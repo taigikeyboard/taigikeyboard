@@ -6,7 +6,7 @@ import Foundation
 import KeyboardKit
 
 // 中文: 設定中心 singleton。所有持久化都走 App Group UserDefaults,
-// 中文: inputMode 與 keyboardLayoutType 之間透過 TPSSyncCoordinator 維持 1:1 連動。
+// 中文: inputMode 與 keyboardLayoutType 透過 setInputMode / setKeyboardLayoutType 狀態機維持 1:1 連動。
 final class SharedSettings {
     private let userDefaults: UserDefaults
 
@@ -69,39 +69,36 @@ final class SharedSettings {
     // 中文: process 內 singleton。整個 app + extension 共用同一份設定 facade。
     static let shared = SharedSettings()
 
-    /// Guards the mutual recursion between inputMode and keyboardLayoutType
-    /// setters when TPS ↔ layout auto-sync fires.
-    // 中文: 防止 inputMode <-> keyboardLayoutType setter 互相觸發無限遞迴的 re-entry guard。
-    private let tpsSync = TPSSyncCoordinator()
-
     private init() {
         userDefaults = Self.sharedUserDefaults
     }
 
-    // 中文: 目前輸入模式。setter 會啟動 TPS 雙向連動 — 切到 .tps 時自動把 layout 切成 .tps,
-    // 中文: 並備份原 layout 到 layoutBeforeTps;離開 .tps 時還原。
+    /// Test-only seam: builds a `SharedSettings` against a caller-supplied
+    /// `UserDefaults` (typically a fresh suite name) so the TPS state machine
+    /// and default-value behavior can be exercised in isolation. Production
+    /// code must keep using `SharedSettings.shared`.
+    ///
+    /// Scope caveat: `KeyboardEnvironment.settingsUserDefaults` continues to
+    /// return the static App Group store regardless of the injected
+    /// `userDefaults`, so this seam is **not** a fully isolated facade.
+    /// Tests must not exercise the `UserDefaults.didChangeNotification`
+    /// path through `settingsUserDefaults`; only stored-value reads / writes
+    /// flow through the injected store.
+    // 中文: 測試專用 init。讓 SharedSettingsTests 可以注入獨立的 UserDefaults suite,
+    // 中文: 在不污染 app group store 的前提下驗證 TPS 狀態機與預設值。
+    // 中文: 範圍上限:settingsUserDefaults 仍回傳 static app group store,因此本 seam
+    // 中文: 不覆蓋 didChangeNotification 鏈路 — 該路徑的測試需另想辦法。
+    init(userDefaults: UserDefaults) {
+        self.userDefaults = userDefaults
+    }
+
+    // 中文: 目前輸入模式。setter 轉發到 setInputMode(_:),由狀態機維持 inputMode ↔ keyboardLayoutType 連動。
     var inputMode: InputMode {
         get {
             let rawValue = userDefaults.string(forKey: Keys.inputMode) ?? "tl"
             return InputMode(rawValue: rawValue) ?? InputMode.tl
         }
-        set {
-            let oldValue = inputMode
-            userDefaults.set(newValue.rawValue, forKey: Keys.inputMode)
-
-            tpsSync.sync {
-                if newValue == .tps, oldValue != .tps {
-                    if keyboardLayoutType != .tps {
-                        layoutBeforeTps = keyboardLayoutType
-                        keyboardLayoutType = .tps
-                    }
-                } else if newValue != .tps, oldValue == .tps {
-                    if keyboardLayoutType == .tps {
-                        keyboardLayoutType = layoutBeforeTps
-                    }
-                }
-            }
-        }
+        set { setInputMode(newValue) }
     }
 
     // 中文: POJ「雙擊 OO」預處理開關。預設 true。供 ToneToggles 打包後給 ToneConverter。
@@ -168,28 +165,70 @@ final class SharedSettings {
         }
     }
 
-    // 中文: 目前鍵盤排版。setter 會啟動 TPS 雙向連動 — 切到 .tps 時自動把 inputMode 切成 .tps,
-    // 中文: 並備份原 inputMode 到 inputModeBeforeTps;離開 .tps 時還原。
+    // 中文: 目前鍵盤排版。setter 轉發到 setKeyboardLayoutType(_:),由狀態機維持 layout ↔ inputMode 連動。
     var keyboardLayoutType: KeyboardLayoutType {
         get {
             let rawValue = userDefaults.string(forKey: Keys.keyboardLayoutType) ?? KeyboardLayoutType.phahTaigi.rawValue
             return KeyboardLayoutType(rawValue: rawValue) ?? .phahTaigi
         }
-        set {
-            let oldValue = keyboardLayoutType
-            userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
+        set { setKeyboardLayoutType(newValue) }
+    }
 
-            tpsSync.sync {
-                if newValue == .tps, oldValue != .tps {
-                    let currentInputMode = inputMode
-                    if currentInputMode != .tps {
-                        inputModeBeforeTps = currentInputMode
-                    }
-                    inputMode = .tps
-                } else if newValue != .tps, oldValue == .tps {
-                    inputMode = inputModeBeforeTps
-                }
+    // MARK: - TPS state machine
+
+    /// Writes `newMode` to `inputMode` and applies the TPS ↔ layout 1:1 sync.
+    ///
+    /// - Entering `.tps`: saves the current `keyboardLayoutType` into
+    ///   `layoutBeforeTps` (skipped if the layout is already `.tps`) and
+    ///   flips the layout to `.tps`.
+    /// - Leaving `.tps`: restores the layout from `layoutBeforeTps`, but only
+    ///   when the live layout is still `.tps` — a manual layout change
+    ///   earlier in the same flow is preserved.
+    /// - All cascading writes bypass the property setter (write the raw
+    ///   `UserDefaults` key directly), so no re-entry guard is needed.
+    // 中文: 寫入 inputMode 並由狀態機保持 TPS 連動。進入 TPS 時備份 layout 並翻成 .tps,
+    // 中文: 離開時若 layout 仍是 .tps 才還原。所有連動寫入都直接打 UserDefaults key,
+    // 中文: 不會再觸發本物件的 setter,因此不再需要 re-entry guard。
+    func setInputMode(_ newMode: InputMode) {
+        let oldMode = inputMode
+        userDefaults.set(newMode.rawValue, forKey: Keys.inputMode)
+
+        if newMode == .tps, oldMode != .tps {
+            let currentLayout = keyboardLayoutType
+            if currentLayout != .tps {
+                layoutBeforeTps = currentLayout
+                userDefaults.set(KeyboardLayoutType.tps.rawValue, forKey: Keys.keyboardLayoutType)
             }
+        } else if newMode != .tps, oldMode == .tps {
+            if keyboardLayoutType == .tps {
+                userDefaults.set(layoutBeforeTps.rawValue, forKey: Keys.keyboardLayoutType)
+            }
+        }
+    }
+
+    /// Writes `newLayout` to `keyboardLayoutType` and applies the TPS ↔
+    /// input-mode 1:1 sync. Mirrors `setInputMode(_:)` with one deliberate
+    /// asymmetry preserved from the pre-refactor cascade: leaving `.tps` on
+    /// the layout side **unconditionally** restores `inputMode` from
+    /// `inputModeBeforeTps`, whereas the input-side exit guards on
+    /// `keyboardLayoutType == .tps` before restoring layout. This mirrors
+    /// HEAD~1 byte-for-byte; any future symmetrization belongs in a
+    /// separate slice.
+    // 中文: 寫入 keyboardLayoutType 並由狀態機保持 TPS 連動。語意刻意對稱於 HEAD~1 而非完全對稱於 setInputMode —
+    // 中文: layout 側離開 TPS 時無條件用 inputModeBeforeTps 還原 inputMode (即使當下 inputMode 已被外部改過),
+    // 中文: 與 input 側的有條件還原相反。若未來要拉齊兩側,需獨立 slice 處理。
+    func setKeyboardLayoutType(_ newLayout: KeyboardLayoutType) {
+        let oldLayout = keyboardLayoutType
+        userDefaults.set(newLayout.rawValue, forKey: Keys.keyboardLayoutType)
+
+        if newLayout == .tps, oldLayout != .tps {
+            let currentMode = inputMode
+            if currentMode != .tps {
+                inputModeBeforeTps = currentMode
+                userDefaults.set(InputMode.tps.rawValue, forKey: Keys.inputMode)
+            }
+        } else if newLayout != .tps, oldLayout == .tps {
+            userDefaults.set(inputModeBeforeTps.rawValue, forKey: Keys.inputMode)
         }
     }
 
