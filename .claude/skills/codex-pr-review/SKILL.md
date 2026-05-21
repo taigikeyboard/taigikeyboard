@@ -74,29 +74,36 @@ Show the evaluation table to the user before any code changes. For FIX entries, 
 
 ### 4. Apply FIX entries
 
-`feedback_codex_review_sandwich.md` makes pre-impl + post-impl Codex review the **default for coding rounds**, but Codex-PR-fix sweeps often include changes that carry no logic risk (artifact rebuilds, comment fixes). Pick a review tier per FIX batch using this rubric, and surface the chosen tier in the evaluation table from Step 3.
+**Codex sandwich is NOT mandatory for PR-fix sweeps.** A PR-fix sweep is reactive cleanup of findings the bot already raised against a diff the bot already saw — most fixes carry no logic risk (artifact rebuilds, comment fixes, narrow scope per finding). Per-batch judgment using the tier rubric below; surface the chosen tier in the Step 3 table so the user can sanity-check before commit.
 
-**Tier A — skip sandwich entirely** (no source-code logic change):
+**Decision flow per FIX batch**:
 
-- Pure artifact regeneration (xcframework / `librust_taigi.a` / generated proto bindings) — the underlying source already passed sandwich at the original commit; this commit only contains the regenerated binary.
+1. Does the batch change runtime behavior, cross a module/FFI boundary, or touch engine hot files? → **Tier C**.
+2. Else, does it change source code (even single-file doc/symbol/test)? → **Tier B**.
+3. Else (artifact regen, whitespace, comment-only, DECLINE/ALREADY-FIXED replies) → **Tier A**.
+
+**Tier A — no review** (no source-code logic change):
+
+- Pure artifact regeneration (xcframework / `librust_taigi.a` / generated proto bindings) — underlying source already passed sandwich at the original commit; this commit only contains the regenerated binary.
 - Whitespace-only / trailing-newline / EOF cleanup.
 - Comment-only edits with no semantic content (typo fix, link update).
 - DECLINE / ALREADY-FIXED replies — no diff at all.
 
-**Tier B — post-impl only** (low-risk source change):
+**Tier B — post-impl review only** (low-risk source change):
 
 - Single-file doc/comment edit that carries semantic content (wrong cross-ref, stale API name).
 - Renaming a private symbol or local variable for clarity, no API surface impact.
 - Removing a single clearly-dead helper the PR already orphaned (verifiable by grep).
 - Test-only edits.
 
-**Tier C — full sandwich** (default for anything else):
+**Tier C — full sandwich** (judgment-gated, NOT a default catch-all):
 
-- Any source change that affects runtime behavior.
-- Multi-file edits.
+- Source change that affects runtime behavior.
+- Multi-file edits crossing logical boundaries.
 - Anything touching `engine/dispatch/`, `engine/protos/`, FFI surface (`engine/swift-ffi/`, `engine/android-jni/`), or shared-core boundary.
 - Refactors, new code paths, public API additions/removals.
-- When in doubt, default to Tier C.
+
+**When unsure between B and C**, prefer **B** — the bot already reviewed the surrounding code in the original PR diff, so a narrow corrective post-impl pass is usually enough. Escalate to C only when the fix introduces new logic the bot has not yet seen (genuinely new code path, not just a corrective edit to existing code).
 
 Apply per batch:
 
@@ -104,7 +111,7 @@ Apply per batch:
 - Tier C: run **one** combined Codex pre-impl review covering the planned fixes (cite the specific finding IDs).
 - Apply fixes.
 - Tier B & C: run Codex post-impl review on the resulting diff. Tier A skips post-impl too.
-- Commit per `feedback_auto_commit_push.md` (commit + push without asking, no risky ops). Commit message must reference the discussion comment ID, e.g. `(Codex PR #197 r3169707395)`. For Tier A artifact-only commits, the message must explicitly say "regenerated artifact, no source change" so the audit trail reflects why sandwich was skipped.
+- Commit per `feedback_auto_commit_push.md` (commit + push without asking, no risky ops). Commit message must reference the discussion comment ID, e.g. `(Codex PR #197 r3169707395)`. Tier A/B commits should briefly state why the lighter tier was chosen ("artifact regen, no source change" / "single-line doc fix, post-impl only") so the audit trail reflects the judgment.
 - If a fix touches Rust under `engine/`, rebuild the xcframework via `engine/scripts/build-xcframework.sh` and include the regenerated artifacts in the commit. Per `feedback_no_rust_ci.md` the gate runs locally — never push without rebuilding. The rebuild itself is Tier A even when the source change is Tier C — bundle if same batch, otherwise separate commit.
 - If a fix touches `engine/composing/src/transition.rs` or `api.rs`, also run `cargo test -p composing` (per `feedback_manual_build_test.md` the user runs platform builds, but Rust workspace tests are scripted-safe).
 
@@ -148,7 +155,7 @@ Print:
 
 - Per `feedback_codex_only.md`: never call Gemini or other reviewers; the bot under sweep IS Codex, and the sandwich reviewer is also Codex.
 - Per `feedback_workaround_circuit_breaker.md`: if a fix attempt fails review twice, STOP — list it as DISCUSS and surface to the user, do not stack patches.
-- Per `feedback_review_before_impl.md` + `feedback_codex_review_sandwich.md`: pre-impl + post-impl Codex review is the default, but Step 4's tier rubric scopes it to Tier C (logic changes). Tier A (artifact regen, comment-only) skips both gates; Tier B (low-risk source edit) runs post-impl only. The rubric only relaxes review *for this PR-fix sweep skill* — general coding rounds still follow the feedback memory's full sandwich rule.
+- `feedback_review_before_impl.md` + `feedback_codex_review_sandwich.md` make pre+post-impl Codex review the default for **general coding rounds**, NOT for PR-fix sweeps. This skill is judgment-based per Step 4's tier rubric: Tier A skips both gates, Tier B runs post-impl only, Tier C runs the full sandwich. The rationale: a PR-fix sweep applies corrective changes to a diff the bot has already reviewed; re-running the sandwich on narrow corrective edits is usually wasted effort. General coding rounds (new feature work, refactors started fresh) still follow the feedback memory's full sandwich rule.
 - Per `feedback_auto_commit_push.md`: commit + push without asking on the feature branch; pause for risky ops (push to main, force-push, scope drift). This skill should never push to main.
 - Per `feedback_round_hygiene.md`: each Codex sweep is its own coding round when fixes are applied — bundle the swept fixes into commits within the same PR (do NOT open a new PR per finding).
 - Project rule #4 (CLAUDE.md): never edit `.xcodeproj` / `.pbxproj` / `build.gradle`. If a finding requires editing one of these files, mark DISCUSS and surface to the user.
