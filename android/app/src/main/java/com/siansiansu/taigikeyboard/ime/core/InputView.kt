@@ -6,13 +6,11 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
 import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ViewFlipper
 import androidx.core.view.WindowInsetsCompat
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 
 /**
@@ -28,6 +26,10 @@ import com.siansiansu.taigikeyboard.R
  * navbar handling intact while the text-input path moves to Compose.
  */
 class InputView : FrameLayout {
+    companion object {
+        private const val TAG = "InputView"
+    }
+
     // A7: `InputView` is inflated only inside `TaigiKeyboard.onCreateInputView`,
     // so the constructor `Context` is the IME service itself.
     private val taigikeyboard: TaigiKeyboard
@@ -41,7 +43,7 @@ class InputView : FrameLayout {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
     override fun onAttachedToWindow() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onAttachedToWindow()")
+        CompositionRoot.shared(context).logger.i(TAG, "onAttachedToWindow()")
 
         super.onAttachedToWindow()
 

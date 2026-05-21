@@ -8,7 +8,6 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
-import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
@@ -18,7 +17,6 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
@@ -26,6 +24,7 @@ import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
@@ -167,8 +166,10 @@ class TextInputManager(
         private val DOUBLE_SPACE_PERIOD_REGEX = """[.!?‽\s][\s]""".toRegex()
     }
 
+    private val logger get() = taigikeyboard.compositionRoot.logger
+
     override fun onCreate() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onCreate()")
+        logger.i(TAG, "onCreate()")
 
         candidateCoordinator =
             CandidateUpdateCoordinator(
@@ -216,7 +217,7 @@ class TextInputManager(
     }
 
     override fun onRegisterInputView(inputView: InputView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onRegisterInputView(inputView)")
+        logger.i(TAG, "onRegisterInputView(inputView)")
 
         // All Main-thread setup runs synchronously so `TaigiKeyboard.onWindowShown`
         // (which fires after this returns) sees `textViewGroup` already populated.
@@ -310,7 +311,7 @@ class TextInputManager(
     }
 
     override fun onDestroy() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
+        logger.i(TAG, "onDestroy()")
 
         candidateCoordinator.destroy()
         coordinator.reset()
@@ -514,7 +515,7 @@ class TextInputManager(
     }
 
     override fun onInputModeChanged(newInputMode: String) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onInputModeChanged($newInputMode)")
+        if (logger.isDebugEnabled) logger.i(TAG, "onInputModeChanged($newInputMode)")
 
         // ComposingManager reads inputMode + toneToggles per dispatch
         // via EngineSettingsProvider.current (live read) — no direct
@@ -548,7 +549,7 @@ class TextInputManager(
     }
 
     override fun onKeyboardLayoutTypeChanged(newLayoutType: String) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onKeyboardLayoutTypeChanged($newLayoutType)")
+        if (logger.isDebugEnabled) logger.i(TAG, "onKeyboardLayoutTypeChanged($newLayoutType)")
 
         layoutReloadJob?.cancel()
         layoutReloadJob =
@@ -562,7 +563,7 @@ class TextInputManager(
     }
 
     fun reloadCurrentLayout() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "reloadCurrentLayout()")
+        logger.i(TAG, "reloadCurrentLayout()")
 
         val currentMode = activeKeyboardMode
         layoutReloadJob?.cancel()
@@ -578,7 +579,7 @@ class TextInputManager(
     }
 
     fun reloadAllLayoutsInBackground() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "reloadAllLayoutsInBackground()")
+        logger.i(TAG, "reloadAllLayoutsInBackground()")
 
         launch {
             val isTranslateSwapped = smartbarManager.getCachedIsTranslateSwapped()
@@ -642,18 +643,16 @@ class TextInputManager(
         val ic = taigikeyboard.currentInputConnection ?: return
 
         if (composingManager?.deleteBackward(ic) == true) {
-            if (BuildConfig.DEBUG) {
+            logger.debug(TAG) {
                 val rawInput = composingManager?.getRawInput()
                 val composingText = composingManager?.getComposingText()
-                Log.d(TAG, "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'")
+                "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'"
             }
             candidateCoordinator.scheduleDisplayDerivation()
             candidateCoordinator.updateTaigiCandidatesDebounced()
             return
         }
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[DELETE] deleteBackward=false or composingManager=null")
-        }
+        logger.debug(TAG) { "[DELETE] deleteBackward=false or composingManager=null" }
 
         ic.beginBatchEdit()
         resetComposingText()
@@ -705,9 +704,7 @@ class TextInputManager(
             val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
             val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[ENTER] composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction")
-            }
+            logger.debug(TAG) { "[ENTER] composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction" }
 
             if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0 &&
                 maskedAction in
@@ -720,9 +717,7 @@ class TextInputManager(
                     EditorInfo.IME_ACTION_SEND,
                 )
             ) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[ENTER] performing action: $maskedAction")
-                }
+                logger.debug(TAG) { "[ENTER] performing action: $maskedAction" }
                 ic.performEditorAction(maskedAction)
                 return
             }
@@ -745,9 +740,7 @@ class TextInputManager(
         val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
         val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[ENTER] non-composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction")
-        }
+        logger.debug(TAG) { "[ENTER] non-composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction" }
 
         if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
             ic.commitText("\n", 1)
@@ -760,9 +753,7 @@ class TextInputManager(
                 EditorInfo.IME_ACTION_SEARCH,
                 EditorInfo.IME_ACTION_SEND,
                 -> {
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[ENTER] performing action: $maskedAction")
-                    }
+                    logger.debug(TAG) { "[ENTER] performing action: $maskedAction" }
                     ic.performEditorAction(maskedAction)
                 }
 
@@ -990,12 +981,7 @@ class TextInputManager(
                             }
 
                             else -> {
-                                if (BuildConfig.DEBUG) {
-                                    Log.e(
-                                        this::class.simpleName,
-                                        "sendKeyPress(keyData): Received unknown key: $keyData",
-                                    )
-                                }
+                                logger.e(TAG, "sendKeyPress(keyData): Received unknown key: $keyData")
                             }
                         }
                     }
@@ -1073,28 +1059,20 @@ class TextInputManager(
                 }
                 if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                 candidateCoordinator.scheduleDisplayDerivation()
-                if (BuildConfig.DEBUG) {
-                    Log.d(
-                        "PERF",
-                        "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms",
-                    )
+                logger.debug("PERF") {
+                    "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms"
                 }
                 candidateCoordinator.updateTaigiCandidatesDebounced()
             } else {
                 if (char == "-" && smartbarManager.isShowingNextWordCandidates()) {
                     ic.commitText("-", 1)
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[INPUT] '-' committed in NextWord mode, keeping suggestions")
-                    }
+                    logger.debug(TAG) { "[INPUT] '-' committed in NextWord mode, keeping suggestions" }
                 } else {
                     manager.startComposing(char, ic)
                     if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                     candidateCoordinator.scheduleDisplayDerivation()
-                    if (BuildConfig.DEBUG) {
-                        Log.d(
-                            "PERF",
-                            "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms",
-                        )
+                    logger.debug("PERF") {
+                        "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms"
                     }
                     candidateCoordinator.updateTaigiCandidatesDebounced()
                 }
@@ -1104,11 +1082,8 @@ class TextInputManager(
             manager.appendCharacter(char, ic)
             if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
             candidateCoordinator.scheduleDisplayDerivation()
-            if (BuildConfig.DEBUG) {
-                Log.d(
-                    "PERF",
-                    "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms",
-                )
+            logger.debug("PERF") {
+                "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms"
             }
             candidateCoordinator.updateTaigiCandidatesDebounced()
         } else {

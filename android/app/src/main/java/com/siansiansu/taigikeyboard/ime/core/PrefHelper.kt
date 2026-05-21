@@ -8,12 +8,11 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
-import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
@@ -66,9 +65,10 @@ class PrefHelper(
         // launches keep working even if the read collector dies.
         private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-        // Collector retry budget: surface DataStore I/O failures via Log.e on
-        // each attempt, give up after this many consecutive failures so the
-        // log does not spam forever on a permanently-broken DataStore.
+        // Collector retry budget: surface DataStore I/O failures via the
+        // injected `LoggerBackend.e` on each attempt, give up after this many
+        // consecutive failures so the log does not spam forever on a
+        // permanently-broken DataStore.
         private const val MAX_COLLECTOR_RETRIES = 3L
         private const val COLLECTOR_RETRY_DELAY_MS = 1_000L
 
@@ -104,8 +104,11 @@ class PrefHelper(
             if (collectorStarted) return
             // Localize the DataStore reference into the launched lambda so the
             // process-lifetime collector does not retain `this` (the PrefHelper
-            // instance) beyond the warm-up call.
+            // instance) beyond the warm-up call. The logger is captured the
+            // same way — the backend is process-wide and stateless, so this
+            // does NOT re-leak `this` via `context`.
             val ds = dataStore
+            val logger = CompositionRoot.shared(context).logger
             cachedPrefs = runBlocking { ds.data.first() }
             scope.launch {
                 ds.data
@@ -115,9 +118,7 @@ class PrefHelper(
                         // give up and clear `collectorStarted` so a future
                         // `warmUp()` can re-arm. Cache stays populated with the
                         // last-good snapshot until then.
-                        if (BuildConfig.DEBUG) {
-                            Log.e(TAG, "DataStore collector failed (attempt=${attempt + 1})", cause)
-                        }
+                        logger.e(TAG, "DataStore collector failed (attempt=${attempt + 1})", cause)
                         if (attempt >= MAX_COLLECTOR_RETRIES) {
                             synchronized(warmUpLock) { collectorStarted = false }
                             false
@@ -209,9 +210,10 @@ class PrefHelper(
         return if (snapshot != null) {
             snapshot[key] ?: default
         } else {
-            if (BuildConfig.DEBUG) {
-                Log.w(TAG, "cached() reached pre-warm fallback for key=${key.name}; check Application.onCreate ordering")
-            }
+            CompositionRoot.shared(context).logger.w(
+                TAG,
+                "cached() reached pre-warm fallback for key=${key.name}; check Application.onCreate ordering",
+            )
             runBlocking { dataStore.data.map { it[key] ?: default }.first() }
         }
     }
@@ -437,7 +439,7 @@ class PrefHelper(
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
                     prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (value == "phahTaigi")
-                    if (BuildConfig.DEBUG) Log.d(TAG, "[PREF] KeyboardLayoutType set to: $value")
+                    CompositionRoot.shared(context).logger.debug(TAG) { "[PREF] KeyboardLayoutType set to: $value" }
                 }
             }
         }
@@ -714,13 +716,12 @@ class PrefHelper(
      */
     suspend fun migrateFromSharedPreferences() {
         val sharedPrefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        val logger = CompositionRoot.shared(context).logger
 
         dataStore.edit { prefs ->
             // Only migrate if DataStore is empty
             if (prefs.asMap().isEmpty()) {
-                if (BuildConfig.DEBUG) {
-                    Log.d("PrefHelper", "Migrating from SharedPreferences to DataStore")
-                }
+                logger.debug(TAG) { "Migrating from SharedPreferences to DataStore" }
 
                 // Advanced settings
                 prefs[PreferenceKeys.SETTINGS_THEME] =
@@ -767,13 +768,9 @@ class PrefHelper(
                 prefs[PreferenceKeys.LONG_PRESS_DELAY] =
                     sharedPrefs.getInt("looknfeel__long_press_delay", 300)
 
-                if (BuildConfig.DEBUG) {
-                    Log.d("PrefHelper", "Migration completed successfully")
-                }
+                logger.debug(TAG) { "Migration completed successfully" }
             } else {
-                if (BuildConfig.DEBUG) {
-                    Log.d("PrefHelper", "DataStore already has data, skipping migration")
-                }
+                logger.debug(TAG) { "DataStore already has data, skipping migration" }
             }
         }
         clearPendingOverlay()
@@ -832,9 +829,7 @@ class PrefHelper(
             prefs[PreferenceKeys.CUSTOM_DICT_ENABLED] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
 
-            if (BuildConfig.DEBUG) {
-                Log.d("PrefHelper", "All preferences reset to defaults")
-            }
+            CompositionRoot.shared(context).logger.debug(TAG) { "All preferences reset to defaults" }
         }
         clearPendingOverlay()
     }

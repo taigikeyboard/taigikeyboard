@@ -3,12 +3,10 @@
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
@@ -16,6 +14,7 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -114,6 +113,7 @@ class SmartbarManager(
     private val toolbarManager =
         ToolbarManager(
             prefs = prefs,
+            logger = compositionRoot.logger,
             smartbarViewProvider = { smartbarView },
             candidateOverlayViewProvider = { candidateOverlayView },
             layoutSelectionOverlayViewProvider = { layoutSelectionOverlayView },
@@ -227,15 +227,16 @@ class SmartbarManager(
                 // forwards the three NextWord-shaped Effects. Reaching this
                 // branch means a routing-layer bug. Debug: crash loudly to
                 // surface it. Release: the stray effect is dropped so the
-                // user's keyboard never crashes; the Log.e below is a
-                // best-effort diagnostic that R8 strips under the
+                // user's keyboard never crashes; the facade `e` below is a
+                // best-effort diagnostic — the AndroidLoggerBackend gates
+                // every level on `BuildConfig.DEBUG` per the
                 // zero-logs-in-release privacy policy (rules/security-rules.md),
                 // so in production this is intentionally swallowed, not surfaced.
                 val msg = "NextWordEffectRouter received non-NextWord effect: $effect"
                 if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
                     throw IllegalStateException(msg)
                 } else {
-                    android.util.Log.e("SmartbarManager", msg)
+                    logger.e(TAG, msg)
                 }
             }
         }
@@ -277,6 +278,8 @@ class SmartbarManager(
             }
         }
 
+    private val logger get() = compositionRoot.logger
+
     companion object {
         private const val TAG = "SmartbarManager"
 
@@ -298,7 +301,7 @@ class SmartbarManager(
     }
 
     fun registerSmartbarView(smartbarView: SmartbarView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerSmartbarView(smartbarView)")
+        logger.i(TAG, "registerSmartbarView(smartbarView)")
 
         this.smartbarView = smartbarView
 
@@ -337,7 +340,7 @@ class SmartbarManager(
     }
 
     fun registerLayoutSelectionOverlayView(overlayView: LayoutSelectionOverlayView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerLayoutSelectionOverlayView(overlayView)")
+        logger.i(TAG, "registerLayoutSelectionOverlayView(overlayView)")
 
         this.layoutSelectionOverlayView = overlayView
 
@@ -349,7 +352,7 @@ class SmartbarManager(
     }
 
     fun registerSymbolSelectionOverlayView(overlayView: SymbolSelectionOverlayView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerSymbolSelectionOverlayView(overlayView)")
+        logger.i(TAG, "registerSymbolSelectionOverlayView(overlayView)")
 
         this.symbolSelectionOverlayView = overlayView
 
@@ -359,7 +362,7 @@ class SmartbarManager(
     }
 
     fun registerSettingsSelectionOverlayView(overlayView: SettingsSelectionOverlayView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerSettingsSelectionOverlayView(overlayView)")
+        logger.i(TAG, "registerSettingsSelectionOverlayView(overlayView)")
 
         this.settingsSelectionOverlayView = overlayView
 
@@ -386,7 +389,7 @@ class SmartbarManager(
     }
 
     fun registerCandidateOverlayView(overlayView: CandidateOverlayView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerCandidateOverlayView(overlayView)")
+        logger.i(TAG, "registerCandidateOverlayView(overlayView)")
 
         this.candidateOverlayView = overlayView
 
@@ -404,7 +407,7 @@ class SmartbarManager(
     }
 
     override fun onDestroy() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
+        logger.i(TAG, "onDestroy()")
 
         // A7: cancel the manager-owned scope so CandidateClickHandler jobs do
         // not outlive the IME service instance. Pre-A7 this scope leaked
@@ -461,11 +464,8 @@ class SmartbarManager(
         }
 
         val isNextWord = suggestions.firstOrNull()?.id?.let { it < 0 } ?: false
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                TAG,
-                "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'",
-            )
+        logger.debug(TAG) {
+            "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'"
         }
 
         val (caps, capsLock) = textInputManager.getCapsState()
@@ -486,9 +486,7 @@ class SmartbarManager(
                 inputMode = inputMode,
             )
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[CASE] caps=$caps, capsLock=$capsLock, composingText='$composingText'")
-        }
+        logger.debug(TAG) { "[CASE] caps=$caps, capsLock=$capsLock, composingText='$composingText'" }
 
         currentSuggestions = transformedSuggestions
         hasCandidates = true
@@ -503,11 +501,8 @@ class SmartbarManager(
 
         view.applyCustomBackgroundColor(colorSettings().candidateBackgroundColor)
 
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                TAG,
-                "[DEBUG] updateCandidates completed: count=${transformedSuggestions.size}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}",
-            )
+        logger.debug(TAG) {
+            "[DEBUG] updateCandidates completed: count=${transformedSuggestions.size}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}"
         }
 
         updateExpandButtonVisibility()
@@ -537,16 +532,14 @@ class SmartbarManager(
             com.siansiansu.taigikeyboard.ime.text.key.KeyCode.VIEW_NUMERIC_ADVANCED,
         )
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[TRANSLATE] isTranslateSwapped 切換為: $cachedIsTranslateSwapped")
-        }
+        logger.debug(TAG) { "[TRANSLATE] isTranslateSwapped 切換為: $cachedIsTranslateSwapped" }
     }
 
     fun clearCandidates() {
-        if (BuildConfig.DEBUG) {
+        logger.debug(TAG) {
             val stackTrace = Thread.currentThread().stackTrace
             val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
-            Log.d(TAG, "[DEBUG] clearCandidates() called from: $caller, hadCandidates=$hasCandidates")
+            "[DEBUG] clearCandidates() called from: $caller, hadCandidates=$hasCandidates"
         }
 
         currentSuggestions = emptyList()
@@ -578,9 +571,7 @@ class SmartbarManager(
             collapseCandidateView()
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[EXPAND] State toggled: isExpanded=$isExpanded")
-        }
+        logger.debug(TAG) { "[EXPAND] State toggled: isExpanded=$isExpanded" }
     }
 
     private fun updateExpandButtonVisibility() {
@@ -589,21 +580,15 @@ class SmartbarManager(
 
     fun setKeyboardHeight(height: Int) {
         keyboardHeight = height
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[HEIGHT] Keyboard height set to: $height")
-        }
+        logger.debug(TAG) { "[HEIGHT] Keyboard height set to: $height" }
     }
 
     private fun expandCandidateView() {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[EXPAND] Expanding candidate view")
-        }
+        logger.debug(TAG) { "[EXPAND] Expanding candidate view" }
 
         val overlay = candidateOverlayView
         if (overlay == null) {
-            if (BuildConfig.DEBUG) {
-                Log.w(TAG, "[EXPAND] Overlay view not registered")
-            }
+            logger.w(TAG, "[EXPAND] Overlay view not registered")
             return
         }
 
@@ -618,9 +603,7 @@ class SmartbarManager(
         smartbarView?.setExpandButtonState(false)
         candidateOverlayView?.hide()
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[EXPAND] Collapsing candidate view")
-        }
+        logger.debug(TAG) { "[EXPAND] Collapsing candidate view" }
     }
 
     fun updateEnglishCandidates(suggestions: List<TaigiWord>) {
@@ -639,9 +622,7 @@ class SmartbarManager(
             activeContainerId = R.id.english_candidates_container
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[ENGLISH] Updated 3-column candidates: ${currentSuggestions.map { it.roman }}")
-        }
+        logger.debug(TAG) { "[ENGLISH] Updated 3-column candidates: ${currentSuggestions.map { it.roman }}" }
 
         pushCandidateState(CandidateMode.English(currentSuggestions))
     }

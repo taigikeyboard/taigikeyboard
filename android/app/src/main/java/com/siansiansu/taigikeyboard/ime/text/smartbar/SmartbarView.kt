@@ -6,7 +6,6 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import android.content.Context
 import android.content.res.ColorStateList
 import android.util.AttributeSet
-import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.widget.ImageButton
@@ -15,8 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
@@ -65,7 +64,7 @@ class SmartbarView : LinearLayout {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
     override fun onAttachedToWindow() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onAttachedToWindow()")
+        CompositionRoot.shared(context).logger.i("SmartbarView", "onAttachedToWindow()")
 
         super.onAttachedToWindow()
 

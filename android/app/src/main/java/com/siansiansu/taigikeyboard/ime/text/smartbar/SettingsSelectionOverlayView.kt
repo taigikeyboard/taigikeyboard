@@ -2,7 +2,6 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.FrameLayout
@@ -10,9 +9,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
@@ -29,6 +29,8 @@ class SettingsSelectionOverlayView : FrameLayout {
 
     private var isShowing: Boolean = false
     private var composeView: ComposeView? = null
+
+    private val logger by lazy { CompositionRoot.shared(context).logger }
 
     // Incremented on each show() to refresh Compose toggle states from prefs
     private val refreshTrigger = mutableIntStateOf(0)
@@ -114,9 +116,7 @@ class SettingsSelectionOverlayView : FrameLayout {
         visibility = VISIBLE
         isShowing = true
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[SHOW] Settings selection overlay shown, height=$keyboardHeight")
-        }
+        logger.debug(TAG) { "[SHOW] Settings selection overlay shown, height=$keyboardHeight" }
     }
 
     /**
@@ -129,9 +129,7 @@ class SettingsSelectionOverlayView : FrameLayout {
         isShowing = false
         onHide?.invoke()
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[HIDE] Settings selection overlay hidden")
-        }
+        logger.debug(TAG) { "[HIDE] Settings selection overlay hidden" }
     }
 
     fun isVisible(): Boolean = isShowing

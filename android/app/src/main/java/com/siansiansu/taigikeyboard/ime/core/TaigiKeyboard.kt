@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.*
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.CursorAnchorInfo
@@ -25,6 +24,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.TaigiKeyboardApplication
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
@@ -95,23 +95,25 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     private val navbarManager = NavigationBarManager()
 
     companion object {
+        private const val TAG = "TaigiKeyboard"
         private const val IME_ID: String = "com.siansiansu.taigikeyboard/.ime.core.TaigiKeyboard"
 
         fun checkIfImeIsEnabled(context: Context): Boolean {
+            val logger = CompositionRoot.shared(context).logger
             // Use InputMethodManager API instead of Settings.Secure for Android 14+ compatibility
             val inputMethodManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             if (inputMethodManager == null) {
-                if (BuildConfig.DEBUG) Log.e(TaigiKeyboard::class.simpleName, "InputMethodManager is null")
+                logger.e(TAG, "InputMethodManager is null")
                 return false
             }
 
             val enabledInputMethods = inputMethodManager.enabledInputMethodList
             val isEnabled = enabledInputMethods.any { it.id == IME_ID }
 
-            if (BuildConfig.DEBUG) {
+            if (logger.isDebugEnabled) {
                 val imeIds = enabledInputMethods.joinToString(":") { it.id }
-                Log.i(TaigiKeyboard::class.simpleName, "List of enabled IMEs: $imeIds")
-                Log.i(TaigiKeyboard::class.simpleName, "Is $IME_ID enabled: $isEnabled")
+                logger.i(TAG, "List of enabled IMEs: $imeIds")
+                logger.i(TAG, "Is $IME_ID enabled: $isEnabled")
             }
 
             return isEnabled
@@ -139,7 +141,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
                     .build(),
             )
         }
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onCreate()")
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -152,6 +153,8 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         val app = application as TaigiKeyboardApplication
         prefs = app.prefs
         compositionRoot = app.compositionRoot
+
+        compositionRoot.logger.i(TAG, "onCreate()")
 
         subtypeManager = SubtypeManager(this, prefs)
         activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
@@ -168,9 +171,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         // Observe inputMode changes and reload keyboard layout
         serviceScope.launch {
             prefs.observeInputMode().collect { newInputMode ->
-                if (BuildConfig.DEBUG) {
-                    Log.d(this@TaigiKeyboard::class.simpleName, "InputMode changed to: $newInputMode")
-                }
+                compositionRoot.logger.debug(TAG) { "InputMode changed to: $newInputMode" }
                 onInputModeChanged(newInputMode)
             }
         }
@@ -178,9 +179,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         // Observe keyboardLayoutType changes and reload keyboard layout
         serviceScope.launch {
             prefs.observeKeyboardLayoutType().collect { newLayoutType ->
-                if (BuildConfig.DEBUG) {
-                    Log.d(this@TaigiKeyboard::class.simpleName, "KeyboardLayoutType changed to: $newLayoutType")
-                }
+                compositionRoot.logger.debug(TAG) { "KeyboardLayoutType changed to: $newLayoutType" }
                 onKeyboardLayoutTypeChanged(newLayoutType)
             }
         }
@@ -210,7 +209,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     @SuppressLint("InflateParams")
     override fun onCreateInputView(): View? {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onCreateInputView()")
+        compositionRoot.logger.i(TAG, "onCreateInputView()")
 
         baseContext.setTheme(R.style.KeyboardTheme)
 
@@ -250,7 +249,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     fun registerInputView(inputView: InputView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerInputView(inputView)")
+        compositionRoot.logger.i(TAG, "registerInputView(inputView)")
 
         this.inputView = inputView
 
@@ -259,7 +258,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
+        compositionRoot.logger.i(TAG, "onDestroy()")
 
         if (::popupRecomposer.isInitialized) {
             popupRecomposer.cancel()
@@ -293,7 +292,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     override fun onWindowShown() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onWindowShown()")
+        compositionRoot.logger.i(TAG, "onWindowShown()")
 
         activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
         onSubtypeChanged(activeSubtype)
@@ -305,7 +304,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     override fun onWindowHidden() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onWindowHidden()")
+        compositionRoot.logger.i(TAG, "onWindowHidden()")
 
         super.onWindowHidden()
         textInputManager.onWindowHidden()
@@ -426,9 +425,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             // 參數 false 表示不只切換到此應用的輸入法
             switchToNextInputMethod(false)
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(this::class.simpleName, "Failed to switch to next input method", e)
-            }
+            compositionRoot.logger.e(TAG, "Failed to switch to next input method", e)
         }
     }
 

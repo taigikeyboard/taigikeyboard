@@ -5,10 +5,11 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.content.res.Configuration
-import android.util.Log
 import android.view.Window
 import androidx.core.view.WindowCompat
-import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
+
+private const val TAG = "NavigationBarManager"
 
 /**
  * 管理導覽列的前景色（圖示顏色）
@@ -36,12 +37,11 @@ class NavigationBarManager {
         context: Context,
     ) {
         val isDark = isDarkMode(context)
+        val logger = CompositionRoot.shared(context).logger
 
-        if (BuildConfig.DEBUG) {
-            Log.d("NavigationBarManager", "=== Updating Navigation Bar ===")
-            Log.d("NavigationBarManager", "  Dark mode: $isDark")
-            Log.d("NavigationBarManager", "  Will use light icons: ${!isDark}")
-        }
+        logger.debug(TAG) { "=== Updating Navigation Bar ===" }
+        logger.debug(TAG) { "  Dark mode: $isDark" }
+        logger.debug(TAG) { "  Will use light icons: ${!isDark}" }
 
         // 設定導覽列前景色（圖示顏色）
         // light mode: 深色圖示，dark mode: 淺色圖示
@@ -49,8 +49,6 @@ class NavigationBarManager {
             .getInsetsController(window, window.decorView)
             .isAppearanceLightNavigationBars = !isDark
 
-        if (BuildConfig.DEBUG) {
-            Log.d("NavigationBarManager", "  isAppearanceLightNavigationBars set to: ${!isDark}")
-        }
+        logger.debug(TAG) { "  isAppearanceLightNavigationBars set to: ${!isDark}" }
     }
 }

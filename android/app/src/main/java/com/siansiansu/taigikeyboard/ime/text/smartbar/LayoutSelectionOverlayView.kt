@@ -5,7 +5,6 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -15,10 +14,11 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.localization.LayoutTexts
 
 /**
@@ -46,6 +46,7 @@ class LayoutSelectionOverlayView : FrameLayout {
 
     // A7: IME-only overlay; `context` resolves to the `TaigiKeyboard` service.
     private val prefs: PrefHelper get() = (context as TaigiKeyboard).prefs
+    private val logger by lazy { CompositionRoot.shared(context).logger }
     private var isShowing: Boolean = false
 
     private var romanizationRow: LinearLayout? = null
@@ -117,9 +118,7 @@ class LayoutSelectionOverlayView : FrameLayout {
         visibility = VISIBLE
         isShowing = true
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[SHOW] Layout selection overlay shown, height=$keyboardHeight")
-        }
+        logger.debug(TAG) { "[SHOW] Layout selection overlay shown, height=$keyboardHeight" }
     }
 
     /**
@@ -131,9 +130,7 @@ class LayoutSelectionOverlayView : FrameLayout {
         visibility = GONE
         isShowing = false
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[HIDE] Layout selection overlay hidden")
-        }
+        logger.debug(TAG) { "[HIDE] Layout selection overlay hidden" }
     }
 
     fun isVisible(): Boolean = isShowing

@@ -3,13 +3,12 @@
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +44,8 @@ class CandidateClickHandler(
      */
     private val onRequestCandidateRefresh: () -> Unit = {},
 ) {
+    private val logger get() = taigikeyboard.compositionRoot.logger
+
     /**
      * Handle candidate click from RecyclerView.
      */
@@ -53,17 +54,15 @@ class CandidateClickHandler(
         index: Int,
     ) {
         TraceContext.withTrace(TraceId.next()) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[INPUT] fn=handleCandidateClick gesture=candidate-tap")
-            }
+            logger.debug(TAG) { "[INPUT] fn=handleCandidateClick gesture=candidate-tap" }
 
-            if (BuildConfig.DEBUG) {
+            if (logger.isDebugEnabled) {
                 val isNextWord = getCurrentSuggestions().firstOrNull()?.id?.let { it < 0 } ?: false
-                Log.d(
+                logger.d(
                     TAG,
                     "[CLICK-ENTRY] onClick triggered, isNextWordMode=$isNextWord, suggestionsCount=${getCurrentSuggestions().size}",
                 )
-                Log.d(TAG, "[CLICK] index=$index, suggestionsSize=${getCurrentSuggestions().size}")
+                logger.d(TAG, "[CLICK] index=$index, suggestionsSize=${getCurrentSuggestions().size}")
             }
 
             val ic = taigikeyboard.currentInputConnection ?: return
@@ -120,16 +119,16 @@ class CandidateClickHandler(
                     }
                 }
 
-            if (BuildConfig.DEBUG) {
-                Log.d(
+            if (logger.isDebugEnabled) {
+                logger.d(
                     TAG,
                     "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'",
                 )
-                Log.d(
+                logger.d(
                     TAG,
                     "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts",
                 )
-                Log.d(
+                logger.d(
                     TAG,
                     "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction, isEnglish=$isEnglishSuggestion",
                 )
@@ -143,18 +142,12 @@ class CandidateClickHandler(
                 }
                 ic.commitText(textToCommit, 1)
                 onClearCandidates()
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[ENGLISH-CLICK] Replaced '$currentWord' with '$textToCommit'")
-                }
+                logger.debug(TAG) { "[ENGLISH-CLICK] Replaced '$currentWord' with '$textToCommit'" }
             } else if (isNextWordPrediction) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic")
-                }
+                logger.debug(TAG) { "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic" }
                 val result = ic.commitText(textToCommit, 1)
                 composingManager?.reset(ic)
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD-CLICK] AFTER commitText: result=$result")
-                }
+                logger.debug(TAG) { "[NEXTWORD-CLICK] AFTER commitText: result=$result" }
             } else {
                 composingManager?.selectSuggestion(textToCommit, ic)
             }
@@ -184,9 +177,7 @@ class CandidateClickHandler(
      */
     fun handleEnglishCandidateClick(index: Int) {
         TraceContext.withTrace(TraceId.next()) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[INPUT] fn=handleEnglishCandidateClick gesture=candidate-tap")
-            }
+            logger.debug(TAG) { "[INPUT] fn=handleEnglishCandidateClick gesture=candidate-tap" }
 
             val currentSuggestions = getCurrentSuggestions()
             if (index >= currentSuggestions.size) return
@@ -203,9 +194,7 @@ class CandidateClickHandler(
             ic.commitText(selectedWord.roman, 1)
             onClearCandidates()
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[ENGLISH-CLICK] Replaced '$currentWord' with '${selectedWord.roman}'")
-            }
+            logger.debug(TAG) { "[ENGLISH-CLICK] Replaced '$currentWord' with '${selectedWord.roman}'" }
         }
     }
 
@@ -265,9 +254,7 @@ class CandidateClickHandler(
         if (isNextWordPred) {
             ic.commitText(textToCommit, 1)
             composingManager?.reset(ic)
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[OVERLAY] NextWord commitText: '$textToCommit'")
-            }
+            logger.debug(TAG) { "[OVERLAY] NextWord commitText: '$textToCommit'" }
         } else {
             composingManager?.selectSuggestion(textToCommit, ic)
         }
@@ -290,9 +277,7 @@ class CandidateClickHandler(
             "",
         )
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[OVERLAY] Selected suggestion: ${word.displayText} at index $index")
-        }
+        logger.debug(TAG) { "[OVERLAY] Selected suggestion: ${word.displayText} at index $index" }
     }
 
     /**
@@ -334,12 +319,10 @@ class CandidateClickHandler(
         val consumedBytes = info[TaigiWord.MetadataKeys.CONSUMED_BYTES]?.toIntOrNull()
         val syllableCount = info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]?.toIntOrNull()
         if (displayText == null || consumedBytes == null || syllableCount == null) {
-            if (BuildConfig.DEBUG) {
-                Log.w(
-                    TAG,
-                    "[CONTINUOUS] decode failed displayText=${info[TaigiWord.MetadataKeys.DISPLAY_TEXT]} consumedBytes=${info[TaigiWord.MetadataKeys.CONSUMED_BYTES]} syllableCount=${info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]}",
-                )
-            }
+            logger.w(
+                TAG,
+                "[CONTINUOUS] decode failed displayText=${info[TaigiWord.MetadataKeys.DISPLAY_TEXT]} consumedBytes=${info[TaigiWord.MetadataKeys.CONSUMED_BYTES]} syllableCount=${info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]}",
+            )
             return
         }
 
@@ -388,11 +371,8 @@ class CandidateClickHandler(
             ic = ic,
         )
 
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                TAG,
-                "[CONTINUOUS] commit displayText='$displayText' didCommit=${result.didCommit} didFinalCommit=${result.didFinalCommit}",
-            )
+        logger.debug(TAG) {
+            "[CONTINUOUS] commit displayText='$displayText' didCommit=${result.didCommit} didFinalCommit=${result.didFinalCommit}"
         }
 
         // Per-segment frequency on every successful commit (mid OR final).

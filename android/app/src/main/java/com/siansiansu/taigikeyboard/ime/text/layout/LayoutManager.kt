@@ -5,9 +5,9 @@
 package com.siansiansu.taigikeyboard.ime.text.layout
 
 import android.content.Context
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
@@ -26,6 +26,8 @@ class LayoutManager(
     private val context: Context,
     private val prefs: PrefHelper,
 ) {
+    private val logger = CompositionRoot.shared(context).logger
+
     companion object {
         private const val TAG = "LayoutManager"
 
@@ -61,15 +63,15 @@ class LayoutManager(
                     .bufferedReader()
                     .use { it.readText() }
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[LAYOUT] Failed to load layout $type/$name", e)
+                logger.e(TAG, "[LAYOUT] Failed to load layout $type/$name", e)
                 null
             } ?: return null
         val layoutAdapter = moshi.adapter(LayoutData::class.java)
         val layoutData = layoutAdapter.fromJson(rawJsonData)
-        if (BuildConfig.DEBUG && layoutData != null && name?.contains("phah_taigi") == true) {
-            Log.d(TAG, "[LAYOUT] Loaded phahTaigi layout: ${layoutData.name}, rows=${layoutData.arrangement.size}")
+        if (logger.isDebugEnabled && layoutData != null && name?.contains("phah_taigi") == true) {
+            logger.d(TAG, "[LAYOUT] Loaded phahTaigi layout: ${layoutData.name}, rows=${layoutData.arrangement.size}")
             layoutData.arrangement.forEachIndexed { rowIndex, row ->
-                Log.d(TAG, "[LAYOUT]   Row $rowIndex: ${row.size} keys - ${row.map { it.label }.joinToString(" ")}")
+                logger.d(TAG, "[LAYOUT]   Row $rowIndex: ${row.size} keys - ${row.map { it.label }.joinToString(" ")}")
             }
         }
         return layoutData
@@ -331,11 +333,8 @@ class LayoutManager(
                             }
                         }
                     }
-                if (BuildConfig.DEBUG) {
-                    Log.d(
-                        TAG,
-                        "[LAYOUT] Loading layout: $layoutName (inputMode=$inputMode, layoutType=${prefs.keyboardLayoutType}, isTranslateSwapped=$isTranslateSwapped)",
-                    )
+                logger.debug(TAG) {
+                    "[LAYOUT] Loading layout: $layoutName (inputMode=$inputMode, layoutType=${prefs.keyboardLayoutType}, isTranslateSwapped=$isTranslateSwapped)"
                 }
                 main = LTN(LayoutType.CHARACTERS, layoutName)
                 // 根據模式選擇 modifier

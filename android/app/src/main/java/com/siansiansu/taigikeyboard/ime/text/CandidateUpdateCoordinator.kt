@@ -4,12 +4,10 @@
 
 package com.siansiansu.taigikeyboard.ime.text
 
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
-import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +30,8 @@ class CandidateUpdateCoordinator(
     private val getComposingManager: () -> ComposingManager?,
     private val smartbarManager: SmartbarManager,
 ) {
+    private val logger get() = taigikeyboard.compositionRoot.logger
+
     private var candidateUpdateJob: Job? = null
     private var englishCandidateUpdateJob: Job? = null
     private var displayDerivationJob: Job? = null
@@ -59,15 +59,15 @@ class CandidateUpdateCoordinator(
                 if (!isActive) return@launch
 
                 val traceId = trace ?: TraceId.untraced
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[trace=$traceId] [CANDIDATE] fn=updateTaigiCandidatesDebounced debounce-fire (untraced from here)")
+                logger.debug(TAG) {
+                    "[trace=$traceId] [CANDIDATE] fn=updateTaigiCandidatesDebounced debounce-fire (untraced from here)"
                 }
 
                 val candidateStart = System.currentTimeMillis()
                 updateTaigiCandidates()
 
-                if (BuildConfig.DEBUG) {
-                    Log.d("PERF", "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms")
+                logger.debug("PERF") {
+                    "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms"
                 }
             }
     }
@@ -92,9 +92,7 @@ class CandidateUpdateCoordinator(
      * Debounced English candidate update.
      */
     fun updateEnglishCandidatesDebounced() {
-        if (BuildConfig.DEBUG) {
-            Log.d("ENSPELL", "[1] updateEnglishCandidatesDebounced() called")
-        }
+        logger.debug(EN_TAG) { "[1] updateEnglishCandidatesDebounced() called" }
 
         englishCandidateUpdateJob?.cancel()
 
@@ -103,9 +101,7 @@ class CandidateUpdateCoordinator(
                 delay(CANDIDATE_DEBOUNCE_MS)
                 if (!isActive) return@launch
 
-                if (BuildConfig.DEBUG) {
-                    Log.d("ENSPELL", "[2] After debounce, calling updateEnglishCandidates()")
-                }
+                logger.debug(EN_TAG) { "[2] After debounce, calling updateEnglishCandidates()" }
                 updateEnglishCandidates()
             }
     }
@@ -114,34 +110,32 @@ class CandidateUpdateCoordinator(
      * Update Taigi candidates using autocomplete service.
      */
     private suspend fun updateTaigiCandidates() {
-        if (BuildConfig.DEBUG) {
+        logger.debug(TAG) {
             val stackTrace = Thread.currentThread().stackTrace
             val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
-            Log.d(TAG, "[DEBUG] updateTaigiCandidates() called from: $caller")
+            "[DEBUG] updateTaigiCandidates() called from: $caller"
         }
 
         val manager =
             getComposingManager() ?: run {
-                if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] composingManager=null, skip")
+                logger.debug(TAG) { "[CANDIDATES] composingManager=null, skip" }
                 return
             }
 
         val rawInput =
             manager.getRawInput() ?: run {
-                if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] rawInput=null, clearCandidates")
+                logger.debug(TAG) { "[CANDIDATES] rawInput=null, clearCandidates" }
                 smartbarManager.clearCandidates()
                 return
             }
         if (rawInput.isEmpty()) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] rawInput=empty, clearCandidates")
+            logger.debug(TAG) { "[CANDIDATES] rawInput=empty, clearCandidates" }
             smartbarManager.clearCandidates()
             return
         }
         val displayText = manager.getComposingText() ?: rawInput
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[CANDIDATES] rawInput='$rawInput', displayText='$displayText'")
-        }
+        logger.debug(TAG) { "[CANDIDATES] rawInput='$rawInput', displayText='$displayText'" }
 
         val service =
             synchronized(serviceLock) {
@@ -174,16 +168,11 @@ class CandidateUpdateCoordinator(
             rawInput = rawInput,
             displayText = displayText,
         )
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                "PERF",
-                "[3] autocomplete (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms",
-            )
+        logger.debug("PERF") {
+            "[3] autocomplete (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms"
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[CANDIDATES] found ${suggestions.size} suggestions")
-        }
+        logger.debug(TAG) { "[CANDIDATES] found ${suggestions.size} suggestions" }
 
         val uiStart = System.currentTimeMillis()
         withContext(Dispatchers.Main) {
@@ -194,13 +183,11 @@ class CandidateUpdateCoordinator(
             if (!isActive) return@withContext
             val currentRaw = getComposingManager()?.getRawInput()
             if (currentRaw != rawInput) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[CANDIDATES] stale result dropped (was='$rawInput', now='$currentRaw')")
-                }
+                logger.debug(TAG) { "[CANDIDATES] stale result dropped (was='$rawInput', now='$currentRaw')" }
                 return@withContext
             }
             smartbarManager.updateCandidates(suggestions)
-            if (BuildConfig.DEBUG) Log.d("PERF", "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms")
+            logger.debug("PERF") { "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms" }
         }
     }
 
@@ -208,30 +195,26 @@ class CandidateUpdateCoordinator(
      * Update English candidates using spell-check service.
      */
     private suspend fun updateEnglishCandidates() {
-        if (BuildConfig.DEBUG) {
-            Log.d("ENSPELL", "[3] updateEnglishCandidates() called")
-        }
+        logger.debug(EN_TAG) { "[3] updateEnglishCandidates() called" }
 
         val ic =
             taigikeyboard.currentInputConnection ?: run {
-                if (BuildConfig.DEBUG) Log.d("ENSPELL", "[3] inputConnection is null")
+                logger.debug(EN_TAG) { "[3] inputConnection is null" }
                 return
             }
 
         val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
 
         if (textBeforeCursor.isEmpty()) {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[3] textBeforeCursor is empty")
+            logger.debug(EN_TAG) { "[3] textBeforeCursor is empty" }
             smartbarManager.clearCandidates()
             return
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.d("ENSPELL", "[3] textBeforeCursor='$textBeforeCursor'")
-        }
+        logger.debug(EN_TAG) { "[3] textBeforeCursor='$textBeforeCursor'" }
 
         if (englishAutocompleteService == null) {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] Creating EnglishAutocompleteService...")
+            logger.debug(EN_TAG) { "[4] Creating EnglishAutocompleteService..." }
             englishAutocompleteService =
                 com.siansiansu.taigikeyboard.ime.text.composing
                     .EnglishAutocompleteService(taigikeyboard.context)
@@ -239,19 +222,19 @@ class CandidateUpdateCoordinator(
 
         val service =
             englishAutocompleteService ?: run {
-                if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] service is null after creation")
+                logger.debug(EN_TAG) { "[4] service is null after creation" }
                 return
             }
 
         try {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[5] Calling getSuggestions()...")
+            logger.debug(EN_TAG) { "[5] Calling getSuggestions()..." }
             val startTime = System.currentTimeMillis()
             val suggestions = service.getSuggestions(textBeforeCursor)
             val elapsed = System.currentTimeMillis() - startTime
 
-            if (BuildConfig.DEBUG) {
-                Log.d("ENSPELL", "[6] getSuggestions() returned ${suggestions.size} suggestions in ${elapsed}ms")
-                suggestions.forEachIndexed { i, s -> Log.d("ENSPELL", "[6]   [$i] ${s.text}") }
+            if (logger.isDebugEnabled) {
+                logger.d(EN_TAG, "[6] getSuggestions() returned ${suggestions.size} suggestions in ${elapsed}ms")
+                suggestions.forEachIndexed { i, s -> logger.d(EN_TAG, "[6]   [$i] ${s.text}") }
             }
 
             val words =
@@ -272,9 +255,7 @@ class CandidateUpdateCoordinator(
                 }
             }
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e("ENSPELL", "[ERROR] Failed to get suggestions", e)
-            }
+            logger.e(EN_TAG, "[ERROR] Failed to get suggestions", e)
             withContext(Dispatchers.Main) {
                 smartbarManager.clearCandidates()
             }
@@ -307,6 +288,7 @@ class CandidateUpdateCoordinator(
 
     companion object {
         private const val TAG = "CandidateCoordinator"
+        private const val EN_TAG = "ENSPELL"
         private const val CANDIDATE_DEBOUNCE_MS = 50L
     }
 }

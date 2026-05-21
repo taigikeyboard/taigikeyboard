@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -14,8 +13,9 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 
 /**
  * Symbol selection overlay view.
@@ -30,6 +30,8 @@ class SymbolSelectionOverlayView : FrameLayout {
 
     private var isShowing: Boolean = false
     private var selectedTab: SymbolCategory = SymbolCategory.FULL_WIDTH
+
+    private val logger by lazy { CompositionRoot.shared(context).logger }
 
     private var tabBar: LinearLayout? = null
     private val tabButtons = mutableListOf<Button>()
@@ -126,9 +128,7 @@ class SymbolSelectionOverlayView : FrameLayout {
         visibility = VISIBLE
         isShowing = true
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[SHOW] Symbol selection overlay shown, height=$keyboardHeight")
-        }
+        logger.debug(TAG) { "[SHOW] Symbol selection overlay shown, height=$keyboardHeight" }
     }
 
     /**
@@ -140,9 +140,7 @@ class SymbolSelectionOverlayView : FrameLayout {
         visibility = GONE
         isShowing = false
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[HIDE] Symbol selection overlay hidden")
-        }
+        logger.debug(TAG) { "[HIDE] Symbol selection overlay hidden" }
     }
 
     fun isVisible(): Boolean = isShowing

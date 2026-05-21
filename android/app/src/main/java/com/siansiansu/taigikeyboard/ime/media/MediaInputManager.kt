@@ -4,12 +4,10 @@ package com.siansiansu.taigikeyboard.ime.media
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -22,10 +20,13 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import kotlinx.coroutines.*
 
+private const val TAG = "MediaInputManager"
+
 class MediaInputManager(
     private val taigikeyboard: TaigiKeyboard,
 ) : CoroutineScope by MainScope(),
     TaigiKeyboard.EventListener {
+    private val logger get() = taigikeyboard.compositionRoot.logger
     private var osHandler: Handler? = null
     private var isDeletePressed: Boolean = false
     private var emojiKeyboardView: ViewFlipper? = null
@@ -39,7 +40,7 @@ class MediaInputManager(
      */
     @SuppressLint("ClickableViewAccessibility")
     override fun onRegisterInputView(inputView: InputView) {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onRegisterInputView(inputView)")
+        logger.i(TAG, "onRegisterInputView(inputView)")
 
         launch(Dispatchers.Default) {
             mediaViewGroup = inputView.findViewById(R.id.media_input)
@@ -65,7 +66,7 @@ class MediaInputManager(
                     emojiKeyboardView?.addView(emojiView, layoutParams)
                 }
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(this::class.simpleName, "Error initializing media input views", e)
+                logger.e(TAG, "Error initializing media input views", e)
             }
         }
     }
@@ -74,7 +75,7 @@ class MediaInputManager(
      * Clean-up of resources and stopping all coroutines.
      */
     override fun onDestroy() {
-        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
+        logger.i(TAG, "onDestroy()")
 
         cancel()
     }

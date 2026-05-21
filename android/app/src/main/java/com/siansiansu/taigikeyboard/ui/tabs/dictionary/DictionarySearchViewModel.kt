@@ -1,14 +1,13 @@
 package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.LexiconBridge
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
@@ -42,6 +41,7 @@ class DictionarySearchViewModel(
 
     private val prefs = PrefHelper(application)
     private val root = CompositionRoot.shared(application)
+    private val logger = root.logger
 
     init {
         observeSearchText()
@@ -84,9 +84,7 @@ class DictionarySearchViewModel(
             // INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
             val isCJK = LexiconBridge.isHanzi(query)
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode")
-            }
+            logger.debug(TAG) { "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode" }
 
             // Resolve filter bitmask + enabled-source set ONCE per query and
             // hand both down the pipeline (mask into LexiconService, codes
@@ -119,24 +117,20 @@ class DictionarySearchViewModel(
                     }
 
                     is Outcome.Failure -> {
-                        if (BuildConfig.DEBUG) {
-                            Log.w(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path failed: ${outcome.error}")
-                        }
+                        logger.w(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path failed: ${outcome.error}")
                         _results.value = emptyList()
                         _isSearching.value = false
                         return
                     }
                 }
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path returned ${searchResults.size} results")
+            logger.debug(TAG) {
+                "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path returned ${searchResults.size} results"
             }
 
             val customResults = searchCustomDictionary(query, isCJK)
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[SEARCH] custom dictionary returned ${customResults.size} results")
-            }
+            logger.debug(TAG) { "[SEARCH] custom dictionary returned ${customResults.size} results" }
 
             // Sort: KAUTIAN (教育部) first, then by frequency
             val sorted =
@@ -151,9 +145,7 @@ class DictionarySearchViewModel(
             _results.value = customResults + filtered
             _isSearching.value = false
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[SEARCH] Failed: ${e.message}", e)
-            }
+            logger.e(TAG, "[SEARCH] Failed: ${e.message}", e)
             _results.value = emptyList()
             _isSearching.value = false
         }
@@ -189,9 +181,7 @@ class DictionarySearchViewModel(
                     )
                 }
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
-            }
+            logger.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
             emptyList()
         }
     }

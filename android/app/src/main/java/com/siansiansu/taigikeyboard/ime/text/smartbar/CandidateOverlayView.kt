@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Paint
 import android.util.AttributeSet
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -16,11 +15,12 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
@@ -65,6 +65,7 @@ class CandidateOverlayView : FrameLayout {
     // A7: IME-only view; `context` resolves to the `TaigiKeyboard` service,
     // so the Application-owned PrefHelper is reachable without `getInstance()`.
     private val prefs: PrefHelper by lazy { (context as TaigiKeyboard).prefs }
+    private val logger by lazy { CompositionRoot.shared(context).logger }
 
     // Text measurement
     private val primaryPaint = Paint().apply { isAntiAlias = true }
@@ -152,9 +153,7 @@ class CandidateOverlayView : FrameLayout {
         // Click protection: disable immediately
         isClickEnabled = false
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[SHOW] show() called, isVisible=$isVisible, suggestions=${suggestions.size}")
-        }
+        logger.debug(TAG) { "[SHOW] show() called, isVisible=$isVisible, suggestions=${suggestions.size}" }
         if (isVisible) return
 
         this.suggestions = suggestions
@@ -183,22 +182,20 @@ class CandidateOverlayView : FrameLayout {
         // Click protection: release after 150ms
         postDelayed({ isClickEnabled = true }, 150)
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[SHOW] Overlay shown with ${suggestions.size} suggestions, height=$keyboardHeight")
-        }
+        logger.debug(TAG) { "[SHOW] Overlay shown with ${suggestions.size} suggestions, height=$keyboardHeight" }
     }
 
     /**
      * Hide overlay.
      */
     fun hide() {
-        if (BuildConfig.DEBUG) {
+        logger.debug(TAG) {
             val stackTrace = Thread.currentThread().stackTrace
             val caller =
                 stackTrace.getOrNull(3)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: "unknown"
             val caller2 =
                 stackTrace.getOrNull(4)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: ""
-            Log.d(TAG, "[HIDE] hide() called from: $caller <- $caller2, isVisible=$isVisible")
+            "[HIDE] hide() called from: $caller <- $caller2, isVisible=$isVisible"
         }
         if (!isVisible) return
 
@@ -208,9 +205,7 @@ class CandidateOverlayView : FrameLayout {
         suggestions = emptyList()
         currentPage = 0
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[HIDE] Overlay hidden")
-        }
+        logger.debug(TAG) { "[HIDE] Overlay hidden" }
     }
 
     /**
@@ -341,9 +336,7 @@ class CandidateOverlayView : FrameLayout {
             val rowIndex = calculateRowIndex(newStartIndex)
             layoutManager?.scrollToPositionWithOffset(rowIndex, 0)
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[PAGE] Scrolled to previous page: $currentPage")
-            }
+            logger.debug(TAG) { "[PAGE] Scrolled to previous page: $currentPage" }
         }
     }
 
@@ -357,9 +350,7 @@ class CandidateOverlayView : FrameLayout {
             val rowIndex = calculateRowIndex(newStartIndex)
             layoutManager?.scrollToPositionWithOffset(rowIndex, 0)
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[PAGE] Scrolled to next page: $currentPage")
-            }
+            logger.debug(TAG) { "[PAGE] Scrolled to next page: $currentPage" }
         }
     }
 

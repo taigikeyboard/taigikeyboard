@@ -501,17 +501,17 @@ object LexiconBridge {
         val responseBytes = try {
             RustEngineBridge.dispatchRaw(request.toByteArray())
         } catch (t: Throwable) {
-            android.util.Log.w(TAG, "dispatch failed", t)
+            RustEngineBridge.backend.w(TAG, "dispatch failed", t)
             return null
         }
         val response = try {
             Response.parseFrom(responseBytes)
         } catch (t: Throwable) {
-            android.util.Log.w(TAG, "response parse failed", t)
+            RustEngineBridge.backend.w(TAG, "response parse failed", t)
             return null
         }
         if (response.errorValue != 0) {
-            android.util.Log.w(TAG, "engine returned error: ${response.error}")
+            RustEngineBridge.backend.w(TAG, "engine returned error: ${response.error}")
             return null
         }
         return if (response.hasLexicon()) response.lexicon else null

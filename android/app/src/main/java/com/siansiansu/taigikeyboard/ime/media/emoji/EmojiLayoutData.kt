@@ -4,9 +4,8 @@ package com.siansiansu.taigikeyboard.ime.media.emoji
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.util.Log
 import androidx.core.graphics.PaintCompat
-import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -37,6 +36,7 @@ fun parseRawEmojiSpecsFile(
     context: Context,
     path: String,
 ): EmojiLayoutDataMap {
+    val logger = CompositionRoot.shared(context).logger
     val layouts = EmojiLayoutDataMap(EmojiCategory::class.java)
     for (category in EmojiCategory.values()) {
         layouts[category] = mutableListOf()
@@ -74,7 +74,7 @@ fun parseRawEmojiSpecsFile(
                 ec = try {
                     EmojiCategory.valueOf(categoryId.uppercase(Locale.ENGLISH))
                 } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) Log.w(TAG, "[PARSE] Unknown category: $categoryId")
+                    logger.w(TAG, "[PARSE] Unknown category: $categoryId")
                     null
                 }
                 continue
@@ -134,13 +134,13 @@ fun parseRawEmojiSpecsFile(
         }
         commitEmojiEditorList()
     } catch (e: IOException) {
-        if (BuildConfig.DEBUG) Log.e(TAG, "[PARSE] parseRawEmojiSpecsFile(): $e")
+        logger.e(TAG, "[PARSE] parseRawEmojiSpecsFile(): $e")
     } finally {
         if (reader != null) {
             try {
                 reader.close()
             } catch (e: IOException) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[PARSE] parseRawEmojiSpecsFile(): $e")
+                logger.e(TAG, "[PARSE] parseRawEmojiSpecsFile(): $e")
             }
         }
     }

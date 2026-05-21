@@ -6,16 +6,18 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.textservice.SentenceSuggestionsInfo
 import android.view.textservice.SpellCheckerSession
 import android.view.textservice.SuggestionsInfo
 import android.view.textservice.TextInfo
 import android.view.textservice.TextServicesManager
-import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+
+private const val TAG = "ENSPELL"
 
 /**
  * 英文自動補全服務
@@ -34,6 +36,8 @@ class EnglishAutocompleteService(
         private const val MAX_SUGGESTIONS = 3
     }
 
+    private val logger = CompositionRoot.shared(context).logger
+
     // SpellChecker Session（懶載入）
     private var spellCheckerSession: SpellCheckerSession? = null
     private var pendingSuggestions: ((List<String>) -> Unit)? = null
@@ -41,47 +45,39 @@ class EnglishAutocompleteService(
     // SpellCheckerSessionListener 實作
     private val spellCheckerListener = object : SpellCheckerSession.SpellCheckerSessionListener {
         override fun onGetSuggestions(results: Array<out SuggestionsInfo>?) {
-            if (BuildConfig.DEBUG) {
-                Log.d("ENSPELL", "[CALLBACK] onGetSuggestions: ${results?.size} results")
-            }
+            logger.debug(TAG) { "[CALLBACK] onGetSuggestions: ${results?.size} results" }
 
             val suggestions = mutableListOf<String>()
             results?.forEachIndexed { idx, info ->
                 if (info == null) return@forEachIndexed
                 val attrs = info.suggestionsAttributes
-                if (BuildConfig.DEBUG) {
-                    Log.d("ENSPELL", "[CALLBACK] result[$idx] attrs=$attrs, count=${info.suggestionsCount}")
-                }
+                logger.debug(TAG) { "[CALLBACK] result[$idx] attrs=$attrs, count=${info.suggestionsCount}" }
                 for (i in 0 until info.suggestionsCount) {
                     suggestions.add(info.getSuggestionAt(i))
                 }
             }
 
-            if (BuildConfig.DEBUG) {
-                Log.d("ENSPELL", "[CALLBACK] Parsed ${suggestions.size} suggestions: $suggestions")
-            }
+            logger.debug(TAG) { "[CALLBACK] Parsed ${suggestions.size} suggestions: $suggestions" }
 
             pendingSuggestions?.invoke(suggestions.take(MAX_SUGGESTIONS))
             pendingSuggestions = null
         }
 
         override fun onGetSentenceSuggestions(results: Array<out SentenceSuggestionsInfo>?) {
-            if (BuildConfig.DEBUG) {
-                Log.d("ENSPELL", "[CALLBACK] onGetSentenceSuggestions: ${results?.size} results")
-            }
+            logger.debug(TAG) { "[CALLBACK] onGetSentenceSuggestions: ${results?.size} results" }
 
             val suggestions = mutableListOf<String>()
             results?.forEachIndexed { resultIdx, sentenceInfo ->
                 if (sentenceInfo == null) return@forEachIndexed
-                if (BuildConfig.DEBUG) {
-                    Log.d("ENSPELL", "[CALLBACK] result[$resultIdx] suggestionsCount=${sentenceInfo.suggestionsCount}")
+                logger.debug(TAG) {
+                    "[CALLBACK] result[$resultIdx] suggestionsCount=${sentenceInfo.suggestionsCount}"
                 }
                 for (i in 0 until sentenceInfo.suggestionsCount) {
                     val suggestionsInfo = sentenceInfo.getSuggestionsInfoAt(i)
                         ?: continue
                     val attrs = suggestionsInfo.suggestionsAttributes
-                    if (BuildConfig.DEBUG) {
-                        Log.d("ENSPELL", "[CALLBACK]   [$i] attrs=$attrs, count=${suggestionsInfo.suggestionsCount}")
+                    logger.debug(TAG) {
+                        "[CALLBACK]   [$i] attrs=$attrs, count=${suggestionsInfo.suggestionsCount}"
                     }
                     for (j in 0 until suggestionsInfo.suggestionsCount) {
                         suggestions.add(suggestionsInfo.getSuggestionAt(j))
@@ -89,9 +85,7 @@ class EnglishAutocompleteService(
                 }
             }
 
-            if (BuildConfig.DEBUG) {
-                Log.d("ENSPELL", "[CALLBACK] Parsed ${suggestions.size} suggestions: $suggestions")
-            }
+            logger.debug(TAG) { "[CALLBACK] Parsed ${suggestions.size} suggestions: $suggestions" }
 
             pendingSuggestions?.invoke(suggestions.take(MAX_SUGGESTIONS))
             pendingSuggestions = null
@@ -103,22 +97,20 @@ class EnglishAutocompleteService(
      */
     private fun initSpellChecker() {
         if (spellCheckerSession != null) {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[7] SpellCheckerSession already exists")
+            logger.debug(TAG) { "[7] SpellCheckerSession already exists" }
             return
         }
 
-        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[7] Initializing SpellCheckerSession...")
+        logger.debug(TAG) { "[7] Initializing SpellCheckerSession..." }
 
         try {
             val tsm = context.getSystemService(Context.TEXT_SERVICES_MANAGER_SERVICE) as? TextServicesManager
             if (tsm == null) {
-                if (BuildConfig.DEBUG) {
-                    Log.w("ENSPELL", "[7] TextServicesManager not available")
-                }
+                logger.w(TAG, "[7] TextServicesManager not available")
                 return
             }
 
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[7] TextServicesManager available, creating session...")
+            logger.debug(TAG) { "[7] TextServicesManager available, creating session..." }
 
             spellCheckerSession = tsm.newSpellCheckerSession(
                 Bundle(),
@@ -128,18 +120,12 @@ class EnglishAutocompleteService(
             )
 
             if (spellCheckerSession != null) {
-                if (BuildConfig.DEBUG) {
-                    Log.d("ENSPELL", "[7] SpellCheckerSession created successfully")
-                }
+                logger.debug(TAG) { "[7] SpellCheckerSession created successfully" }
             } else {
-                if (BuildConfig.DEBUG) {
-                    Log.w("ENSPELL", "[7] newSpellCheckerSession returned null - no spell checker available on device?")
-                }
+                logger.w(TAG, "[7] newSpellCheckerSession returned null - no spell checker available on device?")
             }
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e("ENSPELL", "[7] Failed to init SpellCheckerSession", e)
-            }
+            logger.e(TAG, "[7] Failed to init SpellCheckerSession", e)
         }
     }
 
@@ -150,35 +136,28 @@ class EnglishAutocompleteService(
      * @return 建議列表
      */
     suspend fun getSuggestions(text: String): List<EnglishSuggestion> {
-        if (BuildConfig.DEBUG) {
-            Log.d("ENSPELL", "[GET] getSuggestions() called with text='$text'")
-        }
+        logger.debug(TAG) { "[GET] getSuggestions() called with text='$text'" }
 
         val currentWord = extractCurrentWord(text)
         if (currentWord.isEmpty()) {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[GET] currentWord is empty, returning")
+            logger.debug(TAG) { "[GET] currentWord is empty, returning" }
             return emptyList()
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.d("ENSPELL", "[GET] currentWord='$currentWord'")
-        }
+        logger.debug(TAG) { "[GET] currentWord='$currentWord'" }
 
         // 嘗試使用系統 SpellChecker
-        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[GET] Calling getSpellCheckerSuggestions()...")
+        logger.debug(TAG) { "[GET] Calling getSpellCheckerSuggestions()..." }
         val spellSuggestions = getSpellCheckerSuggestions(currentWord)
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                "ENSPELL",
-                "[GET] getSpellCheckerSuggestions() returned ${spellSuggestions.size} suggestions",
-            )
+        logger.debug(TAG) {
+            "[GET] getSpellCheckerSuggestions() returned ${spellSuggestions.size} suggestions"
         }
 
         return if (spellSuggestions.isNotEmpty()) {
             spellSuggestions.map { EnglishSuggestion(text = it) }
         } else {
             // 無建議時，至少回傳當前輸入
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[GET] No suggestions, returning empty list")
+            logger.debug(TAG) { "[GET] No suggestions, returning empty list" }
             emptyList()
         }
     }
@@ -187,30 +166,25 @@ class EnglishAutocompleteService(
      * 從系統 SpellChecker 取得建議
      */
     private suspend fun getSpellCheckerSuggestions(word: String): List<String> {
-        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-GET] getSpellCheckerSuggestions('$word') called")
+        logger.debug(TAG) { "[SPELL-GET] getSpellCheckerSuggestions('$word') called" }
 
         initSpellChecker()
 
         val session = spellCheckerSession
         if (session == null) {
-            if (BuildConfig.DEBUG) {
-                Log.w("ENSPELL", "[SPELL-GET] SpellCheckerSession is null, returning empty")
-            }
+            logger.w(TAG, "[SPELL-GET] SpellCheckerSession is null, returning empty")
             return emptyList()
         }
 
-        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-GET] Session available, calling suspendCoroutine...")
+        logger.debug(TAG) { "[SPELL-GET] Session available, calling suspendCoroutine..." }
 
         return try {
             kotlinx.coroutines.withTimeout(2000L) {
                 // 2秒超時
                 suspendCoroutine { continuation ->
                     pendingSuggestions = { suggestions ->
-                        if (BuildConfig.DEBUG) {
-                            Log.d(
-                                "ENSPELL",
-                                "[SPELL-CALLBACK] Received ${suggestions.size} suggestions",
-                            )
+                        logger.debug(TAG) {
+                            "[SPELL-CALLBACK] Received ${suggestions.size} suggestions"
                         }
                         continuation.resume(suggestions)
                     }
@@ -218,29 +192,22 @@ class EnglishAutocompleteService(
                     try {
                         // 使用 getSentenceSuggestions 檢查單一詞彙
                         val textInfo = TextInfo(word)
-                        if (BuildConfig.DEBUG) {
-                            Log.d(
-                                "ENSPELL",
-                                "[SPELL-GET] Calling session.getSentenceSuggestions()...",
-                            )
+                        logger.debug(TAG) {
+                            "[SPELL-GET] Calling session.getSentenceSuggestions()..."
                         }
                         session.getSentenceSuggestions(arrayOf(textInfo), MAX_SUGGESTIONS)
 
-                        if (BuildConfig.DEBUG) {
-                            Log.d("ENSPELL", "[SPELL-GET] getSuggestions() called, waiting for callback...")
+                        logger.debug(TAG) {
+                            "[SPELL-GET] getSuggestions() called, waiting for callback..."
                         }
                     } catch (e: Exception) {
-                        if (BuildConfig.DEBUG) {
-                            Log.e("ENSPELL", "[SPELL-GET] Failed to call getSuggestions", e)
-                        }
+                        logger.e(TAG, "[SPELL-GET] Failed to call getSuggestions", e)
                         continuation.resume(emptyList())
                     }
                 }
             }
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            if (BuildConfig.DEBUG) {
-                Log.w("ENSPELL", "[SPELL-GET] Timeout waiting for spell checker callback")
-            }
+            logger.w(TAG, "[SPELL-GET] Timeout waiting for spell checker callback")
             emptyList()
         }
     }
@@ -270,9 +237,7 @@ class EnglishAutocompleteService(
         spellCheckerSession = null
         pendingSuggestions = null
 
-        if (BuildConfig.DEBUG) {
-            Log.d("ENSPELL", "[SPELL] SpellCheckerSession closed")
-        }
+        logger.debug(TAG) { "[SPELL] SpellCheckerSession closed" }
     }
 }
 

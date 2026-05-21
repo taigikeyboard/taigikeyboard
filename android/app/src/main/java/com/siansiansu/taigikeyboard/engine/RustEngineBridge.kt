@@ -5,7 +5,6 @@
 
 package com.siansiansu.taigikeyboard.engine
 
-import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
@@ -65,12 +64,12 @@ import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
  *
  * Per Codex v2 §8 + v3 §7 + v4 §5: error visibility is hardened. Failures
  * increment a counter and append a structured `DiagnosticsEntry` to a
- * 32-entry bounded queue (synchronized). DEBUG additionally calls
- * `Log.e` for logcat traceability — NEVER throws (would kill IME
- * mid-keystroke).
+ * 32-entry bounded queue (synchronized). DEBUG additionally surfaces the
+ * failure via `installedBackend.e` for logcat traceability — NEVER throws
+ * (would kill IME mid-keystroke).
  *
  * 中文: 失敗一律不丟例外(否則會中斷打字),改記入 32-entry diagnostics 環狀佇列;
- *       DEBUG 同時打 Log.e 方便 logcat 追蹤。
+ *       DEBUG 同時透過 facade .e 打 logcat 方便追蹤。
  */
 object RustEngineBridge {
     init {
@@ -79,6 +78,12 @@ object RustEngineBridge {
 
     @Volatile
     private var installedBackend: LoggerBackend = NullLoggerBackend
+
+    /** Sibling-bridge accessor for `LexiconBridge` / `CaseTransformBridge` —
+     *  same backend the JNI layer routes through. Read-only; mutation goes
+     *  through [install]. */
+    internal val backend: LoggerBackend
+        get() = installedBackend
 
     @Volatile
     private var installed: Boolean = false
@@ -2020,11 +2025,12 @@ object RustEngineBridge {
             }
             recentErrors.addLast(entry)
             installedBackend.w("RustEngineBridge", "[$op] $message")
-            // Codex v3 §7 / v4 §5: in DEBUG also surface to logcat. No
-            // throw — would kill the IME mid-keystroke.
-            if (DEBUG) {
-                Log.e("RustEngineBridge", "[$op] $message")
-            }
+            // Codex v3 §7 / v4 §5: also surface as error severity for logcat
+            // traceability. The facade is itself DEBUG-gated (release builds
+            // emit zero output per `security-rules.md` zero-logs contract),
+            // so no outer `if (DEBUG)` guard is required. No throw — would
+            // kill the IME mid-keystroke.
+            installedBackend.e("RustEngineBridge", "[$op] $message")
         }
     }
 

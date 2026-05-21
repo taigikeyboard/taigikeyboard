@@ -1,10 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import android.util.Log
 import android.view.View
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 
 /**
  * Manages toolbar UI interactions extracted from SmartbarManager.
@@ -14,6 +14,7 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
  */
 class ToolbarManager(
     private val prefs: PrefHelper,
+    private val logger: LoggerBackend,
     private val smartbarViewProvider: () -> SmartbarView?,
     private val candidateOverlayViewProvider: () -> CandidateOverlayView?,
     private val layoutSelectionOverlayViewProvider: () -> LayoutSelectionOverlayView?,
@@ -298,7 +299,7 @@ class ToolbarManager(
     fun updateActiveContainerVisibility() {
         val smartbarView = smartbarViewProvider() ?: return
 
-        if (BuildConfig.DEBUG) {
+        logger.debug(TAG) {
             val containerName =
                 when (activeContainerId) {
                     R.id.number_row -> "number_row"
@@ -307,7 +308,7 @@ class ToolbarManager(
                     R.id.toolbar_container -> "toolbar_container"
                     else -> "unknown($activeContainerId)"
                 }
-            Log.d(TAG, "[DEBUG] updateActiveContainerVisibility: $containerName")
+            "[DEBUG] updateActiveContainerVisibility: $containerName"
         }
 
         val allContainers =
