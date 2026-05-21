@@ -1,10 +1,15 @@
 //! v3.5.8 連續輸入 (Continuous Input) Phase 5 — span-local candidate fetch.
 //!
-//! Given a **canonical-TL ASCII** input, a starting byte position, and a
-//! list of valid syllable-end byte offsets (produced by
-//! `composing::syllabifier::tl::valid_span_endings`), return all
-//! dictionary candidates whose toneless TL key equals `input[pos..end]`
-//! for some `end` in `endings`. Each candidate is scored via
+//! Given a **mode-canonical ASCII** input (TL ASCII for TL/English, POJ
+//! ASCII for POJ — both upstream-canonicalized via
+//! `composing::shadow::canonicalize_poj_shadow`; v3.5.9 B-2 PR #309
+//! promoted POJ to a first-class FST key family so the POJ-mode shadow
+//! preserves POJ ASCII instead of folding to TL), a starting byte
+//! position, and a list of valid syllable-end byte offsets (produced
+//! by `composing::syllabifier::tl::valid_span_endings`), return all
+//! dictionary candidates whose toneless key (`<prefix>:<toneless>` with
+//! `prefix ∈ {tl, poj}`) equals `input[pos..end]` for some `end` in
+//! `endings`. Each candidate is scored via
 //! [`ranking::calculate_continuous_score`] and tagged with the consumed
 //! byte span and syllable count so the UI can decide what to commit.
 //!
@@ -23,34 +28,46 @@
 //!
 //! # Contracts
 //!
-//! - **`input` MUST be canonical TL ASCII** (lowercase or mixed-case).
-//!   POJ → TL canonicalization happens upstream via
-//!   `phonetics::canonicalize_syllable`. **TPS Bopomofo input is NOT
-//!   directly accepted here** — `tps::valid_span_endings` operates on
-//!   the raw Bopomofo string and produces TPS byte offsets, which would
-//!   not form valid `tl:` FST keys. Phase 6 will introduce the TPS →
-//!   TL key mapping at the dispatch boundary; this module remains TL-
-//!   only.
+//! - **`input` MUST be mode-canonical ASCII** (lowercase or mixed-case):
+//!   TL ASCII under TL/English mode, POJ ASCII under POJ mode. Both
+//!   forms reach this module after upstream canonicalization in
+//!   `composing::shadow::canonicalize_poj_shadow` — that helper is now
+//!   mode-aware (v3.5.9 B-2 PR #309) and per-syllable
+//!   `phonetics::canonicalize_syllable` / `canonicalize_poj_syllable`
+//!   handle build-pipeline and helper-level normalization. **TPS
+//!   Bopomofo input is NOT directly accepted here** — `tps::valid_span_endings`
+//!   operates on the raw Bopomofo string and produces TPS byte offsets,
+//!   which would not form valid `tl:` / `poj:` FST keys. The Phase 6
+//!   dispatcher maps TPS → numeric-tone TL via `phonetics::tps_to_tl`
+//!   and emits `tl:` keys at the dispatch boundary; TPS remains scoped
+//!   to the TL family pending the C round (TPS first-class promotion).
 //! - `endings` SHOULD be ascending UTF-8 char boundaries within
 //!   `input[pos..]`. Out-of-range or non-boundary endings are silently
 //!   skipped (matches the syllabifier's safe contract).
 //! - `enabled_sources_bitmask` follows the same wire format as
 //!   `lexicon::search()` — bit 12 = variant gate, bit 9 = khiin gate,
 //!   bits 0..=11 = per-source enables, `u32::MAX` = all sources on.
-//! - `user_freq_boost` is multiplicative (`1.0` = no boost). Caller MUST
-//!   pass a finite, non-negative `f32`. Non-finite (`NaN` / `±∞`) values
-//!   are coerced to `0.0` so the descending-score ordering guarantee
-//!   holds (see `fetch_candidates_for_endings` impl). Caller composes
-//!   the boost from the platform-side `user_frequency.db` (see
-//!   `feedback_user_data_sqlite_stays_native`).
+//! - User-frequency input is plumbed through [`ContinuousFetchCtx`] —
+//!   `freq_map` (per-`display_text` `FrequencyData` keyed by `hanji ?? tl`)
+//!   plus `now_ms` (platform epoch-ms). The engine derives
+//!   `user_freq_boost(count)` per candidate inside the (private)
+//!   `record_to_candidate` / `custom_entry_to_candidate` helpers using
+//!   `BOOST_ALPHA`/`MAX_BOOST` from `ranking::score` (v3.5.8 Phase 9.3a);
+//!   platform-side `user_frequency.db` stays native per
+//!   `feedback_user_data_sqlite_stays_native`. Cold-start safe defaults
+//!   = `&FrequencyMap::new()` + `now_ms = 0` (boost = 1.0, recency_rank
+//!   = 1 everywhere).
 //!
 //! # Ordering
 //!
-//! Returned candidates are sorted by `score` descending; ties keep
-//! insertion order (first by `endings` order, then by `prefix_index`
-//! rowid order — `lookup_exact` is deterministic per build). The
-//! comparator coerces `NaN` scores to `-∞` so even a contract-violating
-//! caller cannot break the ordering invariant.
+//! Returned candidates are sorted by the 8-dimensional
+//! `SortKey` (v3.5.8 Phase 9.1 + S8 dim-3→6 coverage demote)
+//! documented at [`fetch_candidates_for_keys`]; `calculate_continuous_score`
+//! provides only one of those dimensions. Within-tier ties keep
+//! insertion order (`endings` order, then `prefix_index` rowid order —
+//! `lookup_exact` is deterministic per build). The comparator coerces
+//! `NaN` scores to `f32::MIN` so even a contract-violating boost cannot
+//! break the ordering invariant.
 //!
 //! # Phase 6 boundary
 //!
@@ -58,13 +75,19 @@
 //! (`ContinuousResponse` / `CandidateMessage` in `composing.proto`) and
 //! the dispatch wiring (`composing/src/dispatch.rs::handle_fetch_at_pos`),
 //! plus the TPS → TL key mapping that runs at the dispatch boundary
-//! before calling [`fetch_candidates_for_keys`]. The earlier
-//! `fetch_candidates_for_endings` entry remains the TL/POJ path
-//! (canonical TL ASCII inputs only).
+//! before calling [`fetch_candidates_for_keys`]. v3.5.9 D7+D8 (#306)
+//! made `fetch_candidates_for_keys` the sole production entry — TL/POJ
+//! span-local lookup is composed in `composing::continuous::fetch_via_lexicon_inner`
+//! (mode-aware `<prefix>:<toneless>` keys via
+//! `composing::shadow::mode_key_prefix`) and TPS goes through
+//! `composing::continuous::build_keys_tps`. The legacy
+//! `fetch_candidates_for_endings` wrapper is `#[doc(hidden)]` and now
+//! exists only so the integration tests under `engine/lexicon/tests/`
+//! keep working without rebuilding `(span, key)` pairs inline.
 
 // 中文: v3.5.8 連續輸入 Phase 5 — 多 span 候選查詢入口。
-// 中文: 對 endings 中的每個 end 以 input[pos..end] 為 toneless TL key 查 FST,
-// 中文:   把每個命中包成 RawCandidate 並用 ContinuousScore 公式打分後 desc 排序回傳。
+// 中文: 對 endings 中的每個 end 以 input[pos..end] 為 toneless key 查 FST(mode-aware
+// 中文:   前綴 `tl:` / `poj:`),把每個命中包成 RawCandidate 並用 ContinuousScore 公式打分後 desc 排序回傳。
 
 use std::cmp::Reverse;
 
@@ -77,11 +100,13 @@ use ranking::{
 };
 
 /// `RawCandidate.form` discriminator. Phase 5 only emits notone candidates
-/// because span-local lookup is always over `tl:<toneless>` keys
-/// (`docs/roadmap.md:312`); Phase 6+ may extend with hanzi (0) / numeric
-/// (2) / abbrev (3) when proto-side carriers exist (Codex pre-impl
-/// review 2026-05-10 Fork 5 ACCEPT).
+/// because span-local lookup is always over `<prefix>:<toneless>` keys
+/// (`prefix ∈ {tl, poj}` after v3.5.9 B-2 PR #309 promoted POJ to a
+/// first-class FST family; `docs/roadmap.md:312`); Phase 6+ may extend
+/// with hanzi (0) / numeric (2) / abbrev (3) when proto-side carriers
+/// exist (Codex pre-impl review 2026-05-10 Fork 5 ACCEPT).
 // 中文: Phase 5 唯一支援的 form 標籤 (notone);其他 form 留給 Phase 6+。
+// 中文: B-2 後 toneless key 前綴 mode-aware (`tl:` / `poj:`),但 form 標籤本身仍只一種。
 pub const FORM_NOTONE: u8 = 1;
 
 /// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
@@ -199,9 +224,10 @@ pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawCandidate {
     /// Byte span `(start, end)` in the original input that this candidate
-    /// consumes on commit. `start` always equals the `pos` passed to
-    /// [`fetch_candidates_for_endings`]; `end` is one of the offsets in
-    /// `endings`.
+    /// consumes on commit. `start` always equals the `pos` plumbed
+    /// through [`fetch_candidates_for_keys`] (the production entry; the
+    /// test-only [`fetch_candidates_for_endings`] wrapper preserves the
+    /// same contract); `end` is one of the offsets in `endings`.
     // 中文: 此候選 commit 時消耗的 byte 區間 (start = pos,end ∈ endings)。
     pub consumed_span: (u32, u32),
     /// Number of TL syllables in the matched dictionary entry, copied
@@ -396,10 +422,12 @@ pub struct ContinuousFetchCtx<'a> {
 /// rustdoc public surface no longer advertises it.
 ///
 /// Internally a thin wrapper around [`fetch_candidates_for_keys`]: it
-/// maps each `end` to a `(consumed_span, "tl:<lowered>")` pair. TPS
-/// callers must NOT use this entry — they go through the Phase-6
-/// dispatcher path that builds keys via `phonetics::tps_to_tl` and
-/// calls [`fetch_candidates_for_keys`] directly.
+/// maps each `end` to a `(consumed_span, "<prefix>:<lowered>")` pair
+/// with `prefix ∈ {tl, poj}` selected per `mode` (v3.5.9 B-2 PR #309
+/// promoted POJ to a first-class FST key family). TPS callers must NOT
+/// use this entry — they go through the Phase-6 dispatcher path that
+/// builds keys via `phonetics::tps_to_tl` and calls
+/// [`fetch_candidates_for_keys`] directly.
 ///
 /// **v3.5.8 Phase 9.3a**: `ctx.freq_map` carries the per-display-text
 /// user selection snapshot keyed by `RawCandidate::display_text`
@@ -506,12 +534,18 @@ pub type ConsumedSpan = (u32, u32);
 /// Mode-agnostic span-local fetch entry. Each input pair is
 /// `(consumed_span, fst_key)`: `consumed_span` is the user-facing
 /// byte range that committing this candidate will eat, and `fst_key`
-/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"`). The
-/// caller (Phase 6 dispatcher) is responsible for building keys from
-/// the user input — TL/POJ path goes through
-/// [`fetch_candidates_for_endings`]; TPS path uses
-/// `phonetics::tps_to_tl` per syllable, strips the trailing tone
-/// digit, and prepends `"tl:"`.
+/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"` for TL/English
+/// or `"poj:chiah"` for POJ — v3.5.9 B-2 PR #309 promoted POJ to a
+/// first-class FST key family). The production caller
+/// (`composing::continuous::fetch_via_lexicon_inner`) selects the
+/// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
+/// pairs in directly; TPS goes through `composing::continuous::build_keys_tps`,
+/// which converts each Bopomofo span via `phonetics::tps_to_tl`, strips
+/// the trailing tone digit, and prepends `"tl:"` (TPS still rides the
+/// TL family pending the C round). The legacy
+/// [`fetch_candidates_for_endings`] wrapper is `#[doc(hidden)]`
+/// (v3.5.9 D7+D8 #306) and exists only for the integration tests under
+/// `engine/lexicon/tests/`.
 ///
 /// # v3.5.8 Phase 9.1 — lexicographic SortKey
 ///
@@ -959,12 +993,18 @@ fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
 ///      records as either `gín-á-lâng` (hyphenated) or `iā sī`
 ///      (space-separated; 998 rows in `dictionary.csv` have spaces) —
 ///      Codex pre-impl BLOCK caught the hyphen-only split.
-///   3. Per-token encoding-only normalize: NFD-walk, drop the 8 POJ /
-///      TL combining tone marks (`U+0300, U+0301, U+0302, U+0304,
-///      U+0306, U+030B, U+030C, U+030D`), lowercase. Concat tokens.
-///   4. Apply [`phonetics::NORMALIZE_TO_POJ_RULES`] over the
-///      concatenated surface (`ou→oo`, `o\u{0358}→oo`, `\u{207f}→nn`,
-///      `\u{1d3a}→nn`), then strip any leaked ASCII digits.
+///   3. **Per token**: NFD-walk, drop the 8 POJ / TL combining tone
+///      marks (`U+0300, U+0301, U+0302, U+0304, U+0306, U+030B,
+///      U+030C, U+030D`), lowercase, then apply
+///      [`phonetics::NORMALIZE_TO_POJ_RULES`] (`ou→oo`,
+///      `o\u{0358}→oo`, `\u{207f}→nn`, `\u{1d3a}→nn`) and strip any
+///      ASCII digits the normalize stage emits.
+///   4. Concatenate the per-token results into the final body.
+///
+/// Step 3's normalize MUST run **per token before concat**, not over
+/// the concatenated surface — see [`derive_poj_notone_for_match`]'s
+/// own contract (`ou→oo` would mis-fire across hyphen boundaries on
+/// `tó-uī → toui`; concat-then-normalize would drift to `tooi`).
 ///
 /// Encoding-only — no phonotactic gating — because that is what the
 /// build pipeline does. A phonotactic gate (Codex post-impl SHOULD #1)

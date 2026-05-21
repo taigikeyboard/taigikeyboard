@@ -12,10 +12,14 @@
 //! dispatch only handles the phase/hanzi/position guards, the proto →
 //! domain hoists (`mode`, `freq_map`, `custom`), and wire encoding.
 //!
-//! The mode-aware key construction (TL/POJ → `tl:<lowered>`; TPS →
-//! `phonetics::tps_to_tl` per Bopomofo span → strip trailing tone
-//! digit → `tl:<toneless>`) lives in `composing::continuous` per the
-//! Phase 5 module contract pinned in `engine/lexicon/src/continuous.rs`.
+//! The mode-aware key construction lives in `composing::continuous`
+//! per the Phase 5 module contract pinned in
+//! `engine/lexicon/src/continuous.rs`: TL/English emit `tl:<lowered>`,
+//! POJ emits `poj:<lowered>` (v3.5.9 B-2 PR #309 promoted POJ to a
+//! first-class FST key family via `composing::shadow::mode_key_prefix`),
+//! TPS rides the TL family via `phonetics::tps_to_tl` per Bopomofo span
+//! → strip trailing tone digit → `tl:<toneless>` (TPS first-class
+//! promotion is the C round, intentionally out of scope here).
 
 // 中文: 將 protobuf ComposingRequest 解碼成 Intent,套用到 Engine 後產出回應。
 // 中文: 純函式分派層,不處理 generation 同步 (那由 EngineHandle 負責)。
@@ -178,19 +182,23 @@ fn handle_fetch_at_pos(
     // detection used in `engine/composing/src/derived.rs:17`).
     let is_tps = contains_tps(raw);
     // Input mode is parsed here (ahead of the seam) because two
-    // downstream behaviors are mode-gated: (a) the POJ→TL canonicalize
-    // step inside the shadow pipeline (toneless pure-ASCII POJ
-    // `chiah`/`chhia`/`goa` must fold POJ spelling into TL or every
-    // ch-/oa-/oe- word yields zero continuous candidates; TL ASCII
-    // must keep the identity fast-path — the F3C `tó-uī`→`toui` gate
-    // in `canonicalize_poj_shadow`); (b) the POJ presentation pass
-    // at step 5 of the seam. Unlike TPS-vs-TL (which
+    // downstream behaviors are mode-gated: (a) the mode-aware
+    // canonicalize step inside the shadow pipeline — POJ mode keeps
+    // POJ ASCII (`chiah` stays `chiah`) so the lattice resolves it
+    // against the POJ family of the tagged-single-FST (`poj:chiah`),
+    // while TL/English mode keeps TL ASCII via the F3C `tó-uī`→`toui`
+    // identity fast-path in `canonicalize_poj_shadow`. Pre-B-2 the POJ
+    // branch folded into TL ASCII so every ch-/oa-/oe- word required
+    // POJ→TL canonicalization to hit the FST; B-2 PR #309 promoted POJ
+    // to a first-class FST key family and dropped the fold; (b) the POJ
+    // presentation pass at step 5 of the seam. Unlike TPS-vs-TL (which
     // `config.input_mode` cannot make because platform builders
     // legacy-map TPS→`"tl"`), POJ-vs-TL IS reliable from config
     // (builders map POJ→`"poj"`). TPS routes through `build_keys_tps`
     // in the seam so the POJ-gated paths never reach it.
     // 中文: input mode 提前 parse — shadow canonicalize 與 POJ render 都需 mode-gate;
-    // 中文:   無調號純 ASCII POJ 須摺成 TL,否則 ch-/oa-/oe- 連續候選全空;TL ASCII 維持 identity(F3C gate)。
+    // 中文:   B-2 PR #309 後 POJ 模式保 POJ ASCII (`chiah` 不再摺為 `tsiah`),lattice
+    // 中文:   走 tagged-single-FST 的 `poj:` 家族;TL/English 模式 TL ASCII 維持 identity (F3C gate)。
     // v3.5.9 B-0c — `mode` flows directly into `assemble_candidates`;
     // the seam derives the POJ-vs-TL branch via `mode == InputMode::Poj`
     // internally (was a separate `is_poj: bool` arg pre-B-0c).

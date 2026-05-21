@@ -3,9 +3,12 @@
 //! Two domain-specific entry points:
 //! - `tl::valid_span_endings` — BFS-with-FST over a `SyllableInventory`,
 //!   returning every byte offset reachable from `pos` by a chain of 1..=
-//!   `max_syllables` valid TL syllables. Caller must supply already-
-//!   canonicalized TL ASCII input (POJ→TL normalization happens upstream
-//!   via `phonetics::canonicalize_syllable`).
+//!   `max_syllables` valid syllables. Caller must supply input already
+//!   canonicalized for the chosen mode (TL ASCII for TL/English via
+//!   `phonetics::canonicalize_syllable`; POJ ASCII for POJ via
+//!   `phonetics::canonicalize_poj_syllable` — v3.5.9 B-1 added the POJ
+//!   axis and B-2 made the inventory mode-aware via
+//!   `SyllableInventory::contains_in(mode, ...)`).
 //! - `tps::valid_span_endings` — O(n) scan over Bopomofo Extended tone
 //!   marks + entering-coda small letters + 8th-tone combining/encode-safe
 //!   dots (unambiguous terminators per `docs/roadmap.md` line 95), plus
@@ -14,9 +17,14 @@
 //!   tone-1 endings; no dispatcher post-processing.
 //!
 //! Both functions return `Vec<usize>` of ascending, deduplicated byte
-//! offsets — the contract Phase 5's `lexicon::fetch_candidates_for_endings`
-//! consumes. They never panic on partial UTF-8 or out-of-range `pos`;
-//! see each entry's `pos` validation contract.
+//! offsets. In production these endings flow into
+//! `composing::continuous::assemble_candidates`, which builds the
+//! mode-aware `<prefix>:<toneless>` keys (`tl:` / `poj:`) and calls
+//! `lexicon::fetch_candidates_for_keys` directly. The legacy
+//! `lexicon::fetch_candidates_for_endings` wrapper that used to consume
+//! these `Vec<usize>` is now `#[doc(hidden)]` test-only after v3.5.9
+//! D7+D8 (#306). The scanners never panic on partial UTF-8 or
+//! out-of-range `pos`; see each entry's `pos` validation contract.
 //!
 //! Design choice (`docs/roadmap.md` line 203): multi-cut, span-local
 //! lookup is the middle ground between khiin-rs pure longest-match

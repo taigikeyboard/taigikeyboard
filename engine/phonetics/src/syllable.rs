@@ -50,15 +50,23 @@ pub fn strip_tone_mark(text: &str) -> (String, String) {
 }
 
 /// Ordered POJ→TL substitution rules consumed by [`normalize_to_tl`]. v3.5.9 A1
-/// D2 export — the offset-aware mirror `composing::shadow::apply_normalize_to_tl_with_offsets`
-/// iterates this same list, so the two implementations cannot drift. Order is
-/// meaningful: `oonn` collapses into `onn` only after `oo` substitutions have
-/// already happened, mirroring the JS source. Scoped to `normalize_to_tl` only
-/// — `is_stop_tone`'s own `.replace("nn", "")` is a separate helper and is
-/// intentionally NOT folded in.
-// 中文: D2 — POJ→TL 取代規則的單一順序表;composing::shadow 的 offset-aware 版本同步
-// 中文:   消費此 list,兩端不會漂移。順序有意義(oonn 必須在 oo 之後);is_stop_tone
-// 中文:   的 .replace("nn","") 是另一個 helper,刻意不併入。
+/// D2 export — the offset-aware mirror `composing::shadow::apply_normalize_with_offsets`
+/// iterates this same list when invoked with `NORMALIZE_TO_TL_RULES`
+/// (TL / English / TPS mode in the runtime shadow), so the two
+/// implementations cannot drift on the TL fold. v3.5.9 B-2 PR #309
+/// added `NORMALIZE_TO_POJ_GLYPH_RULES` as a sibling input to the same
+/// mirror for POJ-mode runtime shadow; the two lists do not commute
+/// (POJ-glyph subset deliberately omits the `ou→oo` alias and the
+/// `ch→ts`/`oa→ua`/`eng→ing`/`ek→ik` chain), so this contract only
+/// pins TL-side parity. Order is meaningful: `oonn` collapses into `onn`
+/// only after `oo` substitutions have already happened, mirroring the
+/// JS source. Scoped to `normalize_to_tl` only — `is_stop_tone`'s own
+/// `.replace("nn", "")` is a separate helper and is intentionally NOT
+/// folded in.
+// 中文: D2 — POJ→TL 取代規則的單一順序表;composing::shadow::apply_normalize_with_offsets
+// 中文:   套此 list 即 TL 模式 offset-aware 版本,兩端在 TL 軸不漂移。v3.5.9 B-2 PR #309
+// 中文:   後 POJ 模式 runtime shadow 改吃 NORMALIZE_TO_POJ_GLYPH_RULES,兩 list 不可換,本契約只守 TL 軸。
+// 中文:   順序有意義(oonn 必須在 oo 之後);is_stop_tone 的 .replace("nn","") 是另一個 helper,刻意不併入。
 pub const NORMALIZE_TO_TL_RULES: &[(&str, &str)] = &[
     ("ch", "ts"),
     ("ou", "oo"),

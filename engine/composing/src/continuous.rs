@@ -211,37 +211,48 @@ fn render_roman_for_mode(roman: &str, mode: phonetics::InputMode) -> String {
 
 /// v3.5.8 — collapse continuous candidates that became identical only
 /// after the POJ render. The pre-render `(roman, hanji, consumed_span)`
-/// dedupe (`lexicon::dedupe_by_roman_hanji_span`) keys on the raw
-/// stored romanization, so a custom entry stored in POJ display form
-/// (`gô͘`) and a `dict.bin` entry in TL (`gôo`) sharing one hanji + span
-/// both survive it, then [`render_roman_for_mode`] renders both to
-/// `gô͘` → a visible duplicate. First-wins keeps the earlier row, so
-/// the prepended whole-sentence best candidate at index 0 is never
-/// dropped. It is behavior-neutral whenever `hanji` is `Some`: the
-/// collision key pins the same hanji and `display_text` (the commit /
+/// dedupe (`lexicon::dedupe_by_roman_hanji_span`) keys on the **raw**
+/// stored romanization without canonicalization, so a hanji-bearing
+/// custom entry stored in POJ display form (`roman = "gô͘"`,
+/// `hanji = Some("吳")`) and a `dict.bin` entry in TL (`roman = "gôo"`,
+/// `hanji = Some("吳")`) sharing one consumed span both survive it,
+/// then [`render_roman_for_mode`] rewrites both `roman` fields to
+/// the POJ display form (`gô͘`) and produces a visible duplicate.
+/// `dedupe_rendered_continuous` collapses that visible duplicate; the
+/// `HashSet::retain` first-wins rule keeps whichever row sits earlier
+/// in the **current candidate vector** at the moment this fn runs
+/// (post-sort, post whole-sentence prepend), so the prepended
+/// best-walk-path candidate at index 0 is never dropped. It is
+/// behavior-neutral whenever `hanji` is `Some`: the collision key
+/// pins the same hanji and `display_text` (the commit /
 /// `user_frequency.db` key) is that hanji for BOTH the custom and the
 /// `dict.bin` candidate, so which row survives cannot change what
 /// commits.
 ///
-/// **v3.5.9 B-4 closed the romanization-only asymmetry.** Pre-B-4 the
-/// hanji-absent custom-after-dict collision could leave the
-/// `display_text` as the dict-TL row's form while the custom row's
-/// raw `entry.roman` was still POJ — a frequency-key granularity nuance.
-/// `lexicon::custom_entry_to_candidate` now folds the fallback through
-/// `phonetics::api::canonical_tl_form`, so both sides write the same
-/// canonical TL freq key regardless of which row this dedupe surfaces.
-/// This dedupe stays as defensive coverage for the post-render visible
-/// duplicate; future B-7 cleanup may retire it once the canonicalization
-/// proves out via on-device dogfood. Called in the POJ branch only —
-/// for TL/English/TPS the render is identity so the pre-render dedupe
-/// already settled every key.
+/// **v3.5.9 B-4 closed the romanization-only (hanji-absent) freq-key
+/// asymmetry but NOT this hanji-bearing visible-duplicate axis.**
+/// Pre-B-4 the hanji-absent custom-after-dict collision could leave the
+/// `display_text` as the dict-TL row's form while the custom row's raw
+/// `entry.roman` was still POJ — a frequency-key granularity nuance
+/// that `lexicon::custom_entry_to_candidate` now closes by folding the
+/// fallback through `phonetics::api::canonical_tl_form`. B-4
+/// deliberately leaves `entry.roman` raw (the walker / `custom_toneless_key`
+/// need it in the user's native form so POJ-family lattice keys match
+/// against POJ-form custom roman per `composing::shadow::custom_toneless_key`),
+/// which means the hanji-bearing custom-vs-dict-POJ-form collision
+/// still slips past pre-render dedupe and lands here. This dedupe is
+/// load-bearing in steady state, not transitional. Called in the POJ
+/// branch only — for TL/English/TPS the render is identity so the
+/// pre-render dedupe already settled every key.
 // 中文: POJ render 後才相等的候選去重(custom 存 POJ `gô͘` vs dict TL `gôo`,
-// 中文:   同 hanji+span 過不了 TL 拼寫的 pre-render 去重,render 後皆 `gô͘`)。
-// 中文:   first-wins → index 0 整句最佳候選不被丟。hanji 存在時行為中性。
+// 中文:   同 hanji+span 過不了 raw `roman` 的 pre-render 去重,render 後皆 `gô͘`)。
+// 中文:   first-wins 取「執行時當下候選向量」中較前者(post-sort、post 整句 prepend),
+// 中文:   故 index 0 整句最佳候選不被丟。hanji 存在時行為中性。
 // 中文:   B-4 已關掉 romanization-only(hanji==None)子情境的 freq-key 不一致:
-// 中文:   lexicon::custom_entry_to_candidate 走 canonical_tl_form,custom 與 dict
-// 中文:   兩端寫同一 canonical TL freq key。本 dedupe 留為 post-render 視覺去重
-// 中文:   兜底(B-7 dogfood 後再考慮退役)。只在 POJ 分支呼叫。
+// 中文:   lexicon::custom_entry_to_candidate 走 canonical_tl_form。但 B-4 刻意保留 entry.roman
+// 中文:   原樣(walker / custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵),
+// 中文:   故 hanji-bearing 的 custom-vs-dict-POJ-form 視覺重複仍需此 post-render dedupe 兜底。
+// 中文:   穩態 load-bearing,非過渡兜底。只在 POJ 分支呼叫。
 fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     use std::collections::HashSet;
     let mut seen: HashSet<(String, Option<String>, ConsumedSpan)> =

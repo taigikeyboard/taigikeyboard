@@ -1,4 +1,7 @@
-// Pure shadow pipeline — POJ→TL canonicalize, hyphen strip, lattice build, and derived span / partial-prefix / custom-key helpers.
+// Pure shadow pipeline — mode-aware canonicalize (POJ→POJ ASCII under POJ
+// mode, POJ→TL ASCII under TL/English mode; v3.5.9 B-2 PR #309), hyphen
+// strip, lattice build, and derived span / partial-prefix / custom-key
+// helpers.
 
 use lexicon::{ConsumedSpan, SyllableInventory};
 use phonetics::InputMode;
@@ -316,16 +319,19 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 
 /// v3.5.8 S6 (Codex pre-impl S6 Q2, 2026-05-17, BLOCK condition) —
 /// derive the walker lattice-edge match key for a
-/// `custom_dictionary.db` entry's romanization, or `None` when it is
-/// not TL-shaped.
+/// `custom_dictionary.db` entry's romanization, or `None` when the
+/// derived form does not land in `[a-z]+` after canonicalization.
 ///
 /// MUST produce a key byte-identical to the one
 /// `continuous::fetch_walker_slot0_inner`'s edge provider builds for a
-/// syllable span (`tl:{toneless}`, where `toneless` is the
-/// hyphen-stripped, POJ-canonicalized, tone-digit-stripped shadow
-/// slice). It therefore reuses the **same three shadow helpers in the
-/// same order** — [`canonicalize_poj_shadow`] → [`build_hyphen_shadow`]
-/// → [`strip_ascii_tone_digits`] — as the single normalization source.
+/// syllable span (`<prefix>:{toneless}` with `prefix ∈ {tl, poj}` per
+/// `mode_key_prefix(mode)`; v3.5.9 B-2 PR #309 promoted POJ to a
+/// first-class FST key family, pre-B-2 every key prefixed `tl:`).
+/// `toneless` is the hyphen-stripped, mode-canonicalized,
+/// tone-digit-stripped shadow slice. This helper therefore reuses the
+/// **same three shadow helpers in the same order** —
+/// [`canonicalize_poj_shadow`] → [`build_hyphen_shadow`] →
+/// [`strip_ascii_tone_digits`] — as the single normalization source.
 /// Codex pre-impl S6 Q2 **BLOCK**ed a plain `strip_ascii_tone_digits`:
 /// it cannot fold a POJ/diacritic custom roman (`tâi-uân`, `tâi-gí`)
 /// into `taiuan` / `taigi`; the canonicalize pass is load-bearing. The
@@ -337,18 +343,21 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 /// resolved after the edge is chosen, never an edge key — the lattice
 /// is keyed by toneless romanization spans. Returns `None` for an
 /// empty result or any residue outside ASCII `a..=z`: punctuation /
-/// CJK / digit-only / non-TL custom roman can never equal a
-/// syllabifier-built lattice edge key, so it simply stays a span-local
-/// candidate and never enters the walker.
+/// CJK / digit-only custom roman, or a POJ-shape token that does not
+/// canonicalize cleanly, can never equal a syllabifier-built lattice
+/// edge key, so it simply stays a span-local candidate and never
+/// enters the walker.
 ///
 /// `mode` MUST be the same value `continuous::fetch_walker_slot0_inner`
-/// passes to [`build_shadow_lattice`] for this fetch: the
-/// canonicalize step is mode-gated (toneless ASCII POJ folds `ch→ts`
-/// only when `mode == InputMode::Poj`), so a mismatch would make a
-/// custom roman key `tl:chiah` while the lattice edge keys `tl:tsiah`,
-/// silently breaking the S6 byte-identity match.
-// 中文: 由 custom_dictionary.db entry 的羅馬字推導 walker lattice-edge 比對 key(非 TL-shaped → None)。
-// 中文: 必須與 edge provider 的 tl:{toneless} byte-identical → 重用同一組 shadow helper 同順序。
+/// passes to [`build_shadow_lattice`] for this fetch: the canonicalize
+/// step is mode-gated — TL/English mode folds POJ→TL (`ch→ts`,
+/// `oa→ua`, ...) and emits `tl:`, POJ mode keeps POJ ASCII (no fold)
+/// and emits `poj:`. A mismatch would make a custom roman key
+/// `poj:chiah` while the lattice edge keys `tl:tsiah` (or the
+/// converse), silently breaking the S6 byte-identity match.
+// 中文: 由 custom_dictionary.db entry 的羅馬字推導 walker lattice-edge 比對 key(canonicalize 後不落 [a-z]+ → None)。
+// 中文: 必須與 edge provider 的 <prefix>:{toneless} byte-identical(B-2 後 prefix ∈ {tl, poj})→
+// 中文:   重用同一組 shadow helper 同順序、共用同一 mode。
 pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
     let lower = roman.to_ascii_lowercase();
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
@@ -438,7 +447,8 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 ///   legitimately consumes only `pe` raw bytes and leaves `\u{207f}`
 ///   pending; the user's deliberate tap on the shorter candidate
 ///   opted into that.
-// 中文: POJ-display 輸入 → 純 ASCII 標準 TL 拼寫,並建立 canonical byte → raw byte 對照表。
+// 中文: POJ-display 輸入 → 該模式 FST 家族對應的 ASCII 拼寫(POJ 模式→POJ ASCII,TL 模式→TL ASCII;v3.5.9 B-2 PR #309),
+// 中文:   並建立 canonical byte → raw byte 對照表。
 pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) {
     if input.is_ascii() {
         // Identity offset map: Phase 1's NFD walk is a no-op for ASCII,
@@ -556,14 +566,20 @@ fn is_tone_combining_mark(c: char) -> bool {
 /// Apply an ordered list of `(find, replace)` rules with offset-map
 /// maintenance, returning the mutated string + updated map. v3.5.9 B-2
 /// generalization of the pre-B-2 `apply_normalize_to_tl_with_offsets`:
-/// the caller now passes the rule list (either
-/// [`phonetics::NORMALIZE_TO_TL_RULES`] or [`phonetics::NORMALIZE_TO_POJ_RULES`]),
-/// making `canonicalize_poj_shadow` mode-aware without duplicating the
+/// the caller now passes the rule list. The two production rule lists
+/// reaching this entry are [`phonetics::NORMALIZE_TO_TL_RULES`]
+/// (TL / English / TPS mode) and [`phonetics::NORMALIZE_TO_POJ_GLYPH_RULES`]
+/// (POJ mode — the glyph-only subset of `NORMALIZE_TO_POJ_RULES` without
+/// the `ou→oo` alias, which would mis-fire across syllable boundaries
+/// at whole-buffer scope; see B-2 PR #309 Codex P1 `r3276402303`). This
+/// makes `canonicalize_poj_shadow` mode-aware without duplicating the
 /// offset-map maintenance loop. Same in-order iteration + same patterns
 /// as the rule lists in `phonetics::syllable`; non-shrinking rules
 /// leave the offset map invariant, shrinking rules drain the dropped
 /// trailing byte's map entry instead of producing a new `String`.
-// 中文: B-2 — 將代換鏈 + offset-map 維護泛化,呼叫端傳 rule list (TL 或 POJ);
+// 中文: B-2 — 將代換鏈 + offset-map 維護泛化,呼叫端傳 rule list;
+// 中文:   TL/English/TPS 用 NORMALIZE_TO_TL_RULES,POJ 模式用 NORMALIZE_TO_POJ_GLYPH_RULES
+// 中文:   (glyph-only,不含 ou→oo 別名,whole-buffer 跨音節安全);
 // 中文:   shrinking 規則由 offset_aware_replace 處理 map 收縮,其餘規則 map invariant。
 pub(crate) fn apply_normalize_with_offsets(
     s: String,
@@ -581,7 +597,7 @@ pub(crate) fn apply_normalize_with_offsets(
 /// Walk `s` left-to-right, replacing every occurrence of `find` with
 /// `repl`, and update `map` so each post-replacement byte still points
 /// at the correct original-input `raw_end`. Used by
-/// [`apply_normalize_to_tl_with_offsets`].
+/// [`apply_normalize_with_offsets`].
 ///
 /// Semantics:
 /// - Equal-length replacements (`ch→ts`, `oa→ua`, ...) leave `map`
