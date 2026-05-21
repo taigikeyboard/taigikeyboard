@@ -249,7 +249,7 @@ pub fn recency_rank(now_ms: i64, last_used_ms: i64) -> u8 {
 /// the weight decays to `1/e ≈ 0.37` after τ and to `0.5` after
 /// `τ · ln 2 ≈ 20.8 days` for the τ = 30-day default. Named for the
 /// mathematical role rather than "half-life" to keep the formula
-/// honest (`rules/ai-friendly-code.md` naming). 30 days is the right
+/// honest (`~/.claude/rules/ai-friendly-code.md` naming). 30 days is the right
 /// initial shape for an IME: strong over days, meaningful over weeks,
 /// noticeably stale over months. **Dogfood-tunable in 14..=90 days**
 /// (Codex pre-impl S3 Q4a, 2026-05-16) — kept a named constant, not a

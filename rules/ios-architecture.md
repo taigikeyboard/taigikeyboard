@@ -6,6 +6,8 @@ Mandatory architectural contract for the iOS target. Read before any non-trivial
 
 **Phase context**: shared-core extraction roadmap is tracked in Claude auto-memory (`project_shared_core_roadmap.md`, not in-repo); the per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`. iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. Phase I and Phase II audit docs (ios-exemplar-plan, android-state-audit) have been retired post-completion.
 
+**Split note**: Shared-core candidate criteria + marker live in `rules/ios-shared-core-candidates.md`. Settings-injection wiring lives in `rules/ios-settings-injection.md`.
+
 ---
 
 ## 1. Module Layers
@@ -116,99 +118,7 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 
 ---
 
-## 4. Shared-Core Candidates
-
-"Shared-core candidate" = a file eligible for future cross-platform extraction (iOS ↔ Android). Marking a file is a **contract** about its dependencies, not a promise to extract it.
-
-### Criteria — ALL must hold
-
-1. Only `import Foundation` (no `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`).
-2. No global singleton dependency (no `SharedSettings.shared`, no `KeyboardSettings.store`, no `*.shared` access).
-3. No DB / App Group container / `FileManager` / file-system access — data is injected.
-4. No app-specific URL generation (e.g., `iTaigi://...`, `moedict://...`) or external service integration.
-5. No platform side effects — no `NotificationCenter` observers, no `Timer`, no `DispatchQueue.main`, no `OperationQueue`.
-6. No `@Published`, no `ObservableObject`, no `@MainActor` on type declarations.
-
-### Marking
-
-Every file that satisfies the criteria begins with:
-
-```swift
-// MARK: - Shared-Core Candidate
-// Pure logic, Foundation-only. Eligible for cross-platform extraction.
-```
-
-Files that are engine-layer but **do not** qualify should begin with a one-line `// NOTE: Not shared-core — <reason>` comment so the audit state stays visible at the top of the file.
-
-### Candidate roster
-
-**Authoritative inventory: `docs/engine/migration-inventory.csv`** (148 rows, 13-col schema). Filter `status=rust_shipped` for already-migrated items; `native_pending` / `native_keep` for residual platform candidates; `wont_migrate` for explicit exclusions (UI / SQLite user-data / KeyboardKit wrappers / etc.). Do not re-enumerate here — update the CSV and point back.
-
-### Exclusions, soft dependencies, verification
-
-`migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Lexicon Database/* SQLite, Services/* glue, KeyboardKit wrappers, URL builders, App-Group / FileManager paths). Per-criterion enforcement is documented in §4 above; running the original verification greps against `Foundation`-only candidate files still applies but the candidate set is the live `native_pending` / `native_keep` filter on the CSV.
-
-Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., `CandidateProcessor` documents that it does *not* use `SharedSettings.shared`; `EnginePrediction` documents that it does *not* `import KeyboardKit`).
-
----
-
-## 5. Settings Injection
-
-### Rule
-
-Engine-layer code **MUST NOT** read `SharedSettings.shared` directly. It reads from an injected `EngineSettingsProvider` instead.
-
-### Definition
-
-```swift
-// Settings/EngineSettings.swift (Foundation-only)
-public protocol EngineSettings {
-    var inputMode: InputMode { get }
-    var isAutoSpaceEnabled: Bool { get }
-    var isOutputBothScripts: Bool { get }
-    var isFrequencyRecordingEnabled: Bool { get }
-    var isAutoCap: Bool { get }
-    // ... add as needed, never everything
-}
-
-// Settings/EngineSettingsProvider.swift (Foundation-only)
-public protocol EngineSettingsProvider: AnyObject {
-    var current: EngineSettings { get }
-    func addChangeListener(_ listener: @escaping () -> Void) -> AnyObject  // token for removal
-}
-```
-
-`SharedSettings.shared` conforms to `EngineSettingsProvider`. Its `current` returns a `SettingsSnapshot` (value type) captured at the moment of access. `addChangeListener` hooks into the existing `UserDefaults.didChangeNotification` plumbing.
-
-### Why provider, not snapshot
-
-`KeyboardViewController`, `AutocompleteService`, `ComposingManager`, and several views rely on `UserDefaults.didChangeNotification` + lazy re-read of `SharedSettings.shared` to implement **live updates** — when the user changes a setting in the host app, the keyboard extension reflects it without being relaunched.
-
-A one-shot snapshot injection (inject once at init, store the value) **breaks this invariant**: input mode switches, TPS toggles, enabled-dictionary toggles would stop propagating. `TaigiKeyboardView` today uses a per-render snapshot (it re-reads on every render cycle), which is a different pattern and remains safe.
-
-### Usage
-
-| Context                                   | Access pattern                                     |
-|-------------------------------------------|----------------------------------------------------|
-| Engine service (`LexiconService`, etc.)   | `provider.current` at each call site               |
-| Engine value-type operation               | Receive `EngineSettings` as a parameter            |
-| UI view                                   | `@ObservedObject var settings = SharedSettings.shared` (app / platform layer only) |
-| Keyboard extension entry (`KeyboardViewController`) | Constructs the provider, injects into engine     |
-| Unit test                                 | Inject a stub `EngineSettingsProvider`             |
-
-### Change sync regression test (mandatory)
-
-Every phase that touches settings wiring must verify:
-
-1. Launch app, open keyboard extension, confirm current setting value is used.
-2. Without relaunching the keyboard, change the setting in the host app.
-3. Interact with the keyboard again — the new setting must be applied.
-
-Settings requiring this check: `inputMode`, `isAutoSpaceEnabled`, `isOutputBothScripts`, `isFrequencyRecordingEnabled`, `isAutoCap`, enabled-dictionaries set, TPS layout toggle.
-
----
-
-## 6. Naming Conventions
+## 4. Naming Conventions
 
 ### Files
 
@@ -244,24 +154,26 @@ Folder names align with `TabType` enum cases and UI-visible titles, not sub-file
 
 ---
 
-## 7. Per-Change Audit Checklist
+## 5. Per-Change Audit Checklist
 
 Apply to any non-trivial structural change:
 
-- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker)
+- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker) — see `rules/ios-shared-core-candidates.md`
 - [ ] No Engine-layer file imports `KeyboardKit` / `UIKit` / `SwiftUI` / `Combine`
-- [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store`
-- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard)
+- [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store` — see `rules/ios-settings-injection.md`
+- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard) — see `rules/ios-settings-injection.md` § Change sync regression test
 - [ ] File names match primary types; no `_` prefix, no numeric folders
 
 ---
 
-## 8. References
+## 6. References
 
 - `rules/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
+- `rules/ios-shared-core-candidates.md` — criteria + marker for files eligible for cross-platform extraction
+- `rules/ios-settings-injection.md` — `EngineSettingsProvider` wiring for live-read settings
 - `rules/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
 - `rules/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
-- `rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
-- `rules/code-review-rules.md` — review checklist
+- `~/.claude/rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
+- `~/.claude/rules/code-review-rules.md` — review checklist
 - `docs/architecture/ios-exemplar.md` — Phase II alignment target for Android
 - `docs/engine/migration-inventory.csv` — authoritative Rust slice inventory + native pending / keep / wont-migrate roster

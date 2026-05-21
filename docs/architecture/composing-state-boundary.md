@@ -461,5 +461,5 @@ Tracked under `rules/cross-platform-alignment.md` §1b tier; not scheduled in Ph
 - iOS boundary contract: §§1–10 above.
 - A4-impl shipped via Phase II Round A4 (Android binding addendum); engine logic now in Rust `engine/composing` (since v3.5.4).
 - Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
-- Android guidelines (IME, DI, coroutines): `rules/android-guidelines.md` §§4, 5, 8.
+- Android guidelines (DI, coroutines): `rules/android-guidelines.md` §§4, 5; IME-specific rules: `rules/android-ime-patterns.md` §2.
 - `clearPreeditWithoutCommit` test label: see §8 of this doc and `behavioral-invariants.md` §13 (full Composing-buffer reset semantics + cross-platform test mapping).

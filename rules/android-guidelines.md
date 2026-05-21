@@ -1,10 +1,10 @@
 # Android Project Guidelines
 
-Mandatory rules for Android development. Read before modifying Android code.
+Mandatory rules for Android development. Core architecture + Kotlin idioms + DI + DataStore + null/error handling + Gradle. UI / IME-specific patterns / testing / refactor-round checklist live in `rules/android-ime-patterns.md`.
 
 **Three goals** every rule below serves at least one of:
 
-- **R — Rust-friendly**: reduce future friction when shared-core slices move to a Rust crate (Phase IV-A onward)
+- **R — Rust-friendly**: reduce future friction when shared-core slices move to a Rust crate (Phase IV-B closed 2026-05-05; criteria still binding for residual `native_pending` / `native_keep` files)
 - **B — Best practice**: Kotlin / Android idiomatic code
 - **A — Anti-regression**: reduce "fix A, break B" outcomes during refactor rounds
 
@@ -12,7 +12,7 @@ Each rule is tagged with one or more of `[R]`, `[B]`, `[A]`.
 
 ## 1. Shared-core candidate rules `[R]`
 
-Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `rules/ios-architecture.md` §4 — same criteria, Kotlin-translated.
+Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `rules/ios-shared-core-candidates.md` — same criteria, Kotlin-translated.
 
 1. Imports Kotlin stdlib only. Forbidden: `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`, `com.squareup.moshi.*`.
 2. No `object` with mutable state, no `companion object` state, no reflection, no Moshi / serialization.
@@ -104,61 +104,14 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 - Cross-process / cross-lifecycle settings updates (IME extension ↔ host app) travel via DataStore Flow collection in `TaigiKeyboard.onCreate`, not via a notification broadcast.
 - SharedPreferences → DataStore migration runs once in `TaigiKeyboard.onCreate`. Do not add new SharedPreferences writes in new code.
 
-## 7. Compose patterns `[B]`
-
-- `remember { … }` for UI-only state that survives recomposition but not configuration change.
-- `rememberSaveable { … }` when the state should survive process death (e.g. user input in a form).
-- `collectAsStateWithLifecycle(initial)` — preferred over `collectAsState` for Flow observation in Compose. Pauses collection when the lifecycle stops, avoiding unnecessary recomposition.
-- State hoisting — stateless `@Composable` functions take state + callbacks as parameters. Stateful versions delegate to the stateless version.
-- `derivedStateOf { … }` for computed state that depends on multiple observable sources.
-- Side-effect APIs choose by scope:
-  - `LaunchedEffect(key)` — coroutine bound to composition, restarts on key change.
-  - `DisposableEffect(key)` — setup + teardown pair (listeners, subscriptions).
-  - `SideEffect` — synchronous side effect on every recomposition.
-- ViewModel owns async; View invokes ViewModel methods. No `LaunchedEffect { viewModelScope.launch { … } }` inside a Compose function.
-
-## 8. IME-specific rules `[B]` `[A]`
-
-- `InputConnection.finishComposingText()` **commits the composing region by default.** To honor "clear without commit" semantics, call `setComposingText("", 1)` **before** `finishComposingText()`. Documented in `docs/architecture/ios-exemplar.md` §4.1 and `docs/architecture/composing-state-boundary.md` §2.2 (Android mapping addendum is A4-design deliverable).
-- All `InputConnection` calls on `Dispatchers.Main.immediate` — Android IME requires main-thread for InputConnection.
-- `InputMethodService.onStartInput` / `onFinishInput` bracket per-input-session state — reset composing context here, not in `onCreate` / `onDestroy`.
-- `LifecycleInputMethodService` provides a `Lifecycle` + `ViewModelStore`. Scoped ViewModels inside the IME use the service's `ViewModelStoreOwner`, not a plain `androidx.lifecycle.ViewModel()` (which has no owner).
-- FlorisBoard-derived code (keyboard view hierarchy, layout JSON loaders) is **platform**, not shared-core. Do not try to purify it.
-
-## 9. Testing `[B]` `[A]`
-
-Cross-platform test naming + assertion conventions follow `rules/ios-guidelines.md` "Test Conventions"; Android-specific additions only here.
-
-- JUnit 4 — project default (see existing `app/src/test/java/.../ime/dictionary/*Test.kt`). Do not mix JUnit 5.
-- Turbine (`app.cash.turbine`) for Flow assertions — pattern `flow.test { … }`.
-- `kotlinx-coroutines-test` — `runTest { … }` block with injectable `TestDispatcher` for time-controlled tests.
-- `INVARIANT_*` function-name prefix for cross-platform-invariant tests; labels match `docs/architecture/behavioral-invariants.md` (policy: `rules/cross-platform-alignment.md` §3a).
-- Tests must be runnable via `./gradlew test` (wired into `testImplementation` in the test source set).
-
-## 10. Nullability + errors `[B]` `[R]`
+## 7. Nullability + errors `[B]` `[R]`
 
 - Forbidden: `!!` in production code. Use `requireNotNull(x) { "explanation" }` at the boundary where null is a programmer error, or `x ?: return` / `x ?: error("…")` when null is a runtime condition.
 - At module boundaries inside shared-core candidates, prefer `Result<T>` or `sealed class Outcome { class Success(val value: T); class Failure(val reason: String) }` over nullable returns. Nullable types map poorly to Rust's `Option<T>` across FFI.
 - Java exceptions do not cross shared-core boundaries. Catch and convert to `Outcome` / `Result` at the edge. Rust has `Result<T, E>`, not `throw`.
 - No `try { … } catch (e: Exception) { /* swallow */ }`. At minimum, log via `LoggerBackend` and return a typed failure.
 
-## 11. Refactor-round checklist `[A]`
-
-Durable checklist for every Android refactor PR:
-
-- [ ] Refactor-freeze observed per `rules/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
-- [ ] Codex + `/simplify` pre-review on plan before implementation (per `rules/claude-workflow.md` §Review Before Implementation). `/simplify` is the Claude Code official skill — run in parallel with Codex to catch reuse / quality / dead-code issues Codex does not flag.
-- [ ] Codex post-review on diff before merge.
-- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round.
-- [ ] Invariant tests stay green.
-- [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `rules/cross-platform-alignment.md` §3a).
-- [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.
-
-**Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`). The Phase II state-audit doc has been retired post-completion.
-
-During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
-
-## 12. Kotlin extension shadowing rule `[B]`
+## 8. Kotlin extension shadowing rule `[B]`
 
 When a receiver class already exposes a member function `fun X(...)`, a top-level extension `fun Receiver.X(...)` with the **same name** is unreachable — Kotlin resolution always picks the member first, regardless of argument-type compatibility.
 
@@ -168,7 +121,7 @@ When a receiver class already exposes a member function `fun X(...)`, a top-leve
 
 Incident: A1 follow-up on PR #145 — extension `fun LoggerBackend.d(tag, msg: () -> String)` shadowed member `fun d(tag, msg: String)`; build failed across 33 call-sites with `Function0<String> but String was expected`. Renaming to `debug` fixed it.
 
-## 13. Gradle files editable by Claude `[B]`
+## 9. Gradle files editable by Claude `[B]`
 
 `android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** (lifted 2026-05-09 — CLAUDE.md rule 4 previously grouped gradle with pbxproj, but gradle edits are routine: plugin wiring, dep bumps, lint config).
 
@@ -176,15 +129,16 @@ Incident: A1 follow-up on PR #145 — extension `fun LoggerBackend.d(tag, msg: (
 - ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `rules/ios-guidelines.md`).
 - After gradle edits, surface what changed in plain text and remind the user that an Android Studio Gradle sync is needed.
 
-## 14. References
+## 10. References
 
+- `rules/android-ime-patterns.md` — companion: Compose, IME-specific patterns, testing, refactor-round checklist
 - Companion documents on the iOS side: `rules/ios-guidelines.md` (day-to-day), `rules/ios-architecture.md` (structural).
 - Cross-platform behavior contract: `rules/cross-platform-alignment.md`.
 - Architectural target: `docs/architecture/ios-exemplar.md` (the contract Android Phase II aligns toward).
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Invariants to preserve: `docs/architecture/behavioral-invariants.md`.
-- Code review checklist: `rules/code-review-rules.md`.
-- Naming + comment rules (cross-platform): `rules/ai-friendly-code.md`.
+- Code review checklist: `~/.claude/rules/code-review-rules.md`.
+- Naming + comment rules (cross-platform): `~/.claude/rules/ai-friendly-code.md`.
 - Security: `rules/security-rules.md` (logging guards, SQL binding, Android exported-component rules).
 - UI style: `rules/ui-style-guide.md`.
-- Claude Opus 4.7 workflow tuning: `rules/claude-workflow.md`.
+- Claude Opus 4.7 workflow tuning: `~/.claude/rules/claude-workflow.md`.

@@ -538,7 +538,7 @@ Recommendation: **B**. Cleaner review boundaries; Finding 1 can land first as a 
 
 ## 10. Out-of-Scope (YAGNI guards)
 
-Per [`feedback_no_future_planning.md`](../../knowledge/feedback) and [`rules/rust-best-practices.md`](../../rules/rust-best-practices.md) §non-goals:
+Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations/blob/main/claude/rules/planning.md) § No future-version planning and [`rules/rust-best-practices.md`](../../rules/rust-best-practices.md) §8:
 
 - **No** `CandidateMode`-based rendering rules — Phase 9.2 mode is metadata-only; cell shape is decided by `hanji` presence (mirrors lexicon path)
 - **No** new `display_strategy` / `display_hints` proto field — single roman + hanji pair is sufficient

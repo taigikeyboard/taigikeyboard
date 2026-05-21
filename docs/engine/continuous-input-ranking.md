@@ -661,7 +661,7 @@ Durable re-grounding of the fix plan in a future session: re-run the Codex consu
 | `docs/roadmap.md` | Active item v3.5.8 § Phase 5 deferred / § Phase 6 limitations / § Phase 9 |
 | `docs/architecture/behavioral-invariants.md` | §11 live-read settings (relevant for Q2 above) |
 | `rules/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
-| `rules/rust-best-practices.md` | §3a domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
+| `rules/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
 | `feedback_no_future_planning.md` | Why §8/§9 here record the limitation but do not schedule a fix |
 | `feedback_no_slice_toggles.md` | Why no `useContinuousV2` toggle is proposed |
 | `references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java` | MOE native ranking entry point |

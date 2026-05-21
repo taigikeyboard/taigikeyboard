@@ -1,6 +1,10 @@
 # CLAUDE.md
 
-Guidelines for **Claude Code** in this repo. Generic personal defaults (cross-project) live in `~/.claude/CLAUDE.md`; **repo-critical agent rules are mirrored here and under `rules/` for clone portability** — a fresh clone on any machine restores the same AI environment.
+Guidelines for **Claude Code** in this repo. Two-repo AI environment:
+
+- **Cross-project process rules** (workflow, planning, diagnosis, review, naming, docs authoring) live in `~/.claude/rules/` — managed by the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo and symlinked in by **that repo's `setup.sh`**. **Required external dependency**: clone `configurations` + run its `setup.sh` before working in this repo on a fresh machine.
+- **Project-specific rules** (Taigi phonetics, iOS/Android/Rust engine specifics, cross-platform parity, dual-platform UI, Rust migration policy, Taigi incident appendix) live in `rules/` here.
+- **Personal defaults** (theme, response style, Codex usage, Opus 4.7 tuning) live in `~/.claude/CLAUDE.md` (also from `configurations`).
 
 ## Project Overview
 
@@ -29,29 +33,29 @@ taigikeyboard/
 2. **Cross-platform alignment** — align on **intended behavior**, not API calls: define expected behavior, verify each platform independently, document when the same behavior needs different implementations.
 3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules (or "dead" phonetic tables from test/dictionary absence); read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` first. Full read-order in `rules/phonetics.md`.
 4. **Bugfix = confirm root cause before fixing** — for any bug fix, first carefully trace and verify the root cause (cite `file:line`, evidence), present it to the user, and **wait for explicit approval**. Do NOT create a branch, edit code, or implement until the user agrees the root cause is correct. Diagnosis and fixing are separate, sequential, user-gated steps.
-5. **Release scope / timing / tag = user-gated** — never decide what is in/out of vX, never tag something "deferred / post-vX / known limitation / ready to tag" without the user's explicit dated word. Full rule in `rules/diagnosis-discipline.md`. Present work factually (cost, options, trade-offs); never assign or exclude scope yourself.
+5. **Release scope / timing / tag = user-gated** — never decide what is in/out of vX, never tag something "deferred / post-vX / known limitation / ready to tag" without the user's explicit dated word. Full rule in `~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope; Taigi incident in `rules/taigi-incidents.md`. Present work factually (cost, options, trade-offs); never assign or exclude scope yourself.
 
 ## Mandatory Rules
 
-Read the listed file **before** the matching work — these override defaults.
+**Cross-project process rules** (workflow, planning, diagnosis, code review, naming, docs authoring, Claude interaction) auto-load from `~/.claude/rules/` via the `configurations` repo symlinks. Don't duplicate them here.
+
+**Project-specific rules** below override defaults — read the listed file **before** the matching work.
 
 | Before… | Read |
 |---|---|
-| any non-trivial task | `rules/claude-workflow.md` |
-| writing/modifying any code | `rules/ai-friendly-code.md` |
-| starting, continuing, or wrapping a coding round | `rules/round-workflow.md` |
-| writing a plan / design doc / architectural proposal | `rules/planning.md` |
-| opening a bug-fix round, writing test asserts, or framing "current behavior" claims | `rules/diagnosis-discipline.md` |
-| reviewing code | `rules/code-review-rules.md` |
 | a change affecting iOS/Android parity | `rules/cross-platform-alignment.md` |
 | modifying iOS code (structural → also architecture) | `rules/ios-guidelines.md` (+ `ios-architecture.md`) |
-| modifying Android code | `rules/android-guidelines.md` |
+| marking a file as iOS Shared-Core Candidate or changing the candidate roster | `rules/ios-shared-core-candidates.md` |
+| modifying iOS Settings wiring (`SharedSettings`, `EngineSettingsProvider`, live-read regressions) | `rules/ios-settings-injection.md` |
+| modifying Android code (core architecture, Kotlin idioms, DI, DataStore) | `rules/android-guidelines.md` |
+| modifying Android Compose / IME-specific code, testing, or a refactor-round PR | `rules/android-ime-patterns.md` |
 | modifying app UI | `rules/ui-style-guide.md` |
 | adding logging / SQL / network / storage | `rules/security-rules.md` |
-| Rust engine code or FFI/proto docs | `rules/rust-best-practices.md` |
+| Rust engine code (general hygiene, workspace, errors, crates, tests) | `rules/rust-best-practices.md` |
+| Rust FFI / proto boundary code, `unsafe` blocks, opaque handles, enforcement | `rules/rust-ffi-safety.md` |
 | starting a Rust slice migration / platform→engine swap / `.proto` addition / mirror-source delete | `rules/rust-migration-policy.md` |
 | any TL/POJ/TPS schema, FST key-family, encoding, or canonical-form work | `rules/phonetics.md` |
-| writing or editing user-facing docs (`README.md`, `CHANGELOG.md`, `content/**`, FAQ) | `rules/docs-authoring.md` |
+| revisiting a global rule and wanting the concrete Taigi "why" | `rules/taigi-incidents.md` |
 | adding or changing a call to / contract with a framework/OS API (KeyboardKit, `UIInputViewController`/`UITextDocumentProxy`, `InputMethodService`/`InputConnection`/`EditorInfo`, Jetpack Compose, DataStore) — not trivial edits to framework-adjacent code | `rules/doc-lookup.md` — verify the current API via `find-docs`/`ctx7` (or local `references/KeyboardKit-Documentation/`) **before** coding; never from model memory |
 | writing a 最佳實踐對齊 section, claiming "Project X does Y", or designing a segmentation / lattice / ranking / user-freq / syllabifier / predictive / next-word / continuous-input slice | `docs/references/mainstream-ime-comparison.md` first (TL;DR matrix + topic index → drill into per-repo cards; do **not** re-explore `references/` from scratch) |
 
