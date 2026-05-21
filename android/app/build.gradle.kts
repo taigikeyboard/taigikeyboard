@@ -118,6 +118,41 @@ kotlin {
     }
 }
 
+// B10 step 1 — Compose compiler stability config + opt-in metrics/reports.
+// Always-on: feed the (currently empty) stability config so the Compose
+// compiler has a stable hook point. Step 2 will fill the file after a report
+// pass justifies each entry. Opt-in: emit stability / metrics reports under
+// `app/build/compose_compiler/` only when invoked with
+// `-PenableComposeCompilerReports=true`. Default builds (debug & release)
+// produce a byte-identical APK to pre-B10; the only delta is that Kotlin
+// compile-task cache keys change because the Compose compiler plugin now
+// always receives a `stabilityConfigurationPath` option, even when the
+// pointed-at file is comment-only. Runtime / packaged behaviour unchanged.
+//
+// Usage (release recommended for accurate stability — debug reports include
+// dev-only paths that mislead decisions):
+//
+//   ./gradlew :app:assembleRelease -PenableComposeCompilerReports=true
+//
+// References:
+//   - https://developer.android.com/develop/ui/compose/compiler
+//   - https://developer.android.com/develop/ui/compose/performance/stability/diagnose
+//   - https://kotlinlang.org/api/kotlin-gradle-plugin/compose-compiler-gradle-plugin/
+composeCompiler {
+    // Plural `stabilityConfigurationFiles` is the Kotlin 2.1+ API (singular
+    // `stabilityConfigurationFile` is deprecated). This repo's Gradle root is
+    // `android/`, so the file resolves to `android/app/compose_compiler_config.conf`.
+    stabilityConfigurationFiles.add(
+        rootProject.layout.projectDirectory.file("app/compose_compiler_config.conf"),
+    )
+
+    if (project.findProperty("enableComposeCompilerReports") == "true") {
+        val composeCompilerOutput = layout.buildDirectory.dir("compose_compiler")
+        reportsDestination = composeCompilerOutput
+        metricsDestination = composeCompilerOutput
+    }
+}
+
 // 設定輸出檔名：TaigiKeyboard-{versionName}-{yyyyMMdd}
 // 例如：TaigiKeyboard-3.3.9-20251231-release.aab
 base {
