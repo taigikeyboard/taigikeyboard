@@ -1,5 +1,7 @@
 // 中文: PrefHelper — 同時實作 EngineSettings / EngineSettingsProvider 兩介面,作為 IME 設定的 single live-read entry。
-// 中文: 後端用 androidx.datastore.preferences,自帶 warmUp() 快取與 pending-keys merge logic。
+// 中文: 後端用 androidx.datastore.preferences,cache + collector 為 process-wide companion state;
+// 中文: Application.onCreate 呼叫 warmUp() 之後,後續任何 ctor (ViewModel / Activity) 都共用同一份已 warmed cache,
+// 中文: 不會再撞到 Main thread runBlocking fallback。
 // 中文: Engine 端永遠 live-read,不做快照(對齊 iOS SharedSettings.swift)。
 
 package com.siansiansu.taigikeyboard.ime.core
@@ -17,10 +19,13 @@ import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -30,6 +35,42 @@ class PrefHelper(
     EngineSettingsProvider {
     companion object {
         private const val TAG = "PrefHelper"
+
+        // The DataStore backend at `Context.preferencesDataStore` is already a
+        // process-wide singleton, so multiple `PrefHelper(ctx)` instances all
+        // read the same persistent store. We mirror that by hoisting the
+        // in-memory cache + pending-write overlay + collector launch into the
+        // companion. Result: Application.onCreate calls `prefs.warmUp()` once,
+        // and every later ctor (Settings activities, dictionary ViewModels)
+        // sees the already-populated cache — the `cached()` runBlocking
+        // fallback never fires on the Main thread in production.
+
+        @Volatile
+        private var cachedPrefs: Preferences? = null
+
+        // Pending-keys guard: tracks keys written to cache but not yet confirmed by DataStore.
+        // Prevents the collector from reverting local writes with stale DataStore snapshots.
+        private val lock = Any()
+        private val pendingKeys = mutableMapOf<Preferences.Key<*>, Any?>()
+
+        // Guards warmUp() — synchronous monitor (not AtomicBoolean) so the
+        // initial DataStore read completes before any other caller observes
+        // `collectorStarted = true`. Without this gate, a second caller could
+        // see "warmed" while `cachedPrefs` is still null and fall through to
+        // the Main-thread runBlocking fallback.
+        private val warmUpLock = Any()
+        private var collectorStarted = false
+
+        // SupervisorJob: one child failure (e.g. an unexpected DataStore I/O
+        // error in the collector) does not cancel the whole scope, so write
+        // launches keep working even if the read collector dies.
+        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+        // Collector retry budget: surface DataStore I/O failures via Log.e on
+        // each attempt, give up after this many consecutive failures so the
+        // log does not spam forever on a permanently-broken DataStore.
+        private const val MAX_COLLECTOR_RETRIES = 3L
+        private const val COLLECTOR_RETRY_DELAY_MS = 1_000L
 
         // Appearance default values — single source of truth for getters, reset, and UI
         const val DEFAULT_KEY_HEIGHT_SCALE = 1.0f
@@ -41,51 +82,77 @@ class PrefHelper(
         const val DEFAULT_COLOR_SETTINGS = "{}"
     }
 
-    private val dataStore = context.preferencesDataStore
-    private val scope = CoroutineScope(Dispatchers.IO)
-
-    @Volatile
-    private var cachedPrefs: Preferences? = null
-
-    // Pending-keys guard: tracks keys written to cache but not yet confirmed by DataStore.
-    // Prevents the collector from reverting local writes with stale DataStore snapshots.
-    private val lock = Any()
-    private val pendingKeys = mutableMapOf<Preferences.Key<*>, Any?>()
+    // Always resolve via the application context: `Context.preferencesDataStore`
+    // returns the same process-wide singleton DataStore regardless of receiver,
+    // but using `applicationContext` here removes any risk of a non-Application
+    // first-warm-up path capturing an Activity context indirectly.
+    private val dataStore = context.applicationContext.preferencesDataStore
 
     /**
-     * Load all preferences into memory cache with a single DataStore read.
-     * Call once during TaigiKeyboard.onCreate() to replace multiple runBlocking calls.
+     * Load all preferences into the process-wide cache with a single DataStore read,
+     * and start the collector that keeps the cache in sync.
+     *
+     * Idempotent: only the first caller does the synchronous read + launches the
+     * collector; subsequent callers return immediately AFTER the cache is populated
+     * (the synchronized block makes the initial load happen-before any other thread
+     * observes `collectorStarted = true`).
+     *
+     * Called by `TaigiKeyboardApplication.onCreate()` once at process start.
      */
     fun warmUp() {
-        cachedPrefs = runBlocking { dataStore.data.first() }
-        // Keep cache in sync when preferences change
-        scope.launch {
-            dataStore.data.collect { prefs ->
-                synchronized(lock) {
-                    if (pendingKeys.isEmpty()) {
-                        // Fast path: no pending writes, accept DataStore snapshot as-is
-                        cachedPrefs = prefs
-                    } else {
-                        // Merge: start from DataStore snapshot, overlay pending values
-                        val mutable = prefs.toMutablePreferences()
-                        for ((key, value) in pendingKeys) {
-                            @Suppress("UNCHECKED_CAST")
-                            if (value != null) {
-                                (mutable as MutablePreferences)[key as Preferences.Key<Any>] = value
+        synchronized(warmUpLock) {
+            if (collectorStarted) return
+            // Localize the DataStore reference into the launched lambda so the
+            // process-lifetime collector does not retain `this` (the PrefHelper
+            // instance) beyond the warm-up call.
+            val ds = dataStore
+            cachedPrefs = runBlocking { ds.data.first() }
+            scope.launch {
+                ds.data
+                    .retryWhen { cause, attempt ->
+                        // Process-wide collector: surface the failure, then retry
+                        // with backoff. After MAX_COLLECTOR_RETRIES exhausted,
+                        // give up and clear `collectorStarted` so a future
+                        // `warmUp()` can re-arm. Cache stays populated with the
+                        // last-good snapshot until then.
+                        if (BuildConfig.DEBUG) {
+                            Log.e(TAG, "DataStore collector failed (attempt=${attempt + 1})", cause)
+                        }
+                        if (attempt >= MAX_COLLECTOR_RETRIES) {
+                            synchronized(warmUpLock) { collectorStarted = false }
+                            false
+                        } else {
+                            delay(COLLECTOR_RETRY_DELAY_MS)
+                            true
+                        }
+                    }.collect { prefs ->
+                        synchronized(lock) {
+                            if (pendingKeys.isEmpty()) {
+                                // Fast path: no pending writes, accept DataStore snapshot as-is
+                                cachedPrefs = prefs
+                            } else {
+                                // Merge: start from DataStore snapshot, overlay pending values
+                                val mutable = prefs.toMutablePreferences()
+                                for ((key, value) in pendingKeys) {
+                                    @Suppress("UNCHECKED_CAST")
+                                    if (value != null) {
+                                        (mutable as MutablePreferences)[key as Preferences.Key<Any>] = value
+                                    }
+                                }
+                                // Prune pending keys that DataStore has caught up to
+                                val iter = pendingKeys.iterator()
+                                while (iter.hasNext()) {
+                                    val (key, pendingValue) = iter.next()
+                                    if (prefs[key] == pendingValue) {
+                                        iter.remove()
+                                    }
+                                }
+                                cachedPrefs = mutable.toPreferences()
                             }
                         }
-                        // Prune pending keys that DataStore has caught up to
-                        val iter = pendingKeys.iterator()
-                        while (iter.hasNext()) {
-                            val (key, pendingValue) = iter.next()
-                            if (prefs[key] == pendingValue) {
-                                iter.remove()
-                            }
-                        }
-                        cachedPrefs = mutable.toPreferences()
                     }
-                }
             }
+            collectorStarted = true
         }
     }
 
@@ -126,6 +193,14 @@ class PrefHelper(
         }
     }
 
+    // Drop every entry in the per-key overlay; intended for callers that wrote
+    // DataStore directly (bypassing `updateCacheAndPersist`) and now need the
+    // collector's next snapshot to install cleanly without stale per-key
+    // masking. See [migrateFromSharedPreferences] / [resetToDefaults].
+    private fun clearPendingOverlay() {
+        synchronized(lock) { pendingKeys.clear() }
+    }
+
     private fun <T> cached(
         key: Preferences.Key<T>,
         default: T,
@@ -134,6 +209,9 @@ class PrefHelper(
         return if (snapshot != null) {
             snapshot[key] ?: default
         } else {
+            if (BuildConfig.DEBUG) {
+                Log.w(TAG, "cached() reached pre-warm fallback for key=${key.name}; check Application.onCreate ordering")
+            }
             runBlocking { dataStore.data.map { it[key] ?: default }.first() }
         }
     }
@@ -630,6 +708,9 @@ class PrefHelper(
     /**
      * Migrates data from SharedPreferences to DataStore.
      * This is called once during the first app launch after update.
+     *
+     * Writes DataStore directly (bypassing `updateCacheAndPersist`), so finishes
+     * by calling [clearPendingOverlay] — see that helper for rationale.
      */
     suspend fun migrateFromSharedPreferences() {
         val sharedPrefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
@@ -695,11 +776,15 @@ class PrefHelper(
                 }
             }
         }
+        clearPendingOverlay()
     }
 
     /**
      * 重置所有設定為預設值
      * 保留內部設定（版本資訊）
+     *
+     * Direct-write counterpart to [migrateFromSharedPreferences]; finishes
+     * by calling [clearPendingOverlay] for the same reason.
      */
     suspend fun resetToDefaults() {
         dataStore.edit { prefs ->
@@ -751,5 +836,6 @@ class PrefHelper(
                 Log.d("PrefHelper", "All preferences reset to defaults")
             }
         }
+        clearPendingOverlay()
     }
 }
