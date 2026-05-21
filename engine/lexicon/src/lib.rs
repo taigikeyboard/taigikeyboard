@@ -37,7 +37,7 @@ pub use continuous::{
     best_candidate_for_key, compound_hanji_exists, derive_mode, fetch_candidates_for_keys,
     fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
     RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
-    PARTIAL_PREFIX_CAP,
+    PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 // v3.5.9 D8 — `fetch_candidates_for_endings` is test-only; production
 // goes through `composing::continuous::fetch_via_lexicon_inner` →

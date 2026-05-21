@@ -36,7 +36,7 @@ use lexicon::{
     best_candidate_for_key, fetch_candidates_for_endings, fetch_candidates_for_keys,
     fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
     RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
-    PARTIAL_PREFIX_CAP,
+    PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
 use ranking::FrequencyMap;
@@ -1038,8 +1038,9 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
 // and `consumed_span = (0, raw.len())`.
 
 /// Convenience: build the partial-prefix key tuple the way
-/// `composing/src/dispatch.rs::build_partial_prefix_key_tl` would for
-/// pure-ASCII input. Hermetic tests at this layer cannot import the
+/// `composing::shadow::build_partial_prefix_key` would for pure-ASCII
+/// input (v3.5.9 B-2 dropped the `_tl` suffix when the emitter became
+/// mode-aware). Hermetic tests at this layer cannot import the
 /// composing crate (cyclic test seam), so we mirror the contract
 /// inline; the composing side's unit tests pin the canonicalize +
 /// hyphen-shadow + tone-digit-strip chain separately.
@@ -1150,13 +1151,15 @@ fn partial_prefix_returns_empty_when_no_dict_hits() {
 }
 
 #[test]
-fn partial_prefix_caps_at_partial_prefix_cap_rowids() {
-    // §15.8 risk row 1 + Codex F6=A — pre-cap before `dict.record`
-    // hydration prevents flood from single-char prefixes. Build a
-    // fixture with `PARTIAL_PREFIX_CAP + 5` `tl:t*` rows so the cap
-    // is exercised. Toneless keys must be unique to land at distinct
+fn partial_prefix_output_caps_at_output_cap() {
+    // §15.8 risk row 1 — bound visible candidate count even when many
+    // FST entries match a single-char prefix. Build a fixture with
+    // `PARTIAL_PREFIX_OUTPUT_CAP + 5` `tl:t*` rows so the post-sort
+    // truncate is exercised (well under `PARTIAL_PREFIX_HYDRATE_CAP`
+    // so every row is hydrated and only the output cap is the
+    // limiter). Toneless keys must be unique to land at distinct
     // rowids; we suffix 2-letter ASCII to keep them inside the fst.
-    let rows: Vec<Row> = (0..(PARTIAL_PREFIX_CAP + 5))
+    let rows: Vec<Row> = (0..(PARTIAL_PREFIX_OUTPUT_CAP + 5))
         .map(|i| {
             // Generate unique 3-char `t` + 2-letter lowercase suffix
             // (`taa`, `tab`, …, `tcz`).
@@ -1171,7 +1174,7 @@ fn partial_prefix_caps_at_partial_prefix_cap_rowids() {
             }
         })
         .collect();
-    let (prefix_index, dict) = build_fixture("item10-cap", &rows);
+    let (prefix_index, dict) = build_fixture("item10-output-cap", &rows);
 
     let key = partial_prefix_key_for("t");
     let out = fetch_partial_prefix_candidates(
@@ -1181,8 +1184,199 @@ fn partial_prefix_caps_at_partial_prefix_cap_rowids() {
     );
     assert_eq!(
         out.len(),
-        PARTIAL_PREFIX_CAP,
-        "partial-prefix output must be capped at PARTIAL_PREFIX_CAP, got {}",
+        PARTIAL_PREFIX_OUTPUT_CAP,
+        "partial-prefix output must be capped at PARTIAL_PREFIX_OUTPUT_CAP, got {}",
+        out.len()
+    );
+}
+
+#[test]
+fn partial_prefix_high_freq_short_candidate_survives_past_legacy_byte_sort_cap() {
+    // R6 regression — the pre-fix `take(PARTIAL_PREFIX_CAP=30)` cap
+    // ran BEFORE hydration, in FST byte-sort order. For input `tl:k`,
+    // the FST front-loaded `tl:ka-*` multi-syllable phrases and
+    // evicted high-frequency single-syllable entries like `tl:ki`
+    // before any SortKey scoring happened. This test pins the fix:
+    // 35 low-freq `ka-XX` rows come first in byte order (rowids 1-35,
+    // all with `frequency = 1`), then 1 high-freq `ki` row at rowid
+    // 36 (`frequency = 50_000`). With HYDRATE_CAP=500 every row is
+    // hydrated, sort runs, and `ki` wins on `-score` / `-freq` even
+    // though it would have been dropped at rowid 31 under the old
+    // pre-cap.
+    //
+    // Goal cited in PR description: "in normal case, 短候選排前面".
+    let mut rows: Vec<Row> = (0..35)
+        .map(|i| {
+            // `ka-aa`, `ka-ab`, …, `ka-bi` — all multi-syllable
+            // phrases sorting BEFORE `ki` in byte order under the
+            // `tl:k` prefix scan.
+            let hi = (b'a' + (i / 26) as u8) as char;
+            let lo = (b'a' + (i % 26) as u8) as char;
+            Row {
+                toneless_key: Box::leak(format!("ka-{hi}{lo}").into_boxed_str()),
+                hanzi: Box::leak(format!("加{i}").into_boxed_str()),
+                tl: Box::leak(format!("ka-{hi}{lo}").into_boxed_str()),
+                syll: 2,
+                freq: 1,
+            }
+        })
+        .collect();
+    // The high-freq single-syllable target — would have been at
+    // byte-rank 36, dropped by the old 30-row pre-cap.
+    rows.push(Row {
+        toneless_key: "ki",
+        hanzi: "基",
+        tl: "ki",
+        syll: 1,
+        freq: 50_000,
+    });
+    let (prefix_index, dict) = build_fixture("r6-short-candidate-survives", &rows);
+
+    let key = partial_prefix_key_for("k");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        1,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
+    );
+    assert!(
+        out.iter().any(|c| c.display_text == "基"),
+        "high-freq `ki` (基) must reach the candidate list even though it sorts \
+         past the legacy byte-rank 30; got {:?}",
+        out.iter().map(|c| &c.display_text).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        out[0].display_text, "基",
+        "high-freq single-syllable `ki` (基) must rank top-1 over freq=1 multi-syllable \
+         phrases; got {:?}",
+        out.iter().map(|c| &c.display_text).collect::<Vec<_>>()
+    );
+    assert!(
+        out.len() <= PARTIAL_PREFIX_OUTPUT_CAP,
+        "output must respect PARTIAL_PREFIX_OUTPUT_CAP, got {}",
+        out.len()
+    );
+}
+
+#[test]
+fn partial_prefix_dedupe_runs_before_output_truncate() {
+    // Pin pipeline order: hydrate → dedupe → sort → truncate. The
+    // existing R6 regression test catches "truncate moved before
+    // sort" (high-freq short candidate evicted by FST byte-sort), but
+    // a duplicate-heavy fixture is needed to also catch "truncate
+    // moved between sort and dedupe" — i.e., a hypothetical refactor
+    // `hydrate → sort → truncate(OUTPUT_CAP) → dedupe` would silently
+    // drop unique survivors when many rows share `(roman, hanji)`.
+    //
+    // Fixture: OUTPUT_CAP dict rows that all hydrate to the SAME
+    // `(roman, hanji)` (distinct toneless_keys `kaa`..`kbd`, all with
+    // `tl = "kaa"` / `hanzi = "加"`) plus 1 UNIQUE row at byte-rank
+    // OUTPUT_CAP under toneless_key `kbe` with `tl = "kbe"` /
+    // `hanzi = "基"`.
+    // Correct order (dedupe → sort → truncate): dedupe collapses the
+    // 30 dupes to 1; output = {"加", "基"} (2 candidates, truncate
+    // no-op).
+    // Broken order (sort → truncate → dedupe): sort puts the 30 dupes
+    // at stable_idx 0..29 ahead of "基" at stable_idx 30; truncate(30)
+    // keeps the dupes and drops "基"; dedupe then collapses to 1.
+    // Output would be {"加"} alone — "基" silently evicted.
+    let cap = PARTIAL_PREFIX_OUTPUT_CAP;
+    let mut rows: Vec<Row> = (0..cap)
+        .map(|i| {
+            // Distinct toneless_keys (`kaa`, `kab`, …) so the FST
+            // accepts them as separate entries, but `tl` + `hanzi`
+            // collapse them to a single `(roman, hanji)` after
+            // `dedupe_by_roman_hanji_span`.
+            let hi = (b'a' + (i / 26) as u8) as char;
+            let lo = (b'a' + (i % 26) as u8) as char;
+            Row {
+                toneless_key: Box::leak(format!("k{hi}{lo}").into_boxed_str()),
+                hanzi: "加",
+                tl: "kaa",
+                syll: 1,
+                freq: 1,
+            }
+        })
+        .collect();
+    // Byte-sort puts this last (after `kbd` at i=29 → `kbe` is i=30).
+    rows.push(Row {
+        toneless_key: "kbe",
+        hanzi: "基",
+        tl: "kbe",
+        syll: 1,
+        freq: 1,
+    });
+    let (prefix_index, dict) = build_fixture("partial-prefix-dedupe-order", &rows);
+
+    let key = partial_prefix_key_for("k");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        1,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
+    );
+    let labels: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
+    assert!(
+        labels.contains(&"基"),
+        "unique survivor `基` (byte-rank {}) must reach output — dedupe must run \
+         BEFORE truncate so the {} dupes of `加` collapse first and free a slot. \
+         If truncate ran before dedupe, `基` would be evicted at stable_idx {}. \
+         got {:?}",
+        cap,
+        cap,
+        cap,
+        labels
+    );
+    assert!(
+        labels.contains(&"加"),
+        "collapsed `加` must also reach output; got {:?}",
+        labels
+    );
+    assert_eq!(
+        out.len(),
+        2,
+        "post-dedupe pool is {{加, 基}} = 2 unique candidates; truncate is a no-op. \
+         got len={} ({:?})",
+        out.len(),
+        labels
+    );
+}
+
+#[test]
+fn partial_prefix_hydrates_up_to_hydrate_cap_then_truncates() {
+    // Worst-case stress: fixture has `PARTIAL_PREFIX_HYDRATE_CAP + 50`
+    // rows under the same prefix. Sort survivor count must equal
+    // `PARTIAL_PREFIX_OUTPUT_CAP` (the visible top-N stays stable);
+    // hydration cap protects per-keystroke work without dropping the
+    // visible candidate-strip size.
+    let rows: Vec<Row> = (0..(PARTIAL_PREFIX_HYDRATE_CAP + 50))
+        .map(|i| {
+            // Encode i into a 3-letter lowercase suffix so all keys
+            // share the `tl:s` prefix and stay unique up to 26^3 =
+            // 17_576 rows. Suffix order: `aaa`, `aab`, …
+            let a = (b'a' + ((i / 676) % 26) as u8) as char;
+            let b = (b'a' + ((i / 26) % 26) as u8) as char;
+            let c = (b'a' + (i % 26) as u8) as char;
+            Row {
+                toneless_key: Box::leak(format!("s{a}{b}{c}").into_boxed_str()),
+                hanzi: Box::leak(format!("漢{i}").into_boxed_str()),
+                tl: Box::leak(format!("s{a}{b}{c}").into_boxed_str()),
+                syll: 1,
+                freq: 1,
+            }
+        })
+        .collect();
+    let (prefix_index, dict) = build_fixture("r6-hydrate-cap-stress", &rows);
+
+    let key = partial_prefix_key_for("s");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        1,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
+    );
+    assert_eq!(
+        out.len(),
+        PARTIAL_PREFIX_OUTPUT_CAP,
+        "output stays bounded by OUTPUT_CAP even when hydration pool exceeds \
+         HYDRATE_CAP, got {}",
         out.len()
     );
 }
@@ -1193,10 +1387,12 @@ fn partial_prefix_empty_key_returns_empty() {
     // short-circuit before any FST range scan. Note this does NOT
     // pin behaviour for a bare namespace string `"tl:"` — that
     // input is treated as a legitimate "match everything under the
-    // namespace" query (capped at `PARTIAL_PREFIX_CAP`), per the
+    // namespace" query (hydrated up to `PARTIAL_PREFIX_HYDRATE_CAP`,
+    // output truncated to `PARTIAL_PREFIX_OUTPUT_CAP`), per the
     // caller-obligation contract on `fetch_partial_prefix_candidates`.
-    // Production dispatch builds keys via `build_partial_prefix_key_tl`
-    // which returns `None` instead of emitting bare `"tl:"`.
+    // Production dispatch builds keys via
+    // `composing::shadow::build_partial_prefix_key` which returns
+    // `None` instead of emitting bare `"tl:"`.
     let (prefix_index, dict) = build_fixture(
         "item10-empty-key",
         &[Row {

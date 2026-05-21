@@ -126,24 +126,35 @@ pub const COVERAGE_KIND_FULL: u8 = 0;
 // 中文:   SortKey 上強制排在 COVERAGE_KIND_FULL 之後,不被任何其他維度反超。
 pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 
-/// v3.5.8 Phase 9 Item 10 — max partial-prefix rowids hydrated per
-/// `FetchAtPos`. Single-char prefixes (`tl:t`) can match hundreds of
-/// FST entries; hydrating every record before sort is wasted work
-/// when the candidate strip only renders ~10 items. Pre-cap mirrors
-/// the legacy `LexiconService.search` per-request cap, taking the
-/// FST byte-sorted prefix in document order (which roughly aligns
-/// with insertion order in `dictionary/build/create_fst.py`); see
-/// `docs/engine/continuous-candidate-display.md` §15.8 risk row 1.
+/// Worst-case rowid hydration budget per partial-prefix lookup.
+/// Single-char prefixes (`tl:k`, `tl:t`) match hundreds of FST entries;
+/// this caps `dict.record(rowid)` calls so per-keystroke work stays
+/// bounded on the iOS keyboard-extension RAM/latency budget. Set well
+/// above [`PARTIAL_PREFIX_OUTPUT_CAP`] so high-frequency short
+/// candidates landing past the legacy byte-sort first 30 still reach
+/// the [`SortKey`] sort and can win on score / freq rather than be
+/// silently dropped at the rowid stage. See
+/// `docs/engine/continuous-candidate-display.md` §15.8.
 ///
-/// **Known limitation** (Codex pre-impl R6, 2026-05-15): pre-cap is
-/// not ranking-aware — a globally high-frequency partial-prefix hit
-/// landing after rowid 30 in FST byte order would be dropped. We
-/// accept this as legacy-parity behaviour (the pre-§15 platform
-/// lexicon path has the same property); see Item 13 retire notes
-/// in `docs/engine/continuous-candidate-display.md` §15.4.
-// 中文: Item 10 — partial-prefix lookup_prefix 在 dict.record hydration 前的 rowid 上限,對齊 legacy LexiconService 行為。
-// 中文: 已知侷限 (R6) — 大頻率候選若落在 byte-sort 後 30 名外會被丟,屬 legacy parity 行為。
-pub const PARTIAL_PREFIX_CAP: usize = 30;
+/// Resolves the pre-v3.5.9 R6 limitation: the old single `take(30)`
+/// pre-cap was ranking-blind, so for input `tl:k` the FST byte-sort
+/// front-loaded `tl:ka-*` multi-syllable phrases and evicted
+/// high-frequency single-syllable entries like `tl:ki` before any
+/// scoring ran.
+// 中文: partial-prefix lookup_prefix 後 dict.record hydration 上限;
+// 中文:   高於 OUTPUT_CAP 是為了讓 byte-sort 後 30 名外的高頻短候選仍能進排序。
+pub const PARTIAL_PREFIX_HYDRATE_CAP: usize = 500;
+
+/// Maximum candidates returned from [`fetch_partial_prefix_candidates`]
+/// to the platform candidate strip. Applied AFTER hydration, dedupe,
+/// and [`SortKey`] sort — so the top-N visible to the user is the
+/// globally best-scoring subset of the (up to
+/// [`PARTIAL_PREFIX_HYDRATE_CAP`]) hydrated pool, not the FST
+/// byte-sort prefix. Matches the legacy `LexiconService` per-request
+/// output size to keep the candidate strip visually stable.
+// 中文: partial-prefix 對外回傳上限;在 SortKey 排序之後才裁切,
+// 中文:   保證 UI 看到的是「按分數選出的 top-N」而非「FST 字典序前 N 筆」。
+pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 
 /// MOE-aligned candidate-type discriminator (`VocType` analog). Carried
 /// on every [`RawCandidate`] and wire-encoded onto
@@ -713,9 +724,11 @@ pub fn fetch_candidates_for_keys(
 /// Pipeline:
 ///
 /// 1. `prefix_index.lookup_prefix(&key.1)` — FST byte-sorted rowid scan.
-/// 2. Pre-cap at [`PARTIAL_PREFIX_CAP`] rowids (mirror legacy
-///    `LexiconService` per-request cap; flood guard for single-char
-///    prefixes like `tl:t`).
+/// 2. Hydrate budget cap at [`PARTIAL_PREFIX_HYDRATE_CAP`] rowids —
+///    bounds `dict.record` work for single-char prefixes (`tl:k`,
+///    `tl:t`) that match hundreds of FST entries. Set well above the
+///    output cap so high-frequency short candidates landing past the
+///    legacy byte-sort first 30 still reach the sort.
 /// 3. Hydrate via `dict.record(rowid)`; drop rows that fail the
 ///    `enabled_sources_bitmask` filter (D-12 invariant parity with
 ///    [`fetch_candidates_for_keys`]).
@@ -726,6 +739,10 @@ pub fn fetch_candidates_for_keys(
 ///    `coverage_kind` dim is `1` here so the whole batch ranks below
 ///    any concurrent full-syllable hits if a caller ever merges them
 ///    (this fn produces partial-prefix candidates only).
+/// 6. Truncate to [`PARTIAL_PREFIX_OUTPUT_CAP`] after the sort, so the
+///    returned slice is the globally best-scoring subset (not the FST
+///    byte-sort prefix). Custom entries participate in the sort and
+///    contribute to the output count.
 ///
 /// `raw_len` is the byte length of the original pending buffer
 /// (`Phase::Continuous { raw }.len()`); kept here for the Tier 0/1
@@ -742,17 +759,17 @@ pub fn fetch_candidates_for_keys(
 /// a non-empty body (e.g. `"tl:gu"`). Passing the bare namespace
 /// (`"tl:"`) is permitted by the empty-string guard but is treated
 /// as a legitimate "match every entry under the namespace" query
-/// — it returns the first [`PARTIAL_PREFIX_CAP`] FST entries under
-/// that prefix, which is a footgun when triggered by misuse rather
-/// than design. Production callers go through
+/// — it hydrates up to [`PARTIAL_PREFIX_HYDRATE_CAP`] FST entries
+/// under that prefix, which is a footgun when triggered by misuse
+/// rather than design. Production callers go through
 /// `composing::shadow::build_partial_prefix_key` (v3.5.9 B-2 renamed
 /// from `build_partial_prefix_key_tl` since the emitter is now
 /// mode-aware), which returns `None` when the toneless body would be
 /// empty and therefore never emits a bare `"tl:"` / `"poj:"` alone.
 // 中文: Item 10 — 部分前綴候選查詢。當 syllabifier 切不出音節邊界時 fall through 到 prefix_index.lookup_prefix。
-// 中文: rowid pre-cap = PARTIAL_PREFIX_CAP (對齊 legacy LexiconService);hydrate 後 record_to_candidate 標 COVERAGE_KIND_PARTIAL_PREFIX。
+// 中文: rowid 上限 = PARTIAL_PREFIX_HYDRATE_CAP (hydration 預算);output 上限 = PARTIAL_PREFIX_OUTPUT_CAP (UI 預算,排序後才裁)。
 // 中文: 全部候選共用 8 維 SortKey,coverage_kind 在最前面;沒有混合 full + partial 的 caller (dispatch 走互斥 branch)。
-// 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu" / "poj:chi");bare namespace 不會被擋,但會回前 PARTIAL_PREFIX_CAP 筆;
+// 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu" / "poj:chi");bare namespace 不會被擋,但會 hydrate 到 PARTIAL_PREFIX_HYDRATE_CAP 筆後排序裁切;
 // 中文:   生產路徑由 composing::shadow::build_partial_prefix_key (B-2 脫 `_tl` 後綴,mode-aware) 保證不會傳 bare namespace。
 // 中文: Item 12 — custom 命中也併進 partial-prefix 路徑,標 COVERAGE_KIND_PARTIAL_PREFIX
 // 中文:   (NOT FULL — 否則繞過 §15.5「partial 永遠排在 full 之下」),legacy custom dict prefix-visible 行為對齊。
@@ -767,15 +784,27 @@ pub fn fetch_partial_prefix_candidates(
         return Vec::new();
     }
     let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
-    let mut out: Vec<RawCandidate> = Vec::new();
-    // Cap by `take(PARTIAL_PREFIX_CAP)` on the rowid stream so the
-    // dict-hydration step is bounded even for single-char prefixes
-    // (e.g. `tl:t`) that match thousands of FST entries. Mirrors the
-    // legacy `LexiconService` per-request cap (§15.8 flood guard).
-    // Filter rejects still consume budget — the goal is bounding
-    // worst-case work, not maximizing hits past the cap.
-    // 中文: 用 take(PARTIAL_PREFIX_CAP) 把 dict.record hydration 上限套在 rowid 流上,
-    // 中文:   即使 tl:t 這種短前綴對到上千筆 FST entry 也只查前 30 筆;對齊 legacy LexiconService 限制。
+    // Pre-allocate to the worst-case pool size so the hydration loop
+    // does not grow `out` through the 16/32/64/128/256/512 doubling
+    // sequence. Saves 2-3 reallocs on single-char prefixes that
+    // saturate `HYDRATE_CAP`.
+    // 中文: 預估最壞值,省去 hydration loop 中的 Vec 倍增重配。
+    let mut out: Vec<RawCandidate> =
+        Vec::with_capacity(PARTIAL_PREFIX_HYDRATE_CAP + ctx.custom.len());
+    // `take(PARTIAL_PREFIX_HYDRATE_CAP)` bounds `dict.record` work for
+    // single-char prefixes (`tl:k`, `tl:t`) that match hundreds of FST
+    // entries. The cap is intentionally set far above the visible
+    // output size: per-record hydration is a few mmap slice reads
+    // plus 2-4 small String allocations, so the extra budget is cheap,
+    // but it lets high-frequency short candidates landing past the
+    // legacy byte-sort first 30 (e.g. `tl:ki` after a wall of
+    // `tl:ka-*` phrases) reach the SortKey sort.
+    //
+    // The output is truncated to PARTIAL_PREFIX_OUTPUT_CAP AFTER
+    // sort/dedupe (below). Filter rejects still consume hydration
+    // budget — goal is bounding worst-case work, not maximizing hits.
+    // 中文: rowid 上限拉到 HYDRATE_CAP (500) — hydration 本身便宜,讓 byte-sort 後排的高頻短候選也進排序。
+    // 中文:   實際對外輸出由 sort 後的 OUTPUT_CAP 控制 (見函式尾)。
     // Item 12: guard the unbounded `lookup_prefix("")` scan — with the
     // early-return now gated on `fst_key.is_empty() && custom.is_empty()`,
     // an empty `fst_key` + non-empty `custom` reaches here and must NOT
@@ -786,7 +815,7 @@ pub fn fetch_partial_prefix_candidates(
             .prefix_index
             .lookup_prefix(fst_key)
             .into_iter()
-            .take(PARTIAL_PREFIX_CAP)
+            .take(PARTIAL_PREFIX_HYDRATE_CAP)
         {
             let Some(record) = ctx.dict.record(rowid) else {
                 continue;
@@ -835,6 +864,11 @@ pub fn fetch_partial_prefix_candidates(
         .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
         .collect();
     indexed.sort_by_key(|(key, _)| *key);
+    // Truncate AFTER sort/dedupe so the visible top-N is the
+    // globally best-scoring subset of the hydrated pool, not the FST
+    // byte-sort prefix (the R6 limitation that motivated this fix).
+    // 中文: 排序+去重之後才裁到 OUTPUT_CAP,確保 UI 看到的是「分數最佳前 N」而非「字典序前 N」。
+    indexed.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
     indexed.into_iter().map(|(_, c)| c).collect()
 }
 
