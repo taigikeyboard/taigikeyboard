@@ -7,6 +7,24 @@ use unicode_normalization::UnicodeNormalization;
 use crate::lattice::{build_lattice, Lattice};
 use crate::syllabifier::tl as tl_syll;
 
+/// v3.5.9 B-2 — map `mode` to its FST key family prefix. The tagged-single-FST
+/// (`syllables.fst` + `dictionary.fst`) carries `tl:` and `poj:` families;
+/// English shares the TL family because English buffers do not have their own
+/// inventory and the syllabifier is not invoked there. TPS does not pass
+/// through these emitters (TPS builds its own pre-fused `tl:` keys via
+/// [`crate::continuous::build_keys_tps`] — promoting TPS to a first-class
+/// family is the C round, intentionally out of scope here).
+// 中文: B-2 — 將 mode 映射到 FST key 家族前綴。`syllables.fst` / `dictionary.fst` 為
+// 中文:   tagged-single-FST,共存 `tl:` 與 `poj:` 兩家族。English 沿用 `tl:` 家族
+// 中文:   (英文 buffer 不會走音節切分);TPS 不經此 emitter(走 build_keys_tps 自建 `tl:` key,
+// 中文:   TPS first-class 是 C round 範疇)。
+pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
+    match mode {
+        InputMode::Poj => "poj",
+        InputMode::Tl | InputMode::English => "tl",
+    }
+}
+
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
 /// `max_syllables=8` budget called out in `docs/roadmap.md:231` and
 /// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Shared by
@@ -40,7 +58,14 @@ pub(crate) fn build_shadow_lattice(
         .iter()
         .map(|&c| canonical_to_raw_end[c])
         .collect();
-    let lattice = build_lattice(&shadow, inv, MAX_SYLLABLES);
+    // v3.5.9 B-2 — thread `mode` into the lattice builder; the inventory is
+    // mode-aware (`SyllableInventory::contains_in(mode, …)`), so a POJ-mode
+    // shadow now resolves against the `poj:` family of `syllables.fst` and
+    // emits POJ-shaped syllable boundaries (`chiah`, `goa`, …) rather than
+    // collapsing onto the TL forms.
+    // 中文: B-2 — mode 透傳至 lattice builder;inventory 為 mode-aware,
+    // 中文:   POJ 模式下走 `poj:` 家族,辨識 POJ 拼寫的音節邊界而非塌成 TL 形。
+    let lattice = build_lattice(&shadow, inv, mode, MAX_SYLLABLES);
     (shadow, shadow_to_raw_end, lattice)
 }
 
@@ -72,7 +97,16 @@ pub(crate) fn left_anchored_keys_from_lattice(
     shadow: &str,
     shadow_to_raw_end: &[usize],
     lattice: &Lattice,
+    mode: InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
+    // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
+    // namespaced into. The lattice itself was already built against the
+    // matching `SyllableInventory` family ([`build_shadow_lattice`] →
+    // [`build_lattice`]), so the syllabification and the key namespace
+    // come from a single mode parameter — they cannot drift.
+    // 中文: B-2 — mode 同時決定 lattice 走的 inventory 家族與此處 key 命名空間,單一參數
+    // 中文:   貫穿,音節切分與 key 前綴不會由不同來源分歧。
+    let prefix = mode_key_prefix(mode);
     let mut out = Vec::with_capacity(lattice.edges().len());
     for &(start, end) in lattice.edges() {
         if start != 0 {
@@ -88,7 +122,7 @@ pub(crate) fn left_anchored_keys_from_lattice(
             continue;
         }
         let raw_end = shadow_to_raw_end[end];
-        out.push(((0u32, raw_end as u32), format!("tl:{toneless}")));
+        out.push(((0u32, raw_end as u32), format!("{prefix}:{toneless}")));
     }
     out
 }
@@ -119,16 +153,23 @@ pub(crate) fn left_anchored_keys_from_lattice(
 pub(crate) fn greedy_longest_syllabification(
     shadow: &str,
     inv: &SyllableInventory,
+    mode: InputMode,
 ) -> Option<Vec<(usize, usize)>> {
     let lowered = shadow.to_ascii_lowercase();
     let mut segs: Vec<(usize, usize)> = Vec::new();
     let mut pos = 0usize;
     while pos < lowered.len() {
-        // v3.5.9 B-1: query the TL family. The shadow is already in TL
-        // form (`canonicalize_poj_shadow` upstream); B-2 will reshape
-        // that helper to preserve POJ ASCII and thread `mode` through
-        // here, at which point the literal becomes the caller's mode.
-        let end = tl_syll::valid_span_endings_lowered(&lowered, pos, inv, InputMode::Tl, 1)
+        // v3.5.9 B-2: `mode` selects the inventory family that gates the
+        // single-syllable step. The shadow is already in the matching
+        // family's canonical ASCII form (B-2 reshape of
+        // `canonicalize_poj_shadow` preserves POJ ASCII when `mode ==
+        // Poj`), so a TL shadow walks the `tl:` family and a POJ shadow
+        // walks the `poj:` family — both produce shadow-aligned offsets
+        // because the inventory family's syllable boundaries match the
+        // shadow form.
+        // 中文: B-2 — mode 決定走哪一家族;shadow 已是該家族的 canonical ASCII
+        // 中文:   形式 (canonicalize_poj_shadow POJ 模式保 POJ),家族與切點對齊。
+        let end = tl_syll::valid_span_endings_lowered(&lowered, pos, inv, mode, 1)
             .into_iter()
             .max()?;
         segs.push((pos, end));
@@ -174,7 +215,11 @@ pub(crate) fn greedy_longest_syllabification(
 /// the edge** rather than mispricing it (the buffer is still spanned
 /// via finer edges).
 // 中文: shadow_span 的「保證」音節數 = 覆蓋它所需的最少單音節 hop 數。
-pub(crate) fn span_min_syllable_count(shadow_span: &str, inv: &SyllableInventory) -> Option<usize> {
+pub(crate) fn span_min_syllable_count(
+    shadow_span: &str,
+    inv: &SyllableInventory,
+    mode: InputMode,
+) -> Option<usize> {
     let lowered = shadow_span.to_ascii_lowercase();
     let end = lowered.len();
     if end == 0 {
@@ -182,11 +227,15 @@ pub(crate) fn span_min_syllable_count(shadow_span: &str, inv: &SyllableInventory
     }
     // Unweighted shortest path (in #hops) from offset 0 to `end`. Each
     // hop is one valid syllable from
-    // `valid_span_endings_lowered(.., pos, inv, InputMode::Tl, 1)` —
-    // the single-hop primitive the lattice builder chains. v3.5.9 B-1
-    // pins the inventory family to TL here for the same reason as
-    // [`greedy_longest_syllabification`]: the shadow upstream is in TL
-    // form; B-2 will thread `mode` through this seam.
+    // `valid_span_endings_lowered(.., pos, inv, mode, 1)` — the
+    // single-hop primitive the lattice builder chains under the same
+    // `mode`. v3.5.9 B-2 plumbs `mode` through here so a POJ shadow
+    // walks the `poj:` family for hop counts, matching the family used
+    // by [`build_lattice`] to produce the edge in the first place; the
+    // hop-count invariant (`build_lattice` emits `(start, end)` only by
+    // chaining single hops) holds per-family.
+    // 中文: B-2 — mode 同步透傳;POJ shadow 走 `poj:` 家族的單音節 hop,
+    // 中文:   與 build_lattice 同家族,保持「edge 必由 single-hop 鏈組成」不變式。
     use std::collections::{BTreeMap, VecDeque};
     let mut dist: BTreeMap<usize, usize> = BTreeMap::new();
     dist.insert(0, 0);
@@ -197,7 +246,7 @@ pub(crate) fn span_min_syllable_count(shadow_span: &str, inv: &SyllableInventory
         if pos == end {
             return Some(hops);
         }
-        for nxt in tl_syll::valid_span_endings_lowered(&lowered, pos, inv, InputMode::Tl, 1) {
+        for nxt in tl_syll::valid_span_endings_lowered(&lowered, pos, inv, mode, 1) {
             if nxt > pos && nxt <= end && !dist.contains_key(&nxt) {
                 dist.insert(nxt, hops + 1);
                 queue.push_back(nxt);
@@ -308,37 +357,41 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
     if toneless.is_empty() || !toneless.bytes().all(|b| b.is_ascii_lowercase()) {
         return None;
     }
-    Some(format!("tl:{toneless}"))
+    // v3.5.9 B-2 — mode-aware family prefix. The contract still requires
+    // byte-identity with the edge provider's emitted key (the S6
+    // invariant), so this MUST consume the same `mode` and the same
+    // shadow pipeline — both are now mode-aware in lockstep.
+    // 中文: B-2 — mode-aware 前綴。S6 byte-identity 不變:walker edge 與此處共用同一 mode
+    // 中文:   + 同一 shadow pipeline,前綴一致。
+    let prefix = mode_key_prefix(mode);
+    Some(format!("{prefix}:{toneless}"))
 }
 
 /// Canonicalize POJ-display input (`pe̍h-ōe-jī`, `chóa`, `peⁿ`, `so͘`)
-/// into ASCII TL spelling, paired with a byte-indexed map from canonical
-/// byte offsets back to original `input` byte offsets. v3.5.8 Phase 9
-/// Item 9.
+/// into ASCII spelling for its mode's FST key family, paired with a
+/// byte-indexed map from canonical byte offsets back to original `input`
+/// byte offsets. v3.5.8 Phase 9 Item 9; v3.5.9 B-2 reshape so the output
+/// is **POJ ASCII** under POJ mode (`chiah` stays `chiah`) and **TL ASCII**
+/// under TL mode (POJ-shaped input still folds via the TL chain).
 ///
-/// Pure-ASCII handling is **mode-gated** on `mode`:
-/// - `mode != InputMode::Poj` (TL / TPS / English): passed through
-///   unchanged with an identity offset map — the F3C gate from the
-///   pre-impl Codex consult (2026-05-15), preserving every Item 8
-///   hyphen-shadow contract pin. Without it, `phonetics::normalize_to_tl`'s
-///   ASCII substitutions (`ou→oo`, `oa→ua`, ...) would mis-rewrite real
-///   dictionary entries like `tó-uī`
-///   (`dictionary/output/dictionary.csv:1984`, `tl_notone=toui`) into
-///   `tooi` once the hyphen collapses the two syllables together.
-/// - `mode == InputMode::Poj` (POJ mode): toneless ASCII POJ never carries the
-///   non-ASCII tone diacritics that would otherwise route it through the
-///   Phase 2 chain, so the identity fast-path would leave `chiah` /
-///   `goa` / `che` keyed as `tl:chiah` (zero FST hits — the dictionary
-///   stores `tl:tsiah`). For ASCII the Phase 1 NFD walk is identity, so
-///   we build the identity offset map and run Phase 2 directly. The
-///   `tó-uī`→`toui`→`tooi` ambiguity above re-applies here, but it is
-///   the SAME pre-existing class the non-ASCII POJ path already has
-///   ([`apply_normalize_to_tl_with_offsets`] runs unconditionally
-///   there) and is far less severe than every ch-/oa-/oe- POJ word
-///   returning zero candidates. Per-syllable POJ disambiguation is a
-///   separate concern (Codex pre-impl Q3, 2026-05-20).
-///
-/// Non-ASCII inputs run the two-phase canonicalize:
+/// Mode-gated Phase 2 rule list (v3.5.9 B-2, refined by PR #309 Codex
+/// P1 `r3276402303`):
+/// - `mode == InputMode::Poj` → [`phonetics::NORMALIZE_TO_POJ_GLYPH_RULES`]:
+///   the glyph-only subset (`o͘→oo`, `ⁿ→nn`, `ᴺ→nn`). The legacy
+///   `ou→oo` alias is **excluded** because it would mis-fire across
+///   syllable boundaries on hyphenless multi-syllable user input — e.g.
+///   typing `toui` for POJ `tó-uī` (indexed `poj_notone=toui`) would
+///   get folded to `tooi` and lose the lattice match. Per-syllable
+///   callers (build-pipeline `canonicalize_poj_syllable`, runtime
+///   `derive_poj_notone_for_match`) still consume the full
+///   [`phonetics::NORMALIZE_TO_POJ_RULES`] — they apply per-token so
+///   the `ou` alias only ever sees a single syllable.
+/// - `mode != InputMode::Poj` (TL / TPS / English) →
+///   [`phonetics::NORMALIZE_TO_TL_RULES`]: unchanged from the pre-B-2
+///   behavior; ASCII branch is identity (F3C gate, protects `tó-uī` from
+///   the `oa→ua` / `oonn→onn` substitution that would otherwise mangle
+///   it after hyphen-shadow collapse), non-ASCII branch runs the full
+///   POJ→TL chain.
 ///
 /// Phase 1 — char-level NFD walk over the original input. Each NFD
 /// scalar that is one of the 8 tone-mark combining codepoints in
@@ -348,15 +401,13 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 /// char's `raw_end` so the offset map stays anchored at the right of
 /// each consumed run. Other NFD scalars pass through unchanged
 /// (including `\u{0358}` and `\u{207f}` / `\u{1d3a}`, which Phase 2
-/// turns into ASCII).
+/// turns into ASCII regardless of which rule list is active — both
+/// lists carry the same encoding rules).
 ///
-/// Phase 2 — apply the [`phonetics::normalize_to_tl`] substitution
-/// chain ([`phonetics::NORMALIZE_TO_TL_RULES`] is the single ordered
-/// source consumed by both sides) with offset-aware substring replace.
-/// All substitutions other than `o\u{0358}→oo`, `\u{207f}|\u{1d3a}→nn`,
-/// and `oonn→onn` are byte-count-preserving so the offset map is
-/// invariant; the three shrinking rules drain the dropped trailing
-/// byte's map entry.
+/// Phase 2 — apply the mode-selected rule list with offset-aware
+/// substring replace. Shrinking rules (`o\u{0358}→oo`, `\u{207f}|\u{1d3a}
+/// →nn`, `oonn→onn` for TL only) drain the dropped trailing byte's map
+/// entry; byte-count-preserving rules leave the offset map invariant.
 ///
 /// Output contract (mirrors [`build_hyphen_shadow`]):
 /// - `canonical` is ASCII (after Phase 2 all non-ASCII codepoints have
@@ -395,9 +446,24 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
         // offset regardless of which branch we take below.
         let map: Vec<usize> = (0..=input.len()).collect();
         if matches!(mode, InputMode::Poj) {
-            // POJ mode: fold POJ→TL spelling even for toneless ASCII so
-            // `chiah`→`tsiah`, `goa`→`gua`, … reach the TL-keyed FST.
-            return apply_normalize_to_tl_with_offsets(input.to_owned(), map);
+            // v3.5.9 B-2 — POJ mode: apply the glyph-only POJ rule
+            // subset. All 3 rules are non-ASCII → ASCII substitutions
+            // that are no-ops on already-ASCII input, so the ASCII
+            // POJ path is now **identity** — `chiah` stays `chiah`,
+            // `toui` stays `toui` (PR #309 Codex P1 `r3276402303`:
+            // applying the legacy `ou→oo` alias whole-buffer mis-fired
+            // on multi-syllable hyphenless typing like `toui` for
+            // POJ `tó-uī`). Dirty-row `ou` protection moves to the
+            // per-syllable build pipeline where it is structurally
+            // safe (one syllable per application).
+            // 中文: B-2 PR #309 — POJ 模式 ASCII 改走 identity (glyph-only 規則對 ASCII 為 no-op)。
+            // 中文:   `toui` 保持 `toui`,讓 lattice 切出 `poj:to` + `poj:ui` 對齊 `tó-uī` 索引;
+            // 中文:   `ou→oo` 髒資料防護下放到逐音節 build pipeline,單音節下不會誤觸發。
+            return apply_normalize_with_offsets(
+                input.to_owned(),
+                map,
+                phonetics::NORMALIZE_TO_POJ_GLYPH_RULES,
+            );
         }
         // TL / non-POJ: F3C identity fast-path (protects `toui`).
         return (input.to_owned(), map);
@@ -441,13 +507,30 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
     }
 
     // Lowercase the ASCII letters that survived the NFD walk so the
-    // Phase 2 substitutions (`ch→ts`, `oa→ua`, ...) actually match.
-    // Non-ASCII bytes left over (`\u{0358}`, `\u{207f}`, `\u{1d3a}`) are
-    // unaffected by `to_ascii_lowercase` and get replaced into ASCII by
-    // Phase 2 below.
+    // Phase 2 substitutions actually match. Non-ASCII bytes left over
+    // (`\u{0358}`, `\u{207f}`, `\u{1d3a}`) are unaffected by
+    // `to_ascii_lowercase` and get replaced into ASCII by Phase 2 below.
     let intermediate_lower = intermediate.to_ascii_lowercase();
 
-    apply_normalize_to_tl_with_offsets(intermediate_lower, map)
+    // v3.5.9 B-2 (PR #309 Codex P1 `r3276402303` refinement) — mode
+    // selects Phase 2 rule list. POJ mode runs the glyph-only POJ
+    // subset (no `ou→oo` alias, no `ch→ts` chain) so non-ASCII POJ
+    // input like `pe\u{030d}h` / `chia\u{030d}h` / `so\u{0358}` lands
+    // as POJ ASCII (`peh` / `chiah` / `soo`). The `ou→oo` alias is
+    // dropped here too because the same hyphenless multi-syllable
+    // failure mode applies to non-ASCII input (e.g. `t\u{f3}u\u{12b}`
+    // typed without a hyphen would have folded `toui → tooi`). TL /
+    // TPS / English keep the pre-B-2 chain so dictionary hits routed
+    // through the TL family stay byte-identical.
+    // 中文: B-2 PR #309 — mode 決定 Phase 2 rule list。POJ 模式跑 glyph-only POJ 子集
+    // 中文:   (無 `ou→oo` alias、無 ch→ts 鏈),避免跨音節邊界誤觸發 (同 ASCII 分支理由)。
+    // 中文:   非-ASCII POJ 輸入仍落到 POJ ASCII 而非 TL ASCII。
+    let rules = if matches!(mode, InputMode::Poj) {
+        phonetics::NORMALIZE_TO_POJ_GLYPH_RULES
+    } else {
+        phonetics::NORMALIZE_TO_TL_RULES
+    };
+    apply_normalize_with_offsets(intermediate_lower, map, rules)
 }
 
 /// True for the 8 combining tone-mark scalars listed in
@@ -470,24 +553,26 @@ fn is_tone_combining_mark(c: char) -> bool {
     )
 }
 
-/// Apply [`phonetics::NORMALIZE_TO_TL_RULES`] (the D2 single source the
-/// `phonetics::normalize_to_tl` body also consumes) with offset-map
-/// maintenance. Same order + same patterns — keeping the two in
-/// lockstep is a hard prerequisite (Codex pre-impl note 2026-05-15);
-/// post-D2 the rule list is the single source so divergence is no
-/// longer possible by editing one side. The three shrinking rules
-/// (`o\u{0358}→oo`, `\u{207f}|\u{1d3a}→nn`, `oonn→onn`) drain the
-/// dropped trailing byte's map entry instead of producing a new
-/// `String`.
-// 中文: 套 phonetics::NORMALIZE_TO_TL_RULES 的代換鏈,同時維護 offset map;
-// 中文: D2 後 rule list 為單一來源,兩端不會由單側修改而漂移。
-pub(crate) fn apply_normalize_to_tl_with_offsets(
+/// Apply an ordered list of `(find, replace)` rules with offset-map
+/// maintenance, returning the mutated string + updated map. v3.5.9 B-2
+/// generalization of the pre-B-2 `apply_normalize_to_tl_with_offsets`:
+/// the caller now passes the rule list (either
+/// [`phonetics::NORMALIZE_TO_TL_RULES`] or [`phonetics::NORMALIZE_TO_POJ_RULES`]),
+/// making `canonicalize_poj_shadow` mode-aware without duplicating the
+/// offset-map maintenance loop. Same in-order iteration + same patterns
+/// as the rule lists in `phonetics::syllable`; non-shrinking rules
+/// leave the offset map invariant, shrinking rules drain the dropped
+/// trailing byte's map entry instead of producing a new `String`.
+// 中文: B-2 — 將代換鏈 + offset-map 維護泛化,呼叫端傳 rule list (TL 或 POJ);
+// 中文:   shrinking 規則由 offset_aware_replace 處理 map 收縮,其餘規則 map invariant。
+pub(crate) fn apply_normalize_with_offsets(
     s: String,
     map: Vec<usize>,
+    rules: &[(&str, &str)],
 ) -> (String, Vec<usize>) {
     let mut s = s;
     let mut map = map;
-    for (find, repl) in phonetics::NORMALIZE_TO_TL_RULES {
+    for (find, repl) in rules {
         offset_aware_replace(&mut s, &mut map, find, repl);
     }
     (s, map)
@@ -561,23 +646,28 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
     }
 }
 
-/// v3.5.8 Phase 9 Item 10 — partial-prefix TL/POJ key builder. Runs
-/// the same `lowercase → canonicalize_poj_shadow → build_hyphen_shadow
-/// → strip_ascii_tone_digits` chain as
-/// `dispatch::build_keys_tl_with_inventory` but **skips the
-/// syllabifier** (the partial-prefix path is reached precisely because
-/// `tl_syll::valid_span_endings` returned empty). Returns `None` when
-/// the resulting toneless key is empty (raw was hyphen-only /
-/// digit-only) so the caller can short-circuit without firing an
-/// unbounded `tl:` prefix scan.
+/// v3.5.8 Phase 9 Item 10 / v3.5.9 B-2 — partial-prefix mode-aware key
+/// builder (renamed from `build_partial_prefix_key_tl` in B-2: the
+/// builder always was mode-aware via `canonicalize_poj_shadow`; B-2
+/// makes the emitted key prefix mode-aware too so POJ mode produces
+/// `poj:` keys against the `poj:` family of the FST). Runs the same
+/// `lowercase → canonicalize_poj_shadow → build_hyphen_shadow →
+/// strip_ascii_tone_digits` chain as the production
+/// [`left_anchored_keys_from_lattice`] / walker edge providers but
+/// **skips the syllabifier** (the partial-prefix path is reached
+/// precisely because `tl_syll::valid_span_endings` returned empty).
+/// Returns `None` when the resulting toneless key is empty (raw was
+/// hyphen-only / digit-only) so the caller can short-circuit without
+/// firing an unbounded prefix scan.
 ///
 /// `consumed_span` is fixed to `(0, raw.len())` — partial-prefix
 /// candidates always final-commit per Q15.4 (the offset maps from
 /// Items 8 + 9 are intentionally discarded here because there is no
 /// per-syllable mid-commit semantics to preserve).
-// 中文: Item 10 — partial-prefix TL/POJ key 構造,沿用 Item 8/9 chain;不走 syllabifier。
+// 中文: Item 10 / B-2 — partial-prefix mode-aware key 構造,沿用 Item 8/9 chain;不走 syllabifier。
 // 中文:   consumed_span 固定 (0, raw.len()),配合 Q15.4 partial-prefix 一律 final-commit。
-pub(crate) fn build_partial_prefix_key_tl(
+// 中文: B-2 rename:`_tl` 後綴脫去,emit 改為 mode-aware (POJ 走 `poj:` 家族)。
+pub(crate) fn build_partial_prefix_key(
     raw: &str,
     mode: InputMode,
 ) -> Option<(ConsumedSpan, String)> {
@@ -591,7 +681,8 @@ pub(crate) fn build_partial_prefix_key_tl(
     if toneless.is_empty() {
         return None;
     }
-    Some(((0u32, raw.len() as u32), format!("tl:{toneless}")))
+    let prefix = mode_key_prefix(mode);
+    Some(((0u32, raw.len() as u32), format!("{prefix}:{toneless}")))
 }
 
 #[cfg(test)]
@@ -676,11 +767,13 @@ mod tests {
     fn custom_toneless_key_poj_ascii_matches_walker_edge_key() {
         // S6 byte-identity: a custom-dict roman `chiah` keyed under the
         // SAME `mode` the walker edge provider uses must equal the
-        // lattice edge key `tl:tsiah` (split-brain would drop the
-        // custom match in POJ mode).
+        // lattice edge key for that mode. v3.5.9 B-2 — POJ now emits
+        // `poj:` family keys preserving POJ ASCII (pre-B-2 this folded
+        // to TL `tl:tsiah`; B-2 keeps POJ first-class via the `poj:`
+        // family of the tagged-single-FST).
         assert_eq!(
             custom_toneless_key("chiah", InputMode::Poj).as_deref(),
-            Some("tl:tsiah"),
+            Some("poj:chiah"),
         );
         // TL mode keeps the F3C identity (un-canonicalized).
         assert_eq!(
@@ -865,46 +958,116 @@ mod tests {
     }
 
     #[test]
-    fn canonicalize_poj_shadow_poj_ascii_chiah_folds_ch_to_ts() {
-        // PR #300 root cause: in POJ mode, toneless ASCII POJ must run
-        // Phase 2 — `chiah` → `tsiah` so the FST `tl:tsiah` lookup hits.
-        // TL mode keeps the F3C identity (`chiah` → `chiah`).
+    fn canonicalize_poj_shadow_poj_ascii_preserves_poj_shape() {
+        // v3.5.9 B-2 (PR #309 refinement) — POJ mode applies the
+        // glyph-only NORMALIZE_TO_POJ_GLYPH_RULES subset (`o\u{0358}
+        // →oo`, `\u{207f}→nn`, `\u{1d3a}→nn`; no `ou→oo` alias
+        // whole-buffer). Pure ASCII POJ syllables stay POJ-shaped —
+        // they are then looked up against the `poj:` family of the
+        // tagged-single-FST.
         let (poj, map) = canonicalize_poj_shadow("chiah", InputMode::Poj);
-        assert_eq!(poj, "tsiah");
-        // ASCII identity map (Phase 1 NFD is identity for ASCII;
-        // `ch→ts` is byte-length-preserving so the map is invariant).
+        assert_eq!(poj, "chiah", "POJ mode preserves POJ ASCII (no ch→ts fold)");
+        // ASCII identity map: Phase 1 NFD is identity for ASCII; no
+        // POJ rule fires on `chiah` (no `ou`, no non-ASCII chars), so
+        // the map is invariant.
         assert_eq!(map, vec![0, 1, 2, 3, 4, 5]);
+        // TL mode keeps the F3C identity unchanged from pre-B-2.
         let (tl, _) = canonicalize_poj_shadow("chiah", InputMode::Tl);
         assert_eq!(tl, "chiah");
     }
 
     #[test]
-    fn canonicalize_poj_shadow_poj_ascii_chhia_oa_oe_eng_ek_fold() {
-        // All the equal-length POJ→TL ASCII substitutions fire under
-        // POJ mode: chh→tsh, oa→ua, oe→ue, eng→ing, ek→ik.
-        for (input, expected) in [
-            ("chhia", "tshia"), // 車
-            ("goa", "gua"),     // 我  oa→ua
-            ("hoe", "hue"),     // oe→ue
-            ("peng", "ping"),   // eng→ing
-            ("tek", "tik"),     // ek→ik
-        ] {
+    fn canonicalize_poj_shadow_poj_ascii_no_tl_chain_substitutions() {
+        // v3.5.9 B-2 — none of the POJ→TL chain rules (`chh→tsh`,
+        // `oa→ua`, `oe→ue`, `eng→ing`, `ek→ik`) fire in POJ mode:
+        // NORMALIZE_TO_POJ_RULES is encoding-only. Each input below
+        // stays as itself, routes to the `poj:` family.
+        for input in ["chhia", "goa", "hoe", "peng", "tek"] {
             let (out, _) = canonicalize_poj_shadow(input, InputMode::Poj);
-            assert_eq!(out, expected, "POJ `{input}` → `{expected}`");
+            assert_eq!(out, input, "POJ `{input}` must stay POJ-shaped");
         }
     }
 
     #[test]
-    fn canonicalize_poj_shadow_poj_ascii_oonn_shrinks_with_offset_drain() {
-        // The only ASCII-reachable shrinking rule (`oonn→onn`) must
-        // still drain exactly one map entry under the POJ ASCII path.
-        let (out, map) = canonicalize_poj_shadow("oonn", InputMode::Poj);
-        assert_eq!(out, "onn", "{out:?}");
+    fn canonicalize_poj_shadow_poj_ascii_ou_is_boundary_preserving() {
+        // v3.5.9 B-2 PR #309 (Codex P1 `r3276402303`) — shadow
+        // canonicalize MUST NOT apply the `ou → oo` alias whole-buffer:
+        // hyphenless POJ user input like `toui` (intended POJ `tó-uī`,
+        // indexed `poj_notone=toui`) would mis-fold to `tooi` and lose
+        // the lattice match. Under the glyph-only rule subset, ASCII
+        // POJ input is identity — the lattice + syllabifier handle
+        // boundaries via the `poj:` family inventory.
+        let (toui, toui_map) = canonicalize_poj_shadow("toui", InputMode::Poj);
         assert_eq!(
-            *map.last().unwrap(),
-            "oonn".len(),
-            "shrunk final byte inherits the full source raw_end: {map:?}",
+            toui, "toui",
+            "POJ `toui` must stay `toui` (boundary preserved)"
         );
+        // ASCII identity → offset map is the identity sequence.
+        assert_eq!(toui_map, vec![0, 1, 2, 3, 4]);
+        // Same boundary-preservation guarantee for typical dirty
+        // single-syllable inputs (`sou`, `kou`): these now stay as
+        // themselves (pre-fix they folded). Per-syllable dirty-row
+        // protection lives in the build pipeline + per-token matching
+        // guard derive — both consume the full NORMALIZE_TO_POJ_RULES
+        // and remain safe (one syllable per application).
+        let (sou, _) = canonicalize_poj_shadow("sou", InputMode::Poj);
+        assert_eq!(sou, "sou");
+        let (kou, _) = canonicalize_poj_shadow("kou", InputMode::Poj);
+        assert_eq!(kou, "kou");
+        // TL mode unchanged — F3C identity fast-path on ASCII.
+        let (tl_sou, _) = canonicalize_poj_shadow("sou", InputMode::Tl);
+        assert_eq!(tl_sou, "sou", "TL ASCII path stays identity (F3C)");
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_poj_non_ascii_keeps_poj_shape() {
+        // v3.5.9 B-2 (PR #309 refinement) — non-ASCII POJ-display input
+        // under POJ mode runs Phase 1 (NFD + tone-mark drop) then
+        // Phase 2 with NORMALIZE_TO_POJ_GLYPH_RULES (glyph encoding
+        // only, no `ou→oo` alias whole-buffer). Result preserves POJ
+        // shape — `chia\u{030d}h` (POJ `chia̍h` for 食) stays `chiah`,
+        // NOT folded to TL `tsiah`.
+        let (out, _) = canonicalize_poj_shadow("chia\u{030d}h", InputMode::Poj);
+        assert_eq!(
+            out, "chiah",
+            "POJ mode keeps POJ shape after tone-mark drop"
+        );
+        // TL mode still folds via NORMALIZE_TO_TL_RULES (byte-identical
+        // to pre-B-2 — verifies the regression guard).
+        let (tl, _) = canonicalize_poj_shadow("chia\u{030d}h", InputMode::Tl);
+        assert_eq!(tl, "tsiah", "TL mode keeps pre-B-2 fold");
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_poj_non_ascii_o_with_dot_above_right() {
+        // v3.5.9 B-2 SHOULD #2 (Codex pre-impl) — the shrinking
+        // `o\u{0358}→oo` rule fires in BOTH lists; verify the offset
+        // map drain stays consistent under POJ mode (commit-span
+        // contract): the two emitted `o` bytes both anchor at raw_end
+        // 4 so a partial-prefix `so` candidate still consumes the full
+        // `o\u{0358}` source spelling on commit.
+        let (poj, poj_map) = canonicalize_poj_shadow("so\u{0358}", InputMode::Poj);
+        assert_eq!(poj, "soo");
+        assert_eq!(poj_map, vec![0, 1, 4, 4]);
+        // TL mode produces the same shape (the rule is shared) — pin
+        // both to lock cross-mode byte-identity on this commit-span-
+        // sensitive shrinking rule.
+        let (tl, tl_map) = canonicalize_poj_shadow("so\u{0358}", InputMode::Tl);
+        assert_eq!(tl, "soo");
+        assert_eq!(tl_map, poj_map);
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_poj_non_ascii_superscript_nasal() {
+        // v3.5.9 B-2 SHOULD #2 — `\u{207f}→nn` (POJ `ⁿ` → ASCII `nn`)
+        // shrinks from 3 bytes to 2. Verify the POJ-mode offset map
+        // matches the TL-mode one byte-for-byte (commit-span contract).
+        let (poj, poj_map) = canonicalize_poj_shadow("pe\u{207f}", InputMode::Poj);
+        assert_eq!(poj, "penn");
+        assert_eq!(poj_map, vec![0, 1, 2, 5, 5]);
+        let (tl, tl_map) = canonicalize_poj_shadow("pe\u{207f}", InputMode::Tl);
+        assert_eq!(tl, "penn");
+        assert_eq!(tl_map, poj_map);
     }
 
     #[test]
@@ -921,16 +1084,17 @@ mod tests {
     }
 
     #[test]
-    fn canonicalize_poj_shadow_non_ascii_is_mode_independent() {
-        // Non-ASCII POJ-display input has always run Phase 2; mode
-        // gating only changes the ASCII path. `chóa` canonicalizes to
-        // `tsua` in BOTH modes (Phase 1 strips tone-2, then Phase 2
-        // runs `ch→ts`, `oa→ua` regardless of `mode` for non-ASCII
-        // inputs).
+    fn canonicalize_poj_shadow_non_ascii_diverges_by_mode_after_b2() {
+        // v3.5.9 B-2 (PR #309 refinement) — non-ASCII POJ-display input
+        // now diverges by mode. POJ mode applies the glyph-only
+        // NORMALIZE_TO_POJ_GLYPH_RULES (no `ch→ts` chain, no `oa→ua`
+        // chain, no `ou→oo` alias) so `chóa` (POJ `chóa` for 紙) keeps
+        // POJ shape → `choa`. TL mode keeps pre-B-2 fold → `tsua`.
+        // Pre-B-2 both modes produced `tsua`.
         let (poj, _) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Poj);
         let (tl, _) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Tl);
-        assert_eq!(poj, "tsua");
-        assert_eq!(tl, "tsua");
+        assert_eq!(poj, "choa", "POJ mode keeps POJ ASCII shape");
+        assert_eq!(tl, "tsua", "TL mode unchanged (regression guard)");
     }
 
     #[test]
@@ -1005,8 +1169,8 @@ mod tests {
     // ----- v3.5.8 Phase 9 Item 10 — partial-prefix key derivation -----
 
     #[test]
-    fn build_partial_prefix_key_tl_passes_ascii_through() {
-        let (span, key) = build_partial_prefix_key_tl("gu", InputMode::Tl).unwrap();
+    fn build_partial_prefix_key_passes_ascii_through() {
+        let (span, key) = build_partial_prefix_key("gu", InputMode::Tl).unwrap();
         // partial-prefix candidates always final-commit (Q15.4) →
         // consumed_span covers the whole pending tail.
         assert_eq!(span, (0u32, 2u32));
@@ -1014,54 +1178,55 @@ mod tests {
     }
 
     #[test]
-    fn build_partial_prefix_key_tl_strips_tone_digits_and_lowercases() {
+    fn build_partial_prefix_key_strips_tone_digits_and_lowercases() {
         // The digit half of `notone.py::remove_tone` still applies on
         // the partial-prefix path so `gu5` and `gu` produce the same
         // FST prefix key.
-        let (_, key) = build_partial_prefix_key_tl("GU5", InputMode::Tl).unwrap();
+        let (_, key) = build_partial_prefix_key("GU5", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:gu");
     }
 
     #[test]
-    fn build_partial_prefix_key_tl_strips_internal_hyphen_via_item8_shadow() {
+    fn build_partial_prefix_key_strips_internal_hyphen_via_item8_shadow() {
         // Item 8's hyphen-shadow chain runs on the partial-prefix path
         // too — `tai-` collapses to `tai` (trailing `-` stays in the
         // pending raw buffer per build_hyphen_shadow contract), and
         // `-tai` collapses to `tai`.
-        let (_, key) = build_partial_prefix_key_tl("tai-", InputMode::Tl).unwrap();
+        let (_, key) = build_partial_prefix_key("tai-", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:tai");
-        let (_, key) = build_partial_prefix_key_tl("-tai", InputMode::Tl).unwrap();
+        let (_, key) = build_partial_prefix_key("-tai", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:tai");
     }
 
     #[test]
-    fn build_partial_prefix_key_tl_canonicalizes_poj_diacritic_via_item9() {
+    fn build_partial_prefix_key_canonicalizes_poj_diacritic_via_item9() {
         // Item 9's canonicalize chain runs on partial-prefix input too
         // — `pe\u{030d}` (POJ `pe̍h` minus the trailing `h`) folds to
         // `pe` after the tone-mark drop, giving FST key `tl:pe`.
-        let (_, key) = build_partial_prefix_key_tl("pe\u{030d}", InputMode::Tl).unwrap();
+        let (_, key) = build_partial_prefix_key("pe\u{030d}", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:pe");
     }
 
     #[test]
-    fn build_partial_prefix_key_tl_returns_none_for_empty_after_strip() {
+    fn build_partial_prefix_key_returns_none_for_empty_after_strip() {
         // Hyphen-only or digit-only raw produces an empty toneless
         // key — return None so the caller skips the FST scan.
-        assert!(build_partial_prefix_key_tl("", InputMode::Tl).is_none());
-        assert!(build_partial_prefix_key_tl("-", InputMode::Tl).is_none());
-        assert!(build_partial_prefix_key_tl("--", InputMode::Tl).is_none());
-        assert!(build_partial_prefix_key_tl("5", InputMode::Tl).is_none());
-        assert!(build_partial_prefix_key_tl("-5-", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key("", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key("-", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key("--", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key("5", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key("-5-", InputMode::Tl).is_none());
     }
 
     #[test]
-    fn build_partial_prefix_key_tl_poj_ascii_canonicalizes() {
-        // Partial-prefix path (syllabifier yielded no ending) must also
-        // fold POJ ASCII so a half-typed `chi` keys `tl:tsi`, not the
-        // dead `tl:chi`.
-        let (_, key) = build_partial_prefix_key_tl("chi", InputMode::Poj).unwrap();
-        assert_eq!(key, "tl:tsi");
-        let (_, tl_key) = build_partial_prefix_key_tl("chi", InputMode::Tl).unwrap();
+    fn build_partial_prefix_key_poj_emits_poj_family() {
+        // v3.5.9 B-2 — POJ mode emits `poj:` family keys preserving POJ
+        // ASCII spelling (pre-B-2 this test asserted `tl:tsi` after a
+        // POJ→TL fold; B-2 makes POJ first-class so `chi` stays `chi`
+        // and routes to the `poj:` family of the FST).
+        let (_, key) = build_partial_prefix_key("chi", InputMode::Poj).unwrap();
+        assert_eq!(key, "poj:chi");
+        let (_, tl_key) = build_partial_prefix_key("chi", InputMode::Tl).unwrap();
         assert_eq!(tl_key, "tl:chi", "TL mode keeps F3C identity");
     }
 
@@ -1107,6 +1272,49 @@ mod tests {
         SyllableInventory::open(&path).expect("open inventory")
     }
 
+    /// v3.5.9 B-2 — POJ-only inventory builder. Emits `poj:<canonical>`
+    /// keys via `phonetics::canonicalize_poj_syllable` (which preserves
+    /// POJ ASCII shape, distinct from `canonicalize_syllable`'s TL fold).
+    /// Used by the B-2 mode-aware unit tests to prove POJ shadow helpers
+    /// route to the `poj:` family of the tagged-single-FST.
+    // 中文: B-2 — POJ-only inventory builder。emit `poj:` 前綴 + POJ ASCII canonical,
+    // 中文:   驗證 mode-aware shadow helpers 路由到 `poj:` 家族。
+    fn build_poj_inventory(samples: &[&str]) -> SyllableInventory {
+        use std::path::PathBuf;
+
+        use fst::SetBuilder;
+        use phonetics::canonicalize_poj_syllable;
+
+        let mut keys: Vec<String> = Vec::new();
+        for s in samples {
+            let (canonical, tone) = canonicalize_poj_syllable(s)
+                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_poj_syllable"));
+            if tone.is_empty() {
+                keys.push(format!("poj:{canonical}"));
+            } else {
+                keys.push(format!("poj:{canonical}{tone}"));
+                keys.push(format!("poj:{canonical}"));
+            }
+        }
+        keys.sort();
+        keys.dedup();
+
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let path: PathBuf = std::env::temp_dir().join(format!(
+            "taigi_shadow_carveout_poj_{}_{n}.fst",
+            std::process::id()
+        ));
+        let file = std::fs::File::create(&path).expect("create fst");
+        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
+        for key in &keys {
+            builder.insert(key.as_bytes()).expect("insert");
+        }
+        builder.finish().expect("finish");
+        SyllableInventory::open(&path).expect("open inventory")
+    }
+
     #[test]
     fn greedy_longest_syllabification_taiuantai_reads_tai_uan_tai() {
         // The documented no-dict carve-out expectation: `taiuantai`
@@ -1115,7 +1323,7 @@ mod tests {
         // sub-syllable over-split `ta i u an ta i` (literal
         // max-syllable-count) and NOT the min-cost fewest-edge blob.
         let inv = build_inventory(&["tai1", "uan1", "ta1", "i1", "u1", "an1"]);
-        let segs = greedy_longest_syllabification("taiuantai", &inv)
+        let segs = greedy_longest_syllabification("taiuantai", &inv, InputMode::Tl)
             .expect("buffer is fully syllabifiable");
         assert_eq!(segs, vec![(0, 3), (3, 6), (6, 9)]);
         let roman = segs
@@ -1132,7 +1340,26 @@ mod tests {
         // caller suppresses the slot-0 synth and leaves the span-local
         // list untouched (pre-S2 behavior).
         let inv = build_inventory(&["tai1"]);
-        assert!(greedy_longest_syllabification("taix", &inv).is_none());
+        assert!(greedy_longest_syllabification("taix", &inv, InputMode::Tl).is_none());
+    }
+
+    #[test]
+    fn greedy_longest_syllabification_poj_mode_uses_poj_family() {
+        // v3.5.9 B-2 — under POJ mode the carve-out walks the `poj:`
+        // family of the inventory. With a `poj:`-only inventory (no
+        // matching `tl:` entries), TL-mode probing must FAIL while
+        // POJ-mode probing succeeds — proves the mode parameter selects
+        // the right family end-to-end.
+        let inv = build_poj_inventory(&["chiah4", "goa2"]);
+        let segs = greedy_longest_syllabification("chiahgoa", &inv, InputMode::Poj)
+            .expect("POJ shadow must syllabify against `poj:` family");
+        assert_eq!(segs, vec![(0, 5), (5, 8)]);
+        // TL mode against the same inventory finds nothing — the `tl:`
+        // family is empty, so the very first step has no valid ending.
+        assert!(
+            greedy_longest_syllabification("chiahgoa", &inv, InputMode::Tl).is_none(),
+            "TL mode must NOT see `poj:`-only inventory entries"
+        );
     }
 
     // ----- v3.5.8 OOV-cost fix — span_min_syllable_count
@@ -1143,12 +1370,15 @@ mod tests {
         let inv = build_inventory(&["tai1", "uan1", "ta1"]);
         // Whole span is itself one valid syllable → 1 (correct, not a
         // collapse).
-        assert_eq!(span_min_syllable_count("tai", &inv), Some(1));
+        assert_eq!(span_min_syllable_count("tai", &inv, InputMode::Tl), Some(1));
         // `taiuanta` = tai|uan|ta → 3 (the synth syllable-sum metadata).
-        assert_eq!(span_min_syllable_count("taiuanta", &inv), Some(3));
+        assert_eq!(
+            span_min_syllable_count("taiuanta", &inv, InputMode::Tl),
+            Some(3)
+        );
         // Not single-syllable-reachable → None (caller fail-closes).
-        assert_eq!(span_min_syllable_count("taix", &inv), None);
-        assert_eq!(span_min_syllable_count("", &inv), None);
+        assert_eq!(span_min_syllable_count("taix", &inv, InputMode::Tl), None);
+        assert_eq!(span_min_syllable_count("", &inv, InputMode::Tl), None);
     }
 
     #[test]
@@ -1162,13 +1392,30 @@ mod tests {
         //   non-greedy `ta` then `nia` spans it → real count = 2.
         let inv = build_inventory(&["ta1", "tan1", "nia1"]);
         assert!(
-            greedy_longest_syllabification("tania", &inv).is_none(),
+            greedy_longest_syllabification("tania", &inv, InputMode::Tl).is_none(),
             "precondition: greedy-longest must dead-end on this span"
         );
         assert_eq!(
-            span_min_syllable_count("tania", &inv),
+            span_min_syllable_count("tania", &inv, InputMode::Tl),
             Some(2),
             "min-hop walk must recover the real 2-syllable count, not collapse to 1"
+        );
+    }
+
+    #[test]
+    fn span_min_syllable_count_poj_mode_uses_poj_family() {
+        // v3.5.9 B-2 — POJ mode min-hop walks the `poj:` family. A
+        // `poj:`-only inventory: POJ-mode hop count succeeds while
+        // TL-mode probe must return None.
+        let inv = build_poj_inventory(&["chiah4", "goa2"]);
+        assert_eq!(
+            span_min_syllable_count("chiahgoa", &inv, InputMode::Poj),
+            Some(2),
+        );
+        assert_eq!(
+            span_min_syllable_count("chiahgoa", &inv, InputMode::Tl),
+            None,
+            "TL mode must NOT see `poj:`-only entries"
         );
     }
 }

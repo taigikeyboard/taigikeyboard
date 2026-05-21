@@ -152,12 +152,28 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
     let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len());
     for (idx, row) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
+        // `tl:` family — pre-B-2 path, unchanged.
         let mut e = Vec::with_capacity(row.toneless_key.len() + 4 + 5);
         e.extend_from_slice(b"tl:");
         e.extend_from_slice(row.toneless_key.as_bytes());
         e.push(SEPARATOR);
         e.extend_from_slice(&rowid.to_le_bytes());
         entries.push(e);
+        // v3.5.9 B-2 — `poj:` family. Derive `poj_notone` at fixture
+        // build time the way `dictionary/build/create_fst.py:124-127`
+        // does in production (TL display → POJ display →
+        // per-syllable `canonicalize_poj_syllable` → concat). Rows whose
+        // TL display does not phonotactically gate have no POJ family
+        // entry in the real `dictionary.fst` either, so the fixture
+        // simply skips them.
+        if let Some(poj_notone) = derive_poj_notone(row.tl) {
+            let mut e2 = Vec::with_capacity(poj_notone.len() + 5 + 5);
+            e2.extend_from_slice(b"poj:");
+            e2.extend_from_slice(poj_notone.as_bytes());
+            e2.push(SEPARATOR);
+            e2.extend_from_slice(&rowid.to_le_bytes());
+            entries.push(e2);
+        }
     }
     entries.sort();
     entries.dedup();
@@ -171,13 +187,34 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
     path
 }
 
+/// v3.5.9 B-2 — derive `poj_notone` from `record.tl` at fixture-build
+/// time, mirroring the production `dictionary/build/create_fst.py:124-127`
+/// pipeline (TL display → POJ display → per-syllable
+/// `canonicalize_poj_syllable` → concat). Returns `None` when any
+/// non-empty syllable fails phonotactic gating (the production pipeline
+/// would have flagged that row as stale and omitted its POJ keys).
+fn derive_poj_notone(tl_display: &str) -> Option<String> {
+    let poj_display = phonetics::api::tl_display_to_poj_display(tl_display);
+    let mut out = String::new();
+    for token in poj_display.split(['-', ' ']) {
+        if token.is_empty() {
+            continue;
+        }
+        let (toneless, _) = phonetics::canonicalize_poj_syllable(token)?;
+        out.push_str(&toneless);
+    }
+    (!out.is_empty()).then_some(out)
+}
+
 /// `syllables.fst` — both numeric and toneless canonical keys, exactly
 /// the builder shape from `engine/composing/tests/build_keys_tl_hyphen.rs`.
 /// `.expect()` (not silent skip) so a wrong grounding assumption fails
 /// loudly here rather than degrading a matrix case (Codex pre-impl BLOCK).
 fn build_syllables_fst(samples: &[&str]) -> PathBuf {
-    // v3.5.9 B-1: tagged-single-FST — emit keys with `tl:` prefix so
-    // production lookups via `contains_in(InputMode::Tl, …)` hit.
+    // v3.5.9 B-1 / B-2: tagged-single-FST — emit both `tl:` and `poj:`
+    // family keys so production lookups via `contains_in(mode, …)`
+    // resolve under either mode. B-2 added the `poj:` family (built via
+    // `canonicalize_poj_syllable` to preserve POJ ASCII shape).
     let mut keys: Vec<String> = Vec::new();
     for s in samples {
         let (canonical, tone) = canonicalize_syllable(s)
@@ -187,6 +224,23 @@ fn build_syllables_fst(samples: &[&str]) -> PathBuf {
         } else {
             keys.push(format!("tl:{canonical}{tone}"));
             keys.push(format!("tl:{canonical}"));
+        }
+        // v3.5.9 B-2 — derive POJ-form sample from the TL-form input
+        // (`tsua7` → POJ `chua7` then through canonicalize_poj_syllable
+        // for normalization). The production POJ inventory is sourced
+        // from the `poj_num` column of `dictionary.csv` — the fixture's
+        // TL samples were rooted in `tl_num`, so we convert each
+        // sample's display form to POJ first via
+        // `phonetics::api::tl_display_to_poj_display`.
+        let poj_display = phonetics::api::tl_display_to_poj_display(s);
+        if let Some((poj_canonical, poj_tone)) = phonetics::canonicalize_poj_syllable(&poj_display)
+        {
+            if poj_tone.is_empty() {
+                keys.push(format!("poj:{poj_canonical}"));
+            } else {
+                keys.push(format!("poj:{poj_canonical}{poj_tone}"));
+                keys.push(format!("poj:{poj_canonical}"));
+            }
         }
     }
     keys.sort();
@@ -408,27 +462,39 @@ fn matrix() -> Vec<Case> {
         // `Tsua` was. Codex pre-impl Q2 + USER 裁示 2026-05-21.
         case("case_sensitive", "TaiUan", "tl"),
         case("headline_ranking", "taiuantaigi", "tl"),
-        // POJ-ASCII fold: `choa`(ch→ts,oa→ua)→`tsua` (grounded:
-        // syllables_fst.rs VALID_SAMPLE `choa7→tsua` + canonicalize_poj
-        // ch→ts test).
+        // v3.5.9 B-2 — POJ first-class: `choa` is the POJ ASCII form
+        // (POJ `chóa` → toneless `choa`). The `poj:choa` key in
+        // `dictionary.fst` resolves to 紙 only — pre-B-2 this folded
+        // through `tl:tsua` and surfaced 紙 + 珠仔 + 珠 together; B-2
+        // narrows the result to the POJ family slice as designed.
         case("poj_ascii_choa", "choa", "poj"),
-        // POJ-ASCII fold: `goa`(oa→ua)→`gua`→我 (grounded:
-        // canonicalize_poj_shadow_poj_ascii_chhia_oa_oe_eng_ek_fold).
+        // v3.5.9 B-2 — POJ first-class: `goa` (POJ ASCII) resolves
+        // through `poj:goa` to 我.
         case("poj_ascii_goa", "goa", "poj"),
-        // POJ render: `台語齒盤`'s roman `tâi-gí-khí-puânn` → `nn`→`ⁿ`
-        // (grounded: render_roman_for_mode_poj_rewrites_oo_and_nn).
-        case("poj_render_nn", "taigikhipuann", "poj"),
-        // POJ post-render dedupe: a custom entry mirroring the grounded
-        // `台語齒盤` dict row collides after the POJ render → first-wins
-        // (grounded: dedupe_rendered_continuous_drops_post_render_collision).
+        // v3.5.9 B-2 — POJ render of `puann → pôaⁿ`: input is the
+        // POJ-form buffer `taigikhipoann` (POJ user types POJ form).
+        // Pre-B-2 this case used the TL-form `taigikhipuann` and worked
+        // by virtue of the POJ→TL fold. B-2 makes POJ first-class so
+        // the input must be POJ ASCII; the dictionary still resolves
+        // `poj:taigikhipoann` to 台語齒盤 and the rendered roman is
+        // `tâi-gí-khí-pôaⁿ` (`nn`→`ⁿ` via `render_roman_for_mode`).
+        case("poj_render_nn", "taigikhipoann", "poj"),
+        // v3.5.9 B-2 — POJ post-render dedupe: custom entry's stored
+        // roman is now in POJ display form `tâi-gí-khí-pôaⁿ` (not the
+        // TL form `tâi-gí-khí-puânn` used pre-B-2) so `custom_toneless_key`
+        // under POJ mode produces `poj:taigikhipoann`, byte-identical
+        // to the walker edge key — dedupe fires. Pre-B-2 the TL form
+        // matched because POJ mode folded everything to TL; B-2 makes
+        // POJ first-class so custom roman must store the form matching
+        // the user's input mode.
         Case {
             name: "poj_post_render_dedupe",
-            raw: "taigikhipuann",
+            raw: "taigikhipoann",
             input_mode: "poj",
             freq: Vec::new(),
             now_ms: 0,
             custom: vec![CustomDictEntry {
-                roman: "tâi-gí-khí-puânn".into(),
+                roman: "tâi-gí-khí-pôaⁿ".into(),
                 hanji: Some("台語齒盤".into()),
             }],
         },

@@ -403,6 +403,7 @@ pub fn fetch_candidates_for_endings(
     input: &str,
     pos: usize,
     endings: &[usize],
+    mode: phonetics::InputMode,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
     if endings.is_empty() || pos >= input.len() || !input.is_char_boundary(pos) {
@@ -411,35 +412,43 @@ pub fn fetch_candidates_for_endings(
 
     let lower = input.to_ascii_lowercase();
     let mut keys: Vec<(ConsumedSpan, String)> = Vec::with_capacity(endings.len());
+    // v3.5.9 B-2 — emit the matching family prefix for `mode`. The
+    // dispatcher [`matches_continuous_toneless_key`] then routes each
+    // key to its mode-specific acronym-collision guard.
+    // 中文: B-2 — emit 與 mode 對應的家族前綴;下游 dispatcher 依前綴選 acronym guard。
+    let prefix = match mode {
+        phonetics::InputMode::Poj => "poj",
+        phonetics::InputMode::Tl | phonetics::InputMode::English => "tl",
+    };
     for &end in endings {
         if end <= pos || end > lower.len() || !lower.is_char_boundary(end) {
             continue;
         }
-        // The toneless TL key is `tl:` + the lowered span with every
+        // The toneless key is `{prefix}:` + the lowered span with every
         // ASCII digit dropped — the digit half of the upstream
         // `notone.py::remove_tone` regex `[\d\-]`
         // (`dictionary/common/notone.py`). Phase 1b guarantees
-        // fused-toneless storage (e.g. `珠仔 → tl:tsua`,
-        // `台北 → tl:taipak`), and the syllabifier hands us endings
-        // for both numeric (`tai1bak4`) and toneless (`taibak`) input
-        // forms; stripping here lets numeric-tone input still hit the
-        // fused toneless FST key. The hyphen half of the regex is NOT
-        // applied at this layer because hyphenated TL input is folded
-        // upstream by `composing::shadow::build_hyphen_shadow` (Phase
-        // 9 Item 8): callers feed already-hyphenless segments here.
-        // Preserving the no-strip invariant at this layer protects the
-        // separation of concerns — if hyphens ever appear in a segment
-        // reaching this fn it indicates an upstream contract violation
-        // and the FST lookup correctly returns no match.
-        // Python `\d` is Unicode-decimal but TL canonical input only
-        // uses ASCII `0..=9`, so `is_ascii_digit()` is sound under the
-        // module input contract above.
+        // fused-toneless storage (e.g. `珠仔 → tl:tsua` / `poj:choa`,
+        // `台北 → tl:taipak` / `poj:taipak`), and the syllabifier hands
+        // us endings for both numeric (`tai1bak4`) and toneless
+        // (`taibak`) input forms; stripping here lets numeric-tone
+        // input still hit the fused toneless FST key. The hyphen half
+        // of the regex is NOT applied at this layer because hyphenated
+        // input is folded upstream by `composing::shadow::build_hyphen_shadow`
+        // (Phase 9 Item 8): callers feed already-hyphenless segments
+        // here. Preserving the no-strip invariant at this layer
+        // protects the separation of concerns — if hyphens ever appear
+        // in a segment reaching this fn it indicates an upstream
+        // contract violation and the FST lookup correctly returns no
+        // match. Python `\d` is Unicode-decimal but canonical input
+        // only uses ASCII `0..=9`, so `is_ascii_digit()` is sound
+        // under the module input contract above.
         let segment = &lower[pos..end];
         let toneless: String = segment.chars().filter(|c| !c.is_ascii_digit()).collect();
         if toneless.is_empty() {
             continue;
         }
-        keys.push(((pos as u32, end as u32), format!("tl:{toneless}")));
+        keys.push(((pos as u32, end as u32), format!("{prefix}:{toneless}")));
     }
 
     // Phase 9.1: pass full `input.len()` for the Tier 1 predicate.
@@ -556,8 +565,10 @@ pub fn fetch_candidates_for_keys(
             }
             // v3.5.8 — drop `tl_abbrev` acronym collisions: continuous
             // input is phonetic-syllable, not acronym (normal-mode
-            // `lexicon::search` keeps acronym matching).
-            if !matches_continuous_tl_toneless_key(key, &record.tl) {
+            // `lexicon::search` keeps acronym matching). v3.5.9 B-2 —
+            // routes through `matches_continuous_toneless_key` so the
+            // matching `poj_abbrev` filter fires on `poj:` keys.
+            if !matches_continuous_toneless_key(key, &record.tl) {
                 continue;
             }
             // Full-syllable path always emits `COVERAGE_KIND_FULL` — by
@@ -679,13 +690,15 @@ pub fn fetch_candidates_for_keys(
 /// — it returns the first [`PARTIAL_PREFIX_CAP`] FST entries under
 /// that prefix, which is a footgun when triggered by misuse rather
 /// than design. Production callers go through
-/// `composing/src/dispatch.rs::build_partial_prefix_key_tl`, which
-/// returns `None` when the toneless body would be empty and
-/// therefore never emits `"tl:"` alone.
+/// `composing::shadow::build_partial_prefix_key` (v3.5.9 B-2 renamed
+/// from `build_partial_prefix_key_tl` since the emitter is now
+/// mode-aware), which returns `None` when the toneless body would be
+/// empty and therefore never emits a bare `"tl:"` / `"poj:"` alone.
 // 中文: Item 10 — 部分前綴候選查詢。當 syllabifier 切不出音節邊界時 fall through 到 prefix_index.lookup_prefix。
 // 中文: rowid pre-cap = PARTIAL_PREFIX_CAP (對齊 legacy LexiconService);hydrate 後 record_to_candidate 標 COVERAGE_KIND_PARTIAL_PREFIX。
 // 中文: 全部候選共用 8 維 SortKey,coverage_kind 在最前面;沒有混合 full + partial 的 caller (dispatch 走互斥 branch)。
-// 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu");bare namespace "tl:" 不會被擋,但會回前 PARTIAL_PREFIX_CAP 筆,生產路徑由 build_partial_prefix_key_tl 保證不會傳 bare namespace。
+// 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu" / "poj:chi");bare namespace 不會被擋,但會回前 PARTIAL_PREFIX_CAP 筆;
+// 中文:   生產路徑由 composing::shadow::build_partial_prefix_key (B-2 脫 `_tl` 後綴,mode-aware) 保證不會傳 bare namespace。
 // 中文: Item 12 — custom 命中也併進 partial-prefix 路徑,標 COVERAGE_KIND_PARTIAL_PREFIX
 // 中文:   (NOT FULL — 否則繞過 §15.5「partial 永遠排在 full 之下」),legacy custom dict prefix-visible 行為對齊。
 // 中文: D7 改:其餘 6 個共用 arg 收進 ContinuousFetchCtx。
@@ -807,8 +820,10 @@ pub fn best_candidate_for_key(
         }
         // v3.5.8 — same `tl_abbrev` collision guard as the span-local
         // path so the whole-sentence walker never picks an acronym
-        // record as an edge representative.
-        if !matches_continuous_tl_toneless_key(key, &record.tl) {
+        // record as an edge representative. v3.5.9 B-2 — routes through
+        // `matches_continuous_toneless_key` so the matching `poj_abbrev`
+        // filter fires on `poj:` keys.
+        if !matches_continuous_toneless_key(key, &record.tl) {
             continue;
         }
         let cand = record_to_candidate(record, consumed_span, freq_map, now_ms, COVERAGE_KIND_FULL);
@@ -883,16 +898,19 @@ pub fn compound_hanji_exists(
 /// (`remove_tone(to_numeric_tone(tl)) == tl_notone` holds for every
 /// `dictionary.csv` row — verified pre-impl).
 ///
-/// Scope: only the `tl:` family is guarded — continuous only ever
-/// builds `tl:` keys; `poj:` / `hanzi:` pass through untouched. A `tl:`
-/// key whose body still carries an ASCII digit is a numeric-tone
-/// (`tl:<tl_num>`) key, NOT a continuous toneless key, so the guard is
-/// skipped rather than silently filtering a non-continuous caller.
+/// Scope: only `tl:` keys are guarded by this fn; v3.5.9 B-2 added the
+/// POJ analog [`matches_continuous_poj_toneless_key`] for `poj:` keys
+/// and the prefix-aware dispatcher [`matches_continuous_toneless_key`].
+/// `hanzi:` keys pass through both guards untouched. A `tl:` key whose
+/// body still carries an ASCII digit is a numeric-tone (`tl:<tl_num>`)
+/// key, NOT a continuous toneless key, so the guard is skipped rather
+/// than silently filtering a non-continuous caller.
 // 中文: 連續輸入 abbrev 撞 key 守門 — 只有當 record 的去調拼寫真的等於查詢的 toneless key body
 // 中文:   (即經 tl_notone 命中,而非 tl_abbrev 縮寫命中)才保留。
 // 中文: 正常 IME 搜尋的 acronym 比對是刻意的(打 gi → 外夷),連續輸入是逐音節注音故為雜訊。
 // 中文: normalize_input 產生數字調形,去掉尾端 ASCII 數字即還原成 FST 儲存的 tl_notone 面。
-// 中文: 只守 tl: 族群;body 仍帶數字 = tl:<tl_num> 數字調 key,非連續 toneless,直接放行不誤殺。
+// 中文: 只守 tl: 族群;poj: 改走 matches_continuous_poj_toneless_key,dispatch 由
+// 中文:   matches_continuous_toneless_key 依 key 前綴選 guard;body 仍帶數字 = 數字調 key 放行。
 fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
     let Some(body) = key.strip_prefix("tl:") else {
         return true;
@@ -905,6 +923,130 @@ fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
         .filter(|c| !c.is_ascii_digit())
         .collect();
     toneless == body
+}
+
+/// v3.5.9 B-2 — POJ analog of [`matches_continuous_tl_toneless_key`].
+/// `record.tl` is the only romanization the engine record carries
+/// (Codex BLOCK #1 — `dict.bin` has no `poj` field), so we derive the
+/// `poj_notone` surface at runtime byte-for-byte the way
+/// `dictionary/build/merge_csv.py:226-240` does in production:
+///   1. [`phonetics::tl_display_to_poj_display`] rewrites the TL display
+///      form into POJ display (`tsiah → chiah`, `gín-á-lâng →
+///      gín-á-lâng`).
+///   2. Split on both `-` AND space. `record.tl` carries multi-syllable
+///      records as either `gín-á-lâng` (hyphenated) or `iā sī`
+///      (space-separated; 998 rows in `dictionary.csv` have spaces) —
+///      Codex pre-impl BLOCK caught the hyphen-only split.
+///   3. Per-token encoding-only normalize: NFD-walk, drop the 8 POJ /
+///      TL combining tone marks (`U+0300, U+0301, U+0302, U+0304,
+///      U+0306, U+030B, U+030C, U+030D`), lowercase. Concat tokens.
+///   4. Apply [`phonetics::NORMALIZE_TO_POJ_RULES`] over the
+///      concatenated surface (`ou→oo`, `o\u{0358}→oo`, `\u{207f}→nn`,
+///      `\u{1d3a}→nn`), then strip any leaked ASCII digits.
+///
+/// Encoding-only — no phonotactic gating — because that is what the
+/// build pipeline does. A phonotactic gate (Codex post-impl SHOULD #1)
+/// would silently reject ~10 legitimate dictionary rows whose TL has
+/// shapes the syllable table does not enumerate (e.g. `hehⁿ` →
+/// `poj_notone=hehnn`; `tl_notone=hehⁿ`; both legitimately indexed in
+/// the shipped `dictionary.fst`). The non-golden parity test
+/// `engine/lexicon/tests/poj_notone_parity.rs` pins this against
+/// every row of `dictionary/output/dictionary.csv`.
+///
+/// Scope mirrors the TL guard: a `poj:` key whose body still carries
+/// an ASCII digit is treated as a numeric-tone key and passed through.
+// 中文: B-2 — POJ analog。record 沒有 poj 欄位(Codex BLOCK #1)。
+// 中文:   依 merge_csv.py 既有 build pipeline 邏輯做 encoding-only derive:
+// 中文:   tl_display_to_poj_display → split `[-,空格]` → NFD 去 8 個 tone combining mark + 小寫
+// 中文:   → concat → 套 NORMALIZE_TO_POJ_RULES → 去 ASCII 數字。
+// 中文: 不做 phonotactic gating(Codex post-impl SHOULD #1):build pipeline 本身不 gate,
+// 中文:   gate 會誤殺 `hehⁿ` / `ho͘hⁿ` 等 ~10 條合法字典行。
+fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
+    let Some(body) = key.strip_prefix("poj:") else {
+        return true;
+    };
+    if body.bytes().any(|b| b.is_ascii_digit()) {
+        return true;
+    }
+    let poj_display = phonetics::api::tl_display_to_poj_display(record_tl);
+    derive_poj_notone_for_match(&poj_display) == body
+}
+
+/// v3.5.9 B-2 — encoding-only POJ-notone derivation; helper for
+/// [`matches_continuous_poj_toneless_key`]. Per-token: NFD-walk, drop
+/// the 8 combining tone marks, lowercase, apply
+/// [`phonetics::NORMALIZE_TO_POJ_RULES`], strip ASCII digits — then
+/// concatenate tokens. Pure / deterministic — testable directly.
+///
+/// Per-token application is load-bearing: the `ou → oo` alias must not
+/// fire across a hyphen boundary. For a 2-syllable record like
+/// `tó-uī`, hand-concatenation would form `toui` and fire `ou → oo`,
+/// drifting from the build pipeline's `to_numeric_tone +
+/// remove_tone(remove_hyphens)` output `toui`. Per-token, `tó` → `to`,
+/// `uī` → `ui`, concat `toui` (no `ou` formed). The non-golden parity
+/// test `engine/lexicon/tests/poj_notone_parity.rs` pins this against
+/// every row of `dictionary/output/dictionary.csv`.
+// 中文: B-2 — encoding-only POJ-notone derive。逐 token 套 normalize_to_poj 後再 concat,
+// 中文:   避免 `ou→oo` 跨連字號邊界誤觸發 (例如 `tó-uī` 不應變成 `tooi`)。
+fn derive_poj_notone_for_match(poj_display: &str) -> String {
+    use unicode_normalization::UnicodeNormalization;
+    let mut out = String::with_capacity(poj_display.len());
+    for token in poj_display.split(['-', ' ']) {
+        if token.is_empty() {
+            continue;
+        }
+        let mut token_buf = String::with_capacity(token.len());
+        for ch in token.nfd() {
+            if is_combining_tone_mark(ch) {
+                continue;
+            }
+            for lower_ch in ch.to_lowercase() {
+                token_buf.push(lower_ch);
+            }
+        }
+        for c in phonetics::normalize_to_poj(&token_buf).chars() {
+            if !c.is_ascii_digit() {
+                out.push(c);
+            }
+        }
+    }
+    out
+}
+
+/// The 8 combining tone-mark codepoints `phonetics::tables::COMBINING_TO_TONE_NUM`
+/// enumerates. Inlined here (not exported from phonetics) so the
+/// matching guard stays self-contained; the same 8 codepoints are
+/// pinned in `engine/composing/src/shadow.rs::is_tone_combining_mark`.
+// 中文: 與 phonetics::tables::COMBINING_TO_TONE_NUM 同步的 8 個 combining 聲調符號;
+// 中文:   shadow.rs::is_tone_combining_mark 也是同一份;改一處須同步另一處 (測試會抓到漂移)。
+fn is_combining_tone_mark(c: char) -> bool {
+    matches!(
+        c,
+        '\u{0300}'  // grave (tone 3)
+            | '\u{0301}'  // acute (tone 2)
+            | '\u{0302}'  // circumflex (tone 5)
+            | '\u{0304}'  // macron (tone 7)
+            | '\u{0306}'  // breve (POJ tone 9)
+            | '\u{030b}'  // double acute (TL tone 9)
+            | '\u{030c}'  // caron (tone 6)
+            | '\u{030d}' // vertical line above (tone 8)
+    )
+}
+
+/// v3.5.9 B-2 — dispatcher that selects the right toneless-key guard by
+/// FST key family. Production span-local and walker paths both route
+/// through here so a `poj:` key cannot accidentally hit the TL guard
+/// (which would always reject a POJ body) or vice versa. `hanzi:` and
+/// any unknown prefix pass through (`matches_continuous_tl_toneless_key`
+/// returns `true` for keys lacking the `tl:` prefix).
+// 中文: B-2 — 依 key 前綴選擇 toneless guard;`tl:` / `poj:` 各走自家 guard,
+// 中文:   `hanzi:` / 未知前綴經 TL guard 的 strip_prefix 失敗早返 true 而透過。
+fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
+    if key.starts_with("poj:") {
+        matches_continuous_poj_toneless_key(key, record_tl)
+    } else {
+        matches_continuous_tl_toneless_key(key, record_tl)
+    }
 }
 
 fn record_to_candidate(
@@ -1985,8 +2127,172 @@ mod abbrev_collision_guard_tests {
 
     #[test]
     fn non_tl_family_passes_through() {
-        // `poj:` / `hanzi:` keys are not continuous toneless keys.
+        // v3.5.9 B-2 — the TL guard itself still passes through `poj:`
+        // and `hanzi:` keys; the dispatcher
+        // `matches_continuous_toneless_key` is what actually routes
+        // `poj:` keys to the dedicated POJ guard. Tested in
+        // `poj_abbrev_collision_guard_tests` + `dispatcher_tests` below.
         assert!(guard("poj:goa", "goá"));
         assert!(guard("hanzi:外夷", "guā-î"));
+    }
+}
+
+#[cfg(test)]
+mod poj_abbrev_collision_guard_tests {
+    //! v3.5.9 B-2 — `matches_continuous_poj_toneless_key`: continuous
+    //! POJ input must reject `poj_abbrev` acronym collisions that
+    //! share the `poj:` FST namespace with a different word's real
+    //! POJ toneless key. Mirrors `abbrev_collision_guard_tests` for
+    //! the TL family.
+    use super::matches_continuous_poj_toneless_key as guard;
+
+    #[test]
+    fn genuine_single_syllable_poj_toneless_match_is_kept() {
+        // 語 TL `gí` → POJ display `gí` → poj_notone "gi" == key body.
+        assert!(guard("poj:gi", "gí"));
+    }
+
+    #[test]
+    fn poj_abbrev_collision_is_rejected() {
+        // 外夷 TL `guā-î` → POJ display `goā-î` → poj_notone "goai"
+        // != key body "gi". Fail-closed drops the acronym hit.
+        assert!(!guard("poj:gi", "guā-î"));
+    }
+
+    #[test]
+    fn genuine_multi_syllable_hyphen_record_is_kept() {
+        // 囡仔人 TL `gín-á-lâng` → POJ display `gín-á-lâng` → split
+        // on `-` → per-syllable canonicalize → "ginalang".
+        assert!(guard("poj:ginalang", "gín-á-lâng"));
+    }
+
+    #[test]
+    fn genuine_space_separated_record_is_kept() {
+        // 998 dictionary.csv rows carry spaces in `tl` (e.g.
+        // 也是 `iā sī`). Codex pre-impl BLOCK on hyphen-only split.
+        // Split on `['-', ' ']` and concat → "iasi".
+        assert!(guard("poj:iasi", "iā sī"));
+    }
+
+    #[test]
+    fn diverged_tl_vs_poj_form_matches_poj() {
+        // 食 TL `tsia̍h` → POJ display `chia̍h` → poj_notone "chiah".
+        // Key body "chiah" matches; "tsiah" would NOT (and that is
+        // exactly the B-2 family separation we are testing).
+        assert!(guard("poj:chiah", "tsia̍h"));
+        assert!(!guard("poj:tsiah", "tsia̍h"));
+    }
+
+    #[test]
+    fn numeric_tone_key_skips_guard() {
+        // A `poj:<poj_num>` key body carries an ASCII digit and is NOT
+        // a continuous toneless key — the guard passes it through so a
+        // non-continuous caller is never silently filtered (parity with
+        // the TL guard's numeric-tone skip).
+        assert!(guard("poj:goa2", "guā-î"));
+    }
+
+    #[test]
+    fn malformed_record_does_not_falsely_match() {
+        // v3.5.9 B-2 — Codex post-impl SHOULD #1 switched the runtime
+        // derive to encoding-only (matches the build pipeline's
+        // `to_numeric_tone + remove_tone` path; no phonotactic gating).
+        // A malformed record like `xyz` flows through as itself and
+        // the comparison against the key body settles the match — no
+        // gate-driven false positives.
+        assert!(!guard("poj:goa", "xyz"));
+        // Identity case: `xyz` against `poj:xyz` IS a match in the
+        // encoding-only scheme. Pinning this so a future tightening
+        // (e.g. re-introducing a syllable-table gate) does not slip in
+        // silently without an updated parity story.
+        assert!(guard("poj:xyz", "xyz"));
+    }
+
+    #[test]
+    fn poj_diacritic_record_with_non_syllabified_nn_match_is_kept() {
+        // v3.5.9 B-2 — Codex post-impl SHOULD #1 motivating row:
+        // 嚇 / 拀 / 煞 / 省 all have `tl=hehⁿ`-style display whose
+        // `poj_notone` shipped in `dictionary.fst` is `hehnn` (POJ
+        // encoding-only). Pre-fix the strict gate rejected these.
+        assert!(guard("poj:hehnn", "hehⁿ"));
+        assert!(guard("poj:sahnn", "sahⁿ"));
+    }
+
+    #[test]
+    fn non_poj_family_passes_through() {
+        // `tl:` / `hanzi:` keys are not POJ continuous toneless keys.
+        assert!(guard("tl:gua", "guá"));
+        assert!(guard("hanzi:外夷", "guā-î"));
+    }
+
+    // v3.5.9 B-2 (Codex post-impl SHOULD #2) — extra delimiter / form
+    // edge cases derived from real `dictionary.csv` rows. The
+    // implementation splits on both `-` and ` ` and skips empty tokens,
+    // so these are the fragile shapes most likely to break a future
+    // refactor.
+
+    #[test]
+    fn mixed_space_and_hyphen_record() {
+        // `bô iàu-kín` (`dictionary.csv:5775`): TL display has a space
+        // between the first syllable and the hyphenated tail. Split on
+        // both delimiters → ["bô", "iàu", "kín"] → poj_notone "boiaukin".
+        // Pin: `bô` POJ-display is `bô`, `iàu` is `iàu`, `kín` is `kín`,
+        // canonicalize each: "bo", "iau", "kin" → "boiaukin".
+        assert!(guard("poj:boiaukin", "bô iàu-kín"));
+    }
+
+    #[test]
+    fn leading_hyphen_record_skips_empty_token() {
+        // `-tiong-tàu` (`dictionary.csv:95675`): leading `-` produces an
+        // empty token after split; guard must skip empty tokens (not
+        // fail-closed on them) and concat the rest → "tiongtau".
+        assert!(guard("poj:tiongtau", "-tiong-tàu"));
+    }
+
+    #[test]
+    fn trailing_hyphen_record_skips_empty_token() {
+        // `thàu-tiong-tàu-` (`dictionary.csv:141481`): trailing `-`
+        // produces an empty trailing token; same skip-empty path.
+        assert!(guard("poj:thautiongtau", "thàu-tiong-tàu-"));
+    }
+}
+
+#[cfg(test)]
+mod dispatcher_tests {
+    //! v3.5.9 B-2 — `matches_continuous_toneless_key` dispatcher: routes
+    //! `poj:` keys to the POJ guard and everything else (`tl:`, unknown
+    //! prefixes) to the TL guard.
+    use super::matches_continuous_toneless_key as dispatch;
+
+    #[test]
+    fn poj_key_routes_to_poj_guard() {
+        // POJ-notone match is kept under POJ routing (TL guard would
+        // wrongly accept any `poj:` key because of its early-return).
+        assert!(dispatch("poj:chiah", "tsia̍h"));
+        // POJ-acronym mismatch is rejected.
+        assert!(!dispatch("poj:gi", "guā-î"));
+    }
+
+    #[test]
+    fn tl_key_routes_to_tl_guard() {
+        assert!(dispatch("tl:gi", "gí"));
+        assert!(!dispatch("tl:gi", "guā-î"));
+    }
+
+    #[test]
+    fn hanzi_key_passes_through() {
+        // Falls into the TL branch which itself passes through any key
+        // lacking the `tl:` prefix → guard returns `true`.
+        assert!(dispatch("hanzi:外夷", "guā-î"));
+    }
+
+    #[test]
+    fn dispatcher_decides_by_prefix_not_content() {
+        // Same body ("chiah"), different prefix → different guard fires.
+        // `poj:chiah` against TL `tsia̍h` → POJ guard accepts (poj_notone
+        // matches). `tl:chiah` against TL `tsia̍h` → TL guard rejects
+        // (`normalize_input(tsia̍h) → tsiah` ≠ "chiah").
+        assert!(dispatch("poj:chiah", "tsia̍h"));
+        assert!(!dispatch("tl:chiah", "tsia̍h"));
     }
 }

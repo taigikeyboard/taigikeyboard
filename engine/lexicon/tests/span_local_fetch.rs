@@ -38,6 +38,7 @@ use lexicon::{
     RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
     PARTIAL_PREFIX_CAP,
 };
+use phonetics::InputMode;
 use ranking::FrequencyMap;
 
 /// v3.5.9 D7 — build the shared `ContinuousFetchCtx` at a test site
@@ -206,6 +207,7 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
         "tsua",
         0,
         &[3, 4], // syllabifier emits span=3 (`tsu`) and span=4 (`tsua`).
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -305,6 +307,7 @@ fn taigikhipuann_surfaces_long_reach_4_syllable_word() {
         "taigikhipuann",
         0,
         &[3, 5, 13],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -358,6 +361,7 @@ fn taixyz_emits_only_single_syllable_when_endings_capped() {
         "taixyz",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -397,6 +401,7 @@ fn empty_endings_yields_empty() {
         "tai",
         0,
         &[],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(out.is_empty(), "no endings → no candidates");
@@ -421,6 +426,7 @@ fn pos_at_or_past_input_end_yields_empty() {
         "tai",
         3,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(out.is_empty());
@@ -444,6 +450,7 @@ fn out_of_range_endings_silently_skipped() {
         "tai",
         0,
         &[3, 99, 100],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1, "only ending=3 valid: {out:#?}");
@@ -479,6 +486,7 @@ fn numeric_tone_input_strips_to_fused_toneless_key() {
         "tsua7",
         0,
         &[5], // syllabifier emits one ending at end-of-input.
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1, "numeric-tone input must surface entry");
@@ -505,6 +513,7 @@ fn numeric_tone_multi_syllable_strips_each_segment_to_fused_key() {
         "tai1bak4",
         0,
         &[4, 8],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     let multi = out
@@ -541,6 +550,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
         "tai-bak",
         0,
         &[7], // hypothetical full-span ending (real syllabifier never emits this)
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(
@@ -623,6 +633,7 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
         "taiuantaigi",
         0,
         &[3, 6, 11], // syllabifier endings
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -671,6 +682,7 @@ fn single_char_input_e_still_surfaces_de_at_slot_1() {
         "e",
         0,
         &[1],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -720,6 +732,7 @@ fn taixyz_invalid_tail_yields_empty_tier1_top() {
         "taixyz",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -799,6 +812,7 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
@@ -833,6 +847,7 @@ fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
@@ -891,6 +906,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(hant.len(), 1);
@@ -901,6 +917,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         "li",
         0,
         &[2],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(tailo.len(), 1);
@@ -915,6 +932,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         "iausi",
         0,
         &[5],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(mixed.len(), 1);
@@ -967,6 +985,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(hant.len(), 1);
@@ -977,6 +996,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
         "li",
         0,
         &[2],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(tailo.len(), 1);
@@ -990,6 +1010,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
         "iausi",
         0,
         &[5],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(mixed.len(), 1);
@@ -1208,6 +1229,7 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
@@ -1497,6 +1519,7 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
         "gi",
         0,
         &[2],
+        InputMode::Tl,
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(

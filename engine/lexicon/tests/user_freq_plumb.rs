@@ -31,6 +31,7 @@ use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{fetch_candidates_for_endings, ContinuousFetchCtx};
+use phonetics::InputMode;
 use protos::engine::FrequencyEntry;
 use ranking::{build_frequency_map, FrequencyMap, MAX_BOOST, RECENCY_WINDOW_MS};
 
@@ -131,6 +132,7 @@ fn user_freq_boost_amplifies_score_for_matched_candidate() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx(&FrequencyMap::new(), 0, &prefix_index, &dict),
     );
     assert!((cold[0].score - 100.0).abs() < 1e-4);
@@ -145,6 +147,7 @@ fn user_freq_boost_amplifies_score_for_matched_candidate() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx(&map_ten, 1_000_000_000_000, &prefix_index, &dict),
     );
     assert!((warm[0].score - 200.0).abs() < 1e-4);
@@ -173,6 +176,7 @@ fn user_freq_boost_saturates_at_max_boost_when_count_high() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx(&map, 1_000_000_000_000, &prefix_index, &dict),
     );
     let expected = 100.0_f32 * MAX_BOOST; // 500.0
@@ -206,8 +210,13 @@ fn recency_rank_zero_when_last_used_is_within_window() {
         count: 1,
         last_used_ms,
     }]);
-    let out =
-        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        InputMode::Tl,
+        &ctx(&map, now_ms, &prefix_index, &dict),
+    );
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].recency_rank, 0);
 }
@@ -232,8 +241,13 @@ fn recency_rank_one_when_last_used_is_outside_window() {
         count: 1,
         last_used_ms,
     }]);
-    let out =
-        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        InputMode::Tl,
+        &ctx(&map, now_ms, &prefix_index, &dict),
+    );
     assert_eq!(out[0].recency_rank, 1);
 }
 
@@ -258,8 +272,13 @@ fn recency_rank_one_when_clock_skew_now_before_last_used() {
         count: 1,
         last_used_ms,
     }]);
-    let out =
-        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        InputMode::Tl,
+        &ctx(&map, now_ms, &prefix_index, &dict),
+    );
     assert_eq!(out[0].recency_rank, 1);
 }
 
@@ -285,7 +304,13 @@ fn recency_rank_one_when_now_ms_is_zero() {
         last_used_ms: 1_700_000_000_000,
     }]);
     // platform shim has not injected a clock yet → now_ms = 0
-    let out = fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, 0, &prefix_index, &dict));
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        InputMode::Tl,
+        &ctx(&map, 0, &prefix_index, &dict),
+    );
     assert_eq!(out[0].recency_rank, 1);
 }
 
@@ -324,8 +349,13 @@ fn recent_candidate_outranks_stale_within_same_tier_and_coverage() {
         count: 1,
         last_used_ms: now_ms - 5 * 60 * 1_000,
     }]);
-    let out =
-        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        InputMode::Tl,
+        &ctx(&map, now_ms, &prefix_index, &dict),
+    );
     assert_eq!(out.len(), 2);
     let displays: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
     assert_eq!(
@@ -385,6 +415,7 @@ fn empty_freq_map_with_zero_now_matches_pre_9_3a_behaviour() {
         "taiuantaigi",
         0,
         &[3, 6, 11],
+        InputMode::Tl,
         &ctx(&FrequencyMap::new(), 0, &prefix_index, &dict),
     );
     let displays: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
@@ -434,6 +465,7 @@ fn mismatched_display_text_key_leaves_score_neutral() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx(&map, 1_700_000_000_500, &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
@@ -476,6 +508,7 @@ fn duplicate_keys_in_freq_map_apply_last_write_winner_to_candidate() {
         "tai",
         0,
         &[3],
+        InputMode::Tl,
         &ctx(&map, 1_700_000_001_000, &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
@@ -530,6 +563,7 @@ fn taiuantaigi_phrase_keeps_slot_one_when_boosted() {
         "taiuantaigi",
         0,
         &[3, 6, 11],
+        InputMode::Tl,
         &ctx(&map, now_ms, &prefix_index, &dict),
     );
     assert_eq!(out[0].display_text, "臺灣台語");

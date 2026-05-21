@@ -262,66 +262,119 @@ fn ascii_only_poj_spellings_skip_canonicalize() {
     );
 }
 
-// ---- POJ-mode ASCII canonicalize (the fix) --------------------------
-// Bug: in POJ continuous mode the user types toneless pure-ASCII POJ
-// (`chiah`, `chhia`, `goa`, `che`). Before the fix that hit the F3C
-// identity fast-path, so `ch→ts` etc. never ran and the lattice keyed
-// `tl:chiah` — zero FST hits (the dictionary stores `tl:tsiah`), i.e.
-// every ch-/chh-/oa-/oe- POJ word returned no continuous candidates.
-// `mode = InputMode::Poj` must run the POJ→TL spelling chain on ASCII too.
+// ---- POJ-mode ASCII canonicalize (B-2 first-class) ------------------
+// v3.5.9 B-2 promoted POJ to a first-class FST key family. POJ
+// continuous typing of toneless pure-ASCII POJ (`chiah`, `chhia`,
+// `goa`, `che`) now reaches the `poj:` family of `dictionary.fst` /
+// `syllables.fst` directly — `chiah` stays `chiah`, no POJ→TL fold.
+// PR #309 Codex P1 refinement: the legacy `ou→oo` alias was further
+// removed from the shadow canonicalize so hyphenless multi-syllable
+// POJ input like `toui` (intended `tó-uī`) is boundary-preserving.
 
 #[test]
-fn poj_mode_ascii_chiah_canonicalizes_to_tsiah() {
-    // 食 — POJ `chia̍h`, toneless ASCII `chiah`. POJ mode must fold
-    // `ch→ts` so the key is `tl:tsiah` (the form the dictionary FST
-    // actually stores), not the dead `tl:chiah`.
-    let inv = build_inventory(&["tsiah8"]);
+fn poj_mode_ascii_chiah_emits_poj_family() {
+    // v3.5.9 B-2 — 食 — POJ `chia̍h`, toneless ASCII `chiah`. POJ mode
+    // now preserves POJ ASCII and emits the `poj:` family key against
+    // the `poj:` family of the tagged-single-FST. Pre-B-2 this folded
+    // to `tl:tsiah`; B-2 makes POJ first-class so `chiah` stays
+    // `poj:chiah`.
+    let inv = build_poj_inventory(&["chiah8"]);
     let keys = build_keys_tl_with_inventory("chiah", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.contains(&"tl:tsiah"),
-        "POJ-mode ASCII `chiah` must canonicalize to `tl:tsiah`, got {key_strs:?}",
+        key_strs.contains(&"poj:chiah"),
+        "POJ-mode ASCII `chiah` must emit `poj:chiah`, got {key_strs:?}",
     );
     assert!(
-        !key_strs.iter().any(|k| k.contains("chiah")),
-        "POJ-mode `chiah` must NOT leak the un-canonicalized `tl:chiah`, got {key_strs:?}",
+        !key_strs.iter().any(|k| k.starts_with("tl:")),
+        "POJ-mode keys must not leak into `tl:` family, got {key_strs:?}",
     );
 }
 
 #[test]
-fn poj_mode_ascii_chhia_canonicalizes_to_tshia() {
-    // 車 — POJ `chhia`, toneless ASCII `chhia` → TL `tshia`.
-    let inv = build_inventory(&["tshia1"]);
+fn poj_mode_ascii_chhia_emits_poj_family() {
+    // v3.5.9 B-2 — 車 — POJ `chhia`. `chh→tsh` chain rule belongs to
+    // NORMALIZE_TO_TL_RULES (TL fold), not POJ — POJ keeps POJ shape.
+    let inv = build_poj_inventory(&["chhia1"]);
     let keys = build_keys_tl_with_inventory("chhia", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.contains(&"tl:tshia"),
-        "POJ-mode ASCII `chhia` must canonicalize to `tl:tshia`, got {key_strs:?}",
+        key_strs.contains(&"poj:chhia"),
+        "POJ-mode ASCII `chhia` must emit `poj:chhia`, got {key_strs:?}",
     );
 }
 
 #[test]
-fn poj_mode_ascii_goa_canonicalizes_to_gua() {
-    // 我 — POJ `góa`, toneless ASCII `goa` → TL `gua` (`oa→ua`).
-    let inv = build_inventory(&["gua2"]);
+fn poj_mode_ascii_goa_emits_poj_family() {
+    // v3.5.9 B-2 — 我 — POJ `góa`. `oa→ua` is TL-only; POJ keeps `goa`.
+    let inv = build_poj_inventory(&["goa2"]);
     let keys = build_keys_tl_with_inventory("goa", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.contains(&"tl:gua"),
-        "POJ-mode ASCII `goa` must canonicalize to `tl:gua`, got {key_strs:?}",
+        key_strs.contains(&"poj:goa"),
+        "POJ-mode ASCII `goa` must emit `poj:goa`, got {key_strs:?}",
     );
 }
 
 #[test]
-fn poj_mode_ascii_oe_substitution_fires() {
-    // Opposite of `ascii_only_poj_spellings_skip_canonicalize`: with
-    // `mode = InputMode::Poj`, ASCII `oe-ji` DOES fold `oe→ue` → `tl:ueji`.
-    let inv = build_inventory(&["ue7", "ji7"]);
+fn poj_mode_ascii_oe_no_tl_chain_fold() {
+    // v3.5.9 B-2 — `oe→ue` is in NORMALIZE_TO_TL_RULES, not POJ. POJ
+    // mode keeps `oe-ji` → `oeji` (hyphen-shadow strips `-`; POJ rule
+    // list is encoding-only and does NOT fold `oe → ue`).
+    let inv = build_poj_inventory(&["oe7", "ji7"]);
     let keys = build_keys_tl_with_inventory("oe-ji", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.iter().any(|k| k.contains("ue")),
-        "POJ-mode ASCII `oe-ji` MUST trigger `oe→ue` substitution, got {key_strs:?}",
+        key_strs.iter().any(|k| k.contains("poj:oe")),
+        "POJ-mode ASCII `oe-ji` MUST stay POJ shape (no `oe→ue` fold), got {key_strs:?}",
+    );
+    assert!(
+        !key_strs.iter().any(|k| k.contains("ue")),
+        "POJ-mode must NOT fire the TL-only `oe→ue` chain, got {key_strs:?}",
+    );
+}
+
+#[test]
+fn poj_mode_ascii_toui_preserves_token_boundary() {
+    // v3.5.9 B-2 PR #309 Codex P1 (`r3276402303`) — hermetic
+    // reproduction of the multi-syllable POJ boundary-preservation
+    // case. User types `toui` (no hyphen) meaning POJ `tó-uī` (佗位),
+    // indexed `poj_notone=toui`. Pre-fix the shadow canonicalize ran
+    // `ou→oo` whole-buffer → `tooi` → `poj:tooi` lookup missed → 佗位
+    // candidate dropped. Post-fix the shadow stays `toui` and the
+    // lattice emits the `poj:toui` full-span phrase key.
+    let inv = build_poj_inventory(&["to2", "ui7"]);
+    let keys = build_keys_tl_with_inventory("toui", &inv, phonetics::InputMode::Poj);
+    let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
+    assert!(
+        key_strs.iter().any(|k| k == &"poj:toui"),
+        "POJ-mode `toui` MUST emit full-span `poj:toui` key, got {key_strs:?}",
+    );
+    assert!(
+        !key_strs.iter().any(|k| k.contains("tooi")),
+        "POJ-mode `toui` MUST NOT fold `ou→oo` whole-buffer to `tooi`, got {key_strs:?}",
+    );
+}
+
+#[test]
+fn poj_mode_non_ascii_toui_preserves_token_boundary() {
+    // v3.5.9 B-2 PR #309 Codex post-impl SHOULD — non-ASCII parallel of
+    // the boundary-preservation test. Input `t\u{f3}u\u{12b}` (POJ
+    // `tóuī` typed without hyphen — same buffer as `toui` but with
+    // precomposed NFC diacritics). After Phase 1 NFD-walk + tone-mark
+    // drop, the intermediate is `toui`; Phase 2 (POJ mode) must use the
+    // glyph-only rule subset so `ou→oo` does NOT fire whole-buffer.
+    // Shadow stays `toui`, lattice emits `poj:toui` phrase key.
+    let inv = build_poj_inventory(&["to2", "ui7"]);
+    let keys = build_keys_tl_with_inventory("t\u{f3}u\u{12b}", &inv, phonetics::InputMode::Poj);
+    let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
+    assert!(
+        key_strs.iter().any(|k| k == &"poj:toui"),
+        "POJ-mode non-ASCII `tóuī` MUST emit full-span `poj:toui` key, got {key_strs:?}",
+    );
+    assert!(
+        !key_strs.iter().any(|k| k.contains("tooi")),
+        "POJ-mode non-ASCII MUST NOT fold `ou→oo` whole-buffer after NFD tone-mark drop, got {key_strs:?}",
     );
 }
 
@@ -365,13 +418,14 @@ fn config_input_mode_string_drives_mode_through_key_construction() {
         phonetics::InputMode::Poj,
         "config `input_mode=\"poj\"` must parse to InputMode::Poj"
     );
-    let poj_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &inv, poj_mode)
+    let poj_inv = build_poj_inventory(&["chiah8"]);
+    let poj_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &poj_inv, poj_mode)
         .into_iter()
         .map(|(_, k)| k)
         .collect();
     assert!(
-        poj_keys.iter().any(|k| k == "tl:tsiah"),
-        "config `poj` must thread through to `tl:tsiah`, got {poj_keys:?}",
+        poj_keys.iter().any(|k| k == "poj:chiah"),
+        "v3.5.9 B-2 — config `poj` must thread through to `poj:chiah`, got {poj_keys:?}",
     );
 
     let tl_mode = phonetics::api::parse_input_mode("tl");
@@ -431,4 +485,41 @@ fn unique_temp_path() -> PathBuf {
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
     let pid = std::process::id();
     std::env::temp_dir().join(format!("composing-build-keys-tl-poj-{pid}-{n}.fst"))
+}
+
+/// v3.5.9 B-2 — POJ family inventory builder. Uses
+/// `phonetics::canonicalize_poj_syllable` so emitted keys preserve POJ
+/// ASCII (e.g. `poj:chiah` not `poj:tsiah`) — distinct from the TL
+/// helper above which folds through the TL chain.
+fn build_poj_inventory(samples: &[&str]) -> SyllableInventory {
+    use phonetics::canonicalize_poj_syllable;
+
+    let pairs: Vec<(String, String)> = samples
+        .iter()
+        .map(|s| {
+            canonicalize_poj_syllable(s)
+                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_poj_syllable"))
+        })
+        .collect();
+
+    let mut keys: Vec<String> = Vec::new();
+    for (canonical, tone) in &pairs {
+        if tone.is_empty() {
+            keys.push(format!("poj:{canonical}"));
+        } else {
+            keys.push(format!("poj:{canonical}{tone}"));
+            keys.push(format!("poj:{canonical}"));
+        }
+    }
+    keys.sort();
+    keys.dedup();
+
+    let path = unique_temp_path();
+    let file = std::fs::File::create(&path).expect("create fst");
+    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
+    for key in &keys {
+        builder.insert(key.as_bytes()).expect("insert");
+    }
+    builder.finish().expect("finish");
+    SyllableInventory::open(&path).expect("open inventory")
 }

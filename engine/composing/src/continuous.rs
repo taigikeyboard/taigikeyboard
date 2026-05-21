@@ -56,7 +56,7 @@
 // 中文: spec docs/reports/2026-05-18-v358-refactor-design-spec.md §2 + ⭐ B1/B2/S7。
 
 use crate::shadow::{
-    build_partial_prefix_key_tl, build_shadow_lattice, custom_toneless_key,
+    build_partial_prefix_key, build_shadow_lattice, custom_toneless_key,
     greedy_longest_syllabification, left_anchored_keys_from_lattice, span_min_syllable_count,
     strip_ascii_tone_digits, MAX_SYLLABLES,
 };
@@ -348,8 +348,10 @@ fn fetch_via_lexicon_inner(
 }
 
 /// v3.5.9 A2 — partial-prefix fetch inner. Pre-A2 `fetch_via_lexicon_partial`'s
-/// body minus the `LexiconHandle::with_state` opener. `build_partial_prefix_key_tl`
-/// is pure (shadow primitives only) and runs ahead of any state borrow.
+/// body minus the `LexiconHandle::with_state` opener.
+/// [`build_partial_prefix_key`] (renamed from `_tl` suffix in v3.5.9
+/// B-2 since the emitter is now mode-aware) is pure (shadow primitives
+/// only) and runs ahead of any state borrow.
 ///
 /// v3.5.9 D7 — takes [`ContinuousFetchCtx`]; `mode` is kept as a
 /// separate arg because it is shadow-key construction input, not part
@@ -357,18 +359,21 @@ fn fetch_via_lexicon_inner(
 ///
 /// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
 /// `is_poj: bool` (`mode == InputMode::Poj` preserves the old gate).
-/// `mode` flows untouched through to [`build_partial_prefix_key_tl`],
-/// keeping the seam's single-source-of-truth invariant.
-// 中文: A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key_tl 純函式先跑,prefix/dict 由 seam 提取。
+/// `mode` flows untouched through to [`build_partial_prefix_key`],
+/// keeping the seam's single-source-of-truth invariant. v3.5.9 B-2
+/// makes the emitter mode-aware so POJ partial-prefix keys land in the
+/// `poj:` family rather than folding through the TL chain.
+// 中文: A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key 純函式先跑,prefix/dict 由 seam 提取。
 // 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx;mode 為 shadow key 構造輸入,留 separate arg。
 // 中文: B-0c 改:`mode: phonetics::InputMode` 取代 `is_poj: bool`,語意對齊(POJ 等價 mode == Poj)。
+// 中文: B-2 改:build_partial_prefix_key (脫 `_tl` 後綴) emitter 改 mode-aware,POJ 走 `poj:` 家族。
 fn fetch_via_lexicon_partial_inner(
     raw: &str,
     raw_len: u32,
     mode: phonetics::InputMode,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
-    let Some(key) = build_partial_prefix_key_tl(raw, mode) else {
+    let Some(key) = build_partial_prefix_key(raw, mode) else {
         return Vec::new();
     };
     fetch_partial_prefix_candidates(&key, raw_len, ctx)
@@ -465,7 +470,16 @@ fn fetch_walker_slot0_inner(
             shadow_to_raw_end[start] as u32,
             shadow_to_raw_end[end] as u32,
         );
-        let key = format!("tl:{toneless}");
+        // v3.5.9 B-2 — walker edge key is mode-aware: the same `mode`
+        // feeding the shadow + lattice (`build_shadow_lattice`) above
+        // also feeds the key prefix here, so the lookup family is
+        // consistent with the inventory family that produced the edge.
+        // 中文: B-2 — walker edge key mode-aware,單一 mode 同時驅動 shadow / lattice / key 前綴,
+        // 中文:   不同家族 (tl/poj) 不會由不同來源分歧。
+        let key = format!(
+            "{prefix}:{toneless}",
+            prefix = crate::shadow::mode_key_prefix(mode)
+        );
         // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
         // `custom_dictionary.db` entry whose normalized toneless
         // roman equals this edge's key OVERRIDES the `dict.bin`
@@ -499,7 +513,7 @@ fn fetch_walker_slot0_inner(
             // carries no syllable model — this mirrors what the
             // dict path reads off `DictionaryRecord.syllable_count`
             // for the same span and feeds the khiin `n_syls` bias.
-            let syllable_count = greedy_longest_syllabification(&shadow[start..end], inv)
+            let syllable_count = greedy_longest_syllabification(&shadow[start..end], inv, mode)
                 .map(|segs| segs.len())
                 .unwrap_or(1)
                 .clamp(1, u8::MAX as usize) as u8;
@@ -601,7 +615,7 @@ fn fetch_walker_slot0_inner(
             // is still spanned via finer edges.
             None => {
                 let toneless_len = toneless.chars().count();
-                let syllable_count = span_min_syllable_count(&shadow[start..end], inv)?
+                let syllable_count = span_min_syllable_count(&shadow[start..end], inv, mode)?
                     .clamp(1, u8::MAX as usize) as u8;
                 Some(crate::lattice::EdgeChoice {
                     roman: toneless,
@@ -675,7 +689,7 @@ fn fetch_walker_slot0_inner(
             .min(u32::from(u8::MAX)) as u8;
         (r, s)
     } else {
-        match greedy_longest_syllabification(shadow, inv) {
+        match greedy_longest_syllabification(shadow, inv, mode) {
             Some(segs) if !segs.is_empty() => {
                 let r = segs
                     .iter()
@@ -817,10 +831,13 @@ pub(crate) fn assemble_candidates(
         } else {
             match inv {
                 Some(inv) => {
-                    let (shadow, shadow_to_raw_end, lattice) =
-                        build_shadow_lattice(raw, inv, mode);
-                    let keys =
-                        left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice);
+                    let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
+                    let keys = left_anchored_keys_from_lattice(
+                        &shadow,
+                        &shadow_to_raw_end,
+                        &lattice,
+                        mode,
+                    );
                     (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
                 }
                 None => (Vec::new(), None),

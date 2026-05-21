@@ -88,30 +88,54 @@ pub fn normalize_to_tl(text: &str) -> String {
         })
 }
 
-/// Encoding-only POJ normalization rules — fold the non-ASCII POJ glyphs
-/// (`o͘`, `ⁿ`, `ᴺ`) to their ASCII spellings (`oo`, `nn`), plus the
-/// legacy `ou` → `oo` alias shared with [`NORMALIZE_TO_TL_RULES`]
-/// (Codex pre-impl B-1 SHOULD, 2026-05-20: an unaudited dirty source
-/// row like `sou2` must not leak as a literal `poj:sou` key while
-/// validating phonotactically through TL's `soo` fold). Crucially we
-/// **do not** run the POJ→TL spelling chain (`ch→ts`, `oa→ua`,
-/// `oe→ue`, `eng→ing`, `ek→ik`). Consumed by
-/// [`canonicalize_poj_syllable`] for the v3.5.9 B-1 POJ syllable
-/// inventory (`poj:` family in tagged-single-FST `syllables.fst`). The
-/// design rationale lives in `docs/reports/2026-05-20-v359-b-plan.md`
-/// §B-2 line 100 — POJ keys must stay POJ-shaped so that the lattice
-/// can recognise `chiah` / `goa` / `toa` as their own syllable
-/// boundaries rather than collapsing onto the TL forms.
-// 中文: B-1 POJ inventory 專用 — fold POJ 非-ASCII 字形 (o͘/ⁿ/ᴺ) 與 ou 別名為 ASCII (oo/nn),
-// 中文:   不跑 POJ→TL 拼寫鏈 (ch→ts 等)。Codex SHOULD:`ou→oo` 是 encoding 同義字,
-// 中文:   不加會讓未來髒資料 (`sou2`) 在 TL fold 通過驗證後寫成字面 `poj:sou`。
-// 中文:   B-2 線下 plan §B-2 line 100 — 鎖死 `poj:` 家族維持 POJ ASCII shape。
+/// POJ normalization rules — fold the non-ASCII POJ glyphs (`o͘`, `ⁿ`,
+/// `ᴺ`) to their ASCII spellings (`oo`, `nn`), plus the legacy `ou` →
+/// `oo` alias (Codex pre-impl B-1 SHOULD, 2026-05-20: an unaudited
+/// dirty single-syllable source row like `sou2` must not leak as a
+/// literal `poj:sou` key while validating phonotactically through TL's
+/// `soo` fold). Crucially we **do not** run the POJ→TL spelling chain
+/// (`ch→ts`, `oa→ua`, `oe→ue`, `eng→ing`, `ek→ik`).
+///
+/// **Per-syllable use only.** The `ou → oo` alias is safe under
+/// per-syllable / single-token application (which is how
+/// [`canonicalize_poj_syllable`] and `derive_poj_notone_for_match`
+/// consume this list — `ou` can only appear inside one POJ syllable,
+/// and that one syllable is the dirty-row case we want to canonicalize).
+/// For whole-buffer use (`composing::shadow::canonicalize_poj_shadow`,
+/// in the downstream `composing` crate) the alias would mis-fire across
+/// syllable boundaries — the runtime shadow uses
+/// [`NORMALIZE_TO_POJ_GLYPH_RULES`] (the glyph-only subset) instead.
+/// v3.5.9 B-2 PR #309 Codex P1 (`r3276402303`) caught that regression
+/// on hyphenless user typing `toui` (intended POJ `tó-uī`).
+// 中文: 逐音節 (per-syllable) 專用 — fold POJ 非-ASCII 字形 (o͘/ⁿ/ᴺ) 與 ou 別名為 ASCII (oo/nn),
+// 中文:   不跑 POJ→TL 拼寫鏈 (ch→ts 等)。`ou→oo` 在單音節下安全 (dirty `sou2` 等);
+// 中文:   全 buffer 套用會跨音節邊界誤觸發 → shadow pipeline 改用 NORMALIZE_TO_POJ_GLYPH_RULES。
 pub const NORMALIZE_TO_POJ_RULES: &[(&str, &str)] = &[
     ("ou", "oo"),
     ("o\u{0358}", "oo"),
     ("\u{207f}", "nn"),
     ("\u{1d3a}", "nn"),
 ];
+
+/// Glyph-only POJ normalization rules — the encoding subset of
+/// [`NORMALIZE_TO_POJ_RULES`] without the legacy `ou → oo` alias.
+/// Safe to apply whole-buffer because every rule is a non-ASCII →
+/// ASCII codepoint substitution that cannot fire across token
+/// boundaries by construction (the LHS is a single non-ASCII codepoint
+/// or a base+combining pair, both of which sit inside one syllable).
+///
+/// Consumed by `composing::shadow::canonicalize_poj_shadow` (downstream
+/// `composing` crate — plain reference, not an intra-doc link) so the
+/// shadow stays boundary-preserving for hyphenless multi-syllable POJ
+/// input (`toui` stays `toui`, the lattice then finds `poj:to` +
+/// `poj:ui`). Per-syllable callers should keep using
+/// [`NORMALIZE_TO_POJ_RULES`] — they get the dirty-row `ou` alias
+/// protection where it is structurally safe.
+// 中文: NORMALIZE_TO_POJ_RULES 的 glyph-only 子集,移除 `ou→oo` alias。
+// 中文:   全 buffer 套用安全 (每條規則 LHS 都在單一音節內);供 shadow pipeline 使用,
+// 中文:   不跨音節邊界誤觸發。逐音節呼叫端仍用完整 NORMALIZE_TO_POJ_RULES 保 dirty-row 防護。
+pub const NORMALIZE_TO_POJ_GLYPH_RULES: &[(&str, &str)] =
+    &[("o\u{0358}", "oo"), ("\u{207f}", "nn"), ("\u{1d3a}", "nn")];
 
 /// Apply [`NORMALIZE_TO_POJ_RULES`] in order. The non-ASCII rules
 /// (`o͘`/`ⁿ`/`ᴺ` → ASCII pairs) are no-ops on already-ASCII input. The

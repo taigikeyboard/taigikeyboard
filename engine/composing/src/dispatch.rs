@@ -241,18 +241,19 @@ fn handle_fetch_at_pos(
 /// [`crate::shadow::left_anchored_keys_from_lattice`]):
 ///
 /// 1. Lowercase `raw` (ASCII only).
-/// 2. `shadow::canonicalize_poj_shadow` (Phase 9 Item 9) folds
-///    POJ-display input into ASCII TL spelling in POJ mode; identity
-///    in TL mode.
+/// 2. `shadow::canonicalize_poj_shadow` (Phase 9 Item 9; v3.5.9 B-2
+///    reshape) emits POJ ASCII in POJ mode (`chiah` stays `chiah`) and
+///    TL ASCII identity in TL mode (`tó-uī` stays `tó-uī`).
 /// 3. `shadow::build_hyphen_shadow` (Phase 9 Item 8) strips ASCII `-`.
 /// 4. The two byte-offset maps compose into a single
 ///    `shadow_to_raw_end` so downstream `consumed_span_end` lines up
 ///    with platform UI commit slicing.
 /// 5. The lattice builder (`crate::lattice::build_lattice`) walks the
-///    shadow against the inventory (which has no hyphenated entries
-///    and no POJ-display keys — both transforms ran upstream).
+///    shadow against the inventory family selected by `mode` (B-2:
+///    `tl:` vs `poj:`) — both transforms ran upstream.
 /// 6. The left-anchored projection (`start == 0`) emits a fused
-///    toneless `tl:<key>` per ending.
+///    toneless `{mode_prefix}:<key>` per ending (`tl:` in TL/English
+///    mode, `poj:` in POJ mode).
 // 中文: build_keys_tl 的可注入測試版 — 直接吃 SyllableInventory,跑「lowercase →
 // 中文:   canonicalize_poj_shadow (Item 9) → hyphen-shadow (Item 8) → 音節切分 →
 // 中文:   fused toneless key + raw byte offset」。
@@ -267,7 +268,10 @@ pub fn build_keys_tl_with_inventory(
     mode: phonetics::InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
     let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice)
+    // v3.5.9 B-2 — `left_anchored_keys_from_lattice` takes `mode` so the
+    // emitted key prefix matches the inventory family the shadow lattice
+    // was built against.
+    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, mode)
 }
 
 /// v3.5.8 Phase 9 Item 12 — hoist proto-shaped `CustomDictEntry[]`

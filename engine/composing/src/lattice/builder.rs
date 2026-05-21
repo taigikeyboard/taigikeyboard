@@ -20,40 +20,38 @@ use phonetics::InputMode;
 use super::Lattice;
 use crate::syllabifier::tl::valid_span_endings_lowered;
 
-/// v3.5.9 B-1: the lattice builder always queries the **TL** family of
-/// the tagged-single-FST syllable inventory because `build_shadow_lattice`
-/// canonicalizes its input to TL form via `canonicalize_poj_shadow`
-/// before reaching here. v3.5.9 B-2 will reshape `canonicalize_poj_shadow`
-/// to preserve POJ ASCII when `mode == InputMode::Poj` and thread a
-/// `mode: InputMode` parameter through this seam; until then, hardcoding
-/// `Tl` here keeps B-1 behavior-neutral against the pre-B golden suite.
-// 中文: B-1 階段 lattice 一律查 tl: 家族 — build_shadow_lattice 在上游已將輸入
-// 中文:   canonicalize 為 TL 形式;B-2 重塑 canonicalize_poj_shadow + 加 mode 參數後解除。
-const LATTICE_INVENTORY_FAMILY: InputMode = InputMode::Tl;
-
 /// Build the segmentation lattice for `shadow` (the hyphen-stripped,
-/// POJ-canonicalized TL buffer).
+/// mode-canonicalized buffer).
 ///
 /// BFS over syllable-boundary offsets: from each reachable offset
-/// `start`, `valid_span_endings_lowered(&lowered, start, inv,
-/// LATTICE_INVENTORY_FAMILY, max_syllables)` returns every ending
-/// reachable by `1..=max_syllables` syllable chains — i.e. BOTH the
-/// immediate single-syllable (atomic) ending AND the multi-syllable
-/// phrase endings. Both kinds are kept as
-/// edges: dropping the multi-syllable phrase edges would remove the
-/// pre-S1 left-anchored `(0, multi-syllable)` keys, so the flattened
-/// output would no longer be a superset of today's (Codex pre-impl
-/// 2026-05-16 Q2). `composing` stays lexicon-agnostic here: it emits
-/// syllabifier-valid spans and lets `fetch_candidates_for_keys`
-/// filter against the dictionary exactly as before (no crate-ownership
-/// inversion — Codex Q2 boundary note).
+/// `start`, `valid_span_endings_lowered(&lowered, start, inv, mode,
+/// max_syllables)` returns every ending reachable by
+/// `1..=max_syllables` syllable chains — i.e. BOTH the immediate
+/// single-syllable (atomic) ending AND the multi-syllable phrase
+/// endings. Both kinds are kept as edges: dropping the multi-syllable
+/// phrase edges would remove the pre-S1 left-anchored
+/// `(0, multi-syllable)` keys, so the flattened output would no longer
+/// be a superset of today's (Codex pre-impl 2026-05-16 Q2). `composing`
+/// stays lexicon-agnostic here: it emits syllabifier-valid spans and
+/// lets `fetch_candidates_for_keys` filter against the dictionary
+/// exactly as before (no crate-ownership inversion — Codex Q2 boundary
+/// note).
+///
+/// v3.5.9 B-2 — `mode` selects the inventory family (`tl:` vs `poj:`)
+/// the syllabifier walks. Callers must pass the SAME `mode` they passed
+/// to `build_shadow_lattice` (and through to the downstream key
+/// emitters in `composing::shadow`) so the syllabification and the
+/// emitted key prefixes come from one mode parameter and cannot drift.
 ///
 /// Pure. `valid_span_endings_lowered` guarantees every returned `end`
 /// is `> start`, on a UTF-8 char boundary, and `<= shadow.len()`, so
 /// the edges are well-formed by construction.
+// 中文: B-2 — `LATTICE_INVENTORY_FAMILY` constant 移除,改收 `mode: InputMode` 參數;
+// 中文:   呼叫端必須與 build_shadow_lattice 及下游 key emitter 使用同一 mode。
 pub(crate) fn build_lattice(
     shadow: &str,
     inv: &SyllableInventory,
+    mode: InputMode,
     max_syllables: usize,
 ) -> Lattice {
     // Lowercase the whole shadow ONCE here, then drive the BFS with
@@ -72,13 +70,7 @@ pub(crate) fn build_lattice(
     queue.push_back(0);
 
     while let Some(start) = queue.pop_front() {
-        for end in valid_span_endings_lowered(
-            &lowered,
-            start,
-            inv,
-            LATTICE_INVENTORY_FAMILY,
-            max_syllables,
-        ) {
+        for end in valid_span_endings_lowered(&lowered, start, inv, mode, max_syllables) {
             edges.push((start, end));
             if visited.insert(end) {
                 queue.push_back(end);
@@ -104,7 +96,7 @@ mod tests {
 
     use fst::SetBuilder;
     use lexicon::SyllableInventory;
-    use phonetics::canonicalize_syllable;
+    use phonetics::{canonicalize_syllable, InputMode};
 
     use super::{build_lattice, Lattice};
 
@@ -154,7 +146,7 @@ mod tests {
         // and is the part S1 deliberately withholds from the
         // user-facing key list.
         let inv = build_inventory(&["tai5", "bak4"]);
-        let lattice = build_lattice("taibak", &inv, MAX_SYLLABLES);
+        let lattice = build_lattice("taibak", &inv, InputMode::Tl, MAX_SYLLABLES);
         let edges = lattice.edges();
         assert!(edges.contains(&(0, 3)), "atomic (0,3) missing: {edges:?}");
         assert!(
@@ -177,7 +169,7 @@ mod tests {
         // is reachable as edge `(6,11)` — the lattice structure that
         // lets S2 surface Finding 3 once commit is start-aware.
         let inv = build_inventory(&["tai1", "uan1", "gi1"]);
-        let lattice = build_lattice("taiuantaigi", &inv, MAX_SYLLABLES);
+        let lattice = build_lattice("taiuantaigi", &inv, InputMode::Tl, MAX_SYLLABLES);
         assert!(
             lattice.edges().contains(&(6, 11)),
             "Finding 3 sub-word edge (6,11) missing: {:?}",
@@ -196,7 +188,7 @@ mod tests {
     #[test]
     fn build_lattice_empty_shadow_yields_no_edges() {
         let inv = build_inventory(&["tai5"]);
-        let lattice = build_lattice("", &inv, MAX_SYLLABLES);
+        let lattice = build_lattice("", &inv, InputMode::Tl, MAX_SYLLABLES);
         assert!(lattice.edges().is_empty());
         assert_eq!(lattice.topological_offsets(), Vec::<usize>::new());
     }

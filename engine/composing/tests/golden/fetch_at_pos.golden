@@ -40,15 +40,13 @@
 0|6|2|1|1|台灣|tâi-uân|台灣|1516.9000|0x44bd9ccd
 ## poj_ascii_choa :: choa
 0|4|1|1|1|紙|chóa|紙|-8.9112|0xc10e9464
-0|4|2|1|1|珠仔|chu-á|珠仔|88.0000|0x42b00000
-0|3|1|1|1|珠|chu|珠|90.0000|0x42b40000
 ## poj_ascii_goa :: goa
 0|3|1|1|1|我|góa|我|-8.8866|0xc10e2f51
-## poj_render_nn :: taigikhipuann
+## poj_render_nn :: taigikhipoann
 0|13|4|1|1|台語齒盤|tâi-gí-khí-pôaⁿ|台語齒盤|-11.5195|0xc1384ff5
 0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
 0|5|2|1|1|台語|tâi-gí|台語|165.0000|0x43250000
-## poj_post_render_dedupe :: taigikhipuann
+## poj_post_render_dedupe :: taigikhipoann
 0|13|4|1|1|台語齒盤|tâi-gí-khí-pôaⁿ|台語齒盤|-6.9299|0xc0ddc216
 0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
 0|5|2|1|1|台語|tâi-gí|台語|165.0000|0x43250000
