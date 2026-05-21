@@ -284,8 +284,21 @@ pub fn build_keys_tl_with_inventory(
 /// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`. proto3 `optional
 /// hanji` absent → `None` (romanization-only entry); present (even
 /// empty) → `Some`.
+///
+/// v3.5.9 B-4 — `roman` is kept in its raw stored form here (TL or
+/// POJ display, whichever the user typed). Canonicalization to TL
+/// happens downstream at the `display_text` synthesis site only
+/// (`lexicon::custom_entry_to_candidate` →
+/// `phonetics::api::canonical_tl_form(roman, mode)`), NOT here. The
+/// lattice / FST-key matching (`composing::shadow::custom_toneless_key`)
+/// needs the user's native form to align with the mode-tagged
+/// inventory introduced by B-1 / B-2; rewriting `roman` at this seam
+/// would break that alignment for POJ-mode custom entries
+/// (Codex pre-impl BLOCK #1, 2026-05-21).
 // 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry;roman/hanji 是 custom_dictionary.db 原始欄位,
 // 中文:   不是 legacy 顯示大寫化形式,確保 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
+// 中文: B-4 — roman 在此保留原 form(用戶 native),canonical TL fold 只發生在 display_text 合成端
+// 中文:   (custom_entry_to_candidate → canonical_tl_form)。在此 rewrite roman 會破 B-2 POJ-family lattice 對齊。
 fn build_custom_entries(entries: &[CustomDictEntry]) -> Vec<CustomEntry> {
     entries
         .iter()

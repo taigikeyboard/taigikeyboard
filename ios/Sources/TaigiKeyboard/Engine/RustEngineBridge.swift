@@ -867,8 +867,16 @@ public enum RustEngineBridge {
     /// feature off — backward-compatible no-op. The engine synthesizes
     /// a full-buffer candidate per entry and dedupes `(roman, hanji)`
     /// against the FST hits (custom wins the collision).
+    ///
+    /// v3.5.9 B-4 — `roman` may be either TL or POJ display form
+    /// (whichever the user typed when storing). The engine treats it
+    /// raw on the lattice / dedupe axis and folds it to canonical TL
+    /// only when synthesizing the `user_frequency.db` commit key,
+    /// keeping that key mode-invariant across TL/POJ.
     // 中文: Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op,
     // 中文: 引擎合成 full-buffer 候選並對 (roman,hanji) 去重 (custom 必勝碰撞)。
+    // 中文: B-4 — roman 為用戶 native 形(TL 或 POJ),引擎在合成 freq commit key 時折成 canonical TL,
+    // 中文:   跨 mode freq 學習合一。
     // v3.5.8 §10.2 platform pass: the FetchAtPos snapshot renders the
     // combined marked region (`combined_display`) and per-segment recased
     // candidates, so it needs the continuous spacing flags to match the

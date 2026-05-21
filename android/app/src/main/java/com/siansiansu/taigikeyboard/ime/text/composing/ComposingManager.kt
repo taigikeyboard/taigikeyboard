@@ -604,8 +604,12 @@ class ComposingManager(
      * `(roman, hanzi)` columns** — NOT a display-massaged form — so the
      * engine's `(roman, hanji)` dedupe key collides correctly against
      * `dict.bin`'s `DictionaryRecord.tl` / `.hanzi` (Codex pre-impl
-     * 2026-05-15). Empty stored hanzi → proto-absent `hanji`
-     * (romanization-only entry → engine derives `CandidateMode.Tailo`).
+     * 2026-05-15). The stored roman may be TL or POJ display form
+     * (whichever the user typed) — v3.5.9 B-4 leaves it raw on the
+     * lattice axis here and only folds it to canonical TL inside the
+     * engine when synthesizing the `user_frequency.db` commit key.
+     * Empty stored hanzi → proto-absent `hanji` (romanization-only
+     * entry → engine derives `CandidateMode.Tailo`).
      *
      * CROSS-PLATFORM INVARIANT — the search-key derivation mirrors iOS
      * `CustomDictionaryDerivation.searchPrefix` (and Android

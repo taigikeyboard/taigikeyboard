@@ -374,6 +374,15 @@ pub enum Intent {
     /// `RawCandidate` per entry and dedupes `(roman, hanji)` against
     /// the FST hits. Empty list = no custom matches / feature
     /// disabled — backward-compatible no-op.
+    ///
+    /// **v3.5.9 B-4** — `roman` may legitimately be either TL or POJ
+    /// display form (whichever the user typed when storing the
+    /// entry). The engine treats it as raw on the lattice / dedupe
+    /// axis (`composing::shadow::custom_toneless_key` canonicalizes
+    /// per-mode for the FST family) and folds it through
+    /// `phonetics::api::canonical_tl_form` only when synthesizing the
+    /// `user_frequency.db` commit key (`display_text`), keeping the
+    /// commit key mode-invariant.
     // 中文: Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
     // 中文: Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
     // 中文: Phase 9 Item 12 — 加帶平台 custom_dictionary.db 命中 (raw roman/hanji),供 engine 合成 + (roman,hanji) 去重。

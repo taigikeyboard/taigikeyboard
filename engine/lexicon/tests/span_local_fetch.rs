@@ -55,6 +55,14 @@ fn ctx<'a>(
     prefix_index: &'a PrefixIndex,
     dict: &'a DictionaryReader,
 ) -> ContinuousFetchCtx<'a> {
+    // v3.5.9 B-4 — `mode` default is `Tl`; this test file pins TL
+    // fixtures (every key starts with `tl:` in this suite). POJ-mode
+    // canonicalization behavior is exercised by the inline tests in
+    // `engine/lexicon/src/continuous.rs::item12_custom_dedupe_tests`
+    // and the cross-mode parity tests in
+    // `engine/phonetics/tests/canonical_tl_form.rs`.
+    // 中文: B-4 — 此 test 套件全 TL fixture,mode 預設 Tl;POJ 行為由
+    // 中文:   item12_custom_dedupe_tests + canonical_tl_form 跨 mode parity 測試覆蓋。
     ContinuousFetchCtx {
         enabled_sources_bitmask: u32::MAX,
         freq_map,
@@ -62,6 +70,7 @@ fn ctx<'a>(
         custom,
         prefix_index,
         dict,
+        mode: phonetics::InputMode::Tl,
     }
 }
 

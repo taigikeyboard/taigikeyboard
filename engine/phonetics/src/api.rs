@@ -249,6 +249,49 @@ pub fn tl_display_to_poj_display(text: &str) -> String {
     rewrite_display(text, System::Poj)
 }
 
+/// v3.5.9 B-4 — mode-aware canonicalizer for the `user_frequency.db`
+/// commit key (`RawCandidate.display_text`). Folds Taigi-script
+/// romanization onto canonical TL display form so a romanization-only
+/// candidate (hanji-absent) keys identically across modes; downstream
+/// presentation reverses via `render_roman_for_mode`. Composes
+/// [`poj_display_to_tl_display`] for **both** `Tl` and `Poj` modes
+/// (PR #310 r3278520895 fix — a POJ-form custom entry typed in POJ
+/// mode and later accessed in TL mode still needs the fold or
+/// `user_frequency.db` keys split). `English` mode is intentionally
+/// identity — English custom entries like `hello` must not be
+/// reinterpreted as Taigi.
+///
+/// Idempotence on TL input: for already-TL display form the rewrite
+/// chain (`strip_tone_mark` → `normalize_to_tl` → `split_initial_final`
+/// → `to_tl`) returns the same TL string. Pass-through on non-Taigi:
+/// `split_initial_final` fails the phonotactic split and the rewriter
+/// returns the original token. Both cases mean `Tl` mode for ordinary
+/// TL custom entries is observably identity at the byte level.
+///
+/// **Bounded non-idempotence — CapsLock input** (Codex pre-impl
+/// 2026-05-21 SHOULD): `rewrite_token` lowercases for the parse and
+/// only title-cases its assembled output via `capitalize_first(_)` per
+/// hyphen-split sub-token, so a fully uppercase Taigi-shaped token
+/// like `TÂI-GÍ` (POJ) or `TSÁI-GÍ` (TL) round-trips as `Tâi-Gí` /
+/// `Tsái-Gí` instead of preserving CapsLock. After PR #310 r3278520895
+/// this asymmetry applies to **both** `Tl` and `Poj` modes (was POJ
+/// only — the cross-mode parity fold forced the symmetry). Production
+/// touch is bounded — the case asymmetry only affects a hanji-absent
+/// custom dict entry whose stored roman is all-caps Taigi-shaped, an
+/// extremely rare user pattern. `English` mode preserves CapsLock
+/// identically via the identity branch. Pinned by
+/// `engine/phonetics/tests/canonical_tl_form.rs::capslock_taigi_is_known_non_idempotent`.
+// 中文: B-4 — display_text (user_frequency.db commit key) 的 mode-aware canonicalizer;
+// 中文:   Tl/Poj 兩 mode 都走 poj_display_to_tl_display(idempotent on TL form,fold POJ form);
+// 中文:   English mode identity(`hello` 不該被當 Taigi 重解)。CapsLock 邊角現在對 Tl/Poj
+// 中文:   兩 mode 都非冪等(全大寫純羅馬 hanji-absent custom entry,production 觸發面極小)。
+pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
+    match mode {
+        InputMode::Tl | InputMode::Poj => poj_display_to_tl_display(text),
+        InputMode::English => text.to_string(),
+    }
+}
+
 fn rewrite_display(text: &str, target: System) -> String {
     if text.is_empty() {
         return String::new();

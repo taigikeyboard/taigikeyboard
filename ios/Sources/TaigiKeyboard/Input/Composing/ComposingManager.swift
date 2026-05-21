@@ -386,8 +386,12 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     /// capitalization-massaged form — so the engine's
     /// `(roman, hanji)` dedupe key collides correctly against
     /// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi` (Codex pre-impl
-    /// 2026-05-15); capitalization is the engine's concern. An empty
-    /// stored hanzi maps to
+    /// 2026-05-15); capitalization is the engine's concern. The
+    /// stored roman may be either TL or POJ display form (whichever
+    /// the user typed) — v3.5.9 B-4 keeps it raw on the lattice axis
+    /// and only folds it to canonical TL inside the engine when
+    /// synthesizing the `user_frequency.db` commit key, so this
+    /// marshaler stays form-agnostic. An empty stored hanzi maps to
     /// proto-absent `hanji` (romanization-only entry → engine derives
     /// `CandidateMode::Tailo`), mirroring `record_to_candidate`.
     ///

@@ -211,28 +211,37 @@ fn render_roman_for_mode(roman: &str, mode: phonetics::InputMode) -> String {
 
 /// v3.5.8 — collapse continuous candidates that became identical only
 /// after the POJ render. The pre-render `(roman, hanji, consumed_span)`
-/// dedupe (`lexicon::dedupe_by_roman_hanji_span`) runs on TL spellings,
-/// so a custom entry stored in POJ display form (`gô͘`) and a `dict.bin`
-/// entry in TL (`gôo`) sharing one hanji + span both survive it, then
-/// [`render_roman_for_mode`] renders both to `gô͘` → a visible
-/// duplicate. First-wins keeps the earlier row, so the prepended
-/// whole-sentence best candidate at index 0 is never dropped. It is
-/// behavior-neutral whenever `hanji` is `Some`: the collision key pins
-/// the same hanji and `display_text` (the commit / `user_frequency.db`
-/// key) is that hanji for BOTH the custom and the `dict.bin` candidate,
-/// so which row survives cannot change what commits. The only bounded
-/// asymmetry is a romanization-only (`hanji == None`) custom-after-dict
-/// collision: the survivor's `display_text` is the earlier (dict TL)
-/// form — a frequency-key granularity nuance only; the committed
-/// document text is the rendered `roman`, identical for both. Called
-/// in the POJ branch only — for TL/English/TPS the render is identity
-/// so the pre-render dedupe already settled every key.
+/// dedupe (`lexicon::dedupe_by_roman_hanji_span`) keys on the raw
+/// stored romanization, so a custom entry stored in POJ display form
+/// (`gô͘`) and a `dict.bin` entry in TL (`gôo`) sharing one hanji + span
+/// both survive it, then [`render_roman_for_mode`] renders both to
+/// `gô͘` → a visible duplicate. First-wins keeps the earlier row, so
+/// the prepended whole-sentence best candidate at index 0 is never
+/// dropped. It is behavior-neutral whenever `hanji` is `Some`: the
+/// collision key pins the same hanji and `display_text` (the commit /
+/// `user_frequency.db` key) is that hanji for BOTH the custom and the
+/// `dict.bin` candidate, so which row survives cannot change what
+/// commits.
+///
+/// **v3.5.9 B-4 closed the romanization-only asymmetry.** Pre-B-4 the
+/// hanji-absent custom-after-dict collision could leave the
+/// `display_text` as the dict-TL row's form while the custom row's
+/// raw `entry.roman` was still POJ — a frequency-key granularity nuance.
+/// `lexicon::custom_entry_to_candidate` now folds the fallback through
+/// `phonetics::api::canonical_tl_form`, so both sides write the same
+/// canonical TL freq key regardless of which row this dedupe surfaces.
+/// This dedupe stays as defensive coverage for the post-render visible
+/// duplicate; future B-7 cleanup may retire it once the canonicalization
+/// proves out via on-device dogfood. Called in the POJ branch only —
+/// for TL/English/TPS the render is identity so the pre-render dedupe
+/// already settled every key.
 // 中文: POJ render 後才相等的候選去重(custom 存 POJ `gô͘` vs dict TL `gôo`,
 // 中文:   同 hanji+span 過不了 TL 拼寫的 pre-render 去重,render 後皆 `gô͘`)。
-// 中文:   first-wins → index 0 整句最佳候選不被丟。hanji 存在時行為中性
-// 中文:   (碰撞鍵鎖同一 hanji,custom/dict 的 display_text 都是該 hanji,commit 不變);
-// 中文:   唯 hanji==None 的 custom-after-dict 留下 dict TL 形 display_text(僅 freq-key 粒度,
-// 中文:   commit 的文件字串是 render 後 roman,兩者相同)。只在 POJ 分支呼叫。
+// 中文:   first-wins → index 0 整句最佳候選不被丟。hanji 存在時行為中性。
+// 中文:   B-4 已關掉 romanization-only(hanji==None)子情境的 freq-key 不一致:
+// 中文:   lexicon::custom_entry_to_candidate 走 canonical_tl_form,custom 與 dict
+// 中文:   兩端寫同一 canonical TL freq key。本 dedupe 留為 post-render 視覺去重
+// 中文:   兜底(B-7 dogfood 後再考慮退役)。只在 POJ 分支呼叫。
 fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     use std::collections::HashSet;
     let mut seen: HashSet<(String, Option<String>, ConsumedSpan)> =
@@ -497,12 +506,20 @@ fn fetch_walker_slot0_inner(
             // `display_text` = the exact key the platform writes to
             // `user_frequency.db` on commit, mirroring
             // `lexicon::custom_entry_to_candidate` (hanji else
-            // roman) so a user-selected custom entry's decayed
-            // weight folds into the path objective identically to a
-            // dict edge (S3 Q4d seam). Single-syllable custom is
-            // damped by `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`
-            // in `edge_cost`, same as dict.
-            let display_text = entry.hanji.clone().unwrap_or_else(|| entry.roman.clone());
+            // `canonical_tl_form(roman, mode)`) so a user-selected
+            // custom entry's decayed weight folds into the path
+            // objective identically to a dict edge (S3 Q4d seam).
+            // v3.5.9 B-4 — the canonicalization keeps the commit key
+            // mode-invariant when the custom entry stored its roman
+            // in POJ display form (the user's native mode). Single-
+            // syllable custom is damped by
+            // `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` in
+            // `edge_cost`, same as dict.
+            // 中文: B-4 — display_text fold canonical TL,跨 mode freq key 合一;
+            // 中文:   `entry.roman` 保留原樣(lattice key 比對需要)。
+            let display_text = entry.hanji.clone().unwrap_or_else(|| {
+                phonetics::api::canonical_tl_form(&entry.roman, mode)
+            });
             let fd = freq_map.get(&display_text).copied().unwrap_or_default();
             let count = u32::try_from(fd.count).unwrap_or(0);
             let user_weight_delta = decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
@@ -716,7 +733,27 @@ fn fetch_walker_slot0_inner(
     } else {
         None
     };
-    let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
+    // v3.5.9 B-4 (Codex pre-impl BLOCK #2 close): the walker
+    // greedy-longest OOV synth builds `roman` from the
+    // mode-aware shadow — POJ mode preserves POJ ASCII per B-2,
+    // so a hanji-absent synth candidate would otherwise key
+    // `user_frequency.db` as POJ ASCII (`chiah goa`) and split
+    // from the same word's TL-mode commit key (`tsiah gua`).
+    // `canonical_tl_form` folds POJ-mode synth roman to TL so
+    // the freq key is mode-invariant; `roman` itself stays in
+    // its native form so the downstream `render_roman_for_mode`
+    // pass renders correctly (POJ-mode roundtrip via
+    // `tl_display_to_poj_display`). §9 #2 user-history contract
+    // is now satisfied across all three candidate paths:
+    // `dict.bin` (record.tl is canonical TL), custom dict (this
+    // change to `custom_entry_to_candidate`), and walker synth
+    // (this site).
+    // 中文: B-4 — walker OOV synth roman 在 POJ mode 是 POJ ASCII;
+    // 中文:   freq key 折成 canonical TL 跨 mode 合一,roman 自身留原 form
+    // 中文:   讓 render_roman_for_mode roundtrip 正確。§9 #2 三 path 全合規。
+    let display_text = hanji
+        .clone()
+        .unwrap_or_else(|| phonetics::api::canonical_tl_form(&roman, mode));
     let last_used_ms = freq_map
         .get(&display_text)
         .map(|d| d.last_used_ms)
@@ -816,6 +853,19 @@ pub(crate) fn assemble_candidates(
                 custom,
                 prefix_index,
                 dict,
+                // v3.5.9 B-4 — thread the active input mode through so
+                // `lexicon::custom_entry_to_candidate` can fold a
+                // POJ-form custom roman's `display_text` (the
+                // `user_frequency.db` commit key) to canonical TL,
+                // keeping the freq key mode-invariant. Lattice / FST
+                // key prefix is decided above and embedded in `keys`,
+                // so this is purely a freq-key axis — TPS callers
+                // currently arrive as `Tl` (TPS shares the `tl:`
+                // FST family per B-2; the `phonetics::InputMode` enum
+                // has no `Tps` variant yet).
+                // 中文: B-4 — mode 透到 lexicon 端 canonicalize hanji-absent display_text;
+                // 中文:   TPS 路徑(B-2 共用 tl: 族)以 Tl 入,InputMode 暫無 Tps 變體。
+                mode,
             });
 
         // ---- Step 1: build keys + shadow/lattice (D1 fold).

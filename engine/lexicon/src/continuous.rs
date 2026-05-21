@@ -368,6 +368,20 @@ pub struct ContinuousFetchCtx<'a> {
     pub prefix_index: &'a PrefixIndex,
     /// Dictionary record reader (mmap-backed).
     pub dict: &'a DictionaryReader,
+    /// v3.5.9 B-4 — active input mode for the fetch. Threaded through
+    /// so [`custom_entry_to_candidate`] can canonicalize
+    /// hanji-absent `display_text` to TL form via
+    /// [`phonetics::api::canonical_tl_form`], keeping the
+    /// `user_frequency.db` commit key mode-invariant. Lattice / FST
+    /// key prefix selection (`tl:` vs `poj:`) is decided upstream and
+    /// embedded in `keys` already — this field exists solely to fold
+    /// the romanization fallback for the freq key, NOT to alter
+    /// dictionary lookup.
+    // 中文: B-4 — fetch 當下的 input mode;custom_entry_to_candidate / OOV synth / walker
+    // 中文:   custom override 用以把 hanji-absent display_text 折成 canonical TL
+    // 中文:   (user_frequency.db commit key 跨 mode 合一)。FST key 前綴上游已決,此欄位
+    // 中文:   不影響字典 lookup。
+    pub mode: phonetics::InputMode,
 }
 
 /// v3.5.9 D8 — test-only entry: fetch every dictionary candidate
@@ -472,6 +486,12 @@ pub fn fetch_candidates_for_endings(
         custom: &[],
         prefix_index: ctx.prefix_index,
         dict: ctx.dict,
+        // v3.5.9 B-4 — `mode` carries through for symmetry with
+        // production ctx construction; this entry never carries
+        // custom dict so `custom_entry_to_candidate` is never reached,
+        // but the field is non-`Option` and must be set.
+        // 中文: B-4 — mode 沿用上游;此 entry 無 custom 故下游 canonicalize 不會觸發,但欄位必填。
+        mode: ctx.mode,
     };
     fetch_candidates_for_keys(&keys, input.len() as u32, &inner)
 }
@@ -607,6 +627,7 @@ pub fn fetch_candidates_for_keys(
             ctx.freq_map,
             ctx.now_ms,
             COVERAGE_KIND_FULL,
+            ctx.mode,
         ));
     }
 
@@ -765,6 +786,7 @@ pub fn fetch_partial_prefix_candidates(
             ctx.freq_map,
             ctx.now_ms,
             COVERAGE_KIND_PARTIAL_PREFIX,
+            ctx.mode,
         ));
     }
     dedupe_by_roman_hanji_span(&mut out);
@@ -1129,9 +1151,15 @@ fn record_to_candidate(
 ///   Item 12's job is duplicate elimination + custom-wins-collision,
 ///   not a global custom-priority tier
 ///   (`docs/engine/continuous-input-ranking.md` §10.10).
-/// - `display_text = hanji.unwrap_or(roman)` — identical contract to
-///   [`record_to_candidate`] so commit + `user_frequency.db` write
-///   keys stay wire-identical between custom and `dict.bin` commits.
+/// - `display_text = hanji.unwrap_or(canonical_tl_form(roman, mode))` —
+///   v3.5.9 B-4 closes the bounded asymmetry the pre-B-4
+///   `unwrap_or(roman)` contract documented at
+///   [`crate::dedupe_by_roman_hanji_span`] callers and
+///   `composing::continuous::dedupe_rendered_continuous`: a POJ-form
+///   roman now folds to canonical TL so the commit +
+///   `user_frequency.db` write key collides with the same word coming
+///   from `dict.bin` (which writes `record.tl`, already canonical TL).
+///   Identical wire contract to [`record_to_candidate`] across modes.
 /// - `mode = derive_mode(hanji)` — TAILO when `hanji` is `None`.
 /// - user-frequency boost / recency are applied identically to
 ///   `dict.bin` candidates (custom entries can also be user-selected).
@@ -1144,11 +1172,28 @@ fn custom_entry_to_candidate(
     freq_map: &FrequencyMap,
     now_ms: i64,
     coverage_kind: u8,
+    input_mode: phonetics::InputMode,
 ) -> RawCandidate {
     let roman = entry.roman.clone();
     let hanji = entry.hanji.clone();
     let mode = derive_mode(hanji.as_deref());
-    let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
+    // v3.5.9 B-4 — `display_text` is the platform's
+    // `user_frequency.db` commit key. When `hanji` is absent the
+    // fallback is the roman, which may have been stored in the user's
+    // native form (POJ display form on a POJ-mode entry). Folding
+    // through `canonical_tl_form` keeps the freq key mode-invariant
+    // so a custom entry typed in POJ and the same word coming back
+    // from `dict.bin` share one frequency bucket. `roman` itself is
+    // left raw (the walker / `custom_toneless_key` need it in the
+    // user's native form so POJ-family lattice keys match against
+    // POJ-form custom roman — see `composing::shadow::custom_toneless_key`).
+    // 中文: B-4 — display_text = 平台寫 user_frequency.db 的 commit key;
+    // 中文:   hanji 缺時 fallback 是 roman,可能為 POJ display 形。canonical_tl_form
+    // 中文:   把它折成 canonical TL 讓 freq key 跨 mode 合一。roman 保留原樣(walker /
+    // 中文:   custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵)。
+    let display_text = hanji
+        .clone()
+        .unwrap_or_else(|| phonetics::api::canonical_tl_form(&roman, input_mode));
     let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
     let count_u32 = u32::try_from(freq_data.count).unwrap_or(0);
     let boost = user_freq_boost(count_u32);
@@ -1895,6 +1940,8 @@ mod item12_custom_dedupe_tests {
     fn custom_entry_to_candidate_hant_shape() {
         // D3 + D4: full-buffer span, freq 0, syll 1, is_custom true,
         // coverage_kind passed through, display = hanji, mode HANT.
+        // `input_mode = Tl` for hanji-present cases — canonicalize
+        // path doesn't execute (hanji is always preferred).
         let c = custom_entry_to_candidate(
             &CustomEntry {
                 roman: "tâi-gí".to_owned(),
@@ -1904,6 +1951,7 @@ mod item12_custom_dedupe_tests {
             &FrequencyMap::new(),
             0,
             COVERAGE_KIND_FULL,
+            phonetics::InputMode::Tl,
         );
         assert!(c.is_custom);
         assert_eq!(c.consumed_span, (0, 9));
@@ -1918,23 +1966,87 @@ mod item12_custom_dedupe_tests {
 
     #[test]
     fn custom_entry_to_candidate_tailo_when_no_hanji() {
-        // hanji None → display falls back to roman, mode TAILO; and
-        // the partial-prefix coverage kind is honored (D6).
+        // hanji None → display falls back to `canonical_tl_form(roman,
+        // mode)`. Fixture uses canonical-TL `guá` so the fold is
+        // observably identity (TL form is idempotent through the
+        // rewrite chain). Mode TAILO; partial-prefix coverage
+        // honored (D6).
         let c = custom_entry_to_candidate(
             &CustomEntry {
-                roman: "góa".to_owned(),
+                roman: "gu\u{00e1}".to_owned(),
                 hanji: None,
             },
             3,
             &FrequencyMap::new(),
             0,
             COVERAGE_KIND_PARTIAL_PREFIX,
+            phonetics::InputMode::Tl,
         );
-        assert_eq!(c.display_text, "góa");
+        assert_eq!(c.display_text, "gu\u{00e1}");
         assert_eq!(c.hanji, None);
         assert_eq!(c.mode, CandidateMode::Tailo);
         assert_eq!(c.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX);
         assert!(c.is_custom);
+    }
+
+    #[test]
+    fn custom_entry_to_candidate_poj_form_in_tl_mode_folds_canonical_tl() {
+        // PR #310 r3278520895 (Codex bot P2): a POJ-form custom entry
+        // (`góa`, hanji absent) loaded while the active input mode
+        // is `Tl` must still fold to canonical TL `guá` for the
+        // `display_text` commit key — otherwise the same word coming
+        // through `dict.bin` (writing `record.tl = "guá"`) keys into
+        // a different `user_frequency.db` bucket and learning splits
+        // cross-mode.
+        // 中文: r3278520895 — POJ form custom entry 在 Tl mode 下要 fold,
+        // 中文:   否則跟 dict.bin canonical TL 分裂 user_frequency.db 鍵。
+        let c = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "g\u{00f3}a".to_owned(), // POJ display form
+                hanji: None,
+            },
+            3,
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_FULL,
+            phonetics::InputMode::Tl,
+        );
+        assert_eq!(c.roman, "g\u{00f3}a", "roman must stay raw");
+        assert_eq!(
+            c.display_text, "gu\u{00e1}",
+            "display_text must fold to canonical TL even in Tl mode"
+        );
+    }
+
+    #[test]
+    fn custom_entry_to_candidate_poj_form_roman_folds_to_canonical_tl_display() {
+        // v3.5.9 B-4 (Codex pre-impl BLOCK #1 corrected to α''): a
+        // hanji-absent custom entry stored in POJ display form
+        // (`góa`, the POJ ASCII used in custom_dictionary.db when the
+        // user typed in POJ mode) must surface a TL canonical
+        // `display_text` so the `user_frequency.db` commit key
+        // collides with the TL-mode equivalent. `roman` itself is left
+        // raw — see `composing::shadow::custom_toneless_key`, which
+        // needs the POJ-form roman to match POJ lattice keys.
+        // 中文: B-4 — POJ form custom entry (hanji 缺) display_text 折成 canonical TL;
+        // 中文:   roman 保持原樣供 custom_toneless_key 對齊 POJ lattice 鍵。
+        let c = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "g\u{00f3}a".to_owned(), // POJ `góa` (TL would be `guá`)
+                hanji: None,
+            },
+            3,
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_FULL,
+            phonetics::InputMode::Poj,
+        );
+        assert_eq!(c.roman, "g\u{00f3}a", "roman must stay raw POJ form");
+        assert_eq!(
+            c.display_text, "gu\u{00e1}",
+            "display_text must be canonical TL `guá` for cross-mode freq-key collision"
+        );
+        assert_eq!(c.hanji, None);
     }
 
     #[test]
@@ -1954,6 +2066,7 @@ mod item12_custom_dedupe_tests {
                 &FrequencyMap::new(),
                 0,
                 COVERAGE_KIND_FULL,
+                phonetics::InputMode::Tl,
             ),
         ];
         dedupe_by_roman_hanji_span(&mut out);
@@ -2043,6 +2156,7 @@ mod item12_custom_dedupe_tests {
             &FrequencyMap::new(),
             0,
             COVERAGE_KIND_FULL,
+            phonetics::InputMode::Tl,
         );
         let mut out = vec![dict, custom];
         dedupe_by_roman_hanji_span(&mut out);
@@ -2065,6 +2179,7 @@ mod item12_custom_dedupe_tests {
             &FrequencyMap::new(),
             0,
             COVERAGE_KIND_FULL,
+            phonetics::InputMode::Tl,
         );
         // Default-source dict candidate: same span (tier 0), same
         // score/freq/recency so only `source_rank` differs.

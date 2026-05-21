@@ -48,6 +48,11 @@ fn ctx<'a>(
     prefix_index: &'a PrefixIndex,
     dict: &'a DictionaryReader,
 ) -> ContinuousFetchCtx<'a> {
+    // v3.5.9 B-4 — `mode` defaults to `Tl`; this suite pins TL freq
+    // plumbing and never hits the canonicalize path (`custom = &[]`
+    // forces the only B-4-touched site, `custom_entry_to_candidate`,
+    // unreachable).
+    // 中文: B-4 — TL 預設,此套件 custom 強制空,B-4 路徑不會觸發。
     ContinuousFetchCtx {
         enabled_sources_bitmask: u32::MAX,
         freq_map,
@@ -55,6 +60,7 @@ fn ctx<'a>(
         custom: &[],
         prefix_index,
         dict,
+        mode: phonetics::InputMode::Tl,
     }
 }
 
