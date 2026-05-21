@@ -8,8 +8,13 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the
- * span-local candidates that `lexicon::fetch_candidates_for_endings`
- * produced for the current `Phase::Continuous { raw }`.
+ * span-local candidates that `lexicon::fetch_candidates_for_keys`
+ * produced (via `composing::continuous::fetch_via_lexicon_inner` for
+ * TL/POJ and `composing::continuous::build_keys_tps` for TPS) for the
+ * current `Phase::Continuous { raw }`. v3.5.9 D7+D8 (#306) made
+ * `fetch_candidates_for_keys` the sole production entry; the legacy
+ * `lexicon::fetch_candidates_for_endings` wrapper is `#[doc(hidden)]`
+ * test-only.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ContinuousResponse}
@@ -202,8 +207,13 @@ public  final class ContinuousResponse extends
   /**
    * <pre>
    * v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the
-   * span-local candidates that `lexicon::fetch_candidates_for_endings`
-   * produced for the current `Phase::Continuous { raw }`.
+   * span-local candidates that `lexicon::fetch_candidates_for_keys`
+   * produced (via `composing::continuous::fetch_via_lexicon_inner` for
+   * TL/POJ and `composing::continuous::build_keys_tps` for TPS) for the
+   * current `Phase::Continuous { raw }`. v3.5.9 D7+D8 (#306) made
+   * `fetch_candidates_for_keys` the sole production entry; the legacy
+   * `lexicon::fetch_candidates_for_endings` wrapper is `#[doc(hidden)]`
+   * test-only.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ContinuousResponse}
