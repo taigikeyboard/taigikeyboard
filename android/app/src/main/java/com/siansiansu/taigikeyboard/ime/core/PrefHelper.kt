@@ -212,10 +212,19 @@ class PrefHelper(
     }
 
     /**
-     * Atomically update multiple keys in the cache and register them as pending.
-     * Used by Pattern C setters (inputMode/keyboardLayoutType) that batch-update multiple keys.
+     * Atomically applies a multi-key write plan: updates the cache + pending
+     * overlay synchronously, then persists the entire batch in a single
+     * DataStore transaction.
+     *
+     * Used by Pattern-C state-machine methods ([applyInputMode] /
+     * [applyKeyboardLayoutType]) that need to commit cascade writes
+     * atomically — pre-refactor each cascade fired 2-3 separate
+     * `dataStore.edit { }` calls, allowing partial-write race windows.
      */
-    private fun updateCacheBatch(updates: Map<Preferences.Key<*>, Any>) {
+    private fun updateCacheBatchAndPersist(
+        updates: Map<Preferences.Key<*>, Any>,
+        afterPersist: (suspend () -> Unit)? = null,
+    ) {
         synchronized(lock) {
             for ((key, value) in updates) {
                 pendingKeys[key] = value
@@ -227,6 +236,15 @@ class PrefHelper(
                 }
                 cachedPrefs = mutable.toPreferences()
             }
+        }
+        scope.launch {
+            dataStore.edit { prefs ->
+                for ((key, value) in updates) {
+                    @Suppress("UNCHECKED_CAST")
+                    prefs[key as Preferences.Key<Any>] = value
+                }
+            }
+            afterPersist?.invoke()
         }
     }
 
@@ -284,58 +302,13 @@ class PrefHelper(
 
     // Language settings
     //
-    // Pattern-C: cross-key TPS state machine. Setter cascades to
-    // `keyboardLayoutType` + `phahTaigiLayoutEnabled` (and saves/restores via
-    // `layoutBeforeTps`). Cannot use the `preference` delegate.
+    // Pattern-C: cross-key TPS state machine. Setter forwards to
+    // [applyInputMode] which delegates the cascade plan to [TpsCascade] and
+    // commits it in a single DataStore transaction. Cannot use the
+    // `preference` delegate.
     override var inputMode: String
         get() = cached(PreferenceKeys.INPUT_MODE, "tl")
-        set(value) {
-            val oldValue = inputMode
-
-            // TPS ↔ layout 1:1 sync (reverse direction: inputMode → layout)
-            // Write directly to cache/DataStore to avoid recursion with keyboardLayoutType setter
-            if (value == "tps" && oldValue != "tps") {
-                if (keyboardLayoutType != "tps") {
-                    layoutBeforeTps = keyboardLayoutType
-                    updateCacheBatch(
-                        mapOf<Preferences.Key<*>, Any>(
-                            Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "tps"),
-                            Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, false),
-                        ),
-                    )
-                    scope.launch {
-                        dataStore.edit { prefs ->
-                            prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "tps"
-                            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = false
-                        }
-                    }
-                }
-            } else if (value != "tps" && oldValue == "tps") {
-                if (keyboardLayoutType == "tps") {
-                    val restored = layoutBeforeTps
-                    updateCacheBatch(
-                        mapOf<Preferences.Key<*>, Any>(
-                            Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, restored),
-                            Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, restored == "phahTaigi"),
-                        ),
-                    )
-                    scope.launch {
-                        dataStore.edit { prefs ->
-                            prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = restored
-                            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (restored == "phahTaigi")
-                        }
-                    }
-                }
-            }
-
-            // Sync cache + persist inputMode
-            updateCacheBatch(mapOf<Preferences.Key<*>, Any>(Pair(PreferenceKeys.INPUT_MODE, value)))
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.INPUT_MODE] = value
-                }
-            }
-        }
+        set(value) = applyInputMode(value)
 
     override var isTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
 
@@ -364,56 +337,83 @@ class PrefHelper(
 
     // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2, tps
     //
-    // Pattern-C: cross-key TPS state machine. Setter cascades to `inputMode`
-    // + `phahTaigiLayoutEnabled` (and saves/restores via
-    // `inputModeBeforeTps`). Cannot use the `preference` delegate.
+    // Pattern-C: cross-key TPS state machine. Setter forwards to
+    // [applyKeyboardLayoutType]. See [TpsCascade] for asymmetry vs
+    // [applyInputMode]. Cannot use the `preference` delegate.
     var keyboardLayoutType: String
         get() = cached(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "phahTaigi")
-        set(value) {
-            val oldValue = keyboardLayoutType
-            // TPS ↔ inputMode 1:1 sync (forward direction: layout → inputMode)
-            // Write inputMode directly to cache/DataStore to avoid recursion with inputMode setter
-            if (value == "tps" && oldValue != "tps") {
-                val currentInputMode = inputMode
-                if (currentInputMode != "tps") {
-                    inputModeBeforeTps = currentInputMode
-                }
-                updateCacheBatch(mapOf<Preferences.Key<*>, Any>(Pair(PreferenceKeys.INPUT_MODE, "tps")))
-                scope.launch {
-                    dataStore.edit { prefs ->
-                        prefs[PreferenceKeys.INPUT_MODE] = "tps"
-                    }
-                }
-            } else if (value != "tps" && oldValue == "tps") {
-                val restored = inputModeBeforeTps
-                updateCacheBatch(mapOf<Preferences.Key<*>, Any>(Pair(PreferenceKeys.INPUT_MODE, restored)))
-                scope.launch {
-                    dataStore.edit { prefs ->
-                        prefs[PreferenceKeys.INPUT_MODE] = restored
-                    }
-                }
-            }
-            // Sync cache + persist layout type
-            updateCacheBatch(
-                mapOf<Preferences.Key<*>, Any>(
-                    Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, value),
-                    Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value == "phahTaigi"),
-                ),
+        set(value) = applyKeyboardLayoutType(value)
+
+    // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS.
+    //
+    // Intentionally NOT a `var by preference(...)` delegate: writes route through the unified
+    // batch in [updateCacheBatchAndPersist] (so the save + cascade + main value land in a single
+    // DataStore transaction). Exposing a delegate setter would invite cascade-bypassing direct
+    // writes that desync the in-memory cache from the persisted store.
+    private val inputModeBeforeTps: String
+        get() = cached(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
+
+    // Stores the layout before switching to TPS, so it can be restored when leaving TPS.
+    // Same delegate-free rationale as [inputModeBeforeTps] — written only via the unified batch.
+    private val layoutBeforeTps: String
+        get() = cached(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
+
+    /**
+     * Writes [value] to `INPUT_MODE` and applies the TPS ↔ layout 1:1
+     * cascade. Cascade plan computed by [TpsCascade.forInputMode]; the entire
+     * plan is committed in a single DataStore transaction via
+     * [updateCacheBatchAndPersist].
+     *
+     * - Entering `.tps`: saves the current `keyboardLayoutType` into
+     *   `LAYOUT_BEFORE_TPS` (skipped if the layout is already `.tps`) and
+     *   flips the layout to `.tps`.
+     * - Leaving `.tps`: restores the layout from `LAYOUT_BEFORE_TPS`, but only
+     *   when the live layout is still `.tps` — a manual layout change
+     *   earlier in the same flow is preserved (GUARDED restore).
+     *
+     * Mirrors iOS `SharedSettings.setInputMode(_:)` (PR #319 / 1cd6cbfd).
+     */
+    private fun applyInputMode(value: String) {
+        val writes =
+            TpsCascade.forInputMode(
+                newValue = value,
+                oldValue = inputMode,
+                currentLayout = keyboardLayoutType,
+                layoutBeforeTps = layoutBeforeTps,
             )
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
-                    prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (value == "phahTaigi")
-                    CompositionRoot.shared(context).logger.debug(TAG) { "[PREF] KeyboardLayoutType set to: $value" }
-                }
-            }
+        updateCacheBatchAndPersist(writes)
+    }
+
+    /**
+     * Writes [value] to `KEYBOARD_LAYOUT_TYPE` (+ paired
+     * `PHAH_TAIGI_LAYOUT_ENABLED`) and applies the TPS ↔ inputMode 1:1
+     * cascade. Cascade plan computed by [TpsCascade.forKeyboardLayoutType];
+     * committed in a single DataStore transaction.
+     *
+     * **Deliberate asymmetry vs [applyInputMode]:** leaving `.tps` on the
+     * layout side **unconditionally** restores `INPUT_MODE` from
+     * `INPUT_MODE_BEFORE_TPS` (no guard), whereas the input-side exit guards
+     * on `keyboardLayoutType == "tps"` before restoring layout. Mirrors
+     * HEAD~1 + iOS PR-1 byte-for-byte. Any future symmetrization belongs in
+     * a separate slice — do NOT collapse the two sides during incidental
+     * cleanup.
+     */
+    private fun applyKeyboardLayoutType(value: String) {
+        val writes =
+            TpsCascade.forKeyboardLayoutType(
+                newValue = value,
+                oldValue = keyboardLayoutType,
+                currentInputMode = inputMode,
+                inputModeBeforeTps = inputModeBeforeTps,
+            )
+        // Logger fires on the IO coroutine after the batch commits.
+        // HEAD~1 fired the same log inside the `dataStore.edit { }` transform
+        // (during persist); the new placement fires immediately after the
+        // edit completes — observationally indistinguishable for a debug log.
+        updateCacheBatchAndPersist(writes) {
+            CompositionRoot.shared(context).logger.debug(TAG) { "[PREF] KeyboardLayoutType set to: $value" }
         }
-
-    // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
-    private var inputModeBeforeTps: String by preference(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
-
-    // Stores the layout before switching to TPS, so it can be restored when leaving TPS
-    private var layoutBeforeTps: String by preference(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
+    }
 
     // TPS settings
     var tpsOrMapsToER: Boolean by preference(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
