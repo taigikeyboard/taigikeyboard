@@ -22,21 +22,20 @@ class ToolbarManager(
     private val settingsSelectionOverlayViewProvider: () -> SettingsSelectionOverlayView?,
     private val onInputModeChanged: (String) -> Unit,
     private val onLayoutSelected: (String) -> Unit,
-    private val onActiveContainerChanged: (Int) -> Unit,
     private val getKeyboardHeight: () -> Int,
 ) {
     // Skip updateActiveContainerVisibility() during animated transitions
     var isAnimatingContainerSwitch = false
         private set
 
-    var activeContainerId: Int = R.id.candidates_container
+    var activeContainer: SmartbarContainer = SmartbarContainer.CANDIDATES
         set(value) {
             field = value
             if (!isAnimatingContainerSwitch) updateActiveContainerVisibility()
         }
 
-    // Container ID to return to when closing toolbar
-    private var containerBeforeToolbar: Int = R.id.candidates_container
+    // Container to return to when closing toolbar
+    private var containerBeforeToolbar: SmartbarContainer = SmartbarContainer.CANDIDATES
 
     // Debounce rapid mode button clicks to prevent race conditions
     private var lastModeChangeTime = 0L
@@ -51,8 +50,8 @@ class ToolbarManager(
     fun collapseToolbarIfOpen() {
         symbolSelectionOverlayViewProvider()?.hide()
         settingsSelectionOverlayViewProvider()?.hide()
-        if (activeContainerId == R.id.toolbar_container) {
-            animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
+        if (activeContainer == SmartbarContainer.TOOLBAR) {
+            animateContainerSlide(SmartbarContainer.TOOLBAR, containerBeforeToolbar, expanding = false)
             animateToggleRotation(45f, 0f)
         }
     }
@@ -68,14 +67,14 @@ class ToolbarManager(
             symbolSelectionOverlayViewProvider()?.hide()
             settingsSelectionOverlayViewProvider()?.hide()
 
-            if (activeContainerId == R.id.toolbar_container) {
+            if (activeContainer == SmartbarContainer.TOOLBAR) {
                 // × → + : collapse toolbar, restore previous container
-                animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
+                animateContainerSlide(SmartbarContainer.TOOLBAR, containerBeforeToolbar, expanding = false)
                 animateToggleRotation(45f, 0f)
             } else {
                 // + → × : expand toolbar
-                containerBeforeToolbar = activeContainerId
-                animateContainerSlide(activeContainerId, R.id.toolbar_container, expanding = true)
+                containerBeforeToolbar = activeContainer
+                animateContainerSlide(activeContainer, SmartbarContainer.TOOLBAR, expanding = true)
                 animateToggleRotation(0f, 45f)
                 updateToolbarModeSwitcherState()
             }
@@ -143,8 +142,8 @@ class ToolbarManager(
         settingsSelectionOverlayViewProvider()?.hide()
 
         // Auto-collapse toolbar after mode selection
-        if (prefs.isToolbarAutoCollapse && activeContainerId == R.id.toolbar_container) {
-            animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
+        if (prefs.isToolbarAutoCollapse && activeContainer == SmartbarContainer.TOOLBAR) {
+            animateContainerSlide(SmartbarContainer.TOOLBAR, containerBeforeToolbar, expanding = false)
             animateToggleRotation(45f, 0f)
         }
     }
@@ -214,7 +213,8 @@ class ToolbarManager(
         overlay.show(getKeyboardHeight())
     }
 
-    fun getPreferredContainerId(): Int = R.id.candidates_container
+    val preferredContainer: SmartbarContainer
+        get() = SmartbarContainer.CANDIDATES
 
     /**
      * Animate the toolbar toggle button rotation (+ ↔ ×).
@@ -236,20 +236,20 @@ class ToolbarManager(
      * Animated vertical slide transition between two containers.
      */
     private fun animateContainerSlide(
-        fromId: Int,
-        toId: Int,
+        from: SmartbarContainer,
+        to: SmartbarContainer,
         expanding: Boolean,
     ) {
         val view = smartbarViewProvider() ?: return
         val contentFrame = view.findViewById<View>(R.id.smartbar_content_frame) ?: return
-        val fromView = view.findViewById<View>(fromId) ?: return
-        val toView = view.findViewById<View>(toId) ?: return
+        val fromView = from.viewIn(view) ?: return
+        val toView = to.viewIn(view) ?: return
         val height = contentFrame.height.toFloat()
 
         if (height <= 0f) {
             fromView.visibility = View.GONE
             toView.visibility = View.VISIBLE
-            activeContainerId = toId
+            activeContainer = to
             return
         }
 
@@ -280,7 +280,7 @@ class ToolbarManager(
                                 fromView.visibility = View.GONE
                                 fromView.translationY = 0f
                                 toView.translationY = 0f
-                                activeContainerId = toId
+                                activeContainer = to
                                 isAnimatingContainerSwitch = false
                                 containerSlideAnimator = null
                             }
@@ -298,47 +298,20 @@ class ToolbarManager(
 
     fun updateActiveContainerVisibility() {
         val smartbarView = smartbarViewProvider() ?: return
+        val target = activeContainer
 
-        logger.debug(TAG) {
-            val containerName =
-                when (activeContainerId) {
-                    R.id.number_row -> "number_row"
-                    R.id.candidates_container -> "candidates_container"
-                    R.id.english_candidates_container -> "english_candidates_container"
-                    R.id.toolbar_container -> "toolbar_container"
-                    else -> "unknown($activeContainerId)"
-                }
-            "[DEBUG] updateActiveContainerVisibility: $containerName"
-        }
+        logger.debug(TAG) { "[DEBUG] updateActiveContainerVisibility: ${target.name}" }
 
-        val allContainers =
-            listOf(
-                smartbarView.candidatesContainer,
-                smartbarView.englishCandidatesContainer,
-                smartbarView.numberRowView,
-                smartbarView.toolbarContainer,
-            )
-
-        allContainers.forEach { it?.visibility = View.GONE }
-
-        when (activeContainerId) {
-            R.id.number_row -> smartbarView.numberRowView?.visibility = View.VISIBLE
-            R.id.candidates_container -> smartbarView.candidatesContainer?.visibility = View.VISIBLE
-            R.id.english_candidates_container -> smartbarView.englishCandidatesContainer?.visibility = View.VISIBLE
-            R.id.toolbar_container -> smartbarView.toolbarContainer?.visibility = View.VISIBLE
+        SmartbarContainer.entries.forEach { container ->
+            container.viewIn(smartbarView)?.visibility =
+                if (container == target) View.VISIBLE else View.GONE
         }
 
         smartbarView.toolbarToggleButton?.visibility =
-            when (activeContainerId) {
-                R.id.number_row -> View.GONE
-                else -> View.VISIBLE
-            }
+            if (target == SmartbarContainer.NUMBER_ROW) View.GONE else View.VISIBLE
 
         smartbarView.toolbarToggleButton?.rotation =
-            when (activeContainerId) {
-                R.id.toolbar_container -> 45f
-                else -> 0f
-            }
+            if (target == SmartbarContainer.TOOLBAR) 45f else 0f
     }
 
     companion object {

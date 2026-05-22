@@ -488,14 +488,14 @@ class TextInputManager(
         activeKeyboardMode = actualMode
         if (_keyboardUi.value.layouts.containsKey(actualMode)) {
             setActiveMode(actualMode)
-            smartbarManager.activeContainerId = smartbarManager.getPreferredContainerId()
+            smartbarManager.activeContainer = smartbarManager.preferredContainer
             textViewGroup?.post { measureAndUpdateKeyboardHeight() }
         } else {
             launch(Dispatchers.Default) {
                 ensureLayoutLoaded(actualMode)
                 withContext(Dispatchers.Main) {
                     setActiveMode(actualMode)
-                    smartbarManager.activeContainerId = smartbarManager.getPreferredContainerId()
+                    smartbarManager.activeContainer = smartbarManager.preferredContainer
                     textViewGroup?.post { measureAndUpdateKeyboardHeight() }
                 }
             }

@@ -128,7 +128,6 @@ class SmartbarManager(
             onLayoutSelected = { newLayoutType ->
                 textInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
             },
-            onActiveContainerChanged = { /* handled by toolbarManager.activeContainerId setter */ },
             getKeyboardHeight = { keyboardHeight },
         )
 
@@ -149,12 +148,12 @@ class SmartbarManager(
             onRequestCandidateRefresh = { taigikeyboard.textInputManager.requestTaigiCandidateRefresh() },
         )
 
-    // --- Public delegation API (preserves original interface) ---
+    // --- Public delegation API to ToolbarManager ---
 
-    var activeContainerId: Int
-        get() = toolbarManager.activeContainerId
+    var activeContainer: SmartbarContainer
+        get() = toolbarManager.activeContainer
         set(value) {
-            toolbarManager.activeContainerId = value
+            toolbarManager.activeContainer = value
         }
 
     fun isShowingNextWordCandidates(): Boolean = nextWordHandler.isShowingNextWordCandidates()
@@ -253,7 +252,7 @@ class SmartbarManager(
 
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
 
-    fun getPreferredContainerId(): Int = toolbarManager.getPreferredContainerId()
+    val preferredContainer: SmartbarContainer get() = toolbarManager.preferredContainer
 
     // --- Number row ---
 
@@ -445,7 +444,7 @@ class SmartbarManager(
                 layoutSelectionOverlayView?.hide()
                 symbolSelectionOverlayView?.hide()
                 settingsSelectionOverlayView?.hide()
-                activeContainerId = R.id.candidates_container
+                activeContainer = SmartbarContainer.CANDIDATES
                 toolbarManager.updateInputModeSwitcherState()
             }
         }
@@ -493,10 +492,10 @@ class SmartbarManager(
         nextWordHandler.setShowingNextWord(isNextWord)
 
         // Switch to candidates view (but don't force-switch from toolbar)
-        if (activeContainerId != R.id.candidates_container &&
-            activeContainerId != R.id.toolbar_container
+        if (activeContainer != SmartbarContainer.CANDIDATES &&
+            activeContainer != SmartbarContainer.TOOLBAR
         ) {
-            activeContainerId = R.id.candidates_container
+            activeContainer = SmartbarContainer.CANDIDATES
         }
 
         view.applyCustomBackgroundColor(colorSettings().candidateBackgroundColor)
@@ -546,10 +545,10 @@ class SmartbarManager(
         hasCandidates = false
         nextWordHandler.clearNextWordState()
 
-        if (activeContainerId == R.id.candidates_container ||
-            activeContainerId == R.id.english_candidates_container
+        if (activeContainer == SmartbarContainer.CANDIDATES ||
+            activeContainer == SmartbarContainer.ENGLISH_CANDIDATES
         ) {
-            activeContainerId = R.id.candidates_container
+            activeContainer = SmartbarContainer.CANDIDATES
         }
 
         updateExpandButtonVisibility()
@@ -618,8 +617,8 @@ class SmartbarManager(
         hasCandidates = true
         nextWordHandler.clearNextWordState()
 
-        if (activeContainerId != R.id.english_candidates_container) {
-            activeContainerId = R.id.english_candidates_container
+        if (activeContainer != SmartbarContainer.ENGLISH_CANDIDATES) {
+            activeContainer = SmartbarContainer.ENGLISH_CANDIDATES
         }
 
         logger.debug(TAG) { "[ENGLISH] Updated 3-column candidates: ${currentSuggestions.map { it.roman }}" }
