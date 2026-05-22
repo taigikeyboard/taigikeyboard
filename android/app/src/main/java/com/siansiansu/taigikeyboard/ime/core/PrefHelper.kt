@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 class PrefHelper(
     private val context: Context,
@@ -87,6 +89,40 @@ class PrefHelper(
     // but using `applicationContext` here removes any risk of a non-Application
     // first-warm-up path capturing an Activity context indirectly.
     private val dataStore = context.applicationContext.preferencesDataStore
+
+    /**
+     * Property delegate: a `var foo: T by preference(KEY, default)` desugars to
+     * a `get()` that calls [cached] (so the live-read contract holds — each
+     * access re-reads the cached snapshot) and a `set()` that calls
+     * [updateCacheAndPersist]. Replaces ~5 lines of boilerplate per property
+     * with a 1-line declaration.
+     *
+     * Pattern-C properties ([inputMode], [keyboardLayoutType]) keep
+     * hand-written setters because they cascade across keys (TPS state
+     * machine).
+     */
+    private inner class PreferenceProperty<T>(
+        private val key: Preferences.Key<T>,
+        private val default: T,
+    ) : ReadWriteProperty<PrefHelper, T> {
+        override fun getValue(
+            thisRef: PrefHelper,
+            property: KProperty<*>,
+        ): T = cached(key, default)
+
+        override fun setValue(
+            thisRef: PrefHelper,
+            property: KProperty<*>,
+            value: T,
+        ) {
+            updateCacheAndPersist(key, value)
+        }
+    }
+
+    private fun <T> preference(
+        key: Preferences.Key<T>,
+        default: T,
+    ): PreferenceProperty<T> = PreferenceProperty(key, default)
 
     /**
      * Load all preferences into the process-wide cache with a single DataStore read,
@@ -219,65 +255,38 @@ class PrefHelper(
     }
 
     // Advanced settings
-    var settingsTheme: String
-        get() = cached(PreferenceKeys.SETTINGS_THEME, "auto")
-        private set(value) {
-            updateCacheAndPersist(PreferenceKeys.SETTINGS_THEME, value)
-        }
+    var settingsTheme: String by preference(PreferenceKeys.SETTINGS_THEME, "auto")
+        private set
 
-    var showAppIcon: Boolean
-        get() = cached(PreferenceKeys.SHOW_APP_ICON, true)
-        private set(value) {
-            updateCacheAndPersist(PreferenceKeys.SHOW_APP_ICON, value)
-        }
+    var showAppIcon: Boolean by preference(PreferenceKeys.SHOW_APP_ICON, true)
+        private set
 
     // Correction settings
-    var doubleSpacePeriod: Boolean
-        get() = cached(PreferenceKeys.DOUBLE_SPACE_PERIOD, true)
-        private set(value) {
-            updateCacheAndPersist(PreferenceKeys.DOUBLE_SPACE_PERIOD, value)
-        }
+    var doubleSpacePeriod: Boolean by preference(PreferenceKeys.DOUBLE_SPACE_PERIOD, true)
+        private set
 
     // Internal settings
-    var versionOnInstall: String
-        get() = cached(PreferenceKeys.VERSION_ON_INSTALL, AppVersionTracker.DEFAULT_VERSION_RAW)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.VERSION_ON_INSTALL, value)
-        }
+    var versionOnInstall: String by preference(PreferenceKeys.VERSION_ON_INSTALL, AppVersionTracker.DEFAULT_VERSION_RAW)
 
-    var versionLastUse: String
-        get() = cached(PreferenceKeys.VERSION_LAST_USE, AppVersionTracker.DEFAULT_VERSION_RAW)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.VERSION_LAST_USE, value)
-        }
+    var versionLastUse: String by preference(PreferenceKeys.VERSION_LAST_USE, AppVersionTracker.DEFAULT_VERSION_RAW)
 
     // Keyboard settings
-    var activeSubtypeId: Int
-        get() = cached(PreferenceKeys.ACTIVE_SUBTYPE_ID, -1)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.ACTIVE_SUBTYPE_ID, value)
-        }
+    var activeSubtypeId: Int by preference(PreferenceKeys.ACTIVE_SUBTYPE_ID, -1)
 
-    var subtypes: String
-        get() = cached(PreferenceKeys.SUBTYPES, "")
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.SUBTYPES, value)
-        }
+    var subtypes: String by preference(PreferenceKeys.SUBTYPES, "")
 
     // Looknfeel settings
-    var heightFactor: String
-        get() = cached(PreferenceKeys.HEIGHT_FACTOR, "normal")
-        private set(value) {
-            updateCacheAndPersist(PreferenceKeys.HEIGHT_FACTOR, value)
-        }
+    var heightFactor: String by preference(PreferenceKeys.HEIGHT_FACTOR, "normal")
+        private set
 
-    var longPressDelay: Int
-        get() = cached(PreferenceKeys.LONG_PRESS_DELAY, 300)
-        private set(value) {
-            updateCacheAndPersist(PreferenceKeys.LONG_PRESS_DELAY, value)
-        }
+    var longPressDelay: Int by preference(PreferenceKeys.LONG_PRESS_DELAY, 300)
+        private set
 
     // Language settings
+    //
+    // Pattern-C: cross-key TPS state machine. Setter cascades to
+    // `keyboardLayoutType` + `phahTaigiLayoutEnabled` (and saves/restores via
+    // `layoutBeforeTps`). Cannot use the `preference` delegate.
     override var inputMode: String
         get() = cached(PreferenceKeys.INPUT_MODE, "tl")
         set(value) {
@@ -328,80 +337,36 @@ class PrefHelper(
             }
         }
 
-    override var isTranslateSwapped: Boolean
-        get() = cached(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.IS_TRANSLATE_SWAPPED, value)
-        }
+    override var isTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
 
-    var outputBothScripts: Boolean
-        get() = cached(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, value)
-        }
+    var outputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
     // Taigi-specific settings
-    var enableDoubleTapOO: Boolean
-        get() = cached(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, value)
-        }
+    var enableDoubleTapOO: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
 
-    var enableDoubleTapNN: Boolean
-        get() = cached(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, value)
-        }
+    var enableDoubleTapNN: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, true)
 
-    var autoCapitalizationEnabled: Boolean
-        get() = cached(PreferenceKeys.AUTO_CAPITALIZATION_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.AUTO_CAPITALIZATION_ENABLED, value)
-        }
+    var autoCapitalizationEnabled: Boolean by preference(PreferenceKeys.AUTO_CAPITALIZATION_ENABLED, true)
 
-    var isAutoSpaceEnabled: Boolean
-        get() = cached(PreferenceKeys.AUTO_SPACE_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.AUTO_SPACE_ENABLED, value)
-        }
+    var isAutoSpaceEnabled: Boolean by preference(PreferenceKeys.AUTO_SPACE_ENABLED, false)
 
-    var isToolbarAutoCollapse: Boolean
-        get() = cached(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, value)
-        }
+    var isToolbarAutoCollapse: Boolean by preference(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, true)
 
-    var isGlobeKeyEnabled: Boolean
-        get() = cached(PreferenceKeys.GLOBE_KEY_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.GLOBE_KEY_ENABLED, value)
-        }
+    var isGlobeKeyEnabled: Boolean by preference(PreferenceKeys.GLOBE_KEY_ENABLED, true)
 
-    var isSoundFeedbackEnabled: Boolean
-        get() = cached(PreferenceKeys.SOUND_FEEDBACK_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.SOUND_FEEDBACK_ENABLED, value)
-        }
+    var isSoundFeedbackEnabled: Boolean by preference(PreferenceKeys.SOUND_FEEDBACK_ENABLED, true)
 
-    var isVibrationFeedbackEnabled: Boolean
-        get() = cached(PreferenceKeys.VIBRATION_FEEDBACK_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.VIBRATION_FEEDBACK_ENABLED, value)
-        }
+    var isVibrationFeedbackEnabled: Boolean by preference(PreferenceKeys.VIBRATION_FEEDBACK_ENABLED, true)
 
-    var fontType: String
-        get() = cached(PreferenceKeys.FONT_TYPE, DEFAULT_FONT_TYPE)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.FONT_TYPE, value)
-        }
+    var fontType: String by preference(PreferenceKeys.FONT_TYPE, DEFAULT_FONT_TYPE)
 
-    var phahTaigiLayoutEnabled: Boolean
-        get() = cached(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value)
-        }
+    var phahTaigiLayoutEnabled: Boolean by preference(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, true)
 
     // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2, tps
+    //
+    // Pattern-C: cross-key TPS state machine. Setter cascades to `inputMode`
+    // + `phahTaigiLayoutEnabled` (and saves/restores via
+    // `inputModeBeforeTps`). Cannot use the `preference` delegate.
     var keyboardLayoutType: String
         get() = cached(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "phahTaigi")
         set(value) {
@@ -445,168 +410,72 @@ class PrefHelper(
         }
 
     // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
-    private var inputModeBeforeTps: String
-        get() = cached(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.INPUT_MODE_BEFORE_TPS, value)
-        }
+    private var inputModeBeforeTps: String by preference(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
 
     // Stores the layout before switching to TPS, so it can be restored when leaving TPS
-    private var layoutBeforeTps: String
-        get() = cached(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.LAYOUT_BEFORE_TPS, value)
-        }
+    private var layoutBeforeTps: String by preference(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
 
     // TPS settings
-    var tpsOrMapsToER: Boolean
-        get() = cached(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.TPS_OR_MAPS_TO_ER, value)
-        }
+    var tpsOrMapsToER: Boolean by preference(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
 
     // 詞頻紀錄開關（預設開啟）
-    var frequencyRecordingEnabled: Boolean
-        get() = cached(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, value)
-        }
+    var frequencyRecordingEnabled: Boolean by preference(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, true)
 
     // 詞關聯紀錄開關（預設開啟）
-    var associationRecordingEnabled: Boolean
-        get() = cached(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, value)
-        }
+    var associationRecordingEnabled: Boolean by preference(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, true)
 
     // 自訂詞庫開關（預設開啟）
-    var customDictEnabled: Boolean
-        get() = cached(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.CUSTOM_DICT_ENABLED, value)
-        }
+    var customDictEnabled: Boolean by preference(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
 
     // 詞庫開關設定
     // 教育部臺灣台語常用詞辭典（kautian）
-    var moeDictEnabled: Boolean
-        get() = cached(PreferenceKeys.MOE_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.MOE_DICT_ENABLED, value)
-        }
+    var moeDictEnabled: Boolean by preference(PreferenceKeys.MOE_DICT_ENABLED, true)
 
     // 台語新詞辭庫（taigitv）
-    var newwordDictEnabled: Boolean
-        get() = cached(PreferenceKeys.NEWWORD_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.NEWWORD_DICT_ENABLED, value)
-        }
+    var newwordDictEnabled: Boolean by preference(PreferenceKeys.NEWWORD_DICT_ENABLED, true)
 
     // iTaigi 華台對照典（itaigi）- 預設關閉
-    var itaigiDictEnabled: Boolean
-        get() = cached(PreferenceKeys.ITAIGI_DICT_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.ITAIGI_DICT_ENABLED, value)
-        }
+    var itaigiDictEnabled: Boolean by preference(PreferenceKeys.ITAIGI_DICT_ENABLED, false)
 
     // 台灣植物名彙（sitbut）
-    var taiwanPlantDictEnabled: Boolean
-        get() = cached(PreferenceKeys.SITBUT_DICT_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.SITBUT_DICT_ENABLED, value)
-        }
+    var taiwanPlantDictEnabled: Boolean by preference(PreferenceKeys.SITBUT_DICT_ENABLED, false)
 
     // 台華線頂對照典（taihoa）
-    var taiHuaDictEnabled: Boolean
-        get() = cached(PreferenceKeys.TAIHOA_DICT_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.TAIHOA_DICT_ENABLED, value)
-        }
+    var taiHuaDictEnabled: Boolean by preference(PreferenceKeys.TAIHOA_DICT_ENABLED, false)
 
     // 台日大辭典（taijit）
-    var taiwanJapanDictEnabled: Boolean
-        get() = cached(PreferenceKeys.TAIJIT_DICT_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.TAIJIT_DICT_ENABLED, value)
-        }
+    var taiwanJapanDictEnabled: Boolean by preference(PreferenceKeys.TAIJIT_DICT_ENABLED, false)
 
     // 台語工藝詞庫（kungge）
-    var kunggeDictEnabled: Boolean
-        get() = cached(PreferenceKeys.KUNGGE_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KUNGGE_DICT_ENABLED, value)
-        }
+    var kunggeDictEnabled: Boolean by preference(PreferenceKeys.KUNGGE_DICT_ENABLED, true)
 
     // 學科術語辭典（stti）
-    var sttiDictEnabled: Boolean
-        get() = cached(PreferenceKeys.STTI_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.STTI_DICT_ENABLED, value)
-        }
+    var sttiDictEnabled: Boolean by preference(PreferenceKeys.STTI_DICT_ENABLED, true)
 
     // 腔口補充資料（khpoo）
-    var khpooDictEnabled: Boolean
-        get() = cached(PreferenceKeys.KHPOO_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KHPOO_DICT_ENABLED, value)
-        }
+    var khpooDictEnabled: Boolean by preference(PreferenceKeys.KHPOO_DICT_ENABLED, true)
 
     // LKK漢羅合用建議用字（預設開啟）
-    var lkkDictEnabled: Boolean
-        get() = cached(PreferenceKeys.LKK_DICT_ENABLED, true)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.LKK_DICT_ENABLED, value)
-        }
+    var lkkDictEnabled: Boolean by preference(PreferenceKeys.LKK_DICT_ENABLED, true)
 
     // Appearance settings
-    var keyHeightScale: Float
-        get() = cached(PreferenceKeys.KEY_HEIGHT_SCALE, DEFAULT_KEY_HEIGHT_SCALE)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KEY_HEIGHT_SCALE, value)
-        }
+    var keyHeightScale: Float by preference(PreferenceKeys.KEY_HEIGHT_SCALE, DEFAULT_KEY_HEIGHT_SCALE)
 
-    var keyFontSizeScale: Float
-        get() = cached(PreferenceKeys.KEY_FONT_SIZE_SCALE, DEFAULT_KEY_FONT_SIZE_SCALE)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KEY_FONT_SIZE_SCALE, value)
-        }
+    var keyFontSizeScale: Float by preference(PreferenceKeys.KEY_FONT_SIZE_SCALE, DEFAULT_KEY_FONT_SIZE_SCALE)
 
-    var candidateTextSizeScale: Float
-        get() = cached(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, DEFAULT_CANDIDATE_TEXT_SIZE_SCALE)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, value)
-        }
+    var candidateTextSizeScale: Float by preference(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, DEFAULT_CANDIDATE_TEXT_SIZE_SCALE)
 
-    var keyCornerRadius: Float
-        get() = cached(PreferenceKeys.KEY_CORNER_RADIUS, DEFAULT_KEY_CORNER_RADIUS)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KEY_CORNER_RADIUS, value)
-        }
+    var keyCornerRadius: Float by preference(PreferenceKeys.KEY_CORNER_RADIUS, DEFAULT_KEY_CORNER_RADIUS)
 
-    var keyBorderWidth: Float
-        get() = cached(PreferenceKeys.KEY_BORDER_WIDTH, DEFAULT_KEY_BORDER_WIDTH)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KEY_BORDER_WIDTH, value)
-        }
+    var keyBorderWidth: Float by preference(PreferenceKeys.KEY_BORDER_WIDTH, DEFAULT_KEY_BORDER_WIDTH)
 
-    var colorSettings: String
-        get() = cached(PreferenceKeys.COLOR_SETTINGS, DEFAULT_COLOR_SETTINGS)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.COLOR_SETTINGS, value)
-        }
+    var colorSettings: String by preference(PreferenceKeys.COLOR_SETTINGS, DEFAULT_COLOR_SETTINGS)
 
     // 異用字開關（預設關閉）
-    var variantEnabled: Boolean
-        get() = cached(PreferenceKeys.VARIANT_DICT_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.VARIANT_DICT_ENABLED, value)
-        }
+    var variantEnabled: Boolean by preference(PreferenceKeys.VARIANT_DICT_ENABLED, false)
 
     // 在來字開關（預設關閉）
-    var khiin: Boolean
-        get() = cached(PreferenceKeys.KHIIN_ENABLED, false)
-        set(value) {
-            updateCacheAndPersist(PreferenceKeys.KHIIN_ENABLED, value)
-        }
+    var khiin: Boolean by preference(PreferenceKeys.KHIIN_ENABLED, false)
 
     // ------------------------------------------------------------------ //
     // EngineSettings / EngineSettingsProvider conformance
