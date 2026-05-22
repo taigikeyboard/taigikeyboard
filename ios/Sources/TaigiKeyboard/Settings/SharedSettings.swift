@@ -22,49 +22,60 @@ final class SharedSettings {
     // 中文: App Group 共享 UserDefaults。建立失敗 (Provisioning 沒設好) 時回退到 .standard,避免 crash。
     static let sharedUserDefaults = UserDefaults(suiteName: appGroupId) ?? .standard
 
-    // 中文: UserDefaults 持久化欄位 key 集合。所有 key 都是 raw string,變動會破壞舊版相容性。
-    private enum Keys {
-        static let inputMode = "inputMode"
-        static let enableDoubleTapOO = "enableDoubleTapOO"
-        static let enableDoubleTapNN = "enableDoubleTapNN"
-        static let isTranslateSwapped = "isTranslateSwapped"
-        static let outputBothScripts = "outputBothScripts"
-        static let fontType = "fontType"
-        static let fullAccessEnabled = "fullAccessEnabled"
-        static let autoSpaceEnabled = "autoSpaceEnabled"
-        static let keyboardLayoutType = "keyboardLayoutType"
-        static let inputModeBeforeTps = "inputModeBeforeTps"
-        static let layoutBeforeTps = "layoutBeforeTps"
-        static let frequencyRecordingEnabled = "frequencyRecordingEnabled"
-        static let associationRecordingEnabled = "associationRecordingEnabled"
-        static let customDictEnabled = "customDictEnabled"
-        // Dictionary toggles
-        static let moeDictEnabled = "moeDictEnabled"
-        static let newwordDictEnabled = "newwordDictEnabled"
-        static let kunggeDictEnabled = "kunggeDictEnabled"
-        static let iTaigiDictEnabled = "iTaigiDictEnabled"
-        static let taiwanJapanDictEnabled = "taiwanJapanDictEnabled"
-        static let taiHuaDictEnabled = "taiHuaDictEnabled"
-        static let taiwanPlantDictEnabled = "taiwanPlantDictEnabled"
-        static let sttiDictEnabled = "sttiDictEnabled"
-        static let khpooDictEnabled = "khpooDictEnabled"
-        static let variantEnabled = "variantEnabled"
-        static let khiin = "khiin"
-        static let lkkDictEnabled = "lkkDictEnabled"
-        /// TPS settings
-        static let tpsOrMapsToER = "tpsOrMapsToER"
-        /// Toolbar settings
-        static let toolbarAutoCollapse = "toolbarAutoCollapse"
-        /// Globe key
-        static let isGlobeKeyEnabled = "isGlobeKeyEnabled"
-        // Appearance settings
-        static let keyHeightScale = "keyHeightScale"
-        static let colorSettings = "colorSettings"
-        static let keyFontSizeScale = "keyFontSizeScale"
-        static let candidateTextSizeScale = "candidateTextSizeScale"
-        static let keyCornerRadius = "keyCornerRadius"
-        static let keyBorderWidth = "keyBorderWidth"
-    }
+    // MARK: - Typed key descriptors
+    //
+    // Each persisted field has a `SettingsKey<T>` descriptor pairing the raw
+    // UserDefaults key with its default value + codec. Key spellings are
+    // frozen for binary compatibility — anything stored on disk by an older
+    // build must keep round-tripping. Typos (`tpsOrMapsToER`, `khiin`,
+    // `enableDoubleTapOO/NN`) are deliberate; renaming them silently abandons
+    // the user's existing preference.
+    // 中文: 持久化欄位描述符。每個 key 字串都凍結 (含拼字錯誤) — 改了就會丟失既有使用者設定。
+
+    private static let inputModeKey: SettingsKey<InputMode> = .rawRep("inputMode", default: .tl)
+    private static let inputModeBeforeTpsKey: SettingsKey<InputMode> = .rawRep("inputModeBeforeTps", default: .tl)
+    private static let keyboardLayoutTypeKey: SettingsKey<KeyboardLayoutType> = .rawRep("keyboardLayoutType", default: .phahTaigi)
+    private static let layoutBeforeTpsKey: SettingsKey<KeyboardLayoutType> = .rawRep("layoutBeforeTps", default: .phahTaigi)
+    private static let fontTypeKey: SettingsKey<FontType> = .rawRep("fontType", default: .openHuninn)
+
+    private static let isDoubleTapOOEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapOO", default: true)
+    private static let isDoubleTapNNEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapNN", default: true)
+    private static let isTranslateSwappedKey: SettingsKey<Bool> = .bool("isTranslateSwapped", default: false)
+    private static let isOutputBothScriptsKey: SettingsKey<Bool> = .bool("outputBothScripts", default: false)
+    private static let isFullAccessEnabledKey: SettingsKey<Bool> = .bool("fullAccessEnabled", default: false)
+    private static let isAutoSpaceEnabledKey: SettingsKey<Bool> = .bool("autoSpaceEnabled", default: false)
+    private static let isFrequencyRecordingEnabledKey: SettingsKey<Bool> = .bool("frequencyRecordingEnabled", default: true)
+    private static let isAssociationRecordingEnabledKey: SettingsKey<Bool> = .bool("associationRecordingEnabled", default: true)
+    private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
+
+    private static let isMoeDictEnabledKey: SettingsKey<Bool> = .bool("moeDictEnabled", default: true)
+    private static let isNewwordDictEnabledKey: SettingsKey<Bool> = .bool("newwordDictEnabled", default: true)
+    private static let isKunggeDictEnabledKey: SettingsKey<Bool> = .bool("kunggeDictEnabled", default: true)
+    private static let isITaigiDictEnabledKey: SettingsKey<Bool> = .bool("iTaigiDictEnabled", default: false)
+    private static let isTaiwanJapanDictEnabledKey: SettingsKey<Bool> = .bool("taiwanJapanDictEnabled", default: false)
+    private static let isTaiHuaDictEnabledKey: SettingsKey<Bool> = .bool("taiHuaDictEnabled", default: false)
+    private static let isTaiwanPlantDictEnabledKey: SettingsKey<Bool> = .bool("taiwanPlantDictEnabled", default: false)
+    private static let isSttiDictEnabledKey: SettingsKey<Bool> = .bool("sttiDictEnabled", default: true)
+    private static let isKhpooDictEnabledKey: SettingsKey<Bool> = .bool("khpooDictEnabled", default: true)
+    private static let isVariantEnabledKey: SettingsKey<Bool> = .bool("variantEnabled", default: false)
+    private static let isKhiinEnabledKey: SettingsKey<Bool> = .bool("khiin", default: false)
+    private static let isLkkDictEnabledKey: SettingsKey<Bool> = .bool("lkkDictEnabled", default: true)
+    private static let isTpsOrMappedToERKey: SettingsKey<Bool> = .bool("tpsOrMapsToER", default: true)
+    private static let isToolbarAutoCollapseKey: SettingsKey<Bool> = .bool("toolbarAutoCollapse", default: true)
+
+    /// Globe key has a device-dependent default (`DeviceCapabilities.prefersGlobeKeyByDefault`)
+    /// so the getter is hand-written; the descriptor is reused for writes
+    /// and the reset-to-default `removeObject(forKey:)` path.
+    // 中文: 地球鍵描述符僅供寫入與 reset 用;讀取走 isGlobeKeyEnabled getter 因預設依機型。
+    private static let isGlobeKeyEnabledKey: SettingsKey<Bool> = .bool("isGlobeKeyEnabled", default: false)
+
+    private static let keyHeightScaleKey: SettingsKey<CGFloat> = .cgFloat("keyHeightScale", default: 1.0)
+    private static let keyFontSizeScaleKey: SettingsKey<CGFloat> = .cgFloat("keyFontSizeScale", default: 1.0)
+    private static let candidateTextSizeScaleKey: SettingsKey<CGFloat> = .cgFloat("candidateTextSizeScale", default: 1.0)
+    private static let keyCornerRadiusKey: SettingsKey<CGFloat> = .cgFloat("keyCornerRadius", default: 6.0)
+    private static let keyBorderWidthKey: SettingsKey<CGFloat> = .cgFloat("keyBorderWidth", default: 0)
+
+    private static let colorSettingsKey: SettingsKey<KeyboardColorSettings> = .codable("colorSettings", default: .default)
 
     // 中文: process 內 singleton。整個 app + extension 共用同一份設定 facade。
     static let shared = SharedSettings()
@@ -94,62 +105,38 @@ final class SharedSettings {
 
     // 中文: 目前輸入模式。setter 轉發到 setInputMode(_:),由狀態機維持 inputMode ↔ keyboardLayoutType 連動。
     var inputMode: InputMode {
-        get {
-            let rawValue = userDefaults.string(forKey: Keys.inputMode) ?? "tl"
-            return InputMode(rawValue: rawValue) ?? InputMode.tl
-        }
+        get { userDefaults.value(for: Self.inputModeKey) }
         set { setInputMode(newValue) }
     }
 
     // 中文: POJ「雙擊 OO」預處理開關。預設 true。供 ToneToggles 打包後給 ToneConverter。
     var isDoubleTapOOEnabled: Bool {
-        get {
-            userDefaults.object(forKey: Keys.enableDoubleTapOO) as? Bool ?? true
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.enableDoubleTapOO)
-        }
+        get { userDefaults.value(for: Self.isDoubleTapOOEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isDoubleTapOOEnabledKey) }
     }
 
     // 中文: POJ「雙擊 NN」預處理開關。預設 true。
     var isDoubleTapNNEnabled: Bool {
-        get {
-            userDefaults.object(forKey: Keys.enableDoubleTapNN) as? Bool ?? true
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.enableDoubleTapNN)
-        }
+        get { userDefaults.value(for: Self.isDoubleTapNNEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isDoubleTapNNEnabledKey) }
     }
 
     // 中文: 翻譯方向是否反轉 (台↔英)。預設 false。
     var isTranslateSwapped: Bool {
-        get {
-            userDefaults.object(forKey: Keys.isTranslateSwapped) as? Bool ?? false
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.isTranslateSwapped)
-        }
+        get { userDefaults.value(for: Self.isTranslateSwappedKey) }
+        set { userDefaults.set(newValue, for: Self.isTranslateSwappedKey) }
     }
 
     // 中文: 鍵盤字體選擇。預設 .openHuninn (jf open 粉圓)。
     var fontType: FontType {
-        get {
-            let rawValue = userDefaults.string(forKey: Keys.fontType) ?? FontType.openHuninn.rawValue
-            return FontType(rawValue: rawValue) ?? .openHuninn
-        }
-        set {
-            userDefaults.set(newValue.rawValue, forKey: Keys.fontType)
-        }
+        get { userDefaults.value(for: Self.fontTypeKey) }
+        set { userDefaults.set(newValue, for: Self.fontTypeKey) }
     }
 
     // 中文: Full Access 開關 (是否取得網路 / 剪貼簿等完整存取)。預設 false。
     var isFullAccessEnabled: Bool {
-        get {
-            userDefaults.bool(forKey: Keys.fullAccessEnabled)
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.fullAccessEnabled)
-        }
+        get { userDefaults.value(for: Self.isFullAccessEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isFullAccessEnabledKey) }
     }
 
     // isAutoCapitalizationEnabled moved to KeyboardKit's KeyboardSettings
@@ -157,20 +144,13 @@ final class SharedSettings {
 
     // 中文: 自動空格開關 (上字後是否補空白)。預設 false。
     var isAutoSpaceEnabled: Bool {
-        get {
-            userDefaults.object(forKey: Keys.autoSpaceEnabled) as? Bool ?? false
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.autoSpaceEnabled)
-        }
+        get { userDefaults.value(for: Self.isAutoSpaceEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isAutoSpaceEnabledKey) }
     }
 
     // 中文: 目前鍵盤排版。setter 轉發到 setKeyboardLayoutType(_:),由狀態機維持 layout ↔ inputMode 連動。
     var keyboardLayoutType: KeyboardLayoutType {
-        get {
-            let rawValue = userDefaults.string(forKey: Keys.keyboardLayoutType) ?? KeyboardLayoutType.phahTaigi.rawValue
-            return KeyboardLayoutType(rawValue: rawValue) ?? .phahTaigi
-        }
+        get { userDefaults.value(for: Self.keyboardLayoutTypeKey) }
         set { setKeyboardLayoutType(newValue) }
     }
 
@@ -184,24 +164,24 @@ final class SharedSettings {
     /// - Leaving `.tps`: restores the layout from `layoutBeforeTps`, but only
     ///   when the live layout is still `.tps` — a manual layout change
     ///   earlier in the same flow is preserved.
-    /// - All cascading writes bypass the property setter (write the raw
-    ///   `UserDefaults` key directly), so no re-entry guard is needed.
+    /// - All cascading writes go through `userDefaults.set(_, for:)`, which
+    ///   bypasses the property setter (no re-entry into the state machine).
     // 中文: 寫入 inputMode 並由狀態機保持 TPS 連動。進入 TPS 時備份 layout 並翻成 .tps,
-    // 中文: 離開時若 layout 仍是 .tps 才還原。所有連動寫入都直接打 UserDefaults key,
-    // 中文: 不會再觸發本物件的 setter,因此不再需要 re-entry guard。
+    // 中文: 離開時若 layout 仍是 .tps 才還原。所有連動寫入都走 userDefaults.set(_, for:),
+    // 中文: 直接打 UserDefaults,不會再觸發本物件的 setter,因此不再需要 re-entry guard。
     func setInputMode(_ newMode: InputMode) {
         let oldMode = inputMode
-        userDefaults.set(newMode.rawValue, forKey: Keys.inputMode)
+        userDefaults.set(newMode, for: Self.inputModeKey)
 
         if newMode == .tps, oldMode != .tps {
             let currentLayout = keyboardLayoutType
             if currentLayout != .tps {
                 layoutBeforeTps = currentLayout
-                userDefaults.set(KeyboardLayoutType.tps.rawValue, forKey: Keys.keyboardLayoutType)
+                userDefaults.set(.tps, for: Self.keyboardLayoutTypeKey)
             }
         } else if newMode != .tps, oldMode == .tps {
             if keyboardLayoutType == .tps {
-                userDefaults.set(layoutBeforeTps.rawValue, forKey: Keys.keyboardLayoutType)
+                userDefaults.set(layoutBeforeTps, for: Self.keyboardLayoutTypeKey)
             }
         }
     }
@@ -219,155 +199,141 @@ final class SharedSettings {
     // 中文: 與 input 側的有條件還原相反。若未來要拉齊兩側,需獨立 slice 處理。
     func setKeyboardLayoutType(_ newLayout: KeyboardLayoutType) {
         let oldLayout = keyboardLayoutType
-        userDefaults.set(newLayout.rawValue, forKey: Keys.keyboardLayoutType)
+        userDefaults.set(newLayout, for: Self.keyboardLayoutTypeKey)
 
         if newLayout == .tps, oldLayout != .tps {
             let currentMode = inputMode
             if currentMode != .tps {
                 inputModeBeforeTps = currentMode
-                userDefaults.set(InputMode.tps.rawValue, forKey: Keys.inputMode)
+                userDefaults.set(.tps, for: Self.inputModeKey)
             }
         } else if newLayout != .tps, oldLayout == .tps {
-            userDefaults.set(inputModeBeforeTps.rawValue, forKey: Keys.inputMode)
+            userDefaults.set(inputModeBeforeTps, for: Self.inputModeKey)
         }
     }
 
     /// Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
     // 中文: 切換到 TPS 之前的 inputMode 備份。離開 TPS 時用來還原。
     private var inputModeBeforeTps: InputMode {
-        get {
-            let rawValue = userDefaults.string(forKey: Keys.inputModeBeforeTps) ?? "tl"
-            return InputMode(rawValue: rawValue) ?? .tl
-        }
-        set {
-            userDefaults.set(newValue.rawValue, forKey: Keys.inputModeBeforeTps)
-        }
+        get { userDefaults.value(for: Self.inputModeBeforeTpsKey) }
+        set { userDefaults.set(newValue, for: Self.inputModeBeforeTpsKey) }
     }
 
     /// Stores the layout before switching to TPS, so it can be restored when leaving TPS
     // 中文: 切換到 TPS 之前的 layout 備份。離開 TPS 時用來還原。
     private var layoutBeforeTps: KeyboardLayoutType {
-        get {
-            let rawValue = userDefaults.string(forKey: Keys.layoutBeforeTps) ?? KeyboardLayoutType.phahTaigi.rawValue
-            return KeyboardLayoutType(rawValue: rawValue) ?? .phahTaigi
-        }
-        set {
-            userDefaults.set(newValue.rawValue, forKey: Keys.layoutBeforeTps)
-        }
+        get { userDefaults.value(for: Self.layoutBeforeTpsKey) }
+        set { userDefaults.set(newValue, for: Self.layoutBeforeTpsKey) }
     }
 
     // 中文: 「同時輸出漢字 + 羅馬字」開關。預設 false。
     var isOutputBothScripts: Bool {
-        get {
-            userDefaults.object(forKey: Keys.outputBothScripts) as? Bool ?? false
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.outputBothScripts)
-        }
+        get { userDefaults.value(for: Self.isOutputBothScriptsKey) }
+        set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
     }
 
     // MARK: - Frequency Recording (default: on)
 
     // 中文: 是否記錄使用者選字頻率 (供 user_frequency.db 排序加權)。預設 true。
     var isFrequencyRecordingEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.frequencyRecordingEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.frequencyRecordingEnabled) }
+        get { userDefaults.value(for: Self.isFrequencyRecordingEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isFrequencyRecordingEnabledKey) }
     }
 
     // MARK: - Association Recording (default: on)
 
     // 中文: 是否記錄選字關聯 (供 NextWord 推薦使用)。預設 true。
     var isAssociationRecordingEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.associationRecordingEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.associationRecordingEnabled) }
+        get { userDefaults.value(for: Self.isAssociationRecordingEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isAssociationRecordingEnabledKey) }
     }
 
     // MARK: - Custom Dictionary
 
     // 中文: 自訂詞庫開關。預設 true。
     var isCustomDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.customDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.customDictEnabled) }
+        get { userDefaults.value(for: Self.isCustomDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isCustomDictEnabledKey) }
     }
 
     // MARK: - Dictionary Toggles
 
-    // 中文: 各內建詞典開關。每個欄位獨立持久化於 UserDefaults,預設值見每行 fallback。
+    // 中文: 各內建詞典開關。每個欄位獨立持久化於 UserDefaults,預設值見每行 descriptor。
     // 中文: 預設開啟:MOE / Newword / Kungge / STTI / Khpoo;預設關閉:iTaigi / TaiwanJapan / TaiHua / TaiwanPlant / Variant / Khiin / LKK。
 
     // 中文: 教育部詞典 (MOE) 開關。預設 true。
     var isMoeDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.moeDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.moeDictEnabled) }
+        get { userDefaults.value(for: Self.isMoeDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isMoeDictEnabledKey) }
     }
 
     // 中文: 新詞詞典開關。預設 true。
     var isNewwordDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.newwordDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.newwordDictEnabled) }
+        get { userDefaults.value(for: Self.isNewwordDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isNewwordDictEnabledKey) }
     }
 
     // 中文: 公語詞典開關。預設 true。
     var isKunggeDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.kunggeDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.kunggeDictEnabled) }
+        get { userDefaults.value(for: Self.isKunggeDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKunggeDictEnabledKey) }
     }
 
     // 中文: iTaigi 詞典開關。預設 false。
     var isITaigiDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.iTaigiDictEnabled) as? Bool ?? false }
-        set { userDefaults.set(newValue, forKey: Keys.iTaigiDictEnabled) }
+        get { userDefaults.value(for: Self.isITaigiDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isITaigiDictEnabledKey) }
     }
 
     // 中文: 台日大辭典開關。預設 false。
     var isTaiwanJapanDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.taiwanJapanDictEnabled) as? Bool ?? false }
-        set { userDefaults.set(newValue, forKey: Keys.taiwanJapanDictEnabled) }
+        get { userDefaults.value(for: Self.isTaiwanJapanDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isTaiwanJapanDictEnabledKey) }
     }
 
     // 中文: 台華對照辭典開關。預設 false。
     var isTaiHuaDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.taiHuaDictEnabled) as? Bool ?? false }
-        set { userDefaults.set(newValue, forKey: Keys.taiHuaDictEnabled) }
+        get { userDefaults.value(for: Self.isTaiHuaDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isTaiHuaDictEnabledKey) }
     }
 
     // 中文: 台灣植物名彙開關。預設 false。
     var isTaiwanPlantDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.taiwanPlantDictEnabled) as? Bool ?? false }
-        set { userDefaults.set(newValue, forKey: Keys.taiwanPlantDictEnabled) }
+        get { userDefaults.value(for: Self.isTaiwanPlantDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isTaiwanPlantDictEnabledKey) }
     }
 
     // 中文: 教育部臺灣台語常用詞辭典 (STTI) 開關。預設 true。
     var isSttiDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.sttiDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.sttiDictEnabled) }
+        get { userDefaults.value(for: Self.isSttiDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isSttiDictEnabledKey) }
     }
 
     // 中文: 教育部閩南語推薦用字 (Khpoo) 開關。預設 true。
     var isKhpooDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.khpooDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.khpooDictEnabled) }
+        get { userDefaults.value(for: Self.isKhpooDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKhpooDictEnabledKey) }
     }
 
     /// Variant characters toggle (default: off)
     // 中文: 異體字候選開關。預設 false。
     var isVariantEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.variantEnabled) as? Bool ?? false }
-        set { userDefaults.set(newValue, forKey: Keys.variantEnabled) }
+        get { userDefaults.value(for: Self.isVariantEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isVariantEnabledKey) }
     }
 
     /// Khiin supplementary data toggle (default: off)
     // 中文: Khiin 補充資料開關。預設 false。
     var isKhiinEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.khiin) as? Bool ?? false }
-        set { userDefaults.set(newValue, forKey: Keys.khiin) }
+        get { userDefaults.value(for: Self.isKhiinEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKhiinEnabledKey) }
     }
 
     /// LKK Hàn-lô mixed script suggestions (default: on)
     // 中文: LKK 漢羅混寫候選開關。預設 true。
     var isLkkDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.lkkDictEnabled) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.lkkDictEnabled) }
+        get { userDefaults.value(for: Self.isLkkDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isLkkDictEnabledKey) }
     }
 
     // MARK: - Toolbar Settings
@@ -375,8 +341,8 @@ final class SharedSettings {
     /// Toolbar auto-collapse toggle (default: true = auto-collapse on composing/mode change)
     // 中文: 工具列自動收合開關。true 時組字或切模式會自動收合工具列。預設 true。
     var isToolbarAutoCollapse: Bool {
-        get { userDefaults.object(forKey: Keys.toolbarAutoCollapse) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.toolbarAutoCollapse) }
+        get { userDefaults.value(for: Self.isToolbarAutoCollapseKey) }
+        set { userDefaults.set(newValue, for: Self.isToolbarAutoCollapseKey) }
     }
 
     // MARK: - Globe Key
@@ -387,12 +353,12 @@ final class SharedSettings {
     // 中文: 一旦使用者寫入過值,後續以儲存值為準,不再走 device-default fallback。
     var isGlobeKeyEnabled: Bool {
         get {
-            guard let stored = userDefaults.object(forKey: Keys.isGlobeKeyEnabled) as? Bool else {
+            guard let stored = userDefaults.storedObject(for: Self.isGlobeKeyEnabledKey) as? Bool else {
                 return DeviceCapabilities.prefersGlobeKeyByDefault
             }
             return stored
         }
-        set { userDefaults.set(newValue, forKey: Keys.isGlobeKeyEnabled) }
+        set { userDefaults.set(newValue, for: Self.isGlobeKeyEnabledKey) }
     }
 
     // MARK: - TPS Settings
@@ -400,55 +366,46 @@ final class SharedSettings {
     /// TPS "or" maps to ㄜ (default: on). When off, "or" maps to ㄛ.
     // 中文: TPS 中 "or" 映射對象開關。true 時映射到ㄜ,false 時映射到ㄛ。預設 true。
     var isTpsOrMappedToER: Bool {
-        get { userDefaults.object(forKey: Keys.tpsOrMapsToER) as? Bool ?? true }
-        set { userDefaults.set(newValue, forKey: Keys.tpsOrMapsToER) }
+        get { userDefaults.value(for: Self.isTpsOrMappedToERKey) }
+        set { userDefaults.set(newValue, for: Self.isTpsOrMappedToERKey) }
     }
 
     // MARK: - Appearance (scale factor, default 1.0)
 
     // 中文: 鍵盤高度縮放係數。預設 1.0。
     var keyHeightScale: CGFloat {
-        get { userDefaults.object(forKey: Keys.keyHeightScale) as? Double ?? 1.0 }
-        set { userDefaults.set(newValue, forKey: Keys.keyHeightScale) }
+        get { userDefaults.value(for: Self.keyHeightScaleKey) }
+        set { userDefaults.set(newValue, for: Self.keyHeightScaleKey) }
     }
 
     // 中文: 鍵帽字體大小縮放係數。預設 1.0。
     var keyFontSizeScale: CGFloat {
-        get { userDefaults.object(forKey: Keys.keyFontSizeScale) as? Double ?? 1.0 }
-        set { userDefaults.set(newValue, forKey: Keys.keyFontSizeScale) }
+        get { userDefaults.value(for: Self.keyFontSizeScaleKey) }
+        set { userDefaults.set(newValue, for: Self.keyFontSizeScaleKey) }
     }
 
     // 中文: 候選列文字大小縮放係數。預設 1.0。
     var candidateTextSizeScale: CGFloat {
-        get { userDefaults.object(forKey: Keys.candidateTextSizeScale) as? Double ?? 1.0 }
-        set { userDefaults.set(newValue, forKey: Keys.candidateTextSizeScale) }
+        get { userDefaults.value(for: Self.candidateTextSizeScaleKey) }
+        set { userDefaults.set(newValue, for: Self.candidateTextSizeScaleKey) }
     }
 
     // 中文: 鍵帽圓角半徑 (point)。預設 6.0。
     var keyCornerRadius: CGFloat {
-        get { userDefaults.object(forKey: Keys.keyCornerRadius) as? Double ?? 6.0 }
-        set { userDefaults.set(newValue, forKey: Keys.keyCornerRadius) }
+        get { userDefaults.value(for: Self.keyCornerRadiusKey) }
+        set { userDefaults.set(newValue, for: Self.keyCornerRadiusKey) }
     }
 
     // 中文: 鍵帽邊框寬度 (point)。預設 0 (無邊框)。
     var keyBorderWidth: CGFloat {
-        get { userDefaults.object(forKey: Keys.keyBorderWidth) as? Double ?? 0 }
-        set { userDefaults.set(newValue, forKey: Keys.keyBorderWidth) }
+        get { userDefaults.value(for: Self.keyBorderWidthKey) }
+        set { userDefaults.set(newValue, for: Self.keyBorderWidthKey) }
     }
 
     // 中文: 鍵盤顏色組合。以 JSON 序列化進 UserDefaults;decode 失敗或未設定時回傳 .default (全 nil)。
     var colorSettings: KeyboardColorSettings {
-        get {
-            guard let data = userDefaults.data(forKey: Keys.colorSettings),
-                  let settings = try? JSONDecoder().decode(KeyboardColorSettings.self, from: data)
-            else { return .default }
-            return settings
-        }
-        set {
-            if let data = try? JSONEncoder().encode(newValue) {
-                userDefaults.set(data, forKey: Keys.colorSettings)
-            }
-        }
+        get { userDefaults.value(for: Self.colorSettingsKey) }
+        set { userDefaults.set(newValue, for: Self.colorSettingsKey) }
     }
 
     /// Creates an immutable snapshot of render-relevant settings.
@@ -494,7 +451,7 @@ final class SharedSettings {
         // Toolbar
         isToolbarAutoCollapse = true
         // Globe key: remove stored value so device-based default takes effect
-        userDefaults.removeObject(forKey: Keys.isGlobeKeyEnabled)
+        userDefaults.remove(Self.isGlobeKeyEnabledKey)
         // TPS
         isTpsOrMappedToER = true
         // Appearance
