@@ -77,7 +77,7 @@ extension SettingsKey where T == CGFloat {
         Self(
             key: key,
             defaultValue: defaultValue,
-            read: { ($0.object(forKey: key) as? Double).map(CGFloat.init) },
+            read: { ($0.object(forKey: key) as? Double).map { CGFloat($0) } },
             write: { $0.set(Double($1), forKey: key) },
         )
     }
