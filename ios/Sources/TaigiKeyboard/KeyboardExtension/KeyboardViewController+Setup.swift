@@ -96,6 +96,7 @@ extension KeyboardViewController {
             emojiContext: state.emojiContext,
             feedbackContext: state.feedbackContext,
             feedbackService: services.feedbackService,
+            keyboardAppContext: state.keyboardAppContext,
             spacebarDragGestureHandler: services.spacebarDragGestureHandler,
         )
 
