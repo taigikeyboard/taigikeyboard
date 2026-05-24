@@ -65,7 +65,7 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 
 | Platform | Build | Test |
 |---|---|---|
-| iOS | Xcode → keyboard extension | Xcode / `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,name=iPhone 16' test` |
+| iOS | Xcode → keyboard extension | Xcode / `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,id=81ADB050-5242-460C-90DA-F3FAF3F6AAA5' test` (iPhone 17 / iOS 26.1; UDID-pinned for derived-data + sim-runtime cache reuse — project `IPHONEOS_DEPLOYMENT_TARGET = 26.1`, so iOS 26.1+ sim required) |
 | Android | `cd android && ./gradlew :app:assembleDebug` | `cd android && ./gradlew :app:testDebugUnitTest` |
 | engine | `cargo build --workspace` | `cargo test --workspace` |
 | taigi-converter | — | `node --test tests/` |
