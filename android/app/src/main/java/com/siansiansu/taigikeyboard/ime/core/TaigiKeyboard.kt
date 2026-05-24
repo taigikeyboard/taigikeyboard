@@ -369,7 +369,8 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     /**
      * Makes a key press vibration through [view]'s
      * [android.view.View.performHapticFeedback]. The text-input keyboard body
-     * routes vibration through `TextInputManager.ImeKeyEventDispatcher`
+     * routes vibration through
+     * [com.siansiansu.taigikeyboard.ime.text.keyboard.ImeKeyEventDispatcher]
      * directly; this overload remains for the legacy view-based media input
      * (`MediaInputManager` bottom buttons).
      */

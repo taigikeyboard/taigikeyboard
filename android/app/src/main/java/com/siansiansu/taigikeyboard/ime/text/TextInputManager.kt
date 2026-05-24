@@ -7,8 +7,6 @@ package com.siansiansu.taigikeyboard.ime.text
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
-import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -21,15 +19,12 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.InputView
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
-import com.siansiansu.taigikeyboard.ime.popup.buildPopupCells
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.composing.hostReportsNoComposingRegion
@@ -37,20 +32,14 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyBounds
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyEventDispatcher
+import com.siansiansu.taigikeyboard.ime.text.keyboard.ImeKeyEventDispatcher
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyTouchCoordinator
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardHeightFactor
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardImeRoot
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardUiState
-import com.siansiansu.taigikeyboard.ime.text.keyboard.computeKeyLetter
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
-import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -105,29 +94,14 @@ class TextInputManager(
     /** Single popup window stack reused for the IME-service lifetime. */
     private val popupHost: KeyPopupManager = KeyPopupManager(taigikeyboard)
 
-    /** Touch state machine that drives [popupHost] + key-press dispatch. */
-    private val coordinator: KeyTouchCoordinator =
-        KeyTouchCoordinator(popupHost = popupHost, dispatcher = ImeKeyEventDispatcher())
-
     /** Lazy view used both as the popup `showAtLocation` parent and as the
      *  reference for vibration haptics. Bound in [onRegisterInputView]. */
     private var hostView: View? = null
 
     /** Cached reference to the keyboard ComposeView host inside [hostView].
-     *  Resolved once after [mountKeyboardComposeView] so each [resolveAnchor]
-     *  call avoids a `findViewById` walk. */
+     *  Resolved once after [mountKeyboardComposeView] so the popup anchor
+     *  resolution avoids a `findViewById` walk. */
     private var composeHost: View? = null
-
-    /** Scratch buffer reused by `getLocationInWindow` inside
-     *  [ImeKeyEventDispatcher.resolveAnchor] — main-thread only. */
-    private val locationScratch = IntArray(2)
-
-    /** Color-settings parse cache — re-parses only when the JSON string
-     *  changes. Mirrors the legacy `KeyboardView.getColorSettings` cache. */
-    private var cachedColorSettingsJson: String = ""
-    private var cachedColorSettings: KeyboardColorSettings = KeyboardColorSettings()
-    private var cachedFontType: String = ""
-    private var cachedTypeface: android.graphics.Typeface = android.graphics.Typeface.DEFAULT
 
     // --- Delegated handlers ---
 
@@ -136,6 +110,34 @@ class TextInputManager(
             taigikeyboard = taigikeyboard,
             onInvalidateAllKeys = { pushAppearance() },
             onInvalidateCharacterKeys = { pushAppearance() },
+        )
+
+    private val appearanceResolver = KeyboardAppearanceResolver(
+        prefs = prefs,
+        taigikeyboard = taigikeyboard,
+        capsStateManager = capsStateManager,
+        isComposingProvider = { synchronized(composingLock) { composingManager?.isComposing() == true } },
+        translateSwappedProvider = {
+            if (this::smartbarManager.isInitialized) {
+                smartbarManager.getCachedIsTranslateSwapped()
+            } else {
+                prefs.isTranslateSwapped
+            }
+        },
+    )
+
+    /** Touch state machine that drives [popupHost] + key-press dispatch. */
+    private val coordinator: KeyTouchCoordinator =
+        KeyTouchCoordinator(
+            popupHost = popupHost,
+            dispatcher = ImeKeyEventDispatcher(
+                taigikeyboard = taigikeyboard,
+                prefs = prefs,
+                capsStateManager = capsStateManager,
+                hostViewProvider = { hostView },
+                composeHostProvider = { composeHost },
+                onDispatchKeyPress = { data -> sendKeyPress(data) },
+            ),
         )
 
     private lateinit var candidateCoordinator: CandidateUpdateCoordinator
@@ -326,67 +328,20 @@ class TextInputManager(
         info: EditorInfo?,
         restarting: Boolean,
     ) {
-        val keyboardMode =
-            when (info) {
-                null -> {
-                    KeyboardMode.CHARACTERS
-                }
-
-                else -> {
-                    when (info.inputType and InputType.TYPE_MASK_CLASS) {
-                        InputType.TYPE_CLASS_NUMBER -> {
-                            keyVariation = KeyVariation.NORMAL
-                            KeyboardMode.NUMERIC
-                        }
-
-                        InputType.TYPE_CLASS_PHONE -> {
-                            keyVariation = KeyVariation.NORMAL
-                            KeyboardMode.PHONE
-                        }
-
-                        InputType.TYPE_CLASS_TEXT -> {
-                            keyVariation =
-                                when (info.inputType and InputType.TYPE_MASK_VARIATION) {
-                                    InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
-                                    InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS,
-                                    -> {
-                                        KeyVariation.EMAIL_ADDRESS
-                                    }
-
-                                    InputType.TYPE_TEXT_VARIATION_PASSWORD,
-                                    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
-                                    InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-                                    -> {
-                                        KeyVariation.PASSWORD
-                                    }
-
-                                    InputType.TYPE_TEXT_VARIATION_URI -> {
-                                        KeyVariation.URI
-                                    }
-
-                                    else -> {
-                                        KeyVariation.NORMAL
-                                    }
-                                }
-                            KeyboardMode.CHARACTERS
-                        }
-
-                        else -> {
-                            keyVariation = KeyVariation.NORMAL
-                            KeyboardMode.CHARACTERS
-                        }
-                    }
-                }
-            }
-        isComposingEnabled =
-            when (keyboardMode) {
-                KeyboardMode.NUMERIC,
-                KeyboardMode.PHONE,
-                KeyboardMode.PHONE2,
-                -> false
-
-                else -> keyVariation != KeyVariation.PASSWORD
-            }
+        // Null EditorInfo keeps `keyVariation` as-is per legacy behaviour — a
+        // prior PASSWORD session stays PASSWORD/non-composing when the host
+        // editor drops its EditorInfo on a restart. Only `isComposingEnabled`
+        // is recomputed from the (unchanged) variation.
+        val keyboardMode: KeyboardMode
+        if (info != null) {
+            val classification = EditorInfoClassifier.classify(info)
+            keyboardMode = classification.mode
+            keyVariation = classification.keyVariation
+            isComposingEnabled = classification.isComposingEnabled
+        } else {
+            keyboardMode = KeyboardMode.CHARACTERS
+            isComposingEnabled = keyVariation != KeyVariation.PASSWORD
+        }
 
         synchronized(composingLock) {
             composingManager =
@@ -1117,134 +1072,16 @@ class TextInputManager(
             first == '˙'
     }
 
-    // --- Appearance + key-event dispatch helpers --------------------------------------
-
-    private fun resolveColorSettings(): KeyboardColorSettings {
-        val json = prefs.colorSettings
-        if (json != cachedColorSettingsJson) {
-            cachedColorSettingsJson = json
-            cachedColorSettings = KeyboardColorSettings.fromJson(json)
-        }
-        return cachedColorSettings
-    }
-
-    private fun resolveTypeface(): android.graphics.Typeface {
-        val fontType = prefs.fontType
-        if (fontType != cachedFontType) {
-            cachedFontType = fontType
-            cachedTypeface = TypefaceLoader.getTypefaceByType(fontType, taigikeyboard)
-        }
-        return cachedTypeface
-    }
-
-    private fun currentAppearance(): KeyboardAppearance {
-        val isComposing = synchronized(composingLock) { composingManager?.isComposing() == true }
-        return KeyboardAppearance(
-            keyboardLayoutType = prefs.keyboardLayoutType,
-            inputMode = prefs.inputMode,
-            caps = capsStateManager.caps,
-            capsLock = capsStateManager.capsLock,
-            isComposing = isComposing,
-            isTranslateSwapped = if (::smartbarManager.isInitialized) {
-                smartbarManager.getCachedIsTranslateSwapped()
-            } else {
-                prefs.isTranslateSwapped
-            },
-            imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0,
-            confirmKeyLabel = SettingsTexts.confirmKeyLabel(prefs.inputMode, prefs.isTranslateSwapped),
-            colorSettings = resolveColorSettings(),
-            typeface = resolveTypeface(),
-            keyFontSizeScale = prefs.keyFontSizeScale,
-            keyCornerRadius = prefs.keyCornerRadius,
-            keyBorderWidth = prefs.keyBorderWidth,
-            heightFactor = KeyboardHeightFactor.fromPreferenceString(prefs.heightFactor),
-            keyHeightScale = prefs.keyHeightScale,
-        )
-    }
-
     /** Republishes the latest appearance snapshot. Equality on the
-     *  [KeyboardAppearance] data class collapses no-op refreshes (e.g.,
-     *  back-to-back `onWindowShown` + `invalidateAllKeys`) into a single
-     *  StateFlow value, so downstream Compose recomposition only fires when
-     *  visuals actually change. */
+     *  [com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance]
+     *  data class collapses no-op refreshes (e.g., back-to-back
+     *  `onWindowShown` + `invalidateAllKeys`) into a single StateFlow value,
+     *  so downstream Compose recomposition only fires when visuals actually
+     *  change. */
     private fun pushAppearance() {
-        val next = currentAppearance()
+        val next = appearanceResolver.snapshot()
         _keyboardUi.update { current ->
             if (current.appearance == next) current else current.copy(appearance = next)
-        }
-    }
-
-    /** Adapter the keyboard body uses to call back into the IME service.
-     *  Built once per [TextInputManager] instance. */
-    private inner class ImeKeyEventDispatcher : KeyEventDispatcher {
-        override fun dispatchKeyPress(data: KeyData) = sendKeyPress(data)
-
-        override fun showInputMethodPicker() {
-            val im = taigikeyboard.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            im.showInputMethodPicker()
-        }
-
-        override fun keyPressVibrate() {
-            if (!prefs.isVibrationFeedbackEnabled) return
-            hostView?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        }
-
-        override fun keyPressSound(data: KeyData) = taigikeyboard.keyPressSound(data)
-
-        override val longPressDelayMs: Long
-            get() = prefs.longPressDelay.toLong()
-
-        override fun resolveAnchor(
-            bounds: KeyBounds,
-            keyboardWidth: Int,
-            desiredKeyWidth: Int,
-            desiredKeyHeight: Int,
-        ): KeyAnchor {
-            // [composeHost] is the keyboard ComposeView; its window-coords +
-            // key-relative offset give the absolute window position needed by
-            // `PopupWindow.showAtLocation`.
-            composeHost?.getLocationInWindow(locationScratch)
-            val anchorTopXInWindow = locationScratch[0] + bounds.visible.left
-            val anchorTopYInWindow = locationScratch[1] + bounds.visible.top
-
-            val isLandscape = taigikeyboard.resources.configuration.orientation ==
-                android.content.res.Configuration.ORIENTATION_LANDSCAPE
-            val computedLabel = computeKeyLetter(
-                bounds.data,
-                prefs.inputMode,
-                capsStateManager.caps,
-                capsStateManager.capsLock,
-            )
-            // Skip popup-cell resolution when this key has no popup variants
-            // — avoids the ~80% of presses that never trigger a long-press
-            // extend. The empty list is safe because [KeyTouchCoordinator]
-            // gates the long-press path on `data.popup.isNotEmpty()` already.
-            val popupCells = if (bounds.data.popup.isEmpty()) {
-                emptyList()
-            } else {
-                buildPopupCells(
-                    bounds.data,
-                    prefs.inputMode,
-                    capsStateManager.caps,
-                    capsStateManager.capsLock,
-                    taigikeyboard.resources,
-                )
-            }
-
-            return KeyAnchor(
-                data = bounds.data,
-                measuredWidth = bounds.visible.width,
-                measuredHeight = bounds.visible.height,
-                xInKeyboard = bounds.visible.left,
-                keyboardWidth = keyboardWidth,
-                xInWindow = anchorTopXInWindow,
-                yInWindow = anchorTopYInWindow,
-                computedLabel = computedLabel,
-                popupCells = popupCells,
-                isLandscape = isLandscape,
-                desiredKeyWidth = desiredKeyWidth,
-                desiredKeyHeight = desiredKeyHeight,
-            )
         }
     }
 }
