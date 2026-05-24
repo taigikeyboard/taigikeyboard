@@ -61,14 +61,16 @@ taigikeyboard/
 
 ## Build & Test
 
-The **user runs all builds/tests manually** — never invoke these or add build hooks/reminders. Reference only:
+The **user runs all builds/tests manually mid-round** — never invoke these or add build hooks/reminders mid-round. Reference:
 
 | Platform | Build | Test |
 |---|---|---|
-| iOS | Xcode → keyboard extension | Xcode / `xcodebuild test` |
-| Android | `./gradlew assembleDebug` | `./gradlew test` |
-| engine | `cargo build` (workspace) | `cargo test --workspace` |
+| iOS | Xcode → keyboard extension | Xcode / `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,name=iPhone 16' test` |
+| Android | `cd android && ./gradlew :app:assembleDebug` | `cd android && ./gradlew :app:testDebugUnitTest` |
+| engine | `cargo build --workspace` | `cargo test --workspace` |
 | taigi-converter | — | `node --test tests/` |
+
+**EXCEPTION — post-PR parallel verification** per `~/.claude/rules/round-workflow.md` § Codex review sandwich step 6: immediately after `gh pr create` returns the URL, kick off **every platform the diff touches** (iOS, Android, engine) build+test in the background (single message, parallel `Bash` calls with `run_in_background: true`) so total wall-clock = max(build, PR-bot review) instead of sum. Single-platform refactor → run only that platform's gate. Multi-platform diff → run all touched platforms. On failure: notify user with the failing target + first error line, push fix as a new commit on the same branch (no `--amend`), re-run only the failing gate. Do NOT close the PR.
 
 ## Communication
 
