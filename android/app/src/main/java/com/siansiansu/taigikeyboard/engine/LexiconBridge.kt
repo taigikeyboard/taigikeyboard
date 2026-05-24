@@ -4,25 +4,31 @@
 
 package com.siansiansu.taigikeyboard.engine
 
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
 import com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
+import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InputType
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
 import com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
+import com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
 import com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
-import com.siansiansu.taigikeyboard.engine.proto.TaigiWord
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
+import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles as ProtoDictionaryToggles
+import com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown as ProtoScoreBreakdown
+import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
 import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
 
 /**
@@ -150,8 +156,7 @@ object LexiconBridge {
      *
      * 中文: 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;
      *       失敗回 null,診斷打到 RustEngineBridge.diagnostics()。
-     */
-    /**
+     *
      * @param syllableInventoryPath Absolute path to v3.5.8 Phase 2
      *   `syllables.fst` (TL syllable inventory FST). Empty string =
      *   skip-install; engine leaves `EngineState.syllable_inventory = None`
@@ -517,7 +522,7 @@ object LexiconBridge {
         return if (response.hasLexicon()) response.lexicon else null
     }
 
-    private fun taigiWordToRow(proto: TaigiWord): Row =
+    private fun taigiWordToRow(proto: ProtoTaigiWord): Row =
         Row(
             id = proto.id,
             roman = proto.roman,
@@ -525,4 +530,193 @@ object LexiconBridge {
             lengthScore = if (proto.hasLengthScore()) proto.lengthScore else null,
             sourceBitmask = if (proto.hasSourceBitmask()) proto.sourceBitmask.toUInt() else null,
         )
+
+    // region Lexicon ranking (1 op) — production caller for `engine/ranking/`
+
+    /**
+     * Production caller for the Rust ranking pipeline. Single FFI
+     * round-trip runs dedup → score → sort → (TPS-gated) display-dedup
+     * atomically inside `engine/ranking/`. Mirrors iOS
+     * `RustEngineBridge.processCandidates`.
+     *
+     * `tpsDedupEnabled` is platform-decided per audit § 3 — pass
+     * `settings?.inputMode == "tps"` from the call site. Engine never
+     * derives it from any config field.
+     *
+     * `nowMs` is caller-supplied for deterministic recency-window math
+     * in tests; production passes `System.currentTimeMillis()`.
+     *
+     * In `BuildConfig.DEBUG` builds, requests + emits the per-candidate
+     * `ScoreBreakdown` so dogfood traces include the score arithmetic.
+     * Release builds skip the breakdown (zero serialization overhead).
+     *
+     * 中文: 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
+     *       tpsDedupEnabled 由平台端決定(讀 settings.inputMode == "tps"),Engine 不自行推。
+     */
+    fun processCandidates(
+        raw: List<TaigiWord>,
+        normalizedInput: String,
+        tpsDedupEnabled: Boolean,
+        frequencyData: Map<String, FrequencyData>,
+        nowMs: Long,
+    ): List<TaigiWord> {
+        val detailed = processCandidatesDetailed(
+            raw = raw,
+            normalizedInput = normalizedInput,
+            tpsDedupEnabled = tpsDedupEnabled,
+            frequencyData = frequencyData,
+            nowMs = nowMs,
+            includeBreakdown = BuildConfig.DEBUG,
+        )
+        if (BuildConfig.DEBUG && detailed.breakdowns.size == detailed.ranked.size) {
+            for (i in detailed.ranked.indices) {
+                val word = detailed.ranked[i]
+                val b = detailed.breakdowns[i]
+                RustEngineBridge.backend.d(
+                    "RustEngineBridge",
+                    "[SCORE] input='$normalizedInput' | ${word.roman} ${word.hanzi ?: ""}: " +
+                        "user=${b.userFreqScore} recency=${b.recencyBonus} exact=${b.exactBonus} " +
+                        "close=${b.closenessBonus} base=${b.baseFreqScore} " +
+                        "completion=${b.completionPenalty} total=${b.total}",
+                )
+            }
+        }
+        return detailed.ranked
+    }
+
+    /**
+     * Test seam — same FFI call as [processCandidates], plus access to the
+     * per-candidate [RustEngineBridge.ScoreBreakdown] payload. Production
+     * code stays on [processCandidates] which discards the breakdown after
+     * debug logging.
+     *
+     * NOTE: `src/test/` JVM tests cannot exercise this seam because
+     * `System.loadLibrary("rust_taigi")` fails on host JVM. Bridge
+     * parity is verified by the Rust workspace tests + iOS XCTest
+     * (links the xcframework) + Android instrumented dogfood.
+     *
+     * 中文: 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
+     */
+    fun processCandidatesDetailed(
+        raw: List<TaigiWord>,
+        normalizedInput: String,
+        tpsDedupEnabled: Boolean,
+        frequencyData: Map<String, FrequencyData>,
+        nowMs: Long,
+        includeBreakdown: Boolean,
+    ): RustEngineBridge.CandidateRanking {
+        val payloadBuilder = ProcessCandidatesRequest
+            .newBuilder()
+            .setNormalizedInput(normalizedInput)
+            .setTpsDedupEnabled(tpsDedupEnabled)
+            .setNowMs(nowMs)
+            .setIncludeBreakdown(includeBreakdown)
+        for (word in raw) {
+            payloadBuilder.addRaw(taigiWordToProto(word))
+        }
+        payloadBuilder.addAllFreq(RustEngineBridge.frequencyDataToProtoEntries(frequencyData))
+        val resp = rankingDispatch(
+            lexiconRequest = LexiconRequest.newBuilder().setProcessCandidates(payloadBuilder.build()).build(),
+            op = "processCandidates",
+        )
+        if (resp == null) {
+            return RustEngineBridge.CandidateRanking(
+                ranked = fallbackRanked(raw),
+                breakdowns = emptyList(),
+            )
+        }
+        if (!resp.hasProcessCandidatesResult()) {
+            RustEngineBridge.recordFailure("processCandidates", "missing process_candidates_result")
+            return RustEngineBridge.CandidateRanking(
+                ranked = fallbackRanked(raw),
+                breakdowns = emptyList(),
+            )
+        }
+        val result = resp.processCandidatesResult
+        val ranked = result.rankedList.map(::taigiWordFromProto)
+        val breakdowns = result.breakdownList.map(::scoreBreakdownFromProto)
+        return RustEngineBridge.CandidateRanking(ranked = ranked, breakdowns = breakdowns)
+    }
+
+    /**
+     * Ranking-pipeline dispatch — mirrors the pre-split
+     * `RustEngineBridge.lexiconDispatch(op)`: `sendRawBytes` JNI hop and
+     * `RustEngineBridge.recordFailure(op, ...)` on every failure mode
+     * (`response decode failed`, non-OK `engine returned X` with code,
+     * `missing lexicon payload`). Distinct from this class's broader
+     * [dispatch] helper which routes legacy lexicon read-path errors
+     * through `backend.w` only — that pre-existing behaviour is preserved
+     * for `install` / `search*` / `assocLookup` / `classifyInput` /
+     * `dictionaryFilters` / `isHanzi`, but the ranking public API must
+     * keep its op-named diagnostics for telemetry parity with iOS
+     * `RustEngineBridge.lexiconDispatch`.
+     */
+    private fun rankingDispatch(
+        lexiconRequest: LexiconRequest,
+        op: String,
+    ): LexiconResponse? {
+        val request = Request
+            .newBuilder()
+            .setId(RustEngineBridge.nextRequestIdInternal())
+            .setLexicon(lexiconRequest)
+            .build()
+        val response = RustEngineBridge.sendRawBytes(request.toByteArray())
+        if (response == null) {
+            RustEngineBridge.recordFailure(op, "response decode failed")
+            return null
+        }
+        if (response.error != ErrorCode.OK) {
+            RustEngineBridge.recordFailure(op, "engine returned ${response.error}", response.error.number)
+            return null
+        }
+        if (!response.hasLexicon()) {
+            RustEngineBridge.recordFailure(op, "missing lexicon payload")
+            return null
+        }
+        return response.lexicon
+    }
+
+    /**
+     * Raw-list fallback on the FFI error path. When the Rust lexicon
+     * dispatch fails (encode / decode error, non-OK engine response,
+     * or missing payload variant), return the input list unchanged.
+     *
+     * Simplified in the v3.5.3 follow-up (PR #192): previously this
+     * delegated to Kotlin-side dedup helpers (since removed) as a
+     * defense-in-depth dedup. That silently masked Rust dispatch bugs
+     * by producing a near-correct candidate list.
+     */
+    private fun fallbackRanked(raw: List<TaigiWord>): List<TaigiWord> = raw
+
+    private fun taigiWordToProto(word: TaigiWord): ProtoTaigiWord {
+        val builder = ProtoTaigiWord
+            .newBuilder()
+            .setId(word.id.toLong())
+            .setRoman(word.roman)
+        word.hanzi?.let { builder.setHanji(it) }
+        word.lengthScore?.let { builder.setLengthScore(it) }
+        word.sourceBitmask?.let { builder.setSourceBitmask(it) }
+        return builder.build()
+    }
+
+    private fun taigiWordFromProto(proto: ProtoTaigiWord): TaigiWord =
+        TaigiWord(
+            id = proto.id.toInt(),
+            roman = proto.roman,
+            hanzi = if (proto.hasHanji()) proto.hanji else null,
+            lengthScore = if (proto.hasLengthScore()) proto.lengthScore else null,
+            sourceBitmask = if (proto.hasSourceBitmask()) proto.sourceBitmask else null,
+        )
+
+    private fun scoreBreakdownFromProto(proto: ProtoScoreBreakdown): RustEngineBridge.ScoreBreakdown =
+        RustEngineBridge.ScoreBreakdown(
+            userFreqScore = proto.userFreqScore,
+            recencyBonus = proto.recencyBonus,
+            exactBonus = proto.exactBonus,
+            completionPenalty = proto.completionPenalty,
+            closenessBonus = proto.closenessBonus,
+            baseFreqScore = proto.baseFreqScore,
+        )
+
+    // endregion Lexicon ranking
 }
