@@ -1,7 +1,9 @@
 // 中文: Android composing 平台殼 — 將 Rust composing engine(engine/composing crate)
 // 中文: 的 Intent → Effect 串到 InputConnection。狀態實質存在 Rust singleton EngineHandle,
-// 中文: 此層只 cache 最新 raw/display/isComposing 給既有呼叫者讀取,不重建狀態機。
-// 中文: bumpGeneration 在 onStartInputView(restarting=false) 觸發,讓 Rust 偵測 input-context 變動。
+// 中文: 此層只把最新 raw/display/isComposing/selectedCandidateIndex 鏡射到 4 個 StateFlow
+// 中文: 給既有同步呼叫者(.value)與未來 Compose 觀察者(.collectAsStateWithLifecycle)讀取,
+// 中文: 不重建狀態機。bumpGeneration 在 onStartInputView(restarting=false) 觸發,讓 Rust 偵測
+// 中文: input-context 變動。
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -18,6 +20,9 @@ import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Android platform wrapper around the Rust shared-core composing engine
@@ -25,9 +30,12 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Engine state (phase + raw input + selectedCandidateIndex) lives inside
  * the Rust singleton EngineHandle; this wrapper:
- * - mirrors the latest response into local fields so existing callers
- *   (TextInputManager, CandidateUpdateCoordinator, SmartbarManager,
- *   CandidateClickHandler) do not need re-shape,
+ * - mirrors the latest response into per-field [StateFlow]s
+ *   ([rawInput] / [displayText] / [isComposing] / [selectedCandidateIndex])
+ *   so existing synchronous callers (TextInputManager,
+ *   CandidateUpdateCoordinator, SmartbarManager, CandidateClickHandler)
+ *   keep their `.value`-equivalent read shape while future Compose
+ *   observers can `collectAsStateWithLifecycle()` on the same flows,
  * - dispatches the bridge-emitted `Effect[]` through [ComposingDelegate]
  *   in proto-list order against the live [InputConnection],
  * - encodes the documented Android divergence for the 1-char delete path
@@ -71,17 +79,20 @@ class ComposingManager(
     // 中文: null 保持測試/Preview 可構造 (等同 feature 關閉,無 custom)。DB 留 native。
     private val customDictionaryService: CustomDictionaryService? = null,
 ) {
-    @Volatile
-    private var cachedRawInput: String = ""
+    // 中文: 引擎鏡射狀態 — 4 個 MutableStateFlow,公開 read-only StateFlow 表面,
+    // 中文: 既有同步 getters 改讀 .value(語義/null 規則完全不變)。
+    // CROSS-PLATFORM PAIR — mirrors iOS `ComposingManager.swift` @Observable mirror.
+    private val _rawInput = MutableStateFlow("")
+    val rawInput: StateFlow<String> = _rawInput.asStateFlow()
 
-    @Volatile
-    private var cachedDisplayText: String = ""
+    private val _displayText = MutableStateFlow("")
+    val displayText: StateFlow<String> = _displayText.asStateFlow()
 
-    @Volatile
-    private var cachedIsComposing: Boolean = false
+    private val _isComposing = MutableStateFlow(false)
+    val isComposing: StateFlow<Boolean> = _isComposing.asStateFlow()
 
-    @Volatile
-    private var cachedSelectedCandidateIndex: Int = -1
+    private val _selectedCandidateIndex = MutableStateFlow(-1)
+    val selectedCandidateIndex: StateFlow<Int> = _selectedCandidateIndex.asStateFlow()
 
     /**
      * Generation source. Lives on the companion so it survives
@@ -97,19 +108,19 @@ class ComposingManager(
      * `true` while the manager is dispatching effects from a self-driven
      * commit. Suppresses redundant generation bumps from `textWillChange`
      * / `onUpdateSelection` firing on candidate taps / self-commits.
+     * Platform suppression flag — not view state — so kept as `@Volatile`
+     * rather than wrapped in StateFlow.
      */
     @Volatile
     var selfCommitInProgress: Boolean = false
         internal set
 
-    val selectedCandidateIndex: Int
-        get() = cachedSelectedCandidateIndex
+    fun isComposing(): Boolean = _isComposing.value
 
-    fun isComposing(): Boolean = cachedIsComposing
+    fun getRawInput(): String? = if (_isComposing.value) _rawInput.value else null
 
-    fun getRawInput(): String? = if (cachedIsComposing) cachedRawInput else null
-
-    fun getComposingText(): String? = if (cachedIsComposing) cachedDisplayText.ifEmpty { cachedRawInput } else null
+    fun getComposingText(): String? =
+        if (_isComposing.value) _displayText.value.ifEmpty { _rawInput.value } else null
 
     /**
      * Bump on real input-context change. Engine drops state silently on the
@@ -148,7 +159,7 @@ class ComposingManager(
         // re-reading `currentGeneration` would let EnterContinuous silently
         // reset newer composing state.
         val generation = currentGeneration
-        if (cachedIsComposing) {
+        if (_isComposing.value) {
             // Mid-composition restart: clear-without-commit before starting fresh.
             applyAsSelfCommit(
                 RustEngineBridge.composingReset(generation),
@@ -232,7 +243,7 @@ class ComposingManager(
      * emits `DeleteBackwardFromDocument` (nailed segments are not in the
      * document), and `Continuous { raw: "", nailed: [...] }` is a valid
      * live state where the next backspace must **unnail** the last segment.
-     * The old `cachedRawInput.isEmpty()` early-return wrongly let that key
+     * The old `_rawInput.value.isEmpty()` early-return wrongly let that key
      * fall through to the host (deleting a real document char); the
      * `length == 1` reset shortcut would wrongly abort the whole
      * composition when a nailed prefix exists. Bare `Phase::Composing`
@@ -243,7 +254,7 @@ class ComposingManager(
      */
     fun deleteBackward(ic: InputConnection): Boolean {
         logger.tdebug(TAG) { "[COMPOSE] fn=deleteBackward" }
-        if (!cachedIsComposing) return false
+        if (!_isComposing.value) return false
         val settings = settingsProvider.current
         applyTransition(
             RustEngineBridge.composingDeleteBackward(
@@ -258,7 +269,7 @@ class ComposingManager(
 
     fun commitComposition(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitComposition" }
-        if (!cachedIsComposing) return
+        if (!_isComposing.value) return
         // Model B (§10.3 + v3.5.8 Phase 9 Finding 2): finalize the WHOLE
         // current composition via CommitRaw — under Continuous the engine
         // commits `Σ nailed.display_text + derived(pending)` (the whole
@@ -386,8 +397,8 @@ class ComposingManager(
      * `applyTransition` can bump it.
      *
      * Engine no-ops on empty buffer / already-Continuous; the local
-     * `cachedRawInput.isEmpty()` short-circuit saves the FFI roundtrip in
-     * the empty-buffer case (cache is set by the immediately preceding
+     * `_rawInput.value.isEmpty()` short-circuit saves the FFI roundtrip in
+     * the empty-buffer case (StateFlow is set by the immediately preceding
      * same-thread `applyTransition` so it is fresh).
      */
     private fun promoteToContinuousIfEligible(
@@ -395,7 +406,7 @@ class ComposingManager(
         ic: InputConnection,
         generation: Long,
     ) {
-        if (cachedRawInput.isEmpty()) return
+        if (_rawInput.value.isEmpty()) return
         val transition = RustEngineBridge.composingEnterContinuous(
             resolveMode(settings.inputMode),
             carrier(settings.toneToggles),
@@ -483,13 +494,13 @@ class ComposingManager(
         // buffer, stable across the two FFI calls). `buildCustomEntries`
         // suspends on `Dispatchers.IO`; it self-guards against a
         // keystroke racing during that await by re-checking
-        // `cachedRawInput` after `service.search` resumes (the
+        // `_rawInput.value` after `service.search` resumes (the
         // generation guard CANNOT cover this — `generation` only bumps
         // on a new input context, never per keystroke; Codex post-impl
         // 2026-05-15 P2).
         // 中文: Item 12 — 查 custom_dictionary.db 一次,兩 phase 共用;buildCustomEntries 內部
-        // 中文: await 後 re-check cachedRawInput 自防 keystroke race(generation 不因 keystroke bump,guard 蓋不到)。
-        val customEntries = buildCustomEntries(cachedRawInput, settings)
+        // 中文: await 後 re-check _rawInput.value 自防 keystroke race(generation 不因 keystroke bump,guard 蓋不到)。
+        val customEntries = buildCustomEntries(_rawInput.value, settings)
         val generation = currentGeneration
         val spacing = continuousSpacingFlags(settings)
 
@@ -643,15 +654,15 @@ class ComposingManager(
             // v3.5.8 Phase 9 Item 12 — await-race guard (Codex post-impl
             // 2026-05-15 P2). `service.search` suspends on `Dispatchers
             // .IO`; a keystroke landing during that await mutates
-            // `cachedRawInput` WITHOUT bumping `generation` (generation
+            // `_rawInput.value` WITHOUT bumping `generation` (generation
             // only bumps on a new input context, not per keystroke), so
             // the generation guard cannot catch this. If the buffer
             // moved under us these rows belong to a stale prefix —
             // inject nothing rather than wrong candidates; the racing
             // keystroke's own fetch produces the correct custom set.
-            // 中文: Item 12 — await race guard:search suspend 期間若 keystroke 改了 cachedRawInput,
+            // 中文: Item 12 — await race guard:search suspend 期間若 keystroke 改了 _rawInput.value,
             // 中文:   generation 不會因 keystroke bump,guard 抓不到 → 這批 rows 是 stale prefix,丟空不注入錯候選。
-            if (cachedRawInput != rawInput) {
+            if (_rawInput.value != rawInput) {
                 return emptyList()
             }
             rows.map { entry ->
@@ -674,11 +685,11 @@ class ComposingManager(
      *
      * Returns an effect-backed [RustEngineBridge.CommitContinuousResult] so
      * callers can gate side-effects (frequency recording, auto-space) on
-     * actual commit success rather than coarse `cachedIsComposing` mirror
+     * actual commit success rather than coarse `_isComposing.value` mirror
      * state. Generation mismatch silently resets the engine to Idle in
      * `engine/composing/src/handle.rs:61-65` BEFORE the intent runs, in
      * which case `Intent::CommitContinuous` becomes a phase-mismatch noop —
-     * the post-call mirror flips to `cachedIsComposing=false` (engine is
+     * the post-call mirror flips to `_isComposing.value=false` (engine is
      * Idle) but no `CommitTextReplacingPreedit` Effect is emitted. Without
      * the effect-backed gate, callers would record frequency for uncommitted
      * text and append a stray space.
@@ -780,11 +791,11 @@ class ComposingManager(
      */
     fun onExternalComposingRegionCleared() {
         if (selfCommitInProgress) return
-        if (!cachedIsComposing) return
-        cachedRawInput = ""
-        cachedDisplayText = ""
-        cachedIsComposing = false
-        cachedSelectedCandidateIndex = -1
+        if (!_isComposing.value) return
+        _rawInput.value = ""
+        _displayText.value = ""
+        _isComposing.value = false
+        _selectedCandidateIndex.value = -1
         bumpGeneration()
     }
 
@@ -806,10 +817,18 @@ class ComposingManager(
         transition: RustEngineBridge.ComposingTransition,
         ic: InputConnection,
     ) {
-        cachedRawInput = transition.rawInput
-        cachedDisplayText = transition.displayText
-        cachedIsComposing = transition.isComposing
-        cachedSelectedCandidateIndex = transition.selectedCandidateIndex
+        // Write order: raw → display → isComposing → selectedCandidateIndex
+        // (mirrors iOS @Observable apply() — see CROSS-PLATFORM PAIR note above).
+        // Per-field StateFlows emit ONLY when the assigned value differs from
+        // the current `.value` (MutableStateFlow compares + skips), so any
+        // observer wired up later sees at most one emission per changed field
+        // per transition — never a redundant Idle→Idle flash.
+        // `selfCommitInProgress` stays a plain @Volatile (synchronous
+        // suppression flag, never observed by UI).
+        _rawInput.value = transition.rawInput
+        _displayText.value = transition.displayText
+        _isComposing.value = transition.isComposing
+        _selectedCandidateIndex.value = transition.selectedCandidateIndex
         for (effect in transition.effects) {
             logger.tdebug("ComposingDelegate") {
                 "[COMMIT] fn=applyTransition effect=${effect.describeKind()}"
