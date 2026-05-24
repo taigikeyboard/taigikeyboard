@@ -138,6 +138,93 @@ No `@Composable` code, candidate-strip code, or runtime path is touched in
 step 1. Step 2 will be a separate slice, on its own branch, with the
 per-keystroke dogfood gate from `~/.claude/rules/code-review-rules.md §9`.
 
+## Step 2 outcome
+
+A release-with-reports build was run against `f14f4e0b` (B10 step 1 ship) +
+the candidate-strip code as it stood at that commit. Module totals:
+
+| Metric | Value |
+|---|---|
+| `totalComposables` | 421 |
+| `skippableComposables` | 312 (74%) |
+| `markedStableClasses` | 2 (pre-existing emoji) |
+| `inferredStableClasses` | 125 |
+| `inferredUnstableClasses` | 96 |
+| `knownUnstableArguments` | 92 / 5530 (1.7%) |
+| `featureFlags.StrongSkipping` | `true` |
+
+All four candidate-strip Composables are already `restartable skippable`:
+
+| Composable | Status | Unstable params |
+|---|---|---|
+| `TaigiCandidateStrip(state)` | skippable | none — `state` is stable |
+| `EnglishCandidateStrip(state)` | skippable | none — `state` is stable |
+| `CandidateCell(word, …)` | skippable | `word: TaigiWord` |
+| `EnglishCandidateCell(…)` | skippable | none |
+
+Suspect classes resolved:
+
+| Class | Pre-run guess | Report verdict |
+|---|---|---|
+| `CandidateStripState` | suspect | already `stable` |
+| `CandidateMode` (sealed parent) | suspect | already `stable` |
+| `CandidateMode.Empty` | n/a | `stable` |
+| `CandidateMode.Taigi` | suspect | `unstable` (sole reason: `items: List<TaigiWord>`) |
+| `CandidateMode.English` | suspect | `unstable` (sole reason: `items: List<TaigiWord>`) |
+| `CandidateDisplayParams` | suspect | already `stable` |
+| `TaigiWord` | suspect | `unstable` (sole reason: `additionalInfo: Map<String, String>`) |
+
+### Per-class decision
+
+**`TaigiWord` — Option A (stability config entry).**
+
+The only hot-path Composable taking an unstable param is `CandidateCell(word:
+TaigiWord)`. With strong-skipping on, unstable params are compared with
+instance equality (`===`) — practically never skipped, since the candidate
+list is rebuilt fresh on every push (`SuggestionCaseTransformer.transform` →
+`mapIndexed { … TaigiWord(…) }`). Declaring `TaigiWord` stable promotes the
+comparison to `Object.equals()`, so structurally equal cells (common on
+`toggleTranslateSwapped` re-pushing the same suggestions, or on continuous
+re-derivation that produces the same row content) actually skip.
+
+Producer audit (`TaigiAutocompleteService.kt:116` /
+`NextWordHandler.kt:436` / `CandidateUpdateCoordinator.kt:242` /
+`LexiconBridge.kt:703`) confirms `additionalInfo` is always built via
+`mapOf(…)` or default `emptyMap()` and never mutated after construction;
+the rest of the fields are `val` primitives or `String`. Option B
+(`kotlinx.collections.immutable.ImmutableMap`) was rejected as
+disproportionate: it would add a transitive dependency and force four
+producer sites + every future caller to use `persistentMapOf`, all to
+enforce a contract the current code already keeps. The stability-config
+entry carries a CONTRACT comment in both `compose_compiler_config.conf`
+and the `TaigiWord` KDoc so a future contributor adding a `var` or mutable
+collection will see the obligation before shipping.
+
+**`CandidateMode.Taigi` / `CandidateMode.English` — Option E (do nothing).**
+
+Neither subtype is taken directly by any `@Composable`. The hot consumers
+are `TaigiCandidateStrip(state: CandidateStripState)` and
+`EnglishCandidateStrip(state: CandidateStripState)`, both of which take the
+sealed-parent-typed `state.mode` indirectly — and `CandidateStripState` is
+already `stable`. `updateSeq` already forces re-evaluation on every push
+(by design — drives `LaunchedEffect` scroll-to-zero). Stabilizing the
+nested unstable subtypes would change report cosmetics without changing
+the skip behavior at any actual call site.
+
+**Other suspects already stable.** `CandidateStripState`,
+`CandidateDisplayParams`, `CandidateMode` (sealed parent), and
+`CandidateMode.Empty` need no entry.
+
+### Behaviour-neutral guarantee for step 2
+
+The diff is a stability-config entry + KDoc + this doc section. No code
+path is rewritten; no producer is touched. Compose's per-cell strong-skip
+comparison flips from `===` to `equals()` for `CandidateCell(word)`,
+unlocking structural skips when the same `TaigiWord` value is re-pushed.
+The acceptance gate is a release-build per-keystroke dogfood on the
+candidate strip per `~/.claude/rules/code-review-rules.md §9` (qualitative,
+no P50/P95). A no-regression dogfood = ship.
+
 ## References
 
 - Android — Compose Compiler Gradle plugin setup:

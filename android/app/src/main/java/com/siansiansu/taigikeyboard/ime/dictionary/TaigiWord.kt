@@ -17,6 +17,17 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  *   `null` for non-dictionary sources (custom dict, autocomplete, spell-check).
  *   Consumed by `engine/ranking/src/score.rs::tier_numerator` through
  *   `RustEngineBridge.processCandidates`.
+ *
+ * Compose stability contract — declared stable in
+ * `android/app/compose_compiler_config.conf` so `CandidateCell(word:
+ * TaigiWord)` gets `Object.equals()` strong-skipping (default for unstable
+ * params would be instance equality `===`, which almost never skips on the
+ * per-keystroke candidate-strip rebuild). The contract holds while every
+ * property stays `val` and `additionalInfo` is built immutably (via `mapOf`
+ * or default `emptyMap()`) and never mutated after construction. Any new
+ * `var`, mutable collection, or non-stable property MUST be matched by
+ * either dropping the stability-config entry or proving the new field is
+ * Compose-state-backed (e.g. wrapped in `mutableStateOf` / `MutableState`).
  */
 data class TaigiWord(
     val id: Int,
