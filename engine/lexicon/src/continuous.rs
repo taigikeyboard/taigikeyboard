@@ -19,7 +19,7 @@
 //! commit `tsua` to span 4 and lose the `珠 (tsu, span=3)` candidate.
 //! Global lattice (librime `src/rime/algo/syllabifier.cc`) is over-built
 //! for our scope. Multi-cut span-local fetch is the canonical middle
-//! ground per `docs/roadmap.md:203`.
+//! ground per `docs/releases/v3.5.8/plan.md` § Phase 3 — 純函數 syllabifier (TL + TPS).
 //!
 //! Multi-syllable candidates (e.g. `珠仔`) and single-syllable candidates
 //! (e.g. `紙`) under the same toneless key (`tl:tsua`) are distinguished
@@ -102,7 +102,7 @@ use ranking::{
 /// `RawCandidate.form` discriminator. Phase 5 only emits notone candidates
 /// because span-local lookup is always over `<prefix>:<toneless>` keys
 /// (`prefix ∈ {tl, poj}` after v3.5.9 B-2 PR #309 promoted POJ to a
-/// first-class FST family; `docs/roadmap.md:312`); Phase 6+ may extend
+/// first-class FST family; `docs/releases/v3.5.8/plan.md` § Phase 5 — Span-local candidate fetch); Phase 6+ may extend
 /// with hanzi (0) / numeric (2) / abbrev (3) when proto-side carriers
 /// exist (Codex pre-impl review 2026-05-10 Fork 5 ACCEPT).
 // 中文: Phase 5 唯一支援的 form 標籤 (notone);其他 form 留給 Phase 6+。
@@ -164,7 +164,7 @@ pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 /// [`CandidateMode::Unspecified`] from Rust.
 ///
 /// **Metadata-only in v3.5.8 Phase 9.2** — does NOT enter the seven-
-/// dimension [`SortKey`] tie-break (per `docs/roadmap.md` § Phase 9 R2
+/// dimension [`SortKey`] tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2
 /// Q3.a "reserve rank use until real collisions are measured"). The
 /// existing `form` axis remains orthogonal (toneless / numeric / hanji
 /// / abbrev) and unaffected.
@@ -230,7 +230,7 @@ pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
 }
 
 /// One span-local candidate. Mirrors the 5-field shape pinned by
-/// `docs/roadmap.md:329-336`.
+/// `docs/releases/v3.5.8/plan.md` § Phase 5 — Each Candidate carries (5-field shape).
 // 中文: 單一 span-local 候選詞,5 欄位對應 roadmap §Phase 5 規格。
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawCandidate {
@@ -293,7 +293,7 @@ pub struct RawCandidate {
     /// Dictionary source bitmask copied verbatim from
     /// [`DictionaryRecord::bitmask`]. Used by the v3.5.8 Phase 9.1
     /// `SortKey` to derive `source_tier_rank` at sort time per
-    /// `docs/roadmap.md` § Phase 9. Carrying it on the candidate (vs.
+    /// `docs/releases/v3.5.8/plan.md` § Phase 9. Carrying it on the candidate (vs.
     /// re-reading the dictionary record) lets the sort be a pure
     /// function of the returned `RawCandidate` vector.
     // 中文: 字典 source bitmask;sort_key 依此呼 ranking::source_tier_rank 取得排序 rank。
@@ -563,7 +563,7 @@ pub type ConsumedSpan = (u32, u32);
 /// `raw_len` is the byte length of the original pending buffer
 /// (`Phase::Continuous { raw }.len()`); it is the predicate input
 /// for Tier 1 (`consumed_span_end == raw_len`). Sorting follows
-/// `docs/roadmap.md` § Phase 9 sort_key formula:
+/// `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula:
 ///
 /// ```text
 /// (coverage_kind, tier, recency_rank, -adjusted_score,
@@ -1215,7 +1215,7 @@ fn record_to_candidate(
 ///   treatment of custom dict and Item 10 partial-prefix Q15.4. With
 ///   `consumed_span_end == raw_len` the downstream `SortKey.tier` is
 ///   `0` (full-buffer) — NO forced Tier-1 promotion
-///   (`docs/roadmap.md` § Phase 9: "無強制 Tier 1 promotion").
+///   (`docs/releases/v3.5.8/plan.md` § Phase 9: "無強制 Tier 1 promotion").
 /// - `frequency = 0`, `syllable_count = 1` — `custom_dictionary.db`
 ///   carries no `dict.bin`-comparable frequency. `is_custom = true`
 ///   gives `source_tier_rank` rank `0`, which is what governs the
@@ -1364,7 +1364,7 @@ fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
 // v3.5.8 Phase 9.1 — SortKey
 //
 // Encodes the eight-dimension lexicographic sort policy pinned in
-// `docs/roadmap.md` § Phase 9 (+ 整句 lattice + walker S8). Field
+// `docs/releases/v3.5.8/plan.md` § Phase 9 (+ 整句 lattice + walker S8). Field
 // order in this struct matches `#[derive(Ord)]`'s lexicographic
 // comparison; `Reverse<T>` flips individual dimensions whose policy
 // is descending. NaN-safe because scores are wrapped in `NonNanF32`
@@ -1396,7 +1396,7 @@ struct SortKey {
     coverage_kind: u8,
     /// `0` = Tier 0 (full-buffer coverage), `1` = Tier 1 (partial).
     /// Roadmap and spec both use the "Tier 0 = full buffer" labelling
-    /// (`docs/roadmap.md` § Phase 9 / `docs/engine/continuous-input-
+    /// (`docs/releases/v3.5.8/plan.md` § Phase 9 / `docs/engine/continuous-input-
     /// ranking.md` §1.1).
     // 中文: tier — 0 為 Tier 0 (consumed_span_end == raw_len),1 為 Tier 1 (部分覆蓋)。
     tier: u8,
@@ -1574,7 +1574,7 @@ mod sort_key_tests {
     fn tier0_full_buffer_beats_tier1_partial_even_when_score_lower() {
         // Phase 9.1 headline behavior: Tier 0 (full buffer) wins over
         // Tier 1 (partial) regardless of raw score. Mirrors the
-        // `taiuantaigi` motivation case (`docs/roadmap.md` § Phase 9
+        // `taiuantaigi` motivation case (`docs/releases/v3.5.8/plan.md` § Phase 9
         // sort_key formula).
         let raw_len: u32 = 11;
         let phrase = cand(0, 11, 15.6, 12, 0); // Tier 0 by span_end == raw_len.

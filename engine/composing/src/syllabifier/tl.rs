@@ -7,8 +7,8 @@
 //! sources — pure longest-match (khiin-rs `references/khiin-rs/khiin/src/data/segmenter.rs:122`)
 //! would commit to `tsua` and lose the `珠` candidate. Global lattice
 //! (librime `src/rime/algo/syllabifier.cc`) is over-built for our scope.
-//! BFS with depth cap = canonical middle ground per `docs/roadmap.md` line
-//! 203.
+//! BFS with depth cap = canonical middle ground per `docs/releases/v3.5.8/plan.md`
+//! § Phase 3 — 純函數 syllabifier 設計裁定.
 
 // 中文: TL 音節切分器 — 從 pos 出發 BFS,深度上限 max_syllables,以 SyllableInventory 判斷音節合法性。
 // 中文: 之所以不用 longest-match,是因為使用者敲 tsua 時必須同時保留 「珠 (span=3)」與「紙/珠仔 (span=4)」兩條候選路徑。

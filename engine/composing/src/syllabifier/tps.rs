@@ -4,7 +4,7 @@
 //! 1. **Explicit terminator** — a tone mark (tone 2/3/5/6/7/9), an
 //!    entering-coda small letter (tone 4, optionally coalesced with a
 //!    following tone-8 dot), or a standalone tone-8 dot. These are
-//!    unambiguous in TPS (per `docs/roadmap.md` line 95).
+//!    unambiguous in TPS (per `docs/releases/v3.5.8/plan.md` § 走查範例 Case D — TPS).
 //! 2. **Implicit tone-1 boundary** ("next initial seen" rule, v3.5.8
 //!    Phase 9 Item 7) — tone-1 syllables carry no mark, so a boundary
 //!    is inferred when a new initial consonant appears after a nucleus

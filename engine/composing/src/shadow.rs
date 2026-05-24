@@ -29,7 +29,7 @@ pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
 }
 
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
-/// `max_syllables=8` budget called out in `docs/roadmap.md:231` and
+/// `max_syllables=8` budget called out in `docs/releases/v3.5.8/plan.md` § Phase 3 — Performance and
 /// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Shared by
 /// [`build_shadow_lattice`] (lattice BFS budget) and
 /// `continuous::build_keys_tps` (TPS cumulative-key cap) — they must
@@ -91,7 +91,7 @@ pub(crate) fn build_shadow_lattice(
 /// by `handle_fetch_at_pos`; the user-facing commit span stays
 /// `(0, end)`. Interior `台語`-style words remain reachable as the
 /// next path-step after the prefix is nailed (Codex pre-impl S2
-/// Q1c = option ii, 2026-05-16; `docs/roadmap.md` §整句 lattice).
+/// Q1c = option ii, 2026-05-16; `docs/releases/v3.5.8/plan.md` §整句 lattice + walker).
 // 中文: A1 抽出 — 只發左錨投影 (start==0) 為 key,與 S1 前逐 byte 相同 → span-local 不變。
 // 中文: 內段 (start>0) 不發為可點 key:Model B forward-only commit 無對應語意;
 // 中文:   S2 walker 內部吃內段邊、合成單一全 buffer 最佳路徑由 handle_fetch_at_pos

@@ -86,7 +86,7 @@ const SOURCE_TIERS: &[(u32, i32)] = &[
 // v3.5.8 Phase 9.1 — Continuous-input source rank table.
 //
 // Lower rank = higher priority in the lexicographic continuous sort_key
-// (per docs/roadmap.md § Phase 9 sort_key formula). Distinct from
+// (per docs/releases/v3.5.8/plan.md § Phase 9 sort_key formula). Distinct from
 // legacy `SOURCE_TIERS` above, which encodes additive multiplier
 // numerators for the non-continuous `calculate_score` path.
 //
@@ -115,7 +115,7 @@ pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
 /// `user_freq_boost`. Mirrors the additive `0.1` previously hard-coded
 /// in [`calculate_continuous_score`]; pinning it as a public constant
 /// is the cross-platform invariant axis for PR-9.3a + PR-9.3b/c
-/// (`docs/roadmap.md` § Phase 9 跨平台常數表). Platforms MUST NOT
+/// (`docs/releases/v3.5.8/plan.md` § Phase 9 跨平台 invariant 常數). Platforms MUST NOT
 /// redefine — single source of truth per
 /// `rules/cross-platform-alignment.md` §3a.
 // 中文: Phase 9.3a — 每次使用者選用,boost 增量 0.1;跨平台不可重定義。
@@ -437,7 +437,7 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
 ///
 /// Cited mainstream IME parallel: khiin-rs `khiin/src/data/segmenter.rs`
 /// uses `cost = ln(1/p) / word_len_bias × syllable_bias`. We pick a
-/// simpler multiplicative form per `docs/roadmap.md:460`.
+/// simpler multiplicative form per `docs/releases/v3.5.8/plan.md` § Sort_key 公式 (PR-9.1 source-of-truth).
 // 中文: v3.5.8 連續輸入 Phase 5 排序公式:freq × (1 + 0.1×(syll−1)) × user_freq_boost。
 // 中文: 純 f32 倍乘式,不接 bigram / recency / closeness;與既有 calculate_score 不重疊。
 // 中文: user_freq_boost 由呼叫端注入 (傳 1.0 即無 boost),保持本函式無狀態。

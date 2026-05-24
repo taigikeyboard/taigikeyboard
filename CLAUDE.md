@@ -70,7 +70,23 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 | engine | `cargo build --workspace` | `cargo test --workspace` |
 | taigi-converter | — | `node --test tests/` |
 
-**EXCEPTION — post-PR parallel verification** per `~/.claude/rules/round-workflow.md` § Codex review sandwich step 6: immediately after `gh pr create` returns the URL, kick off **every platform the diff touches** (iOS, Android, engine) build+test in the background (single message, parallel `Bash` calls with `run_in_background: true`) so total wall-clock = max(build, PR-bot review) instead of sum. Single-platform refactor → run only that platform's gate. Multi-platform diff → run all touched platforms. On failure: notify user with the failing target + first error line, push fix as a new commit on the same branch (no `--amend`), re-run only the failing gate. Do NOT close the PR.
+**Stale-binary gate (mandatory upstream of every iOS/Android build+test)**:
+
+iOS and Android link against pre-built artifacts (`ios/RustEngine/RustTaigi.xcframework`, `android/app/src/main/jniLibs/`, `dictionary/output/dictionary.bin`, `dictionary/output/syllables.fst`). Running `xcodebuild` / `./gradlew` against stale artifacts gives **false-green test results** — Swift/Kotlin builds against the OLD engine binary even though `engine/src/*.rs` changed on disk.
+
+Before any iOS or Android build/test/dogfood when the diff touches **upstream** sources, regenerate artifacts first:
+
+| If the diff touches… | Run first | Regenerates |
+|---|---|---|
+| `engine/` (any Rust source, `.proto`, `Cargo.toml`) | `make build` | Platform protos + iOS xcframework + Android jniLibs |
+| `dictionary/` (CSV sources, build scripts, syllabifier rules) | `make dict` then `make build` | `dictionary.bin` + `syllables.fst` (then xcframework/jniLibs that bundle them) |
+| iOS-only Swift / Android-only Kotlin / docs only | — | No regen needed |
+
+Skipping this gate is the #1 source of "tests pass locally but Continuous-input behaves wrong on device" bugs. Always check `git diff --stat` against the table above before any iOS/Android invocation.
+
+`make build` is **sequential, ~3-5 min** (cargo + xcframework + jniLibs) — it cannot run in parallel with the iOS/Android gates it feeds. `make dict` is a separate ~30s pass that must complete before `make build`.
+
+**EXCEPTION — post-PR parallel verification** per `~/.claude/rules/round-workflow.md` § Codex review sandwich step 6: immediately after `gh pr create` returns the URL, kick off **every platform the diff touches** (iOS, Android, engine) build+test in the background (single message, parallel `Bash` calls with `run_in_background: true`) so total wall-clock = max(build, PR-bot review) instead of sum. Single-platform refactor → run only that platform's gate. Multi-platform diff → run all touched platforms. **If the diff touches `engine/` or `dictionary/`, the stale-binary gate above runs FIRST (sequentially), then the platform gates fire in parallel.** On failure: notify user with the failing target + first error line, push fix as a new commit on the same branch (no `--amend`), re-run only the failing gate. Do NOT close the PR.
 
 ## Communication
 

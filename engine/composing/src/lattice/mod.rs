@@ -22,7 +22,7 @@
 //! the prefix is nailed. The full DAG is constructed here so the
 //! walker wires onto it with no churn and so this slice proves
 //! span-local is the lattice's degenerate left-anchored special case
-//! (`docs/roadmap.md` §整句 lattice + walker).
+//! (`docs/releases/v3.5.8/plan.md` §整句 lattice + walker).
 //!
 //! Shape follows McBopomofo Gramambular
 //! (`references/McBopomofo/Source/Engine/gramambular2/reading_grid.cpp:132`):
@@ -34,7 +34,7 @@
 //! relaxation) and the `cost` module. **S5** corrected the objective
 //! to `min Σ edge_cost` — a faithful khiin `segment_min_cost` port
 //! (the S2/S3 `max Σ edge_score` structurally rewarded
-//! over-segmentation; see `cost.rs` and the `docs/roadmap.md`
+//! over-segmentation; see `cost.rs` and the `docs/releases/v3.5.8/plan.md`
 //! §整句 lattice + walker S5 section). The walker is pure and
 //! shadow-space native; `dispatch::handle_fetch_at_pos` injects the
 //! per-edge content provider and explicitly prepends the synthesized

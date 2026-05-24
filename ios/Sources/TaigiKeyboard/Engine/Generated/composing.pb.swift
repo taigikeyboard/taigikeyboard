@@ -26,7 +26,7 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
 /// detection; see `engine/lexicon/src/continuous.rs::derive_mode`.
 ///
 /// Metadata-only: this field does NOT enter the `SortKey` tie-break
-/// in v3.5.8 (per `docs/roadmap.md` § Phase 9 R2 Q3.a — "reserve rank
+/// in v3.5.8 (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a — "reserve rank
 /// use until real collisions are measured"). It is orthogonal to the
 /// existing `form` axis (toneless / numeric / hanji / abbrev).
 ///

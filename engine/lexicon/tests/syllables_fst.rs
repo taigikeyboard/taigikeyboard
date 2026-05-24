@@ -1,7 +1,7 @@
 //! Engine-side contract test for the v3.5.9 B-1 tagged-single-FST
 //! syllable inventory.
 //!
-//! The v3.5.8 Phase 2 contract (`docs/roadmap.md` §Phase 2 line 195)
+//! The v3.5.8 Phase 2 contract (`docs/releases/v3.5.8/plan.md` § Phase 2 — TL syllable inventory FST)
 //! called for 50 valid + 50 invalid samples covering boundary cases
 //! `bak (T4)`, `tai (T1/T5/T7)`, `khih (T4-h)`, `m`, `ng`, `tsh`, `oo`,
 //! `uainn`. v3.5.9 B-1 extends this to two families:

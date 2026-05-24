@@ -1,13 +1,13 @@
 //! v3.5.8 連續輸入 (Continuous Input) Phase 5 — span-local candidate fetch
 //! contract test.
 //!
-//! Pins the three roadmap-mandated cases (`docs/roadmap.md:339-341`):
+//! Pins the three roadmap-mandated cases (`docs/releases/v3.5.8/plan.md` § Phase 5 — span-local candidate fetch / 走查範例):
 //!
 //! 1. `tsua` with endings={3, 4} must surface
 //!    `紙(span=(0,4), syll=1)` + `珠仔(span=(0,4), syll=2)` + `珠(span=(0,3), syll=1)`
 //!    — the "multi-syll same toneless key" + "shorter-span shadow" combo
 //!    that motivates the whole BFS-with-multi-cut approach
-//!    (`docs/roadmap.md:203`).
+//!    (`docs/releases/v3.5.8/plan.md` § Phase 3 — 純函數 syllabifier (TL + TPS) — design rationale).
 //!
 //! 2. `taigikhipuann` with endings={2, 4, 8, 13} must surface candidates
 //!    for `台(syll=1)`, `台語(syll=2)`, and `台語齒盤(syll=4)` — the
@@ -250,7 +250,7 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert!((zhu.score - 90.0).abs() < 1e-4);
 
     // v3.5.8 SortKey expected order (post-S8; per
-    // `docs/roadmap.md` § Phase 9 sort_key formula):
+    // `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula):
     //   (coverage_kind, tier, recency_rank, -adjusted_score, -freq,
     //    -coverage_bytes, source_rank, stable_idx)
     //
@@ -578,7 +578,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
 
 // ---------------------------------------------------------------------------
 // v3.5.8 Phase 9.1 — Regression matrix (`taiuantaigi` / `e` / `taixyz`)
-// pinned by `docs/roadmap.md` § Phase 9 「回歸守護矩陣」.
+// pinned by `docs/releases/v3.5.8/plan.md` § Phase 9 — 回歸守護矩陣.
 //
 // These cases use synthetic dict fixtures that mirror the frequency
 // disparity that drove the Phase 9 pivot (`docs/engine/continuous-input-

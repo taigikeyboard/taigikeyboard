@@ -18,7 +18,7 @@
 //! `segment_min_cost`) — the same optimum as McBopomofo's
 //! `max Σ log P` relaxation. The S2/S3 `max Σ edge_score` objective
 //! structurally rewarded over-segmentation (`taiuan` → `乾伊有俺`);
-//! see `cost.rs` and `docs/roadmap.md` §整句 lattice + walker S5.
+//! see `cost.rs` and `docs/releases/v3.5.8/plan.md` §整句 lattice + walker S5.
 //!
 //! The walker is **pure and shadow-space native**. It never looks at
 //! the dictionary, the raw byte space, or proto types: the caller

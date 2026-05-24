@@ -22,7 +22,7 @@
 //! like 伊 ≈ 63 255, 有 ≈ 53 685 dwarf any specific phrase such as
 //! 台灣 ≈ 1 379) the all-single-char path won by ~4.7×: typing
 //! `taiuan` surfaced `乾伊有俺` instead of `台灣` (dogfood-confirmed
-//! 2026-05-17; `docs/roadmap.md` §整句 lattice + walker S5).
+//! 2026-05-17; `docs/releases/v3.5.8/plan.md` §整句 lattice + walker S5).
 //!
 //! ## The model (khiin `segmenter.rs:82-92`)
 //!

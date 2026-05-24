@@ -11,7 +11,7 @@
 //!   `SyllableInventory::contains_in(mode, ...)`).
 //! - `tps::valid_span_endings` — O(n) scan over Bopomofo Extended tone
 //!   marks + entering-coda small letters + 8th-tone combining/encode-safe
-//!   dots (unambiguous terminators per `docs/roadmap.md` line 95), plus
+//!   dots (unambiguous terminators per `docs/releases/v3.5.8/plan.md` § 走查範例 Case D — TPS), plus
 //!   implicit tone-1 boundaries via the "next initial seen" rule
 //!   (v3.5.8 Phase 9 Item 7) — the syllabifier itself emits the
 //!   tone-1 endings; no dispatcher post-processing.
@@ -26,7 +26,7 @@
 //! D7+D8 (#306). The scanners never panic on partial UTF-8 or
 //! out-of-range `pos`; see each entry's `pos` validation contract.
 //!
-//! Design choice (`docs/roadmap.md` line 203): multi-cut, span-local
+//! Design choice (`docs/releases/v3.5.8/plan.md` § Phase 3 — 純函數 syllabifier 設計裁定): multi-cut, span-local
 //! lookup is the middle ground between khiin-rs pure longest-match
 //! (which would miss `珠 (tsu, span=3)` when the user types `tsua`) and
 //! librime's global lattice (over-engineered). BFS with FST membership

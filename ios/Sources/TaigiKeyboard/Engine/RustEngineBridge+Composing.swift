@@ -73,7 +73,7 @@ public extension RustEngineBridge {
     /// derive and violate `rules/cross-platform-alignment.md`).
     ///
     /// Metadata-only in v3.5.8 — does NOT enter the engine's `SortKey`
-    /// tie-break (per `docs/roadmap.md` § Phase 9 R2 Q3.a). `.unspecified`
+    /// tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `.unspecified`
     /// is the proto3 default and means "unknown carrier — old engine or
     /// dropped field"; it is never emitted by the current Rust engine.
     /// Platforms must treat `.unspecified` as "ignore mode" rather than

@@ -1,7 +1,7 @@
 //! Engine-side contract test for the fused-toneless multi-syllable key
 //! used by the Roman toneless lookup path (v3.5.8 連續輸入 Phase 1b).
 //!
-//! Background — the v3.5.8 roadmap (`docs/roadmap.md` § Phase 1b) originally
+//! Background — the v3.5.8 roadmap (`docs/releases/v3.5.8/plan.md` § Phase 1b) originally
 //! planned an FST-builder derivation rule that would emit an extra fused
 //! toneless variant for every multi-syllable entry. Pre-impl audit on
 //! 2026-05-10 (this PR) showed the upstream `notone` CSV stage already
