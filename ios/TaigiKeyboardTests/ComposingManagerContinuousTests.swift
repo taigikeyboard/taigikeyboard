@@ -19,7 +19,7 @@ import XCTest
 ///   `NextWordClearForNewComposing`).
 ///
 /// Boundary coverage: `RustEngineBridgeContinuousTests` pins the FFI
-/// contract; this file pins the `ComposingManager` published-mirror +
+/// contract; this file pins the `ComposingManager` observable-mirror +
 /// effect-dispatch wrapper. UI integration (AutocompleteService /
 /// ActionHandler tap decode) is verified by Codex post-impl + manual
 /// dogfood — the wrappers are thin enough that mocking the keyboard

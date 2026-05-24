@@ -1,8 +1,8 @@
 // 中文: iOS 端組字管理器 — Rust 組字引擎與 KeyboardKit / SwiftUI 之間的薄包裝。
 // 中文: 引擎狀態(phase / rawInput / selectedCandidateIndex)由 Rust 端持有,這裡只做 mirror + effect dispatch。
 
-import Combine
 import Foundation
+import Observation
 import SwiftProtobuf
 
 /// Minimal write-only view of the composing-context state that the keyboard
@@ -21,7 +21,7 @@ protocol ComposingContextSink: AnyObject {
 ///
 /// Engine state (phase + raw input + selectedCandidateIndex) lives inside
 /// the Rust singleton `EngineHandle`; this wrapper:
-/// - mirrors the latest response into `@Published` properties for SwiftUI,
+/// - mirrors the latest response into Observation-tracked properties for SwiftUI,
 /// - dispatches the bridge-emitted `Effect[]` through `ComposingDelegate`
 ///   in proto-list order,
 /// - notifies the `ComposingContextSink` once state is settled.
@@ -30,18 +30,19 @@ protocol ComposingContextSink: AnyObject {
 /// change (per plan §4.2 + Codex P1.4). The bridge passes it on every call;
 /// the engine compares against last-seen and silently drops state on
 /// mismatch.
-// 中文: iOS 端的組字管理器(ObservableObject)。負責三件事:
-// 中文:   1) 把引擎回傳鏡射到 @Published 給 SwiftUI;
+// 中文: iOS 端的組字管理器(@Observable)。負責三件事:
+// 中文:   1) 把引擎回傳鏡射到 Observation-tracked 屬性給 SwiftUI;
 // 中文:   2) 依 proto 順序派送 Effect 給 ComposingDelegate;
 // 中文:   3) 結束後通知 ComposingContextSink。
 // 中文: currentGeneration 每次 input-context 切換 +1,引擎會丟掉舊 generation 的 stale 請求。
-public class ComposingManager: ObservableObject, ComposingStateProvider, ContinuousCandidateFetcher {
-    // MARK: - Published Mirror
+@Observable
+public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetcher {
+    // MARK: - Observable Mirror
 
-    @Published public private(set) var isComposing: Bool = false
-    @Published public private(set) var composingText: String = ""
-    @Published public private(set) var rawInput: String = ""
-    @Published public private(set) var selectedCandidateIndex: Int = -1
+    public private(set) var isComposing: Bool = false
+    public private(set) var composingText: String = ""
+    public private(set) var rawInput: String = ""
+    public private(set) var selectedCandidateIndex: Int = -1
 
     // MARK: - Lifecycle Generation
 
@@ -50,17 +51,24 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     /// mismatch then drops state silently before applying the next request.
     // 中文: input-context 切換時由 KeyboardViewController 生命週期 +1。
     // 中文: 引擎收到舊 generation 的請求會直接丟棄,避免 stale state 滲入。
+    @ObservationIgnored
     private var currentGeneration: UInt64 = 1
 
     /// `true` while the platform is dispatching effects from a self-driven
     /// commit. Suppresses redundant generation bumps from `textWillChange`
-    /// firing on candidate taps / self-commits.
+    /// firing on candidate taps / self-commits. Platform suppression flag —
+    /// not view state — so excluded from the observation graph.
     // 中文: 自我送出 commit 期間設為 true,壓掉 textWillChange 觸發的多餘 generation bump。
+    // 中文: 此為平台抑制旗標(非 view state),刻意排除於 observation graph 外。
+    @ObservationIgnored
     public internal(set) var selfCommitInProgress: Bool = false
 
     // MARK: - Collaborators
 
+    @ObservationIgnored
     private weak var contextSink: ComposingContextSink?
+
+    @ObservationIgnored
     weak var delegate: (any ComposingDelegate)?
 
     private let settingsProvider: EngineSettingsProvider
@@ -675,7 +683,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
 
     // 中文: 套用一次 ComposingTransition,三階段:鏡射 → 派送 effect → 通知 sink。
     private func apply(_ transition: RustEngineBridge.ComposingTransition) {
-        // Phase 1 — mutate published mirror (guarded-inequality writes keep
+        // Phase 1 — mutate observable mirror (guarded-inequality writes keep
         // idle→idle silent and avoid redundant SwiftUI invalidation).
         if isComposing != transition.isComposing { isComposing = transition.isComposing }
         if rawInput != transition.rawInput { rawInput = transition.rawInput }

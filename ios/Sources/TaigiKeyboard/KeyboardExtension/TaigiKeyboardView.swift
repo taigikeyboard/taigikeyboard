@@ -14,7 +14,7 @@ struct TaigiKeyboardView: View {
 
     @ObservedObject var autocompleteContext: AutocompleteContext
     @ObservedObject var keyboardContext: KeyboardContext
-    @ObservedObject var composingManager: ComposingManager
+    let composingManager: ComposingManager
 
     let onSuggestionTap: (Autocomplete.Suggestion) -> Void
     let onTranslateToggle: () -> Void

@@ -18,7 +18,7 @@ struct KeyboardPreviewPanel: View {
     let colorScheme: ColorScheme
 
     @State private var previewState = Keyboard.State()
-    @StateObject private var composingManager = ComposingManager()
+    @State private var composingManager = ComposingManager()
 
     var body: some View {
         let services = Keyboard.Services(state: previewState)
