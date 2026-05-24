@@ -143,14 +143,18 @@ Text output
 | Input dispatch | `ActionHandler.swift` + extensions | `TextInputManager.kt` | — |
 | Composing engine | (Rust) | (Rust) | `engine/composing` |
 | Composing wrapper | `ComposingManager.swift` + `ComposingDelegate.swift` | `ComposingManager.kt` + `ComposingDelegate.kt` | — |
-| Classify + search | `AutocompleteService.swift`, `Lexicon/Services/LexiconService.swift` | `TaigiAutocompleteService.kt`, `ime/dictionary/LexiconService.kt` | `engine/lexicon` |
-| Ranking | (calls `processCandidates`) | (calls `processCandidates`) | `engine/ranking` |
-| Phonetics / case | (calls bridge) | (calls bridge) | `engine/phonetics` |
+| Autocomplete / classify + search | `AutocompleteService.swift` (engine-only post v3.5.8 Item 13 retire) | `TaigiAutocompleteService.kt`; `LexiconService.kt` retained for Tab3 `searchWithSources` / `searchByHanzi` only | `engine/lexicon` |
+| Ranking | (calls `processCandidates` via bridge) | (calls `processCandidates` via bridge) | `engine/ranking` |
+| Phonetics / case | (calls bridge) | (calls bridge) | `engine/phonetics`, `engine/case-transform` |
 | Display | `TaigiKeyboardView.swift`, `CandidateView.swift` | `SmartbarView.kt`, `CandidateAdapter.kt` | — |
 | Selection | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` | — |
 | NextWord engine | (Rust) | (Rust) | `engine/nextword` |
 | NextWord platform glue | `NextWord/NextWordController.swift`, `NextWord/Services/NextWordService.swift` | `ime/text/smartbar/NextWordHandler.kt`, `ime/dictionary/NextWordService.kt` | — |
-| FFI seam | `Engine/RustEngineBridge.swift` (+ extensions) | `engine/RustEngineBridge.kt` (+ `LexiconBridge.kt`, `CaseTransformBridge.kt`) | `engine/dispatch` + `engine/swift-ffi` / `engine/android-jni` |
+| FFI seam (facade) | `Engine/RustEngineBridge.swift` | `engine/RustEngineBridge.kt` | `engine/dispatch` + `engine/swift-ffi` / `engine/android-jni` |
+| FFI seam (per-slice extensions) | `Engine/RustEngineBridge+Phonetics.swift`, `+Composing.swift`, `+Lexicon.swift`, `+CaseTransform.swift`, `+NextWord.swift` (B3, PR #324) | `engine/PhoneticsBridge.kt`, `ComposingBridge.kt`, `LexiconBridge.kt`, `CaseTransformBridge.kt`, `NextWordBridge.kt` sibling impl objects (B4, PR #325) | — |
+| FFI seam (infra) | `Engine/SwiftLoggerSink.swift`, `Engine/RustVec+UInt8.swift` | `ime/core/logging/LoggerBackend.kt` + `AndroidLoggerBackend.kt` (B12, PR #317 — all Android log sites route through facade) | — |
+| Settings / prefs | `Settings/SharedSettings.swift` + `SettingsKey.swift` (B8a iOS PR-1/PR-2) | `ime/core/PrefHelper.kt` (B6 delegate, B11 companion-hoist, B8a `TpsCascade.kt`) | — |
+| Smartbar container state | — | `ime/text/smartbar/SmartbarContainer` enum + `ToolbarManager.kt` (B7, PR #320) | — |
 
 ### Keyboard Overlays (v3.4.5+)
 

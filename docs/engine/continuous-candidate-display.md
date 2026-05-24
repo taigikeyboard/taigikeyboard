@@ -595,7 +595,7 @@ Per [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.m
 | 7. Android `buildContinuousSuggestionsForCandidates` | `android/.../ime/text/composing/TaigiAutocompleteService.kt` | ~5 + extend existing `ContinuousSuggestionsContractTest.kt` |
 | 8. Defensive read fallback | iOS + Android `if roman.isEmpty()` paths | ~6 |
 | 9. Acceptance dogfood + manual `xcframework` rebuild + `assembleDebug` | user-run | — |
-| 10. Roadmap row update | `docs/roadmap.md` § Phase 9 | ~3 lines |
+| 10. Roadmap row update | [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) § Phase 9 | ~3 lines |
 
 **Total estimate**: ~80-120 LOC handcoded + ~50 LOC tests + auto-regen wire bindings. Comparable in size to Phase 7A bridge wiring or Phase 9.2 mode carrier.
 
