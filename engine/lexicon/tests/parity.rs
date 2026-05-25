@@ -176,7 +176,6 @@ fn invariant_lex_hanzi_guard_short_circuits() {
         input_type: SearchInputType::Hanzi,
         input_mode: SearchInputMode::Tl,
         limit: 50,
-        tps_or_mapped_to_er: false,
         enabled_sources_bitmask: u32::MAX,
     };
     let rows = search::search(&params, &index, &dict).expect("guard short-circuits");
@@ -215,7 +214,6 @@ fn tps_input_mode_hits_tps_family_through_search() {
         input_type: SearchInputType::RomanWithTone,
         input_mode: SearchInputMode::Tps,
         limit: 50,
-        tps_or_mapped_to_er: false,
         enabled_sources_bitmask: u32::MAX,
     };
     let rows = search::search(&params, &index, &dict).expect("tps search runs");
@@ -247,7 +245,6 @@ fn tps_input_mode_tone8_substitution_matches_build_pipeline_key() {
         input_type: SearchInputType::RomanWithTone,
         input_mode: SearchInputMode::Tps,
         limit: 50,
-        tps_or_mapped_to_er: false,
         enabled_sources_bitmask: u32::MAX,
     };
     let rows = search::search(&params, &index, &dict).expect("tps tone-8 search runs");
@@ -255,6 +252,61 @@ fn tps_input_mode_tone8_substitution_matches_build_pipeline_key() {
         rows.iter().map(|r| r.id).collect::<Vec<_>>(),
         vec![1],
         "U+02D9 input must canonicalize to U+0307 before tps: lookup",
+    );
+}
+
+// --- C-3a TPS er↔or build-time dual-emit -------------------------------
+
+/// PR C-3a moved the runtime `tps_or_mapped_to_er` expansion into the
+/// build pipeline: each `er`/`or` row emits `tps:` keys for BOTH the
+/// ㄜ (U+311C, bridge default) and ㄛ (U+311B, toggle-OFF variant)
+/// glyphs at the same rowid. The search path is mode-blind on this
+/// axis — a TPS user typing either glyph hits the same dictionary row
+/// without any runtime flag.
+#[test]
+fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
+    // Build pipeline emits both `tps:ㄍㄜ˪` (default) and `tps:ㄍㄛ˪`
+    // (variant) at rowid 1 for the TL `kor3` row.
+    let pairs: &[(&str, u32)] = &[
+        ("tps:\u{310D}\u{311C}\u{02EA}", 1), // ㄍㄜ˪
+        ("tps:\u{310D}\u{311B}\u{02EA}", 1), // ㄍㄛ˪
+    ];
+    let path = write_synthetic_fst("tps-c3a-dual-emit.fst", pairs);
+    let index = PrefixIndex::open(&path).expect("fst opens");
+    let dict = synth_dictionary_reader(&[(0, 100, "_kor", "ko2")]);
+
+    // ㄜ-glyph user input (bridge default form).
+    let er_params = SearchParams {
+        input: "\u{310D}\u{311C}\u{02EA}".to_string(),
+        input_type: SearchInputType::RomanWithTone,
+        input_mode: SearchInputMode::Tps,
+        limit: 50,
+        enabled_sources_bitmask: u32::MAX,
+    };
+    let er_rows = search::search(&er_params, &index, &dict).expect("er search runs");
+    assert_eq!(
+        er_rows.iter().map(|r| r.id).collect::<Vec<_>>(),
+        vec![1],
+        "ㄜ-glyph TPS input hits rowid via default emit",
+    );
+
+    // ㄛ-glyph user input (toggle-OFF variant form). Pre-C-3a, the
+    // runtime branch would have tried `key.replace(\"er\", \"or\")` on
+    // the TL ASCII key — that no longer fires post-C-1 because the
+    // key is `tps:<Bopomofo>`. Post-C-3a, the row is reachable via
+    // the variant key emitted at build time.
+    let or_params = SearchParams {
+        input: "\u{310D}\u{311B}\u{02EA}".to_string(),
+        input_type: SearchInputType::RomanWithTone,
+        input_mode: SearchInputMode::Tps,
+        limit: 50,
+        enabled_sources_bitmask: u32::MAX,
+    };
+    let or_rows = search::search(&or_params, &index, &dict).expect("or search runs");
+    assert_eq!(
+        or_rows.iter().map(|r| r.id).collect::<Vec<_>>(),
+        vec![1],
+        "ㄛ-glyph TPS input hits same rowid via build-time variant emit",
     );
 }
 

@@ -57,3 +57,30 @@ def remove_tps_tone(text: str) -> str:
     if not text:
         return ""
     return _TPS_TONE_AND_SEP_RE.sub("", text)
+
+
+# TPS dialect variant: bridge collapses TL `er` and `or` to ㄜ (U+311C).
+# The `or_maps_to_er=false` form (iOS / Android user default) renders TL
+# `or` as ㄛ (U+311B). Data audit confirms ㄜ in `tps_num` appears ONLY
+# when `tl_num` contains an `er` or `or` token (1107 / 1107 rows; no
+# other vowel maps to ㄜ in `taigi-converter/src/tables.js:68`), so a
+# blanket ㄜ→ㄛ substitution produces the toggle-OFF variant without
+# losing the er/or boundary information that pre-substitution at the TL
+# level would lose (e.g. `tsherm` → `tshom` would collapse to ㄘㆱ rather
+# than ㄘㄛㆬ).
+_TPS_ER_GLYPH = "ㄜ"
+_TPS_OR_GLYPH = "ㄛ"
+
+
+def apply_or_dialect_variant(text: str) -> str:
+    """Produce the `or_maps_to_er=false` TPS variant of a bridge output.
+
+    Returns the original `text` with every ㄜ (U+311C) replaced by ㄛ
+    (U+311B). Returns "" when no ㄜ is present so callers can skip
+    emitting a redundant variant key. Used by `numtone` / `notone` /
+    `abbrev` stages to populate `tps_*_var` columns that drive the
+    er↔or dual-emit in `dictionary.fst` (PR C-3a).
+    """
+    if not text or _TPS_ER_GLYPH not in text:
+        return ""
+    return text.replace(_TPS_ER_GLYPH, _TPS_OR_GLYPH)

@@ -8,6 +8,7 @@ import pandas as pd
 
 from pipeline.context import PipelineContext
 from common.abbrev import extract_abbrev, extract_tps_abbrev
+from common.notone import apply_or_dialect_variant
 from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict
 
 
@@ -44,4 +45,9 @@ def run(ctx: PipelineContext) -> None:
     df["tl_abbrev"] = df["tl"].apply(extract_abbrev)
     df["poj_abbrev"] = df["poj"].apply(extract_abbrev)
     df["tps_abbrev"] = df["tl"].apply(_derive_tps_abbrev)
+    # C-3a er↔or dialect dual-emit: ㄜ→ㄛ variant of `tps_abbrev`. Only
+    # populated when the abbrev has ㄜ (vowel-initial er/or syllables,
+    # e.g. `or-á` → `ㄜㄚ` → `ㄛㄚ`); consonant-initial er/or syllables
+    # contribute their consonant glyph and need no variant.
+    df["tps_abbrev_var"] = df["tps_abbrev"].apply(lambda x: apply_or_dialect_variant(str(x)))
     ctx.set_df(df)

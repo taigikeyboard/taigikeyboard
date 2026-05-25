@@ -32,6 +32,11 @@ REQUIRED_COLUMNS = (
     "tl_num", "tl_notone", "tl_abbrev",
     "poj_num", "poj_notone", "poj_abbrev",
     "tps_num", "tps_notone", "tps_abbrev",
+    # C-3a er↔or dialect dual-emit: ㄜ→ㄛ variants of the three tps_*
+    # columns. Empty when the source has no ㄜ (i.e. no `er`/`or` in TL).
+    # Used by `create_fst.py` to emit `tps:<variant>` keys at the same
+    # rowid, retiring the runtime `tps_or_mapped_to_er` branch.
+    "tps_num_var", "tps_notone_var", "tps_abbrev_var",
     *DICT_BIN_COLUMNS,
 )
 
@@ -58,6 +63,11 @@ class DictionaryRecord:
     tps_num: str | None
     tps_notone: str | None
     tps_abbrev: str | None
+    # C-3a er↔or dialect variants of the three `tps_*` columns. None when
+    # the source row has no ㄜ to swap (i.e. no `er`/`or` in `tl_num`).
+    tps_num_var: str | None
+    tps_notone_var: str | None
+    tps_abbrev_var: str | None
     sources: tuple[tuple[str, bool], ...]
     # Number of TL syllables in `tl`, computed from hyphen / space count
     # (see `_syllable_count`). Always 1..=MAX_SYLLABLES — out-of-range rows
@@ -130,6 +140,9 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
             tps_num=_normalise_optional(row["tps_num"]),
             tps_notone=_normalise_optional(row["tps_notone"]),
             tps_abbrev=_normalise_optional(row["tps_abbrev"]),
+            tps_num_var=_normalise_optional(row["tps_num_var"]),
+            tps_notone_var=_normalise_optional(row["tps_notone_var"]),
+            tps_abbrev_var=_normalise_optional(row["tps_abbrev_var"]),
             sources=sources,
             syllable_count=syllable_count,
         ))

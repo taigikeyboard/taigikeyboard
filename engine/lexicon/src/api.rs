@@ -65,7 +65,6 @@ pub fn search_with_sources(
         input_type: SearchInputType::RomanWithTone,
         input_mode: proto_input_mode(req.input_mode),
         limit: req.limit,
-        tps_or_mapped_to_er: false,
         enabled_sources_bitmask: req.enabled_sources_bitmask,
     };
     EngineHandle::with_state(|state| {
@@ -152,12 +151,15 @@ pub fn dictionary_filters(
 }
 
 fn build_search_params(req: &SearchRequest) -> Result<SearchParams, LexiconError> {
+    // C-3a: `req.tps_or_mapped_to_er` is intentionally ignored — the
+    // er↔or dialect axis is handled at build time via dual-emit `tps:`
+    // keys in `dictionary.fst`. The proto field stays on the wire for
+    // backward compatibility with platforms still setting it.
     Ok(SearchParams {
         input: req.input.clone(),
         input_type: proto_input_type(req.input_type),
         input_mode: proto_input_mode(req.input_mode),
         limit: req.limit,
-        tps_or_mapped_to_er: req.tps_or_mapped_to_er,
         enabled_sources_bitmask: req.enabled_sources_bitmask,
     })
 }

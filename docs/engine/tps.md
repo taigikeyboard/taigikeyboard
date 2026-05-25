@@ -426,62 +426,36 @@ TPS multi-syllable input inserts automatic spaces at syllable boundaries when a 
 
 ---
 
-## Known Limitation: Tone 1/4 Ambiguous Syllable Matching
+## Tone 1/4 Ambiguous Syllable Matching — RESOLVED
 
-> **Status**: NOT YET IMPLEMENTED — documented for future improvement.
+> **Status**: RESOLVED by v3.5.9 D / C-0 + C-1 (`tps:` FST family went live).
 
-### Problem
+TPS tone 1 and tone 4 are **unmarked** (no symbol). The build pipeline converts each row's TL form to fused Bopomofo via `dictionary/common/stages/numtone.py::_derive_tps_num`, which emits the SAME `tps_num` for both single-syllable `tsua2` (紙) and multi-syllable `tsu1a2` (珠仔) — both render as `ㄗㄨㄚˋ` because the tone-1 syllable on `tsu` is unmarked. The `tps:ㄗㄨㄚˋ` key in `dictionary.fst` therefore points to both rowids, and a TPS user typing `ㄗㄨㄚˋ` recovers both candidates.
 
-TPS tone 1 and tone 4 are **unmarked** (no symbol). When a user types `ㄗㄨㄚˋ`, the toTL output is `"tsua2"` (single syllable). This matches 紙 (tl_num: `tsua2`) but NOT 珠仔 (tl_num: `tsu1a2`), because the implicit tone 1 on `tsu` is absent from the search key.
+Pre-C-1, the engine fell through to `tl:` keys for TPS input, so the user's `ㄗㄨㄚˋ` lookup never reached the dictionary at all without per-keystroke conversion. C-1 (`engine/lexicon/src/key_normalizer.rs:34`) flipped `KeyMode::Tps` to the `tps:` family directly, and C-0 populated that family at build time.
 
-| Word | tl_num | TPS input ㄗㄨㄚˋ | Match? |
-|------|--------|------------------|--------|
-| 紙 tsuá | `tsua2` | `tsua2` | ✓ |
-| 珠仔 tsu-á | `tsu1a2` | `tsua2` | ✗ |
+---
 
-In contrast, POJ/TL users can type `tsua` (toneless) which matches the `tl_notone` key `"tsua"` → both words found. But TPS users who type an explicit tone 2 get `"tsua2"`, which doesn't match `"tsu1a2"`.
+## er↔or Dialect Dual-Emit (C-3a)
 
-### Proposed Solution: `tps:` Prefix Family in `dictionary.fst`
+> **Status**: SHIPPED by v3.5.9 D / C-3a.
 
-Build a separate set of fst keys under a `tps:` prefix where tone digits 1 and 4 are stripped:
+The Node `taigi-converter` bridge in `taigi-converter/src/tables.js:68` collapses both TL `er` and `or` vowels to the same Bopomofo glyph ㄜ (U+311C). The Rust `phonetics::tps::to_zhuyin` mirror (used by display / candidate rendering) honors the iOS / Android `or_maps_to_er` user setting and renders TL `or` as ㄛ (U+311B) when that toggle is OFF (the default).
 
-```
-紙  tl_num: tsua2   → tps key: tsua2   (no 1/4 to strip)
-珠仔 tl_num: tsu1a2  → tps key: tsua2   (tone 1 removed)
-甘  tl_num: kam1    → tps key: kam     (tone 1 removed)
-角  tl_num: kak4    → tps key: kak     (tone 4 removed)
-```
+This creates a dialect-recall asymmetry: a TPS user typing `ㄛ` for a TL `or`-spelled entry would not find it because the FST key is `ㄜ`-side only. Pre-C-1 the lexicon ran a runtime `key.replace("er", "or")` expansion gated by `SearchRequest.tps_or_mapped_to_er`; C-1 made that ASCII substring branch dead (the TPS key is now Bopomofo, not TL ASCII).
 
-Search side: TPS mode uses `tps:` prefix in `lexicon::key_normalizer::build` and the search key strips 1/4 before lookup.
+C-3a moves the expansion into the build pipeline: every row whose `tps_num` contains ㄜ gets a parallel `tps:<variant>` key at the same rowid with ㄜ → ㄛ substituted (`tps_num_var` / `tps_notone_var` / `tps_abbrev_var` columns in `dictionary.csv`, emitted by `dictionary/build/create_fst.py`). The substitution is always-on — the lexicon runtime no longer reads `tps_or_mapped_to_er`. The `or_maps_to_er` user setting still drives **rendering** (`engine/phonetics::dispatch::tps_to_tps_*`) so the candidate display matches the user's dialect preference; only lexicon **recall** unifies the two glyphs.
 
-### Implementation Plan
+| Aspect | Before C-3a | After C-3a |
+|---|---|---|
+| User typing ㄜ | matches ㄜ-keyed rows (bridge default) | same |
+| User typing ㄛ for a TL `or` row | misses (runtime branch dead post-C-1) | hits via `tps_*_var` build-time emit |
+| `SearchRequest.tps_or_mapped_to_er` | runtime read | OBSOLETE — wire-compat keep, runtime ignored |
+| `or_maps_to_er` user setting | recall + rendering | rendering only |
 
-1. **fst builder** (`dictionary/build/create_fst.py` + `engine/build-helpers/fst-builder`): emit a `tps:` key family — `tps_num` = `tl_num` with `'1'` and `'4'` stripped, plus reuse `tl_notone` / `tl_abbrev` under `tps:`.
-2. **Rust `lexicon::key_normalizer`**: extend `KeyMode::Tps` so it produces a `tps:` prefix instead of falling through to `tl:`.
-3. **Search-key normalization**: extend `phonetics::normalize_input` (or call site) to strip `'1'` / `'4'` for the TPS path so input matches stored keys.
-4. **Platform InputMode**: ensure both iOS `InputMode.tps` and Android `InputMode.TPS` flow through to the engine seam unchanged.
-5. **Rebuild assets**: run the build pipeline to regenerate `dictionary.fst` with the new `tps:` keys (byte-identical across platforms — see `binary-format.md` §3).
+Data scan (`dictionary/output/dictionary.csv` audit 2026-05-25): 1107 rows carry ㄜ in `tps_num`, all sourced from `er` / `or` tokens in `tl_num` (839 er-only, 275 or-only, 0 mixed of distinct tokens within one row, 4 rows with two `er`/`or` tokens). The substitution is safe — no other TL vowel maps to ㄜ in the bridge tables.
 
-### Why Tone 1/4 Specifically
-
-| Tone | TPS symbol | Explicitly typed? |
-|------|-----------|-------------------|
-| 1 | (none) | No |
-| 2 | ˋ | Yes |
-| 3 | ˪ | Yes |
-| 4 | (none, implied by checked coda) | No |
-| 5 | ˊ | Yes |
-| 7 | ˫ | Yes |
-| 8 | ˙ | Yes |
-| 9 | ˆ | Yes |
-
-Stripping 1/4 = removing tones that TPS users physically cannot type, while preserving tones they explicitly chose.
-
-### Impact Estimate
-
-- fst size: ~50% more keys (~3 per entry added to existing 6).
-- The Burntsushi fst is highly compressed — estimated ~1–2 MB increase on top of the current ~9.1 MB asset.
-- Zero impact on POJ/TL (they continue using `tl:` / `poj:` prefix).
+Multi-token rows (N≥2 affected syllables, 4 rows total) emit the fully-swapped variant only; partial mixes (some tokens ㄜ, some ㄛ) are intentionally out of scope.
 
 ---
 

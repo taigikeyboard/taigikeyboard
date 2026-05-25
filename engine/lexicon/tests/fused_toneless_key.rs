@@ -73,7 +73,6 @@ fn fused_toneless_key_retrieves_single_and_multi_syllable_entries() {
         input_type: SearchInputType::RomanNoTone,
         input_mode: SearchInputMode::Tl,
         limit: 10,
-        tps_or_mapped_to_er: false,
         enabled_sources_bitmask: u32::MAX,
     };
     let rows = search::search(&params, &prefix_index, &dict).expect("search succeeds");
@@ -120,7 +119,6 @@ fn fused_toneless_key_works_for_poj_path() {
         input_type: SearchInputType::RomanNoTone,
         input_mode: SearchInputMode::Poj,
         limit: 10,
-        tps_or_mapped_to_er: false,
         enabled_sources_bitmask: u32::MAX,
     };
     let rows = search::search(&params, &prefix_index, &dict).expect("search succeeds");

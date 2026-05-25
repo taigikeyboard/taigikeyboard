@@ -28,7 +28,7 @@ from build.common import BASE_DIR, LOG_DIR
 from common.abbrev import extract_abbrev, extract_tps_abbrev
 from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
-from common.notone import remove_tone, remove_tps_tone
+from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
 from common.romanization import to_numeric_tone
 from common.source_bits import MAIN_SOURCE_COLUMNS
 from common.taigi_bridge import (
@@ -262,6 +262,7 @@ def _assemble_supplement_row(
     if source_flags:
         flags.update(source_flags)
 
+    tps_notone = remove_tps_tone(tps_num)
     return {
         "tl": tl,
         "hanzi": hanzi,
@@ -272,10 +273,16 @@ def _assemble_supplement_row(
         "tps_num": tps_num,
         "tl_notone": remove_tone(tl_num),
         "poj_notone": remove_tone(poj_num),
-        "tps_notone": remove_tps_tone(tps_num),
+        "tps_notone": tps_notone,
         "tl_abbrev": extract_abbrev(tl),
         "poj_abbrev": extract_abbrev(poj),
         "tps_abbrev": tps_abbrev,
+        # C-3a er↔or dialect dual-emit variants. Same shared helper as
+        # the stage pipeline so supplement rows (khiin / dev / lkk) get
+        # identical coverage.
+        "tps_num_var": apply_or_dialect_variant(tps_num),
+        "tps_notone_var": apply_or_dialect_variant(tps_notone),
+        "tps_abbrev_var": apply_or_dialect_variant(tps_abbrev),
         "is_variant": is_variant,
         **flags,
     }

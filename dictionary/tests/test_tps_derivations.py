@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 
 from common.abbrev import extract_tps_abbrev
-from common.notone import remove_tps_tone
+from common.notone import apply_or_dialect_variant, remove_tps_tone
 from common.taigi_bridge import BridgeDeadError, TpsResidueError, convert_tl_to_tps_strict
 
 
@@ -119,3 +119,78 @@ def test_extract_tps_abbrev_empty_per_syllable():
     # If any per-syllable TPS is empty (conversion failed mid-row),
     # the abbrev is unreliable — skip rather than emit garbage.
     assert extract_tps_abbrev("tai5-gi2", ["ㄉㄞˊ", ""]) == ""
+
+
+# ----- C-3a er↔or dialect dual-emit variant helper -----------------------
+
+
+def test_apply_or_dialect_variant_swaps_all_oe_to_o():
+    # Bridge collapses TL `er` and `or` to ㄜ; the `or_maps_to_er=false`
+    # form renders TL `or` as ㄛ. Substitute every ㄜ in the bridge
+    # output to produce the variant key.
+    assert apply_or_dialect_variant("ㄍㄜ˪") == "ㄍㄛ˪"
+    assert apply_or_dialect_variant("ㄜㆷ") == "ㄛㆷ"
+    assert apply_or_dialect_variant("ㄒㄧㄜㆷ") == "ㄒㄧㄛㆷ"
+
+
+def test_apply_or_dialect_variant_handles_multi_er_or_tokens():
+    # Multi-token rows (`ere-ther` style) get the fully-swapped form;
+    # partial-mix variants are intentionally out of scope (4 rows total
+    # in production data).
+    assert apply_or_dialect_variant("ㄜㆤㄊㄜ") == "ㄛㆤㄊㄛ"
+
+
+def test_apply_or_dialect_variant_empty_when_no_oe():
+    # Returns "" when input has no ㄜ so callers can short-circuit the
+    # variant FST emit instead of de-duplicating an identical key.
+    assert apply_or_dialect_variant("ㄍㄚˋ") == ""
+    assert apply_or_dialect_variant("") == ""
+
+
+def test_apply_or_dialect_variant_preserves_other_glyphs():
+    # Only ㄜ (U+311C) is touched. Other Bopomofo + tone marks stay
+    # exactly as the bridge emitted them.
+    assert apply_or_dialect_variant("ㄗㄜㆤˊ") == "ㄗㄛㆤˊ"
+    # ㆦ (U+31A6, `oo` vowel) must NOT be affected — only the er/or
+    # collapse glyph U+311C swaps.
+    assert apply_or_dialect_variant("ㆦ") == ""
+
+
+def test_zhuyin_vowels_table_invariant_only_er_or_map_to_oe():
+    """C-3a hard invariant: blanket ㄜ→ㄛ substitution in
+    `apply_or_dialect_variant` is safe ONLY while `er` and `or` are
+    the only TL vowels that produce ㄜ (U+311C) in bridge output.
+
+    If a future `taigi-converter/src/tables.js` edit maps another TL
+    vowel to ㄜ, the dual-emit semantics would silently broaden recall
+    to that new vowel as well. This test parses the canonical vowel
+    table and fails loud on that condition so the C-3a invariant gets
+    revisited before shipping the change.
+    """
+    import re
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[2]
+    tables_path = repo_root / "taigi-converter" / "src" / "tables.js"
+    text = tables_path.read_text(encoding="utf-8")
+
+    match = re.search(
+        r"export const ZHUYIN_VOWELS\s*=\s*\[(.*?)\];",
+        text,
+        re.DOTALL,
+    )
+    assert match, "ZHUYIN_VOWELS export missing from tables.js"
+    body = match.group(1)
+
+    # Entries are `["tl", "\\uXXXX..."]`. Pull each (tl, bopomofo) pair.
+    entries = re.findall(r'\["([^"]+)",\s*"([^"]+)"\]', body)
+    assert entries, "ZHUYIN_VOWELS parsed empty — regex needs update"
+
+    OE_GLYPH = "ㄜ"  # ㄜ
+    oe_sources = [tl for tl, bopomofo in entries if OE_GLYPH in bopomofo.encode().decode("unicode_escape")]
+    assert sorted(oe_sources) == ["er", "or"], (
+        f"C-3a invariant violated: ZHUYIN_VOWELS maps {sorted(oe_sources)!r} to ㄜ, "
+        f"expected exactly ['er', 'or']. The `apply_or_dialect_variant` blanket "
+        "substitution would now silently broaden recall to additional vowels — "
+        "re-examine the C-3a dual-emit design before shipping the bridge change."
+    )

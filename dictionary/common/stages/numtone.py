@@ -7,6 +7,7 @@ import logging
 import pandas as pd
 
 from pipeline.context import PipelineContext
+from common.notone import apply_or_dialect_variant
 from common.romanization import to_numeric_tone
 from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict
 
@@ -58,6 +59,10 @@ def run(ctx: PipelineContext) -> None:
 
     tps_failure_state = {"count": 0}
     df["tps_num"] = df["tl"].apply(lambda x: _derive_tps_num(x, failure_state=tps_failure_state))
+    # C-3a er↔or dialect dual-emit: ㄜ→ㄛ variant of `tps_num`. Empty when
+    # `tps_num` has no ㄜ (no `er`/`or` source) so downstream emit stays
+    # de-duplicated.
+    df["tps_num_var"] = df["tps_num"].apply(lambda x: apply_or_dialect_variant(str(x) if pd.notna(x) else ""))
     if tps_failure_state["count"] > 0:
         _logger.info(
             "%s: tps_num derivation failed for %d / %d rows (logged first %d)",

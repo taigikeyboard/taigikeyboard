@@ -16,6 +16,9 @@ Key 格式（前綴式）：
 - tps:<tps_num>：TPS Bopomofo + 聲調符號（如 tps:ㄏㆦ˫ㄙㆤ˪）
 - tps:<tps_notone>：TPS 去調 fused（如 tps:ㄏㆦㄙㆤ）
 - tps:<tps_abbrev>：TPS 縮寫（如 tps:ㄏㄙ）
+- tps:<tps_num_var>     C-3a er↔or 方言 always-on：TL `er`/`or` 兩種注音字形（ㄜ vs ㄛ）
+- tps:<tps_notone_var>  同上,僅當源 `tps_*` 含 ㄜ 時 emit;A always-on,取代 runtime
+- tps:<tps_abbrev_var>  `tps_or_mapped_to_er` toggle (per PR C-3a)。
 - hanzi:<hanzi>：漢字前綴搜尋（如 hanzi:好無）
 
 Fused-toneless invariant — `tl_notone` / `poj_notone` are produced
@@ -125,7 +128,14 @@ def collect_pairs(logger) -> list[tuple[str, int]]:
             for val in (record.tl_num, record.tl_notone, record.tl_abbrev):
                 if val:
                     add(f"tl:{val}", rowid)
-            for val in (record.tps_num, record.tps_notone, record.tps_abbrev):
+            # C-3a er↔or dual-emit: same rowid keyed by both ㄜ-form
+            # (bridge default) and ㄛ-form (toggle-OFF variant) so a
+            # TPS user typing either glyph hits the same dictionary
+            # row. Empty `*_var` columns short-circuit.
+            for val in (
+                record.tps_num, record.tps_notone, record.tps_abbrev,
+                record.tps_num_var, record.tps_notone_var, record.tps_abbrev_var,
+            ):
                 if val:
                     add(f"tps:{val}", rowid)
         if record.poj_num and _tl_num_syllable_count(record.poj_num) <= MAX_SYLLABLES_TL_NUM:

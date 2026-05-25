@@ -7,13 +7,14 @@
 //! 2. Build trie key via `key_normalizer`.
 //! 3. `prefix_index.lookup_prefix` returns insertion-ordered rowids
 //!    (D-12 parity correction toward Android).
-//! 4. (TPS er↔or) when `mode == Tps && tps_or_mapped_to_er &&
-//!    key.contains("er")`, run a second prefix lookup against the `or`
-//!    variant and `IndexSet`-extend rowids.
-//! 5. Resolve each rowid through `dictionary_reader.record` + filter,
+//! 4. Resolve each rowid through `dictionary_reader.record` + filter,
 //!    take `limit`, return `LexiconRowOut`.
+//!
+//! TPS dialect er↔or recall: C-3a moved the runtime expansion into the
+//! build pipeline (dual-emit `tps:` keys for the ㄜ and ㄛ glyphs at the
+//! same rowid). The lexicon search path is now mode-blind for that axis.
 
-// 中文: 詞庫搜尋協調層 — Hanzi guard、key 規範化、前綴+完全比對合併、TPS er↔or 擴展、過濾與排序。
+// 中文: 詞庫搜尋協調層 — Hanzi guard、key 規範化、前綴+完全比對合併、過濾與排序。TPS 方言 er↔or 已於 C-3a 移到 build pipeline 雙 emit,不再有 runtime 分支。
 
 use indexmap::IndexSet;
 
@@ -72,7 +73,7 @@ pub enum SearchInputMode {
     Tl,
     // 中文: POJ 羅馬字。
     Poj,
-    // 中文: TPS bopomofo (內部會合併到 tl: 族群)。
+    // 中文: TPS Bopomofo (查 `tps:` 族群,C-1 起獨立 family;er↔or 方言以 build-time 雙 emit 處理)。
     Tps,
 }
 
@@ -87,8 +88,6 @@ pub struct SearchParams {
     pub input_mode: SearchInputMode,
     // 中文: 結果筆數上限。
     pub limit: u32,
-    // 中文: TPS 模式下是否啟用 er↔or 對應擴展。
-    pub tps_or_mapped_to_er: bool,
     // 中文: 啟用字典來源的 bitmask (含 variant + khiin 控制位元)。
     pub enabled_sources_bitmask: u32,
 }
@@ -127,30 +126,6 @@ pub fn search(
     }
     for id in prefix_index.lookup_prefix(&key) {
         rowids.insert(id);
-    }
-
-    // TPS er↔or expansion — DEAD POST-C-1, retired in C-3a.
-    //
-    // Before C-1, `key` for TPS was `tl:<ASCII>` (e.g. `tl:ker`) because
-    // the TPS path fell through to TL. `key.contains("er")` could match
-    // the ASCII substring and a sibling `or` lookup was issued. C-1
-    // flipped TPS to `tps:<Bopomofo>` keys, so this ASCII substring
-    // check can never fire. The branch is left intact for the duration
-    // of this PR to keep the diff minimal; C-3a moves er↔or expansion
-    // into the build pipeline (dual-emit same rowid) and retires both
-    // this branch and `SearchRequest.tps_or_mapped_to_er`.
-    // See [[project_v359_d_tps_triindex_plan]] §C-3a.
-    if params.tps_or_mapped_to_er
-        && matches!(params.input_mode, SearchInputMode::Tps)
-        && key.contains("er")
-    {
-        let or_key = key.replace("er", "or");
-        for id in prefix_index.lookup_exact(&or_key) {
-            rowids.insert(id);
-        }
-        for id in prefix_index.lookup_prefix(&or_key) {
-            rowids.insert(id);
-        }
     }
 
     Ok(collect_filtered_sorted(
