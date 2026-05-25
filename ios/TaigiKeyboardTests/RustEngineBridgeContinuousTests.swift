@@ -154,6 +154,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         // consumed_bytes = "tai".utf8.count → final commit
         let commit = RustEngineBridge.composingCommitContinuous(
             displayText: "台",
+            canonicalText: "台",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
             mode: .tl,
@@ -185,6 +186,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
         let commit = RustEngineBridge.composingCommitContinuous(
             displayText: "台",
+            canonicalText: "台",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
             mode: .tl,

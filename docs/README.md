@@ -158,7 +158,7 @@ Authoritative ownership map (Rust crate vs platform glue) — see `engine/migrat
 |------|-------------|------------|--------------------------------|
 | `Phonetics` | POJ/TL/TPS conversion, normalize, case-transform | `engine/phonetics` | `RustEngineBridge.swift` / `RustEngineBridge.kt` |
 | `Composing` | Composing state machine (Phase × Intent → Effect) | `engine/composing` | `ComposingManager.swift` / `ComposingManager.kt` (effect interpreter) |
-| `Autocomplete` | Continuous-engine candidate pipeline (single source after v3.5.8 Item 13) | `engine/composing` (Continuous dispatch) + `engine/lexicon` + `engine/ranking` | `AutocompleteService.swift` / `TaigiAutocompleteService.kt` |
+| `Autocomplete` | Continuous-engine candidate pipeline (single source after v3.5.8 Item 13) | `engine/composing` (Continuous dispatch) + `engine/lexicon` + `engine/ranking` | `TaigiAutocompleteService.swift` / `TaigiAutocompleteService.kt` |
 | `Lexicon` | fst prefix index + dictionary/association mmap readers | `engine/lexicon` + `engine/mmap-host` | iOS Tab3 `DictionarySearchService.swift`; Android `LexiconService.kt` (Tab3 + asset lifecycle) |
 | `Ranking` | Candidate dedup / score / sort | `engine/ranking` | `RustEngineBridge.processCandidates*` |
 | `Tone` | Tone-mark conversion + restoration + nasal-marker | `engine/phonetics` | `RustEngineBridge.normalizeTone` / `restoreTone` |

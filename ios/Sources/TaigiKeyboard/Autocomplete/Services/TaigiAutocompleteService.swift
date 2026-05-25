@@ -12,7 +12,7 @@ import KeyboardKit
 /// 的 span-local engine 候選轉成 KeyboardKit Suggestion;engine 回空時
 /// 候選列即為空(inline pre-edit 仍保留組字緩衝,Enter 由 Item 3 的
 /// `Phase::Continuous` `Intent::CommitRaw` arm 提交 pending tail)。
-class AutocompleteService: KeyboardKit.AutocompleteService {
+class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - KeyboardKit 協議屬性
 
     var locale: Locale = .current
@@ -58,7 +58,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     // 中文: 連續輸入 fetcher protocol。實作端與 composingState 是同一個 ComposingManager。
     private weak var continuousFetcher: (any ContinuousCandidateFetcher)?
 
-    let logger = DebugLogger(category: "AutocompleteService")
+    let logger = DebugLogger(category: "TaigiAutocompleteService")
 
     // MARK: - 公開介面
 

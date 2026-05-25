@@ -33,7 +33,7 @@ extension ActionHandler {
         //
         // Strict-required keys (Item 4 fork F2=A): `consumedBytes`,
         // `syllableCount`, and `displayText` all come from
-        // `AutocompleteService.buildContinuousSuggestions`. Missing or
+        // `TaigiAutocompleteService.buildContinuousSuggestions`. Missing or
         // unparseable → drop the tap silently. Falling back to
         // `selectSuggestion(text:)` would lose `consumedBytes`, corrupting
         // the engine's `Phase::Continuous { raw }` byte alignment.

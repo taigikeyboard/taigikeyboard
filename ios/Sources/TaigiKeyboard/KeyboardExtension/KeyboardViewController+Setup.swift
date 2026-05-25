@@ -107,7 +107,7 @@ extension KeyboardViewController {
         handler.composingManager.delegate = self
         handler.nextWordController.contextUpdater = handler
 
-        // 4. Connect Taigi AutocompleteService with handler (requires handler already created)
+        // 4. Connect TaigiAutocompleteService with handler (requires handler already created)
         wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)
 
         // 5. v3.5.8 Phase 9.3b — best-effort warmup of `user_frequency.db`
@@ -143,13 +143,13 @@ extension KeyboardViewController {
 
     /// Called at initial setup and from syncSettings() when input mode changes.
     // 中文: 依當前 inputMode 安裝對應的 AutocompleteService。English 模式用 EnglishAutocompleteService,
-    // 中文: 其它模式用 Taigi 自家的 AutocompleteService。在初始 setup 與 settings 變動時都會呼叫。
+    // 中文: 其它模式用 Taigi 自家的 TaigiAutocompleteService。在初始 setup 與 settings 變動時都會呼叫。
     func setupAutocompleteServiceForCurrentMode() {
         if keyboardSettings.inputMode == .english {
             services.autocompleteService = EnglishAutocompleteService()
             setupLogger.debug("[AUTOCOMPLETE] Using EnglishAutocompleteService")
         } else {
-            let autocompleteService = AutocompleteService()
+            let autocompleteService = TaigiAutocompleteService()
             services.autocompleteService = autocompleteService
 
             // Settings 變更路徑：ActionHandler 已存在，直接以 helper 連線。
@@ -164,7 +164,7 @@ extension KeyboardViewController {
         // syncs handler.autocompleteService — no manual sync needed.
     }
 
-    /// 將 Taigi 專用的 composing provider 接上 AutocompleteService。
+    /// 將 Taigi 專用的 composing provider 接上 TaigiAutocompleteService。
     ///
     /// 兩個呼叫路徑共用：
     /// - `setupCoreServices()` 建立 handler 後初始連線
@@ -175,7 +175,7 @@ extension KeyboardViewController {
         from service: any KeyboardKit.AutocompleteService,
         to handler: ActionHandler,
     ) {
-        guard let taigiService = service as? AutocompleteService else { return }
+        guard let taigiService = service as? TaigiAutocompleteService else { return }
         taigiService.setComposingManager(handler.composingManager)
     }
 

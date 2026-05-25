@@ -90,7 +90,7 @@ final class SettingsKeyTests: XCTestCase {
     // MARK: - RawRepresentable<String> codec
 
     func test_rawRepKey_roundTripAndUnknownRawFallsBackToDefault() {
-        let key = SettingsKey<InputMode>.rawRep("rawRepKey", default: .tl)
+        let key: SettingsKey<InputMode> = .rawRep("rawRepKey", default: .tl)
         XCTAssertEqual(defaults.value(for: key), .tl)
         defaults.set(InputMode.poj, for: key)
         XCTAssertEqual(defaults.value(for: key), .poj)
@@ -102,7 +102,7 @@ final class SettingsKeyTests: XCTestCase {
     // MARK: - Codable codec
 
     func test_codableKey_roundTripAndCorruptedDataFallsBackToDefault() {
-        let key = SettingsKey<KeyboardColorSettings>.codable("codableKey", default: .default)
+        let key: SettingsKey<KeyboardColorSettings> = .codable("codableKey", default: .default)
         XCTAssertEqual(defaults.value(for: key), .default)
 
         // Writing a non-default value round-trips through JSON.

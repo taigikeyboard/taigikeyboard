@@ -12,7 +12,7 @@ import Foundation
 /// - interprets the returned `NextWordDecideResult.Effect` list against
 ///   platform resources (Timer, SQLite service, main-thread UI callbacks),
 /// - caches `lastSelectedWord` / `isShowing` echoed back from the engine for
-///   sync read access by `ActionHandler` / `AutocompleteService`,
+///   sync read access by `ActionHandler` / `TaigiAutocompleteService`,
 /// - pushes UI visibility back into the engine via `nextwordSetIsShowing`
 ///   after async predict() results render.
 ///

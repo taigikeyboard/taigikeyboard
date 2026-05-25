@@ -23,7 +23,7 @@ ActionHandler (event dispatch)
     ↓
 ComposingManager (rawInput / composingText)
     ↓
-AutocompleteService (candidate search)
+TaigiAutocompleteService (candidate search)
     ↓
 CandidateView (candidate display)
     ↓
@@ -70,7 +70,7 @@ Text output
 
 ## Phase 3: Candidate Search
 
-### AutocompleteService
+### TaigiAutocompleteService
 
 1. Get `rawInput` (for search) from the composing engine snapshot.
 2. `RustEngineBridge.classifyInput(rawInput)` → `(input_type, search_key)` (Rust `lexicon::classify_input`).
@@ -143,7 +143,7 @@ Text output
 | Input dispatch | `ActionHandler.swift` + extensions | `TextInputManager.kt` | — |
 | Composing engine | (Rust) | (Rust) | `engine/composing` |
 | Composing wrapper | `ComposingManager.swift` + `ComposingDelegate.swift` | `ComposingManager.kt` + `ComposingDelegate.kt` | — |
-| Autocomplete / classify + search | `AutocompleteService.swift` (engine-only post v3.5.8 Item 13 retire) | `TaigiAutocompleteService.kt`; `LexiconService.kt` retained for Tab3 `searchWithSources` / `searchByHanzi` only | `engine/lexicon` |
+| Autocomplete / classify + search | `TaigiAutocompleteService.swift` (engine-only post v3.5.8 Item 13 retire) | `TaigiAutocompleteService.kt`; `LexiconService.kt` retained for Tab3 `searchWithSources` / `searchByHanzi` only | `engine/lexicon` |
 | Ranking | (calls `processCandidates` via bridge) | (calls `processCandidates` via bridge) | `engine/ranking` |
 | Phonetics / case | (calls bridge) | (calls bridge) | `engine/phonetics`, `engine/case-transform` |
 | Display | `TaigiKeyboardView.swift`, `CandidateView.swift` | `SmartbarView.kt`, `CandidateAdapter.kt` | — |

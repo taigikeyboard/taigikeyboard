@@ -16,7 +16,7 @@ import org.junit.Test
  * source: an engine that returns no candidates yields an empty strip —
  * there is NO platform lexicon path and NO slot-0 composing-text cell.
  *
- * Mirrors iOS `AutocompleteServiceContinuousTests`
+ * Mirrors iOS `TaigiAutocompleteServiceContinuousTests`
  * `testAutocomplete_EmptyEngine_NoLexiconBranch_EmptyResult`.
  *
  * Pure JVM unit test — the slimmed [TaigiAutocompleteService] ctor only

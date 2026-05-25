@@ -20,7 +20,7 @@ import XCTest
 ///
 /// Boundary coverage: `RustEngineBridgeContinuousTests` pins the FFI
 /// contract; this file pins the `ComposingManager` observable-mirror +
-/// effect-dispatch wrapper. UI integration (AutocompleteService /
+/// effect-dispatch wrapper. UI integration (TaigiAutocompleteService /
 /// ActionHandler tap decode) is verified by Codex post-impl + manual
 /// dogfood — the wrappers are thin enough that mocking the keyboard
 /// extension context for unit tests is not cost-justified.
@@ -140,7 +140,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
     /// boost arithmetic is pinned in `engine/lexicon/tests/user_freq_plumb.rs`.
     ///
     /// On Idle the engine returns nil candidates → wrapper exposes []. The
-    /// caller (AutocompleteService) cannot distinguish "not Continuous" from
+    /// caller (TaigiAutocompleteService) cannot distinguish "not Continuous" from
     /// "Continuous but no FST hits" — both fall through to the lexicon path.
     func testFetchContinuousCandidates_FromIdle_ReturnsEmpty() {
         let candidates = manager.fetchContinuousCandidates()
@@ -180,13 +180,14 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
         let outcome = manager.commitContinuous(
             displayText: "台",
+            canonicalText: "台",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
         )
 
         XCTAssertTrue(manager.isComposing, "Mid-commit keeps Continuous active")
         XCTAssertEqual(manager.rawInput, "bak", "Pending tail remains after partial consume")
-        XCTAssertTrue(outcome.didCommit, "Mid-commit emits CommitTextReplacingPreedit")
+        XCTAssertTrue(outcome.didCommit, "Mid-commit success signal — Model B nail (NextWordUpdateLastSelectedWord)")
         XCTAssertFalse(outcome.didFinalCommit, "Mid-commit does not exit Continuous")
     }
 
@@ -198,6 +199,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
         let outcome = manager.commitContinuous(
             displayText: "台",
+            canonicalText: "台",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
         )
@@ -227,6 +229,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
         let outcome = manager.commitContinuous(
             displayText: "台",
+            canonicalText: "台",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
         )

@@ -1,5 +1,5 @@
 // 中文: Autocomplete 的依賴抽象層 — 把 ComposingManager / NextWordController / ActionHandler
-// 中文: 解耦,讓 AutocompleteService 不直接綁 KeyboardKit 控制器階層。
+// 中文: 解耦,讓 TaigiAutocompleteService 不直接綁 KeyboardKit 控制器階層。
 
 import Foundation
 

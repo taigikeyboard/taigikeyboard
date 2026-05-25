@@ -19,7 +19,7 @@ import org.junit.Test
  * (consumer) share via
  * [com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.additionalInfo].
  *
- * Mirrors iOS `AutocompleteServiceContinuousTests.swift`. If iOS / Android
+ * Mirrors iOS `TaigiAutocompleteServiceContinuousTests.swift`. If iOS / Android
  * disagree on these key strings, the platform tap path silently mis-aligns
  * `commitContinuous` consumed-byte offsets and corrupts the engine pending
  * buffer — invisible to the user until they hit a bad commit boundary.

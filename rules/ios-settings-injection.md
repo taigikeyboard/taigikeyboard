@@ -30,7 +30,7 @@ public protocol EngineSettingsProvider: AnyObject {
 
 ## 3. Why provider, not snapshot
 
-`KeyboardViewController`, `AutocompleteService`, `ComposingManager`, and several views rely on `UserDefaults.didChangeNotification` + lazy re-read of `SharedSettings.shared` to implement **live updates** — when the user changes a setting in the host app, the keyboard extension reflects it without being relaunched.
+`KeyboardViewController`, `TaigiAutocompleteService`, `ComposingManager`, and several views rely on `UserDefaults.didChangeNotification` + lazy re-read of `SharedSettings.shared` to implement **live updates** — when the user changes a setting in the host app, the keyboard extension reflects it without being relaunched.
 
 A one-shot snapshot injection (inject once at init, store the value) **breaks this invariant**: input mode switches, TPS toggles, enabled-dictionary toggles would stop propagating. `TaigiKeyboardView` today uses a per-render snapshot (it re-reads on every render cycle), which is a different pattern and remains safe.
 

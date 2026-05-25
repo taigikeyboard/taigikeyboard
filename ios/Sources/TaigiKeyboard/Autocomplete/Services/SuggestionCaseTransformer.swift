@@ -50,7 +50,7 @@ enum SuggestionCaseTransformer {
         // (`dispatch::recase_roman`, Model B). The legacy global-caps /
         // typed-prefix transform is invalid under Model B and would
         // clobber that, so bypass it for Continuous-flagged suggestions
-        // (flagged at AutocompleteService.swift `buildContinuousSuggestions`).
+        // (flagged at TaigiAutocompleteService.swift `buildContinuousSuggestions`).
         // 中文: §10.2 Opt 2A — Continuous 候選已由引擎依使用者 raw 逐段 case,
         // 中文: legacy 全域大寫轉換在 Model B 下無效,故跳過不再覆寫。
         // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/SuggestionCaseTransformer.kt IS_CONTINUOUS skip.

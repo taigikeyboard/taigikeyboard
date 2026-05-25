@@ -48,8 +48,8 @@ User expectation:
 
 | Path | Trigger | Cell shape | Source code |
 |---|---|---|---|
-| Lexicon (legacy) | Continuous returns empty OR `continuousFetcher == nil` | dual-line | iOS `convertToSuggestions` ([`AutocompleteService.swift:309-322`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift)) / Android `autocomplete` lexicon branch ([`TaigiAutocompleteService.kt:88-124`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)) |
-| Continuous (Phase 7B/8) | `Phase::Continuous` active + non-empty `ContinuousResponse.candidates` | single-line | iOS `buildContinuousSuggestions` ([`AutocompleteService.swift:273-292`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift)) / Android `buildContinuousSuggestionsForCandidates` ([`TaigiAutocompleteService.kt:228-253`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)) |
+| Lexicon (legacy — retired v3.5.8 Item 13) | Continuous returns empty OR `continuousFetcher == nil` | dual-line | iOS `convertToSuggestions` / Android `autocomplete` lexicon branch (both deleted; see §15.4) |
+| Continuous (Phase 7B/8) | `Phase::Continuous` active + non-empty `ContinuousResponse.candidates` | single-line | iOS `buildContinuousSuggestions` ([`TaigiAutocompleteService.swift:273-292`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift)) / Android `buildContinuousSuggestionsForCandidates` ([`TaigiAutocompleteService.kt:228-253`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)) |
 
 ### 2.2 Where the roman/hanji split is lost
 
@@ -134,7 +134,7 @@ Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/ma
 
 ### 3.1 Within one `autocomplete()` call — mutually exclusive
 
-iOS [`AutocompleteService.swift:129-138`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift):
+iOS (pre-Item-13 snapshot — the fall-through to lexicon path was deleted; see §15.4):
 
 ```swift
 if let fetcher = continuousFetcher {
@@ -166,7 +166,7 @@ Each toggle flips the strip's cell shape, producing the user-observed "交錯" a
 
 Slot-0 (`isComposingText`, lexicon path only) is ALWAYS single-line:
 
-- iOS `createComposingTextSuggestion` ([`AutocompleteService.swift`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift)): `subtitle: nil`
+- iOS `createComposingTextSuggestion` (pre-Item-13 — slot-0 cell deleted): `subtitle: nil`
 - Android `createComposingTextCell` ([`TaigiAutocompleteService.kt`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)): `hanzi = null`
 
 This is **correct** — pending preedit has no hanji yet to display. But when slots 1..n switch to dual-line (lexicon path), slot-0's single-line stands out, amplifying the inconsistency.
@@ -270,7 +270,7 @@ public struct ContinuousCandidate: Equatable {
 ```
 
 ```swift
-// ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift
+// ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
 // Post-Item 4 baseline: signature has no `composingText:` param and no
 // `createComposingTextSuggestion` insert (slot 0 == candidate[0] per
 // `continuous-input-ranking.md` §10.1.2). The `← was:` markers below show
@@ -439,7 +439,7 @@ proto3 additive change — new fields default to empty when absent.
 |---|---|---|
 | `decodeContinuousCandidate_carriesRoman` | `ios/Tests/TaigiKeyboardTests/Engine/RustEngineBridgeContinuousTests.swift` | proto wire with `roman = "tsua"` → `ContinuousCandidate.roman == "tsua"` |
 | `decodeContinuousCandidate_carriesHanjiAsOptional` | same | proto wire with `hanji = "珠"` → `.hanji == "珠"`; absent → `.hanji == nil` |
-| `buildContinuousSuggestions_emitsDualLineForHant` | `AutocompleteServiceContinuousTests.swift` (new) | HANT candidate → `Suggestion(title: roman, subtitle: hanji)` |
+| `buildContinuousSuggestions_emitsDualLineForHant` | `TaigiAutocompleteServiceContinuousTests.swift` (new) | HANT candidate → `Suggestion(title: roman, subtitle: hanji)` |
 | `buildContinuousSuggestions_emitsSingleLineForTailo` | same | TAILO candidate → `Suggestion(subtitle: nil)` |
 
 ### 8.4 Android bridge tests
@@ -590,7 +590,7 @@ Per [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.m
 | 2. Rust `RawCandidate` + `record_to_candidate` | `engine/lexicon/src/continuous.rs` | ~20 + 2 new unit tests |
 | 3. Rust `raw_to_proto_candidate` | `engine/composing/src/dispatch.rs` | ~5 + 1 propagation test |
 | 4. iOS `ContinuousCandidate` + decode | `ios/.../Engine/RustEngineBridge.swift` (struct + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
-| 5. iOS `buildContinuousSuggestions` | `ios/.../Autocomplete/Services/AutocompleteService.swift` | ~5 + 2 service-level tests |
+| 5. iOS `buildContinuousSuggestions` | `ios/.../Autocomplete/Services/TaigiAutocompleteService.swift` | ~5 + 2 service-level tests |
 | 6. Android `ContinuousCandidate` + decode | `android/.../engine/RustEngineBridge.kt` (data class + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
 | 7. Android `buildContinuousSuggestionsForCandidates` | `android/.../ime/text/composing/TaigiAutocompleteService.kt` | ~5 + extend existing `ContinuousSuggestionsContractTest.kt` |
 | 8. Defensive read fallback | iOS + Android `if roman.isEmpty()` paths | ~6 |
@@ -658,7 +658,7 @@ All engine coverage gaps closed by Items 7–12; **Item 13 (capstone) then retir
 After §15.3 landed, both platforms collapsed to a single path:
 
 ```swift
-// iOS — AutocompleteService.swift autocomplete(_:)
+// iOS — TaigiAutocompleteService.swift autocomplete(_:)
 func autocomplete(_ text: String) async throws -> Autocomplete.Result {
     guard !text.isEmpty, let composing = activeComposingContext() else {
         return Autocomplete.Result(inputText: text, suggestions: [])
@@ -739,7 +739,7 @@ struct SortKey {
 | `poj_diacritic_canonicalize` | same | `Phase::Continuous` + `raw = "pe̍h"` → canonicalized to `pek` → `tl:pek` key → expected hits |
 | `hanzi_guard_in_engine` | `engine/composing/src/dispatch.rs` (mod test) | `raw = "我好"` (CJK chars) → `FetchAtPos` returns empty `ContinuousResponse` (carrier present, candidates empty) |
 | `sort_key_partial_below_full` | `engine/lexicon/src/continuous.rs` (mod sort_key_tests) | Construct two `RawCandidate` — one with `coverage_kind = 0` lowest freq, one with `coverage_kind = 1` highest freq — assert full-syllable wins |
-| `platform_autocomplete_no_lexicon_branch` | iOS `AutocompleteServiceContinuousTests.swift::testAutocomplete_EmptyEngine_NoLexiconBranch_EmptyResult` / Android `TaigiAutocompleteServiceTest.kt` | Mock `continuousFetcher` returning empty → `autocomplete` result is **empty `[]`** (no slot-0 composing cell, no lexicon path — the path no longer exists). Plus a positive control: non-empty engine result passes through 1:1 with `isContinuous` set and no `isComposingText`. |
+| `platform_autocomplete_no_lexicon_branch` | iOS `TaigiAutocompleteServiceContinuousTests.swift::testAutocomplete_EmptyEngine_NoLexiconBranch_EmptyResult` / Android `TaigiAutocompleteServiceTest.kt` | Mock `continuousFetcher` returning empty → `autocomplete` result is **empty `[]`** (no slot-0 composing cell, no lexicon path — the path no longer exists). Plus a positive control: non-empty engine result passes through 1:1 with `isContinuous` set and no `isComposingText`. |
 
 ### 15.7 Open Questions for Codex Pre-Impl Consult — RESOLVED
 

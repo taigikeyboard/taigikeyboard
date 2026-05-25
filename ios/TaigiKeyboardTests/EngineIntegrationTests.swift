@@ -38,10 +38,11 @@ final class EngineIntegrationTests: XCTestCase {
     // MARK: - B. Tone Mark Round-Trip (POJ mode cross-component)
 
     func testToneMarkRoundTrip_pojMode() {
-        let marked = TaigiPhonetics.convertSyllable("ka2", mode: .poj)
+        let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+        let marked = RustEngineBridge.normalizeTone("ka2", mode: .poj, toggles: toggles)
         XCTAssertEqual(marked, "k\u{00E1}") // ká (same for simple vowel)
 
-        let restored = ToneRestoration.restore(marked, mode: .poj)
+        let restored = RustEngineBridge.restoreTone(marked)
         XCTAssertEqual(restored, "ka")
     }
 }

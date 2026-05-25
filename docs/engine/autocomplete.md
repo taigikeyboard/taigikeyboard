@@ -84,7 +84,7 @@ Index 2: candidate 2 (e.g., 瓜)
 | Lexicon search | Rust `engine/lexicon::search` (fst lookup + DictionaryReader) |
 | Candidate dedup / score / sort | Rust `engine/ranking::process_candidates` |
 | Per-suggestion case transform | Rust `engine/phonetics::case_transform::transform_suggestion` |
-| Platform service (iOS) | `Autocomplete/Services/AutocompleteService.swift` (engine-only after Item 13; `AutocompleteInputClassifier.swift` deleted) |
+| Platform service (iOS) | `Autocomplete/Services/TaigiAutocompleteService.swift` (engine-only after Item 13; `AutocompleteInputClassifier.swift` deleted) |
 | Platform service (Android) | `ime/text/composing/TaigiAutocompleteService.kt` (engine-only after Item 13; `AutocompleteInputClassifier.kt` deleted) |
 | Trigger (iOS) | `autocompleteText` KeyboardKit property |
 | Trigger (Android) | `SmartbarManager.getSuggestions()` direct call |

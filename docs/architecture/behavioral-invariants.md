@@ -468,7 +468,7 @@ Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion
 ### Tests
 
 - **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers all four subcases (28 tests).
-- **iOS** — bridge round-trip exercised through `AutocompleteService.classify` end-to-end on real keystrokes; future explicit invariant test deferred (no `androidTest`-equivalent infra change in this PR).
+- **iOS** — bridge round-trip exercised through `RustEngineBridge.classifyInput` (called by `TaigiAutocompleteService` continuous path) end-to-end on real keystrokes; future explicit invariant test deferred.
 - **Android** — same posture as iOS; `LexiconBridge.classifyInput` tested via `TaigiAutocompleteService` end-to-end on real device.
 
 ---

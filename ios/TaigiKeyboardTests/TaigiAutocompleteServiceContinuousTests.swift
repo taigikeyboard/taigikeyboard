@@ -3,7 +3,7 @@ import KeyboardKit
 import XCTest
 
 /// v3.5.8 Phase 9 Item 4 — pins the Continuous-input suggestion-emission
-/// contract that `AutocompleteService.buildContinuousSuggestions` (producer)
+/// contract that `TaigiAutocompleteService.buildContinuousSuggestions` (producer)
 /// and `ActionHandler+Suggestions.handleSuggestionSelection` (consumer)
 /// share via `Autocomplete.Suggestion.additionalInfo`.
 ///
@@ -22,9 +22,9 @@ import XCTest
 /// `buildContinuousSuggestions(from:)` helper (accessed via `@testable`).
 /// Full `ActionHandler` tap-decode tests require mocking
 /// `KeyboardContext` / `composingManager` and are deferred.
-final class AutocompleteServiceContinuousTests: XCTestCase {
+final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
 
-    private var service: AutocompleteService!
+    private var service: TaigiAutocompleteService!
 
     override class func setUp() {
         super.setUp()
@@ -33,7 +33,7 @@ final class AutocompleteServiceContinuousTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        service = AutocompleteService()
+        service = TaigiAutocompleteService()
     }
 
     override func tearDown() {

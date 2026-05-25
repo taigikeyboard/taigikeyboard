@@ -61,14 +61,14 @@ Pure state machine lives in `engine/composing` (Rust). Platform side holds the e
 | Platform wrapper | `ComposingManager.swift` | `ComposingManager.kt` |
 | Effect interpreter | `ComposingDelegate.swift` | `ComposingDelegate.kt` |
 | Caps state | (KeyboardKit managed) | `CapsStateManager.kt` |
-| Candidate coordinator | (inline in AutocompleteService) | `CandidateUpdateCoordinator.kt` |
+| Candidate coordinator | (inline in TaigiAutocompleteService) | `CandidateUpdateCoordinator.kt` |
 
 ### Autocomplete
 
 | Function | iOS | Android |
 |----------|-----|---------|
 | Input classifier | (Rust `engine/lexicon::classify_input`; platform shells deleted v3.5.8 Item 13) | (Rust; shell deleted) |
-| Taigi autocomplete | `AutocompleteService.swift` (engine-only) | `TaigiAutocompleteService.kt` (engine-only) |
+| Taigi autocomplete | `TaigiAutocompleteService.swift` (engine-only) | `TaigiAutocompleteService.kt` (engine-only) |
 | English autocomplete | `EnglishAutocompleteService.swift` | `EnglishAutocompleteService.kt` |
 | Candidate View | `CandidateView.swift` | `SmartbarView.kt` |
 | Candidate Adapter | - | `CandidateAdapter.kt` |
@@ -221,7 +221,7 @@ TaigiKeyboard/
 │       └── Settings/    # Settings tab
 ├── Autocomplete/    # Autocomplete + classifier glue
 │   ├── Models/      # CandidateViewModels, SymbolData
-│   ├── Services/    # AutocompleteService, AutocompleteInputClassifier, AutocompleteProviders
+│   ├── Services/    # TaigiAutocompleteService, EnglishAutocompleteService, AutocompleteProviders, SuggestionCaseTransformer
 │   └── Views/       # CandidateView, overlays (Layout/Symbol/Settings)
 ├── Callouts/        # Long-press menus
 ├── Logging/         # LoggerBackend protocol + LoggerFactory
