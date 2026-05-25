@@ -25,13 +25,19 @@ from pathlib import Path
 import pandas as pd
 
 from build.common import BASE_DIR, LOG_DIR
-from common.abbrev import extract_abbrev
+from common.abbrev import extract_abbrev, extract_tps_abbrev
 from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
-from common.notone import remove_tone
+from common.notone import remove_tone, remove_tps_tone
 from common.romanization import to_numeric_tone
 from common.source_bits import MAIN_SOURCE_COLUMNS
-from common.taigi_bridge import convert_poj_to_tl_strict, convert_tl_to_poj_strict
+from common.taigi_bridge import (
+    BridgeDeadError,
+    TpsResidueError,
+    convert_poj_to_tl_strict,
+    convert_tl_to_poj_strict,
+    convert_tl_to_tps_strict,
+)
 from common import read_dictionary_csv
 
 INPUT_FILES = [
@@ -217,13 +223,40 @@ def _assemble_supplement_row(
 
     Callers resolve the TL↔POJ direction themselves (khiin starts from POJ,
     dev/lkk start from TL) and pass both strings in normalised form (lowercase,
-    hyphens). This helper derives `tl_num`, `poj_num`, `tl_notone`,
-    `poj_notone`, `tl_abbrev`, `poj_abbrev` and packs everything into a row
-    dict together with the 9 `MAIN_SOURCE_COLUMNS` flags (all False by
-    default). Extra flags like `dev` / `lkk` come in via `source_flags`.
+    hyphens). This helper derives `tl_num` / `poj_num` / `tps_num`,
+    `tl_notone` / `poj_notone` / `tps_notone`, `tl_abbrev` / `poj_abbrev` /
+    `tps_abbrev` and packs everything into a row dict together with the 9
+    `MAIN_SOURCE_COLUMNS` flags (all False by default). Extra flags like
+    `dev` / `lkk` come in via `source_flags`.
     """
     tl_num = to_numeric_tone(tl)
     poj_num = to_numeric_tone(poj, ascii_only=True)
+    # `taigi-converter` joins per-syllable TPS with ASCII space; FST keys
+    # and user input use the fused form, so strip whitespace here. A
+    # TL row carrying a dialectal char without a Bopomofo equivalent
+    # (e.g. `sṳ`) raises `TpsResidueError` in the strict bridge — fall
+    # back to empty TPS columns so the supplement row still lands in
+    # the CSV (the tl: / poj: indices stay intact even when tps:
+    # cannot be derived). `BridgeDeadError` (Node subprocess death)
+    # propagates so a dead bridge aborts the build (Codex PR #334
+    # review).
+    if tl:
+        try:
+            tps_num = convert_tl_to_tps_strict(tl).replace(" ", "")
+        except TpsResidueError:
+            tps_num = ""
+    else:
+        tps_num = ""
+
+    tl_syllables = [s for s in tl.replace(" ", "-").split("-") if s] if tl else []
+    if len(tl_syllables) >= 2:
+        try:
+            tps_per_syllable = [convert_tl_to_tps_strict(s) for s in tl_syllables]
+        except TpsResidueError:
+            tps_per_syllable = []
+        tps_abbrev = extract_tps_abbrev(tl, tps_per_syllable) if tps_per_syllable else ""
+    else:
+        tps_abbrev = ""
 
     flags = {col: False for col in SOURCE_COLUMNS}
     if source_flags:
@@ -236,10 +269,13 @@ def _assemble_supplement_row(
         "poj": poj,
         "tl_num": tl_num,
         "poj_num": poj_num,
+        "tps_num": tps_num,
         "tl_notone": remove_tone(tl_num),
         "poj_notone": remove_tone(poj_num),
+        "tps_notone": remove_tps_tone(tps_num),
         "tl_abbrev": extract_abbrev(tl),
         "poj_abbrev": extract_abbrev(poj),
+        "tps_abbrev": tps_abbrev,
         "is_variant": is_variant,
         **flags,
     }
@@ -298,6 +334,11 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
             # Without this, khiin's idiosyncratic POJ encodings (e.g.,
             # `hoonn` → `hò͘ⁿ` instead of standard `hòⁿ`) trip the audit.
             poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
+        except BridgeDeadError:
+            # Node subprocess died mid-IPC — fail loud, do NOT
+            # continue iterating with a dead bridge (Codex PR #334
+            # review).
+            raise
         except Exception:
             continue
 
@@ -316,6 +357,11 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
                     poj=poj,
                     frequency=get_frequency(hanzi, tl, freq_map),
                 ))
+            except BridgeDeadError:
+                # _assemble_supplement_row also invokes the bridge
+                # (for tps_num + per-syllable tps_abbrev) — bridge
+                # death there must propagate too.
+                raise
             except Exception:
                 continue
             existing_keys.add((hanzi, tl))
@@ -368,6 +414,10 @@ def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: Path, logger) -> p
         try:
             tl = tl_key
             poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
+        except BridgeDeadError:
+            # Node subprocess died mid-IPC — fail loud (Codex PR #334
+            # review).
+            raise
         except Exception as e:
             logger.warning(f"  [dev] romanization failed for {hanzi}/{tl_raw}: {e}")
             continue
@@ -445,6 +495,10 @@ def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -> pd.D
         try:
             tl = tl_key
             poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
+        except BridgeDeadError:
+            # Node subprocess died mid-IPC — fail loud (Codex PR #334
+            # review).
+            raise
         except Exception as e:
             logger.warning(f"  [lkk] romanization failed for {hanzi}/{tl_raw}: {e}")
             continue

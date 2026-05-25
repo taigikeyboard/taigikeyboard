@@ -31,6 +31,7 @@ REQUIRED_COLUMNS = (
     "hanzi", "tl", "frequency",
     "tl_num", "tl_notone", "tl_abbrev",
     "poj_num", "poj_notone", "poj_abbrev",
+    "tps_num", "tps_notone", "tps_abbrev",
     *DICT_BIN_COLUMNS,
 )
 
@@ -54,6 +55,9 @@ class DictionaryRecord:
     poj_num: str | None
     poj_notone: str | None
     poj_abbrev: str | None
+    tps_num: str | None
+    tps_notone: str | None
+    tps_abbrev: str | None
     sources: tuple[tuple[str, bool], ...]
     # Number of TL syllables in `tl`, computed from hyphen / space count
     # (see `_syllable_count`). Always 1..=MAX_SYLLABLES — out-of-range rows
@@ -123,6 +127,9 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
             poj_num=_normalise_optional(row["poj_num"]),
             poj_notone=_normalise_optional(row["poj_notone"]),
             poj_abbrev=_normalise_optional(row["poj_abbrev"]),
+            tps_num=_normalise_optional(row["tps_num"]),
+            tps_notone=_normalise_optional(row["tps_notone"]),
+            tps_abbrev=_normalise_optional(row["tps_abbrev"]),
             sources=sources,
             syllable_count=syllable_count,
         ))

@@ -2,8 +2,40 @@
 
 from __future__ import annotations
 
+import re
+
+import pandas as pd
+
 from pipeline.context import PipelineContext
-from common.abbrev import extract_abbrev
+from common.abbrev import extract_abbrev, extract_tps_abbrev
+from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict
+
+
+def _derive_tps_abbrev(tl: str) -> str:
+    """Per-syllable TPS first-char concatenation; "" for <2 syllables.
+
+    Calls the `taigi-converter` bridge once per TL syllable so each
+    TPS syllable starts at its true initial / vowel glyph (fused
+    `tps_num` loses the boundary for tone-1 syllables, which carry no
+    Bopomofo tone mark).
+    """
+    if not tl or pd.isna(tl):
+        return ""
+    syllables = [s for s in re.split(r"[-\s]+", str(tl)) if s]
+    if len(syllables) < 2:
+        return ""
+    tps_per_syllable: list[str] = []
+    for syllable in syllables:
+        try:
+            tps_per_syllable.append(convert_tl_to_tps_strict(syllable))
+        except TpsResidueError:
+            # Per-row residue / JS-side conversion failure → skip
+            # abbrev for this row. `BridgeDeadError` (subprocess
+            # death) is a sibling RuntimeError subclass — NOT
+            # `TpsResidueError` — so it propagates and aborts the
+            # build (Codex PR #334 review).
+            return ""
+    return extract_tps_abbrev(str(tl), tps_per_syllable)
 
 
 def run(ctx: PipelineContext) -> None:
@@ -11,4 +43,5 @@ def run(ctx: PipelineContext) -> None:
     df = df.copy()
     df["tl_abbrev"] = df["tl"].apply(extract_abbrev)
     df["poj_abbrev"] = df["poj"].apply(extract_abbrev)
+    df["tps_abbrev"] = df["tl"].apply(_derive_tps_abbrev)
     ctx.set_df(df)

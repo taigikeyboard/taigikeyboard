@@ -13,6 +13,9 @@ Key 格式（前綴式）：
 - poj:<poj_notone>：POJ 去調 fused（如 poj:hoose）
 - tl:<tl_abbrev>：TL 縮寫（如 tl:hs）
 - poj:<poj_abbrev>：POJ 縮寫（如 poj:hs）
+- tps:<tps_num>：TPS Bopomofo + 聲調符號（如 tps:ㄏㆦ˫ㄙㆤ˪）
+- tps:<tps_notone>：TPS 去調 fused（如 tps:ㄏㆦㄙㆤ）
+- tps:<tps_abbrev>：TPS 縮寫（如 tps:ㄏㄙ）
 - hanzi:<hanzi>：漢字前綴搜尋（如 hanzi:好無）
 
 Fused-toneless invariant — `tl_notone` / `poj_notone` are produced
@@ -116,11 +119,15 @@ def collect_pairs(logger) -> list[tuple[str, int]]:
         rowid = record.rowid
         # Romanization-key filter (mirrors original trie.db JOIN: tl_num
         # non-empty + syllables <= 4). All three TL variants share the
-        # tl_num gate; same for POJ.
+        # tl_num gate; same for POJ; TPS gated by the same TL syllable
+        # count (TPS forms are derived from the same TL source row).
         if record.tl_num and _tl_num_syllable_count(record.tl_num) <= MAX_SYLLABLES_TL_NUM:
             for val in (record.tl_num, record.tl_notone, record.tl_abbrev):
                 if val:
                     add(f"tl:{val}", rowid)
+            for val in (record.tps_num, record.tps_notone, record.tps_abbrev):
+                if val:
+                    add(f"tps:{val}", rowid)
         if record.poj_num and _tl_num_syllable_count(record.poj_num) <= MAX_SYLLABLES_TL_NUM:
             for val in (record.poj_num, record.poj_notone, record.poj_abbrev):
                 if val:

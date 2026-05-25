@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
 import unicodedata
 from pathlib import Path
@@ -103,16 +104,37 @@ class TaigiConverter:
             return None
 
     def _call(self, op: str, **kwargs: Any) -> dict:
+        """Send one JSON-line request to the Node subprocess, read one line.
+
+        Every IPC failure surfaces as `BridgeDeadError` so callers can
+        catch a single class to detect "the bridge is dead, abort the
+        build" — covers stdin pipe death (`OSError` / `BrokenPipeError`),
+        unexpected EOF from stdout, and malformed JSON output. Codex
+        PR #334 post-impl review #2 caught the original raise that
+        only covered the EOF case.
+        """
         self._ensure_started()
         assert self._process is not None and self._process.stdin is not None
         assert self._process.stdout is not None
         request = {"op": op, **kwargs}
-        self._process.stdin.write(json.dumps(request, ensure_ascii=False) + "\n")
-        self._process.stdin.flush()
-        line = self._process.stdout.readline()
+        try:
+            self._process.stdin.write(json.dumps(request, ensure_ascii=False) + "\n")
+            self._process.stdin.flush()
+            line = self._process.stdout.readline()
+        except OSError as exc:
+            raise BridgeDeadError(
+                f"taigi-converter IPC pipe failed: {exc}"
+            ) from exc
         if not line:
-            raise RuntimeError("taigi-converter subprocess closed unexpectedly")
-        return json.loads(line)
+            raise BridgeDeadError(
+                "taigi-converter subprocess closed unexpectedly"
+            )
+        try:
+            return json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise BridgeDeadError(
+                f"taigi-converter emitted malformed JSON: {exc} (raw: {line!r})"
+            ) from exc
 
     def convert(self, text: str, source: str, target: str) -> str:
         """Convert between romanization systems (tl, poj)."""
@@ -187,6 +209,94 @@ def convert_tl_to_poj_strict(tl: str) -> str:
 def convert_poj_to_tl_strict(poj: str) -> str:
     """Convert POJ → TL. Raises RuntimeError on subprocess / JS failure."""
     return _convert_strict(poj, "poj", "tl")
+
+
+# Residue after TL→TPS conversion = converter silently dropped a syllable
+# boundary (e.g. fused `tai5gi2` only converts `tai5` and leaves `gi2`) OR
+# the TL contained dialectal characters with no Bopomofo equivalent
+# (e.g. `ṳ` U+1E73, used in some Hokkien sub-dialects). Codex pre-impl
+# C-0 Q3: strict bridge must fail rather than ship mixed-shape TPS.
+# Allowed code points:
+#   - Bopomofo (U+3100–U+312F) + Bopomofo Extended (U+31A0–U+31BF)
+#   - Tone marks: U+02C6 ˆ, U+02C7 ˇ, U+02CA ́, U+02CB ̀, U+02D9 ˙,
+#     U+02EA ˪, U+02EB ˫, U+0307 combining dot
+#   - Whitespace + hyphen (converter joins per-syllable with space;
+#     callers strip both before storing)
+_TPS_RESIDUE_RE = re.compile(
+    "[^㄀-ㄯㆠ-ㆿˆˇˊˋ˙˪˫̇\\s\\-]"
+)
+
+
+class TpsResidueError(RuntimeError):
+    """Per-row TL→TPS residue failure — recoverable by skipping the row.
+
+    Distinguished from bare `RuntimeError` so callers can narrow their
+    `except` to per-row residue without also swallowing bridge / IPC
+    death (which now raises `BridgeDeadError`). Codex PR #334 review
+    caught the original catch-too-wide pattern that silently let a
+    mid-build bridge death ship a partially-truncated TPS index.
+    """
+    pass
+
+
+class BridgeDeadError(RuntimeError):
+    """Node subprocess closed unexpectedly mid-IPC — fail loud.
+
+    Raised by `_call` when `stdout.readline()` returns an empty
+    string (process exited). Distinguished from bare `RuntimeError`
+    (per-row JS-side conversion errors) and `TpsResidueError`
+    (per-row residue) so callers can `except BridgeDeadError: raise`
+    before any broader `except Exception` block that would otherwise
+    silently swallow it. Codex PR #334 post-impl review flagged the
+    pre-existing supplement-loader broad catches as a complementary
+    failure mode: bridge death raised from any `_strict` call inside
+    `_assemble_supplement_row` would be swallowed by the loader's
+    `except Exception: continue`, producing a partial CSV.
+    """
+    pass
+
+
+def convert_tl_to_tps_strict(tl: str) -> str:
+    """Convert hyphen/space-separated TL → per-syllable-space-separated TPS.
+
+    Output is `taigi-converter`'s per-syllable join (one syllable per
+    hyphenated TL token, separated by ASCII space). Most callers fuse
+    with `.replace(" ", "")` before storing in `tps_num` / FST keys
+    (FST keys + user input have no separator).
+
+    Raises:
+      - `TpsResidueError` (recoverable, per-row): non-Bopomofo residue
+        in the converted output (malformed TL that broke per-syllable
+        splitting in `taigi-converter/src/converter.js:20-30`, or a
+        dialectal source-data character with no Bopomofo equivalent,
+        e.g. `ṳ`), or JS-side `error` / null result on this specific
+        TL token. Callers catch this subclass to skip the row.
+      - `BridgeDeadError` (fail-loud, non-recoverable): Node
+        subprocess died mid-IPC (closed stdout, broken pipe, or
+        malformed JSON output). Callers MUST NOT catch — a dead
+        bridge at build time must abort the whole `make dict` run.
+
+    Callers feed the hyphenated `tl` column, NOT the fused `tl_num`.
+    """
+    try:
+        converted = _convert_strict(tl, "tl", "zhuyin")
+    except BridgeDeadError:
+        # Fail loud — propagate.
+        raise
+    except RuntimeError as exc:
+        # JS-side per-row conversion failure (`_convert_strict` raises
+        # bare RuntimeError for the JS `error` field or null result).
+        # Unify with residue rejection under `TpsResidueError` so
+        # callers have ONE recoverable class to catch.
+        raise TpsResidueError(
+            f"taigi-converter tl→zhuyin failed for {tl!r}: {exc}"
+        ) from exc
+    if _TPS_RESIDUE_RE.search(converted):
+        raise TpsResidueError(
+            f"taigi-converter tl→zhuyin produced non-Bopomofo residue: {tl!r} → {converted!r} "
+            f"— check for dialectal source chars or pass hyphenated TL, not fused tl_num"
+        )
+    return converted
 
 
 def to_tone_number(text: str) -> str:

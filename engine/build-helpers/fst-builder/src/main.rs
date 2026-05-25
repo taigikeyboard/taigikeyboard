@@ -7,10 +7,11 @@
 //!   build <output.fst>
 //!     reads stdin TL\tkey\trowid pairs, writes fst
 //!
-//!   build-syllables <output.fst> --tl-input <path> --poj-input <path>
-//!     reads canonical `tl_num` / `poj_num` lines from two separate
-//!     paths, emits the v3.5.9 B-1 tagged-single-FST syllable
-//!     inventory (`tl:` + `poj:` families in one fst::Set)
+//!   build-syllables <output.fst> --tl-input <path> --poj-input <path> --tps-input <path>
+//!     reads canonical `tl_num` / `poj_num` lines from two paths and
+//!     one TPS syllable per line from a third, emits the v3.5.9 D / C-0
+//!     tagged-single-FST syllable inventory (`tl:` + `poj:` + `tps:`
+//!     families in one fst::Set)
 //!
 //!   query <input.fst> <prefix>
 //!     list keys + rowids whose key has prefix
@@ -26,9 +27,10 @@ use std::process::ExitCode;
 const USAGE: &str = "\
 fst-builder build <output.fst>
     (reads stdin: TL\\tkey\\trowid lines)
-fst-builder build-syllables <output.fst> --tl-input <path> --poj-input <path>
-    (reads tl_num lines from --tl-input, poj_num lines from --poj-input;
-     emits tagged-single-FST with tl:/poj: key prefixes)
+fst-builder build-syllables <output.fst> --tl-input <path> --poj-input <path> --tps-input <path>
+    (reads tl_num lines from --tl-input, poj_num lines from --poj-input,
+     one TPS syllable per line from --tps-input; emits tagged-single-FST
+     with tl:/poj:/tps: key prefixes)
 fst-builder query <input.fst> <prefix>
     (lists keys + rowids matching prefix)";
 
@@ -50,15 +52,17 @@ fn main() -> ExitCode {
             }
         },
         "build-syllables" => match parse_build_syllables(&args[1..]) {
-            Ok((output, tl_input, poj_input)) => {
-                match syllables::run_build(output, tl_input, poj_input) {
+            Ok((output, tl_input, poj_input, tps_input)) => {
+                match syllables::run_build(output, tl_input, poj_input, tps_input) {
                     Ok(stats) => {
                         eprintln!(
                             "[fst-builder] built {} (tl_lines_in={}, poj_lines_in={}, \
-                             syllables={}, valid={}, invalid_skipped={}, distinct_keys={})",
+                             tps_lines_in={}, syllables={}, valid={}, invalid_skipped={}, \
+                             distinct_keys={})",
                             output,
                             stats.tl_lines_in,
                             stats.poj_lines_in,
+                            stats.tps_lines_in,
                             stats.syllables_extracted,
                             stats.valid_syllables,
                             stats.invalid_skipped,
@@ -93,17 +97,19 @@ fn main() -> ExitCode {
 }
 
 /// Parse the positional `<output.fst>` plus `--tl-input <path>` /
-/// `--poj-input <path>` flags from the `build-syllables` argument tail.
-/// Both flags are mandatory in v3.5.9 B-1 — the dictionary build
-/// pipeline always passes both. Order-insensitive across the three
-/// pieces (`output`, `--tl-input`, `--poj-input`); rejects duplicates,
+/// `--poj-input <path>` / `--tps-input <path>` flags from the
+/// `build-syllables` argument tail. All three flags are mandatory in
+/// v3.5.9 D / C-0 — the dictionary build pipeline always passes all
+/// three. Order-insensitive across the four pieces (`output`,
+/// `--tl-input`, `--poj-input`, `--tps-input`); rejects duplicates,
 /// unknown flags, and missing values.
-// 中文: 解析 build-syllables 的 <output.fst> + 兩個必填 input flag。三段順序自由,
+// 中文: 解析 build-syllables 的 <output.fst> + 三個必填 input flag。四段順序自由,
 // 中文:   重複、未知 flag、缺值都會回錯。
-fn parse_build_syllables(tail: &[String]) -> Result<(&str, &str, &str), String> {
+fn parse_build_syllables(tail: &[String]) -> Result<(&str, &str, &str, &str), String> {
     let mut output: Option<&str> = None;
     let mut tl_input: Option<&str> = None;
     let mut poj_input: Option<&str> = None;
+    let mut tps_input: Option<&str> = None;
 
     let mut iter = tail.iter().peekable();
     while let Some(arg) = iter.next() {
@@ -124,6 +130,14 @@ fn parse_build_syllables(tail: &[String]) -> Result<(&str, &str, &str), String> 
                     return Err("--poj-input passed more than once".to_string());
                 }
             }
+            "--tps-input" => {
+                let val = iter
+                    .next()
+                    .ok_or_else(|| "missing value for --tps-input".to_string())?;
+                if tps_input.replace(val.as_str()).is_some() {
+                    return Err("--tps-input passed more than once".to_string());
+                }
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown build-syllables flag `{}`", other));
             }
@@ -138,5 +152,6 @@ fn parse_build_syllables(tail: &[String]) -> Result<(&str, &str, &str), String> 
     let output = output.ok_or_else(|| "missing positional <output.fst>".to_string())?;
     let tl_input = tl_input.ok_or_else(|| "missing required --tl-input flag".to_string())?;
     let poj_input = poj_input.ok_or_else(|| "missing required --poj-input flag".to_string())?;
-    Ok((output, tl_input, poj_input))
+    let tps_input = tps_input.ok_or_else(|| "missing required --tps-input flag".to_string())?;
+    Ok((output, tl_input, poj_input, tps_input))
 }

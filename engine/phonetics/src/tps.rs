@@ -198,6 +198,86 @@ pub fn is_tps_initial(ch: char) -> bool {
     ZHUYIN_INITIALS.iter().any(|(_, tps)| tps.starts_with(ch))
 }
 
+/// Standalone TPS tone marks: `\u{02c6}` ˆ tone-9, `\u{02c7}` ˇ tone-6,
+/// `\u{02ca}` ́ tone-5, `\u{02cb}` ̀ tone-2, `\u{02d9}` ˙ encode-safe
+/// tone-8 dot, `\u{02ea}` ˪ tone-3, `\u{02eb}` ˫ tone-7, `\u{0307}`
+/// combining dot for tone-8. Stop codas (`\u{31b4-7,b}`) are part of the
+/// toneless syllable body, not tone marks proper — tone-4 stop syllables
+/// carry no trailing mark, tone-8 stops carry a trailing dot.
+// 中文: TPS 聲調符號集合;入聲韻尾本身屬音節主體,聲調 4 無尾標,聲調 8 在韻尾後加點。
+fn is_tps_tone_mark(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{02c6}'
+            | '\u{02c7}'
+            | '\u{02ca}'
+            | '\u{02cb}'
+            | '\u{02d9}'
+            | '\u{02ea}'
+            | '\u{02eb}'
+            | '\u{0307}'
+    )
+}
+
+/// Split a TPS syllable token into `(canonical_toneless, tone_mark)`.
+///
+/// Mirrors [`crate::canonicalize_syllable`] (TL) and
+/// [`crate::canonicalize_poj_syllable`] (POJ) for the TPS family of
+/// `syllables.fst`. The input is one TPS syllable already produced by
+/// the dictionary build pipeline (`convert(_, "tl", "zhuyin")`), so
+/// the phonotactic validity is guaranteed upstream by the TL CSV;
+/// this function only:
+///
+/// 1. rejects empty or non-Bopomofo inputs,
+/// 2. rejects any non-Bopomofo / non-tone-mark char in the body,
+/// 3. rejects internal tone marks (only the trailing char may be a
+///    tone — e.g. `ㄅˋˊ` is rejected),
+/// 4. splits the trailing tone mark off if present,
+/// 5. returns the toneless TPS body + the tone mark (empty for
+///    tone-1).
+///
+/// Returns `None` on any of the above rejection conditions.
+// 中文: 為 syllables.fst 的 TPS 家族切出 (toneless, tone);輸入由 Python 端透過
+// 中文:   `convert(_, "tl", "zhuyin")` 預先產生,音韻有效性上游已保證,此處
+// 中文:   再做 (1) 注音範圍守門 (2) 內部不准混入 ASCII 等非注音 (3) 聲調符號
+// 中文:   僅允許出現於末位 — 防呼叫端誤餵其他形態 token。
+pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
+    if token.is_empty() {
+        return None;
+    }
+    let chars: Vec<char> = token.chars().collect();
+    let first = *chars.first()?;
+    if !is_tps_char(first) {
+        return None;
+    }
+    let last = *chars.last()?;
+    let body_end = if is_tps_tone_mark(last) {
+        chars.len() - 1
+    } else {
+        chars.len()
+    };
+    if body_end == 0 {
+        return None;
+    }
+    // Body chars must all be Bopomofo — no ASCII letter / digit / stray
+    // tone marks inside. The trailing tone (if any) was already split
+    // off above.
+    for ch in &chars[..body_end] {
+        if !is_tps_char(*ch) {
+            return None;
+        }
+    }
+    let tone_len = if body_end < chars.len() {
+        last.len_utf8()
+    } else {
+        0
+    };
+    let toneless_len = token.len() - tone_len;
+    let toneless = &token[..toneless_len];
+    let tone = &token[toneless_len..];
+    Some((toneless.to_string(), tone.to_string()))
+}
+
 /// Convert a single TL token (with tone digit) to TPS.
 ///
 /// - `encode_safe = true` substitutes `\u{02d9}` for `\u{0307}` so TPS
@@ -452,5 +532,86 @@ mod tests {
     #[test]
     fn from_zhuyin_basic_round_trip() {
         assert_eq!(from_zhuyin("ㄉㄧㄠˊ"), "tiau5");
+    }
+
+    /// `canonicalize_tps_syllable` splits a trailing tone mark off a
+    /// well-formed TPS syllable. Pins the `(toneless, tone)` contract
+    /// consumed by `fst-builder build-syllables` Family::Tps.
+    #[test]
+    fn canonicalize_tps_splits_tone_mark() {
+        let cases: &[(&str, &str, &str)] = &[
+            ("\u{3110}\u{3127}\u{311b}\u{02cb}", "\u{3110}\u{3127}\u{311b}", "\u{02cb}"),
+            ("\u{310d}\u{3127}\u{02ca}", "\u{310d}\u{3127}", "\u{02ca}"),
+            ("\u{3105}\u{31a4}\u{02ea}", "\u{3105}\u{31a4}", "\u{02ea}"),
+        ];
+        for (input, want_toneless, want_tone) in cases {
+            let got = canonicalize_tps_syllable(input).expect("split");
+            assert_eq!(got.0, *want_toneless, "toneless mismatch for {input:?}");
+            assert_eq!(got.1, *want_tone, "tone mismatch for {input:?}");
+        }
+    }
+
+    /// Tone-1 syllables have no trailing mark (`to_zhuyin` emits the
+    /// table value `" "` then trimming downstream strips it). Canonical
+    /// shape: full input as toneless, empty tone.
+    #[test]
+    fn canonicalize_tps_tone_one_has_empty_tone() {
+        let got = canonicalize_tps_syllable("\u{3105}\u{31a4}").expect("split");
+        assert_eq!(got.0, "\u{3105}\u{31a4}");
+        assert_eq!(got.1, "");
+    }
+
+    /// Tone-8 entering tones use the combining dot `\u{0307}` after a
+    /// stop coda (`\u{31b4-7,b}`). The dot is the tone mark; the stop
+    /// stays with the toneless body.
+    #[test]
+    fn canonicalize_tps_tone_eight_keeps_stop_coda_with_toneless() {
+        let got = canonicalize_tps_syllable("\u{3105}\u{31a4}\u{31b5}\u{0307}").expect("split");
+        assert_eq!(got.0, "\u{3105}\u{31a4}\u{31b5}");
+        assert_eq!(got.1, "\u{0307}");
+    }
+
+    /// Encode-safe tone-8 variant uses `\u{02d9}` instead of `\u{0307}`.
+    /// Both must canonicalize through the same `(toneless, tone)` shape;
+    /// engine-side normalization to the canonical form is C-3b's job.
+    #[test]
+    fn canonicalize_tps_tone_eight_encode_safe_dot() {
+        let got = canonicalize_tps_syllable("\u{3105}\u{31a4}\u{31b5}\u{02d9}").expect("split");
+        assert_eq!(got.0, "\u{3105}\u{31a4}\u{31b5}");
+        assert_eq!(got.1, "\u{02d9}");
+    }
+
+    /// Non-Bopomofo input (e.g. accidental ASCII leak from upstream)
+    /// must reject — the FST builder's `valid_syllables > 0` gate
+    /// counts on this to fail loud if Python ever passes raw `tl_num`.
+    #[test]
+    fn canonicalize_tps_rejects_non_bopomofo_first_char() {
+        assert!(canonicalize_tps_syllable("tai5").is_none());
+        assert!(canonicalize_tps_syllable("").is_none());
+        assert!(canonicalize_tps_syllable("\u{02cb}").is_none());
+    }
+
+    /// ASCII chars mid-syllable (e.g. mixed-shape `ㄅa\u{02cb}`) must
+    /// reject — Codex post-impl Q4 hardening. The Python build pipeline
+    /// already filters this via `convert_tl_to_tps_strict`'s residue
+    /// check, but a permissive public helper would let downstream
+    /// callers ship malformed syllables silently.
+    #[test]
+    fn canonicalize_tps_rejects_ascii_in_body() {
+        // `ㄅa˫` — ASCII 'a' between Bopomofo first and tone-7 mark.
+        assert!(canonicalize_tps_syllable("\u{3105}a\u{02eb}").is_none());
+        // `ㄅa` without trailing tone — body has ASCII.
+        assert!(canonicalize_tps_syllable("\u{3105}a").is_none());
+    }
+
+    /// Internal tone marks (only the trailing char may be a tone)
+    /// must reject — Codex post-impl Q4 hardening. `ㄅ˫ˊ` (two
+    /// tone-7 marks back-to-back, or any double-tone) is malformed.
+    #[test]
+    fn canonicalize_tps_rejects_internal_tone_marks() {
+        // `ㄅ˫ˊ` — tone-7 mid-syllable then tone-5 at end.
+        assert!(canonicalize_tps_syllable("\u{3105}\u{02eb}\u{02ca}").is_none());
+        // `ㄅˋㄉˊ` — internal tone-2 followed by Bopomofo then tone-5.
+        assert!(canonicalize_tps_syllable("\u{3105}\u{02cb}\u{3109}\u{02ca}").is_none());
     }
 }
