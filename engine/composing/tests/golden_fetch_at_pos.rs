@@ -174,6 +174,31 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
             e2.extend_from_slice(&rowid.to_le_bytes());
             entries.push(e2);
         }
+        // v3.5.9 D / C-5 — `tps:` family. Mirrors `create_fst.py:124-138`:
+        // emit `tps:<tps_notone>` per row (primary), plus
+        // `tps:<tps_notone_var>` for the C-3a er↔or dual-emit. Derivation
+        // uses `phonetics::tps_notone_from_tl` (same chain the runtime
+        // continuous-input guard uses) so fixture ↔ production parity
+        // holds for the cases the golden matrix exercises.
+        // 中文: D / C-5 — tps: 家族;對齊 create_fst.py 的雙發 (主形 + 變體形)。
+        let tps_notone = phonetics::tps_notone_from_tl(row.tl);
+        if !tps_notone.is_empty() {
+            let mut e3 = Vec::with_capacity(tps_notone.len() + 4 + 5);
+            e3.extend_from_slice(b"tps:");
+            e3.extend_from_slice(tps_notone.as_bytes());
+            e3.push(SEPARATOR);
+            e3.extend_from_slice(&rowid.to_le_bytes());
+            entries.push(e3);
+            let tps_notone_var = phonetics::tps_notone_or_variant(&tps_notone);
+            if !tps_notone_var.is_empty() {
+                let mut e4 = Vec::with_capacity(tps_notone_var.len() + 4 + 5);
+                e4.extend_from_slice(b"tps:");
+                e4.extend_from_slice(tps_notone_var.as_bytes());
+                e4.push(SEPARATOR);
+                e4.extend_from_slice(&rowid.to_le_bytes());
+                entries.push(e4);
+            }
+        }
     }
     entries.sort();
     entries.dedup();
@@ -240,6 +265,37 @@ fn build_syllables_fst(samples: &[&str]) -> PathBuf {
             } else {
                 keys.push(format!("poj:{poj_canonical}{poj_tone}"));
                 keys.push(format!("poj:{poj_canonical}"));
+            }
+        }
+        // v3.5.9 D / C-5 — `tps:` family. Mirrors
+        // `create_syllables_fst.py`: derive per-syllable TPS from each
+        // TL sample via `phonetics::tl_numeric_token_to_tps` (the
+        // pub-widened `to_zhuyin` thunk) with `or_maps_to_er=true`
+        // matching the Node bridge default. Emit BOTH numeric (with
+        // Bopomofo tone marks) AND toneless forms — same shape the
+        // production pipeline ships.
+        // 中文: D / C-5 — TPS 家族;
+        // 中文:   逐 sample 經 to_zhuyin 取得 with-tone Bopomofo,
+        // 中文:   再以 is_tps_tone_mark 剝除取得 toneless,雙發 tps: 入 syllables.fst。
+        let numeric = phonetics::to_tone_number(s);
+        let tps_with_tone = phonetics::tl_numeric_token_to_tps(&numeric, false, true);
+        // `to_zhuyin` emits a trailing space marker for tone-1 inputs and
+        // joins multi-token output with `-`; we treat the sample as a
+        // single syllable so strip both. The C-3a variant glyph (ㄛ) is
+        // not emitted here — syllable inventory is mode-blind; row-level
+        // variant lives in `dictionary.fst` only.
+        let tps_clean: String = tps_with_tone
+            .chars()
+            .filter(|&c| !c.is_whitespace() && c != '-')
+            .collect();
+        if !tps_clean.is_empty() {
+            let tps_toneless: String = tps_clean
+                .chars()
+                .filter(|&c| !phonetics::is_tps_tone_mark(c))
+                .collect();
+            keys.push(format!("tps:{tps_clean}"));
+            if !tps_toneless.is_empty() {
+                keys.push(format!("tps:{tps_toneless}"));
             }
         }
     }
@@ -421,10 +477,20 @@ fn matrix() -> Vec<Case> {
         case("tl_numeric_single", "tsua7", "tl"),
         case("tl_numeric_multi", "tai1bak4", "tl"),
         case("poj_diacritic", "tâi-uân", "tl"),
-        // Negative guard: TPS has no partial-prefix and no tiau/uan dict
-        // rows → empty list. Catches an accidental TPS partial-prefix
-        // regression (Codex pre-impl Q3: keep empty, do not invent rows).
-        case("tps_walker_excluded", "ㄉㄧㄠˊㄨㄢˊ", "tl"),
+        // Negative guard: post-C-3b TPS is first-class but this raw
+        // contains a `ㄉㄧㄠ` syllable that has no matching sample in
+        // the fixture's inventory + no matching dict row, so the
+        // syllabifier cannot syllabify and the walker emits no keys.
+        // Catches a regression where TPS partial-prefix (deliberately
+        // out of scope per Codex pre-impl Fork 7b) accidentally
+        // surfaces hits. Original C-3b pre-fixture label was
+        // `tps_walker_excluded` (TPS folded into `tl:` keys; now
+        // renamed since TPS is no longer excluded — the empty result
+        // is now driven by inventory miss, not mode exclusion).
+        // 中文: 負面守門 — C-3b 後 TPS first-class,但此 raw 含 ㄉㄧㄠ 字組合
+        // 中文:   fixture 的 inventory + dict 都無對應 sample/row,音節切分失敗
+        // 中文:   → walker 不發鍵 → 空候選。保留以防 TPS partial-prefix(Fork 7b 暫不開)誤觸發。
+        case("tps_no_inventory_match", "ㄉㄧㄠˊㄨㄢˊ", "tl"),
         Case {
             name: "custom_dict",
             raw: "taigi",
@@ -503,6 +569,37 @@ fn matrix() -> Vec<Case> {
         // (RC0 class, project_continuous_abbrev_collision). Codex pre-impl
         // BLOCK: known-valid syllables, not silent-skip degradation.
         case("long_oov_vs_dict", "taigilangkangtanlai", "tl"),
+        // v3.5.9 D / C-5 — TPS first-class (post-C-3b). `contains_tps`
+        // in `dispatch::handle` upgrades mode to `InputMode::Tps`
+        // regardless of the platform-sent `input_mode` string, so the
+        // `tl` mode flag here exercises the production auto-detect
+        // path. Inventory + dict.fst extended in `build_*_fst` above
+        // emit the `tps:` family per row (mirroring
+        // `create_fst.py` / `create_syllables_fst.py`).
+        //
+        // Toneless syllabification depends on `phonetics::is_tps_initial`
+        // firing at each next-syllable boundary (the "next initial
+        // seen" rule in `syllabifier::tps`). The medial-only `ㄨ` is
+        // NOT an initial, so a toneless `ㄉㄞㄨㄢ` (`tâi-uân` form)
+        // cannot be split by the implicit-tone-1 rule — toneless
+        // golden cases must therefore use rows whose syllables start
+        // with a proper Bopomofo initial (`ㆣ`/`ㄎ`/`ㄅ`/…). For 台灣
+        // coverage rely on the dogfood matrix's tone-marked path.
+        // 中文: D / C-5 — TPS first-class;dispatch::handle 以 contains_tps 自動升級模式,
+        // 中文:   input_mode="tl" 但 raw 含注音 → 走 TPS(對應生產自動偵測)。
+        // 中文: 無聲調切分仰賴 is_tps_initial 在下一音節邊界觸發隱式規則;
+        // 中文:   ㄨ 為介音非聲母,無法切 ㄉㄞ-ㄨㄢ,只能改用首字聲母清楚的列(ㆣ/ㄎ/ㄅ/…)。
+        //
+        // TPS toneless 2-syllable: `ㄉㄞㆣㄧ` = `tps_notone_from_tl("tâi-gí")`
+        // → 台語 row hit. ㆣ (U+31A3) is a TPS initial → implicit
+        // boundary fires between ㄞ and ㆣ → syllabifier splits into
+        // (ㄉㄞ, ㆣㄧ). Walker slot-0 emits the full-buffer key, span-
+        // local emits the 台 (1-syll) hit.
+        case("tps_notone_taigi", "ㄉㄞㆣㄧ", "tl"),
+        // TPS toneless 4-syllable continuous: `ㄉㄞㆣㄧㄎㄧㄅㄨㆩ` =
+        // `tps_notone_from_tl("tâi-gí-khí-puânn")` → 台語齒盤 row hit
+        // (4-syllable walker slot-0) + sub-span dict hits (台 / 台語).
+        case("tps_continuous_taigikhipuann", "ㄉㄞㆣㄧㄎㄧㄅㄨㆩ", "tl"),
     ]
 }
 

@@ -396,8 +396,15 @@ pub fn tps_notone_or_variant(notone: &str) -> String {
 ///   (`\u{311b}`); `true` renders it as ㄜ (`\u{311c}`), matching the iOS
 ///   `orMapsToER` toggle. Override is per-token (only applied when the
 ///   matched vowel slot is exactly `"or"`); other vowels are unaffected.
+///
+/// Single-token: caller pre-splits multi-token TL on `[-\s]+`. v3.5.9 D /
+/// C-5 widened to `pub` so lexicon parity tests + composing golden
+/// fixtures can emit per-syllable tone-marked TPS samples without
+/// rebuilding the `Method::TlNumericToTps` proto plumbing.
 // 中文: 把單一 TL token (含聲調數字) 轉成 TPS;`encode_safe` 用獨立空白點符號讓 TPS 能通過會剝組合符號的系統,`or_maps_to_er` 切換母音 `or` 的渲染。
-pub(crate) fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
+// 中文: D / C-5 — 為 lexicon parity 測試 + composing golden fixture 之需,放寬至 pub;
+// 中文:   呼叫端負責先用 `[-\s]+` 拆 token 再逐 token 呼叫。
+pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
     let mut remaining: String = text.to_lowercase();
     let mut pre_punct = String::new();
     let mut consonant = String::new();

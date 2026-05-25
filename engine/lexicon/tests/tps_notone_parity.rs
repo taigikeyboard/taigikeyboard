@@ -51,8 +51,10 @@ fn dictionary_csv_path() -> PathBuf {
     path
 }
 
-/// Parse `dictionary.csv` returning `(tl, tps_notone)` per row.
-fn read_rows(path: &std::path::Path) -> std::io::Result<Vec<(String, String)>> {
+/// Parse `dictionary.csv` returning `(tl, tps_notone, tps_notone_var)`
+/// per row. C-5 extended the row tuple to include the variant column
+/// for the er↔or dual-emit parity test below.
+fn read_rows(path: &std::path::Path) -> std::io::Result<Vec<(String, String, String)>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
@@ -66,20 +68,26 @@ fn read_rows(path: &std::path::Path) -> std::io::Result<Vec<(String, String)>> {
         .iter()
         .position(|c| *c == "tps_notone")
         .expect("`tps_notone` column present in CSV header");
+    let tps_notone_var_idx = columns
+        .iter()
+        .position(|c| *c == "tps_notone_var")
+        .expect("`tps_notone_var` column present in CSV header");
 
     let mut rows = Vec::new();
+    let max_idx = tl_idx.max(tps_notone_idx).max(tps_notone_var_idx);
     for line in lines {
         let line = line?;
         if line.is_empty() {
             continue;
         }
         let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() <= tps_notone_idx.max(tl_idx) {
+        if fields.len() <= max_idx {
             continue;
         }
         rows.push((
             fields[tl_idx].to_string(),
             fields[tps_notone_idx].to_string(),
+            fields[tps_notone_var_idx].to_string(),
         ));
     }
     Ok(rows)
@@ -115,7 +123,7 @@ fn runtime_tps_notone_matches_build_pipeline_for_every_row() {
     let mut anomalies = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
 
-    for (tl, tps_notone) in &rows {
+    for (tl, tps_notone, _var) in &rows {
         total += 1;
         if tl.is_empty() || tps_notone.is_empty() {
             continue;
@@ -192,4 +200,105 @@ fn tps_notone_or_variant_substitutes_er_to_or_glyph() {
     // Bodies without ㄜ return empty (caller skips redundant variant emit).
     assert_eq!(phonetics::tps_notone_or_variant("\u{3109}\u{311e}"), ""); // ㄉㄞ
     assert_eq!(phonetics::tps_notone_or_variant(""), "");
+}
+
+/// v3.5.9 D / C-5 — full-CSV `tps_notone_var` parity (D capstone). C-3a
+/// dual-emits `tps:<tps_notone>` AND `tps:<tps_notone_var>` per row whose
+/// primary contains ㄜ (1107 rows in the shipped CSV). The runtime
+/// helper [`phonetics::tps_notone_or_variant`] derives the variant from
+/// the primary via ㄜ→ㄛ substitution; this test asserts byte-match
+/// against the shipped column row-for-row.
+///
+/// Drift here means the C-3a build-pipeline `apply_or_dialect_variant`
+/// and the Rust runtime mirror diverged — the continuous toneless-key
+/// guard would silently reject the ㄛ variant for divergent rows.
+// 中文: D / C-5 — tps_notone_var 全 CSV 平行性測試;
+// 中文:   build pipeline `apply_or_dialect_variant` 與 runtime `tps_notone_or_variant`
+// 中文:   逐行 byte-match,捕捉未來任一端 drift。
+#[test]
+fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
+    let path = dictionary_csv_path();
+    if !path.exists() {
+        eprintln!(
+            "skipping TPS-notone-var parity test: {} not present (lean checkout)",
+            path.display()
+        );
+        return;
+    }
+
+    let rows = read_rows(&path).expect("read dictionary.csv rows");
+    // Iterate every row with a non-empty pure-Bopomofo primary, compute
+    // the runtime-derived variant, and compare to the CSV variant —
+    // INCLUDING the empty-string case (no ㄜ → no variant). Skipping
+    // empty-var rows would mask a regression where the build pipeline
+    // stops populating `tps_notone_var` entirely. Codex post-impl
+    // BLOCK 2026-05-26.
+    // 中文: 不能略過空 var 行,否則 pipeline 停發變體時測試會無聲通過;
+    // 中文:   逐行比對 derived (含空) vs CSV var,並追蹤含 ㄜ 行最少筆數。
+    let mut compared = 0usize;
+    let mut anomalies = 0usize;
+    let mut nonempty_vars = 0usize;
+    let mut drift: Vec<(String, String, String)> = Vec::new();
+
+    for (_tl, notone, var) in &rows {
+        if notone.is_empty() {
+            continue;
+        }
+        if !is_pure_bopomofo(notone) || (!var.is_empty() && !is_pure_bopomofo(var)) {
+            anomalies += 1;
+            continue;
+        }
+        compared += 1;
+        let derived = phonetics::tps_notone_or_variant(notone);
+        if !var.is_empty() {
+            nonempty_vars += 1;
+        }
+        if derived != *var {
+            drift.push((notone.clone(), var.clone(), derived));
+            if drift.len() >= 10 {
+                break;
+            }
+        }
+    }
+
+    assert!(
+        drift.is_empty(),
+        "runtime tps_notone_or_variant(tps_notone) drifted from build \
+         pipeline tps_notone_var on {} of {} compared rows (first {} \
+         shown):\n{}",
+        drift.len(),
+        compared,
+        drift.len(),
+        drift
+            .iter()
+            .map(|(notone, expected, got)| format!(
+                "  tps_notone={notone:?} expected tps_notone_var={expected:?} got {got:?}"
+            ))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+
+    // Coverage gate (Codex post-impl Finding 1): if the build pipeline
+    // ever stops emitting variants entirely, the column-level parity
+    // above stays empty-vs-empty consistent and prints "0 drift"
+    // misleadingly. The shipped CSV currently has 1107 non-empty
+    // `tps_notone_var` rows (per C-3a build pipeline + or-vowel
+    // inventory); accept any non-zero count as a regression alarm
+    // boundary rather than pinning the exact number (which would force
+    // a parity-test re-pin on every dictionary refresh).
+    // 中文: 覆蓋率守門 — pipeline 完全停發變體時上面 drift loop 仍會 0/0 過關,
+    // 中文:   故強制 nonempty_vars > 0(C-3a 後 CSV 應有 ~1107 筆);不寫死筆數
+    // 中文:   是為了讓 dictionary 更新不需要 re-pin 此 assertion。
+    assert!(
+        nonempty_vars > 0,
+        "expected the shipped CSV to contain at least one non-empty \
+         `tps_notone_var` row (C-3a build pipeline emits dual-form for \
+         er/or-vowel rows). Found 0 — build pipeline regressed or the \
+         CSV column is unpopulated."
+    );
+
+    eprintln!(
+        "TPS-notone-var parity OK: {compared} rows compared, \
+         {nonempty_vars} non-empty variants ({anomalies} anomaly rows skipped)."
+    );
 }

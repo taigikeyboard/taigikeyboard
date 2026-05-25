@@ -37,5 +37,6 @@ pub use syllable::{
 pub use tl::to_tl;
 pub use tps::{
     canonicalize_tps_syllable, from_zhuyin as tps_to_tl, is_tps_char, is_tps_initial,
-    is_tps_tone_mark, tps_notone_from_tl, tps_notone_or_variant,
+    is_tps_tone_mark, to_zhuyin as tl_numeric_token_to_tps, tps_notone_from_tl,
+    tps_notone_or_variant,
 };
