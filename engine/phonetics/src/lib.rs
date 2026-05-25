@@ -35,4 +35,7 @@ pub use syllable::{
     NORMALIZE_TO_TL_RULES,
 };
 pub use tl::to_tl;
-pub use tps::{canonicalize_tps_syllable, from_zhuyin as tps_to_tl, is_tps_char, is_tps_initial};
+pub use tps::{
+    canonicalize_tps_syllable, from_zhuyin as tps_to_tl, is_tps_char, is_tps_initial,
+    is_tps_tone_mark, tps_notone_from_tl, tps_notone_or_variant,
+};

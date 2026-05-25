@@ -16,10 +16,15 @@ use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
 // 中文: 鍵盤輸入模式,對應 `AppConfig.input_mode` 字串。
+// 中文: v3.5.9 D / C-3b — Tps 變體加入,作為連續輸入 first-class mode-axis。
+// 中文:   平台 AppConfig.input_mode 字串仍送 "tl"/"poj" 並用 is_translate_swapped 旗標
+// 中文:   表示 TPS;composing::dispatch 端以 contains_tps(raw) 偵測 TPS 字元後升級為
+// 中文:   InputMode::Tps,所以本 enum 的 Tps 變體主要在 engine 內部 mode-axis 流通。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
     Tl,
     Poj,
+    Tps,
     English,
 }
 
@@ -54,6 +59,7 @@ fn capitalize_first(text: &str) -> String {
 pub fn parse_input_mode(mode: &str) -> InputMode {
     match mode {
         "poj" | "POJ" => InputMode::Poj,
+        "tps" | "TPS" => InputMode::Tps,
         "english" | "English" | "EN" => InputMode::English,
         _ => InputMode::Tl,
     }
@@ -156,7 +162,9 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
     if base.is_empty() {
         return syllable.to_string();
     }
-    if matches!(mode, InputMode::English) {
+    // v3.5.9 D / C-3b — English and TPS both bypass TL/POJ syllable assembly.
+    // 中文: TPS 走自家 zhuyin path,不經 to_tl / to_poj 組裝;與 English 同走 identity 提前返回。
+    if matches!(mode, InputMode::English | InputMode::Tps) {
         return syllable.to_string();
     }
     if tone_digit == 1 || tone_digit == 4 {
@@ -171,7 +179,7 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
     let assembled = match mode {
         InputMode::Poj => to_poj(&initial, &final_str, &tone),
         InputMode::Tl => to_tl(&initial, &final_str, &tone),
-        InputMode::English => return syllable.to_string(),
+        InputMode::English | InputMode::Tps => return syllable.to_string(),
     };
     let first = base.chars().next().unwrap();
     if first.is_uppercase() {
@@ -288,7 +296,15 @@ pub fn tl_display_to_poj_display(text: &str) -> String {
 pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
     match mode {
         InputMode::Tl | InputMode::Poj => poj_display_to_tl_display(text),
-        InputMode::English => text.to_string(),
+        // v3.5.9 D / C-3b — TPS roman is Bopomofo, not POJ/TL Latin shape;
+        // poj_display_to_tl_display would no-op on Bopomofo anyway (no Latin
+        // patterns to substitute), but routing through identity makes the
+        // contract explicit and avoids an unnecessary string scan per
+        // user_frequency.db commit key derivation.
+        // 中文: D / C-3b — TPS 漢羅 user-history key 改走 identity;TPS 字形為 Bopomofo,
+        // 中文:   poj_display_to_tl_display 對 Bopomofo 為 no-op,改 identity 顯式
+        // 中文:   表達契約且省一輪掃描。
+        InputMode::Tps | InputMode::English => text.to_string(),
     }
 }
 

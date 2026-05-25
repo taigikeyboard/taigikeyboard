@@ -5,17 +5,23 @@
 //! candidate-vector contract (post-A2 reframing; line refs are `main` after
 //! the seam extract — re-grep before relying on numbers):
 //!
-//! 1. Build the FST keys for this fetch: TPS path = [`build_keys_tps`] (pure);
-//!    TL/POJ path = `shadow::build_shadow_lattice` ONCE + `shadow::
+//! 1. Build the FST keys for this fetch: ALL modes (Tl / Poj / Tps / English)
+//!    run `shadow::build_shadow_lattice` ONCE + `shadow::
 //!    left_anchored_keys_from_lattice` projection (single `LexiconHandle::
-//!    with_state` scope around steps 1–4, **D1 fold**).
-//! 2. `keys.is_empty()` → `is_tps` empty / else
-//!    [`fetch_via_lexicon_partial_inner`] (Item 10 fallthrough).
+//!    with_state` scope around steps 1–4, **D1 fold**). v3.5.9 D / C-3b
+//!    retired the legacy TPS-specific `build_keys_tps` short-circuit (which
+//!    folded TPS into `tl:` keys via `phonetics::tps_to_tl`); TPS now walks
+//!    the same shadow → lattice path as TL/POJ with the only difference
+//!    being the family family the syllabifier + key emitter resolve through
+//!    `mode` (`tps:` against the C-0 emit of `dictionary.fst`).
+//! 2. `keys.is_empty()` → [`fetch_via_lexicon_partial_inner`] (Item 10
+//!    fallthrough) for TL/POJ/English; TPS skips the partial-prefix path
+//!    (no precedent — see step 2 inline comment).
 //!    Else → [`fetch_via_lexicon_inner`] (span-local fetch).
 //! 3. Per-candidate recase loop (`recase_roman` over each
 //!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
 //!    untouched).
-//! 4. `!is_tps && fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
+//! 4. `fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
 //!    retain-dedupe on `(roman, hanji, consumed_span)` then `insert(0,
 //!    raw_to_proto_slot0(slot0))`. The walker returns a [`WalkerSlot0`] —
 //!    **D3 honest type** — and the seam converts to `RawCandidate` with
@@ -58,9 +64,8 @@
 use crate::shadow::{
     build_partial_prefix_key, build_shadow_lattice, custom_toneless_key,
     greedy_longest_syllabification, left_anchored_keys_from_lattice, span_min_syllable_count,
-    strip_ascii_tone_digits, MAX_SYLLABLES,
+    strip_tones_for_mode,
 };
-use crate::syllabifier::tps as tps_syll;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
@@ -69,7 +74,6 @@ use lexicon::{
     EngineHandle as LexiconHandle, RawCandidate, SyllableInventory, COVERAGE_KIND_FULL,
     FORM_NOTONE,
 };
-use phonetics::tps_to_tl;
 use ranking::{decayed_user_weight_delta, recency_rank, FrequencyMap};
 
 // ============================================================================
@@ -260,87 +264,16 @@ fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     candidates.retain(|c| seen.insert((c.roman.clone(), c.hanji.clone(), c.consumed_span)));
 }
 
-/// Drop a trailing ASCII tone digit (`1..=9`) per
-/// `engine/composing/src/syllabifier/tl.rs:94-101`: digit `0` is not a
-/// tone marker so it is preserved.
-// 中文: 剝掉尾端 1..=9 的 tone digit ('0' 不是 tone marker)。
-fn strip_trailing_tone_digit(s: &str) -> &str {
-    match s.as_bytes().last() {
-        Some(b) if b.is_ascii_digit() && *b != b'0' => &s[..s.len() - 1],
-        _ => s,
-    }
-}
-
-// ============================================================================
-// TPS key construction
-// ============================================================================
-
-/// Build TPS FST keys from `Phase::Continuous { raw }`. Each Bopomofo
-/// span returned by `tps::valid_span_endings` is converted to numeric-
-/// tone TL via `phonetics::tps_to_tl` (e.g., `ㄉㄧㄠˊ` → `tiau5`); the
-/// trailing `1..=9` tone digit is stripped and each fragment is
-/// concatenated into a fused toneless TL key (Phase 1b guarantee:
-/// multi-syllable entries store the fused form, e.g. `珠仔 → tl:tsua`).
-/// At each TPS ending the cumulative key from byte 0 is emitted so the
-/// FST surface mirrors the TL path's `lower[0..end]` slice — both
-/// produce identical key sequences against the same logical input.
-/// `consumed_span` stays in the caller's TPS byte space so platform UI
-/// can slice the correct number of Bopomofo characters on commit;
-/// only the FST-side key uses the canonical TL form.
-///
-/// Tone-1 (no mark) syllables ARE detected since v3.5.8 Phase 9 Item 7
-/// (`tps::valid_span_endings` next-initial-seen rule); a tone-1 span
-/// converts to a digitless toneless TL form (`ㄉㄞ` → `tai`) which is
-/// accepted directly as the fused key fragment.
-///
-/// Remaining bounds:
-/// - Malformed fragments where `tps_to_tl` yields a non-ASCII result
-///   (partial / unconvertible Bopomofo emitted as a raw `Part::Other`
-///   symbol) abort the whole build — a partial prefix would corrupt
-///   the cumulative fused key for downstream endings.
-/// - Endings beyond `MAX_SYLLABLES` (= 8) are dropped to mirror the TL
-///   path's BFS depth bound, keeping per-keystroke FST lookup and
-///   candidate scoring complexity bounded across modes. The TPS
-///   syllabifier itself still scans the full input
-///   (`tps::valid_span_endings` is unparameterised today); pushing the
-///   cap into the syllabifier is a follow-up if profiling shows the
-///   linear scan is hot.
-// 中文: TPS key 構造 — 累加每個 Bopomofo 音節的 toneless TL,於每個 TPS ending 釋出 fused key
-// 中文:   (對應 TL 路徑的 lower[0..end])。
-// 中文: consumed_span 仍以 Bopomofo bytes 為單位;第 1 聲自 Item 7 起支援 (轉出無數字 toneless 形,
-// 中文:   直接當 key 片段);不合法 Bopomofo 仍中止整批。
-// 中文: 與 TL 路徑對齊,輸出最多取前 MAX_SYLLABLES (8) 個 ending,避免長 preedit 引發無上限 FST 查詢。
-fn build_keys_tps(raw: &str) -> Vec<(ConsumedSpan, String)> {
-    let endings = tps_syll::valid_span_endings(raw, 0);
-    if endings.is_empty() {
-        return Vec::new();
-    }
-    let cap = endings.len().min(MAX_SYLLABLES);
-    let mut out = Vec::with_capacity(cap);
-    let mut prev_end = 0usize;
-    let mut fused_toneless = String::new();
-    for end in endings.into_iter().take(MAX_SYLLABLES) {
-        if end <= prev_end || end > raw.len() || !raw.is_char_boundary(end) {
-            continue;
-        }
-        let span_text = &raw[prev_end..end];
-        prev_end = end;
-        let tl_numeric = tps_to_tl(span_text);
-        let toneless = strip_trailing_tone_digit(&tl_numeric).to_ascii_lowercase();
-        // Partial / unconvertible Bopomofo makes `tps_to_tl` emit the
-        // raw symbol as a non-ASCII `Part::Other` char; failing this
-        // check aborts the whole build so the cumulative fused key
-        // cannot be corrupted for later endings. Tone-marked and
-        // digitless tone-1 (`ㄉㄞ` → `tai`, Item 7) spans both pass.
-        let well_formed = !toneless.is_empty() && toneless.bytes().all(|b| b.is_ascii_lowercase());
-        if !well_formed {
-            return Vec::new();
-        }
-        fused_toneless.push_str(&toneless);
-        out.push(((0u32, end as u32), format!("tl:{fused_toneless}")));
-    }
-    out
-}
+// v3.5.9 D / C-3b — `build_keys_tps` + `strip_trailing_tone_digit`
+// retired. TPS now walks the shared `build_shadow_lattice` +
+// `left_anchored_keys_from_lattice` path (with mode-aware tone strip via
+// `shadow::strip_tones_for_mode` and `tps:` family routing) the same way
+// TL / POJ do; the legacy per-syllable `phonetics::tps_to_tl` fold into
+// `tl:` keys was the one place TPS diverged from the shared seam and is
+// no longer needed.
+// 中文: D / C-3b — build_keys_tps 與 strip_trailing_tone_digit 退役。
+// 中文:   TPS 改走與 TL/POJ 共用的 shadow → lattice 路徑(mode-aware tone strip
+// 中文:   + tps: 家族),不再經 phonetics::tps_to_tl 折成 tl: 家族鍵。
 
 // ============================================================================
 // Inner fetchers — take pre-resolved lexicon state (no with_state inside).
@@ -482,7 +415,12 @@ fn fetch_walker_slot0_inner(
         {
             return None;
         }
-        let toneless = strip_ascii_tone_digits(&shadow[start..end]);
+        // v3.5.9 D / C-3b — mode-aware tone strip. TL/POJ/English drop
+        // ASCII digits (byte-identical to legacy `strip_ascii_tone_digits`),
+        // TPS drops the 8 Bopomofo tone marks so the body matches the
+        // `tps:<tps_notone>` family from C-0.
+        // 中文: D / C-3b — mode-aware tone 剝除;TPS 改剝注音聲調,對齊 tps_notone 家族。
+        let toneless = strip_tones_for_mode(&shadow[start..end], mode);
         if toneless.is_empty() {
             return None;
         }
@@ -495,7 +433,7 @@ fn fetch_walker_slot0_inner(
         // also feeds the key prefix here, so the lookup family is
         // consistent with the inventory family that produced the edge.
         // 中文: B-2 — walker edge key mode-aware,單一 mode 同時驅動 shadow / lattice / key 前綴,
-        // 中文:   不同家族 (tl/poj) 不會由不同來源分歧。
+        // 中文:   不同家族 (tl/poj/tps) 不會由不同來源分歧。
         let key = format!(
             "{prefix}:{toneless}",
             prefix = crate::shadow::mode_key_prefix(mode)
@@ -719,9 +657,14 @@ fn fetch_walker_slot0_inner(
     } else {
         match greedy_longest_syllabification(shadow, inv, mode) {
             Some(segs) if !segs.is_empty() => {
+                // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
+                // synth strips Bopomofo tone marks per syllable; TL/POJ
+                // keep the byte-identical ASCII-digit drop.
+                // 中文: D / C-3b — TPS no-dict synth 改剝注音聲調符號;
+                // 中文:   TL/POJ 保 byte-identical ASCII 數字剝除。
                 let r = segs
                     .iter()
-                    .map(|&(s, e)| strip_ascii_tone_digits(&shadow[s..e]))
+                    .map(|&(s, e)| strip_tones_for_mode(&shadow[s..e], mode))
                     .collect::<Vec<_>>()
                     .join(" ");
                 let s = segs.len().min(u8::MAX as usize) as u8;
@@ -818,19 +761,20 @@ fn fetch_walker_slot0_inner(
 /// 6-step contract and the **D1 fold** lifecycle invariant.
 ///
 /// Inputs are the proto→domain hoists from `handle_fetch_at_pos`
-/// (`mode` from `parse_input_mode`; `freq_map` from
-/// `ranking::build_frequency_map`; `custom` from `build_custom_entries`;
-/// `is_tps` from `phonetics::contains_tps`). `mode == Poj` derives the
-/// POJ branch internally — v3.5.9 B-0c retired the prior `is_poj: bool`
-/// arg in favor of the `mode` enum sweep. TPS is still represented as
-/// a bool here because v3.5.9 B does NOT alter TPS lattice routing
-/// (`phonetics::InputMode` has no `Tps` variant yet; that lands with
-/// the future C round when TPS becomes first-class).
+/// (`mode` from `parse_input_mode` + `contains_tps` raw-buffer upgrade;
+/// `freq_map` from `ranking::build_frequency_map`; `custom` from
+/// `build_custom_entries`). Every TPS-vs-non-TPS branch derives from
+/// `mode == InputMode::Tps` internally — v3.5.9 D / C-3b dropped the
+/// parallel `is_tps: bool` arg (single mode axis, no split-brain).
+/// `mode == Poj` similarly derives the POJ branch — v3.5.9 B-0c
+/// dropped the prior `is_poj: bool` arg.
 /// Output is the unwrapped `Vec<RawCandidate>` the caller maps to
 /// `CandidateMessage` via `raw_to_proto_candidate`.
 // 中文: A2 seam — 6-step assemble_candidates。取代 A2 前 handle_fetch_at_pos 內 inline 區塊。
 // 中文: 入參皆為 dispatch hoist 過的 domain 型別,出參為 wire 前 RawCandidate vector。
-// 中文: B-0c — `mode: InputMode` 取代 `is_poj: bool` 內部 derive;`is_tps` 仍為 bool(B 不動 TPS)。
+// 中文: B-0c — `mode: InputMode` 取代 `is_poj: bool` 內部 derive。
+// 中文: D / C-3b — `is_tps: bool` 退役;所有 TPS 分支由 mode == InputMode::Tps 推導,
+// 中文:   平台 contains_tps(raw) 升級在 dispatch 端完成,seam 只看 mode。
 // 中文: 單一 LexiconHandle::with_state 範圍包住 step 1–4;D1 fold = build_shadow_lattice 單建;
 // 中文:   POJ render/dedupe (step 5) 在 walker prepend 之後。
 pub(crate) fn assemble_candidates(
@@ -839,7 +783,6 @@ pub(crate) fn assemble_candidates(
     now_ms: i64,
     custom: &[CustomEntry],
     mode: phonetics::InputMode,
-    is_tps: bool,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
     LexiconHandle::with_state(|state| {
@@ -870,39 +813,38 @@ pub(crate) fn assemble_candidates(
                 // `user_frequency.db` commit key) to canonical TL,
                 // keeping the freq key mode-invariant. Lattice / FST
                 // key prefix is decided above and embedded in `keys`,
-                // so this is purely a freq-key axis — TPS callers
-                // currently arrive as `Tl` (TPS shares the `tl:`
-                // FST family per B-2; the `phonetics::InputMode` enum
-                // has no `Tps` variant yet).
-                // 中文: B-4 — mode 透到 lexicon 端 canonicalize hanji-absent display_text;
-                // 中文:   TPS 路徑(B-2 共用 tl: 族)以 Tl 入,InputMode 暫無 Tps 變體。
+                // so this is purely a freq-key axis.
+                // 中文: B-4 — mode 透到 lexicon 端 canonicalize hanji-absent display_text。
+                // 中文: D / C-3b — TPS 改走 InputMode::Tps,canonical_tl_form 對 Tps 走 identity。
                 mode,
             });
 
         // ---- Step 1: build keys + shadow/lattice (D1 fold).
-        // TPS: pure key build, no shadow_lattice. TL/POJ: build the
-        // shadow + lattice ONCE here and project the left-anchored
-        // keys; walker reuses the SAME lattice (no rebuild). Inv
-        // absent → both TPS and TL paths produce empty keys and the
-        // walker is skipped — matches pre-A2 graceful degradation
-        // (`build_keys_tl` returned empty; `fetch_walker_slot0`
-        // returned None on absent state).
-        let (keys, shadow_lattice) = if is_tps {
-            (build_keys_tps(raw), None)
-        } else {
-            match inv {
-                Some(inv) => {
-                    let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-                    let keys = left_anchored_keys_from_lattice(
-                        &shadow,
-                        &shadow_to_raw_end,
-                        &lattice,
-                        mode,
-                    );
-                    (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
-                }
-                None => (Vec::new(), None),
+        // v3.5.9 D / C-3b — all modes (Tl / Poj / Tps / English) share
+        // the same shadow-pipeline path: build the shadow + lattice ONCE
+        // here and project the left-anchored keys via mode-aware
+        // [`shadow::mode_key_prefix`] + [`shadow::strip_tones_for_mode`];
+        // walker reuses the SAME lattice (no rebuild). The legacy
+        // `build_keys_tps` short-circuit retired with C-3b — TPS now
+        // walks the same path TL/POJ already do, the only difference
+        // being the inventory family selected by `mode` inside
+        // [`crate::syllabifier::valid_span_endings_lowered`].
+        // Inv absent → empty keys and walker skipped (graceful
+        // degradation; matches pre-A2 / pre-C-3b behavior).
+        // 中文: D / C-3b — 所有模式共用 shadow-pipeline 單路徑;舊 build_keys_tps 短路退役。
+        // 中文:   inv 缺席時退化為空鍵 + walker 跳過(優雅退化,與 A2 前同)。
+        let (keys, shadow_lattice) = match inv {
+            Some(inv) => {
+                let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
+                let keys = left_anchored_keys_from_lattice(
+                    &shadow,
+                    &shadow_to_raw_end,
+                    &lattice,
+                    mode,
+                );
+                (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
             }
+            None => (Vec::new(), None),
         };
 
         // ---- Step 2: empty-keys partial-prefix vs span-local fetch.
@@ -913,14 +855,18 @@ pub(crate) fn assemble_candidates(
             // a TL/POJ `lookup_prefix` instead so the user still
             // sees engine candidates while typing toward the first
             // syllable boundary. Spec: `docs/engine/
-            // continuous-candidate-display.md` §15.3.D + §15.5. TPS
-            // partial-prefix is out of scope — there is no TPS → TL
-            // partial-syllable mapping (a leading Bopomofo initial
-            // like `ㄉ` carries no terminator, so
-            // `phonetics::tps_to_tl` cannot produce a valid `tl:`
-            // prefix).
-            // 中文: Item 10 — syllabifier 切不出邊界時改走 TL/POJ partial-prefix;TPS 無對應 partial map,跳過。
-            if is_tps {
+            // continuous-candidate-display.md` §15.3.D + §15.5.
+            //
+            // v3.5.9 D / C-3b — TPS partial-prefix is out of scope. A
+            // leading lone Bopomofo char (`ㄉ`) is not yet a syllable
+            // (no terminator, no implicit boundary), and TPS UX has no
+            // precedent for partial-prefix `lookup_prefix("tps:ㄉ")`
+            // expansion. Codex pre-impl Fork 7b = defer to a follow-up
+            // round if dogfood signals the gap.
+            // 中文: Item 10 — syllabifier 切不出邊界時改走 partial-prefix;
+            // 中文: D / C-3b — TPS partial-prefix 暫不開啟(Codex Fork 7b);
+            // 中文:   leading 單個 Bopomofo 字尚未成音節,UX 無先例,留 follow-up。
+            if matches!(mode, phonetics::InputMode::Tps) {
                 Vec::new()
             } else if let Some(ctx) = lex_ctx.as_ref() {
                 fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx)
@@ -954,18 +900,25 @@ pub(crate) fn assemble_candidates(
                     cand.roman = recase_roman(&cand.roman, seg, mode);
                 }
             }
-            // ---- Step 4: walker slot-0 prepend (TL/POJ only).
-            // v3.5.8 S2 — whole-sentence walker. TPS excluded (S1
-            // Codex Q5 deferred TPS multi-start; the lattice builder
-            // is TL/POJ only). The synthesized full-buffer best path
-            // is explicitly prepended at slot 0 (Codex pre-impl S2
-            // Q1 — the 8-dim `SortKey` cannot guarantee slot 0 on
-            // its own). Span-aware de-dup against the synth (Codex
-            // pre-impl S2 Q1d): drop any span-local candidate
-            // identical on `(roman, hanji, consumed_span)` so slot 0
-            // is unique (e.g. a real left-anchored full-buffer dict
-            // word equal to the walker path — keep the walker's at
-            // slot 0, not a duplicate slot N).
+            // ---- Step 4: walker slot-0 prepend (all modes).
+            // v3.5.8 S2 — whole-sentence walker. The synthesized
+            // full-buffer best path is explicitly prepended at slot 0
+            // (Codex pre-impl S2 Q1 — the 8-dim `SortKey` cannot
+            // guarantee slot 0 on its own). Span-aware de-dup against
+            // the synth (Codex pre-impl S2 Q1d): drop any span-local
+            // candidate identical on `(roman, hanji, consumed_span)` so
+            // slot 0 is unique (e.g. a real left-anchored full-buffer
+            // dict word equal to the walker path — keep the walker's
+            // at slot 0, not a duplicate slot N).
+            //
+            // v3.5.9 D / C-3b — TPS now participates in the walker
+            // (was excluded pre-C-3b because the lattice builder was
+            // TL/POJ-only and `build_keys_tps` short-circuited the
+            // shadow path). The unified `valid_span_endings_lowered`
+            // dispatcher routes TPS through its own inventory-gated
+            // scanner inside the same `build_shadow_lattice` /
+            // `build_lattice` call, so the walker sees a real DAG and
+            // can emit a slot-0 whole-sentence best path for TPS too.
             //
             // A2 D1 fold: the walker receives the pre-built
             // `(shadow, shadow_to_raw_end, lattice, inv)` plus
@@ -974,12 +927,15 @@ pub(crate) fn assemble_candidates(
             // A2 D3 honest type: the walker returns
             // [`WalkerSlot0`] (cost-named); convert to wire
             // `RawCandidate` with `score = -(cost as f32)` here.
-            // 中文: S2 — 全句 walker (TPS 排除,S1 Q5 deferred)。合成全 buffer 最佳路徑
-            // 中文:   explicit prepend slot 0 (Codex S2 Q1);與 synth 同 (roman,hanji,span)
-            // 中文:   的 span-local 候選去掉,保 slot 0 唯一 (Codex S2 Q1d)。
+            // 中文: S2 — 全句 walker。合成全 buffer 最佳路徑 explicit prepend slot 0
+            // 中文:   (Codex S2 Q1);與 synth 同 (roman,hanji,span) 的 span-local 候選去掉,
+            // 中文:   保 slot 0 唯一 (Codex S2 Q1d)。
+            // 中文: D / C-3b — TPS 加入 walker(舊 build_keys_tps 短路造就 TPS 不接 walker;
+            // 中文:   現透過統一 valid_span_endings_lowered + 共用 build_shadow_lattice 路徑,
+            // 中文:   TPS 也能合成全句最佳路徑)。
             // 中文: A2 D1 fold — walker 收 seam 預建 shadow/lattice;A2 D3 honest type —
             // 中文:   walker 回 WalkerSlot0,score = -(cost as f32) 在此戳上 wire。
-            if !is_tps {
+            {
                 if let (Some((shadow, shadow_to_raw_end, lattice, inv)), Some(prefix), Some(dict)) =
                     (&shadow_lattice, prefix, dict)
                 {
@@ -1069,106 +1025,13 @@ mod tests {
 
     use super::*;
 
-    // ----- build_keys_tps + strip_trailing_tone_digit -----
-
-    #[test]
-    fn strip_trailing_tone_digit_drops_one_to_nine() {
-        assert_eq!(strip_trailing_tone_digit("tiau5"), "tiau");
-        assert_eq!(strip_trailing_tone_digit("tai1"), "tai");
-        assert_eq!(strip_trailing_tone_digit("bak4"), "bak");
-        assert_eq!(strip_trailing_tone_digit("khih8"), "khih");
-        assert_eq!(strip_trailing_tone_digit("khoo9"), "khoo");
-    }
-
-    #[test]
-    fn strip_trailing_tone_digit_preserves_zero_and_letters() {
-        // '0' is not a tone marker per phonetics::syllable.rs:18-20.
-        assert_eq!(strip_trailing_tone_digit("tai0"), "tai0");
-        assert_eq!(strip_trailing_tone_digit("tai"), "tai");
-        assert_eq!(strip_trailing_tone_digit(""), "");
-    }
-
-    #[test]
-    fn build_keys_tps_emits_cumulative_fused_keys() {
-        // ㄉㄧㄠˊㄨㄢˊ → tone-5 + tone-5 → tiau + uan (after digit strip),
-        // fused into a multi-syllable toneless TL key per Phase 1b.
-        let raw = "ㄉㄧㄠˊㄨㄢˊ";
-        let keys = build_keys_tps(raw);
-        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
-        assert_eq!(texts, vec!["tl:tiau", "tl:tiauuan"], "{texts:?}");
-
-        // consumed_span end values must be at TPS Bopomofo byte offsets.
-        // ㄉ/ㄧ/ㄠ/ㄨ/ㄢ each 3 bytes (Bopomofo block U+3100-U+312F);
-        // ˊ is 2 bytes (U+02CA, modifier-letter range).
-        // First syllable: 3+3+3+2 = 11.
-        assert_eq!(keys[0].0, (0u32, 11u32));
-        // Whole input: 11 + 3+3+2 = 19.
-        assert_eq!(keys[1].0, (0u32, 19u32));
-    }
-
-    #[test]
-    fn build_keys_tps_tone1_no_mark_emits_key() {
-        // Item 7: Bopomofo with no tone mark is a tone-1 syllable. The
-        // syllabifier's next-initial-seen rule ends it at EOI; the
-        // digitless toneless TL form (`ㄉㄧㄠ` → `tiau`) is accepted
-        // directly as the fused key fragment. ㄉ/ㄧ/ㄠ = 3 bytes each.
-        let keys = build_keys_tps("ㄉㄧㄠ");
-        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
-        assert_eq!(texts, vec!["tl:tiau"], "{texts:?}");
-        assert_eq!(keys[0].0, (0u32, 9u32));
-    }
-
-    #[test]
-    fn build_keys_tps_tone1_chain_emits_cumulative_fused_keys() {
-        // ㄉㄞㆣㄧ — "tâi-gí" (台語) typed with no tone marks. The
-        // syllabifier splits ㄉㄞ | ㆣㄧ via next-initial-seen; each
-        // span converts to a clean toneless TL fragment and the
-        // cumulative fused keys mirror the TL path (`tl:tai`, then
-        // `tl:taigi`). Each Bopomofo char = 3 bytes.
-        let keys = build_keys_tps("\u{3109}\u{311e}\u{31a3}\u{3127}");
-        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
-        assert_eq!(texts, vec!["tl:tai", "tl:taigi"], "{texts:?}");
-        assert_eq!(keys[0].0, (0u32, 6u32));
-        assert_eq!(keys[1].0, (0u32, 12u32));
-    }
-
-    #[test]
-    fn build_keys_tps_mixed_tone1_and_tone_marked() {
-        // ㄉㄞㆣㄧˊ — tone-1 ㄉㄞ then tone-5 ㆣㄧˊ. Mixed boundary
-        // kinds still produce cumulative fused keys; ˊ = U+02CA (2
-        // bytes), so the second span ends at 6 + 3+3+2 = 14.
-        let keys = build_keys_tps("\u{3109}\u{311e}\u{31a3}\u{3127}\u{02ca}");
-        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
-        assert_eq!(texts, vec!["tl:tai", "tl:taigi"], "{texts:?}");
-        assert_eq!(keys[0].0, (0u32, 6u32));
-        assert_eq!(keys[1].0, (0u32, 14u32));
-    }
-
-    #[test]
-    fn build_keys_tps_caps_at_max_syllables() {
-        // `MAX_SYLLABLES + 1` well-formed `ㄉㄧㄠˊ` (= tiau5) syllables →
-        // syllabifier emits one more ending than the budget, but
-        // `build_keys_tps` must cap at MAX_SYLLABLES to mirror the TL
-        // path's BFS depth bound and keep per-keystroke FST lookup
-        // complexity bounded.
-        // Each `ㄉㄧㄠˊ` syllable = ㄉ(3) + ㄧ(3) + ㄠ(3) + ˊ(2) = 11 bytes.
-        const SYLLABLE_BYTES: usize = 11;
-        let raw = "ㄉㄧㄠˊ".repeat(MAX_SYLLABLES + 1);
-        let keys = build_keys_tps(&raw);
-        assert_eq!(keys.len(), MAX_SYLLABLES, "{keys:?}");
-        // Last consumed-span end must sit on the cap-th syllable boundary,
-        // not the full input — catches accidental overconsumption that
-        // would mis-align platform commit slicing.
-        assert_eq!(
-            keys[MAX_SYLLABLES - 1].0,
-            (0u32, (SYLLABLE_BYTES * MAX_SYLLABLES) as u32)
-        );
-        // Last fused key concatenates exactly MAX_SYLLABLES toneless `tiau` fragments.
-        assert_eq!(
-            keys[MAX_SYLLABLES - 1].1,
-            format!("tl:{}", "tiau".repeat(MAX_SYLLABLES))
-        );
-    }
+    // v3.5.9 D / C-3b — `build_keys_tps` + `strip_trailing_tone_digit`
+    // tests retired; TPS now exercises the shared
+    // `build_shadow_lattice` + `left_anchored_keys_from_lattice` path
+    // (with `tps:` family prefix and Bopomofo tone-mark strip) tested
+    // by `composing::shadow`'s tests plus the integration suite
+    // (`engine/composing/tests/build_keys_tps.rs` covers the new
+    // mode-aware TPS key emission against an inline `tps:` inventory).
 
     // ----- v3.5.8 S2 — synth_consumed_span trailing-hyphen guard -----
     // (Codex post-impl S2 P1 regression). Production runs

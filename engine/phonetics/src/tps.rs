@@ -204,8 +204,16 @@ pub fn is_tps_initial(ch: char) -> bool {
 /// combining dot for tone-8. Stop codas (`\u{31b4-7,b}`) are part of the
 /// toneless syllable body, not tone marks proper — tone-4 stop syllables
 /// carry no trailing mark, tone-8 stops carry a trailing dot.
+///
+/// v3.5.9 D / C-3b — public so `composing::shadow::strip_tones_for_mode`
+/// + `lexicon::continuous::matches_continuous_tps_toneless_key` can
+/// reuse the single canonical set. Pre-C-3b this was private + a
+/// `is_tps_tone_mark_pub` thunk re-export; simplifier-flagged
+/// triple-naming collapsed to one public symbol.
 // 中文: TPS 聲調符號集合;入聲韻尾本身屬音節主體,聲調 4 無尾標,聲調 8 在韻尾後加點。
-fn is_tps_tone_mark(ch: char) -> bool {
+// 中文: D / C-3b — 改 pub,讓 composing::shadow / lexicon::continuous 共用單一真相;
+// 中文:   砍掉之前 thunk 三重命名(simplifier 提醒)。
+pub fn is_tps_tone_mark(ch: char) -> bool {
     matches!(
         ch,
         '\u{02c6}'
@@ -276,6 +284,108 @@ pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
     let toneless = &token[..toneless_len];
     let tone = &token[toneless_len..];
     Some((toneless.to_string(), tone.to_string()))
+}
+
+/// v3.5.9 D / C-3b — runtime mirror of the build pipeline chain
+/// `dictionary/build/merge_csv.py:251-265`:
+///   `tps_num   = concat( convert_tl_to_tps_strict(tok) for tok in tl.split([-,ws]) )`
+///   `tps_notone = remove_tps_tone(tps_num)  # strip the 8 tone marks + hyphens + whitespace`
+///
+/// Used by `lexicon::continuous::matches_continuous_tps_toneless_key` to
+/// derive the expected `tps_notone` surface from a dictionary record's
+/// `tl` field at runtime, so a continuous-input `tps:<body>` walker key
+/// can be rejected when the FST hit is actually a `tps_abbrev` collision
+/// (the same shape of guard B-2 added for `tl:` and `poj:`).
+///
+/// Per-syllable: TL tokens are split on `-` and whitespace (mirrors the
+/// Python `re.split(r"[-\s]+", tl)`), each token is converted via
+/// [`crate::to_tone_number`] to numeric-tone form (the Node bridge accepts
+/// diacritic input but our Rust [`to_zhuyin`] expects numeric), passed to
+/// [`to_zhuyin`] with `encode_safe = false` + `or_maps_to_er = true`
+/// (the Node bridge default — `convert_tl_to_tps_strict` builds the
+/// primary `tps_notone` column with this toggle), then tone marks +
+/// hyphen + whitespace dropped via [`is_tps_tone_mark`] + the
+/// `_TPS_TONE_AND_SEP_RE` regex equivalent. The resulting tokens
+/// concatenate fused (no separator), exactly what `merge_csv.py`'s
+/// `"".join(tps_per_syllable)` produces.
+///
+/// Encoding-only — no phonotactic gating — same posture as the POJ analog
+/// (`engine/lexicon/src/continuous.rs::derive_poj_notone_for_match`): the
+/// build pipeline does not gate, gating here would silently reject any
+/// legitimate dictionary row whose TL shape the Rust port misses but the
+/// Node bridge accepts. The non-golden parity test
+/// `engine/lexicon/tests/tps_notone_parity.rs` pins runtime derivation
+/// against `dictionary/output/dictionary.csv` row-for-row (C-5 scope) so
+/// drift is caught loud.
+// 中文: D / C-3b — `tps_notone` 的 runtime mirror。對應 build pipeline
+// 中文:   merge_csv.py 既有鏈:逐音節 TL → numeric tone → to_zhuyin → 去 tone marks → concat。
+// 中文:   給 lexicon::continuous::matches_continuous_tps_toneless_key 使用,
+// 中文:   濾掉 tps_abbrev 碰撞 (與 B-2 為 tl:/poj: 加上的 guard 同 shape)。
+// 中文: encoding-only 不做 phonotactic gate(姿態與 derive_poj_notone_for_match 一致),
+// 中文:   建置端不 gate,runtime gate 會誤殺合法 dict 行。
+pub fn tps_notone_from_tl(record_tl: &str) -> String {
+    let mut out = String::with_capacity(record_tl.len() * 3);
+    for token in record_tl.split(['-', ' ', '\t']) {
+        if token.is_empty() {
+            continue;
+        }
+        let numeric = crate::api::to_tone_number(token);
+        // `or_maps_to_er = true` matches the build pipeline default. The
+        // build chain calls `convert_tl_to_tps_strict` (Node bridge with
+        // its `or_maps_to_er` default ON), which emits ㄜ for both TL
+        // `er` and `or` tokens — i.e. the `tps_notone` column in
+        // `dictionary.csv` always carries the er-glyph form. The
+        // separate `tps_notone_var` column (built by C-3a's
+        // `apply_or_dialect_variant`) carries the ㄛ alternate; this
+        // runtime helper produces only the primary `tps_notone` form
+        // because the guard compares against that column.
+        // 中文: or_maps_to_er=true 對齊 build pipeline 預設 — Node bridge 預設將 TL er/or 都映射為 ㄜ;
+        // 中文:   `tps_notone` 欄一律 ㄜ-glyph,ㄛ 變體在 `tps_notone_var` (C-3a),
+        // 中文:   此 runtime helper 只需產出主欄即可比對 guard。
+        let tps = to_zhuyin(&numeric, false, true);
+        for ch in tps.chars() {
+            // `_TPS_TONE_AND_SEP_RE` in `dictionary/common/notone.py:43`
+            // strips not only the 8 tone marks but ALSO ASCII hyphen +
+            // any whitespace. `to_zhuyin` for tone-1 inputs emits a
+            // trailing space marker; without the whitespace strip the
+            // runtime derivation gains a stray ` ` (U+0020) that the
+            // build pipeline's `tps_notone` column does not have.
+            // Match the regex exactly to keep runtime ↔ build pipeline
+            // byte-identical.
+            // 中文: notone.py 的 _TPS_TONE_AND_SEP_RE 同時剝聲調符號 + ASCII 連字號 + 空白;
+            // 中文:   to_zhuyin 對第 1 聲輸入會帶尾空白,須一併剝除,否則 runtime 與 build pipeline 不一致。
+            if is_tps_tone_mark(ch) || ch == '-' || ch.is_whitespace() {
+                continue;
+            }
+            out.push(ch);
+        }
+    }
+    out
+}
+
+/// v3.5.9 D / C-3b — runtime mirror of
+/// `dictionary/common/notone.py::apply_or_dialect_variant`. Returns the
+/// `or_maps_to_er = false` variant of a primary TPS notone surface by
+/// substituting every ㄜ (U+311C) with ㄛ (U+311B). Returns an empty
+/// string when the input has no ㄜ (callers skip a redundant variant
+/// emit per build pipeline behavior).
+///
+/// Why this lives here at runtime: the C-3a build pipeline dual-emits
+/// `tps:<tps_notone>` AND `tps:<tps_notone_var>` per row whose primary
+/// form contains ㄜ. The continuous-input toneless guard
+/// (`lexicon::matches_continuous_tps_toneless_key`) must therefore
+/// accept BOTH forms — otherwise a user typing the ㄛ form (e.g.
+/// `ㄉㄛ` for TL `tor`/`tór`) hits the FST via `tps_notone_var` but
+/// the guard's primary-only derivation rejects it as an
+/// abbrev-collision. Codex post-impl BLOCK 2026-05-25.
+// 中文: D / C-3b — `apply_or_dialect_variant` 的 Rust runtime 鏡像。
+// 中文:   C-3a build pipeline 對含 ㄜ 的 row dual-emit `tps_notone` + `tps_notone_var`
+// 中文:   (ㄜ→ㄛ);連續輸入 guard 必須同時接受兩形,否則用戶打 ㄛ 形會被誤殺。
+pub fn tps_notone_or_variant(notone: &str) -> String {
+    if !notone.contains('\u{311c}') {
+        return String::new();
+    }
+    notone.replace('\u{311c}', "\u{311b}")
 }
 
 /// Convert a single TL token (with tone digit) to TPS.

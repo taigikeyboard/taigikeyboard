@@ -18,7 +18,13 @@ use lexicon::SyllableInventory;
 use phonetics::InputMode;
 
 use super::Lattice;
-use crate::syllabifier::tl::valid_span_endings_lowered;
+// v3.5.9 D / C-3b — route through the mode-aware dispatcher so TPS
+// (`InputMode::Tps`) walks `syllabifier::tps::valid_span_endings_lowered`
+// (terminator scan + `SyllableInventory::contains_in(Tps, ..)` gate)
+// while TL/POJ/English keep the FST BFS path. One dispatcher, one mode.
+// 中文: D / C-3b — 改走 mode-aware dispatcher;TPS 走自家 lowered 變體,
+// 中文:   TL/POJ/English 維持原 FST BFS,單一 mode 路由。
+use crate::syllabifier::valid_span_endings_lowered;
 
 /// Build the segmentation lattice for `shadow` (the hyphen-stripped,
 /// mode-canonicalized buffer).

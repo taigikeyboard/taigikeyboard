@@ -50,6 +50,10 @@ public interface SearchRequestOrBuilder extends
   int getLimit();
 
   /**
+   * <pre>
+   * OBSOLETE — see comment block above; runtime ignored since C-3a
+   * </pre>
+   *
    * <code>bool tps_or_mapped_to_er = 5;</code>
    * @return The tpsOrMappedToEr.
    */

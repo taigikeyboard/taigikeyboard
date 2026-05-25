@@ -16,8 +16,12 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * returns an empty `rows` list WITHOUT consulting any reader. Verified by
  * `INVARIANT_LEX_HANZI_GUARD` (engine + iOS + Android per Codex Mod 1).
  *
- * `tps_or_mapped_to_er` triggers the `er`↔`or` variant search when
- * `input_mode == INPUT_MODE_TPS` and the normalized key contains `er`.
+ * `tps_or_mapped_to_er` is OBSOLETE since C-3a — engine runtime ignores
+ * the field. The er↔or dialect axis is now handled at build time via
+ * dual-emit `tps:` keys (ㄜ + ㄛ glyphs at the same rowid) in
+ * `dictionary.fst`, always-on for every TPS user. The field stays on
+ * the wire so existing platform callers continue to compile; a later
+ * admin sweep removes the platform-side setters.
  *
  * `enabled_sources_bitmask` is the platform's source-toggle state encoded
  * as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
@@ -194,6 +198,10 @@ public  final class SearchRequest extends
   public static final int TPS_OR_MAPPED_TO_ER_FIELD_NUMBER = 5;
   private boolean tpsOrMappedToEr_;
   /**
+   * <pre>
+   * OBSOLETE — see comment block above; runtime ignored since C-3a
+   * </pre>
+   *
    * <code>bool tps_or_mapped_to_er = 5;</code>
    * @return The tpsOrMappedToEr.
    */
@@ -202,6 +210,10 @@ public  final class SearchRequest extends
     return tpsOrMappedToEr_;
   }
   /**
+   * <pre>
+   * OBSOLETE — see comment block above; runtime ignored since C-3a
+   * </pre>
+   *
    * <code>bool tps_or_mapped_to_er = 5;</code>
    * @param value The tpsOrMappedToEr to set.
    */
@@ -210,6 +222,10 @@ public  final class SearchRequest extends
     tpsOrMappedToEr_ = value;
   }
   /**
+   * <pre>
+   * OBSOLETE — see comment block above; runtime ignored since C-3a
+   * </pre>
+   *
    * <code>bool tps_or_mapped_to_er = 5;</code>
    */
   private void clearTpsOrMappedToEr() {
@@ -337,8 +353,12 @@ public  final class SearchRequest extends
    * returns an empty `rows` list WITHOUT consulting any reader. Verified by
    * `INVARIANT_LEX_HANZI_GUARD` (engine + iOS + Android per Codex Mod 1).
    *
-   * `tps_or_mapped_to_er` triggers the `er`↔`or` variant search when
-   * `input_mode == INPUT_MODE_TPS` and the normalized key contains `er`.
+   * `tps_or_mapped_to_er` is OBSOLETE since C-3a — engine runtime ignores
+   * the field. The er↔or dialect axis is now handled at build time via
+   * dual-emit `tps:` keys (ㄜ + ㄛ glyphs at the same rowid) in
+   * `dictionary.fst`, always-on for every TPS user. The field stays on
+   * the wire so existing platform callers continue to compile; a later
+   * admin sweep removes the platform-side setters.
    *
    * `enabled_sources_bitmask` is the platform's source-toggle state encoded
    * as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
@@ -528,6 +548,10 @@ public  final class SearchRequest extends
     }
 
     /**
+     * <pre>
+     * OBSOLETE — see comment block above; runtime ignored since C-3a
+     * </pre>
+     *
      * <code>bool tps_or_mapped_to_er = 5;</code>
      * @return The tpsOrMappedToEr.
      */
@@ -536,6 +560,10 @@ public  final class SearchRequest extends
       return instance.getTpsOrMappedToEr();
     }
     /**
+     * <pre>
+     * OBSOLETE — see comment block above; runtime ignored since C-3a
+     * </pre>
+     *
      * <code>bool tps_or_mapped_to_er = 5;</code>
      * @param value The tpsOrMappedToEr to set.
      * @return This builder for chaining.
@@ -546,6 +574,10 @@ public  final class SearchRequest extends
       return this;
     }
     /**
+     * <pre>
+     * OBSOLETE — see comment block above; runtime ignored since C-3a
+     * </pre>
+     *
      * <code>bool tps_or_mapped_to_er = 5;</code>
      * @return This builder for chaining.
      */

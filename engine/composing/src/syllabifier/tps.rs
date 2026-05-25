@@ -1,5 +1,15 @@
 //! TPS syllabifier — O(n) scan returning every byte offset that ends a
-//! TPS syllable. Two boundary kinds:
+//! TPS syllable.
+//!
+//! v3.5.9 D / C-3b — gained an `_lowered` variant matching the TL
+//! syllabifier signature (`inv`, `mode`, `max_syllables`) so the
+//! [`crate::syllabifier::valid_span_endings_lowered`] dispatcher can
+//! route TPS through the same lattice builder. The inventory gate is
+//! load-bearing per Codex pre-impl Fork 3 amendment: each candidate
+//! ending is verified via `inv.contains_in(InputMode::Tps, slice)` so
+//! a malformed TPS span (residue, unknown Bopomofo combination) cannot
+//! leak into the walker's no-dict carve-out as a synth roman.
+//! Two boundary kinds:
 //!
 //! 1. **Explicit terminator** — a tone mark (tone 2/3/5/6/7/9), an
 //!    entering-coda small letter (tone 4, optionally coalesced with a
@@ -91,6 +101,111 @@ fn classify(ch: char) -> Option<Terminator> {
 // 中文: 線性掃描 input[pos..],回報每個音節結束位移,含顯式終止符與隱式第 1 聲邊界 (天然遞增)。
 // 中文: 韻核 = 非聲母非終止符的注音字元;見到新聲母 (前面已有韻核) 或輸入結尾仍有未結第 1 聲時補切點;終止符會清除待結韻核。
 pub fn valid_span_endings(input: &str, pos: usize) -> Vec<usize> {
+    raw_endings_from(input, pos, usize::MAX)
+}
+
+/// v3.5.9 D / C-3b — pre-lowered variant matching the TL syllabifier
+/// signature so the [`crate::syllabifier::valid_span_endings_lowered`]
+/// dispatcher can route TPS through `lattice::build_lattice` without
+/// per-mode special cases. TPS is case-insensitive (Bopomofo has no
+/// case axis), so `lowered` is just `input` passed through; the
+/// per-keystroke `to_ascii_lowercase` allocation upstream is harmless
+/// for non-Latin chars and is consistent with the TL path.
+///
+/// Algorithm:
+/// 1. Walk the buffer with the existing terminator-scan to collect the
+///    candidate ending byte offsets from `pos` (each ending closes one
+///    structural TPS syllable — tone-marked or implicit tone-1).
+/// 2. **Inventory-gate** each candidate: chain forward from `pos` using
+///    `inv.contains_in(InputMode::Tps, lowered[cur..end])` on each hop's
+///    syllable slice. The first depth-1 endings reachable that pass the
+///    inventory filter become depth-1 results; the BFS then continues
+///    forward from each accepted ending until the chain is exhausted or
+///    `max_syllables` is reached.
+/// 3. Cap result depth at `max_syllables` (mirrors the TL BFS depth
+///    bound). The inventory gate rejects malformed Bopomofo that the
+///    structural classifier alone would accept as a "syllable" (Codex
+///    pre-impl Fork 3 amendment — without this an unknown Bopomofo span
+///    would slip into walker OOV synth as a no-dict carve-out).
+///
+/// `_inv` and `_mode` are taken for signature parity; this function
+/// always probes the `tps:` family via `inv.contains_in(InputMode::Tps,
+/// ...)` regardless of the caller's `mode` (the dispatcher in
+/// `syllabifier::mod.rs` is responsible for routing only TPS callers
+/// here; an unexpected non-TPS `mode` reaching this fn would not change
+/// the family probed).
+// 中文: D / C-3b — 與 TL syllabifier signature 對齊的 pre-lowered 變體。
+// 中文:   先以結構化終止符掃描蒐集候選 ending,再以 inv.contains_in(Tps, slice)
+// 中文:   逐跳過濾,深度上限 max_syllables(對齊 TL BFS bound)。Codex 修訂:
+// 中文:   不過濾會讓不合法 Bopomofo 跳進 walker OOV synth。
+pub(crate) fn valid_span_endings_lowered(
+    lowered: &str,
+    pos: usize,
+    inv: &lexicon::SyllableInventory,
+    _mode: phonetics::InputMode,
+    max_syllables: usize,
+) -> Vec<usize> {
+    if max_syllables == 0 || pos >= lowered.len() || !lowered.is_char_boundary(pos) {
+        return Vec::new();
+    }
+    // The structural scanner enumerates syllable boundaries from `pos`
+    // forward (terminator or implicit tone-1). Cap collection at
+    // `max_syllables` so each call walks O(max_syllables × syllable_bytes)
+    // bytes, not O(N) bytes to end-of-input. The BFS below caps depth at
+    // `max_syllables` anyway, so any candidate past the Nth boundary
+    // would never be inserted into `endings` — truncating the candidate
+    // list is byte-identical for output. Without the cap,
+    // `build_lattice` calls this once per reachable start (Codex PR
+    // #337 r3298575431) and the per-start full-suffix rescan becomes
+    // O(N²) on long TPS buffers, matching the cost shape the TL path
+    // explicitly avoids via `MAX_SYLLABLE_BYTES`.
+    // 中文: 結構化掃描以 max_syllables 為上限收集候選 ending(原本 usize::MAX 會走到 EOI,
+    // 中文:   per-start 全 suffix 重掃 → O(N²),Codex r3298575431 指出)。下方 BFS 深度也限
+    // 中文:   max_syllables,候選超過此上限的位置永遠不會插入 endings → 截斷對輸出 byte-identical。
+    let candidates = raw_endings_from(lowered, pos, max_syllables);
+    if candidates.is_empty() {
+        return Vec::new();
+    }
+    // BFS over candidate endings under the inventory gate. Mirrors the
+    // TL syllabifier's depth-1..=max_syllables chain semantics so the
+    // lattice builder's left-anchored phrase edges (`build_lattice`
+    // emits them from the BFS visit of every reachable start) come out
+    // the same shape for TPS.
+    use std::collections::{BTreeSet, VecDeque};
+    let mut endings: BTreeSet<usize> = BTreeSet::new();
+    let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
+    queue.push_back((pos, 0));
+    while let Some((cur, depth)) = queue.pop_front() {
+        if depth >= max_syllables {
+            continue;
+        }
+        for &end in &candidates {
+            if end <= cur {
+                continue;
+            }
+            if !lowered.is_char_boundary(end) {
+                continue;
+            }
+            let slice = &lowered[cur..end];
+            if !inv.contains_in(phonetics::InputMode::Tps, slice) {
+                continue;
+            }
+            if endings.insert(end) {
+                queue.push_back((end, depth + 1));
+            }
+        }
+    }
+    endings.into_iter().collect()
+}
+
+// Internal structural scan — returns every TPS syllable ending byte
+// offset reachable from `pos` by walking terminators + implicit tone-1
+// boundaries forward. Caller cap via `limit` keeps the public
+// [`valid_span_endings`] (no cap) and the inventory-gated
+// [`valid_span_endings_lowered`] using ONE scan loop.
+// 中文: 結構化掃描內核 — 從 pos 往前以終止符 + 隱式第 1 聲收集所有候選 ending byte 位移;
+// 中文:   呼叫端透過 limit 控上限(公開 API 為無上限,gated 變體在掃描後依 max_syllables 過濾)。
+fn raw_endings_from(input: &str, pos: usize, limit: usize) -> Vec<usize> {
     if pos >= input.len() || !input.is_char_boundary(pos) {
         return Vec::new();
     }
@@ -100,6 +215,9 @@ pub fn valid_span_endings(input: &str, pos: usize) -> Vec<usize> {
     let mut iter = input[pos..].char_indices().peekable();
 
     while let Some((rel, ch)) = iter.next() {
+        if endings.len() >= limit {
+            break;
+        }
         let start = pos + rel;
         let abs = start + ch.len_utf8();
         match classify(ch) {
@@ -135,7 +253,7 @@ pub fn valid_span_endings(input: &str, pos: usize) -> Vec<usize> {
         }
     }
 
-    if nucleus_seen {
+    if nucleus_seen && endings.len() < limit {
         endings.push(input.len());
     }
 

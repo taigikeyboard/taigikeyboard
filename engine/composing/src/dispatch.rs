@@ -17,9 +17,10 @@
 //! `engine/lexicon/src/continuous.rs`: TL/English emit `tl:<lowered>`,
 //! POJ emits `poj:<lowered>` (v3.5.9 B-2 PR #309 promoted POJ to a
 //! first-class FST key family via `composing::shadow::mode_key_prefix`),
-//! TPS rides the TL family via `phonetics::tps_to_tl` per Bopomofo span
-//! → strip trailing tone digit → `tl:<toneless>` (TPS first-class
-//! promotion is the C round, intentionally out of scope here).
+//! and TPS emits `tps:<bopomofo_toneless>` against the C-0 emit of
+//! `dictionary.fst` (v3.5.9 D / C-3b promoted TPS to first-class via
+//! the same shadow → lattice path TL/POJ already walk; the legacy
+//! `build_keys_tps` `tl:`-folded path is retired).
 
 // 中文: 將 protobuf ComposingRequest 解碼成 Intent,套用到 Engine 後產出回應。
 // 中文: 純函式分派層,不處理 generation 同步 (那由 EngineHandle 負責)。
@@ -173,38 +174,37 @@ fn handle_fetch_at_pos(
         // tell "FetchAtPos was reached" vs "wrong phase".
         return with_continuous(snapshot, ContinuousResponse::default());
     }
-    // Pick syllabifier path by inspecting the raw buffer rather than
-    // `config.input_mode`: existing platform `AppConfig` builders map
-    // TPS to `"tl"` for legacy reasons (`ios/.../RustEngineBridge.swift`
-    // appConfig builder, `android/.../ime/text/composing/ComposingManager.kt::resolveMode`),
-    // so config alone would mis-classify a TPS buffer as TL. Bopomofo
-    // chars are unambiguous (`contains_tps` mirrors the same
-    // detection used in `engine/composing/src/derived.rs:17`).
-    let is_tps = contains_tps(raw);
-    // Input mode is parsed here (ahead of the seam) because two
-    // downstream behaviors are mode-gated: (a) the mode-aware
-    // canonicalize step inside the shadow pipeline — POJ mode keeps
-    // POJ ASCII (`chiah` stays `chiah`) so the lattice resolves it
-    // against the POJ family of the tagged-single-FST (`poj:chiah`),
-    // while TL/English mode keeps TL ASCII via the F3C `tó-uī`→`toui`
-    // identity fast-path in `canonicalize_poj_shadow`. Pre-B-2 the POJ
-    // branch folded into TL ASCII so every ch-/oa-/oe- word required
-    // POJ→TL canonicalization to hit the FST; B-2 PR #309 promoted POJ
-    // to a first-class FST key family and dropped the fold; (b) the POJ
-    // presentation pass at step 5 of the seam. Unlike TPS-vs-TL (which
-    // `config.input_mode` cannot make because platform builders
-    // legacy-map TPS→`"tl"`), POJ-vs-TL IS reliable from config
-    // (builders map POJ→`"poj"`). TPS routes through `build_keys_tps`
-    // in the seam so the POJ-gated paths never reach it.
-    // 中文: input mode 提前 parse — shadow canonicalize 與 POJ render 都需 mode-gate;
-    // 中文:   B-2 PR #309 後 POJ 模式保 POJ ASCII (`chiah` 不再摺為 `tsiah`),lattice
-    // 中文:   走 tagged-single-FST 的 `poj:` 家族;TL/English 模式 TL ASCII 維持 identity (F3C gate)。
-    // v3.5.9 B-0c — `mode` flows directly into `assemble_candidates`;
-    // the seam derives the POJ-vs-TL branch via `mode == InputMode::Poj`
-    // internally (was a separate `is_poj: bool` arg pre-B-0c).
-    // 中文: B-0c — mode 直接傳入 seam,POJ-vs-TL 分支由 seam 內部 mode == Poj 推導
-    // 中文:   (B-0c 前是獨立的 is_poj: bool 參數)。
-    let mode = phonetics::api::parse_input_mode(&config.input_mode);
+    // v3.5.9 D / C-3b — mode upgrade: the raw buffer trumps
+    // `config.input_mode` when TPS Bopomofo is detected. Existing
+    // platform `AppConfig` builders map TPS to `"tl"` / `"poj"` for
+    // legacy reasons (`ios/.../RustEngineBridge+Composing.swift:584-599`,
+    // `android/.../engine/RustEngineBridge.kt:1270-1288` — both fold
+    // TPS into `is_translate_swapped` and keep `input_mode` as the
+    // underlying romanization choice), so the config string alone
+    // would mis-classify a TPS buffer. Bopomofo chars are unambiguous
+    // (`phonetics::contains_tps` mirrors the same detection used in
+    // `engine/composing/src/derived.rs:27`), so we promote the parsed
+    // mode to `InputMode::Tps` whenever any Bopomofo char is present.
+    //
+    // Single-source mode flow into `assemble_candidates`: the seam
+    // derives every TPS-gated branch from `mode == InputMode::Tps`
+    // internally — pre-C-3b had a parallel `is_tps: bool` arg that
+    // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
+    // of truth). Dropping the bool eliminates split-brain risk.
+    //
+    // The POJ-vs-TL/English branch in the seam is unaffected: platform
+    // builders DO map POJ → `"poj"` so config is reliable for that
+    // axis; only TPS needs the `contains_tps` override.
+    // 中文: D / C-3b — mode 升級:有 Bopomofo 字元時 raw 凌駕 config。
+    // 中文:   現平台 AppConfig 把 TPS 折成 "tl"/"poj" + is_translate_swapped 旗標,
+    // 中文:   config 字串無法判 TPS,故以 contains_tps(raw) 為唯一真相升級到 InputMode::Tps。
+    // 中文:   單一 mode 直流入 assemble_candidates,刪掉 is_tps 雙軸 split-brain。
+    // 中文:   POJ vs TL 不受影響(config 字串可靠),只有 TPS 需要 raw 偵測覆寫。
+    let mode = if contains_tps(raw) {
+        phonetics::InputMode::Tps
+    } else {
+        phonetics::api::parse_input_mode(&config.input_mode)
+    };
     // Phase 9.3a: hoist proto-shaped `FrequencyEntry[]` into the
     // domain-typed `FrequencyMap` once per fetch; `lexicon` consumes
     // `&FrequencyMap` and stays proto-agnostic. Empty list → empty
@@ -225,7 +225,7 @@ fn handle_fetch_at_pos(
     // (key build → span-local/partial fetch → recase → walker slot-0
     // prepend → POJ presentation pass → return). Wire encoding (step 6)
     // happens below via `raw_to_proto_candidate` + `with_continuous`.
-    let candidates = assemble_candidates(raw, &freq_map, now_ms, &custom, mode, is_tps);
+    let candidates = assemble_candidates(raw, &freq_map, now_ms, &custom, mode);
     with_continuous(
         snapshot,
         ContinuousResponse {

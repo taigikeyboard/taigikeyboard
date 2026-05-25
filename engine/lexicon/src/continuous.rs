@@ -34,13 +34,15 @@
 //!   `composing::shadow::canonicalize_poj_shadow` — that helper is now
 //!   mode-aware (v3.5.9 B-2 PR #309) and per-syllable
 //!   `phonetics::canonicalize_syllable` / `canonicalize_poj_syllable`
-//!   handle build-pipeline and helper-level normalization. **TPS
-//!   Bopomofo input is NOT directly accepted here** — `tps::valid_span_endings`
-//!   operates on the raw Bopomofo string and produces TPS byte offsets,
-//!   which would not form valid `tl:` / `poj:` FST keys. The Phase 6
-//!   dispatcher maps TPS → numeric-tone TL via `phonetics::tps_to_tl`
-//!   and emits `tl:` keys at the dispatch boundary; TPS remains scoped
-//!   to the TL family pending the C round (TPS first-class promotion).
+//!   handle build-pipeline and helper-level normalization. **v3.5.9 D /
+//!   C-3b promoted TPS to a first-class family**: TPS continuous input
+//!   now walks the same shared shadow → lattice path TL/POJ already
+//!   walk and the engine emits `tps:<bopomofo_toneless>` keys against
+//!   the C-0 emit of `dictionary.fst`. The legacy `tl:`-folded path
+//!   (`composing::continuous::build_keys_tps` + `phonetics::tps_to_tl`)
+//!   is retired; `tps::valid_span_endings_lowered` is the unified
+//!   syllabifier entry the lattice builder dispatches to under
+//!   `InputMode::Tps`.
 //! - `endings` SHOULD be ascending UTF-8 char boundaries within
 //!   `input[pos..]`. Out-of-range or non-boundary endings are silently
 //!   skipped (matches the syllabifier's safe contract).
@@ -73,14 +75,14 @@
 //!
 //! Phase 6 added the proto request / response carriers
 //! (`ContinuousResponse` / `CandidateMessage` in `composing.proto`) and
-//! the dispatch wiring (`composing/src/dispatch.rs::handle_fetch_at_pos`),
-//! plus the TPS → TL key mapping that runs at the dispatch boundary
-//! before calling [`fetch_candidates_for_keys`]. v3.5.9 D7+D8 (#306)
-//! made `fetch_candidates_for_keys` the sole production entry — TL/POJ
-//! span-local lookup is composed in `composing::continuous::fetch_via_lexicon_inner`
-//! (mode-aware `<prefix>:<toneless>` keys via
-//! `composing::shadow::mode_key_prefix`) and TPS goes through
-//! `composing::continuous::build_keys_tps`. The legacy
+//! the dispatch wiring (`composing/src/dispatch.rs::handle_fetch_at_pos`).
+//! v3.5.9 D7+D8 (#306) made `fetch_candidates_for_keys` the sole
+//! production entry. v3.5.9 D / C-3b promoted TPS to a first-class FST
+//! family, so ALL modes (TL / POJ / TPS / English) now compose span-local
+//! lookup uniformly in `composing::continuous::fetch_via_lexicon_inner`
+//! via mode-aware `<prefix>:<toneless>` keys (`composing::shadow::mode_key_prefix`
+//! yields `tl:` / `poj:` / `tps:`); the pre-C-3b `build_keys_tps` →
+//! `tl:`-fold short-circuit is retired. The legacy
 //! `fetch_candidates_for_endings` wrapper is `#[doc(hidden)]` and now
 //! exists only so the integration tests under `engine/lexicon/tests/`
 //! keep working without rebuilding `(span, key)` pairs inline.
@@ -434,11 +436,12 @@ pub struct ContinuousFetchCtx<'a> {
 ///
 /// Internally a thin wrapper around [`fetch_candidates_for_keys`]: it
 /// maps each `end` to a `(consumed_span, "<prefix>:<lowered>")` pair
-/// with `prefix ∈ {tl, poj}` selected per `mode` (v3.5.9 B-2 PR #309
-/// promoted POJ to a first-class FST key family). TPS callers must NOT
-/// use this entry — they go through the Phase-6 dispatcher path that
-/// builds keys via `phonetics::tps_to_tl` and calls
-/// [`fetch_candidates_for_keys`] directly.
+/// with `prefix ∈ {tl, poj, tps}` selected per `mode` (v3.5.9 B-2 PR
+/// #309 promoted POJ, v3.5.9 D / C-3b promoted TPS). Production callers
+/// no longer reach this wrapper after D7+D8 (#306) — they compose the
+/// span-local lookup directly through
+/// `composing::continuous::fetch_via_lexicon_inner`; this entry remains
+/// only for the integration tests under `engine/lexicon/tests/`.
 ///
 /// **v3.5.8 Phase 9.3a**: `ctx.freq_map` carries the per-display-text
 /// user selection snapshot keyed by `RawCandidate::display_text`
@@ -447,9 +450,9 @@ pub struct ContinuousFetchCtx<'a> {
 /// neutral behaviour (boost = 1.0, recency_rank = 1 everywhere) —
 /// `recency_rank()`'s guards (`now_ms <= 0`, `last_used_ms <= 0`,
 /// clock skew) make this a safe default.
-// 中文: D8 — test-only TL/POJ 連續輸入入口;production 走 composing::continuous::fetch_via_lexicon_inner 直呼
+// 中文: D8 — test-only 連續輸入入口;production 走 composing::continuous::fetch_via_lexicon_inner 直呼
 // 中文:   fetch_candidates_for_keys 帶平台 custom,只剩 lexicon 整合測試會落到這裡。doc(hidden) 隱藏 rustdoc 公開面。
-// 中文: TPS 路徑請走 Phase 6 dispatcher,先用 phonetics::tps_to_tl 轉出 toneless TL key 再呼叫 fetch_candidates_for_keys。
+// 中文: D / C-3b — TPS first-class 後,prefix ∈ {tl, poj, tps},全模式共用一條 span-local 入口。
 // 中文: Phase 9.3a — ctx 中 freq_map+now_ms;空 map + now_ms=0 = cold-start neutral。
 #[doc(hidden)]
 pub fn fetch_candidates_for_endings(
@@ -471,6 +474,9 @@ pub fn fetch_candidates_for_endings(
     // 中文: B-2 — emit 與 mode 對應的家族前綴;下游 dispatcher 依前綴選 acronym guard。
     let prefix = match mode {
         phonetics::InputMode::Poj => "poj",
+        // v3.5.9 D / C-3b — TPS first-class family.
+        // 中文: D / C-3b — TPS 連續輸入走 tps: 家族。
+        phonetics::InputMode::Tps => "tps",
         phonetics::InputMode::Tl | phonetics::InputMode::English => "tl",
     };
     for &end in endings {
@@ -545,15 +551,13 @@ pub type ConsumedSpan = (u32, u32);
 /// Mode-agnostic span-local fetch entry. Each input pair is
 /// `(consumed_span, fst_key)`: `consumed_span` is the user-facing
 /// byte range that committing this candidate will eat, and `fst_key`
-/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"` for TL/English
-/// or `"poj:chiah"` for POJ — v3.5.9 B-2 PR #309 promoted POJ to a
-/// first-class FST key family). The production caller
+/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"` for TL/English,
+/// `"poj:chiah"` for POJ, `"tps:ㄉㄞ"` for TPS — v3.5.9 B-2 PR #309
+/// promoted POJ and v3.5.9 D / C-3b promoted TPS to first-class FST
+/// families). The production caller
 /// (`composing::continuous::fetch_via_lexicon_inner`) selects the
 /// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
-/// pairs in directly; TPS goes through `composing::continuous::build_keys_tps`,
-/// which converts each Bopomofo span via `phonetics::tps_to_tl`, strips
-/// the trailing tone digit, and prepends `"tl:"` (TPS still rides the
-/// TL family pending the C round). The legacy
+/// pairs in directly for all modes. The legacy
 /// [`fetch_candidates_for_endings`] wrapper is `#[doc(hidden)]`
 /// (v3.5.9 D7+D8 #306) and exists only for the integration tests under
 /// `engine/lexicon/tests/`.
@@ -1129,17 +1133,73 @@ fn is_combining_tone_mark(c: char) -> bool {
     )
 }
 
+/// v3.5.9 D / C-3b — TPS analog of [`matches_continuous_tl_toneless_key`] /
+/// [`matches_continuous_poj_toneless_key`]. The continuous walker emits
+/// `tps:<bopomofo_toneless>` keys (Bopomofo tone marks stripped via
+/// `composing::shadow::strip_tones_for_mode` on the shadow slice); the
+/// FST may return a record indexed under `tps_abbrev` (per-syllable first
+/// chars) that happens to share the same key body. Reject those: the
+/// continuous user typed phonetic syllables, not an abbreviation.
+///
+/// **Variant acceptance (C-3a er↔or dual emit)**: C-3a's build pipeline
+/// emits BOTH `tps:<tps_notone>` (primary, with ㄜ for `er`/`or`) AND
+/// `tps:<tps_notone_var>` (ㄛ for `or`) per row whose primary contains
+/// ㄜ. The guard accepts either form so a user typing the ㄛ variant
+/// (e.g. `ㄉㄛ` for TL `tor`/`tór`) does not get rejected as an
+/// abbrev-collision.
+///
+/// Derivation: [`phonetics::tps_notone_from_tl`] mirrors the build
+/// pipeline `merge_csv.py:265 tps_notone = remove_tps_tone(tps_num)`
+/// (per-token TL→TPS via [`phonetics::tps::to_zhuyin`] with the Node
+/// bridge default `or_maps_to_er = true`, then drop 8 Bopomofo tone
+/// marks + hyphen + whitespace). Variant form derived via
+/// [`phonetics::tps_notone_or_variant`] (ㄜ→ㄛ substitution; matches
+/// `dictionary/common/notone.py::apply_or_dialect_variant`).
+///
+/// A `tps:` key whose body still carries a TPS tone mark is a
+/// numeric-tone (`tps:<tps_num>`) key, not the toneless continuous one,
+/// so the guard passes through (mirrors TL/POJ guards' digit-in-body
+/// bypass).
+// 中文: D / C-3b — TPS toneless-key abbrev-collision 守門。
+// 中文:   walker 發 tps:<bopomofo_toneless> 鍵時,FST 可能回 tps_abbrev 命中(逐音節首字串接)
+// 中文:   恰巧同 body 的 record。連續輸入是逐音節打,非縮寫意圖 → 應濾除。
+// 中文: C-3a 變體接受 — build pipeline 對含 ㄜ row dual-emit `tps:<tps_notone>` +
+// 中文:   `tps:<tps_notone_var>`(ㄜ→ㄛ);guard 兩形都接受,否則打 ㄛ 形會被誤殺。
+// 中文:   `tps_notone_from_tl` 推主形,`tps_notone_or_variant` 推 ㄛ 變體形。
+// 中文:   body 仍含 TPS 聲調符 = 數字調鍵,放行(與 tl:/poj: guard 對稱)。
+fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
+    let Some(body) = key.strip_prefix("tps:") else {
+        return true;
+    };
+    if body.chars().any(phonetics::is_tps_tone_mark) {
+        return true;
+    }
+    let primary = phonetics::tps_notone_from_tl(record_tl);
+    if primary == body {
+        return true;
+    }
+    let variant = phonetics::tps_notone_or_variant(&primary);
+    !variant.is_empty() && variant == body
+}
+
 /// v3.5.9 B-2 — dispatcher that selects the right toneless-key guard by
 /// FST key family. Production span-local and walker paths both route
 /// through here so a `poj:` key cannot accidentally hit the TL guard
 /// (which would always reject a POJ body) or vice versa. `hanzi:` and
 /// any unknown prefix pass through (`matches_continuous_tl_toneless_key`
 /// returns `true` for keys lacking the `tl:` prefix).
+///
+/// v3.5.9 D / C-3b — `tps:` added; routes to
+/// [`matches_continuous_tps_toneless_key`] now that the TPS continuous
+/// walker emits `tps:` family keys against `dictionary.fst`.
 // 中文: B-2 — 依 key 前綴選擇 toneless guard;`tl:` / `poj:` 各走自家 guard,
 // 中文:   `hanzi:` / 未知前綴經 TL guard 的 strip_prefix 失敗早返 true 而透過。
+// 中文: D / C-3b — 加 tps: 分支,TPS 連續輸入走自家 guard。
 fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
     if key.starts_with("poj:") {
         matches_continuous_poj_toneless_key(key, record_tl)
+    } else if key.starts_with("tps:") {
+        matches_continuous_tps_toneless_key(key, record_tl)
     } else {
         matches_continuous_tl_toneless_key(key, record_tl)
     }

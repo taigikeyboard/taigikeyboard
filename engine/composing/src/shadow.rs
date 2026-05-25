@@ -8,23 +8,60 @@ use phonetics::InputMode;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::lattice::{build_lattice, Lattice};
-use crate::syllabifier::tl as tl_syll;
+use crate::syllabifier::valid_span_endings_lowered;
 
 /// v3.5.9 B-2 — map `mode` to its FST key family prefix. The tagged-single-FST
-/// (`syllables.fst` + `dictionary.fst`) carries `tl:` and `poj:` families;
-/// English shares the TL family because English buffers do not have their own
-/// inventory and the syllabifier is not invoked there. TPS does not pass
-/// through these emitters (TPS builds its own pre-fused `tl:` keys via
-/// [`crate::continuous::build_keys_tps`] — promoting TPS to a first-class
-/// family is the C round, intentionally out of scope here).
+/// (`syllables.fst` + `dictionary.fst`) carries `tl:` / `poj:` / `tps:`
+/// families; English shares the TL family because English buffers do not
+/// have their own inventory and the syllabifier is not invoked there.
+///
+/// v3.5.9 D / C-3b — TPS promoted to a first-class family. The continuous
+/// walker now emits `tps:<bopomofo_toneless>` keys against the C-0 emit
+/// of `dictionary.fst`; the legacy `build_keys_tps` path (which folded
+/// TPS into `tl:` keys via `phonetics::tps_to_tl`) is retired.
 // 中文: B-2 — 將 mode 映射到 FST key 家族前綴。`syllables.fst` / `dictionary.fst` 為
-// 中文:   tagged-single-FST,共存 `tl:` 與 `poj:` 兩家族。English 沿用 `tl:` 家族
-// 中文:   (英文 buffer 不會走音節切分);TPS 不經此 emitter(走 build_keys_tps 自建 `tl:` key,
-// 中文:   TPS first-class 是 C round 範疇)。
+// 中文:   tagged-single-FST,共存 `tl:` / `poj:` / `tps:` 三家族。English 沿用 `tl:` 家族
+// 中文:   (英文 buffer 不會走音節切分)。
+// 中文: D / C-3b — TPS first-class,連續 walker 改發 tps:<bopomofo_toneless>;
+// 中文:   舊 build_keys_tps(經 tps_to_tl 折成 tl: 鍵)退役。
 pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
     match mode {
         InputMode::Poj => "poj",
+        InputMode::Tps => "tps",
         InputMode::Tl | InputMode::English => "tl",
+    }
+}
+
+/// v3.5.9 D / C-3b — mode-aware tone-mark stripping. Generalises the
+/// TL/POJ-only [`strip_ascii_tone_digits`] so a TPS shadow slice strips
+/// its 8 Bopomofo tone scalars (per `phonetics::tps::is_tps_tone_mark`)
+/// instead of (no-op) ASCII digits, producing a key body that matches the
+/// `tps:<tps_notone>` family. Used by every shadow-derived key / roman
+/// emit site: `left_anchored_keys_from_lattice`, the walker edge key in
+/// `composing::continuous::fetch_walker_slot0_inner`, the walker's
+/// no-dict roman synth, `custom_toneless_key`, and `build_partial_prefix_key`.
+///
+/// TL/POJ/English: ASCII-digit strip — byte-identical to the legacy
+/// [`strip_ascii_tone_digits`] path.
+/// TPS: TPS tone-mark strip — drops the 8 scalars listed in
+/// `phonetics::tps::is_tps_tone_mark` (U+02C6 ˆ, U+02C7 ˇ, U+02CA ˊ,
+/// U+02CB ˋ, U+02D9 ˙, U+02EA ˪, U+02EB ˫, U+0307 combining dot above).
+/// Hyphens / whitespace are NOT stripped here because
+/// [`build_hyphen_shadow`] already drops ASCII `-` upstream and the TPS
+/// buffer rarely contains them; matches `_TPS_TONE_AND_SEP_RE`'s tone
+/// half (build pipeline `dictionary/common/notone.py::remove_tps_tone`).
+// 中文: D / C-3b — mode-aware tone-mark 剝除。對 TL/POJ/English 與舊
+// 中文:   strip_ascii_tone_digits byte-identical (ASCII 數字),對 TPS 剝除
+// 中文:   phonetics::tps::is_tps_tone_mark 列的 8 個 Bopomofo 聲調符號。
+// 中文:   不剝連字號/空白 — shadow 早已剝、TPS buffer 罕見;對應
+// 中文:   _TPS_TONE_AND_SEP_RE 的聲調半邊。
+pub(crate) fn strip_tones_for_mode(s: &str, mode: InputMode) -> String {
+    match mode {
+        InputMode::Tps => s
+            .chars()
+            .filter(|c| !phonetics::is_tps_tone_mark(*c))
+            .collect(),
+        InputMode::Tl | InputMode::Poj | InputMode::English => strip_ascii_tone_digits(s),
     }
 }
 
@@ -120,7 +157,12 @@ pub(crate) fn left_anchored_keys_from_lattice(
         if end == 0 || end > shadow.len() || !shadow.is_char_boundary(end) {
             continue;
         }
-        let toneless = strip_ascii_tone_digits(&shadow[..end]);
+        // v3.5.9 D / C-3b — mode-aware tone strip: TL/POJ drop ASCII
+        // digits (byte-identical to legacy), TPS drops Bopomofo tone
+        // marks so the emitted body matches the `tps:<tps_notone>` FST
+        // family from C-0.
+        // 中文: D / C-3b — mode-aware tone 剝除;TPS 改剝注音聲調符號,對齊 tps_notone 家族。
+        let toneless = strip_tones_for_mode(&shadow[..end], mode);
         if toneless.is_empty() {
             continue;
         }
@@ -172,7 +214,7 @@ pub(crate) fn greedy_longest_syllabification(
         // shadow form.
         // 中文: B-2 — mode 決定走哪一家族;shadow 已是該家族的 canonical ASCII
         // 中文:   形式 (canonicalize_poj_shadow POJ 模式保 POJ),家族與切點對齊。
-        let end = tl_syll::valid_span_endings_lowered(&lowered, pos, inv, mode, 1)
+        let end = valid_span_endings_lowered(&lowered, pos, inv, mode, 1)
             .into_iter()
             .max()?;
         segs.push((pos, end));
@@ -249,7 +291,7 @@ pub(crate) fn span_min_syllable_count(
         if pos == end {
             return Some(hops);
         }
-        for nxt in tl_syll::valid_span_endings_lowered(&lowered, pos, inv, mode, 1) {
+        for nxt in valid_span_endings_lowered(&lowered, pos, inv, mode, 1) {
             if nxt > pos && nxt <= end && !dist.contains_key(&nxt) {
                 dist.insert(nxt, hops + 1);
                 queue.push_back(nxt);
@@ -362,8 +404,30 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
     let lower = roman.to_ascii_lowercase();
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, _) = build_hyphen_shadow(&canonical);
-    let toneless = strip_ascii_tone_digits(&shadow);
-    if toneless.is_empty() || !toneless.bytes().all(|b| b.is_ascii_lowercase()) {
+    let toneless = strip_tones_for_mode(&shadow, mode);
+    if toneless.is_empty() {
+        return None;
+    }
+    // v3.5.9 D / C-3b — gate body shape by mode:
+    // - TL/POJ/English: body must be all ASCII lowercase a..=z
+    //   (no Bopomofo / digit / punctuation residue can collide with a
+    //   syllabifier-built TL/POJ lattice edge key).
+    // - TPS: body must be all Bopomofo (TPS char) AND carry no leftover
+    //   TPS tone mark (strip should have caught them; the guard is
+    //   defensive — non-Bopomofo residue cannot equal a `tps:<tps_notone>`
+    //   edge key built from the same shadow pipeline).
+    // 中文: D / C-3b — 依 mode 守 body 形狀。TL/POJ/English 仍要求純 ASCII 小寫 a..=z;
+    // 中文:   TPS 要求純 Bopomofo 且無殘留聲調符號 — strip 已處理,守門為防呆;
+    // 中文:   非 Bopomofo 殘留無法等於 tps:<tps_notone> edge 鍵。
+    let body_ok = match mode {
+        InputMode::Tps => toneless
+            .chars()
+            .all(|c| phonetics::is_tps_char(c) && !phonetics::is_tps_tone_mark(c)),
+        InputMode::Tl | InputMode::Poj | InputMode::English => {
+            toneless.bytes().all(|b| b.is_ascii_lowercase())
+        }
+    };
+    if !body_ok {
         return None;
     }
     // v3.5.9 B-2 — mode-aware family prefix. The contract still requires
@@ -693,7 +757,15 @@ pub(crate) fn build_partial_prefix_key(
     let lower = raw.to_ascii_lowercase();
     let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
-    let toneless = strip_ascii_tone_digits(&shadow);
+    // v3.5.9 D / C-3b — mode-aware tone strip. TPS partial-prefix is
+    // currently skipped one layer up in `assemble_candidates` (the TPS
+    // empty-keys branch returns Vec::new() rather than calling this), so
+    // this branch is only reached by TL/POJ/English today; the
+    // mode-aware variant keeps the contract symmetric for any future
+    // TPS partial-prefix enable.
+    // 中文: D / C-3b — mode-aware tone 剝除。TPS partial-prefix 在 assemble_candidates 跳過,
+    // 中文:   此處目前僅 TL/POJ/English 抵達;mode-aware 對稱保留以待 TPS 開放。
+    let toneless = strip_tones_for_mode(&shadow, mode);
     if toneless.is_empty() {
         return None;
     }

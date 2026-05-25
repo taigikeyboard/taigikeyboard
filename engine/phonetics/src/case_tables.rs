@@ -189,7 +189,10 @@ pub(crate) fn lower_to_upper(
     match mode {
         InputMode::Poj => Some(&POJ_LOWER_TO_UPPER),
         InputMode::Tl => Some(&TL_LOWER_TO_UPPER),
-        InputMode::English => None,
+        // v3.5.9 D / C-3b — TPS Bopomofo has no upper/lower case axis;
+        // table absent so callers fall through to identity (matches English).
+        // 中文: TPS 注音無大小寫之分,回 None 走 identity,與 English 同。
+        InputMode::Tps | InputMode::English => None,
     }
 }
 
@@ -202,7 +205,9 @@ pub(crate) fn upper_to_lower(
     match mode {
         InputMode::Poj => Some(&POJ_UPPER_TO_LOWER),
         InputMode::Tl => Some(&TL_UPPER_TO_LOWER),
-        InputMode::English => None,
+        // v3.5.9 D / C-3b — TPS Bopomofo has no upper/lower case axis.
+        // 中文: TPS 注音無大小寫之分,回 None 走 identity,與 English 同。
+        InputMode::Tps | InputMode::English => None,
     }
 }
 

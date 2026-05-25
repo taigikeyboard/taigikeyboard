@@ -420,8 +420,12 @@ public nonisolated struct Taigi_Engine_InstallRequest: Sendable {
 /// returns an empty `rows` list WITHOUT consulting any reader. Verified by
 /// `INVARIANT_LEX_HANZI_GUARD` (engine + iOS + Android per Codex Mod 1).
 ///
-/// `tps_or_mapped_to_er` triggers the `er`↔`or` variant search when
-/// `input_mode == INPUT_MODE_TPS` and the normalized key contains `er`.
+/// `tps_or_mapped_to_er` is OBSOLETE since C-3a — engine runtime ignores
+/// the field. The er↔or dialect axis is now handled at build time via
+/// dual-emit `tps:` keys (ㄜ + ㄛ glyphs at the same rowid) in
+/// `dictionary.fst`, always-on for every TPS user. The field stays on
+/// the wire so existing platform callers continue to compile; a later
+/// admin sweep removes the platform-side setters.
 ///
 /// `enabled_sources_bitmask` is the platform's source-toggle state encoded
 /// as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
@@ -439,6 +443,7 @@ public nonisolated struct Taigi_Engine_SearchRequest: Sendable {
 
   public var limit: UInt32 = 0
 
+  /// OBSOLETE — see comment block above; runtime ignored since C-3a
   public var tpsOrMappedToEr: Bool = false
 
   public var enabledSourcesBitmask: UInt32 = 0

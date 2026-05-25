@@ -37,3 +37,44 @@
 
 pub mod tl;
 pub mod tps;
+
+use lexicon::SyllableInventory;
+use phonetics::InputMode;
+
+/// v3.5.9 D / C-3b — unified mode-aware syllabifier entry point.
+///
+/// Dispatches `valid_span_endings_lowered` to the family-correct scanner:
+/// - `Tl | Poj | English` → [`tl::valid_span_endings_lowered`]
+///   (BFS over `SyllableInventory` for the `tl:` / `poj:` family).
+/// - `Tps` → [`tps::valid_span_endings_lowered`] (terminator scan over
+///   Bopomofo, inventory-gated against the `tps:` family per Codex
+///   pre-impl Fork 3 amendment — every candidate ending is verified via
+///   `inv.contains_in(InputMode::Tps, lowered[pos..end])` so malformed
+///   TPS cannot leak into the walker OOV carve-out).
+///
+/// All callers downstream of [`crate::lattice::build_lattice`] (lattice
+/// BFS, walker greedy / min-syllable derivations) route through here so
+/// the syllabification family stays tied to the same `mode` parameter
+/// that drives `composing::shadow::mode_key_prefix` and the emitted
+/// `<prefix>:<toneless>` FST key — one mode parameter, one family, no
+/// drift.
+// 中文: D / C-3b — 統一 mode-aware syllabifier 入口。TL/POJ/English 走
+// 中文:   tl::valid_span_endings_lowered (FST BFS);TPS 走
+// 中文:   tps::valid_span_endings_lowered (Bopomofo 終止符掃描 + 每跳經
+// 中文:   inv.contains_in(Tps, slice) 過濾,對齊 Codex pre-impl Fork 3 修訂)。
+// 中文: 所有 lattice 下游(BFS、walker greedy / min-syllable)都透過本入口路由,
+// 中文:   shadow::mode_key_prefix 與 FST 家族鍵共用同一 mode,單一參數不分歧。
+pub(crate) fn valid_span_endings_lowered(
+    lowered: &str,
+    pos: usize,
+    inv: &SyllableInventory,
+    mode: InputMode,
+    max_syllables: usize,
+) -> Vec<usize> {
+    match mode {
+        InputMode::Tps => tps::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables),
+        InputMode::Tl | InputMode::Poj | InputMode::English => {
+            tl::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables)
+        }
+    }
+}

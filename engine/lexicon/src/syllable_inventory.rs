@@ -70,17 +70,26 @@ impl SyllableInventory {
     /// implied by `mode`. Callers MUST have canonicalized the syllable
     /// for the correct family ahead of time (TL via
     /// `phonetics::canonicalize_syllable`; POJ via
-    /// `phonetics::canonicalize_poj_syllable`); this loader does no
+    /// `phonetics::canonicalize_poj_syllable`; TPS via
+    /// `phonetics::canonicalize_tps_syllable`); this loader does no
     /// normalization. `mode == InputMode::English` routes through the
     /// TL family — English buffers do not have their own syllable
     /// inventory and rely on TL phonotactic gating where syllabification
     /// is invoked at all.
+    ///
+    /// v3.5.9 D / C-3b — `InputMode::Tps` routes to the `tps:` family
+    /// emitted by `dictionary/build/create_syllables_fst.py` (one
+    /// Bopomofo syllable per line, in both numeric-tone-marked and
+    /// toneless forms).
     // 中文: 在 mode 指定的家族裡查詢一個 canonical 音節 key (numeric 或 toneless)。
     // 中文:   呼叫端必須已用對應家族的 canonicalize_*_syllable 正規化過。
     // 中文:   InputMode::English 不單設家族,沿用 `tl:` 家族查詢 (English 路徑不會走音節切分時為 no-op)。
+    // 中文: v3.5.9 D / C-3b — InputMode::Tps 走 `tps:` 家族 (C-0 build pipeline 已 emit
+    // 中文:   syllables.fst 內 Bopomofo per-syllable + numeric/toneless)。
     pub fn contains_in(&self, mode: InputMode, syllable: &str) -> bool {
         let prefix = match mode {
             InputMode::Poj => "poj:",
+            InputMode::Tps => "tps:",
             InputMode::Tl | InputMode::English => "tl:",
         };
         self.contains_prefixed(prefix, syllable)
