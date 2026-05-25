@@ -477,7 +477,7 @@ fn matrix() -> Vec<Case> {
         // by virtue of the POJ→TL fold. B-2 makes POJ first-class so
         // the input must be POJ ASCII; the dictionary still resolves
         // `poj:taigikhipoann` to 台語齒盤 and the rendered roman is
-        // `tâi-gí-khí-pôaⁿ` (`nn`→`ⁿ` via `render_roman_for_mode`).
+        // `tâi-gí-khí-pôaⁿ` (`nn`→`ⁿ` via `recase_tl_as_poj_display`).
         case("poj_render_nn", "taigikhipoann", "poj"),
         // v3.5.9 B-2 — POJ post-render dedupe: custom entry's stored
         // roman is now in POJ display form `tâi-gí-khí-pôaⁿ` (not the

@@ -28,11 +28,12 @@
 //!    `score = -(slot0.cost as f32)` (the negated-cost bridge IS the wire
 //!    contract, `CandidateMessage.score` proto field 5;
 //!    `frequency`/`bitmask` are walker-N/A and stay `0`).
-//! 5. POJ presentation pass: `mode == Poj` → [`render_roman_for_mode`]
+//! 5. POJ presentation pass: `mode == Poj` → [`recase_tl_as_poj_display`]
 //!    over every candidate's `roman` then [`dedupe_rendered_continuous`].
-//!    Identity for TL / English / (legacy-mapped) TPS. Runs AFTER the
-//!    step-4 retain-dedupe so the prepended slot-0 row never moves; both
-//!    dedupes preserved.
+//!    Skipped (not identity-called) for TL / English / TPS — the gate sits
+//!    at the caller so the helper itself is POJ-only by signature. Runs
+//!    AFTER the step-4 retain-dedupe so the prepended slot-0 row never
+//!    moves; both dedupes preserved.
 //! 6. The dispatch caller wraps the resulting `Vec<RawCandidate>` into
 //!    `ContinuousResponse` via `raw_to_proto_candidate` + `with_continuous`.
 //!
@@ -177,37 +178,39 @@ fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> Strin
     phonetics::case_transform::transform_input_case(roman, raw_segment_letter_case(raw_seg), mode)
 }
 
-/// v3.5.8 — render a continuous candidate's presentation `roman` for the
-/// active input mode. POJ: rewrite TL-display → POJ-display
-/// (`oo`→`o͘`, `nn`→`ⁿ`, `ua`→`oa`, …) via
-/// [`phonetics::api::tl_display_to_poj_display`], then re-impose the
-/// roman's own letter-case POJ-grapheme-aware. The TL→POJ rewriter only
-/// title-cases (it checks `first.is_uppercase()` then stops), so a
-/// CapsLocked candidate (`HOO`) would otherwise collapse to title case
-/// (`Ho͘`); `transform_input_case` with the detected `LetterCase` and
-/// `InputMode::Poj` restores it (`HO͘`) — the same helper `recase_roman`
-/// already trusts for POJ diacritics (Codex pre-impl 2026-05-19 BLOCK).
-/// Case detection reads the (already-recased) roman's own alpha chars
-/// via [`raw_segment_letter_case`]: span-local candidates carry one
-/// uniform case so this is exact. A multi-segment walker path with
-/// heterogeneous casing collapses to one bucket derived from the whole
-/// string — first alpha lowercase ⇒ all-lowercase; first upper but not
-/// all remaining uppercase ⇒ leading-cap only; uniformly upper ⇒
+/// v3.5.9 C-4 (renamed from `render_roman_for_mode`) — POJ display rewrite
+/// for a continuous candidate's presentation `roman`: `oo`→`o͘`, `nn`→`ⁿ`,
+/// `ua`→`oa`, … via [`phonetics::api::tl_display_to_poj_display`], plus a
+/// POJ-aware case restore. Not mode routing. Not the TL↔POJ canonical-form
+/// pipeline; canonical commit keys stay under
+/// [`phonetics::api::canonical_tl_form`]. This helper is step 5 of
+/// [`assemble_candidates`] and runs only when the caller is in POJ mode
+/// (gate at `assemble_candidates`); the signature is POJ-only so the
+/// gate cannot drift to silent identity-on-misuse.
+///
+/// The TL→POJ rewriter only title-cases (it checks `first.is_uppercase()`
+/// then stops), so a CapsLocked candidate (`HOO`) would otherwise collapse
+/// to title case (`Ho͘`); `transform_input_case` with the detected
+/// `LetterCase` and `InputMode::Poj` restores it (`HO͘`) — the same helper
+/// `recase_roman` already trusts for POJ diacritics (Codex pre-impl
+/// 2026-05-19 BLOCK). Case detection reads the (already-recased) roman's
+/// own alpha chars via [`raw_segment_letter_case`]: span-local candidates
+/// carry one uniform case so this is exact. A multi-segment walker path
+/// with heterogeneous casing collapses to one bucket derived from the
+/// whole string — first alpha lowercase ⇒ all-lowercase; first upper but
+/// not all remaining uppercase ⇒ leading-cap only; uniformly upper ⇒
 /// all-caps — a bounded POJ-only edge far outside normal use, not the
-/// reported `oo`/`nn` defect. TL / English / (legacy-mapped) TPS:
-/// identity. Presentation only — never feed `display_text` (the
-/// canonical commit / `user_frequency.db` key) here.
-// 中文: 依 input mode 渲染連續候選呈現 roman。POJ:TL→POJ-display 後,
-// 中文:   以候選自身字母 case 經 transform_input_case(POJ-grapheme-aware)還原大小寫
-// 中文:   — TL→POJ rewriter 只 title-case,CapsLock(HOO)會塌成 Ho͘,此處還原成 HO͘
+/// reported `oo`/`nn` defect. Presentation only — never feed `display_text`
+/// (the canonical commit / `user_frequency.db` key) here.
+// 中文: C-4 — POJ display 重寫(TL→POJ-display:oo→o͘、nn→ⁿ、ua→oa…)加上 POJ-aware case 還原。
+// 中文:   非 mode 路由,非 TL↔POJ canonical 管線(canonical commit key 走 canonical_tl_form)。
+// 中文:   assemble_candidates step 5;只在 POJ mode 由 caller 呼叫,簽章 POJ-only 不接受 mode 漂移。
+// 中文: TL→POJ rewriter 只 title-case,CapsLock(HOO)會塌成 Ho͘,此處還原成 HO͘
 // 中文:   (Codex pre-impl 2026-05-19 BLOCK)。span-local 單段 case 均勻故精確;
 // 中文:   walker 多段異質大小寫依整串首字母塌成單一桶(首小寫⇒全小寫;
 // 中文:   首大寫但其餘非全大寫⇒僅首字大寫;全大寫⇒全大寫)— POJ-only 邊角,非回報 bug。
-// 中文:   TL/English/(legacy 映射)TPS = identity。只處理呈現 roman,勿傳 display_text。
-fn render_roman_for_mode(roman: &str, mode: phonetics::InputMode) -> String {
-    if mode != phonetics::InputMode::Poj {
-        return roman.to_string();
-    }
+// 中文:   只處理呈現 roman,勿傳 display_text。
+fn recase_tl_as_poj_display(roman: &str) -> String {
     let case = raw_segment_letter_case(roman);
     let poj = phonetics::api::tl_display_to_poj_display(roman);
     phonetics::case_transform::transform_input_case(&poj, case, phonetics::InputMode::Poj)
@@ -220,7 +223,7 @@ fn render_roman_for_mode(roman: &str, mode: phonetics::InputMode) -> String {
 /// custom entry stored in POJ display form (`roman = "gô͘"`,
 /// `hanji = Some("吳")`) and a `dict.bin` entry in TL (`roman = "gôo"`,
 /// `hanji = Some("吳")`) sharing one consumed span both survive it,
-/// then [`render_roman_for_mode`] rewrites both `roman` fields to
+/// then [`recase_tl_as_poj_display`] rewrites both `roman` fields to
 /// the POJ display form (`gô͘`) and produces a visible duplicate.
 /// `dedupe_rendered_continuous` collapses that visible duplicate; the
 /// `HashSet::retain` first-wins rule keeps whichever row sits earlier
@@ -695,7 +698,7 @@ fn fetch_walker_slot0_inner(
     // from the same word's TL-mode commit key (`tsiah gua`).
     // `canonical_tl_form` folds POJ-mode synth roman to TL so
     // the freq key is mode-invariant; `roman` itself stays in
-    // its native form so the downstream `render_roman_for_mode`
+    // its native form so the downstream `recase_tl_as_poj_display`
     // pass renders correctly (POJ-mode roundtrip via
     // `tl_display_to_poj_display`). §9 #2 user-history contract
     // is now satisfied across all three candidate paths:
@@ -704,7 +707,7 @@ fn fetch_walker_slot0_inner(
     // (this site).
     // 中文: B-4 — walker OOV synth roman 在 POJ mode 是 POJ ASCII;
     // 中文:   freq key 折成 canonical TL 跨 mode 合一,roman 自身留原 form
-    // 中文:   讓 render_roman_for_mode roundtrip 正確。§9 #2 三 path 全合規。
+    // 中文:   讓 recase_tl_as_poj_display roundtrip 正確。§9 #2 三 path 全合規。
     let display_text = hanji
         .clone()
         .unwrap_or_else(|| phonetics::api::canonical_tl_form(&roman, mode));
@@ -1003,7 +1006,7 @@ pub(crate) fn assemble_candidates(
         // 中文:   render 可能讓 custom POJ 與 dict TL 兩筆變相同 → dedupe_rendered_continuous 收尾去重。
         if mode == phonetics::InputMode::Poj {
             for cand in &mut candidates {
-                cand.roman = render_roman_for_mode(&cand.roman, mode);
+                cand.roman = recase_tl_as_poj_display(&cand.roman);
             }
             dedupe_rendered_continuous(&mut candidates);
         }
@@ -1098,65 +1101,42 @@ mod tests {
     // ----- v3.5.8 — POJ-display render of the continuous candidate roman -----
 
     #[test]
-    fn render_roman_for_mode_poj_rewrites_oo_and_nn() {
-        let poj = phonetics::InputMode::Poj;
+    fn recase_tl_as_poj_display_rewrites_oo_and_nn() {
         // The reported bug: in POJ mode the continuous best candidate
         // must show `oo`→`o͘` (o + U+0358) and `nn`→`ⁿ` (U+207F),
         // not raw TL.
-        assert_eq!(render_roman_for_mode("oo", poj), "o\u{0358}");
-        assert_eq!(render_roman_for_mode("goo", poj), "go\u{0358}");
-        assert_eq!(render_roman_for_mode("sann", poj), "sa\u{207f}");
+        assert_eq!(recase_tl_as_poj_display("oo"), "o\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("goo"), "go\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("sann"), "sa\u{207f}");
         // Whole-sentence walker path: space-joined multi-syllable roman
         // (`tl_display_to_poj_display` splits on ` `/`-` per token).
         assert_eq!(
-            render_roman_for_mode("goo sann", poj),
+            recase_tl_as_poj_display("goo sann"),
             "go\u{0358} sa\u{207f}"
         );
-        assert_eq!(render_roman_for_mode("tai-oo", poj), "tai-o\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("tai-oo"), "tai-o\u{0358}");
         // Tone-marked TL → POJ: the tone sits between `o` and the
         // U+0358 dot (`kòo` 顧 → `kò͘`). Exact, not just "contains".
-        assert_eq!(render_roman_for_mode("kòo", poj), "k\u{f2}\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("kòo"), "k\u{f2}\u{0358}");
     }
 
     #[test]
-    fn render_roman_for_mode_poj_preserves_letter_case() {
-        let poj = phonetics::InputMode::Poj;
+    fn recase_tl_as_poj_display_preserves_letter_case() {
         // Lowercase (normal typing) stays lowercase.
-        assert_eq!(render_roman_for_mode("goo", poj), "go\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("goo"), "go\u{0358}");
         // Sentence-start capital (the `Hittui → Hit` segment class).
-        assert_eq!(render_roman_for_mode("Goo", poj), "Go\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("Goo"), "Go\u{0358}");
         // CapsLock — the Codex pre-impl BLOCK: `tl_display_to_poj_display`
         // only title-cases, so without the `transform_input_case`
         // restore an all-caps candidate would collapse to `Go͘`. Pin
         // the all-caps form survives.
-        assert_eq!(render_roman_for_mode("OO", poj), "O\u{0358}");
+        assert_eq!(recase_tl_as_poj_display("OO"), "O\u{0358}");
         // `nn` under CapsLock: the base letters go all-caps while the
         // POJ nasal `ⁿ` (U+207F) is preserved as-is (correct POJ — no
         // uppercase nasal hook). Without the case restore this would
         // collapse to title case `Sa\u{207f}`, the exact BLOCK
         // regression; pin the all-caps form survives.
-        assert_eq!(render_roman_for_mode("SANN", poj), "SA\u{207f}");
-    }
-
-    #[test]
-    fn render_roman_for_mode_non_poj_is_identity() {
-        // TL / English keep raw TL (asymmetry is POJ-only, matching the
-        // dictionary-search path `inputMode == .poj ? tlToPoj : raw`).
-        // (legacy-mapped) TPS resolves to `Tl` upstream, so it is
-        // covered by the Tl identity here.
-        assert_eq!(render_roman_for_mode("oo", phonetics::InputMode::Tl), "oo");
-        assert_eq!(
-            render_roman_for_mode("sann", phonetics::InputMode::Tl),
-            "sann"
-        );
-        assert_eq!(
-            render_roman_for_mode("Goo", phonetics::InputMode::Tl),
-            "Goo"
-        );
-        assert_eq!(
-            render_roman_for_mode("oo", phonetics::InputMode::English),
-            "oo"
-        );
+        assert_eq!(recase_tl_as_poj_display("SANN"), "SA\u{207f}");
     }
 
     #[test]

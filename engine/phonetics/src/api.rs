@@ -261,7 +261,7 @@ pub fn tl_display_to_poj_display(text: &str) -> String {
 /// commit key (`RawCandidate.display_text`). Folds Taigi-script
 /// romanization onto canonical TL display form so a romanization-only
 /// candidate (hanji-absent) keys identically across modes; downstream
-/// presentation reverses via `render_roman_for_mode`. Composes
+/// presentation reverses via `recase_tl_as_poj_display`. Composes
 /// [`poj_display_to_tl_display`] for **both** `Tl` and `Poj` modes
 /// (PR #310 r3278520895 fix — a POJ-form custom entry typed in POJ
 /// mode and later accessed in TL mode still needs the fold or
