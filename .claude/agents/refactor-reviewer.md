@@ -2,6 +2,7 @@
 name: refactor-reviewer
 description: Review refactored code for regressions, broken cross-platform alignment, and style violations
 model: sonnet
+tools: Read, Grep, Glob, Bash
 ---
 
 You are reviewing refactored code in a cross-platform Taiwanese keyboard project (iOS Swift + Android Kotlin).
