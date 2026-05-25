@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `deferred items`
 > **Status**: Active
-> **Last updated**: 2026-05-24 (B2 docs-only round — split shipped-version detail into `docs/releases/<version>/plan.md` archive per OSS convention)
+> **Last updated**: 2026-05-25 (Phase 0 admin PR — D = TPS 三索引 plan drafted; entry under Active / In-flight items)
 
 ---
 
@@ -11,7 +11,7 @@
 
 - Single source of truth for **forward-looking** work items only.
 - **Shipped release detail** lives in `docs/releases/<version>/plan.md` archives + `changelog/<version>.md` release notes.
-- **Active items** (in-flight implementation plans) — currently empty; release scope/timing is user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
+- **Active items** (in-flight implementation plans) — currently: `v3.5.9 D = TPS 三索引` (plan drafted 2026-05-25, awaiting USER kick-off for first impl PR). Release scope/timing is user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 - **Out of scope / deferred** items below are truly forward-looking (NOT items already shipped in a prior version).
 
 ---
@@ -39,9 +39,66 @@ Authoritative list of shipped versions, newest first. Each row links to the rele
 
 ## Active / In-flight items
 
-**Currently empty.** Per project rule `~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope, release scope/timing/tag are user-gated. New active items land here only when a user has explicitly scoped them.
+### v3.5.9 D = TPS 三索引 (POJ + TL + TPS first-class in lattice / walker)
 
-**v3.5.9 refactor track status** (informational, not a release commitment): the [v3.5.9 refactor track](https://github.com/siansiansu/taigikeyboard/pulls?q=is%3Apr+is%3Aclosed+v3.5.9) has shipped Tier-A engine refactor + 13 Tier-B platform refactor PRs (#301-#326) as behavior-neutral changes on `main`. Remaining items (B5 `TextInputManager` decompose, B9 cross-platform VM-state pair) are user-explicit-scope-gated. Whether/when to cut a v3.5.9 release tag is a user decision; no release commitment is implied by this paragraph.
+**Source**: USER-scoped 2026-05-25 (Phase 0 admin PR). Evaluation memo (2026-05-20) destination = C (三索引). Sequencing originally B-first → C; B 雙索引 prerequisite already shipped via PRs #307-#311.
+**Status**: plan drafted, awaiting USER explicit kick-off for first impl PR (C-0). Scope / timing / release-tag user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
+
+**Goal**: TPS first-class user mode — `tps:` FST key family parallel to existing `tl:` / `poj:` families. Removes:
+
+- `is_tps` short-circuit at `engine/composing/src/dispatch.rs:183` + `engine/composing/src/continuous.rs:890,923,982`
+- `tps_or_mapped_to_er` runtime branch at `engine/lexicon/src/search.rs:91,133`
+- `tps_to_tl` canonicalize chain at `engine/lexicon/src/classification.rs:20,77`
+
+Mode-axis (Input + Key + FST) becomes three-layer symmetric across TL / POJ / TPS; new modes (e.g. additional script) become pure data axes (~+250 LOC) rather than architecture changes (~+1200 LOC).
+
+**Prerequisite already shipped**: B 雙索引 (POJ first-class lattice) = SHIPPED via PRs #307-#311 (B-0c `5b836a80` / B-1 `9b365c9c` / B-2 `f2a4f4e1` / B-3+B-4 `ad085b3b` / B-7 `7b9604af`). The evaluation memo's original "C-2 POJ continuous first-class" line item = subsumed by B-2 PR #309. Remaining D scope = C-0 / C-1 / C-3a / C-3b / C-4 / C-5.
+
+**Phase shape — 6 PR** (Codex sandwich per PR unless flagged otherwise):
+
+| # | Phase | Scope | LOC est. | Risk |
+|---|---|---|---|---|
+| 1 | **C-0** | `dictionary/build/`: `dictionary_records.py` + `merge_csv.py` add 3 cols `tps_num` / `tps_notone` / `tps_abbrev` (with TPS-aware `derive_tps_*` helpers referencing `phonetics::is_tps_initial` + `tps.rs:43-62` tone-mark inventory); `create_fst.py:124-127` emits `tps:` family (3 forms). **dict.bin / FST size POC measurement go/no-go gate**. dict.bin schema 版號 + engine startup verify (rollback strategy). | ~+150 build, ~+30 engine | LOW |
+| 2 | **C-1** | `engine/lexicon/src/key_normalizer.rs:34` `KeyMode::Tps => format!("tps:{normalized}")` replaces the `tl:` fall-through; `engine/lexicon/src/classification.rs:20,77` `if contains_tps(raw) { tps_to_tl(raw) }` retired (mode-based instead). | ~+30 engine | LOW |
+| 3 | **C-3a** | TPS er↔or 方言變體 (Risk Register §8.6 L2) upmoved to build pipeline — dual-emit `tps:<er>` + `tps:<or>` same rowid (USER chose A always-on). `engine/protos/proto/lexicon.proto:118,129` `SearchRequest.tps_or_mapped_to_er` marked obsolete (wire-compat retained, runtime ignored); `engine/lexicon/src/search.rs:91,133-145` runtime branch + expansion logic removed. | ~+100 build / -50 engine | MED |
+| 4 | **C-3b** | TPS continuous first-class — `engine/composing/src/shadow.rs::mode_key_prefix(Tps) => "tps"`; `build_shadow_lattice(.., Tps)` walks `SyllableInventory::contains_in(Tps, ..)` against `syllables.fst` `tps:` family (provided by C-0 emit); `engine/composing/src/syllabifier/tps.rs::valid_span_endings` aligned to TL syllabifier signature and plugged into `build_lattice`; `engine/composing/src/dispatch.rs:181-183` removes char-based `let is_tps = contains_tps(raw);` in favour of `mode == InputMode::Tps`; `engine/composing/src/continuous.rs:890,923,982` `is_tps` branches removed (TPS walks shared walker path, inventory family is the only switch); `assemble_candidates` signature drops `is_tps: bool` param. | ~+200-250 engine | **HIGH** (v3.5.8-hot composing path, non-Tier-A safety umbrella per eval memo §10) |
+| 5 | **C-4** | Rename `engine/composing/src/continuous.rs:203 render_roman_for_mode` (function name misleading — only POJ ASCII → display-glyph rewrite `oo→o͘` / `nn→ⁿ`, NOT TL→POJ canonicalize retirement). Suggested rename: `apply_poj_display_glyphs` + doc clarification + caller / test rename. Behavior-neutral. | ~+10 engine | LOW (mechanical rename — sandwich skipped per `~/.claude/rules/round-workflow.md` carve-out) |
+| 6 | **C-5** | `engine/composing/tests/golden_fetch_at_pos.rs` extends TPS continuous golden cases (per 硬約束 §9 #6, `UPDATE_GOLDEN` disabled — no shipped case overwritten); POJ continuous golden re-pinned if drift; `engine/lexicon/tests/` adds `tps_abbrev_parity` + `tps_notone_parity` (mirrors `poj_notone_parity.rs` against full dict.csv). On-device dogfood per `~/.claude/rules/code-review-rules.md §9` qualitative — per-keystroke composing (TPS abbrev / notone / full+tone) + continuous + L2 er↔or dual-emit verification. | tests | LOW (test / dogfood) |
+
+**Best practices alignment** (direct prior art, verified via cavecrew-investigator deep-dive 2026-05-25):
+
+- First-initial abbrev (`tps_abbrev`): `references/rime-moetaigi/tsuim.yaml:60` per-syllable algebra rule `abbrev/^(.)(.)[12357]$/$1/` + librime `src/rime/algo/algebra.cc` build-time prism expansion + Taigi's existing `tl_abbrev` / `poj_abbrev` build-time precedent (`dictionary/build/merge_csv.py:241-242 extract_abbrev`).
+- Tone-free match (`tps_notone`): `references/rime-moetaigi/tsuim.yaml:56-58` `abbrev/^(.+)[12357]$/$1/` + librime `derive/^(.+)[0-9]$/$1/` + Taigi's `tl_notone` / `poj_notone` precedent (`merge_csv.py:239-240 remove_tone`).
+- Build-time emission vs librime runtime regeneration: chosen for mobile-keyboard latency (mmap FST lookup is O(log n) per query; runtime regex expansion would add per-keystroke ms cost).
+- Tagged-single-FST multi-family (`tl:` / `poj:` / `hanzi:` / `tps:` in one `dictionary.fst`): existing pattern from B-2 PR #309 (`engine/composing/src/shadow.rs:17` documents the design), TPS adds no new infrastructure.
+
+**Deliberately not adopted**:
+
+- librime runtime algebra expansion (per-query regenerate via `Script::Merge`) — Taigi keeps static build-time emit per existing `tl_*` axis precedent.
+- librime abbrev / fuzzy `-ln 2` ranking penalty — Taigi equal-ranks abbrev with full input (USER intent is shortcut, not typo correction); scorer is mode-blind per B-2 grep verification.
+- McBopomofo abbrev — N/A (Mandarin single-platform, full-syllable only; reference for DAG / unigram scoring patterns elsewhere but not for abbrev).
+- L2 er↔or two-FST variant + runtime post-filter (Risk Register §8.6 L2 options B / C) — USER chose A always-on; one FST, dual-emit at build time.
+- Tone-axis as runtime fuzzy matcher — Taigi treats tone-free as a build-time variant key (`tps_notone` col), symmetric with `tl_notone` / `poj_notone`.
+
+**USER-answered forks** (2026-05-25):
+
+1. L2 er↔or toggle policy = **A always-on** (build-pipeline dual-emit).
+2. PR sharding = **拆細** (6 PR, 200-500 LOC each, Codex sandwich per PR, low regression risk).
+3. C-4 `render_roman_for_mode` scope = **rename + doc clarification** (behavior-neutral; function is misnamed, not obsolete).
+
+**Open forks awaiting USER** (not pre-decided in plan):
+
+1. dict.bin / FST size POC pass threshold (C-0 measures actual bytes / mmap profile / iOS 32 MB cap; USER picks go / no-go gate; suggested default: FST < +25% size, dict.bin < +15%, iOS keyboard memory headroom intact).
+2. Release tag / timing / version assignment (v3.5.9 / v3.5.10 / v3.6 / other) — user-gated per `feedback_no_unilateral_release_scope`.
+3. Whether to run in parallel with reactive-mode dogfood — C-3b touches v3.5.8-hot composing path; suggested sequential to avoid multi-source conflict on the hot path.
+
+**硬約束 § 9 satisfaction** (from `memory/project_v359_triple_index_eval.md`): mode-axis three-layer (Input + Key + FST) ✓ — Walker / Scorer remain mode-blind; user-history key keeps hanji-優先 fallback (no surface-form split) ✓; dict.bin POC go/no-go in C-0 ✓; `enum InputMode` already in place from B-0c ✓; MOE-audit #5 split-point = (a) same as TL per B-2 USER answer ✓; S0 golden expansion with `UPDATE_GOLDEN` disabled in C-5 ✓; dict.bin schema 版號 + startup verify in C-0 ✓.
+
+**Detail**: full plan including per-PR sandwich receipts placeholder, Risk Register expansion, and cross-memory linkbacks ([[project_v359_triple_index_eval]] / [[project_v359_b_plan_v3]] / [[project_v359_backlog_handoff]]) lives in Claude auto-memory `project_v359_d_tps_triindex_plan.md` (local-only, not git-tracked per `~/.claude/CLAUDE.md` auto-memory convention).
+
+---
+
+**v3.5.9 refactor track status** (informational, not a release commitment): the [v3.5.9 refactor track](https://github.com/siansiansu/taigikeyboard/pulls?q=is%3Apr+is%3Aclosed+v3.5.9) has shipped Tier-A engine refactor + Tier-B platform refactor PRs (#301-#332) as behavior-neutral changes on `main`. Whether / when to cut a v3.5.9 release tag is a user decision; no release commitment is implied by this paragraph.
 
 ---
 
