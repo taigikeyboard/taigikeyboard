@@ -813,8 +813,9 @@ public nonisolated struct Taigi_Engine_AssocLookupResponse: Sendable {
 
 /// `ClassifyInputResponse` carries the classifier output. `input_type` resolves
 /// via short-circuit precedence (hanzi → tone-marked → numeric-tone →
-/// no-tone). `search_key` is TPS-converted on the engine side so the platform
-/// never sees raw TPS in lexicon search keys. See
+/// no-tone). `search_key` mirrors the raw input verbatim — C-1 retired the
+/// per-keystroke TPS→TL conversion now that the lexicon `tps:` FST family
+/// is hit directly via `SearchRequest{input_mode=Tps}`. See
 /// INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE +
 /// INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY.
 public nonisolated struct Taigi_Engine_ClassifyInputResponse: Sendable {

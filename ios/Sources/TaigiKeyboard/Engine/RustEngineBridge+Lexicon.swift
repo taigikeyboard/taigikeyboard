@@ -253,8 +253,11 @@ public extension RustEngineBridge {
     // MARK: - Classification (v3.5.7)
 
     /// Classifier output — pairs the resolved `InputType` with the
-    /// engine-built `searchKey` (TPS-converted on the engine side).
-    // 中文: classifyInput 的輸出 — 同時帶回判定的 InputType 與引擎組好的 searchKey(TPS 已在引擎端轉好)。
+    /// engine-built `searchKey`. C-1 (v3.5.9 D) retired the TPS→TL
+    /// pre-conversion; `searchKey` is now an identity passthrough of the
+    /// raw input. The `tps:` FST family is queried directly via
+    /// `SearchRequest{input_mode=.tps}`.
+    // 中文: classifyInput 的輸出 — InputType + searchKey;C-1 之後 searchKey = raw 原樣,TPS 改由 SearchRequest{input_mode=.tps} 直接命中 tps: 族群。
     internal struct ClassificationResult: Equatable {
         let inputType: InputType
         let searchKey: String

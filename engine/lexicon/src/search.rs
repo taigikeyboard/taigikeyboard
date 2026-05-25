@@ -129,7 +129,17 @@ pub fn search(
         rowids.insert(id);
     }
 
-    // TPS er↔or expansion.
+    // TPS er↔or expansion — DEAD POST-C-1, retired in C-3a.
+    //
+    // Before C-1, `key` for TPS was `tl:<ASCII>` (e.g. `tl:ker`) because
+    // the TPS path fell through to TL. `key.contains("er")` could match
+    // the ASCII substring and a sibling `or` lookup was issued. C-1
+    // flipped TPS to `tps:<Bopomofo>` keys, so this ASCII substring
+    // check can never fire. The branch is left intact for the duration
+    // of this PR to keep the diff minimal; C-3a moves er↔or expansion
+    // into the build pipeline (dual-emit same rowid) and retires both
+    // this branch and `SearchRequest.tps_or_mapped_to_er`.
+    // See [[project_v359_d_tps_triindex_plan]] §C-3a.
     if params.tps_or_mapped_to_er
         && matches!(params.input_mode, SearchInputMode::Tps)
         && key.contains("er")

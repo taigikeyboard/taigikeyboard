@@ -187,6 +187,77 @@ fn invariant_lex_hanzi_guard_short_circuits() {
     );
 }
 
+// --- TPS three-index read path (C-1) -----------------------------------
+
+/// `SearchRequest{input_mode=Tps}` now hits the `tps:` FST family
+/// directly. Pins the C-0 emit shape (literal Bopomofo + tone mark) +
+/// the C-1 `key_normalizer` flip; pre-C-1 this same request fell through
+/// to `tl:` and missed every `tps:` row.
+#[test]
+fn tps_input_mode_hits_tps_family_through_search() {
+    let pairs: &[(&str, u32)] = &[
+        // Row 1: ê (`tps:ㆤˊ` exact + `tps:ㆤ` toneless prefix).
+        ("tps:\u{3124}\u{02CA}", 1),
+        ("tps:\u{3124}", 1),
+        // Row 2: distractor TL key for the same rowid — confirms C-1
+        // does NOT also fall through to `tl:` and double-count.
+        ("tl:e2", 2),
+    ];
+    let path = write_synthetic_fst("tps-c1-search.fst", pairs);
+    let index = PrefixIndex::open(&path).expect("fst opens");
+    let dict = synth_dictionary_reader(&[
+        (0, 100, "的", "e5"),
+        (0, 50, "_distractor", "e2"),
+    ]);
+
+    let params = SearchParams {
+        input: "\u{3124}\u{02CA}".to_string(),
+        input_type: SearchInputType::RomanWithTone,
+        input_mode: SearchInputMode::Tps,
+        limit: 50,
+        tps_or_mapped_to_er: false,
+        enabled_sources_bitmask: u32::MAX,
+    };
+    let rows = search::search(&params, &index, &dict).expect("tps search runs");
+    assert_eq!(
+        rows.iter().map(|r| r.id).collect::<Vec<_>>(),
+        vec![1],
+        "TPS input must hit the tps: family rowid only, not the tl: distractor",
+    );
+}
+
+/// Tone-8 standalone `U+02D9` from the platform keyboard is substituted
+/// to combining `U+0307` so the FST exact-lookup hits the build-pipeline
+/// emit form.
+#[test]
+fn tps_input_mode_tone8_substitution_matches_build_pipeline_key() {
+    let pairs: &[(&str, u32)] = &[
+        // Build pipeline emits `tps:ㆠㆤㆷ\u{0307}` (combining dot).
+        ("tps:\u{31A0}\u{3124}\u{31B7}\u{0307}", 1),
+    ];
+    let path = write_synthetic_fst("tps-c1-tone8.fst", pairs);
+    let index = PrefixIndex::open(&path).expect("fst opens");
+    let dict = synth_dictionary_reader(&[(0, 100, "_tone8_row", "_")]);
+
+    // Platform keyboard types `\u{02D9}` (standalone modifier letter
+    // dot). `key_normalizer` substitutes to `\u{0307}` (combining) on
+    // the TPS path.
+    let params = SearchParams {
+        input: "\u{31A0}\u{3124}\u{31B7}\u{02D9}".to_string(),
+        input_type: SearchInputType::RomanWithTone,
+        input_mode: SearchInputMode::Tps,
+        limit: 50,
+        tps_or_mapped_to_er: false,
+        enabled_sources_bitmask: u32::MAX,
+    };
+    let rows = search::search(&params, &index, &dict).expect("tps tone-8 search runs");
+    assert_eq!(
+        rows.iter().map(|r| r.id).collect::<Vec<_>>(),
+        vec![1],
+        "U+02D9 input must canonicalize to U+0307 before tps: lookup",
+    );
+}
+
 // --- INVARIANT_LEX_ASSOC_BITMASK_FILTER --------------------------------
 
 /// Regression for v3.5.6 fix r3173013233 — `api::assoc_lookup` previously

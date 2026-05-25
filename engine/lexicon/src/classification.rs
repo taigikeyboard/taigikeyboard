@@ -15,9 +15,10 @@
 //! `docs/architecture/behavioral-invariants.md` under the umbrella label
 //! `INVARIANT_LEX_INPUT_CLASSIFICATION`.
 
-// 中文: IME 與 Tab3 共用的輸入分類純函式 — 判斷漢字 vs 有聲調 / 無聲調羅馬字,以及 TPS → TL 的查詢 key 轉換。
+// 中文: IME 與 Tab3 共用的輸入分類純函式 — 判斷漢字 vs 有聲調 / 無聲調羅馬字。
+// 中文: C-1 後 search_key 維持原樣 (identity);TPS 查詢直接走 SearchRequest{input_mode=Tps},不再前置轉成 TL。
 
-use phonetics::{contains_tps, has_tone_marks, tps_to_tl};
+use phonetics::has_tone_marks;
 use protos::engine::InputType;
 
 /// Returns `true` iff `text` contains at least one CJK Unified Ideograph
@@ -52,11 +53,11 @@ pub fn contains_numeric_tone(text: &str) -> bool {
 
 /// Result of `classify_input`. `input_type` is the typed proto enum;
 /// callers at the proto boundary (`api::classify_input`) convert to `i32`.
-// 中文: classify_input 的結果 — 輸入類型 + 經 TPS→TL 轉換後的查詢 key。
+// 中文: classify_input 的結果 — 輸入類型 + 原樣 search_key (C-1 後 TPS 不再前置轉 TL)。
 pub struct Classification {
     // 中文: 偵測到的輸入類型 (漢字 / 有聲調羅馬字 / 無聲調羅馬字)。
     pub input_type: InputType,
-    // 中文: 用於詞庫查詢的字串 (TPS 輸入會被轉成 TL,其他原樣傳遞)。
+    // 中文: 用於詞庫查詢的字串 — 原樣傳遞;TPS 查詢由 SearchRequest{input_mode=Tps} 經 key_normalizer 直接命中 tps: 族群。
     pub search_key: String,
 }
 
@@ -64,7 +65,7 @@ pub struct Classification {
 ///
 /// Precedence — see `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
 /// Search key — see `INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY`.
-// 中文: 將原始輸入分類為 (input_type, search_key) — 漢字優先、再判斷聲調、最後做 TPS→TL 轉換。
+// 中文: 將原始輸入分類為 (input_type, search_key) — 漢字優先、再判斷聲調;search_key 一律原樣回傳 (C-1)。
 pub fn classify_input(raw: &str) -> Classification {
     let input_type = if is_hanzi(raw) {
         InputType::Hanzi
@@ -74,15 +75,9 @@ pub fn classify_input(raw: &str) -> Classification {
         InputType::RomanNoTone
     };
 
-    let search_key = if contains_tps(raw) {
-        tps_to_tl(raw)
-    } else {
-        raw.to_owned()
-    };
-
     Classification {
         input_type,
-        search_key,
+        search_key: raw.to_owned(),
     }
 }
 
@@ -218,16 +213,12 @@ mod tests {
         assert_eq!(r.search_key, "好");
     }
     #[test]
-    fn search_key_tps_converts_to_tl() {
-        // TPS bopomofo "ㄍㄨㄚˋ" → "gua2" (round-trip via phonetics::tps_to_tl)
+    fn search_key_tps_passes_through_raw() {
+        // C-1: TPS input is no longer pre-converted to TL. `search_key`
+        // mirrors `raw` so the per-keystroke search path can hit the
+        // `tps:` FST family directly via `SearchRequest{input_mode=Tps}`.
         let tps_input = "\u{310d}\u{3128}\u{311a}\u{02cb}";
         let r = classify_input(tps_input);
-        // Sanity: search_key should be ASCII-romanized TL form, not raw TPS
-        assert!(
-            r.search_key.is_ascii(),
-            "search_key should be ASCII TL: {}",
-            r.search_key
-        );
-        assert_ne!(r.search_key, tps_input);
+        assert_eq!(r.search_key, tps_input);
     }
 }

@@ -296,7 +296,12 @@ object LexiconBridge {
 
     // region Classification (v3.5.7)
 
-    /** Classifier output — `inputType` is the platform `DictInputType`. */
+    /**
+     * Classifier output — `inputType` is the platform `DictInputType`.
+     * C-1 (v3.5.9 D) retired the TPS→TL pre-conversion; `searchKey` is
+     * now an identity passthrough of the raw input. The `tps:` FST
+     * family is queried directly via `SearchRequest.inputMode = Tps`.
+     */
     data class ClassificationResult(
         val inputType: DictInputType,
         val searchKey: String,

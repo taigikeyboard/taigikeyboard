@@ -25,7 +25,7 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 | TL → TPS (display + numeric) | Rust `phonetics::api::to_tone_marks` + TPS path inside same crate |
 | Key-level auto-adjust (positional ㄇ/ㆬ + ㄫ/ㆭ/ㄥ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ) | Rust `phonetics::tps_adjust` |
 | Bridge — detection | `RustEngineBridge.containsTPS(_)` / `isTPSToneMark(_)` |
-| Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed by `lexicon::classify_input`, no FFI surface) |
+| Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed by `composing::continuous` for per-span TPS→TL conversion; C-1 retired the `lexicon::classify_input` consumer, no FFI surface) |
 | Bridge — input adjust | `RustEngineBridge.tpsInputAdjust(incoming:rawInput:)` returning `(adjusted, replaceLast?)` |
 | iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Autocomplete/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
 | Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/TextInputManager.handleTaigiInput()`, layout JSON under `ime/text/characters/tps*.json` |
@@ -190,7 +190,10 @@ RustEngineBridge.tlNumericToTPS("tiau5", orMapsToER: false)  // "ㄉㄧㄠˊ"
 RustEngineBridge.tlDisplayToTPS("guá",  orMapsToER: false)   // "ㄍㄨㄚˋ"
 
 // TPS → TL is Rust-internal only — `phonetics::tps_to_tl` is consumed by
-// `lexicon::classify_input`; v3.5.7 retired the per-keystroke FFI ladder.
+// `composing::continuous` for per-span TPS→TL conversion during continuous
+// input. v3.5.7 retired the per-keystroke FFI ladder; C-1 (v3.5.9 D)
+// retired the `lexicon::classify_input` consumer when the `tps:` FST
+// family went live.
 
 // Key-level adjust (positional ㄇ/ㆬ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ):
 let r = RustEngineBridge.tpsInputAdjust(incoming: "ㄇ", rawInput: "ㄅㄚ")
