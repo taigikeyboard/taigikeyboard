@@ -68,8 +68,21 @@ pub fn build_tkdb_v2(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Ve
 }
 
 /// Write `bytes` to a unique tmpdir path and return it.
+///
+/// `name` is a human-readable suffix for debugging; the actual path is
+/// namespaced with `process::id()` plus a per-process atomic counter so
+/// parallel tests within the same `cargo test` binary never collide
+/// (cargo runs `tests/*.rs` test fns in parallel by default; without
+/// the counter, two tests passing the same `name` — or two callers of
+/// `synth_dictionary_reader` with the same row count — would race on
+/// `File::create` and produce a flaky "file too small" panic). Mirrors
+/// the safe pattern at `tests/span_local_fetch.rs:155-156`.
 pub fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}"));
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let pid = std::process::id();
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
     std::fs::write(&path, bytes).expect("write temp");
     path
 }

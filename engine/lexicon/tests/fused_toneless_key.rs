@@ -146,7 +146,14 @@ fn lookup_exact_returns_all_rowids_under_fused_toneless_key() {
 
 fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
     use fst::SetBuilder;
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}"));
+    use std::sync::atomic::{AtomicU64, Ordering};
+    // Per-process atomic counter + pid namespacing so concurrent tests
+    // within the same `cargo test` binary cannot race on the same path
+    // (mirrors `common::write_temp` + `tests/span_local_fetch.rs:155-156`).
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let pid = std::process::id();
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
     let mut entries: Vec<Vec<u8>> = pairs
         .iter()
         .map(|(key, rowid)| {

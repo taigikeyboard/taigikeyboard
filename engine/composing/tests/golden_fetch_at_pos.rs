@@ -577,29 +577,43 @@ fn matrix() -> Vec<Case> {
         // emit the `tps:` family per row (mirroring
         // `create_fst.py` / `create_syllables_fst.py`).
         //
-        // Toneless syllabification depends on `phonetics::is_tps_initial`
-        // firing at each next-syllable boundary (the "next initial
-        // seen" rule in `syllabifier::tps`). The medial-only `ㄨ` is
-        // NOT an initial, so a toneless `ㄉㄞㄨㄢ` (`tâi-uân` form)
-        // cannot be split by the implicit-tone-1 rule — toneless
-        // golden cases must therefore use rows whose syllables start
-        // with a proper Bopomofo initial (`ㆣ`/`ㄎ`/`ㄅ`/…). For 台灣
-        // coverage rely on the dogfood matrix's tone-marked path.
+        // Post 2026-05-27 fix: `syllabifier::tps::valid_span_endings_lowered`
+        // is inv-driven BFS (mirrors TL), so medial-led second syllables
+        // (`ㄉㄞ|ㄨㄢ` where `ㄨ` is medial not initial) segment correctly.
+        // The pre-fix structural "next initial seen" rule could not split
+        // `ㄉㄞㄨㄢ` and `台灣` coverage was deferred to the tone-marked
+        // path — that limitation is gone.
         // 中文: D / C-5 — TPS first-class;dispatch::handle 以 contains_tps 自動升級模式,
         // 中文:   input_mode="tl" 但 raw 含注音 → 走 TPS(對應生產自動偵測)。
-        // 中文: 無聲調切分仰賴 is_tps_initial 在下一音節邊界觸發隱式規則;
-        // 中文:   ㄨ 為介音非聲母,無法切 ㄉㄞ-ㄨㄢ,只能改用首字聲母清楚的列(ㆣ/ㄎ/ㄅ/…)。
+        // 中文: 2026-05-27 修復後 inv-driven BFS 可切 medial-led 第二音節 (例 ㄉㄞ|ㄨㄢ),
+        // 中文:   無聲調 台灣 覆蓋恢復;舊 next-initial-seen 限制退役。
         //
         // TPS toneless 2-syllable: `ㄉㄞㆣㄧ` = `tps_notone_from_tl("tâi-gí")`
-        // → 台語 row hit. ㆣ (U+31A3) is a TPS initial → implicit
-        // boundary fires between ㄞ and ㆣ → syllabifier splits into
-        // (ㄉㄞ, ㆣㄧ). Walker slot-0 emits the full-buffer key, span-
-        // local emits the 台 (1-syll) hit.
+        // → 台語 row hit.
         case("tps_notone_taigi", "ㄉㄞㆣㄧ", "tl"),
         // TPS toneless 4-syllable continuous: `ㄉㄞㆣㄧㄎㄧㄅㄨㆩ` =
         // `tps_notone_from_tl("tâi-gí-khí-puânn")` → 台語齒盤 row hit
         // (4-syllable walker slot-0) + sub-span dict hits (台 / 台語).
         case("tps_continuous_taigikhipuann", "ㄉㄞㆣㄧㄎㄧㄅㄨㆩ", "tl"),
+        // Medial-led 2-syllable: `ㄉㄞㄨㄢ` = `tps_notone_from_tl("tâi-uân")`
+        // → 台灣 row hit. `ㄨ` (U+3128) is a medial vowel, not a TPS
+        // initial — the pre-fix structural scanner could not segment
+        // this buffer at all (the inv probe of fused `tps:ㄉㄞㄨㄢ`
+        // always missed because the inventory only carries single
+        // syllables). Post-fix inv-driven BFS accepts the chain
+        // `tps:ㄉㄞ` + `tps:ㄨㄢ`, the walker emits the full-buffer 台灣
+        // key, and the span-local list adds the 1-syll 台 hit.
+        case("tps_notone_taiuan", "ㄉㄞㄨㄢ", "tl"),
+        // User-reported bug 2026-05-27: medial-led 4-syllable
+        // continuous `ㄉㄞㄨㄢㄉㄞㆣㄧ` = `tps_notone_from_tl("tâi-uân-tâi-gí")`
+        // → 台灣台語 row hit. Pre-fix returned ZERO candidates because
+        // the first medial-led boundary (`ㄉㄞ|ㄨㄢ`) could not split,
+        // killing the BFS at depth 1. Post-fix the chain
+        // `tps:ㄉㄞ + tps:ㄨㄢ + tps:ㄉㄞ + tps:ㆣㄧ` reaches the full
+        // buffer; walker slot-0 emits 台灣台語, span-local emits
+        // 台灣 (2-syll, 6 bytes) + 台 (1-syll) + 台語 (interior — not
+        // emitted as left-anchored key, surfaced via path step) hits.
+        case("tps_notone_taiuantaigi", "ㄉㄞㄨㄢㄉㄞㆣㄧ", "tl"),
     ]
 }
 

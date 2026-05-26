@@ -3,9 +3,9 @@
 //! Mirror of `build_keys_tl_lattice.rs` for the TPS family. Confirms
 //! `build_keys_tl_with_inventory` (despite its legacy name, the
 //! production seam test wrapper for the shared `build_shadow_lattice`
-//! + `left_anchored_keys_from_lattice` path) emits `tps:<bopomofo_toneless>`
-//! keys against a `tps:`-tagged hermetic inventory when called with
-//! `InputMode::Tps`.
+//! and `left_anchored_keys_from_lattice` path) emits
+//! `tps:<bopomofo_toneless>` keys against a `tps:`-tagged hermetic
+//! inventory when called with `InputMode::Tps`.
 //!
 //! This file is the SHIPPED replacement for the retired
 //! `composing/src/continuous.rs::build_keys_tps_*` in-crate tests; the
@@ -75,10 +75,11 @@ fn tps_lattice_emits_tps_prefix_for_tone_marked_input() {
 
 #[test]
 fn tps_lattice_tone1_no_mark_emits_key() {
-    // Tone-1 syllable carries no Bopomofo tone mark. The terminator
-    // scan's implicit "next-initial-seen" rule splits the buffer at
-    // each new initial; here `ㄉㄞ` (3+3) followed by `ㆣㄧ` (3+3).
-    // After inventory gating both spans hit `tps:ㄉㄞ` / `tps:ㄉㄞㆣㄧ`.
+    // Tone-1 syllable carries no Bopomofo tone mark. The inv-driven
+    // BFS probes every byte boundary against the `tps:` family and
+    // accepts whatever the inventory recognises; here `ㄉㄞ` (3+3) and
+    // `ㄉㄞㆣㄧ` (3+3+3+3) both hit, so the left-anchored projection
+    // emits the atomic and phrase keys.
     let inv = build_tps_inventory(&["ㄉㄞ", "ㆣㄧ"]);
     let keys = build_keys_tl_with_inventory(
         "\u{3109}\u{311e}\u{31a3}\u{3127}",
@@ -135,9 +136,8 @@ fn tps_lattice_empty_input_yields_no_keys() {
 #[test]
 fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     // Each `ㄉㄞ` syllable = 6 bytes (ㄉ 3 + ㄞ 3); 9 syllables = 54 bytes.
-    // Tone-1 chain — implicit next-initial-seen rule splits between
-    // each ㄉ-ㄞ pair. Inventory contains only the single-syllable form
-    // so the BFS depth path is one hop per syllable.
+    // Tone-1 chain — the inv-driven BFS accepts each `ㄉㄞ` as a single
+    // inventory hit, one hop per syllable.
     const SYLLABLE_BYTES: usize = 6;
     const MAX_SYLLABLES: usize = 8;
     let inv = build_tps_inventory(&["ㄉㄞ"]);

@@ -206,8 +206,8 @@ pub fn is_tps_initial(ch: char) -> bool {
 /// carry no trailing mark, tone-8 stops carry a trailing dot.
 ///
 /// v3.5.9 D / C-3b — public so `composing::shadow::strip_tones_for_mode`
-/// + `lexicon::continuous::matches_continuous_tps_toneless_key` can
-/// reuse the single canonical set. Pre-C-3b this was private + a
+/// and `lexicon::continuous::matches_continuous_tps_toneless_key` can
+/// reuse the single canonical set. Pre-C-3b this was private with an
 /// `is_tps_tone_mark_pub` thunk re-export; simplifier-flagged
 /// triple-naming collapsed to one public symbol.
 // 中文: TPS 聲調符號集合;入聲韻尾本身屬音節主體,聲調 4 無尾標,聲調 8 在韻尾後加點。

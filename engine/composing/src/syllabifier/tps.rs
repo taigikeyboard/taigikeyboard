@@ -1,261 +1,351 @@
-//! TPS syllabifier — O(n) scan returning every byte offset that ends a
-//! TPS syllable.
+//! TPS syllabifier — BFS over a `SyllableInventory` returning every
+//! span ending reachable from `pos` by a chain of 1..=`max_syllables`
+//! valid TPS Bopomofo syllables.
 //!
-//! v3.5.9 D / C-3b — gained an `_lowered` variant matching the TL
-//! syllabifier signature (`inv`, `mode`, `max_syllables`) so the
-//! [`crate::syllabifier::valid_span_endings_lowered`] dispatcher can
-//! route TPS through the same lattice builder. The inventory gate is
-//! load-bearing per Codex pre-impl Fork 3 amendment: each candidate
-//! ending is verified via `inv.contains_in(InputMode::Tps, slice)` so
-//! a malformed TPS span (residue, unknown Bopomofo combination) cannot
-//! leak into the walker's no-dict carve-out as a synth roman.
-//! Two boundary kinds:
+//! Mirrors the TL syllabifier shape (`syllabifier::tl::valid_span_endings_lowered`)
+//! exactly. The pre-fix structural pre-scan (next-initial-seen rule)
+//! could not split toneless `ㄉㄞ|ㄨㄢ` because the medial vowel `ㄨ`
+//! is not a TPS initial, so no boundary was proposed between the two
+//! syllables — and inventory probes of the fused 2-syllable slice
+//! `tps:ㄉㄞㄨㄢ` always missed. The inv-driven BFS here probes every
+//! byte position `(cur+1)..=cur+MAX_SYLLABLE_BYTES_TPS`, accepts any
+//! slice the `tps:` family of `syllables.fst` recognises, and lets
+//! `SyllableInventory::contains_in(Tps, …)` itself act as the
+//! garbage-Bopomofo filter (a malformed span has no inventory hit and
+//! produces no edge).
 //!
-//! 1. **Explicit terminator** — a tone mark (tone 2/3/5/6/7/9), an
-//!    entering-coda small letter (tone 4, optionally coalesced with a
-//!    following tone-8 dot), or a standalone tone-8 dot. These are
-//!    unambiguous in TPS (per `docs/releases/v3.5.8/plan.md` § 走查範例 Case D — TPS).
-//! 2. **Implicit tone-1 boundary** ("next initial seen" rule, v3.5.8
-//!    Phase 9 Item 7) — tone-1 syllables carry no mark, so a boundary
-//!    is inferred when a new initial consonant appears after a nucleus
-//!    has already been consumed, and at end-of-input when a tone-1
-//!    nucleus is still pending. This is implemented HERE in the
-//!    syllabifier, not in the dispatcher.
-//!
-//! Without rule 2, a pure tone-1 buffer such as `ㄉㄞㆣㄧ` ("tâi-gí")
-//! yields zero terminators → no FST keys → empty candidate strip.
+//! Direction-first alignment per CLAUDE.md Core Principle #6 + Codex
+//! pre-impl 2026-05-27: TL, POJ, TPS now share one segmenter shape,
+//! matching librime DAG (`references/librime/src/rime/algo/syllabifier.cc`),
+//! khiin-rs DP over known words
+//! (`references/khiin-rs/khiin/src/data/segmenter.rs`), and McBopomofo
+//! ReadingGrid unigram-backed spans
+//! (`references/McBopomofo/Source/Engine/gramambular2/reading_grid.cpp`).
 
-// 中文: TPS 音節切分器 — 線性掃描,回報每個音節結束的 byte 位移,含兩種邊界:
-// 中文: (1) 顯式終止符:聲調符號 / 入聲韻尾 / 第 8 聲點;
-// 中文: (2) 隱式第 1 聲邊界 (next-initial-seen,v3.5.8 Phase 9 Item 7):第 1 聲無調號,
-// 中文:     在已吃過韻核後又見到新聲母、或輸入結尾仍有未結的第 1 聲時補回邊界。規則實作於本切分器,非 dispatcher。
+// 中文: TPS 音節切分器 — 對 SyllableInventory 跑 inv-driven BFS,回報深度 ≤ max_syllables 鏈可達的所有 span ending。
+// 中文: 修復前的 structural pre-scan (next-initial-seen) 無法切 ㄉㄞ|ㄨㄢ — ㄨ 是介音非聲母,無切點建議,
+// 中文:   inv probe 撞到融合 2 音節的 tps:ㄉㄞㄨㄢ 永遠 miss。改成 inv-driven BFS 直接以
+// 中文:   contains_in(Tps, slice) 作邊界判定;與 TL syllabifier 同型,亦對齊 librime / khiin-rs / McBopomofo。
 
-/// Roles a TPS character can play in syllable termination. Sourced
-/// from `engine/phonetics/src/tps.rs:75-111` (`ZHUYIN_TONES` and
-/// `ZHUYIN_TONES_ENCODE_SAFE`).
-// 中文: TPS 字符的終止角色;對應 phonetics::tps 的 ZHUYIN_TONES 與 ZHUYIN_TONES_ENCODE_SAFE 兩張表。
-enum Terminator {
-    /// Spacing modifier tone marks (tone 2/3/5/6/7/9) — each marks the
-    /// end of one syllable. Tone 1 is implicit (no mark) and excluded.
-    Mark,
-    /// Bopomofo Extended entering-coda small letter (p/t/k/h stop).
-    /// Stands alone as tone 4; may be coalesced with a following dot
-    /// for tone 8.
-    EnteringCoda,
-    /// 8th-tone dot — `U+0307` (NFD combining) or `U+02D9` (encode-safe
-    /// spacing variant). Treated as a standalone terminator because the
-    /// encode-safe table at `tps.rs:109` lists it as a complete tone-8
-    /// entry on its own; ignoring a stray dot mid-stream would silently
-    /// drop a syllable boundary.
-    Tone8Dot,
-}
+use std::collections::{BTreeSet, VecDeque};
 
-fn classify(ch: char) -> Option<Terminator> {
-    match ch {
-        '\u{02cb}'  // tone 2 ˋ
-        | '\u{02ea}'  // tone 3 ˪
-        | '\u{02ca}'  // tone 5 ˊ
-        | '\u{02c7}'  // tone 6 ˇ
-        | '\u{02eb}'  // tone 7 ˫
-        | '\u{02c6}'  // tone 9 ˆ
-            => Some(Terminator::Mark),
-        '\u{31b4}'  // ㆴ p
-        | '\u{31b5}'  // ㆵ t
-        | '\u{31bb}'  // ㆻ k
-        | '\u{31b7}'  // ㆷ h
-            => Some(Terminator::EnteringCoda),
-        '\u{0307}'  // combining dot above (NFD)
-        | '\u{02d9}'  // ˙ modifier letter dot above (encode-safe)
-            => Some(Terminator::Tone8Dot),
-        _ => None,
-    }
-}
+use lexicon::SyllableInventory;
+use phonetics::InputMode;
 
-/// Return every byte offset `e > pos` such that `input[..e]` ends a
-/// TPS syllable, covering both explicit terminators and implicit
-/// tone-1 boundaries (module-level rules 1 and 2).
-///
-/// - **Explicit terminator**: an entering-coda small letter followed
-///   immediately by an 8th-tone dot terminates AT the dot (one ending,
-///   not two); a stray dot terminates standalone.
-/// - **Implicit tone-1** ("next initial seen"): once a nucleus has
-///   been consumed, the next initial consonant starts a new syllable,
-///   so the previous tone-1 syllable ends at the byte offset *before*
-///   that initial. End-of-input with a pending tone-1 nucleus ends the
-///   trailing syllable at `input.len()`. An explicit terminator clears
-///   the pending nucleus, so an initial immediately after a tone mark
-///   is not a false boundary.
-///
-/// "Nucleus" is any Bopomofo-range char ([`phonetics::is_tps_char`])
-/// that is neither an initial nor a terminator — tolerant of medials
-/// and extended vowels without enumerating the vowel table. Non-TPS
-/// chars (Latin, punctuation, space) never set the nucleus flag.
+/// Upper bound on a single TPS syllable's byte length. Bopomofo
+/// (U+3100..U+312F) + Bopomofo Extended (U+31A0..U+31BF) chars are 3
+/// bytes each in UTF-8; tone-mark spacing modifiers
+/// (U+02C6/02C7/02CA/02CB/02D9/02EA/02EB) + combining dot (U+0307) are
+/// 2 bytes each. Worst-case syllable from `engine/phonetics/src/tps.rs`
+/// (`ZHUYIN_INITIALS` + `ZHUYIN_VOWELS` + `ZHUYIN_TONES`): compound
+/// initial 2 chars × 3 + vowel chain 3 chars × 3 + entering coda 1 ×
+/// 3 + tone-8 dot 1 × 2 = 20 bytes. Set to 24 for a small headroom and
+/// to match the order-of-magnitude of TL's tight `MAX_SYLLABLE_BYTES`.
+// 中文: TPS 單音節最大 byte 上限 — Bopomofo / 擴展區 = 3 bytes,聲調符 = 2 bytes;
+// 中文:   結構最大 20 bytes;設 24 留小幅 headroom,與 TL 的 10 同量級。
+const MAX_SYLLABLE_BYTES_TPS: usize = 24;
+
+/// Return every byte offset `e > pos` reachable from `pos` by a chain
+/// of 1..=`max_syllables` syllables, where each chain link
+/// `lowered[cur..end]` is a member of the `tps:` family branch of the
+/// v3.5.9 B-1 tagged-single-FST syllable inventory.
 ///
 /// Contract:
-/// - Returns strictly ascending byte offsets. Pushes are monotonic by
-///   construction (terminator/EOI offsets only grow; an implicit push
-///   needs an intervening nucleus that advances the cursor), so no
-///   separate dedup is needed.
-/// - Returns empty `Vec` when `pos >= input.len()` or `pos` is not on
-///   a UTF-8 char boundary. Scan state is fresh from `pos`.
-// 中文: 線性掃描 input[pos..],回報每個音節結束位移,含顯式終止符與隱式第 1 聲邊界 (天然遞增)。
-// 中文: 韻核 = 非聲母非終止符的注音字元;見到新聲母 (前面已有韻核) 或輸入結尾仍有未結第 1 聲時補切點;終止符會清除待結韻核。
-pub fn valid_span_endings(input: &str, pos: usize) -> Vec<usize> {
-    raw_endings_from(input, pos, usize::MAX)
-}
-
-/// v3.5.9 D / C-3b — pre-lowered variant matching the TL syllabifier
-/// signature so the [`crate::syllabifier::valid_span_endings_lowered`]
-/// dispatcher can route TPS through `lattice::build_lattice` without
-/// per-mode special cases. TPS is case-insensitive (Bopomofo has no
-/// case axis), so `lowered` is just `input` passed through; the
-/// per-keystroke `to_ascii_lowercase` allocation upstream is harmless
-/// for non-Latin chars and is consistent with the TL path.
+/// - Returns ascending, deduplicated byte offsets.
+/// - Returns empty `Vec` when `pos >= lowered.len()`, `max_syllables
+///   == 0`, or `pos` is not on a UTF-8 char boundary.
+/// - `_mode` is taken for signature parity with the TL syllabifier so
+///   the [`crate::syllabifier::valid_span_endings_lowered`] dispatcher
+///   can forward to either by `InputMode`; this function always probes
+///   the `tps:` family regardless of `_mode` (the dispatcher routes
+///   only TPS callers here).
+/// - `is_false_toneless_boundary_tps` suppresses a toneless ending
+///   that sits immediately before a TPS tone mark, mirroring TL's
+///   `is_false_toneless_boundary` so the longer numeric-tone form
+///   (`tps:ㄉㄞˊ`) wins over the shorter toneless form when the user
+///   typed a tone mark.
+/// - Tone-8 dot `U+02D9` (encode-safe modifier-letter dot typed by
+///   the platform keyboards per `engine/lexicon/src/key_normalizer.rs`)
+///   is substituted to the canonical combining `U+0307` before the
+///   BFS, so the inventory probe hits the build-pipeline-emitted form
+///   (`dictionary/build/merge_csv.py` writes `U+0307`). Both code
+///   points are 2 bytes UTF-8 so the substitution is byte-length
+///   preserving — returned offsets index the original `lowered`
+///   unchanged.
 ///
-/// Algorithm:
-/// 1. Walk the buffer with the existing terminator-scan to collect the
-///    candidate ending byte offsets from `pos` (each ending closes one
-///    structural TPS syllable — tone-marked or implicit tone-1).
-/// 2. **Inventory-gate** each candidate: chain forward from `pos` using
-///    `inv.contains_in(InputMode::Tps, lowered[cur..end])` on each hop's
-///    syllable slice. The first depth-1 endings reachable that pass the
-///    inventory filter become depth-1 results; the BFS then continues
-///    forward from each accepted ending until the chain is exhausted or
-///    `max_syllables` is reached.
-/// 3. Cap result depth at `max_syllables` (mirrors the TL BFS depth
-///    bound). The inventory gate rejects malformed Bopomofo that the
-///    structural classifier alone would accept as a "syllable" (Codex
-///    pre-impl Fork 3 amendment — without this an unknown Bopomofo span
-///    would slip into walker OOV synth as a no-dict carve-out).
-///
-/// `_inv` and `_mode` are taken for signature parity; this function
-/// always probes the `tps:` family via `inv.contains_in(InputMode::Tps,
-/// ...)` regardless of the caller's `mode` (the dispatcher in
-/// `syllabifier::mod.rs` is responsible for routing only TPS callers
-/// here; an unexpected non-TPS `mode` reaching this fn would not change
-/// the family probed).
-// 中文: D / C-3b — 與 TL syllabifier signature 對齊的 pre-lowered 變體。
-// 中文:   先以結構化終止符掃描蒐集候選 ending,再以 inv.contains_in(Tps, slice)
-// 中文:   逐跳過濾,深度上限 max_syllables(對齊 TL BFS bound)。Codex 修訂:
-// 中文:   不過濾會讓不合法 Bopomofo 跳進 walker OOV synth。
+/// Algorithm: FIFO BFS using `endings` itself as the visited set —
+/// `BTreeSet::insert` returns `true` only on first arrival, which
+/// under unit edge costs is also the minimum depth. Time:
+/// O(n × MAX_SYLLABLE_BYTES_TPS) FST lookups, each O(syllable_len).
+// 中文: 從 pos 出發,以 1..=max_syllables 條 tps: 家族音節鏈走訪,回傳所有可達 byte 位移 (遞增去重)。
+// 中文: false-toneless guard 壓掉「短的 toneless edge」當下一字是 TPS 聲調符 (含 U+02D9 / U+0307),
+// 中文:   讓 numeric-tone 長形 (例 tps:ㄉㄞˊ) 勝出,對齊 TL 的 is_false_toneless_boundary 行為。
+// 中文: BFS 前把鍵盤端 U+02D9 (encode-safe 第 8 聲點) 取代為 build pipeline 使用的 U+0307 (組合形),
+// 中文:   兩者皆 2 bytes UTF-8 → byte 偏移不變,回傳值仍以原始 lowered 為座標。
 pub(crate) fn valid_span_endings_lowered(
     lowered: &str,
     pos: usize,
-    inv: &lexicon::SyllableInventory,
-    _mode: phonetics::InputMode,
+    inv: &SyllableInventory,
+    _mode: InputMode,
     max_syllables: usize,
 ) -> Vec<usize> {
     if max_syllables == 0 || pos >= lowered.len() || !lowered.is_char_boundary(pos) {
         return Vec::new();
     }
-    // The structural scanner enumerates syllable boundaries from `pos`
-    // forward (terminator or implicit tone-1). Cap collection at
-    // `max_syllables` so each call walks O(max_syllables × syllable_bytes)
-    // bytes, not O(N) bytes to end-of-input. The BFS below caps depth at
-    // `max_syllables` anyway, so any candidate past the Nth boundary
-    // would never be inserted into `endings` — truncating the candidate
-    // list is byte-identical for output. Without the cap,
-    // `build_lattice` calls this once per reachable start (Codex PR
-    // #337 r3298575431) and the per-start full-suffix rescan becomes
-    // O(N²) on long TPS buffers, matching the cost shape the TL path
-    // explicitly avoids via `MAX_SYLLABLE_BYTES`.
-    // 中文: 結構化掃描以 max_syllables 為上限收集候選 ending(原本 usize::MAX 會走到 EOI,
-    // 中文:   per-start 全 suffix 重掃 → O(N²),Codex r3298575431 指出)。下方 BFS 深度也限
-    // 中文:   max_syllables,候選超過此上限的位置永遠不會插入 endings → 截斷對輸出 byte-identical。
-    let candidates = raw_endings_from(lowered, pos, max_syllables);
-    if candidates.is_empty() {
-        return Vec::new();
-    }
-    // BFS over candidate endings under the inventory gate. Mirrors the
-    // TL syllabifier's depth-1..=max_syllables chain semantics so the
-    // lattice builder's left-anchored phrase edges (`build_lattice`
-    // emits them from the BFS visit of every reachable start) come out
-    // the same shape for TPS.
-    use std::collections::{BTreeSet, VecDeque};
+
+    // U+02D9 → U+0307 byte-length-preserving substitution for inv-probe
+    // canonicalization. Allocate only when the buffer contains U+02D9;
+    // common TPS input via Bopomofo tone marks (ˋ ˊ ˫ ˪ ˇ ˆ) is unaffected.
+    let normalized: Option<String> = if lowered.contains('\u{02D9}') {
+        Some(lowered.replace('\u{02D9}', "\u{0307}"))
+    } else {
+        None
+    };
+    let probe = normalized.as_deref().unwrap_or(lowered);
+
     let mut endings: BTreeSet<usize> = BTreeSet::new();
     let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
     queue.push_back((pos, 0));
+
     while let Some((cur, depth)) = queue.pop_front() {
         if depth >= max_syllables {
             continue;
         }
-        for &end in &candidates {
-            if end <= cur {
+        let upper = (cur + MAX_SYLLABLE_BYTES_TPS).min(probe.len());
+        for end in (cur + 1)..=upper {
+            if !probe.is_char_boundary(end) {
                 continue;
             }
-            if !lowered.is_char_boundary(end) {
-                continue;
-            }
-            let slice = &lowered[cur..end];
-            if !inv.contains_in(phonetics::InputMode::Tps, slice) {
-                continue;
-            }
-            if endings.insert(end) {
+            if inv.contains_in(InputMode::Tps, &probe[cur..end])
+                && !is_false_toneless_boundary_tps(probe, end)
+                && endings.insert(end)
+            {
                 queue.push_back((end, depth + 1));
             }
         }
     }
+
     endings.into_iter().collect()
 }
 
-// Internal structural scan — returns every TPS syllable ending byte
-// offset reachable from `pos` by walking terminators + implicit tone-1
-// boundaries forward. Caller cap via `limit` keeps the public
-// [`valid_span_endings`] (no cap) and the inventory-gated
-// [`valid_span_endings_lowered`] using ONE scan loop.
-// 中文: 結構化掃描內核 — 從 pos 往前以終止符 + 隱式第 1 聲收集所有候選 ending byte 位移;
-// 中文:   呼叫端透過 limit 控上限(公開 API 為無上限,gated 變體在掃描後依 max_syllables 過濾)。
-fn raw_endings_from(input: &str, pos: usize, limit: usize) -> Vec<usize> {
-    if pos >= input.len() || !input.is_char_boundary(pos) {
-        return Vec::new();
-    }
+/// True when the inventory-accepted toneless TPS syllable at `..end`
+/// sits immediately before a TPS tone-mark char — the longer numeric
+/// form (e.g. `tps:ㄉㄞˊ` for tone-5) is the correct match and the
+/// FST contains both. Reuses the canonical tone-mark set from
+/// `phonetics::is_tps_tone_mark` so the eight scalars
+/// (ˆˇˊˋ˙˪˫ + combining dot above) stay in one source of truth.
+///
+/// Stop codas (ㆴㆵㆻㆷ U+31B4/B5/BB/B7) are syllable body, not tone
+/// marks; tone-4 stops carry no trailing mark and tone-8 stops carry
+/// a trailing dot. Per `dictionary/common/notone.py:34-45 remove_tps_tone`,
+/// stop codas are NOT stripped — they stay in `tps_notone` keys. So
+/// they are deliberately absent from the guard set; the inv probe of
+/// the longer slice that ends ON the coda is the correct match.
+// 中文: 把「toneless TPS 音節邊界後接聲調符」判為假邊界 — 較長的 numeric-tone 形是正解,
+// 中文:   FST 兩形都收。直接重用 phonetics::is_tps_tone_mark (含 U+02D9 + U+0307);
+// 中文:   入聲韻尾 ㆴㆵㆻㆷ 屬音節主體,不在 guard 內。
+fn is_false_toneless_boundary_tps(lowered: &str, end: usize) -> bool {
+    lowered[end..]
+        .chars()
+        .next()
+        .is_some_and(phonetics::is_tps_tone_mark)
+}
 
-    let mut endings: Vec<usize> = Vec::new();
-    let mut nucleus_seen = false;
-    let mut iter = input[pos..].char_indices().peekable();
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
 
-    while let Some((rel, ch)) = iter.next() {
-        if endings.len() >= limit {
-            break;
-        }
-        let start = pos + rel;
-        let abs = start + ch.len_utf8();
-        match classify(ch) {
-            Some(Terminator::Mark) | Some(Terminator::Tone8Dot) => {
-                endings.push(abs);
-                nucleus_seen = false;
-            }
-            Some(Terminator::EnteringCoda) => {
-                // Coalesce a following 8th-tone dot into the same ending.
-                if let Some(&(_, next_ch)) = iter.peek() {
-                    if matches!(classify(next_ch), Some(Terminator::Tone8Dot)) {
-                        iter.next();
-                        endings.push(abs + next_ch.len_utf8());
-                        nucleus_seen = false;
-                        continue;
-                    }
-                }
-                endings.push(abs);
-                nucleus_seen = false;
-            }
-            None => {
-                if phonetics::is_tps_initial(ch) {
-                    // A new initial after a nucleus closes the pending
-                    // tone-1 syllable just before this initial.
-                    if nucleus_seen {
-                        endings.push(start);
-                        nucleus_seen = false;
-                    }
-                } else if phonetics::is_tps_char(ch) {
-                    nucleus_seen = true;
-                }
+    use fst::SetBuilder;
+    use lexicon::SyllableInventory;
+    use phonetics::InputMode;
+
+    use super::valid_span_endings_lowered;
+
+    const MAX_SYLLABLES: usize = 8;
+
+    /// Hermetic `tps:` family inventory builder. Mirrors the pattern in
+    /// `composing::tests::build_keys_tps` — keys carry the `tps:`
+    /// prefix so `SyllableInventory::contains_in(Tps, ..)` finds them.
+    /// Each input syllable is recorded in BOTH toneless and the supplied
+    /// optional tone-marked form to mirror the build pipeline's
+    /// dual-emit (`dictionary/build/create_syllables_fst.py` §toneless
+    /// + §numeric).
+    fn build_tps_inventory(samples: &[(&str, Option<&str>)]) -> SyllableInventory {
+        let mut keys: Vec<String> = Vec::new();
+        for &(toneless, numeric) in samples {
+            keys.push(format!("tps:{toneless}"));
+            if let Some(n) = numeric {
+                keys.push(format!("tps:{n}"));
             }
         }
+        keys.sort();
+        keys.dedup();
+
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let path: PathBuf =
+            std::env::temp_dir().join(format!("taigi_tps_syl_unit_{}_{n}.fst", std::process::id()));
+        let file = std::fs::File::create(&path).expect("create fst");
+        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
+        for key in &keys {
+            builder.insert(key.as_bytes()).expect("insert");
+        }
+        builder.finish().expect("finish");
+        SyllableInventory::open(&path).expect("open inventory")
     }
 
-    if nucleus_seen && endings.len() < limit {
-        endings.push(input.len());
+    #[test]
+    fn medial_led_second_syllable_splits_via_inventory() {
+        // ㄉㄞ|ㄨㄢ — toneless 台灣. `ㄨ` is a medial vowel, not a TPS
+        // initial; the pre-fix structural scanner could not propose a
+        // boundary between ㄉㄞ and ㄨㄢ. The inv-driven BFS does, because
+        // both `tps:ㄉㄞ` and `tps:ㄨㄢ` are in the inventory.
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", None), ("\u{3128}\u{3122}", None)]);
+        let dai_len = "\u{3109}\u{311e}".len();
+        let input = "\u{3109}\u{311e}\u{3128}\u{3122}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert_eq!(endings, vec![dai_len, input.len()]);
     }
 
-    endings
+    #[test]
+    fn user_bug_taiuantaigi_full_chain_reachable() {
+        // ㄉㄞㄨㄢㄉㄞㆣㄧ — exact reported bug input. Every single-
+        // syllable hit + every chain end must be reachable.
+        let inv = build_tps_inventory(&[
+            ("\u{3109}\u{311e}", None), // ㄉㄞ
+            ("\u{3128}\u{3122}", None), // ㄨㄢ
+            ("\u{31a3}\u{3127}", None), // ㆣㄧ
+        ]);
+        let dai = "\u{3109}\u{311e}";
+        let uan = "\u{3128}\u{3122}";
+        let gi = "\u{31a3}\u{3127}";
+        let input = format!("{dai}{uan}{dai}{gi}");
+        let endings = valid_span_endings_lowered(&input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        let e1 = dai.len();
+        let e2 = dai.len() + uan.len();
+        let e3 = dai.len() + uan.len() + dai.len();
+        assert_eq!(endings, vec![e1, e2, e3, input.len()]);
+    }
+
+    #[test]
+    fn false_toneless_boundary_before_tone_mark_suppresses_short_form() {
+        // ㄉㄞ + ˊ (tone 5). FST has BOTH the toneless `tps:ㄉㄞ` and
+        // the numeric `tps:ㄉㄞˊ`. Without the guard, BFS would accept
+        // (0, 6) (toneless, leaving orphan ˊ) AND (0, 8) (numeric).
+        // The guard suppresses the toneless ending so commit semantics
+        // never leave a dangling tone mark.
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", Some("\u{3109}\u{311e}\u{02ca}"))]);
+        let input = "\u{3109}\u{311e}\u{02ca}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert_eq!(endings, vec![input.len()]);
+    }
+
+    #[test]
+    fn false_toneless_boundary_before_tone8_dot_combining_suppresses() {
+        // ㄎㄚㆴ̇ — tone-8 stop with combining U+0307 dot. FST has both
+        // the toneless `tps:ㄎㄚㆴ` (tone-4) and the tone-8 numeric
+        // `tps:ㄎㄚㆴ̇`. Guard must suppress the toneless ending so an
+        // orphan U+0307 cannot be commit-stranded.
+        let inv = build_tps_inventory(&[(
+            "\u{310e}\u{311a}\u{31b4}",
+            Some("\u{310e}\u{311a}\u{31b4}\u{0307}"),
+        )]);
+        let input = "\u{310e}\u{311a}\u{31b4}\u{0307}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert_eq!(endings, vec![input.len()]);
+    }
+
+    #[test]
+    fn encode_safe_dot_u02d9_normalizes_to_u0307_for_inv_probe() {
+        // ㄎㄚㆴ˙ — tone-8 stop with the encode-safe U+02D9 modifier-
+        // letter dot that platform keyboards (iOS `TaigiLayouts.swift`,
+        // Android `tps.json`) emit. The build pipeline writes the
+        // canonical combining U+0307 into `dictionary.fst` /
+        // `syllables.fst` (`dictionary/build/merge_csv.py`). The
+        // syllabifier substitutes U+02D9 → U+0307 internally so the
+        // inv probe hits the canonical numeric form, while the
+        // false-toneless guard fires on either dot variant (both in
+        // `phonetics::is_tps_tone_mark`). Result: ONLY the full
+        // tone-8 ending — no orphan-dot short ending, and the full
+        // numeric form is not silently dropped.
+        let inv = build_tps_inventory(&[(
+            "\u{310e}\u{311a}\u{31b4}",
+            Some("\u{310e}\u{311a}\u{31b4}\u{0307}"),
+        )]);
+        let input = "\u{310e}\u{311a}\u{31b4}\u{02d9}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert_eq!(endings, vec![input.len()]);
+    }
+
+    #[test]
+    fn entering_coda_alone_stays_a_valid_ending() {
+        // ㄎㄚㆴ — tone-4 stop, no trailing dot. The coda IS the body;
+        // guard MUST NOT suppress this — there is no tone mark after.
+        let inv = build_tps_inventory(&[("\u{310e}\u{311a}\u{31b4}", None)]);
+        let input = "\u{310e}\u{311a}\u{31b4}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert_eq!(endings, vec![input.len()]);
+    }
+
+    #[test]
+    fn max_syllables_caps_bfs_depth() {
+        // Chain of 3 single-syllable inv hits but max_syllables = 2 →
+        // only the 1- and 2-syllable endings reachable.
+        let inv = build_tps_inventory(&[
+            ("\u{3109}\u{311e}", None), // ㄉㄞ
+            ("\u{3128}\u{3122}", None), // ㄨㄢ
+            ("\u{31a3}\u{3127}", None), // ㆣㄧ
+        ]);
+        let input = "\u{3109}\u{311e}\u{3128}\u{3122}\u{31a3}\u{3127}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, 2);
+        let e1 = "\u{3109}\u{311e}".len();
+        let e2 = "\u{3109}\u{311e}\u{3128}\u{3122}".len();
+        assert_eq!(endings, vec![e1, e2]);
+    }
+
+    #[test]
+    fn non_bopomofo_suffix_does_not_extend_chain_past_inv_hit() {
+        // ㄉㄞXY — the prefix ㄉㄞ (3+3 bytes) hits `tps:ㄉㄞ`; the XY
+        // suffix is non-Bopomofo and inv-absent, so BFS finds no edge
+        // continuing from end=6. inv-only filtering is sufficient — no
+        // structural garbage-rejection filter needed.
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", None)]);
+        let input = "\u{3109}\u{311e}XY";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert_eq!(endings, vec!["\u{3109}\u{311e}".len()]);
+    }
+
+    #[test]
+    fn empty_input_returns_empty() {
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", None)]);
+        let endings = valid_span_endings_lowered("", 0, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert!(endings.is_empty());
+    }
+
+    #[test]
+    fn pos_at_input_end_returns_empty() {
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", None)]);
+        let input = "\u{3109}\u{311e}";
+        let endings =
+            valid_span_endings_lowered(input, input.len(), &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert!(endings.is_empty());
+    }
+
+    #[test]
+    fn pos_at_non_char_boundary_returns_empty_safely() {
+        // ㄉ is 3 bytes; pos=1 is mid-codepoint. Must not panic.
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", None)]);
+        let input = "\u{3109}\u{311e}";
+        let endings = valid_span_endings_lowered(input, 1, &inv, InputMode::Tps, MAX_SYLLABLES);
+        assert!(endings.is_empty());
+    }
+
+    #[test]
+    fn max_syllables_zero_returns_empty() {
+        let inv = build_tps_inventory(&[("\u{3109}\u{311e}", None)]);
+        let input = "\u{3109}\u{311e}";
+        let endings = valid_span_endings_lowered(input, 0, &inv, InputMode::Tps, 0);
+        assert!(endings.is_empty());
+    }
 }

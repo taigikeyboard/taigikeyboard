@@ -139,9 +139,9 @@ mod tests {
         // Keyboard layouts emit modifier-letter dot `˙` (U+02D9) for tone 8;
         // build pipeline emits combining dot `̇` (U+0307). Substitute so the
         // FST exact-lookup hits.
-        let input = format!("\u{3110}\u{3127}\u{02D9}");
+        let input = "\u{3110}\u{3127}\u{02D9}";
         assert_eq!(
-            build(&input, KeyType::Romanization, KeyMode::Tps),
+            build(input, KeyType::Romanization, KeyMode::Tps),
             "tps:\u{3110}\u{3127}\u{0307}"
         );
     }
