@@ -1,5 +1,5 @@
 // 中文: 主 App UI 樣式常數的集中定義(字級、顏色、間距、圓角等)。
-// 中文: 所有 Tab / Settings 共用,改這裡即可全 App 套用。詳見 rules/ui-style-guide.md。
+// 中文: 所有 Tab / Settings 共用,改這裡即可全 App 套用。詳見 .claude/rules/ui-style-guide.md。
 
 import SwiftUI
 
@@ -8,7 +8,7 @@ import SwiftUI
 /// All shared font sizes, colors, and styles used across tabs and settings
 /// are defined here. Change a value here → applies everywhere.
 ///
-/// See rules/ui-style-guide.md for the cross-platform spec.
+/// See .claude/rules/ui-style-guide.md for the cross-platform spec.
 // 中文: App UI 樣式常數的命名空間 enum。
 enum AppStyle {
     // MARK: - Font Sizes

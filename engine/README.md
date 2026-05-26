@@ -24,7 +24,8 @@ Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing`
 
 - `../docs/engine/ffi-safety.md` — FFI seam discipline (panic isolation, Mutex, Drop, error sentinels, logging bridge).
 - `../docs/engine/rust-core-proto.md` — Wire shape per slice.
-- `../rules/rust-best-practices.md` — Workspace conventions, §3a domain↔proto boundary rule, MSRV, crate choices.
+- `../.claude/rules/rust-best-practices.md` — Workspace conventions, MSRV, crate choices.
+- `../.claude/rules/rust-ffi-safety.md` §2 — Domain↔proto boundary rule (the dispatch / RPC façade of each domain crate accepts/returns `protos::engine::*` directly).
 
 ## Toolchain
 
@@ -32,4 +33,4 @@ Rust stable channel (`rust-toolchain.toml`). `prost-build` compiles `.proto` fil
 
 ## MSRV
 
-Rust 1.86, set in `Cargo.toml` `[workspace.package].rust-version`. Bumping MSRV is a PR-level decision per `../rules/rust-best-practices.md` §8. Two prior bumps documented: 1.75 → 1.85 in D9.1 (`edition2024` ecosystem catch-up), 1.85 → 1.86 in D9.2 (`cargo-ndk` 4.x requirement).
+Rust 1.86, set in `Cargo.toml` `[workspace.package].rust-version`. Bumping MSRV is a PR-level decision per `../.claude/rules/rust-best-practices.md` §6 (Rust version policy). Two prior bumps documented: 1.75 → 1.85 in D9.1 (`edition2024` ecosystem catch-up), 1.85 → 1.86 in D9.2 (`cargo-ndk` 4.x requirement).

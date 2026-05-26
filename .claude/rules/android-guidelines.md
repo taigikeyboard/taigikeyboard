@@ -1,6 +1,10 @@
+---
+paths: ["android/**/*.kt", "android/**/*.gradle*"]
+---
+
 # Android Project Guidelines
 
-Mandatory rules for Android development. Core architecture + Kotlin idioms + DI + DataStore + null/error handling + Gradle. UI / IME-specific patterns / testing / refactor-round checklist live in `rules/android-ime-patterns.md`.
+Mandatory rules for Android development. Core architecture + Kotlin idioms + DI + DataStore + null/error handling + Gradle. UI / IME-specific patterns / testing / refactor-round checklist live in `.claude/rules/android-ime-patterns.md`.
 
 **Three goals** every rule below serves at least one of:
 
@@ -12,7 +16,7 @@ Each rule is tagged with one or more of `[R]`, `[B]`, `[A]`.
 
 ## 1. Shared-core candidate rules `[R]`
 
-Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `rules/ios-shared-core-candidates.md` — same criteria, Kotlin-translated.
+Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `.claude/rules/ios-shared-core-candidates.md` — same criteria, Kotlin-translated.
 
 1. Imports Kotlin stdlib only. Forbidden: `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`, `com.squareup.moshi.*`.
 2. No `object` with mutable state, no `companion object` state, no reflection, no Moshi / serialization.
@@ -45,7 +49,7 @@ Engine-layer files that deliberately do **not** qualify begin with `// NOTE: Not
 
 ## 2. Cross-platform invariant discipline — Android syntax `[A]` `[R]`
 
-The **policy** (constants + tests + docs update together, comment format, `INVARIANT_*` test label prefix) lives in `rules/cross-platform-alignment.md` §3a. This section only captures Kotlin-specific details:
+The **policy** (constants + tests + docs update together, comment format, `INVARIANT_*` test label prefix) lives in `.claude/rules/cross-platform-alignment.md` §3a. This section only captures Kotlin-specific details:
 
 - Comment syntax in Kotlin:
   ```kotlin
@@ -126,19 +130,19 @@ Incident: A1 follow-up on PR #145 — extension `fun LoggerBackend.d(tag, msg: (
 `android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** (lifted 2026-05-09 — CLAUDE.md rule 4 previously grouped gradle with pbxproj, but gradle edits are routine: plugin wiring, dep bumps, lint config).
 
 - ✅ Edit gradle files directly.
-- ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `rules/ios-guidelines.md`).
+- ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `.claude/rules/ios-guidelines.md`).
 - After gradle edits, surface what changed in plain text and remind the user that an Android Studio Gradle sync is needed.
 
 ## 10. References
 
-- `rules/android-ime-patterns.md` — companion: Compose, IME-specific patterns, testing, refactor-round checklist
-- Companion documents on the iOS side: `rules/ios-guidelines.md` (day-to-day), `rules/ios-architecture.md` (structural).
-- Cross-platform behavior contract: `rules/cross-platform-alignment.md`.
+- `.claude/rules/android-ime-patterns.md` — companion: Compose, IME-specific patterns, testing, refactor-round checklist
+- Companion documents on the iOS side: `.claude/rules/ios-guidelines.md` (day-to-day), `.claude/rules/ios-architecture.md` (structural).
+- Cross-platform behavior contract: `.claude/rules/cross-platform-alignment.md`.
 - Architectural target: `docs/architecture/ios-exemplar.md` (the contract Android Phase II aligns toward).
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Invariants to preserve: `docs/architecture/behavioral-invariants.md`.
 - Code review checklist: `~/.claude/rules/code-review-rules.md`.
 - Naming + comment rules (cross-platform): `~/.claude/rules/ai-friendly-code.md`.
-- Security: `rules/security-rules.md` (logging guards, SQL binding, Android exported-component rules).
-- UI style: `rules/ui-style-guide.md`.
+- Security: `.claude/rules/security-rules.md` (logging guards, SQL binding, Android exported-component rules).
+- UI style: `.claude/rules/ui-style-guide.md`.
 - Claude Opus 4.7 workflow tuning: `~/.claude/rules/claude-workflow.md`.

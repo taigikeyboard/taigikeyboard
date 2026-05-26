@@ -345,7 +345,7 @@ object RustEngineBridge {
      * detection (`engine/lexicon/src/continuous.rs::derive_mode`); the
      * platform reads but never recomputes (no display-text sniffing —
      * that would parallel-implement the derive and violate
-     * `rules/cross-platform-alignment.md`).
+     * `.claude/rules/cross-platform-alignment.md`).
      *
      * Metadata-only in v3.5.8 — does NOT enter the engine's `SortKey`
      * tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `UNSPECIFIED`

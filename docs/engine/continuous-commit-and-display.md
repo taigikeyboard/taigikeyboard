@@ -33,7 +33,7 @@ The contract in §10.2–§10.4 is **Model B**: during continuous input the whol
 **Why this is the right call:**
 
 - **Convention familiarity** — matches the IME many Taiwanese users already know (MOE) and the cross-IME consensus; satisfies CLAUDE.md rule 16 (mainstream-comparison-driven design) with a four-IME "Project X already does Y" cite.
-- **Decouples "what I typed" from "what the engine guessed"** — preserves user agency under uncertain segmentation (`rules/cross-platform-alignment.md`; G3 in [parent §7](continuous-input-ranking.md#7-long-term-goals--align-with-mainstream-ime)).
+- **Decouples "what I typed" from "what the engine guessed"** — preserves user agency under uncertain segmentation (`.claude/rules/cross-platform-alignment.md`; G3 in [parent §7](continuous-input-ranking.md#7-long-term-goals--align-with-mainstream-ime)).
 - **Eliminates the iOS leak by construction** — nothing is literal-committed mid-flow, so there is no sub-region for the host to confirm; the iOS arm/detect/compensate workaround is deleted, not extended.
 - **Maps onto the existing engine** — no proto / wire change; `Phase::Continuous` already retains every nailed segment's `display_text`, so the engine simply emits one combined `UpdatePreedit` instead of an eager per-segment `CommitTextReplacingPreedit`.
 
@@ -185,7 +185,7 @@ The split is bound to the engine-side dispatch branch in [`engine/composing/src/
 | Mid-commit (nail) | One `UpdatePreedit(whole composition)` → `setMarkedText(combined, caret=end)`. **No `insertText`.** | One `UpdatePreedit(whole composition)` → `setComposingText(combined, 1)`. **No `commitText`.** |
 | Hard finalize (Enter / final-commit / external) | One `CommitTextReplacingPreedit(whole composition)` → `clearMarkedText()` + `insertText` | One `CommitTextReplacingPreedit(whole composition)` → `commitText(combined, 1)` |
 
-`rules/cross-platform-alignment.md` §3a applies: I1–I4 hold identically on both platforms.
+`.claude/rules/cross-platform-alignment.md` §3a applies: I1–I4 hold identically on both platforms.
 
 **Convergence — Model B removes the former Bug-3 divergence (2026-05-16).** Under the pre-2026-05-16 model a mid-commit emitted `commit_text_replacing_preedit(segment)` + `update_preedit(tail)`; iOS hosts confirmed the small re-marked tail into literal text during their `textWillChange→textDidChange` settle (real-device trace), losing the underline mid-composition. iOS carried an arm/detect/compensate workaround that hit a 3-strike circuit-breaker. **Model B eliminates this by construction**: a mid-commit emits **no** `CommitTextReplacingPreedit` — only one `UpdatePreedit` of the whole composition — so there is no sub-region for the host to confirm. The iOS `armContinuousMidCommitTail` / `detectContinuousMidCommitTailLeak` / `compensateLeakedContinuousMidCommitTail` layer is **deleted** (P2), not kept. There is no longer any platform-specific divergence here; both platforms run the identical effect sequence and `behavioral-invariants.md` needs no entry.
 
@@ -224,7 +224,7 @@ Minimum coverage to declare §10 closed (Model B acceptance criterion):
 10. **No-nailed parity** — pure Composing→EnterContinuous→Enter (no tap) commits `derived(raw)` exactly as before (combined == derived(raw) when nailed empty); translate-swapped / TPS pass-through unchanged.
 11. **Hanji line no added spaces** — HANT/MIXED multi-word `candidate[0]`: roman line has word spaces, hanji line is the exact dictionary hanzi (clarification γ; unchanged).
 
-Cross-platform: every case must pass identically on iOS and Android per `rules/cross-platform-alignment.md` — including the I4 "no `commitText(prefix)` / `insertText(prefix)` mid-composition" assertion.
+Cross-platform: every case must pass identically on iOS and Android per `.claude/rules/cross-platform-alignment.md` — including the I4 "no `commitText(prefix)` / `insertText(prefix)` mid-composition" assertion.
 
 ### 10.9 Relationship to §1–§9 (parent doc)
 

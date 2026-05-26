@@ -182,7 +182,7 @@ These gates apply to every coding round, regardless of release. Authoritative so
 - Touched-target test scope by default (e.g. `cargo test -p <crate>`, `./gradlew :module:test`).
 - Cross-platform parity-correction rounds must merge both platforms in lockstep.
 - Doc-only rounds qualify as admin tier — direct-to-main allowed.
-- iOS `pbxproj` is user-only (per `rules/ios-guidelines.md`); Android Gradle is editable.
+- iOS `pbxproj` is user-only (per `.claude/rules/ios-guidelines.md`); Android Gradle is editable.
 - Engine slices require S0 golden-diff EMPTY acceptance (per v3.5.9 Tier-A spec, archive forthcoming).
 
 ---

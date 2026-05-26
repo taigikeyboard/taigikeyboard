@@ -15,7 +15,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 /**
  * Platform-side `LoggerBackend` that forwards to `android.util.Log`.
  * **All** levels (d / i / w / e) are gated on `BuildConfig.DEBUG`, so
- * release builds emit zero logcat output — `rules/security-rules.md`
+ * release builds emit zero logcat output — `.claude/rules/security-rules.md`
  * "Release builds must have zero logs" (IME error paths can carry
  * user-typed text through exception context). The `BuildConfig.DEBUG`
  * guard is the PRIMARY defense; the ProGuard `-assumenosideeffects`

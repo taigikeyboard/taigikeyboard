@@ -44,8 +44,10 @@ description = "Local pre-commit gate (rustfmt + check + clippy + test)"
 dependencies = ["fmt-check", "check", "clippy", "test"]
 
 # --- D9.2 platform-artifact wrappers ---------------------------------------
-# Thin wrappers around the shell scripts. The bare-cargo gate stays canonical
-# per `feedback_no_rust_ci.md`; cargo-make remains the optional orchestrator.
+# Thin wrappers around the shell scripts. The bare-cargo gate (Makefile +
+# `cargo build --workspace` + `cargo test --workspace`) stays canonical; the
+# project has no GitHub Actions CI for Rust (`ci.yml` deleted PR #274 `0dbdb3de`,
+# local Makefile gate only). `cargo-make` remains the optional orchestrator.
 
 [tasks.gen-protos]
 description = "Generate platform-side .pb.swift + .java from engine/protos/proto/"

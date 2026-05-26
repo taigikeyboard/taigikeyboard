@@ -33,7 +33,7 @@ import SwiftProtobuf
 /// Retired-op history available via git log on
 /// `engine/protos/proto/phonetics.proto`.
 ///
-/// Per `feedback_codex_review_sandwich.md` Codex v2 §7: every method
+/// Per `~/.claude/rules/round-workflow.md` § Codex review sandwich: every method
 /// requiring AppConfig (currently NormalizeTone for POJ preprocessing)
 /// takes the necessary fields as mandatory parameters — no global default.
 ///

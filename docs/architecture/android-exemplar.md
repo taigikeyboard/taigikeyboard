@@ -4,7 +4,7 @@
 `ios-exemplar.md` (Phase I G8, PR #134). This doc is intentionally **short** and
 documents *only* Android-specific deviations from the iOS exemplar; shared conventions
 (marker syntax, ViewModel shape, naming, access levels, pure-logic criteria) are defined
-once in `ios-exemplar.md` / `rules/android-guidelines.md` and referenced from here.
+once in `ios-exemplar.md` / `.claude/rules/android-guidelines.md` and referenced from here.
 
 ## 1. Purpose
 
@@ -31,7 +31,7 @@ extension wiring hook (`TaigiKeyboard/KeyboardRoot.swift`). Android has two live
   per A1 so a duplicate call during migration stays safe).
 
 Engine-layer code MUST receive its dependencies via constructor injection from whichever
-scope constructs it. No `.INSTANCE` reach-ins. See `rules/android-guidelines.md` §4.
+scope constructs it. No `.INSTANCE` reach-ins. See `.claude/rules/android-guidelines.md` §4.
 
 ### 2.2 Settings live-read
 
@@ -113,7 +113,7 @@ Verification greps look for the literal string
 
 Files that deliberately do NOT qualify as shared-core candidates begin with
 `// NOTE: Not shared-core — <reason>` so audit state is visible at file head.
-Marker criteria and purity rules live in `rules/android-guidelines.md` §1 — read that
+Marker criteria and purity rules live in `.claude/rules/android-guidelines.md` §1 — read that
 before applying the marker to a new file; it lists every forbidden import and the
 `Any?` / reflection / Moshi exclusions.
 
@@ -128,7 +128,7 @@ monotonically toward the ≥ 40 gating target (§9 signal #3).
 
 ## 4. `CROSS-PLATFORM INVARIANT` comment convention
 
-Kotlin comment syntax (from `rules/android-guidelines.md` §2):
+Kotlin comment syntax (from `.claude/rules/android-guidelines.md` §2):
 
 ```kotlin
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordScorer.swift:<line>.
@@ -152,7 +152,7 @@ legitimate additions — Android is the only platform reading those files at res
 are retained.
 
 The policy (constants + tests + docs update together, `INVARIANT_*` test-label prefix)
-lives in `rules/cross-platform-alignment.md` §3a.
+lives in `.claude/rules/cross-platform-alignment.md` §3a.
 
 ## 5. Roster target
 
@@ -223,7 +223,7 @@ for the four tab3 / tab4 screens once §8 #1 (Application subclass) lands.
 ## 8. Naming and access levels (reference)
 
 `ios-exemplar.md` §5.4 (naming) and §5.5 (access levels) apply verbatim, with the
-following Kotlin-specific refinements from `rules/android-guidelines.md`:
+following Kotlin-specific refinements from `.claude/rules/android-guidelines.md`:
 
 - `object` allowed only for stateless utilities / pure namespaces. Converted to `class`
   with constructor DI in A1 whenever state was held.
@@ -237,9 +237,9 @@ following Kotlin-specific refinements from `rules/android-guidelines.md`:
 - iOS alignment target: `ios-exemplar.md`.
 - Audit driving Phase II rounds: `the Phase II state audit (retired)`.
 - Kotlin rules (marker criteria, invariant syntax, DI, coroutines, IME lifecycle):
-  `rules/android-guidelines.md`.
+  `.claude/rules/android-guidelines.md`.
 - Cross-platform policy (refactor-freeze, invariant-discipline, divergence docs):
-  `rules/cross-platform-alignment.md`.
+  `.claude/rules/cross-platform-alignment.md`.
 - Composing-state boundary + Android binding: `composing-state-boundary.md` §11.
 - NextWord-engine boundary + Android binding: `nextword-engine-boundary.md` §13.
 - Live Rust / native ownership inventory: `../engine/migration-inventory.csv`.

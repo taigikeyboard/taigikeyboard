@@ -13,7 +13,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * Carried inside [com.siansiansu.taigikeyboard.ime.core.Outcome.Failure] at
  * `LexiconService` public boundaries. No `Throwable` parent — Java
  * exceptions never cross shared-core boundaries per
- * `rules/android-guidelines.md` §10.
+ * `.claude/rules/android-guidelines.md` §10.
  */
 sealed class DictionaryError {
     object DatabaseNotFound : DictionaryError()

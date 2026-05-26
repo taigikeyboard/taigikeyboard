@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
  * MaterialTheme.typography.*. This object holds spacing, dimensions,
  * and colors not covered by Material 3.
  *
- * See rules/ui-style-guide.md for the cross-platform spec.
+ * See .claude/rules/ui-style-guide.md for the cross-platform spec.
  */
 object AppStyle {
     // ── Icon Sizes ──────────────────────────────────────────────

@@ -379,7 +379,7 @@ Today's state for reference: `ComposingManager` owns no scope; `SmartbarManager`
 
 Previously `ComposingManager.reset(ic)` called `ic.finishComposingText()` without a prior `ic.setComposingText("", 1)`. External callers invoking `reset` with a non-empty preedit silently committed that preedit. iOS `ComposingState.apply(.reset)` did not — it emits `clearPreeditWithoutCommit`, bound to `clearMarkedText()` which never inserts text.
 
-The correction landed as an **isolated PR before A4-impl** per `rules/cross-platform-alignment.md` §1b ("Not be bundled with unrelated refactor work — a parity correction is its own observable change and deserves an isolated review"). What shipped:
+The correction landed as an **isolated PR before A4-impl** per `.claude/rules/cross-platform-alignment.md` §1b ("Not be bundled with unrelated refactor work — a parity correction is its own observable change and deserves an isolated review"). What shipped:
 
 - Title prefix `parity:`.
 - `ComposingManager.reset(ic)` now does `ic.setComposingText("", 1)` then `ic.finishComposingText()` (`ComposingManager.kt`).
@@ -409,7 +409,7 @@ A4-impl adds the following Android files to the roster (mirroring §6 iOS column
 | `Phonetics/ToneConverter.swift` (parameterized) | `ime/dictionary/ToneConverter.kt` — NOT yet shared-core pure (imports `android.util.Log`, `BuildConfig`). A4-impl signature migration took `ToneToggles`; A8-sweep kept logging intact and applied a `// NOTE: Not shared-core` header. | Deferred to follow-up round (LoggerBackend migration) |
 | `Input/Composing/ComposingManager.swift` (reduced wrapper) | `ime/text/composing/ComposingManager.kt` (reduced wrapper) | No — platform. |
 
-A8-sweep applied the `// region Shared-Core Candidate` header per `rules/android-guidelines.md` §1 to `ComposingTransition.kt` + `ToneToggles.kt`. `ComposingState.kt` marker is held per Codex pre-review (2026-04-20): marking it would leak a transitive platform dependency through `ToneConverter.kt`.
+A8-sweep applied the `// region Shared-Core Candidate` header per `.claude/rules/android-guidelines.md` §1 to `ComposingTransition.kt` + `ToneToggles.kt`. `ComposingState.kt` marker is held per Codex pre-review (2026-04-20): marking it would leak a transitive platform dependency through `ToneConverter.kt`.
 
 ### 11.9 Out of scope for A4-design
 
@@ -420,14 +420,14 @@ A8-sweep applied the `// region Shared-Core Candidate` header per `rules/android
 
 ### 11.10 Live-typing preedit text — Android raw vs iOS derived (A4-impl divergence)
 
-**Status**: deferred divergence, locked 2026-04-20 during A4-impl on branch `phase2/a4-composing-state`. Documents a real shared-core contract divergence so it is not silent per `rules/cross-platform-alignment.md` §3.
+**Status**: deferred divergence, locked 2026-04-20 during A4-impl on branch `phase2/a4-composing-state`. Documents a real shared-core contract divergence so it is not silent per `.claude/rules/cross-platform-alignment.md` §3.
 
 For live-typing intents — `Start` / `Append` / `AppendHyphen` / `ReplaceLast` / non-empty-result `DeleteBackward` — the two platforms emit different `Effect.UpdatePreedit` text content:
 
 - **iOS**: `ComposingState.apply(...)` synchronously calls `derivedDisplay(mode, toneToggles)` and emits `.updatePreedit(derivedText)`. The user sees the tone-marked form immediately on every keystroke.
 - **Android**: `ComposingState.apply(...)` emits `UpdatePreedit(rawInput)` (the raw keystrokes) AND leaves `transition.derivedDisplay` empty for live-typing paths — no synchronous `ToneConverter.convertToToneMarks` call on the main-thread dispatch path. `ComposingManager.cachedDerivedDisplay` is cleared on every dispatch so `getComposingText()` returns the raw placeholder (matching pre-A4 observable behavior for `handleEnter` / `handleSpace` callers that capture `committedText` before commit). A background derivation loop (`CandidateUpdateCoordinator.scheduleDisplayDerivation`) subsequently calls `ComposingManager.applyDerivedDisplay(derived, ic)` which replaces the preedit on `Dispatchers.Default` → `Dispatchers.Main` AND populates `cachedDerivedDisplay` so subsequent `getComposingText()` calls read the derived form. Commit-path intents (`CommitDerived`) still compute `derivedDisplay` synchronously — the derived text travels inline in the `CommitTextReplacingPreedit(text)` effect and Enter/Space is not a hot path.
 
-**Why the divergence exists** — Android's pre-A4 flow set `composingText = rawInput` as a placeholder, then async-derived. Preserving this flow in A4-impl honors `rules/cross-platform-alignment.md` §1 refactor-freeze. Collapsing the async path into synchronous derivation (matching iOS) would be a user-visible mid-keystroke behavior change — `rules/cross-platform-alignment.md` §1b mandates an isolated parity-correction PR for that.
+**Why the divergence exists** — Android's pre-A4 flow set `composingText = rawInput` as a placeholder, then async-derived. Preserving this flow in A4-impl honors `.claude/rules/cross-platform-alignment.md` §1 refactor-freeze. Collapsing the async path into synchronous derivation (matching iOS) would be a user-visible mid-keystroke behavior change — `.claude/rules/cross-platform-alignment.md` §1b mandates an isolated parity-correction PR for that.
 
 **Why it is not a shared-core contract break** — `Effect.UpdatePreedit(text: String)` carries an arbitrary `String` value. The Effect contract is "show `text` as the preedit," not "show the derived form." Both platforms honor the contract; they pass different text.
 
@@ -454,12 +454,12 @@ All three routes preserve Android's pre-A4 observable behavior. `ComposingState`
 4. Update both test suites (pure-state + binding) to assert the derived-text contract on Android too; drop this §11.10 divergence note.
 5. Dogfooding S1/S2/S3 covers the before/after comparison (placeholder flash → direct-derived).
 
-Tracked under `rules/cross-platform-alignment.md` §1b tier; not scheduled in Phase II.
+Tracked under `.claude/rules/cross-platform-alignment.md` §1b tier; not scheduled in Phase II.
 
 ### 11.11 Cross-references
 
 - iOS boundary contract: §§1–10 above.
 - A4-impl shipped via Phase II Round A4 (Android binding addendum); engine logic now in Rust `engine/composing` (since v3.5.4).
-- Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
-- Android guidelines (DI, coroutines): `rules/android-guidelines.md` §§4, 5; IME-specific rules: `rules/android-ime-patterns.md` §2.
+- Parity-correction policy: `.claude/rules/cross-platform-alignment.md` §1b.
+- Android guidelines (DI, coroutines): `.claude/rules/android-guidelines.md` §§4, 5; IME-specific rules: `.claude/rules/android-ime-patterns.md` §2.
 - `clearPreeditWithoutCommit` test label: see §8 of this doc and `behavioral-invariants.md` §13 (full Composing-buffer reset semantics + cross-platform test mapping).

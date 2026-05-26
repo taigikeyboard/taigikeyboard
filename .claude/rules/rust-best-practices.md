@@ -1,6 +1,10 @@
+---
+paths: ["engine/**/*.rs", "engine/**/Cargo.toml"]
+---
+
 # Rust Best Practices
 
-Mandatory rules for Rust shared-core development. Read before any Rust code lands in the engine. FFI / proto-boundary / `unsafe` / opaque-handle / enforcement rules are split into `rules/rust-ffi-safety.md`.
+Mandatory rules for Rust shared-core development. Read before any Rust code lands in the engine. FFI / proto-boundary / `unsafe` / opaque-handle / enforcement rules are split into `.claude/rules/rust-ffi-safety.md`.
 
 **Three goals** every rule below serves at least one of:
 
@@ -44,8 +48,8 @@ taigi-keyboard-rs/
   }
   ```
 - **`anyhow` is forbidden in library crates** (`phonetics`, `engine`, `protos`). Allowed in build scripts only.
-- **`Result<T, EngineError>` throughout internal APIs.** Encode into `Response.ErrorCode` only at the FFI edge (see `rules/rust-ffi-safety.md` § FFI boundary discipline).
-- **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `rules/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
+- **`Result<T, EngineError>` throughout internal APIs.** Encode into `Response.ErrorCode` only at the FFI edge (see `.claude/rules/rust-ffi-safety.md` § FFI boundary discipline).
+- **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `.claude/rules/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
 - **`?` is allowed and idiomatic inside the `catch_unwind` closure** (which returns `Result<Vec<u8>, EngineError>`). What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. Encode errors into `Response.ErrorCode` at the seam between closure and extern fn.
 
 ## 3. Crate + type choices `[R]` `[A]`
@@ -65,8 +69,8 @@ Pinned choices (deviations require written justification):
 
 Type-shape preferences that cross FFI:
 
-- `#[repr(transparent)]` newtype for opaque handles (see `rules/rust-ffi-safety.md` § Opaque handle pattern).
-- **Explicit numeric widths**: `i64` / `f64` at the boundary (not `isize` / `usize`). Mirrors `rules/android-guidelines.md` §1 Kotlin→Rust shape rules.
+- `#[repr(transparent)]` newtype for opaque handles (see `.claude/rules/rust-ffi-safety.md` § Opaque handle pattern).
+- **Explicit numeric widths**: `i64` / `f64` at the boundary (not `isize` / `usize`). Mirrors `.claude/rules/android-guidelines.md` §1 Kotlin→Rust shape rules.
 - **UTF-8 strings only** — protobuf `string` already enforces; never use `&[u8]` for text data.
 
 ## 4. Cross-compile + build tooling `[A]`
@@ -114,7 +118,7 @@ This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `~/
 
 ## 8. Explicit non-goals
 
-Codifying `rules/cross-platform-alignment.md` §5.1 in Rust terms:
+Codifying `.claude/rules/cross-platform-alignment.md` §5.1 in Rust terms:
 
 - **No async runtime** (`tokio`, `async-std`, `smol`). Engine is synchronous. Platform wrappers handle threading.
 - **No global state in Rust.** No `lazy_static!` / `once_cell::sync::Lazy` in engine or phonetics crates. Engine lifetime is platform-managed.
@@ -125,13 +129,13 @@ Codifying `rules/cross-platform-alignment.md` §5.1 in Rust terms:
 
 ## 9. References
 
-- `rules/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
-- `rules/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
+- `.claude/rules/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
+- `.claude/rules/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
 - khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in plan `/Users/alexsu/.claude/plans/cozy-dancing-nova.md` and `references/khiin-rs/`.
-- `rules/cross-platform-alignment.md` §4a — Phase II.5 prerequisite docs.
-- `rules/cross-platform-alignment.md` §5.1 — Rust shared-core non-goals.
-- `rules/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
-- `rules/ios-shared-core-candidates.md` — the iOS-side equivalent of what counts as a candidate for Rust extraction.
+- `.claude/rules/cross-platform-alignment.md` §4a — Phase II.5 prerequisite docs.
+- `.claude/rules/cross-platform-alignment.md` §5.1 — Rust shared-core non-goals.
+- `.claude/rules/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
+- `.claude/rules/ios-shared-core-candidates.md` — the iOS-side equivalent of what counts as a candidate for Rust extraction.
 - `docs/architecture/behavioral-invariants.md` — invariant contracts the Rust implementation must preserve.
 - Rust API Guidelines (https://rust-lang.github.io/api-guidelines/) — adopted as the naming + docs baseline.
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference.

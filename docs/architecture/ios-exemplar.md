@@ -404,7 +404,7 @@ The refactors in Phase I exist because these previously slipped in. They must no
 4. **Direct repository call from a View.** Always a ViewModel in between.
 5. **Singleton resurrection.** If a service is `static let shared` / `companion object INSTANCE`, it must also accept DI; if DI defaults are gone after G7, do not reintroduce `shared`.
 6. **Combine / Flow publishers crossing target boundaries.** Extension and host app each own their own object graph.
-7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `rules/rust-best-practices.md`.
+7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `.claude/rules/rust-best-practices.md`.
 8. **Platform-bound DTOs in engine signatures.** `NextWordService.Prediction` leaking into `filterPredictions` was the Codex finding that motivated `RawNextWordPrediction`. Rule: services map their rows to shared-core DTOs at the service boundary.
 9. **`SharedPreferences` snapshot via `val`.** See §3. Every settings field must be re-read on access.
 

@@ -2,7 +2,7 @@
 
 > **Type**: Specification (problem + proposed fix, partially shipped)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
-> **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [autocomplete.md](autocomplete.md), [binary-format.md](binary-format.md), [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md)
+> **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [autocomplete.md](autocomplete.md), [binary-format.md](binary-format.md), [`.claude/rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md)
 > **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 per `feedback_v358_full_scope.md` (satisfaction-gated; no `v3.5.9+` deferrals). Item 13 = v3.5.8 feature-complete.
 > **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot 「engine 內部處理所有切音節邏輯,fallback 是冗餘」.
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
@@ -375,7 +375,7 @@ UI looks up roman/hanji by `display_text` on each candidate via a second FFI cal
 
 **Rejected**:
 - Violates "engine owns display strings" principle ([`project_v358_continuous_input.md` §關鍵設計決定 §8](../../knowledge/feedback))
-- Violates [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md) "behavior contract pinned at engine layer"
+- Violates [`.claude/rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md) "behavior contract pinned at engine layer"
 - Doubles FFI overhead per fetch (typically 5-30 candidates)
 - Race window: between FetchAtPos response and platform re-lookup the dictionary state could change
 
@@ -538,7 +538,7 @@ Recommendation: **B**. Cleaner review boundaries; Finding 1 can land first as a 
 
 ## 10. Out-of-Scope (YAGNI guards)
 
-Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations/blob/main/claude/rules/planning.md) § No future-version planning and [`rules/rust-best-practices.md`](../../rules/rust-best-practices.md) §8:
+Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations/blob/main/claude/rules/planning.md) § No future-version planning and [`.claude/rules/rust-best-practices.md`](../../rules/rust-best-practices.md) §8:
 
 - **No** `CandidateMode`-based rendering rules — Phase 9.2 mode is metadata-only; cell shape is decided by `hanji` presence (mirrors lexicon path)
 - **No** new `display_strategy` / `display_hints` proto field — single roman + hanji pair is sufficient
@@ -573,7 +573,7 @@ All four reference IMEs ship **at least two display fields** per candidate. Taig
 
 ## 12. Cross-Platform Parity Tier
 
-Per [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md) §1b parity-correction tier:
+Per [`.claude/rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md) §1b parity-correction tier:
 
 - Wire schema change ships in **same release tag** on both platforms
 - iOS + Android `ContinuousCandidate` data class gains identical 2 fields
@@ -606,7 +606,7 @@ Per [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.m
 - **2026-05-11 (day)**: §1-14 display fix drafted from dogfood findings; recorded in [`project_v358_dogfood_findings.md`](../../knowledge/feedback)
 - **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 per [`feedback_v358_full_scope.md`](../../knowledge/feedback) (user wording: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」).
 - **Pending**: Codex weekly quota recovery → pre-impl consult on §9 + §15.7 Open Questions
-- **Then**: implement display fix (§1-14) + fallback retire (§15) as Phase 9 continuation; sub-PR count not capped per `feedback_round_hygiene.md` 200-500 LOC/PR discipline
+- **Then**: implement display fix (§1-14) + fallback retire (§15) as Phase 9 continuation; sub-PR count not capped per `~/.claude/rules/planning.md` § Persistent hand-off (200-500 LOC/PR discipline)
 
 This spec is **frozen** until Codex consult; updates after that should be tracked in commit messages, not retroactive edits.
 

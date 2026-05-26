@@ -1,6 +1,14 @@
+---
+paths:
+  - "engine/**"
+  - "docs/engine/migration-inventory.csv"
+  - "ios/Sources/TaigiKeyboard/Engine/**"
+  - "android/app/src/main/java/com/siansiansu/taigikeyboard/engine/**"
+---
+
 # Rust Migration Policy
 
-Mandatory rules before any platform impl → Rust engine swap, new Rust slice (in or after Phase IV-B which closed 2026-05-05), `.proto` addition, or platform-mirror delete. Companion to `rules/rust-best-practices.md` (how the Rust code itself should look).
+Mandatory rules before any platform impl → Rust engine swap, new Rust slice (in or after Phase IV-B which closed 2026-05-05), `.proto` addition, or platform-mirror delete. Companion to `.claude/rules/rust-best-practices.md` (how the Rust code itself should look).
 
 ## 1. Four design goals per slice
 
@@ -18,7 +26,7 @@ Examples already aligned: `engine/nextword/{lib,api,dispatch,handle,decide,filte
 Each slice ships as a **direct swap** with no fallback code path. Old Swift/Kotlin impl is DELETED in the same PR. No `useXxxRust: Bool` toggle, no parallel implementations.
 
 - Solo maintainer with direct release control; revert-PR + cut hotfix is the rollback mechanism.
-- Dogfood gate is the production gate (S1/S2/S3 + no dismiss + leak-free per `~/.claude/rules/code-review-rules.md` §9; concrete Taigi acceptance sequences in `rules/taigi-incidents.md` § Qualitative perf gate).
+- Dogfood gate is the production gate (S1/S2/S3 + no dismiss + leak-free per `~/.claude/rules/code-review-rules.md` §9; concrete Taigi acceptance sequences in `.claude/rules/taigi-incidents.md` § Qualitative perf gate).
 - Toggle adds permanent cost: dual-path maintenance, doubled test matrix, binary growth, rotting dead code.
 - Reference IMEs (McBopomofo, khiin-rs) don't toggle engine implementations.
 - If a slice "feels like it needs a toggle", that signals the slice is too large — split it.

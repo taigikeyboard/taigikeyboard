@@ -10,7 +10,7 @@ import org.junit.Test
  * Asserts Success/Failure construction, `when` exhaustiveness, and
  * reference equality of payload values — no `inline` or extension helpers
  * are exercised because those are forbidden in shared-core candidate files
- * (`rules/android-guidelines.md` §1).
+ * (`.claude/rules/android-guidelines.md` §1).
  */
 class OutcomeTest {
     @Test

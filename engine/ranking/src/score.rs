@@ -52,7 +52,7 @@ const USER_FREQ_WEIGHT: i32 = 100;
 /// (legacy path) keeps its pre-9.3a behaviour and only filters on
 /// `last_used_ms > 0`. Tightening the legacy guards would change
 /// scoring for the non-Continuous path and is out of scope for this
-/// slice (`feedback_round_hygiene.md`).
+/// slice (`~/.claude/rules/round-workflow.md` § Branching & rounds).
 // 中文: 最近使用判定視窗(1 小時內);Phase 9.1 SortKey 與 legacy 加總公式共用同一閾值。
 // 中文: legacy calculate_score 不採用 9.3a 的 clock-invalid guard,以維持 pre-9.3a 行為。
 pub const RECENCY_WINDOW_MS: i64 = 60 * 60 * 1000;
@@ -117,7 +117,7 @@ pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
 /// is the cross-platform invariant axis for PR-9.3a + PR-9.3b/c
 /// (`docs/releases/v3.5.8/plan.md` § Phase 9 跨平台 invariant 常數). Platforms MUST NOT
 /// redefine — single source of truth per
-/// `rules/cross-platform-alignment.md` §3a.
+/// `.claude/rules/cross-platform-alignment.md` §3a.
 // 中文: Phase 9.3a — 每次使用者選用,boost 增量 0.1;跨平台不可重定義。
 pub const BOOST_ALPHA: f32 = 0.1;
 
@@ -138,7 +138,7 @@ pub const MAX_BOOST: f32 = 5.0;
 /// Cross-platform invariant: this fn is the single source of truth
 /// for Continuous-input source ordering. Platform-side ranking code
 /// MUST NOT redefine the table; per
-/// `rules/cross-platform-alignment.md` §3a.
+/// `.claude/rules/cross-platform-alignment.md` §3a.
 // 中文: 連續輸入排序的來源 rank;custom=0,字典 bit 依表內順序 1..=4,未知=5。
 pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
     if is_custom {

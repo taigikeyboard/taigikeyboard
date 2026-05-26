@@ -1,7 +1,7 @@
 //! High-level Phonetics API for direct in-process callers (the dev
 //! `cli` crate, integration tests, and `phonetics::dispatch::handle`).
 //! The cross-platform FFI envelope lives in `engine/dispatch` per
-//! `rules/rust-best-practices.md §3a`; this module never decodes a
+//! `.claude/rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
 // 中文: Phonetics 高階 Rust API,給 cli/測試/dispatch 直接呼叫;不負責解碼最外層 Request 或 panic 邊界。

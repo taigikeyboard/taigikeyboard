@@ -13,7 +13,7 @@ package com.siansiansu.taigikeyboard.ime.core.logging
  * messages go. Mirrors iOS `Logging/LoggerBackend.swift`.
  *
  * Adapter contract: production/release builds MUST emit zero output for
- * **every** level including [e] (`rules/security-rules.md` "Release builds
+ * **every** level including [e] (`.claude/rules/security-rules.md` "Release builds
  * must have zero logs" — IME error paths can carry user-typed text).
  * Production error visibility comes from the user-initiated
  * DiagnosticService, never logcat / os_log.

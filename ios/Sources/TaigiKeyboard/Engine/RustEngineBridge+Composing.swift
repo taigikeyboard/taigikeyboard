@@ -70,7 +70,7 @@ public extension RustEngineBridge {
     /// Latin-letter detection (`engine/lexicon/src/continuous.rs::
     /// derive_mode`); platforms read but never recompute (no
     /// display-text sniffing — that would parallel-implement the
-    /// derive and violate `rules/cross-platform-alignment.md`).
+    /// derive and violate `.claude/rules/cross-platform-alignment.md`).
     ///
     /// Metadata-only in v3.5.8 — does NOT enter the engine's `SortKey`
     /// tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `.unspecified`

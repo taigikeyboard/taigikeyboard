@@ -1,6 +1,10 @@
+---
+paths: ["ios/**/*.swift"]
+---
+
 # iOS Shared-Core Candidates
 
-Marking criteria + roster for iOS files eligible for cross-platform extraction (iOS ↔ Android). Marking a file is a **contract** about its dependencies, not a promise to extract it. Split out from `rules/ios-architecture.md` for focus.
+Marking criteria + roster for iOS files eligible for cross-platform extraction (iOS ↔ Android). Marking a file is a **contract** about its dependencies, not a promise to extract it. Split out from `.claude/rules/ios-architecture.md` for focus.
 
 **Phase context**: Phase IV-B (shared-core extraction) closed 2026-05-05. The criteria below remain live for any future candidate marking + the residual `native_pending` / `native_keep` roster.
 
@@ -36,8 +40,8 @@ Matches inside `///` doc comments of a candidate file are informational, not vio
 
 ## 5. References
 
-- `rules/ios-architecture.md` — parent file (layer dependencies, KeyboardKit isolation, naming conventions)
-- `rules/ios-settings-injection.md` — companion: `EngineSettingsProvider` is the criterion-2 injection mechanism
-- `rules/android-guidelines.md` §1 — Android-side shared-core candidate rules (criteria mirror)
-- `rules/cross-platform-alignment.md` §1c — shared-core-candidate bug-fix constraint
+- `.claude/rules/ios-architecture.md` — parent file (layer dependencies, KeyboardKit isolation, naming conventions)
+- `.claude/rules/ios-settings-injection.md` — companion: `EngineSettingsProvider` is the criterion-2 injection mechanism
+- `.claude/rules/android-guidelines.md` §1 — Android-side shared-core candidate rules (criteria mirror)
+- `.claude/rules/cross-platform-alignment.md` §1c — shared-core-candidate bug-fix constraint
 - `docs/engine/migration-inventory.csv` — authoritative live roster

@@ -3,7 +3,7 @@
 Guidelines for **Claude Code** in this repo. Two-repo AI environment:
 
 - **Cross-project process rules** (workflow, planning, diagnosis, review, naming, docs authoring) live in `~/.claude/rules/` — managed by the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo and symlinked in by **that repo's `setup.sh`**. **Required external dependency**: clone `configurations` + run its `setup.sh` before working in this repo on a fresh machine.
-- **Project-specific rules** (Taigi phonetics, iOS/Android/Rust engine specifics, cross-platform parity, dual-platform UI, Rust migration policy, Taigi incident appendix) live in `rules/` here.
+- **Project-specific rules** (Taigi phonetics, iOS/Android/Rust engine specifics, cross-platform parity, dual-platform UI, Rust migration policy, Taigi incident appendix) live in `.claude/rules/` here — auto-load via `paths:` glob when Claude reads matching files; three (`security-rules.md` / `doc-lookup.md` / `taigi-incidents.md`) are always-on.
 - **Personal defaults** (theme, response style, Codex usage, Opus 4.7 tuning) live in `~/.claude/CLAUDE.md` (also from `configurations`).
 
 ## Project Overview
@@ -20,7 +20,7 @@ taigikeyboard/
 ├── docs/             # Specs: engine/, architecture/, ui/, references/, reports/, roadmap.md
 ├── knowledge/        # Taiwanese phonetics reference (TL/POJ/TPS)
 ├── taigi-converter/  # Canonical TL↔POJ↔TPS converter (git submodule)
-├── rules/            # Mandatory rules — see "Mandatory Rules" table
+├── .claude/rules/    # Mandatory rules (auto-load via paths: glob) — see "Mandatory Rules" table
 ├── dictionary/       # Dictionary data files
 ├── changelog/        # Per-release changelogs — edit only at release time
 ├── content/          # In-app content (FAQ / feature JSON)
@@ -29,35 +29,35 @@ taigikeyboard/
 
 ## Core Principles (project-specific)
 
-1. **No project-config modification by AI** — `.xcodeproj` / `.pbxproj` / `.xcworkspace` are **user-only** (enforced by `.claude/hooks/block-project-config.sh`). Xcode 16 synchronized groups auto-include new files under most `Sources/TaigiKeyboard/*` subdirs — see `rules/ios-guidelines.md` for the synced-group rules + exceptions. Android Gradle (`build.gradle`, `*.gradle.kts`) **is** editable by Claude (lifted 2026-05-09).
+1. **No project-config modification by AI** — `.xcodeproj` / `.pbxproj` / `.xcworkspace` are **user-only** (enforced by `.claude/hooks/block-project-config.sh`). Xcode 16 synchronized groups auto-include new files under most `Sources/TaigiKeyboard/*` subdirs — see `.claude/rules/ios-guidelines.md` for the synced-group rules + exceptions. Android Gradle (`build.gradle`, `*.gradle.kts`) **is** editable by Claude (lifted 2026-05-09).
 2. **Cross-platform alignment** — align on **intended behavior**, not API calls: define expected behavior, verify each platform independently, document when the same behavior needs different implementations.
-3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules (or "dead" phonetic tables from test/dictionary absence); read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` first. Full read-order in `rules/phonetics.md`.
+3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules (or "dead" phonetic tables from test/dictionary absence); read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` first. Full read-order in `.claude/rules/phonetics.md`.
 4. **Bugfix = confirm root cause before fixing** — for any bug fix, first carefully trace and verify the root cause (cite `file:line`, evidence), present it to the user, and **wait for explicit approval**. Do NOT create a branch, edit code, or implement until the user agrees the root cause is correct. Diagnosis and fixing are separate, sequential, user-gated steps.
-5. **Release scope / timing / tag = user-gated** — never decide what is in/out of vX, never tag something "deferred / post-vX / known limitation / ready to tag" without the user's explicit dated word. Full rule in `~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope; Taigi incident in `rules/taigi-incidents.md`. Present work factually (cost, options, trade-offs); never assign or exclude scope yourself.
+5. **Release scope / timing / tag = user-gated** — never decide what is in/out of vX, never tag something "deferred / post-vX / known limitation / ready to tag" without the user's explicit dated word. Full rule in `~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope; Taigi incident in `.claude/rules/taigi-incidents.md`. Present work factually (cost, options, trade-offs); never assign or exclude scope yourself.
 6. **Direction-first over fix-scope** — when choosing between two correct fixes, prioritize **consistency, best-practice alignment, and correct architectural direction** over minimizing the change-set. Scope minimality is NOT the top criterion: if the smaller fix (e.g. per-call-site qualification, one-line workaround) preserves a naming inconsistency / architectural anti-pattern / recurring trap, prefer the larger fix that resolves the root cause and aligns the codebase. State the trade-off when presenting options; do NOT default to the minimum-change option. **Why**: USER explicit preference 2026-05-25 — "比起修復範圍，我認為考慮一致性、最佳實踐，方向正確會比較重要" (during iOS `AutocompleteService` ambiguity round; per-call-site qualification was the smallest fix, full class rename was the consistent-with-`EnglishAutocompleteService`-sibling root-cause fix).
 
 ## Mandatory Rules
 
 **Cross-project process rules** (workflow, planning, diagnosis, code review, naming, docs authoring, Claude interaction) auto-load from `~/.claude/rules/` via the `configurations` repo symlinks. Don't duplicate them here.
 
-**Project-specific rules** below override defaults — read the listed file **before** the matching work.
+**Project-specific rules** live in `.claude/rules/` and auto-load via `paths:` glob when Claude reads matching files (e.g. editing `ios/**/*.swift` auto-loads `ios-guidelines.md` / `ios-architecture.md`). The table below is the **conceptual discovery index** — use it when a task is framed by topic ("phonetics work", "cross-platform parity") rather than by a specific file path, since `paths:` triggers on file reads, not topic mentions. Three rules are **always-on** (no `paths:` field): `security-rules.md`, `doc-lookup.md`, `taigi-incidents.md`.
 
 | Before… | Read |
 |---|---|
-| a change affecting iOS/Android parity | `rules/cross-platform-alignment.md` |
-| modifying iOS code (structural → also architecture) | `rules/ios-guidelines.md` (+ `ios-architecture.md`) |
-| marking a file as iOS Shared-Core Candidate or changing the candidate roster | `rules/ios-shared-core-candidates.md` |
-| modifying iOS Settings wiring (`SharedSettings`, `EngineSettingsProvider`, live-read regressions) | `rules/ios-settings-injection.md` |
-| modifying Android code (core architecture, Kotlin idioms, DI, DataStore) | `rules/android-guidelines.md` |
-| modifying Android Compose / IME-specific code, testing, or a refactor-round PR | `rules/android-ime-patterns.md` |
-| modifying app UI | `rules/ui-style-guide.md` |
-| adding logging / SQL / network / storage | `rules/security-rules.md` |
-| Rust engine code (general hygiene, workspace, errors, crates, tests) | `rules/rust-best-practices.md` |
-| Rust FFI / proto boundary code, `unsafe` blocks, opaque handles, enforcement | `rules/rust-ffi-safety.md` |
-| starting a Rust slice migration / platform→engine swap / `.proto` addition / mirror-source delete | `rules/rust-migration-policy.md` |
-| any TL/POJ/TPS schema, FST key-family, encoding, or canonical-form work | `rules/phonetics.md` |
-| revisiting a global rule and wanting the concrete Taigi "why" | `rules/taigi-incidents.md` |
-| adding or changing a call to / contract with a framework/OS API (KeyboardKit, `UIInputViewController`/`UITextDocumentProxy`, `InputMethodService`/`InputConnection`/`EditorInfo`, Jetpack Compose, DataStore) — not trivial edits to framework-adjacent code | `rules/doc-lookup.md` — verify the current API via `find-docs`/`ctx7` (or local `references/KeyboardKit-Documentation/`) **before** coding; never from model memory |
+| a change affecting iOS/Android parity | `.claude/rules/cross-platform-alignment.md` |
+| modifying iOS code (structural → also architecture) | `.claude/rules/ios-guidelines.md` (+ `ios-architecture.md`) |
+| marking a file as iOS Shared-Core Candidate or changing the candidate roster | `.claude/rules/ios-shared-core-candidates.md` |
+| modifying iOS Settings wiring (`SharedSettings`, `EngineSettingsProvider`, live-read regressions) | `.claude/rules/ios-settings-injection.md` |
+| modifying Android code (core architecture, Kotlin idioms, DI, DataStore) | `.claude/rules/android-guidelines.md` |
+| modifying Android Compose / IME-specific code, testing, or a refactor-round PR | `.claude/rules/android-ime-patterns.md` |
+| modifying app UI | `.claude/rules/ui-style-guide.md` |
+| adding logging / SQL / network / storage | `.claude/rules/security-rules.md` |
+| Rust engine code (general hygiene, workspace, errors, crates, tests) | `.claude/rules/rust-best-practices.md` |
+| Rust FFI / proto boundary code, `unsafe` blocks, opaque handles, enforcement | `.claude/rules/rust-ffi-safety.md` |
+| starting a Rust slice migration / platform→engine swap / `.proto` addition / mirror-source delete | `.claude/rules/rust-migration-policy.md` |
+| any TL/POJ/TPS schema, FST key-family, encoding, or canonical-form work | `.claude/rules/phonetics.md` |
+| revisiting a global rule and wanting the concrete Taigi "why" | `.claude/rules/taigi-incidents.md` |
+| adding or changing a call to / contract with a framework/OS API (KeyboardKit, `UIInputViewController`/`UITextDocumentProxy`, `InputMethodService`/`InputConnection`/`EditorInfo`, Jetpack Compose, DataStore) — not trivial edits to framework-adjacent code | `.claude/rules/doc-lookup.md` — verify the current API via `find-docs`/`ctx7` (or local `references/KeyboardKit-Documentation/`) **before** coding; never from model memory |
 | writing a 最佳實踐對齊 section, claiming "Project X does Y", or designing a segmentation / lattice / ranking / user-freq / syllabifier / predictive / next-word / continuous-input slice | `docs/references/mainstream-ime-comparison.md` first (TL;DR matrix + topic index → drill into per-repo cards; do **not** re-explore `references/` from scratch) |
 
 ## Build & Test

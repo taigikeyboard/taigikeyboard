@@ -1,3 +1,7 @@
+---
+paths: ["ios/**/*.swift"]
+---
+
 # iOS Project Guidelines
 
 Mandatory rules for iOS development. Read before modifying iOS code.

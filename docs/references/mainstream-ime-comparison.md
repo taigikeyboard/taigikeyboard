@@ -354,7 +354,7 @@ For Phase II+ (cross-platform alignment), read:
 1. **`azookey-reference.md`** — iOS UI patterns.
 2. **`florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/`** — Android IME service skeleton + Compose IME UI (engine *not* wired in).
 3. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android IME *with* a native engine wired in via an async daemon; the FFI-threading model for our Android↔Rust boundary.
-4. **`rules/cross-platform-alignment.md`** — refactor-freeze + Phase II end gate.
+4. **`.claude/rules/cross-platform-alignment.md`** — refactor-freeze + Phase II end gate.
 
 ---
 

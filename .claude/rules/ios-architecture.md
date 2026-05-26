@@ -1,3 +1,7 @@
+---
+paths: ["ios/**/*.swift"]
+---
+
 # iOS Architecture Rules
 
 Mandatory architectural contract for the iOS target. Read before any non-trivial structural change.
@@ -6,7 +10,7 @@ Mandatory architectural contract for the iOS target. Read before any non-trivial
 
 **Phase context**: shared-core extraction roadmap is tracked in Claude auto-memory (`project_shared_core_roadmap.md`, not in-repo); the per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`. iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. Phase I and Phase II audit docs (ios-exemplar-plan, android-state-audit) have been retired post-completion.
 
-**Split note**: Shared-core candidate criteria + marker live in `rules/ios-shared-core-candidates.md`. Settings-injection wiring lives in `rules/ios-settings-injection.md`.
+**Split note**: Shared-core candidate criteria + marker live in `.claude/rules/ios-shared-core-candidates.md`. Settings-injection wiring lives in `.claude/rules/ios-settings-injection.md`.
 
 ---
 
@@ -158,21 +162,21 @@ Folder names align with `TabType` enum cases and UI-visible titles, not sub-file
 
 Apply to any non-trivial structural change:
 
-- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker) — see `rules/ios-shared-core-candidates.md`
+- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker) — see `.claude/rules/ios-shared-core-candidates.md`
 - [ ] No Engine-layer file imports `KeyboardKit` / `UIKit` / `SwiftUI` / `Combine`
-- [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store` — see `rules/ios-settings-injection.md`
-- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard) — see `rules/ios-settings-injection.md` § Change sync regression test
+- [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store` — see `.claude/rules/ios-settings-injection.md`
+- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard) — see `.claude/rules/ios-settings-injection.md` § Change sync regression test
 - [ ] File names match primary types; no `_` prefix, no numeric folders
 
 ---
 
 ## 6. References
 
-- `rules/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
-- `rules/ios-shared-core-candidates.md` — criteria + marker for files eligible for cross-platform extraction
-- `rules/ios-settings-injection.md` — `EngineSettingsProvider` wiring for live-read settings
-- `rules/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
-- `rules/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
+- `.claude/rules/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
+- `.claude/rules/ios-shared-core-candidates.md` — criteria + marker for files eligible for cross-platform extraction
+- `.claude/rules/ios-settings-injection.md` — `EngineSettingsProvider` wiring for live-read settings
+- `.claude/rules/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
+- `.claude/rules/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
 - `~/.claude/rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
 - `~/.claude/rules/code-review-rules.md` — review checklist
 - `docs/architecture/ios-exemplar.md` — Phase II alignment target for Android

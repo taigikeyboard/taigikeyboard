@@ -8,8 +8,9 @@ import SwiftProtobuf
 // MARK: - RustEngineBridge Phonetics + Derivation + TPS surface
 
 /// Phonetics / Derivation / TPS extension for `RustEngineBridge`. Holds
-/// the 15 typed phonetics methods (`feedback_codex_review_sandwich.md`
-/// Codex v2 §7 — D9.4 surface) plus the lazy `toneVariations` cache and
+/// the 15 typed phonetics methods (Codex v2 §7 review per
+/// `~/.claude/rules/round-workflow.md` § Codex review sandwich — D9.4
+/// surface) plus the lazy `toneVariations` cache and
 /// the three private dispatch helpers (`dispatch` / `stringDispatch` /
 /// `boolDispatch`) shared by every method here.
 ///

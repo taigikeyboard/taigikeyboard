@@ -13,7 +13,7 @@
 - **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — MERGED in v3.5.4).**
 - Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring all DEFERRED to Phase III post-Composing.
 - §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 reflects the merged Composing wire (v3.5.4); naming was changed from `oneof intent` to `oneof method` per the Phonetics convention adopted in PR #186.
-- **Authoritative companion**: `rules/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `rules/rust-ffi-safety.md` §4 (opaque handle pattern).
+- **Authoritative companion**: `.claude/rules/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `.claude/rules/rust-ffi-safety.md` §4 (opaque handle pattern).
 
 ---
 
@@ -34,7 +34,7 @@ The Rust engine's logical shape, mirroring `references/khiin-rs/khiin/src/engine
 fn send_command_bytes(handle: EngineHandle, bytes: &[u8]) -> Vec<u8>
 ```
 
-Concrete extern signatures differ per platform (per `rules/rust-ffi-safety.md` §4):
+Concrete extern signatures differ per platform (per `.claude/rules/rust-ffi-safety.md` §4):
 
 - **JNI** (`android-jni`): `JByteArray` in / `JByteArray` out, plus `EngineHandle` as `jlong` wrapped in a `@JvmInline value class` on the Kotlin side.
 - **swift-bridge** (`swift-ffi`): `&[u8]` in / `Vec<u8>` out, with an `EngineBridge` struct holding the handle.
@@ -294,13 +294,13 @@ message CaseResponse {
 
 ## 9. Non-goals codified
 
-- **No platform UI semantics** in any message (per `rules/cross-platform-alignment.md:115-117`):
+- **No platform UI semantics** in any message (per `.claude/rules/cross-platform-alignment.md:115-117`):
   - Candidate navigation ownership stays platform-side. `references/khiin-rs/protos/src/command.proto:114-117` validates this pattern: "App should decide how to show and navigate candidates".
   - No layout, styling, KeyboardKit, FlorisBoard types.
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
 - **No candidate ids in the Composing slice.** `SelectSuggestion` carries text the platform already resolved.
 - **No Lexicon / NextWord proto** — Phase III deliverable. This includes prediction queries, prediction results, and candidate-list updates.
-- **No SQLite I/O proto.** User-data DB stays platform-side permanently per `rules/rust-migration-policy.md` § User-data SQLite stays platform-native and the criteria in `rules/ios-shared-core-candidates.md` §1 (no DB / App Group / FileManager / file-system access in candidates). Excluded files appear with `status=wont_migrate` in `migration-inventory.csv` (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.).
+- **No SQLite I/O proto.** User-data DB stays platform-side permanently per `.claude/rules/rust-migration-policy.md` § User-data SQLite stays platform-native and the criteria in `.claude/rules/ios-shared-core-candidates.md` §1 (no DB / App Group / FileManager / file-system access in candidates). Excluded files appear with `status=wont_migrate` in `migration-inventory.csv` (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.).
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
 
 ---
@@ -316,8 +316,8 @@ message CaseResponse {
 
 ## 11. References
 
-- `rules/rust-best-practices.md` — mandatory companion (§3 crate choices, §8 non-goals)
-- `rules/rust-ffi-safety.md` — mandatory companion (§4 opaque handle pattern)
+- `.claude/rules/rust-best-practices.md` — mandatory companion (§3 crate choices, §8 non-goals)
+- `.claude/rules/rust-ffi-safety.md` — mandatory companion (§4 opaque handle pattern)
 - `references/khiin-rs/protos/src/command.proto:114-117` — candidate display is the client app's job
 - `references/khiin-rs/khiin/src/engine.rs:57` — `send_command_bytes` shape
 - `references/khiin-rs/README.md:140-152` — protobuf rationale + request-id correlation

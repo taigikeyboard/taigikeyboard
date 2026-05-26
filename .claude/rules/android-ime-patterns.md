@@ -1,6 +1,10 @@
+---
+paths: ["android/**/*.kt"]
+---
+
 # Android IME / UI / Testing / Refactor Patterns
 
-Compose + IME-specific patterns + testing + refactor-round checklist. Split out from `rules/android-guidelines.md` for focus. Core architecture / Kotlin idioms / DI / DataStore stay in the parent file.
+Compose + IME-specific patterns + testing + refactor-round checklist. Split out from `.claude/rules/android-guidelines.md` for focus. Core architecture / Kotlin idioms / DI / DataStore stay in the parent file.
 
 ## 1. Compose patterns `[B]`
 
@@ -25,36 +29,36 @@ Compose + IME-specific patterns + testing + refactor-round checklist. Split out 
 
 ## 3. Testing `[B]` `[A]`
 
-Cross-platform test naming + assertion conventions follow `rules/ios-guidelines.md` "Test Conventions"; Android-specific additions only here.
+Cross-platform test naming + assertion conventions follow `.claude/rules/ios-guidelines.md` "Test Conventions"; Android-specific additions only here.
 
 - JUnit 4 — project default (see existing `app/src/test/java/.../ime/dictionary/*Test.kt`). Do not mix JUnit 5.
 - Turbine (`app.cash.turbine`) for Flow assertions — pattern `flow.test { … }`.
 - `kotlinx-coroutines-test` — `runTest { … }` block with injectable `TestDispatcher` for time-controlled tests.
-- `INVARIANT_*` function-name prefix for cross-platform-invariant tests; labels match `docs/architecture/behavioral-invariants.md` (policy: `rules/cross-platform-alignment.md` §3a).
+- `INVARIANT_*` function-name prefix for cross-platform-invariant tests; labels match `docs/architecture/behavioral-invariants.md` (policy: `.claude/rules/cross-platform-alignment.md` §3a).
 - Tests must be runnable via `./gradlew test` (wired into `testImplementation` in the test source set).
 
 ## 4. Refactor-round checklist `[A]`
 
 Durable checklist for every Android refactor PR:
 
-- [ ] Refactor-freeze observed per `rules/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
+- [ ] Refactor-freeze observed per `.claude/rules/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
 - [ ] Codex + `/simplify` pre-review on plan before implementation (per `~/.claude/rules/code-review-rules.md` §8). `/simplify` is the Claude Code official skill — run in parallel with Codex to catch reuse / quality / dead-code issues Codex does not flag.
 - [ ] Codex post-review on diff before merge.
-- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round (concrete Taigi sequences in `rules/taigi-incidents.md` § Qualitative perf gate).
+- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round (concrete Taigi sequences in `.claude/rules/taigi-incidents.md` § Qualitative perf gate).
 - [ ] Invariant tests stay green.
-- [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `rules/cross-platform-alignment.md` §3a).
+- [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `.claude/rules/cross-platform-alignment.md` §3a).
 - [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.
 
 **Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`). The Phase II state-audit doc has been retired post-completion.
 
-During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
+During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `.claude/rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
 
 ## 5. References
 
-- `rules/android-guidelines.md` — parent file: shared-core criteria, Kotlin idioms, lifecycle/DI, DataStore, null/error handling, Gradle
-- `rules/cross-platform-alignment.md` — refactor-freeze contract + emergency / parity tiers + §3a invariant policy
+- `.claude/rules/android-guidelines.md` — parent file: shared-core criteria, Kotlin idioms, lifecycle/DI, DataStore, null/error handling, Gradle
+- `.claude/rules/cross-platform-alignment.md` — refactor-freeze contract + emergency / parity tiers + §3a invariant policy
 - `docs/architecture/ios-exemplar.md` — alignment target
 - `docs/architecture/composing-state-boundary.md` — composing/finishComposingText contract
 - `docs/architecture/behavioral-invariants.md` — `INVARIANT_*` labels
 - `~/.claude/rules/code-review-rules.md` — review checklist + §8 review-before-impl + §9 perf gate
-- `rules/taigi-incidents.md` — concrete Taigi dogfood sequences (S1/S2/S3) + PR #227 refactor-freeze incident
+- `.claude/rules/taigi-incidents.md` — concrete Taigi dogfood sequences (S1/S2/S3) + PR #227 refactor-freeze incident

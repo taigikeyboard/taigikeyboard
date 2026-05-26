@@ -1,6 +1,18 @@
+---
+paths:
+  - "engine/android-jni/**"
+  - "engine/swift-ffi/**"
+  - "engine/dispatch/**"
+  - "engine/protos/**"
+  - "engine/**/src/api.rs"
+  - "engine/**/src/dispatch.rs"
+  - "engine/**/src/handle.rs"
+  - "engine/**/ffi*.rs"
+---
+
 # Rust FFI Safety
 
-Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto layering, `unsafe` discipline, opaque-handle pattern, enforcement hooks. Split out from `rules/rust-best-practices.md` for focus. General Rust hygiene (workspace, errors, crates, tests, versions) stays in the parent file.
+Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto layering, `unsafe` discipline, opaque-handle pattern, enforcement hooks. Split out from `.claude/rules/rust-best-practices.md` for focus. General Rust hygiene (workspace, errors, crates, tests, versions) stays in the parent file.
 
 **Active window**: every Rust PR touching `swift-ffi/`, `android-jni/`, `engine/dispatch`, `protos/`, or any domain crate's RPC façade.
 
@@ -55,7 +67,7 @@ mod syllable;
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
 - **No raw pointer dereferences outside FFI crates.** `phonetics` and `engine` are `#![forbid(unsafe_code)]` at the crate root; only `android-jni` and `swift-ffi` may contain `unsafe`.
-- **Every new `unsafe` block requires Codex pre-implementation review** per `rules/cross-platform-alignment.md` §1c.
+- **Every new `unsafe` block requires Codex pre-implementation review** per `.claude/rules/cross-platform-alignment.md` §1c.
 
 ## 4. Opaque handle pattern `[S]` `[R]`
 
@@ -96,13 +108,13 @@ Both extern fns wrap their bodies in `catch_unwind` per §1. Every `unsafe` bloc
 
 - **Spec docs**: `docs/engine/ffi-safety.md` and `docs/engine/rust-core-proto.md` cite this rules file. Rule deviations in those docs require `// JUSTIFICATION:` prose in-line.
 - **D9 POC and successors**: POC / FFI code is reviewed against every rule above. Deviations land only after Codex + `/simplify` pre-review and Codex post-review on the diff, with written rationale.
-- **Every Rust FFI PR** runs through the `rules/cross-platform-alignment.md` §1c constraint (for shared-core-candidate equivalence), Codex + `/simplify` pre-implementation review on the plan, Codex post-edit review on the diff, plus this file's §§1–4 enforcement. `/simplify` is the Claude Code official skill and catches reuse / quality / dead-code issues Codex does not flag; run both in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage.
+- **Every Rust FFI PR** runs through the `.claude/rules/cross-platform-alignment.md` §1c constraint (for shared-core-candidate equivalence), Codex + `/simplify` pre-implementation review on the plan, Codex post-edit review on the diff, plus this file's §§1–4 enforcement. `/simplify` is the Claude Code official skill and catches reuse / quality / dead-code issues Codex does not flag; run both in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage.
 
 ## 6. References
 
-- `rules/rust-best-practices.md` — parent file: workspace, errors, crates, tests, versions, non-goals
-- `rules/rust-migration-policy.md` — slice migration policy
-- `rules/cross-platform-alignment.md` §1c, §4a, §5.1 — shared-core-candidate constraint + Phase II.5 prerequisites + non-goals
+- `.claude/rules/rust-best-practices.md` — parent file: workspace, errors, crates, tests, versions, non-goals
+- `.claude/rules/rust-migration-policy.md` — slice migration policy
+- `.claude/rules/cross-platform-alignment.md` §1c, §4a, §5.1 — shared-core-candidate constraint + Phase II.5 prerequisites + non-goals
 - `docs/engine/ffi-safety.md` — technical spec (this file is the policy)
 - `docs/engine/rust-core-proto.md` — Request/Response schema
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference

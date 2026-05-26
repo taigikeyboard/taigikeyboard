@@ -353,7 +353,7 @@ Constraints binding the decision:
 - v3.5.8 is dogfood-oriented (per [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) header).
 - `feedback_no_slice_toggles.md` — no fallback toggle to disable Continuous; we ship as-is or we don't ship.
 - Solo maintainer (`feedback_solo_maintainer.md`) — ranking work blocks other v3.5.8 phases if attempted now.
-- `feedback_round_hygiene.md` — context-clear between rounds; this decision must be recoverable from this document alone.
+- `~/.claude/rules/round-workflow.md` § Branching & rounds — context-clear between rounds; this decision must be recoverable from this document alone.
 
 **What v3.5.8 release notes should communicate to users:**
 
@@ -397,8 +397,8 @@ These are noted to prevent re-discovery in future sessions. Not committed to any
 |---|---|
 | [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) | v3.5.8 archive § Phase 5 deferred / § Phase 6 limitations / § Phase 9 |
 | `docs/architecture/behavioral-invariants.md` | §11 live-read settings (relevant for Q2 above) |
-| `rules/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
-| `rules/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
+| `.claude/rules/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
+| `.claude/rules/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
 | `feedback_no_future_planning.md` | Why §8/§9 here record the limitation but do not schedule a fix |
 | `feedback_no_slice_toggles.md` | Why no `useContinuousV2` toggle is proposed |
 | `references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java` | MOE native ranking entry point |

@@ -176,7 +176,7 @@ Confirm `LexiconService.search` for Tab3 hanzi search stays exactly as is — no
 
 **Q15.7 — Sub-PR breakdown**
 
-Combined display fix + fallback retire is ~700-950 LOC. Per `feedback_round_hygiene.md` 200-500 LOC/PR discipline, suggest:
+Combined display fix + fallback retire is ~700-950 LOC. Per `~/.claude/rules/planning.md` § Persistent hand-off (200-500 LOC/PR discipline), suggest:
 
 | Sub-PR | Scope | LOC est. |
 |---|---|---|
@@ -206,7 +206,7 @@ Codex confirms ordering / dependencies. Suggest dependency:
 | Ranking surprises after `coverage_kind` insertion (full-syllable should still dominate when both present) | `partial_prefix_engine_path` test + `sort_key_partial_below_full` test pin invariant |
 | Dogfood regression on input that worked via fallback but breaks under engine | Test matrix §15.6 + acceptance: type every input form (`t`, `gu`, `gua`, `gua2`, `guá`, `ㄍㄨㄚˋ`, `tai-bak`, `pe̍h`) and verify candidate strip non-empty after engine retire |
 | Tab3 broken by accident during retire | Tab3 is a separate consumer on both platforms (iOS `DictionarySearchService`; Android `LexiconService.searchWithSources`/`searchByHanzi`, kept). Only the autocomplete `search()` surface was deleted; pinned by `platform_autocomplete_no_lexicon_branch`. |
-| Codex consult overhead (8 sub-PRs × pre+post sandwich) | per `feedback_codex_review_sandwich.md` — each sub-PR small enough that sandwich is ~30min round-trip; total ~8-10 hours Codex consult time across all 8 PRs, spread over v3.5.8 dogfood window |
+| Codex consult overhead (8 sub-PRs × pre+post sandwich) | per `~/.claude/rules/round-workflow.md` § Codex review sandwich — each sub-PR small enough that sandwich is ~30min round-trip; total ~8-10 hours Codex consult time across all 8 PRs, spread over v3.5.8 dogfood window |
 
 ### 15.9 Out-of-scope confirmation (under §15)
 

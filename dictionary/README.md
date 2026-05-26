@@ -112,4 +112,4 @@ original URLs.
 - **Cross-platform invariant**: `SOURCE_BITS` + `SOURCE_TIERS` + tier
   denominator in `common/source_bits.py` must mirror the iOS/Android
   `DictionaryBinaryReader.{swift,kt}` and `CandidateProcessor.{swift,kt}`.
-  `rules/cross-platform-alignment.md` §3a governs drift.
+  `.claude/rules/cross-platform-alignment.md` §3a governs drift.

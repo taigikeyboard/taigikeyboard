@@ -466,7 +466,7 @@ class ComposingManager(
      * Drift causes silent divergence in the ranking the user sees after
      * their first selection of a phrase.
      *
-     * Android divergence (intentional, per `rules/cross-platform-alignment.md`
+     * Android divergence (intentional, per `.claude/rules/cross-platform-alignment.md`
      * §3): iOS is sync because Swift `frequencyDataBatch` is sync; Android
      * is `suspend` because Kotlin `frequencyDataBatch` owns `Dispatchers.IO`
      * internally (`UserFrequencyService.kt:225`). Same observable behaviour,
@@ -626,7 +626,7 @@ class ComposingManager(
      * `CustomDictionaryDerivation.searchPrefix` (and Android
      * `LexiconService.lookupCustomDictionary:117-122`). Drift in the
      * tone-aware / notone branch causes silent custom-match divergence
-     * between platforms (rules/cross-platform-alignment.md §3a).
+     * between platforms (.claude/rules/cross-platform-alignment.md §3a).
      *
      * `null` service (tests / Preview) or disabled feature → empty
      * list, identical to the no-custom engine path. Runs its SQLite

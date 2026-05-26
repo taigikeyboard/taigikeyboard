@@ -3,7 +3,7 @@
 //! Owns the only NEW `unsafe_code = "allow"` carve-out introduced by the
 //! v3.5.6 lexicon slice (`docs/engine/lexicon-slice-plan.md` G4). The
 //! `unsafe` block lives in `MmapHandle::open_readonly` and is gated by
-//! a single SAFETY comment per `rules/rust-best-practices.md` §4.
+//! a single SAFETY comment per `.claude/rules/rust-best-practices.md` §4.
 //!
 //! All consumers (currently `engine/lexicon`) take a `&[u8]` whose lifetime
 //! is tied to the `&MmapHandle` borrow, so the unsafe-ness does not leak.

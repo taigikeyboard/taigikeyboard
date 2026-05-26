@@ -1,3 +1,18 @@
+---
+paths:
+  - "engine/phonetics/**"
+  - "engine/composing/**"
+  - "engine/lexicon/**"
+  - "engine/protos/**"
+  - "knowledge/taigi-phonetics-reference.md"
+  - "taigi-converter/**"
+  - "dictionary/**"
+  - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Phonetics.swift"
+  - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+CaseTransform.swift"
+  - "android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/ExternalLookupURLBuilder.kt"
+  - "android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt"
+---
+
 # Phonetics Rules
 
 Mandatory reading before ANY TL / POJ / TPS schema work, FST key-family design, column design, encoding choice, canonical-form decision, or "is X dead code" audit of phonetic tables.
