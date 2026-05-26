@@ -422,7 +422,8 @@ mod tests {
             is_translate_swapped: translate_swapped,
             is_association_recording_enabled: association_enabled,
             platform_id: Platform::Ios as i32,
-            output_both_scripts: false,        }
+            output_both_scripts: false,
+        }
     }
 
     fn android_config(association_enabled: bool, translate_swapped: bool) -> AppConfig {
@@ -434,7 +435,8 @@ mod tests {
             is_translate_swapped: translate_swapped,
             is_association_recording_enabled: association_enabled,
             platform_id: Platform::Android as i32,
-            output_both_scripts: false,        }
+            output_both_scripts: false,
+        }
     }
 
     #[test]
@@ -447,7 +449,8 @@ mod tests {
             is_translate_swapped: false,
             is_association_recording_enabled: true,
             platform_id: Platform::Unspecified as i32,
-            output_both_scripts: false,        };
+            output_both_scripts: false,
+        };
         let mut state = PersistedState::default();
         let err = apply(&mut state, Intent::ResetFull { now_ms: 0 }, &config).unwrap_err();
         assert!(matches!(err, NextWordError::InvalidPlatform));

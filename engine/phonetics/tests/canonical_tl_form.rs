@@ -17,7 +17,10 @@ fn poj_diacritic_folds_to_canonical_tl() {
     // (`oa → ua`) + `to_tl` reassembly into TL `puânn`.
     // 中文: POJ display 形(ô / ⁿ)折成 canonical TL(oa→ua),例 `pôaⁿ` → `puânn`。
     assert_eq!(
-        canonical_tl_form("t\u{00e2}i-g\u{00ed}-kh\u{00ed}-p\u{00f4}a\u{207f}", InputMode::Poj),
+        canonical_tl_form(
+            "t\u{00e2}i-g\u{00ed}-kh\u{00ed}-p\u{00f4}a\u{207f}",
+            InputMode::Poj
+        ),
         "t\u{00e2}i-g\u{00ed}-kh\u{00ed}-pu\u{00e2}nn"
     );
 }
@@ -91,8 +94,14 @@ fn tl_mode_observable_identity_for_tl_and_non_taigi_inputs() {
     // 中文: r3278520895 後 Tl mode 走 fold,但 TL 形 / 非-Taigi 觀察上仍 byte-identity
     // 中文:   (TL idempotent + 非 Taigi pass-through)。
     assert_eq!(canonical_tl_form("anything", InputMode::Tl), "anything");
-    assert_eq!(canonical_tl_form("ts\u{00e1}i", InputMode::Tl), "ts\u{00e1}i");
-    assert_eq!(canonical_tl_form("hello world", InputMode::Tl), "hello world");
+    assert_eq!(
+        canonical_tl_form("ts\u{00e1}i", InputMode::Tl),
+        "ts\u{00e1}i"
+    );
+    assert_eq!(
+        canonical_tl_form("hello world", InputMode::Tl),
+        "hello world"
+    );
 }
 
 #[test]
@@ -108,7 +117,10 @@ fn poj_form_in_tl_mode_folds_canonical_tl() {
     // 中文:   否則 commit key 維持 POJ shape 與 dict.bin canonical TL 分裂。
     assert_eq!(canonical_tl_form("g\u{00f3}a", InputMode::Tl), "gu\u{00e1}");
     assert_eq!(
-        canonical_tl_form("t\u{00e2}i-g\u{00ed}-kh\u{00ed}-p\u{00f4}a\u{207f}", InputMode::Tl),
+        canonical_tl_form(
+            "t\u{00e2}i-g\u{00ed}-kh\u{00ed}-p\u{00f4}a\u{207f}",
+            InputMode::Tl
+        ),
         "t\u{00e2}i-g\u{00ed}-kh\u{00ed}-pu\u{00e2}nn"
     );
     assert_eq!(canonical_tl_form("chiah goa", InputMode::Tl), "tsiah gua");
@@ -130,7 +142,10 @@ fn non_taigi_passes_through_in_poj_mode() {
     // tone-digit tokens also fail the split and pass through.
     // 中文: POJ mode 下非 Taigi token 走 split fallback 原樣返回;
     // 中文:   數字調 `tai5gi2` 內部 `5` 卡住 split → identity。
-    assert_eq!(canonical_tl_form("hello world", InputMode::Poj), "hello world");
+    assert_eq!(
+        canonical_tl_form("hello world", InputMode::Poj),
+        "hello world"
+    );
     assert_eq!(canonical_tl_form("tai5gi2", InputMode::Poj), "tai5gi2");
     assert_eq!(canonical_tl_form("123", InputMode::Poj), "123");
 }

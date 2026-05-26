@@ -1245,7 +1245,8 @@ fn partial_prefix_high_freq_short_candidate_survives_past_legacy_byte_sort_cap()
         out.iter().map(|c| &c.display_text).collect::<Vec<_>>()
     );
     assert_eq!(
-        out[0].display_text, "基",
+        out[0].display_text,
+        "基",
         "high-freq single-syllable `ki` (基) must rank top-1 over freq=1 multi-syllable \
          phrases; got {:?}",
         out.iter().map(|c| &c.display_text).collect::<Vec<_>>()

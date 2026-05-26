@@ -49,7 +49,7 @@ fn tps_lattice_emits_tps_prefix_for_tone_marked_input() {
     // First syllable shadow ending: 3+3+2 = 8.
     // Phrase shadow ending: 8 + 3+3+2 = 16.
     let inv = build_tps_inventory(&[
-        "ㄉㄞ", "ㄉㄞˋ",  // tone-2 / toneless ㄉㄞ
+        "ㄉㄞ", "ㄉㄞˋ", // tone-2 / toneless ㄉㄞ
         "ㆣㄧ", "ㆣㄧˊ", // tone-5 / toneless ㆣㄧ
     ]);
     let keys = build_keys_tl_with_inventory(
@@ -145,7 +145,11 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     let keys = build_keys_tl_with_inventory(&raw, &inv, phonetics::InputMode::Tps);
     // Left-anchored phrase endings emitted by the BFS up to depth N.
     // The largest end must NOT exceed MAX_SYLLABLES * syllable_bytes.
-    let max_end = keys.iter().map(|((_, e), _)| *e as usize).max().unwrap_or(0);
+    let max_end = keys
+        .iter()
+        .map(|((_, e), _)| *e as usize)
+        .max()
+        .unwrap_or(0);
     assert!(
         max_end <= MAX_SYLLABLES * SYLLABLE_BYTES,
         "TPS cap violated: max end {max_end} exceeds {} ({MAX_SYLLABLES} × {SYLLABLE_BYTES}); keys = {keys:?}",
@@ -154,7 +158,8 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     // And at least one phrase-length key was emitted (so the cap is
     // a ceiling, not a noop that yielded nothing).
     assert!(
-        keys.iter().any(|((_, e), _)| *e as usize >= SYLLABLE_BYTES * 2),
+        keys.iter()
+            .any(|((_, e), _)| *e as usize >= SYLLABLE_BYTES * 2),
         "expected at least one multi-syllable key, got {keys:?}",
     );
 }

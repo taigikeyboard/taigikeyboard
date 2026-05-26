@@ -106,7 +106,8 @@ fn tl_config() -> AppConfig {
         is_translate_swapped: false,
         is_association_recording_enabled: false,
         platform_id: 0,
-        output_both_scripts: false,    }
+        output_both_scripts: false,
+    }
 }
 
 fn poj_config(oo: bool, nn: bool) -> AppConfig {
@@ -118,7 +119,8 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         is_translate_swapped: false,
         is_association_recording_enabled: false,
         platform_id: 0,
-        output_both_scripts: false,    }
+        output_both_scripts: false,
+    }
 }
 
 // ============================================================

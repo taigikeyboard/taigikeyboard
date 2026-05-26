@@ -50,7 +50,10 @@ use std::path::PathBuf;
 /// is empty (Node bridge rejection in production).
 // 中文: extract_tps_abbrev 的 runtime 鏡像;<2 音節或任一音節 TPS 空 ⇒ "".
 fn derive_tps_abbrev_runtime(tl: &str) -> String {
-    let tokens: Vec<&str> = tl.split(['-', ' ', '\t']).filter(|t| !t.is_empty()).collect();
+    let tokens: Vec<&str> = tl
+        .split(['-', ' ', '\t'])
+        .filter(|t| !t.is_empty())
+        .collect();
     if tokens.len() < 2 {
         return String::new();
     }
@@ -58,9 +61,9 @@ fn derive_tps_abbrev_runtime(tl: &str) -> String {
     for tok in tokens {
         let numeric = phonetics::to_tone_number(tok);
         let tps = phonetics::tl_numeric_token_to_tps(&numeric, false, true);
-        let first = tps.chars().find(|&c| {
-            !phonetics::is_tps_tone_mark(c) && c != '-' && !c.is_whitespace()
-        });
+        let first = tps
+            .chars()
+            .find(|&c| !phonetics::is_tps_tone_mark(c) && c != '-' && !c.is_whitespace());
         match first {
             Some(c) => out.push(c),
             None => return String::new(),

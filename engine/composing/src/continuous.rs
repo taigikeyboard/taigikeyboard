@@ -469,9 +469,10 @@ fn fetch_walker_slot0_inner(
             // `edge_cost`, same as dict.
             // 中文: B-4 — display_text fold canonical TL,跨 mode freq key 合一;
             // 中文:   `entry.roman` 保留原樣(lattice key 比對需要)。
-            let display_text = entry.hanji.clone().unwrap_or_else(|| {
-                phonetics::api::canonical_tl_form(&entry.roman, mode)
-            });
+            let display_text = entry
+                .hanji
+                .clone()
+                .unwrap_or_else(|| phonetics::api::canonical_tl_form(&entry.roman, mode));
             let fd = freq_map.get(&display_text).copied().unwrap_or_default();
             let count = u32::try_from(fd.count).unwrap_or(0);
             let user_weight_delta = decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
@@ -839,12 +840,8 @@ pub(crate) fn assemble_candidates(
         let (keys, shadow_lattice) = match inv {
             Some(inv) => {
                 let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-                let keys = left_anchored_keys_from_lattice(
-                    &shadow,
-                    &shadow_to_raw_end,
-                    &lattice,
-                    mode,
-                );
+                let keys =
+                    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, mode);
                 (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
             }
             None => (Vec::new(), None),

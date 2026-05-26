@@ -184,11 +184,14 @@ fn runtime_tps_notone_matches_build_pipeline_for_every_row() {
 fn tps_notone_or_variant_substitutes_er_to_or_glyph() {
     // Primary form (toggle ON / er-glyph) → variant form (toggle OFF / or-glyph).
     let cases = [
-        ("\u{3109}\u{311c}", "\u{3109}\u{311b}"),                   // ㄉㄜ → ㄉㄛ (tor / tór)
-        ("\u{3110}\u{311c}", "\u{3110}\u{311b}"),                   // ㄋㄜ → ㄋㄛ (lor)
-        ("\u{310e}\u{311c}\u{31b7}", "\u{310e}\u{311b}\u{31b7}"),  // ㄏㄜㆷ → ㄏㄛㆷ (orh)
+        ("\u{3109}\u{311c}", "\u{3109}\u{311b}"), // ㄉㄜ → ㄉㄛ (tor / tór)
+        ("\u{3110}\u{311c}", "\u{3110}\u{311b}"), // ㄋㄜ → ㄋㄛ (lor)
+        ("\u{310e}\u{311c}\u{31b7}", "\u{310e}\u{311b}\u{31b7}"), // ㄏㄜㆷ → ㄏㄛㆷ (orh)
         // Multi-er: every ㄜ swaps (no single-occurrence shortcut).
-        ("\u{3109}\u{311c}\u{3110}\u{311c}", "\u{3109}\u{311b}\u{3110}\u{311b}"),
+        (
+            "\u{3109}\u{311c}\u{3110}\u{311c}",
+            "\u{3109}\u{311b}\u{3110}\u{311b}",
+        ),
     ];
     for (primary, expected) in cases {
         let got = phonetics::tps_notone_or_variant(primary);

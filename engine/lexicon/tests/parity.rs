@@ -204,10 +204,7 @@ fn tps_input_mode_hits_tps_family_through_search() {
     ];
     let path = write_synthetic_fst("tps-c1-search.fst", pairs);
     let index = PrefixIndex::open(&path).expect("fst opens");
-    let dict = synth_dictionary_reader(&[
-        (0, 100, "的", "e5"),
-        (0, 50, "_distractor", "e2"),
-    ]);
+    let dict = synth_dictionary_reader(&[(0, 100, "的", "e5"), (0, 50, "_distractor", "e2")]);
 
     let params = SearchParams {
         input: "\u{3124}\u{02CA}".to_string(),

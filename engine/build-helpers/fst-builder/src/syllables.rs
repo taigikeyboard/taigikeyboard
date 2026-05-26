@@ -125,7 +125,11 @@ pub(crate) fn run_build(
     // C-3b's hard prerequisite — both MUST fail loud.
     // 中文: 每家族 non-empty + valid > 0 雙閘 — 防止 POJ / TPS canonicalizer 退化或
     // 中文:   對應 input 漏接時,builder 仍從其他家族綠燈走完寫出殘缺的 FST。
-    for (label, c) in &[("tl", &tl_counts), ("poj", &poj_counts), ("tps", &tps_counts)] {
+    for (label, c) in &[
+        ("tl", &tl_counts),
+        ("poj", &poj_counts),
+        ("tps", &tps_counts),
+    ] {
         if c.syllables_extracted == 0 {
             return Err(format!(
                 "{label}: no syllables extracted from input — empty file or missing input"
@@ -140,8 +144,9 @@ pub(crate) fn run_build(
         }
     }
 
-    let syllables_extracted =
-        tl_counts.syllables_extracted + poj_counts.syllables_extracted + tps_counts.syllables_extracted;
+    let syllables_extracted = tl_counts.syllables_extracted
+        + poj_counts.syllables_extracted
+        + tps_counts.syllables_extracted;
     let valid_syllables =
         tl_counts.valid_syllables + poj_counts.valid_syllables + tps_counts.valid_syllables;
     let tl_lines_in = tl_counts.lines_in;
@@ -608,11 +613,8 @@ mod tests {
     /// Python pre-splits hyphenated TL into per-syllable TPS lines.
     #[test]
     fn tps_family_keeps_full_line_as_one_syllable() {
-        let keys = collect_family_keys_from_stdin_for_test(
-            Family::Tps,
-            "\u{3110}\u{3127}\u{02cb}",
-        )
-        .expect("collect");
+        let keys = collect_family_keys_from_stdin_for_test(Family::Tps, "\u{3110}\u{3127}\u{02cb}")
+            .expect("collect");
         assert_eq!(
             keys,
             vec![
