@@ -24,7 +24,9 @@
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
 | `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw }`) — Rust `engine/composing` | Active |
 | `engine/continuous-input-ranking.md` | Continuous-input lexicographic SortKey + user_freq_boost + recency_rank spec (v3.5.8 Phase 9 source of truth) | Active |
-| `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6), §15 fallback retire pending | Active |
+| `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) — detail extracted to `continuous-lexicon-fallback-retire.md` | Active |
+| `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
+| `engine/continuous-lexicon-fallback-retire.md` | Architectural extension — eliminate lexicon fallback (Item 13 capstone DONE) — extracted from `continuous-candidate-display.md` §15 | Active |
 | `engine/autocomplete.md` | Candidate search and suggestion pipeline | Active |
 | `engine/tone.md` | Tone conversion / restoration / nasal-marker — Rust `engine/phonetics` | Active |
 | `engine/sort.md` | Candidate ranking — Rust `engine/ranking` | Active |
