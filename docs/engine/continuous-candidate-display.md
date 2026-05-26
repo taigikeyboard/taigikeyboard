@@ -614,17 +614,5 @@ This spec is **frozen** until Codex consult; updates after that should be tracke
 
 ## 15. Architectural Extension — Eliminate Lexicon Fallback
 
-**Moved 2026-05-26 →** [`continuous-lexicon-fallback-retire.md`](continuous-lexicon-fallback-retire.md). The architectural simplification — `§15.1` Motivation through `§15.9` Out-of-scope — extracted to a dedicated file as part of the P3 doc-size split. §15.X subsection numbering preserved so existing references in Swift / Kotlin / proto code comments and other docs continue to resolve.
-
-Quick-reference of subsections retained for discoverability:
-
-- **§15.1** Motivation (user pivot 2026-05-11 — eliminate platform-side lexicon fallback)
-- **§15.2** Scope clarification — what stays platform-side (no hanzi input mode; D-8 guard engine-owned)
-- **§15.3** Engine coverage gaps to close (A–E, **all DONE** Items 7–12)
-- **§15.4** Platform simplification — DONE (Item 13)
-- **§15.5** Ranking adjustment for partial-prefix candidates (`coverage_kind` SortKey dim)
-- **§15.6** Test matrix for fallback retire — DONE
-- **§15.7** Open Questions for Codex Pre-Impl Consult — RESOLVED (Q15.1–Q15.7)
-- **§15.8** Risk register (Item 13 shipped — partial-prefix flood + ranking risks closed)
-- **§15.9** Out-of-scope confirmation (MOE-style mode toggle / hanzi input mode / Tab3 refactor)
+**Moved 2026-05-26 →** [`continuous-lexicon-fallback-retire.md`](continuous-lexicon-fallback-retire.md). The architectural simplification — §15.1 motivation / §15.2 scope clarification / §15.3 engine coverage gaps A–E (Items 7–12) / §15.4 platform simplification (Item 13) / §15.5 partial-prefix ranking (`coverage_kind`) / §15.6 test matrix / §15.7 Codex Q15.1–Q15.7 (RESOLVED) / §15.8 risk register / §15.9 out-of-scope — lives in the dedicated file. §15.X numbering preserved so code, proto, and other-doc references resolve.
 

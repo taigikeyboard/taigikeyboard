@@ -387,23 +387,7 @@ These are noted to prevent re-discovery in future sessions. Not committed to any
 
 ## 10. Commit Behavior & Display Split (Model B)
 
-**Moved 2026-05-26 →** [`continuous-commit-and-display.md`](continuous-commit-and-display.md). The full Model B normative contract for display split + commit dispatch — §10.1 through §10.10a — lives in the dedicated file as part of the P3 doc-size split. Section numbering `§10.X` is preserved in the extracted file so existing references in code comments, other docs (including this file's §1–§9), and historical archives continue to resolve.
-
-Quick-reference of subsections retained for discoverability:
-
-- **§10.1** Motivation
-- **§10.1.1** Mainstream IME source — Model B is unanimous (librime / khiin-rs / MOE / azooKey four-IME cite-and-trace)
-- **§10.1.2** Supersedes — slot-0 model unification (Codex clarification α)
-- **§10.2** Display Contract (incl. segmented-spacing contract, Compound-hyphen Option A, per-segment case 2A, segmented-version rendering clarification γ)
-- **§10.3** Commit Contract (incl. clarifications β REWRITTEN + γ Model-B-adjusted)
-- **§10.4** Data-Flow Invariant (I1–I4)
-- **§10.5** Mode Gating
-- **§10.6** Cross-Platform Touch Points (incl. Bug-3 convergence + external-region-clear policy)
-- **§10.7** Edge Cases
-- **§10.8** Regression Test Hooks (11 acceptance cases)
-- **§10.9** Relationship to §1–§9 (this doc)
-- **§10.10** Codex Co-Review Log (2026-05-13)
-- **§10.10a** Model B rewrite (2026-05-16, Bug 3 closeout)
+**Moved 2026-05-26 →** [`continuous-commit-and-display.md`](continuous-commit-and-display.md). The full Model B normative contract — §10.1 motivation / §10.2 display contract / §10.3 commit contract / §10.4 data-flow invariant / §10.5 mode gating / §10.6 cross-platform touch points / §10.7 edge cases / §10.8 regression test hooks / §10.9 relationship to §1–§9 / §10.10 Codex co-review / §10.10a Model B rewrite — lives in the dedicated file. `§10.X` numbering preserved so existing references in code, other docs, and archives resolve.
 
 ---
 

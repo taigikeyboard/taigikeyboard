@@ -476,18 +476,4 @@ Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion
 
 ## 16. Keyboard body — touch + popup + window insets (Android Compose body)
 
-**Moved 2026-05-26 →** [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md). This section's 11 `INVARIANT_keyboard_*` labels are Android-only by design (the iOS keyboard is a KeyboardKit-driven SwiftUI tree with its own platform contract) and were extracted to a dedicated file to keep this doc focused on cross-platform invariants. Kotlin source comments referencing the labels are unchanged.
-
-Quick redirect — pinned labels:
-
-- `INVARIANT_keyboard_touch_hit_box_matches_visible_bounds`
-- `INVARIANT_keyboard_long_press_delay_unchanged`
-- `INVARIANT_keyboard_popup_drag_select_tracks_pointer`
-- `INVARIANT_keyboard_multi_touch_first_pointer_cancels`
-- `INVARIANT_keyboard_navbar_inset_padding_factor`
-- `INVARIANT_keyboard_navbar_dismiss_bug_stays_resolved`
-- `INVARIANT_keyboard_action_cancel_unconditional_cleanup`
-- `INVARIANT_keyboard_popup_hide_clears_anchor`
-- `INVARIANT_keyboard_popup_hide_dismisses_preview_window`
-- `INVARIANT_keyboard_press_starts_only_on_down`
-- `INVARIANT_keyboard_register_input_view_main_thread_setup`
+**Moved 2026-05-26 →** [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md) — 11 `INVARIANT_keyboard_*` labels (Android-only by design; iOS keyboard is a separate KeyboardKit contract). Kotlin source comments referencing the labels are unchanged; see the extracted file for the full list.
