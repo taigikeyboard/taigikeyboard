@@ -225,6 +225,129 @@ The acceptance gate is a release-build per-keystroke dogfood on the
 candidate strip per `~/.claude/rules/code-review-rules.md §9` (qualitative,
 no P50/P95). A no-regression dogfood = ship.
 
+## Step 2 observability gate — re-run procedure
+
+The acceptance gate from § "Step 2 outcome" is **qualitative dogfood**
+per `~/.claude/rules/code-review-rules.md §9`. It is not a one-shot
+artifact — re-run after any branch that touches `ime/text/smartbar/`,
+`ime/dictionary/TaigiWord.kt`, `ime/text/composing/ComposingManager.kt`,
+or any `@Composable` reachable from `SmartbarContainer`. The procedure
+below captures both the static pre-screen + the device dogfood.
+
+### Baseline (post-step-2 ship)
+
+Module totals from the `f14f4e0b` (B10 step 1) + `5077915e` (B10 step 2)
+release-with-reports build held below — these are the comparison anchors
+for every later re-run:
+
+| Metric | Baseline value |
+|---|---|
+| `totalComposables` | 421 |
+| `skippableComposables` | 312 |
+| `restartableComposables` | 417 |
+| `markedStableClasses` | 2 |
+| `inferredStableClasses` | 127 |
+| `inferredUnstableClasses` | 94 |
+| `knownStableArguments` | 5399 |
+| `knownUnstableArguments` | 91 |
+| `featureFlags.StrongSkipping` | `true` |
+
+Hot-path Composables at baseline (all `restartable skippable`, none with
+unstable params after the `TaigiWord` config entry):
+
+- `TaigiCandidateStrip(state: CandidateStripState)`
+- `EnglishCandidateStrip(state: CandidateStripState)`
+- `CandidateCell(word: TaigiWord, …)`
+- `EnglishCandidateCell(…)`
+
+### Step A — static pre-screen
+
+Before running the build, grep the diff range for shapes that move
+stability:
+
+```bash
+git diff --stat 5077915e..HEAD -- \
+  android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/ \
+  android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TaigiWord.kt \
+  android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/ \
+  android/app/compose_compiler_config.conf
+```
+
+Flag (re-run mandatory) when the diff:
+
+- adds / removes a `@Composable` in `ime/text/smartbar/` or any reachable
+  caller of `SmartbarContainer`;
+- adds a `data class` / `class` that is a parameter to an existing
+  hot-path `@Composable`;
+- mutates `TaigiWord` — new `var`, new mutable collection field, or any
+  property whose producer doesn't guarantee structural immutability;
+- changes `compose_compiler_config.conf`;
+- swaps a `StateFlow<T>` into a Composable parameter slot (Composables
+  should still take the collected `.value`, not the `StateFlow`).
+
+Skip (re-run optional) when the diff is confined to internal
+collaborators that are never `@Composable` params — e.g. B5's
+`TextInputKeyHandler` / `KeyboardUiCoordinator` / `ImeKeyEventDispatcher`
+are `internal class` IME plumbing, B9's `ComposingManager` exposes
+`StateFlow<String>` / `StateFlow<Boolean>` / `StateFlow<Int>` collected
+via `.value` (primitive — stable).
+
+### Step B — release report build (USER)
+
+USER runs (mid-round builds are USER's responsibility per project
+CLAUDE.md § Build & Test — Claude does not invoke `./gradlew` outside
+the post-PR parallel-verification exception):
+
+```bash
+cd android
+./gradlew :app:assembleRelease -PenableComposeCompilerReports=true
+```
+
+Outputs land under `android/app/build/compose_compiler/`. Read in this
+order:
+
+1. `release/app-module.json` — module totals; compare line-by-line to
+   the baseline table above.
+2. `app-classes.txt` — grep for new `unstable class …` entries under
+   `com.siansiansu.taigikeyboard.ime.text.smartbar.` or
+   `com.siansiansu.taigikeyboard.ime.dictionary.`.
+3. `app-composables.txt` — grep for hot-path Composable signatures and
+   verify the `restartable skippable` flag is still set with no unstable
+   params.
+
+### Step C — per-keystroke dogfood (USER)
+
+On a real Android device with the release build installed, exercise the
+candidate strip through the §9 qualitative gate (`.claude/rules/taigi-incidents.md`
+§ "Qualitative perf gate"):
+
+- **S1 POJ diacritics** — type a long POJ word with multiple tone marks
+  (e.g. `kerngerngeh` → 砍砍下), scroll the candidate list, tap a
+  middle-of-list candidate.
+- **S2 TPS composition** — type a TPS sequence with nasal coda
+  (e.g. `ㄉㄞㄨㄢㄉㄞㆣㄧ` → 臺灣台語), commit via candidate tap, then
+  continuous-input a follow-up syllable.
+- **S3 Hanji candidate scroll** — type a high-frequency Hanji prefix
+  (e.g. `hak` → 學校 / 學生 / …), fast-scroll the candidate row at least
+  one screen-width before tapping.
+
+Watch for: visible recomposition flicker on the candidate strip, scroll
+jank, candidate-cell text re-layout between keystrokes, or candidate-strip
+freeze during continuous-input segmentation. None of these should be
+worse than the baseline build.
+
+### Decision rule
+
+| Observation | Action |
+|---|---|
+| `app-module.json` regressions: `inferredStableClasses` ↓ AND a new hot-path Composable has an unstable param | Open a B10 step 3 round; apply the option A/B/C/D/E decision rule above to the new unstable class |
+| `app-module.json` deltas confined to non-hot-path classes (e.g. settings-screen DTOs) | Note in the round summary; no new round |
+| Dogfood S1/S2/S3 all behave like baseline | Gate clean — close round |
+| Dogfood shows visible regression on a Composable that the report says is `skippable` | Likely a `mutableStateOf` / collection-mutation bug, not a stability bug. Trace the producer, not the annotation |
+
+A no-regression observation closes the gate for this branch. The next
+re-run fires when Step A's flag list trips again.
+
 ## References
 
 - Android — Compose Compiler Gradle plugin setup:
