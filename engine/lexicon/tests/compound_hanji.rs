@@ -1,14 +1,20 @@
-//! v3.5.8 §10.2 Option A — `compound_hanji_exists` hermetic regression.
+//! §10.2 — `compound_hanji_exists` hermetic regression.
 //!
 //! Locks the dictionary-compound oracle the composing render/commit join
-//! (`composing::api::nailed_prefix`) uses to decide whether two adjacent
-//! manually-nailed single-syllable segments reconstruct a known
-//! 2-syllable compound (查某 → `tsa-bóo`) and therefore render their
-//! word boundary as an internal hyphen. Synthetic FST + dict.bin so the
-//! contract does not depend on shipped dictionary data.
+//! (`composing::api::nailed_prefix`) uses to decide whether a contiguous
+//! run of manually-nailed single-syllable segments reconstructs a known
+//! n-syllable compound (查某 → `tsa-bóo`, 紅尾冬 → `Âng-bóe-tang`) and
+//! therefore renders its internal boundaries as hyphens. Synthetic FST
+//! + dict.bin so the contract does not depend on shipped dictionary
+//! data.
+//!
+//! v3.5.9 extended the v3.5.8 §10.2 Option A bigram-only oracle to
+//! parametric `syllable_count` so the caller's longest-match loop can
+//! ask "is `hanji` an n-syllable compound?" for any `n >= 2`.
 //
-// 中文: §10.2 Option A — compound_hanji_exists 的 hermetic 回歸測試。
-// 中文:   合成 FST + dict.bin,鎖「漢字 exact-key + syllable_count==2 + hanzi 再驗」契約。
+// 中文: §10.2 — compound_hanji_exists 的 hermetic 回歸測試。
+// 中文:   合成 FST + dict.bin,鎖「漢字 exact-key + syllable_count 參數 + hanzi 再驗」契約。
+// 中文:   v3.5.9 由固定 n=2 擴為任意 n>=2(longest-match)。
 
 mod common;
 
@@ -111,27 +117,37 @@ fn compound_hanji_exists_contract_matrix() {
         "single-hanji prefix has no exact entry"
     );
 
-    // Positive — exact 2-syllable hanji compounds.
-    assert!(compound_hanji_exists("查某", &prefix, &dict));
-    assert!(compound_hanji_exists("麻煩", &prefix, &dict));
+    // Positive — exact 2-syllable hanji compounds with n=2.
+    assert!(compound_hanji_exists("查某", 2, &prefix, &dict));
+    assert!(compound_hanji_exists("麻煩", 2, &prefix, &dict));
 
     // syllable_count gate: a real 2-CJK entry that is NOT two TL
     // syllables must NOT auto-hyphenate (Codex pre-impl N2).
-    assert!(!compound_hanji_exists("逐家", &prefix, &dict));
+    assert!(!compound_hanji_exists("逐家", 2, &prefix, &dict));
 
-    // 3-syllable word: not a 2-syllable bigram (its record is
-    // syllable_count == 3, and per the parity pin above its key is
-    // distinct from "hanzi:查某").
-    assert!(!compound_hanji_exists("查某人", &prefix, &dict));
+    // 3-syllable word with n=3 → positive (v3.5.9 longest-match
+    // extension). Same word with n=2 → negative: it is not a 2-syll
+    // compound, and the parity pin above confirms its key does not
+    // bleed into "hanzi:查某" either.
+    assert!(compound_hanji_exists("查某人", 3, &prefix, &dict));
+    assert!(!compound_hanji_exists("查某人", 2, &prefix, &dict));
+
+    // 2-syll word with n=3 → negative (asymmetric: a record with
+    // syllable_count==2 is not an n=3 compound).
+    assert!(!compound_hanji_exists("查某", 3, &prefix, &dict));
+
+    // n < 2 short-circuit: every input returns false at n=1 / n=0.
+    assert!(!compound_hanji_exists("查某", 1, &prefix, &dict));
+    assert!(!compound_hanji_exists("查某", 0, &prefix, &dict));
 
     // Absent key.
-    assert!(!compound_hanji_exists("無彩", &prefix, &dict));
+    assert!(!compound_hanji_exists("無彩", 2, &prefix, &dict));
 
     // Fn-level: a single-hanji prefix of a compound key resolves to
     // nothing (the raw-rowid parity is pinned directly above).
-    assert!(!compound_hanji_exists("查", &prefix, &dict));
+    assert!(!compound_hanji_exists("查", 2, &prefix, &dict));
 
     // Defensive re-check: key resolves to a record whose hanzi is
     // "好", not "壞" → rejected despite syllable_count == 2.
-    assert!(!compound_hanji_exists("壞", &prefix, &dict));
+    assert!(!compound_hanji_exists("壞", 2, &prefix, &dict));
 }

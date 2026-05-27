@@ -932,39 +932,57 @@ pub fn best_candidate_for_key(
     best
 }
 
-/// v3.5.8 §10.2 Option A — does the exact hanzi `hanji` resolve to a
-/// dictionary entry that is **exactly two TL syllables**? Used by the
-/// composing render/commit join ([`crate`] consumer
-/// `composing::api::nailed_prefix`) to decide whether two adjacent
-/// manually-nailed single-syllable segments reconstruct a known
-/// 2-syllable compound (`查某` / `tsa-bóo`) and therefore render their
-/// word boundary as an internal hyphen instead of a space.
+/// Does the exact hanzi `hanji` resolve to a dictionary entry of
+/// **exactly `syllable_count` TL syllables**? Used by the composing
+/// render/commit join ([`crate`] consumer `composing::api::nailed_prefix`)
+/// to decide whether a contiguous run of manually-nailed single-syllable
+/// segments reconstructs a known n-syllable compound (`紅尾冬` /
+/// `âng-bóe-tang`, `查某` / `tsa-bóo`) and therefore render its internal
+/// boundaries as hyphens instead of spaces.
+///
+/// `syllable_count < 2` returns `false` unconditionally (a single
+/// syllable is not a "compound" by definition; the caller never queries
+/// `n=1`).
 ///
 /// Scans **all** `prefix_index.lookup_exact("hanzi:<hanji>")` rowids —
 /// NOT [`best_candidate_for_key`], which returns a single ranking
 /// winner and would make a presentation separator depend on score
 /// (Codex pre-impl Q2 2026-05-18) — and returns `true` iff some record
-/// has `syllable_count == 2` **and** `hanzi == Some(hanji)`. The
-/// `syllable_count == 2` gate is load-bearing: many two-CJK-codepoint
+/// has `syllable_count == <argument>` **and** `hanzi == Some(hanji)`.
+/// The `syllable_count` gate is load-bearing: many two-CJK-codepoint
 /// dictionary entries are NOT two TL syllables (e.g. `先生 / sin-senn`,
 /// `新婦 / sim-pū`); existence alone would over-hyphenate them (Codex
 /// pre-impl N2 2026-05-18). The explicit `hanzi` re-check guards
 /// against wrong rowids / future index drift; it cannot bridge
 /// byte-different but visually-equivalent variant forms (an accepted
 /// data-level limitation, identical to the toneless-key path).
-// 中文: §10.2 Option A — 漢字 exact-key 查詢:hanji 是否為「恰好 2 音節」的詞庫詞。
+///
+/// **v3.5.9 longest-match extension** — previously fixed at 2 syllables
+/// (`§10.2 Option A`), now parameterized so the caller's longest-match
+/// loop can ask "is `hanji` an n-syllable compound?" for `n >= 2`. Peer
+/// IMEs (khiin-rs `autospace`, librime spelling-algebra DAG, McBopomofo
+/// `ReadingGrid`) handle multi-syllable compounds at segmentation /
+/// lattice-walk time instead of at commit-join time; this extension is
+/// the manual-nail-flow-compatible analog and is intentionally narrower
+/// in scope (an isolated UX heuristic, not a general best practice).
+// 中文: 漢字 exact-key 查詢:hanji 是否為「恰好 syllable_count 音節」的詞庫詞。
 // 中文: 掃全部 lookup_exact rowids(非 best_candidate_for_key — 分隔符不可依賴排序),
-// 中文:   syllable_count==2 為必要閘:很多雙漢字條目非 2 音節(先生 / 新婦),
+// 中文:   syllable_count gate 為必要閘:很多雙漢字條目非 2 音節(先生 / 新婦),
 // 中文:   僅判存在會誤連;hanzi 再驗防 rowid 漂移(無法橋接位元不同的異體字)。
+// 中文: v3.5.9 longest-match 擴充 — 由固定 2 改為傳入,呼叫端 longest-match loop 用。
 pub fn compound_hanji_exists(
     hanji: &str,
+    syllable_count: u8,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> bool {
+    if syllable_count < 2 {
+        return false;
+    }
     let key = format!("hanzi:{hanji}");
     for rowid in prefix_index.lookup_exact(&key) {
         if let Some(record) = dict.record(rowid) {
-            if record.syllable_count == 2 && record.hanzi.as_deref() == Some(hanji) {
+            if record.syllable_count == syllable_count && record.hanzi.as_deref() == Some(hanji) {
                 return true;
             }
         }

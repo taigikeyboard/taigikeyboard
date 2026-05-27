@@ -157,78 +157,125 @@ fn continuous_word_space(config: &AppConfig) -> bool {
 }
 
 /// Pure `Σ nailed[i].display_text` join, parameterized by the
-/// roman-ish `space` predicate and a `is_compound` oracle. **Single
+/// roman-ish `space` predicate and an `is_compound` oracle. **Single
 /// source of truth** for the nailed-prefix concatenation; do not
 /// re-inline this loop.
 ///
 /// Inter-segment boundary policy (only when `space`, i.e. roman-ish —
 /// hanji-first / TPS have no separator at all):
 /// - boundary after a hyphen-continuation segment (`tai-`, `s` ends
-///   with `-`): emit **nothing** (existing mid-word rule, mirrors the
-///   platform `appendAutoSpaceIfApplicable` `endsWith("-")` guard) and
-///   treat the boundary as already hyphenated for chain-prevention;
-/// - else a `-` (instead of the word-boundary space) iff the previous
-///   boundary was NOT a hyphen (left-to-right non-overlapping bigram,
-///   blocks `A-B-C` over-gluing while still allowing `A B-C`), both
-///   adjacent segments are single-syllable, and
-///   `is_compound(prev.canonical_text + seg.canonical_text)` — i.e.
-///   the pair reconstructs a known 2-syllable dictionary compound
-///   (查某 → `tsa-bóo`); otherwise a single space.
+///   with `-`): emit **nothing** and skip the compound check for the
+///   segment that follows (mirrors the platform
+///   `appendAutoSpaceIfApplicable` `endsWith("-")` guard);
+/// - else, find the **longest run** `[j, j+n)` (`n >= 2`) starting at
+///   the current position such that every member is single-syllable
+///   AND `is_compound(Σ canonical_text, n)` is true. If found, emit
+///   internal `-` between run members; otherwise advance one segment
+///   and emit a single space at the boundary.
+///
+/// Anti-overgluing (overlapping bigrams `AB` + `BC` without trigram
+/// `ABC` → `A-B C`, not `A-B-C`) is a natural consequence of
+/// leftmost longest-match; the unit tests below pin the matrix.
 ///
 /// The separator is a render/commit join concern, **dictionary-informed**
-/// for known two-syllable compounds (Codex pre-impl 2026-05-18), and is
-/// NEVER stored in `NailedSegment.display_text` / `raw_text` —
-/// backspace-pop restores the editable tail from `raw_text`, so segment
-/// data stays separator-free; the hyphen is derived fresh on every
-/// render from the segments' own `canonical_text` + `syllable_count`.
+/// for known n-syllable compounds, and is NEVER stored in
+/// `NailedSegment.display_text` / `raw_text` — backspace-pop restores the
+/// editable tail from `raw_text`, so segment data stays separator-free;
+/// the hyphen is derived fresh on every render from the segments' own
+/// `canonical_text` + `syllable_count`.
 // 中文: 純串接迴圈;唯一真相來源,勿內聯。分隔符屬 render/commit 呈現層,
-// 中文:   但對「詞庫已知 2 音節複合詞」用連字號(查某→tsa-bóo);絕不寫入
-// 中文:   NailedSegment(backspace 由 raw_text 還原,連字號每次 render 由
-// 中文:   canonical_text + syllable_count 即時推導)。左→右不重疊 bigram
-// 中文:   (prev_hyphen 防 A-B-C 過度黏連);trailing-`-` 視為已連字號。
+// 中文:   但對「詞庫已知 n 音節複合詞」用連字號;絕不寫入 NailedSegment
+// 中文:   (backspace 由 raw_text 還原,連字號每次 render 由 canonical_text
+// 中文:   + syllable_count 即時推導)。leftmost longest-match,
+// 中文:   trailing-`-` 視為已連字號,下一段不再 compound。
 fn nailed_prefix_with_oracle(
     nailed: &[NailedSegment],
     space: bool,
-    is_compound: impl Fn(&str) -> bool,
+    is_compound: impl Fn(&str, u8) -> bool,
 ) -> String {
     let mut s = String::new();
-    // The previous emitted inter-segment boundary rendered as a hyphen
-    // (an auto-compound `-` OR a user-typed trailing `-` that
-    // suppressed the separator). Blocks `A-B-C` over-gluing (Codex
-    // pre-impl R4 2026-05-18).
-    let mut prev_hyphen = false;
-    for (i, seg) in nailed.iter().enumerate() {
-        if i > 0 && space {
-            if s.ends_with('-') {
-                // Mid-word hyphen-continuation: emit nothing; the
-                // boundary is already hyphenated.
-                prev_hyphen = true;
-            } else {
-                let prev = &nailed[i - 1];
-                let compound = !prev_hyphen
-                    && prev.syllable_count == 1
-                    && seg.syllable_count == 1
-                    && is_compound(&format!("{}{}", prev.canonical_text, seg.canonical_text));
-                if compound {
-                    s.push('-');
-                    prev_hyphen = true;
-                } else {
-                    s.push(' ');
-                    prev_hyphen = false;
-                }
-            }
+    let mut j = 0;
+    while j < nailed.len() {
+        let prev_hyphen = s.ends_with('-');
+        let run_len = if !space || prev_hyphen {
+            1
+        } else {
+            longest_compound_run(&nailed[j..], &is_compound)
+        };
+
+        if j > 0 && space && !prev_hyphen {
+            s.push(' ');
         }
-        s.push_str(&seg.display_text);
+        for k in 0..run_len {
+            if k > 0 {
+                s.push('-');
+            }
+            s.push_str(&nailed[j + k].display_text);
+        }
+        j += run_len;
     }
     s
 }
 
+/// Upper bound on the longest-match compound scan. Matches the
+/// dictionary builder cap `MAX_SYLLABLES = 4` at
+/// `dictionary/build/dictionary_records.py:43` — records with more
+/// syllables are dropped at build time, so probing the FST for `n > 4`
+/// is wasted work. The cap also keeps the `n as u8` proto cast safely
+/// inside `u8` for any nail-history length (the dispatch-layer
+/// `clamp_syllable_count` already saturates platform input at `u8`).
+// 中文: 字典 builder 在 dictionary/build/dictionary_records.py:43
+// 中文:   把 syllable_count cap 在 4;此處 longest-match 沿用同上限,
+// 中文:   既避免無效 FST lookups 也讓 `n as u8` 不會溢位。
+const MAX_COMPOUND_RUN: usize = 4;
+
+/// Largest `n` in `2..=MAX_COMPOUND_RUN` such that `segs[..n]` are all
+/// single-syllable segments whose `display_text` does NOT end with
+/// `-` (a user-typed hyphen continuation — a `tai-` segment carries
+/// its own boundary and cannot be folded into an automatic compound
+/// run without duplicating the hyphen), AND
+/// `is_compound(Σ canonical_text, n)` is true. Returns `1` when no
+/// run qualifies (caller treats it as "advance one segment, normal
+/// boundary").
+///
+/// Builds the full eligible-segment concatenation once, then truncates
+/// from the right per iteration — O(max_n) string ops instead of
+/// rebuilding each attempt.
+// 中文: 從 segs 起始找最長 n in 2..=MAX_COMPOUND_RUN 的 compound run;
+// 中文:   排除 syllable_count!=1 與 display_text 已含 user-typed trailing `-`
+// 中文:   的 segment(否則會把 `tai-` 渲成 `tai--uan`)。一次組好 concat,
+// 中文:   再從右側截斷每次嘗試。
+fn longest_compound_run<F: Fn(&str, u8) -> bool>(segs: &[NailedSegment], is_compound: &F) -> usize {
+    let max_n = segs
+        .iter()
+        .take(MAX_COMPOUND_RUN)
+        .take_while(|s| s.syllable_count == 1 && !s.display_text.ends_with('-'))
+        .count();
+    if max_n < 2 {
+        return 1;
+    }
+    let mut concat = String::new();
+    for s in &segs[..max_n] {
+        concat.push_str(&s.canonical_text);
+    }
+    for n in (2..=max_n).rev() {
+        if is_compound(&concat, n as u8) {
+            return n;
+        }
+        if n > 2 {
+            let last_len = segs[n - 1].canonical_text.len();
+            concat.truncate(concat.len() - last_len);
+        }
+    }
+    1
+}
+
 /// `Σ nailed[i].display_text` joined with the §10.2 word-boundary
-/// separator (see [`continuous_word_space`]), with two adjacent
-/// single-syllable segments that reconstruct a **known 2-syllable
-/// dictionary compound** joined by an internal hyphen instead
-/// (查某 → `tsa-bóo`, v3.5.8 §10.2 Option A — manual single-syllable
-/// tap path).
+/// separator (see [`continuous_word_space`]), with a contiguous run of
+/// single-syllable segments that reconstructs a **known n-syllable
+/// dictionary compound** joined by internal hyphens instead
+/// (紅尾冬 → `Âng-bóe-tang`, 查某 → `tsa-bóo`). v3.5.9 extends the
+/// v3.5.8 §10.2 Option A bigram-only oracle to longest-match `n >= 2`.
 ///
 /// One lexicon lock for the whole join (Codex pre-impl R2 2026-05-18).
 /// Cheap pre-gate first: a compound hyphen can only fire when the
@@ -237,9 +284,10 @@ fn nailed_prefix_with_oracle(
 /// no dictionary is installed (`with_state` → `Err`, e.g. unit tests)
 /// the join degrades to the pure space-join: byte-identical to the
 /// pre-Option-A behaviour.
-// 中文: §10.2 詞界分隔;相鄰兩單音節段若還原成詞庫已知 2 音節複合詞改用連字號。
+// 中文: §10.2 詞界分隔;相鄰連續單音節段若還原成詞庫已知 n 音節複合詞改用連字號。
 // 中文: 整段 join 只鎖一次 lexicon(R2);cheap 前置閘擋掉非 roman-ish / 無單音節對;
 // 中文: 未安裝詞庫(with_state Err,如單元測試)→ 退化為純空格 join(行為不變)。
+// 中文: v3.5.9 由 bigram-only 擴為 longest-match n>=2(紅尾冬→Âng-bóe-tang)。
 pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
     let space = continuous_word_space(config);
     let eligible = space
@@ -248,18 +296,18 @@ pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> Str
             .windows(2)
             .any(|w| w[0].syllable_count == 1 && w[1].syllable_count == 1);
     if !eligible {
-        return nailed_prefix_with_oracle(nailed, space, |_| false);
+        return nailed_prefix_with_oracle(nailed, space, |_, _| false);
     }
     LexiconHandle::with_state(|state| {
         let (Some(prefix), Some(dict)) = (state.prefix_index.as_ref(), state.dictionary.as_ref())
         else {
-            return Ok(nailed_prefix_with_oracle(nailed, space, |_| false));
+            return Ok(nailed_prefix_with_oracle(nailed, space, |_, _| false));
         };
-        Ok(nailed_prefix_with_oracle(nailed, space, |h| {
-            compound_hanji_exists(h, prefix, dict)
+        Ok(nailed_prefix_with_oracle(nailed, space, |h, n| {
+            compound_hanji_exists(h, n, prefix, dict)
         }))
     })
-    .unwrap_or_else(|_| nailed_prefix_with_oracle(nailed, space, |_| false))
+    .unwrap_or_else(|_| nailed_prefix_with_oracle(nailed, space, |_, _| false))
 }
 
 /// The Model B composing-buffer surface for a `(nailed, raw)` pair:
@@ -589,29 +637,36 @@ mod tests {
         assert_eq!(combined_display(&[], "a", &cfg("tl", false, false)), "a");
     }
 
-    // ---- v3.5.8 §10.2 Option A — dictionary-compound hyphen join ----
+    // ---- §10.2 dictionary-compound hyphen join (longest-match) ----
     // `nailed_prefix_with_oracle` is the pure join; these pin the
     // separator policy against a hermetic compound oracle (the live
     // lexicon-backed path is locked in `engine/lexicon/tests/
     // compound_hanji.rs` + the graceful no-lexicon path by the §10.2
     // predicate-matrix tests above, which now route through this fn).
+    // v3.5.9 extended the v3.5.8 §10.2 Option A bigram-only oracle to
+    // longest-match `n >= 2`.
 
     #[test]
     fn oracle_false_everywhere_is_byte_identical_to_plain_space_join() {
         // Regression pin: with no compound ever, the roman-ish join is
         // exactly the pre-Option-A behaviour.
         let n = [seg("hit"), seg("tui")];
-        assert_eq!(nailed_prefix_with_oracle(&n, true, |_| false), "hit tui");
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |_, _| false),
+            "hit tui"
+        );
         // Hanji-first / TPS (space = false) → no separator at all,
         // oracle irrelevant.
         let h = [seg("彼"), seg("隻")];
-        assert_eq!(nailed_prefix_with_oracle(&h, false, |_| true), "彼隻");
+        assert_eq!(nailed_prefix_with_oracle(&h, false, |_, _| true), "彼隻");
     }
 
     #[test]
     fn known_two_syllable_compound_renders_internal_hyphen() {
         // hit ê tsa bóo → hit ê tsa-bóo (查某 is the only 2-syll
-        // compound; "彼个" / others are not in the oracle).
+        // compound; "彼个" / others are not in the oracle). Regression
+        // pin: the v3.5.9 longest-match refactor must preserve the
+        // v3.5.8 §10.2 Option A bigram path.
         let n = [
             seg_dc("hit", "彼", 1),
             seg_dc("ê", "个", 1),
@@ -619,51 +674,141 @@ mod tests {
             seg_dc("bóo", "某", 1),
         ];
         assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |h| h == "查某"),
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2 && h == "查某"),
             "hit ê tsa-bóo"
         );
     }
 
     #[test]
-    fn left_to_right_non_overlapping_bigram_blocks_a_b_c_overgluing() {
-        // Oracle says both 查某 and 某人 are 2-syll compounds. Strict
-        // non-overlapping left-to-right pairing hyphens (查,某) then
-        // blocks (某,人) — "查-某 人", never "查-某-人".
+    fn known_three_syllable_compound_renders_internal_hyphens() {
+        // 紅尾冬 (red-tail fish) is a known 3-syll compound; both 紅尾
+        // (n=2) and 紅尾冬 (n=3) are in the oracle. Longest-match-left
+        // picks n=3, emitting hyphens between all three members:
+        // "Âng-bóe-tang", NOT "Âng-bóe tang".
+        let n = [
+            seg_dc("Âng", "紅", 1),
+            seg_dc("bóe", "尾", 1),
+            seg_dc("tang", "冬", 1),
+        ];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h, n| matches!(
+                (h, n),
+                ("紅尾冬", 3) | ("紅尾", 2)
+            )),
+            "Âng-bóe-tang"
+        );
+    }
+
+    #[test]
+    fn overlapping_bigrams_do_not_imply_trigram() {
+        // Oracle says both 查某 (n=2) and 某人 (n=2) are compounds, but
+        // 查某人 (n=3) is NOT. Longest-match tries n=3 (false), then
+        // n=2 from the leftmost position (true) → consumes 查-某,
+        // advances to 人, emits ` 人` → "tsa-bóo lâng", never
+        // "tsa-bóo-lâng". Anti-overgluing is a natural consequence of
+        // leftmost longest-match, not a separate `prev_hyphen` guard.
         let n = [
             seg_dc("tsa", "查", 1),
             seg_dc("bóo", "某", 1),
             seg_dc("lâng", "人", 1),
         ];
         assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |h| h == "查某" || h == "某人"),
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2
+                && (h == "查某" || h == "某人")),
             "tsa-bóo lâng"
         );
     }
 
     #[test]
-    fn multi_syllable_segment_is_not_a_compound_bigram_member() {
+    fn disjoint_bigrams_each_render_internal_hyphen() {
+        // A-B-C-D with AB and CD both 2-syll compounds, ABC and BCD
+        // and ABCD none → "A-B C-D". Disjoint runs don't block each
+        // other; only an in-flight run is anti-extended.
+        let n = [
+            seg_dc("tsa", "查", 1),
+            seg_dc("bóo", "某", 1),
+            seg_dc("mâ", "麻", 1),
+            seg_dc("huân", "煩", 1),
+        ];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2
+                && (h == "查某" || h == "麻煩")),
+            "tsa-bóo mâ-huân"
+        );
+    }
+
+    #[test]
+    fn multi_syllable_segment_is_not_a_compound_run_member() {
         // A 2-syllable nailed segment (e.g. the compound was tapped
-        // whole) is never re-hyphenated against a neighbour even if the
-        // oracle would match the canonical concatenation.
+        // whole) is never folded into an n-syll compound run even if
+        // the oracle would match the canonical concatenation. The
+        // longest-match scan stops counting at the first non-single-
+        // syllable segment.
         let n = [seg_dc("tsa-bóo", "查某", 2), seg_dc("lâng", "人", 1)];
         assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |_| true),
+            nailed_prefix_with_oracle(&n, true, |_, _| true),
             "tsa-bóo lâng"
+        );
+    }
+
+    #[test]
+    fn user_typed_trailing_hyphen_inside_run_disqualifies_compound() {
+        // `tai-` (user hyphen-continuation) appears first in the run.
+        // Oracle DOES hit `(台灣, 2)`, but `longest_compound_run` must
+        // exclude segments whose `display_text` already ends with `-`
+        // (otherwise the in-run auto-hyphen would render `tai--uan`).
+        // Expected: push `tai-` alone, then the next iteration sees
+        // `s.ends_with('-')` and pushes `uan` with no boundary →
+        // `tai-uan` (Codex PR #349 r3311725114).
+        let n = [seg_dc("tai-", "台", 1), seg_dc("uan", "灣", 1)];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2 && h == "台灣"),
+            "tai-uan"
+        );
+    }
+
+    #[test]
+    fn compound_run_capped_at_max_dictionary_phrase_length() {
+        // Builder caps `syllable_count` at 4 (`dictionary/build/
+        // dictionary_records.py:43`); the longest-match scan mirrors
+        // the cap. Even if the oracle would happily say "yes" for a
+        // 5-syllable concat, `longest_compound_run` never asks at
+        // `n=5` — the result is the longest 4-syllable match (n=4
+        // here), and the 5th segment renders as a separate word with
+        // a space boundary (Codex PR #349 r3311725130).
+        let n = [
+            seg_dc("a", "A", 1),
+            seg_dc("b", "B", 1),
+            seg_dc("c", "C", 1),
+            seg_dc("d", "D", 1),
+            seg_dc("e", "E", 1),
+        ];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h, n| {
+                // ALL prefixes match — without the cap we'd get a
+                // single 5-syll run "a-b-c-d-e".
+                matches!(
+                    (h, n),
+                    ("ABCDE", 5) | ("ABCD", 4) | ("ABC", 3) | ("AB", 2)
+                )
+            }),
+            "a-b-c-d e"
         );
     }
 
     #[test]
     fn user_typed_trailing_hyphen_suppresses_then_blocks_next_compound() {
         // "tai-" is a user hyphen-continuation: boundary emits nothing
-        // and counts as already-hyphenated, so the following (uan, X)
-        // boundary cannot also auto-compound (gets a plain space).
+        // and the following segment skips its compound check (run_len
+        // forced to 1 by `s.ends_with('-')`), so even though 灣國 is in
+        // the oracle the (uan, X) pair does NOT auto-compound.
         let n = [
             seg_dc("tai-", "台", 1),
             seg_dc("uan", "灣", 1),
             seg_dc("X", "國", 1),
         ];
         assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |h| h == "灣國"),
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2 && h == "灣國"),
             "tai-uan X"
         );
     }
