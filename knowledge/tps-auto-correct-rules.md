@@ -81,6 +81,12 @@ When the user taps ㄇ, ㄋ, ㄫ, ㄅ, ㄉ, ㄍ, or ㄏ, check the last characte
 - Last char is a tone mark: ˋ ˪ ˊ ˇ ˫ ˙ ˆ
 - Last char is a checked tone final: ㆴ ㆵ ㆻ ㆷ
 - Last char is a space
+- Last char is a syllabic nasal or precomposed nasal-coda compound final: ㆬ ㄣ ㆭ ㄥ ㆰ ㄢ ㄤ ㆱ ㆲ
+- Last char is a nasalized vowel (ainn/aunn/ann/enn/inn/onn/unn → ㆮ ㆯ ㆩ ㆥ ㆪ ㆧ ㆫ)
+
+Pure-vowel finals (ㄚ ㄧ ㄨ ㄛ ㄜ ㄞ ㄠ etc.) are INTENTIONALLY excluded from the boundary set so single-syllable entering-tone input still works (ㄍㄚ + ㄉ → ㄍㄚㆵ for `kat`).
+
+Nasalized vowel + ㄏ also forms the legal nasalized checked final `-nnh` (annh, ennh, innh, iannh per `taigi-phonetics-reference.md` §3.2.5; ainnh, aunnh per §3.2.6 dialectal), but local look-back cannot distinguish that from cross-syllable `<nasalized-vowel> + ㄏ-initial` patterns like `ㄏㄨㆩㄏㄧ` (歡喜 = huann-hi). Continuous-input correctness wins: dictionary/canonical keys still store `-nnh` with final `ㆷ` and surface via dictionary lookup, but TPS auto-correct **deliberately does not synthesize** `ㆷ` from `ㄏ` after a nasalized vowel — `ㄏ` always stays as initial in that position.
 
 **Not at syllable start** (convert to final form):
 
@@ -123,10 +129,7 @@ Initial forms (ㄅ/ㄉ/ㄍ/ㄏ/ㄋ) are in the consonant table; final forms (ㆴ
 
 ### Implementation
 
-| Platform | Function | Location |
-|---|---|---|
-| iOS | `TPSConverter.adjustTPSInitialKey(_:afterRawInput:)` | `TPSConverter.swift` |
-| Android | `TPSConverter.adjustTPSInitialKey(char, afterRawInput)` | `TPSConverter.kt` |
+Rust shared-core single source: `engine/phonetics/src/tps_adjust.rs::adjust_initial_key`. Platform-side mirrors (iOS `TPSConverter.swift`, Android `TPSConverter.kt`) were deleted in the Path G migration; both iOS and Android call into the Rust engine via `Method::TpsInputAdjust`.
 
 ---
 

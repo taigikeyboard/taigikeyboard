@@ -75,14 +75,45 @@ pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
 // Syllable-boundary set (used by adjustInitialKey)
 // =========================================================================
 
+// Syllable-boundary chars: end the current syllable so a new dual-form
+// initial after one of these stays as the initial form. Includes tone
+// marks, entering-tone finals, syllabic nasals, precomposed nasal-coda
+// compound finals, and nasalized vowel finals — all sourced from
+// `tps::ZHUYIN_VOWELS`. (Space is handled separately by the inline
+// `last == ' '` check at the call site.)
+//
+// Pure-vowel finals (ㄚ ㄧ ㄨ ㄛ ㄜ ㄞ ㄠ etc.) are INTENTIONALLY excluded:
+// they are syllable-end-ambiguous and the entering-tone auto-correct
+// (ㄍㄚ + ㄉ → ㄍㄚㆵ for `kat`) depends on Rule 2 treating them as non-boundary.
+//
+// Nasalized vowel + ㄏ also forms the legal nasalized checked final `-nnh`
+// (annh, ennh, innh, iannh per §3.2.5; ainnh, aunnh per §3.2.6 dialectal),
+// but local look-back cannot distinguish that from cross-syllable
+// `<nasalized-vowel> + ㄏ-initial` like `ㄏㄨㆩㄏㄧ` (歡喜 = huann-hi).
+// Continuous-input correctness wins — `-nnh` checked syllables are rare
+// and the dictionary stores them in precomposed `ㆷ` form, so users reach
+// them via dictionary lookup rather than auto-correct.
+// 中文: 音節邊界字元;聲調符號、空白、入聲韻尾、自鳴鼻音、precomposed 鼻音韻尾與鼻化母音。純母音故意排除以保留入聲輸入。鼻化母音 + ㄏ 雖也是合法 `-nnh`,但局部無法分辨跨音節 (歡喜 `ㄏㄨㆩㄏㄧ`),取連續輸入正確性。
 static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     let mut set: HashSet<char> = TONE_MARK_CHARS.iter().copied().collect();
     // Checked-tone finals (entering-tone consonants — end syllable).
     for c in ['ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'] {
         set.insert(c);
     }
-    // Nasal finals (end syllable; next consonant starts new syllable).
+    // Syllabic nasals (ㆬ ㄣ ㆭ = m/n/ng in ZHUYIN_VOWELS) + contextual
+    // `ㄥ` (ㄫ after ㄧ — see adjust_initial_key).
     for c in ['ㆬ', 'ㄣ', 'ㆭ', 'ㄥ'] {
+        set.insert(c);
+    }
+    // Precomposed nasal-coda compound finals (am/an/ang/om/ong per
+    // `ZHUYIN_VOWELS` lines 51-64).
+    for c in ['ㆰ', 'ㄢ', 'ㄤ', 'ㆱ', 'ㆲ'] {
+        set.insert(c);
+    }
+    // Nasalized vowel finals (ainn/aunn/ann/enn/inn/onn/unn per
+    // `ZHUYIN_VOWELS` lines 44-50). Vowel + inherent nasalization = complete
+    // syllable; next dual-form initial starts a new syllable.
+    for c in ['ㆪ', 'ㆥ', 'ㆧ', 'ㆫ', 'ㆩ', 'ㆮ', 'ㆯ'] {
         set.insert(c);
     }
     set
