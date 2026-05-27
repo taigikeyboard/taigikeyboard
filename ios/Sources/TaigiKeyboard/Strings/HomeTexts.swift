@@ -62,6 +62,15 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.5.9", "2026/05/27", [
+            "New: TPS (Bopomofo-Taiwanese) continuous input — type a whole TPS sentence and the keyboard segments it into candidates, same as TL / POJ.",
+            "Fixed: toneless TPS strings whose syllables start with a medial (e.g. ㄉㄞㄨㄢ for 台灣) no longer return zero candidates.",
+            "Fixed: TPS auto-correct no longer corrupts the next initial after a precomposed nasal coda (ㄉㄞㄨㄢㄉ … no longer becomes ㄉㄞㄨㄢㆵ …).",
+            "Fixed: typing a lone Bopomofo initial like ㄉ now returns prefix-matched candidates instead of nothing.",
+            "Fixed: continuous-input in POJ mode now stays POJ end-to-end — POJ phrases no longer fall back to TL display, and user-frequency learning is shared between POJ and TL.",
+            "Fixed: short common words no longer dropped from the partial-prefix candidate list under load.",
+            "Updated dictionary data.",
+        ]),
         ("3.5.8", "2026/05/20", [
             "New: 連續輸入 — type a whole romanized phrase without committing each syllable; the keyboard segments the sentence and offers candidates per position. Tap to commit a segment, Enter to commit the raw text. Works with POJ / TL, the custom dictionary, user-frequency learning, and next-word prediction.",
             "Continuous-input candidates now show romanization and 漢字 on two lines.",

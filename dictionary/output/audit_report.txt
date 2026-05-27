@@ -1,5 +1,5 @@
 Taigi Keyboard Dictionary Audit Report
-Generated: 2026-05-25 19:30:07
+Generated: 2026-05-27 19:37:25
 Input: /Users/alexsu/Workspace/taigikeyboard/dictionary/output/dictionary.csv
 Total entries: 159034
 

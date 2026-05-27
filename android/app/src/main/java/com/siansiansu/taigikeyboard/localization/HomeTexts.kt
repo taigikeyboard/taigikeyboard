@@ -69,6 +69,20 @@ object HomeTexts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.9",
+                "2026/05/27",
+                listOf(
+                    "New: TPS (Bopomofo-Taiwanese) continuous input — type a whole TPS sentence and the keyboard segments it into candidates, same as TL / POJ.",
+                    "Fixed: toneless TPS strings whose syllables start with a medial (e.g. ㄉㄞㄨㄢ for 台灣) no longer return zero candidates.",
+                    "Fixed: TPS auto-correct no longer corrupts the next initial after a precomposed nasal coda (ㄉㄞㄨㄢㄉ … no longer becomes ㄉㄞㄨㄢㆵ …).",
+                    "Fixed: typing a lone Bopomofo initial like ㄉ now returns prefix-matched candidates instead of nothing.",
+                    "Fixed: continuous-input in POJ mode now stays POJ end-to-end — POJ phrases no longer fall back to TL display, and user-frequency learning is shared between POJ and TL.",
+                    "Fixed: short common words no longer dropped from the partial-prefix candidate list under load.",
+                    "Fixed: cold-start preference reads no longer risk an ANR.",
+                    "Updated dictionary data.",
+                ),
+            ),
+            VersionEntry(
                 "3.5.8",
                 "2026/05/20",
                 listOf(
