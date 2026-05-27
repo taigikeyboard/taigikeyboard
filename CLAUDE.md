@@ -62,7 +62,9 @@ taigikeyboard/
 
 ## Build & Test
 
-The **user runs all builds/tests manually mid-round** — never invoke these or add build hooks/reminders mid-round. Reference:
+The **user runs all builds/tests manually mid-round** — never invoke these or add build hooks/reminders mid-round. **Commit-first ordering**: commit → push → `gh pr create` runs WITHOUT a pre-commit test gate; the post-PR parallel verification (§ EXCEPTION below + `~/.claude/rules/round-workflow.md` sandwich step 6) fires tests in the background AFTER `gh pr create` returns the URL, in parallel with the PR-bot review. Total wall-clock = max(test, PR-bot) instead of sum. Do NOT block commit / push / PR-open on test results. Aligns with `.claude/rules/rust-best-practices.md §7` (judgment-gated, not mandatory).
+
+Reference:
 
 | Platform | Build | Test |
 |---|---|---|

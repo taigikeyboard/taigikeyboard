@@ -7,8 +7,8 @@ DICT := dictionary
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 .PHONY: build test test-fast test-crate test-crate-fast doc dict help \
-        fmt fmt-check lint \
-        fmt-rust fmt-check-rust lint-rust \
+        fmt fmt-fast fmt-check fmt-check-fast lint \
+        fmt-rust fmt-check-rust lint-rust lint-rust-fast \
         fmt-swift fmt-check-swift \
         fmt-kotlin fmt-check-kotlin lint-kotlin
 
@@ -81,7 +81,14 @@ dict:
 
 fmt: fmt-rust fmt-swift fmt-kotlin
 
+# Round-internal fmt: skips fmt-kotlin (Gradle/Spotless JVM cold-start cost).
+# Pre-PR gate stays `make fmt` (full Rust+Swift+Kotlin).
+fmt-fast: fmt-rust fmt-swift
+
 fmt-check: fmt-check-rust fmt-check-swift fmt-check-kotlin
+
+# Round-internal fmt-check matching `fmt-fast`.
+fmt-check-fast: fmt-check-rust fmt-check-swift
 
 lint: lint-rust lint-kotlin
 
@@ -94,6 +101,11 @@ fmt-check-rust:
 
 lint-rust:
 	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# Round-internal clippy: Rust lib/bin only (drops --all-targets / --locked).
+# Canonical recipe per rust-best-practices.md §7 = `make lint-rust` (judgment-gated, not mandatory).
+lint-rust-fast:
+	cd $(ENGINE) && cargo clippy --workspace -- -D warnings
 
 # --- Swift ---
 fmt-swift:
@@ -123,8 +135,11 @@ help:
 	@echo "  make dict               Full dictionary regen + deploy to Android/iOS"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
+	@echo "  make fmt-fast           Apply formatting Rust+Swift only (skips Gradle/Spotless)"
 	@echo "  make fmt-check          Verify formatting without writes (CI-style)"
+	@echo "  make fmt-check-fast     fmt-check Rust+Swift only (skips Gradle/Spotless)"
 	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
+	@echo "  make lint-rust-fast     cargo clippy --workspace -- -D warnings (lib/bin only)"
 	@echo ""
 	@echo "  Per-platform: fmt-rust / fmt-swift / fmt-kotlin"
 	@echo "                fmt-check-rust / fmt-check-swift / fmt-check-kotlin"

@@ -56,3 +56,12 @@ all = { level = "warn", priority = -1 }
 lto = true
 codegen-units = 1
 strip = true
+
+# Trim local dev/test link wall by dropping full DWARF; line tables stay so
+# panic backtraces + proptest shrinking still resolve to source lines.
+# Platform xcframework/jniLibs are always release-built per scripts/, so this
+# only affects `cargo build/check/test` on the host. To temporarily restore
+# full debuginfo for a debugging session:
+#   CARGO_PROFILE_DEV_DEBUG=2 cargo test -p <crate> ...
+[profile.dev]
+debug = "line-tables-only"

@@ -103,17 +103,19 @@ Type-shape preferences that cross FFI:
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
 - **MSRV pinned at Rust 1.86** in root `Cargo.toml` (`rust-version = "1.86"`). Rationale: 1.85 (Feb 2025) stabilises edition2024 and 1.86 (Apr 2025) is the next stable. Bumped during Phase III D9.2 because `cargo-ndk` 4.x requires 1.86 and the dev-tool gap is not worth carrying a 3.5.x sidegrade for. Earlier pins (1.75 → 1.85 in D9.1) similarly bumped to clear active-tooling gaps. Bumping MSRV further remains a PR-level decision with CI verification.
 - **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
-- **`rustfmt` default config**, no deviations. `cargo fmt --check` runs in the local pre-commit gate (§7) via `make fmt-check-rust`.
-- **`clippy` with `-D warnings`** runs in the local pre-commit gate (§7) via `make lint-rust`. Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
+- **`rustfmt` default config**, no deviations. `cargo fmt --check` available via `make fmt-check-rust` (§7 is judgment-gated, not mandatory).
+- **`clippy` with `-D warnings`** available via `make lint-rust`. Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
 ## 7. Pre-commit gate + supply chain `[A]`
 
-This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `~/.claude/rules/round-workflow.md` "Build & changelog" for `./gradlew` / `xcodebuild`: the user runs build/test, AI does not. The author invokes the four-command gate before committing each PR (canonical bare-`cargo` form; `cargo-make` is optional via `engine/Makefile.toml`).
+This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `~/.claude/rules/round-workflow.md` "Build & changelog" for `./gradlew` / `xcodebuild`: the user runs build/test, AI does not. The user decides per-round whether the full canonical gate runs, a subset runs, or no gate runs.
 
-- Per-PR gate: `cargo fmt --all -- --check` + `cargo check --workspace --locked` + `cargo clippy --workspace --all-targets -- -D warnings` + `cargo test --workspace`.
-- **`cargo-audit`** scans against the RustSec advisory DB before each PR — optional, install via `cargo install cargo-audit --locked`.
+- **No mandatory canonical 4-cmd pre-PR gate.** USER explicitly retains judgment per-round on whether to run `cargo fmt --all -- --check` / `cargo check --workspace --locked` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`, in part or in whole. AI does not run these as a fixed gate; AI may surface findings if it noticed something concrete, but never as "you must run the gate now". Rationale: the gate as a mandatory step adds significant wall-clock cost that is wasted on most rounds (docs / single-crate refactor / mechanical rename). Judgment-based use catches what matters; reflexive use does not.
+- The full four commands above remain the **canonical recipe** when USER does decide to run a full check — kept as a documented bare-cargo form so it is reproducible.
+- `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
+- **`cargo-audit`** scans against the RustSec advisory DB on demand — optional, install via `cargo install cargo-audit --locked`.
 - **`cargo-deny check`** enforces dependency policy via `engine/deny.toml`: license allow-list (MIT / Apache-2.0 / BSD / ISC / Unicode-DFS-2016 / Unicode-3.0 / Zlib), `multiple-versions = warn`, `unknown-git = deny`, `unknown-registry = deny`. Optional, install via `cargo install cargo-deny --locked`.
-- **FFI integration tests** must pass on a representative Android emulator + iOS simulator target before merge to main (D9 gate onward) — author runs locally; no CI matrix.
+- **FFI integration tests** are run on representative Android emulator + iOS simulator targets when relevant to the round (D9 gate onward) — user-gated, no CI matrix, no fixed schedule.
 - **Supply chain**: no git dependencies in `Cargo.toml`. Patches go through explicit `[patch.crates-io]` with version pins and written justification.
 
 ## 8. Explicit non-goals
