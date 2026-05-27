@@ -6,7 +6,7 @@ DICT := dictionary
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test doc dict help \
+.PHONY: build test test-fast test-crate test-crate-fast doc dict help \
         fmt fmt-check lint \
         fmt-rust fmt-check-rust lint-rust \
         fmt-swift fmt-check-swift \
@@ -30,6 +30,28 @@ build:
 
 test:
 	cd $(ENGINE) && cargo test --workspace
+
+# Faster workspace test run via cargo-nextest (parallel test-binary execution).
+# Install once: `cargo install cargo-nextest --locked`.
+# Speedup comes from the RUN phase only — compile cost is unchanged.
+# Caveat: nextest skips doctests; for doctest coverage stick with `make test`.
+test-fast:
+	cd $(ENGINE) && cargo nextest run --workspace --no-fail-fast
+
+# Per-crate scoped test for touched-target round workflow
+# (~/.claude/rules/round-workflow.md § Pre-commit quality gates).
+# Usage: make test-crate CRATE=phonetics
+test-crate:
+	@if [ -z "$(CRATE)" ]; then echo "Usage: make test-crate CRATE=<name>"; exit 2; fi
+	cd $(ENGINE) && cargo test -p "$(CRATE)"
+
+# Per-crate + nextest. `--no-tests=pass` keeps no-test crates
+# (swift-ffi / android-jni / protos / mmap-host) from erroring under nextest's
+# default `--no-tests=fail`.
+# Usage: make test-crate-fast CRATE=phonetics
+test-crate-fast:
+	@if [ -z "$(CRATE)" ]; then echo "Usage: make test-crate-fast CRATE=<name>"; exit 2; fi
+	cd $(ENGINE) && cargo nextest run -p "$(CRATE)" --no-fail-fast --no-tests=pass
 
 # Generate rustdoc HTML for the workspace and open in browser. Excludes
 # android-jni because it shares `[lib] name = "rust_taigi"` with swift-ffi
@@ -92,14 +114,17 @@ fmt-check-kotlin:
 lint-kotlin: fmt-check-kotlin
 
 help:
-	@echo "  make build       Full Rust rebuild: proto regen + iOS + Android (no tests)"
-	@echo "  make test        cargo test --workspace"
-	@echo "  make doc         Build rustdoc HTML for engine workspace and open in browser"
-	@echo "  make dict        Full dictionary regen + deploy to Android/iOS"
+	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android (no tests)"
+	@echo "  make test               cargo test --workspace (canonical, includes doctests)"
+	@echo "  make test-fast          cargo nextest run --workspace (faster run, skips doctests)"
+	@echo "  make test-crate         cargo test -p \$$CRATE (touched-target round workflow)"
+	@echo "  make test-crate-fast    cargo nextest run -p \$$CRATE (touched + faster run)"
+	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"
+	@echo "  make dict               Full dictionary regen + deploy to Android/iOS"
 	@echo ""
-	@echo "  make fmt         Apply formatting across Rust + Swift + Kotlin"
-	@echo "  make fmt-check   Verify formatting without writes (CI-style)"
-	@echo "  make lint        cargo clippy + spotlessCheck (Android Lint disabled)"
+	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
+	@echo "  make fmt-check          Verify formatting without writes (CI-style)"
+	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
 	@echo ""
 	@echo "  Per-platform: fmt-rust / fmt-swift / fmt-kotlin"
 	@echo "                fmt-check-rust / fmt-check-swift / fmt-check-kotlin"
