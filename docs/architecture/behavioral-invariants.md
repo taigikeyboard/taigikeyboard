@@ -122,18 +122,21 @@
 **Invariant**: two distinct dedup passes exist and must run in the documented order:
 
 1. **`removeDuplicates(_:)`** runs *before* scoring. Key = `"\(roman)|\(hanzi ?? "")"`. Removes true duplicates.
-2. **`removeDisplayDuplicates(_:)`** runs *after* sorting, only in TPS mode. Key = `hanzi`. Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
+2. **`removeDisplayDuplicates(_:)`** runs *after* sorting, only in TPS mode. Key = `hanzi` (continuous path keys on `(hanzi, consumed_span)` to preserve legitimate distinct partial vs full-buffer surfaces). Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
 
 Reversing or merging these two passes changes ordering. Running display dedup before sort drops higher-ranked entries.
 
 **Why**: the keyboard shows TPS symbols to the left of candidates; visually identical hanzi with different roman forms is confusing, but the ranked winner must be retained.
 
-**Scope**: Rust `engine/ranking::dedup` + `ranking::process_candidates` (single source, since v3.5.2). Bridged via `RustEngineBridge.processCandidates(_:tpsDedupEnabled:...)`.
+**Scope**:
+- Legacy `LexiconService.search` / NextWord ranking pipeline — Rust `engine/ranking::dedup` + `ranking::process_candidates` (single source, since v3.5.2). Bridged via `RustEngineBridge.processCandidates(_:tpsDedupEnabled:...)`.
+- Continuous `FetchAtPos` production path (current dogfood) — Rust `engine/composing::continuous::dedupe_display_hanji_for_tps`, gated on `mode == InputMode::Tps` in `assemble_candidates`. Runs after the walker slot-0 prepend + POJ presentation pass. Two `dict.bin` rows sharing the toneless TPS key (e.g. `灣/uan` + `灣/uân` at `tps:ㄨㄢ`) survive the pre-sort `(roman, hanji, consumed_span)` dedupe — distinct romanization is a legitimate TL/POJ UI signal — and only collapse here, where the TPS UI hides romanization entirely.
 
 **Test labels**:
 - `INVARIANT_engine_dedup_keys_on_roman_plus_hanzi`
 - `INVARIANT_display_dedup_runs_after_sort`
 - `INVARIANT_display_dedup_keeps_words_without_hanzi`
+- `dedupe_display_hanji_for_tps_collapses_same_hanji_same_span` + `tps_input_collapses_duplicate_hanji` (continuous `FetchAtPos` path, `engine/composing/tests/tps_display_dedup.rs`)
 
 ---
 

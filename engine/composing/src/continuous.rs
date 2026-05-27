@@ -251,8 +251,13 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 /// which means the hanji-bearing custom-vs-dict-POJ-form collision
 /// still slips past pre-render dedupe and lands here. This dedupe is
 /// load-bearing in steady state, not transitional. Called in the POJ
-/// branch only — for TL/English/TPS the render is identity so the
-/// pre-render dedupe already settled every key.
+/// branch only — for TL/English the render is identity so the
+/// pre-render dedupe already settled every key. TPS has its own
+/// post-render visual collapse via [`dedupe_display_hanji_for_tps`]
+/// because the TPS UI hides romanization entirely (hanji-only display),
+/// so two `dict.bin` rows differing only on `roman` (e.g. `灣 / uan`
+/// vs `灣 / uân` at the same TPS-toneless key `ㄨㄢ`) survive the
+/// pre-render `(roman, hanji, span)` dedupe yet render identically.
 // 中文: POJ render 後才相等的候選去重(custom 存 POJ `gô͘` vs dict TL `gôo`,
 // 中文:   同 hanji+span 過不了 raw `roman` 的 pre-render 去重,render 後皆 `gô͘`)。
 // 中文:   first-wins 取「執行時當下候選向量」中較前者(post-sort、post 整句 prepend),
@@ -262,11 +267,51 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 // 中文:   原樣(walker / custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵),
 // 中文:   故 hanji-bearing 的 custom-vs-dict-POJ-form 視覺重複仍需此 post-render dedupe 兜底。
 // 中文:   穩態 load-bearing,非過渡兜底。只在 POJ 分支呼叫。
+// 中文:   TPS 走 dedupe_display_hanji_for_tps,因 TPS UI 只顯示漢字,純羅馬字差異(灣/uan vs 灣/uân
+// 中文:   同 tps:ㄨㄢ)無法被 pre-render (roman,hanji,span) 去重攔下。
 fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     use std::collections::HashSet;
     let mut seen: HashSet<(String, Option<String>, ConsumedSpan)> =
         HashSet::with_capacity(candidates.len());
     candidates.retain(|c| seen.insert((c.roman.clone(), c.hanji.clone(), c.consumed_span)));
+}
+
+/// TPS-mode visual dedupe: collapse candidates sharing `(hanji,
+/// consumed_span)` because the TPS candidate strip hides romanization
+/// (TPS = hanji-first input mode per `.claude/rules/phonetics.md`).
+/// Two `dict.bin` rows like `灣 / uan` (tone 1) and `灣 / uân` (tone 5)
+/// both index under `tps:ㄨㄢ`, so the build pipeline legitimately
+/// emits both rowids at the same FST key. The pre-sort
+/// `lexicon::dedupe_by_roman_hanji_span` keys on `(roman, hanji, span)`
+/// and preserves romanization variants; that is correct for TL/POJ
+/// (the UI shows distinct `uan / 灣` vs `uân / 灣` rows) but produces
+/// a visible duplicate in TPS mode where only `灣` is rendered.
+///
+/// Runs AFTER the sort + walker slot-0 prepend + (no-op for TPS) POJ
+/// render pass so first-seen = highest-ranked. `consumed_span` stays
+/// in the key so the same hanji at different spans survives — e.g. a
+/// 1-syllable `灣` covering only the first syllable `(0, n1)` and a
+/// 1-syllable `灣` re-emitted by the walker at the full-buffer span
+/// `(0, raw_len)` are distinct commit surfaces; the rationale matches
+/// `lexicon::dedupe_by_roman_hanji_span`. `hanji = None` or empty
+/// hanji passes through to mirror
+/// `engine/ranking/src/dedup.rs::remove_display_duplicates` (legacy
+/// `processCandidates` path, dead in production today); upstream
+/// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
+/// `(roman, hanji, span)` duplicates so this branch never reaches a
+/// truly identical pair.
+// 中文: TPS 顯示去重 — (hanji, consumed_span) 為鍵;TPS UI 只顯示漢字,純羅馬字差異
+// 中文:   (灣/uan vs 灣/uân 皆掛 tps:ㄨㄢ) 在 TPS 是視覺重複,在 TL/POJ 是合法獨立列。
+// 中文:   排序+walker slot-0 prepend+(TPS no-op) POJ render 之後跑,first-seen = 最高排名。
+// 中文:   保留 span 讓「同 hanji 不同 span」(partial vs full-buffer)合法候選不被誤併;
+// 中文:   hanji 為 None 或空字串者一律保留(顯示為 TPS/羅馬字,以 roman 區隔)。
+fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
+    use std::collections::HashSet;
+    let mut seen: HashSet<(String, ConsumedSpan)> = HashSet::with_capacity(candidates.len());
+    candidates.retain(|c| match c.hanji.as_deref() {
+        Some(h) if !h.is_empty() => seen.insert((h.to_owned(), c.consumed_span)),
+        _ => true,
+    });
 }
 
 // v3.5.9 D / C-3b — `build_keys_tps` + `strip_trailing_tone_digit`
@@ -1010,6 +1055,17 @@ pub(crate) fn assemble_candidates(
             }
             dedupe_rendered_continuous(&mut candidates);
         }
+        // TPS visual-dedupe — TPS UI hides romanization so two rows
+        // identical on `(hanji, span)` but differing on `roman` are a
+        // visible duplicate. Runs AFTER sort + walker slot-0 prepend +
+        // POJ render (POJ render is a no-op for TPS so order with the
+        // POJ branch above is irrelevant). See `dedupe_display_hanji_for_tps`
+        // for the full rationale.
+        // 中文: TPS 視覺去重 — TPS UI 隱藏羅馬字,同 (hanji, span) 不同 roman 為視覺重複。
+        // 中文:   在 sort + walker slot-0 prepend + POJ render (TPS no-op) 之後跑。
+        if mode == phonetics::InputMode::Tps {
+            dedupe_display_hanji_for_tps(&mut candidates);
+        }
         Ok(candidates)
     })
     .unwrap_or_default()
@@ -1183,6 +1239,104 @@ mod tests {
         let before = keep.len();
         dedupe_rendered_continuous(&mut keep);
         assert_eq!(keep.len(), before, "distinct keys must all survive");
+    }
+
+    #[test]
+    fn dedupe_display_hanji_for_tps_collapses_same_hanji_same_span() {
+        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
+            RawCandidate {
+                consumed_span: span,
+                syllable_count: 1,
+                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
+                roman: roman.to_string(),
+                hanji: hanji.map(String::from),
+                score: 0.0,
+                form: FORM_NOTONE,
+                frequency: 0,
+                bitmask: 0,
+                mode: lexicon::CandidateMode::Tailo,
+                recency_rank: 1,
+                coverage_kind: COVERAGE_KIND_FULL,
+                is_custom: false,
+            }
+        }
+        // The reported bug: TPS `ㄨㄢ` → dict has 灣/uan (tone 1) + 灣/uân
+        // (tone 5) at the same `tps:ㄨㄢ` toneless key; same hanji, same
+        // span, different roman. TPS UI shows hanji only ⇒ duplicate.
+        let mut visible_dup = vec![
+            mk("uan", Some("灣"), (0, 6)),
+            mk("uân", Some("灣"), (0, 6)),
+        ];
+        dedupe_display_hanji_for_tps(&mut visible_dup);
+        assert_eq!(visible_dup.len(), 1);
+        assert_eq!(visible_dup[0].roman, "uan", "first-wins keeps top-ranked");
+    }
+
+    #[test]
+    fn dedupe_display_hanji_for_tps_keeps_distinct_spans() {
+        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
+            RawCandidate {
+                consumed_span: span,
+                syllable_count: 1,
+                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
+                roman: roman.to_string(),
+                hanji: hanji.map(String::from),
+                score: 0.0,
+                form: FORM_NOTONE,
+                frequency: 0,
+                bitmask: 0,
+                mode: lexicon::CandidateMode::Tailo,
+                recency_rank: 1,
+                coverage_kind: COVERAGE_KIND_FULL,
+                is_custom: false,
+            }
+        }
+        // Same hanji at different `consumed_span` is a legitimate partial
+        // vs full-buffer surface — must NOT collapse (mirrors the S2
+        // invariant pinned by `lexicon::dedupe_by_roman_hanji_span`).
+        let mut spans = vec![
+            mk("uan", Some("灣"), (0, 3)),
+            mk("uan", Some("灣"), (0, 6)),
+        ];
+        let before = spans.len();
+        dedupe_display_hanji_for_tps(&mut spans);
+        assert_eq!(
+            spans.len(),
+            before,
+            "distinct spans must all survive (partial vs full-buffer)"
+        );
+    }
+
+    #[test]
+    fn dedupe_display_hanji_for_tps_passes_through_none_and_empty_hanji() {
+        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
+            RawCandidate {
+                consumed_span: span,
+                syllable_count: 1,
+                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
+                roman: roman.to_string(),
+                hanji: hanji.map(String::from),
+                score: 0.0,
+                form: FORM_NOTONE,
+                frequency: 0,
+                bitmask: 0,
+                mode: lexicon::CandidateMode::Tailo,
+                recency_rank: 1,
+                coverage_kind: COVERAGE_KIND_FULL,
+                is_custom: false,
+            }
+        }
+        // Hanji-absent rows render as TPS / roman in the UI and are
+        // unique by roman — always survive regardless of repetition on
+        // any other axis. Mirrors `ranking::dedup::remove_display_duplicates`.
+        let mut roman_only = vec![
+            mk("ㄉㄞ", None, (0, 3)),
+            mk("ㄉㄞ", None, (0, 3)),   // duplicate roman, both kept
+            mk("ㄨㄢ", Some(""), (0, 3)), // empty hanji also passes
+        ];
+        let before = roman_only.len();
+        dedupe_display_hanji_for_tps(&mut roman_only);
+        assert_eq!(roman_only.len(), before, "None / empty hanji all pass");
     }
 
     #[test]
