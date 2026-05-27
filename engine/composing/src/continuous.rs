@@ -15,8 +15,10 @@
 //!    being the family family the syllabifier + key emitter resolve through
 //!    `mode` (`tps:` against the C-0 emit of `dictionary.fst`).
 //! 2. `keys.is_empty()` → [`fetch_via_lexicon_partial_inner`] (Item 10
-//!    fallthrough) for TL/POJ/English; TPS skips the partial-prefix path
-//!    (no precedent — see step 2 inline comment).
+//!    fallthrough) for ALL modes (TL/POJ/English/TPS). Each mode emits its
+//!    own family prefix via [`crate::shadow::mode_key_prefix`], so a TPS
+//!    leading initial like `ㄉ` scans `tps:ㄉ` byte-range exactly as TL's
+//!    `g` scans `tl:g`.
 //!    Else → [`fetch_via_lexicon_inner`] (span-local fetch).
 //! 3. Per-candidate recase loop (`recase_roman` over each
 //!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
@@ -851,24 +853,25 @@ pub(crate) fn assemble_candidates(
         let mut candidates: Vec<RawCandidate> = if keys.is_empty() {
             // v3.5.8 Phase 9 Item 10 — partial-prefix fallthrough.
             // The syllabifier produced no valid ending (e.g. `raw =
-            // "gu"`, `"t"`), so the lookup-exact path is dead. Try
-            // a TL/POJ `lookup_prefix` instead so the user still
-            // sees engine candidates while typing toward the first
-            // syllable boundary. Spec: `docs/engine/
+            // "gu"`, `"t"`, `"ㄉ"`), so the lookup-exact path is dead.
+            // Fall through to `lookup_prefix` so the user still sees
+            // engine candidates while typing toward the first syllable
+            // boundary. Spec: `docs/engine/
             // continuous-candidate-display.md` §15.3.D + §15.5.
             //
-            // v3.5.9 D / C-3b — TPS partial-prefix is out of scope. A
-            // leading lone Bopomofo char (`ㄉ`) is not yet a syllable
-            // (no terminator, no implicit boundary), and TPS UX has no
-            // precedent for partial-prefix `lookup_prefix("tps:ㄉ")`
-            // expansion. Codex pre-impl Fork 7b = defer to a follow-up
-            // round if dogfood signals the gap.
-            // 中文: Item 10 — syllabifier 切不出邊界時改走 partial-prefix;
-            // 中文: D / C-3b — TPS partial-prefix 暫不開啟(Codex Fork 7b);
-            // 中文:   leading 單個 Bopomofo 字尚未成音節,UX 無先例,留 follow-up。
-            if matches!(mode, phonetics::InputMode::Tps) {
-                Vec::new()
-            } else if let Some(ctx) = lex_ctx.as_ref() {
+            // Mode-aware for ALL modes: TL/POJ/English emit `tl:`/`poj:`
+            // family keys (since v3.5.9 B-2); TPS emits the `tps:` family
+            // (Fork 7b activated by 2026-05-27 dogfood — a leading
+            // Bopomofo initial `ㄉ` scans `tps:ㄉ` byte-range and returns
+            // every dictionary row whose `tps_notone` starts with `ㄉ`,
+            // matching librime / khiin-rs / McBopomofo leading-prefix
+            // behavior). [`crate::shadow::build_partial_prefix_key`]
+            // returns `None` for empty-after-tone-strip input (bare tone
+            // mark / hyphen-only / digit-only), so no unbounded scan.
+            // 中文: Item 10 — syllabifier 切不出邊界時走 partial-prefix。
+            // 中文: 全模式 mode-aware:TPS 由 build_partial_prefix_key 發 `tps:` 家族鍵,
+            // 中文:   leading 單注音字 (ㄉ) 走 tps:ㄉ byte-range scan,對齊主流 IME。
+            if let Some(ctx) = lex_ctx.as_ref() {
                 fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx)
             } else {
                 Vec::new()

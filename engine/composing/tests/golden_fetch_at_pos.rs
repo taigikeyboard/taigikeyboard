@@ -33,12 +33,15 @@
 //!
 //! ## Grounding (no invented dictionary content)
 //!
-//! Every dictionary triple `(toneless_key, hanzi, tl)` is copied verbatim
-//! from a named existing hermetic test:
+//! Every dictionary triple `(toneless_key, hanzi, tl)` is sourced verbatim
+//! from either an existing hermetic test or production `dictionary.csv`:
 //!
 //! - `span_local_fetch.rs` — tsua/taigikhipuann/taiuantaigi/taibak/
 //!   mode-carrier/partial-prefix rows.
 //! - `user_freq_plumb.rs` — the `台` user-freq row.
+//! - production `dictionary.csv:8` — `有,ū,53685,ū,u7,u7,ㄨ˫,...` (added
+//!   2026-05-27 with v3.5.9 D Fork 7b for the TPS standalone-syllable
+//!   regression guard; mirrors a real row, not invented content).
 //!
 //! The OOV-tail syllables (`lang`/`kang`/`tan`/`lai`) are proven
 //! `VALID_SAMPLES` in `engine/lexicon/tests/syllables_fst.rs`. The POJ
@@ -420,6 +423,20 @@ fn fixture_rows() -> Vec<Row> {
             syll: 1,
             freq: 200,
         },
+        // v3.5.9 D Fork 7b — TPS standalone-syllable regression guard.
+        // 有/ū → `tps_notone=ㄨ` (the vowel ㄨ IS a complete TPS syllable
+        // on its own). Pairs with the `u7` sample below so the inventory
+        // accepts `ㄨ` as a span ending → span-local fetch hits this row.
+        // Mirrors production `dictionary.csv:8` (有,ū,53685,ū,u7,u7,ㄨ˫,...).
+        // 中文: D Fork 7b — 有/ū 是 ㄨ 自身為完整音節的 fixture 證據;
+        // 中文:   配合下方 u7 sample 讓 inv 認可 ㄨ,確保 ㄨ 走 span-local。
+        Row {
+            toneless_key: "u",
+            hanzi: "有",
+            tl: "ū",
+            syll: 1,
+            freq: 53685,
+        },
     ]
 }
 
@@ -429,6 +446,9 @@ fn fixture_rows() -> Vec<Row> {
 const SYLLABLE_SAMPLES: &[&str] = &[
     "tsua7", "tsu", "tai1", "tai5", "bak4", "uan5", "gi2", "khi2", "puann5", "li2", "iau2", "si7",
     "gua2", "lang5", "kang1", "tan5", "lai5",
+    // v3.5.9 D Fork 7b — `u7` for 有/ū; auto-derives `tps:ㄨ` so the
+    // syllable inventory accepts `ㄨ` as a complete span ending.
+    "u7",
 ];
 
 fn install_union_fixture() {
@@ -477,20 +497,47 @@ fn matrix() -> Vec<Case> {
         case("tl_numeric_single", "tsua7", "tl"),
         case("tl_numeric_multi", "tai1bak4", "tl"),
         case("poj_diacritic", "tâi-uân", "tl"),
-        // Negative guard: post-C-3b TPS is first-class but this raw
-        // contains a `ㄉㄧㄠ` syllable that has no matching sample in
-        // the fixture's inventory + no matching dict row, so the
-        // syllabifier cannot syllabify and the walker emits no keys.
-        // Catches a regression where TPS partial-prefix (deliberately
-        // out of scope per Codex pre-impl Fork 7b) accidentally
-        // surfaces hits. Original C-3b pre-fixture label was
-        // `tps_walker_excluded` (TPS folded into `tl:` keys; now
-        // renamed since TPS is no longer excluded — the empty result
-        // is now driven by inventory miss, not mode exclusion).
-        // 中文: 負面守門 — C-3b 後 TPS first-class,但此 raw 含 ㄉㄧㄠ 字組合
-        // 中文:   fixture 的 inventory + dict 都無對應 sample/row,音節切分失敗
-        // 中文:   → walker 不發鍵 → 空候選。保留以防 TPS partial-prefix(Fork 7b 暫不開)誤觸發。
+        // Negative guard: post-C-3b TPS is first-class. This raw's
+        // toneless body `ㄉㄧㄠㄨㄢ` matches NO `tps:` prefix in the
+        // fixture's `dictionary.fst` (closest is `tps:ㄉㄞㄨㄢ` from 台灣;
+        // bytes diverge at position 4 — ㄧ vs ㄞ), so the partial-prefix
+        // byte-range scan returns empty. With Fork 7b activated
+        // (2026-05-27 dogfood enable), this case now exercises the
+        // `prefix_index.n` no-hit branch on the TPS family — empty result
+        // is intended.
+        // 中文: 負面守門 — TPS first-class + Fork 7b 開放後,此 raw 的 toneless
+        // 中文:   `ㄉㄧㄠㄨㄢ` 在 fixture dict.fst 的 tps: 家族中無前綴匹配,
+        // 中文:   prefix_index.n("tps:ㄉㄧㄠㄨㄢ") 回空。
         case("tps_no_inventory_match", "ㄉㄧㄠˊㄨㄢˊ", "tl"),
+        // v3.5.9 D Fork 7b activation (2026-05-27 dogfood): leading lone
+        // Bopomofo initial `ㄉ` is not a complete syllable in the TPS
+        // inventory, so the syllabifier emits no valid ending → empty
+        // keys → partial-prefix fallthrough. `build_partial_prefix_key`
+        // emits `tps:ㄉ` and `prefix_index.n("tps:ㄉ")` byte-range scans
+        // every dictionary row whose `tps_notone` starts with `ㄉ`. The
+        // fixture's TL rows derive `tps_notone_from_tl("tâi")` →
+        // `ㄉㄞ` + `tâi-gí` → `ㄉㄞㆣㄧ` + `tâi-uân` → `ㄉㄞㄨㄢ` + ...,
+        // so `ㄉ` surfaces 台 / 台語 / 台灣 / 代墨 / 台語齒盤 / 臺灣台語
+        // through the partial-prefix path with `coverage_kind =
+        // COVERAGE_KIND_PARTIAL_PREFIX` and `consumed_span = (0, 3)`
+        // (`ㄉ` is 3 bytes UTF-8). Mirrors librime / khiin-rs /
+        // McBopomofo leading-prefix behavior.
+        // 中文: D Fork 7b 啟用 — 單一注音聲母 `ㄉ` 走 partial-prefix,
+        // 中文:   `tps:ㄉ` byte-range 掃出 fixture 中所有 ㄉ 開頭的字
+        // 中文:   (台/台語/台灣/代墨/...),對齊主流注音 IME 行為。
+        case("tps_partial_prefix_leading_initial", "\u{3109}", "tl"),
+        // Regression guard: `ㄨ` (3 bytes) IS a complete TPS syllable
+        // in the fixture inventory (it appears as the second syllable
+        // of `tps:ㄉㄞㄨㄢ` for 台灣, and every TL `u`-sample like `tsua7`
+        // derives `tps:ㄨ` via `to_zhuyin` since `u` → `ㄨ` is in the
+        // ZHUYIN_VOWELS table). So this case must go through SPAN-LOCAL
+        // fetch (`keys = ["tps:ㄨ"]`, non-empty) NOT partial-prefix. The
+        // golden distinguishes the two paths via `coverage_kind`
+        // (FULL=0 for span-local vs PARTIAL_PREFIX=1 above).
+        // 中文: 回歸守門 — `ㄨ` 自身在 fixture inventory 為完整音節
+        // 中文:   (tps:ㄨ 由 to_zhuyin 從 u 衍生),走 span-local 不走 partial,
+        // 中文:   coverage_kind 為 FULL(0)。
+        case("tps_standalone_syllable", "\u{3128}", "tl"),
         Case {
             name: "custom_dict",
             raw: "taigi",

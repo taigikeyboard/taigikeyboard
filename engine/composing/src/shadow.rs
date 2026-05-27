@@ -67,13 +67,14 @@ pub(crate) fn strip_tones_for_mode(s: &str, mode: InputMode) -> String {
 
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
 /// `max_syllables=8` budget called out in `docs/releases/v3.5.8/plan.md` § Phase 3 — Performance and
-/// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Shared by
-/// [`build_shadow_lattice`] (lattice BFS budget) and
-/// `continuous::build_keys_tps` (TPS cumulative-key cap) — they must
-/// agree to keep per-keystroke FST lookup and candidate scoring
-/// complexity bounded across modes.
-// 中文: TL syllabifier BFS 深度上限,對應 roadmap §Phase 3 的 8 syllable 估算。
-// 中文: build_shadow_lattice 與 continuous::build_keys_tps 共用,確保各模式每鍵 FST 查詢複雜度有界。
+/// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Owned by
+/// [`build_shadow_lattice`] (lattice BFS budget); since v3.5.9 D / C-3b
+/// the legacy per-mode `continuous::build_keys_tps` is retired and all
+/// four modes (TL/POJ/English/TPS) share the unified shadow → lattice
+/// path through this single cap.
+// 中文: syllabifier BFS 深度上限,對應 roadmap §Phase 3 的 8 syllable 估算。
+// 中文: build_shadow_lattice 共用此 cap;v3.5.9 D / C-3b 退役 build_keys_tps 後,
+// 中文:   四模式共用同一 shadow → lattice 路徑,FST 查詢複雜度仍由此值有界。
 pub(crate) const MAX_SYLLABLES: usize = 8;
 
 /// Run the v3.5.8 Items 8 + 9 canonicalize → hyphen-shadow pipeline
@@ -726,19 +727,22 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
     }
 }
 
-/// v3.5.8 Phase 9 Item 10 / v3.5.9 B-2 — partial-prefix mode-aware key
-/// builder (renamed from `build_partial_prefix_key_tl` in B-2: the
-/// builder always was mode-aware via `canonicalize_poj_shadow`; B-2
-/// makes the emitted key prefix mode-aware too so POJ mode produces
-/// `poj:` keys against the `poj:` family of the FST). Runs the same
+/// v3.5.8 Phase 9 Item 10 / v3.5.9 B-2 + D Fork 7b — partial-prefix
+/// mode-aware key builder. Runs the
 /// `lowercase → canonicalize_poj_shadow → build_hyphen_shadow →
-/// strip_ascii_tone_digits` chain as the production
+/// strip_tones_for_mode` chain (mode-aware tone strip since v3.5.9 D / C-3b:
+/// TL/POJ/English drop ASCII tone digits, TPS drops the 8 Bopomofo tone
+/// scalars per `phonetics::is_tps_tone_mark`) as the production
 /// [`left_anchored_keys_from_lattice`] / walker edge providers but
 /// **skips the syllabifier** (the partial-prefix path is reached
-/// precisely because `tl_syll::valid_span_endings` returned empty).
-/// Returns `None` when the resulting toneless key is empty (raw was
-/// hyphen-only / digit-only) so the caller can short-circuit without
-/// firing an unbounded prefix scan.
+/// precisely because the syllabifier returned no valid ending — TL `g`,
+/// TPS `ㄉ`, etc.). Emits the `tl:` / `poj:` / `tps:` family prefix
+/// matching `mode` via [`mode_key_prefix`] so the byte-range scan in
+/// [`crate::continuous::fetch_via_lexicon_partial_inner`] hits the right
+/// FST family. Returns `None` when the resulting toneless key is empty
+/// (raw was hyphen-only / digit-only for TL/POJ, bare tone mark for TPS)
+/// so the caller can short-circuit without firing an unbounded prefix
+/// scan.
 ///
 /// `consumed_span` is fixed to `(0, raw.len())` — partial-prefix
 /// candidates always final-commit per Q15.4 (the offset maps from
@@ -757,14 +761,13 @@ pub(crate) fn build_partial_prefix_key(
     let lower = raw.to_ascii_lowercase();
     let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
-    // v3.5.9 D / C-3b — mode-aware tone strip. TPS partial-prefix is
-    // currently skipped one layer up in `assemble_candidates` (the TPS
-    // empty-keys branch returns Vec::new() rather than calling this), so
-    // this branch is only reached by TL/POJ/English today; the
-    // mode-aware variant keeps the contract symmetric for any future
-    // TPS partial-prefix enable.
-    // 中文: D / C-3b — mode-aware tone 剝除。TPS partial-prefix 在 assemble_candidates 跳過,
-    // 中文:   此處目前僅 TL/POJ/English 抵達;mode-aware 對稱保留以待 TPS 開放。
+    // v3.5.9 D / C-3b + D Fork 7b — mode-aware tone strip. All four modes
+    // (TL/POJ/English/TPS) reach this builder via the unified
+    // `assemble_candidates` empty-keys fallthrough; TPS strips the 8
+    // Bopomofo tone scalars (per `phonetics::is_tps_tone_mark`) so a
+    // raw `ㄉㄧˊ` shadow yields a `tps:ㄉㄧ` toneless key.
+    // 中文: D / C-3b + D Fork 7b — mode-aware tone 剝除。四模式共享此構造器;
+    // 中文:   TPS 剝除 phonetics::is_tps_tone_mark 列的 8 個聲調符,raw `ㄉㄧˊ` → key `tps:ㄉㄧ`。
     let toneless = strip_tones_for_mode(&shadow, mode);
     if toneless.is_empty() {
         return None;
@@ -1316,6 +1319,38 @@ mod tests {
         assert_eq!(key, "poj:chi");
         let (_, tl_key) = build_partial_prefix_key("chi", InputMode::Tl).unwrap();
         assert_eq!(tl_key, "tl:chi", "TL mode keeps F3C identity");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tps_emits_tps_family_for_leading_initial() {
+        // v3.5.9 D Fork 7b — TPS partial-prefix activated. A leading
+        // lone Bopomofo initial `ㄉ` (3 bytes UTF-8) emits `tps:ㄉ` so
+        // `prefix_index.n("tps:ㄉ")` byte-range scans every dictionary
+        // row whose `tps_notone` starts with `ㄉ` (佇/著/丁/同/單/...).
+        let (span, key) = build_partial_prefix_key("\u{3109}", InputMode::Tps).unwrap();
+        assert_eq!(span, (0u32, 3u32));
+        assert_eq!(key, "tps:\u{3109}");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tps_strips_tone_marks() {
+        // `ㄉㄞˊ` (with U+02CA tone-5 mark) → `tps:ㄉㄞ`. The 8 Bopomofo
+        // tone scalars (per `phonetics::is_tps_tone_mark`) are stripped
+        // by `strip_tones_for_mode(_, Tps)` exactly like ASCII digits
+        // are stripped for TL/POJ.
+        let (_, key) =
+            build_partial_prefix_key("\u{3109}\u{311e}\u{02ca}", InputMode::Tps).unwrap();
+        assert_eq!(key, "tps:\u{3109}\u{311e}");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tps_bare_tone_mark_returns_none() {
+        // A bare tone-mark only buffer (no Bopomofo body) strips to
+        // empty → None, preventing an unbounded `tps:` namespace scan.
+        // Mirrors the TL `digit-only` / `hyphen-only` guard above.
+        assert!(build_partial_prefix_key("\u{02ca}", InputMode::Tps).is_none());
+        assert!(build_partial_prefix_key("\u{02cb}", InputMode::Tps).is_none());
+        assert!(build_partial_prefix_key("\u{0307}", InputMode::Tps).is_none());
     }
 
     // ----- v3.5.8 S5 — no-dict carve-out (greedy + min-hop helpers) -----
