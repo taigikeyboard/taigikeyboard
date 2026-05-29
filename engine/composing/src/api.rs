@@ -651,10 +651,7 @@ mod tests {
         // Regression pin: with no compound ever, the roman-ish join is
         // exactly the pre-Option-A behaviour.
         let n = [seg("hit"), seg("tui")];
-        assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |_, _| false),
-            "hit tui"
-        );
+        assert_eq!(nailed_prefix_with_oracle(&n, true, |_, _| false), "hit tui");
         // Hanji-first / TPS (space = false) → no separator at all,
         // oracle irrelevant.
         let h = [seg("彼"), seg("隻")];
@@ -713,8 +710,7 @@ mod tests {
             seg_dc("lâng", "人", 1),
         ];
         assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |h, n| n == 2
-                && (h == "查某" || h == "某人")),
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2 && (h == "查某" || h == "某人")),
             "tsa-bóo lâng"
         );
     }
@@ -731,8 +727,7 @@ mod tests {
             seg_dc("huân", "煩", 1),
         ];
         assert_eq!(
-            nailed_prefix_with_oracle(&n, true, |h, n| n == 2
-                && (h == "查某" || h == "麻煩")),
+            nailed_prefix_with_oracle(&n, true, |h, n| n == 2 && (h == "查某" || h == "麻煩")),
             "tsa-bóo mâ-huân"
         );
     }
@@ -787,10 +782,7 @@ mod tests {
             nailed_prefix_with_oracle(&n, true, |h, n| {
                 // ALL prefixes match — without the cap we'd get a
                 // single 5-syll run "a-b-c-d-e".
-                matches!(
-                    (h, n),
-                    ("ABCDE", 5) | ("ABCD", 4) | ("ABC", 3) | ("AB", 2)
-                )
+                matches!((h, n), ("ABCDE", 5) | ("ABCD", 4) | ("ABC", 3) | ("AB", 2))
             }),
             "a-b-c-d e"
         );

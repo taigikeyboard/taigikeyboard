@@ -36,7 +36,8 @@ use lexicon::{
     best_candidate_for_key, fetch_candidates_for_endings, fetch_candidates_for_keys,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
     ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
-    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
+    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
+    PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
 use ranking::FrequencyMap;
@@ -1264,9 +1265,8 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
 // is distinct (no internal `dedupe_by_roman_hanji_span` collapse before
 // the test's bounded/unbounded comparison runs).
 const HOMOPHONE_HANZI: [&str; 32] = [
-    "風", "封", "豐", "瘋", "蜂", "鋒", "峰", "烽", "馮", "逢", "縫", "奉", "鳳", "捧", "棒",
-    "蓬", "篷", "鵬", "彭", "澎", "膨", "朋", "棚", "繃", "崩", "綳", "甭", "蓬", "鬃", "宏",
-    "弘", "洪",
+    "風", "封", "豐", "瘋", "蜂", "鋒", "峰", "烽", "馮", "逢", "縫", "奉", "鳳", "捧", "棒", "蓬",
+    "篷", "鵬", "彭", "澎", "膨", "朋", "棚", "繃", "崩", "綳", "甭", "蓬", "鬃", "宏", "弘", "洪",
 ];
 const HOMOPHONE_TL: [&str; 32] = [
     "hong-1", "hong-2", "hong-3", "hong-4", "hong-5", "hong-6", "hong-7", "hong-8", "hong-9",

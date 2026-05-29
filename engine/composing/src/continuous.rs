@@ -1202,9 +1202,8 @@ pub(crate) fn assemble_candidates(
                     // 中文:   bounded 版會在 dedupe 之前先裁到 30,exact 同音字
                     // 中文:   ≥30 時 30 個名額全在 FULL 也有 → dedupe 全掉 → 0 個延伸。
                     // 中文:   composing 端先 exclude,再裁 OUTPUT_CAP。
-                    let mut ext = fetch_via_lexicon_partial_inner_unbounded(
-                        raw, raw_len, mode, ctx,
-                    );
+                    let mut ext =
+                        fetch_via_lexicon_partial_inner_unbounded(raw, raw_len, mode, ctx);
                     if !ext.is_empty() {
                         // Borrowed key shape — `c` is not mutated during the
                         // retain on `ext`, so HashSet entries can hold &str

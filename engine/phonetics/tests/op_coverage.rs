@@ -738,7 +738,10 @@ fn tps_adjust_reported_bug_repro_taiuan_tai() {
     // `ㄉㄞㄨㄢㆵㄞㆣㄧ`. The second `ㄉ` lands after precomposed nasal
     // coda `ㄢ` (U+3122), which was missing from SYLLABLE_BOUNDARY_CHARS.
     let (adjusted, replace) = tps_adjust("ㄉ", "ㄉㄞㄨㄢ");
-    assert_eq!(adjusted, "ㄉ", "ㄉ after precomposed nasal coda ㄢ must stay initial");
+    assert_eq!(
+        adjusted, "ㄉ",
+        "ㄉ after precomposed nasal coda ㄢ must stay initial"
+    );
     assert_eq!(replace, None);
 }
 
@@ -772,13 +775,13 @@ fn tps_adjust_nasalized_vowel_is_boundary_for_all_initials() {
     // Each fixture uses a realistic raw-input prefix that produces a legal
     // standalone nasalized syllable.
     let cases: [(&str, &str); 7] = [
-        ("ㆪ", "ㄒㄧㆪ"),  // sinn (新)
-        ("ㆥ", "ㄙㆥ"),    // senn
-        ("ㆧ", "ㆧ"),      // onn standalone
-        ("ㆫ", "ㄏㄧㆫ"),  // hiunn
-        ("ㆩ", "ㄍㄧㆩ"),  // kiann (驚)
-        ("ㆮ", "ㄆㆮ"),    // phainn (歹)
-        ("ㆯ", "ㄎㆯ"),    // khaunn
+        ("ㆪ", "ㄒㄧㆪ"), // sinn (新)
+        ("ㆥ", "ㄙㆥ"),   // senn
+        ("ㆧ", "ㆧ"),     // onn standalone
+        ("ㆫ", "ㄏㄧㆫ"), // hiunn
+        ("ㆩ", "ㄍㄧㆩ"), // kiann (驚)
+        ("ㆮ", "ㄆㆮ"),   // phainn (歹)
+        ("ㆯ", "ㄎㆯ"),   // khaunn
     ];
     let all_dual_initials = ["ㄇ", "ㄋ", "ㄫ", "ㄅ", "ㄉ", "ㄍ", "ㄏ"];
     for (last, raw) in cases {
