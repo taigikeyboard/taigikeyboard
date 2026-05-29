@@ -385,6 +385,25 @@ fn fixture_rows() -> Vec<Row> {
             syll: 2,
             freq: 150,
         },
+        // Quanzhou-dialect variant of `tâi-gí` (`tl_notone = taigir`),
+        // grounded in production `dictionary/output/dictionary.csv:33059`
+        // + `:75190`. Same hanji as `taigi`/`tâi-gí`, distinct roman.
+        // Drives the Step 4b prefix-extension scan: input `taigi` (FST
+        // key `tl:taigi`, 5 bytes) cannot reach this row via the
+        // span-local lookup_exact + walker path; only Step 4b's
+        // `lookup_prefix("tl:taigi")` surfaces it because the FST key
+        // here (`tl:taigir`, 6 bytes) extends beyond any lattice edge
+        // the buffer can produce.
+        // 中文: tâi-gír — 台語的泉州腔變體;產線 dictionary.csv:33059/75190 對應。
+        // 中文:   FST key `tl:taigir` 比 `tl:taigi` 多 1 byte,Step 4b
+        // 中文:   `lookup_prefix("tl:taigi")` 才能撈到。
+        Row {
+            toneless_key: "taigir",
+            hanzi: "台語",
+            tl: "tâi-gír",
+            syll: 2,
+            freq: 25,
+        },
         Row {
             toneless_key: "taigikhipuann",
             hanzi: "台語齒盤",
@@ -564,6 +583,18 @@ fn matrix() -> Vec<Case> {
             custom: Vec::new(),
         },
         case("all_oov_partial_prefix", "g", "tl"),
+        // Step 4b prefix-extension (2026-05-29): input `taigi` MUST
+        // surface BOTH the walker slot-0 `tâi-gí`/`台語` and the
+        // prefix-extension `tâi-gír`/`台語` (FST key `tl:taigir`,
+        // 6 bytes — reachable only via lookup_prefix on the whole
+        // input). Mainstream IME parity (librime predictive=true).
+        // Pre-fix this raw surfaced 台 + walker 台語 only; tâi-gír
+        // was unreachable from a 5-byte buffer. Pairs with the new
+        // `taigir`/`台語` fixture row.
+        // 中文: Step 4b 前綴延伸 — `taigi` 必須同時出 `tâi-gí`(walker)
+        // 中文:   與 `tâi-gír`(prefix-extension);後者 FST key
+        // 中文:   `tl:taigir` 比 buffer 多 1 byte,僅 lookup_prefix 能撈到。
+        case("tl_prefix_extension_taigi", "taigi", "tl"),
         case("trailing_hyphen", "tai-", "tl"),
         // Spec §1.5 names `HitTui`; no grounded hit/tui-class fixture
         // exists (would be invented dictionary content). `TaiUan` over

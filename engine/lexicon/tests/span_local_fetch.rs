@@ -34,9 +34,9 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key, fetch_candidates_for_endings, fetch_candidates_for_keys,
-    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
-    RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
-    PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
+    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
+    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
 use ranking::FrequencyMap;
@@ -1123,6 +1123,157 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
     // even after coverage_kind tied to 1.
     assert_eq!(out[0].display_text, "我", "higher-freq partial wins");
 }
+
+#[test]
+fn partial_prefix_filters_abbrev_collisions() {
+    // Codex PR #351 r3319500948 — `fetch_partial_prefix_candidates` must
+    // mirror the span-local + walker guard at
+    // `fetch_candidates_for_keys`:640 / `best_candidate_for_key`:922 and
+    // reject rowids whose FST entry is an `tl_abbrev` / `poj_abbrev` /
+    // `tps_abbrev` collision sharing the input prefix. The prefix-aware
+    // variant `matches_continuous_toneless_prefix_key` reconstructs the
+    // toneless from `record.tl` and keeps the rowid only when
+    // `reconstructed.starts_with(key_body)`.
+    //
+    // Fixture: row 1 is a genuine `tl:taigi` toneless hit (`tâi-gí`/
+    // 台語); row 2 is a synthetic acronym collision — a 5-syllable
+    // phrase whose abbrev happens to start with `taigi`. We simulate the
+    // collision by setting `toneless_key = "taigir"` on row 2 so its
+    // FST entry `tl:taigir` falls inside the byte-range scan of
+    // `lookup_prefix("tl:taigi")` but its `record.tl` reconstructs to a
+    // toneless that does NOT start with `taigi` — the post-fix filter
+    // rejects it. The pre-fix behaviour would have leaked row 2 as a
+    // `COVERAGE_KIND_PARTIAL_PREFIX` candidate.
+    let (prefix_index, dict) = build_fixture(
+        "item10-abbrev-filter",
+        &[
+            Row {
+                toneless_key: "taigi",
+                hanzi: "台語",
+                tl: "tâi-gí",
+                syll: 2,
+                freq: 100,
+            },
+            // Synthetic acronym collision row. `tl = "tó-â-iàu-gô-iàu"`
+            // reconstructs (via `normalize_input` → strip digits) to
+            // `toaiaugoiau`, which does NOT start with `taigi` → filter
+            // rejects. The forged `toneless_key = "taigir"` only places
+            // the FST entry inside the `lookup_prefix("tl:taigi")` range.
+            Row {
+                toneless_key: "taigir",
+                hanzi: "X",
+                tl: "tó-â-iàu-gô-iàu",
+                syll: 5,
+                freq: 50,
+            },
+        ],
+    );
+
+    let key = partial_prefix_key_for("taigi");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        5,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
+    );
+
+    // Row 1 (`tâi-gí`/台語) survives — genuine phonetic prefix-extension.
+    // Row 2 (`tó-â-iàu-gô-iàu`/X) filtered — acronym-only collision.
+    assert_eq!(
+        out.len(),
+        1,
+        "post-fix: only the genuine prefix-extension survives, got {out:#?}"
+    );
+    let labels: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
+    assert_eq!(labels, vec!["台語"], "got {labels:?}");
+    assert_eq!(out[0].coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX);
+}
+
+#[test]
+fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
+    // Codex PR #351 r3321758666 — when an input's exact key has many
+    // homophones, the bounded fetcher's `PARTIAL_PREFIX_OUTPUT_CAP`
+    // truncate is consumed by exact-match rows that the caller is
+    // about to drop via cross-batch FULL/PARTIAL dedupe, leaving zero
+    // visible extension candidates. The `_unbounded` variant must
+    // return the sorted pool intact so the caller can exclude FULL
+    // duplicates BEFORE truncating.
+    //
+    // Fixture: 32 high-freq homophones at `tl:hong` (above
+    // `PARTIAL_PREFIX_OUTPUT_CAP = 30`) + one lower-freq strict-prefix
+    // extension at `tl:hongtshia`. The bounded fetcher would return
+    // 30 homophone rows (the extension does not survive the truncate);
+    // the unbounded fetcher returns all 33 sorted rows (32 homophones
+    // + 1 extension) so a caller-side exclude can drop the 32
+    // homophones and surface the 1 extension.
+    let mut rows: Vec<Row> = (1..=32)
+        .map(|i| Row {
+            toneless_key: "hong",
+            hanzi: HOMOPHONE_HANZI[i - 1],
+            tl: HOMOPHONE_TL[i - 1],
+            syll: 1,
+            freq: 1000 + i as u32,
+        })
+        .collect();
+    rows.push(Row {
+        toneless_key: "hongtshia",
+        hanzi: "風車",
+        tl: "hong-tshia",
+        syll: 2,
+        freq: 10,
+    });
+    let (prefix_index, dict) = build_fixture("item10-unbounded-pool", &rows);
+
+    let key = partial_prefix_key_for("hong");
+    let freq_map = FrequencyMap::new();
+    let ctx_neutral = ctx(&freq_map, 0, &[], &prefix_index, &dict);
+
+    // Bounded path: truncated to OUTPUT_CAP. The lower-freq extension
+    // is squeezed out by the 32 homophones.
+    let bounded = fetch_partial_prefix_candidates(&key, 4, &ctx_neutral);
+    assert_eq!(
+        bounded.len(),
+        PARTIAL_PREFIX_OUTPUT_CAP,
+        "bounded path saturates at OUTPUT_CAP, got {}",
+        bounded.len()
+    );
+    assert!(
+        !bounded.iter().any(|c| c.display_text == "風車"),
+        "extension `風車`/hong-tshia should NOT survive bounded truncate when 32 \
+         homophones outscore it; got display_texts: {:?}",
+        bounded.iter().map(|c| &c.display_text).collect::<Vec<_>>()
+    );
+
+    // Unbounded path: full pool, no truncate. The extension is present
+    // alongside all 32 homophones for the caller to filter.
+    let unbounded = fetch_partial_prefix_candidates_unbounded(&key, 4, &ctx_neutral);
+    assert_eq!(
+        unbounded.len(),
+        33,
+        "unbounded path keeps all 33 dedupe survivors, got {}",
+        unbounded.len()
+    );
+    assert!(
+        unbounded.iter().any(|c| c.display_text == "風車"),
+        "extension `風車`/hong-tshia MUST be present in the unbounded pool so \
+         the caller can surface it after excluding FULL-block homophones"
+    );
+}
+
+// Hermetic hanzi + tl pools for the 32-homophone fixture above. Each
+// hanzi/tl pair is unique so the per-row `(roman, hanji, span)` triple
+// is distinct (no internal `dedupe_by_roman_hanji_span` collapse before
+// the test's bounded/unbounded comparison runs).
+const HOMOPHONE_HANZI: [&str; 32] = [
+    "風", "封", "豐", "瘋", "蜂", "鋒", "峰", "烽", "馮", "逢", "縫", "奉", "鳳", "捧", "棒",
+    "蓬", "篷", "鵬", "彭", "澎", "膨", "朋", "棚", "繃", "崩", "綳", "甭", "蓬", "鬃", "宏",
+    "弘", "洪",
+];
+const HOMOPHONE_TL: [&str; 32] = [
+    "hong-1", "hong-2", "hong-3", "hong-4", "hong-5", "hong-6", "hong-7", "hong-8", "hong-9",
+    "hong-10", "hong-11", "hong-12", "hong-13", "hong-14", "hong-15", "hong-16", "hong-17",
+    "hong-18", "hong-19", "hong-20", "hong-21", "hong-22", "hong-23", "hong-24", "hong-25",
+    "hong-26", "hong-27", "hong-28", "hong-29", "hong-30", "hong-31", "hong-32",
+];
 
 #[test]
 fn partial_prefix_returns_empty_when_no_dict_hits() {

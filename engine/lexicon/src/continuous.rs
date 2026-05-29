@@ -772,13 +772,52 @@ pub fn fetch_candidates_for_keys(
 /// empty and therefore never emits a bare `"tl:"` / `"poj:"` alone.
 // 中文: Item 10 — 部分前綴候選查詢。當 syllabifier 切不出音節邊界時 fall through 到 prefix_index.lookup_prefix。
 // 中文: rowid 上限 = PARTIAL_PREFIX_HYDRATE_CAP (hydration 預算);output 上限 = PARTIAL_PREFIX_OUTPUT_CAP (UI 預算,排序後才裁)。
-// 中文: 全部候選共用 8 維 SortKey,coverage_kind 在最前面;沒有混合 full + partial 的 caller (dispatch 走互斥 branch)。
+// 中文: 全部候選共用 8 維 SortKey,coverage_kind 在最前面;FULL/PARTIAL 跨 batch 合併時,
+// 中文:   composing::continuous::assemble_candidates Step 4b 在 caller 端做跨 batch
+// 中文:   (roman,hanji,consumed_span) 去重,coverage_kind 首維保證 PARTIAL 排在 FULL 之後,無需 re-sort。
 // 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu" / "poj:chi");bare namespace 不會被擋,但會 hydrate 到 PARTIAL_PREFIX_HYDRATE_CAP 筆後排序裁切;
 // 中文:   生產路徑由 composing::shadow::build_partial_prefix_key (B-2 脫 `_tl` 後綴,mode-aware) 保證不會傳 bare namespace。
 // 中文: Item 12 — custom 命中也併進 partial-prefix 路徑,標 COVERAGE_KIND_PARTIAL_PREFIX
 // 中文:   (NOT FULL — 否則繞過 §15.5「partial 永遠排在 full 之下」),legacy custom dict prefix-visible 行為對齊。
 // 中文: D7 改:其餘 6 個共用 arg 收進 ContinuousFetchCtx。
 pub fn fetch_partial_prefix_candidates(
+    key: &(ConsumedSpan, String),
+    raw_len: u32,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Vec<RawCandidate> {
+    let mut out = fetch_partial_prefix_candidates_unbounded(key, raw_len, ctx);
+    out.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
+    out
+}
+
+/// Same hydrate-custom-dedupe-sort pipeline as
+/// [`fetch_partial_prefix_candidates`] but **without** the
+/// `PARTIAL_PREFIX_OUTPUT_CAP` truncate at the tail.
+///
+/// Exists to address the Codex PR #351 r3321758666 finding: for inputs
+/// whose exact key has many homophones (Codex example: production
+/// `tl_notone = hong` has 30+ exact rows; `hong` syllabifies so Step 4b
+/// fires), the post-sort truncate inside the bounded wrapper consumes
+/// the entire `PARTIAL_PREFIX_OUTPUT_CAP` budget on rows that the
+/// caller is about to drop via a cross-batch FULL/PARTIAL dedupe. The
+/// caller then sees zero strict-prefix extensions even though they
+/// exist in the dictionary's prefix range.
+///
+/// The fix surfaces the un-truncated sorted pool so the caller can
+/// apply its FULL-block exclude BEFORE truncating. The empty-keys
+/// branch (which has no FULL block to exclude against) keeps using
+/// the bounded wrapper unchanged.
+///
+/// Caller obligation: must apply its own truncate (typically
+/// `PARTIAL_PREFIX_OUTPUT_CAP`) after the cross-batch filter; the
+/// returned vec is bounded only by `PARTIAL_PREFIX_HYDRATE_CAP` +
+/// custom count.
+// 中文: 與 fetch_partial_prefix_candidates 同管線但不裁尾 — Codex PR #351 r3321758666
+// 中文:   反應的 bug:exact 同音字超出 OUTPUT_CAP 時,bounded 版本會把整個 30 名額耗
+// 中文:   在 caller 等下要剔除的 row,使得 strict-prefix 延伸候選永遠進不來。
+// 中文:   Un-truncated 版讓 caller 在 cross-batch FULL/PARTIAL 過濾後自行裁。
+// 中文:   Empty-keys branch 沒有 FULL block,仍走有裁尾的 wrapper。
+pub fn fetch_partial_prefix_candidates_unbounded(
     key: &(ConsumedSpan, String),
     raw_len: u32,
     ctx: &ContinuousFetchCtx<'_>,
@@ -804,11 +843,15 @@ pub fn fetch_partial_prefix_candidates(
     // legacy byte-sort first 30 (e.g. `tl:ki` after a wall of
     // `tl:ka-*` phrases) reach the SortKey sort.
     //
-    // The output is truncated to PARTIAL_PREFIX_OUTPUT_CAP AFTER
-    // sort/dedupe (below). Filter rejects still consume hydration
-    // budget — goal is bounding worst-case work, not maximizing hits.
+    // This fn does NOT truncate — the bounded wrapper
+    // `fetch_partial_prefix_candidates` applies `PARTIAL_PREFIX_OUTPUT_CAP`
+    // for callers that don't need cross-batch exclude; Step 4b in
+    // `composing::continuous` takes the un-truncated pool, applies its
+    // FULL-block exclude, then truncates itself. Filter rejects still
+    // consume hydration budget — goal is bounding worst-case work, not
+    // maximizing hits.
     // 中文: rowid 上限拉到 HYDRATE_CAP (500) — hydration 本身便宜,讓 byte-sort 後排的高頻短候選也進排序。
-    // 中文:   實際對外輸出由 sort 後的 OUTPUT_CAP 控制 (見函式尾)。
+    // 中文:   此 fn 不裁尾;bounded wrapper / Step 4b 各自決定截斷時機(見 fn 尾註與 caller 端)。
     // Item 12: guard the unbounded `lookup_prefix("")` scan — with the
     // early-return now gated on `fst_key.is_empty() && custom.is_empty()`,
     // an empty `fst_key` + non-empty `custom` reaches here and must NOT
@@ -825,6 +868,21 @@ pub fn fetch_partial_prefix_candidates(
                 continue;
             };
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+                continue;
+            }
+            // Codex PR #351 r3319500948 — drop `tl_abbrev` / `poj_abbrev` /
+            // `tps_abbrev` collisions whose FST key happens to share the
+            // input prefix. Mirrors the span-local + walker guard at
+            // `fetch_candidates_for_keys`:640 / `best_candidate_for_key`:922
+            // but uses the prefix-aware `*_prefix_key` variant — the
+            // partial-prefix path's key body is a STRICT PREFIX of the
+            // toneless, so equality would reject every legitimate
+            // extension hit.
+            // 中文: Codex PR #351 r3319500948 — partial-prefix 也必須過濾
+            // 中文:   `tl_abbrev`/`poj_abbrev`/`tps_abbrev` 命中,對齊 span-local
+            // 中文:   + walker 守門;此處 key body 為 toneless 嚴格前綴 → 用
+            // 中文:   matches_continuous_toneless_prefix_key 而非等值版。
+            if !matches_continuous_toneless_prefix_key(fst_key, &record.tl) {
                 continue;
             }
             out.push(record_to_candidate(
@@ -868,11 +926,15 @@ pub fn fetch_partial_prefix_candidates(
         .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
         .collect();
     indexed.sort_by_key(|(key, _)| *key);
-    // Truncate AFTER sort/dedupe so the visible top-N is the
-    // globally best-scoring subset of the hydrated pool, not the FST
-    // byte-sort prefix (the R6 limitation that motivated this fix).
-    // 中文: 排序+去重之後才裁到 OUTPUT_CAP,確保 UI 看到的是「分數最佳前 N」而非「字典序前 N」。
-    indexed.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
+    // No truncate here — the bounded wrapper `fetch_partial_prefix_candidates`
+    // applies `PARTIAL_PREFIX_OUTPUT_CAP` for callers that don't need to
+    // run a cross-batch exclude. Step 4b in `composing::continuous`
+    // (Codex PR #351 r3321758666) takes the un-truncated pool, applies
+    // its FULL-block exclude, then truncates itself — preserving the
+    // visible top-N invariant after duplicates are dropped.
+    // 中文: 此處不裁尾;bounded wrapper fetch_partial_prefix_candidates 對不需 cross-batch
+    // 中文:   過濾的 caller 套 PARTIAL_PREFIX_OUTPUT_CAP。Step 4b 取 un-truncated pool
+    // 中文:   後在 caller 端套 exclude → 自己裁,確保 UI top-N 是 dup 剔除後的最佳子集。
     indexed.into_iter().map(|(_, c)| c).collect()
 }
 
@@ -1221,6 +1283,84 @@ fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
     } else {
         matches_continuous_tl_toneless_key(key, record_tl)
     }
+}
+
+/// Prefix-aware analog of [`matches_continuous_toneless_key`] for the
+/// partial-prefix path. The span-local + walker filters check for exact
+/// equality (`reconstructed_toneless == body`) because their key body IS
+/// the full toneless. The partial-prefix path's key body is a **strict
+/// prefix** of the toneless — `fetch_partial_prefix_candidates` hydrates
+/// every rowid whose FST key starts with that body, which includes both
+/// (a) genuine phonetic prefix-extension hits where the rowid's
+/// `tl_notone` starts with the body and (b) acronym collisions where
+/// the rowid's `tl_abbrev` starts with the body. The Codex bot
+/// (PR #351 r3319500948) caught the missing filter: a continuous typist
+/// at `tl:taigi` should see `tâi-gí`/`tâi-gír` extensions but NOT a
+/// rowid whose `tl_abbrev` happens to start with `taigi`.
+///
+/// The variant returns `true` when `reconstructed_toneless.starts_with(
+/// body)`. Reuses per-mode `derive_poj_notone_for_match` /
+/// `phonetics::tps_notone_from_tl` / `phonetics::normalize_input` so the
+/// reconstruction path is byte-identical to the equality guards. The
+/// digit-in-body pass-through stays identical too — numeric-tone keys
+/// are reserved for non-continuous code paths.
+///
+/// Sibling of [`matches_continuous_toneless_key`]; the two share the
+/// reconstruction code and only differ in `==` vs `starts_with`.
+// 中文: 部分前綴版 toneless guard — 與 matches_continuous_toneless_key 對稱,
+// 中文:   差別在 `reconstructed == body` 改為 `reconstructed.starts_with(body)`。
+// 中文:   Span-local/walker 的 key body 是完整 toneless,partial-prefix 的 body
+// 中文:   是 toneless 的嚴格前綴 (lookup_prefix 命中既含真正前綴延伸也含
+// 中文:   tl_abbrev 字首同字符的 acronym 命中);Codex PR #351 r3319500948 抓到
+// 中文:   原本未過濾,本變體把 acronym leak 擋掉。重用同一份 derivation。
+fn matches_continuous_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
+    if key.starts_with("poj:") {
+        matches_continuous_poj_toneless_prefix_key(key, record_tl)
+    } else if key.starts_with("tps:") {
+        matches_continuous_tps_toneless_prefix_key(key, record_tl)
+    } else {
+        matches_continuous_tl_toneless_prefix_key(key, record_tl)
+    }
+}
+
+fn matches_continuous_tl_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
+    let Some(body) = key.strip_prefix("tl:") else {
+        return true;
+    };
+    if body.bytes().any(|b| b.is_ascii_digit()) {
+        return true;
+    }
+    let toneless: String = phonetics::normalize_input(record_tl)
+        .chars()
+        .filter(|c| !c.is_ascii_digit())
+        .collect();
+    toneless.starts_with(body)
+}
+
+fn matches_continuous_poj_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
+    let Some(body) = key.strip_prefix("poj:") else {
+        return true;
+    };
+    if body.bytes().any(|b| b.is_ascii_digit()) {
+        return true;
+    }
+    let poj_display = phonetics::api::tl_display_to_poj_display(record_tl);
+    derive_poj_notone_for_match(&poj_display).starts_with(body)
+}
+
+fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
+    let Some(body) = key.strip_prefix("tps:") else {
+        return true;
+    };
+    if body.chars().any(phonetics::is_tps_tone_mark) {
+        return true;
+    }
+    let primary = phonetics::tps_notone_from_tl(record_tl);
+    if primary.starts_with(body) {
+        return true;
+    }
+    let variant = phonetics::tps_notone_or_variant(&primary);
+    !variant.is_empty() && variant.starts_with(body)
 }
 
 fn record_to_candidate(

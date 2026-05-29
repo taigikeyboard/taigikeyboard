@@ -30,6 +30,25 @@
 //!    `score = -(slot0.cost as f32)` (the negated-cost bridge IS the wire
 //!    contract, `CandidateMessage.score` proto field 5;
 //!    `frequency`/`bitmask` are walker-N/A and stay `0`).
+//!
+//!    **Step 4b — whole-input prefix-extension scan (else-branch only).**
+//!    After the walker slot-0 prepend, run
+//!    [`fetch_via_lexicon_partial_inner`] against the whole-buffer key
+//!    from [`crate::shadow::build_partial_prefix_key`] so dict rows
+//!    whose key extends BEYOND any lattice edge (e.g. `tl:taigir` /
+//!    `tâi-gír` for input `taigi`) surface as
+//!    `COVERAGE_KIND_PARTIAL_PREFIX` candidates. Gated by
+//!    `synth_consumed_span` (skipped when raw carries a pending
+//!    trailing hyphen, same suppression as walker slot-0). Mainstream
+//!    IME parity (librime `LookupWords(predictive=true)`, khiin-rs
+//!    `candidates_for_splittable`, our own `lexicon::search`
+//!    exact++prefix merge); the empty-keys branch above already
+//!    covers this for inputs with no valid syllable, Step 4b extends
+//!    it to already-syllabified inputs. Cross-batch
+//!    `(roman, hanji, consumed_span)` dedupe drops extension hits
+//!    already present in the FULL block. `SortKey`'s leading
+//!    `coverage_kind` dim pins the result strictly below the FULL
+//!    block, so no global re-sort is needed.
 //! 5. POJ presentation pass: `mode == Poj` → [`recase_tl_as_poj_display`]
 //!    over every candidate's `roman` then [`dedupe_rendered_continuous`].
 //!    Skipped (not identity-called) for TL / English / TPS — the gate sits
@@ -73,9 +92,9 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key, derive_mode, fetch_candidates_for_keys,
-    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
-    EngineHandle as LexiconHandle, RawCandidate, SyllableInventory, COVERAGE_KIND_FULL,
-    FORM_NOTONE,
+    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, RawCandidate,
+    SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use ranking::{decayed_user_weight_delta, recency_rank, FrequencyMap};
 
@@ -376,10 +395,65 @@ fn fetch_via_lexicon_partial_inner(
     mode: phonetics::InputMode,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
+    fetch_via_lexicon_partial_inner_impl(raw, raw_len, mode, ctx, /* bounded */ true)
+}
+
+/// v3.5.9 Step 4b — un-truncated partial-prefix fetch for the FULL +
+/// PARTIAL cross-batch path. Same hydrate/dedupe/sort/recase as
+/// [`fetch_via_lexicon_partial_inner`] but returns the pool without
+/// applying the `PARTIAL_PREFIX_OUTPUT_CAP` truncate. Step 4b applies
+/// its FULL-block exclude on the un-truncated pool, then truncates
+/// itself — addresses Codex PR #351 r3321758666 (exact-key homophones
+/// would otherwise eat the entire output cap before the dedupe ran).
+///
+/// The empty-keys branch keeps using
+/// [`fetch_via_lexicon_partial_inner`] (bounded wrapper) because it has
+/// no FULL block to exclude against.
+// 中文: Step 4b 專用 — 不裁尾的 partial-prefix fetcher;Codex PR #351 r3321758666 反應的
+// 中文:   bug:exact 同音字 ≥30 時,bounded 版會把 OUTPUT_CAP 全消耗在被 dedupe 剔除的 row。
+// 中文:   un-bounded 版讓 Step 4b 在 caller 端套 exclude → 自己裁,確保延伸候選能浮現。
+fn fetch_via_lexicon_partial_inner_unbounded(
+    raw: &str,
+    raw_len: u32,
+    mode: phonetics::InputMode,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Vec<RawCandidate> {
+    fetch_via_lexicon_partial_inner_impl(raw, raw_len, mode, ctx, /* bounded */ false)
+}
+
+fn fetch_via_lexicon_partial_inner_impl(
+    raw: &str,
+    raw_len: u32,
+    mode: phonetics::InputMode,
+    ctx: &ContinuousFetchCtx<'_>,
+    bounded: bool,
+) -> Vec<RawCandidate> {
     let Some(key) = build_partial_prefix_key(raw, mode) else {
         return Vec::new();
     };
-    fetch_partial_prefix_candidates(&key, raw_len, ctx)
+    let mut out = if bounded {
+        fetch_partial_prefix_candidates(&key, raw_len, ctx)
+    } else {
+        fetch_partial_prefix_candidates_unbounded(&key, raw_len, ctx)
+    };
+    // Partial-prefix candidates carry `consumed_span = (0, raw_len)` by
+    // construction (`build_partial_prefix_key` pins the span). Recase against
+    // the full raw buffer so the keys-empty branch and the Step 4b extension
+    // path apply the SAME per-candidate case mapping the span-local Step 3
+    // loop applies to its FULL-coverage hits. Without this, the case display
+    // of a partial-prefix hit flips between branches as the user crosses the
+    // first syllable boundary (e.g. typing `T` → keys.is_empty() arm,
+    // unrecased; then `Ta` → else-arm + Step 4b, recased).
+    // 中文: partial-prefix 候選 consumed_span 由 build_partial_prefix_key 釘成 (0,raw_len);
+    // 中文:   集中在此 recase 讓 empty-keys 與 Step 4b 兩條路徑共用同一大小寫規則,
+    // 中文:   避免使用者跨第一個音節邊界時同一字典 row 的大小寫忽然翻轉。
+    if raw_len as usize <= raw.len() {
+        let seg = &raw[..raw_len as usize];
+        for cand in &mut out {
+            cand.roman = recase_roman(&cand.roman, seg, mode);
+        }
+    }
+    out
 }
 
 /// v3.5.9 A2 — slot-0 whole-sentence walker inner. Pre-A2
@@ -1028,6 +1102,164 @@ pub(crate) fn assemble_candidates(
                     }
                 }
             }
+            // ---- Step 4b: whole-input prefix-extension scan.
+            //
+            // Mainstream IME parity. Dict rows whose toneless FST key has
+            // `raw` as a strict prefix (key extends BEYOND raw, e.g.
+            // `tl:taigir` for input `taigi` → `tâi-gír`/`台語`) are not
+            // reachable from the span-local + walker pair:
+            // * `fetch_via_lexicon_inner` calls `lookup_exact` per
+            //   left-anchored lattice edge, so it only matches keys EQUAL
+            //   to a `(0, end)` toneless prefix.
+            // * Walker spans `0..raw_len` only, so it cannot extend past
+            //   the buffer length to surface a longer key.
+            // * The `keys.is_empty()` partial-prefix branch only fires
+            //   when the syllabifier produced no valid ending at all.
+            //
+            // Step 4b runs the same `fetch_partial_prefix_candidates`
+            // machinery that branch uses against the whole-buffer key
+            // built by `build_partial_prefix_key(raw, mode)`. The result
+            // carries `COVERAGE_KIND_PARTIAL_PREFIX`, so `SortKey`'s
+            // leading dim pins these strictly below the FULL block in
+            // the merged vec — concat-without-resort preserves the
+            // `[FULL...][PARTIAL...]` invariant.
+            //
+            // References:
+            // - librime `src/rime/gear/table_translator.cc:178` →
+            //   `dictionary.cc:308-309` `LookupWords(predictive=true)` →
+            //   `prism_->ExpandSearch` is the default `table_translator`
+            //   path; both user dict and main dict surface prefix
+            //   extensions for an input already on a valid syllable
+            //   boundary.
+            // - khiin-rs `khiin/src/input/converter.rs:58-69`
+            //   `candidates_for_splittable` keeps `elem.raw_text().len()
+            //   >= query.len()` via `select_conversions_for_multiple` on
+            //   prefix-trie hits.
+            // - Our own `engine/lexicon/src/search.rs:124-129` normal-
+            //   mode autocomplete already does `lookup_exact ++
+            //   lookup_prefix` via `IndexSet` order-preserving merge.
+            //   The continuous path is the outlier.
+            //
+            // **Trailing-hyphen gate.** When `synth_consumed_span` returns
+            // `None` (shadow ends short of `raw_len` because the raw
+            // buffer carries a pending hyphen — `tai-`, `tai-bak-`),
+            // Step 4b must NOT emit a `(0, raw_len)`-span candidate that
+            // would mis-commit the pending `-`. Mirrors the walker
+            // slot-0 trailing-hyphen suppression at
+            // `fetch_walker_slot0_inner`'s `synth_consumed_span?`
+            // early-out, same contract.
+            //
+            // **Recase.** Recase is centralized in
+            // [`fetch_via_lexicon_partial_inner`] so the empty-keys
+            // branch and Step 4b apply the same per-candidate case
+            // mapping — without that centralization the display of a
+            // partial-prefix hit would case-flip as the user crosses
+            // the first syllable boundary. Multi-syllable extension
+            // candidates whose syllable count exceeds the raw segment
+            // share the single-bucket case treatment documented at
+            // [`recase_roman`] (per-syllable case intent is not
+            // recoverable past the raw segment length).
+            //
+            // **Cross-batch dedupe.** Both fetchers run their own internal
+            // `dedupe_by_roman_hanji_span` pre-sort, but that does not
+            // span batches. A partial-prefix hit on the same dict row
+            // already present in the FULL block (walker slot-0 recases
+            // edge-by-edge in `fetch_walker_slot0_inner`; span-local
+            // recases here at Step 3) normalizes to the same `(roman,
+            // hanji, consumed_span)` triple and collapses.
+            //
+            // 中文: Step 4b — 主流 IME 對齊的 whole-buffer 前綴延伸掃描。
+            // 中文:   librime predictive=true / khiin-rs candidates_for_splittable /
+            // 中文:   本專案 lexicon::search 的 exact++prefix。沒這步,長於 buffer
+            // 中文:   的字典詞(`tl:taigir` 對應輸入 `taigi`)永遠進不來。
+            // 中文:   COVERAGE_KIND_PARTIAL_PREFIX + SortKey 首維讓延伸候選
+            // 中文:   嚴格排在 FULL 之後;不需 re-sort。
+            // 中文: 尾端 `-` 門檻 — synth_consumed_span None 時跳過,避免合成
+            // 中文:   (0,raw_len) span 誤吃 pending `-`(對齊 walker slot-0 抑制)。
+            // 中文: Recase — partial-prefix 的 consumed_span 一律 (0,raw_len),
+            // 中文:   對整段 raw 還原大小寫,與 Step 3 span-local recase 一致。
+            // 中文: 跨 batch 去重 — fetcher 內部去重不跨 batch;新增 FULL/PARTIAL
+            // 中文:   交叉 (roman,hanji,consumed_span) 去重,把 walker slot-0 /
+            // 中文:   span-local 已有的行從 partial 中剔除。
+            if let (Some((shadow, shadow_to_raw_end, _, _)), Some(ctx)) =
+                (&shadow_lattice, lex_ctx.as_ref())
+            {
+                if synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len).is_some() {
+                    // v3.5.9 Codex PR #351 r3321758666 — use the un-truncated
+                    // pool so the FULL-block exclude is applied BEFORE the
+                    // `PARTIAL_PREFIX_OUTPUT_CAP` truncate. Otherwise, for
+                    // inputs whose exact key has many homophones (e.g.
+                    // `tl_notone = hong` has 30+ exact rows in production),
+                    // the bounded fetcher would return 30 duplicates of the
+                    // FULL block, and the post-fetch dedupe would drop all
+                    // 30 — leaving zero extension candidates visible even
+                    // though `hong-tshia` / `hong-thai` etc. exist in the
+                    // prefix range. The un-bounded variant returns the
+                    // sorted pool (≤ `PARTIAL_PREFIX_HYDRATE_CAP` after
+                    // dedupe); composing-side filters out FULL duplicates,
+                    // then applies `PARTIAL_PREFIX_OUTPUT_CAP` itself.
+                    // 中文: Codex PR #351 r3321758666 — 走 un-truncated pool。
+                    // 中文:   bounded 版會在 dedupe 之前先裁到 30,exact 同音字
+                    // 中文:   ≥30 時 30 個名額全在 FULL 也有 → dedupe 全掉 → 0 個延伸。
+                    // 中文:   composing 端先 exclude,再裁 OUTPUT_CAP。
+                    let mut ext = fetch_via_lexicon_partial_inner_unbounded(
+                        raw, raw_len, mode, ctx,
+                    );
+                    if !ext.is_empty() {
+                        // Borrowed key shape — `c` is not mutated during the
+                        // retain on `ext`, so HashSet entries can hold &str
+                        // slices into `c` and avoid per-keystroke String allocs.
+                        //
+                        // Recase byte-identity holds for the dominant case:
+                        // span-local single-edge FULL hits AND walker slot-0
+                        // single-buffer paths, both at span (0, raw_len), both
+                        // recased against the same raw segment as `ext`.
+                        //
+                        // Known divergence (Codex post-impl SHIP-WITH-FIXES
+                        // 2026-05-29): walker slot-0 joins per-edge-recased
+                        // syllables with a space (see [`fetch_walker_slot0_inner`]),
+                        // whereas `ext` recases the full raw segment as one
+                        // string. For multi-edge walker paths with mixed-case
+                        // per-syllable intent like `TaIGi`, walker produces
+                        // `Tâi Gí` while `ext` produces `Tâi-gí` for the same
+                        // dict row — the exclude misses the duplicate. Visible
+                        // only when ≥30 homophones share an exact key AND raw
+                        // is mixed-case per-syllable, so deferred to a
+                        // follow-up. The normal lowercase path (the v3.5.9
+                        // continuous dogfood baseline) is unaffected.
+                        // 中文: borrow 形式 HashSet key — `c` 在 ext.retain 期間不變;
+                        // 中文:   span-local 單 edge FULL + walker slot-0 全 buffer 單 edge 都與 ext
+                        // 中文:   recase 對齊。已知例外(Codex post-impl):walker 多 edge 用空格 join
+                        // 中文:   而 ext 整段 recase,`TaIGi`-類 mixed-case 多音節輸入會分歧;
+                        // 中文:   現實觸發條件 = ≥30 同音字 AND 逐音節 mixed-case,延後處理。
+                        let existing: std::collections::HashSet<(
+                            &str,
+                            Option<&str>,
+                            ConsumedSpan,
+                        )> = c
+                            .iter()
+                            .map(|x| (x.roman.as_str(), x.hanji.as_deref(), x.consumed_span))
+                            .collect();
+                        ext.retain(|x| {
+                            !existing.contains(&(
+                                x.roman.as_str(),
+                                x.hanji.as_deref(),
+                                x.consumed_span,
+                            ))
+                        });
+                        // Truncate AFTER exclude so the visible top-N is the
+                        // best-scoring subset of the non-duplicate extensions,
+                        // not the post-truncate dregs of a homophone-dominated
+                        // pool. The lexicon-side sort is preserved (the
+                        // un-truncated pool was already sorted by SortKey),
+                        // so `truncate` keeps the global score order.
+                        // 中文: 先 exclude 再裁,確保 UI top-N 是去 dup 後的最佳子集;
+                        // 中文:   pool 已由 lexicon 端依 SortKey 排好,truncate 保排序。
+                        ext.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
+                        c.extend(ext);
+                    }
+                }
+            }
             c
         };
         // ---- Step 5: POJ presentation pass.
@@ -1263,10 +1495,7 @@ mod tests {
         // The reported bug: TPS `ㄨㄢ` → dict has 灣/uan (tone 1) + 灣/uân
         // (tone 5) at the same `tps:ㄨㄢ` toneless key; same hanji, same
         // span, different roman. TPS UI shows hanji only ⇒ duplicate.
-        let mut visible_dup = vec![
-            mk("uan", Some("灣"), (0, 6)),
-            mk("uân", Some("灣"), (0, 6)),
-        ];
+        let mut visible_dup = vec![mk("uan", Some("灣"), (0, 6)), mk("uân", Some("灣"), (0, 6))];
         dedupe_display_hanji_for_tps(&mut visible_dup);
         assert_eq!(visible_dup.len(), 1);
         assert_eq!(visible_dup[0].roman, "uan", "first-wins keeps top-ranked");
@@ -1294,10 +1523,7 @@ mod tests {
         // Same hanji at different `consumed_span` is a legitimate partial
         // vs full-buffer surface — must NOT collapse (mirrors the S2
         // invariant pinned by `lexicon::dedupe_by_roman_hanji_span`).
-        let mut spans = vec![
-            mk("uan", Some("灣"), (0, 3)),
-            mk("uan", Some("灣"), (0, 6)),
-        ];
+        let mut spans = vec![mk("uan", Some("灣"), (0, 3)), mk("uan", Some("灣"), (0, 6))];
         let before = spans.len();
         dedupe_display_hanji_for_tps(&mut spans);
         assert_eq!(
@@ -1331,7 +1557,7 @@ mod tests {
         // any other axis. Mirrors `ranking::dedup::remove_display_duplicates`.
         let mut roman_only = vec![
             mk("ㄉㄞ", None, (0, 3)),
-            mk("ㄉㄞ", None, (0, 3)),   // duplicate roman, both kept
+            mk("ㄉㄞ", None, (0, 3)),     // duplicate roman, both kept
             mk("ㄨㄢ", Some(""), (0, 3)), // empty hanji also passes
         ];
         let before = roman_only.len();
