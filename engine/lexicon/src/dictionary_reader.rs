@@ -49,6 +49,14 @@ pub const VARIANT_BIT: u16 = 1 << 12;
 /// corrupt the filter AND.
 // 中文: kautian subcollection subtag (v3) — 與 bitmask 分離的 u16;bit0=主條目, bit1-10=腔調, bit11=姓名附錄, 12-15 保留。
 pub const KAUTIAN_SUBTAG_USED_MASK: u16 = 0x0FFF;
+/// Subtag bit positions (mirror `source_bits.py::KAUTIAN_SUBTAG_*`). The
+/// ENCODE side (`dictionary_filters::compute_filters`) packs the wire enable
+/// mask from these so the subcollection bit layout lives in Rust only.
+// 中文: subtag 位元位置 (鏡射 source_bits.py);ENCODE 端用這些打包 wire 啟用遮罩,佈局只存在 Rust。
+pub const KAUTIAN_SUBTAG_MAIN_BIT: u16 = 0;
+pub const KAUTIAN_SUBTAG_ACCENT_SHIFT: u16 = 1;
+pub const KAUTIAN_SUBTAG_ACCENT_COUNT: usize = 10;
+pub const KAUTIAN_SUBTAG_NAME_BIT: u16 = 11;
 
 /// Wire layout: the user's kautian subcollection ENABLE bits ride the high
 /// region of `enabled_sources_bitmask` (u32). bit 13 = active sentinel — when

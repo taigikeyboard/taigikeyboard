@@ -31,8 +31,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
  * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
  * enable mask (main | accent[10] | name, same layout as the record subtag).
- * Decode-only today (`Filter::from_enabled_bitmask` in dictionary_reader.rs);
- * the toggle→mask ENCODE lands with the first platform UI phase. Full layout:
+ * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+ * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+ * (a platform whose UI is not wired yet) keeps bit 13 clear = legacy all-on.
+ * Decode: `Filter::from_enabled_bitmask` in dictionary_reader.rs. Full layout:
  * `docs/engine/binary-format.md` §4.5. Same field semantics apply to
  * `SearchWithSourcesRequest` / `SearchByHanziRequest` below.
  * </pre>
@@ -377,8 +379,10 @@ public  final class SearchRequest extends
    * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
    * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
    * enable mask (main | accent[10] | name, same layout as the record subtag).
-   * Decode-only today (`Filter::from_enabled_bitmask` in dictionary_reader.rs);
-   * the toggle→mask ENCODE lands with the first platform UI phase. Full layout:
+   * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+   * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+   * (a platform whose UI is not wired yet) keeps bit 13 clear = legacy all-on.
+   * Decode: `Filter::from_enabled_bitmask` in dictionary_reader.rs. Full layout:
    * `docs/engine/binary-format.md` §4.5. Same field semantics apply to
    * `SearchWithSourcesRequest` / `SearchByHanziRequest` below.
    * </pre>

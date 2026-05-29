@@ -128,4 +128,25 @@ public interface DictionaryTogglesOrBuilder extends
    * @return The lkk.
    */
   boolean getLkk();
+
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * @return Whether the kautianSubcoll field is set.
+   */
+  boolean hasKautianSubcoll();
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * @return The kautianSubcoll.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getKautianSubcoll();
 }

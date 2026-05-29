@@ -74,6 +74,21 @@ enum DictionaryTexts {
 
     static let lkkDict = "漢羅合用建議用字"
 
+    // MARK: - 教育部辭典子集 (腔調 + 姓名附錄, nested under the kautian master)
+    // 中文: 腔調順序對齊 config.yaml dialect_columns。預設全開,父開關關閉時整組變灰。
+
+    static let kautianAccentLukang = "鹿港偏泉腔"
+    static let kautianAccentSansia = "三峽偏泉腔"
+    static let kautianAccentTaipak = "臺北偏泉腔"
+    static let kautianAccentGilan = "宜蘭偏漳腔"
+    static let kautianAccentTainan = "臺南混合腔"
+    static let kautianAccentKaohsiung = "高雄混合腔"
+    static let kautianAccentKinmen = "金門偏泉腔"
+    static let kautianAccentMakung = "馬公偏泉腔"
+    static let kautianAccentSintik = "新竹偏泉腔"
+    static let kautianAccentTaichung = "臺中偏漳腔"
+    static let kautianNameAppendix = "姓名附錄"
+
     // MARK: - 詞庫搜尋
 
     static let searchPlaceholder = "拍字揣詞"

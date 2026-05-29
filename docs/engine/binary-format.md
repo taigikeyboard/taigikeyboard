@@ -316,9 +316,13 @@ has enabled.
 `dictionary/common/source_bits.py::encode_kautian_subtag` +
 `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`).
 
-The toggle→wire ENCODE (`compute_filters` + proto `DictionaryToggles` fields)
-lands with the first platform UI phase; Phase 2 only DECODES the high bits, so
-production callers still send the legacy mask and behaviour is unchanged.
+The toggle→wire ENCODE landed in Phase 3 (iOS): `compute_filters` sets bit 13 +
+the enable mask from `DictionaryToggles.kautian_subcoll` (a nested message —
+PRESENCE is the active sentinel). iOS always sends it (it ships the toggles);
+a caller that leaves it absent (Android until its UI phase, NextWord) keeps the
+gate off = legacy all-on. The subcollection-enable filtering applies to the
+Tab3 dictionary-browse path; the keyboard continuous path still pins
+`u32::MAX` (no per-source gating there — separate deferred plumbing).
 
 ---
 

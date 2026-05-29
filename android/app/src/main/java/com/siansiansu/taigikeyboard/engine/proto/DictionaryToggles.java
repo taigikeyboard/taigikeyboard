@@ -14,6 +14,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
  * surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
+ *
+ * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+ * carries the user's per-subcollection enable state. PRESENCE of the
+ * sub-message is the active sentinel — a platform that ships the toggles
+ * sets it; any caller that leaves it absent (a platform whose UI is not
+ * yet wired, NextWord) signals "no subcollection gating" and the engine
+ * keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
+ * owns the subtag bit packing so the layout lives in Rust only.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.DictionaryToggles}
@@ -25,6 +33,7 @@ public  final class DictionaryToggles extends
     DictionaryTogglesOrBuilder {
   private DictionaryToggles() {
   }
+  private int bitField0_;
   public static final int KAUTIAN_FIELD_NUMBER = 1;
   private boolean kautian_;
   /**
@@ -481,6 +490,77 @@ public  final class DictionaryToggles extends
     lkk_ = false;
   }
 
+  public static final int KAUTIAN_SUBCOLL_FIELD_NUMBER = 13;
+  private com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles kautianSubcoll_;
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   */
+  @java.lang.Override
+  public boolean hasKautianSubcoll() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getKautianSubcoll() {
+    return kautianSubcoll_ == null ? com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.getDefaultInstance() : kautianSubcoll_;
+  }
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   */
+  private void setKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+    value.getClass();
+  kautianSubcoll_ = value;
+    bitField0_ |= 0x00000001;
+    }
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+    value.getClass();
+  if (kautianSubcoll_ != null &&
+        kautianSubcoll_ != com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.getDefaultInstance()) {
+      kautianSubcoll_ =
+        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.newBuilder(kautianSubcoll_).mergeFrom(value).buildPartial();
+    } else {
+      kautianSubcoll_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * </pre>
+   *
+   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   */
+  private void clearKautianSubcoll() {  kautianSubcoll_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -573,6 +653,14 @@ public  final class DictionaryToggles extends
    *
    * Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
    * surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
+   *
+   * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+   * carries the user's per-subcollection enable state. PRESENCE of the
+   * sub-message is the active sentinel — a platform that ships the toggles
+   * sets it; any caller that leaves it absent (a platform whose UI is not
+   * yet wired, NextWord) signals "no subcollection gating" and the engine
+   * keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
+   * owns the subtag bit packing so the layout lives in Rust only.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.DictionaryToggles}
@@ -1068,6 +1156,83 @@ public  final class DictionaryToggles extends
       return this;
     }
 
+    /**
+     * <pre>
+     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * </pre>
+     *
+     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     */
+    @java.lang.Override
+    public boolean hasKautianSubcoll() {
+      return instance.hasKautianSubcoll();
+    }
+    /**
+     * <pre>
+     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * </pre>
+     *
+     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getKautianSubcoll() {
+      return instance.getKautianSubcoll();
+    }
+    /**
+     * <pre>
+     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * </pre>
+     *
+     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     */
+    public Builder setKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+      copyOnWrite();
+      instance.setKautianSubcoll(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * </pre>
+     *
+     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     */
+    public Builder setKautianSubcoll(
+        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.Builder builderForValue) {
+      copyOnWrite();
+      instance.setKautianSubcoll(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * </pre>
+     *
+     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     */
+    public Builder mergeKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+      copyOnWrite();
+      instance.mergeKautianSubcoll(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * </pre>
+     *
+     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     */
+    public Builder clearKautianSubcoll() {  copyOnWrite();
+      instance.clearKautianSubcoll();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.DictionaryToggles)
   }
   @java.lang.Override
@@ -1084,6 +1249,7 @@ public  final class DictionaryToggles extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "kautian_",
             "taigitv_",
             "itaigi_",
@@ -1096,11 +1262,12 @@ public  final class DictionaryToggles extends
             "variant_",
             "khiin_",
             "lkk_",
+            "kautianSubcoll_",
           };
           java.lang.String info =
-              "\u0000\f\u0000\u0000\u0001\f\f\u0000\u0000\u0000\u0001\u0007\u0002\u0007\u0003\u0007" +
+              "\u0000\r\u0000\u0001\u0001\r\r\u0000\u0000\u0000\u0001\u0007\u0002\u0007\u0003\u0007" +
               "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0007\b\u0007\t\u0007\n\u0007\u000b\u0007" +
-              "\f\u0007";
+              "\f\u0007\r\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

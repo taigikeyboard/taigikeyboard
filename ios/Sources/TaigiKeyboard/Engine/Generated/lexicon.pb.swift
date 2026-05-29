@@ -435,8 +435,10 @@ public nonisolated struct Taigi_Engine_InstallRequest: Sendable {
 /// per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
 /// subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
 /// enable mask (main | accent[10] | name, same layout as the record subtag).
-/// Decode-only today (`Filter::from_enabled_bitmask` in dictionary_reader.rs);
-/// the toggle→mask ENCODE lands with the first platform UI phase. Full layout:
+/// ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+/// .kautian_subcoll` when present; a caller that leaves the sub-message absent
+/// (a platform whose UI is not wired yet) keeps bit 13 clear = legacy all-on.
+/// Decode: `Filter::from_enabled_bitmask` in dictionary_reader.rs. Full layout:
 /// `docs/engine/binary-format.md` §4.5. Same field semantics apply to
 /// `SearchWithSourcesRequest` / `SearchByHanziRequest` below.
 public nonisolated struct Taigi_Engine_SearchRequest: Sendable {
@@ -993,46 +995,155 @@ public nonisolated struct Taigi_Engine_LexiconAssocEntry: Sendable {
 ///
 /// Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
 /// surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
-public nonisolated struct Taigi_Engine_DictionaryToggles: Sendable {
+///
+/// kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+/// carries the user's per-subcollection enable state. PRESENCE of the
+/// sub-message is the active sentinel — a platform that ships the toggles
+/// sets it; any caller that leaves it absent (a platform whose UI is not
+/// yet wired, NextWord) signals "no subcollection gating" and the engine
+/// keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
+/// owns the subtag bit packing so the layout lives in Rust only.
+public nonisolated struct Taigi_Engine_DictionaryToggles: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// 教育部臺灣台語常用詞辭典
-  public var kautian: Bool = false
+  public var kautian: Bool {
+    get {_storage._kautian}
+    set {_uniqueStorage()._kautian = newValue}
+  }
 
   /// 台語新詞辭庫
-  public var taigitv: Bool = false
+  public var taigitv: Bool {
+    get {_storage._taigitv}
+    set {_uniqueStorage()._taigitv = newValue}
+  }
 
   /// iTaigi 華台對照典
-  public var itaigi: Bool = false
+  public var itaigi: Bool {
+    get {_storage._itaigi}
+    set {_uniqueStorage()._itaigi = newValue}
+  }
 
   /// 台灣植物名彙
-  public var sitbut: Bool = false
+  public var sitbut: Bool {
+    get {_storage._sitbut}
+    set {_uniqueStorage()._sitbut = newValue}
+  }
 
   /// 台華線頂對照典
-  public var taihoa: Bool = false
+  public var taihoa: Bool {
+    get {_storage._taihoa}
+    set {_uniqueStorage()._taihoa = newValue}
+  }
 
   /// 台日大辭典
-  public var taijit: Bool = false
+  public var taijit: Bool {
+    get {_storage._taijit}
+    set {_uniqueStorage()._taijit = newValue}
+  }
 
   /// 台語工藝詞庫
-  public var kungge: Bool = false
+  public var kungge: Bool {
+    get {_storage._kungge}
+    set {_uniqueStorage()._kungge = newValue}
+  }
 
   /// 學科術語辭典
-  public var stti: Bool = false
+  public var stti: Bool {
+    get {_storage._stti}
+    set {_uniqueStorage()._stti = newValue}
+  }
 
   /// 腔口補充資料
-  public var khpoo: Bool = false
+  public var khpoo: Bool {
+    get {_storage._khpoo}
+    set {_uniqueStorage()._khpoo = newValue}
+  }
 
   /// 異用字 (filter bit 12)
-  public var variant: Bool = false
+  public var variant: Bool {
+    get {_storage._variant}
+    set {_uniqueStorage()._variant = newValue}
+  }
 
   /// 在來字 (filter bit 9)
-  public var khiin: Bool = false
+  public var khiin: Bool {
+    get {_storage._khiin}
+    set {_uniqueStorage()._khiin = newValue}
+  }
 
   /// LKK漢羅合用建議用字
-  public var lkk: Bool = false
+  public var lkk: Bool {
+    get {_storage._lkk}
+    set {_uniqueStorage()._lkk = newValue}
+  }
+
+  /// kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+  /// gate (legacy all-on). Only meaningful when `kautian = true`.
+  public var kautianSubcoll: Taigi_Engine_KautianSubcollToggles {
+    get {_storage._kautianSubcoll ?? Taigi_Engine_KautianSubcollToggles()}
+    set {_uniqueStorage()._kautianSubcoll = newValue}
+  }
+  /// Returns true if `kautianSubcoll` has been explicitly set.
+  public var hasKautianSubcoll: Bool {_storage._kautianSubcoll != nil}
+  /// Clears the value of `kautianSubcoll`. Subsequent reads from it will return its default value.
+  public mutating func clearKautianSubcoll() {_uniqueStorage()._kautianSubcoll = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// `KautianSubcollToggles` is the per-subcollection enable state for the
+/// kautian source (Phase 3). The main subcollection (主條目 / headword) is
+/// NOT a field — it is always on whenever the kautian master toggle is on,
+/// so `compute_filters` sets its subtag bit unconditionally when this
+/// message is present. Field tags map to the kautian subtag bit positions:
+/// accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
+/// `name_appendix` → subtag bit 11. Bit layout owner is Rust
+/// `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
+/// `docs/engine/binary-format.md` §4.5.
+public nonisolated struct Taigi_Engine_KautianSubcollToggles: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// 鹿港偏泉腔 (subtag bit 1)
+  public var accentLukang: Bool = false
+
+  /// 三峽偏泉腔 (subtag bit 2)
+  public var accentSansia: Bool = false
+
+  /// 臺北偏泉腔 (subtag bit 3)
+  public var accentTaipak: Bool = false
+
+  /// 宜蘭偏漳腔 (subtag bit 4)
+  public var accentGilan: Bool = false
+
+  /// 臺南混合腔 (subtag bit 5)
+  public var accentTainan: Bool = false
+
+  /// 高雄混合腔 (subtag bit 6)
+  public var accentKaohsiung: Bool = false
+
+  /// 金門偏泉腔 (subtag bit 7)
+  public var accentKinmen: Bool = false
+
+  /// 馬公偏泉腔 (subtag bit 8)
+  public var accentMakung: Bool = false
+
+  /// 新竹偏泉腔 (subtag bit 9)
+  public var accentSintik: Bool = false
+
+  /// 臺中偏漳腔 (subtag bit 10)
+  public var accentTaichung: Bool = false
+
+  /// 姓名附錄 名+姓 (subtag bit 11)
+  public var nameAppendix: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2307,7 +2418,161 @@ nonisolated extension Taigi_Engine_LexiconAssocEntry: SwiftProtobuf.Message, Swi
 
 nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DictionaryToggles"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kautian\0\u{1}taigitv\0\u{1}itaigi\0\u{1}sitbut\0\u{1}taihoa\0\u{1}taijit\0\u{1}kungge\0\u{1}stti\0\u{1}khpoo\0\u{1}variant\0\u{1}khiin\0\u{1}lkk\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kautian\0\u{1}taigitv\0\u{1}itaigi\0\u{1}sitbut\0\u{1}taihoa\0\u{1}taijit\0\u{1}kungge\0\u{1}stti\0\u{1}khpoo\0\u{1}variant\0\u{1}khiin\0\u{1}lkk\0\u{3}kautian_subcoll\0")
+
+  fileprivate class _StorageClass {
+    var _kautian: Bool = false
+    var _taigitv: Bool = false
+    var _itaigi: Bool = false
+    var _sitbut: Bool = false
+    var _taihoa: Bool = false
+    var _taijit: Bool = false
+    var _kungge: Bool = false
+    var _stti: Bool = false
+    var _khpoo: Bool = false
+    var _variant: Bool = false
+    var _khiin: Bool = false
+    var _lkk: Bool = false
+    var _kautianSubcoll: Taigi_Engine_KautianSubcollToggles? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _kautian = source._kautian
+      _taigitv = source._taigitv
+      _itaigi = source._itaigi
+      _sitbut = source._sitbut
+      _taihoa = source._taihoa
+      _taijit = source._taijit
+      _kungge = source._kungge
+      _stti = source._stti
+      _khpoo = source._khpoo
+      _variant = source._variant
+      _khiin = source._khiin
+      _lkk = source._lkk
+      _kautianSubcoll = source._kautianSubcoll
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularBoolField(value: &_storage._kautian) }()
+        case 2: try { try decoder.decodeSingularBoolField(value: &_storage._taigitv) }()
+        case 3: try { try decoder.decodeSingularBoolField(value: &_storage._itaigi) }()
+        case 4: try { try decoder.decodeSingularBoolField(value: &_storage._sitbut) }()
+        case 5: try { try decoder.decodeSingularBoolField(value: &_storage._taihoa) }()
+        case 6: try { try decoder.decodeSingularBoolField(value: &_storage._taijit) }()
+        case 7: try { try decoder.decodeSingularBoolField(value: &_storage._kungge) }()
+        case 8: try { try decoder.decodeSingularBoolField(value: &_storage._stti) }()
+        case 9: try { try decoder.decodeSingularBoolField(value: &_storage._khpoo) }()
+        case 10: try { try decoder.decodeSingularBoolField(value: &_storage._variant) }()
+        case 11: try { try decoder.decodeSingularBoolField(value: &_storage._khiin) }()
+        case 12: try { try decoder.decodeSingularBoolField(value: &_storage._lkk) }()
+        case 13: try { try decoder.decodeSingularMessageField(value: &_storage._kautianSubcoll) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if _storage._kautian != false {
+        try visitor.visitSingularBoolField(value: _storage._kautian, fieldNumber: 1)
+      }
+      if _storage._taigitv != false {
+        try visitor.visitSingularBoolField(value: _storage._taigitv, fieldNumber: 2)
+      }
+      if _storage._itaigi != false {
+        try visitor.visitSingularBoolField(value: _storage._itaigi, fieldNumber: 3)
+      }
+      if _storage._sitbut != false {
+        try visitor.visitSingularBoolField(value: _storage._sitbut, fieldNumber: 4)
+      }
+      if _storage._taihoa != false {
+        try visitor.visitSingularBoolField(value: _storage._taihoa, fieldNumber: 5)
+      }
+      if _storage._taijit != false {
+        try visitor.visitSingularBoolField(value: _storage._taijit, fieldNumber: 6)
+      }
+      if _storage._kungge != false {
+        try visitor.visitSingularBoolField(value: _storage._kungge, fieldNumber: 7)
+      }
+      if _storage._stti != false {
+        try visitor.visitSingularBoolField(value: _storage._stti, fieldNumber: 8)
+      }
+      if _storage._khpoo != false {
+        try visitor.visitSingularBoolField(value: _storage._khpoo, fieldNumber: 9)
+      }
+      if _storage._variant != false {
+        try visitor.visitSingularBoolField(value: _storage._variant, fieldNumber: 10)
+      }
+      if _storage._khiin != false {
+        try visitor.visitSingularBoolField(value: _storage._khiin, fieldNumber: 11)
+      }
+      if _storage._lkk != false {
+        try visitor.visitSingularBoolField(value: _storage._lkk, fieldNumber: 12)
+      }
+      try { if let v = _storage._kautianSubcoll {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_DictionaryToggles, rhs: Taigi_Engine_DictionaryToggles) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._kautian != rhs_storage._kautian {return false}
+        if _storage._taigitv != rhs_storage._taigitv {return false}
+        if _storage._itaigi != rhs_storage._itaigi {return false}
+        if _storage._sitbut != rhs_storage._sitbut {return false}
+        if _storage._taihoa != rhs_storage._taihoa {return false}
+        if _storage._taijit != rhs_storage._taijit {return false}
+        if _storage._kungge != rhs_storage._kungge {return false}
+        if _storage._stti != rhs_storage._stti {return false}
+        if _storage._khpoo != rhs_storage._khpoo {return false}
+        if _storage._variant != rhs_storage._variant {return false}
+        if _storage._khiin != rhs_storage._khiin {return false}
+        if _storage._lkk != rhs_storage._lkk {return false}
+        if _storage._kautianSubcoll != rhs_storage._kautianSubcoll {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_KautianSubcollToggles: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".KautianSubcollToggles"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}accent_lukang\0\u{3}accent_sansia\0\u{3}accent_taipak\0\u{3}accent_gilan\0\u{3}accent_tainan\0\u{3}accent_kaohsiung\0\u{3}accent_kinmen\0\u{3}accent_makung\0\u{3}accent_sintik\0\u{3}accent_taichung\0\u{3}name_appendix\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2315,76 +2580,71 @@ nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, Swi
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.kautian) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.taigitv) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.itaigi) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.sitbut) }()
-      case 5: try { try decoder.decodeSingularBoolField(value: &self.taihoa) }()
-      case 6: try { try decoder.decodeSingularBoolField(value: &self.taijit) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.kungge) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.stti) }()
-      case 9: try { try decoder.decodeSingularBoolField(value: &self.khpoo) }()
-      case 10: try { try decoder.decodeSingularBoolField(value: &self.variant) }()
-      case 11: try { try decoder.decodeSingularBoolField(value: &self.khiin) }()
-      case 12: try { try decoder.decodeSingularBoolField(value: &self.lkk) }()
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.accentLukang) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.accentSansia) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.accentTaipak) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.accentGilan) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.accentTainan) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.accentKaohsiung) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.accentKinmen) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.accentMakung) }()
+      case 9: try { try decoder.decodeSingularBoolField(value: &self.accentSintik) }()
+      case 10: try { try decoder.decodeSingularBoolField(value: &self.accentTaichung) }()
+      case 11: try { try decoder.decodeSingularBoolField(value: &self.nameAppendix) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.kautian != false {
-      try visitor.visitSingularBoolField(value: self.kautian, fieldNumber: 1)
+    if self.accentLukang != false {
+      try visitor.visitSingularBoolField(value: self.accentLukang, fieldNumber: 1)
     }
-    if self.taigitv != false {
-      try visitor.visitSingularBoolField(value: self.taigitv, fieldNumber: 2)
+    if self.accentSansia != false {
+      try visitor.visitSingularBoolField(value: self.accentSansia, fieldNumber: 2)
     }
-    if self.itaigi != false {
-      try visitor.visitSingularBoolField(value: self.itaigi, fieldNumber: 3)
+    if self.accentTaipak != false {
+      try visitor.visitSingularBoolField(value: self.accentTaipak, fieldNumber: 3)
     }
-    if self.sitbut != false {
-      try visitor.visitSingularBoolField(value: self.sitbut, fieldNumber: 4)
+    if self.accentGilan != false {
+      try visitor.visitSingularBoolField(value: self.accentGilan, fieldNumber: 4)
     }
-    if self.taihoa != false {
-      try visitor.visitSingularBoolField(value: self.taihoa, fieldNumber: 5)
+    if self.accentTainan != false {
+      try visitor.visitSingularBoolField(value: self.accentTainan, fieldNumber: 5)
     }
-    if self.taijit != false {
-      try visitor.visitSingularBoolField(value: self.taijit, fieldNumber: 6)
+    if self.accentKaohsiung != false {
+      try visitor.visitSingularBoolField(value: self.accentKaohsiung, fieldNumber: 6)
     }
-    if self.kungge != false {
-      try visitor.visitSingularBoolField(value: self.kungge, fieldNumber: 7)
+    if self.accentKinmen != false {
+      try visitor.visitSingularBoolField(value: self.accentKinmen, fieldNumber: 7)
     }
-    if self.stti != false {
-      try visitor.visitSingularBoolField(value: self.stti, fieldNumber: 8)
+    if self.accentMakung != false {
+      try visitor.visitSingularBoolField(value: self.accentMakung, fieldNumber: 8)
     }
-    if self.khpoo != false {
-      try visitor.visitSingularBoolField(value: self.khpoo, fieldNumber: 9)
+    if self.accentSintik != false {
+      try visitor.visitSingularBoolField(value: self.accentSintik, fieldNumber: 9)
     }
-    if self.variant != false {
-      try visitor.visitSingularBoolField(value: self.variant, fieldNumber: 10)
+    if self.accentTaichung != false {
+      try visitor.visitSingularBoolField(value: self.accentTaichung, fieldNumber: 10)
     }
-    if self.khiin != false {
-      try visitor.visitSingularBoolField(value: self.khiin, fieldNumber: 11)
-    }
-    if self.lkk != false {
-      try visitor.visitSingularBoolField(value: self.lkk, fieldNumber: 12)
+    if self.nameAppendix != false {
+      try visitor.visitSingularBoolField(value: self.nameAppendix, fieldNumber: 11)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_DictionaryToggles, rhs: Taigi_Engine_DictionaryToggles) -> Bool {
-    if lhs.kautian != rhs.kautian {return false}
-    if lhs.taigitv != rhs.taigitv {return false}
-    if lhs.itaigi != rhs.itaigi {return false}
-    if lhs.sitbut != rhs.sitbut {return false}
-    if lhs.taihoa != rhs.taihoa {return false}
-    if lhs.taijit != rhs.taijit {return false}
-    if lhs.kungge != rhs.kungge {return false}
-    if lhs.stti != rhs.stti {return false}
-    if lhs.khpoo != rhs.khpoo {return false}
-    if lhs.variant != rhs.variant {return false}
-    if lhs.khiin != rhs.khiin {return false}
-    if lhs.lkk != rhs.lkk {return false}
+  public static func ==(lhs: Taigi_Engine_KautianSubcollToggles, rhs: Taigi_Engine_KautianSubcollToggles) -> Bool {
+    if lhs.accentLukang != rhs.accentLukang {return false}
+    if lhs.accentSansia != rhs.accentSansia {return false}
+    if lhs.accentTaipak != rhs.accentTaipak {return false}
+    if lhs.accentGilan != rhs.accentGilan {return false}
+    if lhs.accentTainan != rhs.accentTainan {return false}
+    if lhs.accentKaohsiung != rhs.accentKaohsiung {return false}
+    if lhs.accentKinmen != rhs.accentKinmen {return false}
+    if lhs.accentMakung != rhs.accentMakung {return false}
+    if lhs.accentSintik != rhs.accentSintik {return false}
+    if lhs.accentTaichung != rhs.accentTaichung {return false}
+    if lhs.nameAppendix != rhs.nameAppendix {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

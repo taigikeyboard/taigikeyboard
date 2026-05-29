@@ -130,8 +130,10 @@ message InstallRequest {
 // per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
 // subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
 // enable mask (main | accent[10] | name, same layout as the record subtag).
-// Decode-only today (`Filter::from_enabled_bitmask` in dictionary_reader.rs);
-// the toggle→mask ENCODE lands with the first platform UI phase. Full layout:
+// ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+// .kautian_subcoll` when present; a caller that leaves the sub-message absent
+// (a platform whose UI is not wired yet) keeps bit 13 clear = legacy all-on.
+// Decode: `Filter::from_enabled_bitmask` in dictionary_reader.rs. Full layout:
 // `docs/engine/binary-format.md` §4.5. Same field semantics apply to
 // `SearchWithSourcesRequest` / `SearchByHanziRequest` below.
 message SearchRequest {
@@ -412,6 +414,14 @@ enum InputMode {
 //
 // Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
 // surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
+//
+// kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+// carries the user's per-subcollection enable state. PRESENCE of the
+// sub-message is the active sentinel — a platform that ships the toggles
+// sets it; any caller that leaves it absent (a platform whose UI is not
+// yet wired, NextWord) signals "no subcollection gating" and the engine
+// keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
+// owns the subtag bit packing so the layout lives in Rust only.
 message DictionaryToggles {
   bool kautian = 1;  // 教育部臺灣台語常用詞辭典
   bool taigitv = 2;  // 台語新詞辭庫
@@ -425,6 +435,32 @@ message DictionaryToggles {
   bool variant = 10; // 異用字 (filter bit 12)
   bool khiin   = 11; // 在來字 (filter bit 9)
   bool lkk     = 12; // LKK漢羅合用建議用字
+  // kautian subcollection toggles. Absent ⇒ engine skips the subcollection
+  // gate (legacy all-on). Only meaningful when `kautian = true`.
+  KautianSubcollToggles kautian_subcoll = 13;
+}
+
+// `KautianSubcollToggles` is the per-subcollection enable state for the
+// kautian source (Phase 3). The main subcollection (主條目 / headword) is
+// NOT a field — it is always on whenever the kautian master toggle is on,
+// so `compute_filters` sets its subtag bit unconditionally when this
+// message is present. Field tags map to the kautian subtag bit positions:
+// accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
+// `name_appendix` → subtag bit 11. Bit layout owner is Rust
+// `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
+// `docs/engine/binary-format.md` §4.5.
+message KautianSubcollToggles {
+  bool accent_lukang    = 1;  // 鹿港偏泉腔 (subtag bit 1)
+  bool accent_sansia    = 2;  // 三峽偏泉腔 (subtag bit 2)
+  bool accent_taipak    = 3;  // 臺北偏泉腔 (subtag bit 3)
+  bool accent_gilan     = 4;  // 宜蘭偏漳腔 (subtag bit 4)
+  bool accent_tainan    = 5;  // 臺南混合腔 (subtag bit 5)
+  bool accent_kaohsiung = 6;  // 高雄混合腔 (subtag bit 6)
+  bool accent_kinmen    = 7;  // 金門偏泉腔 (subtag bit 7)
+  bool accent_makung    = 8;  // 馬公偏泉腔 (subtag bit 8)
+  bool accent_sintik    = 9;  // 新竹偏泉腔 (subtag bit 9)
+  bool accent_taichung  = 10; // 臺中偏漳腔 (subtag bit 10)
+  bool name_appendix    = 11; // 姓名附錄 名+姓 (subtag bit 11)
 }
 
 // `DictionarySourceCode` is the wire-stable mapping for

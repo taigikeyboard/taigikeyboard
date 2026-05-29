@@ -68,4 +68,21 @@ protocol EngineSettings {
     var isKhiinEnabled: Bool { get }
     // 中文: LKK 漢羅混寫候選開關。
     var isLkkDictEnabled: Bool { get }
+
+    // kautian subcollection toggles (nested under the kautian master). Order
+    // mirrors config.yaml dialect_columns; the bridge packs these into the
+    // KautianSubcollToggles proto and `compute_filters` owns the subtag bit
+    // layout. Absent gate ⇒ engine keeps legacy all-on (DD5).
+    // 中文: kautian subcollection 子開關 — 10 腔調 + 姓名附錄。bridge 打包成 proto,bit 佈局由 Rust compute_filters 持有。
+    var isKautianAccentLukangEnabled: Bool { get }
+    var isKautianAccentSansiaEnabled: Bool { get }
+    var isKautianAccentTaipakEnabled: Bool { get }
+    var isKautianAccentGilanEnabled: Bool { get }
+    var isKautianAccentTainanEnabled: Bool { get }
+    var isKautianAccentKaohsiungEnabled: Bool { get }
+    var isKautianAccentKinmenEnabled: Bool { get }
+    var isKautianAccentMakungEnabled: Bool { get }
+    var isKautianAccentSintikEnabled: Bool { get }
+    var isKautianAccentTaichungEnabled: Bool { get }
+    var isKautianNameAppendixEnabled: Bool { get }
 }

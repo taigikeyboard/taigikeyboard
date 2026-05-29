@@ -60,6 +60,23 @@ final class SharedSettings {
     private static let isVariantEnabledKey: SettingsKey<Bool> = .bool("variantEnabled", default: false)
     private static let isKhiinEnabledKey: SettingsKey<Bool> = .bool("khiin", default: false)
     private static let isLkkDictEnabledKey: SettingsKey<Bool> = .bool("lkkDictEnabled", default: true)
+
+    // kautian subcollection toggles (nested under the kautian master).
+    // Default ALL ON — opt-out model, upgrade is zero behaviour change (DD5).
+    // Accent key order mirrors config.yaml `dialect_columns` (= subtag bit - 1).
+    // 中文: kautian subcollection 子開關 (10 腔調 + 姓名附錄)。預設全開 (DD5 opt-out)。腔調順序對齊 config.yaml dialect_columns。
+    private static let isKautianAccentLukangEnabledKey: SettingsKey<Bool> = .bool("kautianAccentLukangEnabled", default: true)
+    private static let isKautianAccentSansiaEnabledKey: SettingsKey<Bool> = .bool("kautianAccentSansiaEnabled", default: true)
+    private static let isKautianAccentTaipakEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTaipakEnabled", default: true)
+    private static let isKautianAccentGilanEnabledKey: SettingsKey<Bool> = .bool("kautianAccentGilanEnabled", default: true)
+    private static let isKautianAccentTainanEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTainanEnabled", default: true)
+    private static let isKautianAccentKaohsiungEnabledKey: SettingsKey<Bool> = .bool("kautianAccentKaohsiungEnabled", default: true)
+    private static let isKautianAccentKinmenEnabledKey: SettingsKey<Bool> = .bool("kautianAccentKinmenEnabled", default: true)
+    private static let isKautianAccentMakungEnabledKey: SettingsKey<Bool> = .bool("kautianAccentMakungEnabled", default: true)
+    private static let isKautianAccentSintikEnabledKey: SettingsKey<Bool> = .bool("kautianAccentSintikEnabled", default: true)
+    private static let isKautianAccentTaichungEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTaichungEnabled", default: true)
+    private static let isKautianNameAppendixEnabledKey: SettingsKey<Bool> = .bool("kautianNameAppendixEnabled", default: true)
+
     private static let isTpsOrMappedToERKey: SettingsKey<Bool> = .bool("tpsOrMapsToER", default: true)
     private static let isToolbarAutoCollapseKey: SettingsKey<Bool> = .bool("toolbarAutoCollapse", default: true)
 
@@ -336,6 +353,74 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isLkkDictEnabledKey) }
     }
 
+    // MARK: - Kautian Subcollections (nested under the kautian master, default on)
+
+    // 中文: 鹿港偏泉腔 (語音差異)。預設 true。
+    var isKautianAccentLukangEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentLukangEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentLukangEnabledKey) }
+    }
+
+    // 中文: 三峽偏泉腔 (語音差異)。預設 true。
+    var isKautianAccentSansiaEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentSansiaEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentSansiaEnabledKey) }
+    }
+
+    // 中文: 臺北偏泉腔 (語音差異)。預設 true。
+    var isKautianAccentTaipakEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentTaipakEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentTaipakEnabledKey) }
+    }
+
+    // 中文: 宜蘭偏漳腔 (語音差異)。預設 true。
+    var isKautianAccentGilanEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentGilanEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentGilanEnabledKey) }
+    }
+
+    // 中文: 臺南混合腔 (語音差異)。預設 true。
+    var isKautianAccentTainanEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentTainanEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentTainanEnabledKey) }
+    }
+
+    // 中文: 高雄混合腔 (語音差異)。預設 true。
+    var isKautianAccentKaohsiungEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentKaohsiungEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentKaohsiungEnabledKey) }
+    }
+
+    // 中文: 金門偏泉腔 (語音差異)。預設 true。
+    var isKautianAccentKinmenEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentKinmenEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentKinmenEnabledKey) }
+    }
+
+    // 中文: 馬公偏泉腔 (語音差異)。預設 true。
+    var isKautianAccentMakungEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentMakungEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentMakungEnabledKey) }
+    }
+
+    // 中文: 新竹偏泉腔 (語音差異)。預設 true。
+    var isKautianAccentSintikEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentSintikEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentSintikEnabledKey) }
+    }
+
+    // 中文: 臺中偏漳腔 (語音差異)。預設 true。
+    var isKautianAccentTaichungEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAccentTaichungEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAccentTaichungEnabledKey) }
+    }
+
+    // 中文: 姓名附錄 (名 + 姓)。預設 true。
+    var isKautianNameAppendixEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianNameAppendixEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianNameAppendixEnabledKey) }
+    }
+
     // MARK: - Toolbar Settings
 
     /// Toolbar auto-collapse toggle (default: true = auto-collapse on composing/mode change)
@@ -448,6 +533,18 @@ final class SharedSettings {
         isVariantEnabled = false
         isKhiinEnabled = false
         isLkkDictEnabled = true
+        // Kautian subcollections (default all on)
+        isKautianAccentLukangEnabled = true
+        isKautianAccentSansiaEnabled = true
+        isKautianAccentTaipakEnabled = true
+        isKautianAccentGilanEnabled = true
+        isKautianAccentTainanEnabled = true
+        isKautianAccentKaohsiungEnabled = true
+        isKautianAccentKinmenEnabled = true
+        isKautianAccentMakungEnabled = true
+        isKautianAccentSintikEnabled = true
+        isKautianAccentTaichungEnabled = true
+        isKautianNameAppendixEnabled = true
         // Toolbar
         isToolbarAutoCollapse = true
         // Globe key: remove stored value so device-based default takes effect

@@ -17,6 +17,11 @@
 
 // 中文: 字典開關 → bitmask 換算的單一真實來源,取代平台端 ~80 行的 EnabledDictionaries 鏡像實作。
 
+use crate::dictionary_reader::{
+    KAUTIAN_SUBTAG_ACCENT_COUNT, KAUTIAN_SUBTAG_ACCENT_SHIFT, KAUTIAN_SUBTAG_MAIN_BIT,
+    KAUTIAN_SUBTAG_NAME_BIT, WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT, WIRE_KAUTIAN_SUBCOLL_MASK,
+    WIRE_KAUTIAN_SUBCOLL_SHIFT,
+};
 use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionaryToggles};
 
 /// Sentinel value for `assoc_lookup_bitmask` — preserves the documented
@@ -40,8 +45,10 @@ pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersR
     }
 }
 
-/// Full `dictionary.bin` filter bitmask (bits 0-12).
-// 中文: dictionary.bin 完整 13 位元 bitmask;bit 10 (dev) 永遠開啟。
+/// Full `dictionary.bin` filter bitmask: source/variant bits 0-12 plus the
+/// kautian subcollection wire high region (bit 13 active + bits 14..=25 enable
+/// mask) when the subcollection toggles are present.
+// 中文: dictionary.bin 完整 bitmask;bit 0-12 為來源/異體字,bit 13 + 14-25 為 kautian subcollection 啟用區 (子訊息存在時才設)。
 fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
     let mut mask: u32 = 0;
     if t.kautian {
@@ -81,7 +88,55 @@ fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
     if t.variant {
         mask |= 1 << 12;
     }
+    mask |= encode_kautian_subcoll_wire(t);
     mask
+}
+
+/// Encode the user's kautian subcollection enable state into the wire high
+/// region: bit 13 (active sentinel) + bits 14..=25 (12-bit enable mask, same
+/// layout as the record subtag). Returns 0 — leaving the engine in legacy
+/// all-on mode (zero behaviour change, DD5) — when EITHER the subcollection
+/// sub-message is absent (a platform whose UI is not wired yet, NextWord) OR
+/// the kautian master toggle is off (kautian rows are dropped by the source-OR
+/// regardless, so gating them is moot). The `main` subcollection bit is set
+/// unconditionally when present: main (主條目) is not a user toggle — it is
+/// always on whenever the kautian master is on.
+// 中文: 把使用者的 kautian subcollection 啟用狀態編成 wire 高位 (bit13 啟用 + bit14-25 啟用遮罩)。
+// 中文: 子訊息缺席或 master 關時回 0 (引擎維持 legacy 全開,DD5 零行為變更);存在時 main 位元必設 (主條目非開關)。
+fn encode_kautian_subcoll_wire(t: &DictionaryToggles) -> u32 {
+    let Some(sub) = t.kautian_subcoll.as_ref() else {
+        return 0;
+    };
+    if !t.kautian {
+        return 0;
+    }
+    let mut subtag: u16 = 1 << KAUTIAN_SUBTAG_MAIN_BIT;
+    // Accent order MUST match config.yaml `dialect_columns` (subtag bit = 1 + index).
+    let accents = [
+        sub.accent_lukang,
+        sub.accent_sansia,
+        sub.accent_taipak,
+        sub.accent_gilan,
+        sub.accent_tainan,
+        sub.accent_kaohsiung,
+        sub.accent_kinmen,
+        sub.accent_makung,
+        sub.accent_sintik,
+        sub.accent_taichung,
+    ];
+    // Tripwire: if a dialect column is added, the array + proto + subtag layout
+    // must grow together. Guards the exact drift axis the mirror const exists for.
+    debug_assert_eq!(accents.len(), KAUTIAN_SUBTAG_ACCENT_COUNT);
+    for (index, enabled) in accents.iter().enumerate() {
+        if *enabled {
+            subtag |= 1 << (KAUTIAN_SUBTAG_ACCENT_SHIFT + index as u16);
+        }
+    }
+    if sub.name_appendix {
+        subtag |= 1 << KAUTIAN_SUBTAG_NAME_BIT;
+    }
+    WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT
+        | ((u32::from(subtag) & WIRE_KAUTIAN_SUBCOLL_MASK) << WIRE_KAUTIAN_SUBCOLL_SHIFT)
 }
 
 /// Association-bin filter bitmask: bits 0-8 mask of toggled sources.
@@ -182,9 +237,31 @@ fn enabled_source_codes(t: &DictionaryToggles) -> Vec<DictionarySourceCode> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dictionary_reader::KAUTIAN_SUBTAG_USED_MASK;
+    use protos::engine::KautianSubcollToggles;
+
+    /// Bits 13..=25 of the wire mask (active sentinel + 12-bit enable mask).
+    /// Low bits 0-12 are the source/variant region, asserted separately.
+    const WIRE_HIGH_REGION: u32 = !0x1FFF;
 
     fn all_off() -> DictionaryToggles {
         DictionaryToggles::default()
+    }
+
+    fn all_subcoll_on() -> KautianSubcollToggles {
+        KautianSubcollToggles {
+            accent_lukang: true,
+            accent_sansia: true,
+            accent_taipak: true,
+            accent_gilan: true,
+            accent_tainan: true,
+            accent_kaohsiung: true,
+            accent_kinmen: true,
+            accent_makung: true,
+            accent_sintik: true,
+            accent_taichung: true,
+            name_appendix: true,
+        }
     }
 
     fn all_on() -> DictionaryToggles {
@@ -201,6 +278,7 @@ mod tests {
             variant: true,
             khiin: true,
             lkk: true,
+            kautian_subcoll: None,
         }
     }
 
@@ -304,5 +382,99 @@ mod tests {
             DictionarySourceCode::DictSourceLkk as i32,
         ];
         assert_eq!(r.enabled_source_codes, expected);
+    }
+
+    // --- kautian subcollection wire ENCODE (Phase 3) ---
+
+    /// DD5 zero-behaviour: absent sub-message ⇒ no high bits, engine skips the
+    /// gate (legacy all-on). Mirrors a platform whose UI is not wired yet.
+    #[test]
+    fn subcoll_absent_sets_no_high_bits() {
+        let mut t = all_on(); // kautian master on, but kautian_subcoll left None
+        t.kautian_subcoll = None;
+        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        assert_eq!(
+            mask & WIRE_HIGH_REGION,
+            0,
+            "absent ⇒ no subcollection gating"
+        );
+        assert_eq!(mask & 0x1FFF, 0x1FFF, "low source/variant region unchanged");
+    }
+
+    /// Present + every subcollection on ⇒ active bit + full 12-bit enable mask.
+    #[test]
+    fn subcoll_present_all_on_sets_full_wire() {
+        let mut t = all_off();
+        t.kautian = true;
+        t.kautian_subcoll = Some(all_subcoll_on());
+        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        let expected_high = WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT
+            | (KAUTIAN_SUBTAG_USED_MASK as u32) << WIRE_KAUTIAN_SUBCOLL_SHIFT;
+        assert_eq!(mask & WIRE_HIGH_REGION, expected_high);
+        // Never collides with the all-enabled sentinel.
+        assert_ne!(mask, u32::MAX);
+    }
+
+    /// Present + every nested toggle off ⇒ main still on (主條目 is not a user
+    /// toggle), accent + name bits clear.
+    #[test]
+    fn subcoll_present_all_off_keeps_main() {
+        let mut t = all_off();
+        t.kautian = true;
+        t.kautian_subcoll = Some(KautianSubcollToggles::default());
+        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        let main_only = 1u32 << KAUTIAN_SUBTAG_MAIN_BIT;
+        let expected_high =
+            WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT | (main_only << WIRE_KAUTIAN_SUBCOLL_SHIFT);
+        assert_eq!(mask & WIRE_HIGH_REGION, expected_high);
+    }
+
+    /// kautian master off ⇒ subcollection state ignored (kautian rows are
+    /// dropped by the source-OR anyway), no high bits emitted.
+    #[test]
+    fn subcoll_ignored_when_master_off() {
+        let mut t = all_off();
+        t.kautian = false;
+        t.kautian_subcoll = Some(all_subcoll_on());
+        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        assert_eq!(mask & WIRE_HIGH_REGION, 0);
+        assert_eq!(mask & (1 << 0), 0, "kautian source bit stays off");
+    }
+
+    /// Each accent toggle maps to subtag bit (1 + config.yaml index); name to
+    /// bit 11. Verifies the ENCODE order matches `dialect_columns`.
+    #[test]
+    fn subcoll_accent_bit_positions_match_dialect_order() {
+        type AccentCase = (fn(&mut KautianSubcollToggles), u16);
+        let cases: [AccentCase; 11] = [
+            (|s| s.accent_lukang = true, 1),
+            (|s| s.accent_sansia = true, 2),
+            (|s| s.accent_taipak = true, 3),
+            (|s| s.accent_gilan = true, 4),
+            (|s| s.accent_tainan = true, 5),
+            (|s| s.accent_kaohsiung = true, 6),
+            (|s| s.accent_kinmen = true, 7),
+            (|s| s.accent_makung = true, 8),
+            (|s| s.accent_sintik = true, 9),
+            (|s| s.accent_taichung = true, 10),
+            (|s| s.name_appendix = true, KAUTIAN_SUBTAG_NAME_BIT),
+        ];
+        for (set, subtag_bit) in cases {
+            let mut sub = KautianSubcollToggles::default();
+            set(&mut sub);
+            let mut t = all_off();
+            t.kautian = true;
+            t.kautian_subcoll = Some(sub);
+            let mask = compute_filters(&t).dictionary_filter_bitmask;
+            // main (bit 0) is always on, plus the one toggled bit.
+            let subtag = (1u16 << KAUTIAN_SUBTAG_MAIN_BIT) | (1u16 << subtag_bit);
+            let expected_high =
+                WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT | (u32::from(subtag) << WIRE_KAUTIAN_SUBCOLL_SHIFT);
+            assert_eq!(
+                mask & WIRE_HIGH_REGION,
+                expected_high,
+                "subtag bit {subtag_bit} should be set",
+            );
+        }
     }
 }

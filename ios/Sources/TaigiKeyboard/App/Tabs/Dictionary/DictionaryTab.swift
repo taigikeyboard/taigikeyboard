@@ -28,6 +28,19 @@ struct DictionaryTab: View {
     @State private var isKhiinEnabled: Bool
     @State private var isLkkDictEnabled: Bool
 
+    // Kautian subcollection toggles (nested under the MOE/kautian master row)
+    @State private var isKautianAccentLukangEnabled: Bool
+    @State private var isKautianAccentSansiaEnabled: Bool
+    @State private var isKautianAccentTaipakEnabled: Bool
+    @State private var isKautianAccentGilanEnabled: Bool
+    @State private var isKautianAccentTainanEnabled: Bool
+    @State private var isKautianAccentKaohsiungEnabled: Bool
+    @State private var isKautianAccentKinmenEnabled: Bool
+    @State private var isKautianAccentMakungEnabled: Bool
+    @State private var isKautianAccentSintikEnabled: Bool
+    @State private var isKautianAccentTaichungEnabled: Bool
+    @State private var isKautianNameAppendixEnabled: Bool
+
     /// Search focus
     @FocusState private var isSearchFocused: Bool
 
@@ -49,6 +62,17 @@ struct DictionaryTab: View {
         _isVariantEnabled = State(initialValue: settings.isVariantEnabled)
         _isKhiinEnabled = State(initialValue: settings.isKhiinEnabled)
         _isLkkDictEnabled = State(initialValue: settings.isLkkDictEnabled)
+        _isKautianAccentLukangEnabled = State(initialValue: settings.isKautianAccentLukangEnabled)
+        _isKautianAccentSansiaEnabled = State(initialValue: settings.isKautianAccentSansiaEnabled)
+        _isKautianAccentTaipakEnabled = State(initialValue: settings.isKautianAccentTaipakEnabled)
+        _isKautianAccentGilanEnabled = State(initialValue: settings.isKautianAccentGilanEnabled)
+        _isKautianAccentTainanEnabled = State(initialValue: settings.isKautianAccentTainanEnabled)
+        _isKautianAccentKaohsiungEnabled = State(initialValue: settings.isKautianAccentKaohsiungEnabled)
+        _isKautianAccentKinmenEnabled = State(initialValue: settings.isKautianAccentKinmenEnabled)
+        _isKautianAccentMakungEnabled = State(initialValue: settings.isKautianAccentMakungEnabled)
+        _isKautianAccentSintikEnabled = State(initialValue: settings.isKautianAccentSintikEnabled)
+        _isKautianAccentTaichungEnabled = State(initialValue: settings.isKautianAccentTaichungEnabled)
+        _isKautianNameAppendixEnabled = State(initialValue: settings.isKautianNameAppendixEnabled)
     }
 
     var body: some View {
@@ -81,6 +105,41 @@ struct DictionaryTab: View {
                         isOn: $isMoeDictEnabled,
                         description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
                     ) { settings.isMoeDictEnabled = $0 }
+                    // Kautian subcollections — nested under the master row,
+                    // greyed when the MOE/kautian master is off (DD7).
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentLukang, isOn: $isKautianAccentLukangEnabled) {
+                        settings.isKautianAccentLukangEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentSansia, isOn: $isKautianAccentSansiaEnabled) {
+                        settings.isKautianAccentSansiaEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentTaipak, isOn: $isKautianAccentTaipakEnabled) {
+                        settings.isKautianAccentTaipakEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentGilan, isOn: $isKautianAccentGilanEnabled) {
+                        settings.isKautianAccentGilanEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentTainan, isOn: $isKautianAccentTainanEnabled) {
+                        settings.isKautianAccentTainanEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentKaohsiung, isOn: $isKautianAccentKaohsiungEnabled) {
+                        settings.isKautianAccentKaohsiungEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentKinmen, isOn: $isKautianAccentKinmenEnabled) {
+                        settings.isKautianAccentKinmenEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentMakung, isOn: $isKautianAccentMakungEnabled) {
+                        settings.isKautianAccentMakungEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentSintik, isOn: $isKautianAccentSintikEnabled) {
+                        settings.isKautianAccentSintikEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianAccentTaichung, isOn: $isKautianAccentTaichungEnabled) {
+                        settings.isKautianAccentTaichungEnabled = $0
+                    }
+                    kautianSubcollToggle(DictionaryTexts.kautianNameAppendix, isOn: $isKautianNameAppendixEnabled) {
+                        settings.isKautianNameAppendixEnabled = $0
+                    }
                     dictToggleWithDescription(
                         title: CommonTexts.newwordDict,
                         url: "https://www.taigitv.org.tw/taigi-words",
@@ -319,6 +378,24 @@ struct DictionaryTab: View {
                 SettingInfoButton(description: info.description)
             }
         }
+        .onChange(of: isOn.wrappedValue) { _, newValue in
+            onChange(newValue)
+        }
+    }
+
+    // MARK: - Kautian Subcollection Toggle (nested, dependent on master)
+
+    // 中文: 教育部辭典底下的巢狀子集開關 — 縮排顯示;父開關 (isMoeDictEnabled) 關閉時整組變灰停用 (DD7)。
+    private func kautianSubcollToggle(
+        _ title: String,
+        isOn: Binding<Bool>,
+        onChange: @escaping (Bool) -> Void,
+    ) -> some View {
+        Toggle(isOn: isOn) {
+            Text(title)
+                .padding(.leading, 16)
+        }
+        .disabled(!isMoeDictEnabled)
         .onChange(of: isOn.wrappedValue) { _, newValue in
             onChange(newValue)
         }

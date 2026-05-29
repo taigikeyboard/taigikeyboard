@@ -83,6 +83,27 @@ public extension RustEngineBridge {
         public let variant: Bool
         public let khiin: Bool
         public let lkk: Bool
+        /// kautian subcollection enable state (10 accents + name appendix).
+        /// iOS always populates this (the app ships the toggles), so the
+        /// `kautian_subcoll` proto message is always present and the engine
+        /// always runs the subcollection gate. Field order mirrors
+        /// config.yaml `dialect_columns` / `KautianSubcollToggles` proto.
+        // 中文: kautian subcollection 啟用狀態 (10 腔調 + 姓名附錄)。iOS 一律帶值,故 proto 子訊息恆存在,引擎恆執行 subcollection gate。
+        public let kautianSubcoll: KautianSubcoll
+
+        public struct KautianSubcoll: Equatable, Sendable {
+            public let lukang: Bool
+            public let sansia: Bool
+            public let taipak: Bool
+            public let gilan: Bool
+            public let tainan: Bool
+            public let kaohsiung: Bool
+            public let kinmen: Bool
+            public let makung: Bool
+            public let sintik: Bool
+            public let taichung: Bool
+            public let nameAppendix: Bool
+        }
     }
 
     /// Output of `lexiconDictionaryFilters` — ready-to-send bitmasks plus
@@ -308,6 +329,21 @@ public extension RustEngineBridge {
         togglesProto.variant = toggles.variant
         togglesProto.khiin = toggles.khiin
         togglesProto.lkk = toggles.lkk
+        // Always set the subcollection message (iOS ships the toggles) so the
+        // engine runs the gate; absence would signal legacy all-on (DD5).
+        var subcollProto = Taigi_Engine_KautianSubcollToggles()
+        subcollProto.accentLukang = toggles.kautianSubcoll.lukang
+        subcollProto.accentSansia = toggles.kautianSubcoll.sansia
+        subcollProto.accentTaipak = toggles.kautianSubcoll.taipak
+        subcollProto.accentGilan = toggles.kautianSubcoll.gilan
+        subcollProto.accentTainan = toggles.kautianSubcoll.tainan
+        subcollProto.accentKaohsiung = toggles.kautianSubcoll.kaohsiung
+        subcollProto.accentKinmen = toggles.kautianSubcoll.kinmen
+        subcollProto.accentMakung = toggles.kautianSubcoll.makung
+        subcollProto.accentSintik = toggles.kautianSubcoll.sintik
+        subcollProto.accentTaichung = toggles.kautianSubcoll.taichung
+        subcollProto.nameAppendix = toggles.kautianSubcoll.nameAppendix
+        togglesProto.kautianSubcoll = subcollProto
         var payload = Taigi_Engine_DictionaryFiltersRequest()
         payload.toggles = togglesProto
         // Binary skew fallback: when method 18 dispatch fails (e.g. Swift
@@ -398,6 +434,7 @@ public extension RustEngineBridge {
         dictMask |= 1 << 10 // dev always
         if toggles.lkk { dictMask |= 1 << 11 }
         if toggles.variant { dictMask |= 1 << 12 }
+        dictMask |= encodeKautianSubcollWire(toggles)
 
         let allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi
             && toggles.sitbut && toggles.taihoa && toggles.taijit
@@ -421,6 +458,37 @@ public extension RustEngineBridge {
             assocLookupBitmask: assocMask,
             enabledSources: enabled,
         )
+    }
+
+    /// kautian subcollection wire ENCODE — fallback-only mirror of Rust
+    /// `engine/lexicon/src/dictionary_filters.rs::encode_kautian_subcoll_wire`.
+    /// Returns the wire high region (bit 13 active + bits 14..=25 enable mask)
+    /// when the kautian master is on; `0` otherwise (kautian rows drop via the
+    /// source-OR anyway). Keeps fallback behaviour identical to the engine so a
+    /// binary-skew session does not silently revert subcollection toggles.
+    ///
+    /// CROSS-PLATFORM INVARIANT — bit positions mirror
+    /// `engine/lexicon/src/dictionary_reader.rs` (`WIRE_KAUTIAN_SUBCOLL_*` /
+    /// `KAUTIAN_SUBTAG_*`). Drift causes silent subcollection-filter divergence.
+    // 中文: kautian subcollection wire ENCODE — 僅供 binary-skew fallback 的鏡像,對齊 Rust encode_kautian_subcoll_wire。
+    private static func encodeKautianSubcollWire(_ toggles: DictionaryToggles) -> UInt32 {
+        guard toggles.kautian else { return 0 }
+        let activeBit: UInt32 = 1 << 13
+        let shift: UInt32 = 14
+        let mainBit: UInt16 = 0
+        let accentShift: UInt16 = 1
+        let nameBit: UInt16 = 11
+        let sub = toggles.kautianSubcoll
+        var subtag: UInt16 = 1 << mainBit // main always on when master on
+        let accents = [
+            sub.lukang, sub.sansia, sub.taipak, sub.gilan, sub.tainan,
+            sub.kaohsiung, sub.kinmen, sub.makung, sub.sintik, sub.taichung,
+        ]
+        for (index, isOn) in accents.enumerated() where isOn {
+            subtag |= 1 << (accentShift + UInt16(index))
+        }
+        if sub.nameAppendix { subtag |= 1 << nameBit }
+        return activeBit | (UInt32(subtag) << shift)
     }
 
     /// Map proto `DictionarySourceCode` to the platform `DictionarySource`
@@ -685,6 +753,19 @@ extension RustEngineBridge.DictionaryToggles {
             variant: settings.isVariantEnabled,
             khiin: settings.isKhiinEnabled,
             lkk: settings.isLkkDictEnabled,
+            kautianSubcoll: KautianSubcoll(
+                lukang: settings.isKautianAccentLukangEnabled,
+                sansia: settings.isKautianAccentSansiaEnabled,
+                taipak: settings.isKautianAccentTaipakEnabled,
+                gilan: settings.isKautianAccentGilanEnabled,
+                tainan: settings.isKautianAccentTainanEnabled,
+                kaohsiung: settings.isKautianAccentKaohsiungEnabled,
+                kinmen: settings.isKautianAccentKinmenEnabled,
+                makung: settings.isKautianAccentMakungEnabled,
+                sintik: settings.isKautianAccentSintikEnabled,
+                taichung: settings.isKautianAccentTaichungEnabled,
+                nameAppendix: settings.isKautianNameAppendixEnabled,
+            ),
         )
     }
 }
