@@ -10,6 +10,7 @@ stages:
   - expand
   - merge
   - cleanup
+  - kautian_provenance
   - frequency
   - poj
   - numtone
@@ -41,6 +42,10 @@ stage_options:
       - 馬公偏泉腔
       - 新竹偏泉腔
       - 臺中偏漳腔
+    # kautian subcollection provenance (Phase 1) — which sheets seed
+    # kautian_main vs kautian_name. dialect_sheet above seeds the accent mask.
+    main_sheets: [詞目.csv, 又唸作.csv, 合音唸作.csv, 俗唸作.csv, 詞彙比較.csv]
+    name_sheets: [名.csv, 姓.csv]
 
   merge:
     exclude: [異用字.csv]

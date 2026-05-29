@@ -14,6 +14,11 @@ from __future__ import annotations
 
 import pandas as pd
 
+from common.kautian_provenance import (
+    PROVENANCE_META_KEY,
+    build_accent_mask_map,
+    build_membership_set,
+)
 from common.stages import csv_roundtrip
 from pipeline.context import PipelineContext
 
@@ -29,9 +34,19 @@ def run(ctx: PipelineContext) -> None:
     sheet_specs: dict[str, dict] = opts.get("sheets") or {}
     dialect_sheet: str | None = opts.get("dialect_sheet")
     dialect_columns: list[str] = opts.get("dialect_columns") or []
+    main_sheets: list[str] = opts.get("main_sheets") or []
+    name_sheets: list[str] = opts.get("name_sheets") or []
     column_rename: dict[str, str] = {**_DEFAULT_COLUMN_RENAME, **(opts.get("column_rename") or {})}
 
+    # Provenance map keys must mirror the cleanup stage's `tl` normalization
+    # (kautian preserves spaces as word boundaries) so they join post-cleanup.
+    preserve_spaces = bool(ctx.get_stage_options("cleanup").get("preserve_spaces", False))
+
     sheets = ctx.current_sheets()
+
+    _stash_provenance_maps(
+        ctx, sheets, dialect_sheet, dialect_columns, main_sheets, name_sheets, preserve_spaces
+    )
     out_sheets: dict[str, pd.DataFrame] = {}
     total_rows = 0
 
@@ -80,3 +95,37 @@ def run(ctx: PipelineContext) -> None:
     out_sheets = {name: csv_roundtrip(df) for name, df in out_sheets.items()}
     ctx.set_sheets(out_sheets)
     ctx.logger.info(f"Total: {len(out_sheets)} files, {total_rows} rows")
+
+
+def _stash_provenance_maps(
+    ctx: PipelineContext,
+    sheets: dict[str, pd.DataFrame],
+    dialect_sheet: str | None,
+    dialect_columns: list[str],
+    main_sheets: list[str],
+    name_sheets: list[str],
+    preserve_spaces: bool,
+) -> None:
+    """Build kautian subcollection membership and stash for the
+    `kautian_provenance` stage.
+
+    Must run here because the dialect melt below (and `merge`'s later
+    `clear_sheets`) is lossy: it collapses the 10 per-accent columns into
+    undifferentiated `[hanzi, tl]` rows, so accent identity has to be read
+    from the raw sheets before that happens. Skips silently when no
+    subcollection sheets are configured — non-kautian sources never reach this.
+    """
+    if not (dialect_sheet or main_sheets or name_sheets):
+        return
+
+    accent_map: dict = {}
+    if dialect_sheet and dialect_sheet in sheets:
+        accent_map = build_accent_mask_map(sheets[dialect_sheet], dialect_columns, preserve_spaces)
+    name_set = build_membership_set(sheets, name_sheets, preserve_spaces)
+    main_set = build_membership_set(sheets, main_sheets, preserve_spaces)
+
+    ctx.set_meta(PROVENANCE_META_KEY, {"accent": accent_map, "name": name_set, "main": main_set})
+    ctx.logger.info(
+        f"  provenance maps: accent_keys={len(accent_map)} "
+        f"name_keys={len(name_set)} main_keys={len(main_set)}"
+    )

@@ -32,6 +32,7 @@ from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
 from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
 from common.romanization import to_numeric_tone
+from common.kautian_provenance import COL_ACCENT_MASK, COL_MAIN, COL_NAME
 from common.source_bits import MAIN_SOURCE_COLUMNS
 from common.taigi_bridge import (
     BridgeDeadError,
@@ -58,6 +59,21 @@ OUTPUT_FILE = "dictionary.csv"
 SCRIPT_NAME = "merge_csv"
 
 SOURCE_COLUMNS = MAIN_SOURCE_COLUMNS
+
+# kautian subcollection provenance columns — present only on kautian rows, so
+# cross-source dedup must UNION them (NaN for other sources). The two bool
+# flags use the same "any" reducer as SOURCE_COLUMNS; the accent mask needs a
+# custom bitwise-OR. See common/kautian_provenance.py.
+KAUTIAN_PROVENANCE_FLAGS = (COL_MAIN, COL_NAME)
+
+
+def _or_mask_agg(series) -> int:
+    """Bitwise-OR a group's accent masks, treating NaN (non-kautian) as 0."""
+    acc = 0
+    for value in series:
+        if pd.notna(value):
+            acc |= int(value)
+    return acc
 
 
 def main():
@@ -116,6 +132,10 @@ def main():
             agg_dict[col] = "any"
         elif col == "frequency":
             agg_dict[col] = "max"
+        elif col == COL_ACCENT_MASK:
+            agg_dict[col] = _or_mask_agg
+        elif col in KAUTIAN_PROVENANCE_FLAGS:
+            agg_dict[col] = "any"  # bool union, NaN-skipping — as SOURCE_COLUMNS
         else:
             agg_dict[col] = "first"
     result_df = merged_df.groupby(["hanzi", "_tl_key"], as_index=False, dropna=False).agg(agg_dict)
@@ -191,6 +211,17 @@ def main():
             only_mask = only_mask & ~result_df[other]
         only_count = only_mask.sum()
         logger.info(f"    {col}: {total} (only: {only_count})")
+
+    # kautian provenance columns: supplement rows (khiin/dev/lkk) and other
+    # sources have no value → fill the cross-source default (not a kautian
+    # subcollection) before writing a uniform schema.
+    if COL_ACCENT_MASK in result_df.columns:
+        result_df[COL_ACCENT_MASK] = (
+            result_df[COL_ACCENT_MASK].fillna(0).astype(int)
+        )
+    for flag_col in KAUTIAN_PROVENANCE_FLAGS:
+        if flag_col in result_df.columns:
+            result_df[flag_col] = result_df[flag_col].fillna(False).astype(bool)
 
     # 儲存
     result_df.to_csv(output_path, index=False)

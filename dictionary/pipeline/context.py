@@ -29,6 +29,10 @@ class PipelineContext:
     _df: pd.DataFrame | None = None
     _sheets: dict[str, pd.DataFrame] | None = None
     _logger: logging.Logger | None = field(default=None, repr=False)
+    # Side-channel for data a stage computes early and a later stage consumes
+    # (e.g. kautian provenance maps built at `select` while sheets are still
+    # in memory, applied after `cleanup` once sheets are gone).
+    _meta: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @property
     def source_name(self) -> str:
@@ -69,6 +73,12 @@ class PipelineContext:
 
     def set_df(self, df: pd.DataFrame) -> None:
         self._df = df
+
+    def set_meta(self, key: str, value: Any) -> None:
+        self._meta[key] = value
+
+    def get_meta(self, key: str, default: Any = None) -> Any:
+        return self._meta.get(key, default)
 
     def current_sheets(self) -> dict[str, pd.DataFrame]:
         if self._sheets is None:
