@@ -38,7 +38,8 @@
 | DD1 storage model | **accent membership bitset per row** | readings shared across accents (八/pueh ∈ 6 腔); per-accent-code would collide with `[hanzi,tl]` dedup |
 | DD2 storage location | **separate `u16 kautian_subtag` field, binary VERSION 2→3** | NOT folded into `source_bitmask` (ranking/badge/continuous-sort consumers); wire reuses existing `enabled_sources_bitmask: u32` high bits |
 | DD3 scope | **keyboard candidates + dictionary browse** | matches existing source toggles; browse-only = product-semantic hole |
-| DD4 req2 algorithm | **syllable-aligned citation-form generation, conservative skip** | only `漢字數==TL音節數` + parseable rows; NO sandhi forms; cap + report ambiguous; generated rows rank/freq-demoted |
+| DD4 req2 algorithm | **syllable-aligned citation-form generation, conservative skip** | only `漢字數==TL音節數` + parseable rows; NO sandhi forms; cap + report ambiguous |
+| DD4b req2 ranking | **equal rank — NO demotion** (USER 2026-05-29) | 腔調 are equal in status; generated accent variants inherit base frequency/tier; flood managed by per-accent toggles (DD3), not ranking |
 | DD4 req2 license | **SHIP + distribute, USER takes license responsibility** | kautian = CC BY-ND-3.0-TW (NoDerivatives); USER explicitly accepted 2026-05-29 |
 | DD5 default state | **ALL ON, no migration** | opt-out model; upgrade = no behavior change; migration phase dropped |
 | DD6 filter invariant (追加) | **OR across subcollections; main path independent** | word in BOTH 主條目 AND 腔調/姓名 stays visible when accent/name toggle OFF (passes via `main_on AND has_main`) |
@@ -64,7 +65,7 @@ OR'd with the existing other-source-OR. Needs `effective_source_bitmask(record, 
 | 2 | **binary v3 + engine filter** (cross-platform-invariant files SAME PR) | `source_bits.py` + `create_dictionary_bin.py` + `dictionary_records.py` + `dictionary_reader.rs` + `lexicon.proto` + generated Swift/Kotlin proto + iOS/Android `LexiconBitmask`; record prefix 9→11; VERSION 3 (reject v2); `kautian_subtag` gate + `effective_source_bitmask` + DD6 invariant tests | HIGH |
 | 3 | **iOS UI / settings** | `SharedSettings`/`EngineSettings` + 11 nested dependent toggles under kautian in `DictionaryTab.swift`; bridge `DictionaryToggles` + fallback bit math | MED |
 | 4 | **Android UI / settings** | DataStore keys + `EngineSettings` + nested Compose rows (`DictionaryInfoSwitch(enabled=)`); parity with iOS (labels / order / defaults) | MED |
-| 5 | **req2 word-level generator** | new pipeline stage (after cleanup, before frequency); structured syllable split (no raw substring replace); report matched/skipped/ambiguous/generated/size-delta; generated rows rank-demoted | HIGH |
+| 5 | **req2 word-level generator** | new pipeline stage (after cleanup, before frequency); structured syllable split (no raw substring replace); report matched/skipped/ambiguous/generated/size-delta; generated rows EQUAL-ranked (accents equal — no demotion) | HIGH |
 
 **最佳實踐對齊** (best-practices alignment):
 
