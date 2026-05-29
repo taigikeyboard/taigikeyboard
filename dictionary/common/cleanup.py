@@ -40,6 +40,18 @@ def count_syllables(text):
     return len([s for s in syllables if s])
 
 
+# Hanzi separators excluded from the syllable-bearing character count
+# (ASCII space, full-width space U+3000, hyphen).
+HANZI_SEPARATORS = " 　-"
+
+
+def hanzi_chars(text):
+    """漢字字數用的字元清單（排除空白和連字符）。"""
+    if pd.isna(text):
+        return []
+    return [c for c in str(text).strip() if c not in HANZI_SEPARATORS]
+
+
 def clean_brackets(text):
     """移除括號標註"""
     if pd.isna(text):
@@ -114,8 +126,7 @@ def is_hanlo_matched(hanzi, tl):
     if hanzi_str == "" or tl_str == "":
         return True
     # 計算漢字字數（排除空白和連字符）
-    hanzi_chars = [c for c in hanzi_str if c not in " \u3000-"]
-    hanzi_count = len(hanzi_chars)
+    hanzi_count = len(hanzi_chars(hanzi_str))
     # 計算 TL 音節數
     tl_count = count_syllables(tl_str)
     return hanzi_count == tl_count

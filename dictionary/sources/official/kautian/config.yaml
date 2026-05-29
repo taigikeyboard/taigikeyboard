@@ -12,6 +12,7 @@ stages:
   - cleanup
   - kautian_provenance
   - frequency
+  - kautian_accent_wordgen
   - poj
   - numtone
   - notone
