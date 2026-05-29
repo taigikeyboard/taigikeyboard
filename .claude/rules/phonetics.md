@@ -19,6 +19,10 @@ Mandatory reading before ANY TL / POJ / TPS schema work, FST key-family design, 
 
 Project `CLAUDE.md` Core Principle #3 ("Phonetics = authoritative-source-only") binds this.
 
+## Word identity = (漢字, 羅馬字) pair (Core Principle #7)
+
+A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, never by either field alone — 一字多音 (`重/tîng` ≠ `重/tāng`) and homophones make both fields necessary. Any key / dedup / group / lookup / accent-or-variant substitution over Taiwanese entries MUST use the `(hanzi, tl)` pair (project-wide: `lexicon`, `ranking`, dictionary `merge`/`merge_csv`/`cleanup`, accent generation). POJ/TPS are alternate renderings of the same TL and add no new identity. Full statement + rationale: project `CLAUDE.md` Core Principle #7.
+
 ## Required reading (in order)
 
 1. **`knowledge/taigi-phonetics-reference.md`** — full file. Especially:
