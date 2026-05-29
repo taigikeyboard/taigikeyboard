@@ -26,6 +26,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `enabled_sources_bitmask` is the platform's source-toggle state encoded
  * as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
  * invariant). 0 = no sources enabled (engine returns empty).
+ *
+ * kautian subcollections (binary v3): the HIGH region carries the user's
+ * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+ * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+ * enable mask (main | accent[10] | name, same layout as the record subtag).
+ * Decode-only today (`Filter::from_enabled_bitmask` in dictionary_reader.rs);
+ * the toggle→mask ENCODE lands with the first platform UI phase. Full layout:
+ * `docs/engine/binary-format.md` §4.5. Same field semantics apply to
+ * `SearchWithSourcesRequest` / `SearchByHanziRequest` below.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.SearchRequest}
@@ -363,6 +372,15 @@ public  final class SearchRequest extends
    * `enabled_sources_bitmask` is the platform's source-toggle state encoded
    * as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
    * invariant). 0 = no sources enabled (engine returns empty).
+   *
+   * kautian subcollections (binary v3): the HIGH region carries the user's
+   * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * Decode-only today (`Filter::from_enabled_bitmask` in dictionary_reader.rs);
+   * the toggle→mask ENCODE lands with the first platform UI phase. Full layout:
+   * `docs/engine/binary-format.md` §4.5. Same field semantics apply to
+   * `SearchWithSourcesRequest` / `SearchByHanziRequest` below.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.SearchRequest}

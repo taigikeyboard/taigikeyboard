@@ -191,7 +191,7 @@ fn collect_filtered_sorted(
     let mut staged: Vec<(u32, DictionaryRecord)> = Vec::with_capacity(rowids.len());
     for rowid in rowids {
         if let Some(record) = dict.record(rowid) {
-            if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+            if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
                 continue;
             }
             staged.push((rowid, record));
@@ -204,7 +204,17 @@ fn collect_filtered_sorted(
     staged.truncate(limit_usize);
     staged
         .into_iter()
-        .map(|(rowid, record)| record_to_row(rowid, record))
+        .map(|(rowid, record)| {
+            // Emit the EFFECTIVE source bitmask (kautian bit dropped when its
+            // subcollection is disabled) so a multi-source survivor ranks by
+            // its other source's tier, not kautian's (DD6 ranking-weight drop).
+            let effective = DictionaryReader::effective_source_bitmask(
+                record.bitmask,
+                record.kautian_subtag,
+                &filter,
+            );
+            record_to_row(rowid, record, effective)
+        })
         .collect()
 }
 
@@ -238,12 +248,12 @@ pub fn assoc_lookup(
     Ok(out)
 }
 
-fn record_to_row(rowid: u32, record: DictionaryRecord) -> LexiconRowOut {
+fn record_to_row(rowid: u32, record: DictionaryRecord, effective_bitmask: u16) -> LexiconRowOut {
     LexiconRowOut {
         id: rowid as i64,
         roman: record.tl,
         hanji: record.hanzi,
         length_score: Some(record.frequency as i32),
-        source_bitmask: Some(record.bitmask as u32),
+        source_bitmask: Some(effective_bitmask as u32),
     }
 }

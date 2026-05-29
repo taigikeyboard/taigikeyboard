@@ -118,13 +118,13 @@ fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
     path
 }
 
-/// TKDB v2 byte layout — verbatim logic from
-/// `engine/lexicon/tests/common/mod.rs::build_tkdb_bin` (`build_tkdb_v2`
-/// path: every row carries a `syllable_count` byte).
-fn build_tkdb_v2(rows: &[Row]) -> Vec<u8> {
+/// TKDB v3 byte layout — verbatim logic from
+/// `engine/lexicon/tests/common/mod.rs::build_tkdb_bin` (`build_tkdb_v3`
+/// path: every row carries a `syllable_count` byte + a `kautian_subtag` u16).
+fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(b"TKDB");
-    out.extend_from_slice(&2u32.to_le_bytes()); // version
+    out.extend_from_slice(&3u32.to_le_bytes()); // version
     out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
     out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
 
@@ -138,6 +138,7 @@ fn build_tkdb_v2(rows: &[Row]) -> Vec<u8> {
         payload.push(row.hanzi.len() as u8);
         payload.push(row.tl.len() as u8);
         payload.push(row.syll); // v2 layout
+        payload.extend_from_slice(&0u16.to_le_bytes()); // kautian_subtag (v3); 0 = no kautian provenance
         payload.extend_from_slice(row.hanzi.as_bytes());
         payload.extend_from_slice(row.tl.as_bytes());
     }
@@ -472,7 +473,7 @@ const SYLLABLE_SAMPLES: &[&str] = &[
 
 fn install_union_fixture() {
     let rows = fixture_rows();
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v2(&rows));
+    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst(&rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst(SYLLABLE_SAMPLES);

@@ -32,7 +32,7 @@ All formats use **little-endian** integers and **strict UTF-8** strings. Both pl
 +---------------------------------------------------+
 | Header (16 bytes)                                 |
 |   "TKDB"                4 bytes                   |
-|   version (u32 LE)      4 bytes  (currently 2)    |
+|   version (u32 LE)      4 bytes  (currently 3)    |
 |   record_count (u32 LE) 4 bytes                   |
 |   build_ts (u32 LE)     4 bytes  (unix epoch)     |
 +---------------------------------------------------+
@@ -46,6 +46,7 @@ All formats use **little-endian** integers and **strict UTF-8** strings. Both pl
 |   hanzi_len      u8      (1 byte; may be 0)       |
 |   tl_len         u8      (1 byte; must be > 0)    |
 |   syllable_count u8      (1 byte; v2; 1..=4)      |
+|   kautian_subtag u16 LE  (2 bytes; v3)           |
 |   hanzi          hanzi_len bytes UTF-8            |
 |   tl             tl_len   bytes UTF-8             |
 +---------------------------------------------------+
@@ -56,9 +57,17 @@ All formats use **little-endian** integers and **strict UTF-8** strings. Both pl
 ranking to disambiguate same-toneless-key entries with different syllable
 counts (e.g. `tsua` → `紙` (syll=1) vs `珠仔` (syll=2)). Range is
 `1..=4` (capped by `MAX_SYLLABLES` in
-`dictionary/build/dictionary_records.py`); `0` is reserved. The v2 reader
-will not parse v1 binaries — rebuild + redeploy artifacts in lockstep
-(see `dictionary/build/deploy.sh`).
+`dictionary/build/dictionary_records.py`); `0` is reserved.
+
+**v2 → v3 (kautian subcollections Phase 2)**: added per-record
+`kautian_subtag` u16 between `syllable_count` and the `hanzi` payload.
+Records which kautian subcollection(s) a row belongs to (main / accent[10] /
+name) so the engine filter can independently gate them while the kautian
+source bit (bit 0) stays a single badge/ranking signal. `0` for every
+non-kautian row. Layout in §4.5. Reserved bits 12-15 are masked off on read.
+
+Each reader supports exactly ONE version; it will NOT parse older binaries
+— rebuild + redeploy artifacts in lockstep (see `dictionary/build/deploy.sh`).
 
 ### 1.2 Record access
 
@@ -79,10 +88,10 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 |---|---|
 | File ≥ 16 bytes | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Magic == `TKDB` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Version == 2 (v1 surfaces explicit `v1→v2` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 3 (v1/v2 surface explicit `v1/v2→v3` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
 | File ≥ `header + record_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Per-record bounds (`recordEnd ≤ data.len()`) | `record()` returns `None` |
-| Per-record min size 9 bytes (v2 fixed prefix) | `record()` returns `None` |
+| Per-record min size 11 bytes (v3 fixed prefix) | `record()` returns `None` |
 | `pos + hanzi_len + tl_len ≤ record_end` | `record()` returns `None` |
 | TL UTF-8 valid | `record()` returns `None` |
 
@@ -236,11 +245,19 @@ bits 13–15  reserved
 ```
 Layer 1 — Variant exclusion:   if !enabled.variant && record has bit 12 → reject
 Layer 2 — Khiin exclusion:     if !enabled.khiin   && record has bit 9  → reject
-Layer 3 — Source OR match:
+Layer 3 — kautian subcollection gate (v3, see §4.5):
+    effective = effective_source_bitmask(record_bitmask, record_subtag, enabled)
+      = record_bitmask, EXCEPT a kautian-source row whose subcollections are
+        all disabled has its bit 0 cleared (other source bits untouched).
+Layer 4 — Source OR match (on the EFFECTIVE bitmask):
     if enabled.all_enabled                                               → accept
-    elif (record & enabled_mask) != 0  || (record & DEV_BIT) != 0        → accept
+    elif (effective & enabled_mask) != 0  || (effective & DEV_BIT) != 0  → accept
     else                                                                 → reject
 ```
+
+The same `effective_source_bitmask` is emitted as the candidate's
+`source_bitmask` so a multi-source survivor ranks by its other source's tier,
+not kautian's (DD6 ranking-weight drop).
 
 ### 4.3 Filter layers (`engine/lexicon::association_reader::AssocFilter`)
 
@@ -262,6 +279,47 @@ Note: association filter does **not** apply variant/khiin/dev exclusions (those 
 
 Excludes `variant`, `khiin`, `dev` from "all" — those are exclusion / always-on flags, not user sources.
 
+### 4.5 `kautian_subtag` (v3) + wire subcollection-enable bits
+
+The per-record `kautian_subtag` u16 (dictionary.bin §1.1) and the user's
+subcollection-enable bits in `enabled_sources_bitmask` (the wire field on
+`SearchRequest` / Tab3 / continuous) share ONE 12-bit layout so the filter
+test is a single AND:
+
+```
+subcollection bit layout (12 bits):
+  bit  0      main         (主條目 / headword)
+  bits 1..=10 accent[0..9] (語音差異 — config.yaml dialect_columns order:
+                            0 鹿港 1 三峽 2 臺北 3 宜蘭 4 臺南 5 高雄
+                            6 金門 7 馬公 8 新竹 9 臺中)
+  bit  11     name         (姓名附錄 — 名 + 姓)
+  bits 12-15  reserved (record subtag masks these off on read)
+```
+
+**Storage** (`dictionary.bin` record `kautian_subtag`): which subcollections a
+row belongs to. `0` for non-kautian rows. A row may carry multiple classes
+(e.g. a headword that is also an accent reading = main + accent bits).
+
+**Wire** (`enabled_sources_bitmask` high region): which subcollections the user
+has enabled.
+
+```
+  bit  13      KAUTIAN_SUBCOLL_ACTIVE — control sentinel. 0 ⇒ engine SKIPS the
+               subcollection gate entirely (legacy / pre-UI default = all on,
+               zero behaviour change). A platform that has the toggles sets this.
+  bits 14..=25 subcollection enable mask, SAME 12-bit layout as the subtag.
+  bits 26-31   reserved (unknown high bits ignored for forward-compat).
+```
+
+`u32::MAX` (the all-enabled sentinel) carries bit 13 + every enable bit set, so
+"all sources/subcollections on" stays consistent. Owner of the bit positions:
+`dictionary/common/source_bits.py::encode_kautian_subtag` +
+`engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`).
+
+The toggle→wire ENCODE (`compute_filters` + proto `DictionaryToggles` fields)
+lands with the first platform UI phase; Phase 2 only DECODES the high bits, so
+production callers still send the legacy mask and behaviour is unchanged.
+
 ---
 
 ## 5. Cross-Platform Invariants (drift hot list)
@@ -273,9 +331,10 @@ When ANY of the following changes, ALL listed files MUST be updated in the same 
 | `dictionary.bin` byte layout | build script, Rust `engine/lexicon::dictionary_reader`, this doc |
 | `association.bin` byte layout | build script, Rust `engine/lexicon::association_reader`, this doc |
 | Bitmask bit positions | build script, iOS `EnabledDictionaries.swift`, Android `EnabledDictionaries.kt`, Rust filter constants in `engine/lexicon`, this doc |
+| `kautian_subtag` + wire subcollection-enable bit layout (§4.5) | `dictionary/common/source_bits.py` (`encode_kautian_subtag`), `dictionary/build/create_dictionary_bin.py`, Rust `engine/lexicon::dictionary_reader` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`), this doc |
 | Key prefix list (`tl:` / `poj:` / `hanzi:`) | build script (`create_fst.py`), Rust `lexicon::key_normalizer`, this doc |
 | Magic bytes (`TKDB` / `TKWA`) | build script, Rust readers, this doc |
-| File version (`dictionary.bin = 2`, `association.bin = 1`) | build script, Rust readers, this doc |
+| File version (`dictionary.bin = 3`, `association.bin = 1`) | build script, Rust readers, this doc |
 | Endianness (little-endian) | build script, Rust readers |
 
 ### 5.1 No-checksum acknowledgement
@@ -319,7 +378,7 @@ The build pipeline must:
 3. Emit fst via `engine/build-helpers/fst-builder` — keys carry the prefix (`tl:` / `poj:` / `hanzi:`) and the value packs rowid in the low 32 bits.
 4. Use bit positions exactly per §4.
 5. Set magic bytes per §1, §2.
-6. Use version `2` for `dictionary.bin` (Phase 1 added per-record `syllable_count`) and version `1` for `association.bin`.
+6. Use version `3` for `dictionary.bin` (v2 added per-record `syllable_count`; v3 added per-record `kautian_subtag`) and version `1` for `association.bin`.
 7. Include all six trie key forms (TL num/no-tone/abbrev, POJ num/no-tone/abbrev) plus `hanzi:` keys for reverse lookup.
 
 ---

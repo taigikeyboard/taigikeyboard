@@ -25,7 +25,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from common.source_bits import DICT_BIN_COLUMNS
+from common.kautian_provenance import COL_ACCENT_MASK, COL_MAIN, COL_NAME
+from common.source_bits import DICT_BIN_COLUMNS, encode_kautian_subtag
+
+# kautian subcollection provenance columns (Phase 1 output). Present on every
+# row of a freshly-built dictionary.csv (merge_csv fills 0/False for non-kautian
+# rows); the loader defaults a missing column to "no provenance" but fails loud
+# if kautian rows exist without them (stale CSV — `make dict` not re-run).
+_PROVENANCE_COLUMNS = (COL_MAIN, COL_ACCENT_MASK, COL_NAME)
 
 REQUIRED_COLUMNS = (
     "hanzi", "tl", "frequency",
@@ -73,6 +80,10 @@ class DictionaryRecord:
     # (see `_syllable_count`). Always 1..=MAX_SYLLABLES — out-of-range rows
     # are filtered before construction. Encoded as `u8` in dictionary.bin v2.
     syllable_count: int
+    # kautian subcollection provenance packed into a u16 (dictionary.bin v3).
+    # 0 for every non-kautian row. Layout (`source_bits.encode_kautian_subtag`):
+    # bit 0 = has_main, bits 1..=10 = accent_mask, bit 11 = has_name.
+    kautian_subtag: int
 
     def source_dict(self) -> dict[str, bool]:
         return dict(self.sources)
@@ -90,6 +101,30 @@ def _normalise_optional(value) -> str | None:
     return s if s != "" else None
 
 
+def _as_bool(value) -> bool:
+    """Coerce a CSV cell to bool, robust to pandas dtype inference.
+
+    `read_dictionary_csv` infers dtype, so a clean flag column arrives as
+    `numpy.bool_`; a column with stray NaN arrives as object strings. Treat
+    only the literal "true" (case-insensitive) / truthy non-string as True.
+    """
+    if pd.isna(value):
+        return False
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    return bool(value)
+
+
+def _kautian_subtag(row) -> int:
+    accent_raw = row[COL_ACCENT_MASK]
+    accent_mask = 0 if pd.isna(accent_raw) else int(float(accent_raw))
+    return encode_kautian_subtag(
+        has_main=_as_bool(row[COL_MAIN]),
+        accent_mask=accent_mask,
+        has_name=_as_bool(row[COL_NAME]),
+    )
+
+
 def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     """Read dictionary.csv → return filtered, deduped records with rowids.
 
@@ -102,6 +137,18 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise RuntimeError(f"dictionary.csv missing columns: {missing}")
+
+    has_provenance = all(c in df.columns for c in _PROVENANCE_COLUMNS)
+    if (
+        not has_provenance
+        and "kautian" in df.columns
+        and any(_as_bool(v) for v in df["kautian"])
+    ):
+        raise RuntimeError(
+            "dictionary.csv has kautian rows but no kautian subcollection "
+            f"provenance columns {_PROVENANCE_COLUMNS} — regenerate via "
+            "`make dict` (Phase 1 kautian_provenance stage)."
+        )
 
     records: list[DictionaryRecord] = []
     seen_non_null: set[tuple[str, str]] = set()
@@ -145,6 +192,7 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
             tps_abbrev_var=_normalise_optional(row["tps_abbrev_var"]),
             sources=sources,
             syllable_count=syllable_count,
+            kautian_subtag=_kautian_subtag(row) if has_provenance else 0,
         ))
 
     return records

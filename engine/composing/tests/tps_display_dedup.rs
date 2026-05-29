@@ -10,7 +10,7 @@
 //! Hermetic install of `LexiconHandle` mirrors `golden_fetch_at_pos.rs`
 //! (this binary is its own process with its own singleton; the lock
 //! guards in-binary `#[test]` parallelism). Fixture builders copy the
-//! same TKDB v2 / dictionary.fst / syllables.fst byte layout — composing
+//! same TKDB v3 / dictionary.fst / syllables.fst byte layout — composing
 //! tests cannot import `lexicon/tests/common/mod.rs` (test-private).
 
 // 中文: TPS 視覺去重整合測試 — 對齊使用者回報的 ㄨㄢ → 重複兩個 灣 bug。
@@ -54,10 +54,10 @@ fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
     path
 }
 
-fn build_tkdb_v2(rows: &[Row]) -> Vec<u8> {
+fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(b"TKDB");
-    out.extend_from_slice(&2u32.to_le_bytes());
+    out.extend_from_slice(&3u32.to_le_bytes());
     out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
     out.extend_from_slice(&0u32.to_le_bytes());
     let offset_table_size = rows.len() * 4;
@@ -70,6 +70,7 @@ fn build_tkdb_v2(rows: &[Row]) -> Vec<u8> {
         payload.push(row.hanzi.len() as u8);
         payload.push(row.tl.len() as u8);
         payload.push(row.syll);
+        payload.extend_from_slice(&0u16.to_le_bytes()); // kautian_subtag (v3); 0 = no kautian provenance
         payload.extend_from_slice(row.hanzi.as_bytes());
         payload.extend_from_slice(row.tl.as_bytes());
     }
@@ -238,7 +239,7 @@ fn fixture_rows() -> Vec<Row> {
 
 fn install_fixture() {
     let rows = fixture_rows();
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v2(&rows));
+    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst(&rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst(&["uan1", "uan5"]);

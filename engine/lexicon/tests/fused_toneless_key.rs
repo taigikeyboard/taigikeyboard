@@ -37,7 +37,7 @@ use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
 
 mod common;
-use common::{build_tkdb_v2, write_temp};
+use common::{build_tkdb_v3, write_temp};
 
 const SEPARATOR: u8 = 0xFF;
 
@@ -56,7 +56,7 @@ fn fused_toneless_key_retrieves_single_and_multi_syllable_entries() {
         "phase1b-fused-toneless.fst",
         &[("tl:tsua", 1), ("tl:tsua", 2)],
     );
-    let dict_bytes = build_tkdb_v2(
+    let dict_bytes = build_tkdb_v3(
         b"TKDB",
         &[
             (0u16, 5_000u32, 1u8, "紙", "tsuá"),
@@ -102,7 +102,7 @@ fn fused_toneless_key_works_for_poj_path() {
         "phase1b-fused-toneless-poj.fst",
         &[("poj:chua", 1), ("poj:chua", 2)],
     );
-    let dict_bytes = build_tkdb_v2(
+    let dict_bytes = build_tkdb_v3(
         b"TKDB",
         &[
             (0u16, 3_134u32, 1u8, "紙", "chóa"),

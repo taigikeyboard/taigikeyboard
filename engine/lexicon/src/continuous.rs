@@ -629,7 +629,7 @@ pub fn fetch_candidates_for_keys(
             let Some(record) = ctx.dict.record(rowid) else {
                 continue;
             };
-            if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+            if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
                 continue;
             }
             // v3.5.8 — drop `tl_abbrev` acronym collisions: continuous
@@ -646,8 +646,14 @@ pub fn fetch_candidates_for_keys(
             // through `fetch_partial_prefix_candidates` instead and
             // carry `COVERAGE_KIND_PARTIAL_PREFIX`.
             // 中文: 完整音節路徑固定 COVERAGE_KIND_FULL;partial-prefix 改走另一條入口。
+            let effective = DictionaryReader::effective_source_bitmask(
+                record.bitmask,
+                record.kautian_subtag,
+                &filter,
+            );
             out.push(record_to_candidate(
                 record,
+                effective,
                 *span,
                 ctx.freq_map,
                 ctx.now_ms,
@@ -867,7 +873,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             let Some(record) = ctx.dict.record(rowid) else {
                 continue;
             };
-            if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+            if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
                 continue;
             }
             // Codex PR #351 r3319500948 — drop `tl_abbrev` / `poj_abbrev` /
@@ -885,8 +891,14 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             if !matches_continuous_toneless_prefix_key(fst_key, &record.tl) {
                 continue;
             }
+            let effective = DictionaryReader::effective_source_bitmask(
+                record.bitmask,
+                record.kautian_subtag,
+                &filter,
+            );
             out.push(record_to_candidate(
                 record,
+                effective,
                 *span,
                 ctx.freq_map,
                 ctx.now_ms,
@@ -971,7 +983,7 @@ pub fn best_candidate_for_key(
         let Some(record) = dict.record(rowid) else {
             continue;
         };
-        if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+        if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
             continue;
         }
         // v3.5.8 — same `tl_abbrev` collision guard as the span-local
@@ -982,7 +994,19 @@ pub fn best_candidate_for_key(
         if !matches_continuous_toneless_key(key, &record.tl) {
             continue;
         }
-        let cand = record_to_candidate(record, consumed_span, freq_map, now_ms, COVERAGE_KIND_FULL);
+        let effective = DictionaryReader::effective_source_bitmask(
+            record.bitmask,
+            record.kautian_subtag,
+            &filter,
+        );
+        let cand = record_to_candidate(
+            record,
+            effective,
+            consumed_span,
+            freq_map,
+            now_ms,
+            COVERAGE_KIND_FULL,
+        );
         let better = match &best {
             None => true,
             Some(b) => NonNanF32::new(cand.score) > NonNanF32::new(b.score),
@@ -1365,18 +1389,24 @@ fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> boo
 
 fn record_to_candidate(
     record: DictionaryRecord,
+    effective_bitmask: u16,
     consumed_span: ConsumedSpan,
     freq_map: &FrequencyMap,
     now_ms: i64,
     coverage_kind: u8,
 ) -> RawCandidate {
     let DictionaryRecord {
-        bitmask,
+        bitmask: _,
         frequency,
         syllable_count,
         hanzi,
         tl,
+        kautian_subtag: _,
     } = record;
+    // EFFECTIVE bitmask (kautian bit dropped when its subcollection is
+    // disabled) drives `source_tier_rank` so a multi-source survivor ranks by
+    // its other source's tier, not kautian's (DD6 ranking-weight drop).
+    let bitmask = effective_bitmask;
     let mode = derive_mode(hanzi.as_deref());
     // Phase 9 Item 5: keep `roman` = `tl` alongside `display_text`
     // before `hanzi.unwrap_or(tl)` consumes the TL string. `hanji`
@@ -2138,6 +2168,7 @@ mod record_to_candidate_carrier_tests {
             bitmask: 0,
             frequency: 0,
             syllable_count: 1,
+            kautian_subtag: 0,
             hanzi: hanzi.map(str::to_owned),
             tl: tl.to_owned(),
         }
@@ -2147,6 +2178,7 @@ mod record_to_candidate_carrier_tests {
     fn hant_record_emits_roman_and_some_hanji() {
         let cand = record_to_candidate(
             record("tâi-uân", Some("臺灣")),
+            0,
             (0, 7),
             &FrequencyMap::new(),
             0,
@@ -2165,6 +2197,7 @@ mod record_to_candidate_carrier_tests {
         // (proto3 `optional` distinguishes None from Some("")).
         let cand = record_to_candidate(
             record("tāi", None),
+            0,
             (0, 3),
             &FrequencyMap::new(),
             0,
@@ -2183,6 +2216,7 @@ mod record_to_candidate_carrier_tests {
         // `roman` still equals the pure TL romanization.
         let cand = record_to_candidate(
             record("hip-siòng", Some("hip相")),
+            0,
             (0, 9),
             &FrequencyMap::new(),
             0,

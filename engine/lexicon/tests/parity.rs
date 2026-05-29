@@ -23,7 +23,7 @@ use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
 use lexicon::LexiconError;
 
 mod common;
-use common::{build_tkdb_v2, write_temp};
+use common::{build_tkdb_v3, write_temp};
 
 const SEPARATOR: u8 = 0xFF;
 
@@ -49,9 +49,11 @@ fn invariant_lex_filter_bitmask_three_layers() {
         khiin: true,
         all_enabled: true,
         enabled_mask: 0,
+        kautian_subcoll_active: false,
+        kautian_subcoll_mask: 0,
     };
     let variant_record = 1u16 << 12; // VARIANT_BIT
-    assert!(!DictionaryReader::passes_filter(variant_record, &f));
+    assert!(!DictionaryReader::passes_filter(variant_record, 0, &f));
 
     // Layer 2: khiin exclusion
     let f2 = Filter {
@@ -59,9 +61,11 @@ fn invariant_lex_filter_bitmask_three_layers() {
         khiin: false,
         all_enabled: true,
         enabled_mask: 0,
+        kautian_subcoll_active: false,
+        kautian_subcoll_mask: 0,
     };
     let khiin_record = 1u16 << 9; // KHIIN_BIT
-    assert!(!DictionaryReader::passes_filter(khiin_record, &f2));
+    assert!(!DictionaryReader::passes_filter(khiin_record, 0, &f2));
 
     // Layer 3: source-OR with dev (dev always passes when set)
     let f3 = Filter {
@@ -69,13 +73,15 @@ fn invariant_lex_filter_bitmask_three_layers() {
         khiin: true,
         all_enabled: false,
         enabled_mask: 1u16 << 0, // only kautian enabled
+        kautian_subcoll_active: false,
+        kautian_subcoll_mask: 0,
     };
     let dev_record = 1u16 << 10; // DEV_BIT
-    assert!(DictionaryReader::passes_filter(dev_record, &f3));
+    assert!(DictionaryReader::passes_filter(dev_record, 0, &f3));
     let kautian_record = 1u16 << 0;
-    assert!(DictionaryReader::passes_filter(kautian_record, &f3));
+    assert!(DictionaryReader::passes_filter(kautian_record, 0, &f3));
     let stti_record = 1u16 << 7;
-    assert!(!DictionaryReader::passes_filter(stti_record, &f3));
+    assert!(!DictionaryReader::passes_filter(stti_record, 0, &f3));
 }
 
 // --- INVARIANT_LEX_BINARY_FORMAT ---------------------------------------
@@ -354,7 +360,7 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     // it as a tiebreaker; a `0` frequency would be valid but tests with a
     // realistic non-zero value catch sort regressions too.
     let fst_path = write_synthetic_fst("api-bitmask.fst", &[("tl:test", 1), ("hanzi:好", 1)]);
-    let dict_bytes = synth_dictionary_bin(b"TKDB", 2, &[(0x0001u16, 100, "好", "ho2")]);
+    let dict_bytes = synth_dictionary_bin(b"TKDB", &[(0x0001u16, 100, "好", "ho2")]);
     let dict_path = write_temp("api-bitmask-dict.bin", &dict_bytes);
     let assoc_path = write_temp("api-bitmask-assoc.bin", &synth_association_bin());
 
@@ -504,16 +510,15 @@ fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
     path
 }
 
-/// Convenience wrapper: emits a v2 TKDB binary with `syllable_count = 1` on
-/// every row. Callers that assert on syllable_count should use
-/// `common::build_tkdb_v2` directly.
-fn synth_dictionary_bin(magic: &[u8; 4], version: u32, rows: &[(u16, u32, &str, &str)]) -> Vec<u8> {
-    assert_eq!(version, 2, "synth_dictionary_bin only emits v2; pass v=2");
-    let rows_v2: Vec<(u16, u32, u8, &str, &str)> = rows
+/// Convenience wrapper: emits a v3 TKDB binary with `syllable_count = 1` and
+/// `kautian_subtag = 0` on every row. Callers that assert on syllable_count or
+/// subtag should use `common::build_tkdb_v3` / `build_tkdb_v3_subtag` directly.
+fn synth_dictionary_bin(magic: &[u8; 4], rows: &[(u16, u32, &str, &str)]) -> Vec<u8> {
+    let rows_v3: Vec<(u16, u32, u8, &str, &str)> = rows
         .iter()
         .map(|(bm, freq, hanzi, tl)| (*bm, *freq, 1u8, *hanzi, *tl))
         .collect();
-    build_tkdb_v2(magic, &rows_v2)
+    build_tkdb_v3(magic, &rows_v3)
 }
 
 /// `bad-version` regression test still needs to forge an arbitrary version
@@ -529,6 +534,7 @@ fn synth_dictionary_bin_with_version(
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(1),
+            kautian_subtag: None,
             hanzi,
             tl,
         })
@@ -537,14 +543,14 @@ fn synth_dictionary_bin_with_version(
 }
 
 fn synth_dictionary_reader(rows: &[(u16, u32, &str, &str)]) -> DictionaryReader {
-    let bytes = synth_dictionary_bin(b"TKDB", 2, rows);
+    let bytes = synth_dictionary_bin(b"TKDB", rows);
     let path = write_temp(&format!("dict-{}.bin", rows.len()), &bytes);
     DictionaryReader::open(&path).expect("synth dict opens")
 }
 
 fn build_minimal_install_fixture(prefix: &str) -> (PathBuf, PathBuf, PathBuf) {
     let fst_path = write_synthetic_fst(&format!("{prefix}.fst"), &[("tl:test", 1)]);
-    let dict_bytes = synth_dictionary_bin(b"TKDB", 2, &[(0, 1, "好", "ho2")]);
+    let dict_bytes = synth_dictionary_bin(b"TKDB", &[(0, 1, "好", "ho2")]);
     let dict_path = write_temp(&format!("{prefix}-dict.bin"), &dict_bytes);
     let assoc_bytes = synth_association_bin();
     let assoc_path = write_temp(&format!("{prefix}-assoc.bin"), &assoc_bytes);

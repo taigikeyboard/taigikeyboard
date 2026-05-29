@@ -6,10 +6,10 @@
 輸入：output/dictionary.csv
 輸出：output/dictionary.bin
 
-Binary 格式（version 2,little-endian）：
+Binary 格式（version 3,little-endian）：
   Header (16 bytes):
     magic:    4 bytes  "TKDB"
-    version:  u32      2
+    version:  u32      3
     count:    u32      record count
     build_ts: u32      Unix timestamp
 
@@ -23,6 +23,7 @@ Binary 格式（version 2,little-endian）：
     hanzi_len:      u8   UTF-8 byte count (0 = NULL)
     tl_len:         u8   UTF-8 byte count
     syllable_count: u8   TL syllable count (v2; 1..=MAX_SYLLABLES)
+    kautian_subtag: u16  kautian subcollection provenance (v3)
     hanzi:          [u8] UTF-8 bytes
     tl:             [u8] UTF-8 bytes
 
@@ -31,9 +32,15 @@ Binary 格式（version 2,little-endian）：
     6=kungge   7=stti     8=khpoo    9=khiin   10=dev     11=lkk
     12=is_variant  13-15=reserved
 
+  kautian_subtag bit layout (u16; 0 for every non-kautian row):
+    0=has_main  1..=10=accent_mask (10 dialect columns)  11=has_name
+    12-15=reserved
+
   v1 → v2 (v3.5.8 Phase 1): added per-record `syllable_count` u8 between
-  `tl_len` and the `hanzi` payload. v1 binaries are NOT readable by the
-  Rust v2 reader; rebuild + redeploy artifacts in lockstep.
+  `tl_len` and the `hanzi` payload.
+  v2 → v3 (kautian subcollections Phase 2): added per-record `kautian_subtag`
+  u16 between `syllable_count` and the `hanzi` payload. Older binaries are NOT
+  readable by the Rust v3 reader; rebuild + redeploy artifacts in lockstep.
 
 用法：
   python3 create_dictionary_bin.py            # 建立 binary
@@ -47,7 +54,7 @@ from pathlib import Path
 from build.common import LOG_DIR, OUTPUT_DIR, start_new_build_timestamp
 from build.dictionary_records import DictionaryRecord, load_dictionary_records
 from common.logging_utils import log_header, setup_logging
-from common.source_bits import DICT_BIN_COLUMNS
+from common.source_bits import DICT_BIN_COLUMNS, KAUTIAN_SUBTAG_USED_MASK
 
 CSV_FILE = OUTPUT_DIR / "dictionary.csv"
 OUTPUT_FILE = OUTPUT_DIR / "dictionary.bin"
@@ -55,7 +62,7 @@ CORPUS_STATS_FILE = OUTPUT_DIR / "corpus_total_freq.txt"
 SCRIPT_NAME = "create_dictionary_bin"
 
 MAGIC = b"TKDB"
-VERSION = 2
+VERSION = 3
 
 # Bitmask bit layout — must match `engine/lexicon/src/dictionary_reader.rs`
 # (CROSS-CRATE INVARIANT). Authoritative source for both bit positions and
@@ -141,13 +148,19 @@ def encode_record(record: DictionaryRecord) -> bytes:
     hanzi_bytes = record.hanzi.encode("utf-8") if record.hanzi else b""
     tl_bytes = record.tl.encode("utf-8")
 
+    assert record.kautian_subtag & ~KAUTIAN_SUBTAG_USED_MASK == 0, (
+        f"kautian_subtag {record.kautian_subtag:#06x} sets reserved bits "
+        f"(rowid={record.rowid})"
+    )
+
     return struct.pack(
-        f"<HIBBB{len(hanzi_bytes)}s{len(tl_bytes)}s",
+        f"<HIBBBH{len(hanzi_bytes)}s{len(tl_bytes)}s",
         bitmask,
         frequency,
         len(hanzi_bytes),
         len(tl_bytes),
         record.syllable_count,
+        record.kautian_subtag,
         hanzi_bytes,
         tl_bytes,
     )
@@ -255,10 +268,16 @@ def verify(logger):
         rec_end = offsets[i + 1] if i + 1 < count else len(data)
         rec_data = data[offset:rec_end]
 
-        bitmask, frequency, hanzi_len, tl_len, syllable_count = struct.unpack_from(
-            "<HIBBB", rec_data, 0
-        )
-        pos = 9  # 2 bitmask + 4 freq + 1 hanzi_len + 1 tl_len + 1 syllable_count
+        (
+            bitmask,
+            frequency,
+            hanzi_len,
+            tl_len,
+            syllable_count,
+            kautian_subtag,
+        ) = struct.unpack_from("<HIBBBH", rec_data, 0)
+        # 2 bitmask + 4 freq + 1 hanzi_len + 1 tl_len + 1 syllable_count + 2 subtag
+        pos = 11
         hanzi_bytes = rec_data[pos: pos + hanzi_len]
         pos += hanzi_len
         tl_bytes = rec_data[pos: pos + tl_len]
@@ -271,6 +290,7 @@ def verify(logger):
         expected_freq = encoded_frequency(rec)
         expected_bitmask = encode_bitmask(rec)
         expected_syllables = rec.syllable_count
+        expected_subtag = rec.kautian_subtag
 
         if hanzi != expected_hanzi:
             logger.error(f"  Row {i + 1}: hanzi mismatch: '{hanzi}' vs '{expected_hanzi}'")
@@ -289,6 +309,12 @@ def verify(logger):
         if syllable_count != expected_syllables:
             logger.error(
                 f"  Row {i + 1}: syllable_count mismatch: {syllable_count} vs {expected_syllables}"
+            )
+            errors += 1
+        if kautian_subtag != expected_subtag:
+            logger.error(
+                f"  Row {i + 1}: kautian_subtag mismatch: "
+                f"{kautian_subtag:#06x} vs {expected_subtag:#06x}"
             )
             errors += 1
 

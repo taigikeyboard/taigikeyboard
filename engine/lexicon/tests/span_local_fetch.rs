@@ -23,7 +23,7 @@
 //! pointing to a tiny `dictionary.bin` v2) per test so we never touch
 //! the real packaged dictionary. FST builder pattern mirrors
 //! `tests/syllables_fst.rs:186-207`; dict.bin v2 builder is shared
-//! `tests/common/mod.rs::build_tkdb_v2`.
+//! `tests/common/mod.rs::build_tkdb_v3`.
 
 // 中文: Phase 5 fetch_candidates_for_endings 契約測試 — 鎖 roadmap §Phase 5 三條 case (tsua / taigikhipuann / taixyz)。
 
@@ -88,7 +88,7 @@ fn ctx_neutral<'a>(
 }
 
 mod common;
-use common::{build_tkdb_v2, write_temp};
+use common::{build_tkdb_v3, write_temp};
 
 /// Single dictionary fixture row: `(toneless_tl_key, hanzi, tl, syllable_count, frequency)`.
 /// `bitmask` is fixed to `1 << 11` (the `lkk` source per
@@ -119,7 +119,7 @@ fn build_fixture(name: &str, rows: &[Row<'_>]) -> (PrefixIndex, DictionaryReader
         .iter()
         .map(|r| (1u16 << 11, r.freq, r.syll, r.hanzi, r.tl))
         .collect();
-    let dict_bytes = build_tkdb_v2(b"TKDB", &dict_rows);
+    let dict_bytes = build_tkdb_v3(b"TKDB", &dict_rows);
     let dict_path = write_temp(&format!("phase5-{name}.dict.bin"), &dict_bytes);
     let dict = DictionaryReader::open(&dict_path).expect("dict.bin opens");
 

@@ -19,7 +19,7 @@
 //!   falsely promote stale entries.
 //!
 //! Fixture builder mirrors `tests/span_local_fetch.rs` (1:1 with the
-//! shared `tests/common::build_tkdb_v2` helper). Phase 9.1 + 9.2
+//! shared `tests/common::build_tkdb_v3` helper). Phase 9.1 + 9.2
 //! invariants (Tier 1 ordering, mode derive) are pinned in that file;
 //! this file scopes to 9.3a-specific axes.
 
@@ -65,7 +65,7 @@ fn ctx<'a>(
 }
 
 mod common;
-use common::{build_tkdb_v2, write_temp};
+use common::{build_tkdb_v3, write_temp};
 
 struct Row<'a> {
     toneless_key: &'a str,
@@ -80,7 +80,7 @@ fn build_fixture(name: &str, rows: &[Row<'_>]) -> (PrefixIndex, DictionaryReader
         .iter()
         .map(|r| (1u16 << 11, r.freq, r.syll, r.hanzi, r.tl))
         .collect();
-    let dict_bytes = build_tkdb_v2(b"TKDB", &dict_rows);
+    let dict_bytes = build_tkdb_v3(b"TKDB", &dict_rows);
     let dict_path = write_temp(&format!("phase9-3a-{name}.dict.bin"), &dict_bytes);
     let dict = DictionaryReader::open(&dict_path).expect("dict.bin opens");
 

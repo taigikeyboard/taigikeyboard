@@ -41,6 +41,43 @@ IS_VARIANT_BIT: Final[int] = 12  # bit 12 in dictionary.bin u16 bitmask
 # Column order for dictionary.bin encoding — `bit = index in this list`.
 DICT_BIN_COLUMNS: Final[list[str]] = list(SOURCE_BITS.keys()) + ["is_variant"]
 
+# --- kautian subcollection subtag (dictionary.bin v3) ------------------------
+# A SEPARATE u16 field (NOT part of the source bitmask above) records which
+# kautian subcollections a row belongs to, so the kautian source bit (bit 0)
+# stays a single undifferentiated badge/ranking signal while the filter can
+# independently gate main / accent / name. Bit-layout owner — mirrors:
+#   - engine/lexicon/src/dictionary_reader.rs (KAUTIAN_SUBTAG_* consts + reader)
+#   - docs/engine/binary-format.md §1 (record layout)
+# The wire `enabled_sources_bitmask` carries the user's subcollection ENABLE
+# bits in the SAME 12-bit layout (main | accent[10] | name) at a high offset;
+# see lexicon.proto + dictionary_reader.rs `Filter::from_enabled_bitmask`.
+KAUTIAN_SUBTAG_MAIN_BIT: Final[int] = 0  # headword (主條目)
+KAUTIAN_SUBTAG_ACCENT_SHIFT: Final[int] = 1  # accent_mask occupies bits 1..=10
+KAUTIAN_SUBTAG_ACCENT_COUNT: Final[int] = 10  # 10 dialect columns (語音差異)
+KAUTIAN_SUBTAG_NAME_BIT: Final[int] = 11  # 姓名附錄 (名 + 姓)
+# Bits 12..15 are reserved and must remain 0.
+_KAUTIAN_SUBTAG_ACCENT_MASK: Final[int] = (1 << KAUTIAN_SUBTAG_ACCENT_COUNT) - 1
+# All subtag bits in use (main | accent[10] | name); bits 12-15 reserved. The
+# encoder asserts `subtag & ~KAUTIAN_SUBTAG_USED_MASK == 0`; the Rust reader
+# masks reads with the mirror constant.
+KAUTIAN_SUBTAG_USED_MASK: Final[int] = (1 << (KAUTIAN_SUBTAG_NAME_BIT + 1)) - 1
+
+
+def encode_kautian_subtag(has_main: bool, accent_mask: int, has_name: bool) -> int:
+    """Pack kautian subcollection provenance into the v3 dictionary.bin u16.
+
+    `accent_mask` is the Phase 1 10-bit value (`kautian_accent_mask`,
+    bit order = config.yaml select.dialect_columns). It is masked to 10 bits
+    so an out-of-range value can never spill into the reserved bits.
+    """
+    subtag = 0
+    if has_main:
+        subtag |= 1 << KAUTIAN_SUBTAG_MAIN_BIT
+    subtag |= (accent_mask & _KAUTIAN_SUBTAG_ACCENT_MASK) << KAUTIAN_SUBTAG_ACCENT_SHIFT
+    if has_name:
+        subtag |= 1 << KAUTIAN_SUBTAG_NAME_BIT
+    return subtag
+
 # The 9-flag subset used by association.bin, build/merge_csv.py's main-source
 # selection, and build/associations.py (NextWord bigram generator). khiin /
 # dev / lkk and is_variant are excluded — those sources do not participate in

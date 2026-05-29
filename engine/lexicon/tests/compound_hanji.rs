@@ -20,7 +20,7 @@ mod common;
 
 use std::path::PathBuf;
 
-use common::{build_tkdb_v2, write_temp};
+use common::{build_tkdb_v3, write_temp};
 use lexicon::compound_hanji_exists;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
@@ -29,7 +29,7 @@ const SEPARATOR: u8 = 0xFF;
 
 /// `(key, rowid)` → FST `key || 0xFF || rowid_le_4`. `lookup_exact`
 /// resolves `rowid`; `DictionaryReader::record` is 1-based, so FST
-/// rowid `N` maps to `build_tkdb_v2` row index `N-1`.
+/// rowid `N` maps to `build_tkdb_v3` row index `N-1`.
 fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
     use fst::SetBuilder;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -84,7 +84,7 @@ fn compound_hanji_exists_contract_matrix() {
             ("hanzi:壞", 5),
         ],
     );
-    let dict_bytes = build_tkdb_v2(
+    let dict_bytes = build_tkdb_v3(
         b"TKDB",
         &[
             (0x0001u16, 500u32, 2u8, "查某", "tsa-bóo"),
