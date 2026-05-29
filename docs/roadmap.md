@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `deferred items`
 > **Status**: Active
-> **Last updated**: 2026-05-29 (kautian subcollections Phase 2 binary v3 + engine filter merged #355; next = Phase 3 iOS UI; 5 PR plan, unscheduled)
+> **Last updated**: 2026-05-29 (kautian subcollections Phase 3 ENCODE + iOS Tab3 UI merged #356; next = Phase 4 Android UI; 5 PR plan, unscheduled)
 
 ---
 
@@ -20,7 +20,7 @@
 
 ### kautian subcollections — 腔調 + 姓名附錄 toggles + 語音差異 詞級擴展
 
-> **Status**: Phase 0 (admin) + Phase 1 (pipeline provenance, #354 `287aad85`) + Phase 2 (binary v3 + engine filter, #355 `943acb14`) MERGED 2026-05-29. NEXT = Phase 3 (iOS UI/settings). Phases 3-5 Pending. Phase 2 is behaviour-neutral (engine DECODE only — `kautian_subtag` u16 in dictionary.bin v3 + filter via the `enabled_sources_bitmask` bit-13 active-sentinel high region; legacy mask ⇒ zero change); the toggle→wire ENCODE (`DictionaryToggles` proto fields + shared `compute_filters`) is deferred to Phase 3 (first platform UI) per YAGNI. **Unscheduled** — no release/version assigned (user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope]).
+> **Status**: Phase 0 (admin) + Phase 1 (pipeline provenance, #354 `287aad85`) + Phase 2 (binary v3 + engine filter, #355 `943acb14`) + Phase 3 (ENCODE + iOS Tab3 UI, #356 `2c12bf8f`) MERGED 2026-05-29. NEXT = Phase 4 (Android UI/settings). Phases 4-5 Pending. Phase 3 landed the toggle→wire ENCODE: proto nested `KautianSubcollToggles` (message PRESENCE = active sentinel; absent ⇒ legacy all-on) + shared `compute_filters` (Rust owns the subtag bit layout; main bit always-on, accent[10] + name from toggles) + iOS 11 nested toggles under the kautian master (greyed when master off, DD7). **DD3 scope corrected** to **Tab3 dictionary-browse only** — the keyboard continuous path pins `enabled_sources_bitmask = u32::MAX` (`continuous.rs:929`), so no source toggle reaches keyboard candidates today (pre-existing deferred PR-9.6, gates all 12 sources, unscoped). **Unscheduled** — no release/version assigned (user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope]).
 > **Live hand-off + design decisions**: Claude auto-memory `project_kautian_subcollections.md`.
 
 **Goal**: Split the kautian source (教育部臺灣台語常用詞辭典, source bit 0) into independently-gateable **subcollections** — `main` (主條目) / `accent_differences` (10 腔調 語音差異) / `name_appendix` (姓名附錄 = 名+姓 merged) — surfaced as nested toggles under the kautian row in the dictionary-management page. **Impact**: users opt out of noisy/appendix data per-subcollection without breaking the existing source-toggle / ranking / badge / keyboard-candidate consistency.
