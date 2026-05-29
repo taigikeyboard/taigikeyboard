@@ -9,12 +9,13 @@
 #   4. create_syllables_fst     - 建立 syllables.fst 音節庫 (tl:/poj:/tps: tagged-single-FST)
 #   5. create_association_bin   - 建立 association.bin (binary mmap)，沿用 build_ts
 #   6. verify_poj_integrity     - fail-fast POJ invariant gate (前 audit 12/13 stale_poj)
-#   7. version_snapshot         - drop 摘要 + vs 上一版 diff；release 模式寫入版本快照
+#   7. version_snapshot         - drop 摘要 + vs 上一個 release tag 的 dictionary.csv diff
 #   8. verify_known_keys        - fst fixture 驗證 (poj:chi2 等已知 key 命中數)
 #   9. deploy                   - 複製到 Android/iOS 專案 (含 syllables.fst)
 #
-# Release 版本標籤：設 RELEASE_VERSION=vX.Y.Z（或傳第一個參數）→ step 7 寫入
-#   snapshots/vX.Y.Z.tsv 並修剪到最新 3 版。未設定 → step 7 僅報告 diff，不寫快照。
+# Release 版本標籤：設 RELEASE_VERSION=vX.Y.Z（或傳第一個參數）→ step 7 的 diff 基準
+#   = semver 嚴格小於它的最新 tag（排除自己）。未設定 → 比對最新 release tag。
+#   不再寫 snapshot 檔；上一版內容直接讀 `git show <tag>:dictionary/output/dictionary.csv`。
 #
 # output/ 由使用者手動清除；本腳本不提供 clean / deploy-only 子命令。
 
@@ -59,7 +60,7 @@ python3 -m build.create_association_bin --verify
 step "Step 6/9: Verifying POJ integrity (fatal gate)..."
 python3 -m build.verify_poj_integrity
 
-step "Step 7/9: Version snapshot + drop/diff summary..."
+step "Step 7/9: Drop summary + vs-previous-release-tag diff..."
 if [ -n "$RELEASE_VERSION" ]; then
     python3 -m build.version_snapshot --version "$RELEASE_VERSION"
 else

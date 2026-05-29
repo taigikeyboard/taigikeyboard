@@ -34,7 +34,7 @@ If `<target>` tag exists locally or on origin, note it once; step 6 will overwri
 
 ## 4. Rebuild (sequential, abort on failure)
 
-- `RELEASE_VERSION=<target> make dict` — passing the version makes the dict build write `dictionary/snapshots/<target>.tsv` (newest 3 kept) and print the build-drop + vs-previous-version diff summary. Commit the new/updated snapshot file with the release.
+- `RELEASE_VERSION=<target> make dict` — passing the version sets the dict build's diff base to the newest release tag strictly older than `<target>` (so it excludes `<target>` even on a re-run) and prints the build-drop + vs-previous-release diff summary. The previous release's `dictionary.csv` is read via `git show <prev-tag>:…`; no snapshot file is written or committed.
 - `make build`
 
 ## 4.5 Mode selection (auto)

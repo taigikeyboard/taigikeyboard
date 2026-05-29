@@ -35,7 +35,6 @@ dictionary/
 │   ├── khiin_conversions.csv  # Khiin conversion table
 │   └── 語音差異.csv            # Regional pronunciation reference
 │
-├── snapshots/                 # Per-release distilled keysets vX.Y.Z.tsv (newest 3, git-tracked)
 ├── output/                    # Generated build artefacts
 └── docs/                      # Pipeline + sources docs
 ```
@@ -98,29 +97,36 @@ original URLs.
 | `build/create_fst.py`            | fst prefix index from CSV (shells to engine/build-helpers/fst-builder) |
 | `build/create_{dictionary,association}_bin.py` | Binary mmap formats consumed by mobile apps |
 | `build/verify_poj_integrity.py`  | Fatal POJ-integrity gate — halts build if `poj`/derived ≠ `convert_tl_to_poj(tl)` (+ KeSi report-only) |
-| `build/version_snapshot.py`      | Build-drop summary + vs-previous diff; release mode writes `snapshots/vX.Y.Z.tsv` (newest 3 kept) |
+| `build/version_snapshot.py`      | Build-drop summary + `(hanzi, tl)` diff vs the previous release tag's `dictionary.csv` (read via `git show`; no snapshot file stored) |
 | `tools/compare_baseline.py`      | Parity gate — SHA256 + CSV-derived semantic diff vs baseline.json |
 | `tools/verify_csv.py`            | CSV character-validity + duplicate sanity checker            |
 | `tools/query_fst.py`             | Query the compiled fst prefix index (dev debug)              |
 
-## Version snapshots & build diff
+## Build-drop summary & version diff
 
 `build.sh` step 7 (`version_snapshot`) prints a build-drop summary (raw →
-dedup → supplements → final) plus a `(hanzi, tl)`-entry diff against the
-previous release snapshot (added / removed). Full added+removed lists land in
-`output/version_diff.txt` (ephemeral, gitignored).
+dedup → supplements → final) plus a `(hanzi, tl)`-entry diff (added / removed)
+against the **previous release tag's** `dictionary/output/dictionary.csv`. That
+CSV is already git-tracked and committed at every release tag, so the previous
+release is read straight from git (`git show <tag>:…`) — no separate snapshot
+file is stored. Full added+removed lists land in `output/version_diff.txt`
+(ephemeral, gitignored).
 
-To stamp a release snapshot, pass the version so step 7 writes
-`snapshots/vX.Y.Z.tsv` and prunes to the newest 3 (by semantic version):
+Diff-base resolution is semver-aware (**3-segment `vX.Y.Z` tags only**; a
+4-segment tag like `v3.4.8.1` is ignored):
 
 ```bash
-RELEASE_VERSION=v3.5.9 ./build.sh        # or:  ./build.sh v3.5.9
+RELEASE_VERSION=v3.6.0 ./build.sh   # diff base = newest tag strictly < v3.6.0
+./build.sh                          # diff base = newest release tag overall
 ```
 
-Without a version, step 7 only reports the diff vs the latest snapshot and
-writes nothing tracked. Re-running the same version overwrites its snapshot in
-place. The report never halts the build — release scope is the maintainer's
-call.
+Passing the version excludes the target tag itself, so re-running after it is
+tagged still diffs against the real predecessor. The report never halts the
+build (any git/parse failure degrades to "nothing to diff") — release scope is
+the maintainer's call.
+
+To inspect a previous release's full dictionary directly:
+`git show v3.5.9:dictionary/output/dictionary.csv`.
 
 ## Notes
 

@@ -309,7 +309,7 @@ The Python build pipeline lives at `dictionary/build/`. Steps relevant to the fo
 | `create_fst.py` | `dictionary.fst` | shells to `engine/build-helpers/fst-builder` (Rust) for fst encoding |
 | `create_association_bin.py` | `association.bin` | TKWA format per §2; reads shared `.build_ts` |
 | `verify_poj_integrity.py` | (exit code) | fatal gate: halts build if `poj`/derived ≠ `convert_tl_to_poj(tl)` |
-| `version_snapshot.py` | `snapshots/vX.Y.Z.tsv` + drop/diff summary | per-release keyset + build-drop + vs-previous diff |
+| `version_snapshot.py` | drop/diff summary (stdout + `output/version_diff.txt`) | build-drop + `(hanzi, tl)` diff vs previous release tag's `dictionary.csv` (read via `git show`; no file stored) |
 | `deploy.sh` | bundles into platform asset directories | iOS bundle + Android assets |
 
 The build pipeline must:

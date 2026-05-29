@@ -1,41 +1,50 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Version snapshots + build-drop / vs-previous diff summary.
+"""Build-drop summary + vs-previous-release diff (no stored snapshot files).
 
 Replaces the verbose `build/audit.py` report (removed in the v3.5.9 round).
-Two jobs:
+Two jobs at dict build time:
 
 1. **Drop summary** — how many word entries the build pipeline discarded.
    Read from `output/.build_stats.json` (written by build/merge_csv.py).
 
 2. **Version diff** — which `(hanzi, tl)` entries were added / removed versus
-   the previous release snapshot. The canonical word unit is the `(hanzi, tl)`
-   pair (same key merge_csv dedups on).
+   the previous RELEASE TAG's `dictionary/output/dictionary.csv`. That CSV is
+   already git-tracked and committed at every release tag, so the previous
+   release is read straight from git (`git show <tag>:…`) — no separate
+   snapshot file is stored (it would duplicate content git already retains).
+   The canonical word unit is the `(hanzi, tl)` pair (same key merge_csv dedups
+   on).
 
-Release mode (`--version vX.Y.Z` or `RELEASE_VERSION` env): also writes a
-distilled keyset snapshot to `dictionary/snapshots/vX.Y.Z.tsv` and prunes to
-the newest `MAX_SNAPSHOTS` by semantic version. Re-running the same version
-overwrites its snapshot in place (does not count as a new one).
+Previous-tag resolution (semver, **3-segment `vX.Y.Z` only** — a 4-segment tag
+like `v3.4.8.1` is ignored by release policy):
+  - release mode (`--version vX.Y.Z` / `RELEASE_VERSION`): previous = newest tag
+    strictly older than the target (so re-running after the target is tagged
+    excludes the target itself).
+  - report-only (plain `make dict`): previous = newest release tag overall.
 
-No version given (plain `make dict`): report-only — diffs current
-`dictionary.csv` against the latest existing snapshot, writes nothing tracked.
-
-This step is REPORT-ONLY: a large added/removed count never halts the build.
-Release-scope is the maintainer's call. Fatal only on a malformed version, a
-tab/newline in a key field, or (release mode) a version older than the latest
-snapshot. Exact `(hanzi, tl)` duplicates in dictionary.csv legitimately
-collapse to one entry — multiple source/variant rows can share a key.
+REPORT-ONLY: never halts the build. Any git / decode / parse failure degrades to
+"no previous release available — nothing to diff". In release mode a missing
+predecessor (no tag, or a resolved tag whose CSV can't be read) additionally
+prints a loud `[WARN]` (a release expects a base; a shallow / tags-less checkout
+would otherwise silently skip the review). The only
+fatal cases are a malformed `--version` and a tab/newline in a current-build key
+field. Exact
+`(hanzi, tl)` duplicates in dictionary.csv legitimately collapse to one entry —
+multiple source/variant rows can share a key.
 
 Usage:
-  python3 -m build.version_snapshot                 # report-only diff
-  python3 -m build.version_snapshot --version v3.5.9 # snapshot + diff + prune
+  python3 -m build.version_snapshot                  # report-only diff vs latest tag
+  python3 -m build.version_snapshot --version v3.6.0 # diff vs newest tag < v3.6.0
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import re
+import subprocess
 import sys
 import unicodedata
 from pathlib import Path
@@ -47,44 +56,45 @@ from common import read_dictionary_csv  # noqa: E402
 
 INPUT_FILE = BASE_DIR / "output" / "dictionary.csv"
 STATS_FILE = BASE_DIR / "output" / ".build_stats.json"
-SNAPSHOT_DIR = BASE_DIR / "snapshots"
 DIFF_FILE = BASE_DIR / "output" / "version_diff.txt"
 
-MAX_SNAPSHOTS = 3
+# Repo-root-relative path of the tracked dictionary CSV inside each release tag.
+TRACKED_CSV = "dictionary/output/dictionary.csv"
+
 SAMPLE_ROWS = 30
+# Release tags are 3-segment semver only; a 4-segment tag is ignored on purpose.
 VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 
 WordKey = tuple[str, str]
 
 
 def _norm(text: str) -> str:
-    """NFC-normalize so snapshot/diff stays stable across NFC/NFD source drift."""
+    """NFC-normalize so the diff stays stable across NFC/NFD source drift."""
     return unicodedata.normalize("NFC", text or "")
 
 
-def parse_version(filename_stem: str) -> tuple[int, ...]:
+def parse_version(tag: str) -> tuple[int, ...]:
     """`v3.10.0` → (3, 10, 0) for semantic-version sorting (not string sort)."""
-    return tuple(int(p) for p in filename_stem.lstrip("v").split("."))
+    return tuple(int(p) for p in tag.lstrip("v").split("."))
 
 
-def load_keyset(csv_path: Path) -> set[WordKey]:
-    """Load the `(hanzi, tl)` keyset as stored in dictionary.csv.
+def _keyset_from_df(df, *, strict: bool) -> set[WordKey]:
+    """Extract the `(hanzi, tl)` keyset, NFC-normalized.
 
-    `tl` is kept verbatim — official entries retain spaces (e.g. "m̄ bat")
-    while supplements use hyphens. (merge_csv dedups on a space-normalized
-    key but writes back the official spaced form; the snapshot tracks what
-    actually shipped, so a rare space↔hyphen spelling flip surfaces as a real
-    add+remove rather than being hidden.)
+    `tl` is kept verbatim — official entries retain spaces (e.g. "m̄ bat") while
+    supplements use hyphens, so a rare space↔hyphen spelling flip surfaces as a
+    real add+remove rather than being hidden. Exact duplicate keys collapse into
+    one entry (multiple source/variant rows share a key).
 
-    Fails fast if any key field contains a tab/newline (would corrupt the TSV
-    snapshot) — keys must be clean by build-pipeline invariant. Exact duplicate
-    keys collapse into one entry (multiple source/variant rows share a key).
+    `strict=True` (current build) fails fast on a tab/newline in a key field —
+    a real data-integrity bug. `strict=False` (previous release loaded from git)
+    is best-effort: historical data is only set-diffed, never re-serialized, so a
+    stray control char is harmless.
     """
-    df = read_dictionary_csv(csv_path)
     keys: set[WordKey] = set()
     for hanzi, tl in zip(df["hanzi"].fillna(""), df["tl"].fillna("")):
         hanzi_n, tl_n = _norm(str(hanzi)), _norm(str(tl))
-        if any(c in hanzi_n or c in tl_n for c in ("\t", "\n", "\r")):
+        if strict and any(c in hanzi_n or c in tl_n for c in ("\t", "\n", "\r")):
             sys.exit(
                 f"[ERROR] tab/newline in key field: hanzi={hanzi_n!r} tl={tl_n!r}"
             )
@@ -92,28 +102,55 @@ def load_keyset(csv_path: Path) -> set[WordKey]:
     return keys
 
 
-def read_snapshot(path: Path) -> set[WordKey]:
-    keys: set[WordKey] = set()
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        if not raw or raw == "hanzi\ttl":
-            continue
-        hanzi, _, tl = raw.partition("\t")
-        keys.add((hanzi, tl))
-    return keys
+def load_current_keyset() -> set[WordKey]:
+    """Current build's `(hanzi, tl)` keyset from output/dictionary.csv."""
+    return _keyset_from_df(read_dictionary_csv(INPUT_FILE), strict=True)
 
 
-def write_snapshot(path: Path, keys: set[WordKey]) -> None:
-    lines = ["hanzi\ttl"]
-    lines.extend(f"{h}\t{t}" for h, t in sorted(keys))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def existing_snapshots() -> list[Path]:
-    """Snapshot files sorted oldest→newest by semantic version."""
-    if not SNAPSHOT_DIR.is_dir():
+def _git_tags() -> list[str]:
+    """Release tags (3-segment semver only), oldest→newest. `[]` on any failure."""
+    try:
+        out = subprocess.run(
+            ["git", "tag"], cwd=BASE_DIR, capture_output=True, text=True, check=True
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
         return []
-    snaps = [p for p in SNAPSHOT_DIR.glob("v*.tsv") if VERSION_RE.match(p.stem)]
-    return sorted(snaps, key=lambda p: parse_version(p.stem))
+    tags = [t for t in out.splitlines() if VERSION_RE.match(t)]
+    return sorted(tags, key=parse_version)
+
+
+def resolve_prev_tag(target: str | None) -> str | None:
+    """Newest release tag to diff against, or None when none qualifies.
+
+    Release mode (`target` given): newest tag strictly older than `target`.
+    Report-only (`target` None): newest release tag overall.
+    """
+    tags = _git_tags()
+    if target is not None:
+        tags = [t for t in tags if parse_version(t) < parse_version(target)]
+    return tags[-1] if tags else None
+
+
+def load_keyset_from_git(tag: str) -> set[WordKey] | None:
+    """`(hanzi, tl)` keyset from a release tag's tracked dictionary.csv.
+
+    Best-effort: any git / decode / parse / schema failure returns None so the
+    report-only diff degrades to "nothing to diff" instead of failing the build.
+    """
+    try:
+        # Raw bytes (no text=True): let pandas do the single utf-8 decode pass
+        # instead of materializing a separate ~31 MB str + StringIO copy.
+        result = subprocess.run(
+            ["git", "show", f"{tag}:{TRACKED_CSV}"],
+            cwd=BASE_DIR,
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            return None
+        df = read_dictionary_csv(io.BytesIO(result.stdout))
+        return _keyset_from_df(df, strict=False)
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, ValueError, KeyError):
+        return None
 
 
 def print_drop_summary() -> None:
@@ -142,19 +179,21 @@ def print_drop_summary() -> None:
     print(f"  final dictionary entries:{stats.get('final', 0):>8,}")
 
 
-def print_version_diff(current: set[WordKey], prev_path: Path | None) -> None:
+def print_version_diff(
+    current: set[WordKey], prev: set[WordKey] | None, prev_tag: str | None
+) -> None:
     print()
     print("=" * 60)
     print("Version diff (entries = (hanzi, tl) pairs)")
     print("=" * 60)
-    if prev_path is None:
-        print("  no previous snapshot — nothing to diff")
+    if prev is None:
+        print("  no previous release available — nothing to diff")
         return
 
-    prev = read_snapshot(prev_path)
+    base_label = f"{prev_tag}:{TRACKED_CSV}"
     added = sorted(current - prev)
     removed = sorted(prev - current)
-    print(f"  vs {prev_path.stem}: +{len(added)} added, -{len(removed)} removed")
+    print(f"  vs {base_label}: +{len(added)} added, -{len(removed)} removed")
 
     def _sample(label: str, items: list[WordKey]) -> None:
         if not items:
@@ -167,7 +206,7 @@ def print_version_diff(current: set[WordKey], prev_path: Path | None) -> None:
     _sample("removed", removed)
 
     # Full lists to an ephemeral file (gitignored) for the maintainer to read.
-    out = [f"# diff vs {prev_path.stem}", f"# added: {len(added)}  removed: {len(removed)}", ""]
+    out = [f"# diff vs {base_label}", f"# added: {len(added)}  removed: {len(removed)}", ""]
     out.append("## added")
     out.extend(f"{h}\t{t}" for h, t in added)
     out.append("")
@@ -177,19 +216,12 @@ def print_version_diff(current: set[WordKey], prev_path: Path | None) -> None:
     print(f"\n  full lists: {DIFF_FILE.relative_to(BASE_DIR)}")
 
 
-def prune_snapshots() -> None:
-    snaps = existing_snapshots()
-    for stale in snaps[:-MAX_SNAPSHOTS]:
-        stale.unlink()
-        print(f"  pruned old snapshot: {stale.name}")
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--version",
         default=None,
-        help="release version label vX.Y.Z (writes a tracked snapshot)",
+        help="release target vX.Y.Z; diff base = newest tag strictly older than it",
     )
     args = ap.parse_args()
 
@@ -198,48 +230,26 @@ def main() -> int:
         return 1
 
     version = args.version
-    print_drop_summary()
-    current = load_keyset(INPUT_FILE)
-
-    snaps = existing_snapshots()
-
-    if version is None:
-        # Report-only: diff against the latest existing snapshot, write nothing.
-        prev = snaps[-1] if snaps else None
-        print_version_diff(current, prev)
-        return 0
-
-    # ── release mode ──
-    if not VERSION_RE.match(version):
+    if version is not None and not VERSION_RE.match(version):
         print(f"[ERROR] malformed version {version!r} (want vMAJOR.MINOR.PATCH)")
         return 1
 
-    # Refuse a version older than the latest snapshot: it would be written then
-    # immediately pruned as the oldest, silently losing the file. Re-running the
-    # latest version (==) overwrites in place and is allowed; the true
-    # first-snapshot case (no snaps) is allowed.
-    if snaps and parse_version(version) < parse_version(snaps[-1].stem):
+    print_drop_summary()
+    current = load_current_keyset()
+
+    prev_tag = resolve_prev_tag(version)
+    prev = load_keyset_from_git(prev_tag) if prev_tag else None
+    if version is not None and prev is None:
+        # Release mode expects a predecessor to review against. Warn loudly
+        # (but don't halt — report-only invariant) whenever the base is missing,
+        # whether no tag resolved or a resolved tag's dictionary.csv could not be
+        # read (first release, shallow clone, or a tags-less checkout).
         print(
-            f"[ERROR] {version} is older than latest snapshot {snaps[-1].stem}; "
-            "refusing (would be pruned immediately). Backports not supported."
+            f"[WARN] release {version}: previous release dictionary unavailable "
+            "(first release, shallow clone, or missing tags/blob?) — version diff "
+            "skipped. Run `git fetch --tags` for the added/removed review."
         )
-        return 1
-
-    target = SNAPSHOT_DIR / f"{version}.tsv"
-    # Previous = newest snapshot strictly older than target (skip same-version
-    # rerun, which overwrites in place rather than diffing against itself).
-    older = [p for p in snaps if parse_version(p.stem) < parse_version(version)]
-    prev = older[-1] if older else None
-    if prev is None and target.exists():
-        print(f"  note: re-running {version} (overwriting snapshot in place)")
-
-    print_version_diff(current, prev)
-
-    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    write_snapshot(target, current)
-    action = "overwrote" if target in snaps else "wrote"
-    print(f"\n  {action} snapshot: {target.relative_to(BASE_DIR)} ({len(current):,} entries)")
-    prune_snapshots()
+    print_version_diff(current, prev, prev_tag)
     return 0
 
 
