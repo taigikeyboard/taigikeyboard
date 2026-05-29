@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `deferred items`
 > **Status**: Active
-> **Last updated**: 2026-05-26 (D = TPS 三索引 SHIPPED 6/6 PRs — C-0~C-5; awaiting v3.5.9 release tag, user-gated)
+> **Last updated**: 2026-05-29 (kautian subcollections feature plan — admin Phase 0; 5 PR plan, unscheduled)
 
 ---
 
@@ -11,8 +11,82 @@
 
 - Single source of truth for **forward-looking** work items only.
 - **Shipped release detail** lives in `docs/releases/<version>/plan.md` archives + `changelog/<version>.md` release notes.
-- **Active items** (in-flight implementation plans) — none currently in flight. `v3.5.9 D = TPS 三索引` SHIPPED 6/6 PRs 2026-05-26 (C-0/C-1/C-3a/C-3b/C-4/C-5) and is in user dogfood; entry retained below under Recently shipped (pre-tag) for traceability. Release scope/timing is user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
+- **Active items** (in-flight implementation plans) — **kautian subcollections** (腔調 + 姓名附錄 toggles + 語音差異 詞級擴展); see [§ Active / In-flight items](#active--in-flight-items). `v3.5.9 D = TPS 三索引` SHIPPED 6/6 PRs 2026-05-26 (C-0/C-1/C-3a/C-3b/C-4/C-5), in user dogfood; entry retained below under Recently shipped (pre-tag). Release scope/timing is user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 - **Out of scope / deferred** items below are truly forward-looking (NOT items already shipped in a prior version).
+
+---
+
+## Active / In-flight items
+
+### kautian subcollections — 腔調 + 姓名附錄 toggles + 語音差異 詞級擴展
+
+> **Status**: Phase 0 (admin) landed 2026-05-29. Phases 1-5 Pending. **Unscheduled** — no release/version assigned (user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope]).
+> **Live hand-off + design decisions**: Claude auto-memory `project_kautian_subcollections.md`.
+
+**Goal**: Split the kautian source (教育部臺灣台語常用詞辭典, source bit 0) into independently-gateable **subcollections** — `main` (主條目) / `accent_differences` (10 腔調 語音差異) / `name_appendix` (姓名附錄 = 名+姓 merged) — surfaced as nested toggles under the kautian row in the dictionary-management page. **Impact**: users opt out of noisy/appendix data per-subcollection without breaking the existing source-toggle / ranking / badge / keyboard-candidate consistency.
+
+**Three user requirements**:
+
+1. **Per-accent toggles** — 10 on/off switches (鹿港偏泉腔 / 三峽偏泉腔 / 臺北偏泉腔 / 宜蘭偏漳腔 / 臺南混合腔 / 高雄混合腔 / 金門偏泉腔 / 馬公偏泉腔 / 新竹偏泉腔 / 臺中偏漳腔) gating kautian `語音差異` data.
+2. **語音差異 詞級擴展** — the `語音差異` sheet is single-character only (407 rows); generate word-level accent variants by applying single-char accent readings to multi-character main entries.
+3. **姓名附錄** — merge the separate 名 (16879) + 姓 (2532) sheets into one toggle labelled「姓名附錄」.
+
+**Locked decisions** (USER 2026-05-29):
+
+| # | Decision | Detail |
+|---|---|---|
+| DD1 storage model | **accent membership bitset per row** | readings shared across accents (八/pueh ∈ 6 腔); per-accent-code would collide with `[hanzi,tl]` dedup |
+| DD2 storage location | **separate `u16 kautian_subtag` field, binary VERSION 2→3** | NOT folded into `source_bitmask` (ranking/badge/continuous-sort consumers); wire reuses existing `enabled_sources_bitmask: u32` high bits |
+| DD3 scope | **keyboard candidates + dictionary browse** | matches existing source toggles; browse-only = product-semantic hole |
+| DD4 req2 algorithm | **syllable-aligned citation-form generation, conservative skip** | only `漢字數==TL音節數` + parseable rows; NO sandhi forms; cap + report ambiguous; generated rows rank/freq-demoted |
+| DD4 req2 license | **SHIP + distribute, USER takes license responsibility** | kautian = CC BY-ND-3.0-TW (NoDerivatives); USER explicitly accepted 2026-05-29 |
+| DD5 default state | **ALL ON, no migration** | opt-out model; upgrade = no behavior change; migration phase dropped |
+| DD6 filter invariant (追加) | **OR across subcollections; main path independent** | word in BOTH 主條目 AND 腔調/姓名 stays visible when accent/name toggle OFF (passes via `main_on AND has_main`) |
+| DD7 UI placement (追加) | **nested under kautian row, dependent on parent** | 11 toggles indented below kautian; disabled (greyed) when kautian master toggle OFF |
+| DD8 subtag layout | **distinguish main / accent[10] / name provenance** | bit-exact u16 layout finalized in Phase 2 Codex pre-impl; a row may carry multiple provenance classes |
+
+**Filter gate model** (the correctness-critical core — kautian contributes a match IF any holds):
+
+```
+main_on   AND record.has_main                          // 主條目 (independent — DD6)
+(enabled_accents & record.accent_mask) != 0            // any enabled accent has this reading
+name_on   AND record.has_name_appendix                 // 姓名附錄
+```
+
+OR'd with the existing other-source-OR. Needs `effective_source_bitmask(record, filter)`: a multi-source row whose kautian subtag is fully disabled must drop only the kautian contribution (ranking weight + match) — never the other enabled sources.
+
+**Phase shape — 5 PR + admin** (200-500 LOC/PR; data → engine → platforms; Codex sandwich per PR):
+
+| # | Phase | Scope | Risk |
+|---|---|---|---|
+| 0 | **admin** (this commit) | roadmap + memory hand-off | LOW |
+| 1 | **pipeline provenance** | preserve 腔調 + sheet origin; emit CSV `kautian_main` / `kautian_accent_mask` / `kautian_name`; OR-aggregate across `[hanzi,tl]` dedup (not `first`); verify 八/pueh = 6 腔, 名+姓 → one name bit | MED |
+| 2 | **binary v3 + engine filter** (cross-platform-invariant files SAME PR) | `source_bits.py` + `create_dictionary_bin.py` + `dictionary_records.py` + `dictionary_reader.rs` + `lexicon.proto` + generated Swift/Kotlin proto + iOS/Android `LexiconBitmask`; record prefix 9→11; VERSION 3 (reject v2); `kautian_subtag` gate + `effective_source_bitmask` + DD6 invariant tests | HIGH |
+| 3 | **iOS UI / settings** | `SharedSettings`/`EngineSettings` + 11 nested dependent toggles under kautian in `DictionaryTab.swift`; bridge `DictionaryToggles` + fallback bit math | MED |
+| 4 | **Android UI / settings** | DataStore keys + `EngineSettings` + nested Compose rows (`DictionaryInfoSwitch(enabled=)`); parity with iOS (labels / order / defaults) | MED |
+| 5 | **req2 word-level generator** | new pipeline stage (after cleanup, before frequency); structured syllable split (no raw substring replace); report matched/skipped/ambiguous/generated/size-delta; generated rows rank-demoted | HIGH |
+
+**最佳實踐對齊** (best-practices alignment):
+
+| 主流做法 | 來源 file:line | 本 plan 對應 phase |
+|---|---|---|
+| Cross-cutting sub-flag in same record, independent exclusion gate (NOT a source badge) | in-repo `is_variant` (bit 12): `engine/lexicon/src/dictionary_reader.rs:234-236` `passes_filter` variant gate; `dictionary_filters.rs:141-142` excluded from source codes | DD2 + Phase 2 subtag gate |
+| Dual pattern — a bit that is both source AND exclusion gate | in-repo `khiin` (bit 9): `dictionary_reader.rs:237-239` | DD6 `effective_source_bitmask` |
+| Dependent / disabled child toggle | Android `DictionaryInfoSwitch(enabled=)` (`ui/tabs/dictionary/DictionarySettingsComponents.kt:165-198`) | DD7 + Phase 4 |
+| Binary VERSION bump + reject-old lockstep | in-repo v1→v2 precedent: `dictionary_reader.rs:127-139` + `create_dictionary_bin.py:34-36` | Phase 2 VERSION 3 |
+| Build-time variant key emission (not runtime regen) | in-repo `tps_num_var` er↔or dual-emit (`docs/roadmap.md` C-3a) | DD4 req2 generated rows |
+
+External IME prior art (per-dictionary / dialect enable in librime, MOE Taigi APK accent handling) to be drilled via `docs/references/mainstream-ime-comparison.md` in Phase 2 Codex pre-impl — not yet read; do not cite specifics until verified.
+
+**刻意不採用** (deliberately not adopted):
+
+- Folding accents/姓名 into `source_bitmask` (DD2 rejected B1) — would corrupt ranking tiers + Tab3 badge.
+- Per-accent mutually-exclusive code with row multiplication (DD1 rejected A2) — collides with `[hanzi,tl]` dedup, loses cross-accent membership.
+- Browse-only sidecar (DD3 rejected) — setting-off-but-keyboard-still-shows product hole.
+- Sandhi-aware word generation in req2 v1 (DD4) — dictionary index stores citation form; sandhi is a separate connected-speech layer.
+- Migration phase (DD5) — moot under ALL-ON default.
+
+**Top risks**: ① dedup eating accent identity (test OR-aggregate per stage) ② subtag gate wrongly in source-OR (must be exclusion gate) ③ multi-source row false ranking weight (effective mask) ④ req2 explosion + wrong tones (cap, skip ambiguous, no sandhi, report) ⑤ binary skew (v3 must reject v2; `make build` before platform verify) ⑥ license (USER accepted DD4).
 
 ---
 
