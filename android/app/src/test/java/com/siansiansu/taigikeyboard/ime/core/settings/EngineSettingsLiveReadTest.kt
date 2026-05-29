@@ -57,6 +57,14 @@ class EngineSettingsLiveReadTest {
         assertEquals(true, provider.current.isMoeDictEnabled)
         backing.isMoeDictEnabled = false
         assertEquals(false, provider.current.isMoeDictEnabled)
+
+        // kautian subcollection toggles honor the same live-read contract.
+        backing.isKautianAccentLukangEnabled = true
+        assertEquals(true, provider.current.isKautianAccentLukangEnabled)
+        backing.isKautianAccentLukangEnabled = false
+        assertEquals(false, provider.current.isKautianAccentLukangEnabled)
+        backing.isKautianNameAppendixEnabled = true
+        assertEquals(true, provider.current.isKautianNameAppendixEnabled)
     }
 
     /**
@@ -86,6 +94,17 @@ class EngineSettingsLiveReadTest {
         var isVariantEnabled: Boolean = false,
         var isKhiinEnabled: Boolean = false,
         var isLkkDictEnabled: Boolean = false,
+        var isKautianAccentLukangEnabled: Boolean = false,
+        var isKautianAccentSansiaEnabled: Boolean = false,
+        var isKautianAccentTaipakEnabled: Boolean = false,
+        var isKautianAccentGilanEnabled: Boolean = false,
+        var isKautianAccentTainanEnabled: Boolean = false,
+        var isKautianAccentKaohsiungEnabled: Boolean = false,
+        var isKautianAccentKinmenEnabled: Boolean = false,
+        var isKautianAccentMakungEnabled: Boolean = false,
+        var isKautianAccentSintikEnabled: Boolean = false,
+        var isKautianAccentTaichungEnabled: Boolean = false,
+        var isKautianNameAppendixEnabled: Boolean = false,
     )
 
     /**
@@ -116,6 +135,17 @@ class EngineSettingsLiveReadTest {
         override val isVariantEnabled: Boolean get() = backing.isVariantEnabled
         override val isKhiinEnabled: Boolean get() = backing.isKhiinEnabled
         override val isLkkDictEnabled: Boolean get() = backing.isLkkDictEnabled
+        override val isKautianAccentLukangEnabled: Boolean get() = backing.isKautianAccentLukangEnabled
+        override val isKautianAccentSansiaEnabled: Boolean get() = backing.isKautianAccentSansiaEnabled
+        override val isKautianAccentTaipakEnabled: Boolean get() = backing.isKautianAccentTaipakEnabled
+        override val isKautianAccentGilanEnabled: Boolean get() = backing.isKautianAccentGilanEnabled
+        override val isKautianAccentTainanEnabled: Boolean get() = backing.isKautianAccentTainanEnabled
+        override val isKautianAccentKaohsiungEnabled: Boolean get() = backing.isKautianAccentKaohsiungEnabled
+        override val isKautianAccentKinmenEnabled: Boolean get() = backing.isKautianAccentKinmenEnabled
+        override val isKautianAccentMakungEnabled: Boolean get() = backing.isKautianAccentMakungEnabled
+        override val isKautianAccentSintikEnabled: Boolean get() = backing.isKautianAccentSintikEnabled
+        override val isKautianAccentTaichungEnabled: Boolean get() = backing.isKautianAccentTaichungEnabled
+        override val isKautianNameAppendixEnabled: Boolean get() = backing.isKautianNameAppendixEnabled
     }
 
     /**

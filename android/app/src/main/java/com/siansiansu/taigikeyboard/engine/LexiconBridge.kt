@@ -14,6 +14,7 @@ import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InputType
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
 import com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest
+import com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
 import com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest
@@ -95,10 +96,10 @@ object LexiconBridge {
     }
 
     /**
-     * 12-toggle snapshot of the user's dictionary preference state. Field
-     * order mirrors `engine/protos/proto/lexicon.proto::DictionaryToggles`.
-     * Build via `from(settings)`; never construct piecemeal at search call
-     * sites — that splits the snapshot.
+     * Snapshot of the user's dictionary preference state. Field order mirrors
+     * `engine/protos/proto/lexicon.proto::DictionaryToggles` (12 source toggles
+     * + nested [KautianSubcoll]). Build via `from(settings)`; never construct
+     * piecemeal at search call sites — that splits the snapshot.
      */
     data class DictionaryToggles(
         val kautian: Boolean,
@@ -113,7 +114,30 @@ object LexiconBridge {
         val variant: Boolean,
         val khiin: Boolean,
         val lkk: Boolean,
+        val kautianSubcoll: KautianSubcoll,
     ) {
+        /**
+         * kautian subcollection enable state (10 accents + name appendix).
+         * Android always populates this (the app ships the toggles), so the
+         * `kautian_subcoll` proto message is always present and the engine
+         * always runs the subcollection gate. Field order mirrors config.yaml
+         * `dialect_columns` / proto `KautianSubcollToggles`.
+         * Mirrors iOS `RustEngineBridge.DictionaryToggles.KautianSubcoll`.
+         */
+        data class KautianSubcoll(
+            val lukang: Boolean,
+            val sansia: Boolean,
+            val taipak: Boolean,
+            val gilan: Boolean,
+            val tainan: Boolean,
+            val kaohsiung: Boolean,
+            val kinmen: Boolean,
+            val makung: Boolean,
+            val sintik: Boolean,
+            val taichung: Boolean,
+            val nameAppendix: Boolean,
+        )
+
         companion object {
             fun from(settings: EngineSettings): DictionaryToggles =
                 DictionaryToggles(
@@ -129,6 +153,19 @@ object LexiconBridge {
                     variant = settings.isVariantEnabled,
                     khiin = settings.isKhiinEnabled,
                     lkk = settings.isLkkDictEnabled,
+                    kautianSubcoll = KautianSubcoll(
+                        lukang = settings.isKautianAccentLukangEnabled,
+                        sansia = settings.isKautianAccentSansiaEnabled,
+                        taipak = settings.isKautianAccentTaipakEnabled,
+                        gilan = settings.isKautianAccentGilanEnabled,
+                        tainan = settings.isKautianAccentTainanEnabled,
+                        kaohsiung = settings.isKautianAccentKaohsiungEnabled,
+                        kinmen = settings.isKautianAccentKinmenEnabled,
+                        makung = settings.isKautianAccentMakungEnabled,
+                        sintik = settings.isKautianAccentSintikEnabled,
+                        taichung = settings.isKautianAccentTaichungEnabled,
+                        nameAppendix = settings.isKautianNameAppendixEnabled,
+                    ),
                 )
         }
     }
@@ -357,6 +394,25 @@ object LexiconBridge {
             .setVariant(toggles.variant)
             .setKhiin(toggles.khiin)
             .setLkk(toggles.lkk)
+            // Always set the subcollection message (Android ships the toggles)
+            // so the engine runs the gate; absence would signal legacy all-on
+            // (DD5). Mirrors iOS RustEngineBridge togglesProto mapping.
+            .setKautianSubcoll(
+                KautianSubcollToggles
+                    .newBuilder()
+                    .setAccentLukang(toggles.kautianSubcoll.lukang)
+                    .setAccentSansia(toggles.kautianSubcoll.sansia)
+                    .setAccentTaipak(toggles.kautianSubcoll.taipak)
+                    .setAccentGilan(toggles.kautianSubcoll.gilan)
+                    .setAccentTainan(toggles.kautianSubcoll.tainan)
+                    .setAccentKaohsiung(toggles.kautianSubcoll.kaohsiung)
+                    .setAccentKinmen(toggles.kautianSubcoll.kinmen)
+                    .setAccentMakung(toggles.kautianSubcoll.makung)
+                    .setAccentSintik(toggles.kautianSubcoll.sintik)
+                    .setAccentTaichung(toggles.kautianSubcoll.taichung)
+                    .setNameAppendix(toggles.kautianSubcoll.nameAppendix)
+                    .build(),
+            )
             .build()
         val payload = DictionaryFiltersRequest
             .newBuilder()
@@ -434,6 +490,7 @@ object LexiconBridge {
         dictMask = dictMask or (1u shl 10) // dev always
         if (toggles.lkk) dictMask = dictMask or (1u shl 11)
         if (toggles.variant) dictMask = dictMask or (1u shl 12)
+        dictMask = dictMask or encodeKautianSubcollWire(toggles)
 
         val allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi &&
             toggles.sitbut && toggles.taihoa && toggles.taijit &&
@@ -458,6 +515,45 @@ object LexiconBridge {
             enabledSources = enabled,
         )
     }
+
+    /**
+     * kautian subcollection wire ENCODE — fallback-only mirror of Rust
+     * `engine/lexicon/src/dictionary_filters.rs::encode_kautian_subcoll_wire`.
+     * Returns the wire high region (bit 13 active + bits 14..=25 enable mask)
+     * when the kautian master is on; `0` otherwise (kautian rows drop via the
+     * source-OR anyway). Keeps fallback behaviour identical to the engine so a
+     * binary-skew session does not silently revert subcollection toggles. The
+     * `main` subtag bit is set unconditionally when the master is on (主條目 is
+     * not a user toggle). Mirrors iOS `RustEngineBridge.encodeKautianSubcollWire`.
+     *
+     * CROSS-PLATFORM INVARIANT — bit positions mirror
+     * `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` /
+     * `WIRE_KAUTIAN_SUBCOLL_*`). Drift causes silent subcollection-filter divergence.
+     */
+    internal fun encodeKautianSubcollWire(toggles: DictionaryToggles): UInt {
+        if (!toggles.kautian) return 0u
+        val sub = toggles.kautianSubcoll
+        // Accent order MUST match config.yaml `dialect_columns` (subtag bit = 1 + index).
+        val accents = listOf(
+            sub.lukang, sub.sansia, sub.taipak, sub.gilan, sub.tainan,
+            sub.kaohsiung, sub.kinmen, sub.makung, sub.sintik, sub.taichung,
+        )
+        var subtag = 1 shl KAUTIAN_SUBTAG_MAIN_BIT // main always on when master on
+        accents.forEachIndexed { index, enabled ->
+            if (enabled) subtag = subtag or (1 shl (KAUTIAN_SUBTAG_ACCENT_SHIFT + index))
+        }
+        if (sub.nameAppendix) subtag = subtag or (1 shl KAUTIAN_SUBTAG_NAME_BIT)
+        return WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT or (subtag.toUInt() shl WIRE_KAUTIAN_SUBCOLL_SHIFT)
+    }
+
+    // kautian subtag bit layout (mirrors Rust dictionary_reader.rs KAUTIAN_SUBTAG_*).
+    private const val KAUTIAN_SUBTAG_MAIN_BIT = 0
+    private const val KAUTIAN_SUBTAG_ACCENT_SHIFT = 1
+    private const val KAUTIAN_SUBTAG_NAME_BIT = 11
+
+    // wire high region (mirrors Rust dictionary_reader.rs WIRE_KAUTIAN_SUBCOLL_*).
+    private val WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT: UInt = 1u shl 13
+    private const val WIRE_KAUTIAN_SUBCOLL_SHIFT = 14
 
     /**
      * Map proto `DictionarySourceCode` to the platform `DictionarySource`

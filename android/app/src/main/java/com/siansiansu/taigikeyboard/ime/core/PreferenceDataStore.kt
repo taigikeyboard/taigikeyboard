@@ -91,6 +91,20 @@ object PreferenceKeys {
     // LKK漢羅合用建議用字
     val LKK_DICT_ENABLED = booleanPreferencesKey("dictionary__lkk_dict_enabled")
 
+    // 教育部辭典子集 (腔調 + 姓名附錄) — 巢狀於 MOE master 下;預設全開 (DD5 opt-out)。
+    // 腔調順序對齊 config.yaml dialect_columns (= subtag bit - 1)。bit 佈局由 Rust compute_filters 持有。
+    val KAUTIAN_ACCENT_LUKANG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_lukang_enabled")
+    val KAUTIAN_ACCENT_SANSIA_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_sansia_enabled")
+    val KAUTIAN_ACCENT_TAIPAK_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_taipak_enabled")
+    val KAUTIAN_ACCENT_GILAN_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_gilan_enabled")
+    val KAUTIAN_ACCENT_TAINAN_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_tainan_enabled")
+    val KAUTIAN_ACCENT_KAOHSIUNG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_kaohsiung_enabled")
+    val KAUTIAN_ACCENT_KINMEN_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_kinmen_enabled")
+    val KAUTIAN_ACCENT_MAKUNG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_makung_enabled")
+    val KAUTIAN_ACCENT_SINTIK_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_sintik_enabled")
+    val KAUTIAN_ACCENT_TAICHUNG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_taichung_enabled")
+    val KAUTIAN_NAME_APPENDIX_ENABLED = booleanPreferencesKey("dictionary__kautian_name_appendix_enabled")
+
     // TPS settings
     val TPS_OR_MAPS_TO_ER = booleanPreferencesKey("tps__or_maps_to_er")
 

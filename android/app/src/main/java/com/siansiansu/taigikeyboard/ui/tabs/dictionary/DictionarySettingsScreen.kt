@@ -45,6 +45,9 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 private const val MAX_VISIBLE_SEARCH_RESULTS = 5
 private val SEARCH_RESULTS_MAX_HEIGHT = 200.dp
 
+// Horizontal indent for kautian subcollection rows nested under the MOE master (DD7).
+private val NESTED_TOGGLE_INDENT = 16.dp
+
 // Dictionary settings screen — dictionary toggles, search, data management navigation
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +83,20 @@ fun DictionarySettingsScreen(
     var khiinEnabled by remember(resetCounter) { mutableStateOf(prefs.khiin) }
     var khpooEnabled by remember(resetCounter) { mutableStateOf(prefs.khpooDictEnabled) }
     var lkkEnabled by remember(resetCounter) { mutableStateOf(prefs.lkkDictEnabled) }
+
+    // kautian subcollections (nested under MOE master, greyed when MOE off — DD7).
+    // Order mirrors config.yaml dialect_columns.
+    var kautianLukangEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentLukangEnabled) }
+    var kautianSansiaEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentSansiaEnabled) }
+    var kautianTaipakEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentTaipakEnabled) }
+    var kautianGilanEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentGilanEnabled) }
+    var kautianTainanEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentTainanEnabled) }
+    var kautianKaohsiungEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentKaohsiungEnabled) }
+    var kautianKinmenEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentKinmenEnabled) }
+    var kautianMakungEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentMakungEnabled) }
+    var kautianSintikEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentSintikEnabled) }
+    var kautianTaichungEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianAccentTaichungEnabled) }
+    var kautianNameAppendixEnabled by remember(resetCounter) { mutableStateOf(prefs.kautianNameAppendixEnabled) }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -160,6 +177,67 @@ fun DictionarySettingsScreen(
                             prefs.moeDictEnabled = it
                         },
                     )
+                    // kautian subcollections — nested under the MOE master,
+                    // greyed when the master is off (DD7). Order mirrors
+                    // config.yaml dialect_columns. Title-only rows via
+                    // DictionarySubToggleRow; each writes its own pref + state.
+                    val kautianSubcollRows: List<Triple<String, Boolean, (Boolean) -> Unit>> =
+                        listOf(
+                            Triple(DictionaryTexts.kautianAccentLukang, kautianLukangEnabled) { on ->
+                                kautianLukangEnabled = on
+                                prefs.kautianAccentLukangEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentSansia, kautianSansiaEnabled) { on ->
+                                kautianSansiaEnabled = on
+                                prefs.kautianAccentSansiaEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentTaipak, kautianTaipakEnabled) { on ->
+                                kautianTaipakEnabled = on
+                                prefs.kautianAccentTaipakEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentGilan, kautianGilanEnabled) { on ->
+                                kautianGilanEnabled = on
+                                prefs.kautianAccentGilanEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentTainan, kautianTainanEnabled) { on ->
+                                kautianTainanEnabled = on
+                                prefs.kautianAccentTainanEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentKaohsiung, kautianKaohsiungEnabled) { on ->
+                                kautianKaohsiungEnabled = on
+                                prefs.kautianAccentKaohsiungEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentKinmen, kautianKinmenEnabled) { on ->
+                                kautianKinmenEnabled = on
+                                prefs.kautianAccentKinmenEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentMakung, kautianMakungEnabled) { on ->
+                                kautianMakungEnabled = on
+                                prefs.kautianAccentMakungEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentSintik, kautianSintikEnabled) { on ->
+                                kautianSintikEnabled = on
+                                prefs.kautianAccentSintikEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianAccentTaichung, kautianTaichungEnabled) { on ->
+                                kautianTaichungEnabled = on
+                                prefs.kautianAccentTaichungEnabled = on
+                            },
+                            Triple(DictionaryTexts.kautianNameAppendix, kautianNameAppendixEnabled) { on ->
+                                kautianNameAppendixEnabled = on
+                                prefs.kautianNameAppendixEnabled = on
+                            },
+                        )
+                    kautianSubcollRows.forEach { (label, checked, onChange) ->
+                        SettingsDivider()
+                        DictionarySubToggleRow(
+                            label = label,
+                            checked = checked,
+                            enabled = moeEnabled,
+                            modifier = Modifier.padding(start = NESTED_TOGGLE_INDENT),
+                            onCheckedChange = onChange,
+                        )
+                    }
                     SettingsDivider()
                     DictionaryRowWithDescription(
                         label = CommonTexts.newwordDict,

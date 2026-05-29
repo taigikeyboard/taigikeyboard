@@ -458,6 +458,30 @@ class PrefHelper(
     // LKK漢羅合用建議用字（預設開啟）
     var lkkDictEnabled: Boolean by preference(PreferenceKeys.LKK_DICT_ENABLED, true)
 
+    // 教育部辭典子集（腔調 + 姓名附錄，巢狀於 MOE master 下）— 預設全開（DD5 opt-out）。
+    // 腔調順序對齊 config.yaml dialect_columns；bit 佈局由 Rust compute_filters 持有。
+    var kautianAccentLukangEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_LUKANG_ENABLED, true)
+
+    var kautianAccentSansiaEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_SANSIA_ENABLED, true)
+
+    var kautianAccentTaipakEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_TAIPAK_ENABLED, true)
+
+    var kautianAccentGilanEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_GILAN_ENABLED, true)
+
+    var kautianAccentTainanEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_TAINAN_ENABLED, true)
+
+    var kautianAccentKaohsiungEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_KAOHSIUNG_ENABLED, true)
+
+    var kautianAccentKinmenEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_KINMEN_ENABLED, true)
+
+    var kautianAccentMakungEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_MAKUNG_ENABLED, true)
+
+    var kautianAccentSintikEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_SINTIK_ENABLED, true)
+
+    var kautianAccentTaichungEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_TAICHUNG_ENABLED, true)
+
+    var kautianNameAppendixEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_NAME_APPENDIX_ENABLED, true)
+
     // Appearance settings
     var keyHeightScale: Float by preference(PreferenceKeys.KEY_HEIGHT_SCALE, DEFAULT_KEY_HEIGHT_SCALE)
 
@@ -544,6 +568,40 @@ class PrefHelper(
 
     override val isLkkDictEnabled: Boolean
         get() = lkkDictEnabled
+
+    // kautian subcollections (nested under the MOE master, default all on per DD5)
+    override val isKautianAccentLukangEnabled: Boolean
+        get() = kautianAccentLukangEnabled
+
+    override val isKautianAccentSansiaEnabled: Boolean
+        get() = kautianAccentSansiaEnabled
+
+    override val isKautianAccentTaipakEnabled: Boolean
+        get() = kautianAccentTaipakEnabled
+
+    override val isKautianAccentGilanEnabled: Boolean
+        get() = kautianAccentGilanEnabled
+
+    override val isKautianAccentTainanEnabled: Boolean
+        get() = kautianAccentTainanEnabled
+
+    override val isKautianAccentKaohsiungEnabled: Boolean
+        get() = kautianAccentKaohsiungEnabled
+
+    override val isKautianAccentKinmenEnabled: Boolean
+        get() = kautianAccentKinmenEnabled
+
+    override val isKautianAccentMakungEnabled: Boolean
+        get() = kautianAccentMakungEnabled
+
+    override val isKautianAccentSintikEnabled: Boolean
+        get() = kautianAccentSintikEnabled
+
+    override val isKautianAccentTaichungEnabled: Boolean
+        get() = kautianAccentTaichungEnabled
+
+    override val isKautianNameAppendixEnabled: Boolean
+        get() = kautianNameAppendixEnabled
 
     /**
      * Returns `this` as [EngineSettings]. Each property access on the

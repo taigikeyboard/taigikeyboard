@@ -78,6 +78,21 @@ object DictionaryTexts {
 
     const val lkkDict = "漢羅合用建議用字"
 
+    // MARK: - 教育部辭典子集 (腔調 + 姓名附錄, 巢狀於 MOE master 下)
+    // 腔調順序對齊 config.yaml dialect_columns;預設全開,父開關關閉時整組變灰。
+
+    const val kautianAccentLukang = "鹿港偏泉腔"
+    const val kautianAccentSansia = "三峽偏泉腔"
+    const val kautianAccentTaipak = "臺北偏泉腔"
+    const val kautianAccentGilan = "宜蘭偏漳腔"
+    const val kautianAccentTainan = "臺南混合腔"
+    const val kautianAccentKaohsiung = "高雄混合腔"
+    const val kautianAccentKinmen = "金門偏泉腔"
+    const val kautianAccentMakung = "馬公偏泉腔"
+    const val kautianAccentSintik = "新竹偏泉腔"
+    const val kautianAccentTaichung = "臺中偏漳腔"
+    const val kautianNameAppendix = "姓名附錄"
+
     // MARK: - 詞庫搜尋
 
     const val searchPlaceholder = "拍字揣詞"

@@ -77,4 +77,21 @@ interface EngineSettings {
     val isVariantEnabled: Boolean
     val isKhiinEnabled: Boolean
     val isLkkDictEnabled: Boolean
+
+    // kautian subcollection toggles (nested under the MOE/kautian master). Order
+    // mirrors config.yaml dialect_columns; the bridge packs these into the
+    // KautianSubcollToggles proto and Rust compute_filters owns the subtag bit
+    // layout. Absent sub-message ⇒ engine keeps legacy all-on (DD5).
+    // 中文: kautian subcollection 子開關 — 10 腔調 + 姓名附錄。對應 iOS Settings/EngineSettings.swift。
+    val isKautianAccentLukangEnabled: Boolean
+    val isKautianAccentSansiaEnabled: Boolean
+    val isKautianAccentTaipakEnabled: Boolean
+    val isKautianAccentGilanEnabled: Boolean
+    val isKautianAccentTainanEnabled: Boolean
+    val isKautianAccentKaohsiungEnabled: Boolean
+    val isKautianAccentKinmenEnabled: Boolean
+    val isKautianAccentMakungEnabled: Boolean
+    val isKautianAccentSintikEnabled: Boolean
+    val isKautianAccentTaichungEnabled: Boolean
+    val isKautianNameAppendixEnabled: Boolean
 }

@@ -197,6 +197,43 @@ internal fun DictionaryInfoSwitch(
     }
 }
 
+// Title-only switch row for nested subcollection toggles (no info button).
+// Used for the kautian 腔調 / 姓名附錄 rows nested under the MOE master toggle;
+// `enabled = false` greys the label + switch (DD7), `modifier` carries the
+// nested indent. Mirrors iOS DictionaryTab.kautianSubcollToggle.
+@Composable
+internal fun DictionarySubToggleRow(
+    label: String,
+    checked: Boolean,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val contentAlpha = if (enabled) 1f else 0.38f
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = onCheckedChange,
+            colors = AppStyle.switchColors(),
+        )
+    }
+}
+
 @Composable
 internal fun DictionaryRowWithDescription(
     label: String,
