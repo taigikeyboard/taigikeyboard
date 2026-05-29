@@ -20,7 +20,7 @@
 
 ### kautian subcollections — 腔調 + 姓名附錄 toggles + 語音差異 詞級擴展
 
-> **Status**: Phase 0 (admin) landed 2026-05-29. Phases 1-5 Pending. **Unscheduled** — no release/version assigned (user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope]).
+> **Status**: Phase 0 (admin) + Phase 1 (pipeline provenance, #354 `287aad85`) MERGED 2026-05-29. NEXT = Phase 2 (binary v3 + engine filter). Phases 2-5 Pending. **Unscheduled** — no release/version assigned (user-gated per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope]).
 > **Live hand-off + design decisions**: Claude auto-memory `project_kautian_subcollections.md`.
 
 **Goal**: Split the kautian source (教育部臺灣台語常用詞辭典, source bit 0) into independently-gateable **subcollections** — `main` (主條目) / `accent_differences` (10 腔調 語音差異) / `name_appendix` (姓名附錄 = 名+姓 merged) — surfaced as nested toggles under the kautian row in the dictionary-management page. **Impact**: users opt out of noisy/appendix data per-subcollection without breaking the existing source-toggle / ranking / badge / keyboard-candidate consistency.
