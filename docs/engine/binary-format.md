@@ -20,7 +20,7 @@ Three read-only binary assets live in the dictionary bundle and are mmap-loaded 
 All formats use **little-endian** integers and **strict UTF-8** strings. Both platforms ship reader code that must agree byte-for-byte; mismatches surface as silent decode failures.
 
 **Source-of-truth** for layout: this document.
-**Source-of-truth** for *content*: the Python build pipeline at `dictionary/build/` (`merge_csv.py` → `create_dictionary_bin.py` → `create_fst.py` → `create_association_bin.py` → `audit.py` → `deploy.sh`; the binary writers read `dictionary.csv` directly via `dictionary_records.py` / `associations.py`, while `create_fst.py` shells to the Rust `engine/build-helpers/fst-builder`). When any step changes the binary layout, this document and both readers must be updated **in the same change set**.
+**Source-of-truth** for *content*: the Python build pipeline at `dictionary/build/` (`merge_csv.py` → `create_dictionary_bin.py` → `create_fst.py` → `create_association_bin.py` → `verify_poj_integrity.py` → `version_snapshot.py` → `deploy.sh`; the binary writers read `dictionary.csv` directly via `dictionary_records.py` / `associations.py`, while `create_fst.py` shells to the Rust `engine/build-helpers/fst-builder`). When any step changes the binary layout, this document and both readers must be updated **in the same change set**.
 
 ---
 
@@ -308,7 +308,8 @@ The Python build pipeline lives at `dictionary/build/`. Steps relevant to the fo
 | `create_dictionary_bin.py` | `dictionary.bin` | TKDB format per §1; writes shared `.build_ts` |
 | `create_fst.py` | `dictionary.fst` | shells to `engine/build-helpers/fst-builder` (Rust) for fst encoding |
 | `create_association_bin.py` | `association.bin` | TKWA format per §2; reads shared `.build_ts` |
-| `audit.py` | `audit_report.txt` + `audit/*.csv` | sanity checks against `dictionary.csv` |
+| `verify_poj_integrity.py` | (exit code) | fatal gate: halts build if `poj`/derived ≠ `convert_tl_to_poj(tl)` |
+| `version_snapshot.py` | `snapshots/vX.Y.Z.tsv` + drop/diff summary | per-release keyset + build-drop + vs-previous diff |
 | `deploy.sh` | bundles into platform asset directories | iOS bundle + Android assets |
 
 The build pipeline must:

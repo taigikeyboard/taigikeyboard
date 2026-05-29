@@ -1,0 +1,3 @@
+# Ephemeral build metadata + diff (regenerated each build)
+output/.build_stats.json
+output/version_diff.txt

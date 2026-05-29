@@ -35,7 +35,8 @@ dictionary/
 │   ├── khiin_conversions.csv  # Khiin conversion table
 │   └── 語音差異.csv            # Regional pronunciation reference
 │
-├── output/                    # Generated build artefacts (gitignored)
+├── snapshots/                 # Per-release distilled keysets vX.Y.Z.tsv (newest 3, git-tracked)
+├── output/                    # Generated build artefacts
 └── docs/                      # Pipeline + sources docs
 ```
 
@@ -96,9 +97,30 @@ original URLs.
 | `build/associations.py`          | Shared bigram + char-to-phrase generator from dictionary.csv |
 | `build/create_fst.py`            | fst prefix index from CSV (shells to engine/build-helpers/fst-builder) |
 | `build/create_{dictionary,association}_bin.py` | Binary mmap formats consumed by mobile apps |
+| `build/verify_poj_integrity.py`  | Fatal POJ-integrity gate — halts build if `poj`/derived ≠ `convert_tl_to_poj(tl)` (+ KeSi report-only) |
+| `build/version_snapshot.py`      | Build-drop summary + vs-previous diff; release mode writes `snapshots/vX.Y.Z.tsv` (newest 3 kept) |
 | `tools/compare_baseline.py`      | Parity gate — SHA256 + CSV-derived semantic diff vs baseline.json |
 | `tools/verify_csv.py`            | CSV character-validity + duplicate sanity checker            |
 | `tools/query_fst.py`             | Query the compiled fst prefix index (dev debug)              |
+
+## Version snapshots & build diff
+
+`build.sh` step 7 (`version_snapshot`) prints a build-drop summary (raw →
+dedup → supplements → final) plus a `(hanzi, tl)`-entry diff against the
+previous release snapshot (added / removed). Full added+removed lists land in
+`output/version_diff.txt` (ephemeral, gitignored).
+
+To stamp a release snapshot, pass the version so step 7 writes
+`snapshots/vX.Y.Z.tsv` and prunes to the newest 3 (by semantic version):
+
+```bash
+RELEASE_VERSION=v3.5.9 ./build.sh        # or:  ./build.sh v3.5.9
+```
+
+Without a version, step 7 only reports the diff vs the latest snapshot and
+writes nothing tracked. Re-running the same version overwrites its snapshot in
+place. The report never halts the build — release scope is the maintainer's
+call.
 
 ## Notes
 

@@ -20,6 +20,8 @@
 """
 
 import csv
+import json
+from collections import Counter
 from pathlib import Path
 
 import pandas as pd
@@ -82,8 +84,14 @@ def main():
         logger.error("No input files found!")
         return
 
+    # Build-drop stats consumed by build/version_snapshot.py for the build
+    # summary. `filter_drops` accumulates entries discarded by supplement
+    # filters (e.g. khiin >4-syllable cap / romanization failures).
+    drop_stats: dict = {"filter_drops": Counter()}
+
     # 合併
     merged_df = pd.concat(all_dfs, ignore_index=True)
+    drop_stats["raw_rows"] = len(merged_df)
     logger.info(f"\n  Total before merge: {len(merged_df)} records")
 
     # 建立正規化 key（空白→連字符）用於跨辭典去重
@@ -122,10 +130,12 @@ def main():
         ignore_index=True
     )
 
+    drop_stats["after_dedup"] = len(result_df)
     logger.info(f"  After dedup: {len(result_df)} records")
 
     # 補入 Khiin 獨有的詞條（不屬於任何辭典來源）
-    khiin_new = _load_khiin_new_entries(result_df, BASE_DIR, logger)
+    khiin_new = _load_khiin_new_entries(result_df, BASE_DIR, logger, drop_stats["filter_drops"])
+    drop_stats["khiin_added"] = len(khiin_new) if khiin_new is not None else 0
     if khiin_new is not None and len(khiin_new) > 0:
         result_df = pd.concat([result_df, khiin_new], ignore_index=True)
         # Re-sort
@@ -141,7 +151,8 @@ def main():
         result_df["dev"] = False
 
     # 補入開發者補充辭典
-    dev_new = _load_dev_supplement(result_df, BASE_DIR, logger)
+    dev_new = _load_dev_supplement(result_df, BASE_DIR, logger, drop_stats["filter_drops"])
+    drop_stats["dev_added"] = len(dev_new) if dev_new is not None else 0
     if dev_new is not None and len(dev_new) > 0:
         result_df = pd.concat([result_df, dev_new], ignore_index=True)
         result_df = result_df.sort_values(
@@ -154,7 +165,8 @@ def main():
     # 補入 LKK 漢羅合用建議用字
     if "lkk" not in result_df.columns:
         result_df["lkk"] = False
-    lkk_new = _load_lkk_entries(result_df, BASE_DIR, logger)
+    lkk_new = _load_lkk_entries(result_df, BASE_DIR, logger, drop_stats["filter_drops"])
+    drop_stats["lkk_added"] = len(lkk_new) if lkk_new is not None else 0
     if lkk_new is not None and len(lkk_new) > 0:
         result_df = pd.concat([result_df, lkk_new], ignore_index=True)
         result_df = result_df.sort_values(
@@ -182,6 +194,12 @@ def main():
 
     # 儲存
     result_df.to_csv(output_path, index=False)
+
+    # Persist drop stats for build/version_snapshot.py's build summary.
+    drop_stats["final"] = len(result_df)
+    stats_path = output_dir / ".build_stats.json"
+    stats_path.write_text(json.dumps(drop_stats, ensure_ascii=False, indent=2))
+    logger.info(f"  Wrote drop stats: {stats_path}")
 
     logger.info(f"\n  [sample records]:")
     for _, row in result_df.head(10).iterrows():
@@ -288,12 +306,18 @@ def _assemble_supplement_row(
     }
 
 
-def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -> pd.DataFrame | None:
+def _load_khiin_new_entries(
+    existing_df: pd.DataFrame, base_dir: Path, logger, filter_drops: Counter
+) -> pd.DataFrame | None:
     """Load Khiin entries not already present in the merged dictionary.
 
     Khiin rows are anonymous contributors — none of the 9 main source bits
     (and no dev/lkk) is set on them, so they stay invisible in the app's
     source-toggle UI while still seeding vocabulary the user can type.
+
+    `filter_drops` accumulates the count of entries discarded by a filter
+    (>4 syllables) or a romanization failure, so the build drop summary is
+    complete rather than silent.
     """
     freq_path = base_dir / "shared" / "data" / "khiin_frequency.csv"
     conv_path = base_dir / "shared" / "data" / "khiin_conversions.csv"
@@ -337,9 +361,9 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
             tl = convert_poj_to_tl_strict(khiin_poj).lower().replace(" ", "-")
             # Re-derive POJ from TL via the canonical converter so the
             # `poj == convert_tl_to_poj(tl)` invariant (enforced by
-            # build/audit.py 12_stale_poj) holds for khiin entries too.
+            # build/verify_poj_integrity.py) holds for khiin entries too.
             # Without this, khiin's idiosyncratic POJ encodings (e.g.,
-            # `hoonn` → `hò͘ⁿ` instead of standard `hòⁿ`) trip the audit.
+            # `hoonn` → `hò͘ⁿ` instead of standard `hòⁿ`) would trip the gate.
             poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
         except BridgeDeadError:
             # Node subprocess died mid-IPC — fail loud, do NOT
@@ -347,10 +371,12 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
             # review).
             raise
         except Exception:
+            filter_drops["khiin_romanization_fail"] += 1
             continue
 
         # Skip entries exceeding 4 syllables
         if len(tl.split("-")) > 4:
+            filter_drops["khiin_over_4syl"] += 1
             continue
 
         for hanzi in hanzi_set:
@@ -370,6 +396,7 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
                 # death there must propagate too.
                 raise
             except Exception:
+                filter_drops["khiin_romanization_fail"] += 1
                 continue
             existing_keys.add((hanzi, tl))
 
@@ -379,7 +406,9 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
     return pd.DataFrame(new_rows) if new_rows else None
 
 
-def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: Path, logger) -> pd.DataFrame | None:
+def _load_dev_supplement(
+    existing_df: pd.DataFrame, base_dir: Path, logger, filter_drops: Counter
+) -> pd.DataFrame | None:
     """
     Load developer supplement dictionary entries.
 
@@ -427,6 +456,7 @@ def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: Path, logger) -> p
             raise
         except Exception as e:
             logger.warning(f"  [dev] romanization failed for {hanzi}/{tl_raw}: {e}")
+            filter_drops["dev_romanization_fail"] += 1
             continue
 
         # user-provided frequency takes precedence over char-frequency derivation
@@ -457,7 +487,9 @@ def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: Path, logger) -> p
     return pd.DataFrame(new_rows) if new_rows else None
 
 
-def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -> pd.DataFrame | None:
+def _load_lkk_entries(
+    existing_df: pd.DataFrame, base_dir: Path, logger, filter_drops: Counter
+) -> pd.DataFrame | None:
     """
     Load LKK 漢羅合用建議用字 dictionary entries.
 
@@ -508,6 +540,7 @@ def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -> pd.D
             raise
         except Exception as e:
             logger.warning(f"  [lkk] romanization failed for {hanzi}/{tl_raw}: {e}")
+            filter_drops["lkk_romanization_fail"] += 1
             continue
 
         new_rows.append(_assemble_supplement_row(

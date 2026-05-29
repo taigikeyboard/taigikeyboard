@@ -4,7 +4,7 @@ Uses the *strict* converter so a Node IPC failure aborts the per-source
 pipeline immediately. The graceful converter (returns input on
 subprocess failure) was the silent failure mode that let stale
 `poj == tl` rows ship in the PR #175 + PR #184 incident — fixing the
-loud-failure path here makes `build/audit.py 12_stale_poj` a backstop
+loud-failure path here makes `build/verify_poj_integrity.py` a backstop
 rather than the only line of defense.
 """
 
