@@ -69,6 +69,20 @@ object HomeTexts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.6.0",
+                "2026/05/31",
+                listOf(
+                    "New: each 教典 (MOE dictionary) subcollection is now its own toggle — turn individual 腔調 (accent) readings and the 姓名 (name) appendix on or off in the dictionary settings.",
+                    "New: multi-character words now carry 語音差異 (per-accent) readings, not just single characters.",
+                    "New: 詞庫增補檔案 — a new toggleable supplement source (~2,500 added words: 一府五院 / 菜市仔名 / 台臺 / 教典僻智識 / 數字時間日期 / 行政區).",
+                    "Changed: turning a dictionary source off now also removes its words from the keyboard's candidates, not just the dictionary browse tab.",
+                    "Changed: toggle switches now use the native Material 3 style.",
+                    "Fixed: typing an explicit tone in continuous input (e.g. tai5) now shows only that tone's readings; typing without a tone (tai) still shows all tones.",
+                    "Fixed: the keyboard no longer occasionally opens collapsed to just the candidate bar on cold start.",
+                    "Updated dictionary data.",
+                ),
+            ),
+            VersionEntry(
                 "3.5.9",
                 "2026/05/27",
                 listOf(

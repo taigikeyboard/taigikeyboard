@@ -62,6 +62,14 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.6.0", "2026/05/31", [
+            "New: each 教典 (MOE dictionary) subcollection is now its own toggle — turn individual 腔調 (accent) readings and the 姓名 (name) appendix on or off in the dictionary settings.",
+            "New: multi-character words now carry 語音差異 (per-accent) readings, not just single characters.",
+            "New: 詞庫增補檔案 — a new toggleable supplement source (~2,500 added words: 一府五院 / 菜市仔名 / 台臺 / 教典僻智識 / 數字時間日期 / 行政區).",
+            "Changed: turning a dictionary source off now also removes its words from the keyboard's candidates, not just the dictionary browse tab.",
+            "Fixed: typing an explicit tone in continuous input (e.g. tai5) now shows only that tone's readings; typing without a tone (tai) still shows all tones.",
+            "Updated dictionary data.",
+        ]),
         ("3.5.9", "2026/05/27", [
             "New: TPS (Bopomofo-Taiwanese) continuous input — type a whole TPS sentence and the keyboard segments it into candidates, same as TL / POJ.",
             "Fixed: toneless TPS strings whose syllables start with a medial (e.g. ㄉㄞㄨㄢ for 台灣) no longer return zero candidates.",
