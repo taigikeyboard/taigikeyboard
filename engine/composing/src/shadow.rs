@@ -65,6 +65,84 @@ pub(crate) fn strip_tones_for_mode(s: &str, mode: InputMode) -> String {
     }
 }
 
+/// True iff `span` is a fully-toned TL/POJ reading: a non-empty sequence
+/// of `(letter+ digit)` groups — every syllable carries an ASCII tone
+/// digit (e.g. `tai5`, `tai5gi2`, `kak4`) — with no orphan/leading digit
+/// and a trailing tone digit. Such a span maps verbatim onto the
+/// digit-separated, hyphenless `tl_num` / `poj_num` FST key family
+/// (`dictionary/build/create_fst.py:127-130` emits `tl:<tl_num>` for
+/// every record), so an exact lookup on the verbatim span filters
+/// candidates to exactly the typed tone(s).
+///
+/// Text-only by design. The span-local + walker callers pass an
+/// already-syllabified lattice edge (syllable validity guaranteed
+/// upstream); the partial-prefix caller ([`build_partial_prefix_key`])
+/// passes the raw whole-buffer shadow, which may be an INCOMPLETE
+/// syllable. Either way this answers only "did the user fully tone it?",
+/// a pure property of the text — it never claims the span is a real word,
+/// so it needs no inventory and no re-segmentation (avoiding the greedy
+/// dead-end trap [`greedy_longest_syllabification`] documents). Safety for
+/// the unvalidated partial case: a fully-toned-LOOKING but nonexistent
+/// body (`abc1`) yields a verbatim key that simply MISSES the FST and
+/// returns zero candidates — never a wrong-tone hit. A mixed/partial-tone
+/// span (`tai5bak`, `taigi2`, `tai5g`) ends in a letter → returns false,
+/// so the caller keeps it on the toneless key, preserving the
+/// toneless-input "show all tones" behavior with no regression.
+// 中文: 判斷 span 是否為「全含調」TL/POJ 讀法 = `([字母]+[數字])+`(每音節皆帶 ASCII 聲調數字,尾端為數字,無孤兒數字)。
+// 中文:   此形 verbatim 對齊 tl_num/poj_num FST 家族 → exact lookup 即按聲調過濾。
+// 中文:   純文字判定:span-local/walker 來自已切音節的 lattice edge;partial-prefix 傳整個 raw shadow(可能非完整音節),
+// 中文:   但純文字只答「是否全含調」、不宣稱是真詞,故不需 inventory、不重切音節(避開 greedy dead-end)。
+// 中文:   未驗證 partial 之安全性:全含調但不存在的 body(abc1)只會 verbatim key miss FST 回空,不會錯調命中。
+// 中文:   混合/部分含調(tai5bak / taigi2 / tai5g 尾為字母)回 false → caller 留在去調鍵,無回歸。
+fn span_is_fully_toned_ascii(span: &str) -> bool {
+    if span.is_empty() {
+        return false;
+    }
+    let mut group_has_letter = false;
+    for b in span.bytes() {
+        if b.is_ascii_digit() {
+            if !group_has_letter {
+                return false; // orphan digit — no letter opened this group (`5tai`, `tai55`)
+            }
+            group_has_letter = false; // tone digit closes the current syllable group
+        } else if b.is_ascii_alphabetic() {
+            group_has_letter = true;
+        } else {
+            return false; // leaked hyphen / non-ASCII — not a clean toned reading
+        }
+    }
+    // A trailing letter leaves a group open (un-toned) → not fully toned.
+    !group_has_letter
+}
+
+/// FST lookup body for a continuous-input span. When `span` is a
+/// fully-toned TL/POJ reading ([`span_is_fully_toned_ascii`]), return it
+/// verbatim (digits kept) so `lookup_exact` / `lookup_prefix` filters by
+/// the typed tone — the fix for the bug where explicit `tai5` surfaced
+/// every tone of `tai`. Otherwise return the toneless form
+/// ([`strip_tones_for_mode`]): toneless continuous input intentionally
+/// surfaces all tones, and mixed/partial-tone spans have no fully-toned
+/// FST key family. This is a key-SELECTION rule (one branch per span
+/// shape), NOT a runtime fallback — there is no "toned miss → retry
+/// toneless" path.
+///
+/// Only TL and POJ are tone-eligible. `English` mode has no tone
+/// semantics (a trailing digit in an English buffer is not a tone), so it
+/// keeps the legacy digit-strip — excluded here to avoid changing English
+/// continuous behavior. TPS tones are Bopomofo scalars, not ASCII digits,
+/// so [`span_is_fully_toned_ascii`] returns false for any non-ASCII
+/// content and TPS always takes the toneless branch unchanged.
+// 中文: 連續輸入 span 的 FST 查詢主體:全含調 TL/POJ → verbatim(保留數字)讓 lookup 按聲調過濾;
+// 中文:   否則回去調形。為「鍵選擇規則」非 runtime fallback(無 toned-miss→retry-toneless)。
+// 中文:   僅 TL/POJ 可含調;English 無聲調語意(尾端數字非聲調)維持去調;TPS 為注音聲調符非 ASCII 數字,恆走去調。
+pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
+    if matches!(mode, InputMode::Tl | InputMode::Poj) && span_is_fully_toned_ascii(span) {
+        span.to_string()
+    } else {
+        strip_tones_for_mode(span, mode)
+    }
+}
+
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
 /// `max_syllables=8` budget called out in `docs/releases/v3.5.8/plan.md` § Phase 3 — Performance and
 /// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Owned by
@@ -158,17 +236,22 @@ pub(crate) fn left_anchored_keys_from_lattice(
         if end == 0 || end > shadow.len() || !shadow.is_char_boundary(end) {
             continue;
         }
-        // v3.5.9 D / C-3b — mode-aware tone strip: TL/POJ drop ASCII
-        // digits (byte-identical to legacy), TPS drops Bopomofo tone
-        // marks so the emitted body matches the `tps:<tps_notone>` FST
-        // family from C-0.
-        // 中文: D / C-3b — mode-aware tone 剝除;TPS 改剝注音聲調符號,對齊 tps_notone 家族。
-        let toneless = strip_tones_for_mode(&shadow[..end], mode);
-        if toneless.is_empty() {
+        // Explicit-tone fix — tone-aware lookup body. A fully-toned span
+        // (`tai5`, `tai5gi2`) keeps its digits so `lookup_exact` filters
+        // to the typed tone; a toneless / mixed span strips to the fused
+        // toneless key (all-tone surface), preserving the toneless-input
+        // behavior. See [`fst_body_for_span`].
+        // v3.5.9 D / C-3b — the underlying strip is mode-aware: TL/POJ
+        // drop ASCII digits, TPS drops Bopomofo tone marks (matches the
+        // `tps:<tps_notone>` FST family from C-0; TPS always toneless here).
+        // 中文: 明確聲調修正 — tone-aware 查詢主體。全含調 span 保留數字 → lookup_exact 按聲調過濾;
+        // 中文:   去調/混合 span 走去調 fused key(全聲調),維持去調輸入行為。見 fst_body_for_span。
+        let body = fst_body_for_span(&shadow[..end], mode);
+        if body.is_empty() {
             continue;
         }
         let raw_end = shadow_to_raw_end[end];
-        out.push(((0u32, raw_end as u32), format!("{prefix}:{toneless}")));
+        out.push(((0u32, raw_end as u32), format!("{prefix}:{body}")));
     }
     out
 }
@@ -761,19 +844,26 @@ pub(crate) fn build_partial_prefix_key(
     let lower = raw.to_ascii_lowercase();
     let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
-    // v3.5.9 D / C-3b + D Fork 7b — mode-aware tone strip. All four modes
-    // (TL/POJ/English/TPS) reach this builder via the unified
-    // `assemble_candidates` empty-keys fallthrough; TPS strips the 8
-    // Bopomofo tone scalars (per `phonetics::is_tps_tone_mark`) so a
-    // raw `ㄉㄧˊ` shadow yields a `tps:ㄉㄧ` toneless key.
-    // 中文: D / C-3b + D Fork 7b — mode-aware tone 剝除。四模式共享此構造器;
-    // 中文:   TPS 剝除 phonetics::is_tps_tone_mark 列的 8 個聲調符,raw `ㄉㄧˊ` → key `tps:ㄉㄧ`。
-    let toneless = strip_tones_for_mode(&shadow, mode);
-    if toneless.is_empty() {
+    // Explicit-tone fix — tone-aware body, same rule as
+    // `left_anchored_keys_from_lattice` / the walker edge: a fully-toned
+    // whole buffer (`tai5`) yields the verbatim `tl:tai5` prefix so the
+    // Step 4b `lookup_prefix` extension scan only surfaces tone-5-initial
+    // keys, never the all-tone `tl:tai` range. Toneless / mixed buffers
+    // keep the toneless prefix (the partial-prefix path's normal "typing
+    // toward the first boundary" behavior). See [`fst_body_for_span`].
+    // v3.5.9 D / C-3b + D Fork 7b — TPS reaches this builder via the
+    // unified `assemble_candidates` empty-keys fallthrough and always
+    // takes the toneless branch (`is_tps_tone_mark` strip), so a raw
+    // `ㄉㄧˊ` shadow still yields the `tps:ㄉㄧ` toneless key.
+    // 中文: 明確聲調修正 — tone-aware 主體,與 left_anchored_keys_from_lattice / walker edge 同規則。
+    // 中文:   全含調 buffer(tai5)→ verbatim `tl:tai5` 前綴,Step 4b lookup_prefix 只撈 tone-5 開頭鍵;
+    // 中文:   去調/混合 buffer 維持去調前綴。TPS 恆走去調分支(is_tps_tone_mark 剝除)。
+    let body = fst_body_for_span(&shadow, mode);
+    if body.is_empty() {
         return None;
     }
     let prefix = mode_key_prefix(mode);
-    Some(((0u32, raw.len() as u32), format!("{prefix}:{toneless}")))
+    Some(((0u32, raw.len() as u32), format!("{prefix}:{body}")))
 }
 
 #[cfg(test)]
@@ -1269,11 +1359,16 @@ mod tests {
     }
 
     #[test]
-    fn build_partial_prefix_key_strips_tone_digits_and_lowercases() {
-        // The digit half of `notone.py::remove_tone` still applies on
-        // the partial-prefix path so `gu5` and `gu` produce the same
-        // FST prefix key.
+    fn build_partial_prefix_key_tone_aware_lowercases() {
+        // Explicit-tone fix — a fully-toned partial buffer KEEPS its tone
+        // digit so the prefix scan filters to the typed tone: `GU5` →
+        // `tl:gu5` (was `tl:gu` pre-fix). Toneless input still strips to
+        // the all-tone fused prefix: `GU` → `tl:gu`.
+        // trace: "GU5" → lower "gu5" → shadow "gu5" → fully-toned (`gu`+`5`)
+        //   → verbatim body "gu5" → "tl:gu5".
         let (_, key) = build_partial_prefix_key("GU5", InputMode::Tl).unwrap();
+        assert_eq!(key, "tl:gu5");
+        let (_, key) = build_partial_prefix_key("GU", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:gu");
     }
 
@@ -1307,6 +1402,26 @@ mod tests {
         assert!(build_partial_prefix_key("--", InputMode::Tl).is_none());
         assert!(build_partial_prefix_key("5", InputMode::Tl).is_none());
         assert!(build_partial_prefix_key("-5-", InputMode::Tl).is_none());
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tone_policy_pins_unvalidated_partial() {
+        // Explicit-tone fix — the partial-prefix builder skips the
+        // syllabifier (it is reached precisely when no valid ending
+        // exists), so it can receive a NON-validated whole buffer. Pin
+        // the tone-policy on each shape so the safety reasoning in
+        // `fst_body_for_span` stays honest:
+        //   - fully-toned → verbatim toned prefix (filters by tone).
+        let (_, k) = build_partial_prefix_key("tai5", InputMode::Tl).unwrap();
+        assert_eq!(k, "tl:tai5");
+        //   - mixed (trailing letter) → toneless prefix (no regression).
+        let (_, k) = build_partial_prefix_key("tai5g", InputMode::Tl).unwrap();
+        assert_eq!(k, "tl:taig");
+        //   - fully-toned-LOOKING but non-existent → still verbatim; it
+        //     just misses the FST and returns zero candidates (NEVER a
+        //     wrong-tone hit), which is the safe outcome for junk input.
+        let (_, k) = build_partial_prefix_key("abc1", InputMode::Tl).unwrap();
+        assert_eq!(k, "tl:abc1");
     }
 
     #[test]

@@ -32,6 +32,7 @@
 14. [Lexicon — hanzi-input search guard (D-8 parity correction)](#14-lexicon--hanzi-input-search-guard-d-8-parity-correction)
 15. [Lexicon — input classification (v3.5.7)](#15-lexicon--input-classification-v357)
 16. [Keyboard body — touch + popup + window insets (Android Compose body)](#16-keyboard-body--touch--popup--window-insets-android-compose-body) → moved to [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md)
+17. [Continuous input — explicit-tone candidate filtering](#17-continuous-input--explicit-tone-candidate-filtering)
 
 ---
 
@@ -480,3 +481,27 @@ Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion
 ## 16. Keyboard body — touch + popup + window insets (Android Compose body)
 
 **Moved 2026-05-26 →** [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md) — 11 `INVARIANT_keyboard_*` labels (Android-only by design; iOS keyboard is a separate KeyboardKit contract). Kotlin source comments referencing the labels are unchanged; see the extracted file for the full list.
+
+---
+
+## 17. Continuous input — explicit-tone candidate filtering
+
+### `INVARIANT_CONTINUOUS_EXPLICIT_TONE_FILTER`
+
+In continuous input — the **sole** keyboard candidate source since Item 13 (PR #279, v3.5.8); the toned `lexicon::search` path is Tab3-only — the FST lookup body for a span is tone-selected:
+
+1. A **fully-toned** romanization span (every syllable carries an ASCII tone digit — `tai5`, `tai5gi2`, `kak4`) looks up the **toned** key family (`tl:<tl_num>` / `poj:<poj_num>`) and surfaces **only candidates whose reading is that tone**.
+2. A span with **no** tone digit (`tai`, `taibak`) looks up the **toneless** fused key (`tl:<tl_notone>`) and surfaces **all tones** — the deliberate no-tone typing affordance.
+3. A **mixed / partial-tone** multi-syllable span (`tai5gi` = toned + toneless) has no fully-toned FST family, so it stays on the toneless key (no regression).
+
+This is a **conditional** contract, NOT "always filter": absent tone ⇒ all tones (intended), present tone ⇒ that tone only. Do not "fix" the toneless-shows-all behavior — it is the feature.
+
+**Why**: typing `tai5` must never surface `tai2` / `tai3`. The continuous path strips tone digits to build a toneless fused key so the no-tone affordance works; before this invariant the strip was **unconditional**, so an explicitly-typed tone was silently discarded and every tone of the syllable appeared (critical bug, 2026-05-30, PR #367). The toned `tl:<tl_num>` keys already exist in `dictionary.fst` (`dictionary/build/create_fst.py:127-130`); they were simply never queried.
+
+**Scope**: TL and POJ only. **English** has no tone semantics (a trailing digit is not a tone) and keeps the toneless strip. **TPS** tones are Bopomofo scalars, not ASCII digits, so TPS always takes the toneless branch (out of this slice). The selection rule `composing::shadow::fst_body_for_span` (→ `span_is_fully_toned_ascii`, the `([a-z]+digit)+` grammar) is applied at all three continuous key-build sites: `left_anchored_keys_from_lattice` (span-local), `build_partial_prefix_key` (Step 4b / empty-keys partial), and the walker edge (`fetch_walker_slot0_inner`). The walker's **custom-dictionary** override stays toneless-keyed (custom matching is tone-insensitive by design). Engine is the single source — iOS / Android inherit via FFI; there is no platform-side tone filtering.
+
+**Relationship to §15**: §15 (`INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET`) defines whether input *carries* a tone; §17 pins what that tone must *do* to the continuous candidate set. The bug lived in the gap between the two — input was classified `RomanWithTone`, but the candidate lookup ignored the tone.
+
+**Tests**:
+- **Rust engine** — `engine/composing/tests/continuous_explicit_tone.rs`: `explicit_tone_filters_to_typed_tone` (`tsua2` → 紙 only, not 蛇; symmetric `tsua5` → 蛇 only) + `toneless_input_still_surfaces_all_tones` (`tsua` → both). Unit: `engine/composing/src/shadow.rs::tests` pin `span_is_fully_toned_ascii` / `fst_body_for_span` / the partial-prefix tone policy. Golden `tl_numeric_single` / `tl_numeric_multi` (`engine/composing/tests/golden_fetch_at_pos.rs`) freeze the toned-key wire vector (fixture emits toned `tl:<tl_num>` / `poj:<poj_num>` keys for production parity).
+- **Dogfood (real-device, production gate)** — see `.claude/rules/taigi-incidents.md` § Qualitative perf gate dogfood checklist (item: explicit tone filters; toneless shows all tones).

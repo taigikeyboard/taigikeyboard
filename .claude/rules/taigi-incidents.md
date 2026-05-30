@@ -48,6 +48,7 @@ Read this file alongside any global rule whose abstract version you want grounde
 ### Qualitative perf gate (§9)
 
 - Taigi-specific dogfood checklist: **S1 POJ diacritics**, **S2 TPS composition**, **S3 Hanji candidate scroll**, plus iOS keyboard extension 64 MB hard cap, leak-free + no-keyboard-dismiss invariants. These translate "perceptible regression on real interactive sequences" into a concrete acceptance gate.
+- **S4 explicit-tone candidate filter** (functional, added 2026-05-30 PR #367): type `tai5` → candidate strip shows **only** tone-5 readings (NOT tai2/tai3/…); type `tai` with no digit → all tones appear (no-tone affordance preserved). Pins `INVARIANT_CONTINUOUS_EXPLICIT_TONE_FILTER` (`docs/architecture/behavioral-invariants.md` §17). This bug class evaded every automated gate (unit tests + golden fixture encoded the toneless strip as correct), so the real-device check is the catch-net.
 - `docs/perf/keyboard-baseline-*.md` exists as a deferred quantitative template — only invoke if USER wants CI capture.
 
 ## Maps to `~/.claude/rules/planning.md`

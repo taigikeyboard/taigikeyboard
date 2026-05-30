@@ -63,20 +63,42 @@ fn internal_hyphen_consumed_into_full_buffer_span() {
 }
 
 #[test]
-fn numeric_tone_with_hyphen_strips_both_in_key_only() {
-    // `tai5-bak4` — shadow `tai5bak4`, endings on shadow={4,8} (the
-    // syllabifier folds the trailing tone digit into the matched
-    // syllable per `is_false_toneless_boundary`). Tone digits then get
-    // stripped during `strip_ascii_tone_digits`; hyphens were stripped
-    // up-front by `build_hyphen_shadow`. Final keys equal the hyphenless
-    // case.
+fn numeric_tone_with_hyphen_builds_toned_keys() {
+    // Explicit-tone fix — `tai5-bak4` is FULLY toned, so each
+    // left-anchored key keeps its tone digits (verbatim `tl_num` form)
+    // and `lookup_exact` filters to exactly the typed tone(s). Hyphens
+    // are stripped up-front by `build_hyphen_shadow`; the digits stay.
+    // trace: shadow "tai5bak4", endings={4,8} (syllabifier folds the
+    //   trailing tone digit per `is_false_toneless_boundary`); both spans
+    //   are fully toned → bodies "tai5" / "tai5bak4" → keys "tl:tai5" /
+    //   "tl:tai5bak4". raw spans (0,4)/(0,9) (raw "tai5-bak4" = 9 bytes,
+    //   inner `-` folds into the second span).
     let inv = build_inventory(&["tai5", "bak4"]);
     let keys = build_keys_tl_with_inventory("tai5-bak4", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
         .collect();
-    assert_eq!(mapped, vec![((0, 4), "tl:tai"), ((0, 9), "tl:taibak")],);
+    assert_eq!(mapped, vec![((0, 4), "tl:tai5"), ((0, 9), "tl:tai5bak4")],);
+}
+
+#[test]
+fn mixed_tone_keeps_toned_prefix_but_toneless_full_span() {
+    // Explicit-tone fix — partial-tone input (`tai5-bak`: first syllable
+    // toned, second toneless) must NOT regress. The fully-toned prefix
+    // span keeps its tone (`tl:tai5`), but the mixed full span has no
+    // fully-toned FST key family, so it falls back to the toneless fused
+    // key (`tl:taibak`) — the all-tone surface, unchanged from pre-fix.
+    // trace: shadow "tai5bak", endings={4,7}; (0,4)="tai5" fully toned →
+    //   "tl:tai5"; (0,7)="tai5bak" ends in 'k' (not fully toned) →
+    //   strip → "taibak" → "tl:taibak". raw "tai5-bak" = 8 bytes.
+    let inv = build_inventory(&["tai5", "bak4"]);
+    let keys = build_keys_tl_with_inventory("tai5-bak", &inv, phonetics::InputMode::Tl);
+    let mapped: Vec<((u32, u32), &str)> = keys
+        .iter()
+        .map(|(span, key)| (*span, key.as_str()))
+        .collect();
+    assert_eq!(mapped, vec![((0, 4), "tl:tai5"), ((0, 8), "tl:taibak")],);
 }
 
 #[test]

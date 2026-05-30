@@ -559,10 +559,27 @@ fn fetch_walker_slot0_inner(
         // consistent with the inventory family that produced the edge.
         // 中文: B-2 — walker edge key mode-aware,單一 mode 同時驅動 shadow / lattice / key 前綴,
         // 中文:   不同家族 (tl/poj/tps) 不會由不同來源分歧。
-        let key = format!(
-            "{prefix}:{toneless}",
-            prefix = crate::shadow::mode_key_prefix(mode)
+        let key_prefix = crate::shadow::mode_key_prefix(mode);
+        // Explicit-tone fix — the DICT lookup is tone-aware: a fully-toned
+        // edge (`tai5`) looks up the verbatim `tl:tai5` key so slot 0 can
+        // only be synthesized from the typed tone, matching the span-local
+        // list (a split — span-local toned, walker toneless — would let a
+        // wrong-tone word reappear at slot 0). See [`crate::shadow::fst_body_for_span`].
+        // 中文: 明確聲調修正 — dict 查詢 tone-aware:全含調 edge(tai5)查 verbatim `tl:tai5`,
+        // 中文:   slot 0 只會從使用者輸入的聲調合成,與 span-local 列一致(否則錯調字會在 slot 0 復活)。
+        let dict_key = format!(
+            "{key_prefix}:{}",
+            crate::shadow::fst_body_for_span(&shadow[start..end], mode)
         );
+        // Custom override stays tone-INSENSITIVE: `custom_map` is keyed by
+        // `custom_toneless_key` (toneless), so it is queried with the
+        // toneless key. The tone-filter fix is a dict-path change only;
+        // custom-dictionary matching behavior is deliberately unchanged
+        // (a custom word is a specific user entry, matched per the legacy
+        // toneless rule).
+        // 中文: custom override 維持 tone-insensitive:custom_map 以 custom_toneless_key(去調)為鍵,
+        // 中文:   故以去調鍵查詢。聲調過濾僅改 dict 路徑,custom 比對行為刻意不變。
+        let custom_key = format!("{key_prefix}:{toneless}");
         // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
         // `custom_dictionary.db` entry whose normalized toneless
         // roman equals this edge's key OVERRIDES the `dict.bin`
@@ -576,7 +593,7 @@ fn fetch_walker_slot0_inner(
         // 中文: S6 — custom 命中該 edge key → 覆寫 dict.bin 最佳候選(在 best_candidate_for_key 之前查);
         // 中文:   = span-local source-rank-0 同語意,無條件 override 非 cost 競爭
         // 中文:   (切分安全靠 CUSTOM_EFFECTIVE_FREQ proxy + 既有單音節阻尼,不靠在此贏分)。
-        if let Some(entry) = custom_map.get(key.as_str()) {
+        if let Some(entry) = custom_map.get(custom_key.as_str()) {
             // `display_text` = the exact key the platform writes to
             // `user_frequency.db` on commit, mirroring
             // `lexicon::custom_entry_to_candidate` (hanji else
@@ -636,7 +653,7 @@ fn fetch_walker_slot0_inner(
         // 中文: PR-9.6 — walker edge dict 查詢套用與 span-local 相同的來源過濾,
         // 中文:   避免全句切分在 slot 0 重新帶回被關閉來源的字(custom edge 不受限,dict edge 受 bitmask 限制)。
         match best_candidate_for_key(
-            &key,
+            &dict_key,
             raw_span,
             freq_map,
             now_ms,

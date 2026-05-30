@@ -163,6 +163,25 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
         e.push(SEPARATOR);
         e.extend_from_slice(&rowid.to_le_bytes());
         entries.push(e);
+        // Explicit-tone fix — `tl:<tl_num>` toned family, production
+        // parity with `dictionary/build/create_fst.py:127-130` (emits
+        // `record.tl_num` alongside `tl_notone`). Derived from the display
+        // `tl` via `phonetics::normalize_input` — the SAME normalizer the
+        // runtime applies to numeric-tone input, so a toned query
+        // `tl:tai5` byte-matches this fixture key. Emitted only when the
+        // result carries a tone digit (display-unmarked tone-1/4 syllables
+        // collapse onto the toneless key, matching `normalize_input`).
+        // 中文: 明確聲調修正 — tl:<tl_num> 含調家族,對齊 create_fst.py 的 tl_num emit。
+        // 中文:   以 normalize_input 從顯示 tl 推導(與 runtime 數字輸入同一正規化器,fixture↔runtime byte 一致)。
+        let tl_num = phonetics::normalize_input(row.tl);
+        if tl_num.bytes().any(|b| b.is_ascii_digit()) {
+            let mut e_num = Vec::with_capacity(tl_num.len() + 4 + 5);
+            e_num.extend_from_slice(b"tl:");
+            e_num.extend_from_slice(tl_num.as_bytes());
+            e_num.push(SEPARATOR);
+            e_num.extend_from_slice(&rowid.to_le_bytes());
+            entries.push(e_num);
+        }
         // v3.5.9 B-2 — `poj:` family. Derive `poj_notone` at fixture
         // build time the way `dictionary/build/create_fst.py:124-127`
         // does in production (TL display → POJ display →
@@ -177,6 +196,21 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
             e2.push(SEPARATOR);
             e2.extend_from_slice(&rowid.to_le_bytes());
             entries.push(e2);
+        }
+        // Explicit-tone fix — `poj:<poj_num>` toned family, production
+        // parity with create_fst.py. Same per-syllable canonicalize as
+        // `derive_poj_notone` but keeps the tone digit, so a toned POJ
+        // query `poj:choa2` byte-matches.
+        // 中文: 明確聲調修正 — poj:<poj_num> 含調家族;與 derive_poj_notone 同切分但保留聲調數字。
+        if let Some(poj_num) = derive_poj_num(row.tl) {
+            if poj_num.bytes().any(|b| b.is_ascii_digit()) {
+                let mut e2n = Vec::with_capacity(poj_num.len() + 5 + 5);
+                e2n.extend_from_slice(b"poj:");
+                e2n.extend_from_slice(poj_num.as_bytes());
+                e2n.push(SEPARATOR);
+                e2n.extend_from_slice(&rowid.to_le_bytes());
+                entries.push(e2n);
+            }
         }
         // v3.5.9 D / C-5 — `tps:` family. Mirrors `create_fst.py:124-138`:
         // emit `tps:<tps_notone>` per row (primary), plus
@@ -231,6 +265,27 @@ fn derive_poj_notone(tl_display: &str) -> Option<String> {
         }
         let (toneless, _) = phonetics::canonicalize_poj_syllable(token)?;
         out.push_str(&toneless);
+    }
+    (!out.is_empty()).then_some(out)
+}
+
+/// Explicit-tone fix — derive `poj_num` (toned POJ) from `record.tl`,
+/// mirroring [`derive_poj_notone`] but keeping each syllable's tone digit
+/// (`canonicalize_poj_syllable` returns `(toneless, tone)`; this concats
+/// `toneless + tone`). Production `create_fst.py` emits `poj:<poj_num>`
+/// alongside `poj:<poj_notone>`; this gives the fixture the same toned
+/// POJ family so a toned POJ query byte-matches. Returns `None` on the
+/// same phonotactic-gate failure as `derive_poj_notone`.
+fn derive_poj_num(tl_display: &str) -> Option<String> {
+    let poj_display = phonetics::api::tl_display_to_poj_display(tl_display);
+    let mut out = String::new();
+    for token in poj_display.split(['-', ' ']) {
+        if token.is_empty() {
+            continue;
+        }
+        let (toneless, tone) = phonetics::canonicalize_poj_syllable(token)?;
+        out.push_str(&toneless);
+        out.push_str(&tone);
     }
     (!out.is_empty()).then_some(out)
 }
@@ -520,8 +575,22 @@ fn matrix() -> Vec<Case> {
     vec![
         case("tl_toneless_multi", "tsua", "tl"),
         case("tl_toneless_long_reach", "taigikhipuann", "tl"),
-        case("tl_numeric_single", "tsua7", "tl"),
-        case("tl_numeric_multi", "tai1bak4", "tl"),
+        // Explicit-tone fix — numeric single-syllable input now FILTERS by
+        // tone. `tsua2` keeps its digit (`tl:tsua2`) so only 紙 (tsuá) is
+        // surfaced; the toneless-key sibling 珠仔 (tsu-á, `tl:tsu1a2`) is
+        // excluded. Contrast `tl_toneless_multi` (`tsua` → 紙 + 珠仔). This
+        // is the headline bug fix: pre-fix `tsua2` stripped to `tl:tsua`
+        // and surfaced every tone. (Was `tsua7`, which has no fixture word
+        // — pre-fix it folded to `tl:tsua` and wrongly returned 紙/珠仔.)
+        // 中文: 明確聲調修正 — 數字單音節輸入按聲調過濾;tsua2 保留數字 → 只出 紙,排除同去調鍵的 珠仔。
+        case("tl_numeric_single", "tsua2", "tl"),
+        // Explicit-tone fix — numeric multi-syllable input keeps the full
+        // toned key. `tai5bak8` (= `tâi-ba̍k`/代墨) hits `tl:tai5bak8`; the
+        // 1-syllable prefix span `tai5` also surfaces 台 (`tl:tai5`). Was
+        // `tai1bak4` (an off-reading of 代墨 = tone5+tone8) which pre-fix
+        // folded to `tl:taibak` and matched regardless of tone.
+        // 中文: 明確聲調修正 — 數字多音節保留完整含調鍵;tai5bak8 命中 代墨,前綴 tai5 另出 台。
+        case("tl_numeric_multi", "tai5bak8", "tl"),
         case("poj_diacritic", "tâi-uân", "tl"),
         // Negative guard: post-C-3b TPS is first-class. This raw's
         // toneless body `ㄉㄧㄠㄨㄢ` matches NO `tps:` prefix in the

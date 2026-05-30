@@ -207,16 +207,23 @@ fn mixed_combining_with_hyphen_chains_to_full_fused_key() {
 #[test]
 fn dual_marker_combining_and_trailing_digit_canonicalizes() {
     // `tâi5-ban3` — combining circumflex on `â` AND trailing ASCII
-    // tone digit `5` on the same first syllable. Codex pre-impl
-    // 2026-05-15 expected key set must include `tl:taiban` (combining
-    // is dropped during Phase 1 → `tai5-ban3` → hyphen-strip →
-    // `tai5ban3` → digit-strip → `taiban`).
+    // tone digit `5` on the same first syllable. After the explicit-tone
+    // fix this is a FULLY toned reading, so the combining circumflex is
+    // dropped (Phase 1) and the surviving ASCII tone digits are KEPT
+    // (verbatim `tl_num` form), not stripped: `tâi5-ban3` → `tai5-ban3`
+    // → hyphen-strip → `tai5ban3` → key `tl:tai5ban3` (was `tl:taiban`
+    // pre-fix). The single-syllable prefix span keeps its tone too:
+    // `tl:tai5`.
     let inv = build_inventory(&["tai5", "ban3"]);
     let keys = build_keys_tl_with_inventory("t\u{00e2}i5-ban3", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.contains(&"tl:taiban"),
-        "expected `tl:taiban` after dual-marker canonicalize, got {key_strs:?}",
+        key_strs.contains(&"tl:tai5ban3"),
+        "expected toned `tl:tai5ban3` after dual-marker canonicalize, got {key_strs:?}",
+    );
+    assert!(
+        key_strs.contains(&"tl:tai5"),
+        "expected toned single-syllable prefix `tl:tai5`, got {key_strs:?}",
     );
 }
 
