@@ -27,12 +27,9 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.TextInputKeyHandler
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * IME 輸入主編排器 — manages all keyboard mode / layout / popup /
@@ -212,6 +209,21 @@ class TextInputManager(
         popupHost.installPopupViewTreeOwnersIfNeeded()
 
         textViewGroup = inputView.findViewById(R.id.text_input)
+
+        // Publish layout + appearance + active mode into KeyboardUiState BEFORE
+        // mounting the ComposeView. `mountKeyboardComposeView` runs `setContent`
+        // on the already-attached InputView, which makes Compose create the
+        // keyboard body's FIRST composition synchronously — it must read a
+        // populated state so `KeyboardImeRoot` renders a non-empty body at the
+        // IME window's first measure. An empty body would let `wrap_content` pin
+        // the input view to smartbar-only height on cold open (the prior async
+        // publish landed too late). `onStartInputView` re-publishes the
+        // editor-specific mode synchronously for the register-before-start order.
+        val activeKeyboardMode = uiCoordinator.activeKeyboardMode
+        uiCoordinator.ensureLayoutLoadedNow(activeKeyboardMode)
+        pushAppearance()
+        uiCoordinator.publishActiveMode(activeKeyboardMode)
+
         composeHost = uiCoordinator.mountKeyboardComposeView(
             inputView = inputView,
             coordinator = coordinator,
@@ -247,16 +259,6 @@ class TextInputManager(
 
         textViewGroup?.post {
             measureAndUpdateKeyboardHeight()
-        }
-
-        // Layout fetch is the only piece that needs IO — keep it async.
-        launch(Dispatchers.Default) {
-            val activeKeyboardMode = uiCoordinator.activeKeyboardMode
-            uiCoordinator.ensureLayoutLoaded(activeKeyboardMode)
-            withContext(Dispatchers.Main) {
-                pushAppearance()
-                uiCoordinator.publishActiveMode(activeKeyboardMode)
-            }
         }
     }
 
@@ -321,6 +323,12 @@ class TextInputManager(
         capsStateManager.updateCapsState()
         keyHandler.resetComposingText()
         uiCoordinator.publishKeyVariation(keyVariation)
+        // Publish the editor's target mode layout SYNCHRONOUSLY so a fresh
+        // ComposeView (register-before-start lifecycle order) measures the
+        // correct non-empty body instead of async-swapping NUMERIC/PHONE in
+        // after the first measure. Makes the following `setActiveKeyboardMode` a
+        // cache hit → synchronous `publishActiveMode`. Warm shows → no I/O.
+        uiCoordinator.ensureLayoutLoadedNow(keyboardMode)
         uiCoordinator.setActiveKeyboardMode(keyboardMode)
         // imeOptions / confirm-key label / composing flag may all flip on a
         // new editor — refresh appearance so KeyContent re-derives ENTER /

@@ -102,17 +102,39 @@ internal class KeyboardUiCoordinator(
         return composeView
     }
 
+    /** CLIPBOARD carries no layout to fetch; an already-cached mode needs no
+     *  recompute. Shared skip guard for both the async [ensureLayoutLoaded] and
+     *  the synchronous [ensureLayoutLoadedNow] so the two stay in lockstep. */
+    private fun isLayoutLoadNeeded(mode: KeyboardMode): Boolean =
+        mode != KeyboardMode.CLIPBOARD && !_keyboardUi.value.layouts.containsKey(mode)
+
     /**
      * Loads [KeyboardLayoutData] for [mode] off the main thread, then publishes
      * it into [_keyboardUi] so the Composable can render. Skipped when [mode]
      * is [KeyboardMode.CLIPBOARD] or already cached.
      */
     suspend fun ensureLayoutLoaded(mode: KeyboardMode) {
-        if (mode == KeyboardMode.CLIPBOARD) return
-        if (_keyboardUi.value.layouts.containsKey(mode)) return
+        if (!isLayoutLoadNeeded(mode)) return
         val computed = withContext(Dispatchers.IO) {
             layoutManager.fetchComputedLayout(mode, activeSubtypeProvider())
         }
+        publishLayout(mode, KeyboardLayoutData.from(computed))
+    }
+
+    /**
+     * Synchronous sibling of [ensureLayoutLoaded] for the boot / first-show
+     * seam. Computes + publishes the layout on the CALLING (main) thread so the
+     * keyboard body holds a non-empty layout in [_keyboardUi] BEFORE the IME
+     * window's first measure. Without it the cold-open Compose body renders
+     * empty (no `layout`/`appearance`), the `wrap_content` input view is pinned
+     * to smartbar-only height, and the async [ensureLayoutLoaded] publish lands
+     * too late to reliably re-grow the IME window. The first call per mode does
+     * one bounded synchronous layout compute (assets read + parse) on the calling
+     * thread; warm reopens cache-hit and return without I/O.
+     */
+    fun ensureLayoutLoadedNow(mode: KeyboardMode) {
+        if (!isLayoutLoadNeeded(mode)) return
+        val computed = layoutManager.fetchComputedLayout(mode, activeSubtypeProvider())
         publishLayout(mode, KeyboardLayoutData.from(computed))
     }
 
