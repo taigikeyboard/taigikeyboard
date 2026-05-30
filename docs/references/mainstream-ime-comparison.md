@@ -2,7 +2,7 @@
 
 > **Type**: Reference index
 > **Purpose**: Centralised cross-reference of every mainstream IME / keyboard repo cloned under `references/`, plus a few external projects worth knowing. Read this **before** writing a `最佳實踐對齊` section in a plan, before designing a new engine slice, or before asserting "Project X already does Y".
-> **Status**: Authoritative as of 2026-05-17. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
+> **Status**: Authoritative as of 2026-05-30. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
 > **Related deep-dives**:
 > - [`azookey-reference.md`](./azookey-reference.md) — azooKey iOS UI / CustardKit / action model
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
@@ -43,6 +43,10 @@
 | 14 | `aiongtaigi-sushi/` (decompiled) | Kotlin + Compose (decompiled) | Android (IME) | Full IME (Taigi) | Unknown (closed source; class names obfuscated `p001a0` etc.) | Unknown | Has on-device `hanji_corrections.csv` orthography map | TL primary | Closed-source | **Hanji-correction CSV** at `resources/assets/hanji_corrections.csv` — direct reference for an orthography normalisation pass (`beh,欲,卜` style mapping from preferred → deprecated form) |
 | 15 | `lexical-models/` (Keyman) | TypeScript | Cross (Keyman) | Predictive model registry | Trie-based wordlist + frequency | Keyman's prediction algorithm | Not in scope | n/a (per-locale) | MIT | **Folder convention** (`release/<author>/<bcp47>.<uniq>/`) for shipping pluggable predictive models. Worth borrowing if we ever externalise dictionary distribution |
 | 16 | `trime/` | Kotlin/Java + JNI (C++) | Android (IME) | RIME wrapper | Delegates to librime | librime's Spelling Algebra | librime user dict (LevelDB) | librime syllabifier (per-schema YAML) | **GPL-3.0-or-later** | **Android counterpart to Hamster** — only open-source, actively-maintained reference for embedding a native engine into an Android IME via JNI. Async `RimeDispatcher`/`RimeDaemon`/`RimeSession` pattern + 3 candidate-UI modes + on-device RIME data deployment |
+| 17 | `mozc/` | C++ (Bazel) | Cross (Android lib / macOS / Win / Linux / ChromeOS) | Full IME (Japanese, Google) | Connector-cost **lattice + Viterbi** (`converter/lattice.cc`, `immutable_converter.cc`, `nbest_generator.cc`) | Connection-matrix + POS cost + segment rerank (`rewriter/`) | `dictionary/user_dictionary.cc` + storage + suppression dict | Kana composer (`composer/`) | BSD-3-Clause | **Canonical n-gram + lattice + Viterbi reference** that modern Japanese IMEs (azooKey incl.) trace lineage to. Promoted from external pointer → cloned `afbf1d089` (2026-05-27) |
+| 18 | `rakukan/` | Rust | Windows (TSF) | Full IME (Japanese, LLM) | LLM (llama.cpp `jinen`) + mozc/SKK dict merge; live-conversion + range-select flow | Dict-merge + user-dict learning + literal (digit/alpha) protection | `rakukan-dict` user dict; immediate commit learning | Kana/romaji (`engine/kana.rs`, `romaji/`) | MIT | **Rust IME with out-of-process engine-host** (`rakukan-engine-host.exe` over Named-Pipe + postcard RPC) + **live conversion**. Closest arch analogue for our Rust-engine FFI + continuous input. `ea8e151` (2026-05-29) |
+| 19 | `PIME/` | C++ + Python/Node/Go | Windows (TSF) | IME framework (multi-backend host) | per-backend (hosts libchewing, McBopomofoWeb, …) | per-backend | per-backend | per-backend | LGPL-2.1 (mixed; per-part) | **Out-of-process multi-backend IME host**: TSF C++ shell ↔ python/node/go server over JSON (`backends.json`). Reference for hosting a foreign engine (e.g. McBopomofoWeb node backend) behind one Windows IME shell. `571759f` (2026-05-16) |
+| 20 | `MacishType/` | Swift + JavaScript | macOS (IMK) | IME shell (JS-pluggable) | engine-defined (external JS) | engine-defined | engine-defined | engine-defined | MIT | **Native-look candidate window** (horizontal / vertical / expandable, app-accent-color match) + **JS-pluggable engine** with `manifest.json`-generated Settings UI. Reference for candidate-window layouts + config-driven engine plugin. `8a6cb3a` (2026-05-27) |
 
 ---
 
@@ -55,7 +59,8 @@ If you are working on… → read these in order.
 1. **`McBopomofo/algorithm.md`** — clearest pedagogical write-up (ReadingGrid, Spans, topological-sort relaxation). Required reading before touching `engine/composing/src/walker/`.
 2. **`khiin-rs/khiin/src/data/segmenter.rs`** — word-level DP cost function. Already mirrored in our roadmap Phase 9 user_freq_boost work.
 3. **`librime/src/rime/algo/syllabifier.cc`** — DAG construction with prism (double-array trie). Industry baseline.
-4. **`moe-taigi-reference.md`** — segment-by-segment "Nail" UX (we explicitly rejected this in 2026-03; keep for context).
+4. **`mozc/src/converter/immutable_converter.cc` + `lattice.cc` + `nbest_generator.cc`** — full connection-cost **Viterbi** + N-best. The "do it properly" end of the spectrum; read when justifying whether a Taigi slice needs a real connection matrix or the cheaper topological-sort relaxation (McBopomofo) / our walker suffices.
+5. **`moe-taigi-reference.md`** — segment-by-segment "Nail" UX (we explicitly rejected this in 2026-03; keep for context).
 
 ### Candidate ranking (user_freq, recency, bigram)
 
@@ -81,12 +86,16 @@ If you are working on… → read these in order.
 
 1. **`librime-predict/src/predictor.cc`** — full plugin, ~7 source files, easiest to read end-to-end.
 2. **`lexical-models/`** — Keyman's external predictive-model registry; relevant if we ever want pluggable dictionaries.
+3. **`mozc/src/prediction/dictionary_predictor.cc` + `dictionary_prediction_aggregator.cc`** — production-grade suggestion aggregation (dictionary + zero-query). Read when our prediction needs to merge multiple candidate sources with budget caps.
+4. **`rakukan/docs/LIVE_CONV_REDESIGN_REVISED.md`** + `crates/rakukan-engine/src/segments.rs` — **live conversion** (auto-show top candidate on pause) + literal protection. Closest non-Taigi reference for our continuous-input candidate flow.
 
 ### Native-engine embedding / FFI threading (mobile)
 
 1. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android: engine on one dedicated thread, `suspend` `RimeApi` + `SharedFlow` events, lifecycle ready-gating, ref-counted sessions. Closest open-source model for our Android↔Rust FFI threading.
 2. **`Hamster/`** — iOS: how to build & embed librime as an iOS framework (the iOS-side counterpart; see card #7).
 3. **External: fcitx5-android** — the dispatcher/daemon pattern Trime is adapted from; clone on demand if the abstraction itself needs scrutiny.
+4. **`rakukan/` out-of-process host** — `crates/rakukan-engine-host/` + `rakukan-engine-rpc/` (Named-Pipe + postcard) + `rakukan-engine-abi/` (DLL loader). Desktop answer to engine isolation: the heavy Rust/LLM/GPU engine runs in a **separate process** behind a thin RPC. Read when engine crashes / GPU memory ever push us toward sandboxing the engine off the keyboard surface (#18).
+5. **`PIME/` multi-backend host** — `backends.json` + `PIMETextService/` + `PIMELauncher/`. One TSF shell ↔ N engines (python/node/go) over JSON IPC; runs McBopomofoWeb as a node backend. The "one shell, many engines, stable IPC boundary" concept (#19). Transport (process fork + IPC) does **not** transfer to a sandboxed mobile keyboard — only the shell/engine separation does.
 
 ### Custom keyboard layout / UI
 
@@ -95,12 +104,15 @@ If you are working on… → read these in order.
 3. **`florisboard/lib/snygg/`** — Compose-based theming DSL for IME. Closest to what we'd want for Android theming.
 4. **`KeyboardKit-Documentation/`** — vendor SDK we run on; always consult before suspecting a KK bug.
 5. **`trime/app/src/main/java/com/osfans/trime/ime/candidates/`** — three Android candidate-render modes (popup / compact / unrolled); `unrolled/CandidatesPagingSource` pages a large candidate list via AndroidX Paging3.
+6. **`MacishType/MacishCandidateWindow/` + `Engines/README.md`** — macOS native candidate-window UX: horizontal / vertical / **expandable** layouts, paging-vs-expand, app-accent-color match, `pageSize` / `fontSize` / index-label knobs. The README `candidateWindow` table is a tidy checklist of candidate-UI options (#20).
 
 ### Schema / config-driven IME
 
 1. **`librime/`** — gold standard. YAML schemas with `__include`, `__patch`, `__append`, `__merge`. We do **not** want this level of flexibility, but the YAML shape is the reference if we externalise anything.
 2. **`rime-moetaigi/moetaigi.schema.yaml`** — minimal Taigi-shaped RIME schema.
 3. **`trime/app/src/main/java/com/osfans/trime/provider/RimeDataProvider.kt` + `app/data/rime/`** — how a RIME schema/dict bundle is *deployed and exposed* on Android (submodule-vendored data + `DocumentsProvider`).
+4. **`PIME/backends.json`** — minimal registry mapping `name → command/workingDir/params` for pluggable engine backends. The whole multi-engine dispatch in ~20 lines.
+5. **`MacishType/Engines/README.md`** — `manifest.json` engine contract: declare a field → it's fixed; omit it → host auto-exposes a user control. Clean "config sets it OR user controls it" model for settings-vs-defaults seams.
 
 ### Taigi-specific UX / data
 
@@ -304,16 +316,94 @@ If you are working on… → read these in order.
   - **Engine data deployment on Android**: submodule-vendored schema/dict + a `DocumentsProvider` for user access — reference if we ever let users inspect/edit on-device dictionary files.
 - **Caveat**: librime engine internals (segmentation / Spelling Algebra / user-dict math) are **already covered** by `librime` (#8) + `rime-reference.md`; do not re-derive them from Trime. Trime's value is the **Android integration layer**, not the engine.
 
+### 17. mozc (Google Japanese Input) — `references/mozc/`
+
+- **What**: Google's OSS Japanese IME, C++ / Bazel. Multi-platform (Android lib, macOS, Windows, Linux, ChromeOS). Origin of Google Japanese Input. BSD-3-Clause. Clone `afbf1d089` (2026-05-27). *Previously an external pointer; now cloned — see card here instead of the bottom section.*
+- **Why we care**: The **canonical n-gram + lattice + Viterbi** Japanese converter. Most modern Japanese IMEs (azooKey included) trace their converter design to Mozc. Read it when comparing **full Viterbi** (Mozc) vs the **topological-sort relaxation** McBopomofo uses (#11) vs our walker — i.e. when deciding whether a Taigi lattice slice needs a real connection-cost matrix or the cheaper relaxation is sufficient.
+- **Where to look**:
+  - `src/converter/lattice.{h,cc}` — the lattice node structure
+  - `src/converter/immutable_converter.{h,cc}` — Viterbi over the lattice with connection costs
+  - `src/converter/nbest_generator.{h,cc}` — N-best extraction (A* over the back-pointers)
+  - `src/converter/segments.{h,cc}` — segment / candidate container
+  - `src/prediction/dictionary_predictor.cc` + `dictionary_prediction_aggregator.cc` — prediction / suggestion
+  - `src/dictionary/user_dictionary.cc` + `user_dictionary_storage.cc` — user dict + import + suppression dictionary
+  - `src/rewriter/` — post-conversion candidate rerankers (date/number/symbol/usage)
+  - `src/composer/` — kana composition (romaji→kana table-driven)
+- **Inspiration takeaways for us**:
+  - **Connection-cost matrix + Viterbi** is the "do it properly" end of the lattice spectrum; our walker + McBopomofo's relaxation sit at the cheaper end. Cite Mozc when justifying why we *don't* need a full bigram connection matrix on mobile.
+  - **Suppression dictionary** (`user_dictionary` storage) — a clean "never surface this entry" layer separate from frequency. Reference if we ever add a user-level blocklist.
+  - **Rewriter pipeline** — post-Viterbi candidate transforms (number formatting, date) as composable passes; structurally similar to where our display-dedupe / orthography passes could live.
+- **Caveat**: Japanese-specific (kana, bunsetsu segmentation). Transfer the **algorithm shape**, not the linguistic rules — same rule as McBopomofo.
+
+### 18. rakukan — `references/rakukan/`
+
+- **What**: `rakukan` v0.9.3 — experimental **Rust** Windows Japanese IME. Core conversion = small local **LLM** (llama.cpp `jinen` model) + **mozc / SKK dictionaries** merged. TSF integration; GPU (CUDA / Vulkan) backends. MIT. Clone `ea8e151` (2026-05-29). Builds on `karukan`'s LLM converter + `azooKey-Windows` TSF layer.
+- **Why we care**: Architecturally the **closest non-Taigi cousin to our own engine** on two axes:
+  1. **Rust engine behind a thin platform shell** — exactly our Rust-engine + iOS/Android-wrapper split, here as `rakukan-tsf` (DLL shell) ↔ `rakukan-engine` (conversion DLL).
+  2. **Out-of-process engine isolation** — the engine runs in a separate **`rakukan-engine-host.exe`** process, reached over **Named-Pipe + `postcard` RPC** (`rakukan-engine-rpc`), with an ABI loader (`rakukan-engine-abi`) swapping CPU/Vulkan/CUDA engine DLLs. The IME shell stays light + stable while heavy LLM/GPU work is sandboxed. Reference for "isolate the heavy engine from the keyboard surface".
+  3. **Live conversion** (ライブ変換) — auto-show top candidate after a short pause; range-select (`Shift+←/→` → `Space` → `Enter`); punctuation-block splitting; **literal protection** (LLM must not mutate digits/alphanumerics: `2024ねん → 2024年`). Directly comparable to our continuous-input candidate flow.
+- **Where to look**:
+  - `docs/DESIGN.md` — full crate-by-crate design (Japanese); crate map at §2
+  - `crates/rakukan-engine/src/` — `backend.rs`, `segments.rs`, `conv_cache.rs`, `ffi.rs`, `kana.rs`, `romaji/`, `kanji/`, `dict/`
+  - `crates/rakukan-engine-host/` + `rakukan-engine-rpc/` + `rakukan-engine-abi/` — the out-of-process host + RPC + DLL-loader split
+  - `crates/rakukan-tsf/` — the TSF (Windows IME) shell
+  - `crates/rakukan-dict/` + `rakukan-dict-builder/` — mozc/SKK/user dict library + build tool
+  - `docs/LIVE_CONV_REDESIGN_REVISED.md`, `docs/CONVERTER_REDESIGN.md` — live-conversion + converter design notes
+- **Inspiration takeaways for us**:
+  - **Out-of-process engine** is the desktop answer to the same isolation problem our mobile FFI solves in-process; cite as prior art if engine crashes/GPU memory ever push us toward a sandboxed engine process.
+  - **Literal protection** (don't let the converter rewrite digits/alpha) is a concrete invariant worth mirroring for our continuous path.
+  - **LLM-based conversion** is explicitly *not* our path (on-device dict + lattice), but rakukan is the cleanest "we considered LLM conversion" cite.
+- **Caveat**: Windows/TSF + GPU/LLM specifics don't transfer to a mobile keyboard extension; read the **crate boundaries + RPC/host split + live-conv invariants**, not the Win32/CUDA glue.
+
+### 19. PIME — `references/PIME/`
+
+- **What**: `EasyIME/PIME` — a Windows **IME framework** that lets you implement input methods over Text Services Framework (TSF) without writing TSF C++. A C++ TSF shell (`PIMETextService` + `libIME2`) talks to a **backend server** (python / node / go) over a JSON protocol. Ships libchewing + McBopomofoWeb (node) backends. License mixed (core `libIME` LGPL-2.1). Clone `571759f` (2026-05-16).
+- **Why we care**: The **multi-backend out-of-process host** pattern: one IME shell registered with the OS, N pluggable engines behind a stable JSON IPC (`backends.json` maps `name → command/workingDir/params`). It is the Windows analogue of "host a foreign engine behind one keyboard surface" — e.g. it runs **McBopomofoWeb** (a JS port of McBopomofo) as a node backend. Reference when reasoning about engine-as-separate-process + a thin protocol boundary (compare: Trime's in-process JNI daemon #16, rakukan's Named-Pipe host #18).
+- **Where to look**:
+  - `backends.json` — the backend registry (the whole pattern in ~20 lines)
+  - `PIMETextService/` — the C++ TSF shell that dispatches to backends
+  - `libIME2/` — the reusable TSF wrapper (LGPL-2.1)
+  - `python/server.py` + `node/server.js` — backend server skeletons
+  - `McBopomofoWeb/` — a real engine (JS McBopomofo) wired in as a backend
+  - `PIMELauncher/` — process manager that spawns/monitors backend servers
+- **Inspiration takeaways for us**:
+  - **Stable IPC boundary between OS-facing shell and engine** — same idea as our FFI boundary, expressed as JSON-over-IPC instead of a C ABI. Useful framing when arguing where the engine/platform line should sit.
+  - **One shell, many engines** — if Taigi ever hosts multiple input engines behind one keyboard, this is the registry shape.
+- **Caveat**: Windows-only, IPC-not-FFI. Mobile keyboard extensions can't fork backend processes (sandbox), so the *transport* doesn't transfer — only the **shell/engine separation** concept does.
+
+### 20. MacishType — `references/MacishType/`
+
+- **What**: `MacishType` — a macOS Input Method Kit (IMK) IME that replicates the system candidate-window look and is **extensible via external JavaScript engines**. Swift host + JS engine sandbox. MIT. Clone `8a6cb3a` (2026-05-27).
+- **Why we care**: Two clean, directly-relevant references:
+  1. **Native candidate-window layouts** — horizontal / vertical / **expandable** panels, paging vs expand-to-reveal, app-accent-color matching, configurable `pageSize` / `fontSize` / index labels. The `Engines/README.md` `candidateWindow` table is a tidy spec of candidate-UI knobs.
+  2. **Config-driven engine plugin** — a `manifest.json` declares the entry module, candidate-window overrides, and a **Settings UI auto-generated from the manifest** (declare a field → it's fixed; omit it → the host exposes a user control). Hot-reloaded via FSEvents + security-scoped bookmark.
+- **Where to look**:
+  - `MacishType/CandidateWindow.swift` + `MacishCandidateWindow/` — the candidate window rendering
+  - `MacishType/InputController.swift` + `InputEngine.swift` — IMK entry + engine interface
+  - `MacishType/JavaScriptEngine/` — the JS host/sandbox
+  - `Engines/README.md` — the engine contract (`manifest.json` schema + candidate-window field table + Settings-UI generation rules)
+  - `Engines/ExampleEngine/` — a minimal working JS engine
+- **Inspiration takeaways for us**:
+  - **Candidate-window knob vocabulary** (layout direction, page size, expandable rows, index labels) — a checklist when we revisit our candidate bar / overlay options.
+  - **Manifest-declares-or-exposes** pattern — a clean rule for "config sets it OR user controls it"; reusable framing for our settings-vs-defaults seams.
+- **Caveat**: macOS IMK + a JS plugin runtime; we ship neither. Mine the **candidate-window UX spec** and the **config/settings model**, not the IMK or JS-host code.
+
+### Cloned but out-of-engine-scope (not IME engines)
+
+Two repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
+
+- **`ISEmojiView/`** (`fec2d03`, 2025-11-27, MIT) — an iOS **emoji-keyboard UI component** (categories, skin-tone variants, recently-used, system-style bottom bar). Not an IME. Relevance: **UI-only** reference for our emoji palette (`EmojiPaletteView`), if we revisit emoji-picker layout. `Sources/ISEmojiView/`.
+- **`KeSi/`** (`826e787`, 2025-12-16, MIT) — `i3thuan5/KeSi`, a **Tâi-bûn NLP toolkit** (Python) by 意傳科技: 斷詞, 輕聲標註, Unicode NFC + 教育部造字碼 normalisation, 漢羅↔全羅. Not an IME. Relevance: **phonetics / dictionary** tooling (see `memory/project_kesi_deprecated.md`), not the engine comparison — read `knowledge/taigi-phonetics-reference.md` + `taigi-converter/` first per CLAUDE.md Core Principle #3.
+
 ---
 
 ## External pointers (NOT cloned under `references/`)
 
 Worth knowing about; clone on demand when a specific question arises.
 
-### Mozc — https://github.com/google/mozc
+### Mozc — now cloned → see card #17
 
-- Google Japanese Input, OSS C++. The **reference implementation** for n-gram + lattice + Viterbi in Japanese IME. Most modern Japanese IMEs (azooKey included) trace lineage to Mozc's converter design.
-- Read when: designing a new lattice algorithm; choosing between unigram-only vs bigram lattice; questioning whether to add proper Viterbi vs the topological-sort relaxation McBopomofo uses.
+- **Promoted to a cloned repo** under `references/mozc/` (2026-05-27). See **per-repo card #17** + matrix row 17 above; this entry is kept only as a redirect.
 
 ### libchewing — https://github.com/chewing/libchewing
 
@@ -362,5 +452,6 @@ For Phase II+ (cross-platform alignment), read:
 
 - **2026-05-12** — Initial version. Indexed 13 repos under `references/` + 4 external pointers (Mozc, libchewing, Gboard, OpenVanilla). Built on top of existing deep-dives (azookey/khiin/rime/moe-taigi).
 - **2026-05-17** — Added repo #16 `trime/` (osfans/trime, RIME IME for Android, GPL-3.0, nightly `277b8ea2`). Matrix row + per-repo card + new "Native-engine embedding / FFI threading" topic section + Custom-UI / Schema-deploy / Phase II+ pointers. Index-only (no deep-dive): Trime's engine internals are already covered by `librime` (#8) + `rime-reference.md`; its value is the Android integration layer. Deep-dive deferred until an Android FFI/daemon slice needs it.
+- **2026-05-30** — Indexed 4 newly-cloned IMEs as cards/rows #17–20: **mozc** (`afbf1d089`, BSD-3, promoted from external pointer → cloned; Mozc external entry now a redirect), **rakukan** (`ea8e151`, MIT, Rust + LLM Windows IME, out-of-process engine-host + live conversion), **PIME** (`571759f`, LGPL-2.1, Windows TSF multi-backend host), **MacishType** (`8a6cb3a`, MIT, macOS IMK, JS-pluggable engine + native candidate window). Topic-index additions: lattice (mozc Viterbi), predictive (mozc predictor + rakukan live-conv), native-engine FFI (rakukan/PIME out-of-process), candidate UI (MacishType), config-driven (PIME `backends.json` + MacishType `manifest.json`). Added a "Cloned but out-of-engine-scope" note for `ISEmojiView/` (iOS emoji UI lib, not an IME) + `KeSi/` (Tâi-bûn NLP toolkit, not an IME) so they aren't re-explored as engine refs. Index-only (no deep-dives): create `docs/references/<repo>-reference.md` if a slice ever needs >500 LOC read-through of mozc's Viterbi or rakukan's RPC/live-conv.
 
 When adding a new repo under `references/`, append a card here and a row in the TL;DR matrix; if the repo is deep enough to warrant its own deep-dive (>500 LOC of read-through), create `docs/references/<repo>-reference.md` and link both ways.
