@@ -283,9 +283,19 @@ class CandidateOverlayView : FrameLayout {
         if (measurementFontType != currentFontType) {
             val typeface = TypefaceLoader.getTypefaceByType(currentFontType, context)
             primaryPaint.typeface = typeface
-            primaryPaint.textSize = PRIMARY_TEXT_SIZE_SP * resources.displayMetrics.scaledDensity
+            primaryPaint.textSize =
+                TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    PRIMARY_TEXT_SIZE_SP,
+                    resources.displayMetrics,
+                )
             subtitlePaint.typeface = typeface
-            subtitlePaint.textSize = SUBTITLE_TEXT_SIZE_SP * resources.displayMetrics.scaledDensity
+            subtitlePaint.textSize =
+                TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    SUBTITLE_TEXT_SIZE_SP,
+                    resources.displayMetrics,
+                )
             measurementFontType = currentFontType
         }
     }

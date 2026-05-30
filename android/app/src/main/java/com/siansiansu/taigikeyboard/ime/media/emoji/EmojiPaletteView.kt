@@ -47,7 +47,7 @@ import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
-private val EmojiCategoryValues = EmojiCategory.values()
+private val EmojiCategoryValues = EmojiCategory.entries
 private val EmojiBaseWidth = 70.dp
 private val EmojiDefaultFontSize = 35.sp
 

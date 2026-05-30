@@ -38,7 +38,7 @@ fun parseRawEmojiSpecsFile(
 ): EmojiLayoutDataMap {
     val logger = CompositionRoot.shared(context).logger
     val layouts = EmojiLayoutDataMap(EmojiCategory::class.java)
-    for (category in EmojiCategory.values()) {
+    for (category in EmojiCategory.entries) {
         layouts[category] = mutableListOf()
     }
     var reader: BufferedReader? = null

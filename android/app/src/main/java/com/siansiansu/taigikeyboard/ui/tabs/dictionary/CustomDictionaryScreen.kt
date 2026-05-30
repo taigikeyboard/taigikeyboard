@@ -324,7 +324,7 @@ fun CustomDictionaryScreen(
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.MenuBook,
+                                    imageVector = Icons.AutoMirrored.Outlined.MenuBook,
                                     contentDescription = null,
                                     modifier = Modifier.size(48.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
