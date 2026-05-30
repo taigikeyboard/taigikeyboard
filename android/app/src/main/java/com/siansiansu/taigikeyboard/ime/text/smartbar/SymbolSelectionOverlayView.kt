@@ -1,27 +1,25 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.core.graphics.toColorInt
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
  * Symbol selection overlay view.
  *
- * Covers the keyboard area with a tabbed symbol grid (7 category tabs),
- * matching the LayoutSelectionOverlayView pattern.
+ * Thin FrameLayout shell hosting Compose M3 content ([SymbolOverlayContent] — PrimaryTabRow +
+ * LazyVerticalGrid), following the ComposeView pattern of SettingsSelectionOverlayView.
+ * Tab/grid colors honor the user-customizable keyboard theme ([KeyboardChromeColors]).
  */
 class SymbolSelectionOverlayView : FrameLayout {
     companion object {
@@ -29,13 +27,12 @@ class SymbolSelectionOverlayView : FrameLayout {
     }
 
     private var isShowing: Boolean = false
-    private var selectedTab: SymbolCategory = SymbolCategory.FULL_WIDTH
+    private var composeView: ComposeView? = null
 
     private val logger by lazy { CompositionRoot.shared(context).logger }
 
-    private var tabBar: LinearLayout? = null
-    private val tabButtons = mutableListOf<Button>()
-    private var gridContainer: LinearLayout? = null
+    // Bumped on each show() to re-resolve keyboard colors + reset the active tab to FULL_WIDTH.
+    private val refreshTrigger = mutableIntStateOf(0)
 
     var onSymbolSelected: ((String) -> Unit)? = null
 
@@ -44,54 +41,50 @@ class SymbolSelectionOverlayView : FrameLayout {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
     init {
-        LayoutInflater.from(context).inflate(R.layout.symbol_selection_overlay, this, true)
         visibility = GONE
-    }
-
-    override fun onFinishInflate() {
-        super.onFinishInflate()
-
-        tabBar = findViewById(R.id.symbol_overlay_tab_bar)
-        gridContainer = findViewById(R.id.symbol_overlay_grid_container)
-
-        buildTabButtons()
-    }
-
-    private fun buildTabButtons() {
-        val bar = tabBar ?: return
-        bar.removeAllViews()
-        tabButtons.clear()
-
-        val density = resources.displayMetrics.density
-
-        for ((index, category) in SymbolCategory.entries.withIndex()) {
-            val btn =
-                Button(context).apply {
-                    text = category.label
-                    textSize = 13f
-                    isAllCaps = false
-                    minWidth = 0
-                    minimumWidth = 0
-                    setPadding(0, 0, 0, 0)
-                    layoutParams =
-                        LinearLayout
-                            .LayoutParams(
-                                0,
-                                (44 * density).toInt(),
-                                1f,
-                            ).apply {
-                                marginStart = if (index > 0) (4 * density).toInt() else 0
-                            }
-                    setBackgroundResource(R.drawable.smartbar_button_background)
-                    setOnClickListener {
-                        selectedTab = category
-                        updateTabStyles()
-                        buildGrid(SymbolData.rows(category), category.columnCount, category.fontSize)
-                    }
-                }
-            tabButtons.add(btn)
-            bar.addView(btn)
+        val typedValue = TypedValue()
+        if (context.theme.resolveAttribute(R.attr.keyboard_bgColor, typedValue, true)) {
+            setBackgroundColor(typedValue.data)
         }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        // DisposeOnDetachedFromWindow (not …ViewTreeLifecycleDestroyed): the IME input view
+        // detaches on config change while the service Lifecycle stays alive, so the composition
+        // must dispose at the detach boundary. See SmartbarView for the same rationale.
+        composeView =
+            ComposeView(context).apply {
+                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            }
+
+        addView(
+            composeView,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+            ),
+        )
+
+        composeView?.setContent {
+            TaigiKeyboardTheme {
+                val trigger by refreshTrigger
+                SymbolOverlayContent(
+                    chromeColors = rememberKeyboardChromeColors(trigger),
+                    resetKey = trigger,
+                    onSymbolSelected = { onSymbolSelected?.invoke(it) },
+                )
+            }
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // Remove the child + drop the ref so a later reattach rebuilds a single fresh ComposeView
+        // instead of stacking a second one on top of the (now composition-disposed) old child.
+        composeView?.let { removeView(it) }
+        composeView = null
     }
 
     /**
@@ -117,14 +110,8 @@ class SymbolSelectionOverlayView : FrameLayout {
                 }
         }
 
-        selectedTab = SymbolCategory.FULL_WIDTH
-        updateTabStyles()
-        buildGrid(
-            SymbolData.rows(SymbolCategory.FULL_WIDTH),
-            SymbolCategory.FULL_WIDTH.columnCount,
-            SymbolCategory.FULL_WIDTH.fontSize,
-        )
-
+        // Re-resolve colors + reset active tab to FULL_WIDTH (legacy reopen behavior).
+        refreshTrigger.intValue++
         visibility = VISIBLE
         isShowing = true
 
@@ -144,117 +131,4 @@ class SymbolSelectionOverlayView : FrameLayout {
     }
 
     fun isVisible(): Boolean = isShowing
-
-    private fun updateTabStyles() {
-        val accentColor = resolveAccentColor()
-        val fgColor = resolveForegroundColor()
-        val density = resources.displayMetrics.density
-
-        SymbolCategory.entries.forEachIndexed { index, category ->
-            val btn = tabButtons.getOrNull(index) ?: return@forEachIndexed
-            if (category == selectedTab) {
-                btn.background =
-                    GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 6 * density
-                        setColor(accentColor)
-                    }
-                btn.setTextColor(Color.WHITE)
-            } else {
-                btn.setBackgroundResource(R.drawable.smartbar_button_background)
-                btn.setTextColor(fgColor)
-            }
-        }
-    }
-
-    private fun buildGrid(
-        rows: List<List<String>>,
-        columnCount: Int,
-        fontSize: Float,
-    ) {
-        val container = gridContainer ?: return
-        container.removeAllViews()
-
-        val density = resources.displayMetrics.density
-        val fgColor = resolveForegroundColor()
-        val cellHeight = (40 * density).toInt()
-        val spacing = (4 * density).toInt()
-
-        for (row in rows) {
-            val rowLayout =
-                LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams =
-                        LinearLayout
-                            .LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                LinearLayout.LayoutParams.WRAP_CONTENT,
-                            ).apply {
-                                bottomMargin = spacing
-                            }
-                }
-
-            for (i in 0 until columnCount) {
-                val symbol = row.getOrNull(i)
-                if (symbol != null) {
-                    val cell =
-                        TextView(context).apply {
-                            text = symbol
-                            setTextColor(fgColor)
-                            textSize = fontSize
-                            gravity = Gravity.CENTER
-                            layoutParams =
-                                LinearLayout
-                                    .LayoutParams(
-                                        0,
-                                        cellHeight,
-                                        1f,
-                                    ).apply {
-                                        marginStart = if (i > 0) spacing else 0
-                                    }
-                            isClickable = true
-                            setOnClickListener {
-                                onSymbolSelected?.invoke(symbol)
-                            }
-                        }
-                    rowLayout.addView(cell)
-                } else {
-                    // Empty placeholder cell
-                    val spacer =
-                        View(context).apply {
-                            layoutParams =
-                                LinearLayout
-                                    .LayoutParams(
-                                        0,
-                                        cellHeight,
-                                        1f,
-                                    ).apply {
-                                        marginStart = if (i > 0) spacing else 0
-                                    }
-                        }
-                    rowLayout.addView(spacer)
-                }
-            }
-
-            container.addView(rowLayout)
-        }
-    }
-
-    private fun resolveAccentColor(): Int {
-        val typedValue = TypedValue()
-        return if (context.theme.resolveAttribute(R.attr.smartbar_accentColor, typedValue, true)) {
-            typedValue.data
-        } else {
-            "#007AFF".toColorInt()
-        }
-    }
-
-    private fun resolveForegroundColor(): Int {
-        val typedValue = TypedValue()
-        return if (context.theme.resolveAttribute(R.attr.smartbar_fgColor, typedValue, true)) {
-            typedValue.data
-        } else {
-            Color.BLACK
-        }
-    }
 }
