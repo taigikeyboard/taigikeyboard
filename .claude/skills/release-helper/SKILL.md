@@ -1,6 +1,6 @@
 ---
 name: release-helper
-description: Cut a release on main. Diff against base tag, rebuild dict + Rust engine, update 4 changelog files, commit, force-retag, push. Args:&nbsp;<base-tag>&nbsp;<target-version>. Re-run safe — auto picks full vs incremental, overrides existing tag, dedupes entries by topic.
+description: Cut a release on main. Diff against base tag, rebuild dict + Rust engine, update 4 changelog files, commit, push. User tags manually. Args:&nbsp;<base-tag>&nbsp;<target-version>. Re-run safe — auto picks full vs incremental, dedupes entries by topic.
 disable-model-invocation: false
 ---
 
@@ -9,7 +9,9 @@ disable-model-invocation: false
 Run from `main`. User supplies `<base-tag> <target>`.
 Example: `/release-helper v3.5.0 v3.5.7`
 
-Re-run safe: existing `<target>` tag is force-overwritten; existing changelog entries are merged in place by topic, never blindly appended. Step 4.5 auto-selects full regenerate vs incremental.
+Re-run safe: existing changelog entries are merged in place by topic, never blindly appended. Step 4.5 auto-selects full regenerate vs incremental.
+
+**This skill does NOT tag.** It commits + pushes the release prep to `main`; tagging is user-gated and manual. After the skill finishes, the user runs `git tag <target> && git push origin <target>` themselves.
 
 ## 1. Sanity (abort on failure)
 
@@ -19,7 +21,7 @@ Re-run safe: existing `<target>` tag is force-overwritten; existing changelog en
 - `git rev-parse <base-tag>` succeeds
 - Open PRs (`gh pr list`): if any, list and ask before continuing
 
-If `<target>` tag exists locally or on origin, note it once; step 6 will overwrite.
+If `<target>` tag exists locally or on origin, note it once (informational — this skill never creates or moves tags).
 
 ## 2. Housekeeping
 
@@ -76,14 +78,19 @@ State the chosen mode before step 5 ("mode: incremental, N new commits since `<t
 - Group small related fixes into one line
 - iOS and Android lists may diverge — only what each platform exposes
 
-## 6. Commit + force-tag + push
+## 6. Commit + push (NO tag)
 
 ```
 git add -A
 git commit -m "<target>: changelog + dict/engine rebuild"
-git tag -f <target>
 git push origin main
-git push --force origin refs/tags/<target>
+```
+
+Do **NOT** tag. After pushing, report the commit SHA and tell the user to tag manually when ready:
+
+```
+git tag <target>
+git push origin <target>
 ```
 
 If steps 4 + 5 produced no diff: tell the user, do not commit.
@@ -93,3 +100,4 @@ If steps 4 + 5 produced no diff: tell the user, do not commit.
 - Hand-edit ONLY the 4 changelog files. Build artifacts ride via `git add -A`.
 - Never modify other versions' `changelog/*.md`.
 - Rebuild failure: surface error, abort before committing.
+- Never tag. Tagging is user-gated and manual — the skill stops after `git push origin main`.
