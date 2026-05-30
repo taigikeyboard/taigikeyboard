@@ -211,7 +211,7 @@ MOE-style separation of manually-managed vs auto-learned user-frequency entries.
 
 ### Android UI modernization — modern Compose components for IME chrome
 
-**Goal** (USER 2026-05-30, verbatim): 「希望 android 盡量使用 UI 現代元件」. **Status**: deep audit scheduled NEXT ROUND (post-`/clear`); no version assigned (user-gated per `feedback_no_unilateral_release_scope`).
+**Goal** (USER 2026-05-30, verbatim): 「希望 android 盡量使用 UI 現代元件」. **Status**: ✅ **DONE** (2026-05-30) — all 3 chrome/overlay migration slices MERGED + dogfood-clean: Symbol `e7eb4239` (#362) / Layout `b96b65a6` (#364) / Candidate `58cee891` (#365). Each pure-View overlay → thin ComposeView host + Compose M3 content; keys stay custom-draw (per "Key distinction" below). No version assigned (user-gated per `feedback_no_unilateral_release_scope`). Optional leftover = base `ComposeOverlayView` extraction (rule-of-three, YAGNI candidate — not tracked). Full hand-off → memory `project_android_compose_modernization.md`.
 
 **Exploration findings (2026-05-30, grounded in code)** — the hard part is already done:
 
@@ -220,7 +220,7 @@ MOE-style separation of manually-managed vs auto-learned user-frequency entries.
 - **Key distinction**: "modern Compose" ≠ "standard M3 widgets". The **keys must stay custom-drawn** (Canvas + `KeyboardColorSettings` user colors + multi-touch/long-press/flick) — `Button()`-per-key = perf/memory/touch regression; no mainstream IME uses Material widgets for keys. Migration target = **chrome/overlay layer only** (candidate `RecyclerView` → `LazyVerticalGrid`, overlays → Compose M3).
 - **Constraint**: root `InputView`/window structure is the `project_ime_window_arch.md` IME-dismiss bug zone (8 commits to fix) — touching it = highest risk. Leaf overlays (no window coupling) = low-risk sweet spot.
 
-**Next-round audit deliverable**: per-file slice list (factual, grounded, no version) classifying each remaining View class by migrate / keep-custom / window-fragile. Full hand-off → memory `project_android_compose_modernization.md`. Best-practices entry point: `docs/references/mainstream-ime-comparison.md` (how peer IMEs structure keyboard vs chrome rendering) + `.claude/rules/android-ime-patterns.md §2` (FlorisBoard-derived = platform, don't gratuitously purify).
+**Outcome**: 3 leaf overlays (Symbol/Layout/Candidate) migrated to Compose M3 over a shared `KeyboardChromeColors` seam; `InputView`/window kept as View (IME-dismiss bug zone, untouched). Best-practices entry point: `docs/references/mainstream-ime-comparison.md` (how peer IMEs structure keyboard vs chrome rendering) + `.claude/rules/android-ime-patterns.md §2` (FlorisBoard-derived = platform, don't gratuitously purify).
 
 ---
 
