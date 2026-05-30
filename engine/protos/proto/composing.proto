@@ -161,11 +161,32 @@ message EnterContinuous {}
 // feature disabled — fully backward-compatible (older builds simply
 // never set field 4). See `docs/engine/continuous-input-ranking.md`
 // §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+//
+// PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
+// source-toggle state so keyboard continuous candidates honour the SAME
+// 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+// appendix) toggles the Tab3 browse path already applies. Same wire
+// layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
+// bits 0-12 + kautian subcollection high region bits 13-25), produced by
+// the SAME `compute_filters` bridge both platforms call for browse — no
+// continuous-specific encoder, so browse and continuous can never drift.
+// The engine decodes it via `Filter::from_enabled_bitmask` inside
+// `composing::continuous::assemble_candidates` → `ContinuousFetchCtx`.
+//
+// SENTINEL: `0` (proto3 default) means "platform did not wire this" and
+// is normalised to `u32::MAX` (legacy all-on) in
+// `composing::dispatch::handle_fetch_at_pos`, reproducing the pre-PR-9.6
+// behaviour for older / un-wired builds. A real bitmask is never `0`
+// because `compute_filters` always sets the `dev` bit (bit 10), so `0`
+// is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
+// `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
+// convention).
 message FetchAtPos {
   uint32 position                          = 1;
   repeated FrequencyEntry frequency_entries = 2;
   int64 now_ms                             = 3;
   repeated CustomDictEntry custom_entries  = 4;
+  uint32 enabled_sources_bitmask           = 5;
 }
 
 // v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled

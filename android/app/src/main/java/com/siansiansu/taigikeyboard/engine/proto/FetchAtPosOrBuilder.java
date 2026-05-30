@@ -48,4 +48,10 @@ public interface FetchAtPosOrBuilder extends
    * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
    */
   int getCustomEntriesCount();
+
+  /**
+   * <code>uint32 enabled_sources_bitmask = 5;</code>
+   * @return The enabledSourcesBitmask.
+   */
+  int getEnabledSourcesBitmask();
 }

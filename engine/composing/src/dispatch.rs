@@ -74,6 +74,7 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
             frequency_entries: m.frequency_entries,
             now_ms: m.now_ms,
             custom_entries: m.custom_entries,
+            enabled_sources_bitmask: m.enabled_sources_bitmask,
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
@@ -107,12 +108,14 @@ pub fn handle(
             frequency_entries,
             now_ms,
             custom_entries,
+            enabled_sources_bitmask,
         } => Ok(handle_fetch_at_pos(
             engine,
             position,
             &frequency_entries,
             now_ms,
             &custom_entries,
+            enabled_sources_bitmask,
             config,
         )),
         intent => Ok(engine.apply(intent, config)),
@@ -147,6 +150,7 @@ fn handle_fetch_at_pos(
     frequency_entries: &[FrequencyEntry],
     now_ms: i64,
     custom_entries: &[CustomDictEntry],
+    enabled_sources_bitmask: u32,
     config: &AppConfig,
 ) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
@@ -221,11 +225,33 @@ fn handle_fetch_at_pos(
     // with builds that never set `FetchAtPos.custom_entries`).
     // 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry,空 list = 無 custom,合成 0 筆、去重 no-op。
     let custom = build_custom_entries(custom_entries);
+    // PR-9.6 — normalise the source-toggle bitmask at the proto→domain
+    // boundary: proto3 default `0` means "platform did not wire this"
+    // (older / un-wired build) and maps to `u32::MAX` (legacy all-on),
+    // reproducing pre-PR-9.6 behaviour where continuous candidates
+    // ignored toggles. A real bitmask is never `0` because
+    // `compute_filters` always sets the `dev` bit, so `0` is an
+    // unambiguous absence marker. Normalising here (mirroring the
+    // `build_frequency_map` / `build_custom_entries` hoists) keeps
+    // `assemble_candidates` taking an already-resolved enabled bitmask —
+    // no domain code has to know about the wire sentinel.
+    // 中文: PR-9.6 — 在 proto→domain 邊界正規化 source-toggle bitmask;
+    // 中文:   0 (proto3 預設,平台未接線) → u32::MAX (legacy 全開),重現 PR-9.6 前忽略 toggle 的行為。
+    // 中文:   真實 bitmask 因 dev bit 必設故絕不為 0,0 為明確 absence sentinel;在此正規化讓 assemble_candidates 只收已解析值。
+    let enabled_sources_bitmask = if enabled_sources_bitmask == 0 {
+        u32::MAX
+    } else {
+        enabled_sources_bitmask
+    };
     // v3.5.9 A2 seam — the 6-step assemble_candidates contract
     // (key build → span-local/partial fetch → recase → walker slot-0
     // prepend → POJ presentation pass → return). Wire encoding (step 6)
     // happens below via `raw_to_proto_candidate` + `with_continuous`.
-    let candidates = assemble_candidates(raw, &freq_map, now_ms, &custom, mode);
+    // PR-9.6 — `enabled_sources_bitmask` (already sentinel-normalised
+    // above) flows into `ContinuousFetchCtx` so the span-local + partial
+    // -prefix fetchers apply the same `Filter` the Tab3 browse path uses.
+    let candidates =
+        assemble_candidates(raw, &freq_map, now_ms, &custom, mode, enabled_sources_bitmask);
     with_continuous(
         snapshot,
         ContinuousResponse {

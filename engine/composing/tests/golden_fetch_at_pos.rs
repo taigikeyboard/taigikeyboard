@@ -497,6 +497,11 @@ struct Case {
     freq: Vec<FrequencyEntry>,
     now_ms: i64,
     custom: Vec<CustomDictEntry>,
+    // PR-9.6 — source-toggle bitmask threaded into `FetchAtPos`. `0` is
+    // the proto3-absent sentinel → dispatch normalises it to `u32::MAX`
+    // (all sources on), so cases left at the default reproduce the
+    // pre-PR-9.6 all-on behaviour. A restrictive case sets a real mask.
+    enabled_sources_bitmask: u32,
 }
 
 fn case(name: &'static str, raw: &'static str, input_mode: &'static str) -> Case {
@@ -507,6 +512,7 @@ fn case(name: &'static str, raw: &'static str, input_mode: &'static str) -> Case
         freq: Vec::new(),
         now_ms: 0,
         custom: Vec::new(),
+        enabled_sources_bitmask: 0,
     }
 }
 
@@ -568,6 +574,7 @@ fn matrix() -> Vec<Case> {
                 roman: "tâi-gí".into(),
                 hanji: Some("台語".into()),
             }],
+            enabled_sources_bitmask: 0,
         },
         case("mixed", "iausi", "tl"),
         case("tailo_no_hanji", "li", "tl"),
@@ -582,6 +589,7 @@ fn matrix() -> Vec<Case> {
             }],
             now_ms: 1_000_000_000_000,
             custom: Vec::new(),
+            enabled_sources_bitmask: 0,
         },
         case("all_oov_partial_prefix", "g", "tl"),
         // Step 4b prefix-extension (2026-05-29): input `taigi` MUST
@@ -607,6 +615,24 @@ fn matrix() -> Vec<Case> {
         // `Tsua` was. Codex pre-impl Q2 + USER 裁示 2026-05-21.
         case("case_sensitive", "TaiUan", "tl"),
         case("headline_ranking", "taiuantaigi", "tl"),
+        // PR-9.6 — source-toggle filtering reaches the continuous path.
+        // Every fixture row is tagged source bit 11 (`lkk`) via
+        // `RANK_NEUTRAL_BITMASK`; a dev-only mask (bit 10 set, `lkk` OFF)
+        // must drop the `lkk`-tagged FST hits, proving the bitmask threads
+        // from `FetchAtPos.enabled_sources_bitmask` through dispatch →
+        // `ContinuousFetchCtx` → `Filter::from_enabled_bitmask` →
+        // `passes_filter`. Contrast with `headline_ranking` (same raw,
+        // default bitmask `0` → `u32::MAX` all-on) which keeps them — the
+        // golden diff between the two cases IS the filtering proof.
+        Case {
+            name: "source_filter_lkk_off",
+            raw: "taiuantaigi",
+            input_mode: "tl",
+            freq: Vec::new(),
+            now_ms: 0,
+            custom: Vec::new(),
+            enabled_sources_bitmask: (1 << 10), // dev only; lkk (bit 11) off
+        },
         // v3.5.9 B-2 — POJ first-class: `choa` is the POJ ASCII form
         // (POJ `chóa` → toneless `choa`). The `poj:choa` key in
         // `dictionary.fst` resolves to 紙 only — pre-B-2 this folded
@@ -642,6 +668,7 @@ fn matrix() -> Vec<Case> {
                 roman: "tâi-gí-khí-pôaⁿ".into(),
                 hanji: Some("台語齒盤".into()),
             }],
+            enabled_sources_bitmask: 0,
         },
         // ≥6-syllable long-OOV-vs-dict: `tai`/`taigi` dict-covered,
         // `lang`/`kang`/`tan`/`lai` proven-valid + dict-absent → OOV path
@@ -740,6 +767,7 @@ fn run_case(c: &Case) -> String {
             frequency_entries: c.freq.clone(),
             now_ms: c.now_ms,
             custom_entries: c.custom.clone(),
+            enabled_sources_bitmask: c.enabled_sources_bitmask,
         })),
         &mut engine,
         &cfg,

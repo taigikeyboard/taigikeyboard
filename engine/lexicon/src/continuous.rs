@@ -389,8 +389,10 @@ pub struct CustomEntry {
 // 中文:   收進一個借用 struct,call site 縮到 3-4 args、移除 clippy::too_many_arguments allow。欄位順序對齊舊
 // 中文:   fetch_candidates_for_keys 參數順序,讓 git blame 可逐欄對應;欄位全 pub,call site 用 struct literal 直接建。
 pub struct ContinuousFetchCtx<'a> {
-    /// `Filter::from_enabled_bitmask` input. Production passes
-    /// `u32::MAX` (all sources enabled); tests narrow it to verify
+    /// `Filter::from_enabled_bitmask` input. PR-9.6 — production passes
+    /// the platform's dictionary source-toggle bitmask (sentinel-
+    /// normalised in `composing::dispatch::handle_fetch_at_pos`, so `0`/
+    /// absent already became `u32::MAX` all-on); tests narrow it to verify
     /// filter behaviour.
     pub enabled_sources_bitmask: u32,
     /// Per-`display_text` user-selection snapshot. Empty map +
@@ -954,9 +956,11 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 /// key. Returns the highest-`score` [`record_to_candidate`] over
 /// `prefix_index.lookup_exact(key)` (NaN coerced low via
 /// [`NonNanF32`]; ties keep the first FST rowid for determinism), or
-/// `None` when the key has no dict hit. Filter parity with the
-/// production span-local path (`enabled_sources_bitmask = u32::MAX`,
-/// `composing::continuous::fetch_via_lexicon_inner`).
+/// `None` when the key has no dict hit. PR-9.6 — `enabled_sources_bitmask`
+/// gives the walker the SAME source filter the span-local path applies
+/// (`composing::continuous::fetch_via_lexicon_inner` via
+/// `ContinuousFetchCtx`), so a whole-sentence parse never re-surfaces a
+/// word whose only source the user toggled off. `u32::MAX` = all sources.
 ///
 /// The whole-sentence walker (`composing::lattice::walker`) calls
 /// this once per lattice edge through a dispatch-injected edge
@@ -976,8 +980,9 @@ pub fn best_candidate_for_key(
     now_ms: i64,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
+    enabled_sources_bitmask: u32,
 ) -> Option<RawCandidate> {
-    let filter = Filter::from_enabled_bitmask(u32::MAX);
+    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
     let mut best: Option<RawCandidate> = None;
     for rowid in prefix_index.lookup_exact(key) {
         let Some(record) = dict.record(rowid) else {

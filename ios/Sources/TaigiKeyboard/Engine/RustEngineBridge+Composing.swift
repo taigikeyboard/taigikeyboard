@@ -494,12 +494,17 @@ public extension RustEngineBridge {
         frequencyEntries: [Taigi_Engine_FrequencyEntry] = [],
         nowMs: Int64 = 0,
         customEntries: [Taigi_Engine_CustomDictEntry] = [],
+        // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
+        // sends). Default `0` = proto3-absent sentinel → engine all-on,
+        // preserving pre-PR-9.6 behaviour for callers (incl. tests).
+        enabledSourcesBitmask: UInt32 = 0,
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.position = 0
         payload.frequencyEntries = frequencyEntries
         payload.nowMs = nowMs
         payload.customEntries = customEntries
+        payload.enabledSourcesBitmask = enabledSourcesBitmask
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",

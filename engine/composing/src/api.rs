@@ -431,14 +431,22 @@ pub enum Intent {
     /// `phonetics::api::canonical_tl_form` only when synthesizing the
     /// `user_frequency.db` commit key (`display_text`), keeping the
     /// commit key mode-invariant.
+    /// PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
+    /// source-toggle state so continuous candidates honour the same
+    /// toggles as Tab3 browse. Decoded verbatim from
+    /// `FetchAtPos.enabled_sources_bitmask`; the `0`-means-absent →
+    /// `u32::MAX` sentinel is resolved in `handle_fetch_at_pos`. Full
+    /// wire/sentinel contract: the `FetchAtPos` proto comment.
     // 中文: Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
     // 中文: Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
     // 中文: Phase 9 Item 12 — 加帶平台 custom_dictionary.db 命中 (raw roman/hanji),供 engine 合成 + (roman,hanji) 去重。
+    // 中文: PR-9.6 — 加帶平台 source-toggle bitmask;0=未接線 sentinel 在 handle_fetch_at_pos 正規化為 u32::MAX。
     FetchAtPos {
         position: u32,
         frequency_entries: Vec<protos::engine::FrequencyEntry>,
         now_ms: i64,
         custom_entries: Vec<protos::engine::CustomDictEntry>,
+        enabled_sources_bitmask: u32,
     },
     /// Nail a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the nailed segment's raw text and

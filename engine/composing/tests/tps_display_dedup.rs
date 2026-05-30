@@ -294,6 +294,7 @@ fn fetch(raw: &str, input_mode: &str) -> Vec<(Option<String>, String)> {
             frequency_entries: Vec::new(),
             now_ms: 0,
             custom_entries: Vec::new(),
+            enabled_sources_bitmask: 0,
         })),
         &mut engine,
         &cfg,

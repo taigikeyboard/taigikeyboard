@@ -284,6 +284,17 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
         let spacing = Self.continuousSpacingFlags(settings)
 
+        // PR-9.6 — compute the dictionary source-toggle bitmask from the
+        // SAME settings snapshot + SAME `compute_filters` bridge the Tab3
+        // browse path uses (`DictionarySearchService.search`), so keyboard
+        // candidates honour the same 12 source toggles + kautian
+        // subcollection (腔調/姓名) toggles. Computed once and shared by
+        // both fetch phases (the result depends only on `settings`, stable
+        // for this synchronous fetch — mirrors `customEntries`).
+        let enabledSourcesBitmask = RustEngineBridge.lexiconDictionaryFilters(
+            toggles: RustEngineBridge.DictionaryToggles(from: settings),
+        ).dictionaryFilterBitmask
+
         // Phase 1: neutral fetch to learn candidate displayText keys.
         let neutral = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
@@ -292,6 +303,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             outputBothScripts: spacing.outputBothScripts,
             generation: generation,
             customEntries: customEntries,
+            enabledSourcesBitmask: enabledSourcesBitmask,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `.noop` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -330,6 +342,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             frequencyEntries: entries,
             nowMs: nowMs,
             customEntries: customEntries,
+            enabledSourcesBitmask: enabledSourcesBitmask,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition

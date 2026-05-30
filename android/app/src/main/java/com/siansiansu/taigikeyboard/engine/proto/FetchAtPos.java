@@ -51,6 +51,26 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * feature disabled — fully backward-compatible (older builds simply
  * never set field 4). See `docs/engine/continuous-input-ranking.md`
  * §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+ *
+ * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
+ * source-toggle state so keyboard continuous candidates honour the SAME
+ * 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+ * appendix) toggles the Tab3 browse path already applies. Same wire
+ * layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
+ * bits 0-12 + kautian subcollection high region bits 13-25), produced by
+ * the SAME `compute_filters` bridge both platforms call for browse — no
+ * continuous-specific encoder, so browse and continuous can never drift.
+ * The engine decodes it via `Filter::from_enabled_bitmask` inside
+ * `composing::continuous::assemble_candidates` → `ContinuousFetchCtx`.
+ *
+ * SENTINEL: `0` (proto3 default) means "platform did not wire this" and
+ * is normalised to `u32::MAX` (legacy all-on) in
+ * `composing::dispatch::handle_fetch_at_pos`, reproducing the pre-PR-9.6
+ * behaviour for older / un-wired builds. A real bitmask is never `0`
+ * because `compute_filters` always sets the `dev` bit (bit 10), so `0`
+ * is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
+ * `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
+ * convention).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -304,6 +324,32 @@ public  final class FetchAtPos extends
     customEntries_.remove(index);
   }
 
+  public static final int ENABLED_SOURCES_BITMASK_FIELD_NUMBER = 5;
+  private int enabledSourcesBitmask_;
+  /**
+   * <code>uint32 enabled_sources_bitmask = 5;</code>
+   * @return The enabledSourcesBitmask.
+   */
+  @java.lang.Override
+  public int getEnabledSourcesBitmask() {
+    return enabledSourcesBitmask_;
+  }
+  /**
+   * <code>uint32 enabled_sources_bitmask = 5;</code>
+   * @param value The enabledSourcesBitmask to set.
+   */
+  private void setEnabledSourcesBitmask(int value) {
+
+    enabledSourcesBitmask_ = value;
+  }
+  /**
+   * <code>uint32 enabled_sources_bitmask = 5;</code>
+   */
+  private void clearEnabledSourcesBitmask() {
+
+    enabledSourcesBitmask_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -433,6 +479,26 @@ public  final class FetchAtPos extends
    * feature disabled — fully backward-compatible (older builds simply
    * never set field 4). See `docs/engine/continuous-input-ranking.md`
    * §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+   *
+   * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
+   * source-toggle state so keyboard continuous candidates honour the SAME
+   * 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+   * appendix) toggles the Tab3 browse path already applies. Same wire
+   * layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
+   * bits 0-12 + kautian subcollection high region bits 13-25), produced by
+   * the SAME `compute_filters` bridge both platforms call for browse — no
+   * continuous-specific encoder, so browse and continuous can never drift.
+   * The engine decodes it via `Filter::from_enabled_bitmask` inside
+   * `composing::continuous::assemble_candidates` → `ContinuousFetchCtx`.
+   *
+   * SENTINEL: `0` (proto3 default) means "platform did not wire this" and
+   * is normalised to `u32::MAX` (legacy all-on) in
+   * `composing::dispatch::handle_fetch_at_pos`, reproducing the pre-PR-9.6
+   * behaviour for older / un-wired builds. A real bitmask is never `0`
+   * because `compute_filters` always sets the `dev` bit (bit 10), so `0`
+   * is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
+   * `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
+   * convention).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -708,6 +774,34 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <code>uint32 enabled_sources_bitmask = 5;</code>
+     * @return The enabledSourcesBitmask.
+     */
+    @java.lang.Override
+    public int getEnabledSourcesBitmask() {
+      return instance.getEnabledSourcesBitmask();
+    }
+    /**
+     * <code>uint32 enabled_sources_bitmask = 5;</code>
+     * @param value The enabledSourcesBitmask to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEnabledSourcesBitmask(int value) {
+      copyOnWrite();
+      instance.setEnabledSourcesBitmask(value);
+      return this;
+    }
+    /**
+     * <code>uint32 enabled_sources_bitmask = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEnabledSourcesBitmask() {
+      copyOnWrite();
+      instance.clearEnabledSourcesBitmask();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -730,10 +824,11 @@ public  final class FetchAtPos extends
             "nowMs_",
             "customEntries_",
             com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.class,
+            "enabledSourcesBitmask_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0002\u0000\u0001\u000b\u0002\u001b" +
-              "\u0003\u0002\u0004\u001b";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0002\u0000\u0001\u000b\u0002\u001b" +
+              "\u0003\u0002\u0004\u001b\u0005\u000b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

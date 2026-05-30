@@ -466,6 +466,26 @@ public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
 /// feature disabled — fully backward-compatible (older builds simply
 /// never set field 4). See `docs/engine/continuous-input-ranking.md`
 /// §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+///
+/// PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
+/// source-toggle state so keyboard continuous candidates honour the SAME
+/// 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+/// appendix) toggles the Tab3 browse path already applies. Same wire
+/// layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
+/// bits 0-12 + kautian subcollection high region bits 13-25), produced by
+/// the SAME `compute_filters` bridge both platforms call for browse — no
+/// continuous-specific encoder, so browse and continuous can never drift.
+/// The engine decodes it via `Filter::from_enabled_bitmask` inside
+/// `composing::continuous::assemble_candidates` → `ContinuousFetchCtx`.
+///
+/// SENTINEL: `0` (proto3 default) means "platform did not wire this" and
+/// is normalised to `u32::MAX` (legacy all-on) in
+/// `composing::dispatch::handle_fetch_at_pos`, reproducing the pre-PR-9.6
+/// behaviour for older / un-wired builds. A real bitmask is never `0`
+/// because `compute_filters` always sets the `dev` bit (bit 10), so `0`
+/// is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
+/// `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
+/// convention).
 public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -478,6 +498,8 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   public var nowMs: Int64 = 0
 
   public var customEntries: [Taigi_Engine_CustomDictEntry] = []
+
+  public var enabledSourcesBitmask: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1605,7 +1627,7 @@ nonisolated extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1617,6 +1639,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.frequencyEntries) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.customEntries) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
       default: break
       }
     }
@@ -1635,6 +1658,9 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if !self.customEntries.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.customEntries, fieldNumber: 4)
     }
+    if self.enabledSourcesBitmask != 0 {
+      try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1643,6 +1669,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if lhs.frequencyEntries != rhs.frequencyEntries {return false}
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.customEntries != rhs.customEntries {return false}
+    if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

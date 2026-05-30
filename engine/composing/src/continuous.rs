@@ -351,16 +351,16 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 /// v3.5.9 A2 — span-local fetch inner. Pre-A2 `fetch_via_lexicon`'s body
 /// minus the `LexiconHandle::with_state` opener and the `prefix_index` /
 /// `dictionary` `as_ref()?` guards (those moved into [`assemble_candidates`]
-/// under the **D1 fold**). Behavior is byte-identical to pre-A2:
-/// `enabled_sources_bitmask = u32::MAX` (PR-9.6 will plumb platform
-/// toggles uniformly to both paths). Caller is responsible for the empty
+/// under the **D1 fold**). Caller is responsible for the empty
 /// `Vec::new()` return when state is unavailable.
 ///
 /// v3.5.9 D7 — takes [`ContinuousFetchCtx`] for the six shared lexicon
-/// args; `enabled_sources_bitmask` is pinned to `u32::MAX` at the seam
-/// construction site (`assemble_candidates`), not here.
-// 中文: A2 — fetch_via_lexicon 純內層;D1 fold 後 prefix/dict 由 seam 提取;bitmask 仍 u32::MAX,等 PR-9.6 兩條路徑同步 plumb。
+/// args. PR-9.6 — `enabled_sources_bitmask` is the platform's source-toggle
+/// state (sentinel-normalised in `dispatch::handle_fetch_at_pos`), built
+/// into the ctx at the seam (`assemble_candidates`), not here.
+// 中文: A2 — fetch_via_lexicon 純內層;D1 fold 後 prefix/dict 由 seam 提取。
 // 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx,seam 端建一次傳兩個 inner。
+// 中文: PR-9.6 — bitmask 為平台 source-toggle 值(dispatch 端正規化),在 seam 建入 ctx,非此處。
 fn fetch_via_lexicon_inner(
     keys: &[(ConsumedSpan, String)],
     raw_len: u32,
@@ -492,6 +492,7 @@ fn fetch_walker_slot0_inner(
     inv: &SyllableInventory,
     prefix: &PrefixIndex,
     dict: &DictionaryReader,
+    enabled_sources_bitmask: u32,
 ) -> Option<WalkerSlot0> {
     // v3.5.8 S6 (Codex pre-impl S6 Q2/Q6, 2026-05-17) — per-fetch
     // map from a custom entry's normalized toneless key to the
@@ -627,7 +628,22 @@ fn fetch_walker_slot0_inner(
                 user_weight_delta,
             });
         }
-        match best_candidate_for_key(&key, raw_span, freq_map, now_ms, prefix, dict) {
+        // PR-9.6 — the walker's per-edge dict lookup applies the SAME
+        // source filter as the span-local path so a whole-sentence parse
+        // cannot re-surface (at slot 0) a word whose only source the user
+        // toggled off. Custom edges above are unconditional (custom is not
+        // a toggleable source); dict edges honour `enabled_sources_bitmask`.
+        // 中文: PR-9.6 — walker edge dict 查詢套用與 span-local 相同的來源過濾,
+        // 中文:   避免全句切分在 slot 0 重新帶回被關閉來源的字(custom edge 不受限,dict edge 受 bitmask 限制)。
+        match best_candidate_for_key(
+            &key,
+            raw_span,
+            freq_map,
+            now_ms,
+            prefix,
+            dict,
+            enabled_sources_bitmask,
+        ) {
             Some(c) => {
                 // v3.5.8 S3 (Codex pre-impl Q4d seam, 2026-05-16):
                 // fold this edge's time-decayed user-frequency
@@ -893,6 +909,13 @@ fn fetch_walker_slot0_inner(
 /// parallel `is_tps: bool` arg (single mode axis, no split-brain).
 /// `mode == Poj` similarly derives the POJ branch — v3.5.9 B-0c
 /// dropped the prior `is_poj: bool` arg.
+///
+/// PR-9.6 — `enabled_sources_bitmask` is the platform's dictionary
+/// source-toggle state, already sentinel-normalised by
+/// `handle_fetch_at_pos` (`0`/absent → `u32::MAX` all-on). It flows
+/// straight into `ContinuousFetchCtx` so both inner fetchers decode it
+/// via `Filter::from_enabled_bitmask` — identical filtering to the Tab3
+/// browse path (12 sources + variant + khiin + kautian subcollection).
 /// Output is the unwrapped `Vec<RawCandidate>` the caller maps to
 /// `CandidateMessage` via `raw_to_proto_candidate`.
 // 中文: A2 seam — 6-step assemble_candidates。取代 A2 前 handle_fetch_at_pos 內 inline 區塊。
@@ -908,6 +931,7 @@ pub(crate) fn assemble_candidates(
     now_ms: i64,
     custom: &[CustomEntry],
     mode: phonetics::InputMode,
+    enabled_sources_bitmask: u32,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
     LexiconHandle::with_state(|state| {
@@ -918,15 +942,20 @@ pub(crate) fn assemble_candidates(
         // v3.5.9 D7 — build the shared lexicon-fetch context once per
         // seam invocation. `Some` only when BOTH `prefix_index` and
         // `dictionary` resolved; either inner fetcher (span-local or
-        // partial-prefix) needs both. `enabled_sources_bitmask =
-        // u32::MAX` is the production wiring (Item: PR-9.6 will plumb
-        // platform toggles uniformly).
-        // 中文: D7 — 此次 seam 共用的 lexicon-fetch ctx 只建一次;只有 prefix+dict 兩個都解到時才 Some
-        // 中文:   (兩個內層 fetcher 都需要);bitmask=u32::MAX 為當前 production 對齊 (待 PR-9.6 統一平台 plumb)。
+        // partial-prefix) needs both.
+        // PR-9.6 — `enabled_sources_bitmask` is now the platform's
+        // source-toggle state (sentinel-normalised in
+        // `dispatch::handle_fetch_at_pos`: `0`/absent → `u32::MAX`), so
+        // the span-local + partial-prefix fetchers apply the SAME
+        // `Filter` (sources + variant + khiin + kautian subcollection)
+        // the Tab3 browse path applies. `u32::MAX` keeps every source on.
+        // 中文: D7 — 此次 seam 共用的 lexicon-fetch ctx 只建一次;只有 prefix+dict 兩個都解到時才 Some (兩個內層 fetcher 都需要)。
+        // 中文: PR-9.6 — enabled_sources_bitmask 改為平台 source-toggle 狀態 (0/未接線在 handle_fetch_at_pos 正規化為 u32::MAX),
+        // 中文:   讓 span-local + partial-prefix 兩條 fetch 套用與 Tab3 browse 相同的 Filter (來源+variant+khiin+kautian subcollection)。
         let lex_ctx = prefix
             .zip(dict)
             .map(|(prefix_index, dict)| ContinuousFetchCtx {
-                enabled_sources_bitmask: u32::MAX,
+                enabled_sources_bitmask,
                 freq_map,
                 now_ms,
                 custom,
@@ -1074,6 +1103,7 @@ pub(crate) fn assemble_candidates(
                         inv,
                         prefix,
                         dict,
+                        enabled_sources_bitmask,
                     ) {
                         let slot0_cand = RawCandidate {
                             consumed_span: slot0.consumed_span,

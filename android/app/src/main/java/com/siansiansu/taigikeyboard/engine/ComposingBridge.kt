@@ -251,6 +251,7 @@ internal object ComposingBridge {
         customEntries: List<CustomDictEntry>,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
+        enabledSourcesBitmask: UInt,
     ): RustEngineBridge.ContinuousFetchResult {
         val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
             .newBuilder()
@@ -258,6 +259,7 @@ internal object ComposingBridge {
             .addAllFrequencyEntries(frequencyEntries)
             .setNowMs(nowMs)
             .addAllCustomEntries(customEntries)
+            .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
             .build()
         return composingFetchDispatch(
             methodSetter = { it.fetchAtPos = payload },

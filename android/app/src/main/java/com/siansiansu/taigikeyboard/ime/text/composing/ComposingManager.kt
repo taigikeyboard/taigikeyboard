@@ -8,6 +8,7 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.engine.LexiconBridge
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
@@ -504,6 +505,17 @@ class ComposingManager(
         val generation = currentGeneration
         val spacing = continuousSpacingFlags(settings)
 
+        // PR-9.6 — compute the dictionary source-toggle bitmask from the
+        // SAME settings snapshot + SAME `dictionaryFilters` bridge the Tab3
+        // browse path uses (`DictionarySearchViewModel`), so keyboard
+        // candidates honour the same 12 source toggles + kautian
+        // subcollection (腔調/姓名) toggles. Computed once and shared by
+        // both fetch phases (depends only on `settings`, stable across the
+        // two FFI calls — mirrors `customEntries`).
+        val enabledSourcesBitmask = LexiconBridge.dictionaryFilters(
+            LexiconBridge.DictionaryToggles.from(settings),
+        ).dictionaryFilterBitmask
+
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
             mode = mode,
@@ -512,6 +524,7 @@ class ComposingManager(
             customEntries = customEntries,
             effectiveSwapped = spacing.effectiveSwapped,
             outputBothScripts = spacing.outputBothScripts,
+            enabledSourcesBitmask = enabledSourcesBitmask,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `NOOP` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -553,6 +566,7 @@ class ComposingManager(
             customEntries = customEntries,
             effectiveSwapped = spacing.effectiveSwapped,
             outputBothScripts = spacing.outputBothScripts,
+            enabledSourcesBitmask = enabledSourcesBitmask,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition

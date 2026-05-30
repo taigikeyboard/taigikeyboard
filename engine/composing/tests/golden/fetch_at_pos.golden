@@ -62,6 +62,8 @@
 0|11|4|1|1|臺灣台語|tâi-uân-tâi-gí|臺灣台語|-11.2793|0xc1347824
 0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
 0|6|2|1|1|台灣|tâi-uân|台灣|1516.9000|0x44bd9ccd
+## source_filter_lkk_off :: taiuantaigi
+0|11|4|1|2|tai uan tai gi|tai uan tai gi|⌀|-109999996928.0000|0xd1cce416
 ## poj_ascii_choa :: choa
 0|4|1|1|1|紙|chóa|紙|-8.9112|0xc10e9464
 ## poj_ascii_goa :: goa

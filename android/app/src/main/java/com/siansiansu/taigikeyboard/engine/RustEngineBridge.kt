@@ -694,6 +694,10 @@ object RustEngineBridge {
         customEntries: List<CustomDictEntry> = emptyList(),
         effectiveSwapped: Boolean = false,
         outputBothScripts: Boolean = false,
+        // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
+        // sends). Default `0u` = proto3-absent sentinel → engine all-on,
+        // preserving pre-PR-9.6 behaviour for callers (incl. tests).
+        enabledSourcesBitmask: UInt = 0u,
     ): ContinuousFetchResult =
         ComposingBridge.composingFetchAtPos(
             mode,
@@ -704,6 +708,7 @@ object RustEngineBridge {
             customEntries,
             effectiveSwapped,
             outputBothScripts,
+            enabledSourcesBitmask,
         )
 
     /**

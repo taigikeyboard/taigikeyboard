@@ -1795,6 +1795,7 @@ fn best_candidate_for_key_returns_highest_score_on_collision() {
         0,
         &prefix_index,
         &dict,
+        u32::MAX,
     )
     .expect("key has dict hits");
     assert_eq!(best.display_text, "臺灣", "highest-score row must win");
@@ -1830,6 +1831,7 @@ fn best_candidate_for_key_none_when_key_absent() {
             0,
             &prefix_index,
             &dict,
+            u32::MAX,
         )
         .is_none(),
         "absent key must return None"
@@ -1897,6 +1899,7 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
         0,
         &prefix_index,
         &dict,
+        u32::MAX,
     )
     .expect("genuine toneless candidate exists");
     assert_eq!(
