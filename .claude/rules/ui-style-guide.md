@@ -83,6 +83,18 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 | Icon-to-label spacing | 12dp | system |
 | Reusable components | ActionRow, SwitchRow, NavigationRow, ColorRow, SliderRow | Form + Toggle / NavigationLink |
 
+### Switch / Toggle
+
+**Intentional cross-platform divergence** — each platform uses its native toggle style; do not re-align.
+
+| Property | Android | iOS |
+|----------|---------|-----|
+| Colors | Material 3 default (`SwitchDefaults.colors()` — checked track = `primary`) | iOS system green toggle |
+| Touch target | M3 default 48dp min (no `LocalMinimumInteractiveComponentSize` override) | system |
+| Component | bare `Switch(checked, onCheckedChange)` inside `SwitchRow` / dictionary toggle rows | `Toggle` |
+
+Rationale: Android follows platform-default Material 3; iOS keeps its native green toggle. Earlier Android builds emulated the iOS green via `AppStyle.switchColors()` — removed so Android toggles look native.
+
 ### Cards
 
 | Property | Android | iOS |
@@ -118,7 +130,7 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 - `AppStyle.trailingChevronSize` (24dp)
 - `AppStyle.sectionSpacing` (24dp), `AppStyle.sectionHeaderBottomPadding` (6dp)
 - `AppStyle.largeTopAppBarExpandedHeight` (112dp)
-- `AppStyle.warningOrange()`, `AppStyle.switchColors()`
+- `AppStyle.warningOrange()`
 - `SectionHeader(text)` shared composable
 
 ### iOS

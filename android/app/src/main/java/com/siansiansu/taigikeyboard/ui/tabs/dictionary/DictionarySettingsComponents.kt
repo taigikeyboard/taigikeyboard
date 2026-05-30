@@ -192,7 +192,6 @@ internal fun DictionaryInfoSwitch(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
-            colors = AppStyle.switchColors(),
         )
     }
 }
@@ -229,7 +228,6 @@ internal fun DictionarySubToggleRow(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
-            colors = AppStyle.switchColors(),
         )
     }
 }
@@ -282,7 +280,6 @@ internal fun DictionaryRowWithDescription(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                colors = AppStyle.switchColors(),
             )
         }
         Text(

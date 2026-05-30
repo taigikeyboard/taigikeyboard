@@ -3,8 +3,6 @@ package com.siansiansu.taigikeyboard.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwitchColors
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -40,17 +38,6 @@ object AppStyle {
     /** Accent orange for warning and feature icons. iOS equivalent: .orange */
     @Composable
     fun warningOrange(): Color = if (isSystemInDarkTheme()) Color(0xFFFF9F0A) else Color(0xFFFF9500)
-
-    /** Switch colors aligned with iOS toggle (green on, neutral gray off). */
-    @Composable
-    fun switchColors(): SwitchColors =
-        SwitchDefaults.colors(
-            checkedTrackColor = if (isSystemInDarkTheme()) Color(0xFF30D158) else Color(0xFF34C759),
-            checkedThumbColor = Color.White,
-            uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFF48484A) else Color(0xFFC7C7CC),
-            uncheckedThumbColor = Color.White,
-            uncheckedBorderColor = Color.Transparent,
-        )
 }
 
 /** Shared section header used across all tabs and settings screens. */
