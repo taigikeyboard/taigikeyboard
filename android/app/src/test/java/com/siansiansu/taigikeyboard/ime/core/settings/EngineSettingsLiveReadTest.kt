@@ -94,6 +94,7 @@ class EngineSettingsLiveReadTest {
         var isVariantEnabled: Boolean = false,
         var isKhiinEnabled: Boolean = false,
         var isLkkDictEnabled: Boolean = false,
+        var isDevDictEnabled: Boolean = false,
         var isKautianAccentLukangEnabled: Boolean = false,
         var isKautianAccentSansiaEnabled: Boolean = false,
         var isKautianAccentTaipakEnabled: Boolean = false,
@@ -135,6 +136,7 @@ class EngineSettingsLiveReadTest {
         override val isVariantEnabled: Boolean get() = backing.isVariantEnabled
         override val isKhiinEnabled: Boolean get() = backing.isKhiinEnabled
         override val isLkkDictEnabled: Boolean get() = backing.isLkkDictEnabled
+        override val isDevDictEnabled: Boolean get() = backing.isDevDictEnabled
         override val isKautianAccentLukangEnabled: Boolean get() = backing.isKautianAccentLukangEnabled
         override val isKautianAccentSansiaEnabled: Boolean get() = backing.isKautianAccentSansiaEnabled
         override val isKautianAccentTaipakEnabled: Boolean get() = backing.isKautianAccentTaipakEnabled

@@ -11,7 +11,7 @@
 //!
 //! ```text
 //!  0 = kautian   3 = sitbut   6 = kungge   9 = khiin   12 = variant
-//!  1 = taigitv   4 = taihoa   7 = stti    10 = dev (always set)
+//!  1 = taigitv   4 = taihoa   7 = stti    10 = dev (詞庫增補檔案 toggle)
 //!  2 = itaigi    5 = taijit   8 = khpoo   11 = lkk
 //! ```
 
@@ -81,7 +81,9 @@ fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
     if t.khiin {
         mask |= 1 << 9;
     }
-    mask |= 1 << 10; // dev always included
+    if t.dev {
+        mask |= 1 << 10;
+    }
     if t.lkk {
         mask |= 1 << 11;
     }
@@ -192,12 +194,18 @@ fn all_association_sources_enabled(t: &DictionaryToggles) -> bool {
 }
 
 /// `DictionarySourceCode` set the platform should mark as enabled when
-/// retagging Tab3 result badges. `DEV` + `CUSTOM` are non-toggleable and
-/// always present; `variant` is a filter bit, not a source code.
-// 中文: 提供 Tab3 標籤重貼用的啟用來源清單;DEV + CUSTOM 永遠存在,variant 是過濾位元 (非來源)。
+/// retagging Tab3 result badges. `CUSTOM` is non-toggleable and always
+/// present; `DEV` (詞庫增補檔案) is gated by the dev toggle and pushed
+/// first-when-present so the order stays `[DEV?, CUSTOM, …]`; `variant` is
+/// a filter bit, not a source code.
+// 中文: 提供 Tab3 標籤重貼用的啟用來源清單;CUSTOM 永遠存在,DEV 受開關控制 (開時排最前),variant 是過濾位元 (非來源)。
 fn enabled_source_codes(t: &DictionaryToggles) -> Vec<DictionarySourceCode> {
     use DictionarySourceCode as C;
-    let mut codes = vec![C::DictSourceDev, C::DictSourceCustom];
+    let mut codes = Vec::new();
+    if t.dev {
+        codes.push(C::DictSourceDev);
+    }
+    codes.push(C::DictSourceCustom);
     if t.kautian {
         codes.push(C::DictSourceKautian);
     }
@@ -278,22 +286,21 @@ mod tests {
             variant: true,
             khiin: true,
             lkk: true,
+            dev: true,
             kautian_subcoll: None,
         }
     }
 
-    /// INVARIANT: when every toggle is off, `dictionary_filter_bitmask`
-    /// still has bit 10 (`dev`) set — verified pre-v3.5.8 in
-    /// `EnabledDictionaries.swift:50-83` / `.kt:34-49`.
+    /// INVARIANT: every source is toggleable — all-off ⇒ empty source mask.
+    /// dev (bit 10, 詞庫增補檔案 toggle) is no longer an unconditional floor;
+    /// `CUSTOM` stays in the source-code list (separate user-dict path, not a
+    /// `dictionary.bin` source bit).
     #[test]
-    fn all_toggles_off_keeps_dev_only() {
+    fn all_toggles_off_keeps_nothing() {
         let r = compute_filters(&all_off());
-        assert_eq!(r.dictionary_filter_bitmask, 1 << 10);
+        assert_eq!(r.dictionary_filter_bitmask, 0);
         assert_eq!(r.assoc_lookup_bitmask, 0);
-        let codes: Vec<i32> = vec![
-            DictionarySourceCode::DictSourceDev as i32,
-            DictionarySourceCode::DictSourceCustom as i32,
-        ];
+        let codes: Vec<i32> = vec![DictionarySourceCode::DictSourceCustom as i32];
         assert_eq!(r.enabled_source_codes, codes);
     }
 
@@ -323,7 +330,7 @@ mod tests {
     #[test]
     fn bit_positions_match_layout() {
         type ToggleCase = (fn(&mut DictionaryToggles), u32);
-        let cases: [ToggleCase; 12] = [
+        let cases: [ToggleCase; 13] = [
             (|t| t.kautian = true, 1 << 0),
             (|t| t.taigitv = true, 1 << 1),
             (|t| t.itaigi = true, 1 << 2),
@@ -334,18 +341,18 @@ mod tests {
             (|t| t.stti = true, 1 << 7),
             (|t| t.khpoo = true, 1 << 8),
             (|t| t.khiin = true, 1 << 9),
+            (|t| t.dev = true, 1 << 10),
             (|t| t.lkk = true, 1 << 11),
             (|t| t.variant = true, 1 << 12),
         ];
-        for (set, expected_extra_bit) in cases {
+        for (set, expected_bit) in cases {
             let mut t = all_off();
             set(&mut t);
             let mask = compute_filters(&t).dictionary_filter_bitmask;
-            // dev bit 10 always set
+            // Each toggle drives exactly its bit — no unconditional dev floor.
             assert_eq!(
-                mask,
-                (1 << 10) | expected_extra_bit,
-                "toggle bit {expected_extra_bit:#x} should add to dev-only mask",
+                mask, expected_bit,
+                "toggle bit {expected_bit:#x} should be the only bit set",
             );
         }
     }
@@ -357,13 +364,11 @@ mod tests {
         let mut t = all_off();
         t.variant = true;
         let r = compute_filters(&t);
-        let codes: Vec<i32> = vec![
-            DictionarySourceCode::DictSourceDev as i32,
-            DictionarySourceCode::DictSourceCustom as i32,
-        ];
+        // dev off (all_off) ⇒ only CUSTOM in source codes.
+        let codes: Vec<i32> = vec![DictionarySourceCode::DictSourceCustom as i32];
         assert_eq!(r.enabled_source_codes, codes);
-        // But dictionary filter has bit 12 set
-        assert_eq!(r.dictionary_filter_bitmask, (1 << 10) | (1 << 12));
+        // Dictionary filter has only bit 12 (variant) — no dev floor.
+        assert_eq!(r.dictionary_filter_bitmask, 1 << 12);
     }
 
     /// Source codes order is stable (DEV/CUSTOM first, then toggle-on
@@ -372,9 +377,11 @@ mod tests {
     #[test]
     fn source_codes_order_is_stable() {
         let mut t = all_off();
+        t.dev = true;
         t.lkk = true;
         t.kautian = true;
         let r = compute_filters(&t);
+        // DEV (when on) first, then CUSTOM, then toggle-on in declaration order.
         let expected: Vec<i32> = vec![
             DictionarySourceCode::DictSourceDev as i32,
             DictionarySourceCode::DictSourceCustom as i32,

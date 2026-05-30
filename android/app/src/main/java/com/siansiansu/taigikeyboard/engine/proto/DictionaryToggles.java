@@ -490,6 +490,44 @@ public  final class DictionaryToggles extends
     lkk_ = false;
   }
 
+  public static final int DEV_FIELD_NUMBER = 14;
+  private boolean dev_;
+  /**
+   * <pre>
+   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * </pre>
+   *
+   * <code>bool dev = 14;</code>
+   * @return The dev.
+   */
+  @java.lang.Override
+  public boolean getDev() {
+    return dev_;
+  }
+  /**
+   * <pre>
+   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * </pre>
+   *
+   * <code>bool dev = 14;</code>
+   * @param value The dev to set.
+   */
+  private void setDev(boolean value) {
+
+    dev_ = value;
+  }
+  /**
+   * <pre>
+   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * </pre>
+   *
+   * <code>bool dev = 14;</code>
+   */
+  private void clearDev() {
+
+    dev_ = false;
+  }
+
   public static final int KAUTIAN_SUBCOLL_FIELD_NUMBER = 13;
   private com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles kautianSubcoll_;
   /**
@@ -1158,6 +1196,46 @@ public  final class DictionaryToggles extends
 
     /**
      * <pre>
+     * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+     * </pre>
+     *
+     * <code>bool dev = 14;</code>
+     * @return The dev.
+     */
+    @java.lang.Override
+    public boolean getDev() {
+      return instance.getDev();
+    }
+    /**
+     * <pre>
+     * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+     * </pre>
+     *
+     * <code>bool dev = 14;</code>
+     * @param value The dev to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDev(boolean value) {
+      copyOnWrite();
+      instance.setDev(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+     * </pre>
+     *
+     * <code>bool dev = 14;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDev() {
+      copyOnWrite();
+      instance.clearDev();
+      return this;
+    }
+
+    /**
+     * <pre>
      * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
@@ -1263,11 +1341,12 @@ public  final class DictionaryToggles extends
             "khiin_",
             "lkk_",
             "kautianSubcoll_",
+            "dev_",
           };
           java.lang.String info =
-              "\u0000\r\u0000\u0001\u0001\r\r\u0000\u0000\u0000\u0001\u0007\u0002\u0007\u0003\u0007" +
-              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0007\b\u0007\t\u0007\n\u0007\u000b\u0007" +
-              "\f\u0007\r\u1009\u0000";
+              "\u0000\u000e\u0000\u0001\u0001\u000e\u000e\u0000\u0000\u0000\u0001\u0007\u0002\u0007" +
+              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0007\b\u0007\t\u0007\n\u0007" +
+              "\u000b\u0007\f\u0007\r\u1009\u0000\u000e\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

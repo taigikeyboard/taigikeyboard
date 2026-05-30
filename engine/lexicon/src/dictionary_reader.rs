@@ -11,11 +11,12 @@
 //! per-row kautian subcollection provenance (0 for non-kautian rows).
 //!
 //! `lookup` accesses by 1-based rowid. `passes_filter` is the 4-layer
-//! (variant excl → khiin excl → kautian-subcollection gate → source-OR
-//! with-dev) filter.
+//! (variant excl → khiin excl → kautian-subcollection gate → source-OR)
+//! filter. dev (bit 10) is a normal toggleable source in the source-OR
+//! mask (詞庫增補檔案 toggle, default on), no longer an unconditional floor.
 
 // 中文: DictionaryReader — TKDB 詞庫二進位 mmap 讀取器。
-// 中文: 以 1-based rowid 索引;passes_filter 為 4 層過濾 (variant → khiin → kautian subcollection gate → 來源 OR + dev)。
+// 中文: 以 1-based rowid 索引;passes_filter 為 4 層過濾 (variant → khiin → kautian subcollection gate → 來源 OR)。dev (bit 10) 為一般可切換來源 (詞庫增補檔案開關,預設開)。
 
 use mmap_host::MmapHandle;
 
@@ -35,7 +36,7 @@ const RECORD_FIXED_PREFIX: usize = 11;
 pub const KAUTIAN_BIT: u16 = 1 << 0;
 // 中文: khiin 來源位元 (bit 9)。
 pub const KHIIN_BIT: u16 = 1 << 9;
-// 中文: dev 來源位元 (bit 10),永遠視為啟用。
+// 中文: dev 來源位元 (bit 10),受詞庫增補檔案開關控制 (預設開,經 enabled_mask 過濾)。
 pub const DEV_BIT: u16 = 1 << 10;
 // 中文: 異體字標記位元 (bit 12),由 variant 過濾邏輯使用。
 pub const VARIANT_BIT: u16 = 1 << 12;
@@ -312,11 +313,12 @@ impl DictionaryReader {
     }
 
     /// Filter: variant exclusion → khiin exclusion → kautian subcollection gate
-    /// → source-OR-with-dev. `record_subtag` is `DictionaryRecord.kautian_subtag`
+    /// → source-OR. `record_subtag` is `DictionaryRecord.kautian_subtag`
     /// (0 for non-kautian rows). The source-OR runs on the
     /// [`Self::effective_source_bitmask`] so a fully-disabled kautian row drops
-    /// only its kautian contribution.
-    // 中文: 過濾 — variant 排除 → khiin 排除 → kautian subcollection gate → 來源 OR (dev 永遠通過)。
+    /// only its kautian contribution. dev (bit 10) is carried in
+    /// `enabled_mask` like any other source.
+    // 中文: 過濾 — variant 排除 → khiin 排除 → kautian subcollection gate → 來源 OR (dev 同一般來源,經 enabled_mask)。
     pub fn passes_filter(record_bitmask: u16, record_subtag: u16, filter: &Filter) -> bool {
         if !filter.variant && (record_bitmask & VARIANT_BIT) != 0 {
             return false;
@@ -328,7 +330,9 @@ impl DictionaryReader {
             return true;
         }
         let effective = Self::effective_source_bitmask(record_bitmask, record_subtag, filter);
-        (effective & filter.enabled_mask) != 0 || (effective & DEV_BIT) != 0
+        // dev (bit 10) is a normal toggleable source carried in `enabled_mask`
+        // — no longer an unconditional floor (詞庫增補檔案 toggle, default on).
+        (effective & filter.enabled_mask) != 0
     }
 }
 

@@ -458,6 +458,9 @@ class PrefHelper(
     // LKK漢羅合用建議用字（預設開啟）
     var lkkDictEnabled: Boolean by preference(PreferenceKeys.LKK_DICT_ENABLED, true)
 
+    // 開發者補充辭典（詞庫增補檔案，預設開啟）
+    var devDictEnabled: Boolean by preference(PreferenceKeys.DEV_DICT_ENABLED, true)
+
     // 教育部辭典子集（腔調 + 姓名附錄，巢狀於 MOE master 下）— 預設全開（DD5 opt-out）。
     // 腔調順序對齊 config.yaml dialect_columns；bit 佈局由 Rust compute_filters 持有。
     var kautianAccentLukangEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_LUKANG_ENABLED, true)
@@ -568,6 +571,9 @@ class PrefHelper(
 
     override val isLkkDictEnabled: Boolean
         get() = lkkDictEnabled
+
+    override val isDevDictEnabled: Boolean
+        get() = devDictEnabled
 
     // kautian subcollections (nested under the MOE master, default all on per DD5)
     override val isKautianAccentLukangEnabled: Boolean

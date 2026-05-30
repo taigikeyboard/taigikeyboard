@@ -125,6 +125,17 @@ struct CopyrightView: View {
                         .foregroundColor(.secondary)
                 }
             }
+
+            // Developer supplement dictionary (詞庫增補檔案)
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(DictionaryTexts.devSupplementDict)
+                        .font(AppStyle.headlineFont)
+
+                    Text(HomeTexts.devSupplementCredit)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .navigationTitle(HomeTexts.copyrightNotice)
         .navigationBarTitleDisplayMode(.large)

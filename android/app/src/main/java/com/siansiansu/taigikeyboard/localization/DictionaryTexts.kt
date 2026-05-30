@@ -77,6 +77,7 @@ object DictionaryTexts {
     // MARK: - 詞庫名稱 (Dictionary tab-only)
 
     const val lkkDict = "漢羅合用建議用字"
+    const val devSupplementDict = "詞庫增補檔案"
 
     // MARK: - 教育部辭典子集 (腔調 + 姓名附錄, 巢狀於 MOE master 下)
     // 腔調順序對齊 config.yaml dialect_columns;預設全開,父開關關閉時整組變灰。

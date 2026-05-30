@@ -58,6 +58,7 @@ class KautianSubcollWireEncodeTest {
         variant = false,
         khiin = false,
         lkk = false,
+        dev = false,
         kautianSubcoll = sub,
     )
 

@@ -1080,6 +1080,12 @@ public nonisolated struct Taigi_Engine_DictionaryToggles: @unchecked Sendable {
     set {_uniqueStorage()._lkk = newValue}
   }
 
+  /// 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+  public var dev: Bool {
+    get {_storage._dev}
+    set {_uniqueStorage()._dev = newValue}
+  }
+
   /// kautian subcollection toggles. Absent ⇒ engine skips the subcollection
   /// gate (legacy all-on). Only meaningful when `kautian = true`.
   public var kautianSubcoll: Taigi_Engine_KautianSubcollToggles {
@@ -2418,7 +2424,7 @@ nonisolated extension Taigi_Engine_LexiconAssocEntry: SwiftProtobuf.Message, Swi
 
 nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DictionaryToggles"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kautian\0\u{1}taigitv\0\u{1}itaigi\0\u{1}sitbut\0\u{1}taihoa\0\u{1}taijit\0\u{1}kungge\0\u{1}stti\0\u{1}khpoo\0\u{1}variant\0\u{1}khiin\0\u{1}lkk\0\u{3}kautian_subcoll\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kautian\0\u{1}taigitv\0\u{1}itaigi\0\u{1}sitbut\0\u{1}taihoa\0\u{1}taijit\0\u{1}kungge\0\u{1}stti\0\u{1}khpoo\0\u{1}variant\0\u{1}khiin\0\u{1}lkk\0\u{3}kautian_subcoll\0\u{1}dev\0")
 
   fileprivate class _StorageClass {
     var _kautian: Bool = false
@@ -2433,6 +2439,7 @@ nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, Swi
     var _variant: Bool = false
     var _khiin: Bool = false
     var _lkk: Bool = false
+    var _dev: Bool = false
     var _kautianSubcoll: Taigi_Engine_KautianSubcollToggles? = nil
 
       // This property is used as the initial default value for new instances of the type.
@@ -2456,6 +2463,7 @@ nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, Swi
       _variant = source._variant
       _khiin = source._khiin
       _lkk = source._lkk
+      _dev = source._dev
       _kautianSubcoll = source._kautianSubcoll
     }
   }
@@ -2488,6 +2496,7 @@ nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, Swi
         case 11: try { try decoder.decodeSingularBoolField(value: &_storage._khiin) }()
         case 12: try { try decoder.decodeSingularBoolField(value: &_storage._lkk) }()
         case 13: try { try decoder.decodeSingularMessageField(value: &_storage._kautianSubcoll) }()
+        case 14: try { try decoder.decodeSingularBoolField(value: &_storage._dev) }()
         default: break
         }
       }
@@ -2539,6 +2548,9 @@ nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, Swi
       try { if let v = _storage._kautianSubcoll {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
       } }()
+      if _storage._dev != false {
+        try visitor.visitSingularBoolField(value: _storage._dev, fieldNumber: 14)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2560,6 +2572,7 @@ nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, Swi
         if _storage._variant != rhs_storage._variant {return false}
         if _storage._khiin != rhs_storage._khiin {return false}
         if _storage._lkk != rhs_storage._lkk {return false}
+        if _storage._dev != rhs_storage._dev {return false}
         if _storage._kautianSubcoll != rhs_storage._kautianSubcoll {return false}
         return true
       }

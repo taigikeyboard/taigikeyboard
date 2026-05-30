@@ -131,6 +131,16 @@ public interface DictionaryTogglesOrBuilder extends
 
   /**
    * <pre>
+   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * </pre>
+   *
+   * <code>bool dev = 14;</code>
+   * @return The dev.
+   */
+  boolean getDev();
+
+  /**
+   * <pre>
    * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>

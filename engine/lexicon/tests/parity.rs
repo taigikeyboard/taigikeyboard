@@ -67,21 +67,30 @@ fn invariant_lex_filter_bitmask_three_layers() {
     let khiin_record = 1u16 << 9; // KHIIN_BIT
     assert!(!DictionaryReader::passes_filter(khiin_record, 0, &f2));
 
-    // Layer 3: source-OR with dev (dev always passes when set)
+    // Layer 3: source-OR — every source passes iff its bit is in
+    // `enabled_mask`. dev (bit 10, 詞庫增補檔案 toggle) is a normal
+    // toggleable source, NOT an unconditional floor.
     let f3 = Filter {
         variant: true,
         khiin: true,
         all_enabled: false,
-        enabled_mask: 1u16 << 0, // only kautian enabled
+        enabled_mask: (1u16 << 0) | (1u16 << 10), // kautian + dev enabled
         kautian_subcoll_active: false,
         kautian_subcoll_mask: 0,
     };
-    let dev_record = 1u16 << 10; // DEV_BIT
+    let dev_record = 1u16 << 10;
     assert!(DictionaryReader::passes_filter(dev_record, 0, &f3));
     let kautian_record = 1u16 << 0;
     assert!(DictionaryReader::passes_filter(kautian_record, 0, &f3));
     let stti_record = 1u16 << 7;
     assert!(!DictionaryReader::passes_filter(stti_record, 0, &f3));
+
+    // dev OFF ⇒ a dev-only row is filtered out (toggle, not a floor).
+    let f3_dev_off = Filter {
+        enabled_mask: 1u16 << 0, // kautian only, dev OFF
+        ..f3
+    };
+    assert!(!DictionaryReader::passes_filter(dev_record, 0, &f3_dev_off));
 }
 
 // --- INVARIANT_LEX_BINARY_FORMAT ---------------------------------------

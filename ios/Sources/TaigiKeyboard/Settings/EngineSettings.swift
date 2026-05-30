@@ -68,6 +68,8 @@ protocol EngineSettings {
     var isKhiinEnabled: Bool { get }
     // 中文: LKK 漢羅混寫候選開關。
     var isLkkDictEnabled: Bool { get }
+    // 中文: 開發者補充辭典 (詞庫增補檔案) 開關。
+    var isDevDictEnabled: Bool { get }
 
     // kautian subcollection toggles (nested under the kautian master). Order
     // mirrors config.yaml dialect_columns; the bridge packs these into the

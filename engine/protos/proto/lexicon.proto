@@ -435,6 +435,7 @@ message DictionaryToggles {
   bool variant = 10; // 異用字 (filter bit 12)
   bool khiin   = 11; // 在來字 (filter bit 9)
   bool lkk     = 12; // LKK漢羅合用建議用字
+  bool dev     = 14; // 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
   // kautian subcollection toggles. Absent ⇒ engine skips the subcollection
   // gate (legacy all-on). Only meaningful when `kautian = true`.
   KautianSubcollToggles kautian_subcoll = 13;

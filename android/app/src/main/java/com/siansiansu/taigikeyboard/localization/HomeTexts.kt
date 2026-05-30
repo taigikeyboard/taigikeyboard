@@ -349,4 +349,7 @@ object HomeTexts {
 
     // 腔口差
     const val accentDictCredit = "「實齋」整理、提供"
+
+    // 詞庫增補檔案
+    const val devSupplementCredit = "「建中」整理、提供"
 }

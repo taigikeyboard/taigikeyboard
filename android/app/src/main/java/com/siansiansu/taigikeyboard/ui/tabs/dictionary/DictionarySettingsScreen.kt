@@ -83,6 +83,7 @@ fun DictionarySettingsScreen(
     var khiinEnabled by remember(resetCounter) { mutableStateOf(prefs.khiin) }
     var khpooEnabled by remember(resetCounter) { mutableStateOf(prefs.khpooDictEnabled) }
     var lkkEnabled by remember(resetCounter) { mutableStateOf(prefs.lkkDictEnabled) }
+    var devEnabled by remember(resetCounter) { mutableStateOf(prefs.devDictEnabled) }
 
     // kautian subcollections (nested under MOE master, greyed when MOE off — DD7).
     // Order mirrors config.yaml dialect_columns.
@@ -353,6 +354,17 @@ fun DictionarySettingsScreen(
                         onCheckedChange = {
                             lkkEnabled = it
                             prefs.lkkDictEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    DictionaryRowWithDescription(
+                        label = DictionaryTexts.devSupplementDict,
+                        checked = devEnabled,
+                        description = "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。",
+                        url = "https://github.com/luke871016/Taigi-Input-method-dictionary-supplement",
+                        onCheckedChange = {
+                            devEnabled = it
+                            prefs.devDictEnabled = it
                         },
                     )
                 }

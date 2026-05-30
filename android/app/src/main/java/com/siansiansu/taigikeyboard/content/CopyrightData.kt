@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.content
 
 import com.siansiansu.taigikeyboard.localization.CommonTexts
+import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.localization.HomeTexts
 
 // Static copyright data for fonts, dictionaries, and data sources displayed in the Home tab
@@ -224,6 +225,14 @@ object CopyrightDataSource {
                 id = 11,
                 title = CommonTexts.khpooDict,
                 description = HomeTexts.accentDictCredit,
+                license = "",
+                buttons = emptyList(),
+            ),
+            // 9. 詞庫增補檔案
+            CopyrightPage(
+                id = 12,
+                title = DictionaryTexts.devSupplementDict,
+                description = HomeTexts.devSupplementCredit,
                 license = "",
                 buttons = emptyList(),
             ),

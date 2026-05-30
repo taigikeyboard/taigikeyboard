@@ -73,6 +73,7 @@ enum DictionaryTexts {
     // MARK: - 詞庫名稱
 
     static let lkkDict = "漢羅合用建議用字"
+    static let devSupplementDict = "詞庫增補檔案"
 
     // MARK: - 教育部辭典子集 (腔調 + 姓名附錄, nested under the kautian master)
     // 中文: 腔調順序對齊 config.yaml dialect_columns。預設全開,父開關關閉時整組變灰。

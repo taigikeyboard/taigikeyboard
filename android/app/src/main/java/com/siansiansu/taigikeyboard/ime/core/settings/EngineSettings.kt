@@ -77,6 +77,7 @@ interface EngineSettings {
     val isVariantEnabled: Boolean
     val isKhiinEnabled: Boolean
     val isLkkDictEnabled: Boolean
+    val isDevDictEnabled: Boolean
 
     // kautian subcollection toggles (nested under the MOE/kautian master). Order
     // mirrors config.yaml dialect_columns; the bridge packs these into the

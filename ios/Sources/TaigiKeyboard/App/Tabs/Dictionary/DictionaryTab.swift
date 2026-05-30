@@ -27,6 +27,7 @@ struct DictionaryTab: View {
     @State private var isVariantEnabled: Bool
     @State private var isKhiinEnabled: Bool
     @State private var isLkkDictEnabled: Bool
+    @State private var isDevDictEnabled: Bool
 
     // Kautian subcollection toggles (nested under the MOE/kautian master row)
     @State private var isKautianAccentLukangEnabled: Bool
@@ -62,6 +63,7 @@ struct DictionaryTab: View {
         _isVariantEnabled = State(initialValue: settings.isVariantEnabled)
         _isKhiinEnabled = State(initialValue: settings.isKhiinEnabled)
         _isLkkDictEnabled = State(initialValue: settings.isLkkDictEnabled)
+        _isDevDictEnabled = State(initialValue: settings.isDevDictEnabled)
         _isKautianAccentLukangEnabled = State(initialValue: settings.isKautianAccentLukangEnabled)
         _isKautianAccentSansiaEnabled = State(initialValue: settings.isKautianAccentSansiaEnabled)
         _isKautianAccentTaipakEnabled = State(initialValue: settings.isKautianAccentTaipakEnabled)
@@ -202,6 +204,13 @@ struct DictionaryTab: View {
                         isOn: $isLkkDictEnabled,
                         description: "李江却台語文教基金會漢羅合用建議用字。",
                     ) { settings.isLkkDictEnabled = $0 }
+
+                    dictToggleWithDescription(
+                        title: DictionaryTexts.devSupplementDict,
+                        url: "https://github.com/luke871016/Taigi-Input-method-dictionary-supplement",
+                        isOn: $isDevDictEnabled,
+                        description: "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。",
+                    ) { settings.isDevDictEnabled = $0 }
                 } header: {
                     Text(DictionaryTexts.supplementSectionTitle)
                         .font(AppStyle.sectionHeaderFont)

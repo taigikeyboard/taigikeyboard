@@ -60,6 +60,8 @@ final class SharedSettings {
     private static let isVariantEnabledKey: SettingsKey<Bool> = .bool("variantEnabled", default: false)
     private static let isKhiinEnabledKey: SettingsKey<Bool> = .bool("khiin", default: false)
     private static let isLkkDictEnabledKey: SettingsKey<Bool> = .bool("lkkDictEnabled", default: true)
+    // 中文: 開發者補充辭典 (詞庫增補檔案) 開關。預設 true。
+    private static let isDevDictEnabledKey: SettingsKey<Bool> = .bool("devDictEnabled", default: true)
 
     // kautian subcollection toggles (nested under the kautian master).
     // Default ALL ON — opt-out model, upgrade is zero behaviour change (DD5).
@@ -353,6 +355,13 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isLkkDictEnabledKey) }
     }
 
+    /// Developer supplement dictionary (詞庫增補檔案) toggle (default: on)
+    // 中文: 開發者補充辭典 (詞庫增補檔案) 開關。預設 true。
+    var isDevDictEnabled: Bool {
+        get { userDefaults.value(for: Self.isDevDictEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isDevDictEnabledKey) }
+    }
+
     // MARK: - Kautian Subcollections (nested under the kautian master, default on)
 
     // 中文: 鹿港偏泉腔 (語音差異)。預設 true。
@@ -533,6 +542,7 @@ final class SharedSettings {
         isVariantEnabled = false
         isKhiinEnabled = false
         isLkkDictEnabled = true
+        isDevDictEnabled = true
         // Kautian subcollections (default all on)
         isKautianAccentLukangEnabled = true
         isKautianAccentSansiaEnabled = true

@@ -83,6 +83,7 @@ public extension RustEngineBridge {
         public let variant: Bool
         public let khiin: Bool
         public let lkk: Bool
+        public let dev: Bool
         /// kautian subcollection enable state (10 accents + name appendix).
         /// iOS always populates this (the app ships the toggles), so the
         /// `kautian_subcoll` proto message is always present and the engine
@@ -329,6 +330,7 @@ public extension RustEngineBridge {
         togglesProto.variant = toggles.variant
         togglesProto.khiin = toggles.khiin
         togglesProto.lkk = toggles.lkk
+        togglesProto.dev = toggles.dev
         // Always set the subcollection message (iOS ships the toggles) so the
         // engine runs the gate; absence would signal legacy all-on (DD5).
         var subcollProto = Taigi_Engine_KautianSubcollToggles()
@@ -431,7 +433,7 @@ public extension RustEngineBridge {
         if toggles.stti { dictMask |= 1 << 7 }
         if toggles.khpoo { dictMask |= 1 << 8 }
         if toggles.khiin { dictMask |= 1 << 9 }
-        dictMask |= 1 << 10 // dev always
+        if toggles.dev { dictMask |= 1 << 10 }
         if toggles.lkk { dictMask |= 1 << 11 }
         if toggles.variant { dictMask |= 1 << 12 }
         dictMask |= encodeKautianSubcollWire(toggles)
@@ -441,7 +443,8 @@ public extension RustEngineBridge {
             && toggles.kungge && toggles.stti && toggles.khpoo
         let assocMask: UInt32 = allAssocOn ? UInt32.max : (dictMask & 0x1FF)
 
-        var enabled: Set<DictionarySource> = [.dev, .custom]
+        var enabled: Set<DictionarySource> = [.custom]
+        if toggles.dev { enabled.insert(.dev) }
         if toggles.kautian { enabled.insert(.kautian) }
         if toggles.taigitv { enabled.insert(.taigitv) }
         if toggles.itaigi { enabled.insert(.itaigi) }
@@ -753,6 +756,7 @@ extension RustEngineBridge.DictionaryToggles {
             variant: settings.isVariantEnabled,
             khiin: settings.isKhiinEnabled,
             lkk: settings.isLkkDictEnabled,
+            dev: settings.isDevDictEnabled,
             kautianSubcoll: KautianSubcoll(
                 lukang: settings.isKautianAccentLukangEnabled,
                 sansia: settings.isKautianAccentSansiaEnabled,

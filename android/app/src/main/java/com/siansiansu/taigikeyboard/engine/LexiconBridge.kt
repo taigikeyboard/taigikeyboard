@@ -114,6 +114,7 @@ object LexiconBridge {
         val variant: Boolean,
         val khiin: Boolean,
         val lkk: Boolean,
+        val dev: Boolean,
         val kautianSubcoll: KautianSubcoll,
     ) {
         /**
@@ -153,6 +154,7 @@ object LexiconBridge {
                     variant = settings.isVariantEnabled,
                     khiin = settings.isKhiinEnabled,
                     lkk = settings.isLkkDictEnabled,
+                    dev = settings.isDevDictEnabled,
                     kautianSubcoll = KautianSubcoll(
                         lukang = settings.isKautianAccentLukangEnabled,
                         sansia = settings.isKautianAccentSansiaEnabled,
@@ -394,6 +396,7 @@ object LexiconBridge {
             .setVariant(toggles.variant)
             .setKhiin(toggles.khiin)
             .setLkk(toggles.lkk)
+            .setDev(toggles.dev)
             // Always set the subcollection message (Android ships the toggles)
             // so the engine runs the gate; absence would signal legacy all-on
             // (DD5). Mirrors iOS RustEngineBridge togglesProto mapping.
@@ -487,7 +490,7 @@ object LexiconBridge {
         if (toggles.stti) dictMask = dictMask or (1u shl 7)
         if (toggles.khpoo) dictMask = dictMask or (1u shl 8)
         if (toggles.khiin) dictMask = dictMask or (1u shl 9)
-        dictMask = dictMask or (1u shl 10) // dev always
+        if (toggles.dev) dictMask = dictMask or (1u shl 10)
         if (toggles.lkk) dictMask = dictMask or (1u shl 11)
         if (toggles.variant) dictMask = dictMask or (1u shl 12)
         dictMask = dictMask or encodeKautianSubcollWire(toggles)
@@ -497,7 +500,8 @@ object LexiconBridge {
             toggles.kungge && toggles.stti && toggles.khpoo
         val assocMask: UInt = if (allAssocOn) UInt.MAX_VALUE else (dictMask and 0x1FFu)
 
-        val enabled = mutableSetOf(DictionarySource.DEV, DictionarySource.CUSTOM)
+        val enabled = mutableSetOf(DictionarySource.CUSTOM)
+        if (toggles.dev) enabled.add(DictionarySource.DEV)
         if (toggles.kautian) enabled.add(DictionarySource.KAUTIAN)
         if (toggles.taigitv) enabled.add(DictionarySource.TAIGITV)
         if (toggles.itaigi) enabled.add(DictionarySource.ITAIGI)

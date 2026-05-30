@@ -230,7 +230,7 @@ bit  6  kungge       (台語工藝詞庫)
 bit  7  stti         (學科術語辭典)
 bit  8  khpoo        (腔口補充資料)
 bit  9  khiin        (在來字)              ← filtered by exclusion layer
-bit 10  dev          (always-included flag) ← never user-toggleable
+bit 10  dev          (詞庫增補檔案 — user-toggleable, default on)
 bit 11  lkk          (LKK漢羅合用建議用字)
 bit 12  is_variant   (異用字)              ← filtered by exclusion layer
 bits 13–15  reserved
@@ -251,9 +251,12 @@ Layer 3 — kautian subcollection gate (v3, see §4.5):
         all disabled has its bit 0 cleared (other source bits untouched).
 Layer 4 — Source OR match (on the EFFECTIVE bitmask):
     if enabled.all_enabled                                               → accept
-    elif (effective & enabled_mask) != 0  || (effective & DEV_BIT) != 0  → accept
+    elif (effective & enabled_mask) != 0                                 → accept
     else                                                                 → reject
 ```
+dev (bit 10, 詞庫增補檔案) rides `enabled_mask` like any other source
+(default on, user-toggleable). It used to be an unconditional `|| DEV_BIT`
+floor in Layer 4; the 詞庫增補檔案 toggle made it a normal source.
 
 The same `effective_source_bitmask` is emitted as the candidate's
 `source_bitmask` so a multi-source survivor ranks by its other source's tier,
@@ -268,7 +271,7 @@ elif (entry & enabled_mask) != 0                                         → acc
 else                                                                     → reject
 ```
 
-Note: association filter does **not** apply variant/khiin/dev exclusions (those bits do not exist in association entries).
+Note: association filter does **not** apply variant/khiin exclusions (those bits do not exist in association entries); dev is not an association source either.
 
 ### 4.4 `allEnabled` semantics
 
@@ -277,7 +280,7 @@ Note: association filter does **not** apply variant/khiin/dev exclusions (those 
 | `allEnabled` | property | `allEnabled()` | 10 sources: kautian, taigitv, kungge, itaigi, taijit, taihoa, sitbut, stti, khpoo, **lkk** |
 | `allAssociationSourcesEnabled` | property | `allAssociationSourcesEnabled()` | 9 sources: same minus **lkk** |
 
-Excludes `variant`, `khiin`, `dev` from "all" — those are exclusion / always-on flags, not user sources.
+Excludes `variant`, `khiin` from "all" — those are exclusion flags, not main sources. `dev` (詞庫增補檔案) is a user-toggleable source (default on), carried in the source-OR like the other sources.
 
 ### 4.5 `kautian_subtag` (v3) + wire subcollection-enable bits
 
