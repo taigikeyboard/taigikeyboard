@@ -41,7 +41,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="top"
-        android:elevation="8dp"
         android:visibility="gone" />
 
     <!-- Symbol selection overlay: covers keyboard with symbol grid -->

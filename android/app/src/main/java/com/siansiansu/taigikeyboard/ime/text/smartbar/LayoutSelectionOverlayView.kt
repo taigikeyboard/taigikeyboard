@@ -1,94 +1,103 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
 import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.core.graphics.toColorInt
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.localization.LayoutTexts
+import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
  * Layout selection overlay view.
  *
- * Covers the keyboard area with layout preview cards,
- * matching the iOS LayoutSelectionOverlay behavior.
+ * Thin FrameLayout shell hosting Compose M3 content ([LayoutOverlayContent] — preview-card
+ * sections), following the ComposeView pattern of SymbolSelectionOverlayView. Card colors honor
+ * the user-customizable keyboard theme ([KeyboardChromeColors]).
  */
 class LayoutSelectionOverlayView : FrameLayout {
     companion object {
         private const val TAG = "LayoutSelectionOverlay"
-        private const val CARD_WIDTH_DP = 120
-        private const val CARD_SPACING_DP = 12
-        private const val CHECKMARK_SIZE_DP = 36
-        private const val CORNER_RADIUS_DP = 10
-        private const val AUTO_COLLAPSE_DELAY_MS = 300L
     }
-
-    private data class LayoutOption(
-        val key: String,
-        val labelProvider: () -> String,
-        val previewRes: Int,
-        val isDisabled: Boolean = false,
-    )
 
     // A7: IME-only overlay; `context` resolves to the `TaigiKeyboard` service.
     private val prefs: PrefHelper get() = (context as TaigiKeyboard).prefs
     private val logger by lazy { CompositionRoot.shared(context).logger }
-    private var isShowing: Boolean = false
 
-    private var romanizationRow: LinearLayout? = null
-    private var phoneticRow: LinearLayout? = null
+    private var isShowing: Boolean = false
+    private var composeView: ComposeView? = null
+
+    // Bumped on each show() to re-resolve keyboard colors + re-seed the selected layout from prefs.
+    private val refreshTrigger = mutableIntStateOf(0)
 
     var onLayoutSelected: ((String) -> Unit)? = null
-
-    private val romanizationLayouts: List<LayoutOption> by lazy {
-        listOf(
-            LayoutOption("phahTaigi", { LayoutTexts.phahTaigiLayout }, R.drawable.layout_phahtaigi_preview),
-            LayoutOption("qwerty", { LayoutTexts.standardLayout }, R.drawable.layout_standard_preview),
-            LayoutOption("moe1", { LayoutTexts.moe1Layout }, R.drawable.layout_moe1_preview),
-            LayoutOption("moe2", { LayoutTexts.moe2Layout }, R.drawable.layout_moe2_preview),
-        )
-    }
-
-    private val phoneticLayouts: List<LayoutOption> by lazy {
-        listOf(
-            LayoutOption("tps", { LayoutTexts.tpsLayout }, R.drawable.layout_tps_preview),
-        )
-    }
 
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
     init {
-        LayoutInflater.from(context).inflate(R.layout.layout_selection_overlay, this, true)
         visibility = GONE
+        val typedValue = TypedValue()
+        if (context.theme.resolveAttribute(R.attr.keyboard_bgColor, typedValue, true)) {
+            setBackgroundColor(typedValue.data)
+        }
     }
 
-    override fun onFinishInflate() {
-        super.onFinishInflate()
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
 
-        romanizationRow = findViewById(R.id.layout_overlay_romanization_row)
-        phoneticRow = findViewById(R.id.layout_overlay_phonetic_row)
+        // DisposeOnDetachedFromWindow (not …ViewTreeLifecycleDestroyed): the IME input view
+        // detaches on config change while the service Lifecycle stays alive, so the composition
+        // must dispose at the detach boundary. See SymbolSelectionOverlayView for the same rationale.
+        composeView =
+            ComposeView(context).apply {
+                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            }
 
-        // Set section headers
-        findViewById<TextView>(R.id.layout_overlay_romanization_header)?.text =
-            LayoutTexts.romanizationKeyboard
-        findViewById<TextView>(R.id.layout_overlay_phonetic_header)?.text =
-            LayoutTexts.taigiPhonetic
+        addView(
+            composeView,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+            ),
+        )
+
+        composeView?.setContent {
+            TaigiKeyboardTheme {
+                val trigger by refreshTrigger
+                LayoutOverlayContent(
+                    chromeColors = rememberKeyboardChromeColors(trigger),
+                    selectedKey = remember(trigger) { prefs.keyboardLayoutType },
+                    resetKey = trigger,
+                    onLayoutSelected = { key ->
+                        // Persist BEFORE notifying so onKeyboardLayoutTypeChanged sees the new pref.
+                        prefs.keyboardLayoutType = key
+                        onLayoutSelected?.invoke(key)
+                        // The registered callback already hides synchronously; this defensive close
+                        // covers a null callback so the overlay still collapses on selection.
+                        hide()
+                    },
+                )
+            }
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // Remove the child + drop the ref so a later reattach rebuilds a single fresh ComposeView
+        // instead of stacking a second one on top of the (now composition-disposed) old child.
+        composeView?.let { removeView(it) }
+        composeView = null
     }
 
     /**
@@ -114,7 +123,8 @@ class LayoutSelectionOverlayView : FrameLayout {
                 }
         }
 
-        buildCards()
+        // Re-resolve colors + re-seed the selected layout from prefs.
+        refreshTrigger.intValue++
         visibility = VISIBLE
         isShowing = true
 
@@ -134,270 +144,4 @@ class LayoutSelectionOverlayView : FrameLayout {
     }
 
     fun isVisible(): Boolean = isShowing
-
-    private fun buildCards(selectedLayout: String? = null) {
-        val currentLayout = selectedLayout ?: prefs.keyboardLayoutType
-
-        romanizationRow?.removeAllViews()
-        phoneticRow?.removeAllViews()
-
-        romanizationLayouts.forEachIndexed { index, layout ->
-            val card = createLayoutCard(layout, currentLayout == layout.key)
-            romanizationRow?.addView(card)
-            if (index < romanizationLayouts.size - 1) {
-                romanizationRow?.addView(createSpacer())
-            }
-        }
-
-        phoneticLayouts.forEachIndexed { index, layout ->
-            val card = createLayoutCard(layout, currentLayout == layout.key)
-            phoneticRow?.addView(card)
-            if (index < phoneticLayouts.size - 1) {
-                phoneticRow?.addView(createSpacer())
-            }
-        }
-    }
-
-    private fun createLayoutCard(
-        layout: LayoutOption,
-        isSelected: Boolean,
-    ): View {
-        val density = resources.displayMetrics.density
-        val cardWidthPx = (CARD_WIDTH_DP * density).toInt()
-        val cornerRadiusPx = CORNER_RADIUS_DP * density
-        val checkmarkSizePx = (CHECKMARK_SIZE_DP * density).toInt()
-
-        val column =
-            LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams =
-                    LinearLayout.LayoutParams(
-                        cardWidthPx,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    )
-                gravity = Gravity.CENTER_HORIZONTAL
-            }
-
-        // Preview image container (FrameLayout for overlays)
-        val imageContainer =
-            FrameLayout(context).apply {
-                layoutParams =
-                    LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    )
-            }
-
-        // Preview image
-        val imageView =
-            ImageView(context).apply {
-                layoutParams =
-                    FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.WRAP_CONTENT,
-                    )
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                adjustViewBounds = true
-                setImageResource(layout.previewRes)
-
-                // Rounded corners via clip
-                clipToOutline = true
-                outlineProvider =
-                    object : android.view.ViewOutlineProvider() {
-                        override fun getOutline(
-                            view: View,
-                            outline: android.graphics.Outline,
-                        ) {
-                            outline.setRoundRect(0, 0, view.width, view.height, cornerRadiusPx)
-                        }
-                    }
-            }
-        imageContainer.addView(imageView)
-
-        if (layout.isDisabled) {
-            // Dark overlay for disabled cards (40% black, matching Layout tab)
-            val darkOverlay =
-                View(context).apply {
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                        )
-                    setBackgroundColor(Color.argb(102, 0, 0, 0)) // 0x66000000
-                    clipToOutline = true
-                    outlineProvider =
-                        object : android.view.ViewOutlineProvider() {
-                            override fun getOutline(
-                                view: View,
-                                outline: android.graphics.Outline,
-                            ) {
-                                outline.setRoundRect(0, 0, view.width, view.height, cornerRadiusPx)
-                            }
-                        }
-                }
-            imageContainer.addView(darkOverlay)
-
-            // "Coming Soon" text with capsule background (matching Layout tab)
-            val comingSoonText =
-                TextView(context).apply {
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.CENTER,
-                        )
-                    text = LayoutTexts.comingSoon
-                    setTextColor(resolveForegroundColor())
-                    textSize = 11f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    val hPad = (12 * density).toInt()
-                    val vPad = (4 * density).toInt()
-                    setPadding(hPad, vPad, hPad, vPad)
-                    background =
-                        GradientDrawable().apply {
-                            shape = GradientDrawable.RECTANGLE
-                            cornerRadius = 50 * density
-                            setColor(Color.argb(180, 128, 128, 128))
-                        }
-                }
-            imageContainer.addView(comingSoonText)
-        } else if (isSelected) {
-            // Semi-transparent dark overlay for selected cards
-            val selectedOverlay =
-                View(context).apply {
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                        )
-                    setBackgroundColor(Color.argb(64, 0, 0, 0)) // 25% black
-                    clipToOutline = true
-                    outlineProvider =
-                        object : android.view.ViewOutlineProvider() {
-                            override fun getOutline(
-                                view: View,
-                                outline: android.graphics.Outline,
-                            ) {
-                                outline.setRoundRect(0, 0, view.width, view.height, cornerRadiusPx)
-                            }
-                        }
-                }
-            imageContainer.addView(selectedOverlay)
-
-            // Checkmark circle
-            val checkmarkContainer =
-                FrameLayout(context).apply {
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            checkmarkSizePx,
-                            checkmarkSizePx,
-                            Gravity.CENTER,
-                        )
-                    background =
-                        GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(resolveAccentColor())
-                        }
-                }
-
-            val checkmarkIcon =
-                ImageView(context).apply {
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            (16 * density).toInt(),
-                            (16 * density).toInt(),
-                            Gravity.CENTER,
-                        )
-                    setImageResource(R.drawable.ic_check)
-                    imageTintList = ColorStateList.valueOf(Color.WHITE)
-                }
-            checkmarkContainer.addView(checkmarkIcon)
-            imageContainer.addView(checkmarkContainer)
-        }
-
-        // Border for selected cards
-        if (isSelected && !layout.isDisabled) {
-            val borderDrawable =
-                GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = cornerRadiusPx
-                    setStroke((2.5f * density).toInt(), resolveAccentColor())
-                    setColor(Color.TRANSPARENT)
-                }
-            val borderView =
-                View(context).apply {
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                        )
-                    background = borderDrawable
-                }
-            imageContainer.addView(borderView)
-        }
-
-        column.addView(imageContainer)
-
-        // Label text
-        val label =
-            TextView(context).apply {
-                layoutParams =
-                    LinearLayout
-                        .LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                        ).apply {
-                            topMargin = (6 * density).toInt()
-                        }
-                text = layout.labelProvider()
-                textSize = 12f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                maxLines = 1
-                setTextColor(resolveForegroundColor())
-                alpha = if (layout.isDisabled) 0.5f else 1f
-            }
-        column.addView(label)
-
-        // Click handler
-        if (!layout.isDisabled) {
-            column.setOnClickListener {
-                prefs.keyboardLayoutType = layout.key
-                buildCards(layout.key) // Refresh selection state with known value
-                // Directly trigger keyboard rebuild (bypass DataStore Flow delay)
-                onLayoutSelected?.invoke(layout.key)
-                // Auto-collapse after short delay
-                it.postDelayed({
-                    hide()
-                }, AUTO_COLLAPSE_DELAY_MS)
-            }
-        }
-
-        return column
-    }
-
-    private fun createSpacer(): View {
-        val spacingPx = (CARD_SPACING_DP * resources.displayMetrics.density).toInt()
-        return View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(spacingPx, 1)
-        }
-    }
-
-    private fun resolveAccentColor(): Int {
-        val typedValue = TypedValue()
-        return if (context.theme.resolveAttribute(R.attr.smartbar_accentColor, typedValue, true)) {
-            typedValue.data
-        } else {
-            "#007AFF".toColorInt() // Fallback iOS blue
-        }
-    }
-
-    private fun resolveForegroundColor(): Int {
-        val typedValue = TypedValue()
-        return if (context.theme.resolveAttribute(R.attr.smartbar_fgColor, typedValue, true)) {
-            typedValue.data
-        } else {
-            Color.BLACK
-        }
-    }
 }
