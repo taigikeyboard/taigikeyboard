@@ -151,9 +151,9 @@
 /// fails `cargo test --workspace`, not silent drift. **Recompute and
 /// update this constant whenever the dictionary is rebuilt** — the
 /// artifact will print the expected value in the failure message.
-// 中文: 語料總頻 = dictionary.csv 全列 frequency 加總(165995 列,13_059_700,2026-05-30 量測;kautian Phase 5 #358 字典重建後)。
+// 中文: 語料總頻 = dictionary.csv 全列 frequency 加總(168467 列,13_095_142,2026-05-31 量測;dev 補充詞庫 6 檔合併後)。
 // 中文: dict.bin v2 無語料總計 metadata → bake 成常數 + pipeline-emitted artifact 守門(Codex S5 Q4=a / v3.5.9 A4);字典重建須同步更新此值,失敗訊息會列實測值。
-pub(crate) const CORPUS_TOTAL_FREQ: f64 = 13_059_700.0;
+pub(crate) const CORPUS_TOTAL_FREQ: f64 = 13_095_142.0;
 
 /// Compile-time invariant: `CORPUS_TOTAL_FREQ` must exceed
 /// `1 + max(freq)` (的 = 184_693) so every `ln(1/p)` is strictly
@@ -512,7 +512,7 @@ mod tests {
         // `EXPECTED_DICT_ENTRIES` matches the constant doc-comment
         // (165 995 @ 2026-05-30, post kautian Phase 5 #358); update
         // alongside the constant on dictionary rebuild.
-        const EXPECTED_DICT_ENTRIES: u32 = 165_995;
+        const EXPECTED_DICT_ENTRIES: u32 = 168_467;
 
         let artifact = corpus_total_freq_artifact_path();
         let csv = artifact.parent().unwrap().join("dictionary.csv");
