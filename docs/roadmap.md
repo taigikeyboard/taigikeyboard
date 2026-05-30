@@ -209,6 +209,19 @@ v3.5.8 S6 ships G1a (whole-buffer custom-dict match into slot-0 walker). G1b (an
 
 MOE-style separation of manually-managed vs auto-learned user-frequency entries. v3.5.8 ships a single `user_frequency.db`. A split would mirror MOE Taigi APK's `mainstream-ime-comparison.md` §70 pattern; deferred until a dogfood need surfaces.
 
+### Android UI modernization — modern Compose components for IME chrome
+
+**Goal** (USER 2026-05-30, verbatim): 「希望 android 盡量使用 UI 現代元件」. **Status**: deep audit scheduled NEXT ROUND (post-`/clear`); no version assigned (user-gated per `feedback_no_unilateral_release_scope`).
+
+**Exploration findings (2026-05-30, grounded in code)** — the hard part is already done:
+
+- **Already Compose**: keyboard body + every key (`ime/text/keyboard/KeyboardImeRoot.kt` / `KeyboardLayout.kt` / `KeyContent.kt` / `KeyTouchCoordinator.kt`) — FlorisBoard's Canvas-drawn `TextKeyboardView` already replaced (custom `Layout` block + `pointerInteropFilter`, 1:1 with legacy `onTouchEvent`). Smartbar candidate strip + key popups also Compose islands. `TaigiKeyboardTheme` (`ui/theme/Theme.kt:135`) already wraps `MaterialTheme`.
+- **Still traditional View (7 classes)**: `InputView`(root+`ViewFlipper`) / `SmartbarView` / `EmojiKeyboardView` / `SettingsSelectionOverlayView`(host ComposeView already) / `CandidateOverlayView`(FrameLayout+RecyclerView, 414 LOC) + `CandidateOverlayAdapter`(254) / `LayoutSelectionOverlayView` / `SymbolSelectionOverlayView`. ~7 XML layouts.
+- **Key distinction**: "modern Compose" ≠ "standard M3 widgets". The **keys must stay custom-drawn** (Canvas + `KeyboardColorSettings` user colors + multi-touch/long-press/flick) — `Button()`-per-key = perf/memory/touch regression; no mainstream IME uses Material widgets for keys. Migration target = **chrome/overlay layer only** (candidate `RecyclerView` → `LazyVerticalGrid`, overlays → Compose M3).
+- **Constraint**: root `InputView`/window structure is the `project_ime_window_arch.md` IME-dismiss bug zone (8 commits to fix) — touching it = highest risk. Leaf overlays (no window coupling) = low-risk sweet spot.
+
+**Next-round audit deliverable**: per-file slice list (factual, grounded, no version) classifying each remaining View class by migrate / keep-custom / window-fragile. Full hand-off → memory `project_android_compose_modernization.md`. Best-practices entry point: `docs/references/mainstream-ime-comparison.md` (how peer IMEs structure keyboard vs chrome rendering) + `.claude/rules/android-ime-patterns.md §2` (FlorisBoard-derived = platform, don't gratuitously purify).
+
 ---
 
 ## Stub redirects for legacy section anchors
