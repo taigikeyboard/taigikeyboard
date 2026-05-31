@@ -325,7 +325,7 @@ class PrefHelper(
 
     var isToolbarAutoCollapse: Boolean by preference(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, true)
 
-    var isGlobeKeyEnabled: Boolean by preference(PreferenceKeys.GLOBE_KEY_ENABLED, true)
+    var isGlobeKeyEnabled: Boolean by preference(PreferenceKeys.GLOBE_KEY_ENABLED, false)
 
     var isSoundFeedbackEnabled: Boolean by preference(PreferenceKeys.SOUND_FEEDBACK_ENABLED, true)
 
