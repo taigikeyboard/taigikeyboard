@@ -33,6 +33,7 @@
 15. [Lexicon — input classification (v3.5.7)](#15-lexicon--input-classification-v357)
 16. [Keyboard body — touch + popup + window insets (Android Compose body)](#16-keyboard-body--touch--popup--window-insets-android-compose-body) → moved to [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md)
 17. [Continuous input — explicit-tone candidate filtering](#17-continuous-input--explicit-tone-candidate-filtering)
+18. [Continuous input — longest-match prefix suppression](#18-continuous-input--longest-match-prefix-suppression)
 
 ---
 
@@ -505,3 +506,33 @@ This is a **conditional** contract, NOT "always filter": absent tone ⇒ all ton
 **Tests**:
 - **Rust engine** — `engine/composing/tests/continuous_explicit_tone.rs`: `explicit_tone_filters_to_typed_tone` (`tsua2` → 紙 only, not 蛇; symmetric `tsua5` → 蛇 only) + `toneless_input_still_surfaces_all_tones` (`tsua` → both). Unit: `engine/composing/src/shadow.rs::tests` pin `span_is_fully_toned_ascii` / `fst_body_for_span` / the partial-prefix tone policy. Golden `tl_numeric_single` / `tl_numeric_multi` (`engine/composing/tests/golden_fetch_at_pos.rs`) freeze the toned-key wire vector (fixture emits toned `tl:<tl_num>` / `poj:<poj_num>` keys for production parity).
 - **Dogfood (real-device, production gate)** — see `.claude/rules/taigi-incidents.md` § Qualitative perf gate dogfood checklist (item: explicit tone filters; toneless shows all tones).
+
+---
+
+## 18. Continuous input — longest-match prefix suppression
+
+### `INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`
+
+In continuous input, the span-local candidate strip surfaces, among the **single-syllable** spans anchored at buffer offset 0, **only the longest**. A shorter single syllable that is a strict prefix of a longer valid single syllable at the same anchor is **suppressed**:
+
+1. `tai` → `台/代/大/…` (`tai`, 3 letters) only; the 2-letter `ta` (`乾/焦/大/…`) is NOT surfaced.
+2. `tai5` → `台/臺/抬/…` (`tâi`, tone 5) only; `ta` is NOT surfaced. (Compounds with §17: the longest single syllable is also tone-filtered.)
+3. `tsua` → `紙/蛇/…` (`tsua`) only; the shorter `tsu` (`珠`) is NOT surfaced.
+4. A bare short syllable with no longer single-syllable extension typed still surfaces: `ka` → `共/家/加/…`, `m` / `ng` (syllabic consonants) — no `kah`/`kak` letters present, so `ka` is itself the longest.
+
+Applies to **both toned and toneless input** — the suppression keys on span length, not tone (USER 2026-05-31「免調也壓制」). TL / POJ / TPS alike (the rule lives in the mode-agnostic span-local key builder).
+
+**Multi-syllable phrase spans are NOT suppressed.** A left-anchored phrase span (`tai`+`bak` → `taibak` → 台北; the sub-word `台`/`台語` of `taigikhipuann`) is a different word, kept alongside the longest single syllable. Only **shorter single-syllable prefixes** are dropped, never phrase candidates — `taigikhipuann` still surfaces `台` (span 0–3), `台語` (span 0–5), and the whole-buffer `台語齒盤`.
+
+**Why**: typing a complete syllable must not pollute the candidate strip with shorter prefix syllables. `tai` is one 3-letter syllable; a 2-letter `ta` candidate is noise (critical bug reported 2026-05-31 — `tai5` surfaced the full `ta` tone family). The shorter syllable IS phonotactically valid, but at the anchor the user committed to the longer reading by typing its extra letters.
+
+**Scope — display layer only, NOT segmentation**: the rule lives in `composing::continuous::left_anchored_keys_from_lattice`, which recomputes the single-syllable ends via the `max_syllables = 1` primitive (`syllabifier::valid_span_endings_lowered`) and emits a key only for the longest single end + every phrase end. The segmentation **lattice keeps every edge** — the whole-sentence walker (`fetch_walker_slot0_inner`) and the min-hop `shadow::span_min_syllable_count` still see every split, so a span segmentable only via a non-greedy shorter-first cut (`ta`+`nia` when `tan`+`ia` dead-ends — Codex PR #290 P1) is unaffected. Engine is the single source — iOS / Android inherit via FFI.
+
+**Best-practice alignment**: longest-match at the surfaced syllable matches khiin-rs `references/khiin-rs/khiin/src/data/segmenter.rs` (longest-match DP). Peer Mandarin/Bopomofo IMEs (McBopomofo, librime) do not face this because their syllables are inherently toned/atomic; the suppression is the price of Taigi's optional-tone affordance (`tai` = all tones, `tai5` = tone 5). Deliberately NOT adopted: suppressing inside the lattice (would reintroduce the PR #290 greedy dead-end) and "keep only the single longest end" (would drop the phrase sub-word candidates).
+
+**Relationship to §17**: §17 selects the tone (toned vs toneless FST key family) for a given span; §18 selects which span lengths surface at the anchor. Orthogonal axes — the reported `tai5`→`ta` bug needed §18 (the `ta` span carries no tone digit, so §17's tone filter never touched it).
+
+**Tests**:
+- **Rust engine** — `engine/composing/tests/continuous_explicit_tone.rs::longest_match_suppresses_shorter_prefix_syllable` (`tsua2` drops 珠; toneless `tsua` keeps 紙+蛇 but drops 珠). Golden `tl_toneless_multi` (`engine/composing/tests/golden_fetch_at_pos.rs`) freezes `tsua` → 紙 + 珠仔 (both longest-span) with 珠 absent. `tl_toneless_long_reach` freezes the phrase-not-suppressed property (台/台語 sub-words retained).
+- **Dev harness** — `engine/composing/tests/candidate_dump.rs` (`#[ignore]`) dumps production candidates for any input; run `cargo test -p composing --test candidate_dump -- --ignored --nocapture`.
+- **Dogfood (real-device, production gate)** — see `.claude/rules/taigi-incidents.md` § Qualitative perf gate dogfood checklist (item: longest-match prefix suppression).

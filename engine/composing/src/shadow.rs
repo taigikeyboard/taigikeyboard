@@ -216,6 +216,7 @@ pub(crate) fn left_anchored_keys_from_lattice(
     shadow: &str,
     shadow_to_raw_end: &[usize],
     lattice: &Lattice,
+    inv: &SyllableInventory,
     mode: InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
     // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
@@ -226,6 +227,45 @@ pub(crate) fn left_anchored_keys_from_lattice(
     // 中文: B-2 — mode 同時決定 lattice 走的 inventory 家族與此處 key 命名空間,單一參數
     // 中文:   貫穿,音節切分與 key 前綴不會由不同來源分歧。
     let prefix = mode_key_prefix(mode);
+
+    // Longest-match prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`,
+    // USER 2026-05-31「免調也壓制」): among the SINGLE-syllable spans anchored at
+    // offset 0, surface only the LONGEST. A shorter single syllable that is a
+    // strict prefix of a longer one (`ta`⊂`tai`⊂`tai5`, `tsu`⊂`tsua`) is
+    // dropped — fixing the reported bug where typing a complete syllable
+    // (`tai` / `tai5`) surfaced 2-letter `ta` candidates. Keys on span length,
+    // not tone, so it covers toned + toneless alike and subsumes the
+    // explicit-tone case (§17).
+    //
+    // The single-syllable ends are recomputed via the SAME `max_syllables = 1`
+    // primitive `build_lattice` chains (`lattice.edges()` flattens depth, so a
+    // `(0, end)` edge cannot be told apart from a chain reaching `end` —
+    // re-running the depth-1 walk is the only way to isolate true single
+    // syllables). Lowercasing once mirrors `build_lattice`, which also
+    // re-lowercases the shadow before walking.
+    //
+    // An end is suppressed only when it is (a) a single-syllable end, (b) not
+    // the longest single syllable, AND (c) has NO multi-syllable phrase
+    // reading — i.e. no interior edge `(m, end)` with `m > 0` reaches it. (c)
+    // is the safety guard: a shorter span that ALSO parses as a phrase
+    // (`a`+`i` ending where `ai` is a single syllable too) is a legitimate
+    // different-word candidate and must survive. In practice (b)+(c) coincide
+    // for the reported bug (`ta`/`tsu` have no interior predecessor), but (c)
+    // makes the rule provably never drop a phrase candidate. Display layer
+    // only: the lattice keeps every edge, so the walker
+    // (`fetch_walker_slot0_inner`) + min-hop `span_min_syllable_count` still
+    // see every split (non-greedy `ta`+`nia` recovery, Codex PR #290 P1,
+    // unaffected).
+    // 中文: longest-match 前綴壓制 — 只壓「單音節且非最長且無多音節 phrase 讀法」的較短端;
+    // 中文:   (ta⊂tai⊂tai5、tsu⊂tsua);含調免調皆壓 (USER 2026-05-31「免調也壓制」)。
+    // 中文: (c) phrase 守門 — 同 end 另有 phrase 讀法 (內段 edge (m,end), m>0 可達) 即合法異詞候選,保留;
+    // 中文:   保證絕不誤刪 phrase。lattice.edges() 攤平深度,故以 max_syllables=1 重走辨識單音節端。
+    // 中文: 純顯示層 — lattice edge 不動,walker / span_min_syllable_count 仍見全部切法 (不退化 #290)。
+    let lowered = shadow.to_ascii_lowercase();
+    let single_ends = valid_span_endings_lowered(&lowered, 0, inv, mode, 1);
+    let max_single_end = single_ends.iter().copied().max();
+    let has_phrase_reading = |end: usize| lattice.edges().iter().any(|&(s, e)| e == end && s > 0);
+
     let mut out = Vec::with_capacity(lattice.edges().len());
     for &(start, end) in lattice.edges() {
         if start != 0 {
@@ -234,6 +274,13 @@ pub(crate) fn left_anchored_keys_from_lattice(
         // Guards mirror the pre-S1 single-start loop exactly (`start`
         // is 0 here, so the slice / offset map is identical).
         if end == 0 || end > shadow.len() || !shadow.is_char_boundary(end) {
+            continue;
+        }
+        // Drop a strictly-shorter single-syllable-only prefix span (see the
+        // (a)/(b)/(c) rule above). Longest single, phrase ends, and
+        // phrase-reachable shorter spans are all kept.
+        // 中文: 丟掉「較短且僅單音節且無 phrase 讀法」的前綴;最長單音節、phrase 端、可作 phrase 的較短端皆保留。
+        if single_ends.contains(&end) && Some(end) != max_single_end && !has_phrase_reading(end) {
             continue;
         }
         // Explicit-tone fix — tone-aware lookup body. A fully-toned span

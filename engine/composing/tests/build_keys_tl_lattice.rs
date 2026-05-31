@@ -82,6 +82,49 @@ fn internal_hyphen_output_is_byte_identical_to_pre_s1() {
     );
 }
 
+#[test]
+fn longest_match_suppresses_shorter_single_syllable_prefix() {
+    // §18 INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX (USER 2026-05-31
+    // 「免調也壓制」). Input `tai` with BOTH `ta` and `tai` valid single
+    // syllables. The shorter `ta` (end 2) is a strict prefix of the longest
+    // single `tai` (end 3) and has no multi-syllable phrase reading, so it is
+    // suppressed — only `tl:tai` survives. This is the reported bug (`tai` /
+    // `tai5` must not surface the 2-letter `ta` family).
+    let inv = build_inventory(&["ta1", "tai5"]);
+    let keys = build_keys_tl_with_inventory("tai", &inv, phonetics::InputMode::Tl);
+    assert_eq!(
+        mapped(&keys),
+        vec![((0, 3), "tl:tai")],
+        "shorter single-syllable `ta` must be suppressed under longest-match",
+    );
+}
+
+#[test]
+fn phrase_reachable_shorter_span_survives_suppression() {
+    // §18 phrase guard. Input `ainn` against inv {a, i, ai, ainn}. The span
+    // `ai` (end 2) is a NON-longest single syllable BUT also parses as the
+    // phrase `a`+`i` (interior edge `(1, 2)`), so it is a legitimate
+    // different-word candidate and MUST survive suppression. The bare `a`
+    // (end 1) is a non-longest single with NO phrase reading → it is the only
+    // shorter prefix dropped. Proves the suppression keys on
+    // single-syllable-ONLY, never silently dropping a phrase.
+    let inv = build_inventory(&["a1", "i1", "ai1", "ainn1"]);
+    let keys = build_keys_tl_with_inventory("ainn", &inv, phonetics::InputMode::Tl);
+    let m = mapped(&keys);
+    assert!(
+        m.iter().any(|(_, k)| *k == "tl:ai"),
+        "phrase-reachable shorter span `ai` must survive, got {m:?}",
+    );
+    assert!(
+        m.iter().any(|(_, k)| *k == "tl:ainn"),
+        "longest single `ainn` must survive, got {m:?}",
+    );
+    assert!(
+        m.iter().all(|(_, k)| *k != "tl:a"),
+        "bare `a` (non-longest single, no phrase reading) must be suppressed, got {m:?}",
+    );
+}
+
 // ---- Hermetic SyllableInventory builder -----------------------------
 // Pattern mirrors `engine/composing/tests/build_keys_tl_hyphen.rs`;
 // inline duplication preferred over a shared test-utils crate for the

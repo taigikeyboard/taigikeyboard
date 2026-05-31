@@ -250,8 +250,14 @@ fn handle_fetch_at_pos(
     // PR-9.6 — `enabled_sources_bitmask` (already sentinel-normalised
     // above) flows into `ContinuousFetchCtx` so the span-local + partial
     // -prefix fetchers apply the same `Filter` the Tab3 browse path uses.
-    let candidates =
-        assemble_candidates(raw, &freq_map, now_ms, &custom, mode, enabled_sources_bitmask);
+    let candidates = assemble_candidates(
+        raw,
+        &freq_map,
+        now_ms,
+        &custom,
+        mode,
+        enabled_sources_bitmask,
+    );
     with_continuous(
         snapshot,
         ContinuousResponse {
@@ -304,8 +310,9 @@ pub fn build_keys_tl_with_inventory(
     let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
     // v3.5.9 B-2 — `left_anchored_keys_from_lattice` takes `mode` so the
     // emitted key prefix matches the inventory family the shadow lattice
-    // was built against.
-    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, mode)
+    // was built against. It also takes `inv` for longest-match prefix
+    // suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`).
+    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, inv, mode)
 }
 
 /// v3.5.8 Phase 9 Item 12 — hoist proto-shaped `CustomDictEntry[]`

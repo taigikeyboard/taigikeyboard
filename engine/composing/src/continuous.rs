@@ -1007,8 +1007,13 @@ pub(crate) fn assemble_candidates(
         let (keys, shadow_lattice) = match inv {
             Some(inv) => {
                 let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-                let keys =
-                    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, mode);
+                let keys = left_anchored_keys_from_lattice(
+                    &shadow,
+                    &shadow_to_raw_end,
+                    &lattice,
+                    inv,
+                    mode,
+                );
                 (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
             }
             None => (Vec::new(), None),

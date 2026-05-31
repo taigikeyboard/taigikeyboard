@@ -308,3 +308,41 @@ fn toneless_input_still_surfaces_all_tones() {
         "toneless tsua must surface both 紙 and 蛇; got {hanji:?}"
     );
 }
+
+#[test]
+fn longest_match_suppresses_shorter_prefix_syllable() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    // INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX (USER 2026-05-31「免調也壓制」).
+    // 珠/tsu is a SHORTER single syllable that is a strict prefix of tsua —
+    // the reported bug's `ta` ⊂ `tai` / `tai5` shape. The span-local candidate
+    // strip surfaces only the LONGEST single syllable at offset 0, so 珠 (tsu,
+    // span 0–3) must NOT appear for either a toned or a toneless tsua* query.
+    // The fixture's `syllables.fst` carries `tsua2` (build_syllables_fst), so
+    // `tsua2` resolves to the toned single syllable exactly as production does.
+    //
+    // Toned: `tsua2` keeps 紙 (tsuá, tone 2) and drops BOTH 蛇 (wrong tone,
+    // §17) AND 珠 (shorter prefix syllable, §18).
+    let toned = fetch_hanji("tsua2");
+    assert!(
+        toned.iter().any(|h| h == "紙"),
+        "tsua2 must surface 紙 (tsuá); got {toned:?}"
+    );
+    assert!(
+        !toned.iter().any(|h| h == "珠"),
+        "tsua2 must NOT surface 珠 (shorter prefix syllable); got {toned:?}"
+    );
+
+    // Toneless: `tsua` surfaces all tones of the longest syllable (紙 + 蛇)
+    // but still drops the shorter 珠 — the suppression keys on span length,
+    // not tone.
+    let toneless = fetch_hanji("tsua");
+    assert!(
+        toneless.iter().any(|h| h == "紙") && toneless.iter().any(|h| h == "蛇"),
+        "toneless tsua must surface both 紙 and 蛇; got {toneless:?}"
+    );
+    assert!(
+        !toneless.iter().any(|h| h == "珠"),
+        "toneless tsua must NOT surface 珠 (shorter prefix syllable); got {toneless:?}"
+    );
+}

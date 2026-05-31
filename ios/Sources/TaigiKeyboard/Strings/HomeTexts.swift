@@ -253,7 +253,7 @@ enum HomeTexts {
     static let ogdlTaiwanLicense = "OGDL-Taiwan-1.0"
 
     /// 腔口差
-    static let accentDictCredit = "「實齋」整理、提供"
+    static let accentDictCredit = "實齋整理、提供"
 
     /// 詞庫增補檔案
     static let devSupplementCredit = "「建中」整理、提供"

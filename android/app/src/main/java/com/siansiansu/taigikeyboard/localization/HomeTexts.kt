@@ -362,8 +362,8 @@ object HomeTexts {
     const val ogdlTaiwanLicense = "OGDL-Taiwan-1.0"
 
     // 腔口差
-    const val accentDictCredit = "「實齋」整理、提供"
+    const val accentDictCredit = "實齋整理、提供"
 
     // 詞庫增補檔案
-    const val devSupplementCredit = "「建中」整理、提供"
+    const val devSupplementCredit = "建中整理、提供"
 }

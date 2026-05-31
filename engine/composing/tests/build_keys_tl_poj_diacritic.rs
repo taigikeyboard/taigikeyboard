@@ -152,37 +152,40 @@ fn poj_o_with_dot_above_right_becomes_oo() {
 }
 
 #[test]
-fn poj_o_dot_atomic_substitution_no_prefix_dangling_mark() {
-    // Codex post-impl P1 (2026-05-15) regression: against the live
-    // `dictionary.csv` sibling pair where both `so` (no tone, e.g.
-    // 蓑) and `soo` (no tone, e.g. 數) exist, the syllabifier emits
-    // BOTH endings — and the shorter `tl:so` candidate must NOT
-    // commit raw_end=2 (which would leave the combining dot `\u{0358}`
-    // dangling in the pending buffer). Both candidates have to
-    // consume the whole `so\u{0358}` source spelling so the user
-    // never sees a stranded combining mark.
+fn poj_o_dot_atomic_longest_match_suppresses_shorter_so() {
+    // §18 longest-match prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`,
+    // USER 2026-05-31「免調也壓制」). Against the live `dictionary.csv`
+    // sibling pair where both `so` (no tone, e.g. 蓑) and `soo` (no tone,
+    // e.g. 數) are valid syllables, the shadow `soo` (from POJ `so\u{0358}`)
+    // has single-syllable ends {2 (`so`), 3 (`soo`)}. `so` is a strict
+    // prefix of the longer `soo`, so it is SUPPRESSED — only the longest
+    // single syllable `tl:soo` is emitted.
+    //
+    // This subsumes the prior Codex post-impl P1 (2026-05-15) concern: that
+    // round worried the shorter `tl:so` candidate might commit raw_end=2 and
+    // strand the combining dot `\u{0358}`. Under longest-match `tl:so` no
+    // longer surfaces at all, so there is no shorter candidate to strand the
+    // mark. `tl:soo` still consumes the whole `so\u{0358}` source (raw_end=4).
     let inv = build_inventory(&["soo3", "so7"]);
     let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
         .collect();
-    let so_candidate = mapped.iter().find(|(_, k)| *k == "tl:so");
     assert!(
-        so_candidate.is_some(),
-        "test fixture mismatch: expected `tl:so` candidate to be emitted, got {mapped:?}",
-    );
-    assert_eq!(
-        so_candidate.unwrap().0,
-        (0, 4),
-        "`tl:so` must consume the whole `so\\u0358` (raw_end=4) to keep the combining dot from dangling, got {mapped:?}",
+        mapped.iter().all(|(_, k)| *k != "tl:so"),
+        "shorter prefix syllable `tl:so` must be suppressed under longest-match, got {mapped:?}",
     );
     let soo_candidate = mapped.iter().find(|(_, k)| *k == "tl:soo");
     assert!(
         soo_candidate.is_some(),
-        "expected `tl:soo` candidate to be emitted, got {mapped:?}",
+        "expected the longest single syllable `tl:soo` to be emitted, got {mapped:?}",
     );
-    assert_eq!(soo_candidate.unwrap().0, (0, 4),);
+    assert_eq!(
+        soo_candidate.unwrap().0,
+        (0, 4),
+        "`tl:soo` must consume the whole `so\\u0358` (raw_end=4), got {mapped:?}",
+    );
 }
 
 #[test]
