@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
@@ -184,8 +183,16 @@ private fun CandidateCell(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    // First candidate (engine ranker top, index 0) gets a filled keycap-color background as a
+    // visual hint — matches the iOS strip + the Rime-family highlighted-candidate convention.
+    // Keyed on literal index 0, not the dead isComposingText metadata (no producer since the
+    // v3.5.8 continuous redesign removed the composing-text cell).
     val backgroundColor =
-        if (isPressed) Color(display.themePressedHighlightColor) else Color.Transparent
+        when {
+            isPressed -> Color(display.themePressedHighlightColor)
+            index == 0 -> Color(display.themeKeyBgColor)
+            else -> Color.Transparent
+        }
 
     val isTPSLayout = display.layoutType == "tps"
     val displayRoman =

@@ -238,7 +238,7 @@ private fun CandidatePreviewRow(
         remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_fgColor) }
     val subtitleColor =
         remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_subtitle_fgColor) }
-    val composingBgColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.semiTransparentColor) }
+    val firstCandidateBgColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.key_bgColor) }
     val iconTint = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_fgColor) }
 
     val bgColor = colorSettings.candidateBackgroundColor?.let { Color(it) } ?: defaultBgColor
@@ -273,8 +273,9 @@ private fun CandidatePreviewRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             sampleCandidates.forEachIndexed { index, candidate ->
-                // First candidate has composing background (matches candidate_composing_background)
-                val itemBg = if (index == 0) composingBgColor else Color.Transparent
+                // First candidate has keycap-color background — matches the production candidate
+                // strip's first-candidate hint (key_bgColor); see behavioral-invariants.md §19.
+                val itemBg = if (index == 0) firstCandidateBgColor else Color.Transparent
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier =

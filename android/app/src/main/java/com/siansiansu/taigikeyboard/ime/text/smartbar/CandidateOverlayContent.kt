@@ -243,13 +243,12 @@ private fun CandidateRow(
 ) {
     val density = LocalDensity.current
 
-    // Distribute leftover width equally across non-composing cells — replicates the legacy
+    // Distribute leftover width equally across all cells — replicates the legacy
     // LinearLayout `width = measuredWidth, weight = 1` (base width + equal share of slack).
-    val nonComposingCount = row.count { !it.word.isComposing }
     val totalMeasured = row.sumOf { it.measuredWidth }
     val totalSpacing = spacingPx * (row.size - 1).coerceAtLeast(0)
     val leftover = (availableWidthPx - totalMeasured - totalSpacing).coerceAtLeast(0)
-    val bonus = if (nonComposingCount > 0) leftover / nonComposingCount else 0
+    val bonus = if (row.isNotEmpty()) leftover / row.size else 0
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -263,7 +262,7 @@ private fun CandidateRow(
                 // Render at exactly the packer's measuredWidth (+ stretch bonus) — the legacy cell's
                 // android:minWidth=64dp never bound because LinearLayout used an exact-width LayoutParams,
                 // so coercing to 64dp here would overflow a packed row into the control lane.
-                val widthPx = item.measuredWidth + if (item.word.isComposing) 0 else bonus
+                val widthPx = item.measuredWidth + bonus
                 CandidateCell(
                     item = item,
                     cellWidth = with(density) { widthPx.toDp() },
@@ -301,14 +300,17 @@ private fun CandidateCell(
     onClick: () -> Unit,
 ) {
     val word = item.word
-    val isComposing = word.isComposing
+    // First candidate (engine ranker top, index 0) gets the filled keycap-color hint — mirrors
+    // the strip + iOS overlay. Keyed on the packer's originalIndex, not the dead isComposingText
+    // metadata (no producer since the v3.5.8 continuous redesign).
+    val isFirstCandidate = item.originalIndex == 0
     val interaction = remember { MutableInteractionSource() }
     val isPressed by interaction.collectIsPressedAsState()
 
     val backgroundColor =
         when {
             isPressed -> colors.pressed
-            isComposing -> colors.composingBackground
+            isFirstCandidate -> colors.firstCandidateBackground
             else -> Color.Transparent
         }
 
@@ -320,13 +322,13 @@ private fun CandidateCell(
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // The composing cell insets its background vertically (legacy InsetDrawable) so the keycap
-        // tint sits as a shorter pill; pressed/normal cells fill the full cell bounds.
+        // The first-candidate cell insets its background vertically (legacy InsetDrawable) so the
+        // keycap tint sits as a shorter pill; pressed/normal cells fill the full cell bounds.
         Box(
             modifier =
                 Modifier
                     .matchParentSize()
-                    .padding(vertical = if (isComposing && !isPressed) CellVerticalPadding else 0.dp)
+                    .padding(vertical = if (isFirstCandidate && !isPressed) CellVerticalPadding else 0.dp)
                     .clip(RoundedCornerShape(CellCornerRadius))
                     .background(backgroundColor),
         )
@@ -468,7 +470,7 @@ private data class CandidateOverlayColors(
     val background: Color,
     val primary: Color,
     val subtitle: Color,
-    val composingBackground: Color,
+    val firstCandidateBackground: Color,
     val pressed: Color,
     val controlTint: Color,
     val buttonPressed: Color,
@@ -482,7 +484,7 @@ private fun rememberCandidateOverlayColors(refreshKey: Int): CandidateOverlayCol
             background = Color(getColorFromAttr(context, R.attr.smartbar_bgColor)),
             primary = Color(getColorFromAttr(context, R.attr.smartbar_candidate_fgColor)),
             subtitle = Color(getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor)),
-            composingBackground = Color(getColorFromAttr(context, R.attr.key_bgColor)),
+            firstCandidateBackground = Color(getColorFromAttr(context, R.attr.key_bgColor)),
             pressed = Color(getColorFromAttr(context, R.attr.semiTransparentColor)),
             controlTint = Color(getColorFromAttr(context, R.attr.smartbar_fgColor)),
             buttonPressed = Color(getColorFromAttr(context, R.attr.overlay_button_bgColorPressed)),
@@ -522,6 +524,3 @@ private fun measureCellWidth(
     val hanziWidth = if (!word.hanzi.isNullOrEmpty()) subtitlePaint.measureText(word.hanzi) else 0f
     return maxOf(minCellWidthPx, (maxOf(romanWidth, hanziWidth) + cellPaddingPx + 0.5f).toInt())
 }
-
-private val TaigiWord.isComposing: Boolean
-    get() = additionalInfo[TaigiWord.MetadataKeys.IS_COMPOSING_TEXT] == "true"

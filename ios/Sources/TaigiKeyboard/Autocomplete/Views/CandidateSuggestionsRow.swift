@@ -58,6 +58,7 @@ struct CandidateSuggestionsRow: View {
                             isTPSLayout: isTPSLayout,
                             orMapsToER: orMapsToER,
                             isSelected: selectedCandidateIndex == index,
+                            isFirstCandidate: index == 0,
                             onTap: onSuggestionTap,
                         )
                         .id("candidate_\(index)")

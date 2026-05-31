@@ -12,6 +12,8 @@ struct ExpandedCandidateGridCell: View {
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
+    /// 第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
+    let isFirstCandidate: Bool
     let onTap: (Autocomplete.Suggestion) -> Void
 
     @State private var isPressed: Bool = false
@@ -41,6 +43,7 @@ struct ExpandedCandidateGridCell: View {
             for: colorScheme,
             isSelected: isSelected,
             isPressed: isPressed,
+            isFirstCandidate: isFirstCandidate,
             isLiquidGlassEnabled: style.isLiquidGlassEnabled,
         )
     }

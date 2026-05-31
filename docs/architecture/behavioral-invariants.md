@@ -536,3 +536,25 @@ Applies to **both toned and toneless input** — the suppression keys on span le
 - **Rust engine** — `engine/composing/tests/continuous_explicit_tone.rs::longest_match_suppresses_shorter_prefix_syllable` (`tsua2` drops 珠; toneless `tsua` keeps 紙+蛇 but drops 珠). Golden `tl_toneless_multi` (`engine/composing/tests/golden_fetch_at_pos.rs`) freezes `tsua` → 紙 + 珠仔 (both longest-span) with 珠 absent. `tl_toneless_long_reach` freezes the phrase-not-suppressed property (台/台語 sub-words retained).
 - **Dev harness** — `engine/composing/tests/candidate_dump.rs` (`#[ignore]`) dumps production candidates for any input; run `cargo test -p composing --test candidate_dump -- --ignored --nocapture`.
 - **Dogfood (real-device, production gate)** — see `.claude/rules/taigi-incidents.md` § Qualitative perf gate dogfood checklist (item: longest-match prefix suppression).
+
+---
+
+## 19. Candidate strip + overlay — first-candidate keycap-color hint
+
+### `INVARIANT_CANDIDATE_FIRST_KEYCAP_HINT`
+
+The first candidate (engine ranker top, index 0) in **both** the candidate strip **and** the expanded candidate overlay renders with a **filled keycap-color background + rounded corners** (no border) as a visual hint. Every other candidate has a transparent background until pressed/selected. Holds on **both iOS and Android**.
+
+- **Color** — the platform keycap/button background, white in light themes and the dark keycap shade in dark themes:
+  - Android: `R.attr.key_bgColor` — `CandidateDisplayParams.themeKeyBgColor` (strip), `CandidateOverlayColors.firstCandidateBackground` (overlay).
+  - iOS: `Color.keyboardButtonBackground` (non-Liquid-Glass); `keyboardButtonBackgroundLiquid(for:).opacity(0.4)` (Liquid Glass — kept below the pressed/selected 0.6 so the state hierarchy stays legible).
+- **Keying** — literal index 0 (strip: enumerated index; overlay: `RowItem.originalIndex == 0`). NOT the `isComposingText` metadata — that path is dead (no producer since the v3.5.8 continuous redesign removed the composing-text cell).
+- **Precedence** — the pressed background wins over the first-candidate hint (and, on iOS, the selected background too; Android candidate cells have no selected-candidate visual state, only pressed).
+
+**Why**: the ranker top is the default-commit candidate; a keycap-color fill signals it without a separate selection cursor. Removed in PR #267 (2026-05-13 "no visual distinction" rule), restored 2026-06-01 per USER — the hint aids continuous-input dogfooding. Dashed-border affordances (the old iOS/Android slot-0 style) are **deliberately not used**: every surveyed highlighting IME (Rime family — trime / Hamster / librime concept) uses a filled background, none use a border. FlorisBoard / aiongtaigi-sushi do not distinguish the first candidate at all, so they are not the model here.
+
+**Cross-platform sites**:
+- iOS — `CandidateViewStyle.resolvedBackgroundColor(isFirstCandidate:)` ← `CandidateButtonView` (strip) + `ExpandedCandidateGridCell` (overlay).
+- Android — `SmartbarCandidateStrip.CandidateCell` (strip) + `CandidateOverlayContent.CandidateCell` (overlay).
+
+**Tests**: pure visual styling — no automated render assertion (Compose / SwiftUI render pins are heavy + brittle; per `code-review-rules.md §9` the gate is qualitative dogfood). Pinned by the **S6 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.

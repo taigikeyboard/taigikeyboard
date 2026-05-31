@@ -148,12 +148,14 @@ extension CandidateView.ItemStyle {
     ///   - colorScheme: 顏色方案
     ///   - isSelected: 是否選中
     ///   - isPressed: 是否按下
+    ///   - isFirstCandidate: 是否為第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
     ///   - isLiquidGlassEnabled: 是否啟用 Liquid Glass
     /// - Returns: 實際的背景色
     func resolvedBackgroundColor(
         for colorScheme: ColorScheme,
         isSelected: Bool = false,
         isPressed: Bool = false,
+        isFirstCandidate: Bool = false,
         isLiquidGlassEnabled: Bool = false,
     ) -> Color {
         // iOS 26 Liquid Glass 策略：使用透明背景讓系統 Liquid Glass 效果透出
@@ -163,6 +165,10 @@ extension CandidateView.ItemStyle {
                 // 使用閒置顏色加 60% 透明度
                 let idleColor = backgroundColor ?? Color.keyboardButtonBackgroundLiquid(for: colorScheme)
                 return idleColor.opacity(0.6)
+            } else if isFirstCandidate {
+                // 第一候選詞(engine ranker top)：低透明度鍵帽色提示，保留 Liquid Glass 通透感。
+                // 透明度刻意低於 pressed/selected 的 0.6，維持狀態強度層級。
+                return Color.keyboardButtonBackgroundLiquid(for: colorScheme).opacity(0.4)
             } else {
                 // 未選中時使用極低透明度，保持觸控功能同時讓系統 Liquid Glass 透出
                 return Color.white.opacity(0.001)
@@ -172,6 +178,10 @@ extension CandidateView.ItemStyle {
             if isPressed || isSelected {
                 // 按壓時使用深色按鈕背景（與 KeyboardKit 一致）
                 return selectedBackgroundColor ?? Color.keyboardDarkButtonBackground(for: colorScheme)
+            } else if isFirstCandidate {
+                // 第一候選詞:填滿鍵帽底色作為視覺提示(淺色主題=白),對齊 Android key_bgColor
+                // 與 Rime 家族 (trime / Hamster) 的 highlighted-candidate 慣例。
+                return Color.keyboardButtonBackground
             } else {
                 return backgroundColor ?? Color.clear
             }

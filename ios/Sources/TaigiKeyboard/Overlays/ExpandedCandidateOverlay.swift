@@ -115,6 +115,7 @@ struct ExpandedCandidateOverlay: View {
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,
                     isSelected: selectedCandidateIndex == item.originalIndex,
+                    isFirstCandidate: item.originalIndex == 0,
                     onTap: { suggestion in
                         onSuggestionTap(suggestion)
                         onCollapse()
