@@ -94,7 +94,7 @@ object PreferenceKeys {
     // 開發者補充辭典 (詞庫增補檔案)
     val DEV_DICT_ENABLED = booleanPreferencesKey("dictionary__dev_dict_enabled")
 
-    // 教育部辭典子集 (腔調 + 姓名附錄) — 巢狀於 MOE master 下;預設全開 (DD5 opt-out)。
+    // 教育部辭典子集 (腔調 + 姓名附錄) — 巢狀於 MOE master 下;腔調預設開 (DD5 opt-out),姓名附錄預設關 (姓名 opt-in)。
     // 腔調順序對齊 config.yaml dialect_columns (= subtag bit - 1)。bit 佈局由 Rust compute_filters 持有。
     val KAUTIAN_ACCENT_LUKANG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_lukang_enabled")
     val KAUTIAN_ACCENT_SANSIA_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_sansia_enabled")

@@ -483,7 +483,8 @@ class PrefHelper(
 
     var kautianAccentTaichungEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_TAICHUNG_ENABLED, true)
 
-    var kautianNameAppendixEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_NAME_APPENDIX_ENABLED, true)
+    // 姓名附錄預設關 (姓名 opt-in;CROSS-PLATFORM mirrors iOS SharedSettings.swift isKautianNameAppendixEnabledKey default false)
+    var kautianNameAppendixEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_NAME_APPENDIX_ENABLED, false)
 
     // Appearance settings
     var keyHeightScale: Float by preference(PreferenceKeys.KEY_HEIGHT_SCALE, DEFAULT_KEY_HEIGHT_SCALE)
