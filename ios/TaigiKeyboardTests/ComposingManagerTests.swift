@@ -25,11 +25,31 @@ final class ComposingManagerTests: XCTestCase {
     private var manager: ComposingManager!
     private var spy: DelegateSpy!
 
+    /// Strictly-increasing generation seed, one bump per test (process-wide,
+    /// XCTest runs methods serially within a process).
+    private static var generationSeed: UInt64 = 0
+
     override func setUp() {
         super.setUp()
         manager = ComposingManager()
         spy = DelegateSpy()
         manager.delegate = spy
+
+        // Test isolation. The composing engine is a PROCESS-WIDE Rust singleton
+        // (`EngineHandle::instance()`, engine/composing/src/handle.rs:39); a fresh
+        // `ComposingManager()` does NOT reset it. The singleton only drops to a
+        // clean `EngineState::default()` on a generation MISMATCH (handle.rs:61-65)
+        // — `Intent::Reset` alone is phase-scoped and narrower. Every fresh manager
+        // starts at generation 1, so once the first test sets `last_generation = 1`,
+        // no later test mismatches and the singleton leaks the prior test's
+        // composing / next-word state (e.g. rawInput "ab" → next test sees "aba",
+        // or stray `nextWordClearForNewComposing` effects). Bump to a strictly
+        // increasing per-test generation so each test's first engine request forces
+        // the full reset. Bump count is bounded by tests-per-process (trivial).
+        Self.generationSeed += 1
+        for _ in 0 ..< Self.generationSeed {
+            manager.bumpGeneration()
+        }
     }
 
     override func tearDown() {
@@ -149,10 +169,15 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        // v3.5.8 Continuous: the single composing char lives in the PREEDIT,
+        // never the document, so deleting it clears the preedit + exits to Idle
+        // with NO DeleteBackwardFromDocument; the terminal effect is
+        // NextWordClearForNewComposing (matches engine/composing/tests/
+        // continuous_phase.rs::delete_backward_under_continuous_with_empty_state_exits_to_idle).
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
             .resetAutocomplete,
-            .deleteBackwardFromDocument,
+            .nextWordClearForNewComposing,
         ])
     }
 
@@ -174,16 +199,17 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        // v3.5.8 Phase 7B: startComposing auto-promotes to Phase::Continuous,
-        // and `commitComposition` was rerouted through SelectSuggestion to
-        // commit cleanly across all phases. SelectSuggestion under Continuous
-        // emits the abort trio + the commit + NextWordClearForNewComposing
-        // (engine/composing/tests/continuous_phase.rs::select_suggestion_under_continuous_commits_text_and_exits).
+        // v3.5.8 Phase 7B: startComposing auto-promotes to Phase::Continuous;
+        // `commitComposition` routes through CommitRaw, which under Continuous
+        // commits `derived_display(pending)` and fires the terminal
+        // NextWordWordSelected (records the association — Model B; matches
+        // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_commits_derived_display_and_fires_nextword
+        // and testCommitRawInput below). roman carries the raw buffer "hello".
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived),
             .resetAutocomplete,
             .resetAutocompleteContext,
-            .nextWordClearForNewComposing,
+            .nextWordWordSelected(text: derived, roman: "hello", triggerPrediction: true),
         ])
     }
 
@@ -230,10 +256,14 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        // SelectSuggestion under Continuous commits the text + exits, with a
+        // terminal NextWordClearForNewComposing (matches engine/composing/tests/
+        // continuous_phase.rs::select_suggestion_under_continuous_commits_text_and_exits).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit("picked"),
             .resetAutocomplete,
             .resetAutocompleteContext,
+            .nextWordClearForNewComposing,
         ])
     }
 
@@ -259,10 +289,14 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        // Under Continuous the pending derived + external commit atomically,
+        // then NextWordClearForNewComposing (matches engine/composing/tests/
+        // continuous_phase.rs::commit_preedit_then_insert_external_under_continuous_combines_pending_and_external).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived + "😀"),
             .resetAutocomplete,
             .resetAutocompleteContext,
+            .nextWordClearForNewComposing,
         ])
     }
 
@@ -345,9 +379,14 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        // Under Continuous, reset exits to Idle with the composing clear pair +
+        // a terminal NextWordClearForNewComposing (matches engine/composing/tests/
+        // continuous_phase.rs::reset_under_continuous_emits_nextword_clear_in_addition_to_composing_pair).
+        // The clear-not-commit invariant below is unaffected.
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
             .resetAutocomplete,
+            .nextWordClearForNewComposing,
         ])
         XCTAssertFalse(spy.effects.contains { effect in
             if case .commitTextReplacingPreedit = effect { return true }
