@@ -45,10 +45,14 @@ pub(crate) fn apply(
     match intent {
         Intent::Start { text } => match &state.phase {
             Phase::Continuous { .. } => start_under_continuous(state, text, config),
-            _ => enter_composing(state, text, config),
+            // §21: a leading `--` 輕聲 marker typed from Idle is a document
+            // literal, not composing input (see helper). Composing-phase Start
+            // (non-production) keeps the plain enter-composing behavior.
+            Phase::Idle => enter_composing_or_insert_leading_hyphens(state, text, config),
+            Phase::Composing { .. } => enter_composing(state, text, config),
         },
         Intent::Append { ch } => match &state.phase {
-            Phase::Idle => enter_composing(state, ch, config),
+            Phase::Idle => enter_composing_or_insert_leading_hyphens(state, ch, config),
             Phase::Composing { raw } => {
                 let mut next = raw.clone();
                 next.push_str(&ch);
@@ -146,6 +150,54 @@ fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> 
     state.selected_candidate_index = 0;
     let display = derived_display(&raw, config);
     step_response(raw, display, 0)
+}
+
+/// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading ASCII-hyphen run
+/// typed from `Phase::Idle` (no syllable content yet) is the 輕聲 (neutral-tone)
+/// marker `--` (e.g. `--ah` 矣). It is a **document literal**, not composing
+/// input: insert the run verbatim and — if a syllable remainder follows in the
+/// same text — enter composing with the remainder. The underlined preedit then
+/// covers only the convertible syllable, matching the candidate strip and the
+/// reference IME (MOE).
+///
+/// Internal hyphens (typed AFTER syllable content, e.g. the 連字 in `tai-bak`)
+/// never reach this fn — the buffer is already `Phase::Composing`, so they stay
+/// composing-boundary delimiters via the `Append`/`Composing` arm.
+///
+/// Production keystrokes arrive one char at a time, so the common case is
+/// `text == "-"` (remainder empty → pure literal insert, stay Idle). The
+/// split also covers a multi-char `Start { text: "--ah" }` from the engine API
+/// / tests so no old-model entry survives.
+// 中文: 開頭 hyphen run(輕聲標記 --ah,在 Idle 尚無音節內容時)視為文件 literal,直接插入;
+// 中文: 若同一段後面有音節餘字則以餘字進 Composing。底線只蓋可轉換音節,對齊候選詞與 MOE。
+// 中文: 內部 hyphen(音節之後,如 tai-bak 連字)走 Append/Composing arm,維持斷詞分隔,不到此函式。
+fn enter_composing_or_insert_leading_hyphens(
+    state: &mut EngineState,
+    text: String,
+    config: &AppConfig,
+) -> ComposingResponse {
+    let hyphen_len = text.bytes().take_while(|&b| b == b'-').count();
+    if hyphen_len == 0 {
+        return enter_composing(state, text, config);
+    }
+    let (run, remainder) = text.split_at(hyphen_len);
+    if remainder.is_empty() {
+        // All hyphens — insert the literal run, stay Idle (no preedit).
+        return exit_to_idle(state, vec![commit_text_replacing_preedit(run.to_string())]);
+    }
+    // Leading run + syllable remainder (multi-char `Start` / engine-API /
+    // test path ONLY — the platform sends one char per keystroke, so a
+    // production leading `-` always arrives as `Start{"-"}` with an empty
+    // remainder above). Insert the literal run first, then compose the
+    // remainder. This emits a mixed commit+composing transition; callers MUST
+    // feed leading-hyphen input char-by-char, not as one multi-char `Start`:
+    // a mixed transition can desync Android's `onUpdateSelection` clear-hook
+    // (commit fires before the preedit lands). Engine/proto level is correct
+    // and tested; the contract is char-by-char at the platform boundary.
+    let mut resp = enter_composing(state, remainder.to_string(), config);
+    resp.effect
+        .insert(0, commit_text_replacing_preedit(run.to_string()));
+    resp
 }
 
 /// TPS auto-correct. Preserves `selected_candidate_index` (correction on top

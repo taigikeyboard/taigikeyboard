@@ -30,6 +30,62 @@ fn req(method: Method) -> ComposingRequest {
     }
 }
 
+fn commit_text(resp: &protos::engine::ComposingResponse) -> Option<String> {
+    resp.effect.iter().find_map(|e| match e.kind.as_ref()? {
+        protos::engine::effect::Kind::CommitTextReplacingPreedit(c) => Some(c.text.clone()),
+        _ => None,
+    })
+}
+
+// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading `--` typed from
+// Idle is a document literal, NOT composing input (MOE-style). Production sends
+// one char at a time, so the first `-` arrives as Start{"-"}.
+#[test]
+fn intent_start_leading_hyphen_inserts_literal_stays_idle() {
+    let mut engine = Engine::new();
+    let resp = dispatch::handle(
+        &req(Method::Start(Start { text: "-".into() })),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    assert!(!resp.is_composing, "leading `-` must not enter composing");
+    assert_eq!(commit_text(&resp), Some("-".to_string()));
+    // No preedit underline for the literal hyphen.
+    assert_eq!(resp.preedit.unwrap_or_default().display_text, "");
+}
+
+#[test]
+fn intent_append_leading_hyphen_in_idle_inserts_literal() {
+    let mut engine = Engine::new();
+    let resp = dispatch::handle(
+        &req(Method::Append(Append { char: "-".into() })),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    assert!(!resp.is_composing);
+    assert_eq!(commit_text(&resp), Some("-".to_string()));
+}
+
+// Multi-char Start (engine API / test path): split the leading hyphen run,
+// insert it literally, then compose the syllable remainder.
+#[test]
+fn intent_start_leading_hyphens_then_syllable_splits() {
+    let mut engine = Engine::new();
+    let resp = dispatch::handle(
+        &req(Method::Start(Start {
+            text: "--ah".into(),
+        })),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    assert!(resp.is_composing, "the syllable remainder composes");
+    assert_eq!(commit_text(&resp), Some("--".to_string()));
+    assert_eq!(resp.preedit.unwrap().raw_input, "ah");
+}
+
 #[test]
 fn intent_start() {
     let mut engine = Engine::new();

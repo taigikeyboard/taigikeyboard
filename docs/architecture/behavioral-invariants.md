@@ -34,6 +34,8 @@
 16. [Keyboard body — touch + popup + window insets (Android Compose body)](#16-keyboard-body--touch--popup--window-insets-android-compose-body) → moved to [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md)
 17. [Continuous input — explicit-tone candidate filtering](#17-continuous-input--explicit-tone-candidate-filtering)
 18. [Continuous input — longest-match prefix suppression](#18-continuous-input--longest-match-prefix-suppression)
+19. [Candidate strip + overlay — first-candidate keycap-color hint](#19-candidate-strip--overlay--first-candidate-keycap-color-hint)
+21. [Composing input — leading 輕聲 `--` marker is a document literal](#21-composing-input--leading-輕聲----marker-is-a-document-literal)
 
 ---
 
@@ -558,3 +560,22 @@ The first candidate (engine ranker top, index 0) in **both** the candidate strip
 - Android — `SmartbarCandidateStrip.CandidateCell` (strip) + `CandidateOverlayContent.CandidateCell` (overlay).
 
 **Tests**: pure visual styling — no automated render assertion (Compose / SwiftUI render pins are heavy + brittle; per `code-review-rules.md §9` the gate is qualitative dogfood). Pinned by the **S6 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
+
+---
+
+## 21. Composing input — leading 輕聲 `--` marker is a document literal
+
+### `INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL`
+
+A leading ASCII-hyphen run typed when the composing buffer has **no syllable content yet** (engine `Phase::Idle`) is the Taiwanese 輕聲 (neutral-tone) marker `--` (e.g. `--ah` 矣). It is committed to the document as **literal text** and does **not** enter the composing buffer. Only the following syllable (`ah`) composes — so the underlined preedit equals the candidate strip (`ah`), not `--ah`. Holds on **both iOS and Android** (single engine change). Matches the reference IME (MOE): typing `--` shows no underline; only `ah` is underlined; the result is `--ah`.
+
+- **Scope** — leading hyphens only (run typed from `Phase::Idle`). The full run is preserved (single `-` or `--`+). Production keystrokes arrive one char at a time, so each leading `-` is its own `Start{"-"}` → literal insert, stay Idle; the first non-hyphen char starts composing.
+- **Internal hyphens unaffected** — a hyphen typed AFTER syllable content (the 連字 in `tai-bak`, or an internal khinsiann `goa--si`) hits the `Append`/`Composing` arm and stays a composing-boundary delimiter. Internal `--` khinsiann compounds (`tso̍h--ji̍t`) remain dictionary-supplied via the candidate roman.
+- **`--` is plain document text after insert** — backspace/cursor/editing over it use the host editor's normal behavior (the engine is Idle, no preedit). Picking a candidate after a literal `--` appends to it: `--ah` + tap roman `ah` → `--ah`; + tap **Hanji 矣** → `--矣`. The `--` is kept regardless of candidate kind (roman OR hanji) — this matches MOE, whose hanji mode also retains `--` (`--ah` → 矣 → `--矣`; USER-verified 2026-06-02). 輕聲 `--` is a Taiwanese-romanization marker that the MOE convention preserves even in hanji output, so it is never stripped per candidate kind.
+- **Mechanism** — `transition.rs::enter_composing_or_insert_leading_hyphens` emits `CommitTextReplacingPreedit(run)` (a plain insert when there is no active preedit — iOS `clearMarkedText()` no-op + `insertText`; Android `commitText`) and stays Idle, splitting any syllable remainder into `enter_composing`.
+
+**Why**: the engine has no 輕聲 semantics — previously `Intent::Start{"-"}` / `Append{"-"}` in Idle called `enter_composing`, so a leading `--` entered the composing buffer and the whole `--ah` underlined while the candidate was only `ah` (preedit ≠ candidate — dogfood wart 2026-06-02). Treating the leading marker as a document literal (MOE model) makes preedit == candidate and `--` normal editable text. An earlier commit-time re-attach approach (PR #378, closed) fixed only the commit string, not the underline; it was superseded by this input-model fix.
+
+**Engine site**: `engine/composing/src/transition.rs` — `enter_composing_or_insert_leading_hyphens`, wired into the `Start`/Idle and `Append`/Idle arms.
+
+**Tests**: `composing/tests/intent_coverage.rs` (`intent_start_leading_hyphen_inserts_literal_stays_idle`, `intent_append_leading_hyphen_in_idle_inserts_literal`, `intent_start_leading_hyphens_then_syllable_splits`). Plus the **S8 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
