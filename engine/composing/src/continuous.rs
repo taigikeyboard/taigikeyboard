@@ -295,6 +295,36 @@ fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     candidates.retain(|c| seen.insert((c.roman.clone(), c.hanji.clone(), c.consumed_span)));
 }
 
+/// Two romanizations are the **same reading** when they differ only in
+/// syllable separators: ASCII space (walker synth multi-word join), `-`
+/// (連字 compound), or `--` (輕聲 khinsiann, two `-` chars). Tone
+/// diacritics live inside the syllable letters and are NOT stripped, so
+/// the comparison is tone-preserving:
+///
+/// * `roman_reading_eq("hōo guá", "hōo--guá")` → `true` (予我: synth
+///   space-join vs dict khinsiann form — the same reading).
+/// * `roman_reading_eq("hōo guá", "hōo-guā")` → `false` (戶外: guā tone 7
+///   ≠ guá tone 2 — a different word per Core Principle #7).
+///
+/// Used only by the slot-0 promote at [`assemble_candidates`] Step 4 to
+/// recognize when the walker's space-joined synth is a malformed
+/// rendering of an existing full-span dict word, so the dict word's
+/// canonical separator form can take slot 0 instead.
+// 中文: 兩個羅馬字「同讀音」= 僅差音節分隔符(空格 / `-` 連字 / `--` 輕聲);
+// 中文:   聲調符號在音節字母內,不剝除 → 保聲調。hōo guá == hōo--guá(予我),
+// 中文:   但 != hōo-guā(戶外,七聲≠二聲)。供 slot-0 promote 辨識 synth 是否為
+// 中文:   既有全 span 字典詞的錯誤(空格)呈現。
+fn roman_reading_eq(a: &str, b: &str) -> bool {
+    fn is_kept(c: &char) -> bool {
+        *c != ' ' && *c != '-'
+    }
+    // Allocation-free: compare the separator-filtered char streams
+    // directly (`Iterator::eq`). This runs per candidate in the per-
+    // keystroke slot-0 scan, so it must not heap-allocate a stripped
+    // `String` for each comparison.
+    a.chars().filter(is_kept).eq(b.chars().filter(is_kept))
+}
+
 /// TPS-mode visual dedupe: collapse candidates sharing `(hanji,
 /// consumed_span)` because the TPS candidate strip hides romanization
 /// (TPS = hanji-first input mode per `.claude/rules/phonetics.md`).
@@ -1145,12 +1175,77 @@ pub(crate) fn assemble_candidates(
                             coverage_kind: slot0.coverage_kind,
                             is_custom: slot0.is_custom,
                         };
+                        // `hoogua` bug (2026-06-02): the walker synth
+                        // joins per-syllable canonical romans with a
+                        // SPACE (`fetch_walker_slot0_inner` ~`.join(" ")`).
+                        // For a genuine multi-word reading (台語齒盤) that
+                        // space-join IS the desired display. But when the
+                        // synth's full-buffer `(hanji, span)` coincides
+                        // with a single lexical dict word that stores its
+                        // own separator form (`-` 連字 / `--` 輕聲), the
+                        // space-join is a malformed rendering of that word
+                        // (`予我` synth `hōo guá` vs dict `hōo--guá`). The
+                        // existing `(roman, hanji, span)` dedupe below
+                        // can't collapse the pair because `roman` differs
+                        // ONLY in the separator, so the malformed synth
+                        // wins slot 0 and the canonical dict row sinks.
+                        //
+                        // Fix (display layer, NOT the cost/segmentation
+                        // primitive — diagnosis §S5 / behavioral-invariants
+                        // §18 lesson): when an existing FULL-coverage,
+                        // full-span dict candidate shares the synth's hanji
+                        // and is the SAME reading (separator-insensitive,
+                        // tone-preserving — `roman_reading_eq`), promote
+                        // that dict row's canonical roman to slot 0 and
+                        // drop the synth. Gates:
+                        // * `coverage_kind == COVERAGE_KIND_FULL` + same
+                        //   `consumed_span` → a real whole-buffer dict word.
+                        // * `x.roman != slot0_cand.roman` → only the
+                        //   separator-mismatch case; identical-form readings
+                        //   (也是 `iā sī` synth == dict) keep the synth
+                        //   verbatim so slot-0 metadata is unchanged there.
+                        // * `roman_reading_eq` → `hōo guá` matches
+                        //   `hōo--guá` (予我) but NOT `hōo-guā` (戶外,
+                        //   tone 7 ≠ tone 2) — respects Core Principle #7
+                        //   word identity (漢字 + canonical 羅馬字).
+                        // * `!slot0_cand.is_custom` → never replace a
+                        //   custom-influenced walker path with a non-custom
+                        //   dict row (would drop the user's custom-dict
+                        //   effect; Codex pre-impl regression #3).
+                        // 中文: hoogua bug — walker synth 以空格 join 逐音節羅馬字;
+                        // 中文:   真多詞句(台語齒盤)空格正確,但合成 (hanji,span) 撞上
+                        // 中文:   單一字典詞(存 `-`/`--`)時,空格版是該詞的錯誤呈現,
+                        // 中文:   而 (roman,hanji,span) 去重因 roman 僅差分隔符無法收斂。
+                        // 中文: 修法在 display 層(非 cost/segmentation primitive,§S5/§18 教訓):
+                        // 中文:   既有 FULL 全 span 同 hanji 且 reading 相容(分隔符無關、保聲調)
+                        // 中文:   的字典候選 → 提其 canonical roman 到 slot 0、丟 synth。
+                        // 中文:   x.roman != synth roman 門檻只動分隔符不符的 bug case;
+                        // 中文:   !is_custom 不以非 custom dict row 取代 custom walker path。
+                        let promote_idx = if slot0_cand.is_custom {
+                            None
+                        } else {
+                            c.iter().position(|x| {
+                                x.coverage_kind == COVERAGE_KIND_FULL
+                                    && x.consumed_span == slot0_cand.consumed_span
+                                    && x.hanji == slot0_cand.hanji
+                                    && x.roman != slot0_cand.roman
+                                    && roman_reading_eq(&x.roman, &slot0_cand.roman)
+                            })
+                        };
+                        // Slot 0 is either the promoted canonical dict row
+                        // (removed from its current position) or the synth.
+                        // Both then run the SAME exact-`(roman, hanji, span)`
+                        // dedupe + `insert(0, …)` so slot 0 stays unique.
+                        let slot0 = match promote_idx {
+                            Some(i) => c.remove(i),
+                            None => slot0_cand,
+                        };
                         c.retain(|x| {
-                            !(x.roman == slot0_cand.roman
-                                && x.hanji == slot0_cand.hanji
-                                && x.consumed_span == slot0_cand.consumed_span)
+                            !(x.roman == slot0.roman
+                                && x.hanji == slot0.hanji
+                                && x.consumed_span == slot0.consumed_span)
                         });
-                        c.insert(0, slot0_cand);
+                        c.insert(0, slot0);
                     }
                 }
             }
@@ -1374,6 +1469,23 @@ mod tests {
     // by `composing::shadow`'s tests plus the integration suite
     // (`engine/composing/tests/build_keys_tps.rs` covers the new
     // mode-aware TPS key emission against an inline `tps:` inventory).
+
+    // ----- `hoogua` bug — slot-0 separator-insensitive reading match -----
+
+    #[test]
+    fn roman_reading_eq_matches_separator_variants_preserves_tone() {
+        // 予我: walker space-join vs dict khinsiann — same reading.
+        assert!(roman_reading_eq("hōo guá", "hōo--guá"));
+        // 連字 vs space — same reading.
+        assert!(roman_reading_eq("tâi gí", "tâi-gí"));
+        // 戶外: tone 7 `guā` ≠ tone 2 `guá` — different reading despite
+        // sharing the separator-stripped consonant/vowel skeleton.
+        assert!(!roman_reading_eq("hōo guá", "hōo-guā"));
+        // Identical strings (also-是 `iā sī` synth == dict) trivially eq.
+        assert!(roman_reading_eq("iā sī", "iā sī"));
+        // Different syllables entirely — not a reading match.
+        assert!(!roman_reading_eq("hōo guá", "tâi gí"));
+    }
 
     // ----- v3.5.8 S2 — synth_consumed_span trailing-hyphen guard -----
     // (Codex post-impl S2 P1 regression). Production runs

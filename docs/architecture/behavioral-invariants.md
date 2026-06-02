@@ -579,3 +579,20 @@ A leading ASCII-hyphen run typed when the composing buffer has **no syllable con
 **Engine site**: `engine/composing/src/transition.rs` — `enter_composing_or_insert_leading_hyphens`, wired into the `Start`/Idle and `Append`/Idle arms.
 
 **Tests**: `composing/tests/intent_coverage.rs` (`intent_start_leading_hyphen_inserts_literal_stays_idle`, `intent_append_leading_hyphen_in_idle_inserts_literal`, `intent_start_leading_hyphens_then_syllable_splits`). Plus the **S8 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
+
+---
+
+## 22. Continuous input — slot-0 respects the dictionary separator form
+
+### `INVARIANT_CONTINUOUS_SLOT0_RESPECTS_DICT_SEPARATOR`
+
+When the continuous-input best candidate (index 0) is a single lexical dictionary word, its romanization shows the **dictionary's stored separator form** — `-` (連字 compound, `tâi-gí` 台語), `--` (輕聲 khinsiann, `hōo--guá` 予我), or a space (詞組 phrase stored with spaces, `iā sī` 也是) — **not** a fabricated space-join. Holds wherever the full buffer maps to one dict word. Genuine multi-word readings that have **no** single full-span dict word (e.g. `tâi-gí khí-puânn` 台語齒盤) keep the walker's space-joined synthesis.
+
+- **Why the bug existed** — the full-sentence walker synthesizes slot 0 by joining each chosen edge's canonical roman with a **space** (`fetch_walker_slot0_inner` ~`.join(" ")`). That space-join is correct for a real multi-word reading, but when the min-cost path splits a whole-word input into single-syllable edges (`hoogua` → 予/hōo + 我/guá, because the common single chars out-frequency the freq-16 compound 予我), the synth hanji `予我` collides with the dict word 予我 while the synth roman `hōo guá` is a malformed rendering of `hōo--guá`. The slot-0 `(roman, hanji, consumed_span)` dedupe could not collapse the pair because the romans differ **only** in the separator, so the malformed synth won slot 0 and the canonical dict row sank below.
+- **Fix location** — the **display/assembly layer**, NOT the cost/segmentation primitive. At the Step-4 slot-0 prepend seam (`composing::continuous::assemble_candidates`), when an existing **FULL-coverage, full-span** dict candidate shares the synth's `hanji` and is the **same reading** (separator-insensitive, tone-preserving — `roman_reading_eq`, which strips ` `/`-` but keeps tone diacritics so `hōo guá` matches `hōo--guá` but never `hōo-guā` tone 7), that dict row's canonical roman is promoted to slot 0 and the synth is dropped. The walker's **reading choice** (which word) is preserved; only the **rendering** changes. This keeps the segmentation/cost primitive untouched per the §18 / diagnosis-discipline §S5 lesson (candidate-strip display fixes must not live in the shared primitive that also feeds the min-hop commit counter).
+- **Gates** (all required to promote) — `coverage_kind == COVERAGE_KIND_FULL`; same `consumed_span`; same `hanji`; `x.roman != synth.roman` (only the separator-mismatch case — identical-form readings like 也是 `iā sī` keep the synth verbatim, so slot-0 metadata is unchanged there); `roman_reading_eq`; `!synth.is_custom` (never replace a custom-influenced walker path with a non-custom dict row). Respects **Core Principle #7** word identity (漢字 + canonical 羅馬字): `hōo--guá` (予我) and `hōo-guā` (戶外) stay distinct words.
+- **Scope** — engine-internal continuous-input candidate assembly; surfaces identically on iOS and Android (single engine change, no platform mirror).
+
+**Engine site**: `engine/composing/src/continuous.rs` — `roman_reading_eq` + the promote branch in `assemble_candidates` Step 4.
+
+**Tests**: `composing/tests/continuous_slot0_dict_roman.rs` (`slot0_promotes_dict_khinsiann_form_over_space_synth`, `slot0_keeps_space_synth_for_genuine_multiword_reading`) + the `roman_reading_eq` unit test in `continuous.rs`. Empirically verified against production artifacts via the `composing/tests/candidate_dump.rs` dev harness (`DUMP_INPUTS="hoogua"` → `[0]=予我/hōo--guá`). Plus the **S9 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
