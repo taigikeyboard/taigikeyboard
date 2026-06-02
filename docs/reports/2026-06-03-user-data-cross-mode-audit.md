@@ -80,8 +80,10 @@
 - **A(最小)**:純漢字 lookup(對齊 bundled bin)。最貼「配合舊版格式」,但丟掉 prev 讀音區分。
 - **B(不適合單獨用)**:連續輸入改傳 canonical TL + DB migration 重正規化既有列。但 continuous effect 拿的是 raw slice,`canonical_tl_form("taigi")` 不會變 `tâi-gí`;舊 raw 列無法無歧義重建。**列為 C 之後的完整對齊 follow-up。**
 
-### 次要風險(連帶,Codex 補)
-連續輸入同樣把 **`next_tl` 存成 raw/toneless** → 候選 identity 碎片化、可能顯示 `taigi` 而非 `tâi-gí`。C/A 先修「找不到」;要完整對齊 #7,需讓連續 commit payload 帶 selected candidate 的 canonical TL(= B 的 engine 部分)。
+### 第二 co-bug(同寫入路徑;最終 review 升級)
+同一條 raw-roman 寫入路徑造成**第二個資料模型 bug**:連續輸入把 **`next_tl` 也存成 raw/toneless**(`taigi`),一般 commit 存 canonical(`tâi-gí`)。`UNIQUE(prev_word,next_word,next_tl)` 含 next_tl → **同一個 next word 變兩列**;且 nextword `filter.rs:57,68` 按 **`(hanzi, tl)` merge**(非 hanzi)→ 兩列變**兩個預測 → 預測列重複顯示同詞**。
+
+這不是取代主 root cause,而是讓「R1 純查詢放寬」從「乾淨修好」變成「會召回但可能召回成重複」。**修法**:R1 在 `filter.rs` merge 層加 **toneless-collapse**(toneless 列折進同漢字 toned 列;2 guardrail:分隔符+聲調不敏感、不做歧義一對多)讀層消重;R2 讓連續 commit 寫 canonical TL,寫層根治未來 fragmentation(亦為 R5 foundational)。hanzi-only dedup 不可(違 #7 真多音字 重/tāng vs 重/tàng)。詳見 §8 R1/R2。
 
 ---
 
@@ -248,11 +250,11 @@
 | Round | Scope | 範圍 | 風險 | auto mode? |
 |---|---|---|---|---|
 | **R0 admin** (本輪) | roadmap + 本報告 + memory plan,commit to main | docs | none | — |
-| **R1** 🔴 | 詞關聯 recall fix:`WHERE prev_word = ?` + prev_tl 移 `ORDER BY` ranking(exact>empty>mismatch);回歸測試(mismatched 非空 prev_tl 仍回傳);`INVARIANT_NEXTWORD_PREV_HANJI_LOOKUP`;S dogfood 跨 mode/路徑 recall | iOS+Android SQL(非 engine,無 schema,無 migration) | **低** | ✅ auto |
-| **R2** | 連續輸入 commit 帶 canonical TL(非 raw_text)→ 修 next_tl 污染 + prev_tl ranking 訊號品質 + 顯示;完整對齊 #7 next 端 | engine `transition.rs` + iOS/Android wiring(無 schema) | 中 | ✅ auto + Codex pre/post |
-| **R3** | 自訂詞 cross-mode lookup:**設計 fork → Codex consult 先**((a) 寫入多家族衍生鍵 +backfill / (b) 查詢端 canonicalize 統一家族) | engine `derivation.rs` + 平台 query + 可能非破壞 migration | 中-高 | ⚠ Codex 設計 fork 先,再 auto |
+| **R1** 🔴 | 詞關聯 recall + dedup:(a) 查詢 `WHERE prev_word = ?` + prev_tl 移 `ORDER BY` ranking(CASE exact>empty>mismatch,**rank-before-truncate**,overfetch limit×2);(b) **`filter.rs` merge 加 toneless-collapse** — toneless next_tl 列折進同漢字 toned 列。**2 guardrail**:① 分隔符+聲調皆不敏感(復用 `roman_reading_eq` PR #380 continuous.rs:298);② **僅當恰好一個** toned 列匹配才折,多個(重/tāng+重/tàng)保留不歸併。回歸測試(mismatched 非空 prev_tl 仍回傳 + dup-collapse + LIMIT)+ `INVARIANT_NEXTWORD_PREV_HANJI_LOOKUP` + S dogfood | iOS+Android SQL + engine `filter.rs`(無 schema,無 migration) | **低** | ✅ auto + Codex |
+| **R2** | 連續輸入 commit 帶 canonical TL(非 raw_text)→ 修 next_tl/prev_tl 來源 fragmentation(寫層根治)+ 顯示;完整對齊 #7 next 端。**設計 fork→Codex 先**:`CommitContinuous` 加 `association_tl` 欄(**proto triple-touch** rust-migration-policy §4)+ 連續候選帶 candidate TL sidechannel + NailedSegment 欄 + emit **僅進 NextWord effect 不進 lattice key**(lattice 保 raw `entry.roman` continuous.rs:264-291) | engine `transition.rs`+proto + iOS/Android wiring + autocomplete suggestion TL | 中 | ⚠ Codex 設計 fork 先 |
+| **R3** | 自訂詞 cross-mode lookup:**設計 fork → Codex consult 先;偏好 (a) 寫入多家族衍生鍵 +backfill**(Codex:查詢端 canonicalize 風險破壞 custom lattice byte identity) | engine `derivation.rs` + 平台 query + 非破壞 migration(多家族 backfill) | 中-高 | ⚠ Codex 設計 fork 先 |
 | **R4** | Android 自訂詞 cap parity:hard cap 30000 + grandfather 既有 + 擋新增明確 error(**不自動驅逐** user-authored);cap-policy 結構整併 | Android only | 低 | ✅ auto |
-| **R5** ⚠ | 多音字 frequency `(hanji, tl)` pair-key:修 #7 違反(重/tîng+重/tāng 合併);tolerant pair-key(比照 R1,不 hard-filter,舊 tl='' 仍配);schema ALTER+tl backfill | engine `score.rs` + iOS/Android schema(**非破壞 ALTER,絕不 DROP**) | **高**(re-key 全詞頻 + 影響 ranking) | ⚠ Codex pre/post,謹慎,最後行為變更輪 |
+| **R5** ⚠ | 多音字 frequency `(hanji, tl)` pair-key:修 #7 違反(重/tîng+重/tāng 合併)。**全範圍非單純 ALTER**:user_frequency schema ALTER+tl + **`FrequencyEntry` proto +tl** + ranking `FrequencyMap` key(score.rs:173) + candidate key extraction(`buildFrequencyEntries` dedup ComposingManager) + **backup/import migration** + tolerant(舊 tl='' 仍配,比照 R1)。**依賴 R2**(需 canonical TL 於連續 commit,否則詞頻同樣 raw/canonical fragmentation) | engine `score.rs`+proto + iOS/Android schema(**非破壞 ALTER,絕不 DROP**) | **高**(re-key 全詞頻 + ranking + 高風險 migration) | ⚠ Codex pre/post,謹慎,**必在 R2 後** |
 | **R6** | SQLite hygiene:VACUUM on-demand(**非啟動路徑**,prune 後/用戶壓縮鍵)、`PRAGMA optimize`(schema/index 變後)、integrity_check 診斷、journal-mode parity、移除冗餘 index、record-path 錯誤上拋(停止吞錯) | iOS+Android | 低 | ✅ auto |
 | **R7** | 備份/隱私政策:learned data(詞頻/關聯)是否 exclude iCloud/Android Auto Backup(自訂詞保持可備份) | iOS backup attrs / Android `fullBackupContent` | 低(**需 USER 產品決策**) | ⛔ STOP — USER 產品決策後才 impl |
 
@@ -260,9 +262,13 @@
 
 **總計**: **7 個實作 round (R1-R7)** + R0 admin(本輪 docs commit)。
 
-**Round 排序理由**: R1 最先(用戶實際回報的 bug + 最安全 + 消滅 dead-row)。R2 讓未來寫入資料乾淨。R3 自訂詞獨立。R4 Android-only 小。R5 最高風險(re-key 全詞頻)隔離在行為變更最後。R6 hygiene 低風險。R7 需產品決策殿後。每 round 之間 context 清除,memory `project_user_data_cross_mode_audit.md` + 本報告 = 唯一 hand-off。
+**Round 排序理由**: R1 最先(用戶實際回報的 bug;讀層自足 — 查詢放寬 + toneless-collapse 同時修 recall + 消滅 dead-row + 防重複顯示,Codex 確認可獨立 ship)。R2 寫層根治 fragmentation + 為 R5 foundational。R3 自訂詞獨立。R4 Android-only 小。R5 最高風險(re-key 全詞頻 + 高風險 migration)**必在 R2 後**。R6 hygiene 低風險。R7 需產品決策殿後(與 R5 的 backup migration 協調)。每 round 之間 context 清除,memory `project_user_data_cross_mode_audit.md` + 本報告 = 唯一 hand-off。
 
-**auto mode 例外(真 BLOCK,需 USER 介入)**: R3 設計 fork(Codex consult 後若仍兩案相當)、R5 若 review 發現 ranking 回歸風險過高、R7 備份隱私產品決策。其餘 auto。
+**依賴**: R5 → 依賴 R2(canonical TL)。R1 讀層自足(不需 R2 先)。R3/R4/R6 獨立。R7 產品決策 + 與 R5 backup 協調。
+
+**auto mode 例外(真 BLOCK,需 USER 介入)**: R2/R3 設計 fork(Codex consult 後若仍兩案相當)、R5 若 review 發現 ranking 回歸風險過高、R7 備份隱私產品決策。其餘 auto。
+
+**最終 review 收斂(2026-06-03)**: 此計畫經 Codex ANALYSIS-ONLY **對抗 review + 確認 pass** 兩輪。Codex 起初 7 項 objection(R1 非乾淨單獨 / 重複曝光 / LIMIT 飢餓 / 多音字 prev 錯讀音 / R2 需 proto / 平台替換較差 / R5 under-scoped),全部以上述修正 resolved。**最終 Codex「no remaining objection」** —— 條件為 R1 toneless-collapse 含 2 guardrail(分隔符+聲調不敏感、不做歧義一對多)。Claude 亦無異議。雙簽核完成。Prompts: `/tmp/v361-plan-adversarial-codex.txt` + `/tmp/v361-plan-confirm-codex.txt`。
 
 ## 9. 三索引繼續實作價值 (USER 指令 #5)
 
@@ -286,5 +292,7 @@
 - Codex `codex exec` ANALYSIS-ONLY 二意見 ×2:
   - 詞關聯根因 + 修法排名 + #7 適用範圍,prompt `/tmp/nextword-assoc-codex.txt`。修正一處:`association.bin` 非 byte-identical(SHA 變),但 key schema/user-DB 未動的結論成立。
   - DB 生命週期 + 最佳實踐 verdict(§7),prompt `/tmp/userdata-lifecycle-codex.txt`。確認 query-only fix 無需 data migration、dead-row 不可 DELETE、VACUUM 屬 maintenance 非 hotfix、自訂詞 user-authored 不可 LRU 驅逐;補多音字詞頻 key / 備份隱私 / 多進程 / 遷移執行緒風險。
+  - **計畫對抗 review**(§8,USER 要求「直到雙方無異議」),prompt `/tmp/v361-plan-adversarial-codex.txt`。Codex 7 objection:發現 `next_tl` fragmentation 第二 co-bug + filter `(hanzi,tl)` merge 重複 + R1 LIMIT 飢餓 + R2 需 proto + R5 under-scoped。
+  - **計畫確認 pass**,prompt `/tmp/v361-plan-confirm-codex.txt`。全 7 項 resolved;最終「no remaining objection」(條件:R1 toneless-collapse 2 guardrail — 分隔符+聲調不敏感、不做歧義一對多)。雙簽核完成。
 - 三索引 ship 範圍:roadmap `docs/roadmap.md` + eval `docs/reports/2026-05-20-triple-index-eval.md` + memory `project_v359_d_tps_triindex_plan.md`。
 - 所有「跨 mode 共享?」判定均 trace 實際 key 構造 + lookup query,非 code-reading 推論。

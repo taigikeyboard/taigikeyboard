@@ -41,15 +41,19 @@ USER 回報詞關聯紀錄跨版本失效 (連續輸入同漢字詞之前關聯�
 
 | Round | Scope | 風險 | auto? |
 |---|---|---|---|
-| R1 🔴 | 詞關聯 recall fix (`WHERE prev_word=?` + prev_tl→ORDER BY ranking);消滅 dead-row;無 migration | 低 | ✅ |
-| R2 | 連續輸入 commit 帶 canonical TL (修 next_tl 污染 + #7 next 端);engine transition.rs | 中 | ✅+Codex |
-| R3 | 自訂詞 cross-mode (設計 fork→Codex:寫入多家族鍵 vs 查詢端 canonicalize) | 中-高 | ⚠ Codex fork 先 |
+| R1 🔴 | 詞關聯 recall + dedup:查詢 `WHERE prev_word=?` + prev_tl→ORDER BY ranking (rank-before-truncate, overfetch) + `filter.rs` **toneless-collapse** (toneless→toned 同漢字;2 guardrail:分隔符+聲調不敏感 復用 `roman_reading_eq` / 不做歧義一對多)。無 migration | 低 | ✅+Codex |
+| R2 | 連續輸入 commit 帶 canonical TL (寫層根治 next_tl fragmentation;**proto triple-touch** `CommitContinuous +association_tl` + 候選帶 TL + emit 僅 NextWord 不進 lattice);R5 foundational | 中 | ⚠ Codex fork 先 |
+| R3 | 自訂詞 cross-mode (設計 fork→Codex;**偏好寫入多家族鍵**,查詢端 canonicalize 風險破壞 lattice byte identity) | 中-高 | ⚠ Codex fork 先 |
 | R4 | Android 自訂詞 cap parity (hard cap+grandfather+擋新增,不自動驅逐) | 低 | ✅ |
-| R5 ⚠ | 多音字 freq (hanji,tl) pair-key (修 #7;tolerant key;ALTER+backfill,不 DROP) | **高** | ⚠ Codex pre/post |
+| R5 ⚠ | 多音字 freq (hanji,tl) pair-key (修 #7)。**全範圍**:schema ALTER+tl + `FrequencyEntry` proto +tl + ranking key + candidate key extraction + **backup migration** + tolerant;**依賴 R2** | **高** | ⚠ Codex pre/post |
 | R6 | SQLite hygiene (VACUUM on-demand 非啟動路徑/optimize/integrity/journal parity/冗餘 index/record 錯誤上拋) | 低 | ✅ |
-| R7 | 備份/隱私 (learned data 是否 exclude cloud backup) | 低 | ⛔ USER 產品決策後 |
+| R7 | 備份/隱私 (learned data 是否 exclude cloud backup;與 R5 backup migration 協調) | 低 | ⛔ USER 產品決策後 |
 
-刻意不做 (YAGNI/Codex): orphan 清理 (risk>value,須 (hanzi,tl)-safe + 保留自訂詞)。
+依賴:R5→R2 (canonical TL)。R1 讀層自足。順序 R1→R2→R3→R4→R5→R6→R7。刻意不做 (YAGNI/Codex): orphan 清理。
+
+**Root cause (2 co-bug,最終 review 確認)**: (1) `prev_tl` hard-filter → recall miss;(2) `next_tl` raw/canonical fragmentation + filter `(hanzi,tl)` merge → 重複顯示。R1 讀層 (查詢放寬+toneless-collapse) + R2 寫層 (canonical TL) 雙修。
+
+**雙簽核**: Codex 對抗 review 7 objection → 全 resolved → 確認 pass「no remaining objection」(R1 2 guardrail 為條件)。Claude 亦無異議。
 
 **三索引繼續實作價值 (USER #5)**: **已 100% 完成,無 pending。** 三軸全 first-class — TL 本來是 / POJ B-1#308+B-2#309 / TPS D#334-340。價值已交付 (三軸對稱搜尋 + 架構去耦),應保留;回退=失 TPS/POJ first-class 搜尋 + 重引架構債。與 v3.6.1 (使用者資料層) 正交,**v3.6.1 不動三索引**。
 
