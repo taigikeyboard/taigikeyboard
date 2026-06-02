@@ -110,7 +110,7 @@ extension ActionHandler {
             // 中文: Model B — 標點抑制下詞顯示(與 Space 一致);無條件呼叫對齊
             // 中文: Android,連非組字時的殘留 strip 也一併清掉。
             nextWordController.clearDisplay()
-            keyboardContext.textDocumentProxy.insertText(finalChar)
+            insertNonComposingCharacter(finalChar)
             return true
         }
 
@@ -120,6 +120,39 @@ extension ActionHandler {
         }
 
         return true
+    }
+
+    /// Insert a non-composing character (punctuation / symbol), applying the
+    /// auto-space "smart punctuation" swap: when auto-space is active and the
+    /// character just before the cursor is the auto-inserted trailing space,
+    /// attaching punctuation deletes that space and re-inserts it AFTER the
+    /// punctuation (`guá ` + `?` → `guá? `, never `guá ?`).
+    // CROSS-PLATFORM INVARIANT — mirrors Android
+    // TextInputKeyHandler.commitNonComposingCharacter. Drift causes silent divergence.
+    private func insertNonComposingCharacter(_ char: String) {
+        let proxy = keyboardContext.textDocumentProxy
+        // No-selection guard: with an active selection the preceding space is
+        // text before the selection, not an auto-space; the punctuation must
+        // replace the selection normally (Codex P2).
+        if isAutoSpaceModeActive,
+           AutoSpacePunctuation.isAttaching(char),
+           (proxy.selectedText ?? "").isEmpty,
+           proxy.documentContextBeforeInput?.last == " "
+        {
+            proxy.deleteBackward()
+            proxy.insertText(char + " ")
+            return
+        }
+        proxy.insertText(char)
+    }
+
+    /// True when the current mode would have auto-inserted a trailing space —
+    /// the same gate the auto-space insertion sites use. Outside this gate the
+    /// swap must not touch a user-typed space.
+    private var isAutoSpaceModeActive: Bool {
+        guard settings.isAutoSpaceEnabled else { return false }
+        let effectiveSwapped = settings.keyboardLayoutType == .tps || settings.isTranslateSwapped
+        return !effectiveSwapped || settings.isOutputBothScripts
     }
 
     // MARK: - Space

@@ -10,6 +10,7 @@ import android.content.Context
 import android.os.Handler
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
@@ -19,6 +20,7 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.text.AutoSpacePunctuation
 import com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.CharacterInputPipeline
@@ -527,10 +529,49 @@ internal class TextInputKeyHandler(
             if (manager.isComposing()) {
                 manager.commitComposition(ic)
             }
-            ic.commitText(char, 1)
+            commitNonComposingCharacter(ic, char)
             smartbarManager.clearCandidates()
             return
         }
+    }
+
+    /**
+     * Commit a non-composing character (punctuation / symbol), applying the
+     * auto-space "smart punctuation" swap: when auto-space is active and the
+     * char before the cursor is the auto-inserted trailing space, attaching
+     * punctuation deletes that space and re-inserts it AFTER the punctuation
+     * (`guá ` + `?` → `guá? `, never `guá ?`).
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors iOS
+    // ActionHandler.insertNonComposingCharacter. Drift causes silent divergence.
+    private fun commitNonComposingCharacter(ic: InputConnection, char: String) {
+        // No-selection guard: with an active selection the preceding space is
+        // text before the selection, not an auto-space; the punctuation must
+        // replace the selection normally (Codex P2).
+        if (isAutoSpaceModeActive() &&
+            AutoSpacePunctuation.isAttaching(char) &&
+            ic.getSelectedText(0).isNullOrEmpty() &&
+            ic.getTextBeforeCursor(1, 0)?.toString() == " "
+        ) {
+            ic.deleteSurroundingText(1, 0)
+            ic.commitText("$char ", 1)
+            return
+        }
+        ic.commitText(char, 1)
+    }
+
+    /**
+     * True when the current mode would have auto-inserted a trailing space —
+     * the same gate [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
+     * uses. Outside this gate the swap must not touch a user-typed space.
+     */
+    private fun isAutoSpaceModeActive(): Boolean {
+        if (!prefs.isAutoSpaceEnabled) return false
+        val effectiveSwapped =
+            prefs.keyboardLayoutType == "tps" ||
+                prefs.inputMode == "tps" ||
+                prefs.isTranslateSwapped
+        return !effectiveSwapped || prefs.outputBothScripts
     }
 }
 

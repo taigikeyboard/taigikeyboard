@@ -596,3 +596,18 @@ When the continuous-input best candidate (index 0) is a single lexical dictionar
 **Engine site**: `engine/composing/src/continuous.rs` — `roman_reading_eq` + the promote branch in `assemble_candidates` Step 4.
 
 **Tests**: `composing/tests/continuous_slot0_dict_roman.rs` (`slot0_promotes_dict_khinsiann_form_over_space_synth`, `slot0_keeps_space_synth_for_genuine_multiword_reading`) + the `roman_reading_eq` unit test in `continuous.rs`. Empirically verified against production artifacts via the `composing/tests/candidate_dump.rs` dev harness (`DUMP_INPUTS="hoogua"` → `[0]=予我/hōo--guá`). Plus the **S9 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
+
+## 23. Auto-space — attaching punctuation swaps the trailing space
+
+### `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`
+
+When auto-space is active (`isAutoSpaceEnabled` AND a roman-ish mode that auto-inserts a trailing space — i.e. `!effectiveSwapped || isOutputBothScripts`) and the character immediately before the cursor is a single space, typing **attaching** punctuation deletes that space, inserts the punctuation, then re-inserts the space AFTER it: `guá ` + `?` → `guá? ` (NOT `guá ?`). The trailing space is preserved so the next word stays separated.
+
+- **Attaching set** (mirrored both platforms) — sentence-end `。！？.!?`, clause separators `，,、；;：:`, CLOSING brackets/quotes `)）]】」』`. **Opening** brackets/quotes (`(（[「『`) are deliberately excluded — they want a LEADING space, not attachment. ASCII straight quotes (`"` `'`) are excluded because the same glyph is both opening and closing; attaching would corrupt `guá "…"` into `guá" …`.
+- **Why the bug existed** — auto-space is a literal space written to the document (`insertText(" ")` / `commitText(" ", 1)`); there was no smart-punctuation swap. The non-composing punctuation branch inserted the char directly, leaving the auto-space before it → `guá ?`.
+- **Gating** — the swap fires only inside the same gate the auto-space insertion sites use, so it never eats a user-typed space in TPS / swapped-Hanji mode or when auto-space is off. Stateless: the document (cursor-preceding char) is the source of truth, not a cross-keystroke "pending space" flag.
+- **Scope** — platform-side text-proxy mutation (NOT the Rust engine, which is not in the punctuation/auto-space path). Mirrored on iOS + Android with `CROSS-PLATFORM INVARIANT` comments.
+
+**Platform sites**: iOS `ActionHandler+KeyActions.swift` — `insertNonComposingCharacter` + `isAutoSpaceModeActive`, classifier `Input/AutoSpacePunctuation.swift`. Android `TextInputKeyHandler.kt` — `commitNonComposingCharacter` + `isAutoSpaceModeActive`, classifier `ime/text/AutoSpacePunctuation.kt`.
+
+**Tests**: iOS `AutoSpacePunctuationTests.swift` + Android `AutoSpacePunctuationTest.kt` (`INVARIANT_*` — pin the attaching set on both platforms). The document-mutation swap itself is dogfood-gated (**S10** in `.claude/rules/taigi-incidents.md` § Qualitative perf gate) — no fake-proxy render test by design.
