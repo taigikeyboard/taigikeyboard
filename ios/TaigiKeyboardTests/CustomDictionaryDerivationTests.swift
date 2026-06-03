@@ -68,24 +68,55 @@ final class CustomDictionaryDerivationTests: XCTestCase {
         XCTAssertEqual(CustomDictionaryDerivation.generateRomanNum("gâu-tsá"), "gau5tsa2")
     }
 
-    // MARK: - searchPrefix routing
+    // MARK: - queryKey / searchKeys (v3.6.1 R3 cross-mode)
 
-    func testSearchPrefix_toneAware() {
-        let (key, toneAware) = CustomDictionaryDerivation.searchPrefix(for: "ho2")
-        XCTAssertTrue(toneAware)
-        XCTAssertEqual(key, "ho2")
+    // trace (engine/phonetics/src/custom_search.rs): tone-aware = ASCII digit
+    // present → form "num"; mode .tl → family "tl"; key fused = "ho2".
+    func testQueryKey_toneAware_tlFamilyNumForm() {
+        let q = CustomDictionaryDerivation.queryKey(for: "ho2", mode: .tl)
+        XCTAssertEqual(q?.family, "tl")
+        XCTAssertEqual(q?.form, "num")
+        XCTAssertEqual(q?.key, "ho2")
     }
 
-    func testSearchPrefix_toneAware_stripsHyphens() {
-        let (key, toneAware) = CustomDictionaryDerivation.searchPrefix(for: "gau5-tsa2")
-        XCTAssertTrue(toneAware)
-        XCTAssertEqual(key, "gau5tsa2")
+    // trace: digit present + hyphen → fuse_latin_numeric drops hyphen → "gau5tsa2".
+    func testQueryKey_toneAware_stripsHyphens() {
+        let q = CustomDictionaryDerivation.queryKey(for: "gau5-tsa2", mode: .tl)
+        XCTAssertEqual(q?.form, "num")
+        XCTAssertEqual(q?.key, "gau5tsa2")
     }
 
-    func testSearchPrefix_toneless() {
-        let (key, toneAware) = CustomDictionaryDerivation.searchPrefix(for: "hó")
-        XCTAssertFalse(toneAware)
-        XCTAssertEqual(key, "ho")
+    // trace: no digit → form "notone"; derive_notone("hó") strips diacritic → "ho".
+    func testQueryKey_toneless_tlFamilyNotoneForm() {
+        let q = CustomDictionaryDerivation.queryKey(for: "hó", mode: .tl)
+        XCTAssertEqual(q?.family, "tl")
+        XCTAssertEqual(q?.form, "notone")
+        XCTAssertEqual(q?.key, "ho")
+    }
+
+    // trace: parse_input_mode(.poj) → family "poj".
+    func testQueryKey_pojMode_pojFamily() {
+        let q = CustomDictionaryDerivation.queryKey(for: "chiah", mode: .poj)
+        XCTAssertEqual(q?.family, "poj")
+    }
+
+    // trace: input.trim().is_empty() → None.
+    func testQueryKey_emptyInput_nil() {
+        XCTAssertNil(CustomDictionaryDerivation.queryKey(for: "", mode: .tl))
+        XCTAssertNil(CustomDictionaryDerivation.queryKey(for: "   ", mode: .tl))
+    }
+
+    // trace: derive_custom_search_keys("chiah") materializes the {tl,poj,tps}
+    // bundle; canonical TL = "tsiah", POJ = "chiah".
+    func testSearchKeys_pojStored_carriesBothLatinFamilies() {
+        let keys = CustomDictionaryDerivation.searchKeys(for: "chiah")
+        XCTAssertTrue(keys.contains(CustomSearchKey(family: "tl", form: "notone", key: "tsiah")))
+        XCTAssertTrue(keys.contains(CustomSearchKey(family: "poj", form: "notone", key: "chiah")))
+    }
+
+    func testSearchKeys_empty_yieldsNothing() {
+        XCTAssertTrue(CustomDictionaryDerivation.searchKeys(for: "").isEmpty)
+        XCTAssertTrue(CustomDictionaryDerivation.searchKeys(for: "   ").isEmpty)
     }
 
     // MARK: - INVARIANT wrappers — Phase 0 §10

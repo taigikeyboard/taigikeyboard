@@ -158,6 +158,33 @@ object RustEngineBridge {
     // 中文: 自訂字典 search-key 衍生 — 取每音節首字母縮寫(連字號/空白切),單音節回空字串。
     fun deriveAbbrev(roman: String): String = PhoneticsBridge.deriveAbbrev(roman)
 
+    // 中文: 自訂詞跨模式搜尋鍵寫入端 — 把 roman 展成 {tl,poj,tps}×{num,notone,abbrev} bundle。
+    fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> = PhoneticsBridge.deriveCustomSearchKeys(roman)
+
+    // 中文: 自訂詞跨模式搜尋鍵查詢端 — 依 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    // 中文: TPS 經 InputMode → "tl",引擎再以 contains_tps(raw) 升家族(NormalizeMode 無 TPS,故由 raw 決定)。
+    fun deriveCustomQueryKey(
+        input: String,
+        mode: com.siansiansu.taigikeyboard.ime.core.settings.InputMode,
+    ): CustomSearchKey? = PhoneticsBridge.deriveCustomQueryKey(input, customSearchInputMode(mode))
+
+    /**
+     * Map the platform [com.siansiansu.taigikeyboard.ime.core.settings.InputMode]
+     * to the engine `input_mode` string. Android's enum has no TPS case (`"tps"`
+     * settings collapses to `TL` upstream via `InputMode.fromPrefString`); the
+     * engine upgrades to the TPS family via `contains_tps` on the raw input.
+     * Mirrors iOS `RustEngineBridge+Phonetics.swift` `customSearchInputMode`.
+     */
+    // 中文: InputMode → 引擎 input_mode 字串。Android enum 無 TPS(上游 "tps"→TL),引擎以 contains_tps(raw) 升家族。
+    private fun customSearchInputMode(
+        mode: com.siansiansu.taigikeyboard.ime.core.settings.InputMode,
+    ): String =
+        when (mode) {
+            com.siansiansu.taigikeyboard.ime.core.settings.InputMode.POJ -> "poj"
+            com.siansiansu.taigikeyboard.ime.core.settings.InputMode.ENGLISH -> "english"
+            com.siansiansu.taigikeyboard.ime.core.settings.InputMode.TL -> "tl"
+        }
+
     // 中文: 判斷字串是否含 TPS(注音符號)— Composing 衍生顯示用來略過 POJ/TL 聲調轉換。
     fun containsTps(text: String): Boolean = PhoneticsBridge.containsTps(text)
 
@@ -1353,6 +1380,19 @@ data class ToneTogglesCarrier(
 data class StripToneOutcome(
     val bare: String,
     val tone: String,
+)
+
+/**
+ * One custom-dictionary cross-mode search key (v3.6.1 R3). Mirrors the proto
+ * `CustomSearchKey` and iOS `RustEngineBridge+Phonetics.swift` `CustomSearchKey`:
+ * `family` ∈ {tl, poj, tps}, `form` ∈ {num, notone, abbrev}, `key` the fused
+ * family-native search string. Written to the `custom_search_key` side table;
+ * the query op returns one to match against it.
+ */
+data class CustomSearchKey(
+    val family: String,
+    val form: String,
+    val key: String,
 )
 
 /** Result of `Method::TpsInputAdjust`. */

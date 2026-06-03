@@ -401,8 +401,9 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// merge + `(roman, hanji)` dedupe + ranking (spec G3 — platform
     /// never re-ranks); this method only fetches + marshals.
     ///
-    /// Query path: `CustomDictionaryDerivation.searchPrefix` →
-    /// `CustomDictionaryRepository.searchSync` (parameterized SQL).
+    /// Query path: `CustomDictionaryDerivation.queryKey(for:mode:)` →
+    /// `CustomDictionaryRepository.searchSync(family:form:key:)` (cross-mode
+    /// side-table join, parameterized SQL).
     /// **Marshals the RAW stored `(roman, hanzi)` columns** — NOT a
     /// capitalization-massaged form — so the engine's
     /// `(roman, hanji)` dedupe key collides correctly against
@@ -429,11 +430,13 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         rawInput: String,
         settings: EngineSettings,
     ) -> [Taigi_Engine_CustomDictEntry] {
-        guard settings.isCustomDictEnabled, !rawInput.isEmpty else { return [] }
-        let (searchPrefix, isToneAware) = CustomDictionaryDerivation.searchPrefix(for: rawInput)
+        guard settings.isCustomDictEnabled, !rawInput.isEmpty,
+              let q = CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
+        else { return [] }
         let rows = customDictionaryRepository.searchSync(
-            prefix: searchPrefix,
-            isToneAware: isToneAware,
+            family: q.family,
+            form: q.form,
+            key: q.key,
             limit: 20,
         )
         return rows.map { row in

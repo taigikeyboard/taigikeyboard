@@ -180,6 +180,11 @@ dependencies {
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    // Pure-JVM SQLite for SQL-structure tests (the custom-dict cross-mode JOIN
+    // query). Android's SQLiteDatabase is unavailable in JVM unit tests
+    // (testOptions.unitTests.isReturnDefaultValues = true), so exercise the
+    // exact production SQL string against an in-memory JDBC DB instead.
+    testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
 
     // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge
     implementation("com.google.protobuf:protobuf-javalite:3.25.5")

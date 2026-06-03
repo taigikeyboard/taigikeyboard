@@ -9,7 +9,10 @@ package com.siansiansu.taigikeyboard.engine
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
 import com.siansiansu.taigikeyboard.engine.proto.ContainsTps
+import com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult
 import com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev
+import com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey
+import com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys
 import com.siansiansu.taigikeyboard.engine.proto.DeriveNotone
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
@@ -147,6 +150,38 @@ internal object PhoneticsBridge {
         return stringDispatch({ it.deriveAbbrev = payload }, roman, "deriveAbbrev", null)
     }
 
+    /**
+     * `Method::DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). Full
+     * {tl, poj, tps} × {num, notone, abbrev} (+ TPS er/or variant) bundle for
+     * a stored custom-dict roman, materialized into the `custom_search_key`
+     * side table. Empty on FFI failure / residue-only input.
+     */
+    // 中文: 自訂詞寫入端 — 把 roman 展成跨家族搜尋鍵 bundle,落地到 custom_search_key 側表。
+    fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> {
+        val payload = DeriveCustomSearchKeys.newBuilder().setRoman(roman).build()
+        return customSearchKeys({ it.deriveCustomSearchKeys = payload }, "deriveCustomSearchKeys")
+    }
+
+    /**
+     * `Method::DeriveCustomQueryKey` — READ side (v3.6.1 R3). Single
+     * family-native key for the current raw `input` + `inputMode` string. The
+     * engine upgrades the family to TPS when the raw input carries Bopomofo,
+     * so the caller passes its settings mode verbatim. `null` for residue-only
+     * / empty input or FFI failure.
+     */
+    // 中文: 自訂詞查詢端 — 依 input + inputMode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    fun deriveCustomQueryKey(
+        input: String,
+        inputMode: String,
+    ): CustomSearchKey? {
+        val payload = DeriveCustomQueryKey
+            .newBuilder()
+            .setInput(input)
+            .setInputMode(inputMode)
+            .build()
+        return customSearchKeys({ it.deriveCustomQueryKey = payload }, "deriveCustomQueryKey").firstOrNull()
+    }
+
     // endregion
     // region TPS (5 ops)
 
@@ -263,6 +298,25 @@ internal object PhoneticsBridge {
         }
         val r: BoolResult = resp.boolResult
         return r.value
+    }
+
+    /**
+     * Shared decode for the two custom-dict search-key ops — both return a
+     * `CustomSearchKeysResult` (the write op a full bundle, the query op 0/1).
+     * Mirrors iOS `RustEngineBridge+Phonetics.swift` `customSearchKeys`.
+     */
+    // 中文: 兩個自訂詞搜尋鍵 op 共用的 decode;皆回 CustomSearchKeysResult。
+    private inline fun customSearchKeys(
+        methodSetter: (PhoneticsRequest.Builder) -> Unit,
+        op: String,
+    ): List<CustomSearchKey> {
+        val resp = dispatch(methodSetter, op, null) ?: return emptyList()
+        if (!resp.hasCustomSearchKeysResult()) {
+            RustEngineBridge.recordFailure(op, "expected CustomSearchKeysResult")
+            return emptyList()
+        }
+        val r: CustomSearchKeysResult = resp.customSearchKeysResult
+        return r.keysList.map { CustomSearchKey(family = it.family, form = it.form, key = it.key) }
     }
 
     // endregion

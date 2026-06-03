@@ -12,6 +12,7 @@ pub mod dispatch;
 
 mod case_tables;
 pub mod case_transform;
+mod custom_search;
 mod derivation;
 mod normalization;
 mod poj;

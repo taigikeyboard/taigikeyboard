@@ -75,5 +75,16 @@ public interface PhoneticsResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult();
 
+  /**
+   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
+   * @return Whether the customSearchKeysResult field is set.
+   */
+  boolean hasCustomSearchKeysResult();
+  /**
+   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
+   * @return The customSearchKeysResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult getCustomSearchKeysResult();
+
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse.ResultCase getResultCase();
 }

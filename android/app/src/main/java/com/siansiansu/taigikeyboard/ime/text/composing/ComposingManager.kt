@@ -622,10 +622,10 @@ class ComposingManager(
      * the merge + `(roman, hanji)` dedupe + ranking (spec G3 —
      * platform never re-ranks); this only fetches + marshals.
      *
-     * Reuses the SAME derivation + query the legacy lexicon path uses
-     * (`LexiconService.lookupCustomDictionary` — inline tone-aware /
-     * `CustomDictionaryDerivation.generateNotone` key + parameterized
-     * `CustomDictionaryService.search`). **Marshals the RAW stored
+     * v3.6.1 R3 — derives the single family-native query key via
+     * `CustomDictionaryDerivation.deriveCustomQueryKey(rawInput, mode)`
+     * and runs the cross-mode `custom_search_key` JOIN query
+     * (`CustomDictionaryService.search`). **Marshals the RAW stored
      * `(roman, hanzi)` columns** — NOT a display-massaged form — so the
      * engine's `(roman, hanji)` dedupe key collides correctly against
      * `dict.bin`'s `DictionaryRecord.tl` / `.hanzi` (Codex pre-impl
@@ -636,35 +636,40 @@ class ComposingManager(
      * Empty stored hanzi → proto-absent `hanji` (romanization-only
      * entry → engine derives `CandidateMode.Tailo`).
      *
-     * CROSS-PLATFORM INVARIANT — the search-key derivation mirrors iOS
-     * `CustomDictionaryDerivation.searchPrefix` (and Android
-     * `LexiconService.lookupCustomDictionary:117-122`). Drift in the
-     * tone-aware / notone branch causes silent custom-match divergence
-     * between platforms (.claude/rules/cross-platform-alignment.md §3a).
+     * CROSS-PLATFORM INVARIANT — the query-key derivation + side-table
+     * query mirror iOS `CustomDictionaryDerivation.deriveCustomQueryKey`
+     * + `CustomDictionaryRepository` query. Drift causes silent
+     * custom-match divergence between platforms
+     * (.claude/rules/cross-platform-alignment.md §3a).
      *
-     * `null` service (tests / Preview) or disabled feature → empty
-     * list, identical to the no-custom engine path. Runs its SQLite
-     * hop inside `CustomDictionaryService.search`'s own
-     * `Dispatchers.IO`; resumes on the caller context before the FFI.
+     * `null` service (tests / Preview), disabled feature, or `null`
+     * query key (residue-only input) → empty list, identical to the
+     * no-custom engine path. Runs its SQLite hop inside
+     * `CustomDictionaryService.search`'s own `Dispatchers.IO`; resumes
+     * on the caller context before the FFI.
      */
     // 中文: Item 12 — 查 custom_dictionary.db 並 marshal 成 proto CustomDictEntry;
-    // 中文: 與 legacy lexicon path 共用同一 derivation+query,送原始 (roman,hanzi),不送顯示massaged 形式;
-    // 中文: 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);搜尋鍵衍生與 iOS searchPrefix 為跨平台不變式。
+    // 中文: R3 — 用 deriveCustomQueryKey 產家族鍵走 custom_search_key JOIN 查詢,送原始 (roman,hanzi);
+    // 中文: 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);查詢鍵衍生 + 側表查詢與 iOS 為跨平台不變式。
     private suspend fun buildCustomEntries(
         rawInput: String,
         settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
     ): List<CustomDictEntry> {
         val service = customDictionaryService ?: return emptyList()
         if (!settings.isCustomDictEnabled || rawInput.isEmpty()) return emptyList()
-        val isToneAware = rawInput.any { it.isDigit() }
-        val searchPrefix =
-            if (isToneAware) {
-                rawInput.lowercase().replace("-", "").replace(" ", "")
-            } else {
-                CustomDictionaryDerivation.generateNotone(rawInput)
-            }
+        // v3.6.1 R3 — derive the single family-native query key from the raw
+        // buffer + settings input mode. `settings.inputMode` is the platform
+        // string (incl. "tps"); `InputMode.fromPrefString` collapses "tps" → TL
+        // and the engine upgrades to the TPS family via `contains_tps` on the
+        // raw input. `null` key (residue-only input) → no custom matches.
+        // 中文: R3 — 由 raw buffer + 設定 input mode 產出單一家族查詢鍵;"tps" 折成 TL,引擎以 contains_tps(raw) 升家族。
+        val queryKey =
+            CustomDictionaryDerivation.deriveCustomQueryKey(
+                rawInput,
+                com.siansiansu.taigikeyboard.ime.core.settings.InputMode.fromPrefString(settings.inputMode),
+            ) ?: return emptyList()
         return try {
-            val rows = service.search(prefix = searchPrefix, isToneAware = isToneAware, limit = 20)
+            val rows = service.search(family = queryKey.family, form = queryKey.form, key = queryKey.key, limit = 20)
             // v3.5.8 Phase 9 Item 12 — await-race guard (Codex post-impl
             // 2026-05-15 P2). `service.search` suspends on `Dispatchers
             // .IO`; a keystroke landing during that await mutates

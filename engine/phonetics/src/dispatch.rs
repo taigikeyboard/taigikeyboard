@@ -18,6 +18,7 @@
 use crate::api::{
     poj_display_to_tl_display, tl_display_to_poj_display, to_tone_number, PhoneticsError,
 };
+use crate::custom_search;
 use crate::derivation;
 use crate::normalization;
 use crate::tone_variations;
@@ -26,8 +27,8 @@ use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, StringResult,
-    StripToneResult, TpsAdjustResult,
+    AppConfig, BoolResult, CustomSearchKeysResult, OptionalStringResult, PhoneticsRequest,
+    PhoneticsResponse, StringResult, StripToneResult, TpsAdjustResult,
 };
 
 /// Dispatch a decoded `PhoneticsRequest` against the per-request `AppConfig`
@@ -90,6 +91,22 @@ pub fn handle(
         Method::DeriveAbbrev(payload) => PhonResult::StringResult(StringResult {
             output: derivation::derive_abbrev(&payload.roman),
         }),
+        Method::DeriveCustomSearchKeys(payload) => {
+            PhonResult::CustomSearchKeysResult(CustomSearchKeysResult {
+                keys: custom_search::derive_custom_search_keys(&payload.roman)
+                    .into_iter()
+                    .map(to_proto_key)
+                    .collect(),
+            })
+        }
+        Method::DeriveCustomQueryKey(payload) => {
+            PhonResult::CustomSearchKeysResult(CustomSearchKeysResult {
+                keys: custom_search::derive_custom_query_key(&payload.input, &payload.input_mode)
+                    .into_iter()
+                    .map(to_proto_key)
+                    .collect(),
+            })
+        }
 
         // --- TPS ---
         Method::ContainsTps(payload) => PhonResult::BoolResult(BoolResult {
@@ -130,6 +147,16 @@ pub fn handle(
 }
 
 // ---- Local helpers ------------------------------------------------------
+
+/// Map a native custom-search key to its proto shape (`&'static str` family /
+/// form tags → owned `String`).
+fn to_proto_key(k: custom_search::CustomSearchKey) -> protos::engine::CustomSearchKey {
+    protos::engine::CustomSearchKey {
+        family: k.family.to_string(),
+        form: k.form.to_string(),
+        key: k.key,
+    }
+}
 
 // `parse_input_mode`, `preprocess_for_normalize_tone`, and the nasal-double-n
 // helper moved to `crate::api` in v3.5.4 commit 3 so `composing::derived` can

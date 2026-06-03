@@ -29,6 +29,8 @@ public  final class PhoneticsRequest extends
     NFD_PREPROCESS_FOR_LOOKUP(19),
     DERIVE_NOTONE(20),
     DERIVE_ABBREV(21),
+    DERIVE_CUSTOM_SEARCH_KEYS(22),
+    DERIVE_CUSTOM_QUERY_KEY(23),
     CONTAINS_TPS(30),
     TL_NUMERIC_TO_TPS(32),
     TL_DISPLAY_TO_TPS(33),
@@ -60,6 +62,8 @@ public  final class PhoneticsRequest extends
         case 19: return NFD_PREPROCESS_FOR_LOOKUP;
         case 20: return DERIVE_NOTONE;
         case 21: return DERIVE_ABBREV;
+        case 22: return DERIVE_CUSTOM_SEARCH_KEYS;
+        case 23: return DERIVE_CUSTOM_QUERY_KEY;
         case 30: return CONTAINS_TPS;
         case 32: return TL_NUMERIC_TO_TPS;
         case 33: return TL_DISPLAY_TO_TPS;
@@ -559,7 +563,7 @@ public  final class PhoneticsRequest extends
   public static final int DERIVE_NOTONE_FIELD_NUMBER = 20;
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -570,7 +574,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -584,7 +588,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -596,7 +600,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -614,7 +618,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -671,6 +675,106 @@ public  final class PhoneticsRequest extends
    */
   private void clearDeriveAbbrev() {
     if (methodCase_ == 21) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int DERIVE_CUSTOM_SEARCH_KEYS_FIELD_NUMBER = 22;
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   */
+  @java.lang.Override
+  public boolean hasDeriveCustomSearchKeys() {
+    return methodCase_ == 22;
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys getDeriveCustomSearchKeys() {
+    if (methodCase_ == 22) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   */
+  private void setDeriveCustomSearchKeys(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 22;
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   */
+  private void mergeDeriveCustomSearchKeys(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys value) {
+    value.getClass();
+  if (methodCase_ == 22 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 22;
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   */
+  private void clearDeriveCustomSearchKeys() {
+    if (methodCase_ == 22) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int DERIVE_CUSTOM_QUERY_KEY_FIELD_NUMBER = 23;
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   */
+  @java.lang.Override
+  public boolean hasDeriveCustomQueryKey() {
+    return methodCase_ == 23;
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey getDeriveCustomQueryKey() {
+    if (methodCase_ == 23) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   */
+  private void setDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 23;
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   */
+  private void mergeDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
+    value.getClass();
+  if (methodCase_ == 23 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 23;
+  }
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   */
+  private void clearDeriveCustomQueryKey() {
+    if (methodCase_ == 23) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1513,7 +1617,7 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- Derivation (2 ops) ---
+     * --- Derivation (4 ops) ---
      * </pre>
      *
      * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -1524,7 +1628,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Derivation (2 ops) ---
+     * --- Derivation (4 ops) ---
      * </pre>
      *
      * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -1535,7 +1639,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Derivation (2 ops) ---
+     * --- Derivation (4 ops) ---
      * </pre>
      *
      * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -1547,7 +1651,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Derivation (2 ops) ---
+     * --- Derivation (4 ops) ---
      * </pre>
      *
      * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -1560,7 +1664,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Derivation (2 ops) ---
+     * --- Derivation (4 ops) ---
      * </pre>
      *
      * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -1572,7 +1676,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Derivation (2 ops) ---
+     * --- Derivation (4 ops) ---
      * </pre>
      *
      * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -1628,6 +1732,102 @@ public  final class PhoneticsRequest extends
     public Builder clearDeriveAbbrev() {
       copyOnWrite();
       instance.clearDeriveAbbrev();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+     */
+    @java.lang.Override
+    public boolean hasDeriveCustomSearchKeys() {
+      return instance.hasDeriveCustomSearchKeys();
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys getDeriveCustomSearchKeys() {
+      return instance.getDeriveCustomSearchKeys();
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+     */
+    public Builder setDeriveCustomSearchKeys(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys value) {
+      copyOnWrite();
+      instance.setDeriveCustomSearchKeys(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+     */
+    public Builder setDeriveCustomSearchKeys(
+        com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDeriveCustomSearchKeys(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+     */
+    public Builder mergeDeriveCustomSearchKeys(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys value) {
+      copyOnWrite();
+      instance.mergeDeriveCustomSearchKeys(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+     */
+    public Builder clearDeriveCustomSearchKeys() {
+      copyOnWrite();
+      instance.clearDeriveCustomSearchKeys();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+     */
+    @java.lang.Override
+    public boolean hasDeriveCustomQueryKey() {
+      return instance.hasDeriveCustomQueryKey();
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey getDeriveCustomQueryKey() {
+      return instance.getDeriveCustomQueryKey();
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+     */
+    public Builder setDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
+      copyOnWrite();
+      instance.setDeriveCustomQueryKey(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+     */
+    public Builder setDeriveCustomQueryKey(
+        com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDeriveCustomQueryKey(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+     */
+    public Builder mergeDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
+      copyOnWrite();
+      instance.mergeDeriveCustomQueryKey(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+     */
+    public Builder clearDeriveCustomQueryKey() {
+      copyOnWrite();
+      instance.clearDeriveCustomQueryKey();
       return this;
     }
 
@@ -1924,6 +2124,8 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.class,
+            com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys.class,
+            com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.class,
             com.siansiansu.taigikeyboard.engine.proto.ContainsTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
@@ -1931,9 +2133,10 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
           };
           java.lang.String info =
-              "\u0000\u0010\u0001\u0000\n#\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0012\u0001\u0000\n#\u0012\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u0014" +
-              "<\u0000\u0015<\u0000\u001e<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
+              "<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000\u001e<\u0000 <\u0000!<\u0000\"<\u0000" +
+              "#<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

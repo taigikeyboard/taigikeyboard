@@ -143,11 +143,13 @@ final class DictionarySearchService: @unchecked Sendable {
     }
 
     private func lookupCustomDictionary(query: String) -> [DictionarySearchResult] {
-        guard settingsProvider.current.isCustomDictEnabled else { return [] }
-        let (prefix, isToneAware) = CustomDictionaryDerivation.searchPrefix(for: query)
+        guard settingsProvider.current.isCustomDictEnabled,
+              let q = CustomDictionaryDerivation.queryKey(for: query, mode: settingsProvider.current.inputMode)
+        else { return [] }
         let entries = customDictionaryRepository.searchSync(
-            prefix: prefix,
-            isToneAware: isToneAware,
+            family: q.family,
+            form: q.form,
+            key: q.key,
             limit: 20,
         )
         return entries.map { entry in

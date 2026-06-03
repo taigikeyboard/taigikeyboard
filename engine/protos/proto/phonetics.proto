@@ -33,9 +33,11 @@ message PhoneticsRequest {
     GetToneVariations get_tone_variations = 18;
     NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;
 
-    // --- Derivation (2 ops) ---
+    // --- Derivation (4 ops) ---
     DeriveNotone derive_notone = 20;
     DeriveAbbrev derive_abbrev = 21;
+    DeriveCustomSearchKeys derive_custom_search_keys = 22;
+    DeriveCustomQueryKey derive_custom_query_key = 23;
 
     // --- TPS (5 ops) ---
     ContainsTps contains_tps = 30;
@@ -104,6 +106,32 @@ message DeriveNotone { string roman = 1; }
 // Android JVM `Regex("[\\s-]+")` semantics; preserves NBSP as non-delimiter).
 message DeriveAbbrev { string roman = 1; }
 
+// `DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). From a stored
+// custom-dictionary roman, materialize the full {tl, poj, tps} ×
+// {num, notone, abbrev} (+ TPS er/or dialect variant) search-key bundle so a
+// query typed in ANY input mode finds the entry. Mirrors the system-dict
+// three-family FST (`dictionary/build/create_fst.py:128-144`). The keys are
+// matched ONLY within `custom_dictionary.db`'s own query — never against the
+// system FST — so byte-identity with the build pipeline is NOT required; the
+// invariant is WRITE-key == QUERY-key for the same word (both via this op).
+// The raw `roman` column + engine `custom_toneless_key` lattice path are
+// untouched. Replaces `CustomDictionaryDerivation.searchPrefix`'s write half.
+message DeriveCustomSearchKeys { string roman = 1; }
+
+// `DeriveCustomQueryKey` — READ side (v3.6.1 R3). Given the user's current raw
+// input + settings `input_mode`, returns the single family-native key tagged
+// with its primary form (num / notone). Effective family =
+// contains_tps(input) ? tps : parse(input_mode) — mirrors the composing
+// dispatch TPS upgrade (`engine/composing/src/dispatch.rs:208`), so Android
+// (whose `NormalizeMode` lacks a TPS variant) gets the right family from the
+// raw input rather than settings alone. The platform matches the returned key
+// against the entry's {primary-form, abbrev} rows in that family. Returns no
+// key for empty / residue-only input.
+message DeriveCustomQueryKey {
+  string input = 1;
+  string input_mode = 2;
+}
+
 // =========================================================================
 // TPS request payloads
 // =========================================================================
@@ -150,6 +178,7 @@ message PhoneticsResponse {
     BoolResult bool_result = 13;
     ToneVariationsResult tone_variations_result = 14;
     TpsAdjustResult tps_adjust_result = 15;
+    CustomSearchKeysResult custom_search_keys_result = 16;
   }
 }
 
@@ -192,3 +221,19 @@ message TpsAdjustResult {
   string adjusted = 1;
   OptionalStringResult replace_last = 2;
 }
+
+// One materialized custom-dictionary search key (v3.6.1 R3). `family` ∈
+// {tl, poj, tps}; `form` ∈ {num, notone, abbrev}; `key` is the fused
+// family-native search string. TPS er/or dialect variants are emitted as
+// additional rows sharing the same (family, form) with an alternate `key`, so
+// the query side stays family-uniform.
+message CustomSearchKey {
+  string family = 1;
+  string form = 2;
+  string key = 3;
+}
+
+// Result for both `DeriveCustomSearchKeys` (the full write-side bundle) and
+// `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the input has no
+// derivable key.
+message CustomSearchKeysResult { repeated CustomSearchKey keys = 1; }

@@ -57,10 +57,11 @@ final class CustomDictionaryService: @unchecked Sendable {
         try await repository.deleteAll()
     }
 
-    /// Search by prefix (for autocomplete)
-    // 中文: 依 prefix 搜尋(autocomplete 用)。
-    func search(prefix: String, isToneAware: Bool, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
-        try await repository.search(prefix: prefix, isToneAware: isToneAware, limit: limit)
+    /// Cross-mode prefix search (for autocomplete). `family` / `form` / `key`
+    /// come from `CustomDictionaryDerivation.queryKey(for:mode:)`.
+    // 中文: 跨模式 prefix 搜尋(autocomplete 用)。鍵由 queryKey(for:mode:) 產生。
+    func search(family: String, form: String, key: String, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
+        try await repository.search(family: family, form: form, key: key, limit: limit)
     }
 
     // MARK: - Export

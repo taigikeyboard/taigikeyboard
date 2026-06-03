@@ -7,11 +7,13 @@ import SQLite3
 /// Custom-dictionary forward data migrations, gated by `PRAGMA user_version`.
 ///
 /// Owns version-gated forward migrations that are not DDL:
-/// 1. Add derived columns (`notone` / `abbrev` / `roman_num`) to databases
-///    created before those columns existed.
-/// 2. Re-derive every row's derived columns so values match the current
-///    `CustomDictionaryDerivation` logic (cheap: a single prepared UPDATE
-///    reused across rows).
+/// 1. (v1) Add derived columns (`notone` / `abbrev` / `roman_num`) to
+///    databases created before those columns existed + re-derive every row's
+///    derived columns so values match the current `CustomDictionaryDerivation`
+///    logic (cheap: a single prepared UPDATE reused across rows).
+/// 2. (v2) Backfill the `custom_search_key` side table for every existing
+///    entry so cross-input-mode search finds pre-v2 entries. Non-destructive —
+///    only inserts side rows, never touches `custom_dictionary` user data.
 ///
 /// Runs after `CustomDictionarySchema.ensureTables`; callers must serialize
 /// access (typically via `SQLiteConnectionManager.execute`).
@@ -32,6 +34,14 @@ enum CustomDictionaryMigrator {
         if currentVersion < 1 {
             addMissingDerivedColumns(db: db)
             backfillDerivedColumns(db: db)
+        }
+
+        if currentVersion < 2 {
+            // `ensureTables` already created the side table before the migrator
+            // ran, but re-create idempotently so the backfill never targets a
+            // missing table if call order ever changes.
+            try? CustomDictionarySchema.ensureTables(db: db)
+            backfillSearchKeys(db: db)
         }
 
         sqliteExecSimple(db: db, "PRAGMA user_version = \(CustomDictionarySchema.schemaVersion)")
@@ -96,6 +106,59 @@ enum CustomDictionaryMigrator {
             updateStmt.bindText(3, CustomDictionaryDerivation.generateRomanNum(roman))
             updateStmt.bindText(4, id)
             sqlite3_step(updateStmt)
+        }
+    }
+
+    /// Backfill the `custom_search_key` side table for every existing entry.
+    /// Delete-then-insert per entry so a re-run (after a derivation-logic
+    /// change) replaces stale rows rather than duplicating them. Reuses three
+    /// prepared statements across rows. Non-destructive to `custom_dictionary`.
+    // 中文: 為所有既有 entry 補建 custom_search_key 側表。每個 entry 先刪後插,
+    // 中文: 重跑時取代舊鍵而非重複。重用 prepared statement,不動 custom_dictionary 使用者資料。
+    private static func backfillSearchKeys(db: OpaquePointer) {
+        var selectStmt: OpaquePointer?
+        guard sqlite3_prepare_v2(
+            db,
+            "SELECT id, roman FROM \(CustomDictionarySchema.tableName);",
+            -1, &selectStmt, nil,
+        ) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(selectStmt) }
+
+        var deleteStmt: OpaquePointer?
+        guard sqlite3_prepare_v2(
+            db,
+            "DELETE FROM \(CustomDictionarySchema.searchKeyTableName) WHERE \(CustomDictionarySchema.searchKeyEntryIdColumn) = ?;",
+            -1, &deleteStmt, nil,
+        ) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(deleteStmt) }
+
+        var insertStmt: OpaquePointer?
+        let insertSQL = """
+            INSERT INTO \(CustomDictionarySchema.searchKeyTableName)
+                (\(CustomDictionarySchema.searchKeyEntryIdColumn), \(CustomDictionarySchema.searchKeyFamilyColumn), \(CustomDictionarySchema.searchKeyFormColumn), \(CustomDictionarySchema.searchKeyKeyColumn))
+            VALUES (?, ?, ?, ?);
+        """
+        guard sqlite3_prepare_v2(db, insertSQL, -1, &insertStmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(insertStmt) }
+
+        while sqlite3_step(selectStmt) == SQLITE_ROW {
+            let id = String(cString: sqlite3_column_text(selectStmt, 0))
+            let roman = String(cString: sqlite3_column_text(selectStmt, 1))
+
+            sqlite3_reset(deleteStmt)
+            sqlite3_clear_bindings(deleteStmt)
+            deleteStmt.bindText(1, id)
+            sqlite3_step(deleteStmt)
+
+            for searchKey in CustomDictionaryDerivation.searchKeys(for: roman) {
+                sqlite3_reset(insertStmt)
+                sqlite3_clear_bindings(insertStmt)
+                insertStmt.bindText(1, id)
+                insertStmt.bindText(2, searchKey.family)
+                insertStmt.bindText(3, searchKey.form)
+                insertStmt.bindText(4, searchKey.key)
+                sqlite3_step(insertStmt)
+            }
         }
     }
 }

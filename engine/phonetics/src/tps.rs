@@ -388,6 +388,59 @@ pub fn tps_notone_or_variant(notone: &str) -> String {
     notone.replace('\u{311c}', "\u{311b}")
 }
 
+/// v3.6.1 R3 — TPS num (tone-marked, fused) sibling of [`tps_notone_from_tl`].
+/// Per-token TL → numeric → [`to_zhuyin`], KEEPING the tone marks and dropping
+/// only hyphen + whitespace so the fused form matches a TPS continuous input
+/// that carries tone marks. Used as the `tps:num` custom-dictionary search key.
+// 中文: R3 — tps_notone_from_tl 的「保留聲調符號」版本,供自訂詞 tps:num 搜尋鍵;
+// 中文:   逐音節 TL → numeric → to_zhuyin,只剝連字號 / 空白,聲調符號保留。
+pub fn tps_num_from_tl(record_tl: &str) -> String {
+    let mut out = String::with_capacity(record_tl.len() * 3);
+    for token in record_tl.split(['-', ' ', '\t']) {
+        if token.is_empty() {
+            continue;
+        }
+        let numeric = crate::api::to_tone_number(token);
+        let tps = to_zhuyin(&numeric, false, true);
+        for ch in tps.chars() {
+            if ch == '-' || ch.is_whitespace() {
+                continue;
+            }
+            out.push(ch);
+        }
+    }
+    out
+}
+
+/// v3.6.1 R3 — TPS abbrev mirror of build pipeline
+/// `dictionary/common/abbrev.py::extract_tps_abbrev`. First Bopomofo glyph
+/// (leading initial / vowel) per TL syllable; "" for fewer than 2 syllables.
+/// Used as the `tps:abbrev` custom-dictionary search key.
+// 中文: R3 — extract_tps_abbrev 的 runtime 鏡像;每個 TL 音節取首個注音字母 (聲母/韻母),
+// 中文:   少於兩音節回空字串。供自訂詞 tps:abbrev 搜尋鍵。
+pub fn tps_abbrev_from_tl(record_tl: &str) -> String {
+    let syllables: Vec<&str> = record_tl
+        .split(['-', ' ', '\t'])
+        .filter(|s| !s.is_empty())
+        .collect();
+    if syllables.len() < 2 {
+        return String::new();
+    }
+    let mut out = String::new();
+    for syllable in syllables {
+        let numeric = crate::api::to_tone_number(syllable);
+        let tps = to_zhuyin(&numeric, false, true);
+        match tps
+            .chars()
+            .find(|&c| c != '-' && !c.is_whitespace() && !is_tps_tone_mark(c))
+        {
+            Some(glyph) => out.push(glyph),
+            None => return String::new(),
+        }
+    }
+    out
+}
+
 /// Convert a single TL token (with tone digit) to TPS.
 ///
 /// - `encode_safe = true` substitutes `\u{02d9}` for `\u{0307}` so TPS

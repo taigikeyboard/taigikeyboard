@@ -7,7 +7,9 @@
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import com.siansiansu.taigikeyboard.engine.CustomSearchKey
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 /**
  * Pure derivation functions for custom-dictionary columns. Mirrors iOS
@@ -30,4 +32,27 @@ object CustomDictionaryDerivation {
 
     /** Numeric-toned form for tone-aware search — same as `Method::NormalizeInput`. */
     fun generateRomanNum(roman: String): String = RustEngineBridge.normalizeInput(roman)
+
+    /**
+     * v3.6.1 R3 WRITE side — full {tl, poj, tps} × {num, notone, abbrev} (+ TPS
+     * er/or variant) cross-mode search-key bundle for a stored custom-dict
+     * roman. Materialized into the `custom_search_key` side table so a query in
+     * ANY input mode finds the entry. Rust `Method::DeriveCustomSearchKeys`.
+     * Mirrors iOS `CustomDictionaryDerivation.deriveCustomSearchKeys`.
+     */
+    // 中文: R3 寫入端 — 跨家族搜尋鍵 bundle,落地 custom_search_key 側表。
+    fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> = RustEngineBridge.deriveCustomSearchKeys(roman)
+
+    /**
+     * v3.6.1 R3 READ side — single family-native key for the user's current raw
+     * `input` + `mode`. The engine upgrades the family to TPS when the raw input
+     * carries Bopomofo, so the caller passes its settings mode verbatim. `null`
+     * for residue-only / empty input. Rust `Method::DeriveCustomQueryKey`.
+     * Mirrors iOS `CustomDictionaryDerivation.deriveCustomQueryKey`.
+     */
+    // 中文: R3 查詢端 — 依當前 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    fun deriveCustomQueryKey(
+        input: String,
+        mode: InputMode,
+    ): CustomSearchKey? = RustEngineBridge.deriveCustomQueryKey(input, mode)
 }

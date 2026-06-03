@@ -32,7 +32,57 @@ class CustomDictionaryService(
     companion object {
         private const val TAG = "CustomDictionaryService"
         private const val DATABASE_NAME = "custom_dictionary.db"
-        private const val DATABASE_VERSION = 5
+        private const val DATABASE_VERSION = 6
+
+        /**
+         * v3.6.1 R3 cross-mode side-table DDL + indexes + query. `internal` so
+         * the JVM SQL-structure test (`CustomDictionaryServiceCrossModeTest`)
+         * runs the EXACT production strings against a JDBC in-memory DB — no
+         * SQL duplication that could drift from the live query.
+         */
+        internal const val CREATE_SEARCH_KEY_TABLE_SQL =
+            "CREATE TABLE IF NOT EXISTS custom_search_key (" +
+                "entry_id TEXT NOT NULL, family TEXT NOT NULL, form TEXT NOT NULL, key TEXT NOT NULL);"
+        internal const val CREATE_SEARCH_KEY_LOOKUP_INDEX_SQL =
+            "CREATE INDEX IF NOT EXISTS idx_csk_lookup ON custom_search_key(family, form, key);"
+        internal const val CREATE_SEARCH_KEY_ENTRY_INDEX_SQL =
+            "CREATE INDEX IF NOT EXISTS idx_csk_entry ON custom_search_key(entry_id);"
+
+        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift query.
+        // Drift causes silent divergence.
+        internal const val SEARCH_SQL =
+            "SELECT DISTINCT c.id, c.roman, c.hanzi, c.created_at, c.updated_at " +
+                "FROM custom_dictionary c " +
+                "JOIN custom_search_key k ON k.entry_id = c.id " +
+                "WHERE k.family = ? " +
+                "AND k.form IN (?, 'abbrev') " +
+                "AND k.key LIKE ? || '%' " +
+                "ORDER BY c.roman " +
+                "LIMIT ?"
+
+        /**
+         * Delete-then-insert the `custom_search_key` rows for one entry. Shared
+         * by [executeUpsert] (every save / import) and the v5→v6 backfill.
+         * Delete-first keeps the side table consistent when an UPSERT edits the
+         * entry's `roman`.
+         */
+        // 中文: 先刪後插重建 entry 的側表鍵;upsert 路徑與 v5→v6 回填共用;roman 改動時保持一致。
+        private fun rewriteSearchKeys(
+            db: SQLiteDatabase,
+            entryId: String,
+            roman: String,
+        ) {
+            db.execSQL(
+                "DELETE FROM ${SearchKeyTable.NAME} WHERE ${SearchKeyTable.ENTRY_ID} = ?",
+                arrayOf(entryId),
+            )
+            for (key in CustomDictionaryDerivation.deriveCustomSearchKeys(roman)) {
+                db.execSQL(
+                    "INSERT INTO ${SearchKeyTable.NAME} (${SearchKeyTable.ENTRY_ID}, ${SearchKeyTable.FAMILY}, ${SearchKeyTable.FORM}, ${SearchKeyTable.KEY}) VALUES (?, ?, ?, ?)",
+                    arrayOf(entryId, key.family, key.form, key.key),
+                )
+            }
+        }
     }
 
     private object Table {
@@ -45,6 +95,23 @@ class CustomDictionaryService(
         const val ROMAN_NUM = "roman_num"
         const val CREATED_AT = "created_at"
         const val UPDATED_AT = "updated_at"
+    }
+
+    /**
+     * Cross-mode search side table (v3.6.1 R3). One row per (entry, family,
+     * form) search key produced by `CustomDictionaryDerivation
+     * .deriveCustomSearchKeys`. The NEW query path joins here by the current
+     * input's family; the legacy `notone` / `abbrev` / `roman_num` columns on
+     * `custom_dictionary` stay write-only for backcompat / rollback.
+     */
+    // 中文: 跨模式搜尋側表 — 一筆 (entry, family, form) 搜尋鍵。新查詢路徑走這張表,
+    // 中文: 舊衍生欄位保留為 write-only(回滾用)。
+    private object SearchKeyTable {
+        const val NAME = "custom_search_key"
+        const val ENTRY_ID = "entry_id"
+        const val FAMILY = "family"
+        const val FORM = "form"
+        const val KEY = "key"
     }
 
     private var dbHelper: DatabaseHelper? = null
@@ -78,6 +145,11 @@ class CustomDictionaryService(
         val romanNum = CustomDictionaryDerivation.generateRomanNum(entry.roman)
         logger.debug(TAG) { "[UPSERT] roman='${entry.roman}' notone='$notone' abbrev='$abbrev' romanNum='$romanNum'" }
         db.execSQL(UPSERT_SQL, arrayOf(entry.id, entry.roman, entry.hanzi, notone, abbrev, romanNum))
+        // v3.6.1 R3 — refresh the cross-mode side-table keys for this entry.
+        // The legacy notone/abbrev/roman_num columns above stay written for
+        // backcompat / rollback; the side table is the NEW query path.
+        // 中文: R3 — 重建此 entry 的跨模式側表鍵;舊欄位仍寫(回滾用),側表為新查詢路徑。
+        rewriteSearchKeys(db, entry.id, entry.roman)
     }
 
     private suspend fun initialize() {
@@ -184,6 +256,8 @@ class CustomDictionaryService(
                 initialize()
                 val db = dbHelper?.writableDatabase ?: return@withContext
                 db.delete(Table.NAME, "${Table.ID} = ?", arrayOf(id))
+                // v3.6.1 R3 — drop the entry's side-table search keys too.
+                db.delete(SearchKeyTable.NAME, "${SearchKeyTable.ENTRY_ID} = ?", arrayOf(id))
             } catch (e: Exception) {
                 logger.e(TAG, "[DELETE] Failed", e)
             }
@@ -195,35 +269,40 @@ class CustomDictionaryService(
                 initialize()
                 val db = dbHelper?.writableDatabase ?: return@withContext
                 db.execSQL("DELETE FROM ${Table.NAME}")
+                // v3.6.1 R3 — clear the side table alongside the main table.
+                db.execSQL("DELETE FROM ${SearchKeyTable.NAME}")
             } catch (e: Exception) {
                 logger.e(TAG, "[DELETE_ALL] Failed", e)
             }
         }
 
     /**
-     * Prefix search for autocomplete integration.
-     * @param prefix Preprocessed prefix — `roman_num` key when [isToneAware], else `notone` key.
-     * @param isToneAware `true` matches against the toned column.
+     * Cross-mode prefix search (v3.6.1 R3). Joins `custom_search_key` by the
+     * current input's [family]; matches the primary [form] OR `abbrev` rows by
+     * [key] prefix. [key] comes from `CustomDictionaryDerivation
+     * .deriveCustomQueryKey` (already lowercased family-native form) and is
+     * bound verbatim. Returns each entry once (`DISTINCT`).
+     *
+     * @param family `tl` / `poj` / `tps` — the query key's family.
+     * @param form `num` / `notone` — the query key's primary form (`abbrev` is always also matched).
+     * @param key Family-native prefix (bound verbatim).
      */
+    // 中文: R3 跨模式 prefix 查詢 — 依 family JOIN 側表,比對 primary form 或 abbrev 列的 key 前綴。
+    // SQL is the `SEARCH_SQL` companion constant (shared with the JVM test).
     suspend fun search(
-        prefix: String,
-        isToneAware: Boolean,
+        family: String,
+        form: String,
+        key: String,
         limit: Int = 50,
     ): List<Entry> =
         withContext(Dispatchers.IO) {
             try {
                 initialize()
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
-                val lowered = prefix.lowercase()
-                val matchColumn = if (isToneAware) Table.ROMAN_NUM else Table.NOTONE
                 val cursor =
                     db.rawQuery(
-                        """SELECT ${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.CREATED_AT}, ${Table.UPDATED_AT}
-                   FROM ${Table.NAME}
-                   WHERE $matchColumn LIKE ? || '%'
-                      OR ${Table.ABBREV} LIKE ? || '%'
-                   ORDER BY ${Table.ROMAN} LIMIT ?""",
-                        arrayOf(lowered, lowered, limit.toString()),
+                        SEARCH_SQL,
+                        arrayOf(family, form, key, limit.toString()),
                     )
                 val results = mutableListOf<Entry>()
                 cursor.use {
@@ -416,6 +495,18 @@ class CustomDictionaryService(
             db.execSQL("CREATE INDEX idx_custom_notone ON ${Table.NAME}(${Table.NOTONE});")
             db.execSQL("CREATE INDEX idx_custom_abbrev ON ${Table.NAME}(${Table.ABBREV});")
             db.execSQL("CREATE INDEX idx_custom_roman_num ON ${Table.NAME}(${Table.ROMAN_NUM});")
+            createSearchKeyTable(db)
+        }
+
+        // v3.6.1 R3 cross-mode search side table + indexes. Shared by [onCreate]
+        // and [migrateV5ToV6] (the latter via `IF NOT EXISTS`). DDL strings are
+        // companion constants reused by the JVM SQL-structure test.
+        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionarySchema.swift (custom_search_key).
+        // Drift causes silent divergence.
+        private fun createSearchKeyTable(db: SQLiteDatabase) {
+            db.execSQL(CREATE_SEARCH_KEY_TABLE_SQL)
+            db.execSQL(CREATE_SEARCH_KEY_LOOKUP_INDEX_SQL)
+            db.execSQL(CREATE_SEARCH_KEY_ENTRY_INDEX_SQL)
         }
 
         override fun onUpgrade(
@@ -427,6 +518,7 @@ class CustomDictionaryService(
             if (oldVersion < 3) migrateV2ToV3(db)
             if (oldVersion < 4) migrateV3ToV4(db)
             if (oldVersion < 5) migrateV4ToV5(db)
+            if (oldVersion < 6) migrateV5ToV6(db)
             logger.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion")
         }
 
@@ -464,6 +556,17 @@ class CustomDictionaryService(
                     arrayOf(CustomDictionaryDerivation.generateRomanNum(roman), id),
                 )
             }
+        }
+
+        /**
+         * v5 → v6: add the `custom_search_key` cross-mode side table + indexes
+         * and backfill one bundle per existing entry. Non-destructive — the
+         * legacy `notone` / `abbrev` / `roman_num` columns are untouched.
+         */
+        // 中文: v5→v6 — 建 custom_search_key 側表 + 索引,對既有每筆 entry 回填 bundle;非破壞,舊欄位不動。
+        private fun migrateV5ToV6(db: SQLiteDatabase) {
+            createSearchKeyTable(db)
+            forEachRomanRow(db) { id, roman -> rewriteSearchKeys(db, id, roman) }
         }
 
         private fun regenerateNotone(db: SQLiteDatabase) {

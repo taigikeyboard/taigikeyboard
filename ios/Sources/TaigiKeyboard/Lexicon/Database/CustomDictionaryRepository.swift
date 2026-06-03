@@ -72,6 +72,8 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     "Upsert failed: \(String(cString: sqlite3_errmsg(db)))",
                 )
             }
+
+            Self.writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
         }
     }
 
@@ -101,16 +103,19 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
     }
 
-    /// Search entries by prefix (for autocomplete integration).
+    /// Cross-mode prefix search (v3.6.1 R3). Query keys come from
+    /// `CustomDictionaryDerivation.queryKey(for:mode:)`, which is family-native
+    /// to the current input mode, so an entry stored in any mode is found.
     /// - Parameters:
-    ///   - prefix: Preprocessed search prefix (`roman_num` key for toned,
-    ///     `notone` key for toneless).
-    ///   - isToneAware: When true, matches `roman_num`; otherwise `notone`.
-    // 中文: 依 prefix 查詢(async)。toneAware → 比對 roman_num,toneless → 比對 notone。
-    func search(prefix: String, isToneAware: Bool, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
+    ///   - family: Search-key family (`tl` / `poj` / `tps`).
+    ///   - form: Search-key form (`num` / `notone` / `abbrev`).
+    ///   - key: Fused search string (already normalized + lowercased by the
+    ///     engine — bind verbatim, do NOT re-lowercase).
+    // 中文: 跨模式 prefix 查詢(async)。鍵由引擎依當前 mode 產生家族原生形,任一模式存的詞都查得到。
+    func search(family: String, form: String, key: String, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
-            Self.runPrefixSearch(db: db, prefix: prefix, isToneAware: isToneAware, limit: limit)
+            Self.runPrefixSearch(db: db, family: family, form: form, key: key, limit: limit)
         }
     }
 
@@ -118,19 +123,19 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Returns `[]` when the DB is not yet connected — callers must accept
     /// empty results on the very first keystroke rather than blocking.
     // 中文: keyboard extension hot path 用的同步版本。連線未就緒就回空陣列,絕不 block。
-    func searchSync(prefix: String, isToneAware: Bool, limit: Int = 50) -> [CustomDictionaryEntry] {
+    func searchSync(family: String, form: String, key: String, limit: Int = 50) -> [CustomDictionaryEntry] {
         guard connectionManager.isConnected() else { return [] }
         do {
             return try connectionManager.executeSync { db in
-                Self.runPrefixSearch(db: db, prefix: prefix, isToneAware: isToneAware, limit: limit)
+                Self.runPrefixSearch(db: db, family: family, form: form, key: key, limit: limit)
             }
         } catch {
             return []
         }
     }
 
-    /// Delete an entry by id.
-    // 中文: 依 id 刪除一筆。
+    /// Delete an entry by id (and its `custom_search_key` side rows).
+    // 中文: 依 id 刪除一筆,連同 custom_search_key 側表的對應 row。
     func delete(id: String) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -141,15 +146,18 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
             stmt.bindText(1, id)
             sqlite3_step(stmt)
+
+            Self.deleteSearchKeys(db: db, entryId: id)
         }
     }
 
-    /// Delete all entries.
-    // 中文: 清空整張表。
+    /// Delete all entries (and all `custom_search_key` side rows).
+    // 中文: 清空主表與 custom_search_key 側表。
     func deleteAll() async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
             sqliteExecSimple(db: db, "DELETE FROM \(CustomDictionarySchema.tableName);")
+            sqliteExecSimple(db: db, "DELETE FROM \(CustomDictionarySchema.searchKeyTableName);")
         }
     }
 
@@ -205,6 +213,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     Self.bindEntry(stmt, entry)
 
                     if sqlite3_step(stmt) == SQLITE_DONE {
+                        Self.writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
                         existingKeys.insert(key)
                         insertedCount += 1
                     }
@@ -309,19 +318,28 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         stmt.bindText(8, dateFormatter.string(from: entry.updatedAt))
     }
 
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryService.kt (custom_search_key query). Drift causes silent divergence.
+    //
+    // `form IN (?, 'abbrev')` lets an abbrev side row satisfy any query in the
+    // same family — preserving the old `notone LIKE ? OR abbrev LIKE ?`
+    // behavior. `DISTINCT` because one entry can match several side rows.
+    // `key` is bound verbatim (engine already normalized + lowercased it).
     private static func runPrefixSearch(
         db: OpaquePointer,
-        prefix: String,
-        isToneAware: Bool,
+        family: String,
+        form: String,
+        key: String,
         limit: Int,
     ) -> [CustomDictionaryEntry] {
-        let column = isToneAware ? "roman_num" : "notone"
         let sql = """
-            SELECT id, roman, hanzi, created_at, updated_at
-            FROM \(CustomDictionarySchema.tableName)
-            WHERE \(column) LIKE ? || '%'
-               OR abbrev LIKE ? || '%'
-            ORDER BY roman
+            SELECT DISTINCT c.id, c.roman, c.hanzi, c.created_at, c.updated_at
+            FROM \(CustomDictionarySchema.tableName) c
+            JOIN \(CustomDictionarySchema.searchKeyTableName) k
+                ON k.\(CustomDictionarySchema.searchKeyEntryIdColumn) = c.id
+            WHERE k.\(CustomDictionarySchema.searchKeyFamilyColumn) = ?
+              AND k.\(CustomDictionarySchema.searchKeyFormColumn) IN (?, 'abbrev')
+              AND k.\(CustomDictionarySchema.searchKeyKeyColumn) LIKE ? || '%'
+            ORDER BY c.roman
             LIMIT ?;
         """
 
@@ -329,10 +347,10 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
 
-        let lowered = prefix.lowercased()
-        stmt.bindText(1, lowered)
-        stmt.bindText(2, lowered)
-        sqlite3_bind_int(stmt, 3, Int32(limit))
+        stmt.bindText(1, family)
+        stmt.bindText(2, form)
+        stmt.bindText(3, key)
+        sqlite3_bind_int(stmt, 4, Int32(limit))
 
         var results: [CustomDictionaryEntry] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -341,6 +359,46 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             }
         }
         return results
+    }
+
+    // MARK: - Search-Key Side Table
+
+    private static let insertSearchKeySQL = """
+        INSERT INTO \(CustomDictionarySchema.searchKeyTableName)
+            (\(CustomDictionarySchema.searchKeyEntryIdColumn), \(CustomDictionarySchema.searchKeyFamilyColumn), \(CustomDictionarySchema.searchKeyFormColumn), \(CustomDictionarySchema.searchKeyKeyColumn))
+        VALUES (?, ?, ?, ?);
+    """
+
+    /// Replace an entry's `custom_search_key` rows: delete by entry id, then
+    /// insert the full cross-mode bundle from
+    /// `CustomDictionaryDerivation.searchKeys(for:)`. Called after every upsert
+    /// and batch insert so the side table never drifts from the entry's roman.
+    // 中文: 取代某 entry 的 custom_search_key 列 — 先依 id 刪,再插完整跨模式 bundle。
+    private static func writeSearchKeys(db: OpaquePointer, entryId: String, roman: String) {
+        deleteSearchKeys(db: db, entryId: entryId)
+
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, insertSearchKeySQL, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        for searchKey in CustomDictionaryDerivation.searchKeys(for: roman) {
+            sqlite3_reset(stmt)
+            sqlite3_clear_bindings(stmt)
+            stmt.bindText(1, entryId)
+            stmt.bindText(2, searchKey.family)
+            stmt.bindText(3, searchKey.form)
+            stmt.bindText(4, searchKey.key)
+            sqlite3_step(stmt)
+        }
+    }
+
+    private static func deleteSearchKeys(db: OpaquePointer, entryId: String) {
+        let sql = "DELETE FROM \(CustomDictionarySchema.searchKeyTableName) WHERE \(CustomDictionarySchema.searchKeyEntryIdColumn) = ?;"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        stmt.bindText(1, entryId)
+        sqlite3_step(stmt)
     }
 
     private static func existingRomanHanziKeys(db: OpaquePointer) -> Set<String> {

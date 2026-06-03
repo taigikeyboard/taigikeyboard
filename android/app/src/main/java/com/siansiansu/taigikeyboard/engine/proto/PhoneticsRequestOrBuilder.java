@@ -118,7 +118,7 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -127,7 +127,7 @@ public interface PhoneticsRequestOrBuilder extends
   boolean hasDeriveNotone();
   /**
    * <pre>
-   * --- Derivation (2 ops) ---
+   * --- Derivation (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
@@ -145,6 +145,28 @@ public interface PhoneticsRequestOrBuilder extends
    * @return The deriveAbbrev.
    */
   com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev getDeriveAbbrev();
+
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   * @return Whether the deriveCustomSearchKeys field is set.
+   */
+  boolean hasDeriveCustomSearchKeys();
+  /**
+   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
+   * @return The deriveCustomSearchKeys.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys getDeriveCustomSearchKeys();
+
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   * @return Whether the deriveCustomQueryKey field is set.
+   */
+  boolean hasDeriveCustomQueryKey();
+  /**
+   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
+   * @return The deriveCustomQueryKey.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey getDeriveCustomQueryKey();
 
   /**
    * <pre>

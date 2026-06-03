@@ -15,23 +15,40 @@ import SQLite3
 enum CustomDictionarySchema {
     static let tableName = "custom_dictionary"
 
+    /// Cross-mode search side table (v3.6.1 R3). One row per
+    /// (entry, family, form) search key produced by
+    /// `RustEngineBridge.deriveCustomSearchKeys`. The NEW query path joins
+    /// here by the current input's family; the legacy `notone` / `abbrev` /
+    /// `roman_num` columns on `custom_dictionary` stay write-only for
+    /// backcompat / rollback.
+    // 中文: 跨模式搜尋側表 — 一筆 (entry, family, form) 搜尋鍵。新查詢路徑走這張表,
+    // 中文: 舊衍生欄位保留為 write-only(回滾用)。
+    static let searchKeyTableName = "custom_search_key"
+    static let searchKeyEntryIdColumn = "entry_id"
+    static let searchKeyFamilyColumn = "family"
+    static let searchKeyFormColumn = "form"
+    static let searchKeyKeyColumn = "key"
+
     /// Bump when `CustomDictionaryDerivation` logic changes or new derived
     /// columns are added — `CustomDictionaryMigrator` re-runs ALTER + backfill
     /// against any DB whose `PRAGMA user_version` is below this value.
     // 中文: schema 版本號 — 衍生欄位邏輯改動時要 bump,
     // 中文: migrator 會對 PRAGMA user_version 低於此值的 DB 重跑 ALTER + backfill。
-    static let schemaVersion = 1
+    static let schemaVersion = 2
 
     /// Derived column names backed by `CustomDictionaryDerivation`.
     /// Single source of truth for the `ALTER TABLE` migrator.
     // 中文: 衍生欄位名清單,作為 ALTER TABLE migrator 的單一資料來源。
     static let derivedColumns = ["notone", "abbrev", "roman_num"]
 
-    /// Create the primary table + all indexes. Idempotent via `IF NOT EXISTS`.
-    // 中文: 建立主表與全部索引,IF NOT EXISTS 保證冪等。
+    /// Create the primary table + side table + all indexes. Idempotent via
+    /// `IF NOT EXISTS`.
+    // 中文: 建立主表 + 側表與全部索引,IF NOT EXISTS 保證冪等。
     static func ensureTables(db: OpaquePointer) throws {
         try createMainTable(db: db)
         createIndexes(db: db)
+        try createSearchKeyTable(db: db)
+        createSearchKeyIndexes(db: db)
     }
 
     /// Check whether a column exists on `custom_dictionary`.
@@ -77,6 +94,35 @@ enum CustomDictionarySchema {
             "CREATE INDEX IF NOT EXISTS idx_custom_notone ON \(tableName)(notone);",
             "CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON \(tableName)(abbrev);",
             "CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON \(tableName)(roman_num);",
+        ] {
+            sqliteExecSimple(db: db, sql)
+        }
+    }
+
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryService.kt (custom_search_key). Drift causes silent divergence.
+    private static func createSearchKeyTable(db: OpaquePointer) throws {
+        let sql = """
+            CREATE TABLE IF NOT EXISTS \(searchKeyTableName) (
+                \(searchKeyEntryIdColumn) TEXT NOT NULL,
+                \(searchKeyFamilyColumn) TEXT NOT NULL,
+                \(searchKeyFormColumn) TEXT NOT NULL,
+                \(searchKeyKeyColumn) TEXT NOT NULL
+            );
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw LexiconError.queryPreparationFailed("Create \(searchKeyTableName) failed: \(String(cString: sqlite3_errmsg(db)))")
+        }
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw LexiconError.queryExecutionFailed("Create \(searchKeyTableName) failed: \(String(cString: sqlite3_errmsg(db)))")
+        }
+    }
+
+    private static func createSearchKeyIndexes(db: OpaquePointer) {
+        for sql in [
+            "CREATE INDEX IF NOT EXISTS idx_csk_lookup ON \(searchKeyTableName)(\(searchKeyFamilyColumn), \(searchKeyFormColumn), \(searchKeyKeyColumn));",
+            "CREATE INDEX IF NOT EXISTS idx_csk_entry ON \(searchKeyTableName)(\(searchKeyEntryIdColumn));",
         ] {
             sqliteExecSimple(db: db, sql)
         }

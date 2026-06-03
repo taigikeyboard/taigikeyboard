@@ -148,6 +148,31 @@ public extension RustEngineBridge {
         return stringDispatch(method: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev", config: nil)
     }
 
+    /// `Method::DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). Full
+    /// {tl, poj, tps} × {num, notone, abbrev} (+ TPS variant) bundle for a
+    /// stored custom-dict roman. The platform materializes these into the
+    /// `custom_search_key` side table so a query in any input mode finds the
+    /// entry. Empty bundle on FFI failure / residue-only input.
+    // 中文: 自訂詞寫入端 — 把單一 roman 展成跨家族搜尋鍵 bundle,平台落地到 custom_search_key 側表。
+    static func deriveCustomSearchKeys(_ roman: String) -> [CustomSearchKey] {
+        var payload = Taigi_Engine_DeriveCustomSearchKeys()
+        payload.roman = roman
+        return customSearchKeys(method: .deriveCustomSearchKeys(payload), op: "deriveCustomSearchKeys")
+    }
+
+    /// `Method::DeriveCustomQueryKey` — READ side (v3.6.1 R3). Single
+    /// family-native key for the current `input` + `mode`. Effective family is
+    /// upgraded to TPS by the engine when the raw input carries Bopomofo, so
+    /// the caller passes its settings mode verbatim. `nil` for residue-only /
+    /// empty input or FFI failure.
+    // 中文: 自訂詞查詢端 — 依當前 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    static func deriveCustomQueryKey(_ input: String, mode: InputMode) -> CustomSearchKey? {
+        var payload = Taigi_Engine_DeriveCustomQueryKey()
+        payload.input = input
+        payload.inputMode = customSearchInputMode(mode)
+        return customSearchKeys(method: .deriveCustomQueryKey(payload), op: "deriveCustomQueryKey").first
+    }
+
     // MARK: TPS (5 ops)
 
     static func containsTPS(_ text: String) -> Bool {
@@ -276,6 +301,47 @@ public extension RustEngineBridge {
         }
         return b.value
     }
+
+    /// Shared decode for the two custom-dict search-key ops — both return a
+    /// `CustomSearchKeysResult` (the write op a full bundle, the query op 0/1).
+    // 中文: 兩個自訂詞搜尋鍵 op 共用的 decode;皆回 CustomSearchKeysResult。
+    private static func customSearchKeys(
+        method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
+        op: String,
+    ) -> [CustomSearchKey] {
+        guard let resp = dispatch(method: method, op: op, config: nil) else { return [] }
+        guard case let .customSearchKeysResult(r)? = resp.result else {
+            recordFailure(op: op, message: "expected CustomSearchKeysResult")
+            return []
+        }
+        return r.keys.map { CustomSearchKey(family: $0.family, form: $0.form, key: $0.key) }
+    }
+
+    /// Map the platform `InputMode` to the engine `input_mode` string. TPS maps
+    /// to "tl" because TPS is a layout, not an engine mode — the engine upgrades
+    /// to the TPS family via `contains_tps` on the raw input (mirrors
+    /// `RustEngineBridge.appConfig`).
+    // 中文: InputMode → 引擎 input_mode 字串;TPS 走 "tl"(TPS 是 layout,引擎以 contains_tps 升家族)。
+    private static func customSearchInputMode(_ mode: InputMode) -> String {
+        switch mode {
+        case .poj: "poj"
+        case .english: "english"
+        case .tl, .tps: "tl"
+        }
+    }
+}
+
+// MARK: - CustomSearchKey
+
+/// One custom-dictionary cross-mode search key (v3.6.1 R3). Mirrors the proto
+/// `CustomSearchKey`: `family` ∈ {tl, poj, tps}, `form` ∈ {num, notone,
+/// abbrev}, `key` the fused family-native search string. Written to the
+/// `custom_search_key` side table; the query op returns one to match against
+/// it. Pure value type (no KeyboardKit / UIKit).
+public struct CustomSearchKey: Equatable, Sendable {
+    public let family: String
+    public let form: String
+    public let key: String
 }
 
 // MARK: - ToneVariationsCache
