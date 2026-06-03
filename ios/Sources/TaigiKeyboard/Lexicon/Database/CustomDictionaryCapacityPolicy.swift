@@ -12,8 +12,9 @@ import SQLite3
 /// Stateless — all methods operate on a caller-provided `OpaquePointer`.
 // 中文: 自訂詞庫的容量限制策略 — stateless,所有方法吃外部傳入的 OpaquePointer。
 enum CustomDictionaryCapacityPolicy {
-    /// Maximum number of rows. Mirrors Android's `MAX_ENTRY_COUNT`.
-    // 中文: row 上限,與 Android MAX_ENTRY_COUNT 對齊。
+    /// Maximum number of rows.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryCapacityPolicy.kt (MAX_ENTRIES).
+    // Drift causes silent divergence.
     static let maxEntries = 30000
 
     /// True when a row with the given `id` already exists.

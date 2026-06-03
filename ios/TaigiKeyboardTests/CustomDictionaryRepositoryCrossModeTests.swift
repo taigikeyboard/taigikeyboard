@@ -130,6 +130,34 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
         XCTAssertEqual(sqlite3_exec(db, "PRAGMA user_version = 1;", nil, nil, nil), SQLITE_OK)
     }
 
+    /// INVARIANT_CUSTOM_DICT_CAPACITY — the 30000-row cap constant is pinned on
+    /// both platforms (Android `CustomDictionaryCapacityPolicy.MAX_ENTRIES`), and
+    /// the capacity policy tracks row count + bypasses updates of an existing id.
+    /// The over-cap throw + grandfather-on-import behavior is dogfood-pinned (S14)
+    /// — a 30000-row insert test is impractical; Android exercises the pure
+    /// decision arithmetic directly in `CustomDictionaryCapacityPolicyTest`.
+    func test_INVARIANT_CUSTOM_DICT_CAPACITY_constAndExistingRowBypass() async throws {
+        XCTAssertEqual(
+            CustomDictionaryCapacityPolicy.maxEntries, 30000,
+            "row cap must stay aligned with Android MAX_ENTRIES",
+        )
+
+        try await repository.ensureInitialized()
+        let initialCount = try await repository.count()
+        XCTAssertEqual(initialCount, 0, "fresh DB starts empty")
+
+        let entry = CustomDictionaryEntry(roman: "chiah", hanzi: "食")
+        try await repository.upsert(entry)
+        let afterInsert = try await repository.count()
+        XCTAssertEqual(afterInsert, 1, "count tracks inserted rows")
+
+        // Re-upserting the SAME id is an update, not a new insert — the count
+        // stays 1, exercising the guard's existing-row bypass path.
+        try await repository.upsert(entry)
+        let afterUpdate = try await repository.count()
+        XCTAssertEqual(afterUpdate, 1, "update of an existing id is not a new insert (guard bypass)")
+    }
+
     // MARK: - Helpers
 
     private func assertFinds(

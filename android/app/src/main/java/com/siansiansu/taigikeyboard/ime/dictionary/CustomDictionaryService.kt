@@ -244,7 +244,14 @@ class CustomDictionaryService(
             try {
                 initialize()
                 val db = dbHelper?.writableDatabase ?: return@withContext
-                executeUpsert(db, entry)
+                // Capacity guard + write in one transaction (TOCTOU-safe). A NEW
+                // id over the cap throws CustomDictionaryFullException → caught
+                // below → entry not added (matches iOS silent single-save).
+                // 中文: 容量 guard 與寫入同一 transaction;新 id 超過上限會拋出 → 下方吞掉 → 不新增(對齊 iOS)。
+                db.transaction {
+                    CustomDictionaryCapacityPolicy.guardInsertCapacity(this, entry.id)
+                    executeUpsert(this, entry)
+                }
             } catch (e: Exception) {
                 logger.e(TAG, "[SAVE] Failed", e)
             }
@@ -340,7 +347,6 @@ class CustomDictionaryService(
     // MARK: - File Import
 
     private val MAX_FILE_SIZE = 5L * 1024 * 1024 // 5 MB
-    private val MAX_ENTRY_COUNT = 30_000
     private val IMPORT_BATCH_SIZE = 500
 
     @Suppress("SqlResolve")
@@ -368,7 +374,7 @@ class CustomDictionaryService(
             }
             if (entries.isEmpty()) return@withContext ImportResult(0, 0)
 
-            if (entries.size > MAX_ENTRY_COUNT) {
+            if (entries.size > CustomDictionaryCapacityPolicy.MAX_ENTRIES) {
                 throw Exception("tooManyEntries")
             }
 
@@ -387,12 +393,21 @@ class CustomDictionaryService(
                     }
                 }
 
+            // Cumulative row cap: grandfather existing rows, stop at MAX_ENTRIES,
+            // overflow entries fall into totalSkipped below (no eviction, no throw).
+            // 中文: 累計 row 上限 — 既有列 grandfather,到上限停;超量列計入 totalSkipped(不驅逐、不拋錯)。
+            val remaining =
+                CustomDictionaryCapacityPolicy.remainingCapacity(
+                    CustomDictionaryCapacityPolicy.currentEntryCount(db),
+                )
             var importedCount = 0
             var skippedCount = 0
 
             for (batch in entries.chunked(IMPORT_BATCH_SIZE)) {
+                if (importedCount >= remaining) break
                 db.transaction {
                     for (entry in batch) {
+                        if (importedCount >= remaining) return@transaction
                         val key = "${entry.roman}|${entry.hanzi}"
                         if (key in existingKeys) {
                             skippedCount++

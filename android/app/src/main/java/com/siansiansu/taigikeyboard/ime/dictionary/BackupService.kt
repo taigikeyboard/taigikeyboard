@@ -129,8 +129,15 @@ class BackupService(
         val existing = customDict.fetchAll()
         val existingPairs = existing.map { "${it.roman}\t${it.hanzi}" }.toSet()
 
+        // Respect the row cap: grandfather existing entries, stop at the limit.
+        // save() swallows the over-cap throw, so without this the reported count
+        // would over-count rows that were never written. Mirrors importFromFile.
+        // 中文: 尊重 row 上限 — grandfather 既有列,到上限停;save() 會吞掉超量例外,
+        // 中文: 不擋的話回報數會灌水(算進沒寫成功的列)。對齊 importFromFile。
+        val remaining = CustomDictionaryCapacityPolicy.remainingCapacity(existing.size)
         var imported = 0
         for (i in 0 until array.length()) {
+            if (imported >= remaining) break
             val obj = array.getJSONObject(i)
             val roman = obj.optString("roman", "")
             val hanzi = obj.optString("hanzi", "")
