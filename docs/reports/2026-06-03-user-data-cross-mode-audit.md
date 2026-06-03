@@ -292,6 +292,8 @@
 
 R1 PR #382 開啟後,USER 在對話中提出兩個關鍵修正,**沉澱為 R2/R3/R5 共用的設計契約**(下一輪冷啟動須讀此節 + memory)。
 
+**⚠ 本節經對抗 re-eval 收斂(2026-06-03,Claude 2 passes + Codex ANALYSIS-ONLY,全 grep file:line 實證)**。下方決策 2 / fork / 影響輪次表已含修正(F1 framing、F2 解耦、F3 鏈測試、B1-B3 隔離硬約束、fork 分輪)。prompt `/tmp/v361-855-eval-codex.txt`。
+
 ### 三軸正交模型(澄清「是否回到單索引」的疑慮)
 USER 問:POJ/TPS 都轉 TL 當 key,是否回到單索引?**否。** 三條軸正交:
 
@@ -303,29 +305,46 @@ USER 問:POJ/TPS 都轉 TL 當 key,是否回到單索引?**否。** 三條軸正
 
 「單索引」是**搜尋軸**的舊限制(只有一個可搜尋 key family);三索引已修好,R2-R5 一行不碰。canonical-TL 當 key 是**身分軸**決定 —— 一個詞只有一個身分,N 種方式打進來、1 個身分記起來、任意 mode 顯示出去,**零資訊損失**。`triple-index-eval.md` §硬約束#2 早已要求「user-history key 必須是 candidate identity,不得含 surface form/mode/input code」→ canonicalize 是三索引契約的下半場,**非**回退。
 
+**⚠ 隔離前提(B1/B2)**:身分軸正交**只在身分鍵是獨立欄位時成立** —— **不可覆用** commit/顯示用的 `display_text`/`roman`(兩者會被送字/render 改寫)。詳決策 2 下方「Codex 三軸隔離硬約束」。
+
 ### 決策 1:身分 = (漢字, canonical-TL) 配對,非漢字單獨
-USER 重申 #7。今天詞頻 key = `display_text` = `hanji ?? tl`(漢字優先 → **漢字單獨**,`lexicon/continuous.rs:53`)違反 #7(重/tîng + 重/tāng 併列)。R5 改 (hanji,tl) pair-key。canonical TL 帶聲調 → 多音字讀音區分**保留**(與單索引壓平相反)。hanji-absent 詞:身分 = canonical-TL 單獨。
+USER 重申 #7。今天詞頻 key = `display_text` = `hanji ?? tl`(漢字優先 → **漢字單獨**,實際構造 `lexicon/continuous.rs:1424`、custom/OOV fallback `:1523`;key helper `ranking/score.rs:184` / `sort.rs::display_text_key`;`:53` 僅 module doc)違反 #7(重/tîng + 重/tāng 併列)。R5 改 (hanji,tl) pair-key。canonical TL 帶聲調 → 多音字讀音區分**保留**(與單索引壓平相反)。hanji-absent 詞:身分 = canonical-TL 單獨。
 
-### 決策 2:canonical-TL 推導必須 mode-independent,含 **TPS→TL 轉換**(反轉現有 carve-out)
-chokepoint = `canonical_tl_form`(`engine/phonetics/src/api.rs:296-308`):
-- TL 表面 → identity;POJ 表面 → `poj_display_to_tl_display` 折疊(`chiah`→`tsiah`);
-- **TPS 注音 → 目前走 identity(v3.5.9 D/C-3b carve-out,保留注音)= 跨 mode 破口。必須改走 `from_zhuyin`(`tps.rs:524`,有 round-trip 測試)轉 TL。**
-- 連續輸入 raw → 取候選 canonical TL(R2)。
+### 決策 2:canonical-TL 推導必須 mode-independent,含 **TPS→TL 轉換**
 
-`from_zhuyin` 產出**聲調數字**形(`tai5`),TL/POJ 存的是**附加符號**顯示形(`tâi`)→ 需接 `to_tone_marks` 對齊。
+**⚠ F1 framing 修正(re-eval)**:這**不是「反轉 carve-out」**。現有 `canonical_tl_form` TPS branch(`api.rs:296-308`)走 identity 是**明確 no-op 契約**(`poj_display_to_tl_display` 對 Bopomofo 本就 no-op,identity 只是顯式等價)—— **非**刻意功能隔離。改走 `from_zhuyin` = **新增**一條此 chokepoint 從未有過的 TPS→TL 轉換,風險按**新轉換鏈**評估,不可當 safe-revert。
 
-### 兩個 R2/R5 Codex 設計 fork 待拍板(auto-mode BLOCK 點)
-1. **既有 user-data migration vs tolerant**:反轉 carve-out 後,舊 TPS/POJ 表面 key 對不上新 TL key。一次性 UPDATE 重 key(**絕不可 DROP**,比照 R5 硬約束)vs tolerant 讓舊列自然 LRU 淘汰。
-2. **canonical 目標形**:聲調數字(`tai5`)vs 附加符號顯示形(`tâi`)。建議後者對齊現有 `tl` 欄。
+chokepoint 分工:
+- TL 表面 → identity;POJ 表面 → `poj_display_to_tl_display`(`chiah`→`tsiah`,已驗);
+- TPS 注音 → `from_zhuyin`(`tps.rs:524`)→ 接 `to_tone_marks` 對齊附加符號顯示形(`tâi`)。**⚠ F3 缺口**:`from_zhuyin` 現只 pin 單音節聲調數字(`tps.rs:651` `ㄉㄧㄠˊ→tiau5`);多音節 + 分隔符 + stopped/nasal + 接 `to_tone_marks` 鏈**未測** → R2/R3/R5 動工前**先補鏈式測試**。
+- 連續輸入 raw → 取**候選 canonical TL**(R2)。
 
-### 影響輪次
-| 輪 | 用到 canonical-TL | 因本決策追加 |
-|---|---|---|
-| R2 | 詞關聯 next_tl/prev_tl 寫 canonical TL | TPS commit 存 `from_zhuyin(注音)`;反轉 carve-out 為共用 primitive |
-| R3 | 自訂詞跨 mode 多家族鍵 | tps: 家族用轉 TL 後 canonical 比對 |
-| R5 | 詞頻 (hanji,tl) pair-key | tl 分量 TPS 轉 TL;key hanji-only → pair |
+**⚠ F2 解耦(re-eval)**:`canonical_tl_form` **不是**統一 chokepoint。實證 3 個 call site(`lexicon/continuous.rs:1523` + `composing/continuous.rs:644` + `:898`)**全是 hanji-absent display_text fallback**;dict-hit 詞 mode-independence 來自**候選 `record.tl`**(任何 mode 打進來 record.tl 本就 canonical),**不經** `canonical_tl_form`。→ TPS 新轉換**只 load-bearing 於 hanji-absent custom/OOV + R3**,**非** R2/R5 核心。
 
-**NEXT ROUND**:冷啟動先仔細評估本節 + R2 proto 設計,再開工。
+### Codex 三軸隔離硬約束(re-eval,B1-B3)
+身分軸正交**只在這三條都守住時成立**,否則 leak 回搜尋/顯示:
+1. **B1 — 身分鍵須獨立欄位,不可覆用 `display_text`**。`display_text` 現雙職:commit 文字(`transition.rs` commit `Σ display_text`)**+** freq key。R5 把 pair 序列化塞回 `display_text` → **污染送字/顯示**。必須另開 `tl` 欄(R5 plan 的 `FrequencyEntry +tl`(`lexicon.proto:354`)已對齊;此為硬約束,釘 invariant)。
+2. **B2 — canonical TL 須 render 前快照**。`cand.roman` 被 POJ render pass 改寫(`composing/continuous.rs:1432`)→ 非穩定 identity 載體,不可事後從 final roman 回推。
+3. **B3 — legacy migration 不可精確**。舊 `display_text_key="重"` **無資訊**判歸 `tîng` 或 `tāng` → 詞頻 migration **資訊理論上不可能乾淨重鍵**。
+
+### 兩個 R2/R5 Codex 設計 fork(re-eval 收斂建議,USER 拍板)
+1. **migration vs tolerant** → **分輪不同**(B3 推導):
+   - **詞頻 R5 = 強制 tolerant**:舊 hanji-only count 無法拆 → 新 pair-key 寫入 + legacy `display_text_key` fallback 讀(承認暫時相容,**非**語義 migration)。
+   - **詞關聯 R2 = 可重 key**:prev_tl/next_tl 值存在,可 UPDATE 重正規化(**絕不 DROP**)。
+2. **canonical 目標形** → **附加符號顯示形**(`tâi`),對齊現有 `tl` 欄;`from_zhuyin` 數字形必接 `to_tone_marks`。✅ 維持原建議。
+3. **R2 identity 載體**(B1 新增)→ **獨立候選 sidechannel 欄**(帶 `record.tl`,render 前快照),**不**覆用 `display_text`/`canonical_tl_form`。
+
+### 影響輪次(F2 解耦後)
+| 輪 | identity 載體(核心) | from_zhuyin(僅補 hanji-absent) | migration |
+|---|---|---|---|
+| R2 詞關聯 | 候選 `record.tl` sidechannel(render 前快照) | hanji-absent OOV-in-TPS 才需 | 可重 key |
+| R3 自訂詞 | native roman 留顯示 + 另存 `canonical_tl` | tps: 家族衍生鍵走 from_zhuyin(先補測試) | 非破壞 backfill |
+| R5 詞頻 | `record.tl` → 新增獨立 `tl` 欄,pair-key | tl 分量 hanji-absent TPS 才轉 | **強制 tolerant** |
+
+### F4 — R5 cost/benefit 誠實框定
+R5 修 Core #7 **系統性違規**(非僅窄 homograph 污染)→ 方向必做。但 full re-key 風險最高 + B3 不可乾淨 → **不一次性賭乾淨重鍵**,走 tolerant fallback;動工前對 USER 明列成本。
+
+**NEXT ROUND**:冷啟動先讀本節(含上方 re-eval framing 修正)+ R2 proto/sidechannel 設計,先解上方 3 fork 再 impl。`from_zhuyin→to_tone_marks` 鏈測試 = R2/R3/R5 共同前置。
 
 ## 9. 三索引繼續實作價值 (USER 指令 #5)
 
