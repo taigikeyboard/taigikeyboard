@@ -399,6 +399,49 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.predictions.count, 3)
     }
 
+    // MARK: - Read-layer reading-variant collapse (v3.6.1 R1)
+
+    /// INVARIANT_NEXTWORD_READ_LAYER_DEDUP — iOS-side parity for
+    /// `engine/nextword/src/filter.rs::collapse_reading_variants`. A raw
+    /// continuous next_tl ("taigi") folds into the canonical tone-marked
+    /// row ("tâi-gí") for the same hanzi, so 台語 surfaces once.
+    func testFilter_collapsesRawVariantIntoCanonical() {
+        let gen = currentGen()
+        let result = RustEngineBridge.nextwordFilter(
+            raw: [
+                row(hanzi: "台語", tl: "tâi-gí", count: 5, lastUsedMs: 1000, source: .user),
+                row(hanzi: "台語", tl: "taigi", count: 3, lastUsedMs: 1000, source: .user),
+            ],
+            queryGeneration: gen,
+            nowMs: 1000,
+            limit: 10,
+            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            generation: envelopeGen,
+        )
+        XCTAssertEqual(result.predictions.count, 1, "raw variant folds into canonical (台語 once)")
+        XCTAssertEqual(result.predictions.first?.tl, "tâi-gí", "canonical tone-marked row kept")
+    }
+
+    /// INVARIANT_NEXTWORD_READ_LAYER_DEDUP — genuine 一字多音 (Core Principle
+    /// #7) is preserved: 重/tāng + 重/tàng share the toneless key `tang` but
+    /// both carry tone marks, so the collapse leaves all readings intact.
+    func testFilter_preservesDistinctPolyphones() {
+        let gen = currentGen()
+        let result = RustEngineBridge.nextwordFilter(
+            raw: [
+                row(hanzi: "重", tl: "tāng", count: 5, source: .dict),
+                row(hanzi: "重", tl: "tàng", count: 4, source: .dict),
+                row(hanzi: "重", tl: "tang", count: 3, source: .dict),
+            ],
+            queryGeneration: gen,
+            nowMs: 1000,
+            limit: 10,
+            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            generation: envelopeGen,
+        )
+        XCTAssertEqual(result.predictions.count, 3, "distinct polyphones must not collapse")
+    }
+
     // MARK: - Boost: partition reorder
 
     func testBoost_emptyPredictedReturnsInputUntouched() {

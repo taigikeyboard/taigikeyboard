@@ -308,6 +308,40 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
     }
 }
 
+/// Separator- and tone-insensitive reading key for collapsing romanization
+/// variants of the **same syllable sequence** — `taigi`, `tai5gi2`, and
+/// `tâi-gí` all map to `taigi`. Lowercases, folds the nasal marker
+/// (ⁿ U+207F / ᴺ U+1D3A → `nn`), then drops every tone diacritic, ASCII
+/// digit, hyphen, and space.
+///
+/// Reuses [`derivation::derive_notone`] (the custom-dictionary `notone`
+/// derivation) verbatim so the two never drift — both want exactly
+/// "strip everything that is not a base spelling letter". Used by
+/// `nextword::filter` to recognize that a continuous-input raw next_tl
+/// (`taigi`) and a normal-commit canonical next_tl (`tâi-gí`) are the
+/// same reading and must not surface as two predictions of one word.
+///
+/// **Tone-INSENSITIVE** — unlike `composing::roman_reading_eq` (which is
+/// separator-insensitive but tone-PRESERVING), this folds tones away so
+/// `tāng` (重量) and `tàng` both key to `tang`; the caller is responsible
+/// for keeping genuinely distinct readings (Core Principle #7) apart by
+/// only collapsing when a single canonical target exists.
+///
+/// **Residual** — does NOT fold spelling families: POJ `chiah` keys to
+/// `chiah`, TL `tsiah` to `tsiah` (no `ch↔ts` / `oa↔ua`). A POJ-spelled
+/// raw next_tl therefore will not collapse onto its TL canonical here;
+/// the write-side R2 fix (continuous commit carries canonical TL) closes
+/// that gap. R1 only needs the common same-family case.
+// 中文: 分隔符 + 聲調皆不敏感的「讀音鍵」,把同一音節序列的不同羅馬字寫法收斂到同一鍵
+// 中文:   (taigi / tai5gi2 / tâi-gí → 全部 taigi)。復用 derive_notone(自訂詞 notone 衍生)
+// 中文:   避免兩處邏輯漂移。供 nextword::filter 辨識連續輸入 raw next_tl 與一般 commit
+// 中文:   canonical next_tl 為同讀音,避免同一詞出現兩筆預測。聲調不敏感(tāng/tàng 同鍵 tang),
+// 中文:   故呼叫端須在唯一 canonical 目標存在時才折疊以守 #7。殘留:不折拼寫家族(ch↔ts),
+// 中文:   POJ-spelled raw 不會在此收斂到 TL canonical,留待 R2 寫層修正。
+pub fn toneless_reading_key(roman: &str) -> String {
+    crate::derivation::derive_notone(roman)
+}
+
 fn rewrite_display(text: &str, target: System) -> String {
     if text.is_empty() {
         return String::new();
@@ -354,5 +388,49 @@ fn rewrite_token(token: &str, target: System) -> String {
         capitalize_first(&assembled)
     } else {
         assembled
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // trace: derive_notone lowercases, folds ⁿ→nn, NFD, drops combining
+    // tone marks + ASCII digits + '-' + ' '. So all three renderings of
+    // 台語 collapse to the bare spelling "taigi".
+    #[test]
+    fn toneless_reading_key_folds_tone_and_separator_variants() {
+        assert_eq!(toneless_reading_key("tâi-gí"), "taigi");
+        assert_eq!(toneless_reading_key("taigi"), "taigi");
+        assert_eq!(toneless_reading_key("tai5gi2"), "taigi");
+        // canonical (diacritic + hyphen) and continuous raw (fused) agree.
+        assert_eq!(toneless_reading_key("tâi-gí"), toneless_reading_key("taigi"));
+    }
+
+    // trace: all-tone-1 multi-syllable canonical "khong-an" vs continuous
+    // raw "khongan" — separator-only difference, both toneless — still
+    // collapse to one key. (The caller keeps the separator-bearing form as
+    // canonical.)
+    #[test]
+    fn toneless_reading_key_collapses_separator_only_difference() {
+        assert_eq!(toneless_reading_key("khong-an"), "khongan");
+        assert_eq!(toneless_reading_key("khong-an"), toneless_reading_key("khongan"));
+    }
+
+    // trace: 重/tāng (重量) and 重/tàng are genuinely distinct readings
+    // (Core Principle #7) but tone-INSENSITIVE folding maps both to "tang".
+    // The key intentionally collides; the nextword caller must NOT collapse
+    // such a bare single-syllable group (no separator → no canonical target).
+    #[test]
+    fn toneless_reading_key_is_tone_insensitive_distinct_readings_collide() {
+        assert_eq!(toneless_reading_key("tāng"), "tang");
+        assert_eq!(toneless_reading_key("tàng"), "tang");
+    }
+
+    // trace: spelling families are NOT folded (no ch↔ts). Documented R1
+    // residual — POJ-spelled raw will not collapse onto TL canonical here.
+    #[test]
+    fn toneless_reading_key_does_not_fold_spelling_families() {
+        assert_ne!(toneless_reading_key("chiah"), toneless_reading_key("tsiah"));
     }
 }

@@ -611,3 +611,32 @@ When auto-space is active (`isAutoSpaceEnabled` AND a roman-ish mode that auto-i
 **Platform sites**: iOS `ActionHandler+KeyActions.swift` — `insertNonComposingCharacter` + `isAutoSpaceModeActive`, classifier `Input/AutoSpacePunctuation.swift`. Android `TextInputKeyHandler.kt` — `commitNonComposingCharacter` + `isAutoSpaceModeActive`, classifier `ime/text/AutoSpacePunctuation.kt`.
 
 **Tests**: iOS `AutoSpacePunctuationTests.swift` + Android `AutoSpacePunctuationTest.kt` (`INVARIANT_*` — pin the attaching set on both platforms). The document-mutation swap itself is dogfood-gated (**S10** in `.claude/rules/taigi-incidents.md` § Qualitative perf gate) — no fake-proxy render test by design.
+
+## 24. NextWord — prev-Hanji lookup + read-layer reading-variant dedup
+
+### `INVARIANT_NEXTWORD_PREV_HANJI_LOOKUP`
+
+`user_association.db` next-word lookup keys on `prev_word` (Hanji) ALONE. `prev_tl` (the previous word's romanization) is a **ranking signal, not a hard filter**: query `WHERE prev_word = ? ORDER BY CASE WHEN prev_tl = ? THEN 0 WHEN prev_tl = '' THEN 1 ELSE 2 END, count DESC LIMIT ?`.
+
+- **Recall** — a stored row whose non-empty `prev_tl` differs from the query roman is STILL returned (was silently dropped pre-v3.6.1). This recovers associations learned via a different commit path or app version — most importantly continuous-input commits store a raw `prev_tl` (`taigi`) while normal commits store canonical TL (`tâi-gí`) for the same word, and the old `prev_tl = ? OR prev_tl = ''` hard filter made the learned associations vanish.
+- **Why Hanji-only is correct** — the bundled `association.bin` already keys prev on Hanji bytes only (`engine/lexicon/src/association_reader.rs`), and Core Principle #7 (`(hanzi, tl)` pair = word identity) binds the bigram **next** side (`UNIQUE(prev_word, next_word, next_tl)`), NOT the **prev** (context) side. `prev_tl` was never an identity key here.
+- **Rank before truncate** — the `CASE` ordering keeps exact-`prev_tl` rows inside the `limit * 2` over-fetch window so a hot `prev_word` cannot starve them at the SQL `LIMIT`. The engine `filter` then applies the final score sort + real limit; final ordering is by score (count/decay), which is intentionally blind to `prev_tl` match quality — recall, not perfect prev-disambiguation, is the contract.
+- **No data migration, no schema bump, no DELETE** — relaxing the query alone restores readability of every previously-unreadable ("dead") row. Those rows are NOT corrupt; deleting them would erase learned associations.
+
+### `INVARIANT_NEXTWORD_READ_LAYER_DEDUP`
+
+`engine/nextword/src/filter.rs` collapses separator/tone-only romanization variants of the SAME next word into ONE prediction, AFTER the `(hanzi, tl)` merge and BEFORE shaping/sort/truncate. Rows are grouped by `(hanzi, phonetics::toneless_reading_key(tl))` (separator- AND tone-insensitive). Canonical selection within a group is **separator-based** — a genuine multi-syllable reading is ALWAYS hyphen/space-separated in canonical TL, so a no-separator row sharing the toneless key can only be a fused raw keystroke slice:
+
+1. the unique separator-bearing row (`tâi-gí`) is canonical; every no-separator row (`taigi`) folds its score into it. Separator-bearing rows that are the SAME reading (`hōo-guá` vs `hōo--guá`, differing only `-`/`--`/space — equal after stripping separators, tones kept) fold together too.
+2. the group is left UNTOUCHED when (a) NO row has a separator — a bare toneless single syllable may be a genuine tone-1 reading (`當/tang`) byte-identical to a raw, so it must never be folded into a tone-marked sibling (`當/tàng`); tone-mark presence alone is NOT a safe discriminator because tone-1/tone-4 readings are bare; or (b) ≥2 separator-bearing rows are genuinely distinct readings (`tāng-bīn` vs `tàng-bīn`).
+
+This protects genuine 一字多音 (Core Principle #7) — `當/tàng` + `當/tang` and `重/tāng` + `重/tàng` + `重/tang` all stay distinct (no separators, no fold).
+
+- **Why** — the relaxed lookup (above) increases exposure of the duplicate-row class: continuous (`next_tl = taigi`) and normal (`next_tl = tâi-gí`) commits both persist under `UNIQUE(...next_tl)`, and the `(hanzi, tl)` merge keeps them distinct → 台語 would otherwise show twice. This is the read-layer cleanup; the write-side root fix (continuous commit carries canonical TL) is R2.
+- **Residuals (both closed write-side in R2)** — (a) a *single-syllable* raw-vs-toned duplicate (`我/gua` vs `我/guá`) is NOT folded, because a bare toneless syllable is indistinguishable from a genuine tone-1 reading; safety (never hide a real reading) is preferred over completeness. (b) `toneless_reading_key` does NOT fold spelling families (`ch↔ts`, `oa↔ua`, POJ↔TL), so a POJ-spelled raw next_tl will not collapse onto its TL canonical.
+
+**Scope**: SQL recall is platform-side (`user_association.db` is native SQLite, not in the engine); the dedup is engine-side (`nextword/filter.rs`), shared by both platforms via FFI.
+
+**Platform sites**: iOS `NextWord/Repository/NextWordRepository.swift::fetchUserRows`; Android `ime/dictionary/NextWordService.kt` user-query SQL (`CROSS-PLATFORM INVARIANT` comment). Dedup: `engine/nextword/src/filter.rs::collapse_reading_variants` + `engine/phonetics/src/api.rs::toneless_reading_key`.
+
+**Tests**: engine `filter.rs` unit tests (`collapse_*`, canonical) + `phonetics/src/api.rs` (`toneless_reading_key_*`). iOS `NextWordRepositoryTests.swift` (in-memory SQLite recall + ranking) + `RustEngineBridgeNextWordTests.swift` (`testFilter_collapses*` / `testFilter_preservesDistinctPolyphones`, FFI dedup parity). Android JVM unit tests cannot load the `.so` or run Robolectric, so the SQL recall is pinned via the shared SQL string + **S11** dogfood (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).

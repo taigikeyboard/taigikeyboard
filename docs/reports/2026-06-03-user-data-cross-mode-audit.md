@@ -270,6 +270,45 @@
 
 **最終 review 收斂(2026-06-03)**: 此計畫經 Codex ANALYSIS-ONLY **對抗 review + 確認 pass** 兩輪。Codex 起初 7 項 objection(R1 非乾淨單獨 / 重複曝光 / LIMIT 飢餓 / 多音字 prev 錯讀音 / R2 需 proto / 平台替換較差 / R5 under-scoped),全部以上述修正 resolved。**最終 Codex「no remaining objection」** —— 條件為 R1 toneless-collapse 含 2 guardrail(分隔符+聲調不敏感、不做歧義一對多)。Claude 亦無異議。雙簽核完成。Prompts: `/tmp/v361-plan-adversarial-codex.txt` + `/tmp/v361-plan-confirm-codex.txt`。
 
+## 8.5 跨 slice 設計決策 — user-data 身分鍵 = canonical TL(2026-06-03 USER 對話追加)
+
+R1 PR #382 開啟後,USER 在對話中提出兩個關鍵修正,**沉澱為 R2/R3/R5 共用的設計契約**(下一輪冷啟動須讀此節 + memory)。
+
+### 三軸正交模型(澄清「是否回到單索引」的疑慮)
+USER 問:POJ/TPS 都轉 TL 當 key,是否回到單索引?**否。** 三條軸正交:
+
+| 軸 | 作用 | 設計 | v3.6.1 R2-R5 是否動 |
+|---|---|---|---|
+| **搜尋軸** 輸入→候選 | 打字怎麼找到詞 | **三索引** `tl:`/`poj:`/`tps:` 三家族 first-class | ❌ 完全不動 |
+| **顯示軸** 候選→畫面 | 候選羅馬字呈現 | 由 canonical TL 反推(`tl_display_to_poj_display` / `tlDisplayToTPS`) | ❌ 不動 |
+| **身分軸** 候選→user history | 記住「用過這個詞」 | **(漢字, canonical-TL) 單一身分** | ✅ 統一到這 |
+
+「單索引」是**搜尋軸**的舊限制(只有一個可搜尋 key family);三索引已修好,R2-R5 一行不碰。canonical-TL 當 key 是**身分軸**決定 —— 一個詞只有一個身分,N 種方式打進來、1 個身分記起來、任意 mode 顯示出去,**零資訊損失**。`triple-index-eval.md` §硬約束#2 早已要求「user-history key 必須是 candidate identity,不得含 surface form/mode/input code」→ canonicalize 是三索引契約的下半場,**非**回退。
+
+### 決策 1:身分 = (漢字, canonical-TL) 配對,非漢字單獨
+USER 重申 #7。今天詞頻 key = `display_text` = `hanji ?? tl`(漢字優先 → **漢字單獨**,`lexicon/continuous.rs:53`)違反 #7(重/tîng + 重/tāng 併列)。R5 改 (hanji,tl) pair-key。canonical TL 帶聲調 → 多音字讀音區分**保留**(與單索引壓平相反)。hanji-absent 詞:身分 = canonical-TL 單獨。
+
+### 決策 2:canonical-TL 推導必須 mode-independent,含 **TPS→TL 轉換**(反轉現有 carve-out)
+chokepoint = `canonical_tl_form`(`engine/phonetics/src/api.rs:296-308`):
+- TL 表面 → identity;POJ 表面 → `poj_display_to_tl_display` 折疊(`chiah`→`tsiah`);
+- **TPS 注音 → 目前走 identity(v3.5.9 D/C-3b carve-out,保留注音)= 跨 mode 破口。必須改走 `from_zhuyin`(`tps.rs:524`,有 round-trip 測試)轉 TL。**
+- 連續輸入 raw → 取候選 canonical TL(R2)。
+
+`from_zhuyin` 產出**聲調數字**形(`tai5`),TL/POJ 存的是**附加符號**顯示形(`tâi`)→ 需接 `to_tone_marks` 對齊。
+
+### 兩個 R2/R5 Codex 設計 fork 待拍板(auto-mode BLOCK 點)
+1. **既有 user-data migration vs tolerant**:反轉 carve-out 後,舊 TPS/POJ 表面 key 對不上新 TL key。一次性 UPDATE 重 key(**絕不可 DROP**,比照 R5 硬約束)vs tolerant 讓舊列自然 LRU 淘汰。
+2. **canonical 目標形**:聲調數字(`tai5`)vs 附加符號顯示形(`tâi`)。建議後者對齊現有 `tl` 欄。
+
+### 影響輪次
+| 輪 | 用到 canonical-TL | 因本決策追加 |
+|---|---|---|
+| R2 | 詞關聯 next_tl/prev_tl 寫 canonical TL | TPS commit 存 `from_zhuyin(注音)`;反轉 carve-out 為共用 primitive |
+| R3 | 自訂詞跨 mode 多家族鍵 | tps: 家族用轉 TL 後 canonical 比對 |
+| R5 | 詞頻 (hanji,tl) pair-key | tl 分量 TPS 轉 TL;key hanji-only → pair |
+
+**NEXT ROUND**:冷啟動先仔細評估本節 + R2 proto 設計,再開工。
+
 ## 9. 三索引繼續實作價值 (USER 指令 #5)
 
 **三索引已 100% 完成,無 pending 實作項。** 三軸全 first-class 並列(empirically 確認):

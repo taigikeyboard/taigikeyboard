@@ -152,9 +152,25 @@ enum NextWordRepository {
 
     // MARK: - Reads
 
-    /// Query next-word candidates by previous word (+ optional TL disambiguator).
-    /// Returns at most `limit` rows ordered by count DESC.
-    // 中文: 用 prev_word(+ 可選 prev_tl)查預測候選,count DESC 排序、最多回傳 limit 筆。
+    /// Query next-word candidates by previous word, ranking `prev_tl`
+    /// matches ahead of mismatches instead of hard-filtering on them.
+    ///
+    /// `prev_word` (Hanji) is the only lookup key — matching the bundled
+    /// `association.bin` (Hanji-only prev key) and Core Principle #7, which
+    /// binds the `(hanzi, tl)` pair on the bigram *next* side, NOT the
+    /// *prev* (context) side. A non-empty `prev_tl` that differs from the
+    /// query `roman` (e.g. continuous-input raw `taigi` vs normal-commit
+    /// canonical `tâi-gí` for the same word) is still recalled — it ranks
+    /// after exact and empty matches but is no longer dropped.
+    ///
+    /// `ORDER BY` ranks before the SQL `LIMIT` truncates, so exact-`prev_tl`
+    /// rows survive the over-fetch window even when a hot `prev_word` has
+    /// many rows. Callers over-fetch `limit * 2`; the Rust filter applies
+    /// the final score sort + real limit.
+    // 中文: 用 prev_word(漢字)查預測候選;prev_tl 不再硬過濾,改排序訊號
+    // 中文:   (exact > empty > mismatch)。對齊 association.bin(prev 漢字-only)與
+    // 中文:   Core Principle #7(pair-key 綁 next 端,非 prev 端)。形式不符的非空
+    // 中文:   prev_tl(連續 raw taigi vs 一般 canonical tâi-gí)仍會召回,只排在後面。
     static func fetchUserRows(
         db: OpaquePointer,
         word: String,
@@ -165,8 +181,10 @@ enum NextWordRepository {
             SELECT next_word, next_tl, count,
                    strftime('%s', last_used) * 1000 AS last_used_ms
             FROM user_association
-            WHERE prev_word = ? AND (prev_tl = ? OR prev_tl = '')
-            ORDER BY count DESC
+            WHERE prev_word = ?
+            ORDER BY
+                CASE WHEN prev_tl = ? THEN 0 WHEN prev_tl = '' THEN 1 ELSE 2 END,
+                count DESC
             LIMIT ?
         """
         var stmt: OpaquePointer?

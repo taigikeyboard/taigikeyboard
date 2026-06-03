@@ -245,13 +245,23 @@ class NextWordService(
             val dictCount = rows.size
             userDatabase?.let { db ->
                 try {
+                    // CROSS-PLATFORM INVARIANT — mirrors
+                    // ios/Sources/TaigiKeyboard/NextWord/Repository/NextWordRepository.swift
+                    // fetchUserRows. prev_word (Hanji) is the only lookup key;
+                    // prev_tl is a ranking signal (exact > empty > mismatch),
+                    // NOT a hard filter, so a mismatched non-empty prev_tl
+                    // (continuous raw vs normal canonical) is still recalled.
+                    // ORDER BY ranks before LIMIT truncates the over-fetch
+                    // window. Drift causes silent divergence.
                     val sql =
                         """
                         SELECT next_word, next_tl, count,
                                strftime('%s', last_used) * 1000 AS last_used_ms
                         FROM user_association
-                        WHERE prev_word = ? AND (prev_tl = ? OR prev_tl = '')
-                        ORDER BY count DESC
+                        WHERE prev_word = ?
+                        ORDER BY
+                            CASE WHEN prev_tl = ? THEN 0 WHEN prev_tl = '' THEN 1 ELSE 2 END,
+                            count DESC
                         LIMIT ?
                         """.trimIndent()
                     logger.debug(TAG) { "[PREDICT] User query: prev_word='$word', prev_tl='$roman'" }
