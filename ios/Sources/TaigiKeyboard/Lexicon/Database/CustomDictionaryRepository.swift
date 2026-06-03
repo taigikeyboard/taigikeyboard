@@ -158,6 +158,11 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         try await connectionManager.execute { db in
             sqliteExecSimple(db: db, "DELETE FROM \(CustomDictionarySchema.tableName);")
             sqliteExecSimple(db: db, "DELETE FROM \(CustomDictionarySchema.searchKeyTableName);")
+            // R6: reclaim freed pages after a full clear. Best-effort —
+            // VACUUM needs exclusive access + ~2x temp; a failure leaves the
+            // file larger but intact (sqliteExecSimple is silent). Runs after
+            // the DELETEs committed, outside any transaction.
+            sqliteExecSimple(db: db, "VACUUM")
         }
     }
 

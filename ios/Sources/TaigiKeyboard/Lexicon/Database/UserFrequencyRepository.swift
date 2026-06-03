@@ -61,7 +61,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         do {
             try await ensureInitialized()
             try await connectionManager.execute { db in
-                try Self.insertOrUpdateWord(db: db, word: word, tl: tl, logger: self.logger)
+                try Self.insertOrUpdateWord(db: db, word: word, tl: tl)
             }
 
             let shouldPrune: Bool = stateLock.withLock {
@@ -78,7 +78,11 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 }
             }
         } catch {
-            logger.error("[RECORD] Failed to record usage for: \(word)")
+            // Fire-and-forget: a failed frequency write must never block
+            // typing. Single boundary — the helper throws the real sqlite
+            // error so this logs once (no double-swallow). DebugLogger no-ops
+            // in release.
+            logger.error("frequency.record.failed word=\(word) tl=\(tl) error=\(error.localizedDescription)")
         }
     }
 
@@ -305,7 +309,6 @@ final class UserFrequencyRepository: @unchecked Sendable {
         db: OpaquePointer,
         word: String,
         tl: String,
-        logger: DebugLogger,
     ) throws {
         // R5 pair-key (#7): identity is `(word, tl)` — `tl` is the
         // candidate's canonical-TL reading so 重/tîng and 重/tāng increment
@@ -320,18 +323,19 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 last_used = CURRENT_TIMESTAMP;
         """
 
+        // R6: throw the real sqlite error rather than log-and-return so the
+        // single `recordWord` boundary records the failure exactly once.
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            logger.error("[RECORD] Failed to prepare statement")
-            return
+            throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
         }
         defer { sqlite3_finalize(stmt) }
 
         stmt.bindText(1, word)
         stmt.bindText(2, tl)
 
-        if sqlite3_step(stmt) != SQLITE_DONE {
-            logger.error("[RECORD] Failed to record usage for: \(word)")
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 

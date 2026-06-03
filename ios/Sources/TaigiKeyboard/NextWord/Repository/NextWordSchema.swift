@@ -13,15 +13,21 @@ import SQLite3
 enum NextWordSchema {
     /// Schema version for `user_association.db` (mirrors Android's DATABASE_VERSION).
     // 中文: schema 版本號,需與 Android DATABASE_VERSION 對齊。
-    static let schemaVersion = 4
+    static let schemaVersion = 5
 
     /// Migrate forward then create tables + indexes.
     /// Safe to call repeatedly; CREATE and ALTER are guarded by version check + IF NOT EXISTS.
     // 中文: 先做向前遷移,再 CREATE TABLE / INDEX。可重複呼叫,內部以版本與 IF NOT EXISTS 防衛。
     static func ensureTables(db: OpaquePointer, logger: DebugLogger) throws {
-        try migrate(db: db, logger: logger)
+        let didMigrate = try migrate(db: db, logger: logger)
         try createTables(db: db)
         createIndexes(db: db)
+        if didMigrate {
+            // R6: refresh the query planner's stats once, AFTER all DDL
+            // (CREATE INDEX included). Gated on an actual migration so it never
+            // runs on a steady-state open. Cheap no-op when nothing changed.
+            sqliteExecSimple(db: db, "PRAGMA optimize")
+        }
     }
 
     // MARK: - Private
@@ -50,29 +56,32 @@ enum NextWordSchema {
         }
     }
 
-    // 中文: 建立查詢用 index — 走 prev_word 主索引與 (prev_word, prev_tl) 複合索引。
+    // 中文: 建立查詢用 index — 僅 (prev_word, prev_tl) 複合索引。
+    // 中文: 單欄 idx_user_prev_word 是它的左前綴子集,SQLite 可用複合索引服務
+    // 中文: `WHERE prev_word = ?` 查詢,故 R6 移除,改由 v4→v5 migration 清舊 DB。
     private static func createIndexes(db: OpaquePointer) {
-        for indexSQL in [
-            "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word);",
+        sqliteExecSimple(
+            db: db,
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl);",
-        ] {
-            sqliteExecSimple(db: db, indexSQL)
-        }
+        )
     }
 
     /// Migrate forward using `PRAGMA user_version`.
     /// - v<3 → v3: DROP + CREATE (old schema incompatible).
     /// - v3 → v4: ALTER TABLE adds `prev_tl` (data preserved).
-    // 中文: 用 PRAGMA user_version 做向前遷移。v<3 直接重建,v3→v4 ALTER TABLE 加欄位保留資料。
-    private static func migrate(db: OpaquePointer, logger: DebugLogger) throws {
+    /// - v4 → v5: DROP redundant `idx_user_prev_word` (left-prefix of the
+    ///   `idx_user_prev_word_tl` composite). Data preserved.
+    // 中文: 用 PRAGMA user_version 做向前遷移。v<3 直接重建,v3→v4 ALTER 加欄位,v4→v5 刪冗餘單欄索引。
+    // 中文: 回傳是否實際執行了遷移(供呼叫端決定要不要跑 PRAGMA optimize)。
+    private static func migrate(db: OpaquePointer, logger: DebugLogger) throws -> Bool {
         var versionStmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &versionStmt, nil) == SQLITE_OK else { return }
+        guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &versionStmt, nil) == SQLITE_OK else { return false }
         let currentVersion = sqlite3_step(versionStmt) == SQLITE_ROW
             ? Int(sqlite3_column_int(versionStmt, 0))
             : 0
         sqlite3_finalize(versionStmt)
 
-        guard currentVersion < schemaVersion else { return }
+        guard currentVersion < schemaVersion else { return false }
         logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(schemaVersion)")
 
         if currentVersion < 3 {
@@ -83,7 +92,14 @@ enum NextWordSchema {
             sqliteExecSimple(db: db, "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''")
             sqliteExecSimple(db: db, "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)")
         }
+        // v4 → v5 (R6): drop the redundant single-column idx_user_prev_word —
+        // it is the left-prefix subset of the (prev_word, prev_tl) composite.
+        // Unconditional inside the `currentVersion < schemaVersion` guard so it
+        // reaches every pre-v5 DB (a v3 DB jumping straight to v5 would skip a
+        // `>= 4` step), not just DBs that were exactly at v4. Idempotent.
+        sqliteExecSimple(db: db, "DROP INDEX IF EXISTS idx_user_prev_word")
 
         sqliteExecSimple(db: db, "PRAGMA user_version = \(schemaVersion)")
+        return true
     }
 }

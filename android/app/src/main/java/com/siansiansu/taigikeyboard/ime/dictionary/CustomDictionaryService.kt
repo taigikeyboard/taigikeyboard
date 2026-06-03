@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import androidx.core.database.sqlite.transaction
+import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import kotlinx.coroutines.Dispatchers
@@ -278,6 +279,7 @@ class CustomDictionaryService(
                 db.execSQL("DELETE FROM ${Table.NAME}")
                 // v3.6.1 R3 — clear the side table alongside the main table.
                 db.execSQL("DELETE FROM ${SearchKeyTable.NAME}")
+                vacuumBestEffort(db, logger, TAG)
             } catch (e: Exception) {
                 logger.e(TAG, "[DELETE_ALL] Failed", e)
             }

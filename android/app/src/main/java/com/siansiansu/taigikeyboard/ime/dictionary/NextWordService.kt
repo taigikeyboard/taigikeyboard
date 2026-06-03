@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
@@ -62,7 +63,7 @@ class NextWordService(
     companion object {
         private const val TAG = "NextWordService"
         private const val USER_DB_NAME = "user_association.db"
-        private const val DATABASE_VERSION = 4 // v4: added prev_tl column
+        private const val DATABASE_VERSION = 5 // v5: dropped redundant idx_user_prev_word
 
         /**
          * Default candidate limit when callers don't specify one.
@@ -143,9 +144,15 @@ class NextWordService(
 
         val db = userDatabase ?: return
 
-        migrateUserDb(db)
+        val didMigrate = migrateUserDb(db)
         createUserAssocTable(db)
         createUserAssocIndexes(db)
+        if (didMigrate) {
+            // R6: refresh the query planner's stats once, AFTER all DDL
+            // (CREATE INDEX included). Gated on an actual migration so it never
+            // runs on a steady-state open. Cheap no-op when nothing changed.
+            db.execSQL("PRAGMA optimize;")
+        }
 
         // One-shot migration: WAL → DELETE journal mode (v3.4.8).
         migrateFromWAL(db)
@@ -335,7 +342,11 @@ class NextWordService(
                     pruneOldAssociations()
                 }
             } catch (e: Exception) {
-                logger.e(TAG, "[RECORD] Insert failed", e)
+                // Fire-and-forget: a failed association write must never block
+                // typing. Single boundary — execSQL throws the real
+                // SQLiteException, logged once here. LoggerBackend gates all
+                // levels on BuildConfig.DEBUG (release no-op).
+                logger.e(TAG, "association.record.failed prev=$prev next=$nextHanzi", e)
             }
         }
 
@@ -409,6 +420,7 @@ class NextWordService(
                 db.execSQL("DELETE FROM user_association")
 
                 logger.i(TAG, "[CLEAR] All user associations cleared")
+                vacuumBestEffort(db, logger, TAG)
             } catch (e: Exception) {
                 logger.e(TAG, "[CLEAR] Failed to clear associations", e)
             }
@@ -493,9 +505,10 @@ class NextWordService(
     }
 
     private fun createUserAssocIndexes(db: SQLiteDatabase) {
-        db.execSQL(
-            "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word)",
-        )
+        // Only the (prev_word, prev_tl) composite: the single-column
+        // idx_user_prev_word is its left-prefix subset, so SQLite serves
+        // `WHERE prev_word = ?` from the composite. R6 dropped the single
+        // index here + via the v4->v5 migration for existing DBs.
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)",
         )
@@ -534,22 +547,27 @@ class NextWordService(
      * Migrate `user_association.db` to the current `DATABASE_VERSION`.
      * Each step delegates to a named migration function.
      */
-    private fun migrateUserDb(db: SQLiteDatabase) {
+    private fun migrateUserDb(db: SQLiteDatabase): Boolean {
         val cursor = db.rawQuery("PRAGMA user_version;", null)
         val currentVersion =
             cursor.use {
                 if (it.moveToFirst()) it.getInt(0) else 0
             }
 
-        if (currentVersion >= DATABASE_VERSION) return
+        if (currentVersion >= DATABASE_VERSION) return false
 
         logger.i(TAG, "[MIGRATE] user_association.db v$currentVersion -> v$DATABASE_VERSION")
 
         if (currentVersion < 2) migrateV0ToV2(db)
         if (currentVersion in 2 until 3) migrateV2ToV3(db)
         if (currentVersion in 3 until 4) migrateV3ToV4(db)
+        // Unconditional inside the `currentVersion >= DATABASE_VERSION` guard so
+        // it reaches every pre-v5 DB. Runs AFTER migrateV0ToV2 (which recreates
+        // the single index for very old DBs), so the drop always wins.
+        migrateV4ToV5(db)
 
         db.execSQL("PRAGMA user_version = $DATABASE_VERSION;")
+        return true
     }
 
     /** v0/v1 → v2: drop next_poj and delimiter columns to align with iOS. */
@@ -642,6 +660,21 @@ class NextWordService(
             logger.e(TAG, "[MIGRATE] v3->v4 migration failed", e)
         } finally {
             db.endTransaction()
+        }
+    }
+
+    /**
+     * v4 → v5: drop the redundant single-column idx_user_prev_word. The
+     * (prev_word, prev_tl) composite's left prefix already serves every
+     * `WHERE prev_word = ?` lookup, so the single index only cost write
+     * amplification. No data loss.
+     */
+    private fun migrateV4ToV5(db: SQLiteDatabase) {
+        try {
+            db.execSQL("DROP INDEX IF EXISTS idx_user_prev_word")
+            logger.i(TAG, "[MIGRATE] Dropped redundant idx_user_prev_word")
+        } catch (e: Exception) {
+            logger.e(TAG, "[MIGRATE] v4->v5 migration failed", e)
         }
     }
 

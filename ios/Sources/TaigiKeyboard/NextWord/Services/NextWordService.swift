@@ -165,7 +165,10 @@ final class NextWordService: @unchecked Sendable {
                 await pruneOldAssociations()
             }
         } catch {
-            logger.error("[RECORD] Failed: \(error.localizedDescription)")
+            // Fire-and-forget: a failed association write must never block
+            // typing. Single boundary — `insertOrUpdate` throws the real
+            // error so this logs once. DebugLogger no-ops in release.
+            logger.error("association.record.failed prev=\(prev) next=\(nextHanzi) error=\(error.localizedDescription)")
         }
     }
 
@@ -175,6 +178,11 @@ final class NextWordService: @unchecked Sendable {
             try await ensureUserTablesCreated()
             try await userConnectionManager.execute { db in
                 NextWordRepository.deleteAll(db: db)
+                // R6: reclaim freed pages after a full clear. Best-effort —
+                // VACUUM needs exclusive access + ~2x temp; a failure leaves
+                // the file larger but intact (sqliteExecSimple is silent). Runs
+                // after the DELETE committed, outside any transaction.
+                sqliteExecSimple(db: db, "VACUUM")
             }
             logger.info("[CLEAR] All user associations cleared")
         } catch {

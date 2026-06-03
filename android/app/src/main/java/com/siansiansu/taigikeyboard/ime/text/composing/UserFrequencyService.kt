@@ -10,6 +10,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
@@ -230,7 +231,11 @@ class UserFrequencyService(
                 pruneOldEntries()
             }
         } catch (e: Exception) {
-            logger.e(TAG, "[RECORD] Failed to record usage for: $word", e)
+            // Fire-and-forget: a failed frequency write must never block
+            // typing. Single boundary — execSQL throws the real
+            // SQLiteException, logged once here. LoggerBackend gates all levels
+            // on BuildConfig.DEBUG (release no-op).
+            logger.e(TAG, "frequency.record.failed word=$word tl=$tl", e)
         }
     }
 
@@ -509,6 +514,7 @@ class UserFrequencyService(
                 db.execSQL("DELETE FROM ${Table.NAME}")
 
                 logger.i(TAG, "[CLEAR] All frequencies cleared")
+                vacuumBestEffort(db, logger, TAG)
             } catch (e: Exception) {
                 logger.e(TAG, "[CLEAR] Failed to clear frequencies", e)
             }
