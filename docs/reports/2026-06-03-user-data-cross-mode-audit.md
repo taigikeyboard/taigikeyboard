@@ -201,6 +201,24 @@
 
 ### 7.3 冗餘 / 未使用資料清理 (USER 指令 #3)
 
+#### 7.3.0 v3.6.0 用戶冗餘清查 (USER 追問 2026-06-03;grep 實證)
+
+**會 —— v3.6.0 用戶確實累積冗餘(詞關聯),且無針對性清理。** 兩個冗餘 class:
+
+| 冗餘 class | v3.6.0 有? | 成因 | 性質 |
+|---|---|---|---|
+| **詞關聯 dead-row** | ✅ | `prev_tl` 非 UNIQUE key 卻被 `ON CONFLICT` 覆寫 + 讀取 `WHERE prev_tl=? OR=''` → 非空且不符查詢 roman 的列**不可讀但仍佔 50k 額度、仍 count++** | 讀不可見、非真損壞 |
+| **詞關聯 next-word 重複列** | ✅ | 連續存 raw `taigi`、一般存 canonical `tâi-gí`;`UNIQUE` 含 next_tl → **同一 next word 兩列**(§2 第二 co-bug) | 真重複物理列 |
+| 詞頻 homograph | ⚠ 相反 | hanji-only key → 重/tîng+重/tāng **併一列** | 過度合併,非冗餘 |
+
+**清理現況(兩平台 grep 實證 2026-06-03)**:
+
+- **唯一清理 = LRU count-cap**。詞頻 cap 20k(+2k batch,iOS `UserFrequencyPruner.pruneIfNeeded`、`UserFrequencyRepository.swift:67-77`)/ 詞關聯 cap 50k(+5k batch,iOS `NextWordRepository.pruneOldest:137`、Android `NextWordService.pruneOldAssociations:653` `MAX_USER_ASSOCIATIONS=50000` `PRUNE_BATCH_SIZE=5000` `PRUNE_CHECK_INTERVAL=100`),evict by `count ASC, last_used ASC`。
+- **無針對性 dead-row / dedup 清理、無 orphan 清理、無 `VACUUM`/`auto_vacuum`**(grep 全 user-data 路徑 VACUUM **零命中**,兩平台)。
+- → 冗餘列**不被專門清**。只在 row count 撐破 cap 時被 LRU 連帶掃,且前提是它剛好低 count/舊;**持續 count++ 的 dead-row 躲過 LRU 永存**。
+- **化解 ≠ 刪**:R1 #382(`51f24603`,**merged 但 NOT in v3.6.0**,v3.6.0 用戶須升級才得)讀層 `WHERE prev_word=?` 讓 dead-row 全變可讀 + `collapse_reading_variants` 折重複顯示;R2 寫層帶 canonical TL 根治 fragmentation。物理重複列 R1 不刪(讀層只折顯示),消物理列等 R2 + 可選 R6 `VACUUM` 回收空間(**非啟動路徑**)。
+- **絕不可 DELETE**:放寬查詢後 dead-row 是真·學過的關聯,刪 = 刪用戶資料(下方 Codex 警告同此)。
+
 - **Dead-row hazard(兩平台確認)**:`user_association` UNIQUE key = `(prev_word, next_word, next_tl)`,**不含 prev_tl**;但 `ON CONFLICT DO UPDATE SET prev_tl = excluded.prev_tl` 覆寫 prev_tl,且讀取 `WHERE ... prev_tl = ? OR prev_tl = ''`。→ 儲存 prev_tl 為非空且不等於查詢 roman 的列**不可讀但仍佔 50k 額度、仍被 count++**。
 - **Codex 關鍵結論**:**推薦修法(`WHERE prev_word = ?`)直接消滅整個 dead-row class** —— 每列都能被 prev_word 讀到,dead 只是 read predicate 造成的不可見,**非真損壞**。
 - **Codex 明確警告**:relaxed query 下這些列**不再 dead**,**絕不可 DELETE「dead rows」**(= 刪用戶學過的關聯)。
