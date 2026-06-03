@@ -2,6 +2,17 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      Backup posture (R7 — INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP,
+      docs/architecture/behavioral-invariants.md §29):
+      allowBackup="false" disables Android Auto Backup + device-transfer entirely,
+      so the user-data DBs (user_frequency / user_association / custom_dictionary)
+      never leave the device automatically. Learned + user-authored typing data
+      stays on-device; cross-device portability is the manual `.taigi` export only.
+      backup_rules.xml / data_extraction_rules.xml below exclude-everything as
+      defense-in-depth if backup is ever re-enabled.
+      Mirrors iOS SQLiteConnectionManager.excludeFromOSBackup.
+    -->
     <application
         android:name=".TaigiKeyboardApplication"
         android:allowBackup="false"

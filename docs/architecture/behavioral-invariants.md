@@ -40,6 +40,10 @@
 23. [Auto-space — attaching punctuation swaps the trailing space](#23-auto-space--attaching-punctuation-swaps-the-trailing-space)
 24. [NextWord — prev-Hanji lookup + read-layer reading-variant dedup](#24-nextword--prev-hanji-lookup--read-layer-reading-variant-dedup)
 25. [Continuous input — commit carries canonical TL (write-side identity)](#25-continuous-input--commit-carries-canonical-tl-write-side-identity)
+26. [Custom dictionary — cross-input-mode search via side table](#26-custom-dictionary--cross-input-mode-search-via-side-table)
+27. [Custom dictionary — row-count capacity](#27-custom-dictionary--row-count-capacity)
+28. [User frequency — `(漢字, canonical-TL)` pair-key identity](#28-user-frequency--漢字-canonical-tl-pair-key-identity)
+29. [User-data backup — excluded from OS automatic backup](#29-user-data-backup--excluded-from-os-automatic-backup)
 
 ---
 
@@ -719,3 +723,21 @@ User-selection frequency is keyed by the **`(display_text, canonical_tl)` PAIR**
 **Platform sites**: proto `FrequencyEntry.canonical_tl` (`lexicon.proto`). Engine `ranking/src/score.rs` (`FrequencyMap` nested struct + tolerant `get` + `build_frequency_map`), `ranking/src/sort.rs`, `lexicon/src/continuous.rs` (2 sites), `composing/src/continuous.rs` (3 sites). iOS `UserFrequencySchema.swift` (migration), `UserFrequencyRepository.swift` (pair upsert + row-level batch), `UserFrequencyService.swift`, `FrequencyData.swift` (`FrequencyRow`), `ComposingManager.swift` (`buildFrequencyEntries`), `ActionHandler+Suggestions.swift`, `BackupService.swift`. Android `UserFrequencyService.kt` (migration + pair upsert + row-level batch), `FrequencyData.kt` (`FrequencyRow`), `RustEngineBridge.kt` (`frequencyRowsToProtoEntries`), `ComposingManager.kt`, `CandidateClickHandler.kt`, `BackupService.kt`.
 
 **Tests**: engine `ranking/src/score.rs` (`frequency_map_pair_key_separates_homograph_readings`, `frequency_map_legacy_empty_tl_is_tolerant_fallback`, `frequency_map_missing_pair_is_neutral_cold_start`) — pin separate-reading buckets + tolerant fallback (no sum) + neutral cold-start. iOS `UserFrequencyRepositoryTests.swift` (`test_INVARIANT_USER_FREQ_PAIR_KEY_*` — pair upsert keeps readings separate, tolerant batch read, migration backfills `tl=''` against the real temp-DB repository). The cross-mode learn-then-rank device sequence is dogfood-pinned (**S15**). Cross-platform device acceptance: `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
+
+## 29. User-data backup — excluded from OS automatic backup
+
+### `INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP`
+
+All three user-data SQLite databases — `user_frequency` (詞頻), `user_association` (詞關聯), `custom_dictionary` (自訂詞) — are **marked excluded from OS automatic backup** (iOS iCloud / Android Auto Backup + device-transfer) on both platforms. Learned typing behaviour and user-authored words stay on-device; the **manual `.taigi` export/import is the only cross-device portability path** (R7 product decision, 2026-06-04). `isExcludedFromBackup` is a system *directive*, not a hard guarantee — the contract is that the data is *marked* excluded, not cryptographically prevented from ever appearing in a backup.
+
+- **iOS** — every DB opened through `SQLiteConnectionManager.connect()` gets `isExcludedFromBackup = true` set on its file URL **after** `configure()` runs. SQLite opens the file **lazily** (`sqlite3_open_v2` does not create it; the first PRAGMA in `configure()` opens it with `O_CREAT` via the repos' `SQLITE_OPEN_CREATE` flag), so the attribute is applied post-configure when the `.db` is on disk — marking a brand-new install on its **first** launch, not the second. Centralized: the manager's three callers are exactly the three user-data DBs. A failed `setResourceValues` is swallowed + logged (`DebugLogger`, release no-op) — a best-effort metadata write must NEVER fail DB open / break typing. Set on every `connect()` (cheap, once per cached connection), which also backfills the attribute on pre-R7 installs whose `.db` already exists without it.
+- **Android** — `android:allowBackup="false"` disables Auto Backup + device-transfer wholesale; `backup_rules.xml` (API <31) and `data_extraction_rules.xml` (API 31+, both `cloud-backup` AND `device-transfer`) exclude the root domain as defense-in-depth if backup is ever re-enabled. No code change — already compliant pre-R7; the rules + manifest carry documenting comments citing this invariant.
+- **Journal mode** — both platforms pin `PRAGMA journal_mode=DELETE`, so the only persistent file per DB is the main `.db` (no `-wal`/`-shm` sidecar; `-journal` is transient). Marking the main `.db` is sufficient. If WAL is ever enabled, the sidecars need the same exclusion (or a directory-level exclusion).
+- **UX footgun (intentional, documented)** — a reinstall / new device does NOT auto-restore via iCloud / Google. The user MUST have manually exported a `.taigi` (settings → backup) to carry custom words, frequency, and associations across. This applies to `custom_dictionary` too (the most "worth backing up"), per the explicit product decision to exclude all three. Backup / export UI copy must not imply OS / iCloud restore.
+- **Manual `.taigi` is unaffected** — the export/import (`BackupService`, v2, carries `tl`/pair-key) is the sanctioned cross-device channel, orthogonal to this OS-backup exclusion.
+
+**Scope**: platform-native SQLite user-data policy (`rust-migration-policy §6`) — no engine / FFI involvement. iOS sets a Foundation `URLResourceValues` attribute on the DB file; Android is a manifest / XML posture. The shared Rust engine never sees backup policy.
+
+**Platform sites**: iOS `SQLiteConnectionManager.swift` (`excludeFromOSBackup(path:)` called from `connect()` after open; DELETE-journal comment in `configure()`). Android `AndroidManifest.xml` (`android:allowBackup="false"` + documenting comment), `res/xml/data_extraction_rules.xml`, `res/xml/backup_rules.xml` (exclude-root + documenting comments).
+
+**Tests**: iOS `BackupExclusionTests.swift` (`test_INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP_*` — a freshly opened DB reads back `isExcludedFromBackup == true`; an existing-install legacy file is backfilled on next open) against a real temp-file `SQLiteConnectionManager`. Android has no Robolectric → the manifest / XML posture is documented + device-dogfood-pinned (**S16**); the practical gate is the build + a backup-restore dogfood. Cross-platform device acceptance: `.claude/rules/taigi-incidents.md` § Qualitative perf gate.

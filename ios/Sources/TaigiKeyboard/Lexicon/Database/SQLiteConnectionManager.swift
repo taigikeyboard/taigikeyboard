@@ -56,6 +56,10 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
 
         try configure()
+
+        // configure() 的 PRAGMA 會逼 SQLite 真正開檔 → 檔案此時已落地，才標記排除
+        // OS 備份（R7 隱私決策）。SQLite 採延遲開檔，open 後檔案尚未必存在。
+        excludeFromOSBackup(path: path)
     }
 
     /// 一次性 WAL → DELETE 遷移
@@ -91,12 +95,38 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
     }
 
+    /// 將資料庫檔案標記為排除 OS / iCloud 自動備份。
+    ///
+    /// 三個使用者資料庫（詞頻 / 詞關聯 / 自訂詞）都是裝置端學習或自建的打字資料，
+    /// 不應隨 iCloud 自動上雲；跨裝置可攜僅靠手動 `.taigi` 匯出（R7 產品決策）。
+    /// `isExcludedFromBackup` 是系統指示而非硬保證，且這是 best-effort 的檔案
+    /// metadata 寫入 —— 失敗絕不可中斷 DB open（打字路徑），故吞錯只記 log。
+    ///
+    /// 須在 configure() 之後呼叫：SQLite 延遲開檔，`sqlite3_open_v2` 不會立即建檔，
+    /// 要等首個語句；configure() 的 PRAGMA 以 O_CREAT 把主 `.db` 落地，此時才有檔可
+    /// 標記。如此全新安裝「首次啟動」即標記成功，而非延到第二次。
+    ///
+    /// DELETE journal mode → 持久檔只有主 `.db`，無 `-wal`/`-shm` sidecar，標記主檔
+    /// 即足夠。若日後改用 WAL，sidecar 需比照排除（或改目錄層級排除）。
+    private func excludeFromOSBackup(path: String) {
+        var url = URL(fileURLWithPath: path)
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = true
+        do {
+            try url.setResourceValues(resourceValues)
+        } catch {
+            logger.warning("[BACKUP] Failed to set isExcludedFromBackup for \(path): \(error.localizedDescription)")
+        }
+    }
+
     /// 配置資料庫 PRAGMA 設定
     private func configure() throws {
         guard let db = connection else {
             throw LexiconError.databaseNotAvailable
         }
 
+        // DELETE journal mode 為刻意選擇（App Group 跨進程穩定 + 無 WAL sidecar）。
+        // 與 excludeFromOSBackup() 搭配：只標記主 `.db` 即可（無 -wal/-shm）。
         let configurations = [
             "PRAGMA journal_mode=DELETE;",
             "PRAGMA synchronous=NORMAL;",

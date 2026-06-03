@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup rules (API 31+): exclude ALL app data from BOTH cloud-backup and
+  device-transfer. Inert while android:allowBackup="false" — see AndroidManifest.xml
+  for the full backup posture + rationale; defense-in-depth if backup is re-enabled.
+  Pins INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP (behavioral-invariants.md §29).
+-->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="root" path="." />

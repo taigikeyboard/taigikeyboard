@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy Auto Backup rules (fullBackupContent, API < 31): exclude ALL app data.
+  Inert while android:allowBackup="false" — see AndroidManifest.xml for the full
+  backup posture + rationale; kept as defense-in-depth if backup is re-enabled.
+  Pins INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP (behavioral-invariants.md §29).
+-->
 <full-backup-content>
     <exclude domain="root" path="." />
 </full-backup-content>
