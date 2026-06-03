@@ -54,7 +54,11 @@ fn sort_with_breakdown(
         .into_iter()
         .map(|word| {
             let key = display_text_key(&word);
-            let freq = freq_map.get(&key).copied().unwrap_or_default();
+            // R5 pair-key (#7): the `(display_text, canonical_tl)` identity.
+            // `word.roman` is the candidate's canonical TL in this crate
+            // (see `display_text_key`). Tolerant `get` falls back to the
+            // legacy `tl == ""` bucket on an exact miss.
+            let freq = freq_map.get(&key, &word.roman);
             let breakdown = score::calculate_score(&word, normalized_input, freq, now_ms);
             (word, breakdown)
         })
@@ -88,7 +92,11 @@ fn sort_totals_only(
         .into_iter()
         .map(|word| {
             let key = display_text_key(&word);
-            let freq = freq_map.get(&key).copied().unwrap_or_default();
+            // R5 pair-key (#7): the `(display_text, canonical_tl)` identity.
+            // `word.roman` is the candidate's canonical TL in this crate
+            // (see `display_text_key`). Tolerant `get` falls back to the
+            // legacy `tl == ""` bucket on an exact miss.
+            let freq = freq_map.get(&key, &word.roman);
             let total = score::total(&score::calculate_score(
                 &word,
                 normalized_input,
@@ -103,10 +111,18 @@ fn sort_totals_only(
     paired.into_iter().map(|(word, _)| word).collect()
 }
 
-/// Display text used as the user-frequency map key. Mirrors
-/// `TaigiWord.displayText` accessor on both platforms (`hanji` if non-empty
-/// else `roman`).
-// 中文: 取得頻率表 key:漢字非空時用漢字,否則退回羅馬字。
+/// Display-text component of the user-frequency PAIR key. Mirrors
+/// `TaigiWord.displayText` on both platforms (`hanji` if non-empty else
+/// `roman`). The full identity is `(display_text_key, word.roman)` —
+/// `word.roman` is the candidate's canonical TL in this crate, so the
+/// pair distinguishes 一字多音 (#7). NOTE: the non-Continuous
+/// `process_candidates` path that feeds `sort_by_score` is test-only on
+/// both platforms (no production caller); production user-frequency
+/// scoring flows through `lexicon::continuous`, which keys on
+/// `RawCandidate.canonical_tl`. Keep `word.roman` canonical-TL if this
+/// path is ever revived so the read key matches the platform write key.
+// 中文: 頻率表 PAIR key 的顯示分量:漢字非空用漢字,否則羅馬字;完整身分 = (顯示文字, word.roman canonical TL)。
+// 中文: 此 process_candidates 路徑兩平台皆 test-only,production 走 continuous(canonical_tl)。
 pub(crate) fn display_text_key(word: &TaigiWord) -> String {
     match word.hanji.as_deref() {
         Some(h) if !h.is_empty() => h.to_owned(),
@@ -137,8 +153,10 @@ mod tests {
         let cold = word(1, "gua", Some("瓜"), Some(100));
         let learned = word(2, "gua", Some("我"), Some(10));
         let mut freq_map = FrequencyMap::new();
+        // Pair key: display_text "我" + canonical TL = candidate roman "gua".
         freq_map.insert(
             "我".to_owned(),
+            "gua".to_owned(),
             FrequencyData {
                 count: 5,
                 last_used_ms: 0,

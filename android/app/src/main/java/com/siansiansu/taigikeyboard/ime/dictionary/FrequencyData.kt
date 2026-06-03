@@ -21,3 +21,17 @@ data class FrequencyData(
         val EMPTY = FrequencyData(count = 0, lastUsedMillis = 0L)
     }
 }
+
+/**
+ * One `user_frequency.db` row in R5 `(word, tl)` pair-key form: the
+ * display-text key, its canonical-TL reading, and the snapshot. Returned by
+ * `UserFrequencyService.frequencyDataBatch` so the engine can build a
+ * `(display_text, canonical_tl)`-keyed `FrequencyMap` (Core Principle #7).
+ * `tl == ""` is the legacy fallback bucket. Mirrors iOS `FrequencyRow`.
+ */
+// 中文: R5 (word, tl) pair-key 的一列 — 顯示鍵 + canonical TL 讀音 + 快照;tl='' 為 legacy fallback 桶。
+data class FrequencyRow(
+    val word: String,
+    val tl: String,
+    val data: FrequencyData,
+)

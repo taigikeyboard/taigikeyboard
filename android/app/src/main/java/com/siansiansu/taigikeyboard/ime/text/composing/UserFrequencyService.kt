@@ -13,6 +13,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
+import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -54,7 +55,9 @@ class UserFrequencyService(
     companion object {
         private const val TAG = "UserFrequencyService"
         private const val DATABASE_NAME = "user_frequency.db"
-        private const val DATABASE_VERSION = 1
+        // v3.6.1 R5: bumped 1 → 2 for the `(word, tl)` pair-key migration
+        // (Core Principle #7). `onUpgrade` rebuilds the table.
+        private const val DATABASE_VERSION = 2
         private const val MAX_ENTRIES = 20_000
         private const val PRUNE_CHECK_INTERVAL = 100
         private const val PRUNE_BATCH_SIZE = 2_000
@@ -68,6 +71,10 @@ class UserFrequencyService(
         const val NAME = "user_frequency"
         const val ID = "id"
         const val WORD = "word"
+        // R5 (#7): canonical-TL reading. The identity is `(word, tl)`, so
+        // 一字多音 (重/tîng vs 重/tāng) keep separate rows. `tl == ''` is the
+        // legacy fallback bucket (pre-R5 rows / old-backup import).
+        const val TL = "tl"
         const val COUNT = "count"
         const val LAST_USED = "last_used"
         const val CREATED_AT = "created_at"
@@ -190,35 +197,42 @@ class UserFrequencyService(
     // Public API — Recording
     // ------------------------------------------------------------------ //
 
-    /** Record a usage of [word]. Increments count and refreshes last-used timestamp. */
+    /**
+     * Record a usage of [word] with its canonical-TL reading [tl]. R5 (#7):
+     * `(word, tl)` is the identity, so 一字多音 increment separate buckets.
+     * Pass `""` only when the candidate has no canonical TL (wire skew /
+     * TPS-OOV) → the legacy fallback bucket.
+     */
     @Suppress("SqlResolve")
-    suspend fun recordUsage(word: String) =
-        withContext(Dispatchers.IO) {
-            try {
-                ensureInitialized()
-                val db = dbHelper?.writableDatabase ?: return@withContext
+    suspend fun recordUsage(
+        word: String,
+        tl: String,
+    ) = withContext(Dispatchers.IO) {
+        try {
+            ensureInitialized()
+            val db = dbHelper?.writableDatabase ?: return@withContext
 
-                val sql =
-                    """
-                    INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.COUNT}, ${Table.LAST_USED})
-                    VALUES (?, 1, CURRENT_TIMESTAMP)
-                    ON CONFLICT(${Table.WORD}) DO UPDATE SET
-                        ${Table.COUNT} = ${Table.COUNT} + 1,
-                        ${Table.LAST_USED} = CURRENT_TIMESTAMP
-                    """.trimIndent()
+            val sql =
+                """
+                INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.TL}, ${Table.COUNT}, ${Table.LAST_USED})
+                VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT(${Table.WORD}, ${Table.TL}) DO UPDATE SET
+                    ${Table.COUNT} = ${Table.COUNT} + 1,
+                    ${Table.LAST_USED} = CURRENT_TIMESTAMP
+                """.trimIndent()
 
-                db.execSQL(sql, arrayOf(word))
+            db.execSQL(sql, arrayOf(word, tl))
 
-                logger.debug(TAG) { "[RECORD] Recorded usage for: $word" }
+            logger.debug(TAG) { "[RECORD] Recorded usage for: $word / $tl" }
 
-                if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
-                    recordCounter.set(0)
-                    pruneOldEntries()
-                }
-            } catch (e: Exception) {
-                logger.e(TAG, "[RECORD] Failed to record usage for: $word", e)
+            if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
+                recordCounter.set(0)
+                pruneOldEntries()
             }
+        } catch (e: Exception) {
+            logger.e(TAG, "[RECORD] Failed to record usage for: $word", e)
         }
+    }
 
     // ------------------------------------------------------------------ //
     // Public API — Queries
@@ -237,10 +251,14 @@ class UserFrequencyService(
                 ensureInitialized()
                 val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData.EMPTY
 
+                // R5: a word may span several `(word, tl)` rows. This
+                // single-word accessor (UI count / compat) aggregates them:
+                // total count + most-recent last_used. The pair-keyed
+                // ranking path uses `frequencyDataBatch` (per-reading).
                 val cursor =
                     db.rawQuery(
                         """
-                        SELECT ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
+                        SELECT SUM(${Table.COUNT}), MAX(strftime('%s', ${Table.LAST_USED}) * 1000)
                         FROM ${Table.NAME}
                         WHERE ${Table.WORD} = ?
                         """.trimIndent(),
@@ -248,7 +266,9 @@ class UserFrequencyService(
                     )
 
                 cursor.use {
-                    if (it.moveToFirst()) {
+                    // SUM/MAX over zero rows yields one all-NULL row → treat
+                    // as EMPTY; a real hit has a non-null count.
+                    if (it.moveToFirst() && !it.isNull(0)) {
                         val count = it.getInt(0)
                         val lastUsedMillis = it.getLong(1)
                         return@withContext FrequencyData(count, lastUsedMillis)
@@ -262,22 +282,29 @@ class UserFrequencyService(
             }
         }
 
-    /** Batch lookup: returns a map for every [words] entry that exists in the DB. */
-    suspend fun frequencyDataBatch(words: List<String>): Map<String, FrequencyData> =
+    /**
+     * Batch lookup — R5 returns one ROW per `(word, tl)` reading for every
+     * [words] entry in the DB (a word may yield several: each learned
+     * reading + the legacy `tl == ''` bucket), so the engine can build its
+     * `(display_text, canonical_tl)` pair-keyed `FrequencyMap`. Keyed on
+     * `word` only (`WHERE word IN`); the caller dedupes the query keys by
+     * display text.
+     */
+    suspend fun frequencyDataBatch(words: List<String>): List<FrequencyRow> =
         withContext(Dispatchers.IO) {
-            if (words.isEmpty()) return@withContext emptyMap()
+            if (words.isEmpty()) return@withContext emptyList()
 
             try {
                 ensureInitialized()
-                val db = dbHelper?.readableDatabase ?: return@withContext emptyMap()
+                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
 
-                val result = mutableMapOf<String, FrequencyData>()
+                val rows = mutableListOf<FrequencyRow>()
                 val placeholders = words.joinToString(",") { "?" }
 
                 val cursor =
                     db.rawQuery(
                         """
-                        SELECT ${Table.WORD}, ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
+                        SELECT ${Table.WORD}, ${Table.TL}, ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
                         FROM ${Table.NAME}
                         WHERE ${Table.WORD} IN ($placeholders)
                         """.trimIndent(),
@@ -287,20 +314,25 @@ class UserFrequencyService(
                 cursor.use {
                     while (it.moveToNext()) {
                         val word = it.getString(0)
-                        val count = it.getInt(1)
-                        val lastUsedMillis = it.getLong(2)
-                        result[word] = FrequencyData(count, lastUsedMillis)
+                        val tl = it.getString(1) ?: ""
+                        val count = it.getInt(2)
+                        val lastUsedMillis = it.getLong(3)
+                        rows.add(FrequencyRow(word, tl, FrequencyData(count, lastUsedMillis)))
                     }
                 }
 
-                result
+                rows
             } catch (e: Exception) {
                 logger.e(TAG, "[QUERY] Failed to get frequency data batch", e)
-                emptyMap()
+                emptyList()
             }
         }
 
-    /** Top-[limit] most frequent words, descending by count then recency. */
+    /**
+     * Top-[limit] most frequent words for the viewer. R5: aggregates the
+     * per-reading rows back to one row per word (`GROUP BY word`) — the
+     * dictionary browser shows hanji + total count, no reading column.
+     */
     suspend fun topWords(limit: Int = 100): List<Pair<String, Int>> =
         withContext(Dispatchers.IO) {
             try {
@@ -310,9 +342,10 @@ class UserFrequencyService(
                 val cursor =
                     db.rawQuery(
                         """
-                        SELECT ${Table.WORD}, ${Table.COUNT}
+                        SELECT ${Table.WORD}, SUM(${Table.COUNT})
                         FROM ${Table.NAME}
-                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                        GROUP BY ${Table.WORD}
+                        ORDER BY SUM(${Table.COUNT}) DESC, MAX(${Table.LAST_USED}) DESC
                         LIMIT ?
                         """.trimIndent(),
                         arrayOf(limit.toString()),
@@ -325,7 +358,11 @@ class UserFrequencyService(
             }
         }
 
-    /** All frequency rows (ordered by count DESC, then last-used DESC). */
+    /**
+     * All frequency data for the viewer — R5 aggregates by word (one row
+     * per word, total count) so the list + CSV export stay single-row-per-
+     * word. Backup uses [getAllFrequencyRows] to preserve `(word, tl)`.
+     */
     suspend fun getAllFrequencies(): List<Pair<String, Int>> =
         withContext(Dispatchers.IO) {
             try {
@@ -335,9 +372,10 @@ class UserFrequencyService(
                 val cursor =
                     db.rawQuery(
                         """
-                        SELECT ${Table.WORD}, ${Table.COUNT}
+                        SELECT ${Table.WORD}, SUM(${Table.COUNT})
                         FROM ${Table.NAME}
-                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                        GROUP BY ${Table.WORD}
+                        ORDER BY SUM(${Table.COUNT}) DESC, MAX(${Table.LAST_USED}) DESC
                         """.trimIndent(),
                         null,
                     )
@@ -345,6 +383,41 @@ class UserFrequencyService(
                 collectWordCountPairs(cursor)
             } catch (e: Exception) {
                 logger.e(TAG, "[QUERY] Failed to get all frequencies", e)
+                emptyList()
+            }
+        }
+
+    /**
+     * All `(word, tl, count)` rows for backup export — preserves the R5
+     * per-reading identity (#7) unlike [getAllFrequencies], which aggregates
+     * by word for the viewer. One row per learned reading + any legacy
+     * `tl == ''` row.
+     */
+    suspend fun getAllFrequencyRows(): List<Triple<String, String, Int>> =
+        withContext(Dispatchers.IO) {
+            try {
+                ensureInitialized()
+                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
+
+                val cursor =
+                    db.rawQuery(
+                        """
+                        SELECT ${Table.WORD}, ${Table.TL}, ${Table.COUNT}
+                        FROM ${Table.NAME}
+                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                        """.trimIndent(),
+                        null,
+                    )
+
+                val rows = mutableListOf<Triple<String, String, Int>>()
+                cursor.use {
+                    while (it.moveToNext()) {
+                        rows.add(Triple(it.getString(0), it.getString(1) ?: "", it.getInt(2)))
+                    }
+                }
+                rows
+            } catch (e: Exception) {
+                logger.e(TAG, "[QUERY] Failed to get all frequency rows", e)
                 emptyList()
             }
         }
@@ -376,9 +449,14 @@ class UserFrequencyService(
     // Public API — Mutations
     // ------------------------------------------------------------------ //
 
-    /** Batch-import frequency entries, merging by max(existing, incoming). Returns imported count. */
+    /**
+     * Batch-import frequency entries `(word, tl, count)`, merging by
+     * max(existing, incoming). R5: keyed on the `(word, tl)` pair so each
+     * reading merges independently; a pre-R5 backup row imports with
+     * `tl == ""` (the legacy fallback bucket). Returns imported count.
+     */
     @Suppress("SqlResolve")
-    suspend fun batchImportMerge(entries: List<Pair<String, Int>>): Int =
+    suspend fun batchImportMerge(entries: List<Triple<String, String, Int>>): Int =
         withContext(Dispatchers.IO) {
             try {
                 ensureInitialized()
@@ -386,9 +464,9 @@ class UserFrequencyService(
 
                 val sql =
                     """
-                    INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.COUNT}, ${Table.LAST_USED})
-                    VALUES (?, ?, datetime('now'))
-                    ON CONFLICT(${Table.WORD}) DO UPDATE SET
+                    INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.TL}, ${Table.COUNT}, ${Table.LAST_USED})
+                    VALUES (?, ?, ?, datetime('now'))
+                    ON CONFLICT(${Table.WORD}, ${Table.TL}) DO UPDATE SET
                         ${Table.COUNT} = MAX(${Table.COUNT}, excluded.${Table.COUNT}),
                         ${Table.LAST_USED} = datetime('now')
                     """.trimIndent()
@@ -397,8 +475,8 @@ class UserFrequencyService(
                 var imported = 0
                 try {
                     val stmt = db.compileStatement(sql)
-                    for ((word, count) in entries) {
-                        stmt.bindArgs(word, count.toLong())
+                    for ((word, tl, count) in entries) {
+                        stmt.bindArgs(word, tl, count.toLong())
                         stmt.executeInsert()
                         imported++
                     }
@@ -512,23 +590,28 @@ class UserFrequencyService(
         }
 
         private fun createUserFrequencyTable(db: SQLiteDatabase) {
+            // R5 (#7): identity is `UNIQUE(word, tl)` — 一字多音 keep separate
+            // rows. `tl` defaults to '' (the legacy fallback bucket).
             db.execSQL(
                 """
                 CREATE TABLE ${Table.NAME} (
                     ${Table.ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ${Table.WORD} TEXT NOT NULL UNIQUE,
+                    ${Table.WORD} TEXT NOT NULL,
+                    ${Table.TL} TEXT NOT NULL DEFAULT '',
                     ${Table.COUNT} INTEGER DEFAULT 1,
                     ${Table.LAST_USED} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    ${Table.CREATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ${Table.CREATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(${Table.WORD}, ${Table.TL})
                 );
                 """.trimIndent(),
             )
         }
 
         private fun createUserFrequencyIndexes(db: SQLiteDatabase) {
-            db.execSQL("CREATE INDEX idx_word ON ${Table.NAME}(${Table.WORD});")
-            db.execSQL("CREATE INDEX idx_count ON ${Table.NAME}(${Table.COUNT} DESC);")
-            db.execSQL("CREATE INDEX idx_last_used ON ${Table.NAME}(${Table.LAST_USED} DESC);")
+            // No standalone idx_word: the UNIQUE(word, tl) autoindex has
+            // `word` leftmost, so it serves `WHERE word = ?` / `IN (...)`.
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_count ON ${Table.NAME}(${Table.COUNT} DESC);")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_last_used ON ${Table.NAME}(${Table.LAST_USED} DESC);")
         }
 
         private fun createMetadataTable(db: SQLiteDatabase) {
@@ -556,7 +639,7 @@ class UserFrequencyService(
 
                 db.execSQL(
                     "INSERT OR REPLACE INTO ${MetadataTable.NAME} (${MetadataTable.KEY}, ${MetadataTable.VALUE}) VALUES (?, ?)",
-                    arrayOf("schema_version", "1"),
+                    arrayOf("schema_version", DATABASE_VERSION.toString()),
                 )
                 db.execSQL(
                     "INSERT OR REPLACE INTO ${MetadataTable.NAME} (${MetadataTable.KEY}, ${MetadataTable.VALUE}) VALUES (?, ?)",
@@ -580,7 +663,51 @@ class UserFrequencyService(
             oldVersion: Int,
             newVersion: Int,
         ) {
+            if (oldVersion < 2) {
+                migrateToPairKey(db)
+            }
             logger.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion (data preserved)")
+        }
+
+        /**
+         * R5 (#7): rebuild the pre-R5 table (inline `word UNIQUE`, no `tl`)
+         * into the `(word, tl)` pair-key shape. SQLite cannot drop an inline
+         * column UNIQUE via `ALTER`, so this does create-new / copy / drop /
+         * rename. `SQLiteOpenHelper` already wraps `onUpgrade` in a
+         * transaction, so a throw here rolls the whole rebuild back. Existing
+         * rows backfill `tl = ''` (the legacy fallback bucket); `id` /
+         * `count` / `last_used` / `created_at` are preserved exactly. Mirrors
+         * iOS `UserFrequencySchema.migrateToPairKeyIfNeeded`.
+         */
+        // 中文: R5 — 把舊表(inline word UNIQUE、無 tl)重建成 (word, tl) pair-key。
+        // 中文: inline UNIQUE 無法 ALTER 掉 → create-new/copy/drop/rename;onUpgrade 已在 transaction 內,throw 會回滾。
+        private fun migrateToPairKey(db: SQLiteDatabase) {
+            val newTable = "${Table.NAME}_pairkey_migrate"
+            db.execSQL(
+                """
+                CREATE TABLE $newTable (
+                    ${Table.ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ${Table.WORD} TEXT NOT NULL,
+                    ${Table.TL} TEXT NOT NULL DEFAULT '',
+                    ${Table.COUNT} INTEGER DEFAULT 1,
+                    ${Table.LAST_USED} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    ${Table.CREATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(${Table.WORD}, ${Table.TL})
+                );
+                """.trimIndent(),
+            )
+            db.execSQL(
+                """
+                INSERT INTO $newTable (${Table.ID}, ${Table.WORD}, ${Table.TL}, ${Table.COUNT}, ${Table.LAST_USED}, ${Table.CREATED_AT})
+                SELECT ${Table.ID}, ${Table.WORD}, '', ${Table.COUNT}, ${Table.LAST_USED}, ${Table.CREATED_AT} FROM ${Table.NAME};
+                """.trimIndent(),
+            )
+            db.execSQL("DROP TABLE ${Table.NAME};")
+            db.execSQL("ALTER TABLE $newTable RENAME TO ${Table.NAME};")
+            // Old installs created idx_word; drop it so the schema converges
+            // to one shape across fresh + upgraded DBs.
+            db.execSQL("DROP INDEX IF EXISTS idx_word;")
+            createUserFrequencyIndexes(db)
         }
     }
 }

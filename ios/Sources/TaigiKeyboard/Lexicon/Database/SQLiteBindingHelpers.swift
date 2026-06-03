@@ -27,3 +27,46 @@ func sqliteExecSimple(db: OpaquePointer, _ sql: String) {
         sqlite3_finalize(stmt)
     }
 }
+
+// MARK: - Schema introspection (shared across schema / migrator files)
+
+/// Read `PRAGMA user_version` (the integer schema-version gate). Returns `0`
+/// for a fresh DB or on any prepare/step failure.
+// 中文: 讀 PRAGMA user_version(schema 版本閘門);全新 DB 或失敗回 0。
+func sqliteReadUserVersion(db: OpaquePointer) -> Int {
+    var stmt: OpaquePointer?
+    defer { sqlite3_finalize(stmt) }
+    guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &stmt, nil) == SQLITE_OK else { return 0 }
+    return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+}
+
+/// Write `PRAGMA user_version = N`. PRAGMA cannot bind values; `version` is a
+/// caller-supplied schema constant, never user input.
+// 中文: 寫 PRAGMA user_version = N;PRAGMA 不能綁定,version 為呼叫端 schema 常數。
+func sqliteSetUserVersion(db: OpaquePointer, version: Int) {
+    sqliteExecSimple(db: db, "PRAGMA user_version = \(version)")
+}
+
+/// `true` when a table named `table` exists.
+// 中文: 表是否存在。
+func sqliteTableExists(db: OpaquePointer, table: String) -> Bool {
+    var stmt: OpaquePointer?
+    defer { sqlite3_finalize(stmt) }
+    let sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1;"
+    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+    stmt.bindText(1, table)
+    return sqlite3_step(stmt) == SQLITE_ROW
+}
+
+/// `true` when `table` has a column named `column`. `table` is a hardcoded
+/// schema constant (not user input) — `pragma_table_info` cannot bind an
+/// identifier.
+// 中文: 表是否有某欄。table 為硬編 schema 常數(非使用者輸入)。
+func sqliteColumnExists(db: OpaquePointer, table: String, column: String) -> Bool {
+    let sql = "SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name = ?;"
+    var stmt: OpaquePointer?
+    defer { sqlite3_finalize(stmt) }
+    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+    stmt.bindText(1, column)
+    return sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) > 0
+}

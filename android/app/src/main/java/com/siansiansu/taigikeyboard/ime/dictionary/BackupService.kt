@@ -35,7 +35,9 @@ class BackupService(
     suspend fun exportAll(context: Context): String =
         withContext(Dispatchers.IO) {
             val customEntries = customDict.fetchAll()
-            val frequencyData = userFreq.getAllFrequencies()
+            // R5: row-level export preserves each `(word, tl)` reading (#7) —
+            // NOT getAllFrequencies(), which aggregates by word for the viewer.
+            val frequencyData = userFreq.getAllFrequencyRows()
             val associationData = nextWord.allAssociations()
 
             val appVersion =
@@ -47,7 +49,7 @@ class BackupService(
 
             val json =
                 JSONObject().apply {
-                    put("version", 1)
+                    put("version", 2)
                     put(
                         "exportedAt",
                         java.text
@@ -76,10 +78,11 @@ class BackupService(
                     put(
                         "userFrequency",
                         JSONArray().apply {
-                            for ((word, count) in frequencyData) {
+                            for ((word, tl, count) in frequencyData) {
                                 put(
                                     JSONObject().apply {
                                         put("word", word)
+                                        put("tl", tl)
                                         put("count", count)
                                         put("lastUsed", "")
                                     },
@@ -154,11 +157,13 @@ class BackupService(
 
     private suspend fun importFrequency(array: JSONArray?): Int {
         array ?: return 0
+        // R5: a pre-R5 backup has no `tl` key → "" → the legacy fallback
+        // bucket (#7 tolerant).
         val entries =
             (0 until array.length())
                 .map { i ->
                     val obj = array.getJSONObject(i)
-                    Pair(obj.optString("word", ""), obj.optInt("count", 1))
+                    Triple(obj.optString("word", ""), obj.optString("tl", ""), obj.optInt("count", 1))
                 }.filter { it.first.isNotEmpty() }
 
         return userFreq.batchImportMerge(entries)

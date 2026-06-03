@@ -385,12 +385,17 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         for candidate in candidates where seen.insert(candidate.displayText).inserted {
             uniqueKeys.append(candidate.displayText)
         }
-        let snapshot = service.frequencyDataBatch(for: uniqueKeys)
-        return snapshot.map { word, data in
+        // R5 pair-key (#7): one `FrequencyEntry` per `(word, tl)` ROW so the
+        // engine can build a `(display_text, canonical_tl)`-keyed map. A
+        // word may yield several rows (each learned reading + the legacy
+        // `tl == ""` bucket); the engine's tolerant `get` resolves them.
+        let rows = service.frequencyDataBatch(for: uniqueKeys)
+        return rows.map { row in
             var entry = Taigi_Engine_FrequencyEntry()
-            entry.displayTextKey = word
-            entry.count = UInt32(max(0, data.count))
-            entry.lastUsedMs = data.lastUsedMillis
+            entry.displayTextKey = row.word
+            entry.canonicalTl = row.tl
+            entry.count = UInt32(max(0, row.data.count))
+            entry.lastUsedMs = row.data.lastUsedMillis
             return entry
         }
     }

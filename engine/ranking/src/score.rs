@@ -156,7 +156,7 @@ pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
 /// stateless. `last_used_ms == 0` means "never used"; the recency bonus
 /// gate guards against a stray bonus for never-seen entries.
 // 中文: 單一候選詞的使用者頻率資料,last_used_ms == 0 代表沒用過。
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct FrequencyData {
     /// Cumulative selection count. Capped at [`USER_FREQ_CAP`] by the
     /// legacy additive `calculate_score`; Continuous boost uses
@@ -170,20 +170,86 @@ pub struct FrequencyData {
     pub last_used_ms: i64,
 }
 
-/// Per-candidate user-frequency map keyed by `TaigiWord.displayText`
-/// (= `hanji` if non-empty else `roman`) — same key as the
-/// Continuous-input [`RawCandidate::display_text`] in
-/// `lexicon::continuous`. Engine builds this once per request from the
-/// proto's `FrequencyEntry` list and reuses it across the whole batch.
+/// Per-candidate user-frequency map keyed by the
+/// `(display_text, canonical_tl)` PAIR identity (Core Principle #7;
+/// v3.6.1 R5). `display_text` = `hanji` if non-empty else `roman` (same
+/// key the platform writes to `user_frequency.db` on commit and the
+/// Continuous-input [`RawCandidate::display_text`] carries);
+/// `canonical_tl` = the candidate's canonical-TL reading
+/// ([`RawCandidate::canonical_tl`], snapshotted before the POJ-render
+/// pass). One `display_text` (e.g. 重) holds one bucket PER reading so
+/// 一字多音 (重/tîng vs 重/tāng) keep separate counts.
 ///
-/// **Duplicate-key policy**: last-write-wins via
-/// [`HashMap::insert`]. Platform-side `user_frequency.db` queries
-/// SHOULD pre-dedupe by `display_text_key` before sending the
-/// `FrequencyEntry[]` snapshot; for legacy callers, duplicates are
-/// silently coalesced.
-// 中文: 使用者頻率查詢表,key = 候選顯示文字(漢字優先,否則用羅馬字)。
-// 中文: 同 key 的多筆 entry 以最後一筆為準(insert 覆寫);平台側建議先 dedupe。
-pub type FrequencyMap = std::collections::HashMap<String, FrequencyData>;
+/// Internally a nested `display_text → (canonical_tl → FrequencyData)`
+/// map: the outer level lets [`get`](Self::get) borrow `&str` and the
+/// inner level expresses the tolerant fallback directly. Engine builds
+/// this once per request from the proto's `FrequencyEntry` list
+/// ([`build_frequency_map`]) and reuses it across the whole batch.
+///
+/// **Legacy `canonical_tl == ""` bucket**: pre-R5 rows / old-backup
+/// imports the platform could not re-key carry an empty `canonical_tl`.
+/// [`get`](Self::get) consults that bucket as a tolerant fallback for ANY
+/// reading of the `display_text` whose exact `(display, tl)` entry is
+/// absent — both 重/tîng and 重/tāng inherit the old merged 重 count until
+/// each is re-learned, at which point the exact bucket shadows the legacy
+/// one. Self-healing; the platform never deletes the legacy row.
+///
+/// **Duplicate-key policy**: last-write-wins within one
+/// `(display, tl)` bucket. Platform queries return at most one row per
+/// pair (UNIQUE(word, tl)); for legacy callers, duplicates coalesce.
+// 中文: 使用者頻率查詢表,身分鍵 = (顯示文字, canonical TL) 配對 (#7;R5)。
+// 中文: 巢狀 display→(tl→data);canonical_tl="" 為舊資料 fallback 桶,exact 命中即遮蔽。
+#[derive(Debug, Clone, Default)]
+pub struct FrequencyMap {
+    by_display: std::collections::HashMap<String, std::collections::HashMap<String, FrequencyData>>,
+}
+
+impl FrequencyMap {
+    /// Empty map — cold-start neutral (every [`get`](Self::get) returns
+    /// [`FrequencyData::default`]).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Pre-size the outer (`display_text`) level. Inner maps grow lazily.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            by_display: std::collections::HashMap::with_capacity(capacity),
+        }
+    }
+
+    /// Insert one `(display_text, canonical_tl)` bucket. Last-write-wins
+    /// on an exact pair collision.
+    pub fn insert(&mut self, display_text: String, canonical_tl: String, data: FrequencyData) {
+        self.by_display
+            .entry(display_text)
+            .or_default()
+            .insert(canonical_tl, data);
+    }
+
+    /// Tolerant pair lookup: exact `(display, tl)` first, then the legacy
+    /// `(display, "")` fallback bucket. NEVER sums — the exact bucket
+    /// shadows the legacy one. Returns [`FrequencyData::default`] (neutral
+    /// cold-start: `user_freq_boost(0) = 1.0`, `recency_rank(_, 0) = 1`)
+    /// when neither is present, so absent entries reproduce the pre-R5
+    /// never-used behaviour. A `canonical_tl == ""` query consults the
+    /// legacy bucket once (no redundant second probe).
+    // 中文: 容錯配對查詢 — 先 exact (display,tl),miss 再退 legacy (display,"")。絕不相加。
+    pub fn get(&self, display_text: &str, canonical_tl: &str) -> FrequencyData {
+        let Some(inner) = self.by_display.get(display_text) else {
+            return FrequencyData::default();
+        };
+        let exact = inner.get(canonical_tl);
+        // Legacy fallback only when the query carries a reading — an empty
+        // `canonical_tl` already probed the legacy bucket above.
+        let legacy = if canonical_tl.is_empty() {
+            None
+        } else {
+            inner.get("")
+        };
+        exact.or(legacy).copied().unwrap_or_default()
+    }
+}
 
 /// v3.5.8 Phase 9.3a — Continuous-input `user_freq_boost(count)`:
 ///
@@ -337,6 +403,7 @@ pub fn build_frequency_map(entries: &[protos::engine::FrequencyEntry]) -> Freque
     for entry in entries {
         map.insert(
             entry.display_text_key.clone(),
+            entry.canonical_tl.clone(),
             FrequencyData {
                 count: i32::try_from(entry.count).unwrap_or(i32::MAX),
                 last_used_ms: entry.last_used_ms,
@@ -930,23 +997,24 @@ mod tests {
     #[test]
     fn build_frequency_map_dedupes_duplicate_keys_last_write_wins() {
         // Codex pre-impl risk: platform-side `user_frequency.db`
-        // sometimes ships duplicate `display_text_key` rows. The map
-        // must coalesce silently (later entry wins).
+        // sometimes ships duplicate `(display_text_key, canonical_tl)`
+        // rows. The map must coalesce silently (later entry wins).
         let entries = vec![
             protos::engine::FrequencyEntry {
                 display_text_key: "台".to_owned(),
                 count: 1,
                 last_used_ms: 100,
+                canonical_tl: "tâi".to_owned(),
             },
             protos::engine::FrequencyEntry {
                 display_text_key: "台".to_owned(),
                 count: 7,
                 last_used_ms: 700,
+                canonical_tl: "tâi".to_owned(),
             },
         ];
         let map = build_frequency_map(&entries);
-        assert_eq!(map.len(), 1);
-        let data = map.get("台").expect("台 present");
+        let data = map.get("台", "tâi");
         assert_eq!(data.count, 7);
         assert_eq!(data.last_used_ms, 700);
     }
@@ -961,9 +1029,50 @@ mod tests {
             display_text_key: "x".to_owned(),
             count: u32::MAX,
             last_used_ms: 1,
+            canonical_tl: String::new(),
         }];
         let map = build_frequency_map(&entries);
-        assert_eq!(map.get("x").unwrap().count, i32::MAX);
+        assert_eq!(map.get("x", "").count, i32::MAX);
+    }
+
+    #[test]
+    fn frequency_map_pair_key_separates_homograph_readings() {
+        // R5 / Core Principle #7: 一字多音 — same hanji 重, two readings
+        // tîng (重複) vs tāng (重量) — keep SEPARATE buckets. The
+        // pre-R5 hanji-only key merged them.
+        let mut map = FrequencyMap::new();
+        map.insert("重".to_owned(), "tîng".to_owned(), freq(3, 100));
+        map.insert("重".to_owned(), "tāng".to_owned(), freq(9, 900));
+        assert_eq!(map.get("重", "tîng").count, 3);
+        assert_eq!(map.get("重", "tāng").count, 9);
+    }
+
+    #[test]
+    fn frequency_map_legacy_empty_tl_is_tolerant_fallback() {
+        // A pre-R5 / old-backup row carries canonical_tl == "". Any
+        // reading whose exact (display, tl) bucket is absent falls back
+        // to it; once a reading is re-learned its exact bucket shadows
+        // the legacy one (NEVER summed).
+        let mut map = FrequencyMap::new();
+        map.insert("重".to_owned(), String::new(), freq(5, 500)); // legacy merged 重
+        map.insert("重".to_owned(), "tîng".to_owned(), freq(2, 200)); // re-learned tîng
+        // Exact reading shadows legacy (no sum: 2, not 7).
+        assert_eq!(map.get("重", "tîng").count, 2);
+        // Not-yet-re-learned reading inherits the legacy bucket.
+        assert_eq!(map.get("重", "tāng").count, 5);
+        // A direct empty-tl query also hits the legacy bucket.
+        assert_eq!(map.get("重", "").count, 5);
+    }
+
+    #[test]
+    fn frequency_map_missing_pair_is_neutral_cold_start() {
+        // Absent display OR absent reading with no legacy fallback →
+        // default (count 0, last_used 0) so user_freq_boost(0)=1.0.
+        let mut map = FrequencyMap::new();
+        map.insert("我".to_owned(), "guá".to_owned(), freq(4, 400));
+        assert_eq!(map.get("無", "bô"), FrequencyData::default());
+        assert_eq!(map.get("我", "góa"), FrequencyData::default()); // no legacy bucket
+        assert_eq!(map.get("我", "guá").count, 4); // exact reading still present
     }
 
     #[test]

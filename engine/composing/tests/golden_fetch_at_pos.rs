@@ -655,6 +655,7 @@ fn matrix() -> Vec<Case> {
                 display_text_key: "台".into(),
                 count: 10,
                 last_used_ms: 1,
+                canonical_tl: String::new(),
             }],
             now_ms: 1_000_000_000_000,
             custom: Vec::new(),

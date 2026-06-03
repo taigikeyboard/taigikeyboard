@@ -26,3 +26,21 @@ public struct FrequencyData {
 
     public static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
 }
+
+/// One `user_frequency.db` row in R5 `(word, tl)` pair-key form: the
+/// display-text key, its canonical-TL reading, and the snapshot. Returned
+/// by `UserFrequencyRepository.frequencyDataBatch` so the engine can build
+/// a `(display_text, canonical_tl)`-keyed `FrequencyMap` (Core Principle
+/// #7). `tl == ""` is the legacy fallback bucket.
+// 中文: R5 (word, tl) pair-key 的一列 — 顯示鍵 + canonical TL 讀音 + 快照;tl='' 為 legacy fallback 桶。
+public struct FrequencyRow {
+    public let word: String
+    public let tl: String
+    public let data: FrequencyData
+
+    public init(word: String, tl: String, data: FrequencyData) {
+        self.word = word
+        self.tl = tl
+        self.data = data
+    }
+}

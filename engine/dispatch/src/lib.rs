@@ -267,6 +267,7 @@ mod tests {
                 display_text_key: "我".to_owned(),
                 count: 5,
                 last_used_ms: 0,
+                canonical_tl: String::new(),
             }],
             now_ms: 1_000_000_000,
             include_breakdown: true,

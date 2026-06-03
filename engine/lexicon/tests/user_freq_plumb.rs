@@ -148,6 +148,7 @@ fn user_freq_boost_amplifies_score_for_matched_candidate() {
         display_text_key: "台".into(),
         count: 10,
         last_used_ms: 1,
+        canonical_tl: String::new(),
     }]);
     let warm = fetch_candidates_for_endings(
         "tai",
@@ -177,6 +178,7 @@ fn user_freq_boost_saturates_at_max_boost_when_count_high() {
         display_text_key: "台".into(),
         count: 100,
         last_used_ms: 1,
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "tai",
@@ -215,6 +217,7 @@ fn recency_rank_zero_when_last_used_is_within_window() {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms,
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "tai",
@@ -246,6 +249,7 @@ fn recency_rank_one_when_last_used_is_outside_window() {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms,
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "tai",
@@ -277,6 +281,7 @@ fn recency_rank_one_when_clock_skew_now_before_last_used() {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms,
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "tai",
@@ -308,6 +313,7 @@ fn recency_rank_one_when_now_ms_is_zero() {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms: 1_700_000_000_000,
+        canonical_tl: String::new(),
     }]);
     // platform shim has not injected a clock yet → now_ms = 0
     let out = fetch_candidates_for_endings(
@@ -354,6 +360,7 @@ fn recent_candidate_outranks_stale_within_same_tier_and_coverage() {
         display_text_key: "代".into(),
         count: 1,
         last_used_ms: now_ms - 5 * 60 * 1_000,
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "tai",
@@ -466,6 +473,7 @@ fn mismatched_display_text_key_leaves_score_neutral() {
         display_text_key: "完全不一樣".into(),
         count: 50,
         last_used_ms: 1_700_000_000_000,
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "tai",
@@ -503,11 +511,13 @@ fn duplicate_keys_in_freq_map_apply_last_write_winner_to_candidate() {
             display_text_key: "台".into(),
             count: 1, // would yield boost 1.1 → score 110.0
             last_used_ms: 1_700_000_000_000,
+            canonical_tl: String::new(),
         },
         FrequencyEntry {
             display_text_key: "台".into(),
             count: 7, // last-write-winner: boost 1.7 → score 170.0
             last_used_ms: 1_700_000_000_500,
+            canonical_tl: String::new(),
         },
     ]);
     let out = fetch_candidates_for_endings(
@@ -564,6 +574,7 @@ fn taiuantaigi_phrase_keeps_slot_one_when_boosted() {
         display_text_key: "臺灣台語".into(),
         count: 3,
         last_used_ms: now_ms - 30_000, // 30 seconds ago.
+        canonical_tl: String::new(),
     }]);
     let out = fetch_candidates_for_endings(
         "taiuantaigi",

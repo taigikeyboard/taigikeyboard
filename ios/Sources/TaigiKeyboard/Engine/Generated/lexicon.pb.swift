@@ -919,6 +919,18 @@ public nonisolated struct Taigi_Engine_TaigiWord: Sendable {
 /// pre-filters to candidate-relevant keys to keep the request small.
 /// `display_text_key` matches `TaigiWord.displayText` (= hanji ?? roman)
 /// so the engine can `find` matching entries during scoring.
+///
+/// v3.6.1 R5 — user-frequency identity is the `(display_text_key,
+/// canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
+/// candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
+/// pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
+/// carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+/// separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
+/// for pre-R5 rows / old-backup imports the platform could not re-key; the
+/// engine treats it as a tolerant fallback bucket consulted by ALL readings
+/// of that `display_text` until each is re-learned (see
+/// `ranking::FrequencyMap::get`). Empty string is the canonical legacy
+/// marker — the field is NOT `optional`.
 public nonisolated struct Taigi_Engine_FrequencyEntry: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -929,6 +941,8 @@ public nonisolated struct Taigi_Engine_FrequencyEntry: Sendable {
   public var count: UInt32 = 0
 
   public var lastUsedMs: Int64 = 0
+
+  public var canonicalTl: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2284,7 +2298,7 @@ nonisolated extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FrequencyEntry"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text_key\0\u{1}count\0\u{3}last_used_ms\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text_key\0\u{1}count\0\u{3}last_used_ms\0\u{3}canonical_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2295,6 +2309,7 @@ nonisolated extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftP
       case 1: try { try decoder.decodeSingularStringField(value: &self.displayTextKey) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.lastUsedMs) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
       default: break
       }
     }
@@ -2310,6 +2325,9 @@ nonisolated extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftP
     if self.lastUsedMs != 0 {
       try visitor.visitSingularInt64Field(value: self.lastUsedMs, fieldNumber: 3)
     }
+    if !self.canonicalTl.isEmpty {
+      try visitor.visitSingularStringField(value: self.canonicalTl, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2317,6 +2335,7 @@ nonisolated extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftP
     if lhs.displayTextKey != rhs.displayTextKey {return false}
     if lhs.count != rhs.count {return false}
     if lhs.lastUsedMs != rhs.lastUsedMs {return false}
+    if lhs.canonicalTl != rhs.canonicalTl {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

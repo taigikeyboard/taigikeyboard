@@ -350,10 +350,23 @@ message TaigiWord {
 // pre-filters to candidate-relevant keys to keep the request small.
 // `display_text_key` matches `TaigiWord.displayText` (= hanji ?? roman)
 // so the engine can `find` matching entries during scoring.
+//
+// v3.6.1 R5 — user-frequency identity is the `(display_text_key,
+// canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
+// candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
+// pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
+// carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+// separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
+// for pre-R5 rows / old-backup imports the platform could not re-key; the
+// engine treats it as a tolerant fallback bucket consulted by ALL readings
+// of that `display_text` until each is re-learned (see
+// `ranking::FrequencyMap::get`). Empty string is the canonical legacy
+// marker — the field is NOT `optional`.
 message FrequencyEntry {
   string display_text_key = 1;
   uint32 count = 2;
   int64 last_used_ms = 3;
+  string canonical_tl = 4;
 }
 
 // `ScoreBreakdown` is the single source of truth for both ranking math

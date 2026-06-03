@@ -78,7 +78,13 @@ final class FrequencyDataViewModel: ObservableObject {
         }
         let entries = CSVDocument.decodeFrequencyCSV(csvString)
         try await repository.ensureInitialized()
-        let imported = try await repository.batchImportMerge(entries: entries)
+        // R5: the user-facing frequency CSV stays `(word, count)` — a hand
+        // editable format with no reading column. Imported rows land in the
+        // legacy `tl == ""` fallback bucket (#7 tolerant). Full per-reading
+        // fidelity lives in the `.taigi` backup, not the CSV.
+        let imported = try await repository.batchImportMerge(
+            entries: entries.map { (word: $0.word, tl: "", count: $0.count) },
+        )
         return (imported: imported, skipped: entries.count - imported)
     }
 

@@ -443,6 +443,13 @@ class NextWordHandler(
                     roman = if (p.subtitle != null) p.text else "",
                     hanzi = p.hanzi,
                     lengthScore = p.score.toInt(),
+                    // R5 pair-key (#7): canonical-TL reading for the
+                    // user-frequency `(displayText, canonicalTl)` write.
+                    // `p.tl` is the engine-side canonical TL (only text/subtitle
+                    // are mode-shaped), matching the Continuous read key. Without
+                    // it the freq write would land in the legacy tl=="" bucket
+                    // and 重/tāng could inherit a count learned from 重/tîng.
+                    additionalInfo = mapOf(TaigiWord.MetadataKeys.CANONICAL_TL to p.tl),
                 )
             }
             onUpdateCandidates(words)

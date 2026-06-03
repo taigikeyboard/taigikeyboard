@@ -110,8 +110,12 @@ extension ActionHandler {
             // suggestion.text) ensures frequency tracks what the engine
             // committed, not the TPS surface form (PR #257 r3214912627).
             // 中文: 每次成功 commit(mid 或 final)都記頻次;頻次用 sidechannel displayText。
+            // R5 pair-key (#7): record `(displayText, canonical TL)` so
+            // 一字多音 keep separate frequency buckets. `associationTl` is
+            // the canonical-TL sidechannel already extracted above (the same
+            // reading NextWord learns); empty only on wire skew / TPS-OOV.
             if didCommit, settings.isFrequencyRecordingEnabled {
-                CompositionRoot.userFrequencyService.recordUsage(for: displayText)
+                CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: associationTl)
             }
             // Auto-space only on FINAL commit (entire buffer consumed; engine
             // exits Continuous → Idle). Mid-commits keep composing more
@@ -142,8 +146,12 @@ extension ActionHandler {
             commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
 
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
+            // R5 pair-key (#7): canonical-TL reading from the same
+            // sidechannel; empty (legacy bucket) for a NextWord prediction
+            // that carries no canonical TL.
+            let canonicalTl = suggestion.additionalInfo["canonicalTl"] ?? ""
             if settings.isFrequencyRecordingEnabled {
-                CompositionRoot.userFrequencyService.recordUsage(for: displayText)
+                CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: canonicalTl)
             }
 
             logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")

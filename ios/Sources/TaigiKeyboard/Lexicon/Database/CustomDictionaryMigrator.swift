@@ -26,7 +26,7 @@ enum CustomDictionaryMigrator {
     /// returns immediately when `PRAGMA user_version` is already current.
     // 中文: 套用前向遷移,版本符合就直接回。可重入。
     static func runIfNeeded(db: OpaquePointer, logger: DebugLogger) {
-        let currentVersion = readUserVersion(db: db)
+        let currentVersion = sqliteReadUserVersion(db: db)
         guard currentVersion < CustomDictionarySchema.schemaVersion else { return }
 
         logger.info("[MIGRATE] custom_dictionary.db v\(currentVersion) -> v\(CustomDictionarySchema.schemaVersion)")
@@ -44,17 +44,10 @@ enum CustomDictionaryMigrator {
             backfillSearchKeys(db: db)
         }
 
-        sqliteExecSimple(db: db, "PRAGMA user_version = \(CustomDictionarySchema.schemaVersion)")
+        sqliteSetUserVersion(db: db, version: CustomDictionarySchema.schemaVersion)
     }
 
     // MARK: - Private
-
-    private static func readUserVersion(db: OpaquePointer) -> Int {
-        var stmt: OpaquePointer?
-        defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &stmt, nil) == SQLITE_OK else { return 0 }
-        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
-    }
 
     /// Add derived columns via `ALTER TABLE` when missing. The whitelist is
     /// required because SQLite DDL cannot parameterize column identifiers.

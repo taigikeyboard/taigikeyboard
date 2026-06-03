@@ -50,8 +50,9 @@
 //!   `lexicon::search()` — bit 12 = variant gate, bit 9 = khiin gate,
 //!   bits 0..=11 = per-source enables, `u32::MAX` = all sources on.
 //! - User-frequency input is plumbed through [`ContinuousFetchCtx`] —
-//!   `freq_map` (per-`display_text` `FrequencyData` keyed by `hanji ?? tl`)
-//!   plus `now_ms` (platform epoch-ms). The engine derives
+//!   `freq_map` (R5: `FrequencyData` keyed by the `(display_text,
+//!   canonical_tl)` PAIR identity, #7) plus `now_ms` (platform epoch-ms).
+//!   The engine derives
 //!   `user_freq_boost(count)` per candidate inside the (private)
 //!   `record_to_candidate` / `custom_entry_to_candidate` helpers using
 //!   `BOOST_ALPHA`/`MAX_BOOST` from `ranking::score` (v3.5.8 Phase 9.3a);
@@ -1449,13 +1450,15 @@ fn record_to_candidate(
     let canonical_tl = tl.clone();
     let hanji = hanzi.clone();
     let display_text = hanzi.unwrap_or(tl);
-    // Phase 9.3a: look up the candidate's user-frequency snapshot by
-    // `display_text` (the same key the platform writes to
-    // `user_frequency.db` on commit). Absent entries fall through to
-    // `FrequencyData::default()` (count = 0, last_used_ms = 0) →
-    // `user_freq_boost(0) = 1.0` and `recency_rank(_, 0) = 1`, which
-    // reproduces the cold-start neutral behaviour.
-    let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
+    // Phase 9.3a + R5 pair-key (#7): look up the candidate's
+    // user-frequency snapshot by the `(display_text, canonical_tl)`
+    // identity — the same pair the platform writes to `user_frequency.db`
+    // on commit (`display_text` key + `canonical_tl` reading). The
+    // tolerant `get` falls back to the legacy `tl == ""` bucket on an
+    // exact miss; absent entries fall through to `FrequencyData::default()`
+    // (count = 0, last_used_ms = 0) → `user_freq_boost(0) = 1.0` and
+    // `recency_rank(_, 0) = 1`, reproducing the cold-start neutral path.
+    let freq_data = freq_map.get(&display_text, &canonical_tl);
     // `FrequencyData.count` is `i32` (legacy `calculate_score` cap
     // domain). Saturate the negative side to 0; the wire builder
     // already saturates the positive side at `i32::MAX`.
@@ -1558,7 +1561,11 @@ fn custom_entry_to_candidate(
     // TPS round-trip is unchanged.
     let canonical_tl = phonetics::api::canonical_tl_form(&roman, input_mode);
     let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
-    let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
+    // R5 pair-key (#7): same `(display_text, canonical_tl)` identity as
+    // `record_to_candidate`. For a hanji-absent custom/OOV entry
+    // `display_text == canonical_tl`; the tolerant `get` still falls back
+    // to the legacy `tl == ""` bucket on an exact miss.
+    let freq_data = freq_map.get(&display_text, &canonical_tl);
     let count_u32 = u32::try_from(freq_data.count).unwrap_or(0);
     let boost = user_freq_boost(count_u32);
     // `frequency = 0` (D4) → `calculate_continuous_score` reduces to

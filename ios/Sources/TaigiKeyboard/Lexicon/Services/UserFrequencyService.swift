@@ -28,9 +28,14 @@ final class UserFrequencyService: @unchecked Sendable {
 
     // MARK: - Instance Methods
 
-    func recordUsage(for word: String) {
+    /// Record a candidate commit. R5: the `(word, tl)` pair is the identity
+    /// (Core Principle #7) — `tl` is the candidate's canonical-TL reading so
+    /// 一字多音 keep separate counts. Pass `""` only when the candidate has
+    /// no canonical TL (wire skew / TPS-OOV) → the legacy fallback bucket.
+    // 中文: 紀錄候選 commit;R5 身分 = (word, tl) pair(#7),tl 為 canonical TL 讀音。
+    func recordUsage(for word: String, tl: String) {
         Task { [weak self] in
-            await self?.repository.recordWord(word)
+            await self?.repository.recordWord(word, tl: tl)
         }
     }
 
@@ -42,7 +47,7 @@ final class UserFrequencyService: @unchecked Sendable {
         repository.frequencyData(for: word)
     }
 
-    func frequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
+    func frequencyDataBatch(for words: [String]) -> [FrequencyRow] {
         repository.frequencyDataBatch(for: words)
     }
 

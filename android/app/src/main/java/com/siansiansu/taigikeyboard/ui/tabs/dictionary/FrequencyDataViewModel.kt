@@ -86,7 +86,12 @@ class FrequencyDataViewModel(
                     } ?: throw Exception("Cannot read file")
                 }
             val entries = parseCSV(csvString)
-            val imported = withContext(Dispatchers.IO) { userFreq.batchImportMerge(entries) }
+            // R5: the user-facing frequency CSV stays `(word, count)` — a
+            // hand-editable format with no reading column. Imported rows land
+            // in the legacy `tl == ""` fallback bucket (#7 tolerant). Full
+            // per-reading fidelity lives in the `.taigi` backup, not the CSV.
+            val triples = entries.map { Triple(it.first, "", it.second) }
+            val imported = withContext(Dispatchers.IO) { userFreq.batchImportMerge(triples) }
             val refreshed = withContext(Dispatchers.IO) { userFreq.getAllFrequencies() }
             _allData.value = refreshed
             return ImportOutcome(imported = imported, skipped = entries.size - imported)

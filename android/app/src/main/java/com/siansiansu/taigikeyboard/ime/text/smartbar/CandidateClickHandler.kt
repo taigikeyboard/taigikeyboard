@@ -154,10 +154,13 @@ class CandidateClickHandler(
 
             appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
 
-            // Record usage frequency
+            // Record usage frequency. R5 pair-key (#7): the candidate's
+            // canonical-TL reading from the metadata sidechannel keeps
+            // 一字多音 in separate buckets; "" only on wire skew / TPS-OOV.
             if (prefs.frequencyRecordingEnabled) {
+                val canonicalTl = selectedWord.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
                 scope.launch {
-                    userFreq.recordUsage(selectedWord.displayText)
+                    userFreq.recordUsage(selectedWord.displayText, canonicalTl)
                 }
             }
 
@@ -261,10 +264,12 @@ class CandidateClickHandler(
 
         appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
 
-        // Record usage frequency
+        // Record usage frequency. R5 pair-key (#7): canonical-TL reading
+        // from the metadata sidechannel; "" only on wire skew / TPS-OOV.
         if (prefs.frequencyRecordingEnabled) {
+            val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
             scope.launch {
-                userFreq.recordUsage(word.displayText)
+                userFreq.recordUsage(word.displayText, canonicalTl)
             }
         }
 
@@ -384,9 +389,11 @@ class CandidateClickHandler(
         // Per-segment frequency on every successful commit (mid OR final).
         // Stale taps (didCommit=false) skip — engine had silently reset to Idle
         // so we'd be polluting UserFrequencyService with non-events.
+        // R5 pair-key (#7): reuse the `associationTl` canonical-TL sidechannel
+        // already resolved above (same reading NextWord learns).
         if (result.didCommit && prefs.frequencyRecordingEnabled) {
             scope.launch {
-                userFreq.recordUsage(displayText)
+                userFreq.recordUsage(displayText, associationTl)
             }
         }
 

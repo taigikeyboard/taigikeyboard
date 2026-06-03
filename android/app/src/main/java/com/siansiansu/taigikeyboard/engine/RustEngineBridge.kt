@@ -14,6 +14,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
+import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyRow
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
@@ -270,11 +271,10 @@ object RustEngineBridge {
 
     /**
      * Marshal a `Map<String, FrequencyData>` snapshot into the proto
-     * `FrequencyEntry` wire shape consumed by `ProcessCandidatesRequest`
-     * (legacy lexicon ranking) and `FetchAtPos` (Continuous-input fetch,
-     * v3.5.8 Phase 9.3a/9.3c). Centralises the `count` clamp + field
-     * naming so the two callers cannot drift. Mirrors iOS implicit
-     * convention — Swift inlines the same shape but at one call site.
+     * `FrequencyEntry` wire shape. Used by the legacy `ProcessCandidatesRequest`
+     * ranking path (test-only on both platforms — no production caller).
+     * `canonicalTl` defaults to "" (the engine's legacy tolerant-fallback
+     * bucket), which is correct for that path's word-keyed map.
      */
     internal fun frequencyDataToProtoEntries(
         data: Map<String, FrequencyData>,
@@ -285,6 +285,27 @@ object RustEngineBridge {
                 .setDisplayTextKey(word)
                 .setCount(maxOf(0, snapshot.count))
                 .setLastUsedMs(snapshot.lastUsedMillis)
+                .build()
+        }
+
+    /**
+     * R5 (#7): marshal `(word, tl)` pair-key rows into proto `FrequencyEntry`
+     * carrying `canonicalTl`, so the engine builds a
+     * `(display_text, canonical_tl)`-keyed `FrequencyMap`. Used by the
+     * Continuous-input `FetchAtPos` fetch (the production user-frequency
+     * path). Centralises the `count` clamp + field naming. Mirrors iOS
+     * `ComposingManager.buildFrequencyEntries`.
+     */
+    internal fun frequencyRowsToProtoEntries(
+        rows: List<FrequencyRow>,
+    ): List<FrequencyEntry> =
+        rows.map { row ->
+            FrequencyEntry
+                .newBuilder()
+                .setDisplayTextKey(row.word)
+                .setCanonicalTl(row.tl)
+                .setCount(maxOf(0, row.data.count))
+                .setLastUsedMs(row.data.lastUsedMillis)
                 .build()
         }
 

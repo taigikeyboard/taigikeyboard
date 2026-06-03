@@ -642,11 +642,12 @@ fn fetch_walker_slot0_inner(
             // `edge_cost`, same as dict.
             // 中文: B-4 — display_text fold canonical TL,跨 mode freq key 合一;
             // 中文:   `entry.roman` 保留原樣(lattice key 比對需要)。
-            let display_text = entry
-                .hanji
-                .clone()
-                .unwrap_or_else(|| phonetics::api::canonical_tl_form(&entry.roman, mode));
-            let fd = freq_map.get(&display_text).copied().unwrap_or_default();
+            // R5 pair-key (#7): fold the custom roman to canonical TL once,
+            // reuse for both the hanji-absent display_text fallback AND the
+            // `(display_text, canonical_tl)` freq pair key.
+            let canonical_tl = phonetics::api::canonical_tl_form(&entry.roman, mode);
+            let display_text = entry.hanji.clone().unwrap_or_else(|| canonical_tl.clone());
+            let fd = freq_map.get(&display_text, &canonical_tl);
             let count = u32::try_from(fd.count).unwrap_or(0);
             let user_weight_delta = decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
             // Syllable count = greedy-longest segment count of the
@@ -716,7 +717,11 @@ fn fetch_walker_slot0_inner(
                 // 中文:   (收斂 Gap B → G2)。display_text = 平台 commit 寫 user_frequency.db
                 // 中文:   的同一 key;best_candidate_for_key/record_to_candidate 不動
                 // 中文:   (其 boost 管 edge 內選 record,此管選哪條切分路徑,正交不重複計)。
-                let fd = freq_map.get(&c.display_text).copied().unwrap_or_default();
+                // R5 pair-key (#7): (c.display_text, c.canonical_tl) —
+                // c.canonical_tl is the record's TL, the same reading the
+                // platform commits to user_frequency.db. Tolerant fallback
+                // to the legacy tl == "" bucket on an exact miss.
+                let fd = freq_map.get(&c.display_text, &c.canonical_tl);
                 // `FrequencyData.count` is i32 (legacy cap domain);
                 // re-widen to u32 the same way
                 // `record_to_candidate` does (negative → 0).
@@ -904,10 +909,10 @@ fn fetch_walker_slot0_inner(
     // (`assemble_candidates`) reads it instead of re-folding `slot0.roman`.
     let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
     let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
-    let last_used_ms = freq_map
-        .get(&display_text)
-        .map(|d| d.last_used_ms)
-        .unwrap_or(0);
+    // R5 pair-key (#7): walker OOV synth keyed by (display_text,
+    // canonical_tl); `get` returns neutral default (last_used_ms = 0)
+    // on miss, same as the prior `unwrap_or(0)`.
+    let last_used_ms = freq_map.get(&display_text, &canonical_tl).last_used_ms;
     // Classify via the lexicon single-source-of-truth so the
     // synth's `CandidateMessage.mode` matches span-local / custom
     // candidates exactly — including MIXED when the concatenated

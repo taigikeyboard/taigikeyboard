@@ -47,9 +47,14 @@ final class BackupService: @unchecked Sendable {
         let hanzi: String
     }
 
-    // 中文: 備份檔內頻率項目 — 詞、count 與最後使用時間字串。
+    // 中文: 備份檔內頻率項目 — 詞、canonical TL 讀音、count 與最後使用時間字串。
+    // 中文: R5 新增 tl(optional)— 舊備份無此欄 decode 為 nil → "" legacy fallback 桶。
     struct FrequencyEntry: Codable {
         let word: String
+        /// R5 `(word, tl)` pair identity (#7). Optional so a pre-R5 backup
+        /// (no `tl` key) decodes to `nil` → imported as the legacy `""`
+        /// fallback bucket.
+        let tl: String?
         let count: Int
         let lastUsed: String
     }
@@ -76,7 +81,9 @@ final class BackupService: @unchecked Sendable {
     // 中文: 匯出全部 user data 為 JSON Data。
     func exportAll() async throws -> Data {
         let customEntries = try await customDictionaryService.fetchAll()
-        let frequencyData = await userFrequencyRepository.topWordsAsync(limit: Int.max)
+        // R5: row-level export preserves each `(word, tl)` reading (#7) —
+        // NOT `topWordsAsync`, which aggregates by word for the viewer.
+        let frequencyData = await userFrequencyRepository.allFrequencyRowsAsync()
         let associationData = await nextWordService.allAssociations()
 
         let appVersion = Bundle.main.object(
@@ -84,7 +91,7 @@ final class BackupService: @unchecked Sendable {
         ) as? String ?? "1.0"
 
         let backup = BackupData(
-            version: 1,
+            version: 2,
             exportedAt: ISO8601DateFormatter().string(from: Date()),
             platform: "ios",
             appVersion: appVersion,
@@ -92,7 +99,7 @@ final class BackupService: @unchecked Sendable {
                 CustomDictEntry(roman: $0.roman, hanzi: $0.hanzi)
             },
             userFrequency: frequencyData.map {
-                FrequencyEntry(word: $0.word, count: $0.count, lastUsed: "")
+                FrequencyEntry(word: $0.word, tl: $0.tl, count: $0.count, lastUsed: "")
             },
             userAssociation: associationData.map {
                 AssociationBackupEntry(
@@ -159,8 +166,9 @@ final class BackupService: @unchecked Sendable {
         guard !entries.isEmpty else { return 0 }
         do {
             try await userFrequencyRepository.ensureInitialized()
+            // R5: a pre-R5 backup has no `tl` → `nil` → "" legacy bucket.
             return try await userFrequencyRepository.batchImportMerge(entries: entries.map {
-                (word: $0.word, count: $0.count)
+                (word: $0.word, tl: $0.tl ?? "", count: $0.count)
             })
         } catch {
             logger.error("[IMPORT] Frequency import failed: \(error.localizedDescription)")

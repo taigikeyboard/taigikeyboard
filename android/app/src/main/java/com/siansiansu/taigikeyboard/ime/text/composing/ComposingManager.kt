@@ -610,9 +610,13 @@ class ComposingManager(
         candidates: List<RustEngineBridge.ContinuousCandidate>,
         userFreq: UserFrequencyService,
     ): List<FrequencyEntry> {
+        // R5 pair-key (#7): query by display text (dedup'd), get back one
+        // ROW per `(word, tl)` reading + the legacy `tl == ""` bucket, and
+        // marshal each as a `FrequencyEntry` carrying `canonicalTl` so the
+        // engine can build a `(display_text, canonical_tl)`-keyed map.
         val uniqueKeys = candidates.map { it.displayText }.distinct()
-        val snapshot = userFreq.frequencyDataBatch(uniqueKeys)
-        return RustEngineBridge.frequencyDataToProtoEntries(snapshot)
+        val rows = userFreq.frequencyDataBatch(uniqueKeys)
+        return RustEngineBridge.frequencyRowsToProtoEntries(rows)
     }
 
     /**

@@ -199,6 +199,14 @@ extension ActionHandler: AutocompleteContextUpdater {
                     // `handleSuggestionSelection` (engine's `pojToTL` needs raw
                     // roman, not the mode-shaped display `text`).
                     "tl": prediction.tl,
+                    // R5 pair-key (#7): canonical-TL reading for the
+                    // user-frequency `(displayText, canonicalTl)` write.
+                    // `prediction.tl` is the engine-side canonical TL (only
+                    // `text`/`subtitle` are mode-shaped), matching the
+                    // Continuous read key. Without it the freq write would
+                    // land in the legacy `tl == ""` bucket and 重/tāng could
+                    // inherit a count learned from 重/tîng.
+                    "canonicalTl": prediction.tl,
                     "displayText": prediction.hanzi,
                 ],
             )

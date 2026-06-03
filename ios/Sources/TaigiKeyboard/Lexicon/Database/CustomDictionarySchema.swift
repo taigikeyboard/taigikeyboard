@@ -55,12 +55,7 @@ enum CustomDictionarySchema {
     /// Public so `CustomDictionaryMigrator` can gate `ALTER TABLE` calls.
     // 中文: 檢查 custom_dictionary 是否已有指定欄位,給 migrator 判斷要不要 ALTER。
     static func columnExists(db: OpaquePointer, column: String) -> Bool {
-        let sql = "SELECT COUNT(*) FROM pragma_table_info('\(tableName)') WHERE name = ?;"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
-        defer { sqlite3_finalize(stmt) }
-        stmt.bindText(1, column)
-        return sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) > 0
+        sqliteColumnExists(db: db, table: tableName, column: column)
     }
 
     // MARK: - Private

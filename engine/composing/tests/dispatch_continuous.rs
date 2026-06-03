@@ -570,6 +570,7 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
                     display_text_key: "珠仔".into(),
                     count: 3,
                     last_used_ms: 1_700_000_000_000,
+                    canonical_tl: String::new(),
                 },
                 // Duplicate key exercises the `last-write-wins` policy
                 // documented at `ranking::build_frequency_map`.
@@ -577,6 +578,7 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
                     display_text_key: "珠仔".into(),
                     count: 7,
                     last_used_ms: 1_700_000_001_000,
+                    canonical_tl: String::new(),
                 },
             ],
             now_ms: 1_700_000_002_000,

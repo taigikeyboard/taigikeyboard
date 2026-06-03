@@ -32,4 +32,16 @@ public interface FrequencyEntryOrBuilder extends
    * @return The lastUsedMs.
    */
   long getLastUsedMs();
+
+  /**
+   * <code>string canonical_tl = 4;</code>
+   * @return The canonicalTl.
+   */
+  java.lang.String getCanonicalTl();
+  /**
+   * <code>string canonical_tl = 4;</code>
+   * @return The bytes for canonicalTl.
+   */
+  com.google.protobuf.ByteString
+      getCanonicalTlBytes();
 }

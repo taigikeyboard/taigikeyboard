@@ -11,6 +11,18 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * pre-filters to candidate-relevant keys to keep the request small.
  * `display_text_key` matches `TaigiWord.displayText` (= hanji ?? roman)
  * so the engine can `find` matching entries during scoring.
+ *
+ * v3.6.1 R5 — user-frequency identity is the `(display_text_key,
+ * canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
+ * candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
+ * pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
+ * carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+ * separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
+ * for pre-R5 rows / old-backup imports the platform could not re-key; the
+ * engine treats it as a tolerant fallback bucket consulted by ALL readings
+ * of that `display_text` until each is re-learned (see
+ * `ranking::FrequencyMap::get`). Empty string is the canonical legacy
+ * marker — the field is NOT `optional`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FrequencyEntry}
@@ -22,6 +34,7 @@ public  final class FrequencyEntry extends
     FrequencyEntryOrBuilder {
   private FrequencyEntry() {
     displayTextKey_ = "";
+    canonicalTl_ = "";
   }
   public static final int DISPLAY_TEXT_KEY_FIELD_NUMBER = 1;
   private java.lang.String displayTextKey_;
@@ -122,6 +135,53 @@ public  final class FrequencyEntry extends
     lastUsedMs_ = 0L;
   }
 
+  public static final int CANONICAL_TL_FIELD_NUMBER = 4;
+  private java.lang.String canonicalTl_;
+  /**
+   * <code>string canonical_tl = 4;</code>
+   * @return The canonicalTl.
+   */
+  @java.lang.Override
+  public java.lang.String getCanonicalTl() {
+    return canonicalTl_;
+  }
+  /**
+   * <code>string canonical_tl = 4;</code>
+   * @return The bytes for canonicalTl.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCanonicalTlBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(canonicalTl_);
+  }
+  /**
+   * <code>string canonical_tl = 4;</code>
+   * @param value The canonicalTl to set.
+   */
+  private void setCanonicalTl(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+
+    canonicalTl_ = value;
+  }
+  /**
+   * <code>string canonical_tl = 4;</code>
+   */
+  private void clearCanonicalTl() {
+
+    canonicalTl_ = getDefaultInstance().getCanonicalTl();
+  }
+  /**
+   * <code>string canonical_tl = 4;</code>
+   * @param value The bytes for canonicalTl to set.
+   */
+  private void setCanonicalTlBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    canonicalTl_ = value.toStringUtf8();
+
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -211,6 +271,18 @@ public  final class FrequencyEntry extends
    * pre-filters to candidate-relevant keys to keep the request small.
    * `display_text_key` matches `TaigiWord.displayText` (= hanji ?? roman)
    * so the engine can `find` matching entries during scoring.
+   *
+   * v3.6.1 R5 — user-frequency identity is the `(display_text_key,
+   * canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
+   * candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
+   * pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
+   * carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+   * separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
+   * for pre-R5 rows / old-backup imports the platform could not re-key; the
+   * engine treats it as a tolerant fallback bucket consulted by ALL readings
+   * of that `display_text` until each is re-learned (see
+   * `ranking::FrequencyMap::get`). Empty string is the canonical legacy
+   * marker — the field is NOT `optional`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FrequencyEntry}
@@ -331,6 +403,55 @@ public  final class FrequencyEntry extends
       return this;
     }
 
+    /**
+     * <code>string canonical_tl = 4;</code>
+     * @return The canonicalTl.
+     */
+    @java.lang.Override
+    public java.lang.String getCanonicalTl() {
+      return instance.getCanonicalTl();
+    }
+    /**
+     * <code>string canonical_tl = 4;</code>
+     * @return The bytes for canonicalTl.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getCanonicalTlBytes() {
+      return instance.getCanonicalTlBytes();
+    }
+    /**
+     * <code>string canonical_tl = 4;</code>
+     * @param value The canonicalTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalTl(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setCanonicalTl(value);
+      return this;
+    }
+    /**
+     * <code>string canonical_tl = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCanonicalTl() {
+      copyOnWrite();
+      instance.clearCanonicalTl();
+      return this;
+    }
+    /**
+     * <code>string canonical_tl = 4;</code>
+     * @param value The bytes for canonicalTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalTlBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setCanonicalTlBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FrequencyEntry)
   }
   @java.lang.Override
@@ -350,10 +471,11 @@ public  final class FrequencyEntry extends
             "displayTextKey_",
             "count_",
             "lastUsedMs_",
+            "canonicalTl_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u0002";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u0002\u0004\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

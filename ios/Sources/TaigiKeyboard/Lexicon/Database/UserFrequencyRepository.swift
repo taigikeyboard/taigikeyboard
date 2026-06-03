@@ -57,11 +57,11 @@ final class UserFrequencyRepository: @unchecked Sendable {
     /// stays under capacity without adding latency to every single write.
     // 中文: 紀錄一次詞使用。每 recordCheckInterval 次觸發一次背景 prune,
     // 中文: 表會控制在上限內,但不會讓每次寫入都付 prune 成本。
-    func recordWord(_ word: String) async {
+    func recordWord(_ word: String, tl: String) async {
         do {
             try await ensureInitialized()
             try await connectionManager.execute { db in
-                try Self.insertOrUpdateWord(db: db, word: word, logger: self.logger)
+                try Self.insertOrUpdateWord(db: db, word: word, tl: tl, logger: self.logger)
             }
 
             let shouldPrune: Bool = stateLock.withLock {
@@ -103,16 +103,21 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
-    /// Batch lookup — one SQL round-trip for many words.
-    // 中文: 批次查詢 — 一個 SQL round-trip 拿多筆,排序管線用這個。
-    func frequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
-        guard connectionManager.isConnected(), !words.isEmpty else { return [:] }
+    /// Batch lookup — one SQL round-trip for many words. R5: returns one
+    /// ROW per `(word, tl)` reading (a word may yield several: each learned
+    /// reading + the legacy `tl == ""` bucket), so the engine can build its
+    /// `(display_text, canonical_tl)` pair-keyed `FrequencyMap`. Keyed on
+    /// `word` only (`WHERE word IN`), so the caller still dedupes the query
+    /// keys by display text.
+    // 中文: 批次查詢 — R5 回每個 (word, tl) 讀音一列(含 legacy '' 桶),引擎建 pair-key map。
+    func frequencyDataBatch(for words: [String]) -> [FrequencyRow] {
+        guard connectionManager.isConnected(), !words.isEmpty else { return [] }
         do {
             return try connectionManager.executeSync { db in
                 Self.queryFrequencyDataBatch(db: db, words: words)
             }
         } catch {
-            return [:]
+            return []
         }
     }
 
@@ -146,15 +151,20 @@ final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Mutations
 
     /// Import with merge-by-max strategy so restoring an older backup never
-    /// stomps the user's current (higher) counts.
-    // 中文: 批次匯入 — merge-by-max 策略,還原舊備份不會把當前較高的 count 蓋掉。
-    func batchImportMerge(entries: [(word: String, count: Int)]) async throws -> Int {
+    /// stomps the user's current (higher) counts. R5: keyed on the
+    /// `(word, tl)` pair so each reading merges independently. A backup
+    /// written before R5 (no `tl`) imports with `tl == ""` — the legacy
+    /// fallback bucket — which is exactly the tolerant behaviour the engine
+    /// expects.
+    // 中文: 批次匯入 — merge-by-max;R5 用 (word, tl) pair-key,各讀音獨立合併。
+    // 中文: 舊備份無 tl → tl='' 進 legacy fallback 桶。
+    func batchImportMerge(entries: [(word: String, tl: String, count: Int)]) async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
             let sql = """
-                INSERT INTO \(UserFrequencySchema.tableName) (word, count, last_used)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(word) DO UPDATE SET
+                INSERT INTO \(UserFrequencySchema.tableName) (word, tl, count, last_used)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(word, tl) DO UPDATE SET
                     count = MAX(count, excluded.count),
                     last_used = CURRENT_TIMESTAMP;
             """
@@ -168,7 +178,8 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 defer { sqlite3_finalize(stmt) }
 
                 stmt.bindText(1, entry.word)
-                sqlite3_bind_int(stmt, 2, Int32(entry.count))
+                stmt.bindText(2, entry.tl)
+                sqlite3_bind_int(stmt, 3, Int32(entry.count))
 
                 if sqlite3_step(stmt) == SQLITE_DONE {
                     imported += 1
@@ -177,6 +188,21 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
             sqlite3_exec(db, "COMMIT;", nil, nil, nil)
             return imported
+        }
+    }
+
+    /// All `(word, tl, count)` rows for backup export — preserves the R5
+    /// per-reading identity (unlike `topWords`, which aggregates by word for
+    /// the viewer). One row per learned reading + any legacy `tl == ""` row.
+    // 中文: 備份匯出用 — 回每個 (word, tl, count) 列,保留 R5 讀音身分(topWords 給 UI 是合併過的)。
+    func allFrequencyRowsAsync() async -> [(word: String, tl: String, count: Int)] {
+        do {
+            try await ensureInitialized()
+            return try await connectionManager.execute { db in
+                Self.queryAllFrequencyRows(db: db)
+            }
+        } catch {
+            return []
         }
     }
 
@@ -275,11 +301,21 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     // MARK: - Query Helpers
 
-    private static func insertOrUpdateWord(db: OpaquePointer, word: String, logger: DebugLogger) throws {
+    private static func insertOrUpdateWord(
+        db: OpaquePointer,
+        word: String,
+        tl: String,
+        logger: DebugLogger,
+    ) throws {
+        // R5 pair-key (#7): identity is `(word, tl)` — `tl` is the
+        // candidate's canonical-TL reading so 重/tîng and 重/tāng increment
+        // separate buckets. A normal commit always carries a canonical TL;
+        // `tl == ""` only when the candidate genuinely has none (wire skew /
+        // TPS-OOV) and writes the legacy fallback bucket.
         let sql = """
-            INSERT INTO \(UserFrequencySchema.tableName) (word, count, last_used)
-            VALUES (?, 1, CURRENT_TIMESTAMP)
-            ON CONFLICT(word) DO UPDATE SET
+            INSERT INTO \(UserFrequencySchema.tableName) (word, tl, count, last_used)
+            VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+            ON CONFLICT(word, tl) DO UPDATE SET
                 count = count + 1,
                 last_used = CURRENT_TIMESTAMP;
         """
@@ -292,6 +328,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         stmt.bindText(1, word)
+        stmt.bindText(2, tl)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             logger.error("[RECORD] Failed to record usage for: \(word)")
@@ -299,8 +336,13 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     private static func queryFrequencyData(db: OpaquePointer, word: String) -> FrequencyData {
+        // R5: a word may now span several `(word, tl)` rows. This
+        // single-word accessor (UI count display / compat) aggregates them:
+        // total count + most-recent last_used. The pair-keyed ranking path
+        // does NOT use this — it consults the per-reading bucket via
+        // `frequencyDataBatch`.
         let sql = """
-            SELECT count, strftime('%s', last_used) * 1000
+            SELECT SUM(count), MAX(strftime('%s', last_used) * 1000)
             FROM \(UserFrequencySchema.tableName)
             WHERE word = ?;
         """
@@ -311,6 +353,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         stmt.bindText(1, word)
 
         if sqlite3_step(stmt) == SQLITE_ROW {
+            // SUM/MAX over zero rows yields SQL NULL → column_int = 0.
             let count = Int(sqlite3_column_int(stmt, 0))
             let lastUsedMillis = sqlite3_column_int64(stmt, 1)
             return FrequencyData(count: count, lastUsedMillis: lastUsedMillis)
@@ -318,36 +361,42 @@ final class UserFrequencyRepository: @unchecked Sendable {
         return .empty
     }
 
-    private static func queryFrequencyDataBatch(db: OpaquePointer, words: [String]) -> [String: FrequencyData] {
+    private static func queryFrequencyDataBatch(db: OpaquePointer, words: [String]) -> [FrequencyRow] {
         let placeholders = words.map { _ in "?" }.joined(separator: ",")
         let sql = """
-            SELECT word, count, strftime('%s', last_used) * 1000
+            SELECT word, tl, count, strftime('%s', last_used) * 1000
             FROM \(UserFrequencySchema.tableName)
             WHERE word IN (\(placeholders));
         """
 
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [:] }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
 
         for (index, word) in words.enumerated() {
             stmt.bindText(Int32(index + 1), word)
         }
 
-        var result: [String: FrequencyData] = [:]
+        var rows: [FrequencyRow] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
             let word = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
-            let count = Int(sqlite3_column_int(stmt, 1))
-            let lastUsedMillis = sqlite3_column_int64(stmt, 2)
-            result[word] = FrequencyData(count: count, lastUsedMillis: lastUsedMillis)
+            let tl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+            let count = Int(sqlite3_column_int(stmt, 2))
+            let lastUsedMillis = sqlite3_column_int64(stmt, 3)
+            rows.append(FrequencyRow(word: word, tl: tl, data: FrequencyData(count: count, lastUsedMillis: lastUsedMillis)))
         }
-        return result
+        return rows
     }
 
     private static func queryTopWords(db: OpaquePointer, limit: Int) -> [(word: String, count: Int)] {
+        // R5: aggregate the per-reading rows back to one row per word for
+        // the dictionary-browser viewer (which shows hanji + total count, no
+        // reading column). Backup export uses `queryAllFrequencyRows`
+        // instead to preserve the `(word, tl)` readings.
         let sql = """
-            SELECT word, count FROM \(UserFrequencySchema.tableName)
-            ORDER BY count DESC, last_used DESC
+            SELECT word, SUM(count) AS total FROM \(UserFrequencySchema.tableName)
+            GROUP BY word
+            ORDER BY total DESC, MAX(last_used) DESC
             LIMIT ?;
         """
 
@@ -362,6 +411,25 @@ final class UserFrequencyRepository: @unchecked Sendable {
             let word = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
             let count = Int(sqlite3_column_int(stmt, 1))
             results.append((word: word, count: count))
+        }
+        return results
+    }
+
+    private static func queryAllFrequencyRows(db: OpaquePointer) -> [(word: String, tl: String, count: Int)] {
+        let sql = """
+            SELECT word, tl, count FROM \(UserFrequencySchema.tableName)
+            ORDER BY count DESC, last_used DESC;
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        var results: [(word: String, tl: String, count: Int)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let word = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
+            let tl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+            let count = Int(sqlite3_column_int(stmt, 2))
+            results.append((word: word, tl: tl, count: count))
         }
         return results
     }
