@@ -50,6 +50,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         mode: RustEngineBridge.CandidateMode = .hant,
         roman: String? = nil,
         hanji: String? = nil,
+        canonicalTl: String? = nil,
     ) -> RustEngineBridge.ContinuousCandidate {
         RustEngineBridge.ContinuousCandidate(
             consumedSpanStart: consumedSpanStart,
@@ -61,6 +62,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             mode: mode,
             roman: roman ?? displayText,
             hanji: hanji,
+            canonicalTl: canonicalTl ?? roman ?? displayText,
         )
     }
 
@@ -101,6 +103,22 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result[1].additionalInfo["consumedBytes"], "7")
         XCTAssertEqual(result[1].additionalInfo["syllableCount"], "2")
         XCTAssertEqual(result[1].additionalInfo["displayText"], "珠仔")
+    }
+
+    func testCanonicalTlSidechannelCarriesIdentityTl() {
+        // R2: the canonical TL identity rides `additionalInfo["canonicalTl"]`
+        // so the tap path can forward it as `commitContinuous(associationTl:)`.
+        // It is independent of the display `roman` — a POJ-rendered candidate
+        // shows `roman` = POJ but keeps `canonicalTl` = TL.
+        let candidates = [
+            makeCandidate(consumedSpanEnd: 6, displayText: "鵝", roman: "gô͘", canonicalTl: "gôo"),
+        ]
+        let result = service.buildContinuousSuggestions(from: candidates)
+        XCTAssertEqual(
+            result[0].additionalInfo["canonicalTl"],
+            "gôo",
+            "canonicalTl sidechannel must carry the canonical TL, not the POJ display roman",
+        )
     }
 
     func testConsumedBytesUsesConsumedSpanEnd() {

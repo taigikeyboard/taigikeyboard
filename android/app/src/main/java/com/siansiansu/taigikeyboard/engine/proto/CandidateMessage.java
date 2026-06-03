@@ -56,6 +56,7 @@ public  final class CandidateMessage extends
     displayText_ = "";
     roman_ = "";
     hanji_ = "";
+    canonicalTl_ = "";
   }
   private int bitField0_;
   public static final int CONSUMED_SPAN_START_FIELD_NUMBER = 1;
@@ -377,6 +378,143 @@ public  final class CandidateMessage extends
     checkByteStringIsUtf8(value);
     hanji_ = value.toStringUtf8();
     bitField0_ |= 0x00000001;
+  }
+
+  public static final int CANONICAL_TL_FIELD_NUMBER = 10;
+  private java.lang.String canonicalTl_;
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   * @return The canonicalTl.
+   */
+  @java.lang.Override
+  public java.lang.String getCanonicalTl() {
+    return canonicalTl_;
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   * @return The bytes for canonicalTl.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCanonicalTlBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(canonicalTl_);
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   * @param value The canonicalTl to set.
+   */
+  private void setCanonicalTl(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+
+    canonicalTl_ = value;
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   */
+  private void clearCanonicalTl() {
+
+    canonicalTl_ = getDefaultInstance().getCanonicalTl();
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   * @param value The bytes for canonicalTl to set.
+   */
+  private void setCanonicalTlBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    canonicalTl_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.CandidateMessage parseFrom(
@@ -856,6 +994,145 @@ public  final class CandidateMessage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+     * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+     * recased per the typed segment), this stays the canonical TL the
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `DictionaryRecord.tl` for dict-backed candidates, or
+     * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+     * custom / walker-synth candidates. Snapshotted at candidate
+     * construction, BEFORE the composing recase / POJ-render passes touch
+     * `roman`. The platform round-trips it back via
+     * `CommitContinuous.association_tl` so the NextWord association learns
+     * the same TL a normal candidate commit would. Empty iff no canonical
+     * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+     * `association_tl` and the engine falls back to the raw committed slice.
+     * NEVER consulted for the document commit (that goes through
+     * `display_text`).
+     * </pre>
+     *
+     * <code>string canonical_tl = 10;</code>
+     * @return The canonicalTl.
+     */
+    @java.lang.Override
+    public java.lang.String getCanonicalTl() {
+      return instance.getCanonicalTl();
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+     * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+     * recased per the typed segment), this stays the canonical TL the
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `DictionaryRecord.tl` for dict-backed candidates, or
+     * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+     * custom / walker-synth candidates. Snapshotted at candidate
+     * construction, BEFORE the composing recase / POJ-render passes touch
+     * `roman`. The platform round-trips it back via
+     * `CommitContinuous.association_tl` so the NextWord association learns
+     * the same TL a normal candidate commit would. Empty iff no canonical
+     * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+     * `association_tl` and the engine falls back to the raw committed slice.
+     * NEVER consulted for the document commit (that goes through
+     * `display_text`).
+     * </pre>
+     *
+     * <code>string canonical_tl = 10;</code>
+     * @return The bytes for canonicalTl.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getCanonicalTlBytes() {
+      return instance.getCanonicalTlBytes();
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+     * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+     * recased per the typed segment), this stays the canonical TL the
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `DictionaryRecord.tl` for dict-backed candidates, or
+     * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+     * custom / walker-synth candidates. Snapshotted at candidate
+     * construction, BEFORE the composing recase / POJ-render passes touch
+     * `roman`. The platform round-trips it back via
+     * `CommitContinuous.association_tl` so the NextWord association learns
+     * the same TL a normal candidate commit would. Empty iff no canonical
+     * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+     * `association_tl` and the engine falls back to the raw committed slice.
+     * NEVER consulted for the document commit (that goes through
+     * `display_text`).
+     * </pre>
+     *
+     * <code>string canonical_tl = 10;</code>
+     * @param value The canonicalTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalTl(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setCanonicalTl(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+     * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+     * recased per the typed segment), this stays the canonical TL the
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `DictionaryRecord.tl` for dict-backed candidates, or
+     * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+     * custom / walker-synth candidates. Snapshotted at candidate
+     * construction, BEFORE the composing recase / POJ-render passes touch
+     * `roman`. The platform round-trips it back via
+     * `CommitContinuous.association_tl` so the NextWord association learns
+     * the same TL a normal candidate commit would. Empty iff no canonical
+     * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+     * `association_tl` and the engine falls back to the raw committed slice.
+     * NEVER consulted for the document commit (that goes through
+     * `display_text`).
+     * </pre>
+     *
+     * <code>string canonical_tl = 10;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCanonicalTl() {
+      copyOnWrite();
+      instance.clearCanonicalTl();
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+     * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+     * recased per the typed segment), this stays the canonical TL the
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `DictionaryRecord.tl` for dict-backed candidates, or
+     * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+     * custom / walker-synth candidates. Snapshotted at candidate
+     * construction, BEFORE the composing recase / POJ-render passes touch
+     * `roman`. The platform round-trips it back via
+     * `CommitContinuous.association_tl` so the NextWord association learns
+     * the same TL a normal candidate commit would. Empty iff no canonical
+     * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+     * `association_tl` and the engine falls back to the raw committed slice.
+     * NEVER consulted for the document commit (that goes through
+     * `display_text`).
+     * </pre>
+     *
+     * <code>string canonical_tl = 10;</code>
+     * @param value The bytes for canonicalTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalTlBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setCanonicalTlBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CandidateMessage)
   }
   @java.lang.Override
@@ -882,10 +1159,11 @@ public  final class CandidateMessage extends
             "mode_",
             "roman_",
             "hanji_",
+            "canonicalTl_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0000\u0000\u0001\u000b\u0002\u000b\u0003\u000b" +
-              "\u0004\u0208\u0005\u0001\u0006\u000b\u0007\f\b\u0208\t\u1208\u0000";
+              "\u0000\n\u0000\u0001\u0001\n\n\u0000\u0000\u0000\u0001\u000b\u0002\u000b\u0003\u000b" +
+              "\u0004\u0208\u0005\u0001\u0006\u000b\u0007\f\b\u0208\t\u1208\u0000\n\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

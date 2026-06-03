@@ -725,6 +725,7 @@ class ComposingManager(
     fun commitContinuous(
         displayText: String,
         canonicalText: String,
+        associationTl: String,
         consumedBytes: Int,
         syllableCount: Int,
         ic: InputConnection,
@@ -737,6 +738,7 @@ class ComposingManager(
         val transition = RustEngineBridge.composingCommitContinuous(
             displayText = displayText,
             canonicalText = canonicalText,
+            associationTl = associationTl,
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             mode = resolveMode(settings.inputMode),

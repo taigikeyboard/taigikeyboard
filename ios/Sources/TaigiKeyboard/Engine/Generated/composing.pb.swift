@@ -574,6 +574,21 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   /// presence distinction needed.
   public var canonicalText: String = String()
 
+  /// v3.6.1 R2 — canonical TL romanization of the committed candidate
+  /// (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+  /// recase passes rewrite `roman`). Becomes the `roman` arg of the
+  /// NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+  /// learned association `prev_tl` / `next_tl` is the same canonical TL a
+  /// normal (non-continuous) candidate commit records — fixing the
+  /// continuous-vs-normal `next_tl` fragmentation (raw typed slice
+  /// `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+  /// the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+  /// TL) decodes as "" → engine falls back to the raw committed slice
+  /// (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+  /// is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+  /// populated for hanji-present candidates too, NOT only hanji-absent.
+  public var associationTl: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -743,6 +758,23 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
   public var hasHanji: Bool {self._hanji != nil}
   /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
   public mutating func clearHanji() {self._hanji = nil}
+
+  /// v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+  /// `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+  /// recased per the typed segment), this stays the canonical TL the
+  /// `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+  /// `DictionaryRecord.tl` for dict-backed candidates, or
+  /// `phonetics::api::canonical_tl_form(native_roman, mode)` for
+  /// custom / walker-synth candidates. Snapshotted at candidate
+  /// construction, BEFORE the composing recase / POJ-render passes touch
+  /// `roman`. The platform round-trips it back via
+  /// `CommitContinuous.association_tl` so the NextWord association learns
+  /// the same TL a normal candidate commit would. Empty iff no canonical
+  /// TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+  /// `association_tl` and the engine falls back to the raw committed slice.
+  /// NEVER consulted for the document commit (that goes through
+  /// `display_text`).
+  public var canonicalTl: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1716,7 +1748,7 @@ nonisolated extension Taigi_Engine_CustomDictEntry: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitContinuous"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0\u{3}canonical_text\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0\u{3}canonical_text\0\u{3}association_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1728,6 +1760,7 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.consumedBytes) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.syllableCount) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.canonicalText) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.associationTl) }()
       default: break
       }
     }
@@ -1746,6 +1779,9 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
     if !self.canonicalText.isEmpty {
       try visitor.visitSingularStringField(value: self.canonicalText, fieldNumber: 4)
     }
+    if !self.associationTl.isEmpty {
+      try visitor.visitSingularStringField(value: self.associationTl, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1754,6 +1790,7 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
     if lhs.consumedBytes != rhs.consumedBytes {return false}
     if lhs.syllableCount != rhs.syllableCount {return false}
     if lhs.canonicalText != rhs.canonicalText {return false}
+    if lhs.associationTl != rhs.associationTl {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1899,7 +1936,7 @@ nonisolated extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0\u{1}roman\0\u{1}hanji\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0\u{1}roman\0\u{1}hanji\0\u{3}canonical_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1916,6 +1953,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
       case 7: try { try decoder.decodeSingularEnumField(value: &self.mode) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
       default: break
       }
     }
@@ -1953,6 +1991,9 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     try { if let v = self._hanji {
       try visitor.visitSingularStringField(value: v, fieldNumber: 9)
     } }()
+    if !self.canonicalTl.isEmpty {
+      try visitor.visitSingularStringField(value: self.canonicalTl, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1966,6 +2007,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if lhs.mode != rhs.mode {return false}
     if lhs.roman != rhs.roman {return false}
     if lhs._hanji != rhs._hanji {return false}
+    if lhs.canonicalTl != rhs.canonicalTl {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

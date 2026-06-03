@@ -363,9 +363,15 @@ class CandidateClickHandler(
                 }
             }
 
+        // R2: canonical TL identity sidechannel — forwarded as
+        // `associationTl` so NextWord learns the same next_tl/prev_tl a
+        // normal candidate commit records. Absent (wire skew / older
+        // suggestion) → "" → engine falls back to the raw committed slice.
+        val associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
         val result = composingManager.commitContinuous(
             displayText = textToCommit,
             canonicalText = displayText,
+            associationTl = associationTl,
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             ic = ic,

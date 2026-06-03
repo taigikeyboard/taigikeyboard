@@ -91,9 +91,15 @@ extension ActionHandler {
                 isTPSLayout: isTPSLayout,
                 effectiveSwapped: effectiveSwapped,
             )
+            // R2: canonical TL identity sidechannel — forwarded as
+            // `associationTl` so NextWord learns the same `next_tl`/`prev_tl`
+            // a normal candidate commit records. Absent (wire skew / older
+            // suggestion) → "" → engine falls back to the raw committed slice.
+            let associationTl = suggestion.additionalInfo["canonicalTl"] ?? ""
             let (didCommit, didFinalCommit) = composingManager.commitContinuous(
                 displayText: docText,
                 canonicalText: displayText,
+                associationTl: associationTl,
                 consumedBytes: consumedBytes,
                 syllableCount: syllableCount,
             )

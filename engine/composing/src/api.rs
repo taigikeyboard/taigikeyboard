@@ -126,6 +126,19 @@ pub struct NailedSegment {
     pub canonical_text: String,
     // 中文: 對應消耗的原始輸入 (e.g., "tsua")。
     pub raw_text: String,
+    // v3.6.1 R2 — canonical TL romanization of the committed candidate
+    // (the chosen `CandidateMessage.canonical_tl`). The NextWord
+    // `WordSelected` / `UpdateLastSelectedWord` `roman` arg is built from
+    // this (so the learned `prev_tl` / `next_tl` matches a normal
+    // candidate commit), falling back to `raw_text` when empty (legacy
+    // callers / TPS-OOV hanji-absent). Kept SEPARATE from `raw_text`,
+    // which stays the authority for span / unnail mechanics (Codex
+    // pre-impl 2026-06-03 SHOULD).
+    // 中文: R2 — 此候選的 canonical TL(選定的 CandidateMessage.canonical_tl)。
+    // 中文: NextWord WordSelected/UpdateLastSelectedWord 的 roman 引數由此構造
+    // 中文: (學到的 prev_tl/next_tl 與一般候選 commit 一致),空時 fallback raw_text。
+    // 中文: 與 raw_text 分開存 — raw_text 仍是 span / unnail 機制的唯一權威。
+    pub association_tl: String,
     // 中文: 在原 raw 輸入中的 byte 偏移 (start, end);用於 Phase 5 span-local 查詢。
     pub raw_span: (usize, usize),
     // 中文: 此 segment 包含的音節數,1 為單音節、2+ 為複合詞。
@@ -461,6 +474,10 @@ pub enum Intent {
         // v3.5.8 Phase 9 Bug 1 (Option A): canonical key for freq/NextWord.
         // Empty → engine falls back to `display_text` (legacy callers).
         canonical_text: String,
+        // v3.6.1 R2: canonical TL of the committed candidate. Becomes the
+        // NextWord `roman` arg (→ `prev_tl`/`next_tl`); empty → engine
+        // falls back to the raw committed slice (legacy / TPS-OOV).
+        association_tl: String,
         consumed_bytes: usize,
         syllable_count: u8,
     },
@@ -551,6 +568,7 @@ mod tests {
             display_text: display.to_owned(),
             canonical_text: display.to_owned(),
             raw_text: display.to_owned(),
+            association_tl: display.to_owned(),
             raw_span: (0, display.len()),
             syllable_count: 1,
         }
@@ -564,6 +582,7 @@ mod tests {
             display_text: display.to_owned(),
             canonical_text: canonical.to_owned(),
             raw_text: display.to_owned(),
+            association_tl: canonical.to_owned(),
             raw_span: (0, display.len()),
             syllable_count,
         }

@@ -278,6 +278,29 @@ pub struct RawCandidate {
     // 中文: Phase 9 Item 5 — 漢字顯示用 sidechannel;TAILO 候選為 None。
     // 中文: 對應 proto optional;commit 不查此欄,只用於 dual-line 候選列 subtitle。
     pub hanji: Option<String>,
+    /// v3.6.1 R2 — canonical TL romanization, the identity sidechannel
+    /// for the `(hanji, canonical-TL)` word-identity pair (Core
+    /// Principle #7). Unlike [`roman`] (the DISPLAY romanization that
+    /// `dispatch::handle_fetch_at_pos` recases per typed segment and
+    /// rewrites TL→POJ in POJ mode), this stays the canonical TL:
+    /// `DictionaryRecord.tl` for `dict.bin` hits ([`record_to_candidate`]),
+    /// `phonetics::api::canonical_tl_form(roman, mode)` for custom
+    /// ([`custom_entry_to_candidate`]) and walker-synth candidates.
+    /// Emitted on `CandidateMessage.canonical_tl`; the platform
+    /// round-trips it back into `CommitContinuous.association_tl` so the
+    /// NextWord association learns the same TL a normal candidate commit
+    /// records (fixes continuous-vs-normal `next_tl` fragmentation). Empty
+    /// only when no canonical TL is recoverable (TPS-OOV hanji-absent) —
+    /// platform omits `association_tl` and the engine falls back to the
+    /// raw committed slice. NEVER consulted for the document commit.
+    // 中文: R2 — canonical TL 身分 sidechannel((漢字, canonical-TL) 配對,#7)。
+    // 中文:   與 roman(顯示羅馬字,POJ mode 被改寫 + 逐段 recase)不同,此欄保持
+    // 中文:   canonical TL:dict 命中 = DictionaryRecord.tl,custom/walker-synth =
+    // 中文:   canonical_tl_form(roman, mode)。emit 上 CandidateMessage.canonical_tl,
+    // 中文:   平台 round-trip 回 CommitContinuous.association_tl,讓 NextWord 學到與
+    // 中文:   一般候選 commit 相同的 TL(修連續 vs 一般 next_tl fragmentation)。
+    // 中文:   TPS-OOV hanji-absent 無 TL 時為空 → 平台略過 → 引擎 fallback raw slice。commit 不查此欄。
+    pub canonical_tl: String,
     /// Result of [`ranking::calculate_continuous_score`].
     // 中文: 連續輸入排序分數 (見 ranking::calculate_continuous_score)。
     pub score: f32,
@@ -1420,6 +1443,10 @@ fn record_to_candidate(
     // 中文: Item 5 — 在 hanzi.unwrap_or(tl) 移走 tl 之前 clone 一份到 roman 欄位;
     // 中文:   hanji 直接照搬 DictionaryRecord.hanzi,讓 proto optional 保留 None vs Some("")。
     let roman = tl.clone();
+    // R2 identity sidechannel: `DictionaryRecord.tl` is already canonical
+    // TL, so `canonical_tl` equals `roman` here BEFORE the composing-layer
+    // recase / POJ-render passes rewrite `roman`.
+    let canonical_tl = tl.clone();
     let hanji = hanzi.clone();
     let display_text = hanzi.unwrap_or(tl);
     // Phase 9.3a: look up the candidate's user-frequency snapshot by
@@ -1442,6 +1469,7 @@ fn record_to_candidate(
         display_text,
         roman,
         hanji,
+        canonical_tl,
         score,
         form: FORM_NOTONE,
         frequency,
@@ -1518,9 +1546,18 @@ fn custom_entry_to_candidate(
     // 中文:   hanji 缺時 fallback 是 roman,可能為 POJ display 形。canonical_tl_form
     // 中文:   把它折成 canonical TL 讓 freq key 跨 mode 合一。roman 保留原樣(walker /
     // 中文:   custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵)。
-    let display_text = hanji
-        .clone()
-        .unwrap_or_else(|| phonetics::api::canonical_tl_form(&roman, input_mode));
+    // R2 identity sidechannel: fold the user's native-form roman (POJ
+    // display form on a POJ-mode entry) to canonical TL ONCE, then reuse
+    // for both the hanji-absent `display_text` fallback and the
+    // `(hanji, canonical-TL)` identity key. Populated for hanji-PRESENT
+    // entries too (Codex pre-impl 2026-06-03 BLOCK: identity is the pair,
+    // not gated on hanji). TPS-mode `canonical_tl_form` is identity
+    // (Bopomofo, no TL) → `canonical_tl` stays Bopomofo for a TPS-OOV
+    // hanji-absent custom entry; the platform treats a non-TL form as
+    // "no canonical TL" only for the wire-empty case, so the existing
+    // TPS round-trip is unchanged.
+    let canonical_tl = phonetics::api::canonical_tl_form(&roman, input_mode);
+    let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
     let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
     let count_u32 = u32::try_from(freq_data.count).unwrap_or(0);
     let boost = user_freq_boost(count_u32);
@@ -1535,6 +1572,7 @@ fn custom_entry_to_candidate(
         display_text,
         roman,
         hanji,
+        canonical_tl,
         score,
         form: FORM_NOTONE,
         frequency: 0,
@@ -1794,6 +1832,7 @@ mod sort_key_tests {
             display_text: String::new(),
             roman: String::new(),
             hanji: None,
+            canonical_tl: String::new(),
             score,
             form: FORM_NOTONE,
             frequency,
@@ -2192,6 +2231,10 @@ mod record_to_candidate_carrier_tests {
         assert_eq!(cand.roman, "tâi-uân");
         assert_eq!(cand.hanji.as_deref(), Some("臺灣"));
         assert_eq!(cand.display_text, "臺灣");
+        // R2: identity sidechannel = canonical TL even though display_text
+        // is the hanji. This is what the platform round-trips into the
+        // NextWord association as `next_tl`/`prev_tl`.
+        assert_eq!(cand.canonical_tl, "tâi-uân");
         assert_eq!(cand.mode, CandidateMode::Hant);
     }
 
@@ -2256,6 +2299,7 @@ mod item12_custom_dedupe_tests {
             display_text: hanji.unwrap_or(roman).to_owned(),
             roman: roman.to_owned(),
             hanji: hanji.map(str::to_owned),
+            canonical_tl: roman.to_owned(),
             score: 1.0,
             form: FORM_NOTONE,
             frequency: 100,
@@ -2291,6 +2335,10 @@ mod item12_custom_dedupe_tests {
         assert_eq!(c.roman, "tâi-gí");
         assert_eq!(c.hanji.as_deref(), Some("台語"));
         assert_eq!(c.display_text, "台語");
+        // R2 (Codex BLOCK): identity sidechannel populated for
+        // hanji-PRESENT custom entries too — `(hanji, canonical-TL)` is
+        // the word identity, NOT gated on hanji absence.
+        assert_eq!(c.canonical_tl, "tâi-gí");
         assert_eq!(c.mode, CandidateMode::Hant);
         assert_eq!(c.coverage_kind, COVERAGE_KIND_FULL);
     }
@@ -2347,6 +2395,10 @@ mod item12_custom_dedupe_tests {
             c.display_text, "gu\u{00e1}",
             "display_text must fold to canonical TL even in Tl mode"
         );
+        // R2: identity sidechannel folds the raw POJ-form roman to
+        // canonical TL — NOT the raw `góa`. This is the TL the NextWord
+        // association learns, matching a dict.bin commit's `record.tl`.
+        assert_eq!(c.canonical_tl, "gu\u{00e1}");
     }
 
     #[test]

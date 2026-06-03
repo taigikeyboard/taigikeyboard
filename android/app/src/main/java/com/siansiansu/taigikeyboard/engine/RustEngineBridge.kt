@@ -425,6 +425,19 @@ object RustEngineBridge {
          * 中文: Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → Kotlin null。
          */
         val hanji: String?,
+        /**
+         * v3.6.1 R2 — canonical TL identity sidechannel
+         * (`CandidateMessage.canonical_tl`). Unlike `roman` (the
+         * POJ-rendered display form in POJ mode), this stays the canonical
+         * TL the `(hanji, canonical-TL)` word identity is keyed on. The tap
+         * path round-trips it into `commitContinuous(associationTl = …)` so
+         * the NextWord association learns the same TL a normal candidate
+         * commit records. Empty only for TPS-OOV hanji-absent candidates
+         * with no dict TL.
+         *
+         * 中文: R2 — canonical TL 身分 sidechannel;tap 時 round-trip 回 associationTl。
+         */
+        val canonicalTl: String,
     )
 
     /**
@@ -733,6 +746,7 @@ object RustEngineBridge {
     fun composingCommitContinuous(
         displayText: String,
         canonicalText: String,
+        associationTl: String,
         consumedBytes: Int,
         syllableCount: Int,
         mode: NormalizeMode,
@@ -744,6 +758,7 @@ object RustEngineBridge {
         ComposingBridge.composingCommitContinuous(
             displayText,
             canonicalText,
+            associationTl,
             consumedBytes,
             syllableCount,
             mode,

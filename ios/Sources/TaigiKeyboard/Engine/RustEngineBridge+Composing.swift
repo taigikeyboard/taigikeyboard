@@ -133,6 +133,16 @@ public extension RustEngineBridge {
         /// present (engine never emits `Some("")` today; defensive).
         // 中文: Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → nil。
         public let hanji: String?
+        /// v3.6.1 R2 — canonical TL identity sidechannel
+        /// (`CandidateMessage.canonical_tl`). Unlike `roman` (the
+        /// POJ-rendered display form in POJ mode), this stays the
+        /// canonical TL the `(hanji, canonical-TL)` word identity is keyed
+        /// on. The tap path round-trips it into
+        /// `commitContinuous(associationTl:)` so the NextWord association
+        /// learns the same TL a normal candidate commit records. Empty
+        /// only for TPS-OOV hanji-absent candidates with no dict TL.
+        // 中文: R2 — canonical TL 身分 sidechannel;tap 時 round-trip 回 associationTl。
+        public let canonicalTl: String
 
         public init(
             consumedSpanStart: UInt32,
@@ -144,6 +154,7 @@ public extension RustEngineBridge {
             mode: CandidateMode,
             roman: String,
             hanji: String?,
+            canonicalTl: String,
         ) {
             self.consumedSpanStart = consumedSpanStart
             self.consumedSpanEnd = consumedSpanEnd
@@ -154,6 +165,7 @@ public extension RustEngineBridge {
             self.mode = mode
             self.roman = roman
             self.hanji = hanji
+            self.canonicalTl = canonicalTl
         }
     }
 
@@ -534,6 +546,7 @@ public extension RustEngineBridge {
     static func composingCommitContinuous(
         displayText: String,
         canonicalText: String,
+        associationTl: String,
         consumedBytes: UInt32,
         syllableCount: UInt32,
         mode: InputMode,
@@ -547,6 +560,9 @@ public extension RustEngineBridge {
         var payload = Taigi_Engine_CommitContinuous()
         payload.displayText = displayText
         payload.canonicalText = canonicalText
+        // R2: canonical TL of the chosen candidate → NextWord `next_tl` /
+        // `prev_tl`. Empty → engine falls back to the raw committed slice.
+        payload.associationTl = associationTl
         payload.consumedBytes = consumedBytes
         payload.syllableCount = syllableCount
         return composingDispatch(
@@ -739,6 +755,7 @@ public extension RustEngineBridge {
                     mode: CandidateMode.decode(msg.mode.rawValue),
                     roman: roman,
                     hanji: msg.hasHanji ? msg.hanji : nil,
+                    canonicalTl: msg.canonicalTl,
                 )
             }
             : nil

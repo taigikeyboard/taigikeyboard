@@ -79,6 +79,7 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
             canonical_text: m.canonical_text,
+            association_tl: m.association_tl,
             consumed_bytes: m.consumed_bytes as usize,
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
@@ -370,6 +371,13 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         // 中文:   hanji 為 proto optional,TAILO 候選送 None,wire 上是「absent」而非空字串。
         roman: c.roman,
         hanji: c.hanji,
+        // v3.6.1 R2 — identity sidechannel: canonical TL (NOT the
+        // POJ-rendered display `roman`). The platform round-trips it back
+        // into `CommitContinuous.association_tl` on tap. Empty only for
+        // TPS-OOV hanji-absent candidates with no recoverable dict TL.
+        // 中文: R2 — canonical TL 身分 sidechannel(非 POJ render 後的顯示 roman);
+        // 中文:   平台 tap 時 round-trip 回 CommitContinuous.association_tl。
+        canonical_tl: c.canonical_tl,
     }
 }
 
@@ -430,6 +438,7 @@ mod tests {
             display_text: "臺灣".to_owned(),
             roman: "tâi-uân".to_owned(),
             hanji: Some("臺灣".to_owned()),
+            canonical_tl: "tâi-uân".to_owned(),
             score: 1.5,
             form: FORM_NOTONE,
             frequency: 12,
@@ -443,6 +452,8 @@ mod tests {
         assert_eq!(proto.roman, "tâi-uân");
         assert_eq!(proto.hanji.as_deref(), Some("臺灣"));
         assert_eq!(proto.display_text, "臺灣");
+        // R2 — canonical TL sidechannel propagates onto the wire.
+        assert_eq!(proto.canonical_tl, "tâi-uân");
     }
 
     #[test]
@@ -453,6 +464,7 @@ mod tests {
             display_text: "tāi".to_owned(),
             roman: "tāi".to_owned(),
             hanji: None,
+            canonical_tl: "tāi".to_owned(),
             score: 0.5,
             form: FORM_NOTONE,
             frequency: 3,

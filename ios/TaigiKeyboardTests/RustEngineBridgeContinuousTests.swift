@@ -155,19 +155,27 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         let commit = RustEngineBridge.composingCommitContinuous(
             displayText: "台",
             canonicalText: "台",
+            associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
             mode: .tl,
             toggles: toggles,
             generation: envelopeGen,
         )
-        let hasSelected = commit.effects.contains { effect in
-            if case .nextWordWordSelected = effect { return true }
-            return false
-        }
-        XCTAssertTrue(
-            hasSelected,
+        let selectedRoman: String? = commit.effects.lazy.compactMap { effect -> String? in
+            if case let .nextWordWordSelected(_, roman, _) = effect { return roman }
+            return nil
+        }.first
+        XCTAssertNotNil(
+            selectedRoman,
             "Phase 4 final-commit contract: CommitContinuous emits NextWordWordSelected; got \(commit.effects)",
+        )
+        // R2 end-to-end through the real engine: the association roman is the
+        // candidate's canonical TL (associationTl "tâi"), NOT the raw slice
+        // "tai". This is the write-side fragmentation fix.
+        XCTAssertEqual(
+            selectedRoman, "tâi",
+            "WordSelected roman must be the canonical TL (associationTl), not the raw slice",
         )
     }
 
@@ -187,6 +195,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         let commit = RustEngineBridge.composingCommitContinuous(
             displayText: "台",
             canonicalText: "台",
+            associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
             mode: .tl,

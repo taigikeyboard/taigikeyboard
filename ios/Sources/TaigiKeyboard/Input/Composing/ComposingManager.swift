@@ -492,6 +492,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     public func commitContinuous(
         displayText: String,
         canonicalText: String,
+        associationTl: String,
         consumedBytes: UInt32,
         syllableCount: UInt32,
     ) -> (didCommit: Bool, didFinalCommit: Bool) {
@@ -505,6 +506,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let transition = RustEngineBridge.composingCommitContinuous(
             displayText: displayText,
             canonicalText: canonicalText,
+            associationTl: associationTl,
             consumedBytes: consumedBytes,
             syllableCount: syllableCount,
             mode: settings.inputMode,

@@ -121,6 +121,10 @@ pub(crate) struct WalkerSlot0 {
     pub display_text: String,
     pub roman: String,
     pub hanji: Option<String>,
+    /// v3.6.1 R2 — canonical TL identity (`RawCandidate.canonical_tl`),
+    /// computed ONCE here from the synth `roman` (the single point that
+    /// knows the fold rule) so the seam reads it instead of re-folding.
+    pub canonical_tl: String,
     pub mode: CandidateMode,
     pub recency_rank: u8,
     pub coverage_kind: u8,
@@ -893,9 +897,13 @@ fn fetch_walker_slot0_inner(
     // 中文: B-4 — walker OOV synth roman 在 POJ mode 是 POJ ASCII;
     // 中文:   freq key 折成 canonical TL 跨 mode 合一,roman 自身留原 form
     // 中文:   讓 recase_tl_as_poj_display roundtrip 正確。§9 #2 三 path 全合規。
-    let display_text = hanji
-        .clone()
-        .unwrap_or_else(|| phonetics::api::canonical_tl_form(&roman, mode));
+    // R2: fold the synth roman to canonical TL ONCE here — this is the
+    // single point that knows the synth's fold rule. Reused for the
+    // hanji-absent `display_text` fallback AND carried on `WalkerSlot0`
+    // as the `(hanji, canonical-TL)` identity sidechannel, so the seam
+    // (`assemble_candidates`) reads it instead of re-folding `slot0.roman`.
+    let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
+    let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
     let last_used_ms = freq_map
         .get(&display_text)
         .map(|d| d.last_used_ms)
@@ -924,6 +932,7 @@ fn fetch_walker_slot0_inner(
         display_text,
         roman,
         hanji,
+        canonical_tl,
         mode: candidate_mode,
         recency_rank: recency_rank(now_ms, last_used_ms),
         coverage_kind: COVERAGE_KIND_FULL,
@@ -1157,12 +1166,19 @@ pub(crate) fn assemble_candidates(
                         dict,
                         enabled_sources_bitmask,
                     ) {
+                        // R2 identity sidechannel: read the canonical TL the
+                        // walker already folded once (`WalkerSlot0.canonical_tl`,
+                        // from the synth `roman`) — do NOT re-fold here. In the
+                        // promote branch below `slot0_cand` is discarded and the
+                        // promoted dict row carries its own `record.tl`
+                        // `canonical_tl`.
                         let slot0_cand = RawCandidate {
                             consumed_span: slot0.consumed_span,
                             syllable_count: slot0.syllable_count,
                             display_text: slot0.display_text,
                             roman: slot0.roman,
                             hanji: slot0.hanji,
+                            canonical_tl: slot0.canonical_tl,
                             // D3 honest conversion: wire `score`
                             // (proto field 5) = negated min-cost.
                             score: -(slot0.cost as f32),
@@ -1591,6 +1607,38 @@ mod tests {
     }
 
     #[test]
+    fn poj_render_rewrites_roman_but_preserves_canonical_tl() {
+        // R2 (Codex pre-impl 2026-06-03 SHOULD): the POJ presentation pass
+        // (`assemble_candidates` Step 5) rewrites the DISPLAY `roman`
+        // TL→POJ, but the identity sidechannel `canonical_tl` must stay
+        // canonical TL so the NextWord association learns the same TL a
+        // normal candidate commit records. Mirror the exact mutation the
+        // production loop applies (`cand.roman = recase_tl_as_poj_display`).
+        let mut cand = RawCandidate {
+            consumed_span: (0, 6),
+            syllable_count: 1,
+            display_text: "鵝".to_string(),
+            roman: "goo".to_string(),
+            hanji: Some("鵝".to_string()),
+            canonical_tl: "goo".to_string(),
+            score: 0.0,
+            form: FORM_NOTONE,
+            frequency: 0,
+            bitmask: 0,
+            mode: lexicon::CandidateMode::Hant,
+            recency_rank: 1,
+            coverage_kind: COVERAGE_KIND_FULL,
+            is_custom: false,
+        };
+        cand.roman = recase_tl_as_poj_display(&cand.roman);
+        assert_eq!(cand.roman, "go\u{0358}", "display roman renders to POJ");
+        assert_eq!(
+            cand.canonical_tl, "goo",
+            "identity sidechannel stays canonical TL through POJ render"
+        );
+    }
+
+    #[test]
     fn dedupe_rendered_continuous_drops_post_render_collision_keeping_first() {
         fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32), is_custom: bool) -> RawCandidate {
             RawCandidate {
@@ -1599,6 +1647,7 @@ mod tests {
                 display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
                 roman: roman.to_string(),
                 hanji: hanji.map(String::from),
+                canonical_tl: roman.to_string(),
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
@@ -1645,6 +1694,7 @@ mod tests {
                 display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
                 roman: roman.to_string(),
                 hanji: hanji.map(String::from),
+                canonical_tl: roman.to_string(),
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
@@ -1673,6 +1723,7 @@ mod tests {
                 display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
                 roman: roman.to_string(),
                 hanji: hanji.map(String::from),
+                canonical_tl: roman.to_string(),
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
@@ -1705,6 +1756,7 @@ mod tests {
                 display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
                 roman: roman.to_string(),
                 hanji: hanji.map(String::from),
+                canonical_tl: roman.to_string(),
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,

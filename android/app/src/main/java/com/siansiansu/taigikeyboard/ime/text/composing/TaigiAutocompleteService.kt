@@ -127,6 +127,9 @@ internal fun buildContinuousSuggestionsForCandidates(
                 TaigiWord.MetadataKeys.CONSUMED_BYTES to candidate.consumedSpanEnd.toString(),
                 TaigiWord.MetadataKeys.SYLLABLE_COUNT to candidate.syllableCount.toString(),
                 TaigiWord.MetadataKeys.DISPLAY_TEXT to candidate.displayText,
+                // R2: canonical TL identity → round-trips to
+                // commitContinuous(associationTl) for the NextWord write.
+                TaigiWord.MetadataKeys.CANONICAL_TL to candidate.canonicalTl,
             ),
         )
     }

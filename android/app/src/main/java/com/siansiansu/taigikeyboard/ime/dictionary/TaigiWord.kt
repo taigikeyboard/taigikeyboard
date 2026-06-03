@@ -75,5 +75,14 @@ data class TaigiWord(
          * rewrite of `roman` (e.g. TPS layout transforms).
          */
         const val DISPLAY_TEXT = "displayText"
+
+        /**
+         * v3.6.1 R2 — canonical TL identity (`CandidateMessage.canonical_tl`).
+         * Forwarded by the tap path as `commitContinuous(associationTl = …)`
+         * so the NextWord association learns the same `next_tl`/`prev_tl` a
+         * normal candidate commit records. Distinct from the display `roman`
+         * (POJ-rendered in POJ mode).
+         */
+        const val CANONICAL_TL = "canonicalTl"
     }
 }

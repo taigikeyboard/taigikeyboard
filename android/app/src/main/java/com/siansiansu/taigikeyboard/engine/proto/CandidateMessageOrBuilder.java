@@ -90,4 +90,52 @@ public interface CandidateMessageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getHanjiBytes();
+
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   * @return The canonicalTl.
+   */
+  java.lang.String getCanonicalTl();
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+   * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+   * recased per the typed segment), this stays the canonical TL the
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `DictionaryRecord.tl` for dict-backed candidates, or
+   * `phonetics::api::canonical_tl_form(native_roman, mode)` for
+   * custom / walker-synth candidates. Snapshotted at candidate
+   * construction, BEFORE the composing recase / POJ-render passes touch
+   * `roman`. The platform round-trips it back via
+   * `CommitContinuous.association_tl` so the NextWord association learns
+   * the same TL a normal candidate commit would. Empty iff no canonical
+   * TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+   * `association_tl` and the engine falls back to the raw committed slice.
+   * NEVER consulted for the document commit (that goes through
+   * `display_text`).
+   * </pre>
+   *
+   * <code>string canonical_tl = 10;</code>
+   * @return The bytes for canonicalTl.
+   */
+  com.google.protobuf.ByteString
+      getCanonicalTlBytes();
 }

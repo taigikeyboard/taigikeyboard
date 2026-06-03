@@ -40,6 +40,7 @@ class TaigiAutocompleteServiceTest {
         mode = RustEngineBridge.CandidateMode.HANT,
         roman = displayText,
         hanji = null,
+        canonicalTl = displayText,
     )
 
     @Test

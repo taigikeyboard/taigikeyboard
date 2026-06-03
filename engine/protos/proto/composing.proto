@@ -231,6 +231,20 @@ message CommitContinuous {
   // (not `optional`): the empty-default IS the fallback signal, no
   // presence distinction needed.
   string canonical_text = 4;
+  // v3.6.1 R2 — canonical TL romanization of the committed candidate
+  // (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+  // recase passes rewrite `roman`). Becomes the `roman` arg of the
+  // NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+  // learned association `prev_tl` / `next_tl` is the same canonical TL a
+  // normal (non-continuous) candidate commit records — fixing the
+  // continuous-vs-normal `next_tl` fragmentation (raw typed slice
+  // `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+  // the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+  // TL) decodes as "" → engine falls back to the raw committed slice
+  // (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+  // is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+  // populated for hanji-present candidates too, NOT only hanji-absent.
+  string association_tl = 5;
 }
 
 // v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
@@ -340,6 +354,22 @@ message CandidateMessage {
   CandidateMode  mode                = 7;
   string         roman               = 8;
   optional string hanji              = 9;
+  // v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
+  // `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
+  // recased per the typed segment), this stays the canonical TL the
+  // `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+  // `DictionaryRecord.tl` for dict-backed candidates, or
+  // `phonetics::api::canonical_tl_form(native_roman, mode)` for
+  // custom / walker-synth candidates. Snapshotted at candidate
+  // construction, BEFORE the composing recase / POJ-render passes touch
+  // `roman`. The platform round-trips it back via
+  // `CommitContinuous.association_tl` so the NextWord association learns
+  // the same TL a normal candidate commit would. Empty iff no canonical
+  // TL is recoverable (TPS-OOV hanji-absent) — platform then omits
+  // `association_tl` and the engine falls back to the raw committed slice.
+  // NEVER consulted for the document commit (that goes through
+  // `display_text`).
+  string         canonical_tl        = 10;
 }
 
 // Platform-neutral effects. The wrapper maps document-mutation effects

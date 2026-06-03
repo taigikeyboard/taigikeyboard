@@ -272,6 +272,7 @@ internal object ComposingBridge {
     fun composingCommitContinuous(
         displayText: String,
         canonicalText: String,
+        associationTl: String,
         consumedBytes: Int,
         syllableCount: Int,
         mode: NormalizeMode,
@@ -284,6 +285,9 @@ internal object ComposingBridge {
             .newBuilder()
             .setDisplayText(displayText)
             .setCanonicalText(canonicalText)
+            // R2: canonical TL → NextWord next_tl/prev_tl. Empty → engine
+            // falls back to the raw committed slice.
+            .setAssociationTl(associationTl)
             .setConsumedBytes(consumedBytes)
             .setSyllableCount(syllableCount)
             .build()
@@ -417,6 +421,7 @@ internal object ComposingBridge {
                     mode = RustEngineBridge.CandidateMode.decode(msg.modeValue),
                     roman = roman,
                     hanji = if (msg.hasHanji()) msg.hanji else null,
+                    canonicalTl = msg.canonicalTl,
                 )
             }
         } else {

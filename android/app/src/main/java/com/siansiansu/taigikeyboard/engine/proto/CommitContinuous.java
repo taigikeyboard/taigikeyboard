@@ -33,6 +33,7 @@ public  final class CommitContinuous extends
   private CommitContinuous() {
     displayText_ = "";
     canonicalText_ = "";
+    associationTl_ = "";
   }
   public static final int DISPLAY_TEXT_FIELD_NUMBER = 1;
   private java.lang.String displayText_;
@@ -262,6 +263,133 @@ public  final class CommitContinuous extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     canonicalText_ = value.toStringUtf8();
+
+  }
+
+  public static final int ASSOCIATION_TL_FIELD_NUMBER = 5;
+  private java.lang.String associationTl_;
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization of the committed candidate
+   * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+   * recase passes rewrite `roman`). Becomes the `roman` arg of the
+   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * learned association `prev_tl` / `next_tl` is the same canonical TL a
+   * normal (non-continuous) candidate commit records — fixing the
+   * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * TL) decodes as "" → engine falls back to the raw committed slice
+   * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * populated for hanji-present candidates too, NOT only hanji-absent.
+   * </pre>
+   *
+   * <code>string association_tl = 5;</code>
+   * @return The associationTl.
+   */
+  @java.lang.Override
+  public java.lang.String getAssociationTl() {
+    return associationTl_;
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization of the committed candidate
+   * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+   * recase passes rewrite `roman`). Becomes the `roman` arg of the
+   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * learned association `prev_tl` / `next_tl` is the same canonical TL a
+   * normal (non-continuous) candidate commit records — fixing the
+   * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * TL) decodes as "" → engine falls back to the raw committed slice
+   * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * populated for hanji-present candidates too, NOT only hanji-absent.
+   * </pre>
+   *
+   * <code>string association_tl = 5;</code>
+   * @return The bytes for associationTl.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAssociationTlBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(associationTl_);
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization of the committed candidate
+   * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+   * recase passes rewrite `roman`). Becomes the `roman` arg of the
+   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * learned association `prev_tl` / `next_tl` is the same canonical TL a
+   * normal (non-continuous) candidate commit records — fixing the
+   * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * TL) decodes as "" → engine falls back to the raw committed slice
+   * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * populated for hanji-present candidates too, NOT only hanji-absent.
+   * </pre>
+   *
+   * <code>string association_tl = 5;</code>
+   * @param value The associationTl to set.
+   */
+  private void setAssociationTl(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+
+    associationTl_ = value;
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization of the committed candidate
+   * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+   * recase passes rewrite `roman`). Becomes the `roman` arg of the
+   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * learned association `prev_tl` / `next_tl` is the same canonical TL a
+   * normal (non-continuous) candidate commit records — fixing the
+   * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * TL) decodes as "" → engine falls back to the raw committed slice
+   * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * populated for hanji-present candidates too, NOT only hanji-absent.
+   * </pre>
+   *
+   * <code>string association_tl = 5;</code>
+   */
+  private void clearAssociationTl() {
+
+    associationTl_ = getDefaultInstance().getAssociationTl();
+  }
+  /**
+   * <pre>
+   * v3.6.1 R2 — canonical TL romanization of the committed candidate
+   * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+   * recase passes rewrite `roman`). Becomes the `roman` arg of the
+   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * learned association `prev_tl` / `next_tl` is the same canonical TL a
+   * normal (non-continuous) candidate commit records — fixing the
+   * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * TL) decodes as "" → engine falls back to the raw committed slice
+   * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * populated for hanji-present candidates too, NOT only hanji-absent.
+   * </pre>
+   *
+   * <code>string association_tl = 5;</code>
+   * @param value The bytes for associationTl to set.
+   */
+  private void setAssociationTlBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    associationTl_ = value.toStringUtf8();
 
   }
 
@@ -618,6 +746,135 @@ public  final class CommitContinuous extends
       return this;
     }
 
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization of the committed candidate
+     * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+     * recase passes rewrite `roman`). Becomes the `roman` arg of the
+     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * learned association `prev_tl` / `next_tl` is the same canonical TL a
+     * normal (non-continuous) candidate commit records — fixing the
+     * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * TL) decodes as "" → engine falls back to the raw committed slice
+     * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * populated for hanji-present candidates too, NOT only hanji-absent.
+     * </pre>
+     *
+     * <code>string association_tl = 5;</code>
+     * @return The associationTl.
+     */
+    @java.lang.Override
+    public java.lang.String getAssociationTl() {
+      return instance.getAssociationTl();
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization of the committed candidate
+     * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+     * recase passes rewrite `roman`). Becomes the `roman` arg of the
+     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * learned association `prev_tl` / `next_tl` is the same canonical TL a
+     * normal (non-continuous) candidate commit records — fixing the
+     * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * TL) decodes as "" → engine falls back to the raw committed slice
+     * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * populated for hanji-present candidates too, NOT only hanji-absent.
+     * </pre>
+     *
+     * <code>string association_tl = 5;</code>
+     * @return The bytes for associationTl.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getAssociationTlBytes() {
+      return instance.getAssociationTlBytes();
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization of the committed candidate
+     * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+     * recase passes rewrite `roman`). Becomes the `roman` arg of the
+     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * learned association `prev_tl` / `next_tl` is the same canonical TL a
+     * normal (non-continuous) candidate commit records — fixing the
+     * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * TL) decodes as "" → engine falls back to the raw committed slice
+     * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * populated for hanji-present candidates too, NOT only hanji-absent.
+     * </pre>
+     *
+     * <code>string association_tl = 5;</code>
+     * @param value The associationTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAssociationTl(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setAssociationTl(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization of the committed candidate
+     * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+     * recase passes rewrite `roman`). Becomes the `roman` arg of the
+     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * learned association `prev_tl` / `next_tl` is the same canonical TL a
+     * normal (non-continuous) candidate commit records — fixing the
+     * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * TL) decodes as "" → engine falls back to the raw committed slice
+     * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * populated for hanji-present candidates too, NOT only hanji-absent.
+     * </pre>
+     *
+     * <code>string association_tl = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAssociationTl() {
+      copyOnWrite();
+      instance.clearAssociationTl();
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.6.1 R2 — canonical TL romanization of the committed candidate
+     * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
+     * recase passes rewrite `roman`). Becomes the `roman` arg of the
+     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * learned association `prev_tl` / `next_tl` is the same canonical TL a
+     * normal (non-continuous) candidate commit records — fixing the
+     * continuous-vs-normal `next_tl` fragmentation (raw typed slice
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
+     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * TL) decodes as "" → engine falls back to the raw committed slice
+     * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
+     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * populated for hanji-present candidates too, NOT only hanji-absent.
+     * </pre>
+     *
+     * <code>string association_tl = 5;</code>
+     * @param value The bytes for associationTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAssociationTlBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setAssociationTlBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CommitContinuous)
   }
   @java.lang.Override
@@ -638,10 +895,11 @@ public  final class CommitContinuous extends
             "consumedBytes_",
             "syllableCount_",
             "canonicalText_",
+            "associationTl_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b\u0004\u0208";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208\u0005\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

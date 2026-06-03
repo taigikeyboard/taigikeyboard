@@ -57,6 +57,7 @@ class ContinuousSuggestionsContractTest {
         mode: RustEngineBridge.CandidateMode = RustEngineBridge.CandidateMode.HANT,
         roman: String? = null,
         hanji: String? = null,
+        canonicalTl: String? = null,
     ): RustEngineBridge.ContinuousCandidate = RustEngineBridge.ContinuousCandidate(
         consumedSpanStart = consumedSpanStart,
         consumedSpanEnd = consumedSpanEnd,
@@ -67,6 +68,7 @@ class ContinuousSuggestionsContractTest {
         mode = mode,
         roman = roman ?: displayText,
         hanji = hanji,
+        canonicalTl = canonicalTl ?: roman ?: displayText,
     )
 
     @Test
@@ -132,6 +134,23 @@ class ContinuousSuggestionsContractTest {
         assertEquals("7", second.additionalInfo[MetadataKeys.CONSUMED_BYTES])
         assertEquals("2", second.additionalInfo[MetadataKeys.SYLLABLE_COUNT])
         assertEquals("珠仔", second.additionalInfo[MetadataKeys.DISPLAY_TEXT])
+    }
+
+    @Test
+    fun `R2 canonical TL identity rides CANONICAL_TL sidechannel, independent of display roman`() {
+        // R2: the canonical TL identity rides `CANONICAL_TL` so the click
+        // handler can forward it as `commitContinuous(associationTl = …)`.
+        // It is independent of the display `roman` — a POJ-rendered
+        // candidate shows `roman` = POJ but keeps `canonicalTl` = TL.
+        val candidates = listOf(
+            cand(consumedSpanEnd = 6, displayText = "鵝", roman = "gô͘", canonicalTl = "gôo"),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates)
+        assertEquals(
+            "CANONICAL_TL sidechannel carries the canonical TL, not the POJ display roman",
+            "gôo",
+            result[0].additionalInfo[MetadataKeys.CANONICAL_TL],
+        )
     }
 
     @Test

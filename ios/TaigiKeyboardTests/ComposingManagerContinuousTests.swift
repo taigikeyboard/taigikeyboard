@@ -181,6 +181,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let outcome = manager.commitContinuous(
             displayText: "台",
             canonicalText: "台",
+            associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
         )
@@ -200,6 +201,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let outcome = manager.commitContinuous(
             displayText: "台",
             canonicalText: "台",
+            associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
         )
@@ -230,6 +232,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let outcome = manager.commitContinuous(
             displayText: "台",
             canonicalText: "台",
+            associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
         )

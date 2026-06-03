@@ -100,12 +100,14 @@ pub(crate) fn apply(
         Intent::CommitContinuous {
             display_text,
             canonical_text,
+            association_tl,
             consumed_bytes,
             syllable_count,
         } => commit_continuous(
             state,
             display_text,
             canonical_text,
+            association_tl,
             consumed_bytes,
             syllable_count,
             config,
@@ -361,9 +363,12 @@ fn delete_backward_continuous(
     // use the canonical key, not the (possibly swap-formatted) display
     // string — keeps association learning mode-independent (decision b).
     let nextword_correction = match new_nailed.last() {
-        Some(prev) => {
-            next_word_update_last_selected_word(prev.canonical_text.clone(), prev.raw_text.clone())
-        }
+        Some(prev) => next_word_update_last_selected_word(
+            prev.canonical_text.clone(),
+            // R2: re-establish the prior segment's context with its
+            // canonical TL (raw-slice fallback), mirroring the commit path.
+            association_roman(&prev.association_tl, &prev.raw_text),
+        ),
         None => next_word_clear_for_new_composing(),
     };
     let combined = combined_display(&new_nailed, &new_pending, config);
@@ -481,9 +486,14 @@ fn commit_raw_continuous(
         // final word. `nailed` is non-empty here (combined non-empty with
         // empty raw implies a nailed segment exists).
         match nailed.last() {
-            Some(last) => {
-                next_word_word_selected(last.canonical_text.clone(), last.raw_text.clone(), true)
-            }
+            Some(last) => next_word_word_selected(
+                last.canonical_text.clone(),
+                // R2: this segment had a candidate selected at nail time →
+                // use its canonical TL (raw-slice fallback). The pending-tail
+                // branch above stays raw — there is no candidate there.
+                association_roman(&last.association_tl, &last.raw_text),
+                true,
+            ),
             None => next_word_clear_for_new_composing(),
         }
     };
@@ -789,6 +799,7 @@ fn commit_continuous(
     state: &mut EngineState,
     display_text: String,
     canonical_text: String,
+    association_tl: String,
     consumed_bytes: usize,
     syllable_count: u8,
     config: &AppConfig,
@@ -814,10 +825,15 @@ fn commit_continuous(
     let prev_end = new_nailed.last().map(|s| s.raw_span.1).unwrap_or(0);
     let raw_span = (prev_end, prev_end + consumed_bytes);
     let new_pending = pending[consumed_bytes..].to_string();
+    // R2: the NextWord `roman` arg — canonical TL when the platform sent
+    // it, else the raw committed slice (legacy / TPS-OOV fallback). Used
+    // for whichever single effect this commit fires below (final OR mid).
+    let next_word_roman = association_roman(&association_tl, &raw_text);
     let segment = NailedSegment {
         display_text: display_text.clone(),
         canonical_text: canonical.clone(),
         raw_text: raw_text.clone(),
+        association_tl,
         raw_span,
         syllable_count,
     };
@@ -839,7 +855,7 @@ fn commit_continuous(
                 commit_text_replacing_preedit(combined),
                 reset_autocomplete(),
                 reset_autocomplete_context(),
-                next_word_word_selected(canonical, raw_text, true),
+                next_word_word_selected(canonical, next_word_roman, true),
             ],
         );
     }
@@ -859,7 +875,7 @@ fn commit_continuous(
         }),
         effect: vec![
             update_preedit(combined),
-            next_word_update_last_selected_word(canonical, raw_text),
+            next_word_update_last_selected_word(canonical, next_word_roman),
             perform_autocomplete(),
         ],
         selected_candidate_index: 0,
@@ -965,6 +981,24 @@ fn reset_autocomplete_context() -> Effect {
         kind: Some(effect::Kind::ResetAutocompleteContext(
             ResetAutocompleteContext {},
         )),
+    }
+}
+
+/// v3.6.1 R2 — resolve the NextWord `roman` arg for a committed
+/// continuous segment: the candidate's canonical TL when the platform
+/// supplied it (`CommitContinuous.association_tl` / `NailedSegment
+/// .association_tl`), else the raw committed slice. The canonical-TL path
+/// keeps the learned `prev_tl` / `next_tl` aligned with a normal candidate
+/// commit (fixing continuous-vs-normal fragmentation); the raw fallback
+/// preserves pre-R2 behavior for legacy callers + TPS-OOV hanji-absent
+/// candidates that carry no canonical TL.
+// 中文: R2 — 已釘連續 segment 的 NextWord roman 引數:有 canonical TL 用之
+// 中文:   (學到的 prev_tl/next_tl 與一般候選 commit 對齊),無則 fallback raw slice。
+fn association_roman(association_tl: &str, raw_text: &str) -> String {
+    if association_tl.is_empty() {
+        raw_text.to_owned()
+    } else {
+        association_tl.to_owned()
     }
 }
 

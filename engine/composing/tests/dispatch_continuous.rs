@@ -299,6 +299,7 @@ fn decode_commit_continuous_mid_commit() {
         &req(Method::CommitContinuous(CommitContinuous {
             display_text: "珠".into(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         })),
@@ -341,6 +342,7 @@ fn decode_commit_continuous_final_commit_exits_to_idle() {
         &req(Method::CommitContinuous(CommitContinuous {
             display_text: "紙".into(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 4,
             syllable_count: 1,
         })),
@@ -462,6 +464,7 @@ fn commit_continuous_response_omits_continuous_carrier() {
         &req(Method::CommitContinuous(CommitContinuous {
             display_text: "珠".into(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         })),

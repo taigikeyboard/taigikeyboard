@@ -139,6 +139,7 @@ fn invariant_holds_after_mid_commit_leaves_pending_tail() {
         Intent::CommitContinuous {
             display_text: "紙".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 4,
             syllable_count: 1,
         },
@@ -206,6 +207,7 @@ fn invariant_holds_for_append_after_mid_commit() {
         Intent::CommitContinuous {
             display_text: "紙".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 4,
             syllable_count: 1,
         },
@@ -252,6 +254,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
         Intent::CommitContinuous {
             display_text: "紙".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 4,
             syllable_count: 1,
         },
@@ -267,6 +270,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
         Intent::CommitContinuous {
             display_text: "你".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 2,
             syllable_count: 1,
         },

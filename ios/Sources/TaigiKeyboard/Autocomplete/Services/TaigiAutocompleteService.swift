@@ -165,6 +165,9 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
                     "consumedBytes": String(c.consumedSpanEnd),
                     "syllableCount": String(c.syllableCount),
                     "displayText": c.displayText,
+                    // R2: canonical TL identity → round-trips to
+                    // commitContinuous(associationTl:) for the NextWord write.
+                    "canonicalTl": c.canonicalTl,
                 ],
             )
         }

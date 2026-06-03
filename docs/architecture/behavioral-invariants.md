@@ -36,6 +36,10 @@
 18. [Continuous input — longest-match prefix suppression](#18-continuous-input--longest-match-prefix-suppression)
 19. [Candidate strip + overlay — first-candidate keycap-color hint](#19-candidate-strip--overlay--first-candidate-keycap-color-hint)
 21. [Composing input — leading 輕聲 `--` marker is a document literal](#21-composing-input--leading-輕聲----marker-is-a-document-literal)
+22. [Continuous input — slot-0 respects the dictionary separator form](#22-continuous-input--slot-0-respects-the-dictionary-separator-form)
+23. [Auto-space — attaching punctuation swaps the trailing space](#23-auto-space--attaching-punctuation-swaps-the-trailing-space)
+24. [NextWord — prev-Hanji lookup + read-layer reading-variant dedup](#24-nextword--prev-hanji-lookup--read-layer-reading-variant-dedup)
+25. [Continuous input — commit carries canonical TL (write-side identity)](#25-continuous-input--commit-carries-canonical-tl-write-side-identity)
 
 ---
 
@@ -640,3 +644,20 @@ This protects genuine 一字多音 (Core Principle #7) — `當/tàng` + `當/ta
 **Platform sites**: iOS `NextWord/Repository/NextWordRepository.swift::fetchUserRows`; Android `ime/dictionary/NextWordService.kt` user-query SQL (`CROSS-PLATFORM INVARIANT` comment). Dedup: `engine/nextword/src/filter.rs::collapse_reading_variants` + `engine/phonetics/src/api.rs::toneless_reading_key`.
 
 **Tests**: engine `filter.rs` unit tests (`collapse_*`, canonical) + `phonetics/src/api.rs` (`toneless_reading_key_*`). iOS `NextWordRepositoryTests.swift` (in-memory SQLite recall + ranking) + `RustEngineBridgeNextWordTests.swift` (`testFilter_collapses*` / `testFilter_preservesDistinctPolyphones`, FFI dedup parity). Android JVM unit tests cannot load the `.so` or run Robolectric, so the SQL recall is pinned via the shared SQL string + **S11** dogfood (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
+
+## 25. Continuous input — commit carries canonical TL (write-side identity)
+
+### `INVARIANT_NEXTWORD_CONTINUOUS_CANONICAL_TL`
+
+A continuous-input candidate commit records the **candidate's canonical TL** as the NextWord association romanization (`prev_tl` / `next_tl`), identical to a normal (span-local) candidate commit — NOT the raw typed slice. This is the write-side root fix for the fragmentation §24 mitigated read-side: pre-R2, continuous commit passed `pending[..consumed_bytes]` (e.g. `taigi`) while normal commit passed canonical TL (`tâi-gí`) for the same word, so `user_association.db` accumulated split `(prev_tl, next_tl)` forms.
+
+- **Identity carrier** — each continuous candidate carries a `canonical_tl` sidechannel (`CandidateMessage.canonical_tl`), snapshotted at candidate construction BEFORE the composing-layer recase / POJ-render passes rewrite the display `roman`. `DictionaryRecord.tl` for dict-backed candidates; `phonetics::api::canonical_tl_form(native_roman, mode)` for custom / walker-synth candidates. Populated for hanji-PRESENT candidates too — `(hanji, canonical-TL)` is the word identity (Core Principle #7), not gated on hanji absence.
+- **Round-trip** — the platform stores `canonical_tl` on the candidate's tap metadata and forwards it into `CommitContinuous.association_tl` on tap. The engine's `commit_continuous` stores it on `NailedSegment.association_tl` and uses it as the `roman` arg of the `WordSelected` (final) / `UpdateLastSelectedWord` (mid / unnail) NextWord effects.
+- **Fallback is byte-identical to pre-R2** — when `association_tl` is empty (legacy callers, the other 12 composing methods, or a TPS-OOV hanji-absent candidate with no recoverable dict TL), the engine falls back to the raw committed slice. `NailedSegment.raw_text` stays the sole authority for span / unnail mechanics — `association_tl` is a separate field, never overloaded onto `raw_text` or `display_text` (the document-commit string).
+- **Display untouched** — `canonical_tl` is NEVER consulted for the document commit (that goes through `display_text`); the POJ-render pass mutates only the display `roman`, leaving `canonical_tl` intact.
+
+**Scope**: engine `composing` (proto + `RawCandidate.canonical_tl` + `NailedSegment.association_tl` + `commit_continuous`) and `lexicon` (candidate construction); platform round-trip is iOS / Android tap metadata.
+
+**Platform sites**: iOS `RustEngineBridge+Composing.swift` (`ContinuousCandidate.canonicalTl`, `composingCommitContinuous(associationTl:)`) + `TaigiAutocompleteService.swift` (metadata) + `ActionHandler+Suggestions.swift` (tap reader) + `ComposingManager.swift`. Android `RustEngineBridge.kt` / `ComposingBridge.kt` (`ContinuousCandidate.canonicalTl`, `composingCommitContinuous(associationTl)`) + `TaigiAutocompleteService.kt` + `TaigiWord.MetadataKeys.CANONICAL_TL` + `CandidateClickHandler.kt` + `ComposingManager.kt`.
+
+**Tests**: engine `lexicon/src/continuous.rs` (`record_to_candidate` / `custom_entry_to_candidate` canonical_tl), `composing/src/continuous.rs` (`poj_render_rewrites_roman_but_preserves_canonical_tl`), `composing/src/dispatch.rs` (`raw_to_proto_candidate` propagation), `composing/tests/continuous_phase.rs` (`bug1_*` assert `nw.roman` == canonical TL). iOS `RustEngineBridgeContinuousTests.swift` (final-commit `WordSelected` roman == canonical TL through the real engine) + `TaigiAutocompleteServiceContinuousTests.swift` (metadata sidechannel). Android `ContinuousSuggestionsContractTest.kt` (CANONICAL_TL metadata). Cross-platform device acceptance: **S11** + a new **S12** continuous-vs-normal recall sequence (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).

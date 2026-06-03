@@ -122,6 +122,7 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -173,6 +174,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -182,6 +184,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
         Intent::CommitContinuous {
             display_text: "仔".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -205,6 +208,7 @@ fn final_commit_exits_to_idle_emits_word_selected() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -240,6 +244,7 @@ fn commit_continuous_out_of_range_is_noop() {
         Intent::CommitContinuous {
             display_text: "X".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 99,
             syllable_count: 1,
         },
@@ -268,6 +273,7 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
         Intent::CommitContinuous {
             display_text: "X".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 1, // mid-codepoint
             syllable_count: 1,
         },
@@ -283,6 +289,7 @@ fn commit_continuous_zero_bytes_is_noop() {
         Intent::CommitContinuous {
             display_text: "X".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 0,
             syllable_count: 1,
         },
@@ -298,6 +305,7 @@ fn commit_continuous_empty_display_is_noop() {
         Intent::CommitContinuous {
             display_text: String::new(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -315,6 +323,7 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -365,6 +374,7 @@ fn append_under_continuous_extends_pending_only() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -377,6 +387,7 @@ fn append_under_continuous_extends_pending_only() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -422,6 +433,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -466,6 +478,7 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -513,6 +526,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -522,6 +536,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
         Intent::CommitContinuous {
             display_text: "仔".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -573,6 +588,7 @@ fn delete_backward_pops_multi_char_display_emits_no_document_deletes() {
         Intent::CommitContinuous {
             display_text: "珠仔".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 4,
             syllable_count: 2,
         },
@@ -647,6 +663,7 @@ fn query_state_under_continuous_raw_input_pending_only_display_text_whole_compos
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -761,6 +778,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
         Intent::CommitContinuous {
             display_text: "紙".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 4,
             syllable_count: 1,
         },
@@ -941,6 +959,7 @@ fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -978,6 +997,7 @@ fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1008,6 +1028,7 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1099,12 +1120,14 @@ fn nailed_segment_public_fields_round_trip() {
         display_text: "珠仔".to_string(),
         canonical_text: "珠仔".to_string(),
         raw_text: "tsua".to_string(),
+        association_tl: "tsu-á".to_string(),
         raw_span: (0, 4),
         syllable_count: 2,
     };
     assert_eq!(seg.display_text, "珠仔");
     assert_eq!(seg.canonical_text, "珠仔");
     assert_eq!(seg.raw_text, "tsua");
+    assert_eq!(seg.association_tl, "tsu-á");
     assert_eq!(seg.raw_span, (0, 4));
     assert_eq!(seg.syllable_count, 2);
 }
@@ -1123,7 +1146,8 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: "tāi-uân".to_string(), // swapped roman → marked region
-            canonical_text: "臺灣".to_string(),  // canonical → NextWord/freq
+            canonical_text: "臺灣".to_string(),  // canonical hanji → NextWord text
+            association_tl: "tâi-uân".to_string(), // R2 canonical TL → NextWord roman
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1148,13 +1172,17 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
         unreachable!();
     };
     assert_eq!(nw.text, "臺灣");
-    assert_eq!(nw.roman, "tsu");
+    // R2: NextWord roman = the candidate's canonical TL (association_tl),
+    // NOT the raw typed slice "tsu". This is the write-side fix that keeps
+    // continuous-input `prev_tl`/`next_tl` aligned with a normal commit.
+    assert_eq!(nw.roman, "tâi-uân");
 
     let Phase::Continuous { nailed, .. } = e.snapshot_state().phase else {
         panic!("still Continuous");
     };
     assert_eq!(nailed[0].display_text, "tāi-uân");
     assert_eq!(nailed[0].canonical_text, "臺灣");
+    assert_eq!(nailed[0].association_tl, "tâi-uân");
 }
 
 #[test]
@@ -1164,6 +1192,7 @@ fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
         Intent::CommitContinuous {
             display_text: "tāi-uân".to_string(),
             canonical_text: "臺灣".to_string(),
+            association_tl: "tâi-uân".to_string(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1177,6 +1206,8 @@ fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
         unreachable!();
     };
     assert_eq!(nw.text, "臺灣");
+    // R2: terminal WordSelected roman = canonical TL, not raw "tsu".
+    assert_eq!(nw.roman, "tâi-uân");
     assert!(nw.trigger_prediction);
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
@@ -1191,6 +1222,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
         Intent::CommitContinuous {
             display_text: "tāi-uân".to_string(), // 7 chars
             canonical_text: "臺灣".to_string(),
+            association_tl: "tâi-uân".to_string(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1200,6 +1232,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
         Intent::CommitContinuous {
             display_text: "gí".to_string(), // 2 chars
             canonical_text: "語".to_string(),
+            association_tl: "gí".to_string(),
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -1226,7 +1259,9 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
         unreachable!();
     };
     assert_eq!(nw.text, "臺灣");
-    assert_eq!(nw.roman, "tsu");
+    // R2: the backspace correction re-establishes seg0's context with its
+    // canonical TL (association_tl), not the raw slice "tsu".
+    assert_eq!(nw.roman, "tâi-uân");
     // Unnailing seg1 restores its raw_text "a" (consumed_bytes=1 from
     // pending "agua") as the new pending; combined = seg0 display "tāi-uân"
     // + derived("a") = "tāi-uâna".
@@ -1244,6 +1279,7 @@ fn bug1_empty_canonical_falls_back_to_display_text() {
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
+            association_tl: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
