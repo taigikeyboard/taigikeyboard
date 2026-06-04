@@ -65,9 +65,10 @@ final class SharedSettings {
 
     // kautian subcollection toggles (nested under the kautian master).
     // 10 accents default ON — opt-out model, upgrade is zero behaviour change (DD5).
-    // Name appendix defaults OFF — surnames are opt-in (user choice).
+    // Name appendix defaults ON — opt-out model; a user who never toggled it gets
+    // surname candidates after upgrade, an explicit OFF stored value is preserved.
     // Accent key order mirrors config.yaml `dialect_columns` (= subtag bit - 1).
-    // 中文: kautian subcollection 子開關 (10 腔調 + 姓名附錄)。腔調預設開 (DD5 opt-out),姓名附錄預設關 (姓名 opt-in)。腔調順序對齊 config.yaml dialect_columns。
+    // 中文: kautian subcollection 子開關 (10 腔調 + 姓名附錄)。腔調預設開 (DD5 opt-out),姓名附錄預設開 (opt-out)。腔調順序對齊 config.yaml dialect_columns。
     private static let isKautianAccentLukangEnabledKey: SettingsKey<Bool> = .bool("kautianAccentLukangEnabled", default: true)
     private static let isKautianAccentSansiaEnabledKey: SettingsKey<Bool> = .bool("kautianAccentSansiaEnabled", default: true)
     private static let isKautianAccentTaipakEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTaipakEnabled", default: true)
@@ -78,7 +79,7 @@ final class SharedSettings {
     private static let isKautianAccentMakungEnabledKey: SettingsKey<Bool> = .bool("kautianAccentMakungEnabled", default: true)
     private static let isKautianAccentSintikEnabledKey: SettingsKey<Bool> = .bool("kautianAccentSintikEnabled", default: true)
     private static let isKautianAccentTaichungEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTaichungEnabled", default: true)
-    private static let isKautianNameAppendixEnabledKey: SettingsKey<Bool> = .bool("kautianNameAppendixEnabled", default: false)
+    private static let isKautianNameAppendixEnabledKey: SettingsKey<Bool> = .bool("kautianNameAppendixEnabled", default: true)
 
     private static let isTpsOrMappedToERKey: SettingsKey<Bool> = .bool("tpsOrMapsToER", default: true)
     private static let isToolbarAutoCollapseKey: SettingsKey<Bool> = .bool("toolbarAutoCollapse", default: true)
@@ -425,7 +426,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isKautianAccentTaichungEnabledKey) }
     }
 
-    // 中文: 姓名附錄 (名 + 姓)。預設 false (姓名 opt-in)。
+    // 中文: 姓名附錄 (名 + 姓)。預設 true (opt-out)。
     var isKautianNameAppendixEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianNameAppendixEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianNameAppendixEnabledKey) }
@@ -555,7 +556,7 @@ final class SharedSettings {
         isKautianAccentMakungEnabled = true
         isKautianAccentSintikEnabled = true
         isKautianAccentTaichungEnabled = true
-        isKautianNameAppendixEnabled = false
+        isKautianNameAppendixEnabled = true
         // Toolbar
         isToolbarAutoCollapse = true
         // Globe key: remove stored value so device-based default takes effect
