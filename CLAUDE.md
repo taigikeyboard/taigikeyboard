@@ -95,6 +95,7 @@ Skipping this gate is the #1 source of "tests pass locally but Continuous-input 
 ## Communication
 
 - Reply in **Taiwanese Mandarin (台灣華語)**; documentation and code comments stay in **English**.
+- **Doc-authoring language**: living reference (`.claude/rules/**`, `docs/architecture/**`, `docs/engine/**`, `docs/roadmap.md`) defaults to **English prose**. CJK is allowed only for (a) verbatim USER quotes kept as evidence and (b) domain phonetic terms / examples (台語 / 漢字 / TL / POJ / TPS). Dated snapshots (`docs/reports/**`, `docs/releases/**`) are frozen — do **not** retro-translate.
 - Concise, bullet-point, key points only — no filler.
 - Analyze first and present options; explain scope of impact before changing code.
 

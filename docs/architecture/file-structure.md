@@ -204,6 +204,45 @@ engine/
     └── fst-builder/   # Offline FST builder (dictionary.fst producer)
 ```
 
+### Engine crate layering
+
+Dependency edges flow **one way, top → bottom** (caller depends on callee). The dependency-direction invariant + enforcement notes live in `.claude/rules/rust-best-practices.md` §1a.
+
+```
+┌─ adapters ─────────────────────────────────────────────────┐
+│  swift-ffi · android-jni   thin: bytes in/out, catch_unwind │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ depends ↓
+┌─ use-case ────────────────┴─────────────────────────────────┐
+│  dispatch                  only crate that sees all domains  │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ depends ↓
+┌─ domain ──────────────────┴─────────────────────────────────┐
+│  composing → lexicon, ranking, phonetics                     │
+│  lexicon   → ranking, phonetics, mmap-host                   │
+│  ranking   → phonetics                                       │
+│  nextword  → phonetics                                       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ depends ↓
+┌─ leaf / shared kernel ────┴─────────────────────────────────┐
+│  phonetics  pure fns (POJ/TL/TPS, tone, normalize)           │
+│  protos     prost-generated message types (shared by all)    │
+│  mmap-host  unsafe mmap carve-out (infra)                     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Request data-flow (one keystroke)
+
+```
+keystroke (platform UI)
+  → RustEngineBridge (Swift / Kotlin)          marshal proto request bytes
+  → swift-ffi / android-jni                    extern entry + catch_unwind
+  → dispatch                                   decode proto → match request kind
+  → composing / lexicon / ranking / nextword   domain work
+  → phonetics                                  POJ/TL/TPS, tone (called by the above)
+  ← proto response bytes                       back up the same path → candidates rendered
+```
+
 ### iOS (`ios/Sources/TaigiKeyboard/`)
 
 ```

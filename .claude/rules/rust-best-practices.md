@@ -33,6 +33,42 @@ taigi-keyboard-rs/
 - **FFI crates** (`android-jni`, `swift-ffi`) are **thin** — protobuf in / protobuf out / `catch_unwind`. No domain logic. Each crate's `lib.rs` should be < 300 LOC.
 - Depend via `workspace.dependencies` in root `Cargo.toml` with pinned versions. Workspace-internal deps use relative paths (`phonetics = { path = "./phonetics" }`).
 
+## 1a. Crate layering & dependency direction `[R]` `[A]`
+
+The §1 sketch is the original khiin-rs-modeled target. The workspace has since split the stateful `engine/` crate into discrete domain crates. Current actual layout (11 crates), with dependency edges flowing **one way, top → bottom**:
+
+```
+┌─ adapters ─────────────────────────────────────────────────┐
+│  swift-ffi · android-jni   thin: bytes in/out, catch_unwind │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ depends ↓
+┌─ use-case ────────────────┴─────────────────────────────────┐
+│  dispatch                  only crate that sees all domains  │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ depends ↓
+┌─ domain ──────────────────┴─────────────────────────────────┐
+│  composing → lexicon, ranking, phonetics                     │
+│  lexicon   → ranking, phonetics, mmap-host                   │
+│  ranking   → phonetics                                       │
+│  nextword  → phonetics                                       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ depends ↓
+┌─ leaf / shared kernel ────┴─────────────────────────────────┐
+│  phonetics  pure fns (POJ/TL/TPS, tone, normalize)           │
+│  protos     prost-generated message types (shared by all)    │
+│  mmap-host  unsafe mmap carve-out (infra)                     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Dependency-direction invariant** — a crate may depend only on crates in its own layer or below:
+
+- **Forbidden upward edges**: no domain crate (`phonetics` / `ranking` / `lexicon` / `nextword` / `composing`) may depend on `dispatch` or an FFI crate; the leaf layer (`phonetics` / `protos` / `mmap-host`) may depend on nothing above itself.
+- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`.
+- **Cargo enforces acyclicity at build time** (a cycle fails to compile) — that is the hard backstop. This layering rule is the *soft* guide that stops the graph degrading into flat all-depends-on-all while still technically acyclic.
+- **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `~/.claude/rules/planning.md` § No redundant fallback — keep data flow one-direction).
+
+A visual copy of this graph plus the per-keystroke request lane lives in `docs/architecture/file-structure.md` § Engine crate layering.
+
 ## 2. Error handling `[R]` `[S]`
 
 - **`thiserror` for library errors**. Every public engine error derives `thiserror::Error`:
