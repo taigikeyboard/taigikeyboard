@@ -141,13 +141,13 @@ UserTheme {
 }
 
 SixRoleColors = { background, keyText, normalKeyFill, specialKeyFill, candidateText, candidateBackground }
-ShadowSpec    = { intensity: 0.0…1.0 }   // 0 = flat (current). color = derived (MVP); see §6 H
+ShadowSpec    = { intensity: 0.0…1.0 }   // 0 = flat. DECIDED: intensity-only, color derived (no color picker). §6 H
 
 // What the SIMPLIFIED editor exposes (USER 2026-06-05) — maps onto SixRoleColors:
 EditorColors {
   background   // → background + candidateBackground
   key          // → normalKeyFill + specialKeyFill   (no special/normal split)
-  text         // → keyText + candidateText           (one text color)  — confirm §10
+  text         // → keyText + candidateText           (one text color, DECIDED 2026-06-05)
 }
 
 // Selection
@@ -200,8 +200,8 @@ USER wants the custom-theme editor pared down. Instead of today's 6 separate col
 |---|---|
 | **背景 Background** | `background` + `candidateBackground` (keyboard + candidate strip together) |
 | **按鍵 Key** | `normalKeyFill` + `specialKeyFill` (no special/normal distinction) |
-| **文字 Text** | `keyText` + `candidateText` (one text color — confirm §10: merge vs keep candidate text separate) |
-| **按鍵陰影 Key shadow** | `keyShadow.intensity` slider, 0 = flat |
+| **文字 Text** | `keyText` + `candidateText` (one text color — merged, DECIDED 2026-06-05) |
+| **按鍵陰影 Key shadow** | `keyShadow.intensity` slider, 0 = flat (intensity-only, no color — DECIDED, fork H1) |
 
 - **Why shadow is added with the merge**: merging normal/special key fills removes the depth cue that distinguished function keys. The adjustable **shadow replaces that depth cue** — keys regain definition via elevation instead of a second fill color. The two changes are one coherent simplification.
 - Reuses the existing `ColorPicker` (iOS) / `ColorPickerDialog` (Android) widgets, but only **3** rows + a slider — NOT the current 6-row `AppearanceSettingsView` / `ColorSettingRow` layout verbatim. Plus a name field + Save/Cancel. Live preview already wired.
@@ -357,14 +357,14 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 
 - Suggest ~50; mirror the cap-parity pattern (S14). USER to confirm the number / whether a cap is wanted.
 
-### Fork H (open) — key-shadow controls
+### Fork H — key-shadow controls → **H1 (DECIDED, USER 2026-06-05)**
 
-- **H1 (MVP, recommended)**: a single **intensity** slider (0 = flat); shadow color derived (dark / from text color).
-- **H2**: also expose a shadow **color** picker. YAGNI for MVP; add only if dogfood wants it.
+- **H1 (adopted)**: a single **intensity** slider (0 = flat); shadow color derived (dark / from text color). No color picker.
+- ~~H2 (shadow color picker)~~ — not adopted (YAGNI).
 
-### Editor-simplification sub-fork (open) — text merge
+### Editor text-merge → **merged (DECIDED, USER 2026-06-05)**
 
-- USER: 「文字也不需要區分特殊鍵、一般鍵」. Default interpretation: **one Text color** (`keyText` + `candidateText` merged). Alternative: keep **candidate text separate** (4 colors), since the candidate strip can sit on a different luminance. USER to confirm (§10).
+- USER 「文字合併成一個」: the editor's **Text** = `keyText` + `candidateText` (one color). The keep-candidate-text-separate alternative is not adopted.
 
 ---
 
@@ -452,8 +452,8 @@ Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 - [x] Fork F — user-theme OS-backup → **F-Exclude** (`.taigi` only, uniform with user-data DBs) (2026-06-05)
 - [x] Fork E — user-theme light/dark → **E1 single value** working default (E2 deferred; USER may override)
 - [x] Editor simplified → **3 colors + key-shadow slider** (Background / Key / Text) (2026-06-05)
-- [ ] Editor text-merge — one Text (key+candidate, default) vs keep candidate text separate (4 colors)?
-- [ ] Fork H — key-shadow: intensity-only (MVP) vs also shadow color?
+- [x] Editor text-merge → **merged into one Text** (key + candidate) (2026-06-05)
+- [x] Fork H — key-shadow → **intensity-only**, color derived (2026-06-05)
 - [ ] Fork A — 6-role MVP vs full-chrome override?
 - [ ] Fork C — hand-mirrored built-in table vs shared JSON (model favors shared JSON)?
 - [ ] Fork G — user-theme count cap (suggest ~50) — number / needed?
