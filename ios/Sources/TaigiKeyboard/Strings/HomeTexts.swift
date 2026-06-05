@@ -62,6 +62,18 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.6.1", "2026/06/05", [
+            "New: frequency, next-word prediction, and the custom dictionary now work consistently across TL / POJ / TPS — learn or add a word in one input mode and it's found and ranked in the others.",
+            "New: the same 漢字 with different readings (e.g. 重 tāng / tîng) now keeps separate frequency counts and ranks independently.",
+            "Fixed: TL and POJ composing now shows exactly what you type — no automatic spelling conversion (teng stays teng).",
+            "Fixed: TPS first-tone continuous input now segments correctly, with or without a separating space (ㄍㄠㄉㄞ → 交代).",
+            "Fixed: whole-word continuous input now follows the dictionary's spacing / 輕聲 form (hoogua → 予我 hōo--guá), and next-word predictions learned via continuous input recall correctly and no longer appear twice.",
+            "Fixed: a leading 輕聲 -- is now treated as normal text — only the syllable underlines while composing.",
+            "Changed: with auto-space on, attaching punctuation after a committed word now keeps the space after the punctuation (guá? not guá ?).",
+            "Changed: the 姓名 (name) appendix dictionary source now defaults on.",
+            "Changed: learned typing data (frequency, associations, custom words) is no longer included in iCloud / system backup — use the in-app 備份 (.taigi export) to move it to a new device.",
+            "The first candidate again shows a filled keycap-colour background hint.",
+        ]),
         ("3.6.0", "2026/05/31", [
             "New: each 教典 (MOE dictionary) subcollection is now its own toggle — turn individual 腔調 (accent) readings and the 姓名 (name) appendix on or off in the dictionary settings.",
             "New: multi-character words now carry 語音差異 (per-accent) readings, not just single characters.",
