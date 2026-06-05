@@ -125,6 +125,24 @@ fn phrase_reachable_shorter_span_survives_suppression() {
     );
 }
 
+#[test]
+fn tl_space_stays_hard_boundary_not_collapsed() {
+    // Scope guard for INVARIANT_TPS_SPACE_SOFT_SEPARATOR — the TPS
+    // space-strip is TPS-ONLY. In TL (and POJ/English) an ASCII space is
+    // a real word boundary / literal space, NOT a syllable separator, so
+    // it must stay a HARD boundary: the lattice must NOT span it. `tai uan`
+    // emits only the first-syllable `tl:tai@(0,3)`; no cross-space
+    // `(0, 7)` phrase key (which would be the TPS behavior leaking into
+    // TL). Pins that `build_separator_shadow` is identity for non-TPS.
+    let inv = build_inventory(&["tai5", "uan5"]);
+    let keys = build_keys_tl_with_inventory("tai uan", &inv, phonetics::InputMode::Tl);
+    assert_eq!(
+        mapped(&keys),
+        vec![((0, 3), "tl:tai")],
+        "TL space must stay a hard boundary; no cross-space phrase key allowed",
+    );
+}
+
 // ---- Hermetic SyllableInventory builder -----------------------------
 // Pattern mirrors `engine/composing/tests/build_keys_tl_hyphen.rs`;
 // inline duplication preferred over a shared test-utils crate for the

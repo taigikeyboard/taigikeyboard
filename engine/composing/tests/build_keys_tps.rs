@@ -98,6 +98,45 @@ fn tps_lattice_tone1_no_mark_emits_key() {
 }
 
 #[test]
+fn tps_lattice_spans_tone1_separator_space_into_phrase_key() {
+    // INVARIANT_TPS_SPACE_SOFT_SEPARATOR — `ㄍㄠ ㄉㄞ` (kau-tai, the
+    // user's 交代 case). First tone has no Bopomofo tone mark, so the
+    // keyboard appends an ASCII space as the syllable boundary. The TPS
+    // shadow strips that space (`build_separator_shadow`) so the lattice
+    // chains `ㄍㄠ` + `ㄉㄞ` into a cross-space phrase edge instead of
+    // dead-ending at the space. Codepoints: ㄍ U+310D, ㄠ U+3120,
+    // space U+0020, ㄉ U+3109, ㄞ U+311E (each Bopomofo char 3 bytes,
+    // space 1 byte → raw len 13; shadow len 12).
+    let inv = build_tps_inventory(&["\u{310d}\u{3120}", "\u{3109}\u{311e}"]);
+    let raw = "\u{310d}\u{3120}\u{0020}\u{3109}\u{311e}";
+    assert_eq!(raw.len(), 13, "raw byte length precondition");
+    let keys = build_keys_tl_with_inventory(raw, &inv, phonetics::InputMode::Tps);
+
+    // First-syllable key — span ends at raw 6 (before the space), space
+    // left pending for a mid-commit.
+    assert!(
+        keys.contains(&((0u32, 6u32), "tps:\u{310d}\u{3120}".to_string())),
+        "first-syllable key tps:ㄍㄠ@(0,6) missing: {:?}",
+        mapped(&keys),
+    );
+    // Cross-space phrase key — body is space-FREE (`tps:ㄍㄠㄉㄞ`) and the
+    // consumed span ends at raw len 13, so a full commit replaces the
+    // whole preedit INCLUDING the separator space.
+    assert!(
+        keys.contains(&(
+            (0u32, 13u32),
+            "tps:\u{310d}\u{3120}\u{3109}\u{311e}".to_string()
+        )),
+        "cross-space phrase key tps:ㄍㄠㄉㄞ@(0,13) missing: {:?}",
+        mapped(&keys),
+    );
+    // No interior keys leaked.
+    for ((start, _), key) in &keys {
+        assert_eq!(*start, 0, "interior key {key:?} leaked");
+    }
+}
+
+#[test]
 fn tps_lattice_inventory_gate_rejects_unknown_syllable() {
     // Inventory only has `ㄉㄞ`; the second span `ㆣㄧ` is NOT in the
     // inventory so the lattice walker rejects it. Only the first

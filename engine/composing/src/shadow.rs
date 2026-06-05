@@ -155,15 +155,19 @@ pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
 // 中文:   四模式共用同一 shadow → lattice 路徑,FST 查詢複雜度仍由此值有界。
 pub(crate) const MAX_SYLLABLES: usize = 8;
 
-/// Run the v3.5.8 Items 8 + 9 canonicalize → hyphen-shadow pipeline
-/// and build the segmentation lattice over the resulting shadow.
+/// Run the canonicalize → hyphen-shadow → (TPS-only) space-strip
+/// pipeline and build the segmentation lattice over the resulting
+/// shadow. The TPS space-strip ([`build_separator_shadow`]) folds the
+/// keyboard's tone-1 / syllable-separator space out of the shadow so a
+/// first-tone phrase (`ㄍㄠ ㄉㄞ`) yields a cross-space edge; it is a
+/// no-op for TL/POJ/English.
 /// Returns `(shadow, shadow_to_raw_end, lattice)`. Shared by
 /// `dispatch::build_keys_tl_with_inventory` (left-anchored projection —
 /// its output is byte-identical to pre-S1, the S1 pinning tests guard
 /// this) and `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker)
 /// so the shadow + offset map + DAG are constructed exactly once per
 /// fetch and the two consumers cannot drift.
-// 中文: 跑 Item 8/9 canonicalize → hyphen-shadow 並建 lattice;回 (shadow, shadow→raw map, lattice)。
+// 中文: 跑 canonicalize → hyphen-shadow → (TPS-only) space-strip 並建 lattice;回 (shadow, shadow→raw map, lattice)。
 // 中文: build_keys (左錨投影,byte-identical 於 pre-S1) 與 fetch_walker_slot0 (S2 walker) 共用。
 pub(crate) fn build_shadow_lattice(
     raw: &str,
@@ -172,10 +176,22 @@ pub(crate) fn build_shadow_lattice(
 ) -> (String, Vec<usize>, Lattice) {
     let lower = raw.to_ascii_lowercase();
     let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    let (shadow, shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
-    let shadow_to_raw_end: Vec<usize> = shadow_to_canonical_end
+    let (hyphenless, hyphenless_to_canonical) = build_hyphen_shadow(&canonical);
+    // TPS-only — the ASCII space is the keyboard's tone-1 / syllable
+    // separator (appended on `space` while composing so the next
+    // dual-form consonant stays an initial), NOT a literal space. Strip
+    // it before lattice construction so a first-tone phrase `ㄍㄠ ㄉㄞ`
+    // produces one cross-space `(0, full)` edge (交代) instead of
+    // dead-ending at the space; the offset map keeps the separator byte
+    // in the full-span commit. No-op for TL/POJ/English (space is a real
+    // word boundary). See `build_separator_shadow`.
+    // 中文: TPS-only — space 是鍵盤的第一調/音節分隔符,非字面空白;切分前剝除,
+    // 中文:   讓第一調詞 `ㄍㄠ ㄉㄞ` 產生跨 space 整詞 edge(交代);offset map 保 commit。
+    let (shadow, shadow_to_hyphenless) = build_separator_shadow(&hyphenless, mode);
+    // Compose the three offset maps: shadow → hyphenless → canonical → raw.
+    let shadow_to_raw_end: Vec<usize> = shadow_to_hyphenless
         .iter()
-        .map(|&c| canonical_to_raw_end[c])
+        .map(|&hyphenless_idx| canonical_to_raw_end[hyphenless_to_canonical[hyphenless_idx]])
         .collect();
     // v3.5.9 B-2 — thread `mode` into the lattice builder; the inventory is
     // mode-aware (`SyllableInventory::contains_in(mode, …)`), so a POJ-mode
@@ -462,20 +478,71 @@ pub(crate) fn span_min_syllable_count(
 // 中文: 把 raw 內所有 ASCII `-` 拿掉成 shadow,並建立 shadow byte → raw byte 的對照表。
 // 中文: leading `-` 算進前綴消耗;trailing `-` 留在 pending buffer 不被吃掉。
 pub(crate) fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
-    let mut shadow = String::with_capacity(raw.len());
-    let mut shadow_to_raw_end: Vec<usize> = Vec::with_capacity(raw.len() + 1);
-    shadow_to_raw_end.push(0);
-    for (raw_idx, ch) in raw.char_indices() {
-        if ch == '-' {
+    strip_char_shadow(raw, '-')
+}
+
+/// Shared strip + offset-map mechanism behind [`build_hyphen_shadow`]
+/// and [`build_separator_shadow`]: drop every `skip` char from `input`
+/// and return the stripped string paired with a byte map where index `k`
+/// is the input byte offset RIGHT AFTER the last char that contributed
+/// the `k`-th output byte. `map[0] = 0`; `map.len() == output.len() + 1`.
+/// The two callers differ only in which char they strip (`-` vs ` `) and
+/// in their mode gating; the loop body is identical, so it lives here.
+// 中文: build_hyphen_shadow 與 build_separator_shadow 共用的剝除 + offset-map 機制;
+// 中文:   兩者只差剝除的字元(`-` vs ` `)與 mode gating,迴圈本體相同故抽出。
+fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
+    let mut shadow = String::with_capacity(input.len());
+    let mut map: Vec<usize> = Vec::with_capacity(input.len() + 1);
+    map.push(0);
+    for (idx, ch) in input.char_indices() {
+        if ch == skip {
             continue;
         }
-        let raw_end_after_ch = raw_idx + ch.len_utf8();
+        let end_after = idx + ch.len_utf8();
         for _ in 0..ch.len_utf8() {
-            shadow_to_raw_end.push(raw_end_after_ch);
+            map.push(end_after);
         }
         shadow.push(ch);
     }
-    (shadow, shadow_to_raw_end)
+    (shadow, map)
+}
+
+/// Mode-aware syllable-separator strip, paired with a shadow→input
+/// byte-offset map (mirrors [`build_hyphen_shadow`]'s shape).
+///
+/// In TPS the ASCII space (U+0020) is the keyboard's tone-1 / syllable
+/// boundary marker — iOS `ActionHandler+KeyActions` / Android
+/// `TextInputKeyHandler` append it on the `space` key WHILE composing
+/// precisely so the next dual-form consonant stays an initial
+/// (`tps_adjust::adjust_initial_key` treats space as a syllable
+/// boundary). First tone has no tone mark, so the space is the only
+/// delimiter it has. The continuous segmenter must therefore treat that
+/// space as a ZERO-WIDTH separator: strip it from the shadow so the
+/// lattice produces a cross-space phrase edge (`ㄍㄠ ㄉㄞ` → one
+/// `(0, full)` span → 交代) instead of dead-ending at the space, while
+/// the returned offset map keeps every shadow byte anchored to the raw
+/// byte AFTER the run it came from — so a full-span commit's
+/// `consumed_span` still consumes the separator byte and fully replaces
+/// the preedit.
+///
+/// TPS-only: for TL/POJ/English a space is a real word boundary / literal
+/// space and MUST stay a hard segment boundary, so this returns the
+/// identity shadow + map (byte-identical to not calling it).
+///
+/// Contract mirrors [`build_hyphen_shadow`]: `map` has length
+/// `shadow.len() + 1`; index `k` is the input byte offset right after the
+/// last input char that contributed the `k`-th shadow byte; `map[0] = 0`.
+// 中文: mode-aware 音節分隔符剝除 + offset map(形狀同 build_hyphen_shadow)。
+// 中文: TPS 的 ASCII space 是鍵盤的第一調/音節邊界標記(組字中按 space 附加,
+// 中文:   使下一個雙形聲母保持初聲形);第一調無調號故 space 是唯一分界 →
+// 中文:   連續切分需當零寬分隔符剝除,讓 lattice 產生跨 space 整詞 edge
+// 中文:   (ㄍㄠ ㄉㄞ → 交代);offset map 保 raw 對映故 commit 仍吃掉 space byte。
+// 中文: TL/POJ/English 維持 identity(space 為真詞界/字面空白,不可動)。
+fn build_separator_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) {
+    if !matches!(mode, InputMode::Tps) {
+        return (input.to_owned(), (0..=input.len()).collect());
+    }
+    strip_char_shadow(input, ' ')
 }
 
 /// Drop every ASCII digit from `s`. Equivalent to the digit half of
@@ -501,10 +568,11 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 /// `mode_key_prefix(mode)`; v3.5.9 B-2 PR #309 promoted POJ to a
 /// first-class FST key family, pre-B-2 every key prefixed `tl:`).
 /// `toneless` is the hyphen-stripped, mode-canonicalized,
-/// tone-digit-stripped shadow slice. This helper therefore reuses the
-/// **same three shadow helpers in the same order** —
+/// (TPS-only) space-stripped, tone-stripped shadow slice. This helper
+/// therefore reuses the **same shadow helpers in the same order** —
 /// [`canonicalize_poj_shadow`] → [`build_hyphen_shadow`] →
-/// [`strip_ascii_tone_digits`] — as the single normalization source.
+/// [`build_separator_shadow`] → [`strip_tones_for_mode`] — as the
+/// single normalization source the walker edge keys use.
 /// Codex pre-impl S6 Q2 **BLOCK**ed a plain `strip_ascii_tone_digits`:
 /// it cannot fold a POJ/diacritic custom roman (`tâi-uân`, `tâi-gí`)
 /// into `taiuan` / `taigi`; the canonicalize pass is load-bearing. The
@@ -534,7 +602,12 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
     let lower = roman.to_ascii_lowercase();
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
-    let (shadow, _) = build_hyphen_shadow(&canonical);
+    let (hyphenless, _) = build_hyphen_shadow(&canonical);
+    // TPS-only space strip — keep this key byte-identical to the walker
+    // edge keys (S6 byte-identity invariant) now that the TPS shadow
+    // strips the syllable-separator space (`build_shadow_lattice`). No-op
+    // for TL/POJ/English and for space-free custom roman.
+    let (shadow, _) = build_separator_shadow(&hyphenless, mode);
     let toneless = strip_tones_for_mode(&shadow, mode);
     if toneless.is_empty() {
         return None;
@@ -901,7 +974,13 @@ pub(crate) fn build_partial_prefix_key(
     }
     let lower = raw.to_ascii_lowercase();
     let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    let (shadow, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
+    let (hyphenless, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
+    // TPS-only space strip — keep the partial-prefix key family
+    // byte-identical to the walker / left-anchored edge keys, which now
+    // strip the TPS syllable-separator space (see `build_shadow_lattice`).
+    // No-op for TL/POJ/English. consumed_span stays (0, raw.len()) below,
+    // so the discarded offset map is irrelevant here.
+    let (shadow, _) = build_separator_shadow(&hyphenless, mode);
     // Explicit-tone fix — tone-aware body, same rule as
     // `left_anchored_keys_from_lattice` / the walker edge: a fully-toned
     // whole buffer (`tai5`) yields the verbatim `tl:tai5` prefix so the
@@ -1103,6 +1182,69 @@ mod tests {
         let (shadow, map) = build_hyphen_shadow("tai-bak-");
         assert_eq!(shadow, "taibak");
         assert_eq!(map, vec![0, 1, 2, 3, 5, 6, 7]);
+    }
+
+    // ----- TPS syllable-separator space strip (build_separator_shadow) -----
+
+    #[test]
+    fn build_separator_shadow_tps_strips_space_and_maps_to_raw() {
+        // `ㄍㄠ ㄉㄞ` (kau-tai with the keyboard's tone-1 / boundary
+        // space). TPS mode strips the ASCII space so the lattice can
+        // build a cross-space phrase edge, but the offset map keeps the
+        // full-span end anchored at raw len (13) so commit consumes the
+        // space byte. Per-char byte widths: ㄍㄠㄉㄞ each 3 bytes, space 1.
+        let raw = "\u{310d}\u{3120} \u{3109}\u{311e}";
+        assert_eq!(raw.len(), 13, "raw byte length precondition");
+        let (shadow, map) = build_separator_shadow(raw, InputMode::Tps);
+        assert_eq!(shadow, "\u{310d}\u{3120}\u{3109}\u{311e}");
+        assert_eq!(shadow.len(), 12);
+        // map[shadow.len()] == raw.len(): the full-span commit consumes
+        // the stripped separator byte.
+        assert_eq!(map.len(), 13);
+        assert_eq!(
+            map[12], 13,
+            "full-span end must map to raw len (incl space)"
+        );
+        // First-syllable end (shadow offset 6 = end of ㄠ) maps to raw 6,
+        // right before the space — a first-syllable commit leaves the
+        // space pending, which is correct.
+        assert_eq!(map[6], 6);
+        // The ㄉ that followed the space starts at raw 7 (after the
+        // 1-byte space), so shadow offset 9 (end of ㄉ) maps to raw 10.
+        assert_eq!(map[9], 10);
+    }
+
+    #[test]
+    fn build_separator_shadow_non_tps_is_identity() {
+        // TL/POJ/English: a space is a real word boundary / literal
+        // space and MUST stay a hard segment boundary — identity shadow
+        // + identity map, byte-identical to the pre-fix pipeline.
+        for mode in [InputMode::Tl, InputMode::Poj, InputMode::English] {
+            let (shadow, map) = build_separator_shadow("tai uan", mode);
+            assert_eq!(shadow, "tai uan", "{mode:?} must not strip space");
+            assert_eq!(
+                map,
+                (0..=7).collect::<Vec<usize>>(),
+                "{mode:?} identity map"
+            );
+        }
+    }
+
+    #[test]
+    fn build_separator_shadow_tps_keeps_entering_tone_coda() {
+        // Scope guard: only the ASCII space is stripped. A real
+        // entering-tone stop coda ㆵ (U+31B5, `kat` = ㄍㄚㆵ) is a
+        // Bopomofo body char, NOT a separator — it must survive so a
+        // deliberate single-syllable entering-tone word is unaffected.
+        let kat = "\u{310d}\u{311a}\u{31b5}";
+        let (shadow, map) = build_separator_shadow(kat, InputMode::Tps);
+        assert_eq!(shadow, kat, "entering-tone coda must not be stripped");
+        // No char stripped → shadow byte-for-byte == raw; the map is the
+        // per-char-end map (same convention as build_hyphen_shadow), with
+        // map.last() == raw len so a full-span commit consumes everything.
+        // trace: ㄍ/ㄚ/ㆵ each 3 bytes → [0,3,3,3,6,6,6,9,9,9].
+        assert_eq!(map, vec![0, 3, 3, 3, 6, 6, 6, 9, 9, 9]);
+        assert_eq!(map[map.len() - 1], kat.len(), "full span maps to raw len");
     }
 
     // ----- v3.5.8 Phase 9 Item 9 — canonicalize_poj_shadow contract pins -----
