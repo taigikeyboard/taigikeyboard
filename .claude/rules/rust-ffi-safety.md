@@ -107,8 +107,7 @@ Both extern fns wrap their bodies in `catch_unwind` per §1. Every `unsafe` bloc
 ## 5. Enforcement hooks `[A]`
 
 - **Spec docs**: `docs/engine/ffi-safety.md` and `docs/engine/rust-core-proto.md` cite this rules file. Rule deviations in those docs require `// JUSTIFICATION:` prose in-line.
-- **D9 POC and successors**: POC / FFI code is reviewed against every rule above. Deviations land only after Codex + `/simplify` pre-review and Codex post-review on the diff, with written rationale.
-- **Every Rust FFI PR** runs through the `.claude/rules/cross-platform-alignment.md` §1c constraint (for shared-core-candidate equivalence), Codex + `/simplify` pre-implementation review on the plan, Codex post-edit review on the diff, plus this file's §§1–4 enforcement. `/simplify` is the Claude Code official skill and catches reuse / quality / dead-code issues Codex does not flag; run both in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage.
+- **Every Rust FFI PR** is reviewed against §§1–4 here plus the `.claude/rules/cross-platform-alignment.md` §1c shared-core-candidate equivalence constraint, then through the standard Codex + `/simplify` pre-impl / Codex post-impl sandwich (mechanics in `~/.claude/rules/round-workflow.md` § Codex review sandwich; run Codex + `/simplify` in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage). New `unsafe` blocks (§3) and D9-POC-class FFI code always take the full sandwich; deviations land only with written rationale.
 
 ## 6. References
 

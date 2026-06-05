@@ -14,8 +14,8 @@ Mandatory rules before any platform impl → Rust engine swap, new Rust slice (i
 
 Every Rust slice must satisfy ALL four:
 
-1. **High cohesion, low coupling.** Each crate owns ONE engine concern with no cross-imports beyond `protos` + `dispatch`. Cross-module deps are minimal and explicit.
-2. **Rust idioms.** `unsafe_code = "forbid"`, `thiserror` typed errors, `prost` for proto, `Mutex<T>` for shared state, `once_cell` for static init, `#[cfg(test)]` fixtures, no panics in non-test paths (use `Result`).
+1. **High cohesion, low coupling.** Each crate owns ONE engine concern; dependencies flow one-way down the layer graph (`rust-best-practices.md` §1a) — a domain crate may depend on lower domain/leaf crates (`composing→lexicon/ranking/phonetics`, `lexicon→mmap-host/ranking/phonetics`) plus `protos` for the RPC façade, but **never** upward on `dispatch`/FFI. Cross-module deps minimal and explicit.
+2. **Rust idioms.** Typed `thiserror` errors, `prost` proto, sync-only, no `panic!`/`unwrap()`/`expect()` on unvalidated input (use `Result` for recoverable paths). `unsafe_code = "forbid"` on domain crates — `unsafe` is confined to the FFI crates plus the documented `mmap-host` carve-out. Canonical detail: `rust-best-practices.md` §2 (errors) / §3 (crate+type choices) / §8 (non-goals, incl. no `once_cell::sync::Lazy` globals in engine/phonetics) + `rust-ffi-safety.md` §1 (`Mutex<Engine>` guard) / §3 (`unsafe`).
 3. **Single responsibility naming.** File name = role (`trie.rs` not `util.rs`); function name = action verb (`lookup_prefix` not `process`); variable name = content (`row_ids` not `result`). One file / function / variable = one thing.
 4. **Idiomatic file organization.** Defer to Rust convention: tests live inline via `#[cfg(test)] mod tests { }`. Files split by sub-concern (cohesion-driven), NOT by line count. **No hard LOC cap** (revised 2026-05-07). Use length as a smell signal — "does this file actually own one concern?" — not a blocker. A 650-LOC file with one concern + cohesive tests reads better than 2 files with `#[path]` indirection.
 

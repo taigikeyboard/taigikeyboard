@@ -16,26 +16,16 @@ Each rule is tagged with one or more of `[R]`, `[S]`, `[A]`.
 
 ## 1. Workspace layout `[R]` `[A]`
 
-Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-rs/Cargo.toml`) with deliberate deviations:
+Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-rs/Cargo.toml`) with deliberate deviations. Full crate list lives in `docs/architecture/file-structure.md` § Directory Structure; the runtime dependency graph + layering invariant in §1a below.
 
-```
-taigi-keyboard-rs/
-├── phonetics/   # Pure functions — POJ/TL/TPS, Unicode, tone. No I/O, no std beyond core+alloc.
-├── engine/      # Stateful engine — composing state, candidate ranking, next-word.
-├── protos/      # Protobuf definitions (generated via prost-build).
-├── android-jni/ # cdylib — JNI entry points + protobuf marshaling.
-├── swift-ffi/   # staticlib — swift-bridge entry points + protobuf marshaling.
-└── Cargo.toml         # Workspace manifest, pinned workspace.dependencies.
-```
-
-- **`phonetics/`** corresponds to `knowledge/` reference content + `taigi-converter/` behavior. Zero platform dependencies — portable to any Rust target.
-- **`engine/`** owns `BufferMgr`-equivalent state machines, candidate scoring, SQLite access. Depends on `phonetics` + `protos`.
+- **`phonetics`** — pure POJ/TL/TPS / Unicode / tone, no I/O, zero platform dependencies, portable to any Rust target. Corresponds to `knowledge/` reference content + `taigi-converter/` behavior.
+- **Domain crates** (`composing`, `lexicon`, `ranking`, `nextword`) own the state machines, candidate scoring, and next-word prediction. Dependency direction per §1a.
 - **FFI crates** (`android-jni`, `swift-ffi`) are **thin** — protobuf in / protobuf out / `catch_unwind`. No domain logic. Each crate's `lib.rs` should be < 300 LOC.
 - Depend via `workspace.dependencies` in root `Cargo.toml` with pinned versions. Workspace-internal deps use relative paths (`phonetics = { path = "./phonetics" }`).
 
 ## 1a. Crate layering & dependency direction `[R]` `[A]`
 
-The §1 sketch is the original khiin-rs-modeled target. The workspace has since split the stateful `engine/` crate into discrete domain crates. Current actual layout (11 crates), with dependency edges flowing **one way, top → bottom**:
+The §1 sketch is the original khiin-rs-modeled target. The workspace has since split the stateful `engine/` crate into discrete domain crates. Current runtime crates — dependency edges flow **one way, top → bottom** (the offline `build-helpers/fst-builder` producer sits outside this runtime graph):
 
 ```
 ┌─ adapters ─────────────────────────────────────────────────┐
