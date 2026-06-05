@@ -195,10 +195,15 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
-    /// All `(word, tl, count)` rows for backup export — preserves the R5
-    /// per-reading identity (unlike `topWords`, which aggregates by word for
-    /// the viewer). One row per learned reading + any legacy `tl == ""` row.
-    // 中文: 備份匯出用 — 回每個 (word, tl, count) 列,保留 R5 讀音身分(topWords 給 UI 是合併過的)。
+    /// All `(word, tl, count)` rows, one per learned reading + any legacy
+    /// `tl == ""` row. Preserves the R5 per-reading identity. Shared by two
+    /// consumers: the `.taigi` backup export AND the 詞頻 management viewer
+    /// (which lists + deletes per `(word, tl)`). `topWords` is the merged
+    /// `(word, SUM(count))` form, now used only by the hand-editable CSV
+    /// export. Do NOT add viewer-only SQL (limit / filter) here — it would
+    /// leak into backup; split a wrapper if their needs diverge.
+    // 中文: 每個 (word, tl, count) 列(含 legacy '' 桶),保留 R5 讀音身分。
+    // 中文: 備份匯出 + 詞頻管理 viewer 共用(viewer 逐讀音列出 + 刪除);topWords 合併版只給 CSV 匯出。
     func allFrequencyRowsAsync() async -> [(word: String, tl: String, count: Int)] {
         do {
             try await ensureInitialized()
@@ -210,19 +215,23 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
-    /// Delete a single word from the frequency table.
-    // 中文: 從頻率表刪除單一詞。
-    func deleteWord(_ word: String) async throws {
+    /// Delete a single `(word, tl)` reading from the frequency table. R5
+    /// (#7): identity is the pair, so 一字多音 (重/tāng vs 重/tîng) delete
+    /// independently. Deleting the legacy `tl == ""` row removes only the
+    /// fallback bucket; re-learned exact-reading rows survive.
+    // 中文: 刪除單一 (word, tl) 讀音 (#7);一字多音各自獨立刪。legacy '' 列只移除 fallback 桶。
+    func deleteWord(_ word: String, tl: String) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(
                 db,
-                "DELETE FROM \(UserFrequencySchema.tableName) WHERE word = ?",
+                "DELETE FROM \(UserFrequencySchema.tableName) WHERE word = ? AND tl = ?",
                 -1, &stmt, nil,
             ) == SQLITE_OK else { return }
             defer { sqlite3_finalize(stmt) }
             stmt.bindText(1, word)
+            stmt.bindText(2, tl)
             sqlite3_step(stmt)
         }
     }
@@ -393,10 +402,10 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     private static func queryTopWords(db: OpaquePointer, limit: Int) -> [(word: String, count: Int)] {
-        // R5: aggregate the per-reading rows back to one row per word for
-        // the dictionary-browser viewer (which shows hanji + total count, no
-        // reading column). Backup export uses `queryAllFrequencyRows`
-        // instead to preserve the `(word, tl)` readings.
+        // R5: aggregate the per-reading rows back to one row per word for the
+        // hand-editable `(word, count)` CSV export (no reading column). The
+        // 詞頻 viewer + backup both use `queryAllFrequencyRows` to preserve
+        // the `(word, tl)` readings.
         let sql = """
             SELECT word, SUM(count) AS total FROM \(UserFrequencySchema.tableName)
             GROUP BY word
@@ -420,9 +429,11 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     private static func queryAllFrequencyRows(db: OpaquePointer) -> [(word: String, tl: String, count: Int)] {
+        // Deterministic tie-break (word, tl) so equal count/time rows keep a
+        // stable order across the viewer list + backup export.
         let sql = """
             SELECT word, tl, count FROM \(UserFrequencySchema.tableName)
-            ORDER BY count DESC, last_used DESC;
+            ORDER BY count DESC, last_used DESC, word ASC, tl ASC;
         """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }

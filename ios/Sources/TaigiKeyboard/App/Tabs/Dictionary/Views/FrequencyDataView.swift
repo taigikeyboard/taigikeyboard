@@ -17,14 +17,16 @@ struct FrequencyDataView: View {
 
     private let displayLimit = 100
 
-    // 中文: 依 filterText 對 word 做大小寫不敏感子字串比對;
+    // 中文: 依 filterText 對 漢字 word 或 羅馬字 tl 做大小寫不敏感子字串比對;
     // 中文: 無關鍵字時走 displayLimit 上限以避免大量列表卡頓。
-    private var filteredData: [(word: String, count: Int)] {
+    private var filteredData: [FrequencyListItem] {
         if filterText.isEmpty {
             return Array(viewModel.allData.prefix(displayLimit))
         }
         let query = filterText.lowercased()
-        return viewModel.allData.filter { $0.word.lowercased().contains(query) }
+        return viewModel.allData.filter {
+            $0.word.lowercased().contains(query) || $0.tl.lowercased().contains(query)
+        }
     }
 
     var body: some View {
@@ -104,8 +106,15 @@ struct FrequencyDataView: View {
                         Text(DictionaryTexts.noResults)
                             .foregroundColor(.secondary)
                     } else {
-                        ForEach(filteredData, id: \.word) { item in
-                            HStack {
+                        ForEach(filteredData) { item in
+                            HStack(spacing: 8) {
+                                // 羅馬字 (caption/secondary) + 漢字 (body) 同行;
+                                // legacy tl='' 或純羅馬字 (tl == word) 不重複前綴。
+                                if !item.tl.isEmpty, item.tl != item.word {
+                                    Text(item.tl)
+                                        .foregroundColor(.secondary)
+                                        .font(AppStyle.captionFont)
+                                }
                                 Text(item.word)
                                 Spacer()
                                 Text("\(item.count)")
@@ -114,7 +123,7 @@ struct FrequencyDataView: View {
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    Task { await viewModel.deleteWord(item.word) }
+                                    Task { await viewModel.deleteWord(item.word, tl: item.tl) }
                                 } label: {
                                     Image(latinSystemName: "trash")
                                 }

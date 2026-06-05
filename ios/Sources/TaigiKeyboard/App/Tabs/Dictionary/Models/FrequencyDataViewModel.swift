@@ -3,6 +3,17 @@
 
 import Foundation
 
+/// One displayed frequency row: a `(word, tl)` reading + its count. R5
+/// (#7): identity is the pair, so 一字多音 (重/tāng vs 重/tîng) are distinct
+/// rows. `id` is the composite key — `word` alone is not unique.
+// 中文: 詞頻列表一列 = (word, tl) 讀音 + 次數;id 用 (word,tl) 複合鍵(word 不唯一)。
+struct FrequencyListItem: Identifiable {
+    let word: String
+    let tl: String
+    let count: Int
+    var id: String { "\(word)\t\(tl)" }
+}
+
 /// ViewModel for `FrequencyDataView`.
 ///
 /// Owns frequency data loading, CSV import/export, deletion, and the
@@ -11,8 +22,8 @@ import Foundation
 // 中文: 詞頻管理畫面的 ViewModel,封裝 UserFrequencyRepository 操作。
 @MainActor
 final class FrequencyDataViewModel: ObservableObject {
-    // 中文: 全部詞頻資料 (word, count) 排序後清單。
-    @Published var allData: [(word: String, count: Int)] = []
+    // 中文: 全部詞頻資料 (word, tl, count) 逐讀音排序後清單。
+    @Published var allData: [FrequencyListItem] = []
     // 中文: 載入中旗標,首次 load() 完成後切回 false。
     @Published var isLoading = true
     // 中文: 詞頻錄製開關;切換時同步寫回 SharedSettings。
@@ -37,17 +48,17 @@ final class FrequencyDataViewModel: ObservableObject {
         settings.isFrequencyRecordingEnabled = enabled
     }
 
-    // 中文: 從 repository 載入全部詞頻資料(無上限)。
+    // 中文: 從 repository 載入全部詞頻資料(逐 (word, tl) 讀音,無上限)。
     func load() async {
-        let freq = await repository.topWordsAsync(limit: Int.max)
-        allData = freq
+        let rows = await repository.allFrequencyRowsAsync()
+        allData = rows.map { FrequencyListItem(word: $0.word, tl: $0.tl, count: $0.count) }
         isLoading = false
     }
 
-    // 中文: 刪除單一詞的詞頻紀錄並從 in-memory 清單移除。
-    func deleteWord(_ word: String) async {
-        try? await repository.deleteWord(word)
-        allData.removeAll { $0.word == word }
+    // 中文: 刪除單一 (word, tl) 讀音的詞頻紀錄並從 in-memory 清單移除 (#7)。
+    func deleteWord(_ word: String, tl: String) async {
+        try? await repository.deleteWord(word, tl: tl)
+        allData.removeAll { $0.word == word && $0.tl == tl }
     }
 
     // 中文: 清除全部詞頻資料 — 直接刪除底層 SQLite 檔。

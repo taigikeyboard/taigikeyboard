@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -85,7 +86,9 @@ fun FrequencyDataScreen(
             allData.take(DISPLAY_LIMIT)
         } else {
             val query = filterText.lowercase()
-            allData.filter { it.first.lowercase().contains(query) }
+            allData.filter {
+                it.word.lowercase().contains(query) || it.tl.lowercase().contains(query)
+            }
         }
 
     LaunchedEffect(Unit) { viewModel.load() }
@@ -295,8 +298,9 @@ fun FrequencyDataScreen(
                 } else {
                     itemsIndexed(
                         items = filteredData,
-                        key = { _, (word, _) -> word },
-                    ) { index, (word, count) ->
+                        // Composite key — `word` alone is not unique per (word, tl).
+                        key = { _, item -> "${item.word}\t${item.tl}" },
+                    ) { index, item ->
                         Row(
                             modifier =
                                 Modifier
@@ -305,18 +309,32 @@ fun FrequencyDataScreen(
                                     .padding(start = 20.dp, end = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = word,
+                            // 羅馬字 (caption/onSurfaceVariant) + 漢字 (body) 同行;
+                            // legacy tl='' 或純羅馬字 (tl == word) 不重複前綴。
+                            Row(
                                 modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                if (item.tl.isNotEmpty() && item.tl != item.word) {
+                                    Text(
+                                        text = item.tl,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                }
+                                Text(
+                                    text = item.word,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                            }
                             Text(
-                                text = "$count",
+                                text = "${item.count}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.labelLarge,
                             )
                             IconButton(
-                                onClick = { viewModel.deleteWord(word) },
+                                onClick = { viewModel.deleteWord(item.word, item.tl) },
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,

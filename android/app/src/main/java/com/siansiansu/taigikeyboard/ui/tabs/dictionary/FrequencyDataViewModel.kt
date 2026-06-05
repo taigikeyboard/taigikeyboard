@@ -24,11 +24,20 @@ class FrequencyDataViewModel(
         val skipped: Int,
     )
 
+    // One displayed frequency row: a (word, tl) reading + its count. R5 (#7):
+    // identity is the pair, so 一字多音 (重/tāng vs 重/tîng) are distinct rows.
+    // 中文: 詞頻列表一列 = (word, tl) 讀音 + 次數;word 不唯一,身分是配對 (#7)。
+    data class FrequencyListItem(
+        val word: String,
+        val tl: String,
+        val count: Int,
+    )
+
     private val prefs = PrefHelper(application)
     private val userFreq: UserFrequencyService = CompositionRoot.shared(application).userFreq
 
-    private val _allData = MutableStateFlow<List<Pair<String, Int>>>(emptyList())
-    val allData: StateFlow<List<Pair<String, Int>>> = _allData.asStateFlow()
+    private val _allData = MutableStateFlow<List<FrequencyListItem>>(emptyList())
+    val allData: StateFlow<List<FrequencyListItem>> = _allData.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -46,16 +55,22 @@ class FrequencyDataViewModel(
 
     fun load() {
         viewModelScope.launch {
-            val freq = withContext(Dispatchers.IO) { userFreq.getAllFrequencies() }
-            _allData.value = freq
+            val rows = withContext(Dispatchers.IO) { userFreq.getAllFrequencyRows() }
+            _allData.value = rows.toListItems()
             _isLoading.value = false
         }
     }
 
-    fun deleteWord(word: String) {
+    private fun List<Triple<String, String, Int>>.toListItems(): List<FrequencyListItem> =
+        map { (word, tl, count) -> FrequencyListItem(word, tl, count) }
+
+    fun deleteWord(
+        word: String,
+        tl: String,
+    ) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { userFreq.deleteWord(word) }
-            _allData.value = _allData.value.filter { it.first != word }
+            withContext(Dispatchers.IO) { userFreq.deleteWord(word, tl) }
+            _allData.value = _allData.value.filter { !(it.word == word && it.tl == tl) }
         }
     }
 
@@ -92,8 +107,8 @@ class FrequencyDataViewModel(
             // per-reading fidelity lives in the `.taigi` backup, not the CSV.
             val triples = entries.map { Triple(it.first, "", it.second) }
             val imported = withContext(Dispatchers.IO) { userFreq.batchImportMerge(triples) }
-            val refreshed = withContext(Dispatchers.IO) { userFreq.getAllFrequencies() }
-            _allData.value = refreshed
+            val refreshed = withContext(Dispatchers.IO) { userFreq.getAllFrequencyRows() }
+            _allData.value = refreshed.toListItems()
             return ImportOutcome(imported = imported, skipped = entries.size - imported)
         } finally {
             _isImporting.value = false

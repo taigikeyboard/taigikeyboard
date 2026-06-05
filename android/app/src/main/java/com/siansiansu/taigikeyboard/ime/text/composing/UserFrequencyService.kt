@@ -393,10 +393,14 @@ class UserFrequencyService(
         }
 
     /**
-     * All `(word, tl, count)` rows for backup export — preserves the R5
-     * per-reading identity (#7) unlike [getAllFrequencies], which aggregates
-     * by word for the viewer. One row per learned reading + any legacy
-     * `tl == ''` row.
+     * All `(word, tl, count)` rows, one per learned reading + any legacy
+     * `tl == ''` row. Preserves the R5 per-reading identity (#7). Shared by
+     * two consumers: the `.taigi` backup export AND the 詞頻 management viewer
+     * (which lists + deletes per `(word, tl)`). [getAllFrequencies] is the
+     * merged `(word, SUM(count))` form, now used only by the hand-editable
+     * CSV export. Do NOT add viewer-only SQL (limit / filter) here — it would
+     * leak into backup; split a wrapper if their needs diverge.
+     * Deterministic tie-break `(word, tl)` keeps equal count/time rows stable.
      */
     suspend fun getAllFrequencyRows(): List<Triple<String, String, Int>> =
         withContext(Dispatchers.IO) {
@@ -409,7 +413,7 @@ class UserFrequencyService(
                         """
                         SELECT ${Table.WORD}, ${Table.TL}, ${Table.COUNT}
                         FROM ${Table.NAME}
-                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC, ${Table.WORD} ASC, ${Table.TL} ASC
                         """.trimIndent(),
                         null,
                     )
@@ -496,13 +500,21 @@ class UserFrequencyService(
             }
         }
 
-    /** Delete a single word from frequency data. */
-    suspend fun deleteWord(word: String) =
-        withContext(Dispatchers.IO) {
-            ensureInitialized()
-            val db = dbHelper?.writableDatabase ?: return@withContext
-            db.delete(Table.NAME, "${Table.WORD} = ?", arrayOf(word))
-        }
+    /**
+     * Delete a single `(word, tl)` reading. R5 (#7): identity is the pair, so
+     * 一字多音 (重/tāng vs 重/tîng) delete independently. Deleting the legacy
+     * `tl == ''` row removes only the fallback bucket; re-learned exact rows
+     * survive.
+     */
+    // 中文: 刪除單一 (word, tl) 讀音 (#7);一字多音各自獨立刪。legacy '' 列只移除 fallback 桶。
+    suspend fun deleteWord(
+        word: String,
+        tl: String,
+    ) = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        val db = dbHelper?.writableDatabase ?: return@withContext
+        db.delete(Table.NAME, "${Table.WORD} = ? AND ${Table.TL} = ?", arrayOf(word, tl))
+    }
 
     /** Clear all frequency rows (debug / reset). */
     suspend fun clearAllFrequencies() =
