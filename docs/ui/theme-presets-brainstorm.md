@@ -1,8 +1,8 @@
 # Theme Presets & Custom Themes — Brainstorm (v3.6.2)
 
 > **Type**: Planning (brainstorm — evolving; USER will append ideas)
-> **Keywords**: `theme`, `preset`, `palette`, `colorscheme`, `custom theme`, `image upload`
-> **Status**: Brainstorm — NO code, NO committed phase sequencing yet
+> **Keywords**: `theme`, `preset`, `palette`, `colorscheme`, `theme set`, `shelf`, `custom theme`, `image upload`
+> **Status**: Brainstorm — NO code. Two forks decided (USER 2026-06-05): **5th nav tab** + **theme-id resolve storage model**. Remaining forks open.
 > **Version scope**: v3.6.2 (USER-scoped 2026-06-05: 「這個列為 v3.6.2 的計劃」)
 > **Related**: `docs/ui/theme.md` (current-state reference), `docs/roadmap.md` (deferred TODO "keyboard theme picker")
 
@@ -10,23 +10,22 @@
 
 ## Summary
 
-- **Goal**: ship a set of **predefined theme presets** (named palettes the user picks in one tap), and evaluate **user-uploaded image** as a custom-theme source.
-- **Current state is NOT greenfield** — both platforms already have a mirrored 6-role free-pick color system (`KeyboardColorSettings`); a preset is just "a fully-populated `KeyboardColorSettings` applied at once."
-- **Layered design answer**: borrow **palette values** from established editor/vim colorschemes (Catppuccin, Tokyo Night, Nord, Gruvbox), borrow only the **semantic-token concept** from FlorisBoard's stylesheet — NOT its full addon-store + per-element stylesheet engine (over-engineering for a solo-maintainer cross-platform app).
-- **Two hard constraints** surfaced by code-grounding: (1) only **6 roles** are user-overridable today — full chrome (pressed states, popups, enter key, emoji, smartbar) is platform-default; (2) **no light/dark split** in stored colors — a Catppuccin Latte-vs-Mocha pairing needs a schema change that is a cross-platform-invariant surface.
-- **Image upload**: two distinct interpretations (palette-extraction vs background-image layer); the iOS keyboard-extension **64 MB hard memory cap** is the dominant feasibility constraint.
+- **Goal**: ship predefined **theme sets** (each = a named palette with a 小標題, bundling **light + dark** variants), a KeyboardKit-Shelf-style picker on its **own 5th nav tab**, and evaluate **user-uploaded image** as a custom-theme source.
+- **Current state is NOT greenfield** — both platforms already have a mirrored 6-role free-pick color system (`KeyboardColorSettings`). The v3.6.2 work shifts storage from "store 6 raw colors" to "**store a `selectedThemeId`, resolve 6 roles (and light/dark) at render time**"; the existing free-pick path becomes the **Custom** theme.
+- **Layered design**: palette values from established editor/vim colorschemes (Catppuccin, Tokyo Night, Gruvbox, Solarized, Nord); the **picker UX** references KeyboardKit's `KeyboardTheme.Shelf`; we **deliberately do NOT use** KeyboardKit's theme *engine* (Pro-gated) or FlorisBoard's Snygg stylesheet engine + addon store.
+- **Two USER decisions 2026-06-05**: (1) **Nav fork A** — appearance/theme becomes its own top-level tab (4 → 5 tabs); (2) **Storage fork** — adopt the theme-id resolve model (auto-solves the light/dark fork B and active-identity fork D).
+- **Remaining open forks**: preset coverage (6 roles vs full chrome, §6 A), preset source-of-truth (hand-mirror vs shared JSON, §6 C), image-upload scope (§7), final roster + licensing (§5).
 
 ---
 
-## 1. Goal & USER directive
+## 1. Goal & USER directives
 
 USER 2026-06-05 (verbatim, kept as evidence):
 
-> 「這是我未來的規劃,我想製作一些定義的主題色讓 user 選」
-> 「評估讓使用者上傳圖片當作自定義的可能性」
-> 「先撰寫文件,我想到什麼再補充上來」「這個列為 v3.6.2 的計劃」
+> 「我想製作一些定義的主題色讓 user 選」「評估讓使用者上傳圖片當作自定義的可能性」「先撰寫文件,我想到什麼再補充上來」「這個列為 v3.6.2 的計劃」
+> 「根據主流 vim 主題配色、包含 light/dark theme」「一個主題 set 有小標題」「主題選擇頁面我想參考 keyboardkit」「目前 app 有四個 tabs 導覽列,將主題外觀獨立成一個 tab,總共會有 5 個」
 
-This satisfies CLAUDE.md Core Principle #5 (release scope user-gated) — the v3.6.2 scope is the USER's explicit dated instruction, not an inferred scope. Phase sequencing below is **draft** and remains user-gated.
+These satisfy CLAUDE.md Core Principle #5 (release scope user-gated) — v3.6.2 scope + the nav/storage decisions are the USER's explicit dated instructions, not inferred. Remaining phase sequencing stays user-gated.
 
 Aligns with the existing `docs/roadmap.md` deferred TODO: **"keyboard theme picker"** (the single open roadmap item as of 2026-06-01).
 
@@ -50,179 +49,262 @@ Both platforms share a **deliberately mirrored** architecture (`KeyboardColorSet
 - iOS: `ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift:42-58` (each `CodableColor?`, `nil` = uncustomized → KeyboardKit dynamic fallback).
 - Android: `android/.../ime/core/KeyboardColorSettings.kt:16-23` (each nullable ARGB `Int`, `null` = theme default).
 
-**The gap**: the full keyboard chrome is much larger than 6 roles and is **not** user-overridable today:
-- Android Track A — ~30 XML theme attrs (`attrs.xml:4-40`): `key_bgColorPressed/Active`, `key_function_bgColor`, `key_enter_bgColor/fgColor`, `key_popup_bgColor/fgColor`, `key_popup_extended_*`, `emoji_key_*`, `smartbar_*`, `smartbar_accentColor`. Only 3 of these feed the Compose overlay chrome via `KeyboardChromeColors.from()` (`KeyboardChromeColors.kt:28-33`) — and that path is **not** fed by user colors.
-- iOS — uncustomized roles delegate to KeyboardKit adaptive `Color(.assetName)` + system `Color(.label)`/`Color(.secondaryLabel)` (`CandidateTheme.swift:70-71`); pressed/popup/accent are KeyboardKit-internal.
+**The gap**: the full keyboard chrome is larger than 6 roles and is **not** user-overridable today (Android ~30 XML attrs `attrs.xml:4-40`; iOS KeyboardKit adaptive internals). A theme can only recolor the 6 roles — pressed/popup/enter/emoji/smartbar chrome stays platform-default (see §6 fork A).
 
-→ **A preset can only recolor the 6 roles.** Pressed states, popups, enter key, emoji, smartbar chrome stay platform-default and may visually mismatch a strongly-tinted preset unless the override surface is widened (see §6 fork A).
+### 2.2 Storage today — single JSON blob, one key, per-platform
 
-### 2.2 Storage — single JSON blob, one key, per-platform
-
-- iOS: `SharedSettings.swift:99` `colorSettingsKey = .codable("colorSettings", default: .default)` → App Group UserDefaults. `CodableColor` = RGBA `Double` ×4 (`KeyboardColorSettings.swift:16-37`).
-- Android: `PrefHelper.colorSettings: String` (`PrefHelper.kt:500`, default `"{}"`) → DataStore key `COLOR_SETTINGS`; JSON object, each role a nullable packed-ARGB `Int`.
-- **No separate light/dark storage** on either platform — one value per role, applied in both modes (overrides the adaptive light/dark switch for that role). iOS: `CodableColor` "light and dark share the same value by design" (`KeyboardColorSettings.swift:11-15`). Android: same single-Int model.
+- iOS: `SharedSettings.swift:99` `colorSettingsKey = .codable("colorSettings", default: .default)` → App Group UserDefaults. `CodableColor` = RGBA `Double` ×4.
+- Android: `PrefHelper.colorSettings: String` (`PrefHelper.kt:500`, default `"{}"`) → DataStore key `COLOR_SETTINGS`; JSON, each role nullable packed-ARGB `Int`.
+- **No separate light/dark storage** — one value per role, both modes. (This is what the §4 storage shift fixes.)
 
 ### 2.3 Customization UI today — per-element free pick, NO preset concept
 
-- iOS: 6 `ColorPicker` rows (`AppearanceSettingsView.swift:186-209`), per-row reset + global reset (`:128-135`).
-- Android: 6 `ColorSettingRow` → `ColorPickerDialog` with Grid / Spectrum / Sliders / hex tabs (`ColorPickerDialog.kt:73-75`). The "Grid" swatches are individual colors, **not** named palettes.
-- **Neither platform has any named-preset / palette entity.** The only multi-color operation today is "reset all to nil/null". Live preview via `KeyboardPreviewPanel` (iOS `AppearanceSettingsView.swift:139`, Android `AppearanceSettingsScreen.kt:340`).
+- iOS: 6 `ColorPicker` rows (`AppearanceSettingsView.swift:186-209`). Android: 6 `ColorSettingRow` → `ColorPickerDialog` (`ColorPickerDialog.kt:73-75`). Neither has any named-preset entity. Live preview via `KeyboardPreviewPanel`.
 
-### 2.4 Resolver path (one-line, both platforms)
+### 2.4 Navigation today — 4 tabs, appearance nested under Layout
 
-- iOS: `UserDefaults["colorSettings"]` → `TaigiKeyboardView.@State colorSettings` → split into `CandidateTheme.resolved` (candidate text, via `.candidateTheme` env) + inline KeyboardKit `.background`/`.keyboardButtonStyle`/`candidateStyle` closures. Live-refresh on `UserDefaults.didChangeNotification`.
-- Android: `prefs.colorSettings` JSON → `KeyboardColorSettings.fromJson()` → `KeyboardAppearanceResolver` (keys) + `SmartbarManager.colorSettings()` (candidates) → applied as `userOverride ?: getColorFromAttr(themeAttr)`.
+- iOS: `TabType.swift:7-12` — `.home / .layout / .dictionary / .settings`; built in `ContentView.swift:16-60`. Appearance lives under the **Layout** tab (「齒盤佈局」= layout + font + color), file `App/Tabs/Layout/AppearanceSettingsView.swift`.
+- Android: `ui/tabs/{home,layout,dictionary,settings}/` + `MainSettingsScreen.kt` (NavigationBar). Appearance under **layout**, file `ui/tabs/layout/AppearanceSettingsScreen.kt`.
 
-**Key consequence**: because all user color state already funnels through one `(role → color)` blob, a preset needs **zero renderer changes** — it only writes the blob.
+### 2.5 Resolver path (one-line, both platforms)
+
+- iOS: `UserDefaults["colorSettings"]` → `TaigiKeyboardView.@State colorSettings` → `CandidateTheme.resolved` (candidate text via `.candidateTheme` env) + inline KeyboardKit `.background`/`.keyboardButtonStyle`/`candidateStyle` closures. Live-refresh on `UserDefaults.didChangeNotification`.
+- Android: `prefs.colorSettings` JSON → `KeyboardColorSettings.fromJson()` → `KeyboardAppearanceResolver` (keys) + `SmartbarManager.colorSettings()` (candidates) → `userOverride ?: getColorFromAttr(themeAttr)`.
+
+**Key consequence**: the renderer already consumes a `KeyboardColorSettings` (6 roles). The §4 model only changes *where those 6 values come from* (a resolved theme vs raw storage) — the render sinks are untouched.
 
 ---
 
-## 3. Design decision — palette source vs apply architecture (two layers)
+## 3. Design decision — palette source vs apply architecture (layers)
 
-The original fork ("FlorisBoard addon theme vs vim colorscheme") conflates two different layers. They are NOT either/or.
+The original fork ("FlorisBoard addon vs vim colorscheme") conflates separate layers. They are NOT either/or.
 
-| Layer | Question | Reference to borrow from |
+| Layer | Question | Reference borrowed |
 |---|---|---|
-| **A. Palette source** | which colors, which semantic roles | **vim/editor colorschemes** |
-| **B. Apply architecture** | how colors reach each keyboard element | FlorisBoard token *concept* only — NOT its engine |
+| **A. Palette source** | which colors, which roles | **vim/editor colorschemes** (Catppuccin/Tokyo Night/Gruvbox/Solarized/Nord) |
+| **B. Picker UX** | how the user browses + picks a theme | **KeyboardKit `KeyboardTheme.Shelf`** (UI design only) |
+| **C. Apply architecture** | how colors reach each element | our existing 6-role resolver; theme = a resolved `KeyboardColorSettings` |
 
-**Critical fact**: Catppuccin / Tokyo Night / Nord / Gruvbox / Oblivion are **originally editor/vim colorschemes**. The FlorisBoard addons the USER listed merely repackage them into keyboard stylesheets. So "vim colorscheme" and "those FlorisBoard addons" are the **same color-source pool**, differing only in delivery format.
+**Critical fact**: Catppuccin / Tokyo Night / Gruvbox / Tron etc. are originally editor/vim colorschemes. FlorisBoard addons merely repackage them. So "vim colorscheme" and "those FlorisBoard addons" are the **same color-source pool**, differing only in delivery.
 
-### Layer A — palette: adopt vim-colorscheme model
+### Layer A — palette: adopt the vim-colorscheme model
 
-- **Pre-curated & harmonious** — designer-tuned contrast, validated in both light/dark; safer than ad-hoc hand-mixing.
-- **Semantic-role native** — colorschemes are already `bg / fg / accent / …` role maps; maps cleanly onto our 6 roles (e.g. Catppuccin `base/mantle/crust` → backgrounds, `text` → foreground, `mauve/blue` → accent).
-- **Brand recognition = marketing** — "Catppuccin" / "Tokyo Night" carry community goodwill; better than "Theme 1".
-- **Permissive licensing** — Catppuccin / Tokyo Night / Nord / Gruvbox are **MIT**; porting palette values + attribution is fine. Oblivion (GNOME) / Windows Phone need per-source license check before adoption.
+Pre-curated, harmonious, semantic-role native, brand-recognized, permissively licensed (most MIT). Maps cleanly onto our 6 roles. See §5.
 
-### Layer B — architecture: FlorisBoard concept only, not the engine
+### Layer B — picker UX: reference KeyboardKit `KeyboardTheme.Shelf`
 
-FlorisBoard's Snygg stylesheet engine = CSS-vars + per-element selectors + downloadable addon store + publish flow (`org.florisboard.themes/extension.json`, `stylesheets/*.json` with `@defines` + per-selector rules).
+Grounded in KK 9.9.0 docs (`references/keyboardkit9.9.0/.../Themes-Article.md:179-194`, doc-lookup 2026-06-05):
 
-- **Deliberately NOT adopted** (YAGNI, over-engineering for a solo-maintainer cross-platform app): the Snygg parser, arbitrary per-element selectors, the addon store, the publish/upload pipeline. Replicating that = a whole theming engine on two platforms with zero current need.
-- **Adopted**: the `@defines` **semantic-token idea** — we already have it as the 6-role `KeyboardColorSettings`. A preset = a fixed role→hex table. No new engine.
+- `KeyboardTheme.Shelf` = "a vertical list of **horizontally scrolling shelves**"; `KeyboardTheme.ShelfItem` renders "how a `Keyboard.Button` will look" — i.e. **live keyboard-button preview swatches**.
+- This maps 1:1 to the USER's model: a theme **set** = one shelf with a **title (小標題)**; the set's **variants** (light/dark) = horizontally-scrolling `ShelfItem`s, each a live preview.
+- KK's own themes use the same set→variation shape (`KeyboardTheme.standard` + `.blue`/`.green` variations; `.tron` + `.fcon`/`.virus`, `Themes-Article.md:71,160`).
+
+⚠ **Licensing caveat (doc-lookup gate)**: KeyboardKit's theme **engine** is **Pro-gated** — the open-source 9.9.0 has only `_Pro/ProPlaceholders.swift`. We **cannot use the KK theme engine**; we **reference the Shelf UI design** and feed our own static theme table into the existing 6-role resolver. iOS picker = a SwiftUI re-implementation of the Shelf layout; Android = a Compose `LazyColumn` of horizontally-scrolling `LazyRow` shelves (mirrors the Shelf shape).
+
+### Layer C — apply architecture: existing 6-role resolver, NOT a new engine
+
+- **Deliberately NOT adopted** (YAGNI): FlorisBoard Snygg stylesheet engine + arbitrary per-element selectors + addon store + publish pipeline; **and** KeyboardKit Pro's theme engine (license + closed-source). Both = a whole theming engine we don't need.
+- **Adopted**: a theme = a fully-resolved `KeyboardColorSettings` (6 roles), chosen from a static table. No new render path.
 
 ---
 
-## 4. Proposed preset model (MVP)
+## 4. Storage & resolve model — theme-id resolve (DECIDED 2026-06-05)
 
-A preset is **"a fully-populated `KeyboardColorSettings` applied in one tap."** Injection points (both platforms, mirrored):
+**Decision**: shift from "store 6 raw colors" to "**store a `selectedThemeId`; resolve the 6 roles — and the light/dark variant — at render time**." The existing free-pick 6-color path becomes a reserved theme id `custom`.
 
-### 4.1 Model layer (best fit — the only place that knows all 6 roles)
+### 4.1 Static theme table (the new model layer)
 
-- iOS: add `KeyboardColorPreset` enum (name + factory → fully-populated `KeyboardColorSettings`) next to `KeyboardColorSettings.swift`.
-- Android: add preset constants/factory returning a fully-populated `KeyboardColorSettings` beside its companion (`KeyboardColorSettings.kt:35`).
-- Each case maps 6 hex values → the role fields. **No renderer change** — the existing resolver consumes any `KeyboardColorSettings` verbatim.
+```
+ThemeSet {
+  id: String              // "catppuccin", "gruvbox", "tokyoNight", "solarized", "nord", "florisDefault", "custom"
+  displayName: String     // 小標題 shown on the shelf, e.g. "Catppuccin"
+  light: SixRoleColors?   // nil if the set has no light variant
+  dark:  SixRoleColors?   // nil if the set has no dark variant
+}
+SixRoleColors = { background, keyText, normalKeyFill, specialKeyFill, candidateText, candidateBackground }
+```
+
+- **Render-time resolve**: pick `light` vs `dark` by the system `colorScheme`; if the chosen variant is `nil`, fall back to the other (e.g. Nord dark-only → dark used in both modes).
+- **`custom`**: `light == dark ==` the user's existing 6-color free-pick values. This preserves today's behavior as one selectable theme.
 
 ### 4.2 Persistence
 
-- Reuse the existing `colorSettings` key on both platforms (no new color storage). Applying a preset = write `preset.makeSettings()` through the existing change callback (iOS `applyColorChange` sibling; Android `onColorSettingsChanged`).
-- **Open**: to highlight the *active* preset in the UI, add a small new key (`colorPresetName: String`), since today only the resolved colors are stored, not the preset identity. Alternative: reverse-match the blob against known presets (fragile once the user hand-edits one color). Lean toward storing the name.
+- **New key** `selectedThemeId: String` (iOS `SettingsKey<String>` in `SharedSettings`; Android DataStore key). Default `custom` (so existing users keep their current look).
+- **Keep** the existing `colorSettings` blob — it now backs *only* the `custom` theme (the free-pick pickers write here).
+- **Precedence**: `selectedThemeId != custom` → resolve from the static table; `== custom` → use the `colorSettings` 6 overrides (today's path).
 
-### 4.3 UI
+### 4.3 Migration (lightweight, non-destructive)
 
-- Add a preset picker section/subpage parallel to the existing **font picker** (iOS `AppearanceFontPickerView` `AppearanceSettingsView.swift:215-243`; Android `FontPickerContent` `AppearanceSettingsScreen.kt:80-89`).
-- Each preset row shows a swatch-set preview (the 6 colors). Selecting applies + (optionally) marks active.
-- The live `KeyboardPreviewPanel` reflects the change for free (renders the real keyboard reading the same live store).
+- Existing users have a `colorSettings` blob and no `selectedThemeId`. On read, absent `selectedThemeId` defaults to `custom` → their current colors render unchanged. No data move, no schema rebuild of the color blob.
+- This is a pure additive key; mirrors the non-destructive migration discipline used across v3.6.1 (see `.claude/rules/taigi-incidents.md` S11–S15).
 
-### 4.4 ViewModel sync (the one non-trivial piece)
+### 4.4 Why this resolves two forks
 
-- iOS `AppearanceSettingsViewModel`: add `applyPreset(_:)` that sets `settings.colorSettings` **and** re-seeds the 6 `@Published` color props + `savedColors`, so the per-element pickers reflect the preset (`AppearanceSettingsViewModel.swift:114-162` is the mirror to follow).
-- Android: selecting a preset writes the blob; the per-role rows re-read from the same state — verify the `AppearanceSettingsScreen` state hoist reflects an external full-blob write (likely already does via DataStore flow; confirm at impl time).
+- **Fork B (light/dark)**: solved without per-role day/dark storage — the pair lives in the static table, not user storage. System appearance switches the variant at render time.
+- **Fork D (active-preset identity)**: solved — `selectedThemeId` *is* the persisted identity; the shelf highlights it directly.
 
 ### 4.5 Cross-platform parity invariant (mandatory)
 
-- Preset list, names, and hex values must be **identical** on iOS and Android. Single source of truth options:
-  - **(P1)** Two hand-mirrored tables (current pattern for `KeyboardColorSettings`) — simplest, but drift risk; needs a parity test/checklist.
-  - **(P2)** A shared JSON preset table in-repo (e.g. `docs/ui/theme-presets.json` or an asset bundled to both), each platform parses. Closer to FlorisBoard's stylesheet-as-data; eliminates drift; slightly more plumbing.
-- **Open fork** — see §6 fork C.
+- The static theme table (ids, display names, every hex) must be **identical** on iOS and Android — now a larger surface (per theme up to 12 colors: 6 light + 6 dark). This **raises the value of Fork C option P2** (a shared JSON table parsed by both) over P1 (hand-mirrored tables). See §6 fork C.
 
 ---
 
-## 5. Preset shortlist (starting curation)
+## 5. Theme sets (starting curation) — vim colorschemes with light/dark
 
-| Preset | Source license | Light/dark | Notes |
-|---|---|---|---|
-| Catppuccin Latte | MIT | light | pairs with Mocha |
-| Catppuccin Mocha | MIT | dark | |
-| Tokyo Night | MIT | dark | |
-| Nord | MIT | dark-leaning | |
-| Gruvbox (light + dark) | MIT | both | warm/retro — fits our retro design philosophy (`theme.md` §Design Philosophy) |
-| Floris Day / Night | apache-2.0 | both | keep existing as baseline |
+Each set = a 小標題 + light and/or dark variant. Hex mapped to the 6 roles with this rule: **`background` darkest → `specialKeyFill` mid → `normalKeyFill` lightest** (letters most raised, matches platform default where special keys are darker/muted). Light variants: letter keys near-white, special keys gray, bg the palette's light base. `accent` is reserved (not one of the 6 roles today; used only if §6 fork A widens chrome, or for the §19 first-candidate keycap hint).
 
-Oblivion / Windows Phone / Nothing / Tron from the USER's original keyword list: **license + source check required** before inclusion (not all MIT). Tron/Nothing-style are aesthetics, not a single canonical palette — would be an original interpretation, not a port.
+### Catppuccin (MIT) — Latte (light) + Mocha (dark)
 
-> Final per-role hex tables are TBD — to be filled once §6 forks are resolved. Each preset must define all 6 roles; if §6 fork B (light/dark split) is adopted, each role carries a day+dark pair.
+| role | Latte (light) | Mocha (dark) |
+|---|---|---|
+| background | `#eff1f5` | `#1e1e2e` |
+| candidateBackground | `#e6e9ef` | `#181825` |
+| specialKeyFill | `#ccd0da` | `#313244` |
+| normalKeyFill | `#ffffff` | `#45475a` |
+| keyText / candidateText | `#4c4f69` | `#cdd6f4` |
+| *accent (reserved)* | `#8839ef` | `#cba6f7` |
+
+### Gruvbox (MIT) — light + dark (warm/retro, fits our design philosophy)
+
+| role | light | dark |
+|---|---|---|
+| background | `#fbf1c7` | `#282828` |
+| candidateBackground | `#f2e5bc` | `#1d2021` |
+| specialKeyFill | `#ebdbb2` | `#3c3836` |
+| normalKeyFill | `#ffffff` | `#504945` |
+| keyText / candidateText | `#3c3836` | `#ebdbb2` |
+| *accent (reserved)* | `#b57614` | `#fabd2f` |
+
+### Tokyo Night (MIT) — Day (light) + Night (dark)
+
+| role | Day (light) | Night (dark) |
+|---|---|---|
+| background | `#e1e2e7` | `#1a1b26` |
+| candidateBackground | `#d5d6db` | `#16161e` |
+| specialKeyFill | `#c4c8da` | `#292e42` |
+| normalKeyFill | `#ffffff` | `#414868` |
+| keyText / candidateText | `#343b58` | `#c0caf5` |
+| *accent (reserved)* | `#2e7de9` | `#7aa2f7` |
+
+### Solarized (BSD/MIT-style, Ethan Schoonover) — Light + Dark (THE canonical light/dark pair)
+
+| role | Light | Dark |
+|---|---|---|
+| background | `#eee8d5` (base2) | `#073642` (base02) |
+| candidateBackground | `#fdf6e3` (base3) | `#002b36` (base03) |
+| specialKeyFill | `#e3dcc4` | `#0a3a45` |
+| normalKeyFill | `#fdf6e3` (base3) | `#0d4a57` |
+| keyText / candidateText | `#657b83` (base00) | `#93a1a1` (base1) |
+| *accent (reserved)* | `#268bd2` (blue) | `#268bd2` (blue) |
+
+> Solarized fills are interpolated within the base tones for keyboard legibility; dogfood-tune.
+
+### Nord (MIT) — dark-only canonical (light variant optional, flagged)
+
+| role | dark |
+|---|---|
+| background | `#2e3440` (nord0) |
+| candidateBackground | `#2e3440` |
+| specialKeyFill | `#3b4252` (nord1) |
+| normalKeyFill | `#434c5e` (nord2) |
+| keyText / candidateText | `#eceff4` (nord6) |
+| *accent (reserved)* | `#88c0d0` (nord8) |
+
+> Nord has no official light theme. Options: ship dark-only (variant fallback handles both modes) or author a "Nord Light" using snow-storm tones (`#eceff4` bg / `#2e3440` text). Flagged for USER.
+
+### Floris Default (apache-2.0) — Day + Night (keep existing baseline)
+
+| role | Day (light) | Night (dark) |
+|---|---|---|
+| background | `#e0e0e0` | `#212121` |
+| candidateBackground | `#f5f5f5` | `#212121` |
+| specialKeyFill | `#d0d0d0` | `#313131` |
+| normalKeyFill | `#ffffff` | `#424242` |
+| keyText / candidateText | `#121212` | `#dcdcdc` |
+| *accent (reserved)* | `#4caf50` | `#4caf50` |
+
+Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,floris_night}.json`.
+
+### Plus: `Custom` (reserved id)
+
+The existing 6-role free-pick. Always present; selecting it activates the per-element ColorPickers.
+
+### Keyword-list extras (deferred — license + design check)
+
+`Tron` / `Nothing` / `Windows Phone` / `Oblivion` from the USER's original list: not single canonical palettes (Tron/Nothing are aesthetics needing original interpretation) and need per-source license checks. Deferred until USER confirms which to include.
+
+> All hex values above are derived from canonical palettes mapped to 6 roles — **final values gated on device dogfood** for contrast/legibility (`code-review-rules.md §9`).
 
 ---
 
-## 6. Open design forks (need USER decision before plan finalizes)
+## 6. Open design forks
 
-### Fork A — preset coverage: 6 roles only, or widen the override surface?
+### Decided 2026-06-05
 
-- **A1 (MVP, minimal)**: presets recolor only the 6 existing roles. Pressed/popup/enter/emoji/smartbar chrome stays platform-default → may clash with a strongly-tinted preset.
-- **A2 (full theme)**: make the chrome overridable too — Android route `getColorFromAttr`/`KeyboardChromeColors.from` through a user-palette layer (`ThemeAttributeColors.kt:9`, `KeyboardChromeColors.kt:28`); iOS extend the KeyboardKit style closures. Larger, touches the XML-attr seam + KeyboardKit internals on both platforms.
-- Recommendation: **start A1**, evaluate visual mismatch via dogfood, widen to A2 only if presets look broken. (Direction-first per Core Principle #6 — but A2's cost is real; decide with dogfood evidence.)
+- **Nav fork → A**: appearance/theme becomes its **own 5th top-level tab** (see §8.1).
+- **Storage fork → theme-id resolve** (§4). This **closes Fork B (light/dark)** and **Fork D (active identity)**.
 
-### Fork B — light/dark: single value, or per-mode pair?
+### Fork A (open) — preset coverage: 6 roles only, or widen the override surface?
 
-- Today: one value per role, both modes (`CodableColor` / single Int).
-- Catppuccin Latte-vs-Mocha and Gruvbox light/dark **cannot** be expressed without extending the schema to a day+dark pair per role.
-- **B1**: keep single-value — ship each variant as a *separate* preset entry (Latte and Mocha are two list items). Simple, no schema change, but the user must re-pick when they switch system appearance.
-- **B2**: extend `KeyboardColorSettings`/`CodableColor` to per-mode pairs — auto-follows system light/dark. **Cross-platform-invariant schema change** (both platforms, migration of existing stored blobs). Bigger.
-- Recommendation: **B1 for v3.6.2 MVP** (no schema churn); record B2 as a follow-up the USER may scope later.
+- **A1 (MVP)**: themes recolor only the 6 existing roles; pressed/popup/enter/emoji/smartbar chrome stays platform-default → may clash with strongly-tinted themes.
+- **A2 (full theme)**: make chrome overridable — Android route `getColorFromAttr`/`KeyboardChromeColors.from` through a palette layer; iOS extend the KeyboardKit style closures. Larger, touches XML-attr seam + KeyboardKit internals.
+- Recommendation: **start A1**, dogfood, widen to A2 only if themes look broken (direction-first per Core Principle #6, but decide with evidence).
 
-### Fork C — preset source of truth: hand-mirrored tables (P1) or shared JSON (P2)?
+### Fork C (open) — theme table source of truth: hand-mirror (P1) or shared JSON (P2)?
 
-- P1 = consistent with current `KeyboardColorSettings` mirroring; P2 = drift-proof, more FlorisBoard-like. See §4.5.
-
-### Fork D — active-preset identity: store name, or reverse-match?
-
-- Lean store-name (§4.2). USER to confirm whether "currently selected: X" UI state is wanted in MVP.
+- P1 = consistent with current `KeyboardColorSettings` mirroring; P2 = drift-proof shared JSON parsed by both, closer to FlorisBoard's stylesheet-as-data.
+- **The §4 model enlarges the table (up to 12 colors/theme), raising P2's value.** Recommendation leans P2; USER to confirm.
 
 ---
 
 ## 7. Image upload as custom theme — feasibility evaluation
 
-USER asked to evaluate user-uploaded image as a custom-theme source. **Two distinct interpretations** — they have very different cost/risk:
+Two distinct interpretations with very different cost/risk:
 
-### Interpretation I-1 — extract a palette FROM the image (image → 6 role colors)
+### I-1 — extract a palette FROM the image (image → the 6 roles → writes the `custom` theme)
 
-- Pipeline: user picks image → color quantization (k-means / median-cut) → dominant colors → heuristic map to the 6 roles (darkest→bg, highest-contrast→text, accent→saturated) → write `KeyboardColorSettings`.
-- **Fits the existing architecture** — output is still just the 6-role blob; no renderer change, no image stored at keyboard runtime.
-- Cost: a one-shot extraction in the **host app** (not the extension), so the 64 MB extension cap is avoided — the image is processed app-side, only 6 colors cross into shared settings.
-- Per platform: iOS `UIImage` + Core Image / vImage or a small quantizer; Android `Palette` API (AndroidX `androidx.palette`) does exactly this out of the box.
-- Risk: auto-mapped palettes can produce low-contrast / unreadable results → must clamp contrast (WCAG-ish min ratio) + always show live preview + let the user tweak afterward (the 6 pickers already exist).
-- **Feasibility: HIGH.** This is the recommended image path — it degrades to "a fancy preset generator" and touches nothing risky.
+- Pipeline: pick image (host app) → color quantization (Android `androidx.palette`; iOS Core Image / vImage quantizer) → dominant colors → heuristic map to 6 roles (with a contrast clamp) → write the `colorSettings` blob + set `selectedThemeId = custom`.
+- **Fits the model perfectly** — output is the existing 6-role `custom` theme; zero renderer change; no image stored at keyboard runtime; the 64 MB extension cap is avoided (processing is host-app-side, only 6 colors cross into shared settings).
+- Risk: auto-mapped palettes can be low-contrast → enforce a min contrast ratio + live preview + let the user tweak via the existing 6 pickers.
+- **Feasibility: HIGH.** Recommended image path — degrades to "a fancy Custom-theme generator."
 
-### Interpretation I-2 — use the image AS the keyboard background (background-image layer)
+### I-2 — image AS the keyboard background (background-image layer)
 
-- This is what FlorisBoard/Gboard "photo theme" does: the bitmap renders behind translucent keys.
-- **Does NOT fit the current 6-role model** — needs a new "background image" concept (a 7th layer behind keys), translucent key fills, and the image bytes loaded **inside the keyboard extension at render time**.
-- **iOS blocker**: keyboard extension has a **~64 MB hard memory cap** (project incident: `.claude/rules/taigi-incidents.md` S-perf, iOS 64 MB). A full-res user photo decoded in the extension can blow the cap → keyboard killed. Would require: downscale + re-encode app-side to a strict max dimension, cache a small bitmap in the App Group, and budget its decoded size against 64 MB alongside the engine + dict. Fragile.
-- Android: less strict but still an IME-process memory concern; also needs translucent-key restyling to stay legible.
-- Storage: processed image in App Group container (iOS) / `filesDir` (Android) — both already used for user data; mark as user-content.
-- **Feasibility: LOW-MEDIUM, iOS-gated.** High effort, real crash risk on iOS, needs key-translucency rework. Recommend **defer** unless USER specifically wants photo backgrounds (then scope it as its own slice with a hard memory budget).
+- Needs a new "background image" concept (a layer behind translucent keys) + the bitmap loaded **inside the keyboard extension at render time**.
+- **iOS blocker**: keyboard extension ~64 MB hard memory cap (`.claude/rules/taigi-incidents.md`). A full-res photo decoded in the extension can blow the cap → keyboard killed. Requires app-side downscale/re-encode to a strict max dimension + decoded-size budgeting against engine + dict. Fragile. Also needs translucent-key restyling for legibility.
+- **Feasibility: LOW-MEDIUM, iOS-gated.** Recommend **defer** to its own user-gated slice with an explicit memory budget.
 
-### Image-upload recommendation
+### Image recommendation
 
-- **MVP**: support **I-1 (palette extraction)** only — high value, low risk, reuses everything. Android `Palette` + an iOS quantizer, host-app-side, output = the 6-role blob.
-- **Defer I-2 (background image)** to a separate user-gated slice with an explicit iOS 64 MB memory budget — do not bundle into the preset MVP.
+- MVP: **I-1 only** (palette extraction → `custom` theme). Defer **I-2** (background image).
 
 ---
 
-## 8. Draft scope (v3.6.2) — NOT yet committed sequencing
+## 8. Information architecture & phases
 
-USER-scoped to v3.6.2 (2026-06-05). Phase order below is **draft**; final sequencing + what-ships-in-v3.6.2 stays user-gated (Core Principle #5). Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
+### 8.1 Navigation — 5th tab (DECIDED: fork A, 2026-06-05)
+
+Appearance/theme is promoted to its own top-level tab. Result: **5 tabs** (at the iOS / Android Material-3 NavigationBar practical maximum — acceptable, no room for a 6th).
+
+- **iOS**: add `case theme` to `TabType` (`TabType.swift`), add the 5th `tabItem` in `ContentView.swift`, icon `paintpalette.fill` (or `paintbrush.fill`), localized title via a new `ThemeTexts`. Move `AppearanceSettingsView` out from under `LayoutTab` into a new `ThemeTab`.
+- **Android**: add a `theme` destination to the NavigationBar in `MainSettingsScreen.kt` + a `ui/tabs/theme/` package, mirroring `ui/tabs/layout/`. Move `AppearanceSettingsScreen` content into it.
+- **Layout tab retains** keyboard layout + font (it stays a valid tab; just no longer overloaded with color).
+- **Cross-platform parity**: tab order, icon semantics, and title must mirror (a UI parity surface; capture in `ui-style-guide.md` when implemented). The existing `.switchToSettingsTab`-style deep links must be checked for the new index.
+- **Trade-off recorded** (for posterity): this spends a scarce nav slot on a set-and-forget feature, which runs against `ui-style-guide.md` §Feature Grouping by Usage Frequency. USER accepted the trade for discoverability / showcase value (appearance is a keyboard-app selling point; SwiftKey/Gboard surface themes prominently).
+
+### 8.2 Draft phase table (NOT committed sequencing — user-gated)
+
+Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 
 | Phase | Scope | Depends on |
 |---|---|---|
 | P0 (admin) | This doc + roadmap entry + memory file | — |
-| P1 | Preset model + persistence + parity source-of-truth (resolve Fork C) | Fork B (B1), Fork D |
-| P2 | Preset picker UI both platforms + live preview wiring | P1 |
-| P3 | Curated preset hex tables (resolve Fork A coverage) + dogfood | P1, P2 |
-| P4 (optional) | Image → palette extraction (I-1) | P1 |
-| (deferred) | A2 full-chrome override / B2 light-dark pairs / I-2 background image | user-gated later |
+| P1 | 5th tab scaffolding both platforms (move appearance out of Layout, no behavior change) | — |
+| P2 | Theme-id storage model + resolver (`selectedThemeId`, `custom` precedence, migration) | — |
+| P3 | Static theme table (resolve Fork C) + curated hex (resolve Fork A coverage) | P2 |
+| P4 | Shelf-style picker UI both platforms + live preview + light/dark resolve | P1, P2, P3 |
+| P5 (optional) | Image → palette extraction (I-1) writing `custom` | P2 |
+| (deferred) | A2 full-chrome override / I-2 background image / keyword-list extra themes | user-gated later |
 
 ---
 
@@ -230,41 +312,43 @@ USER-scoped to v3.6.2 (2026-06-05). Phase order below is **draft**; final sequen
 
 | 主流做法 | 來源 | 本 plan 對應 |
 |---|---|---|
-| Semantic color tokens (`@defines`) | FlorisBoard `org.florisboard.themes/extension.json` + `stylesheets/floris_day.json:3-31` | §3 Layer B — adopt token concept; 6-role `KeyboardColorSettings` is our `@defines` |
-| Preset = named palette as data | FlorisBoard `extension.json` `themes[]` array (id/label/isNight) | §4 preset enum/table; §6 Fork B mirrors `isNight` |
-| Curated colorscheme palettes | Catppuccin / Tokyo Night / Nord / Gruvbox (MIT) | §5 shortlist |
+| Theme picker as scrolling shelves of live previews | KeyboardKit `Themes-Article.md:179-194` (`KeyboardTheme.Shelf` / `ShelfItem`) | §3 Layer B, §8.1, P4 |
+| Theme = set + style variations | KeyboardKit `Themes-Article.md:71,160` (`.standard`+`.blue`; `.tron`+`.virus`) | §4 ThemeSet, §5 sets |
+| Persist a selected-theme identity | KeyboardKit `KeyboardThemeContext` (Themes-Article.md:28-32) | §4.2 `selectedThemeId` |
+| Semantic color tokens (`@defines`) | FlorisBoard `stylesheets/floris_day.json:3-31` | §4.1 `SixRoleColors` |
+| Curated colorscheme palettes | Catppuccin / Tokyo Night / Gruvbox / Solarized / Nord (mostly MIT) | §5 |
 | Palette extraction from image | AndroidX `androidx.palette` (canonical) | §7 I-1 |
 
-**Project rules cited**:
-- `.claude/rules/cross-platform-alignment.md` — preset list/values are a parity surface (§2, §4.5).
-- CLAUDE.md Core Principle #2 (align on intended behavior), #5 (release scope user-gated), #6 (direction-first).
-- `.claude/rules/taigi-incidents.md` — iOS 64 MB extension cap gates §7 I-2.
-- `code-review-rules.md §9` — qualitative dogfood gate for preset visual correctness (no quantitative perf numbers).
+**Project rules cited**: `cross-platform-alignment.md` (theme table + tab order are parity surfaces, §4.5/§8.1); CLAUDE.md Core Principle #2/#5/#6; `taigi-incidents.md` (iOS 64 MB cap §7; non-destructive migration §4.3); `ui-style-guide.md` §Feature Grouping (the §8.1 trade-off); `code-review-rules.md §9` (qualitative dogfood gate for theme legibility).
 
 **刻意不採用 (deliberately not adopted)**:
-- FlorisBoard Snygg stylesheet engine / arbitrary per-element selectors — YAGNI, over-engineering on two platforms (§3 Layer B).
-- FlorisBoard Addons Store (download/publish pipeline) — out of scope; presets ship bundled in-app.
-- I-2 background-image at runtime in the iOS extension — deferred on memory-cap risk (§7).
-- B2 per-mode light/dark schema change — deferred; B1 ships variants as separate presets (§6 Fork B).
+- **KeyboardKit Pro theme engine** — Pro-gated + closed-source; we reuse only its Shelf UI *design* and feed our own table into the existing 6-role resolver (§3 Layer B).
+- **FlorisBoard Snygg stylesheet engine / addon store** — YAGNI, over-engineering on two platforms (§3 Layer C).
+- **I-2 runtime background-image in the iOS extension** — deferred on the 64 MB cap (§7).
+- **Per-role day/dark storage (fork B2)** — unnecessary; the theme-id model keeps the pair in the static table, not user storage (§4.4).
 
 ---
 
 ## 10. Open questions / TODO (USER to append)
 
+- [x] Nav structure — **A: 5th tab** (2026-06-05)
+- [x] Storage model — **theme-id resolve** (2026-06-05); closes light/dark + active-identity forks
 - [ ] Fork A — 6-role MVP vs full-chrome override?
-- [ ] Fork B — single-value (ship variants) vs per-mode light/dark pair?
-- [ ] Fork C — hand-mirrored preset tables vs shared JSON source of truth?
-- [ ] Fork D — store active-preset name vs reverse-match?
-- [ ] Final preset roster — which of the keyword list (Tron / Catppuccin / Tokyo Night / Nothing / Windows Phone / Oblivion) to include; license-check the non-MIT ones.
+- [ ] Fork C — hand-mirrored theme table vs shared JSON source of truth (model now favors shared JSON)?
+- [ ] Nord light variant — ship dark-only, or author a "Nord Light"?
+- [ ] Keyword-list extras (Tron / Nothing / Windows Phone / Oblivion) — which to include; license-check.
 - [ ] Image upload — I-1 (palette extract) in v3.6.2, or defer all image work?
+- [ ] Tab icon choice (iOS `paintpalette.fill` vs `paintbrush.fill`; Android equivalent) + localized tab title.
 - [ ] (USER additions below)
 
 ---
 
 ## Appendix — code-grounding citations (read 2026-06-05, READ-ONLY)
 
-**iOS**: `Settings/KeyboardColorSettings.swift:10-58` · `Autocomplete/Models/CandidateTheme.swift:46-73` · `App/Tabs/Layout/AppearanceSettingsView.swift:44-243` · `AppearanceSettingsViewModel.swift:19-162` · `SharedSettings.swift:99,502-505,572`.
+**iOS**: `Settings/KeyboardColorSettings.swift:10-58` · `Autocomplete/Models/CandidateTheme.swift:46-73` · `App/Tabs/Layout/AppearanceSettingsView.swift:44-243` · `AppearanceSettingsViewModel.swift:19-162` · `SharedSettings.swift:99,502-505,572` · `App/Tabs/TabType.swift:7-34` · `App/ContentView.swift:16-65`.
 
-**Android**: `ime/core/KeyboardColorSettings.kt:14-54` · `ime/theme/ThemeAttributeColors.kt:9-16` · `ime/text/KeyboardAppearanceResolver.kt:47,56-63` · `ime/text/smartbar/KeyboardChromeColors.kt:28-47` · `ui/tabs/layout/AppearanceSettingsScreen.kt:80-392` · `ui/tabs/layout/ColorPickerDialog.kt:73-280` · `PrefHelper.kt:84,500` · `res/values[-night]/themes.xml` · `attrs.xml:4-40`.
+**Android**: `ime/core/KeyboardColorSettings.kt:14-54` · `ime/theme/ThemeAttributeColors.kt:9-16` · `ime/text/KeyboardAppearanceResolver.kt:47,56-63` · `ime/text/smartbar/KeyboardChromeColors.kt:28-47` · `ui/tabs/layout/AppearanceSettingsScreen.kt:80-392` · `ui/tabs/layout/ColorPickerDialog.kt:73-280` · `ui/tabs/MainSettingsScreen.kt` (NavigationBar) · `PrefHelper.kt:84,500`.
 
-**FlorisBoard reference**: `references/florisboard/app/src/main/assets/ime/theme/org.florisboard.themes/{extension.json, stylesheets/floris_day.json}`.
+**KeyboardKit reference** (9.9.0, doc-lookup 2026-06-05): `references/keyboardkit9.9.0/Sources/KeyboardKit/KeyboardKit.docc/Features/Themes-Article.md:14-194` (Shelf/ShelfItem, ThemeContext, predefined themes incl. `.tron`); `_Pro/ProPlaceholders.swift` (engine is Pro-gated).
+
+**FlorisBoard reference**: `references/florisboard/.../org.florisboard.themes/{extension.json, stylesheets/floris_day.json, floris_night.json}`.
