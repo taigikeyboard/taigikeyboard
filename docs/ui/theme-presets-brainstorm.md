@@ -2,7 +2,7 @@
 
 > **Type**: Planning (brainstorm — evolving; USER will append ideas)
 > **Keywords**: `theme`, `preset`, `palette`, `colorscheme`, `theme set`, `shelf`, `custom theme`, `user theme`, `image upload`
-> **Status**: Brainstorm — NO code. Decided (USER 2026-06-05): **5th nav tab**, **theme-id resolve storage model**, **user-created named themes (the "+" flow)**, **user themes excluded from OS auto-backup** (`.taigi` only). Remaining forks open.
+> **Status**: Brainstorm — NO code. Decided (USER 2026-06-05): **5th nav tab**, **theme-id resolve storage model**, **user-created named themes (the "+" flow)**, **user themes excluded from OS auto-backup** (`.taigi` only), **simplified 3-color + shadow-intensity editor**. Remaining forks (§10) **deferred to implementation-time review** — each carries a recommended lean but is NOT committed.
 > **Version scope**: v3.6.2 (USER-scoped 2026-06-05: 「這個列為 v3.6.2 的計劃」)
 > **Related**: `docs/ui/theme.md` (current-state reference), `docs/roadmap.md` (deferred TODO "keyboard theme picker")
 
@@ -454,13 +454,15 @@ Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 - [x] Editor simplified → **3 colors + key-shadow slider** (Background / Key / Text) (2026-06-05)
 - [x] Editor text-merge → **merged into one Text** (key + candidate) (2026-06-05)
 - [x] Fork H — key-shadow → **intensity-only**, color derived (2026-06-05)
-- [ ] Fork A — 6-role MVP vs full-chrome override?
-- [ ] Fork C — hand-mirrored built-in table vs shared JSON (model favors shared JSON)?
-- [ ] Fork G — user-theme count cap (suggest ~50) — number / needed?
-- [ ] Nord light variant — ship dark-only, or author a "Nord Light"?
-- [ ] Keyword-list extras (Tron / Nothing / Windows Phone / Oblivion) — which to include; license-check.
-- [ ] Image upload — I-1 (palette extract → user theme) in v3.6.2, or defer?
-- [ ] Tab icon choice (iOS `paintpalette.fill` vs `paintbrush.fill`; Android equivalent) + localized tab title.
+**Deferred to implementation-time review (USER 2026-06-05: 「先記錄,之後真正要實作的時候再 review」)** — the items below carry a *recommended working default* but are NOT decided. Re-confirm with USER when the relevant phase starts; do not treat as committed (Core Principle #5).
+
+- [ ] Fork A — coverage. **Lean: A1** (recolor the 6 roles only; chrome stays platform-default). Revisit if dogfood shows clashing. Decide at P3.
+- [ ] Fork C — built-in table source of truth. **Lean: P2** (shared JSON parsed by both; drift-proof). Decide at P3.
+- [ ] Fork G — user-theme count cap. **Lean: ~50** (mirror S14 cap-parity). Decide at P5.
+- [ ] Nord light variant. **Lean: ship dark-only** (no official Nord light; don't fabricate). Decide at P3.
+- [ ] Keyword-list extras (Tron / Nothing / Windows Phone / Oblivion). **Lean: not included** for v3.6.2 (not single canonical palettes; non-MIT licensing). Add individually only if USER wants a specific one (then license + palette work). Decide at P3.
+- [ ] Image upload I-1 (palette extract → user theme). **Lean: defer past v3.6.2** (depends on the theme CRUD landing first). Decide after P5.
+- [ ] Tab icon + title. **Lean: `paintpalette.fill` + 「主題」**. Decide at P1.
 - [ ] (USER additions below)
 
 ---
