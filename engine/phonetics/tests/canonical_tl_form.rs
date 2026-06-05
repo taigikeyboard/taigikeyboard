@@ -127,6 +127,20 @@ fn poj_form_in_tl_mode_folds_canonical_tl() {
 }
 
 #[test]
+fn tl_mode_preserves_special_final_eng() {
+    // 2026-06-05 TL-literal: `canonical_tl_form(Tl)` must NOT fold the TL
+    // special nasal final `eng` [ɛŋ] (in `TL_FINALS`, §3.2.6) into `ing`
+    // [iŋ] — otherwise a hanji-absent `teng` candidate's committed
+    // `display_text` surfaces as `tíng`. The unambiguous POJ→TL folds
+    // (`ch`/`oa`/`oe`) stay (see `poj_form_in_tl_mode_folds_canonical_tl`),
+    // so cross-mode identity for POJ-form custom entries is preserved.
+    assert_eq!(canonical_tl_form("teng", InputMode::Tl), "teng");
+    // POJ mode genuinely IS POJ, so `eng`→`ing` is a correct POJ→TL
+    // conversion: POJ `teng` → TL `ting`.
+    assert_eq!(canonical_tl_form("teng", InputMode::Poj), "ting");
+}
+
+#[test]
 fn english_mode_is_identity_does_not_misinterpret() {
     // Critical: an English custom entry `hello` must not be re-parsed
     // as Taigi initial+final. English mode short-circuits to identity.

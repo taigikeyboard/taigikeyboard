@@ -67,13 +67,55 @@ mod tests {
     }
 
     #[test]
-    fn raw_input_composing_tl_applies_tone_marks_over_user_hyphens() {
-        // TL canonicalizes the POJ-style "goa" to "gua" via normalize_to_tl
-        // before applying tone marks; hyphens are user-typed and preserved.
+    fn raw_input_composing_tl_is_literal_no_poj_spelling_fold() {
+        // TL composing display is literal (2026-06-05): the tone mark lands
+        // on the typed letters with NO spelling fold. POJ-style `goa2` keeps
+        // `goa` (mark on `a` per TL rule → `goá`), NOT canonicalized to `guá`.
+        // `ai3`→`ài`, `li2`→`lí`; hyphens preserved.
         let phase = Phase::Composing {
             raw: "goa2-ai3-li2".to_string(),
         };
-        assert_eq!(phase.raw_input(&config_tl()), "guá-ài-lí");
+        assert_eq!(phase.raw_input(&config_tl()), "go\u{e1}-\u{e0}i-l\u{ed}");
+    }
+
+    #[test]
+    fn raw_input_composing_tl_preserves_special_final_eng() {
+        // Regression for the `téng` bug: the TL special nasal final `eng`
+        // [ɛŋ] must NOT be folded to `ing` [iŋ]. `teng2` → `téng`, NOT `tíng`.
+        let phase = Phase::Composing {
+            raw: "teng2".to_string(),
+        };
+        assert_eq!(phase.raw_input(&config_tl()), "t\u{e9}ng");
+    }
+
+    #[test]
+    fn raw_input_composing_poj_is_literal_no_spelling_fold() {
+        // POJ composing display is ALSO literal (2026-06-05): the tone mark
+        // lands on the typed letters, NO spelling conversion. A user typing TL
+        // spelling in POJ mode keeps it: `ting2` → `tíng` (NOT `téng`). POJ-
+        // spelled input is likewise verbatim with POJ tone placement:
+        // `goa2` → `góa` (mark on `o`), `teng2` → `téng`.
+        assert_eq!(
+            Phase::Composing {
+                raw: "ting2".to_string(),
+            }
+            .raw_input(&config_poj()),
+            "t\u{ed}ng"
+        );
+        assert_eq!(
+            Phase::Composing {
+                raw: "goa2".to_string(),
+            }
+            .raw_input(&config_poj()),
+            "g\u{f3}a"
+        );
+        assert_eq!(
+            Phase::Composing {
+                raw: "teng2".to_string(),
+            }
+            .raw_input(&config_poj()),
+            "t\u{e9}ng"
+        );
     }
 
     #[test]

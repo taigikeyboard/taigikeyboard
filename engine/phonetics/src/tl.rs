@@ -16,6 +16,19 @@ pub fn to_tl(initial: &str, final_str: &str, tone: &str) -> String {
     combined.nfc().collect()
 }
 
+/// Place the tone mark for `tone` directly on the literal `syllable`, with NO
+/// spelling normalization. Used by the TL-literal composing display so the
+/// typed letters survive — `goa2` → `goá` (not `guá`), `teng2` → `téng` (the TL
+/// special final `eng` is not folded to `ing`). The mark lands on the priority
+/// vowel per [`place_tl_tone_mark`]; leading consonants carry no vowel so they
+/// are untouched, and syllabic nasals (`ng`/`m`) get the mark on `n`/`m`.
+/// Output is NFC. Tone 1/4 (and toneless) have no mark → returns `syllable`.
+// 中文: 直接在字面音節上放 TL 聲調符號,不做任何拼寫正規化(goa→goá、teng→téng)。
+pub fn apply_tl_tone_literal(syllable: &str, tone: &str) -> String {
+    let mark = tl_tone_mark(tone);
+    place_tl_tone_mark(syllable, mark).nfc().collect()
+}
+
 /// Vowel priority for TL: `a > oo > ere > e > o > ui→i > iu→u > iri > i > u > ng > m`.
 /// Mirrors `placeTlToneMark` in `tl.js`.
 fn place_tl_tone_mark(final_str: &str, mark: &str) -> String {

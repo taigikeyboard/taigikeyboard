@@ -1,5 +1,13 @@
 //! v3.5.8 Phase 9 Item 9 — POJ-display canonicalization integration matrix.
 //!
+//! **2026-06-05 TL-literal update**: TL mode no longer applies the POJ→TL
+//! SPELLING fold (`ch→ts`/`oa→ua`/`oe→ue`/`eng→ing`/`ek→ik`) to user input,
+//! so the Item-9 *TL* POJ-display recovery (e.g. `ōe`→`ue` to reach 白話字)
+//! is intentionally removed — TL input is literal. The ENCODING folds
+//! (`o͘→oo`, `ⁿ→nn`, tone-mark strip, hyphen-shadow) still apply. The
+//! spelling-fold cases below are now LITERAL-behavior guards (they assert
+//! the fold does NOT fire); the encoding cases are unchanged.
+//!
 //! Pins `build_keys_tl_with_inventory` against a hermetic
 //! `SyllableInventory` for the shapes Codex's pre-impl + post-impl
 //! consults (2026-05-15) called out as the user-visible coverage gap
@@ -44,12 +52,14 @@ use phonetics::canonicalize_syllable;
 use unicode_normalization::UnicodeNormalization;
 
 #[test]
-fn nfc_peh_oe_ji_surfaces_full_fused_key() {
-    // `pe̍h-ōe-jī` (NFC, 13 bytes: 1+1+2+1+1+2+1+1+1+2 — `e̍h` is
-    // not precomposed, `ō` and `ī` are precomposed). The candidate
-    // ending at the whole buffer must produce `tl:pehueji`, which is
-    // the live dictionary's `tl_notone` for 白話字
-    // (`dictionary/output/dictionary.csv:3181`).
+fn nfc_peh_oe_ji_tl_literal_no_oe_ue_recovery() {
+    // TL-literal (2026-06-05): the Item-9 POJ-display recovery is removed
+    // for TL mode. `pe̍h-ōe-jī` (NFC) is taken literally — the `oe→ue`
+    // SPELLING fold does NOT fire, so the POJ `ōe` does not match the TL
+    // `ue` inventory and the fused `tl:pehueji` (白話字) is NOT produced.
+    // Encoding still applies: `pe̍h` tone-strips to the valid `tl:peh`,
+    // consuming the whole `pe̍h` (5 bytes, dropped `\u{030d}` folds into
+    // the preceding `e`'s raw_end so commit leaves no dangling mark).
     let inv = build_inventory(&["peh8", "ue7", "ji7"]);
     let keys = build_keys_tl_with_inventory(
         "pe\u{030d}h-\u{014d}e-j\u{012b}",
@@ -61,27 +71,22 @@ fn nfc_peh_oe_ji_surfaces_full_fused_key() {
         .map(|(span, key)| (*span, key.as_str()))
         .collect();
     assert!(
-        mapped.contains(&((0, 13), "tl:pehueji")),
-        "expected full-buffer `tl:pehueji` candidate, got {mapped:?}",
+        !mapped.iter().any(|(_, k)| *k == "tl:pehueji"),
+        "TL literal must NOT fold `oe→ue` to recover 白話字, got {mapped:?}",
     );
-    // The single-syllable `tl:peh` candidate must consume the whole
-    // `pe̍h` (5 bytes: `p` + `e` + `\u{030d}` (2 bytes) + `h`). The
-    // dropped `\u{030d}` raw bytes have to fold into the preceding
-    // `e`'s raw_end so commit does not leave a dangling combining
-    // mark in the pending buffer — Codex pre-impl risk #2 (2026-05-15).
     assert!(
         mapped.contains(&((0, 5), "tl:peh")),
-        "expected `tl:peh` candidate at raw_end=5 (consumes whole `pe̍h`), got {mapped:?}",
+        "encoding still strips the tone mark → `tl:peh` at raw_end=5, got {mapped:?}",
     );
 }
 
 #[test]
-fn nfd_peh_oe_ji_matches_nfc_canary() {
-    // F5C single NFD canary. `pe̍h-ōe-jī` re-expressed as NFD doubles
-    // the combining marks (each precomposed `ō` / `ī` decomposes into
-    // base + macron). The canonical output must be byte-identical to
-    // the NFC case; raw byte offsets shift because NFD itself is
-    // longer in bytes.
+fn nfd_peh_oe_ji_tl_literal_matches_nfc_canary() {
+    // F5C single NFD canary under TL-literal. `pe̍h-ōe-jī` as NFD doubles
+    // the combining marks; the literal result must match the NFC case —
+    // no `oe→ue` fold either way, so `tl:pehueji` is absent and the
+    // tone-stripped `tl:peh` still surfaces. The `tl:peh` raw_end tracks
+    // the NFD byte count (offset map faithful to NFD bytes).
     let nfc = "pe\u{030d}h-\u{014d}e-j\u{012b}";
     let nfd: String = nfc.nfd().collect();
     assert!(nfd.len() > nfc.len(), "NFD canary assumption violated");
@@ -89,30 +94,32 @@ fn nfd_peh_oe_ji_matches_nfc_canary() {
     let keys = build_keys_tl_with_inventory(&nfd, &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.contains(&"tl:pehueji"),
-        "NFD canary failed to surface `tl:pehueji`, got {key_strs:?}",
+        !key_strs.contains(&"tl:pehueji"),
+        "TL literal NFD must NOT fold `oe→ue`, got {key_strs:?}",
     );
-    // The full-buffer candidate's raw_end must equal the NFD byte count
-    // (not the NFC byte count) — proving the offset map tracked NFD
-    // bytes faithfully.
-    let full = keys
+    let peh = keys
         .iter()
-        .find(|(_, k)| k == "tl:pehueji")
-        .expect("full-buffer candidate present");
-    assert_eq!(full.0 .1 as usize, nfd.len(), "raw_end != NFD len");
+        .find(|(_, k)| k == "tl:peh")
+        .expect("`tl:peh` present (tone-strip encoding)");
+    assert!(
+        peh.0 .1 as usize > "peh".len(),
+        "raw_end must track the longer NFD bytes for `pe̍h`, got {:?}",
+        peh.0,
+    );
 }
 
 #[test]
-fn poj_initial_ch_substitution_canonicalizes_to_ts() {
-    // `chóa` → NFD `cho + U+0301 + a` → drop combining → `choa` →
-    // normalize_to_tl (`ch→ts`, then `oa→ua`) → `tsua`. The dictionary
-    // already keys `紙` etc. as `tl_notone=tsua`.
+fn tl_literal_choa_does_not_fold_to_tsua() {
+    // TL-literal (2026-06-05): `chóa` → drop combining → literal `choa` —
+    // the `ch→ts` / `oa→ua` SPELLING fold does NOT fire, so `choa` (POJ
+    // shape, `ch` is not a TL initial) never matches the TL `tsua`
+    // inventory. The pre-2026-06-05 `tl:tsua` recovery is gone.
     let inv = build_inventory(&["tsua7"]);
     let keys = build_keys_tl_with_inventory("ch\u{00f3}a", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        key_strs.contains(&"tl:tsua"),
-        "expected `tl:tsua` after POJ `chóa` canonicalize, got {key_strs:?}",
+        !key_strs.contains(&"tl:tsua"),
+        "TL literal must NOT fold POJ `chóa` into `tl:tsua`, got {key_strs:?}",
     );
 }
 
@@ -189,21 +196,22 @@ fn poj_o_dot_atomic_longest_match_suppresses_shorter_so() {
 }
 
 #[test]
-fn mixed_combining_with_hyphen_chains_to_full_fused_key() {
-    // `tâi-ōe` — combining circumflex on first syllable, ASCII hyphen,
-    // combining macron on second syllable. Both transforms (Item 9
-    // canonicalize + Item 8 hyphen-shadow) must compose without
-    // shifting the offset map.
+fn mixed_combining_with_hyphen_tl_literal_no_oe_fold() {
+    // `tâi-ōe` — combining circumflex + ASCII hyphen + combining macron.
+    // Encoding (tone-strip) + Item-8 hyphen-shadow still compose without
+    // shifting the offset map, so the first syllable yields `tl:tai`. But
+    // TL-literal (2026-06-05) does NOT fold `oe→ue`, so the POJ `ōe` does
+    // not match the TL `ue` inventory and the fused `tl:taiue` is absent.
     let inv = build_inventory(&["tai5", "ue7"]);
     let keys = build_keys_tl_with_inventory("t\u{00e2}i-\u{014d}e", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tai"),
-        "expected `tl:tai` single-syllable hit, got {key_strs:?}",
+        "expected `tl:tai` single-syllable hit (tone-strip encoding), got {key_strs:?}",
     );
     assert!(
-        key_strs.contains(&"tl:taiue"),
-        "expected fused `tl:taiue`, got {key_strs:?}",
+        !key_strs.contains(&"tl:taiue"),
+        "TL literal must NOT fold `oe→ue` into fused `tl:taiue`, got {key_strs:?}",
     );
 }
 

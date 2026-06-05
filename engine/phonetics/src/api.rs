@@ -8,7 +8,10 @@
 
 use crate::case_transform::adjust_nasal_marker_case;
 use crate::poj::to_poj;
-use crate::syllable::{is_stop_tone, normalize_to_tl, split_initial_final, strip_tone_mark};
+use crate::syllable::{
+    is_stop_tone, normalize_to_tl, normalize_to_tl_keep_tl_finals, split_initial_final,
+    strip_tone_mark,
+};
 use crate::tl::to_tl;
 use crate::tps::is_zhuyin;
 use protos::engine::AppConfig;
@@ -170,22 +173,39 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
     if tone_digit == 1 || tone_digit == 4 {
         return syllable.to_string();
     }
-
-    let normalized = normalize_to_tl(&base.to_lowercase());
-    let Some((initial, final_str)) = split_initial_final(&normalized) else {
-        return syllable.to_string();
-    };
     let tone = tone_digit.to_string();
-    let assembled = match mode {
-        InputMode::Poj => to_poj(&initial, &final_str, &tone),
-        InputMode::Tl => to_tl(&initial, &final_str, &tone),
-        InputMode::English | InputMode::Tps => return syllable.to_string(),
+    let lowered = base.to_lowercase();
+    // Validate the token is ONE syllable via the canonical tables — normalize
+    // POJ→TL only to CHECK validity (recognizes `goa`/`chiah`/`ere`/`iri`, and
+    // rejects unhyphenated multi-syllable blobs `goa2ai3li` + garbage `xyz`).
+    // The engine does NOT auto-syllabify (§10.2), so an invalid token is left
+    // verbatim. Crucially the tone mark is placed on the LITERAL spelling below,
+    // so a recognized syllable keeps its typed letters (no conversion in the
+    // output).
+    if split_initial_final(&normalize_to_tl(&lowered)).is_none() {
+        return syllable.to_string();
+    }
+
+    // LITERAL composing display (both TL and POJ): place the tone mark directly
+    // on the typed letters — NO spelling conversion. The user sees exactly what
+    // they typed, only the tone digit becomes a tone mark. `teng2`→`téng`,
+    // `goa2`→`goá` (TL) / `góa` (POJ), `ting2`→`tíng`. The mode only selects the
+    // tone-mark glyph + the vowel-priority placement convention; it never
+    // rewrites the spelling family (`ch`↔`ts`, `oa`↔`ua`, `eng`↔`ing` all
+    // stay). The cross-mode `user_frequency.db` / NextWord identity is computed
+    // separately via `canonical_tl_form` (still canonical), so this literal
+    // display does not affect mode-independent learning.
+    let placed = if matches!(mode, InputMode::Tl) {
+        crate::tl::apply_tl_tone_literal(&lowered, &tone)
+    } else {
+        // POJ (English / TPS already returned above).
+        crate::poj::apply_poj_tone_literal(&lowered, &tone)
     };
     let first = base.chars().next().unwrap();
     if first.is_uppercase() {
-        capitalize_first(&assembled)
+        capitalize_first(&placed)
     } else {
-        assembled
+        placed
     }
 }
 
@@ -249,12 +269,12 @@ fn is_combining(c: char) -> bool {
 
 // 中文: 顯示層 POJ → TL 轉換 (給跨平台 fixture 測試使用)。
 pub fn poj_display_to_tl_display(text: &str) -> String {
-    rewrite_display(text, System::Tl)
+    rewrite_display(text, System::Tl, false)
 }
 
 // 中文: 顯示層 TL → POJ 轉換 (給跨平台 fixture 測試使用)。
 pub fn tl_display_to_poj_display(text: &str) -> String {
-    rewrite_display(text, System::Poj)
+    rewrite_display(text, System::Poj, false)
 }
 
 /// v3.5.9 B-4 — mode-aware canonicalizer for the `user_frequency.db`
@@ -295,7 +315,14 @@ pub fn tl_display_to_poj_display(text: &str) -> String {
 // 中文:   兩 mode 都非冪等(全大寫純羅馬 hanji-absent custom entry,production 觸發面極小)。
 pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
     match mode {
-        InputMode::Tl | InputMode::Poj => poj_display_to_tl_display(text),
+        // TL mode: still fold POJ-shaped spellings onto canonical TL for the
+        // cross-mode identity (`góa`→`guá`, B-4 / R2 / R5), but keep TL special
+        // finals `eng`[ɛŋ] / `ek` literal so a hanji-absent `teng` candidate's
+        // committed `display_text` is `teng`, not `tíng` (2026-06-05 TL-literal).
+        InputMode::Tl => rewrite_display(text, System::Tl, true),
+        // POJ mode: input genuinely IS POJ, so `eng`→`ing` is a correct POJ→TL
+        // conversion — use the full fold.
+        InputMode::Poj => poj_display_to_tl_display(text),
         // v3.5.9 D / C-3b — TPS roman is Bopomofo, not POJ/TL Latin shape;
         // poj_display_to_tl_display would no-op on Bopomofo anyway (no Latin
         // patterns to substitute), but routing through identity makes the
@@ -342,7 +369,12 @@ pub fn toneless_reading_key(roman: &str) -> String {
     crate::derivation::derive_notone(roman)
 }
 
-fn rewrite_display(text: &str, target: System) -> String {
+/// `keep_tl_finals = true` swaps the spelling fold to
+/// [`normalize_to_tl_keep_tl_finals`] (drops `eng→ing` / `ek→ik`) so a TL
+/// special final survives — used only by `canonical_tl_form` for TL mode. The
+/// public `poj_display_to_tl_display` / `tl_display_to_poj_display` (and POJ-mode
+/// `canonical_tl_form`) pass `false` for the full POJ↔TL fold.
+fn rewrite_display(text: &str, target: System, keep_tl_finals: bool) -> String {
     if text.is_empty() {
         return String::new();
     }
@@ -350,18 +382,18 @@ fn rewrite_display(text: &str, target: System) -> String {
     let mut current = String::new();
     for ch in text.chars() {
         if ch == '-' || ch == ' ' {
-            out.push_str(&rewrite_token(&current, target));
+            out.push_str(&rewrite_token(&current, target, keep_tl_finals));
             out.push(ch);
             current.clear();
         } else {
             current.push(ch);
         }
     }
-    out.push_str(&rewrite_token(&current, target));
+    out.push_str(&rewrite_token(&current, target, keep_tl_finals));
     out
 }
 
-fn rewrite_token(token: &str, target: System) -> String {
+fn rewrite_token(token: &str, target: System, keep_tl_finals: bool) -> String {
     if token.is_empty() {
         return String::new();
     }
@@ -369,7 +401,12 @@ fn rewrite_token(token: &str, target: System) -> String {
     if bare.is_empty() {
         return token.to_string();
     }
-    let normalized = normalize_to_tl(&bare.to_lowercase());
+    let lowered = bare.to_lowercase();
+    let normalized = if keep_tl_finals {
+        normalize_to_tl_keep_tl_finals(&lowered)
+    } else {
+        normalize_to_tl(&lowered)
+    };
     let Some((initial, final_str)) = split_initial_final(&normalized) else {
         return token.to_string();
     };
@@ -394,6 +431,44 @@ fn rewrite_token(token: &str, target: System) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // trace: TL literal — `teng2` → `apply_tl_tone_literal("teng","2")` places
+    // acute on `e` (eng has no a/oo/ere before e) → "téng". `goa2` → place on
+    // `a` → "goá" (letters kept, NOT folded to `guá`). No spelling conversion.
+    #[test]
+    fn to_tone_marks_tl_is_literal() {
+        assert_eq!(to_tone_marks("teng2", InputMode::Tl), "t\u{e9}ng");
+        assert_eq!(to_tone_marks("goa2", InputMode::Tl), "go\u{e1}");
+    }
+
+    // trace: POJ literal — `apply_poj_tone_literal` places the POJ mark on the
+    // typed letters, no spelling conversion. `ting2` → "tíng" (NOT folded to
+    // `téng`); `teng2` → "téng"; `goa2` → "góa" (POJ mark on `o`); `chiah8` →
+    // "chia̍h" (ch kept, mark on `a` of the `ia` pair).
+    #[test]
+    fn to_tone_marks_poj_is_literal() {
+        assert_eq!(to_tone_marks("ting2", InputMode::Poj), "t\u{ed}ng");
+        assert_eq!(to_tone_marks("teng2", InputMode::Poj), "t\u{e9}ng");
+        assert_eq!(to_tone_marks("goa2", InputMode::Poj), "g\u{f3}a");
+        assert_eq!(to_tone_marks("chiah8", InputMode::Poj), "chia\u{30d}h");
+    }
+
+    // trace: the single-syllable validator is `split_initial_final ∘
+    // normalize_to_tl`, which recognizes a special final like `ere` (a TL final
+    // with a consonant `r` between two vowels) so the literal mark still lands:
+    // `ere2` → place on the `ere` cluster → "eré". Garbage (`xyz2`) and
+    // unhyphenated multi-syllable (`goaai3` / internal digits) fail the split
+    // and stay verbatim (engine does not auto-syllabify, §10.2) — the tone digit
+    // is never silently dropped.
+    #[test]
+    fn to_tone_marks_special_final_and_invalid_tokens() {
+        // `ere` is a valid special TL final → literal mark on the second `e`.
+        assert_eq!(to_tone_marks("ere2", InputMode::Tl), "er\u{e9}");
+        // Garbage with no valid syllable stays verbatim (digit kept, not lost).
+        assert_eq!(to_tone_marks("xyz2", InputMode::Tl), "xyz2");
+        // Unhyphenated multi-syllable stays verbatim (no auto-syllabify).
+        assert_eq!(to_tone_marks("goa2ai3li2", InputMode::Tl), "goa2ai3li2");
+    }
 
     // trace: derive_notone lowercases, folds ⁿ→nn, NFD, drops combining
     // tone marks + ASCII digits + '-' + ' '. So all three renderings of

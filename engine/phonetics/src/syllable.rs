@@ -49,6 +49,19 @@ pub fn strip_tone_mark(text: &str) -> (String, String) {
     (text.nfc().collect(), String::new())
 }
 
+/// **Legacy POJ→TL canonicalization** — bundles the POJ→TL SPELLING fold
+/// (`ch→ts`, `oa→ua`, `oe→ue`, `eng→ing`, `ek→ik`) with the encoding fold
+/// (`o͘`/`ⁿ`/`ᴺ`→ASCII, `ou→oo` alias, `oonn→onn` cleanup). Use ONLY to
+/// canonicalize POJ-shaped input into TL, for cross-system conversion
+/// (`rewrite_token`), or for the FST inventory build. Do NOT use for
+/// already-canonical TL **literal** user input: the spelling rules rewrite
+/// valid TL — e.g. they collapse the TL special nasal final `eng` [ɛŋ]
+/// (`knowledge/taigi-phonetics-reference.md` §3.2.6) into `ing` [iŋ], so a
+/// user typing `téng` would see `tíng`. The TL-literal search shadow uses
+/// [`TL_ENCODING_RULES`] (encoding only); the literal composing **display**
+/// places the tone mark directly on the typed letters via
+/// `tl::apply_tl_tone_literal` / `poj::apply_poj_tone_literal` (no fold at all).
+///
 /// Ordered POJ→TL substitution rules consumed by [`normalize_to_tl`]. v3.5.9 A1
 /// D2 export — the offset-aware mirror `composing::shadow::apply_normalize_with_offsets`
 /// iterates this same list when invoked with `NORMALIZE_TO_TL_RULES`
@@ -91,6 +104,57 @@ pub const NORMALIZE_TO_TL_RULES: &[(&str, &str)] = &[
 pub fn normalize_to_tl(text: &str) -> String {
     NORMALIZE_TO_TL_RULES
         .iter()
+        .fold(text.to_string(), |acc, (find, repl)| {
+            acc.replace(find, repl)
+        })
+}
+
+/// TL-literal **search-key** encoding normalization rules — POJ glyph → ASCII
+/// (`o͘`→`oo`, `ⁿ`/`ᴺ`→`nn`) plus the TL nasal-`oo` cleanup (`oonn`→`onn`, which
+/// yields the valid TL final `onn`). This is the encoding subset of
+/// [`NORMALIZE_TO_TL_RULES`] with the POJ→TL **spelling** fold
+/// (`ch`/`oa`/`oe`/`eng`/`ek`) and the `ou→oo` alias deliberately removed, so
+/// TL search input is taken **literally**: a real TL special final like `eng`
+/// [ɛŋ] is preserved (not collapsed to `ing` [iŋ]), and `toui` is not garbled
+/// to `tooi`. Consumed by `composing::shadow::canonicalize_poj_shadow` (the FST
+/// search shadow for TL / English / TPS) via the offset-aware
+/// `apply_normalize_with_offsets`. (The composing *display* path —
+/// `convert_syllable` — does no normalization at all; it places the tone mark
+/// directly on the typed letters via `tl::apply_tl_tone_literal` /
+/// `poj::apply_poj_tone_literal`.) Order matters: `oonn→onn` must follow the
+/// glyph folds that can produce `oonn` (e.g. `o͘ⁿ` → `oo`+`nn` → `oonn` → `onn`).
+// 中文: TL 字面「搜尋鍵」的編碼正規化 — 只做 POJ 字形→ASCII + TL 鼻化 oo 清理 (oonn→onn)。
+// 中文:   刻意不含 POJ→TL 拼寫摺疊與 ou→oo 別名,讓 TL 搜尋字面化(保留 eng[ɛŋ]、toui 不壞)。
+// 中文:   供 shadow 搜尋用;組字「顯示」path 完全不正規化,直接在字面音節放聲調符號。
+pub const TL_ENCODING_RULES: &[(&str, &str)] = &[
+    ("o\u{0358}", "oo"),
+    ("\u{207f}", "nn"),
+    ("\u{1d3a}", "nn"),
+    ("oonn", "onn"),
+];
+
+/// Apply [`NORMALIZE_TO_TL_RULES`] EXCEPT the two rules that fold a valid TL
+/// final into a different valid TL final — `eng→ing` and `ek→ik`. Every other
+/// rule (`ch→ts`, `oa→ua`, `oe→ue`, the glyph/encoding folds) maps a POJ-only
+/// or non-TL spelling onto TL, so it is unambiguous and safe; only `eng`[ɛŋ] /
+/// `ek` collide with a real TL special final (`knowledge/taigi-phonetics-reference.md`
+/// §3.2.6) and must be preserved when canonicalizing TL-mode input.
+///
+/// Used by `api::canonical_tl_form` for `InputMode::Tl`: it must still fold a
+/// POJ-shaped custom roman (`góa`→`guá`) onto canonical TL for the cross-mode
+/// `user_frequency.db` / NextWord identity (B-4 / R2 / R5), but must NOT collapse
+/// a TL `eng`/`ek` reading — otherwise the committed `display_text` for a
+/// hanji-absent `teng` candidate would surface as `tíng`. POJ-mode input still
+/// uses the full [`normalize_to_tl`] (POJ `eng` genuinely IS TL `ing`).
+/// Reuses [`NORMALIZE_TO_TL_RULES`] verbatim (filtered) so the two never drift;
+/// filter preserves order, so `oonn→onn` still runs last.
+// 中文: 套 NORMALIZE_TO_TL_RULES 但跳過 eng→ing / ek→ik(這兩條把合法 TL 特殊韻折成另一個
+// 中文:   合法 TL 韻);其餘規則皆 POJ-only→TL 無歧義。供 canonical_tl_form 的 TL 模式:
+// 中文:   仍折 POJ 形 custom roman (góa→guá) 保跨模式身分,但不壓 TL eng/ek。POJ 模式仍用全套。
+pub(crate) fn normalize_to_tl_keep_tl_finals(text: &str) -> String {
+    NORMALIZE_TO_TL_RULES
+        .iter()
+        .filter(|(find, _)| *find != "eng" && *find != "ek")
         .fold(text.to_string(), |acc, (find, repl)| {
             acc.replace(find, repl)
         })

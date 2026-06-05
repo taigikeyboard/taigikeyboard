@@ -23,6 +23,18 @@ pub fn to_poj(initial: &str, final_str: &str, tone: &str) -> String {
     combined.nfc().collect()
 }
 
+/// Place the tone mark for `tone` directly on the literal `syllable`, with NO
+/// spelling normalization. Used by the POJ-literal composing display so the
+/// typed letters survive — `ting2` → `tíng` (not `téng`), `goa2` → `góa` (POJ
+/// mark on `o`). The mark lands per [`place_poj_tone_mark`] (handles `o͘`, vowel
+/// pairs, syllabic `ng`/`m`); leading consonants are untouched. Output is NFC.
+/// Tone 1/4 (and toneless) have no mark → returns `syllable`.
+// 中文: 直接在字面音節上放 POJ 聲調符號,不做任何拼寫正規化(ting→tíng、goa→góa)。
+pub fn apply_poj_tone_literal(syllable: &str, tone: &str) -> String {
+    let mark = poj_tone_mark(tone);
+    place_poj_tone_mark(syllable, mark).nfc().collect()
+}
+
 fn tl_final_to_poj(final_str: &str) -> String {
     let mut result = final_str.to_string();
     for (tl_part, poj_part) in POJ_FINAL_SUBSTITUTIONS {

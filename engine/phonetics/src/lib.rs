@@ -36,7 +36,7 @@ pub use poj::to_poj;
 pub use syllable::{
     canonicalize_poj_syllable, canonicalize_syllable, is_valid_syllable, normalize_to_poj,
     normalize_to_tl, strip_tone_mark, NORMALIZE_TO_POJ_GLYPH_RULES, NORMALIZE_TO_POJ_RULES,
-    NORMALIZE_TO_TL_RULES,
+    NORMALIZE_TO_TL_RULES, TL_ENCODING_RULES,
 };
 pub use tl::to_tl;
 pub use tps::{

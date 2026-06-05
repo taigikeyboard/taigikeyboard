@@ -575,11 +575,11 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 /// into ASCII spelling for its mode's FST key family, paired with a
 /// byte-indexed map from canonical byte offsets back to original `input`
 /// byte offsets. v3.5.8 Phase 9 Item 9; v3.5.9 B-2 reshape so the output
-/// is **POJ ASCII** under POJ mode (`chiah` stays `chiah`) and **TL ASCII**
-/// under TL mode (POJ-shaped input still folds via the TL chain).
+/// is **POJ ASCII** under POJ mode (`chiah` stays `chiah`) and **TL literal**
+/// under TL mode (POJ-shaped input is NOT folded into the TL chain).
 ///
 /// Mode-gated Phase 2 rule list (v3.5.9 B-2, refined by PR #309 Codex
-/// P1 `r3276402303`):
+/// P1 `r3276402303`; TL-literal pass added 2026-06-05):
 /// - `mode == InputMode::Poj` → [`phonetics::NORMALIZE_TO_POJ_GLYPH_RULES`]:
 ///   the glyph-only subset (`o͘→oo`, `ⁿ→nn`, `ᴺ→nn`). The legacy
 ///   `ou→oo` alias is **excluded** because it would mis-fire across
@@ -591,11 +591,13 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 ///   [`phonetics::NORMALIZE_TO_POJ_RULES`] — they apply per-token so
 ///   the `ou` alias only ever sees a single syllable.
 /// - `mode != InputMode::Poj` (TL / TPS / English) →
-///   [`phonetics::NORMALIZE_TO_TL_RULES`]: unchanged from the pre-B-2
-///   behavior; ASCII branch is identity (F3C gate, protects `tó-uī` from
-///   the `oa→ua` / `oonn→onn` substitution that would otherwise mangle
-///   it after hyphen-shadow collapse), non-ASCII branch runs the full
-///   POJ→TL chain.
+///   [`phonetics::TL_ENCODING_RULES`]: encoding-only (`o͘→oo`, `ⁿ→nn`,
+///   `ᴺ→nn`, `oonn→onn`), **no POJ→TL spelling fold**. TL input is taken
+///   literally so a valid TL special final `eng` [ɛŋ] survives (not
+///   collapsed to `ing` [iŋ]) and POJ-shaped TL-mode input (`teng`/`goa`/
+///   `chiah`) is not auto-corrected into a `tl:` hit. The ASCII branch is
+///   still identity (F3C gate); since the encoding rules are no-ops on
+///   ASCII, ASCII identity and `TL_ENCODING_RULES` agree on ASCII input.
 ///
 /// Phase 1 — char-level NFD walk over the original input. Each NFD
 /// scalar that is one of the 8 tone-mark combining codepoints in
@@ -730,10 +732,18 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
     // 中文: B-2 PR #309 — mode 決定 Phase 2 rule list。POJ 模式跑 glyph-only POJ 子集
     // 中文:   (無 `ou→oo` alias、無 ch→ts 鏈),避免跨音節邊界誤觸發 (同 ASCII 分支理由)。
     // 中文:   非-ASCII POJ 輸入仍落到 POJ ASCII 而非 TL ASCII。
+    // POJ keeps POJ shape (glyph-only); TL / English / TPS take input
+    // literally — encoding-only normalization, NO POJ→TL spelling fold — so a
+    // valid TL special final `eng` [ɛŋ] is not collapsed to `ing` [iŋ] and a
+    // POJ-spelled syllable typed in TL mode (`teng`/`goa`/`chiah`) is not
+    // auto-corrected into a `tl:` family hit. English non-ASCII stays literal
+    // (`hello` not reinterpreted as Taigi); TPS Bopomofo never matches these
+    // Latin rules.
+    // 中文: POJ 保 POJ 形 (glyph-only);TL/English/TPS 字面化 — 純編碼,無 POJ→TL 拼寫摺疊。
     let rules = if matches!(mode, InputMode::Poj) {
         phonetics::NORMALIZE_TO_POJ_GLYPH_RULES
     } else {
-        phonetics::NORMALIZE_TO_TL_RULES
+        phonetics::TL_ENCODING_RULES
     };
     apply_normalize_with_offsets(intermediate_lower, map, rules)
 }
@@ -762,8 +772,9 @@ fn is_tone_combining_mark(c: char) -> bool {
 /// maintenance, returning the mutated string + updated map. v3.5.9 B-2
 /// generalization of the pre-B-2 `apply_normalize_to_tl_with_offsets`:
 /// the caller now passes the rule list. The two production rule lists
-/// reaching this entry are [`phonetics::NORMALIZE_TO_TL_RULES`]
-/// (TL / English / TPS mode) and [`phonetics::NORMALIZE_TO_POJ_GLYPH_RULES`]
+/// reaching this entry are [`phonetics::TL_ENCODING_RULES`]
+/// (TL / English / TPS mode — encoding-only, no POJ→TL spelling fold) and
+/// [`phonetics::NORMALIZE_TO_POJ_GLYPH_RULES`]
 /// (POJ mode — the glyph-only subset of `NORMALIZE_TO_POJ_RULES` without
 /// the `ou→oo` alias, which would mis-fire across syllable boundaries
 /// at whole-buffer scope; see B-2 PR #309 Codex P1 `r3276402303`). This
@@ -962,20 +973,28 @@ mod tests {
     }
 
     #[test]
-    fn custom_toneless_key_poj_diacritic_is_canonicalized_first() {
-        // Codex pre-impl S6 Q2 BLOCK: a POJ/diacritic custom roman must
-        // fold to the same toneless key a numeric/typed `taigi` span
-        // produces. A plain tone-digit strip would NOT do this — the
-        // `canonicalize_poj_shadow` pass is load-bearing.
+    fn custom_toneless_key_tl_strips_tone_keeps_literal_spelling() {
+        // The canonicalize pass still strips tone marks + folds glyph
+        // encoding, so a diacritic custom roman keys to the same toneless
+        // form as the numeric one when there is NO spelling difference:
+        // `tâi-gí` → `tl:taigi` == numeric `tai5gi2`.
         assert_eq!(
             custom_toneless_key("tâi-gí", InputMode::Tl).as_deref(),
             Some("tl:taigi"),
-            "POJ diacritic must canonicalize → same key as numeric tai5gi2"
+            "tone-mark + hyphen strip (no spelling change) → tl:taigi"
         );
-        // POJ `oa`/`ou`-style display also canonicalizes (Item 9 chain).
+        // TL-literal (2026-06-05): the POJ→TL SPELLING fold is NOT applied,
+        // so POJ-spelled `oân` (oa) keys to `tl:taioan`, distinct from the
+        // TL-spelled `uan5` → `tl:taiuan`. Both the lattice edge key and this
+        // custom key run the SAME `canonicalize_poj_shadow(mode)`, so they
+        // stay byte-identical and the continuous custom match still holds.
         assert_eq!(
             custom_toneless_key("tâi-oân", InputMode::Tl).as_deref(),
+            Some("tl:taioan"),
+        );
+        assert_eq!(
             custom_toneless_key("tai5uan5", InputMode::Tl).as_deref(),
+            Some("tl:taiuan"),
         );
     }
 
@@ -1153,11 +1172,12 @@ mod tests {
     }
 
     #[test]
-    fn canonicalize_poj_shadow_poj_ch_initial_substitutes_to_ts() {
-        // Non-ASCII path with `ch` initial: `chóa` (POJ `tsuá`) →
-        // canonical `tsua` with the tone-2 acute dropped.
+    fn canonicalize_poj_shadow_tl_non_ascii_is_literal_no_spelling_fold() {
+        // TL-literal (2026-06-05): non-ASCII `chóa` (POJ glyph for 紙) keeps
+        // its literal spelling after the tone-2 acute drop — NO `ch→ts` /
+        // `oa→ua` POJ→TL fold. Pre-2026-06-05 this folded to `tsua`.
         let (canonical, _map) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Tl);
-        assert_eq!(canonical, "tsua");
+        assert_eq!(canonical, "choa");
     }
 
     #[test]
@@ -1167,8 +1187,10 @@ mod tests {
         // makes it `o`. This pins the ordering: NFD walk must come
         // BEFORE the lowercase pass, otherwise uppercase precomposed
         // diacritic chars would survive into Phase 2 substitutions.
+        // TL-literal (2026-06-05): no `oa→ua` spelling fold, so the result
+        // is `oa` — still proving the uppercase `Ó` lowercased to `o`.
         let (out, _map) = canonicalize_poj_shadow("\u{00d3}a", InputMode::Tl);
-        assert_eq!(out, "ua", "{out:?}");
+        assert_eq!(out, "oa", "{out:?}");
     }
 
     #[test]
@@ -1260,10 +1282,10 @@ mod tests {
             out, "chiah",
             "POJ mode keeps POJ shape after tone-mark drop"
         );
-        // TL mode still folds via NORMALIZE_TO_TL_RULES (byte-identical
-        // to pre-B-2 — verifies the regression guard).
+        // TL mode is literal too (2026-06-05) — no `ch→ts` spelling fold;
+        // both modes converge to `chiah` on this glyph-only input.
         let (tl, _) = canonicalize_poj_shadow("chia\u{030d}h", InputMode::Tl);
-        assert_eq!(tl, "tsiah", "TL mode keeps pre-B-2 fold");
+        assert_eq!(tl, "chiah", "TL literal: no ch→ts spelling fold");
     }
 
     #[test]
@@ -1312,17 +1334,16 @@ mod tests {
     }
 
     #[test]
-    fn canonicalize_poj_shadow_non_ascii_diverges_by_mode_after_b2() {
-        // v3.5.9 B-2 (PR #309 refinement) — non-ASCII POJ-display input
-        // now diverges by mode. POJ mode applies the glyph-only
-        // NORMALIZE_TO_POJ_GLYPH_RULES (no `ch→ts` chain, no `oa→ua`
-        // chain, no `ou→oo` alias) so `chóa` (POJ `chóa` for 紙) keeps
-        // POJ shape → `choa`. TL mode keeps pre-B-2 fold → `tsua`.
-        // Pre-B-2 both modes produced `tsua`.
+    fn canonicalize_poj_shadow_non_ascii_both_modes_literal() {
+        // 2026-06-05 TL-literal pass — non-ASCII POJ-display input now keeps
+        // its literal shape in BOTH modes (POJ glyph-only, TL encoding-only,
+        // neither runs the POJ→TL spelling chain). `chóa` (POJ for 紙) →
+        // `choa` either way. The pre-B-2 TL `tsua` fold AND the B-2-era
+        // mode divergence are both gone.
         let (poj, _) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Poj);
         let (tl, _) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Tl);
-        assert_eq!(poj, "choa", "POJ mode keeps POJ ASCII shape");
-        assert_eq!(tl, "tsua", "TL mode unchanged (regression guard)");
+        assert_eq!(poj, "choa", "POJ keeps POJ ASCII shape");
+        assert_eq!(tl, "choa", "TL literal: no ch→ts / oa→ua fold");
     }
 
     #[test]
