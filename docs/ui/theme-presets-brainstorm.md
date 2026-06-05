@@ -2,7 +2,7 @@
 
 > **Type**: Planning (brainstorm — evolving; USER will append ideas)
 > **Keywords**: `theme`, `preset`, `palette`, `colorscheme`, `theme set`, `shelf`, `custom theme`, `user theme`, `image upload`
-> **Status**: Brainstorm — NO code. Decided (USER 2026-06-05): **5th nav tab**, **theme-id resolve storage model**, **user-created named themes (the "+" flow)**. Remaining forks open.
+> **Status**: Brainstorm — NO code. Decided (USER 2026-06-05): **5th nav tab**, **theme-id resolve storage model**, **user-created named themes (the "+" flow)**, **user themes excluded from OS auto-backup** (`.taigi` only). Remaining forks open.
 > **Version scope**: v3.6.2 (USER-scoped 2026-06-05: 「這個列為 v3.6.2 的計劃」)
 > **Related**: `docs/ui/theme.md` (current-state reference), `docs/roadmap.md` (deferred TODO "keyboard theme picker")
 
@@ -13,8 +13,9 @@
 - **Goal**: ship predefined **theme sets** (each = a named palette with a 小標題, bundling **light + dark** variants), let users **create / name / save multiple custom themes** (a KeyboardKit-style **"+"** flow that survives app updates), present everything in a KeyboardKit-Shelf-style picker on its **own 5th nav tab**, and evaluate **user-uploaded image** as a custom-theme source.
 - **Current state is NOT greenfield** — both platforms already have a mirrored 6-role free-pick color system (`KeyboardColorSettings`). v3.6.2 shifts storage from "store 6 raw colors" to "**store a `selectedThemeId`, resolve 6 roles (and light/dark) at render time**", and adds a **persisted list of user-created themes**. The existing 6-picker UI becomes the theme **editor** reached via "+".
 - **Layered design**: palette values from established editor/vim colorschemes (Catppuccin, Tokyo Night, Gruvbox, Solarized, Nord); the **picker UX** references KeyboardKit's `KeyboardTheme.Shelf`; we **deliberately do NOT use** KeyboardKit's theme *engine* (Pro-gated) or FlorisBoard's Snygg stylesheet engine + addon store.
-- **USER decisions 2026-06-05**: (1) **Nav** — appearance/theme → its own top-level tab (4 → 5); (2) **Storage** — theme-id resolve model (auto-solves light/dark + active-identity forks); (3) **User themes** — multiple named, saved, update-durable, applyable themes via "+".
-- **Remaining open forks**: preset coverage (6 roles vs full chrome, §6 A), theme-table source-of-truth (hand-mirror vs shared JSON, §6 C), **user-theme light/dark editing** (single vs pair, §6 E), **user-theme OS-backup policy** (exclude like other user-data vs allow iCloud restore, §6 F), user-theme count cap (§6 G), image-upload scope (§7), final roster + licensing (§5).
+- **USER decisions 2026-06-05**: (1) **Nav** — appearance/theme → its own top-level tab (4 → 5); (2) **Storage** — theme-id resolve model (auto-solves light/dark + active-identity forks); (3) **User themes** — multiple named, saved, update-durable, applyable themes via "+"; (4) **Backup** — user themes **excluded from OS auto-backup** (fork F-Exclude; `.taigi` is the only cross-device path, uniform with the 3 user-data DBs).
+- **Working default (USER may override)**: user-theme light/dark editing = **single value (E1)** for MVP (§6 E).
+- **Remaining open forks**: preset coverage (6 roles vs full chrome, §6 A), theme-table source-of-truth (hand-mirror vs shared JSON, §6 C), user-theme count cap (§6 G), image-upload scope (§7), final roster + licensing (§5).
 
 ---
 
@@ -189,9 +190,12 @@ No new color-editing UI — `AppearanceSettingsView` (iOS) / `ColorPickerDialog`
 | Scenario | Auto-preserved? | Mechanism |
 |---|---|---|
 | **App update** (same device) | ✅ automatic | UserDefaults / DataStore / files / SQLite live in the app container; updates do not wipe them (§2.2). Core requirement met. |
-| **Reinstall / new device** | ⚠ policy-dependent | per v3.6.1 R7, user-data DBs are **excluded from OS auto-backup**; manual `.taigi` is the cross-device path. User themes are user content → must **join the `.taigi` export**. OS-backup inclusion is fork §6 F. |
+| **Reinstall / new device** | ⚠ manual `.taigi` only | **DECIDED (USER 2026-06-05, fork F-Exclude)**: user themes are **excluded from OS auto-backup**, uniform with the 3 user-data DBs (R7 posture). Manual `.taigi` is the **only** cross-device path → user themes **must join the `.taigi` export**. ⚠ UX footgun (same as S16): the backup/export UI copy must never promise OS / iCloud restore for themes. |
 
-**Storage location (recommendation)**: a small bounded list (≤ a few dozen × 12 colors + name = tiny). Recommend a **JSON-encoded list in settings storage** (iOS App Group UserDefaults `SettingsKey<[UserTheme]>`; Android DataStore) over a new SQLite table (YAGNI — no query/relational need). It **must** be added to `.taigi` serialization for reinstall/new-device survival (parity surface).
+**Storage location** — constrained by the F-Exclude decision:
+- A small bounded list (≤ a few dozen × 12 colors + name = tiny) → a **JSON-encoded list**, NOT a new SQLite table (YAGNI — no query/relational need).
+- ⚠ **OS-backup exclusion drives the location** (code-grounded vs R7): iOS marks individual **files** excluded via `isExcludedFromBackup` (R7 did this on the SQLite DBs, `SQLiteConnectionManager.connect()`). **App Group UserDefaults plist is backed up wholesale and cannot be selectively excluded** — so on iOS the theme JSON must live in a **standalone file in the App Group container** marked `isExcludedFromBackup`, **not** a `SettingsKey`/UserDefaults key. Android: any file under app storage is already excluded by the existing `allowBackup="false"` (R7) — DataStore / a JSON file both fine.
+- It **must** be added to `.taigi` serialization for reinstall/new-device survival (parity surface — schema + format mirror iOS/Android).
 
 ### 4b.4 Constraints
 
@@ -296,6 +300,8 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 - **Nav fork → A**: appearance/theme = its own 5th top-level tab (§8.1).
 - **Storage fork → theme-id resolve** (§4) — closes Fork B (light/dark) + Fork D (active identity).
 - **User themes → yes**: multiple named, saved, update-durable, applyable, via "+" (§4b).
+- **Fork F → F-Exclude**: user themes excluded from OS auto-backup, `.taigi` only (§4b.3).
+- **Fork E → E1 working default** (USER may override): single value, both modes.
 
 ### Fork A (open) — preset coverage: 6 roles only, or widen the override surface?
 
@@ -307,18 +313,15 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 
 - §4 enlarges the built-in table; recommendation leans **P2 (shared JSON parsed by both)**; USER to confirm.
 
-### Fork E (open) — user-theme light/dark editing: single value, or editable pair?
+### Fork E — user-theme light/dark editing (E1 working default, USER may override)
 
-- **E1 (MVP)**: a user theme stores one `SixRoleColors`, applied in both modes (matches today's free-pick).
-- **E2**: editor toggle to define light + dark separately (parity with built-ins' auto-switch).
-- Recommendation: **E1 for MVP** (simpler editor), E2 a follow-up. USER to confirm.
+- **E1 (MVP, adopted default)**: a user theme stores one `SixRoleColors`, applied in both modes (matches today's free-pick). Simpler editor.
+- **E2 (deferred)**: editor toggle to define light + dark separately (parity with built-ins' auto-switch). Follow-up.
 
-### Fork F (open) — user-theme OS-backup policy
+### Fork F — user-theme OS-backup policy → **F-Exclude (DECIDED, USER 2026-06-05)**
 
-- v3.6.1 R7 excluded the 3 user-data DBs from OS auto-backup **for privacy** (typed-text-derived data). **User themes are colors + names — NOT privacy-sensitive.**
-- **F-Exclude**: treat like other user-data — exclude from OS backup, `.taigi` only (policy uniform; lose themes on reinstall without export).
-- **F-Allow**: allow OS backup (iCloud / Google auto-restores themes since non-sensitive) **and** include in `.taigi` (friendlier reinstall; diverges from R7's "all user-data excluded" posture).
-- No default assumed — USER decision (release/privacy posture, Core Principle #5).
+- v3.6.1 R7 excluded the 3 user-data DBs from OS auto-backup. Although themes are colors + names (not privacy-sensitive), USER chose **uniform policy**: user themes are **excluded from OS auto-backup**, manual `.taigi` is the only cross-device path.
+- **Implementation** (§4b.3): iOS stores the theme JSON in a standalone App Group file marked `isExcludedFromBackup` (UserDefaults plist can't be selectively excluded); Android is already covered by `allowBackup="false"`. Themes join `.taigi` export. UI copy must not promise OS/iCloud restore (S16 footgun). Pin under a new invariant when implemented (sibling to `INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP` §29).
 
 ### Fork G (open) — user-theme count cap
 
@@ -407,10 +410,10 @@ Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 - [x] Nav structure — **A: 5th tab** (2026-06-05)
 - [x] Storage model — **theme-id resolve** (2026-06-05)
 - [x] User-created themes — **yes, "+" CRUD, update-durable, multiple** (2026-06-05)
+- [x] Fork F — user-theme OS-backup → **F-Exclude** (`.taigi` only, uniform with user-data DBs) (2026-06-05)
+- [x] Fork E — user-theme light/dark → **E1 single value** working default (E2 deferred; USER may override)
 - [ ] Fork A — 6-role MVP vs full-chrome override?
 - [ ] Fork C — hand-mirrored built-in table vs shared JSON (model favors shared JSON)?
-- [ ] Fork E — user-theme light/dark: single value (MVP) vs editable pair?
-- [ ] Fork F — user-theme OS-backup: exclude (like other user-data) vs allow iCloud restore (non-sensitive)?
 - [ ] Fork G — user-theme count cap (suggest ~50) — number / needed?
 - [ ] Nord light variant — ship dark-only, or author a "Nord Light"?
 - [ ] Keyword-list extras (Tron / Nothing / Windows Phone / Oblivion) — which to include; license-check.
