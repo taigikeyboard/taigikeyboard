@@ -46,7 +46,7 @@ enum HomeTexts {
 
     static let userGuide = "網站紹介"
     static let rateUs = "為阮評分"
-    static let aboutDeveloper = "關於開發者"
+    static let aboutDeveloper = "關於"
     static let privacyPolicy = "隱私權政策"
 
     // MARK: - 關於開發者

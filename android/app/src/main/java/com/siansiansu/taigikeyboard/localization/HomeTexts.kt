@@ -46,7 +46,7 @@ object HomeTexts {
 
     const val userGuide = "網站紹介"
     const val rateUs = "為阮評分"
-    const val aboutDeveloper = "關於開發者"
+    const val aboutDeveloper = "關於"
     const val privacyPolicy = "隱私權政策"
 
     // MARK: - 關於開發者
