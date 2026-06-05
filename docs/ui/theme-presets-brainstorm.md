@@ -14,6 +14,7 @@
 - **Current state is NOT greenfield** — both platforms already have a mirrored 6-role free-pick color system (`KeyboardColorSettings`). v3.6.2 shifts storage from "store 6 raw colors" to "**store a `selectedThemeId`, resolve 6 roles (and light/dark) at render time**", and adds a **persisted list of user-created themes**. The existing 6-picker UI becomes the theme **editor** reached via "+".
 - **Layered design**: palette values from established editor/vim colorschemes (Catppuccin, Tokyo Night, Gruvbox, Solarized, Nord); the **picker UX** references KeyboardKit's `KeyboardTheme.Shelf`; we **deliberately do NOT use** KeyboardKit's theme *engine* (Pro-gated) or FlorisBoard's Snygg stylesheet engine + addon store.
 - **USER decisions 2026-06-05**: (1) **Nav** — appearance/theme → its own top-level tab (4 → 5); (2) **Storage** — theme-id resolve model (auto-solves light/dark + active-identity forks); (3) **User themes** — multiple named, saved, update-durable, applyable themes via "+"; (4) **Backup** — user themes **excluded from OS auto-backup** (fork F-Exclude; `.taigi` is the only cross-device path, uniform with the 3 user-data DBs).
+- **Simplified editor (USER 2026-06-05)**: the custom-theme editor exposes **3 colors** (Background = keyboard + candidate strip; Key = no special/normal split; Text = key + candidate) **+ a key-shadow slider** (new render property; shadow replaces the depth cue lost when key fills merge). Built-ins keep the authored 6-role tables; internal model stays 6 roles + shadow (§4b.2/§4b.5).
 - **Working default (USER may override)**: user-theme light/dark editing = **single value (E1)** for MVP (§6 E).
 - **Remaining open forks**: preset coverage (6 roles vs full chrome, §6 A), theme-table source-of-truth (hand-mirror vs shared JSON, §6 C), user-theme count cap (§6 G), image-upload scope (§7), final roster + licensing (§5).
 
@@ -134,18 +135,28 @@ BuiltInTheme {
 UserTheme {
   id: UUID                // stable, survives updates
   name: String            // user-given; shown as 小標題
-  colors: ThemeColors     // single SixRoleColors, or {light,dark} pair — fork §6 E
+  colors: SixRoleColors   // internal still 6 roles (the editor exposes fewer — §4b.2)
+  keyShadow: ShadowSpec   // NEW render property (§4b.5); default none (flat)
   createdAt / updatedAt
 }
 
 SixRoleColors = { background, keyText, normalKeyFill, specialKeyFill, candidateText, candidateBackground }
+ShadowSpec    = { intensity: 0.0…1.0 }   // 0 = flat (current). color = derived (MVP); see §6 H
+
+// What the SIMPLIFIED editor exposes (USER 2026-06-05) — maps onto SixRoleColors:
+EditorColors {
+  background   // → background + candidateBackground
+  key          // → normalKeyFill + specialKeyFill   (no special/normal split)
+  text         // → keyText + candidateText           (one text color)  — confirm §10
+}
 
 // Selection
 selectedThemeId: String   // "default" | built-in id | UserTheme UUID
 ```
 
 - **`default`** = today's nil-fallback (platform / KeyboardKit adaptive). Users who never customize get this.
-- **Render-time resolve**: built-in → pick `light`/`dark` by system `colorScheme` (fallback to the other if nil, e.g. Nord dark-only). `default` → platform adaptive. user theme → its colors (light/dark per §6 E).
+- **Built-in themes keep the full authored 6-role `SixRoleColors`** (richer depth; §5). Only the **user-theme editor** is simplified to 3 colors + shadow (§4b.2) — it writes the 3 onto the 6 internal roles, so the renderer path is identical for built-in and user themes.
+- **Render-time resolve**: built-in → pick `light`/`dark` by system `colorScheme` (fallback to the other if nil, e.g. Nord dark-only). `default` → platform adaptive. user theme → its `SixRoleColors` + `keyShadow` (light/dark per §6 E).
 
 ### 4.2 Persistence
 
@@ -155,7 +166,7 @@ selectedThemeId: String   // "default" | built-in id | UserTheme UUID
 
 ### 4.3 Migration (lightweight, non-destructive)
 
-- Existing users with a customized `colorSettings` blob → seed **one** `UserTheme` named e.g. "我的主題" from it, set `selectedThemeId` to that UUID → their current look is preserved as a saved theme.
+- Existing users with a customized `colorSettings` blob → seed **one** `UserTheme` named e.g. "我的主題" from it (all 6 roles preserved internally → **lossless**, even though the simplified editor only exposes 3; re-editing via the 3-knob editor is what collapses the pairs), set `selectedThemeId` to that UUID → their current look is preserved.
 - Users with the default `{}` blob → `selectedThemeId = default`, no user theme created.
 - Pure additive keys; no destructive rebuild. Mirrors the non-destructive migration discipline across v3.6.1 (`.claude/rules/taigi-incidents.md` S11–S15).
 
@@ -177,13 +188,31 @@ USER: 「有一個 + 號,可以替自己自定義的主題取名、儲存,不會
 ### 4b.1 CRUD surface
 
 - The Shelf shows: **Default** + built-in themes + **the user's saved themes** + a trailing **"+"** item.
-- **"+"** → opens the **editor** (reuses today's 6 `ColorPicker` rows + live `KeyboardPreviewPanel`) with a **name field** → **Save** → appends a `UserTheme`, selects it.
+- **"+"** → opens the **simplified editor** (§4b.2: 3 color rows + a shadow slider + live `KeyboardPreviewPanel`) with a **name field** → **Save** → appends a `UserTheme`, selects it.
 - A saved user theme's detail / long-press → **Rename / Duplicate / Delete**.
 - **Duplicate-a-built-in to edit**: selecting a built-in → "Duplicate" → creates an editable `UserTheme` pre-filled from that built-in's resolved colors (KeyboardKit-like "start from a base theme"). Built-ins themselves stay read-only.
 
-### 4b.2 Editor = the existing 6-picker UI
+### 4b.2 Editor — simplified to 3 colors + a shadow slider (USER 2026-06-05)
 
-No new color-editing UI — `AppearanceSettingsView` (iOS) / `ColorPickerDialog` + `ColorSettingRow` (Android) become the theme editor body, plus a name field and Save/Cancel. Live preview is already wired.
+USER wants the custom-theme editor pared down. Instead of today's 6 separate color pickers, the editor exposes **3 colors + 1 shadow slider**:
+
+| Editor control | Writes to internal `SixRoleColors` / shadow |
+|---|---|
+| **背景 Background** | `background` + `candidateBackground` (keyboard + candidate strip together) |
+| **按鍵 Key** | `normalKeyFill` + `specialKeyFill` (no special/normal distinction) |
+| **文字 Text** | `keyText` + `candidateText` (one text color — confirm §10: merge vs keep candidate text separate) |
+| **按鍵陰影 Key shadow** | `keyShadow.intensity` slider, 0 = flat |
+
+- **Why shadow is added with the merge**: merging normal/special key fills removes the depth cue that distinguished function keys. The adjustable **shadow replaces that depth cue** — keys regain definition via elevation instead of a second fill color. The two changes are one coherent simplification.
+- Reuses the existing `ColorPicker` (iOS) / `ColorPickerDialog` (Android) widgets, but only **3** rows + a slider — NOT the current 6-row `AppearanceSettingsView` / `ColorSettingRow` layout verbatim. Plus a name field + Save/Cancel. Live preview already wired.
+- **Internal model stays 6 roles** (§4.1) — the 3 editor inputs fan out, so the renderer is unchanged and built-in themes (authored at full 6-role) coexist.
+
+### 4b.5 Key shadow — new render property (design-stance departure)
+
+- **Project is currently flat / no-shadow** (`docs/ui/theme.md` "Flat design: no shadows, uses borders"). Adding an adjustable key shadow is a departure — **sanctioned by USER for custom themes only**. `default` + all **built-in** themes keep `keyShadow.intensity = 0` (flat look preserved).
+- **iOS feasibility (grounded, doc-lookup 2026-06-05)**: KeyboardKit `Keyboard.ButtonStyle.shadow: ShadowStyle?` (`ButtonShadowStyle` = color + size, `references/keyboardkit9.9.0/.../Keyboard+ButtonStyle.swift:139,197` + `Keyboard+ButtonShadow.swift`). Driven via the `keyboardButtonStyle { }` closure we already use (`TaigiKeyboardView.swift:318-350`).
+- **Android feasibility**: keys are custom-drawn (`KeyContent.kt`) → shadow via `Paint.setShadowLayer` / a shadow layer in the draw pass. Confirm at impl.
+- **New cross-platform surface**: `keyShadow` is a parity field (schema + `.taigi` + intensity→render mapping mirror iOS/Android). Pin an invariant when implemented.
 
 ### 4b.3 Durability — two layers (answer to "不會因為更新不見")
 
@@ -302,6 +331,7 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 - **User themes → yes**: multiple named, saved, update-durable, applyable, via "+" (§4b).
 - **Fork F → F-Exclude**: user themes excluded from OS auto-backup, `.taigi` only (§4b.3).
 - **Fork E → E1 working default** (USER may override): single value, both modes.
+- **Editor simplified → 3 colors + shadow** (§4b.2): Background (bg+candidate), Key (no special/normal split), Text (key+candidate), + Key-shadow slider. Built-ins keep authored 6-role; internal model stays 6 + shadow.
 
 ### Fork A (open) — preset coverage: 6 roles only, or widen the override surface?
 
@@ -326,6 +356,15 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 ### Fork G (open) — user-theme count cap
 
 - Suggest ~50; mirror the cap-parity pattern (S14). USER to confirm the number / whether a cap is wanted.
+
+### Fork H (open) — key-shadow controls
+
+- **H1 (MVP, recommended)**: a single **intensity** slider (0 = flat); shadow color derived (dark / from text color).
+- **H2**: also expose a shadow **color** picker. YAGNI for MVP; add only if dogfood wants it.
+
+### Editor-simplification sub-fork (open) — text merge
+
+- USER: 「文字也不需要區分特殊鍵、一般鍵」. Default interpretation: **one Text color** (`keyText` + `candidateText` merged). Alternative: keep **candidate text separate** (4 colors), since the candidate strip can sit on a different luminance. USER to confirm (§10).
 
 ---
 
@@ -412,6 +451,9 @@ Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 - [x] User-created themes — **yes, "+" CRUD, update-durable, multiple** (2026-06-05)
 - [x] Fork F — user-theme OS-backup → **F-Exclude** (`.taigi` only, uniform with user-data DBs) (2026-06-05)
 - [x] Fork E — user-theme light/dark → **E1 single value** working default (E2 deferred; USER may override)
+- [x] Editor simplified → **3 colors + key-shadow slider** (Background / Key / Text) (2026-06-05)
+- [ ] Editor text-merge — one Text (key+candidate, default) vs keep candidate text separate (4 colors)?
+- [ ] Fork H — key-shadow: intensity-only (MVP) vs also shadow color?
 - [ ] Fork A — 6-role MVP vs full-chrome override?
 - [ ] Fork C — hand-mirrored built-in table vs shared JSON (model favors shared JSON)?
 - [ ] Fork G — user-theme count cap (suggest ~50) — number / needed?
