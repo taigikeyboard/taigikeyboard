@@ -53,7 +53,8 @@ struct TaigiKeyboardView: View {
         self.onTranslateToggle = onTranslateToggle
         self.initialInputMode = initialInputMode
         _currentInputMode = State(initialValue: settings.inputMode)
-        _colorSettings = State(initialValue: settings.colorSettings)
+        // 中文: @State 持有「解析後」的主題顏色(default 主題 = colorSettings buffer);透過 resolvedTheme 取得。
+        _colorSettings = State(initialValue: settings.resolvedTheme.colors)
         _keyFontSizeScale = State(initialValue: settings.keyFontSizeScale)
         _keyBorderWidth = State(initialValue: settings.keyBorderWidth)
         _candidateTextSizeScale = State(initialValue: settings.candidateTextSizeScale)
@@ -149,7 +150,8 @@ struct TaigiKeyboardView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let latest = settings.colorSettings
+            // 中文: 重新解析主題顏色。selectedThemeId / colorSettings / themeRevision 任一變更皆觸發此通知。
+            let latest = settings.resolvedTheme.colors
             if colorSettings != latest {
                 colorSettings = latest
             }

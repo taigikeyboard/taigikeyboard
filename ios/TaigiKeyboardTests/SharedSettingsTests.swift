@@ -1,4 +1,5 @@
 @testable import TaigiKeyboard
+import SwiftUI
 import XCTest
 
 /// Tests for `SharedSettings.setInputMode(_:)` / `setKeyboardLayoutType(_:)`
@@ -214,5 +215,25 @@ final class SharedSettingsTests: XCTestCase {
         defaults.set(InputMode.tl.rawValue, forKey: "inputMode")
 
         XCTAssertEqual(settings.inputMode, .tl, "Each read must hit UserDefaults; no in-memory cache")
+    }
+
+    // MARK: - Theme resolution (v3.6.2 PR-2a — no-migration safety)
+
+    // trace: fresh install → selectedThemeId absent → "default" → resolvedTheme.colors == .default (all nil)
+    func test_resolvedTheme_defaultUncustomized_returnsAllNil() {
+        XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
+        XCTAssertEqual(settings.resolvedTheme, ResolvedKeyboardTheme(colors: .default, keyShadowIntensity: 0))
+    }
+
+    // trace: a customized user stays on "default" → resolvedTheme preserves their colorSettings verbatim,
+    // which is the entire "no migration needed" safety argument for the renderer switch.
+    func test_resolvedTheme_defaultTheme_preservesCustomizedColorSettings() {
+        var custom = KeyboardColorSettings()
+        custom.backgroundColor = CodableColor(.red)
+        settings.colorSettings = custom
+
+        XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
+        XCTAssertEqual(settings.resolvedTheme.colors, custom)
+        XCTAssertEqual(settings.resolvedTheme.keyShadowIntensity, 0)
     }
 }

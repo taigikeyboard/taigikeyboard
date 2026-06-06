@@ -57,6 +57,33 @@ extension SettingsKey where T == Bool {
     }
 }
 
+extension SettingsKey where T == Int {
+    /// `UserDefaults`-backed `Int` with "missing-or-non-Int → default"
+    /// semantics. Uses `object(forKey:) as? Int` so an unset key returns
+    /// `defaultValue` instead of `0`.
+    static func int(_ key: String, default defaultValue: Int) -> Self {
+        Self(
+            key: key,
+            defaultValue: defaultValue,
+            read: { $0.object(forKey: key) as? Int },
+            write: { $0.set($1, forKey: key) },
+        )
+    }
+}
+
+extension SettingsKey where T == String {
+    /// `UserDefaults`-backed `String` with "missing-or-non-String → default"
+    /// semantics.
+    static func string(_ key: String, default defaultValue: String) -> Self {
+        Self(
+            key: key,
+            defaultValue: defaultValue,
+            read: { $0.string(forKey: key) },
+            write: { $0.set($1, forKey: key) },
+        )
+    }
+}
+
 extension SettingsKey where T == Double {
     /// `UserDefaults`-backed `Double` with "missing-or-non-Double → default"
     /// semantics.

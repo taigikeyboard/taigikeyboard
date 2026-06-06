@@ -99,6 +99,11 @@ final class SharedSettings {
 
     private static let colorSettingsKey: SettingsKey<KeyboardColorSettings> = .codable("colorSettings", default: .default)
 
+    // 中文: 選定主題 id。"default" = 既有自由配色 buffer(colorSettings);其餘為 UserTheme UUID / built-in id。
+    private static let selectedThemeIdKey: SettingsKey<String> = .string("selectedThemeId", default: ThemeId.default)
+    // 中文: 主題版本計數。每次 user-theme 檔變更 +1,寫入觸發 didChangeNotification,讓 extension 重新解析。
+    private static let themeRevisionKey: SettingsKey<Int> = .int("themeRevision", default: 0)
+
     // 中文: process 內 singleton。整個 app + extension 共用同一份設定 facade。
     static let shared = SharedSettings()
 
@@ -507,10 +512,45 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.keyBorderWidthKey) }
     }
 
-    // 中文: 鍵盤顏色組合。以 JSON 序列化進 UserDefaults;decode 失敗或未設定時回傳 .default (全 nil)。
+    // 中文: 鍵盤顏色組合(自由配色 buffer)。以 JSON 序列化進 UserDefaults;decode 失敗或未設定時回傳 .default (全 nil)。
+    // 中文: 主題模型下,此欄位 = "default" 主題解析來源,也是外觀編輯器寫入目標(editor scratch)。
     var colorSettings: KeyboardColorSettings {
         get { userDefaults.value(for: Self.colorSettingsKey) }
         set { userDefaults.set(newValue, for: Self.colorSettingsKey) }
+    }
+
+    // 中文: 選定主題 id。"default" 時渲染走 colorSettings;其餘走 userThemeStore / built-in。
+    var selectedThemeId: String {
+        get { userDefaults.value(for: Self.selectedThemeIdKey) }
+        set { userDefaults.set(newValue, for: Self.selectedThemeIdKey) }
+    }
+
+    // 中文: 使用者自訂主題儲存(App Group JSON 檔,排除備份)。變更時 bump themeRevision 觸發跨進程刷新。
+    private lazy var userThemeStore = UserThemeStore(
+        containerURL: Self.sharedContainerURL,
+        onMutated: { [weak self] in self?.bumpThemeRevision() },
+    )
+
+    // 中文: 主題版本 +1。寫入 themeRevision 鍵 → 觸發 didChangeNotification,讓 keyboard extension 重新解析主題。
+    private func bumpThemeRevision() {
+        let next = userDefaults.value(for: Self.themeRevisionKey) &+ 1
+        userDefaults.set(next, for: Self.themeRevisionKey)
+    }
+
+    // 中文: 渲染端消費的解析主題。"default" 走快路徑(免 file I/O,維持現有行為)。
+    // 中文: 只有 id 為 UUID(user theme)才讀 user-theme 檔;非 UUID(built-in id,PR-2b)不讀檔 —
+    // 中文: 避免 render 熱路徑無謂 I/O,並讓 PR-2b 的 built-in 解析分支自然接在 else。
+    var resolvedTheme: ResolvedKeyboardTheme {
+        let id = selectedThemeId
+        if id == ThemeId.default {
+            return ResolvedKeyboardTheme(colors: colorSettings, keyShadowIntensity: 0)
+        }
+        let userThemes = UUID(uuidString: id) != nil ? userThemeStore.load() : []
+        return ThemeResolver.resolved(
+            themeId: id,
+            legacyColorSettings: colorSettings,
+            userThemes: userThemes,
+        )
     }
 
     /// Creates an immutable snapshot of render-relevant settings.
@@ -525,7 +565,7 @@ final class SharedSettings {
             isTpsOrMappedToER: isTpsOrMappedToER,
             keyFontSizeScale: keyFontSizeScale,
             keyCornerRadius: keyCornerRadius,
-            colorSettings: colorSettings,
+            colorSettings: resolvedTheme.colors,
         )
     }
 
@@ -580,6 +620,8 @@ final class SharedSettings {
         keyCornerRadius = 6.0
         keyBorderWidth = 0
         colorSettings = .default
+        // 中文: 回到 default 主題(走 colorSettings buffer);不刪除已存的 user themes。
+        selectedThemeId = ThemeId.default
 
         // KeyboardKit-owned defaults live in a separate store; reset via
         // `SettingsResetCoordinator.resetAll()` when you need both sides.
