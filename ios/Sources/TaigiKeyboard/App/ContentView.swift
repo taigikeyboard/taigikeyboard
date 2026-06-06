@@ -1,11 +1,11 @@
-// 中文: 主 App 的 TabView 容器,管 Home / Layout / Dictionary / Settings 四個 tab。
+// 中文: 主 App 的 TabView 容器,管 Home / Theme / Layout / Dictionary / Settings 五個 tab。
 
 import KeyboardKit
 import SwiftUI
 
 /// Main content view.
 ///
-/// TabView container with 4 tabs: Home, Layout, Dictionary, Settings.
+/// TabView container with 5 tabs: Home, Theme, Layout, Dictionary, Settings.
 // 中文: 主畫面 TabView,接收 SetupGuideViewModel 用於 Home tab 的鍵盤狀態追蹤。
 // 中文: 監聽 .switchToSettingsTab 通知以支援 deep link 切到設定頁。
 struct ContentView: View {
@@ -24,6 +24,17 @@ struct ContentView: View {
                     }
                 }
                 .tag(TabType.home)
+
+            // ThemeTab: Theme (2nd position — keyboard appearance / color theme)
+            ThemeTab()
+                .tabItem {
+                    Label {
+                        Text(TabType.theme.title)
+                    } icon: {
+                        Image(latinSystemName: TabType.theme.icon)
+                    }
+                }
+                .tag(TabType.theme)
 
             // LayoutTab: Layout
             LayoutTab()

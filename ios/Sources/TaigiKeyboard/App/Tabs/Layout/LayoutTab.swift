@@ -1,12 +1,12 @@
 // 中文: Layout Tab — 鍵盤排版選擇主頁面。提供 PhahTaigi / QWERTY / MOE / TPS
-// 中文: 4 種版面卡片橫向選單,以及進入「外觀設定」子頁的入口。
+// 中文: 4 種版面卡片橫向選單。外觀設定已移至「主題」tab(第 2 位)。
 
 import SwiftUI
 
 /// Layout tab.
 ///
 /// Keyboard layout selection (PhahTaigi, QWERTY, MOE, TPS) with horizontal swipe cards.
-// 中文: Layout Tab View — 包含外觀設定入口 + 兩段橫向卡片(羅馬字鍵盤 / 台語注音)。
+// 中文: Layout Tab View — 兩段橫向卡片(羅馬字鍵盤 / 台語注音)。
 struct LayoutTab: View {
     @State private var selectedLayout: KeyboardLayoutType
 
@@ -23,24 +23,6 @@ struct LayoutTab: View {
         NavigationStack {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Appearance settings link
-                    NavigationLink {
-                        AppearanceSettingsView()
-                    } label: {
-                        HStack {
-                            Text(LayoutTexts.appearanceSettings)
-                            Spacer()
-                            Image(latinSystemName: "chevron.right")
-                                .font(AppStyle.captionFont)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding()
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cardCornerRadius, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal)
-
                     // Section 1: Romanization keyboards
                     layoutSection(
                         header: LayoutTexts.romanizationKeyboard,

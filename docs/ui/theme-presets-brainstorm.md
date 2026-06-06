@@ -2,7 +2,7 @@
 
 > **Type**: Planning (brainstorm — evolving; USER will append ideas)
 > **Keywords**: `theme`, `preset`, `palette`, `colorscheme`, `theme set`, `shelf`, `custom theme`, `user theme`, `image upload`
-> **Status**: Brainstorm — NO code. Decided (USER 2026-06-05): **5th nav tab**, **theme-id resolve storage model**, **user-created named themes (the "+" flow)**, **user themes excluded from OS auto-backup** (`.taigi` only), **simplified 3-color + shadow-intensity editor**. Remaining forks (§10) **deferred to implementation-time review** — each carries a recommended lean but is NOT committed.
+> **Status**: Brainstorm — NO code. Decided (USER 2026-06-05; editor + tab-position revised 2026-06-07): **dedicated nav tab placed 2nd** (5 tabs total), **theme-id resolve storage model**, **user-created named themes (the "+" flow)**, **user themes excluded from OS auto-backup** (`.taigi` only), **full 6-role editor + a key-shadow intensity slider** (editor NOT simplified). Remaining forks (§10) **deferred to implementation-time review** — each carries a recommended lean but is NOT committed.
 > **Version scope**: v3.6.2 (USER-scoped 2026-06-05: 「這個列為 v3.6.2 的計劃」)
 > **Related**: `docs/ui/theme.md` (current-state reference), `docs/roadmap.md` (deferred TODO "keyboard theme picker")
 
@@ -13,8 +13,8 @@
 - **Goal**: ship predefined **theme sets** (each = a named palette with a 小標題, bundling **light + dark** variants), let users **create / name / save multiple custom themes** (a KeyboardKit-style **"+"** flow that survives app updates), present everything in a KeyboardKit-Shelf-style picker on its **own 5th nav tab**, and evaluate **user-uploaded image** as a custom-theme source.
 - **Current state is NOT greenfield** — both platforms already have a mirrored 6-role free-pick color system (`KeyboardColorSettings`). v3.6.2 shifts storage from "store 6 raw colors" to "**store a `selectedThemeId`, resolve 6 roles (and light/dark) at render time**", and adds a **persisted list of user-created themes**. The existing 6-picker UI becomes the theme **editor** reached via "+".
 - **Layered design**: palette values from established editor/vim colorschemes (Catppuccin, Tokyo Night, Gruvbox, Solarized, Nord); the **picker UX** references KeyboardKit's `KeyboardTheme.Shelf`; we **deliberately do NOT use** KeyboardKit's theme *engine* (Pro-gated) or FlorisBoard's Snygg stylesheet engine + addon store.
-- **USER decisions 2026-06-05**: (1) **Nav** — appearance/theme → its own top-level tab (4 → 5); (2) **Storage** — theme-id resolve model (auto-solves light/dark + active-identity forks); (3) **User themes** — multiple named, saved, update-durable, applyable themes via "+"; (4) **Backup** — user themes **excluded from OS auto-backup** (fork F-Exclude; `.taigi` is the only cross-device path, uniform with the 3 user-data DBs).
-- **Simplified editor (USER 2026-06-05)**: the custom-theme editor exposes **3 colors** (Background = keyboard + candidate strip; Key = no special/normal split; Text = key + candidate) **+ a key-shadow slider** (new render property; shadow replaces the depth cue lost when key fills merge). Built-ins keep the authored 6-role tables; internal model stays 6 roles + shadow (§4b.2/§4b.5).
+- **USER decisions 2026-06-05**: (1) **Nav** — appearance/theme → its own top-level tab (4 → 5; **placed 2nd**, after 頭頁 — USER 2026-06-07); (2) **Storage** — theme-id resolve model (auto-solves light/dark + active-identity forks); (3) **User themes** — multiple named, saved, update-durable, applyable themes via "+"; (4) **Backup** — user themes **excluded from OS auto-backup** (fork F-Exclude; `.taigi` is the only cross-device path, uniform with the 3 user-data DBs).
+- **Editor (USER 2026-06-05, revised 2026-06-07)**: the custom-theme editor keeps the **full 6-role free-pick** (NOT simplified — the existing 6-picker UI is reused as-is; the earlier 3-color + text merge is dropped) **+ a key-shadow intensity slider** (an independent render property, NOT tied to any fill merge). Built-ins keep the authored 6-role tables + `keyShadow = 0` (flat); the user editor adds the shadow control on top of the 6 roles (§4b.2/§4b.5).
 - **Working default (USER may override)**: user-theme light/dark editing = **single value (E1)** for MVP (§6 E).
 - **Remaining open forks**: preset coverage (6 roles vs full chrome, §6 A), theme-table source-of-truth (hand-mirror vs shared JSON, §6 C), user-theme count cap (§6 G), image-upload scope (§7), final roster + licensing (§5).
 
@@ -143,19 +143,14 @@ UserTheme {
 SixRoleColors = { background, keyText, normalKeyFill, specialKeyFill, candidateText, candidateBackground }
 ShadowSpec    = { intensity: 0.0…1.0 }   // 0 = flat. DECIDED: intensity-only, color derived (no color picker). §6 H
 
-// What the SIMPLIFIED editor exposes (USER 2026-06-05) — maps onto SixRoleColors:
-EditorColors {
-  background   // → background + candidateBackground
-  key          // → normalKeyFill + specialKeyFill   (no special/normal split)
-  text         // → keyText + candidateText           (one text color, DECIDED 2026-06-05)
-}
+// Editor (USER 2026-06-07: NOT simplified) edits all 6 roles directly + the shadow slider.
 
 // Selection
 selectedThemeId: String   // "default" | built-in id | UserTheme UUID
 ```
 
 - **`default`** = today's nil-fallback (platform / KeyboardKit adaptive). Users who never customize get this.
-- **Built-in themes keep the full authored 6-role `SixRoleColors`** (richer depth; §5). Only the **user-theme editor** is simplified to 3 colors + shadow (§4b.2) — it writes the 3 onto the 6 internal roles, so the renderer path is identical for built-in and user themes.
+- **Built-in themes keep the full authored 6-role `SixRoleColors`** (richer depth; §5). The **user-theme editor** writes all 6 roles directly (plus the shadow control, §4b.2), so the renderer path is identical for built-in and user themes.
 - **Render-time resolve**: built-in → pick `light`/`dark` by system `colorScheme` (fallback to the other if nil, e.g. Nord dark-only). `default` → platform adaptive. user theme → its `SixRoleColors` + `keyShadow` (light/dark per §6 E).
 
 ### 4.2 Persistence
@@ -166,7 +161,7 @@ selectedThemeId: String   // "default" | built-in id | UserTheme UUID
 
 ### 4.3 Migration (lightweight, non-destructive)
 
-- Existing users with a customized `colorSettings` blob → seed **one** `UserTheme` named e.g. "我的主題" from it (all 6 roles preserved internally → **lossless**, even though the simplified editor only exposes 3; re-editing via the 3-knob editor is what collapses the pairs), set `selectedThemeId` to that UUID → their current look is preserved.
+- Existing users with a customized `colorSettings` blob → seed **one** `UserTheme` named e.g. "我的主題" from it (all 6 roles preserved → **lossless**; the editor exposes all 6 directly), set `selectedThemeId` to that UUID → their current look is preserved.
 - Users with the default `{}` blob → `selectedThemeId = default`, no user theme created.
 - Pure additive keys; no destructive rebuild. Mirrors the non-destructive migration discipline across v3.6.1 (`.claude/rules/taigi-incidents.md` S11–S15).
 
@@ -188,24 +183,28 @@ USER: 「有一個 + 號,可以替自己自定義的主題取名、儲存,不會
 ### 4b.1 CRUD surface
 
 - The Shelf shows: **Default** + built-in themes + **the user's saved themes** + a trailing **"+"** item.
-- **"+"** → opens the **simplified editor** (§4b.2: 3 color rows + a shadow slider + live `KeyboardPreviewPanel`) with a **name field** → **Save** → appends a `UserTheme`, selects it.
+- **"+"** → opens the **editor** (§4b.2: 6 color rows + a shadow slider + live `KeyboardPreviewPanel`) with a **name field** → **Save** → appends a `UserTheme`, selects it.
 - A saved user theme's detail / long-press → **Rename / Duplicate / Delete**.
 - **Duplicate-a-built-in to edit**: selecting a built-in → "Duplicate" → creates an editable `UserTheme` pre-filled from that built-in's resolved colors (KeyboardKit-like "start from a base theme"). Built-ins themselves stay read-only.
 
-### 4b.2 Editor — simplified to 3 colors + a shadow slider (USER 2026-06-05)
+### 4b.2 Editor — full 6-role free-pick + a shadow slider (USER 2026-06-05, revised 2026-06-07)
 
-USER wants the custom-theme editor pared down. Instead of today's 6 separate color pickers, the editor exposes **3 colors + 1 shadow slider**:
+USER 2026-06-07: 「編輯器不需要簡化」. The editor keeps the **full 6-role free-pick** — the existing 6 color pickers reused as-is — plus an independent key-shadow slider:
 
-| Editor control | Writes to internal `SixRoleColors` / shadow |
+| Editor control | Internal field |
 |---|---|
-| **背景 Background** | `background` + `candidateBackground` (keyboard + candidate strip together) |
-| **按鍵 Key** | `normalKeyFill` + `specialKeyFill` (no special/normal distinction) |
-| **文字 Text** | `keyText` + `candidateText` (one text color — merged, DECIDED 2026-06-05) |
-| **按鍵陰影 Key shadow** | `keyShadow.intensity` slider, 0 = flat (intensity-only, no color — DECIDED, fork H1) |
+| **背景 Background** | `background` |
+| **候選列背景 Candidate background** | `candidateBackground` |
+| **一般按鍵 Normal key** | `normalKeyFill` |
+| **特殊按鍵 Special key** | `specialKeyFill` |
+| **按鍵文字 Key text** | `keyText` |
+| **候選文字 Candidate text** | `candidateText` |
+| **按鍵陰影 Key shadow** | `keyShadow.intensity` slider, 0 = flat (intensity-only, no color — fork H1) |
 
-- **Why shadow is added with the merge**: merging normal/special key fills removes the depth cue that distinguished function keys. The adjustable **shadow replaces that depth cue** — keys regain definition via elevation instead of a second fill color. The two changes are one coherent simplification.
-- Reuses the existing `ColorPicker` (iOS) / `ColorPickerDialog` (Android) widgets, but only **3** rows + a slider — NOT the current 6-row `AppearanceSettingsView` / `ColorSettingRow` layout verbatim. Plus a name field + Save/Cancel. Live preview already wired.
-- **Internal model stays 6 roles** (§4.1) — the 3 editor inputs fan out, so the renderer is unchanged and built-in themes (authored at full 6-role) coexist.
+- **Editor NOT simplified** (USER 2026-06-07): the earlier 3-color merge (Background = bg+candidate, Key = normal+special, Text = key+candidate) is **dropped**; all 6 roles are edited individually, matching the built-in tables 1:1.
+- **Shadow kept as an independent feature** (USER 2026-06-07): the key-shadow slider is NOT tied to any fill merge — it is a standalone elevation control on top of the 6 roles (§4b.5). Default 0 (flat).
+- Reuses the existing `AppearanceSettingsView` / `ColorSettingRow` 6-picker layout **verbatim** + a name field + Save/Cancel + the shadow slider. Live preview already wired.
+- **Internal model = 6 roles + shadow** (§4.1); renderer unchanged; built-in themes (authored at full 6-role, shadow 0) coexist.
 
 ### 4b.5 Key shadow — new render property (design-stance departure)
 
@@ -228,7 +227,7 @@ USER wants the custom-theme editor pared down. Instead of today's 6 separate col
 
 ### 4b.4 Constraints
 
-- **Count cap** (defensive, fork §6 G): suggest ~50 user themes; mirror the iOS/Android cap-parity pattern (S14 `CustomDictionaryCapacityPolicy`).
+- **Count cap**: **5** user themes (DECIDED USER 2026-06-07); mirror the iOS/Android cap-parity pattern (S14 `CustomDictionaryCapacityPolicy`). At-cap "+" → disabled / a "max 5" notice.
 - **Name**: non-empty; duplicates allowed (UUID is the identity, name is a label) or de-duplicated — minor, decide at impl.
 - **Light/dark editing** (fork §6 E): MVP single color set (both modes) vs editor toggle to define light + dark separately.
 
@@ -326,12 +325,12 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 
 ### Decided 2026-06-05
 
-- **Nav fork → A**: appearance/theme = its own 5th top-level tab (§8.1).
+- **Nav fork → A**: appearance/theme = its own top-level tab, **placed 2nd** (after 頭頁; USER 2026-06-07) (§8.1).
 - **Storage fork → theme-id resolve** (§4) — closes Fork B (light/dark) + Fork D (active identity).
 - **User themes → yes**: multiple named, saved, update-durable, applyable, via "+" (§4b).
 - **Fork F → F-Exclude**: user themes excluded from OS auto-backup, `.taigi` only (§4b.3).
 - **Fork E → E1 working default** (USER may override): single value, both modes.
-- **Editor simplified → 3 colors + shadow** (§4b.2): Background (bg+candidate), Key (no special/normal split), Text (key+candidate), + Key-shadow slider. Built-ins keep authored 6-role; internal model stays 6 + shadow.
+- **Editor → full 6-role free-pick + shadow slider** (§4b.2, revised 2026-06-07): NOT simplified (3-color + text merge dropped); all 6 roles edited individually + an independent key-shadow intensity slider (fork H1). Built-ins keep authored 6-role + shadow 0.
 
 ### Fork A (open) — preset coverage: 6 roles only, or widen the override surface?
 
@@ -353,18 +352,18 @@ Source: bundled florisboard `org.florisboard.themes/stylesheets/{floris_day,flor
 - v3.6.1 R7 excluded the 3 user-data DBs from OS auto-backup. Although themes are colors + names (not privacy-sensitive), USER chose **uniform policy**: user themes are **excluded from OS auto-backup**, manual `.taigi` is the only cross-device path.
 - **Implementation** (§4b.3): iOS stores the theme JSON in a standalone App Group file marked `isExcludedFromBackup` (UserDefaults plist can't be selectively excluded); Android is already covered by `allowBackup="false"`. Themes join `.taigi` export. UI copy must not promise OS/iCloud restore (S16 footgun). Pin under a new invariant when implemented (sibling to `INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP` §29).
 
-### Fork G (open) — user-theme count cap
+### Fork G → **5 (DECIDED, USER 2026-06-07)**
 
-- Suggest ~50; mirror the cap-parity pattern (S14). USER to confirm the number / whether a cap is wanted.
+- User-theme count cap = **5**; mirror the cap-parity pattern (S14). At-cap "+" disabled / "max 5" notice. Android mirrors the same cap when it lands.
 
 ### Fork H — key-shadow controls → **H1 (DECIDED, USER 2026-06-05)**
 
 - **H1 (adopted)**: a single **intensity** slider (0 = flat); shadow color derived (dark / from text color). No color picker.
 - ~~H2 (shadow color picker)~~ — not adopted (YAGNI).
 
-### Editor text-merge → **merged (DECIDED, USER 2026-06-05)**
+### Editor scope → **NOT simplified (DECIDED, USER 2026-06-07)**
 
-- USER 「文字合併成一個」: the editor's **Text** = `keyText` + `candidateText` (one color). The keep-candidate-text-separate alternative is not adopted.
+- USER 「編輯器不需要簡化」: the editor keeps the **full 6-role free-pick**; the earlier 3-color merge + text-merge (`keyText`+`candidateText` into one) are **dropped** — all 6 roles are edited individually. The key-shadow slider stays as an **independent** feature (fork H1).
 
 ---
 
@@ -393,30 +392,66 @@ Two interpretations with very different cost/risk:
 
 ## 8. Information architecture & phases
 
-### 8.1 Navigation — 5th tab (DECIDED: fork A, 2026-06-05)
+### 8.1 Navigation — dedicated tab, placed 2nd (DECIDED: fork A 2026-06-05; position 2026-06-07)
 
-Appearance/theme promoted to its own top-level tab. Result: **5 tabs** (at the iOS / Android Material-3 NavigationBar practical maximum — acceptable, no room for a 6th).
+Appearance/theme promoted to its own top-level tab. Result: **5 tabs** (at the iOS / Android Material-3 NavigationBar practical maximum — acceptable, no room for a 6th). **Tab order (USER 2026-06-07): 頭頁 → 主題 → 齒佈 → 詞庫 → 設定** — theme sits at **position 2 (index 1)**, immediately after Home.
 
-- **iOS**: add `case theme` to `TabType` (`TabType.swift`), add the 5th `tabItem` in `ContentView.swift`, icon `paintpalette.fill` (or `paintbrush.fill`), localized title via a new `ThemeTexts`. Move `AppearanceSettingsView` out from under `LayoutTab` into a new `ThemeTab`.
-- **Android**: add a `theme` destination to the NavigationBar in `MainSettingsScreen.kt` + a `ui/tabs/theme/` package, mirroring `ui/tabs/layout/`. Move `AppearanceSettingsScreen` content into it.
+- **iOS**: insert `case theme = 1` into `TabType` (`TabType.swift`) and **renumber** `layout = 2 / dictionary = 3 / settings = 4` (the enum's `Int` rawValue *is* the tab index — `TabType.swift` comment "Int rawValue 同時是 tab 索引"). Add the `tabItem` at slot 1 in `ContentView.swift`, icon `paintpalette.fill` (or `paintbrush.fill`), localized title via a new `ThemeTexts`. Move `AppearanceSettingsView` out from under `LayoutTab` into a new `ThemeTab`.
+- **⚠ Index-shift hazard**: renumbering rawValues breaks any **persisted "last-selected tab index"** and any **deep-link constant** (`.switchToSettingsTab`-style, Home quick-links) that hard-codes the old `layout=1 / dictionary=2 / settings=3`. Grep every `TabType(rawValue:)` / raw `selectedTab = N` / deep-link before landing P1; bump each. A persisted index from a prior install now points one tab to the left → migrate or reset to `.home`.
+- **Android**: add a `theme` destination at NavigationBar slot 1 in `MainSettingsScreen.kt` + a `ui/tabs/theme/` package, mirroring `ui/tabs/layout/`. Move `AppearanceSettingsScreen` content into it. Update any nav-route ordinal / saved-state route key the same way.
 - **Layout tab retains** keyboard layout + font.
-- **Cross-platform parity**: tab order, icon semantics, title mirror (capture in `ui-style-guide.md` at impl). Check `.switchToSettingsTab`-style deep links for the new index.
-- **Trade-off recorded**: spends a scarce nav slot on a set-and-forget feature, running against `ui-style-guide.md` §Feature Grouping by Usage Frequency. USER accepted for discoverability / showcase value (appearance is a keyboard-app selling point; SwiftKey/Gboard surface themes prominently).
+- **Cross-platform parity**: tab order (頭頁→主題→齒佈→詞庫→設定), icon semantics, title mirror (capture in `ui-style-guide.md` at impl).
+- **Trade-off recorded**: spends a scarce nav slot — now in **prime position 2** — on a set-and-forget feature, running against `ui-style-guide.md` §Feature Grouping by Usage Frequency. USER accepted for discoverability / showcase value (appearance is a keyboard-app selling point; SwiftKey/Gboard surface themes prominently); the 2nd-position placement maximizes that showcase intent.
 
-### 8.2 Draft phase table (NOT committed sequencing — user-gated)
+### 8.2 Phase table — **iOS-first implementation (USER 2026-06-07: 「先對 iOS 做一版來測試」)**
+
+**Platform order**: build the full iOS slice first (testable on device), then mirror to Android via `/port-feature`. iOS is the color-model source-of-truth (`KeyboardColorSettings.kt:14` "Matches iOS"). ⚠ Android key-shadow draw-pass (`Paint.setShadowLayer`) is the one unverified feasibility — spike early.
 
 Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 
 | Phase | Scope | Depends on |
 |---|---|---|
 | P0 (admin) | This doc + roadmap entry + memory file | — |
-| P1 | 5th tab scaffolding both platforms (move appearance out of Layout, no behavior change) | — |
+| P1 | Dedicated theme tab scaffolding both platforms — insert at **index 1** (renumber layout/dictionary/settings + fix deep links), move appearance out of Layout, no behavior change | — |
 | P2 | Theme-id storage model + resolver (`selectedThemeId`, `default`, migration) | — |
 | P3 | Built-in static theme table (resolve Fork C) + curated hex (resolve Fork A coverage) | P2 |
 | P4 | Shelf picker UI both platforms + live preview + light/dark resolve | P1, P2, P3 |
 | P5 | User-theme CRUD: "+" create / name / save / rename / delete / duplicate + persistence + `.taigi` (resolve Forks E/F/G) | P2, P4 |
 | P6 (optional) | Image → palette extraction (I-1) pre-filling the editor | P5 |
 | (deferred) | A2 full-chrome override / I-2 background image / E2 light-dark editing / keyword-list extra themes | user-gated later |
+
+---
+
+## 8b. iOS implementation plan (grounded in code + Codex pre-impl 2026-06-07)
+
+iOS-first (USER 2026-06-07). Codex pre-impl review (gpt-5.5, ANALYSIS-ONLY) corrected the seam + phasing. **PR-2 split into 2a/2b.**
+
+### Grounded render path (actual code)
+- `SharedSettings.colorSettings` (App Group UserDefaults, `.codable`, default `.default`=all-nil) → `KeyboardColorSettings` (6 OPTIONAL `CodableColor?`; nil = KK adaptive fallback; light+dark share one RGBA).
+- Consumers (ALL must read the resolved value — Codex Q1): `TaigiKeyboardView` `RenderProviders.keyTextColor` (`:74`), root `.background()` (`:141-144`), liquid-glass gate `backgroundColor==nil` (`:106`), `.keyboardButtonStyle{}` normal/special fill (`:318-344`), `candidateStyle` (`:358-364`), `CandidateTheme.resolved` (`Autocomplete/Models/CandidateTheme.swift:48-65`). Live-read re-reads every render (`:152-154`).
+- Editor today: `App/Tabs/Layout/AppearanceSettingsView.swift` + `…ViewModel.swift` (6 ColorPicker rows over `settings.colorSettings`), preview via `App/Tabs/Layout/KeyboardPreviewPanel.swift` (already syncs `colorScheme` via `onChange`, `:44`).
+- Nav: `App/Tabs/TabType.swift` enum; `ContentView.swift` body order = tab order; `.tag(TabType.x)` enum identity; deep-link `.switchToSettingsTab` sets `selectedTab=.settings` (enum). `selectedTab` `@State`, NOT persisted. No `TabType.allCases[rawValue]` / rawValue-index usage (grepped) → renumber safe.
+
+### Type design (Codex Q5/Q1/Q8)
+- `Settings/KeyboardThemeModels.swift` (Platform layer): `ThemeId` ("default" | builtin id | UUID), `BuiltInTheme {id, displayName, light: KeyboardColorSettings?, dark: KeyboardColorSettings?}` (concrete-color pairs), `UserTheme {id:UUID, name, colors: KeyboardColorSettings (OPTIONAL per-field — preserves "2/6 customized" migration), keyShadow:{intensity:Double}, timestamps}`, `ResolvedKeyboardTheme {colors: KeyboardColorSettings, keyShadowIntensity: Double}`.
+- `Settings/ThemeResolver.swift`: `(selectedThemeId, colorScheme) → ResolvedKeyboardTheme`. **`default` special-cases to `KeyboardColorSettings.default` (all nil) + intensity 0** — preserves Liquid Glass (Codex Q3). Invalid/missing id → fallback `default` (+ repair). Built-in → pick light/dark by colorScheme; Nord dark-only → fallback the other.
+- `Settings/UserThemeStore.swift`: standalone App Group JSON file, `isExcludedFromBackup` (F-Exclude; plist can't selectively exclude). CRUD + cap 5. **Bumps a `themeRevision` UserDefaults key on every mutation** so the extension refreshes when the active theme is edited (selectedThemeId unchanged — Codex Q4). Write order: write file → then set selectedThemeId; delete active → write list → then fallback.
+- Place theme core in `Settings/` (Platform), NOT `App/` — `KeyboardExtension/` can't depend on App layer (Codex Q8). UI in `App/Tabs/Theme/`.
+
+### Render seam (Codex Q1/Q2)
+- `TaigiKeyboardView` body top computes ONE `resolved = ThemeResolver.resolved(selectedThemeId, colorScheme)` (colorScheme via `@Environment` / `keyboardContext.colorScheme`), feeds `resolved.colors` to every consumer above + `resolved.keyShadowIntensity` to the button-shadow path. Resolve in body (not only on UserDefaults notification) so a system light/dark switch re-renders. Mirror in `KeyboardPreviewPanel`.
+- Shadow render: KeyboardKit `Keyboard.ButtonStyle.shadow`/`ButtonShadowStyle` inside the existing `keyboardButtonStyle{}` closure; built-ins/default intensity 0.
+
+### Phasing (revised — each its own PR/branch)
+| PR | Scope | Testable |
+|---|---|---|
+| **iOS PR-1** | Theme tab scaffold at **position 2** (TabType `theme=1` + renumber, `ThemeTexts`, `ContentView` insert, new `App/Tabs/Theme/ThemeTab` hosting moved `AppearanceSettingsView`). No behavior change. | Tab appears 2nd, appearance editor works there |
+| **iOS PR-2a** | Theme **core**: models + `UserThemeStore` (file r/w + `isExcludedFromBackup` + `themeRevision`) + `selectedThemeId` + `ThemeResolver` (default→nil special-case, invalid→fallback) + **migration** (seed one UserTheme from non-default `colorSettings`) + **renderer switch** (all consumers read resolved) + fallback/migration tests. NO shelf. | Existing custom colors survive (migration); default users unchanged (Liquid Glass intact) |
+| **iOS PR-2b** | Built-in static table (6 sets hex, §5) + Shelf picker UI (`App/Tabs/Theme/**`) + live mini-keyboard previews + apply-built-in (light/dark resolve). | **Pick a built-in → keyboard recolors** (real test version) |
+| **iOS PR-3** | User CRUD ("+"/name/save/rename/delete/duplicate) + full 6-role editor + shadow slider + cap **5** + `.taigi` export/import. Active edit bumps `themeRevision`. | Create/save/apply user themes, survive `.taigi` round-trip |
+| → Android | Mirror via `/port-feature` after iOS dogfood. ⚠ spike `Paint.setShadowLayer` early. | — |
+
+**Hard ordering (Codex Q7)**: migration + renderer-switch MUST land together in PR-2a (else existing custom-color users revert to default). UserThemeStore can't be deferred past PR-2a (migration seeds a UserTheme).
 
 ---
 
@@ -446,19 +481,19 @@ Sizing targets 200–500 LOC/PR per `~/.claude/rules/planning.md`.
 
 ## 10. Open questions / TODO (USER to append)
 
-- [x] Nav structure — **A: 5th tab** (2026-06-05)
+- [x] Nav structure — **A: dedicated tab, placed 2nd** (頭頁→主題→齒佈→詞庫→設定) (2026-06-05; position 2026-06-07)
 - [x] Storage model — **theme-id resolve** (2026-06-05)
 - [x] User-created themes — **yes, "+" CRUD, update-durable, multiple** (2026-06-05)
 - [x] Fork F — user-theme OS-backup → **F-Exclude** (`.taigi` only, uniform with user-data DBs) (2026-06-05)
 - [x] Fork E — user-theme light/dark → **E1 single value** working default (E2 deferred; USER may override)
-- [x] Editor simplified → **3 colors + key-shadow slider** (Background / Key / Text) (2026-06-05)
-- [x] Editor text-merge → **merged into one Text** (key + candidate) (2026-06-05)
-- [x] Fork H — key-shadow → **intensity-only**, color derived (2026-06-05)
+- [x] Editor scope → **full 6-role free-pick, NOT simplified** (3-color + text merge dropped) (revised 2026-06-07)
+- [x] Editor text → **keep keyText / candidateText separate** (merge reverted) (2026-06-07)
+- [x] Fork H — key-shadow → **intensity-only**, color derived; kept as an **independent** feature (2026-06-05; reaffirmed 2026-06-07)
 **Deferred to implementation-time review (USER 2026-06-05: 「先記錄,之後真正要實作的時候再 review」)** — the items below carry a *recommended working default* but are NOT decided. Re-confirm with USER when the relevant phase starts; do not treat as committed (Core Principle #5).
 
 - [ ] Fork A — coverage. **Lean: A1** (recolor the 6 roles only; chrome stays platform-default). Revisit if dogfood shows clashing. Decide at P3.
 - [ ] Fork C — built-in table source of truth. **Lean: P2** (shared JSON parsed by both; drift-proof). Decide at P3.
-- [ ] Fork G — user-theme count cap. **Lean: ~50** (mirror S14 cap-parity). Decide at P5.
+- [x] Fork G — user-theme count cap → **5** (DECIDED USER 2026-06-07; mirror S14 cap-parity).
 - [ ] Nord light variant. **Lean: ship dark-only** (no official Nord light; don't fabricate). Decide at P3.
 - [ ] Keyword-list extras (Tron / Nothing / Windows Phone / Oblivion). **Lean: not included** for v3.6.2 (not single canonical palettes; non-MIT licensing). Add individually only if USER wants a specific one (then license + palette work). Decide at P3.
 - [ ] Image upload I-1 (palette extract → user theme). **Lean: defer past v3.6.2** (depends on the theme CRUD landing first). Decide after P5.

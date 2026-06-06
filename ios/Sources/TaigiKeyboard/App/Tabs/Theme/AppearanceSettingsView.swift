@@ -1,4 +1,4 @@
-// 中文: Layout Tab 下的「外觀設定」子頁。提供字型、配色、按鍵尺寸、候選列字級
+// 中文: Theme Tab(主題)下的「外觀設定」頁。提供字型、配色、按鍵尺寸、候選列字級
 // 中文: 等可調項目,並在底部錨定 KeyboardPreviewPanel 預覽。
 
 import KeyboardKit
@@ -33,7 +33,7 @@ struct AppearanceSettingsView: View {
                         )
                     } label: {
                         HStack {
-                            Text(LayoutTexts.customFont)
+                            Text(ThemeTexts.customFont)
                             Spacer()
                             Text(viewModel.selectedFontType.displayName)
                                 .foregroundColor(.secondary)
@@ -42,15 +42,15 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Keyboard overall: background color + height
-                Section(header: Text(LayoutTexts.keyboardSection)) {
+                Section(header: Text(ThemeTexts.keyboardSection)) {
                     colorRow(
-                        label: LayoutTexts.colorKeyboardBackground,
+                        label: ThemeTexts.colorKeyboardBackground,
                         color: $viewModel.keyboardBackground,
                         defaultColor: AppearanceSettingsViewModel.Defaults.keyboardBackground,
                         keyPath: \.backgroundColor,
                     )
                     sliderRow(
-                        label: LayoutTexts.keyHeight,
+                        label: ThemeTexts.keyHeight,
                         value: $viewModel.keyHeightScale,
                         in: scaleRange, step: scaleStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyHeightScale,
@@ -59,41 +59,41 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Key section: colors + font size + corner radius + border width
-                Section(header: Text(LayoutTexts.colorKeySection)) {
+                Section(header: Text(ThemeTexts.colorKeySection)) {
                     colorRow(
-                        label: LayoutTexts.colorKeyText,
+                        label: ThemeTexts.colorKeyText,
                         color: $viewModel.keyText,
                         defaultColor: AppearanceSettingsViewModel.Defaults.keyText,
                         keyPath: \.keyTextColor,
                     )
                     colorRow(
-                        label: LayoutTexts.colorNormalKeyFill,
+                        label: ThemeTexts.colorNormalKeyFill,
                         color: $viewModel.normalKeyFill,
                         defaultColor: AppearanceSettingsViewModel.Defaults.normalKeyFill,
                         keyPath: \.normalKeyFillColor,
                     )
                     colorRow(
-                        label: LayoutTexts.colorSpecialKeyFill,
+                        label: ThemeTexts.colorSpecialKeyFill,
                         color: $viewModel.specialKeyFill,
                         defaultColor: AppearanceSettingsViewModel.Defaults.specialKeyFill,
                         keyPath: \.specialKeyFillColor,
                     )
                     sliderRow(
-                        label: LayoutTexts.keyFontSize,
+                        label: ThemeTexts.keyFontSize,
                         value: $viewModel.keyFontSizeScale,
                         in: scaleRange, step: scaleStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyFontSizeScale,
                         onChanged: { viewModel.setKeyFontSizeScale($0) },
                     )
                     sliderRow(
-                        label: LayoutTexts.keyCornerRadius,
+                        label: ThemeTexts.keyCornerRadius,
                         value: $viewModel.keyCornerRadius,
                         in: radiusRange, step: radiusStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyCornerRadius,
                         onChanged: { viewModel.setKeyCornerRadius($0) },
                     )
                     sliderRow(
-                        label: LayoutTexts.keyBorderWidth,
+                        label: ThemeTexts.keyBorderWidth,
                         value: $viewModel.keyBorderWidth,
                         in: borderWidthRange, step: borderWidthStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyBorderWidth,
@@ -102,21 +102,21 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Candidate section: colors + text size
-                Section(header: Text(LayoutTexts.candidateSection)) {
+                Section(header: Text(ThemeTexts.candidateSection)) {
                     colorRow(
-                        label: LayoutTexts.colorCandidateText,
+                        label: ThemeTexts.colorCandidateText,
                         color: $viewModel.candidateText,
                         defaultColor: AppearanceSettingsViewModel.Defaults.candidateText,
                         keyPath: \.candidateTextColor,
                     )
                     colorRow(
-                        label: LayoutTexts.colorCandidateBackground,
+                        label: ThemeTexts.colorCandidateBackground,
                         color: $viewModel.candidateBackground,
                         defaultColor: AppearanceSettingsViewModel.Defaults.candidateBackground,
                         keyPath: \.candidateBackgroundColor,
                     )
                     sliderRow(
-                        label: LayoutTexts.candidateTextSize,
+                        label: ThemeTexts.candidateTextSize,
                         value: $viewModel.candidateTextSizeScale,
                         in: scaleRange, step: scaleStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.candidateTextSizeScale,
@@ -130,7 +130,7 @@ struct AppearanceSettingsView: View {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         viewModel.resetAllAppearance()
                     } label: {
-                        Text(LayoutTexts.appearanceResetAll)
+                        Text(ThemeTexts.appearanceResetAll)
                     }
                 }
             }
@@ -145,7 +145,7 @@ struct AppearanceSettingsView: View {
                 colorScheme: colorScheme,
             )
         }
-        .navigationTitle(LayoutTexts.appearanceSettings)
+        .navigationTitle(ThemeTexts.appearanceSettings)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -237,7 +237,7 @@ private struct AppearanceFontPickerView: View {
                 }
             }
         }
-        .navigationTitle(LayoutTexts.customFont)
+        .navigationTitle(ThemeTexts.customFont)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
