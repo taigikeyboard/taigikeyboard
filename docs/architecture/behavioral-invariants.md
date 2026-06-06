@@ -829,3 +829,26 @@ This fixes no-space first-tone continuous input for nasal-initial second syllabl
 **Tests**: `phonetics/src/tps_adjust.rs` (`nasals_with_valid_coda_convert`, `nasal_after_vowel_with_impossible_coda_keeps_initial`, `nasal_rule2b_interaction_is_benign`). Cross-platform device acceptance: **S20** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
 
 **Known follow-up (USER-gated)**: same residuals as §32 (chained no-space multi-syllable mid impossible-coda + zero-onset second syllable, both space-disambiguated). Rule 2b itself stays ungated and handles only `ㄇ`/`ㄫ` (not `ㄋ`) — benign per above.
+
+## §34 — Continuous literal-roman candidate (漢羅 fast input)
+
+### `INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE`
+
+In **TL / POJ** continuous input, when the user writes a tone such that the preedit shows a tone-marked form, the candidate strip surfaces — at **index 0** — a **roman-only** candidate equal to that literal preedit form (`nng7` → `nn̄g`, `goa2` → `goá` TL / `góa` POJ, `tai5-gi2` → `tâi-gí`). The candidate has **no hanji** (`hanji = None` → `CandidateMode::Tailo`), so a tap commits the romanization. This lets 漢羅 (mixed Han + roman) input commit a romanized word in one tap WITHOUT toggling the 文/A script switch, even while in 漢字 (`is_translate_swapped`) display mode — PhahTaigi parity (reference `references/PhahTaigi_iOS`, lomaji candidate always first).
+
+- **WYSIWYG**: the candidate `roman == display_text ==` the preedit literal (`composing::derived::derived_display`). It is the literal typed spelling with the tone mark only — NO spelling fold (`INVARIANT_TL_INPUT_LITERAL_NO_POJ_SPELLING_FOLD` §30). It is NOT re-run through the Step 5 POJ recase (`derived_display` is already the mode-correct POJ/TL literal).
+- **Identity axis untouched (#7)**: the candidate carries `canonical_tl` via `phonetics::api::canonical_tl_form`, so 詞頻 (§28) / 詞關聯 (§24) learn the canonical `(∅, TL)` reading on commit (`goa2` literal display `goá`, identity `guá`). Display and identity stay orthogonal.
+
+**Gates (all must hold; else no literal candidate):**
+- `mode ∈ {Tl, Poj}` — TPS is hanji-first with diacritic-glyph tones (already promoted to `InputMode::Tps` upstream); English excluded.
+- `raw` does **not** end in `-` — a trailing hyphen is a pending syllable boundary, not a finished word (would bypass the existing trailing-hyphen suppression).
+- `raw` contains an ASCII tone digit `1..=9`.
+- `derived_display(raw, config)` carries **no remaining ASCII digit** — a real tone-mark placement consumes the digit (tones 2,3,5,6,7,8,9 on a valid syllable). A digit left in the literal means no mark was placed: tone-1/4-only input (kept verbatim), **unhyphenated multi-syllable blobs** (`goa2ai3li2`, `tai5bak8` — the engine does not auto-syllabify, §10.2, returned verbatim), or a **POJ `oo`/`nn` doubletap** spelling-only change (`oo1`→`o͘1`). Hyphenated multi-syllable (`tai5-gi2`) DOES convert and is included. (Checking the literal for a residual digit — not `!= raw` — closes the POJ-doubletap tone-1/4 gap, where `oo1`→`o͘1` differs from raw yet placed no tone mark.)
+
+**Placement / dedup**: prepended at index 0 (the walker slot-0 / dict best candidate moves to index 1 when a tone is written — expected, not a regression). A pre-existing IDENTICAL bare-roman (`hanji = None`, same roman) candidate is dropped to avoid duplication; dict rows that carry hanji stay (a `tâi`/台 dict candidate and a bare `tâi` commit differ).
+
+**Scope**: shared Rust engine (`composing`) — **no platform code**. The injection lives in the display-layer seam `composing::dispatch::handle_fetch_at_pos` (`literal_roman_candidate` helper), NOT in the segmentation / cost primitive `assemble_candidates` (incidents S5 / §18 / S9 — display-layer change). Both platforms already commit a roman-only (hanji-absent) candidate's `roman` in swapped mode (iOS `formatOutputText` `else` / Android `CandidateClickHandler` `when` `else`), so no platform change is needed. Needs `make build` to refresh xcframework/jniLibs before device dogfood (no `make dict` — dict artifacts unchanged).
+
+**Engine sites**: `composing/src/dispatch.rs` — `literal_roman_candidate` (gate + build), prepend + bare-roman dedup in `handle_fetch_at_pos`. Reuses `composing::derived::derived_display` + `phonetics::api::canonical_tl_form`.
+
+**Tests**: `composing/src/dispatch.rs` (`literal_roman_candidate_*` — gate matrix + WYSIWYG + Tailo + `guá` identity fold) + golden `composing/tests/golden/fetch_at_pos.golden` (`tl_numeric_single :: tsua2` now leads with the `tsuá` Tailo row). Cross-platform device acceptance: **S21** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).

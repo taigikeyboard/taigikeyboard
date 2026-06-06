@@ -32,7 +32,8 @@ use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::continuous::assemble_candidates;
 use crate::shadow::{build_shadow_lattice, left_anchored_keys_from_lattice};
 use lexicon::{
-    classification::is_hanzi, ConsumedSpan, CustomEntry, RawCandidate, SyllableInventory,
+    classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, RawCandidate,
+    SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use phonetics::contains_tps;
 use protos::engine::{
@@ -251,7 +252,7 @@ fn handle_fetch_at_pos(
     // PR-9.6 — `enabled_sources_bitmask` (already sentinel-normalised
     // above) flows into `ContinuousFetchCtx` so the span-local + partial
     // -prefix fetchers apply the same `Filter` the Tab3 browse path uses.
-    let candidates = assemble_candidates(
+    let mut candidates = assemble_candidates(
         raw,
         &freq_map,
         now_ms,
@@ -259,12 +260,110 @@ fn handle_fetch_at_pos(
         mode,
         enabled_sources_bitmask,
     );
+    // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): when the user
+    // writes a tone in TL/POJ, surface the literal tone-marked form of
+    // exactly what they typed (= the preedit WYSIWYG) as a roman-only
+    // candidate at index 0, so 漢羅 mixing commits the romanization in one
+    // tap without toggling 文/A. Display-layer prepend — the segmentation /
+    // cost primitive (`assemble_candidates`) is never touched (incidents
+    // S5/§18/S9). NOT re-run through Step 5's POJ recase: `derived_display`
+    // is already the mode-correct POJ/TL literal.
+    // 中文: §34 — TL/POJ 寫調時把「使用者字面 + 聲調符號」(= preedit WYSIWYG) 當
+    // 中文:   roman-only 候選放 index 0,漢羅一鍵上屏免切 文/A。display 層 prepend,
+    // 中文:   不碰 assemble_candidates 切詞/cost primitive;不再跑 Step 5 POJ recase。
+    if let Some(literal) = literal_roman_candidate(raw, config, mode) {
+        // Drop a pre-existing IDENTICAL bare-roman (hanji-absent Tailo) so
+        // the literal is not duplicated; dict rows with hanji stay (a
+        // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
+        // pre-impl F5). 中文: 去重同 roman 的純羅馬字 Tailo;帶漢字的字典候選保留。
+        candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
+        candidates.insert(0, literal);
+    }
     with_continuous(
         snapshot,
         ContinuousResponse {
             candidates: candidates.into_iter().map(raw_to_proto_candidate).collect(),
         },
     )
+}
+
+/// Build the literal tone-marked roman candidate for 漢羅 fast input
+/// (`INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE` §34 / dogfood S21).
+///
+/// Returns `Some` only when ALL gates pass:
+/// * `mode` is TL or POJ — TPS is hanji-first with diacritic-glyph tones
+///   (already promoted to `InputMode::Tps` upstream); English is excluded.
+/// * `raw` does not end in `-` — a trailing hyphen is a pending syllable
+///   boundary, not a finished word; injecting `tâi-` would bypass the
+///   trailing-hyphen suppression the continuous seam already applies
+///   (`continuous.rs` longest-match block; Codex pre-impl guard).
+/// * `raw` carries at least one ASCII tone digit `1..=9` — "the user wrote
+///   a tone" (Core requirement).
+/// * `derived_display(raw, config)` carries NO remaining ASCII digit — a
+///   real tone-mark placement consumes the digit (tones 2,3,5,6,7,8,9 on a
+///   valid syllable). A digit left in the literal means no mark was placed:
+///   tone-1/4 (kept verbatim), an unhyphenated multi-syllable blob
+///   (`goa2ai3li2`, returned verbatim — the engine does not auto-syllabify,
+///   §10.2), or a POJ `oo`/`nn` doubletap spelling-only change (`oo1`→`o͘1`).
+///   Hyphenated multi-syllable (`tai5-gi2` → `tâi-gí`) DOES convert and is
+///   included.
+///
+/// The candidate is roman-only (`hanji = None` → `CandidateMode::Tailo`)
+/// and carries `canonical_tl` via `canonical_tl_form` so 詞頻 / 詞關聯
+/// learn the canonical `(∅, TL)` identity on commit (Core Principle #7;
+/// `behavioral-invariants.md` §24/§28). `roman == display_text ==`
+/// preedit literal — WYSIWYG with the underline (§30 literal-no-fold).
+// 中文: §34/S21 — 漢羅快速輸入的字面聲調 roman 候選;TL/POJ + 非 trailing hyphen +
+// 中文:   有 ASCII 數字調 + derived 真的轉了(排除 toneless / 1·4 / 未連字多音節 blob)。
+// 中文:   roman-only(hanji=None→Tailo),canonical_tl 走 canonical_tl_form 保 #7 身分;
+// 中文:   roman == display_text == preedit 字面(§30 WYSIWYG)。
+fn literal_roman_candidate(
+    raw: &str,
+    config: &AppConfig,
+    mode: phonetics::InputMode,
+) -> Option<RawCandidate> {
+    if !matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj) {
+        return None;
+    }
+    if raw.ends_with('-') {
+        return None;
+    }
+    if !raw.chars().any(|c| ('1'..='9').contains(&c)) {
+        return None;
+    }
+    // A real tone-mark placement CONSUMES the tone digit (tones 2,3,5,6,7,8,9
+    // on a valid syllable → `goá`, `nn̄g`). If the literal STILL carries an
+    // ASCII digit, no tone mark was placed: tone-1/4 keep the digit verbatim
+    // (`tai1`), an unhyphenated multi-syllable blob is returned verbatim
+    // (`goa2ai3li2`, §10.2 no auto-syllabify), or POJ `oo`/`nn` doubletap
+    // changed only the spelling (`oo1`→`o͘1`, still digit-tailed). Reject all
+    // of those — the digit-free literal is the WYSIWYG roman to commit.
+    // (Checking the literal, not `!= raw`, closes the POJ-doubletap tone-1/4
+    // gap: `oo1`→`o͘1` differs from raw yet placed no tone mark.)
+    // 中文: 真正放聲調符號會消化數字;literal 仍含 ASCII 數字 = 沒放調(tone 1/4 / 未連字 blob /
+    // 中文:   POJ oo·nn doubletap 只改拼寫如 oo1→o͘1)→ 一律排除。查 literal 而非 != raw
+    // 中文:   才能堵住 POJ doubletap 的 tone-1/4 漏洞。
+    let literal = crate::derived::derived_display(raw, config);
+    if literal.bytes().any(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let canonical_tl = phonetics::api::canonical_tl_form(&literal, mode);
+    Some(RawCandidate {
+        consumed_span: (0, raw.len() as u32),
+        syllable_count: literal.split('-').count().min(u8::MAX as usize) as u8,
+        display_text: literal.clone(),
+        roman: literal,
+        hanji: None,
+        canonical_tl,
+        score: 0.0,
+        form: FORM_NOTONE,
+        frequency: 0,
+        bitmask: 0,
+        mode: derive_mode(None),
+        recency_rank: 0,
+        coverage_kind: COVERAGE_KIND_FULL,
+        is_custom: false,
+    })
 }
 
 /// Inventory-injected hermetic test seam for the shadow + key projection
@@ -478,5 +577,138 @@ mod tests {
         assert_eq!(proto.roman, "tāi");
         assert!(proto.hanji.is_none());
         assert_eq!(proto.display_text, "tāi");
+    }
+
+    // ----- INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34) -----
+    // 漢羅 fast input: TL/POJ + written tone → roman-only literal candidate
+    // (= preedit WYSIWYG) injected at index 0. Tests assert the GATE +
+    // self-consistency; the literal string is asserted against
+    // `derived_display` (the source of truth) rather than a hard-coded
+    // diacritic so the two never drift.
+
+    fn config_tl() -> AppConfig {
+        AppConfig {
+            tone_mode: String::new(),
+            input_mode: "tl".to_string(),
+            oo_doubletap_enabled: false,
+            nn_doubletap_enabled: false,
+            is_translate_swapped: false,
+            is_association_recording_enabled: false,
+            platform_id: 0,
+            output_both_scripts: false,
+        }
+    }
+
+    fn config_poj() -> AppConfig {
+        AppConfig {
+            input_mode: "poj".to_string(),
+            ..config_tl()
+        }
+    }
+
+    #[test]
+    fn literal_roman_candidate_tl_single_syllable_is_tailo_wysiwyg() {
+        // Headline case: `nng7` → the literal tone-marked roman (`nn̄g`),
+        // roman-only (hanji None → Tailo), matching the preedit byte-for-byte.
+        let cfg = config_tl();
+        let cand = literal_roman_candidate("nng7", &cfg, phonetics::InputMode::Tl)
+            .expect("nng7 must yield a literal roman candidate");
+        assert_eq!(cand.roman, crate::derived::derived_display("nng7", &cfg));
+        assert_eq!(cand.display_text, cand.roman); // WYSIWYG: display == roman
+        assert_ne!(cand.roman, "nng7"); // a tone-mark conversion happened
+        assert!(cand.hanji.is_none());
+        assert_eq!(cand.mode, lexicon::CandidateMode::Tailo);
+        assert_eq!(cand.consumed_span, (0, 4));
+        assert!(!cand.canonical_tl.is_empty()); // #7 identity sidechannel set
+    }
+
+    #[test]
+    fn literal_roman_candidate_tl_goa2_keeps_literal_spelling() {
+        // §30 literal: TL `goa2` displays `goá` (mark on `a`, NOT folded to
+        // `guá`); the identity `canonical_tl` DOES fold to canonical TL `guá`.
+        let cfg = config_tl();
+        let cand = literal_roman_candidate("goa2", &cfg, phonetics::InputMode::Tl).unwrap();
+        assert_eq!(cand.roman, crate::derived::derived_display("goa2", &cfg));
+        assert_eq!(cand.canonical_tl, "gu\u{e1}"); // guá — cross-mode #7 identity
+    }
+
+    #[test]
+    fn literal_roman_candidate_poj_uses_poj_diacritics() {
+        // POJ mode is literal too: `goa2` → `góa` (mark on `o`).
+        let cfg = config_poj();
+        let cand = literal_roman_candidate("goa2", &cfg, phonetics::InputMode::Poj).unwrap();
+        assert_eq!(cand.roman, crate::derived::derived_display("goa2", &cfg));
+        assert!(cand.hanji.is_none());
+    }
+
+    #[test]
+    fn literal_roman_candidate_hyphenated_multisyllable_included() {
+        // Hyphenated fully-toned multi-syllable converts → included.
+        let cfg = config_tl();
+        let cand = literal_roman_candidate("tai5-gi2", &cfg, phonetics::InputMode::Tl).unwrap();
+        assert_eq!(
+            cand.roman,
+            crate::derived::derived_display("tai5-gi2", &cfg)
+        );
+        assert!(cand.roman.contains('-'));
+        assert_eq!(cand.syllable_count, 2);
+    }
+
+    #[test]
+    fn literal_roman_candidate_toneless_is_none() {
+        // No tone digit → no literal candidate (the no-tone affordance).
+        assert!(literal_roman_candidate("taigi", &config_tl(), phonetics::InputMode::Tl).is_none());
+    }
+
+    #[test]
+    fn literal_roman_candidate_trailing_hyphen_is_none() {
+        // Trailing `-` = pending boundary, not a finished word (Codex guard).
+        assert!(literal_roman_candidate("tai5-", &config_tl(), phonetics::InputMode::Tl).is_none());
+    }
+
+    #[test]
+    fn literal_roman_candidate_unhyphenated_blob_is_none() {
+        // Engine does not auto-syllabify (§10.2): `goa2ai3li2` returns
+        // verbatim from derived_display → no conversion → excluded.
+        assert!(
+            literal_roman_candidate("goa2ai3li2", &config_tl(), phonetics::InputMode::Tl).is_none()
+        );
+    }
+
+    #[test]
+    fn literal_roman_candidate_tone1_places_no_mark_is_none() {
+        // Tone 1 places no diacritic (`convert_syllable` keeps the digit), so
+        // derived_display == raw → excluded.
+        assert!(literal_roman_candidate("tai1", &config_tl(), phonetics::InputMode::Tl).is_none());
+    }
+
+    #[test]
+    fn literal_roman_candidate_tps_and_english_excluded() {
+        // TPS is hanji-first (diacritic-glyph tones, not ASCII digits);
+        // English is not Taigi romanization. Both excluded by the mode gate.
+        let cfg = config_tl();
+        assert!(literal_roman_candidate("nng7", &cfg, phonetics::InputMode::Tps).is_none());
+        assert!(literal_roman_candidate("nng7", &cfg, phonetics::InputMode::English).is_none());
+    }
+
+    #[test]
+    fn literal_roman_candidate_poj_doubletap_tone14_is_none() {
+        // Codex post-impl BLOCK regression: POJ `oo`/`nn` doubletap rewrites
+        // the spelling (`oo1`→`o͘1`) so the literal DIFFERS from raw, but tone
+        // 1/4 placed NO tone mark — the digit is still in the literal. The
+        // residual-digit gate (not `!= raw`) excludes it.
+        let cfg = AppConfig {
+            input_mode: "poj".to_string(),
+            oo_doubletap_enabled: true,
+            nn_doubletap_enabled: true,
+            ..config_tl()
+        };
+        assert!(literal_roman_candidate("oo1", &cfg, phonetics::InputMode::Poj).is_none());
+        assert!(literal_roman_candidate("oo4", &cfg, phonetics::InputMode::Poj).is_none());
+        // Sanity: a REAL tone (2) with doubletap on still converts → Some
+        // (`oo2` → `ó͘`, no residual digit).
+        let cand = literal_roman_candidate("oo2", &cfg, phonetics::InputMode::Poj)
+            .expect("oo2 places a real tone mark → candidate");
+        assert!(!cand.roman.bytes().any(|b| b.is_ascii_digit()));
     }
 }
