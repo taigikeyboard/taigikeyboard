@@ -19,6 +19,7 @@ struct SettingsTab: View {
     @State private var isDoubleTapOOEnabled: Bool
     @State private var isDoubleTapNNEnabled: Bool
     @State private var isOutputBothScripts: Bool
+    @State private var literalRomanCandidateEnabled: Bool
     @State private var isTpsOrMappedToER: Bool
     @State private var toolbarAutoCollapse: Bool
     @State private var isGlobeKeyEnabled: Bool
@@ -54,6 +55,7 @@ struct SettingsTab: View {
         _isDoubleTapOOEnabled = State(initialValue: settings.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)
         _isOutputBothScripts = State(initialValue: settings.isOutputBothScripts)
+        _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
         _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
         _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
         _isGlobeKeyEnabled = State(initialValue: settings.isGlobeKeyEnabled)
@@ -91,6 +93,16 @@ struct SettingsTab: View {
                     }
                     .onChange(of: isOutputBothScripts) { _, newValue in
                         settings.isOutputBothScripts = newValue
+                    }
+
+                    Toggle(isOn: $literalRomanCandidateEnabled) {
+                        HStack {
+                            Text(SettingsTexts.literalRomanCandidate)
+                            SettingInfoButton(description: SettingsTexts.literalRomanCandidateInfo)
+                        }
+                    }
+                    .onChange(of: literalRomanCandidateEnabled) { _, newValue in
+                        settings.isLiteralRomanCandidateEnabled = newValue
                     }
 
                     Toggle(isOn: $autoCapitalizationEnabled) {

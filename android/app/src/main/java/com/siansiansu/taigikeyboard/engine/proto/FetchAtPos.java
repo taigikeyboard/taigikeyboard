@@ -71,6 +71,21 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
  * `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
  * convention).
+ *
+ * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
+ * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
+ * `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+ * the romanization in one tap). It does NOT suppress roman-only / OOV-synth
+ * candidates that `assemble_candidates` produces naturally — only the §34
+ * forced prepend.
+ *
+ * SENTINEL (inverted, mirrors the `enabled_sources_bitmask` legacy-default
+ * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
+ * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
+ * candidate. The platform sends `true` only when the user turns the
+ * 顯示羅馬字 setting OFF. Platform settings stay positive
+ * (`isLiteralRomanCandidateEnabled` iOS / `literalRomanCandidateEnabled`
+ * Android); the bridge sets `disabled = !enabled`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -350,6 +365,32 @@ public  final class FetchAtPos extends
     enabledSourcesBitmask_ = 0;
   }
 
+  public static final int LITERAL_ROMAN_CANDIDATE_DISABLED_FIELD_NUMBER = 6;
+  private boolean literalRomanCandidateDisabled_;
+  /**
+   * <code>bool literal_roman_candidate_disabled = 6;</code>
+   * @return The literalRomanCandidateDisabled.
+   */
+  @java.lang.Override
+  public boolean getLiteralRomanCandidateDisabled() {
+    return literalRomanCandidateDisabled_;
+  }
+  /**
+   * <code>bool literal_roman_candidate_disabled = 6;</code>
+   * @param value The literalRomanCandidateDisabled to set.
+   */
+  private void setLiteralRomanCandidateDisabled(boolean value) {
+
+    literalRomanCandidateDisabled_ = value;
+  }
+  /**
+   * <code>bool literal_roman_candidate_disabled = 6;</code>
+   */
+  private void clearLiteralRomanCandidateDisabled() {
+
+    literalRomanCandidateDisabled_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -499,6 +540,21 @@ public  final class FetchAtPos extends
    * is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
    * `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
    * convention).
+   *
+   * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
+   * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
+   * `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+   * the romanization in one tap). It does NOT suppress roman-only / OOV-synth
+   * candidates that `assemble_candidates` produces naturally — only the §34
+   * forced prepend.
+   *
+   * SENTINEL (inverted, mirrors the `enabled_sources_bitmask` legacy-default
+   * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
+   * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
+   * candidate. The platform sends `true` only when the user turns the
+   * 顯示羅馬字 setting OFF. Platform settings stay positive
+   * (`isLiteralRomanCandidateEnabled` iOS / `literalRomanCandidateEnabled`
+   * Android); the bridge sets `disabled = !enabled`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -802,6 +858,34 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <code>bool literal_roman_candidate_disabled = 6;</code>
+     * @return The literalRomanCandidateDisabled.
+     */
+    @java.lang.Override
+    public boolean getLiteralRomanCandidateDisabled() {
+      return instance.getLiteralRomanCandidateDisabled();
+    }
+    /**
+     * <code>bool literal_roman_candidate_disabled = 6;</code>
+     * @param value The literalRomanCandidateDisabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLiteralRomanCandidateDisabled(boolean value) {
+      copyOnWrite();
+      instance.setLiteralRomanCandidateDisabled(value);
+      return this;
+    }
+    /**
+     * <code>bool literal_roman_candidate_disabled = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLiteralRomanCandidateDisabled() {
+      copyOnWrite();
+      instance.clearLiteralRomanCandidateDisabled();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -825,10 +909,11 @@ public  final class FetchAtPos extends
             "customEntries_",
             com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.class,
             "enabledSourcesBitmask_",
+            "literalRomanCandidateDisabled_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0002\u0000\u0001\u000b\u0002\u001b" +
-              "\u0003\u0002\u0004\u001b\u0005\u000b";
+              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0002\u0000\u0001\u000b\u0002\u001b" +
+              "\u0003\u0002\u0004\u001b\u0005\u000b\u0006\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

@@ -71,6 +71,7 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
             now_ms: 0,
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &config(),
@@ -113,6 +114,7 @@ fn decode_fetch_at_pos_position_nonzero_returns_empty_carrier() {
             now_ms: 0,
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &config(),
@@ -153,6 +155,12 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             now_ms: 0,
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
+            // §34/S22: disable the literal-roman prepend so this test isolates
+            // the lexicon-degradation path. With it ON (default), the bare
+            // `derived_display("tsua")` candidate is added regardless of the
+            // lexicon, which is orthogonal to "lexicon NotInitialized yields no
+            // DICT candidates". Doubles as OFF-gate coverage.
+            literal_roman_candidate_disabled: true,
         })),
         &mut engine,
         &config(),
@@ -162,6 +170,68 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
     assert!(
         cont.candidates.is_empty(),
         "lexicon NotInitialized must yield empty candidates"
+    );
+}
+
+// §34/S22 — the `literal_roman_candidate_disabled` toggle gates ONLY the
+// forced index-0 preedit-literal prepend. Lexicon-free so the literal is the
+// sole candidate: ON → it appears at index 0; OFF → it is gone (and here, the
+// carrier is empty because no dict candidates exist without a lexicon). The
+// toggle never touches `assemble_candidates`, so any naturally-produced
+// candidate would survive OFF — that is covered by the lexicon-backed golden.
+#[test]
+fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
+    fn fetch_tsua(disabled: bool) -> Vec<(Option<String>, String)> {
+        let mut engine = Engine::new();
+        dispatch::handle(
+            &req(Method::Start(protos::engine::Start {
+                text: "tsua".into(),
+            })),
+            &mut engine,
+            &config(),
+        )
+        .unwrap();
+        dispatch::handle(
+            &req(Method::EnterContinuous(EnterContinuous {})),
+            &mut engine,
+            &config(),
+        )
+        .unwrap();
+        let resp = dispatch::handle(
+            &req(Method::FetchAtPos(FetchAtPos {
+                position: 0,
+                frequency_entries: vec![],
+                now_ms: 0,
+                custom_entries: vec![],
+                enabled_sources_bitmask: 0,
+                literal_roman_candidate_disabled: disabled,
+            })),
+            &mut engine,
+            &config(),
+        )
+        .expect("dispatch ok");
+        resp.continuous
+            .expect("continuous carrier present")
+            .candidates
+            .into_iter()
+            .map(|c| (c.hanji, c.roman))
+            .collect()
+    }
+
+    // ON (default): the literal-roman candidate is prepended at index 0,
+    // roman-only (`hanji == None`) and byte-identical to the preedit.
+    let on = fetch_tsua(false);
+    assert_eq!(
+        on.first(),
+        Some(&(None, "tsua".to_string())),
+        "literal-roman ON must prepend the preedit literal at index 0"
+    );
+
+    // OFF: the forced prepend is skipped; lexicon-free leaves no candidates.
+    let off = fetch_tsua(true);
+    assert!(
+        off.is_empty(),
+        "literal-roman OFF must not prepend the literal (got {off:?})"
     );
 }
 
@@ -214,6 +284,7 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
             now_ms: 0,
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &config(),
@@ -261,6 +332,7 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
             now_ms: 0,
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &config(),
@@ -411,6 +483,7 @@ fn fetch_at_pos_decodes_to_position_field() {
         now_ms: 0,
         custom_entries: vec![],
         enabled_sources_bitmask: 0,
+        literal_roman_candidate_disabled: false,
     };
 }
 
@@ -584,6 +657,10 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
             now_ms: 1_700_000_002_000,
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
+            // §34/S22: disable the literal-roman prepend — this test pins
+            // user-freq snapshot threading + empty-when-lexicon-absent, and the
+            // bare literal candidate (added regardless of lexicon) is noise here.
+            literal_roman_candidate_disabled: true,
         })),
         &mut engine,
         &config(),

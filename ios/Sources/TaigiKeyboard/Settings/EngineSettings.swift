@@ -34,6 +34,17 @@ protocol EngineSettings {
     // 中文: 是否記錄使用者選字的關聯資料,供 NextWord 推薦使用。
     var isAssociationRecordingEnabled: Bool { get }
 
+    // 中文: 顯示羅馬字開關 (§34/S22)。TL/POJ 組字時是否在候選列首位顯示字面 roman
+    // 中文: 候選 (= preedit WYSIWYG),讓漢羅一鍵上屏免切 文/A。預設 true。只關 §34
+    // 中文: 強制 prepend,不影響 assemble_candidates 自然產生的 roman 候選。
+    /// Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ
+    /// composing surfaces the preedit literal (`derived_display`) as the
+    /// index-0 candidate so 漢羅 mixing commits the romanization in one tap.
+    /// The bridge inverts this into `FetchAtPos.literal_roman_candidate_disabled`.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isLiteralRomanCandidateEnabled.
+    // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
+    var isLiteralRomanCandidateEnabled: Bool { get }
+
     /// POJ preprocessing toggles bundled as a live-read value so
     /// `ComposingState` / `ToneConverter` can stay Foundation-pure.
     // 中文: POJ 雙擊 OO / NN 預處理開關打包,讓 ComposingState / ToneConverter 不需直接讀設定。

@@ -76,6 +76,7 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
             now_ms: m.now_ms,
             custom_entries: m.custom_entries,
             enabled_sources_bitmask: m.enabled_sources_bitmask,
+            literal_roman_candidate_disabled: m.literal_roman_candidate_disabled,
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
@@ -111,6 +112,7 @@ pub fn handle(
             now_ms,
             custom_entries,
             enabled_sources_bitmask,
+            literal_roman_candidate_disabled,
         } => Ok(handle_fetch_at_pos(
             engine,
             position,
@@ -118,6 +120,7 @@ pub fn handle(
             now_ms,
             &custom_entries,
             enabled_sources_bitmask,
+            literal_roman_candidate_disabled,
             config,
         )),
         intent => Ok(engine.apply(intent, config)),
@@ -153,6 +156,7 @@ fn handle_fetch_at_pos(
     now_ms: i64,
     custom_entries: &[CustomDictEntry],
     enabled_sources_bitmask: u32,
+    literal_roman_candidate_disabled: bool,
     config: &AppConfig,
 ) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
@@ -271,13 +275,25 @@ fn handle_fetch_at_pos(
     // 中文: §34 — TL/POJ 組字時(不論有無標調)把目前組字結果(= preedit WYSIWYG)當
     // 中文:   roman-only 候選放 index 0,漢羅一鍵上屏免切 文/A,加調時候選列不跳動。
     // 中文:   display 層 prepend,不碰 assemble_candidates 切詞/cost primitive;不跑 Step 5 POJ recase。
-    if let Some(literal) = literal_roman_candidate(raw, config, mode) {
-        // Drop a pre-existing IDENTICAL bare-roman (hanji-absent Tailo) so
-        // the literal is not duplicated; dict rows with hanji stay (a
-        // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
-        // pre-impl F5). 中文: 去重同 roman 的純羅馬字 Tailo;帶漢字的字典候選保留。
-        candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
-        candidates.insert(0, literal);
+    //
+    // §34 / S22 toggle (顯示羅馬字): when the user turns the setting OFF
+    // the platform sends `literal_roman_candidate_disabled = true` and the
+    // forced prepend is skipped — the dedupe `retain` lives inside this
+    // block so it is skipped too. This suppresses ONLY the §34 WYSIWYG
+    // prepend; any roman-only / OOV-synth candidate `assemble_candidates`
+    // produced on its own stays. Inverted sentinel: proto3 default `false`
+    // = show (legacy always-on), so un-wired builds are unaffected.
+    // 中文: §34/S22 開關 — 使用者關閉時平台送 disabled=true,跳過 prepend(含內層去重);
+    // 中文:   只關 §34 強制 prepend,assemble_candidates 自然產生的 roman 候選保留。
+    if !literal_roman_candidate_disabled {
+        if let Some(literal) = literal_roman_candidate(raw, config, mode) {
+            // Drop a pre-existing IDENTICAL bare-roman (hanji-absent Tailo)
+            // so the literal is not duplicated; dict rows with hanji stay (a
+            // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
+            // pre-impl F5). 中文: 去重同 roman 的純羅馬字 Tailo;帶漢字的字典候選保留。
+            candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
+            candidates.insert(0, literal);
+        }
     }
     with_continuous(
         snapshot,

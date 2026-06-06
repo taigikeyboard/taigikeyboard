@@ -9,6 +9,8 @@ import Foundation
 enum SettingsIcons {
     // 中文: 「同時輸出漢羅雙寫」開關圖示。
     static let isOutputBothScripts = "character.book.closed"
+    // 中文: 顯示羅馬字 (§34/S22) 開關圖示。
+    static let literalRomanCandidate = "abc"
     // 中文: 自動大寫開關圖示。
     static let autoCapitalization = "textformat.size"
     // 中文: 自動空格開關圖示。

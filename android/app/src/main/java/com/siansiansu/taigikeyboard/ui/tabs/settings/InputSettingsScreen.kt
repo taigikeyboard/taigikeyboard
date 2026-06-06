@@ -76,6 +76,7 @@ fun InputSettingsScreen(
     // Each state re-reads from prefs when resetCounter changes (after settings reset)
     var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
     var outputBoth by remember(resetCounter) { mutableStateOf(prefs.outputBothScripts) }
+    var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
     var doubleOO by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapOO) }
@@ -174,6 +175,16 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             outputBoth = it
                             prefs.outputBothScripts = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = SettingsTexts.literalRomanCandidate,
+                        checked = literalRomanCandidate,
+                        infoText = SettingsTexts.literalRomanCandidateInfo,
+                        onCheckedChange = {
+                            literalRomanCandidate = it
+                            prefs.literalRomanCandidateEnabled = it
                         },
                     )
                     SettingsDivider()

@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.siansiansu.taigikeyboard.ui.components.Abc
 import com.siansiansu.taigikeyboard.ui.components.FormatSize
 import com.siansiansu.taigikeyboard.ui.components.Language
 import com.siansiansu.taigikeyboard.ui.components.SpaceBar
@@ -18,6 +19,7 @@ import com.siansiansu.taigikeyboard.ui.components.VolumeUp
  */
 object SettingsIcons {
     val outputBothScripts: ImageVector get() = Icons.Outlined.Translate
+    val literalRomanCandidate: ImageVector get() = Icons.Outlined.Abc
     val autoCapitalization: ImageVector get() = Icons.Outlined.FormatSize
     val autoSpace: ImageVector get() = Icons.Outlined.SpaceBar
     val toolbar: ImageVector get() = Icons.Outlined.ViewStream

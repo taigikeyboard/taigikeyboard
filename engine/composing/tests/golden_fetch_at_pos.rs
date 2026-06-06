@@ -838,6 +838,9 @@ fn run_case(c: &Case) -> String {
             now_ms: c.now_ms,
             custom_entries: c.custom.clone(),
             enabled_sources_bitmask: c.enabled_sources_bitmask,
+            // §34/S22: all golden cases keep the literal-roman candidate ON
+            // (the toggle OFF path is covered by a focused dispatch unit test).
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &cfg,

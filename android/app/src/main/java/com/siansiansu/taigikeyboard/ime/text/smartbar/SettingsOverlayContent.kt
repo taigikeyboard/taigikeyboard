@@ -57,6 +57,7 @@ fun SettingsOverlayContent(
 
     // Toggle states — refreshTrigger as key ensures re-read from prefs on each show()
     var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.outputBothScripts) }
+    var literalRomanCandidate by remember(refreshTrigger) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(refreshTrigger) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(refreshTrigger) { mutableStateOf(prefs.isAutoSpaceEnabled) }
     var toolbarAutoCollapse by remember(refreshTrigger) { mutableStateOf(prefs.isToolbarAutoCollapse) }
@@ -95,6 +96,19 @@ fun SettingsOverlayContent(
             onCheckedChange = {
                 outputBoth = it
                 prefs.outputBothScripts = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = SettingsTexts.literalRomanCandidate,
+            checked = literalRomanCandidate,
+            icon = SettingsIcons.literalRomanCandidate,
+            iconTint = iconTint,
+            onCheckedChange = {
+                literalRomanCandidate = it
+                prefs.literalRomanCandidateEnabled = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,

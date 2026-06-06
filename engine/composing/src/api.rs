@@ -454,12 +454,18 @@ pub enum Intent {
     // 中文: Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
     // 中文: Phase 9 Item 12 — 加帶平台 custom_dictionary.db 命中 (raw roman/hanji),供 engine 合成 + (roman,hanji) 去重。
     // 中文: PR-9.6 — 加帶平台 source-toggle bitmask;0=未接線 sentinel 在 handle_fetch_at_pos 正規化為 u32::MAX。
+    /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
+    /// preedit-literal roman candidate (index-0 `derived_display` WYSIWYG row
+    /// for 漢羅 one-tap). Decoded verbatim from `FetchAtPos`; OFF suppresses
+    /// only the §34 forced prepend, not the natural roman candidates. Full
+    /// wire/sentinel contract: the `FetchAtPos` proto comment.
     FetchAtPos {
         position: u32,
         frequency_entries: Vec<protos::engine::FrequencyEntry>,
         now_ms: i64,
         custom_entries: Vec<protos::engine::CustomDictEntry>,
         enabled_sources_bitmask: u32,
+        literal_roman_candidate_disabled: bool,
     },
     /// Nail a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the nailed segment's raw text and

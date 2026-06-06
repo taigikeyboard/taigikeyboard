@@ -28,6 +28,8 @@ enum SettingsTexts {
 
     static let typingSectionTitle = "拍字設定"
     static let isOutputBothScripts = "括號標註"
+    static let literalRomanCandidate = "顯示羅馬字"
+    static let literalRomanCandidateInfo = "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。"
     static let autoCapitalization = "自動大本字"
     static let autoSpace = "自動空白"
 

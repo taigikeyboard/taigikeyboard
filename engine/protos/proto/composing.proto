@@ -181,12 +181,28 @@ message EnterContinuous {}
 // is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
 // `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
 // convention).
+//
+// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
+// preedit-literal roman candidate (the `derived_display` WYSIWYG row that
+// `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+// the romanization in one tap). It does NOT suppress roman-only / OOV-synth
+// candidates that `assemble_candidates` produces naturally — only the §34
+// forced prepend.
+//
+// SENTINEL (inverted, mirrors the `enabled_sources_bitmask` legacy-default
+// idiom above): proto3 default `false` means "show" (= pre-toggle always-on
+// behaviour), so older / un-wired builds and proto-decoded fixtures keep the
+// candidate. The platform sends `true` only when the user turns the
+// 顯示羅馬字 setting OFF. Platform settings stay positive
+// (`isLiteralRomanCandidateEnabled` iOS / `literalRomanCandidateEnabled`
+// Android); the bridge sets `disabled = !enabled`.
 message FetchAtPos {
   uint32 position                          = 1;
   repeated FrequencyEntry frequency_entries = 2;
   int64 now_ms                             = 3;
   repeated CustomDictEntry custom_entries  = 4;
   uint32 enabled_sources_bitmask           = 5;
+  bool literal_roman_candidate_disabled    = 6;
 }
 
 // v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled

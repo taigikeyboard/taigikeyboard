@@ -245,6 +245,14 @@ fn req(method: Method) -> ComposingRequest {
 
 /// Drive `raw` through `Start → EnterContinuous → FetchAtPos` and return
 /// the `(hanji, roman)` pairs in candidate order.
+///
+/// Runs in DEFAULT config (literal-roman candidate ON, §34/S22). The
+/// always-on preedit-literal prepend takes index 0 as a bare-roman row
+/// (`hanji = None`), so this file's separator invariant asserts against the
+/// first HANJI-bearing candidate (the dict best), which now sits right after
+/// it — verifying `INVARIANT_CONTINUOUS_SLOT0_RESPECTS_DICT_SEPARATOR` under
+/// the config users actually run. The separator-promote lives in
+/// `assemble_candidates` and is independent of the toggle.
 fn fetch_candidates(raw: &str) -> Vec<(Option<String>, String)> {
     let cfg = config();
     let mut engine = Engine::new();
@@ -267,6 +275,7 @@ fn fetch_candidates(raw: &str) -> Vec<(Option<String>, String)> {
             now_ms: 0,
             custom_entries: Vec::new(),
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &cfg,
@@ -287,20 +296,24 @@ fn slot0_promotes_dict_khinsiann_form_over_space_synth() {
     let _lock = engine_install_lock();
     install_fixture();
     // INVARIANT_CONTINUOUS_SLOT0_RESPECTS_DICT_SEPARATOR.
-    // Best candidate (index 0) must be the dictionary word 予我 with its
+    // The best DICT candidate must be the dictionary word 予我 with its
     // canonical khinsiann roman `hōo--guá`, NOT the walker's space-joined
-    // synth `hōo guá`.
+    // synth `hōo guá`. In default config the §34 literal-roman row (`hanji
+    // = None`) leads at index 0, so the dict best is the first HANJI-bearing
+    // candidate right after it.
     let cands = fetch_candidates("hoogua");
-    assert!(!cands.is_empty(), "hoogua produced no candidates");
-    let (hanji0, roman0) = &cands[0];
+    let (hanji0, roman0) = cands
+        .iter()
+        .find(|(hanji, _)| hanji.is_some())
+        .expect("hoogua produced no hanji candidate");
     assert_eq!(
         hanji0.as_deref(),
         Some("予我"),
-        "slot 0 hanji must be 予我; got {cands:?}"
+        "best dict candidate hanji must be 予我; got {cands:?}"
     );
     assert_eq!(
         roman0, "hōo--guá",
-        "slot 0 roman must be the dict khinsiann form `hōo--guá`, not the space synth; got {roman0:?}"
+        "best dict roman must be the dict khinsiann form `hōo--guá`, not the space synth; got {roman0:?}"
     );
 
     // The malformed space-join synth must be fully suppressed (it was the

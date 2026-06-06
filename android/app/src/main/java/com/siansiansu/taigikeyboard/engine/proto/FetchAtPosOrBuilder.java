@@ -54,4 +54,10 @@ public interface FetchAtPosOrBuilder extends
    * @return The enabledSourcesBitmask.
    */
   int getEnabledSourcesBitmask();
+
+  /**
+   * <code>bool literal_roman_candidate_disabled = 6;</code>
+   * @return The literalRomanCandidateDisabled.
+   */
+  boolean getLiteralRomanCandidateDisabled();
 }

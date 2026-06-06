@@ -16,6 +16,7 @@ struct SettingsSelectionOverlay: View {
     let onOpenApp: () -> Void
 
     @State private var isOutputBothScripts: Bool
+    @State private var literalRomanCandidateEnabled: Bool
     @State private var autoCapitalizationEnabled: Bool
     @State private var autoSpaceEnabled: Bool
     @State private var toolbarAutoCollapse: Bool
@@ -43,6 +44,7 @@ struct SettingsSelectionOverlay: View {
         self.onOpenApp = onOpenApp
         let s = SharedSettings.shared
         _isOutputBothScripts = State(initialValue: s.isOutputBothScripts)
+        _literalRomanCandidateEnabled = State(initialValue: s.isLiteralRomanCandidateEnabled)
         _autoCapitalizationEnabled = State(
             initialValue: KeyboardSettings.store.bool(forKey: Self.autoCapKey),
         )
@@ -82,6 +84,9 @@ struct SettingsSelectionOverlay: View {
                     // General settings
                     settingsToggle(SettingsTexts.isOutputBothScripts, isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
                         SharedSettings.shared.isOutputBothScripts = $0
+                    }
+                    settingsToggle(SettingsTexts.literalRomanCandidate, isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
+                        SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
                     }
                     settingsToggle(SettingsTexts.autoCapitalization, isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
@@ -129,6 +134,7 @@ struct SettingsSelectionOverlay: View {
         .onAppear {
             let s = SharedSettings.shared
             isOutputBothScripts = s.isOutputBothScripts
+            literalRomanCandidateEnabled = s.isLiteralRomanCandidateEnabled
             autoCapitalizationEnabled = KeyboardSettings.store.bool(forKey: Self.autoCapKey)
             autoSpaceEnabled = s.isAutoSpaceEnabled
             toolbarAutoCollapse = s.isToolbarAutoCollapse

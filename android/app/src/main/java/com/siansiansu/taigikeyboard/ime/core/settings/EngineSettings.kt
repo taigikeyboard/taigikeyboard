@@ -56,6 +56,18 @@ interface EngineSettings {
     val isAssociationRecordingEnabled: Boolean
 
     /**
+     * Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ
+     * composing surfaces the preedit literal (`derived_display`) as the
+     * index-0 candidate so 漢羅 mixing commits the romanization in one tap.
+     * `ComposingManager` inverts it into
+     * `FetchAtPos.literalRomanCandidateDisabled`. Gates ONLY that forced
+     * prepend, not naturally-produced roman candidates.
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isLiteralRomanCandidateEnabled.
+    // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
+    val isLiteralRomanCandidateEnabled: Boolean
+
+    /**
      * POJ preprocessing toggles bundled as a live-read value so
      * `ComposingState` / `ToneConverter` can stay Kotlin-stdlib-pure.
      */

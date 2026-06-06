@@ -295,6 +295,7 @@ fn fetch(raw: &str, input_mode: &str) -> Vec<(Option<String>, String)> {
             now_ms: 0,
             custom_entries: Vec::new(),
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &cfg,

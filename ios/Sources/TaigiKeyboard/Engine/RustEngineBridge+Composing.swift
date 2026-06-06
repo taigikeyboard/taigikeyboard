@@ -510,6 +510,10 @@ public extension RustEngineBridge {
         // sends). Default `0` = proto3-absent sentinel → engine all-on,
         // preserving pre-PR-9.6 behaviour for callers (incl. tests).
         enabledSourcesBitmask: UInt32 = 0,
+        // §34/S22 — invert of the 顯示羅馬字 setting. Default `false` = show
+        // (proto3-absent sentinel → engine prepends the literal-roman
+        // candidate, the pre-toggle always-on behaviour for callers/tests).
+        literalRomanCandidateDisabled: Bool = false,
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.position = 0
@@ -517,6 +521,7 @@ public extension RustEngineBridge {
         payload.nowMs = nowMs
         payload.customEntries = customEntries
         payload.enabledSourcesBitmask = enabledSourcesBitmask
+        payload.literalRomanCandidateDisabled = literalRomanCandidateDisabled
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",

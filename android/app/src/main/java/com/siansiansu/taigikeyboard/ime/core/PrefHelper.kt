@@ -314,6 +314,9 @@ class PrefHelper(
 
     var outputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
+    // §34/S22 — 顯示羅馬字 toggle. Default true (always-on legacy behaviour).
+    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, true)
+
     // Taigi-specific settings
     var enableDoubleTapOO: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
 
@@ -524,6 +527,12 @@ class PrefHelper(
     // this via EngineSettings.
     override val isOutputBothScripts: Boolean
         get() = outputBothScripts
+
+    // §34/S22: engine-facing alias for the Android `literalRomanCandidateEnabled`
+    // pref (kept un-renamed because the settings UI reads it directly).
+    // `ComposingManager` inverts it into `FetchAtPos.literalRomanCandidateDisabled`.
+    override val isLiteralRomanCandidateEnabled: Boolean
+        get() = literalRomanCandidateEnabled
 
     override val isAssociationRecordingEnabled: Boolean
         get() = associationRecordingEnabled

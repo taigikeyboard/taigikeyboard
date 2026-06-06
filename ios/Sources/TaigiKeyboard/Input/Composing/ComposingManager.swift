@@ -295,6 +295,12 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: RustEngineBridge.DictionaryToggles(from: settings),
         ).dictionaryFilterBitmask
 
+        // §34/S22 — invert the 顯示羅馬字 setting into the engine's
+        // `disabled` wire flag. Computed once from the same snapshot and
+        // shared by both fetch phases so a mid-fetch settings change cannot
+        // make the two phases disagree (mirrors `enabledSourcesBitmask`).
+        let literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
+
         // Phase 1: neutral fetch to learn candidate displayText keys.
         let neutral = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
@@ -304,6 +310,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             generation: generation,
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
+            literalRomanCandidateDisabled: literalRomanCandidateDisabled,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `.noop` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -343,6 +350,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             nowMs: nowMs,
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
+            literalRomanCandidateDisabled: literalRomanCandidateDisabled,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition

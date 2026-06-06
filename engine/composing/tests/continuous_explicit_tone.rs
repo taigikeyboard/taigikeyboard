@@ -249,6 +249,7 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
             now_ms: 0,
             custom_entries: Vec::new(),
             enabled_sources_bitmask: 0,
+            literal_roman_candidate_disabled: false,
         })),
         &mut engine,
         &cfg,

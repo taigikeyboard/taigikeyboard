@@ -37,6 +37,8 @@ object SettingsTexts {
 
     const val typingSectionTitle = "拍字設定"
     const val outputBothScripts = "括號標註"
+    const val literalRomanCandidate = "顯示羅馬字"
+    const val literalRomanCandidateInfo = "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。"
     const val autoCapitalization = "自動大本字"
     const val autoSpace = "自動空白"
 

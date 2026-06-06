@@ -129,6 +129,7 @@ fn dump_continuous_candidates() {
                 now_ms: 0,
                 custom_entries: Vec::new(),
                 enabled_sources_bitmask: bitmask,
+                literal_roman_candidate_disabled: false,
             })),
             &mut engine,
             &cfg,

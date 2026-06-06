@@ -252,6 +252,7 @@ internal object ComposingBridge {
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
         enabledSourcesBitmask: UInt,
+        literalRomanCandidateDisabled: Boolean,
     ): RustEngineBridge.ContinuousFetchResult {
         val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
             .newBuilder()
@@ -260,6 +261,7 @@ internal object ComposingBridge {
             .setNowMs(nowMs)
             .addAllCustomEntries(customEntries)
             .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
+            .setLiteralRomanCandidateDisabled(literalRomanCandidateDisabled)
             .build()
         return composingFetchDispatch(
             methodSetter = { it.fetchAtPos = payload },

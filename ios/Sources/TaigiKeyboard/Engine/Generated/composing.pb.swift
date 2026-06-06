@@ -486,6 +486,21 @@ public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
 /// is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
 /// `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
 /// convention).
+///
+/// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
+/// preedit-literal roman candidate (the `derived_display` WYSIWYG row that
+/// `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+/// the romanization in one tap). It does NOT suppress roman-only / OOV-synth
+/// candidates that `assemble_candidates` produces naturally — only the §34
+/// forced prepend.
+///
+/// SENTINEL (inverted, mirrors the `enabled_sources_bitmask` legacy-default
+/// idiom above): proto3 default `false` means "show" (= pre-toggle always-on
+/// behaviour), so older / un-wired builds and proto-decoded fixtures keep the
+/// candidate. The platform sends `true` only when the user turns the
+/// 顯示羅馬字 setting OFF. Platform settings stay positive
+/// (`isLiteralRomanCandidateEnabled` iOS / `literalRomanCandidateEnabled`
+/// Android); the bridge sets `disabled = !enabled`.
 public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -500,6 +515,8 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   public var customEntries: [Taigi_Engine_CustomDictEntry] = []
 
   public var enabledSourcesBitmask: UInt32 = 0
+
+  public var literalRomanCandidateDisabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1659,7 +1676,7 @@ nonisolated extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0\u{3}literal_roman_candidate_disabled\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1672,6 +1689,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.customEntries) }()
       case 5: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.literalRomanCandidateDisabled) }()
       default: break
       }
     }
@@ -1693,6 +1711,9 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if self.enabledSourcesBitmask != 0 {
       try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 5)
     }
+    if self.literalRomanCandidateDisabled != false {
+      try visitor.visitSingularBoolField(value: self.literalRomanCandidateDisabled, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1702,6 +1723,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.customEntries != rhs.customEntries {return false}
     if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
+    if lhs.literalRomanCandidateDisabled != rhs.literalRomanCandidateDisabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
