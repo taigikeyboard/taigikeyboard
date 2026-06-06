@@ -84,9 +84,9 @@
 // 中文: spec docs/reports/2026-05-18-v358-refactor-design-spec.md §2 + ⭐ B1/B2/S7。
 
 use crate::shadow::{
-    build_partial_prefix_key, build_shadow_lattice, custom_toneless_key,
-    greedy_longest_syllabification, left_anchored_keys_from_lattice, span_min_syllable_count,
-    strip_tones_for_mode,
+    build_defolded_shadow_lattice, build_partial_prefix_key, build_shadow_lattice,
+    custom_toneless_key, greedy_longest_syllabification, left_anchored_keys_from_lattice,
+    span_min_syllable_count, strip_tones_for_mode,
 };
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
@@ -1051,13 +1051,35 @@ pub(crate) fn assemble_candidates(
         let (keys, shadow_lattice) = match inv {
             Some(inv) => {
                 let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-                let keys = left_anchored_keys_from_lattice(
+                let mut keys = left_anchored_keys_from_lattice(
                     &shadow,
                     &shadow_to_raw_end,
                     &lattice,
                     inv,
                     mode,
                 );
+                // De-fold enumerate (TPS-only; `INVARIANT_TPS_DEFOLD_ENUMERATE`
+                // §34) — surface a word hidden when the auto-correct folded a
+                // coda that is really the next syllable's onset (雞胸 ke-hing).
+                // Rationale + scope live on `build_defolded_shadow_lattice`.
+                // APPENDED after the base keys so a true `(roman, hanji, span)`
+                // collision keeps the natural reading (`dedupe_by_roman_hanji_span`
+                // keeps the earlier index on a source-rank tie). The walker
+                // slot-0 below uses the BASE lattice only — de-fold is span-local,
+                // not slot-0, this round.
+                // 中文: de-fold enumerate(TPS-only §34;rationale 見 build_defolded_shadow_lattice)。
+                // 中文:   append 在 base 後 → 真碰撞時自然讀法勝(dedupe 保留較早 index);walker slot-0 仍用 base lattice。
+                if let Some((d_shadow, d_shadow_to_raw_end, d_lattice)) =
+                    build_defolded_shadow_lattice(raw, inv, mode)
+                {
+                    keys.extend(left_anchored_keys_from_lattice(
+                        &d_shadow,
+                        &d_shadow_to_raw_end,
+                        &d_lattice,
+                        inv,
+                        mode,
+                    ));
+                }
                 (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
             }
             None => (Vec::new(), None),

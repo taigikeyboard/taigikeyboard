@@ -218,6 +218,36 @@ fn dual_final_form(initial: char, last: char) -> Option<char> {
     }
 }
 
+/// Inverse of [`dual_final_form`]: the syllable-ONSET glyph for a TPS
+/// final/coda glyph (`ㆴ→ㄅ`, `ㆵ→ㄉ`, `ㆻ→ㄍ`, `ㆷ→ㄏ`, `ㆬ→ㄇ`, `ㄣ→ㄋ`,
+/// `ㆭ→ㄫ`, `ㄥ→ㄫ`), or `None` for any non-coda char. Both `ㆭ` and the
+/// `-ing`-context `ㄥ` map back to the single onset `ㄫ`.
+///
+/// Used by the continuous-input de-fold reading (`composing::shadow`):
+/// when the per-keystroke auto-correct folded a dual-form consonant into
+/// a coda (`ㄍㆤ`+`ㄏ`→`ㄍㆤㆷ`), a coda glyph that is actually the NEXT
+/// syllable's onset (雞胸 ke-hing = `ㄍㆤ|ㄏㄧㄥ`) is structurally hidden —
+/// a coda glyph cannot start a syllable in the `tps:` inventory. De-folding
+/// it back to the onset glyph lets the segmenter surface the alternate
+/// reading. Every pair is a 3-byte Bopomofo↔3-byte Bopomofo glyph, so the
+/// substitution is byte-length preserving (offset maps stay valid).
+// 中文: dual_final_form 的反向 — TPS 韻尾/終形 glyph → 對應聲母 glyph(ㆭ 與 ㄥ 皆回 ㄫ);
+// 中文:   供連續輸入 de-fold 讀法用:被 auto-correct 摺成韻尾、實為下字聲母者(雞胸 ㄍㆤ|ㄏㄧㄥ)
+// 中文:   反摺回聲母讓切分器列出替代讀法。每對皆 3-byte↔3-byte,byte 長度不變(offset map 不動)。
+pub fn defold_coda_to_initial(coda: char) -> Option<char> {
+    match coda {
+        'ㆴ' => Some('ㄅ'),
+        'ㆵ' => Some('ㄉ'),
+        'ㆻ' => Some('ㄍ'),
+        'ㆷ' => Some('ㄏ'),
+        'ㆬ' => Some('ㄇ'),
+        'ㄣ' => Some('ㄋ'),
+        'ㆭ' => Some('ㄫ'),
+        'ㄥ' => Some('ㄫ'),
+        _ => None,
+    }
+}
+
 /// The trailing run of open (vowel-final) syllables currently being typed:
 /// `raw_input` after the last syllable-boundary char (tone mark, stop /
 /// nasal coda, nasalized-vowel final — all in [`SYLLABLE_BOUNDARY_CHARS`]
@@ -414,6 +444,33 @@ mod tests {
         let (adjusted, replace_last) = super::adjust("\u{02cb}", "ㄍㄨㄇ"); // tone 2 after kept ㄇ
         assert_eq!(adjusted, "\u{02cb}");
         assert_eq!(replace_last.as_deref(), Some("ㆬ")); // Rule 2b reconstructs the coda
+    }
+
+    #[test]
+    fn defold_is_inverse_of_dual_final_form() {
+        use super::{defold_coda_to_initial, dual_final_form};
+        // Every dual-form initial → its coda → back to the initial.
+        // `last` only matters for ㄫ (ㄧ→ㄥ else ㆭ); both ㄥ and ㆭ defold to ㄫ.
+        for (initial, last) in [
+            ('ㄅ', 'ㄚ'),
+            ('ㄉ', 'ㄚ'),
+            ('ㄍ', 'ㄚ'),
+            ('ㄏ', 'ㄚ'),
+            ('ㄇ', 'ㄚ'),
+            ('ㄋ', 'ㄚ'),
+            ('ㄫ', 'ㄚ'), // → ㆭ → ㄫ
+            ('ㄫ', 'ㄧ'), // → ㄥ → ㄫ
+        ] {
+            let coda = dual_final_form(initial, last).expect("dual-form initial has a coda");
+            assert_eq!(
+                defold_coda_to_initial(coda),
+                Some(initial),
+                "{initial}+{last} → {coda} must defold back to {initial}",
+            );
+        }
+        // Non-coda chars return None.
+        assert_eq!(defold_coda_to_initial('ㄚ'), None);
+        assert_eq!(defold_coda_to_initial('ㄍ'), None); // onset, not a coda
     }
 
     #[test]

@@ -176,7 +176,23 @@ pub(crate) fn build_shadow_lattice(
 ) -> (String, Vec<usize>, Lattice) {
     let lower = raw.to_ascii_lowercase();
     let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    let (hyphenless, hyphenless_to_canonical) = build_hyphen_shadow(&canonical);
+    lattice_from_canonical(&canonical, &canonical_to_raw_end, inv, mode)
+}
+
+/// Shared tail of [`build_shadow_lattice`] / [`build_defolded_shadow_lattice`]:
+/// from a `(canonical, canonical_to_raw_end)` pair, run hyphen-shadow +
+/// (TPS-only) separator-shadow + lattice and compose the shadow→raw offset
+/// map. Factored out so the base and de-folded readings build their lattices
+/// through ONE code path (no drift).
+// 中文: build_shadow_lattice / build_defolded_shadow_lattice 共用尾段;base 與 de-fold 讀法
+// 中文:   經同一路徑建 lattice(避免漂移)。
+fn lattice_from_canonical(
+    canonical: &str,
+    canonical_to_raw_end: &[usize],
+    inv: &SyllableInventory,
+    mode: InputMode,
+) -> (String, Vec<usize>, Lattice) {
+    let (hyphenless, hyphenless_to_canonical) = build_hyphen_shadow(canonical);
     // TPS-only — the ASCII space is the keyboard's tone-1 / syllable
     // separator (appended on `space` while composing so the next
     // dual-form consonant stays an initial), NOT a literal space. Strip
@@ -202,6 +218,81 @@ pub(crate) fn build_shadow_lattice(
     // 中文:   POJ 模式下走 `poj:` 家族,辨識 POJ 拼寫的音節邊界而非塌成 TL 形。
     let lattice = build_lattice(&shadow, inv, mode, MAX_SYLLABLES);
     (shadow, shadow_to_raw_end, lattice)
+}
+
+/// TPS de-fold reading: build the lattice for the ALTERNATE segmentation
+/// where a single folded coda glyph is read as the NEXT syllable's onset
+/// (`ㄍㆤㆷㄧㄥ` → `ㄍㆤㄏㄧㄥ`, ke|hing 雞胸). The per-keystroke auto-correct
+/// folds a dual-form consonant into a coda glyph (`ㄏ`→`ㆷ`); a coda glyph
+/// cannot START a syllable in the `tps:` inventory, so the onset reading is
+/// structurally hidden from the segmenter. De-folding it back (byte-preserving
+/// glyph swap, so `canonical_to_raw_end` and the downstream offset maps stay
+/// valid) lets `left_anchored_keys_from_lattice` emit the hidden word's key.
+/// Returns `None` for non-TPS, or when the canonical has zero or more than
+/// one eligible de-fold site (this round handles exactly one — mixed
+/// multi-coda readings are a documented follow-up). librime Spelling-Algebra
+/// alignment: this is the "alternate spelling as an extra path" model.
+/// `INVARIANT_TPS_DEFOLD_ENUMERATE` (§34).
+// 中文: TPS de-fold 讀法 — 把單一被摺韻尾 glyph 當下字聲母的替代切分(ㄍㆤㆷㄧㄥ→ㄍㆤㄏㄧㄥ,雞胸)。
+// 中文:   韻尾 glyph 無法起音節故隱藏;反摺(等 byte glyph 替換,offset map 不變)讓隱藏詞 key 出現。
+// 中文:   非 TPS 或 0/>1 反摺點回 None(本輪只做單點;多韻尾混合讀法為後續)。對齊 librime Spelling Algebra。
+pub(crate) fn build_defolded_shadow_lattice(
+    raw: &str,
+    inv: &SyllableInventory,
+    mode: InputMode,
+) -> Option<(String, Vec<usize>, Lattice)> {
+    if mode != InputMode::Tps {
+        return None;
+    }
+    let lower = raw.to_ascii_lowercase();
+    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
+    let defolded = defold_single_coda(&canonical)?;
+    Some(lattice_from_canonical(
+        &defolded,
+        &canonical_to_raw_end,
+        inv,
+        mode,
+    ))
+}
+
+/// Swap the single eligible folded coda glyph in `canonical` for its onset
+/// glyph (byte-preserving — every coda↔onset pair is 3-byte Bopomofo, so the
+/// byte offsets are unchanged and `canonical_to_raw_end` still applies).
+/// Eligible = `phonetics::defold_coda_to_initial(c).is_some()` AND the NEXT
+/// char is `phonetics::is_tps_vowel_material` (so the de-folded onset can
+/// begin a syllable). The next-char check runs on `canonical` — BEFORE the
+/// separator / hyphen strip — so a coda before a TPS space (`ㆦ`␣`…`) or a
+/// `-` 連字 has a non-vowel next char and is NOT de-folded: the user's
+/// explicit boundary is respected. Returns `None` if zero or more than one
+/// eligible site (scope: exactly one this round).
+// 中文: 把 canonical 內單一合格的被摺韻尾 glyph 換成聲母 glyph(等 byte → offset 不變)。
+// 中文:   合格 = defold_coda_to_initial Some 且下一字為 is_tps_vowel_material;檢查在 canonical
+// 中文:   (分隔/連字剝除前)→ 韻尾後接空白/連字者不反摺(尊重使用者邊界)。0 或 >1 點回 None。
+fn defold_single_coda(canonical: &str) -> Option<String> {
+    let chars: Vec<char> = canonical.chars().collect();
+    let mut site: Option<(usize, char)> = None; // (index, de-folded onset glyph)
+    for i in 0..chars.len() {
+        let Some(onset) = phonetics::defold_coda_to_initial(chars[i]) else {
+            continue;
+        };
+        let next_is_vowel = chars
+            .get(i + 1)
+            .copied()
+            .is_some_and(phonetics::is_tps_vowel_material);
+        if next_is_vowel {
+            if site.is_some() {
+                return None; // >1 eligible site — out of scope this round
+            }
+            site = Some((i, onset));
+        }
+    }
+    let (i, onset) = site?;
+    let defolded: String = chars
+        .iter()
+        .enumerate()
+        .map(|(j, &c)| if j == i { onset } else { c })
+        .collect();
+    Some(defolded)
 }
 
 /// v3.5.9 A1 — extracted from the pre-A1 `build_keys_tl_with_inventory`
@@ -1011,6 +1102,49 @@ mod tests {
     //! cross-slice golden lives in `engine/composing/tests/golden_fetch_at_pos.rs`.
 
     use super::*;
+
+    // INVARIANT_TPS_DEFOLD_ENUMERATE (§34) — de-fold a single folded coda
+    // glyph back to its onset so a hidden alternate reading surfaces.
+    #[test]
+    fn defold_single_coda_swaps_one_coda_before_vowel() {
+        // ㄍㆤㆷㄧㄥ (folded ke-hing 雞胸) → ㄍㆤㄏㄧㄥ (ke|hing): ㆷ→ㄏ, ㄧ is vowel.
+        assert_eq!(
+            defold_single_coda("ㄍㆤㆷㄧㄥ").as_deref(),
+            Some("ㄍㆤㄏㄧㄥ"),
+        );
+        // ㆦㆴㆤㆷ (folded oo-pe̍h 烏白) → ㆦㄅㆤㆷ (oo|peh): the FIRST ㆴ→ㄅ
+        // (ㆤ is vowel); the trailing ㆷ has no following char → not de-folded.
+        assert_eq!(defold_single_coda("ㆦㆴㆤㆷ").as_deref(), Some("ㆦㄅㆤㆷ"));
+    }
+
+    #[test]
+    fn defold_single_coda_byte_length_preserved() {
+        // coda↔onset are both 3-byte Bopomofo → de-folded shadow keeps the
+        // exact byte length, so `canonical_to_raw_end` stays valid.
+        let input = "ㄍㆤㆷㄧㄥ";
+        let out = defold_single_coda(input).unwrap();
+        assert_eq!(out.len(), input.len());
+    }
+
+    #[test]
+    fn defold_single_coda_respects_separator_boundary() {
+        // A coda before a TPS space (the user's explicit tone-1 boundary) has
+        // a non-vowel next char → NOT de-folded. `ㄍㆤㆷ ㄧㄥ` (keh | ing,
+        // user-separated) must stay folded. Predicate runs on canonical
+        // (pre-separator-strip), so the space blocks the de-fold.
+        assert_eq!(defold_single_coda("ㄍㆤㆷ ㄧㄥ"), None);
+    }
+
+    #[test]
+    fn defold_single_coda_skips_zero_and_multi_site() {
+        // No coda glyph → None.
+        assert_eq!(defold_single_coda("ㄍㄠ"), None);
+        // A coda NOT followed by a vowel (end of buffer) → None.
+        assert_eq!(defold_single_coda("ㄍㄠㆷ"), None);
+        // >1 eligible site → None (mixed multi-coda out of scope this round).
+        // ㄍㆤㆷㄧ + ㆷㄚ : two `ㆷ`-before-vowel sites.
+        assert_eq!(defold_single_coda("ㄍㆤㆷㄧㆷㄚ"), None);
+    }
 
     #[test]
     fn strip_ascii_tone_digits_drops_all_ascii_digits() {

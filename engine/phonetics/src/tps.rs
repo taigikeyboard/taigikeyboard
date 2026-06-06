@@ -72,6 +72,32 @@ pub(crate) const ZHUYIN_VOWELS: &[(&str, &str)] = &[
     ("n", "\u{3123}"),
 ];
 
+/// True when `c` is a TPS nucleus glyph that can START a syllable body
+/// after an onset — a base vowel / medial / nasalized vowel / precomposed
+/// nasal-coda final (ㄚㄧㄨㄛㆦㆤㄜㄝㆨㄞㄠ, the ㆩㆥㆪㆧㆫㆮㆯ nasalized set,
+/// and the ㆰㄢㄤㆱㆲ am/an/ang/om/ong finals). Derived from
+/// [`ZHUYIN_VOWELS`] minus the three syllabic/coda-nasal forms `ㆬ`(m) /
+/// `ㄣ`(n) / `ㆭ`(ng), which are codas, not nuclei.
+///
+/// Used by the continuous-input de-fold predicate (`composing::shadow`):
+/// a folded coda glyph is only de-folded to an onset when the FOLLOWING
+/// char is vowel material — i.e. the coda is positioned where a real
+/// onset could begin the next syllable (`ㄍㆤㆷ|ㄧㄥ`), never before a tone
+/// mark, separator, or another coda.
+// 中文: 判斷 c 是否為「可接在聲母後起始音節主體」的 TPS 韻核 glyph(母音/介音/鼻化母音/
+// 中文:   precomposed 鼻韻尾 am/an/ang/om/ong)。源自 ZHUYIN_VOWELS 扣掉三個自鳴/韻尾鼻音
+// 中文:   ㆬ(m)/ㄣ(n)/ㆭ(ng)。供 de-fold predicate:韻尾後接韻核才反摺,絕不在聲調符/分隔符/韻尾前反摺。
+pub fn is_tps_vowel_material(c: char) -> bool {
+    // The syllabic / coda nasal forms are codas, not nuclei — exclude them
+    // even though they live in `ZHUYIN_VOWELS`.
+    if matches!(c, '\u{31ac}' | '\u{3123}' | '\u{31ad}') {
+        return false;
+    }
+    ZHUYIN_VOWELS
+        .iter()
+        .any(|(_, glyph)| glyph.chars().next() == Some(c))
+}
+
 pub(crate) const ZHUYIN_TONES: &[(&str, &str)] = &[
     ("1", " "),
     ("2", "\u{02cb}"),
@@ -702,6 +728,23 @@ mod tests {
     #[test]
     fn from_zhuyin_basic_round_trip() {
         assert_eq!(from_zhuyin("ㄉㄧㄠˊ"), "tiau5");
+    }
+
+    #[test]
+    fn is_tps_vowel_material_accepts_nuclei_rejects_coda_nasals() {
+        // Base vowels / medials / nasalized vowels / precomposed nasal-coda
+        // finals are nucleus material (can follow a de-folded onset).
+        for c in ['ㄚ', 'ㄧ', 'ㄨ', 'ㄛ', 'ㆦ', 'ㆤ', 'ㄞ', 'ㄠ', 'ㆩ', 'ㄢ', 'ㄤ'] {
+            assert!(is_tps_vowel_material(c), "{c} should be vowel material");
+        }
+        // The syllabic / coda nasal forms are codas, NOT nuclei.
+        for c in ['ㆬ', 'ㄣ', 'ㆭ'] {
+            assert!(!is_tps_vowel_material(c), "{c} (coda nasal) must be rejected");
+        }
+        // Onsets / stop codas / tone marks / space are not vowel material.
+        for c in ['ㄍ', 'ㆷ', 'ㆵ', '\u{02cb}', ' '] {
+            assert!(!is_tps_vowel_material(c), "{c} must be rejected");
+        }
     }
 
     /// `canonicalize_tps_syllable` splits a trailing tone mark off a
