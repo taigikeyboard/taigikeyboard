@@ -110,20 +110,41 @@ extension KeyboardViewController {
         // 4. Connect TaigiAutocompleteService with handler (requires handler already created)
         wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)
 
-        // 5. v3.5.8 Phase 9.3b — best-effort warmup of `user_frequency.db`
-        //    so the Continuous-input fetch path can apply persisted boost
-        //    as early as possible (not guaranteed for the very first
-        //    composition — the Task races against the first keystroke).
-        //    The Continuous fetch path never lazy-inits the freq DB itself,
-        //    so without this warmup a fresh session would ignore
-        //    `user_frequency.db` indefinitely until the user committed
-        //    something. Fire-and-forget — `fetchContinuousCandidates` keeps
-        //    its `isConnected()` cold-start guard for the race window before
-        //    this Task lands. Warning log on failure is intentional for
+        // 5. Best-effort warmup of the two SYNCHRONOUS eager-empty hot-path
+        //    user-data DBs that `fetchContinuousCandidates` reads:
+        //    `user_frequency.db` (boost — `UserFrequencyService.frequencyDataBatch`)
+        //    and `custom_dictionary.db` (custom candidates —
+        //    `CustomDictionaryRepository.searchSync`). Both readers return `[]`
+        //    until their connection is open and NEVER lazy-open (the Continuous
+        //    fetch is synchronous and must not block on an async DB open), so
+        //    without an eager warmup here a fresh session would ignore them
+        //    indefinitely until the user committed something. NextWord's
+        //    `user_association.db` is intentionally NOT warmed here — its reads
+        //    are async and lazy-init per query (`ensureUserTablesCreated`).
+        //    A future third synchronous eager-empty reader MUST be warmed here.
+        //
+        //    Fire-and-forget — `fetchContinuousCandidates` keeps its
+        //    `isConnected()` cold-start guard for the race window before these
+        //    Tasks land. Warning log on failure is intentional for
         //    observability (Codex PR #265 r3216760651 post-impl R5).
-        // 中文: 連續輸入路徑會早 return 略過 lexicon 那條 lazy init,
-        // 中文: 因此於 setupCoreServices 觸發 user_frequency.db 提前打開 +
-        // 中文: 建 schema,best-effort 讓使用者頻率 boost 儘早可用(首次組字仍可能 race)。
+        //
+        //    The custom_dictionary.db warmup is UNGATED (not behind
+        //    `isCustomDictEnabled`): the lookup is already gated in
+        //    `ComposingManager.buildCustomEntries`, and an ungated warmup keeps
+        //    the connection ready for a live settings toggle (enable in the
+        //    host app → works in an already-running extension, no relaunch).
+        //    Regression guard: PR #279 (Item 13) deleted the old
+        //    `LexiconService` fallback that lazy-opened this DB but only kept
+        //    the user-freq warmup, so custom-dict candidates silently vanished
+        //    from the keyboard (behavioral-invariants.md §26).
+        // 中文: 連續輸入同步讀取的兩個 eager-empty user-data DB 都在此提前打開 +
+        // 中文:   建 schema:user_frequency.db(boost)+ custom_dictionary.db(自訂詞候選)。
+        // 中文:   兩者 searchSync / frequencyDataBatch 在連線開啟前回 [] 且不 lazy-open
+        // 中文:   (連續 fetch 同步,不可 block async open),故須在此 warmup。
+        // 中文:   NextWord user_association.db 不在此 — 走 async lazy-init,不需要。
+        // 中文:   custom dict warmup ungated(查詢已在 buildCustomEntries gate),連線
+        // 中文:   常駐讓設定即時開關免重啟生效;#279 刪舊 LexiconService lazy-open 卻只留
+        // 中文:   user-freq warmup → 自訂詞候選消失(§26 regression guard)。
         let userFrequencyService = CompositionRoot.userFrequencyService
         Task {
             do {
@@ -132,6 +153,17 @@ extension KeyboardViewController {
             } catch {
                 setupLogger.warning(
                     "[INIT] User frequency DB warmup failed: \(error.localizedDescription)",
+                )
+            }
+        }
+        let customDictionaryRepository = CompositionRoot.customDictionaryRepository
+        Task {
+            do {
+                try await customDictionaryRepository.ensureInitialized()
+                setupLogger.info("[INIT] Custom dictionary DB warmed")
+            } catch {
+                setupLogger.warning(
+                    "[INIT] Custom dictionary DB warmup failed: \(error.localizedDescription)",
                 )
             }
         }
