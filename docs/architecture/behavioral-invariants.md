@@ -794,14 +794,38 @@ This fixes no-space first-tone continuous input: `au` admits NO stop coda (no `a
 - **Impossible coda → keep initial**: `ㄍㄠ`+`ㄉ`(kaut), `ㄍㄠ`+`ㄅ`/`ㄍ`, `ㄛ`+`ㄉ`(ot), `ㄍㄧㄠ`+`ㄉ`(kiaut), `ㄠ`+`ㄉ`(zero onset), `ㄧㄛ`+`ㄅ`(iop), `ㄍㄨㄚ`+`ㄅ`(kuap — `uap` is non-canonical: absent from MOE §4, every code table, and the dict; only 鬱懊癖's `tl_abbrev` "uap" acronym exists).
 
 **Scope / decisions:**
-- **STOPS ONLY.** The same over-broad assumption applies to dual-form NASALS (`ㄇ`/`ㄋ`/`ㄫ` → `ㆬ`/`ㄣ`/`ㆭ`; e.g. `aum` is also not a valid final), but they entangle with the syllabic-nasal Rule 2b (`ㄇ`/`ㄫ` + later tone mark → `ㆬ`/`ㆭ`) and the `ㄫ`→`ㄥ`/`ㆭ` context branch. Nasal gating is a deliberate, documented follow-up — nasal behaviour is UNCHANGED by this fix.
+- **Originally stops-only; nasals now gated too (§33).** This fix (#392) deliberately scoped to stops; dual-form NASALS (`ㄇ`/`ㄋ`/`ㄫ` → `ㆬ`/`ㄣ`/`ㆭ`/`ㄥ`) were added later under `INVARIANT_TPS_NASALCODA_PHONOTACTIC_GATE` (§33), which generalized the `stop_coda_form` helper to `dual_final_form` so the same gate handles both.
 - **No segmentation.** The gate fires only when the boundary-suffix (chars after the last `SYLLABLE_BOUNDARY_CHARS`/space) is itself exactly ONE valid syllable (vowel-final open, or syllabic `m`/`ng`) AND `<suffix><coda>` is invalid. A multi-syllable no-space run (`ㄍㄠㄉㄚ`) is not one syllable → falls through to the legacy convert (no regression; the chained valid-coda case `ta`+`t`=`tat` still converts via that default).
 - **Still ambiguous-by-default.** When both the coda reading AND a next-initial reading are phonotactically valid (`ㄚ`+`ㄉ` could be `kat` or `ka`+`ta`-), the gate keeps the coda (`kat`); the alternate is reached via the boundary space (`INVARIANT_TPS_SPACE_SOFT_SEPARATOR`).
 
 **Scope**: shared Rust engine (`phonetics`) — no platform code. Both iOS and Android call `Method::TpsInputAdjust` per keystroke (gated on TPS layout), so the fix is cross-platform via the shared engine. Needs `make build` to refresh xcframework/jniLibs before device dogfood (no `make dict` — dict artifacts unchanged).
 
-**Engine sites**: `phonetics/src/tps_adjust.rs` — `adjust_initial_key` (the phonotactic stop-coda gate), `stop_coda_form` (ㄅㄉㄍㄏ → ㆴㆵㆻㆷ; `None` for nasals), `pending_open_syllable` (suffix after the last boundary). Validity via `crate::tps_to_tl` (`from_zhuyin`) → `crate::is_valid_syllable` (`canonicalize_syllable` → `split_initial_final` against `TL_INITIALS` × `TL_FINALS`).
+**Engine sites**: `phonetics/src/tps_adjust.rs` — `adjust_initial_key` (the phonotactic gate), `dual_final_form(initial, last)` (ㄅㄉㄍㄏ → ㆴㆵㆻㆷ; generalized to cover nasals too by §33), `pending_open_syllable` (suffix after the last boundary). Validity via `crate::tps_to_tl` (`from_zhuyin`) → `crate::is_valid_syllable` (`canonicalize_syllable` → `split_initial_final` against `TL_INITIALS` × `TL_FINALS`).
 
-**Tests**: `phonetics/src/tps_adjust.rs` (`stop_after_vowel_with_valid_coda_converts`, `stop_after_vowel_with_impossible_coda_keeps_initial`, `h_coda_after_au_still_converts`, `multi_syllable_no_space_suffix_falls_through_to_convert`, `nasals_are_not_gated`, `boundary_and_empty_buffer_keep_initial_as_before`). End-to-end (post-adjust buffer → lattice) confirmed via `composing/tests/candidate_dump.rs`: `ㄍㄠㄉㄞ` → 交代 kau-tài; `ㄍㄚㆵ` → 結 (kat intact). Cross-platform device acceptance: **S19** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
+**Tests**: `phonetics/src/tps_adjust.rs` (`stop_after_vowel_with_valid_coda_converts`, `stop_after_vowel_with_impossible_coda_keeps_initial`, `h_coda_after_au_still_converts`, `multi_syllable_no_space_suffix_falls_through_to_convert`, `boundary_and_empty_buffer_keep_initial_as_before`). End-to-end (post-adjust buffer → lattice) confirmed via `composing/tests/candidate_dump.rs`: `ㄍㄠㄉㄞ` → 交代 kau-tài; `ㄍㄚㆵ` → 結 (kat intact). Cross-platform device acceptance: **S19** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
 
-**Known follow-up (USER-gated)**: (1) nasal phonotactic gate (above); (2) chained no-space multi-syllable with a mid impossible-coda (`ㄍㄠㄍㄠ`+`ㄉ`) stays default-convert (the suffix is not one syllable) — disambiguated via the boundary space; (3) zero-onset second syllable after an open syllable with no space (`ㄍㄠ`+`ㄧ`+`ㄉ`) is not split by this local gate — also space-disambiguated.
+**Known follow-up (USER-gated)**: (1) nasal phonotactic gate — **DONE in §33**; (2) chained no-space multi-syllable with a mid impossible-coda (`ㄍㄠㄍㄠ`+`ㄉ`) stays default-convert (the suffix is not one syllable) — disambiguated via the boundary space; (3) zero-onset second syllable after an open syllable with no space (`ㄍㄠ`+`ㄧ`+`ㄉ`) is not split by this local gate — also space-disambiguated.
+
+## 33. TPS nasal coda is phonotactically gated (no-space first-tone continuous input)
+
+### `INVARIANT_TPS_NASALCODA_PHONOTACTIC_GATE`
+
+Sibling of §32 (`INVARIANT_TPS_STOPCODA_PHONOTACTIC_GATE`) — the same per-keystroke phonotactic gate now also covers dual-form NASALS. In **TPS** input, a dual-form NASAL key (`ㄇ`/`ㄋ`/`ㄫ`) typed after a pure vowel converts to its nasal-coda final form (`ㄇ`→`ㆬ`, `ㄋ`→`ㄣ`, `ㄫ`→`ㄥ` after `ㄧ` else `ㆭ`) ONLY when the resulting final is phonotactically valid (nasal-coda finals table, `taigi-phonetics-reference.md` §3.2.3 / `tables.rs::TL_FINALS`). When the coda would form a non-syllable, the key stays an INITIAL so it begins the next syllable.
+
+This fixes no-space first-tone continuous input for nasal-initial second syllables: `u` admits no `-m` (no `um`), so typing 龜毛 (ku-môo) as `ㄍㄨㄇㆦ` previously had the `ㄇ` auto-folded to `ㆬ` (`ㄍㄨㆬ` = `kum`, a non-syllable), stranding 毛's initial; first tone has no tone mark to delimit (the `第一調穩死` symptom). Now the gate keeps `ㄇ` an initial → `ㄍㄨㄇㆦ` → the lattice segments it → 龜毛.
+
+- **Valid nasal coda → convert (unchanged)**: `ㄚ`+`ㄇ`=`am`, `ㄚ`+`ㄋ`=`an`, `ㄚ`+`ㄫ`=`ang` (`ㆭ`), `ㄧ`+`ㄫ`=`ing` (`ㄥ`), `ㄍㄨ`+`ㄋ`=`kun`, `ㄒㄧ`+`ㄋ`=`sin`.
+- **Impossible nasal coda → keep initial**: `ㄍㄨ`+`ㄇ` (kum), `ㄍㄠ`+`ㄇ`/`ㄋ`/`ㄫ` (aum/aun/aung), `ㄍㄨㄧ`+`ㄫ` (kuing). (`um`/`aum`/`aun`/`aung`/`uing` are absent from `TL_FINALS`.)
+
+**Scope / decisions:**
+- **One gate, one glyph source.** §32 (#392) and this fix share `adjust_initial_key`'s gate; the helper was generalized from `stop_coda_form(initial)` to `dual_final_form(initial, last)` so stops + nasals use ONE lookup feeding both the validity test and the emitted glyph (no gate/conversion drift; the `ㄫ`→`ㄥ`/`ㆭ` context branch lives once inside the helper, hence the `last` parameter).
+- **Rule 2b interaction is benign.** `syllabic_nasal_replacement` (Rule 2b) still folds a kept `ㄇ`/`ㄫ` to syllabic `ㆬ`/`ㆭ` when a tone mark follows. For `ㄇ` this reconstructs byte-identically the same invalid `kum` the old blanket fold produced; for `ㄋ`/`ㄫ` the glyph differs but the syllable is still invalid TL — no working-word regression (those `<vowel><nasal><tone>` sequences map to no dict word either way). The improvement is the `<vowel><nasal><vowel>` next-syllable case (龜毛).
+- **No segmentation / still ambiguous-by-default** — same as §32: the gate fires only when the boundary-suffix is one valid open syllable AND `<suffix><coda>` is invalid; an ambiguous-but-valid coda (`ㄚ`+`ㄇ`=`am`) converts, the alternate reached via the boundary space (`INVARIANT_TPS_SPACE_SOFT_SEPARATOR`).
+
+**Scope**: shared Rust engine (`phonetics`) — no platform code. Both iOS and Android call `Method::TpsInputAdjust` per keystroke (gated on TPS layout). Needs `make build` to refresh xcframework/jniLibs before device dogfood (no `make dict` — dict artifacts unchanged).
+
+**Engine sites**: `phonetics/src/tps_adjust.rs` — `adjust_initial_key` (shared gate), `dual_final_form(initial, last)` (ㄅㄉㄍㄏ→ㆴㆵㆻㆷ + ㄇㄋㄫ→ㆬㄣㆭ/ㄥ), `pending_open_syllable`. Validity via `crate::tps_to_tl` → `crate::is_valid_syllable`.
+
+**Tests**: `phonetics/src/tps_adjust.rs` (`nasals_with_valid_coda_convert`, `nasal_after_vowel_with_impossible_coda_keeps_initial`, `nasal_rule2b_interaction_is_benign`). Cross-platform device acceptance: **S20** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
+
+**Known follow-up (USER-gated)**: same residuals as §32 (chained no-space multi-syllable mid impossible-coda + zero-onset second syllable, both space-disambiguated). Rule 2b itself stays ungated and handles only `ㄇ`/`ㄫ` (not `ㄋ`) — benign per above.

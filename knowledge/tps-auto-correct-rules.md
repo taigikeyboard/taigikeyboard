@@ -100,6 +100,15 @@ Nasalized vowel + ㄏ also forms the legal nasalized checked final `-nnh` (annh,
 | ㄍ | → ㆻ | → ㆻ |
 | ㄏ | → ㆷ | → ㆷ |
 
+**Phonotactic gate (no-space continuous input).** The "convert to final form" above
+applies only when the resulting syllable is phonotactically valid. A dual-form key
+whose final/coda would build a NON-syllable (e.g. `ㄍㄠ`+`ㄉ`=`kaut`, `ㄍㄨ`+`ㄇ`=`kum`
+— `aut`/`um` are not finals) stays an INITIAL so it begins the next syllable, letting a
+first-tone (no tone mark) word segment without a space (交代, 龜毛). Validity is decided
+by `is_valid_syllable(tps_to_tl(pending_open_syllable + final))` against `TL_FINALS`.
+Covers stops AND nasals. See `docs/architecture/behavioral-invariants.md` §32
+(`INVARIANT_TPS_STOPCODA_PHONOTACTIC_GATE`) + §33 (`INVARIANT_TPS_NASALCODA_PHONOTACTIC_GATE`).
+
 ### Examples
 
 | Input sequence | rawInput result | TL |

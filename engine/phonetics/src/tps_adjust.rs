@@ -141,17 +141,19 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
     if last == ' ' || SYLLABLE_BOUNDARY_CHARS.contains(&last) {
         return char_str.to_string();
     }
-    // Phonotactic gate (STOP codas only, ㄅㄉㄍㄏ → ㆴㆵㆻㆷ): a stop coda
-    // can attach only to specific nuclei per the entering-tone finals
-    // table (`taigi-phonetics-reference.md` §3.2.4 / `tables.rs::TL_FINALS`).
-    // `au` admits NO stop coda (no aut/aup/auk — only `-h`, e.g. auh 搯),
-    // likewise `ot`/`iaut`/… do not exist. The blanket "convert after any
-    // pure vowel" rule therefore mis-builds `ㄍㄠ`+`ㄉ` → `ㄍㄠㆵ` (=kaut, a
-    // non-syllable), stranding the NEXT syllable's initial — first tone has
-    // no tone mark to delimit, so nothing stops it (the `第一調穩死` /
-    // 交代 = kau-tài bug). When the current open syllable already cannot
-    // take this stop as a coda, keep the INITIAL form so it starts the next
-    // syllable; the existing lattice then segments `ㄍㄠㄉㄞ` → 交代.
+    // Phonotactic gate (all dual-form finals — STOPS ㄅㄉㄍㄏ → ㆴㆵㆻㆷ AND
+    // NASALS ㄇㄋㄫ → ㆬㄣㆭ/ㄥ): a dual-form final can attach only to specific
+    // nuclei per the entering-tone finals (§3.2.4) + nasal-coda finals
+    // (§3.2.3) tables (`taigi-phonetics-reference.md` / `tables.rs::TL_FINALS`).
+    // `au` admits NO stop coda (no aut/aup/auk — only `-h`, e.g. auh 搯) and
+    // NO nasal coda (no aum/aun/aung); `u` admits no `-m` (no `um`). The
+    // blanket "convert after any pure vowel" rule therefore mis-builds
+    // `ㄍㄠ`+`ㄉ` → `ㄍㄠㆵ` (kaut) and `ㄍㄨ`+`ㄇ` → `ㄍㄨㆬ` (kum) — both
+    // non-syllables — stranding the NEXT syllable's initial; first tone has
+    // no tone mark to delimit, so nothing stops it (the `第一調穩死` bug:
+    // 交代 kau-tài, 龜毛 ku-môo). When the current open syllable cannot take
+    // this final, keep the INITIAL form so it begins the next syllable; the
+    // existing lattice then segments `ㄍㄠㄉㄞ` → 交代, `ㄍㄨㄇㆦ` → 龜毛.
     //
     // Gate only when the boundary-suffix is itself exactly ONE valid
     // syllable (a vowel-final open syllable, or a syllabic `m`/`ng`) AND
@@ -166,50 +168,52 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
     // is absent from every code table and the dict (only 鬱懊癖's `tl_abbrev`
     // "uap" exists — an acronym, not a final), so `ㄍㄨㄚ`+`ㄅ` correctly
     // keeps the initial.
-    // Nasals (ㄇㄋㄫ) are deliberately untouched here — same over-broad
-    // assumption applies but they entangle with the syllabic-nasal Rule 2b
-    // and the ㄫ→ㄥ/ㆭ context branch; tracked as a separate follow-up.
-    // 中文: 音韻 gate(僅塞音尾 ㄅㄉㄍㄏ):塞音尾只接特定韻(§3.2.4 / TL_FINALS),
-    // 中文:   `au` 不接塞音尾 → `ㄍㄠ`+`ㄉ` 不可成 `kaut`,應保持 ㄉ 為下一字聲母(交代)。
-    // 中文:   僅當 boundary-suffix 本身為單一合法開音節且 suffix+coda 非法時保持聲母;
-    // 中文:   多音節 no-space 串非單一開音節 → 照舊轉(零回歸)。鼻音另案處理(Rule 2b 糾纏)。
-    if let Some(coda) = stop_coda_form(first) {
-        let pending = pending_open_syllable(raw_input);
-        let pending_is_open = crate::is_valid_syllable(&crate::tps_to_tl(pending));
-        let coda_valid = crate::is_valid_syllable(&crate::tps_to_tl(&format!("{pending}{coda}")));
-        if pending_is_open && !coda_valid {
-            return char_str.to_string();
-        }
+    // Rule 2b (syllabic-nasal, `syllabic_nasal_replacement`) interaction:
+    // when the gate now keeps `ㄇ`/`ㄫ` an initial after a vowel and a TONE
+    // MARK follows, Rule 2b retroactively folds it to ㆬ/ㆭ. For `ㄇ` this
+    // reconstructs byte-identically the same invalid `kum` the old blanket
+    // fold produced; for `ㄋ`/`ㄫ` the glyph differs but the syllable is
+    // still invalid TL — no working-word regression, since those
+    // `<vowel><nasal><tone>` sequences map to no dict word either way. The
+    // improvement is the `<vowel><nasal><vowel>` next-syllable case (龜毛).
+    // (`dual_final_form` is the single glyph source for both the gate test
+    // and the conversion below — see its doc comment.)
+    // 中文: 音韻 gate(雙形尾 — 塞音 ㄅㄉㄍㄏ + 鼻音 ㄇㄋㄫ):雙形尾只接特定韻
+    // 中文:   (入聲韻 §3.2.4 + 鼻音韻 §3.2.3 / TL_FINALS);`au` 不接塞音/鼻音尾、`u` 不接 -m
+    // 中文:   → `ㄍㄠ`+`ㄉ`=kaut、`ㄍㄨ`+`ㄇ`=kum 皆非音節,保持聲母為下一字起始(交代/龜毛)。
+    // 中文:   僅當 boundary-suffix 為單一合法開音節且 suffix+final 非法時保持聲母;多音節串照舊轉(零回歸)。
+    // 中文:   Rule 2b 互動:gate 保留的 ㄇ/ㄫ 後接聲調會被折回 ㆬ/ㆭ;ㄇ 與舊行為 byte-identical,
+    // 中文:   ㄋ/ㄫ glyph 不同但仍 invalid TL(無 working-word 回歸)。改善 = <母音><鼻音><母音>(龜毛)。
+    let Some(coda) = dual_final_form(first, last) else {
+        return char_str.to_string();
+    };
+    let pending = pending_open_syllable(raw_input);
+    let pending_is_open = crate::is_valid_syllable(&crate::tps_to_tl(pending));
+    let coda_valid = crate::is_valid_syllable(&crate::tps_to_tl(&format!("{pending}{coda}")));
+    if pending_is_open && !coda_valid {
+        return char_str.to_string();
     }
-    match first {
-        'ㄇ' => "ㆬ".to_string(),
-        'ㄋ' => "ㄣ".to_string(),
-        'ㄅ' => "ㆴ".to_string(),
-        'ㄉ' => "ㆵ".to_string(),
-        'ㄍ' => "ㆻ".to_string(),
-        'ㄏ' => "ㆷ".to_string(),
-        'ㄫ' => {
-            if last == 'ㄧ' {
-                "ㄥ".to_string()
-            } else {
-                "ㆭ".to_string()
-            }
-        }
-        _ => char_str.to_string(),
-    }
+    coda.to_string()
 }
 
-/// The entering-tone coda glyph for a dual-form STOP initial
-/// (`ㄅ→ㆴ`, `ㄉ→ㆵ`, `ㄍ→ㆻ`, `ㄏ→ㆷ`), or `None` for non-stops. Nasals
-/// (`ㄇ`/`ㄋ`/`ㄫ`) are intentionally excluded — the phonotactic stop-coda
-/// gate in [`adjust_initial_key`] does not apply to them.
-// 中文: 雙形塞音聲母對應的入聲尾字元;非塞音(鼻音)回 None,音韻 gate 不套用鼻音。
-fn stop_coda_form(initial: char) -> Option<char> {
+/// The final/coda glyph for a dual-form initial — STOPS (`ㄅ→ㆴ`, `ㄉ→ㆵ`,
+/// `ㄍ→ㆻ`, `ㄏ→ㆷ`) and NASALS (`ㄇ→ㆬ`, `ㄋ→ㄣ`, `ㄫ→ㄥ/ㆭ`) — or `None`
+/// for any other char. `ㄫ` is context-dependent: after `ㄧ` it is `ㄥ`
+/// (the `-ing` rhyme), otherwise `ㆭ`; `last` is therefore a parameter so
+/// the phonotactic gate in [`adjust_initial_key`] tests validity against
+/// the EXACT glyph that will be emitted — one glyph source for both the
+/// gate test and the conversion, no gate/conversion drift.
+// 中文: 雙形聲母(塞音+鼻音)對應的韻尾/終形字元;ㄫ 依前字決定 ㄥ(ing)/ㆭ 故帶 last;
+// 中文:   gate 與轉換共用同一份 glyph(避免漂移),非雙形回 None。
+fn dual_final_form(initial: char, last: char) -> Option<char> {
     match initial {
         'ㄅ' => Some('ㆴ'),
         'ㄉ' => Some('ㆵ'),
         'ㄍ' => Some('ㆻ'),
         'ㄏ' => Some('ㆷ'),
+        'ㄇ' => Some('ㆬ'),
+        'ㄋ' => Some('ㄣ'),
+        'ㄫ' => Some(if last == 'ㄧ' { 'ㄥ' } else { 'ㆭ' }),
         _ => None,
     }
 }
@@ -376,16 +380,40 @@ mod tests {
     }
 
     #[test]
-    fn nasals_are_not_gated() {
-        // Nasals (ㄇㄋㄫ) are intentionally outside the stop-coda gate
-        // (Rule 2b syllabic-nasal + ㄫ→ㄥ/ㆭ context interplay). They keep
-        // the legacy positional behaviour: ㄚ+ㄇ→ㆬ, ㄚ+ㄫ→ㆭ, ㄧ+ㄫ→ㄥ —
-        // AND ㄠ+ㄇ→ㆬ stays as before (unchanged, even though aum is not a
-        // valid final), so this fix introduces no nasal behaviour change.
-        assert_eq!(adjust_initial_key("ㄇ", "ㄚ"), "ㆬ");
-        assert_eq!(adjust_initial_key("ㄫ", "ㄚ"), "ㆭ");
-        assert_eq!(adjust_initial_key("ㄫ", "ㄧ"), "ㄥ");
-        assert_eq!(adjust_initial_key("ㄇ", "ㄍㄠ"), "ㆬ");
+    fn nasals_with_valid_coda_convert() {
+        // Nasals (ㄇㄋㄫ) now go through the SAME phonotactic gate as stops.
+        // A valid nasal-coda final still converts (unchanged): am/an/ang,
+        // ing (ㄧ+ㄫ→ㄥ), un. (knowledge §3.2.3 / TL_FINALS).
+        assert_eq!(adjust_initial_key("ㄇ", "ㄚ"), "ㆬ"); // am
+        assert_eq!(adjust_initial_key("ㄋ", "ㄚ"), "ㄣ"); // an
+        assert_eq!(adjust_initial_key("ㄫ", "ㄚ"), "ㆭ"); // ang
+        assert_eq!(adjust_initial_key("ㄫ", "ㄧ"), "ㄥ"); // ing (ㄫ→ㄥ after ㄧ)
+        assert_eq!(adjust_initial_key("ㄋ", "ㄍㄨ"), "ㄣ"); // kun valid
+        assert_eq!(adjust_initial_key("ㄋ", "ㄒㄧ"), "ㄣ"); // sin valid
+    }
+
+    #[test]
+    fn nasal_after_vowel_with_impossible_coda_keeps_initial() {
+        // The 龜毛 fix: a nasal whose coda would be a non-syllable stays an
+        // INITIAL so it begins the next syllable. `um`/`aum`/`aun`/`aung`/
+        // `uing` are NOT in TL_FINALS.
+        assert_eq!(adjust_initial_key("ㄇ", "ㄍㄨ"), "ㄇ"); // kum ✗ → 龜毛 ku-môo
+        assert_eq!(adjust_initial_key("ㄇ", "ㄍㄠ"), "ㄇ"); // kaum ✗
+        assert_eq!(adjust_initial_key("ㄋ", "ㄍㄠ"), "ㄋ"); // kaun ✗
+        assert_eq!(adjust_initial_key("ㄫ", "ㄍㄠ"), "ㄫ"); // kaung ✗ (ㆭ glyph, last≠ㄧ)
+        assert_eq!(adjust_initial_key("ㄫ", "ㄍㄨㄧ"), "ㄫ"); // kuing ✗ (ㄥ glyph, last=ㄧ)
+    }
+
+    #[test]
+    fn nasal_rule2b_interaction_is_benign() {
+        // Gate keeps `ㄇ` after `ㄍㄨ` (kum invalid). If a tone mark then
+        // arrives, Rule 2b (`adjust`) folds the kept `ㄇ` to ㆬ →
+        // byte-identical to the pre-fix blanket fold (`ㄍㄨㆬ`); still the
+        // same invalid syllable, no working-word regression.
+        assert_eq!(adjust_initial_key("ㄇ", "ㄍㄨ"), "ㄇ"); // kept by gate
+        let (adjusted, replace_last) = super::adjust("\u{02cb}", "ㄍㄨㄇ"); // tone 2 after kept ㄇ
+        assert_eq!(adjusted, "\u{02cb}");
+        assert_eq!(replace_last.as_deref(), Some("ㆬ")); // Rule 2b reconstructs the coda
     }
 
     #[test]
