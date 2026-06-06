@@ -288,7 +288,7 @@ fn handle_fetch_at_pos(
 }
 
 /// Build the literal tone-marked roman candidate for 漢羅 fast input
-/// (`INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE` §34 / dogfood S21).
+/// (`INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE` §34 / dogfood S22).
 ///
 /// Returns `Some` only when ALL gates pass:
 /// * `mode` is TL or POJ — TPS is hanji-first with diacritic-glyph tones
@@ -313,7 +313,7 @@ fn handle_fetch_at_pos(
 /// learn the canonical `(∅, TL)` identity on commit (Core Principle #7;
 /// `behavioral-invariants.md` §24/§28). `roman == display_text ==`
 /// preedit literal — WYSIWYG with the underline (§30 literal-no-fold).
-// 中文: §34/S21 — 漢羅快速輸入的字面聲調 roman 候選;TL/POJ + 非 trailing hyphen +
+// 中文: §34/S22 — 漢羅快速輸入的字面聲調 roman 候選;TL/POJ + 非 trailing hyphen +
 // 中文:   有 ASCII 數字調 + derived 真的轉了(排除 toneless / 1·4 / 未連字多音節 blob)。
 // 中文:   roman-only(hanji=None→Tailo),canonical_tl 走 canonical_tl_form 保 #7 身分;
 // 中文:   roman == display_text == preedit 字面(§30 WYSIWYG)。
