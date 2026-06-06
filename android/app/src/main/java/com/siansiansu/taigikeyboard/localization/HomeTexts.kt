@@ -70,14 +70,16 @@ object HomeTexts {
         listOf(
             VersionEntry(
                 "3.6.1",
-                "2026/06/05",
+                "2026/06/06",
                 listOf(
                     "New: frequency, next-word prediction, and the custom dictionary now work consistently across TL / POJ / TPS — learn or add a word in one input mode and it's found and ranked in the others.",
                     "New: the same 漢字 with different readings (e.g. 重 tāng / tîng) now keeps separate frequency counts and ranks independently.",
+                    "New: in TL / POJ the romanization itself appears as the first candidate, so you can mix 漢羅 (Han-Lo) and commit the roman spelling in one tap — no need to switch to 文/A.",
                     "Fixed: TL and POJ composing now shows exactly what you type — no automatic spelling conversion (teng stays teng).",
-                    "Fixed: TPS first-tone continuous input now segments correctly, with or without a separating space (ㄍㄠㄉㄞ → 交代).",
+                    "Fixed: TPS first-tone continuous input now segments correctly, with or without a separating space (ㄍㄠㄉㄞ → 交代), and some words hidden by auto-correct (雞胸 / 烏白 / 包袱) now appear as candidates.",
                     "Fixed: whole-word continuous input now follows the dictionary's spacing / 輕聲 form (hoogua → 予我 hōo--guá), and next-word predictions learned via continuous input recall correctly and no longer appear twice.",
                     "Fixed: a leading 輕聲 -- is now treated as normal text — only the syllable underlines while composing.",
+                    "Changed: the 詞頻 (frequency) list now shows each word's romanization with the 漢字, listing different readings separately.",
                     "Changed: with auto-space on, attaching punctuation after a committed word now keeps the space after the punctuation (guá? not guá ?).",
                     "Changed: the 姓名 (name) appendix dictionary source now defaults on.",
                     "Changed: the custom dictionary now caps at 30,000 entries (matching iOS); existing entries are kept.",
