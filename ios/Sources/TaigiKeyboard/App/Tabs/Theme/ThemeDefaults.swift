@@ -1,10 +1,10 @@
 // 中文: 主題外觀預設值常數(6 角色 adaptive 色 / 5 個尺寸 / 全域預設字型)。
-// 中文: 原 AppearanceSettingsViewModel.Defaults 抽出 — 供 ThemeSwatch 預覽與 ThemeEditorView reset 共用。
+// 中文: 原 AppearanceSettingsViewModel.Defaults 抽出 — 供自訂主題卡按鈕預覽與 ThemeEditorView reset 共用。
 
 import Foundation
 import SwiftUI
 
-/// Default appearance constants shared by the theme swatch preview
+/// Default appearance constants shared by the custom-theme card button preview
 /// (`ThemePickerView`) and the user-theme editor (`ThemeEditorView`): the six
 /// adaptive role colors, the five size scalars (single-sourced from
 /// `ThemeAppearance.default`), and the global default font.

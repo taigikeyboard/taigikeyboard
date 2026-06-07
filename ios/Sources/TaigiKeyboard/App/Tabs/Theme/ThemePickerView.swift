@@ -8,8 +8,8 @@ import SwiftUI
 /// layout — 240pt cards with screenshot previews, horizontal scroll).
 ///
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
-///   per-card menu) plus a `Create New…` card (hidden at the cap). These keep
-///   the live color swatch (user-picked palettes).
+///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
+///   live button preview (background + a styled centered key).
 /// - **預設** — the `Default` (adaptive) theme.
 /// - **Standard / Swifty / Minimal …** — one shelf per built-in family
 ///   (`BuiltInThemes.families`); each card shows its screenshot slot and applies
@@ -20,8 +20,6 @@ import SwiftUI
 /// editor (or the keyboard) writes them — no `SharedSettings` publishing needed.
 // 中文: 選定主題 / themeRevision 走 @AppStorage(App Group),選取與清單變更即時反映;免讓 SharedSettings 變 @Published。
 struct ThemePickerView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     @AppStorage("selectedThemeId", store: UserDefaults(suiteName: SharedSettings.appGroupId))
     private var selectedThemeId = ThemeId.default
 
@@ -45,7 +43,7 @@ struct ThemePickerView: View {
                     ForEach(userThemes) { theme in
                         ThemeGalleryCard(
                             title: theme.name,
-                            colors: theme.appearance.colors,
+                            appearance: theme.appearance,
                             previewImageName: nil,
                             isSelected: selectedThemeId == theme.id.uuidString,
                             onTap: { apply(theme.id.uuidString) },
@@ -65,7 +63,6 @@ struct ThemePickerView: View {
                         ForEach(family.themes, id: \.id) { theme in
                             ThemeGalleryCard(
                                 title: theme.displayName,
-                                colors: theme.colors(for: colorScheme),
                                 previewImageName: theme.previewImageName,
                                 isSelected: selectedThemeId == theme.id,
                                 onTap: { apply(theme.id) },
@@ -238,14 +235,16 @@ private struct ThemeCardAction: Identifiable {
     let action: () -> Void
 }
 
-/// A theme cell: a preview (screenshot when `previewImageName` is set, else the
-/// live color swatch) + a title with a selection checkmark + an optional `…`
-/// action menu (user themes only). Tapping the preview applies the theme.
-// 中文: 主題卡 — 預覽(有 previewImageName 用截圖,否則用即時色塊)+ 標題/打勾 + 「…」選單。點預覽即套用。
+/// A theme cell: a preview (screenshot when `previewImageName` is set, else a
+/// live custom-theme button preview) + a title with a selection checkmark + an
+/// optional `…` action menu (user themes only). Tapping the preview applies the theme.
+// 中文: 主題卡 — 預覽(有 previewImageName 用截圖,否則用自訂主題大按鈕預覽)+ 標題/打勾 + 「…」選單。點預覽即套用。
 private struct ThemeGalleryCard: View {
     let title: String
-    let colors: KeyboardColorSettings
-    /// Screenshot asset name; `nil` → render the live swatch.
+    /// Full appearance for the live custom-theme preview; `nil` for built-in cards
+    /// (they render via `previewImageName` and never reach the live preview).
+    var appearance: ThemeAppearance? = nil
+    /// Screenshot asset name; `nil` → render the live custom-theme button preview.
     let previewImageName: String?
     let isSelected: Bool
     let onTap: () -> Void
@@ -314,8 +313,9 @@ private struct ThemeGalleryCard: View {
 
     /// Preview content: the screenshot asset (filling the aspect box) when
     /// `previewImageName` is set and the asset exists; a neutral placeholder when
-    /// the asset is missing (scaffold stage); otherwise the live color swatch.
-    // 中文: 預覽內容 — 有截圖 asset 用截圖;asset 缺(scaffold)用佔位圖;無 previewImageName 用色塊。
+    /// the asset is missing (scaffold stage); otherwise the live custom-theme
+    /// button preview (background + one styled centered key).
+    // 中文: 預覽內容 — 有截圖 asset 用截圖;asset 缺(scaffold)用佔位圖;無 previewImageName 用自訂主題大按鈕預覽。
     @ViewBuilder
     private var preview: some View {
         if let previewImageName {
@@ -327,7 +327,7 @@ private struct ThemeGalleryCard: View {
                 ThemeScreenshotPlaceholder(title: title)
             }
         } else {
-            ThemeSwatch(colors: colors)
+            CustomThemeButtonPreview(appearance: appearance ?? .default)
         }
     }
 }
@@ -357,59 +357,52 @@ private struct ThemeScreenshotPlaceholder: View {
     }
 }
 
-// MARK: - Swatch
+// MARK: - Custom-theme button preview
 
-/// A static, lightweight mini-keyboard rendering of a 6-role palette: a
-/// candidate bar plus two key rows. Falls back to neutral system colors for nil
-/// roles (the `Default` adaptive theme).
-// 中文: 迷你鍵盤配色預覽。nil 角色退到中性系統色(對應 Default adaptive 主題)。
-private struct ThemeSwatch: View {
-    let colors: KeyboardColorSettings
+/// A custom-theme card preview: the theme background with one large centered key
+/// that applies the theme's full button style — fill, text glyph, corner radius,
+/// border, and shadow — so the saved theme's distinctive key look reads at a
+/// glance (the old colors-only swatch hid radius / border / shadow). Border and
+/// shadow mirror the real keyboard (`TaigiKeyboardView`): a black stroke and a
+/// soft drop shadow sized by `keyShadowIntensity`. nil color roles fall back to
+/// the same adaptive defaults the keyboard uses.
+// 中文: 自訂主題卡預覽 — 背景 + 正中一顆大鍵,套完整 button style(填色/字/圓角/邊框/陰影),一眼看出該主題的鍵長相。
+private struct CustomThemeButtonPreview: View {
+    let appearance: ThemeAppearance
+
+    /// Sample glyph on the key face — a Taigi romanization letter with a tone mark.
+    private static let sampleGlyph = "â"
+    private static let keyWidth: CGFloat = 104
+    private static let keyHeight: CGFloat = 64
+    private static let glyphBaseSize: CGFloat = 32
 
     var body: some View {
-        // nil roles fall back to the SAME adaptive defaults the real keyboard uses,
-        // so the "Default" swatch matches what the keyboard renders.
         let defaults = ThemeDefaults.self
+        let colors = appearance.colors
         let background = colors.backgroundColor?.color ?? defaults.keyboardBackground
-        let normalFill = colors.normalKeyFillColor?.color ?? defaults.normalKeyFill
-        let specialFill = colors.specialKeyFillColor?.color ?? defaults.specialKeyFill
+        let keyFill = colors.normalKeyFillColor?.color ?? defaults.normalKeyFill
         let keyText = colors.keyTextColor?.color ?? defaults.keyText
-        let candidateBackground = colors.candidateBackgroundColor?.color ?? background
-        let candidateText = colors.candidateTextColor?.color ?? defaults.candidateText
+        let cornerRadius = CGFloat(appearance.keyCornerRadius)
+        let borderWidth = CGFloat(appearance.keyBorderWidth)
+        let shadow = CGFloat(appearance.keyShadowIntensity)
 
-        VStack(spacing: 5) {
-            // Candidate bar with two sample 候選詞 marks.
-            HStack(spacing: 5) {
-                ForEach(0 ..< 2, id: \.self) { _ in
-                    Capsule().fill(candidateText.opacity(0.8)).frame(width: 26, height: 5)
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(keyFill)
+            .overlay {
+                if borderWidth > 0 {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(Color.black, lineWidth: borderWidth)
                 }
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 20)
-            .frame(maxWidth: .infinity)
-            .background(candidateBackground)
-
-            // Two key rows: 3 normal keys + 1 special key, each with a key-text dot.
-            ForEach(0 ..< 2, id: \.self) { row in
-                HStack(spacing: 6) {
-                    ForEach(0 ..< 4, id: \.self) { col in
-                        // 中文: 第二排最後一鍵當特殊鍵(Shift/Enter 類)以呈現 specialKeyFill。
-                        let isSpecialKey = row == 1 && col == 3
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(isSpecialKey ? specialFill : normalFill)
-                            .overlay(
-                                Circle().fill(keyText.opacity(0.85)).frame(width: 5, height: 5),
-                            )
-                            .frame(height: 26)
-                    }
-                }
-                .padding(.horizontal, 10)
+            .overlay {
+                Text(Self.sampleGlyph)
+                    .font(AppStyle.appFont(size: Self.glyphBaseSize * CGFloat(appearance.keyFontSizeScale)))
+                    .foregroundColor(keyText)
             }
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(background)
+            .frame(width: Self.keyWidth, height: Self.keyHeight)
+            // shadow == 0 → radius 0 + opacity 0 = no shadow (flat themes).
+            .shadow(color: .black.opacity(shadow > 0 ? 0.3 : 0), radius: shadow, y: shadow / 2)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(background)
     }
 }
