@@ -15,6 +15,7 @@ struct SettingsTab: View {
     private let settings = SharedSettings.shared
 
     @State private var selectedInputMode: InputMode
+    @State private var selectedFontType: FontType
     @State private var autoSpaceEnabled: Bool
     @State private var isDoubleTapOOEnabled: Bool
     @State private var isDoubleTapNNEnabled: Bool
@@ -51,6 +52,7 @@ struct SettingsTab: View {
         let settings = SharedSettings.shared
 
         _selectedInputMode = State(initialValue: settings.inputMode)
+        _selectedFontType = State(initialValue: settings.fontType)
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
         _isDoubleTapOOEnabled = State(initialValue: settings.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)
@@ -78,6 +80,26 @@ struct SettingsTab: View {
                             Text(SettingsTexts.inputMode)
                             Spacer()
                             Text(selectedInputMode.displayName)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
+                // Global keyboard font — its own Section (separate card) below 輸入模式.
+                // Applies to every theme (font is NOT per-theme); native Form grouped
+                // container, no hand-rolled card.
+                // 中文: 全域鍵盤字型獨立 Section(自成一卡),放輸入模式下方;非 per-theme,改一次=全部主題。
+                Section {
+                    NavigationLink {
+                        ThemeFontPickerView(
+                            selectedFont: $selectedFontType,
+                            onChange: { settings.fontType = $0 },
+                        )
+                    } label: {
+                        HStack {
+                            Text(ThemeTexts.customFont)
+                            Spacer()
+                            Text(selectedFontType.displayName)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -263,6 +285,7 @@ struct SettingsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 selectedInputMode = settings.inputMode
+                selectedFontType = settings.fontType
                 diagnosticText = DiagnosticService.gather().formatted()
             }
         }
@@ -295,6 +318,7 @@ struct SettingsTab: View {
 
         // Sync local state
         selectedInputMode = settings.inputMode
+        selectedFontType = settings.fontType
         autoCapitalizationEnabled = true // KeyboardKit default
         isAudioFeedbackEnabled = true
         isHapticFeedbackEnabled = true

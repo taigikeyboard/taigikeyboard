@@ -101,8 +101,10 @@ private struct LayoutOptionCard: View {
     var isDisabled: Bool = false
     let action: () -> Void
 
-    /// Fixed card width for horizontal scrolling
-    private let cardWidth: CGFloat = 200
+    /// Fixed card width for horizontal scrolling.
+    /// CROSS-PAGE: matches `ThemeCardMetrics.width` (ThemePickerView.swift) so the
+    /// 主題 and 佈局 keyboard previews render at the identical size. Change both.
+    private let cardWidth: CGFloat = 240
 
     var body: some View {
         Button(action: action) {

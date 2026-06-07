@@ -1,11 +1,11 @@
 // 中文: 主題選擇器 — 主題 tab 的 root。Custom Themes shelf(自訂主題 CRUD + Create New)+
 // 中文: 預設 shelf + 內建主題依 family(Standard/Swifty/Minimal)各一條橫向 shelf。
-// 中文: 排版對齊齒盤佈局頁(200pt 卡 + 截圖預覽);scaffold 階段內建卡顯示截圖槽而非色塊。
+// 中文: 排版對齊齒盤佈局頁(240pt 卡 + 截圖預覽);scaffold 階段內建卡顯示截圖槽而非色塊。
 
 import SwiftUI
 
 /// The theme tab root: a gallery of horizontal shelves (mirrors the齒盤佈局 page
-/// layout — 200pt cards with screenshot previews, horizontal scroll).
+/// layout — 240pt cards with screenshot previews, horizontal scroll).
 ///
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These keep
@@ -32,36 +32,11 @@ struct ThemePickerView: View {
     @State private var userThemes: [UserTheme] = []
     @State private var editorRoute: ThemeEditorRoute?
 
-    // 中文: 全域鍵盤字型(非主題的一部分)。seed 自 SharedSettings,改動即時落盤。
-    @State private var selectedFontType: FontType = SharedSettings.shared.fontType
-
     private let shelfSpacing: CGFloat = 28
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: shelfSpacing) {
-                // Global keyboard font — standalone entry (font is NOT per-theme;
-                // changing it applies to every theme). Placement refined next round.
-                // 中文: 全域鍵盤字型獨立入口(字型非 per-theme,改一次=全部主題)。
-                NavigationLink {
-                    ThemeFontPickerView(
-                        selectedFont: $selectedFontType,
-                        onChange: { SharedSettings.shared.fontType = $0 },
-                    )
-                } label: {
-                    HStack {
-                        Text(ThemeTexts.customFont)
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text(selectedFontType.displayName)
-                            .foregroundColor(.secondary)
-                        Image(latinSystemName: "chevron.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundColor(Color(.tertiaryLabel))
-                    }
-                    .padding(.horizontal, AppStyle.horizontalPadding)
-                }
-
                 // Custom Themes: user's saved themes + Create New.
                 ThemeShelf(title: ThemeTexts.customThemesSection) {
                     if userThemes.count < UserThemeStore.maxUserThemes {
@@ -159,7 +134,7 @@ enum ThemeEditorRoute: Identifiable {
 /// at the identical size.
 // 中文: 卡片共用尺寸 — 對齊齒盤佈局頁。width 同 LayoutOptionCard(200);aspect 同 layout 預覽圖(585×369)。
 private enum ThemeCardMetrics {
-    static let width: CGFloat = 200
+    static let width: CGFloat = 240
     static let previewAspectRatio: CGFloat = 585.0 / 369.0
     static let cardSpacing: CGFloat = 12
 }
@@ -203,7 +178,7 @@ private struct CreateNewThemeCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 // Color.clear sets the aspect-ratio box; the panel is overlaid to fill it.
                 // 中文: Color.clear 定 aspect-ratio 外框,面板 overlay 填滿。
                 Color.clear
@@ -228,7 +203,8 @@ private struct CreateNewThemeCard: View {
                     .frame(width: ThemeCardMetrics.width)
 
                 Text(ThemeTexts.createNewTheme)
-                    .font(AppStyle.bodyFont)
+                    .font(AppStyle.captionFont)
+                    .fontWeight(.semibold)
                     .foregroundColor(.primary)
                     .lineLimit(1)
             }
@@ -263,34 +239,45 @@ private struct ThemeGalleryCard: View {
     let actions: [ThemeCardAction]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Button(action: onTap) {
                 // Color.clear sets the aspect-ratio box (same ratio as the 齒盤佈局
-                // assets); the preview is overlaid to fill it.
+                // assets); the preview is overlaid to fill it. Selection marker mirrors
+                // LayoutOptionCard: a dimming mask + a blue circle checkmark over the
+                // preview, plus a blue stroke when selected (no border otherwise).
                 // 中文: Color.clear 定 aspect-ratio 外框(同齒盤佈局比例),預覽 overlay 填滿。
+                // 中文: 選取標記對齊 LayoutOptionCard — 遮罩 + 藍圈白勾 + 選中時藍框(未選無框)。
                 Color.clear
                     .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
                     .overlay(preview)
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
+                                .fill(Color.black.opacity(0.25))
+                            Circle()
+                                .fill(AppStyle.accentBlue)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Image(latinSystemName: "checkmark")
+                                        .font(AppStyle.appFont(size: 16).bold())
+                                        .foregroundColor(.white),
+                                )
+                        }
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
                     .frame(width: ThemeCardMetrics.width)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                            .strokeBorder(
-                                isSelected ? AppStyle.accentBlue : Color(.separator),
-                                lineWidth: isSelected ? 2.5 : 1,
-                            ),
+                            .stroke(isSelected ? AppStyle.accentBlue : Color.clear, lineWidth: 2.5),
                     )
             }
             .buttonStyle(.plain)
 
             HStack(spacing: 4) {
-                if isSelected {
-                    Image(latinSystemName: "checkmark.circle.fill")
-                        .foregroundColor(AppStyle.accentBlue)
-                }
                 Text(title)
-                    .font(AppStyle.bodyFont)
-                    .foregroundColor(isSelected ? AppStyle.accentBlue : .primary)
+                    .font(AppStyle.captionFont)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
