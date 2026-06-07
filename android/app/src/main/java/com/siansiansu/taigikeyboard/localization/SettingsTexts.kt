@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.localization
 object SettingsTexts {
     // MARK: - Tab 標題
 
-    const val tabTitle = "齒盤設定"
+    const val tabTitle = "設定"
 
     // MARK: - 通用按鍵
 

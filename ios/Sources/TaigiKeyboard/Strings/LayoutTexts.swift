@@ -9,8 +9,8 @@
 enum LayoutTexts {
     // MARK: - Tab 標題
 
-    static let tabTitle = "齒盤佈局"
-    static let tabBarTitle = "齒佈"
+    static let tabTitle = "佈局"
+    static let tabBarTitle = "佈局"
 
     // MARK: - 佈局選擇
 

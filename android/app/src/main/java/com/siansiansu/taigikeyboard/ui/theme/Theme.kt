@@ -15,7 +15,7 @@ import com.siansiansu.taigikeyboard.R
 // ── Typography ──────────────────────────────────────────────────────────────
 // HuninnFontFamily applied to all slots. Four slots customized to align with iOS:
 //   headlineLarge = 34sp (page title),  titleMedium = 18sp (section header),
-//   bodyLarge     = 17sp (body text),   labelLarge  = 14sp (caption, M3 default)
+//   bodyLarge     = 17sp (body text),   labelLarge  = 17sp (caption, aligned with body)
 private val HuninnFontFamily = FontFamily(Font(R.font.jf_openhuninn_2_1))
 
 private val DefaultTypography = Typography()
@@ -34,7 +34,7 @@ private val AppTypography =
         bodyLarge = DefaultTypography.bodyLarge.copy(fontFamily = HuninnFontFamily, fontSize = 17.sp),
         bodyMedium = DefaultTypography.bodyMedium.copy(fontFamily = HuninnFontFamily),
         bodySmall = DefaultTypography.bodySmall.copy(fontFamily = HuninnFontFamily),
-        labelLarge = DefaultTypography.labelLarge.copy(fontFamily = HuninnFontFamily),
+        labelLarge = DefaultTypography.labelLarge.copy(fontFamily = HuninnFontFamily, fontSize = 17.sp),
         labelMedium = DefaultTypography.labelMedium.copy(fontFamily = HuninnFontFamily),
         labelSmall = DefaultTypography.labelSmall.copy(fontFamily = HuninnFontFamily),
     )

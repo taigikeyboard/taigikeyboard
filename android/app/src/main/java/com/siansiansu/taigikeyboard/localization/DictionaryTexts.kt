@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.localization
 object DictionaryTexts {
     // MARK: - Tab 標題
 
-    const val tabTitle = "詞庫管理"
+    const val tabTitle = "詞庫"
 
     // MARK: - 通用按鍵
 

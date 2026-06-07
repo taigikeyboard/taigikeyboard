@@ -13,7 +13,7 @@ enum HomeTexts {
     // MARK: - Tab 標題
 
     static let tabTitle = "頭頁"
-    static let appHeaderTitle = "iOS 台語齒盤"
+    static let appHeaderTitle = "台語齒盤"
 
     // MARK: - 區塊標題
 

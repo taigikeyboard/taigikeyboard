@@ -25,8 +25,8 @@ enum AppStyle {
     /// Body text size (17pt).
     static let bodySize: CGFloat = 17
 
-    /// Caption size (14pt).
-    static let captionSize: CGFloat = 14
+    /// Caption size (17pt — aligned with body size per USER 2026-06-08).
+    static let captionSize: CGFloat = 17
 
     // MARK: - Font Helper
 

@@ -2,7 +2,7 @@ package com.siansiansu.taigikeyboard.localization
 
 // Layout and appearance text constants (corresponds to iOS LayoutTexts.swift)
 object LayoutTexts {
-    const val tabTitle = "齒盤佈局"
+    const val tabTitle = "佈局"
 
     const val romanizationKeyboard = "羅馬字齒盤"
     const val taigiPhonetic = "方音符號"

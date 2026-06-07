@@ -27,7 +27,7 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 | Sub-page Title | SetupGuide, Appearance, etc. | TopAppBar (default titleLarge) | .navigationBarTitleDisplayMode(.inline) |
 | Section Header | Card group labels | `MaterialTheme.typography.titleMedium` (18sp), onSurfaceVariant | appFont(size: 18), .secondary |
 | Body / Row Label | List items, toggle labels, descriptions, search empty state | `MaterialTheme.typography.bodyLarge` (17sp), onSurface | 17pt (.body), .primary |
-| Caption | Trailing values, metadata, tags, badges, TL annotations, dates | `MaterialTheme.typography.labelLarge` (14sp), onSurfaceVariant | 12–16pt (.callout/.caption), .secondary |
+| Caption | Trailing values, metadata, tags, badges, TL annotations, dates | `MaterialTheme.typography.labelLarge` (17sp), onSurfaceVariant | 17pt, .secondary |
 
 **Android font system**: All font sizes and HuninnFontFamily are defined in `ui/theme/Theme.kt` as `AppTypography`. Screens access them via `MaterialTheme.typography.*`. Do NOT use inline `.sp` values for text.
 
@@ -123,7 +123,7 @@ Rationale: Android follows platform-default Material 3; iOS keeps its native gre
 ### Android
 
 **Typography** → `ui/theme/Theme.kt` (`AppTypography`)
-- Defines HuninnFontFamily + iOS-aligned sizes for headlineLarge (34sp), titleMedium (18sp), bodyLarge (17sp), labelLarge (14sp)
+- Defines HuninnFontFamily + iOS-aligned sizes for headlineLarge (34sp), titleMedium (18sp), bodyLarge (17sp), labelLarge (17sp)
 - Access via `MaterialTheme.typography.*` — never use raw `.sp` in screen files
 
 **Dimensions & Colors** → `ui/theme/AppStyle.kt`
@@ -136,7 +136,7 @@ Rationale: Android follows platform-default Material 3; iOS keeps its native gre
 ### iOS
 
 **Typography & Colors** → `App/Components/AppStyle.swift`
-- `AppStyle.sectionHeaderFont` (18pt Open Huninn), `AppStyle.bodyFont` (17pt), `AppStyle.captionFont` (14pt)
+- `AppStyle.sectionHeaderFont` (18pt Open Huninn), `AppStyle.bodyFont` (17pt), `AppStyle.captionFont` (17pt)
 - `AppStyle.sectionHeaderColor` (.secondary), `AppStyle.primaryColor`, `AppStyle.secondaryColor`
 - `AppStyle.accentBlue` (.accentColor), `AppStyle.warningOrange` (.orange)
 - `SectionHeader(text:)` shared view

@@ -23,7 +23,7 @@
 
     <!-- Tab titles (referenced by SettingsMainActivity) -->
     <string name="tab_home">頭頁</string>
-    <string name="tab_layout">齒佈</string>
+    <string name="tab_layout">佈局</string>
     <string name="tab_dictionary">詞庫</string>
     <string name="tab_settings">設定</string>
 

@@ -22,7 +22,7 @@ enum BuiltInThemes {
     /// Shelf order shown to the user (after `Default`, before user themes).
     // 中文: 顯示順序(在 Default 之後、使用者自訂主題之前)。
     static let families: [BuiltInThemeFamily] = [
-        BuiltInThemeFamily(title: "Standard", themes: [
+        BuiltInThemeFamily(title: "經典", themes: [
             // The Standard head IS the app default (adaptive). Its id is the
             // `ThemeId.default` sentinel so selecting it = reset-to-default, and
             // it shows selected whenever no other theme is chosen. Resolver /
@@ -30,7 +30,7 @@ enum BuiltInThemes {
             // 中文: Standard 第一張 = 預設(adaptive)。id 用 ThemeId.default sentinel,選它=回預設、無選取時它就是亮的。
             BuiltInTheme(
                 id: ThemeId.default,
-                displayName: "Standard",
+                displayName: "經典",
                 light: nil,
                 dark: nil,
                 previewImageName: "theme_standard_preview",

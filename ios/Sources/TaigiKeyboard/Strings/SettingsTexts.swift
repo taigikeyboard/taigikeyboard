@@ -9,7 +9,7 @@
 enum SettingsTexts {
     // MARK: - Tab 標題
 
-    static let tabTitle = "齒盤設定"
+    static let tabTitle = "設定"
     static let tabBarTitle = "設定"
 
     // MARK: - 通用按鍵

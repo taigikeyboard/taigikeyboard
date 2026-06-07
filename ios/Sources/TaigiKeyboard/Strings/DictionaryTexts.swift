@@ -9,7 +9,7 @@
 enum DictionaryTexts {
     // MARK: - Tab 標題
 
-    static let tabTitle = "詞庫管理"
+    static let tabTitle = "詞庫"
     static let tabBarTitle = "詞庫"
 
     // MARK: - 通用按鍵

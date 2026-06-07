@@ -14,8 +14,8 @@ enum ThemeTexts {
     // MARK: - 主題選擇器版面 placeholder
 
     // 中文: 版面草稿用字串(暫借 KeyboardKit 原文)。實際主題逐一加回時 USER 會改成自訂版本。
-    static let customThemesSection = "Custom Themes"
-    static let createNewTheme = "Create New…"
+    static let customThemesSection = "自訂主題"
+    static let createNewTheme = "新主題…"
 
     // MARK: - 字體設定
 
