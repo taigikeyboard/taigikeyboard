@@ -17,6 +17,12 @@ enum ThemeTexts {
     static let defaultThemeName = "預設"
     static let customAppearance = "自訂外觀設定"
 
+    // MARK: - 主題選擇器版面 placeholder
+
+    // 中文: 版面草稿用字串(暫借 KeyboardKit 原文)。實際主題逐一加回時 USER 會改成自訂版本。
+    static let customThemesSection = "Custom Themes"
+    static let createNewTheme = "Create New…"
+
     // MARK: - 字體設定
 
     static let customFont = "字型設定"

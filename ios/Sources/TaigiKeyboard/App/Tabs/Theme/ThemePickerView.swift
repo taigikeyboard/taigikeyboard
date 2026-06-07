@@ -1,160 +1,186 @@
-// 中文: 主題選擇器(Shelf)— 主題 tab 的 root。橫向捲動陳列「預設 + 內建主題」迷你預覽,
-// 中文: 點選即套用(寫 selectedThemeId → keyboard extension 下次 render 重新解析配色)。
-// 中文: 底部一條 NavigationLink 進「自訂外觀設定」= 既有 6 色 + 尺寸編輯器(PR-1 移入,本 PR 不動)。
+// 中文: 主題選擇器 — 主題 tab 的 root。版面草稿階段(只排版,不接主題邏輯)。
+// 中文: 仿 KeyboardKit「Themes」頁:頂部 Custom Themes shelf(Create New… 卡 → 外觀設定子頁),
+// 中文: 下方多個分類 shelf(暫用 KK 原文分類 + placeholder 預覽卡;真主題之後逐一加回)。
 
 import SwiftUI
 
-/// The theme tab root: a KeyboardKit-`Shelf`-style picker of built-in themes
-/// (plus `Default`), with a link down to the full appearance editor.
+/// The theme tab root: a KeyboardKit-`Themes`-style gallery of horizontal
+/// "shelves". The first shelf (`Custom Themes`) holds a `Create New…` card that
+/// links into the existing appearance editor. The remaining shelves are layout
+/// placeholders — category headers + empty preview cards that the user fills with
+/// real theme screenshots once the page layout is settled.
 ///
-/// Selecting a cell writes `selectedThemeId`; the keyboard extension re-resolves
-/// its colors on the next render (cross-process via `UserDefaults` change). User
-/// themes ("+" create) and shadow controls land in PR-3.
-// 中文: 主題選擇頁。每格是 light/dark 依當前 colorScheme 取的迷你配色預覽,非完整鍵盤(避免 7 份 live keyboard)。
+/// Layout-only on purpose: no theme is applied here yet. The six built-in themes
+/// (`BuiltInThemes`) and selection/apply wiring are temporarily detached and
+/// return one-by-one in a later pass. The resolver/render path is untouched.
+// 中文: 主題選擇頁。每格 = placeholder 預覽框 + 名稱;真主題截圖之後補上。
 struct ThemePickerView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedThemeId: String = SharedSettings.shared.selectedThemeId
-
     var body: some View {
-        Form {
-            Section(header: Text(ThemeTexts.builtInThemesSection)) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ThemeShelfCell(
-                            title: ThemeTexts.defaultThemeName,
-                            colors: .default,
-                            isSelected: selectedThemeId == ThemeId.default,
-                            onTap: { apply(ThemeId.default) },
-                        )
-                        ForEach(BuiltInThemes.all, id: \.id) { theme in
-                            ThemeShelfCell(
-                                title: theme.displayName,
-                                colors: theme.colors(for: colorScheme),
-                                isSelected: selectedThemeId == theme.id,
-                                onTap: { apply(theme.id) },
-                            )
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: shelfSpacing) {
+                // Custom Themes: entry to the appearance editor (user themes land here too, later).
+                ThemeShelf(title: ThemeTexts.customThemesSection) {
+                    CreateNewThemeCard()
+                }
+
+                // Placeholder built-in categories (KK names; user replaces later).
+                ForEach(PlaceholderThemes.categories, id: \.title) { category in
+                    ThemeShelf(title: category.title) {
+                        ForEach(category.themeNames, id: \.self) { name in
+                            ThemePlaceholderCard(name: name)
                         }
                     }
-                    .padding(.vertical, 4)
-                }
-                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-            }
-
-            Section {
-                NavigationLink {
-                    AppearanceSettingsView()
-                } label: {
-                    Text(ThemeTexts.customAppearance)
                 }
             }
+            .padding(.vertical, AppStyle.horizontalPadding)
         }
         .navigationTitle(ThemeTexts.tabTitle)
     }
 
-    // 中文: 套用主題。更新本地選取狀態(打勾即時反映)+ 寫入 SharedSettings(觸發 extension 重繪)。
-    private func apply(_ id: String) {
-        guard selectedThemeId != id else { return }
-        selectedThemeId = id
-        SharedSettings.shared.selectedThemeId = id
+    private let shelfSpacing: CGFloat = 28
+}
+
+// MARK: - Placeholder data
+
+/// Placeholder theme categories + names. Temporarily borrowed from KeyboardKit's
+/// predefined collections so the gallery reads correctly while empty. The user
+/// swaps these for the real Taigi themes (and screenshots) once the layout is
+/// approved — delete this enum at that point.
+// 中文: 版面草稿用的分類 + 主題名(暫借 KK 預設集合)。真主題加回時整個刪掉。
+private enum PlaceholderThemes {
+    struct Category {
+        let title: String
+        let themeNames: [String]
+    }
+
+    static let categories: [Category] = [
+        Category(title: "Standard", themeNames: ["Standard", "Blue", "Green", "Yellow", "Red", "Purple"]),
+        Category(title: "Swifty", themeNames: ["Swifty", "Swifty Blue", "Swifty Green", "Swifty Yellow", "Swifty Red"]),
+        Category(title: "Minimal", themeNames: ["Minimal", "Minimal Blue", "Minimal Green", "Minimal Yellow"]),
+        Category(title: "Colorful", themeNames: ["Colorful Blue", "Colorful Green", "Colorful Orange", "Colorful Purple"]),
+    ]
+}
+
+// MARK: - Card metrics
+
+/// Shared dimensions for every card on a shelf so previews line up across shelves.
+// 中文: 所有 shelf 卡共用尺寸,跨 shelf 對齊。
+private enum ThemeCardMetrics {
+    static let width: CGFloat = 220
+    static let previewHeight: CGFloat = 140
+    static let cardSpacing: CGFloat = 14
+}
+
+// MARK: - Shelf
+
+/// One horizontal shelf: a gray section header above a horizontally scrolling row
+/// of cards.
+// 中文: 單一 shelf — 灰色標題 + 橫向捲動的卡列。
+private struct ThemeShelf<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(AppStyle.headlineFont)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, AppStyle.horizontalPadding)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: ThemeCardMetrics.cardSpacing) {
+                    content
+                }
+                .padding(.horizontal, AppStyle.horizontalPadding)
+            }
+        }
     }
 }
 
-// MARK: - Shelf cell
+// MARK: - Create New card
 
-/// One theme on the shelf: a mini palette preview, a title, and a selection
-/// checkmark. Tappable to apply.
-// 中文: 單一主題格 — 迷你配色預覽 + 標題 + 選取打勾。
-private struct ThemeShelfCell: View {
-    let title: String
-    let colors: KeyboardColorSettings
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    private let cellWidth: CGFloat = 96
-    private let previewHeight: CGFloat = 64
+/// The first card on the Custom Themes shelf: a gray panel with a centered white
+/// "+" tile. Tapping navigates to the existing appearance editor.
+// 中文: Custom Themes 第一格 — 灰底卡 + 中央白色「+」磚;點選進外觀設定。
+private struct CreateNewThemeCard: View {
+    private let plusTileSize: CGFloat = 84
+    private let plusGlyphSize: CGFloat = 28
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 6) {
-                ThemeSwatch(colors: colors)
-                    .frame(width: cellWidth, height: previewHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(
-                                isSelected ? AppStyle.accentBlue : Color(.separator),
-                                lineWidth: isSelected ? 2.5 : 1,
-                            ),
-                    )
+        NavigationLink {
+            AppearanceSettingsView()
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
+                        .fill(Color(.systemGray4))
 
-                HStack(spacing: 4) {
-                    if isSelected {
-                        Image(latinSystemName: "checkmark.circle.fill")
-                            .foregroundColor(AppStyle.accentBlue)
-                            .font(.caption)
-                    }
-                    Text(title)
-                        .font(.caption)
-                        .foregroundColor(isSelected ? AppStyle.accentBlue : .primary)
-                        .lineLimit(1)
+                    RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius)
+                        .fill(Color(.systemBackground))
+                        .frame(width: plusTileSize, height: plusTileSize)
+                        .overlay(
+                            Image(latinSystemName: "plus")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: plusGlyphSize, height: plusGlyphSize)
+                                .foregroundColor(.primary),
+                        )
                 }
-                .frame(width: cellWidth)
+                .frame(width: ThemeCardMetrics.width, height: ThemeCardMetrics.previewHeight)
+
+                Text(ThemeTexts.createNewTheme)
+                    .font(AppStyle.bodyFont)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
             }
+            .frame(width: ThemeCardMetrics.width, alignment: .leading)
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Swatch
+// MARK: - Theme placeholder card
 
-/// A static, lightweight mini-keyboard rendering of a 6-role palette: a
-/// candidate bar plus two key rows (normal + one special key). Falls back to
-/// neutral system colors for nil roles (the `Default` adaptive theme).
-// 中文: 迷你鍵盤配色預覽。nil 角色退到中性系統色(對應 Default adaptive 主題)。
-private struct ThemeSwatch: View {
-    let colors: KeyboardColorSettings
+/// A placeholder theme cell: an empty preview slot (a theme screenshot drops in
+/// here later) plus the theme name and a trailing action affordance. Non-
+/// interactive while the page is layout-only.
+// 中文: 主題 placeholder 卡 — 空預覽框(之後放主題截圖)+ 名稱 + 動作圖示(版面草稿暫不可點)。
+private struct ThemePlaceholderCard: View {
+    let name: String
+
+    private let previewGlyphSize: CGFloat = 30
 
     var body: some View {
-        let background = colors.backgroundColor?.color ?? Color(.secondarySystemBackground)
-        let normalFill = colors.normalKeyFillColor?.color ?? Color(.systemBackground)
-        let specialFill = colors.specialKeyFillColor?.color ?? Color(.systemGray3)
-        let keyText = colors.keyTextColor?.color ?? Color(.label)
-        let candidateBackground = colors.candidateBackgroundColor?.color ?? background
-        let candidateText = colors.candidateTextColor?.color ?? Color(.label)
+        VStack(alignment: .leading, spacing: 8) {
+            RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
+                .fill(Color(.secondarySystemBackground))
+                .frame(width: ThemeCardMetrics.width, height: ThemeCardMetrics.previewHeight)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
+                        .strokeBorder(Color(.separator), lineWidth: 1),
+                )
+                .overlay(
+                    // 中文: 「截圖待補」提示圖示。
+                    Image(latinSystemName: "photo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: previewGlyphSize, height: previewGlyphSize)
+                        .foregroundColor(Color(.tertiaryLabel)),
+                )
 
-        VStack(spacing: 4) {
-            // Candidate bar with two sample候選詞 marks.
             HStack(spacing: 4) {
-                ForEach(0 ..< 2, id: \.self) { _ in
-                    Capsule().fill(candidateText.opacity(0.8)).frame(width: 18, height: 4)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 6)
-            .frame(height: 14)
-            .frame(maxWidth: .infinity)
-            .background(candidateBackground)
+                Text(name)
+                    .font(AppStyle.bodyFont)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
 
-            // Two key rows: 3 normal keys + 1 special key, each with a key-text dot.
-            ForEach(0 ..< 2, id: \.self) { row in
-                HStack(spacing: 4) {
-                    ForEach(0 ..< 4, id: \.self) { col in
-                        // 中文: 第二排最後一鍵當特殊鍵(Shift/Enter 類)以呈現 specialKeyFill。
-                        let isSpecialKey = row == 1 && col == 3
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(isSpecialKey ? specialFill : normalFill)
-                            .overlay(
-                                Circle().fill(keyText.opacity(0.85)).frame(width: 3, height: 3),
-                            )
-                            .frame(height: 14)
-                    }
-                }
-                .padding(.horizontal, 6)
+                Spacer(minLength: 0)
+
+                // 中文: 每主題的動作選單(套用 / 編輯 / 刪除)入口。版面草稿先放圖示,邏輯之後補。
+                Image(latinSystemName: "ellipsis")
+                    .foregroundColor(.secondary)
             }
-            Spacer(minLength: 0)
+            .frame(width: ThemeCardMetrics.width)
         }
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(background)
     }
 }
