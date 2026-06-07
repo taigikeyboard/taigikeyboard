@@ -30,11 +30,13 @@ final class UserThemeStoreTests: XCTestCase {
     private func makeUserTheme(name: String = "T", shadow: Double = 0) -> UserTheme {
         var colors = KeyboardColorSettings()
         colors.backgroundColor = CodableColor(.blue)
+        var appearance = ThemeAppearance.default
+        appearance.colors = colors
+        appearance.keyShadowIntensity = shadow
         return UserTheme(
             id: UUID(),
             name: name,
-            colors: colors,
-            keyShadowIntensity: shadow,
+            appearance: appearance,
             createdAt: Date(timeIntervalSince1970: 0),
             updatedAt: Date(timeIntervalSince1970: 0),
         )
@@ -102,5 +104,47 @@ final class UserThemeStoreTests: XCTestCase {
         // add cannot persist without a container → returns false, load stays empty.
         XCTAssertFalse(store.add(makeUserTheme()))
         XCTAssertEqual(store.load(), [])
+    }
+
+    // trace: a theme with custom sizes + font survives a write/read round-trip intact.
+    func testAddAndLoad_fullAppearance_roundTrips() {
+        let store = UserThemeStore(containerURL: tempDir, onMutated: {})
+        var appearance = ThemeAppearance.default
+        appearance.colors.backgroundColor = CodableColor(.green)
+        appearance.keyHeightScale = 1.1
+        appearance.keyFontSizeScale = 0.9
+        appearance.candidateTextSizeScale = 1.05
+        appearance.keyCornerRadius = 12
+        appearance.keyBorderWidth = 1.5
+        appearance.fontType = .iansui
+        appearance.keyShadowIntensity = 0.4
+        let theme = UserTheme(
+            id: UUID(),
+            name: "Full",
+            appearance: appearance,
+            createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0),
+        )
+
+        XCTAssertTrue(store.add(theme))
+
+        XCTAssertEqual(store.load(), [theme])
+    }
+
+    // trace: a theme file written before size/font fields existed (only colors +
+    // keyShadowIntensity inside `appearance`) decodes with the new fields filled
+    // from ThemeAppearance.default — no theme is lost when the schema grows.
+    func testThemeAppearance_decodesPartialJSON_fillsMissingWithDefaults() throws {
+        let json = Data(#"{ "colors": {}, "keyShadowIntensity": 0.25 }"#.utf8)
+        let appearance = try JSONDecoder().decode(ThemeAppearance.self, from: json)
+
+        XCTAssertEqual(appearance.keyShadowIntensity, 0.25)
+        XCTAssertEqual(appearance.colors, .default)
+        XCTAssertEqual(appearance.keyHeightScale, ThemeAppearance.default.keyHeightScale)
+        XCTAssertEqual(appearance.keyFontSizeScale, ThemeAppearance.default.keyFontSizeScale)
+        XCTAssertEqual(appearance.candidateTextSizeScale, ThemeAppearance.default.candidateTextSizeScale)
+        XCTAssertEqual(appearance.keyCornerRadius, ThemeAppearance.default.keyCornerRadius)
+        XCTAssertEqual(appearance.keyBorderWidth, ThemeAppearance.default.keyBorderWidth)
+        XCTAssertEqual(appearance.fontType, ThemeAppearance.default.fontType)
     }
 }

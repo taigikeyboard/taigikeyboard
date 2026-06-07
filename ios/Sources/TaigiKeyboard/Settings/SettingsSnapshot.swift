@@ -24,4 +24,10 @@ struct SettingsSnapshot {
     let keyCornerRadius: CGFloat
     // 中文: 鍵盤顏色組合。
     let colorSettings: KeyboardColorSettings
+    // 中文: 候選列文字縮放係數(每主題)。
+    let candidateTextSizeScale: CGFloat
+    // 中文: 鍵帽邊框寬度(每主題)。
+    let keyBorderWidth: CGFloat
+    // 中文: 鍵帽陰影強度(每主題,0 = 無陰影)。
+    let keyShadowIntensity: CGFloat
 }

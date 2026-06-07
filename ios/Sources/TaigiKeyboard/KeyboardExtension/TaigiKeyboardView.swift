@@ -22,9 +22,6 @@ struct TaigiKeyboardView: View {
 
     @StateObject private var expandState = CandidateExpandState()
     @State private var currentInputMode: InputMode
-    @State private var keyFontSizeScale: CGFloat
-    @State private var keyBorderWidth: CGFloat
-    @State private var candidateTextSizeScale: CGFloat
     @State private var panels = OverlayPanelState()
     // 中文: 設定編輯軸的 re-render 觸發器。colorScheme 變動由 keyboardContext(@ObservedObject)
     // 中文: 自動觸發;但 host app 改顏色/主題時 keyboardContext 不變,靠 didChange bump 此值強制重繪。
@@ -55,9 +52,6 @@ struct TaigiKeyboardView: View {
         self.onTranslateToggle = onTranslateToggle
         self.initialInputMode = initialInputMode
         _currentInputMode = State(initialValue: settings.inputMode)
-        _keyFontSizeScale = State(initialValue: settings.keyFontSizeScale)
-        _keyBorderWidth = State(initialValue: settings.keyBorderWidth)
-        _candidateTextSizeScale = State(initialValue: settings.candidateTextSizeScale)
     }
 
     /// Per-render-cycle cached settings and providers.
@@ -103,7 +97,7 @@ struct TaigiKeyboardView: View {
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
         let theme = CandidateTheme.resolved(
-            candidateTextSizeScale: candidateTextSizeScale,
+            candidateTextSizeScale: p.settings.candidateTextSizeScale,
             colorSettings: colors,
         )
         let candidateStyle = Self.candidateStyle(
@@ -168,21 +162,10 @@ struct TaigiKeyboardView: View {
                 .publisher(for: UserDefaults.didChangeNotification)
                 .receive(on: DispatchQueue.main),
         ) { _ in
-            // 中文: host app 改設定 → bump settingsRevision 強制重繪;body 會以 live keyboardContext.colorScheme
-            // 中文: 重新解析主題顏色(selectedThemeId / colorSettings / themeRevision 任一變更皆觸發此通知)。
+            // 中文: host app 改設定 → bump settingsRevision 強制重繪;body 以 live keyboardContext.colorScheme
+            // 中文: 重新解析主題外觀(selectedThemeId / colorSettings / 各尺寸 / fontType / themeRevision 任一變更皆觸發)。
+            // 中文: 尺寸/字型/邊框/陰影全走 settings.snapshot(per-theme resolved),不再各自 @State 鏡像。
             settingsRevision &+= 1
-            let latestScale = settings.keyFontSizeScale
-            if keyFontSizeScale != latestScale {
-                keyFontSizeScale = latestScale
-            }
-            let latestBorderWidth = settings.keyBorderWidth
-            if keyBorderWidth != latestBorderWidth {
-                keyBorderWidth = latestBorderWidth
-            }
-            let latestCandidateScale = settings.candidateTextSizeScale
-            if candidateTextSizeScale != latestCandidateScale {
-                candidateTextSizeScale = latestCandidateScale
-            }
         }
     }
 
@@ -272,7 +255,7 @@ struct TaigiKeyboardView: View {
                 )
             },
             buttonView: { params in
-                let borderWidth = keyBorderWidth
+                let borderWidth = p.settings.keyBorderWidth
                 if borderWidth > 0, params.item.action != .none {
                     params.view.overlay(
                         RoundedRectangle(cornerRadius: p.settings.keyCornerRadius)
@@ -337,6 +320,19 @@ struct TaigiKeyboardView: View {
             var style = params.standardStyle()
             style.keyboardFont = p.font.buttonKeyboardFont(for: params.action)
             style.cornerRadius = p.settings.keyCornerRadius
+
+            // Per-theme key shadow. Intensity 0 → leave KK's standard button shadow
+            // untouched (= HEAD behavior; built-ins/default resolve to 0). Intensity > 0
+            // → override with a per-theme shadow of that point size. PR-A only ADDS
+            // shadow; PR-B's slider semantics (0 = no shadow) will need an explicit
+            // `.noShadow` path, since `params.standardStyle()` already carries one.
+            // KK API: Keyboard.ButtonStyle.shadow / Keyboard.ButtonShadowStyle(color:size:).
+            if p.settings.keyShadowIntensity > 0 {
+                style.shadow = Keyboard.ButtonShadowStyle(
+                    color: .keyboardButtonShadow,
+                    size: p.settings.keyShadowIntensity,
+                )
+            }
 
             // Apply resolved theme colors (single source: the per-render snapshot).
             let colors = p.settings.colorSettings

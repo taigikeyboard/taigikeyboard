@@ -274,9 +274,10 @@ extension KeyboardViewController {
         }
     }
 
-    // 中文: 依使用者選擇的字型生成長按 callout 視覺樣式。
+    // 中文: 依當前主題解析後的字型生成長按 callout 視覺樣式。
+    // 中文: callout 在 setup 期固定 → per-theme 字型於下次開鍵盤(重跑 setup)套用。
     func createCalloutStyle() -> Callouts.CalloutStyle {
-        guard let fontName = keyboardSettings.fontType.customFontName else {
+        guard let fontName = keyboardSettings.resolvedFontType.customFontName else {
             return Callouts.CalloutStyle.standard
         }
 

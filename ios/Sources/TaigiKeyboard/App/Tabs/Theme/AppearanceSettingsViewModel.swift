@@ -24,12 +24,13 @@ final class AppearanceSettingsViewModel: ObservableObject {
         static let candidateText = Color(.label)
         static let candidateBackground = Color.keyboardBackground
 
-        static let keyHeightScale: Double = 1.0
-        static let keyFontSizeScale: Double = 1.0
-        static let candidateTextSizeScale: Double = 1.0
-        static let keyCornerRadius: Double = 6.0
-        static let keyBorderWidth: Double = 0
-        static let fontType: FontType = .openHuninn
+        // 中文: 尺寸/字型預設的單一來源 = ThemeAppearance.default(factory 外觀);避免三處各寫一份。
+        static let keyHeightScale = ThemeAppearance.default.keyHeightScale
+        static let keyFontSizeScale = ThemeAppearance.default.keyFontSizeScale
+        static let candidateTextSizeScale = ThemeAppearance.default.candidateTextSizeScale
+        static let keyCornerRadius = ThemeAppearance.default.keyCornerRadius
+        static let keyBorderWidth = ThemeAppearance.default.keyBorderWidth
+        static let fontType = ThemeAppearance.default.fontType
     }
 
     // MARK: - Sliders

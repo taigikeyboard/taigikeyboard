@@ -538,36 +538,94 @@ final class SharedSettings {
         userDefaults.set(next, for: Self.themeRevisionKey)
     }
 
-    // 中文: 渲染端消費的解析主題。"default" 走快路徑(免 file I/O,維持現有行為)。
+    // 中文: 全域外觀(= "default" 主題)。由 SharedSettings 自有的外觀鍵組成 —
+    // 中文: colorSettings + 5 尺寸 scalar + fontType;陰影固定 0(自由配色 buffer 無陰影)。
+    private var legacyAppearance: ThemeAppearance {
+        ThemeAppearance(
+            colors: colorSettings,
+            keyShadowIntensity: 0,
+            keyHeightScale: keyHeightScale,
+            keyFontSizeScale: keyFontSizeScale,
+            candidateTextSizeScale: candidateTextSizeScale,
+            keyCornerRadius: keyCornerRadius,
+            keyBorderWidth: keyBorderWidth,
+            fontType: fontType,
+        )
+    }
+
+    // 中文: 渲染端消費的解析外觀。"default" 走快路徑(免 file I/O,= 全域外觀)。
     // 中文: 只有 id 為 UUID(user theme)才讀 user-theme 檔;非 UUID(built-in id)不讀檔 —
     // 中文: 避免 render 熱路徑無謂 I/O,built-in 由 ThemeResolver 查 BuiltInThemes 表並依 colorScheme 取 light/dark。
-    func resolvedTheme(for colorScheme: ColorScheme) -> ResolvedKeyboardTheme {
+    func resolvedAppearance(for colorScheme: ColorScheme) -> ThemeAppearance {
         let id = selectedThemeId
         if id == ThemeId.default {
-            return ResolvedKeyboardTheme(colors: colorSettings, keyShadowIntensity: 0)
+            return legacyAppearance
         }
         let userThemes = UUID(uuidString: id) != nil ? userThemeStore.load() : []
         return ThemeResolver.resolved(
             themeId: id,
             colorScheme: colorScheme,
-            legacyColorSettings: colorSettings,
+            legacyAppearance: legacyAppearance,
             userThemes: userThemes,
         )
+    }
+
+    // 中文: 已解析的字型。KeyboardFonts.globalFont/globalUIFont(~15 caller,無 per-render snapshot)
+    // 中文: 走這裡。字型與 colorScheme 無關,故免 scheme 參數。default 直接回全域(免 I/O);
+    // 中文: 其餘以 (selectedThemeId, themeRevision) 快取,避免每次 globalFont 都讀 user-theme 檔。
+    private var resolvedFontTypeCache: (themeId: String, revision: Int, fontType: FontType)?
+
+    var resolvedFontType: FontType {
+        let id = selectedThemeId
+        if id == ThemeId.default { return fontType }
+        let revision = userDefaults.value(for: Self.themeRevisionKey)
+        if let cache = resolvedFontTypeCache, cache.themeId == id, cache.revision == revision {
+            return cache.fontType
+        }
+        // colorScheme irrelevant for fontType; .light is an arbitrary fixed pick.
+        let resolved = resolvedAppearance(for: .light).fontType
+        resolvedFontTypeCache = (id, revision, resolved)
+        return resolved
+    }
+
+    // MARK: - User theme CRUD
+
+    // 中文: user theme CRUD 對外接口(委派 private userThemeStore)。主題編輯器 / Custom Themes shelf 用。
+    func loadUserThemes() -> [UserTheme] {
+        userThemeStore.load()
+    }
+
+    /// Appends a user theme. Returns `false` at the cap or on write failure.
+    @discardableResult
+    func addUserTheme(_ theme: UserTheme) -> Bool {
+        userThemeStore.add(theme)
+    }
+
+    func updateUserTheme(_ theme: UserTheme) {
+        userThemeStore.update(theme)
+    }
+
+    func deleteUserTheme(id: UUID) {
+        userThemeStore.delete(id: id)
     }
 
     /// Creates an immutable snapshot of render-relevant settings.
     /// Call once per render cycle to avoid repeated UserDefaults reads.
     // 中文: 取得渲染週期一致快照。每次渲染 (~50 個鍵) 呼叫一次,避免每個鍵都打 UserDefaults。
     func snapshot(for colorScheme: ColorScheme) -> SettingsSnapshot {
-        SettingsSnapshot(
+        let appearance = resolvedAppearance(for: colorScheme)
+        return SettingsSnapshot(
             inputMode: inputMode,
-            fontType: fontType,
+            fontType: appearance.fontType,
             keyboardLayoutType: keyboardLayoutType,
             isTranslateSwapped: isTranslateSwapped,
             isTpsOrMappedToER: isTpsOrMappedToER,
-            keyFontSizeScale: keyFontSizeScale,
-            keyCornerRadius: keyCornerRadius,
-            colorSettings: resolvedTheme(for: colorScheme).colors,
+            keyFontSizeScale: appearance.keyFontSizeScale,
+            keyCornerRadius: appearance.keyCornerRadius,
+            colorSettings: appearance.colors,
+            candidateTextSizeScale: appearance.candidateTextSizeScale,
+            keyBorderWidth: appearance.keyBorderWidth,
+            keyShadowIntensity: appearance.keyShadowIntensity,
         )
     }
 
@@ -580,7 +638,7 @@ final class SharedSettings {
         isTranslateSwapped = false
         isOutputBothScripts = false
         isLiteralRomanCandidateEnabled = true
-        fontType = .openHuninn
+        fontType = ThemeAppearance.default.fontType
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi
         // Dictionary toggles (iTaigi, TaiHua default off)
@@ -615,12 +673,12 @@ final class SharedSettings {
         userDefaults.remove(Self.isGlobeKeyEnabledKey)
         // TPS
         isTpsOrMappedToER = true
-        // Appearance
-        keyHeightScale = 1.0
-        keyFontSizeScale = 1.0
-        candidateTextSizeScale = 1.0
-        keyCornerRadius = 6.0
-        keyBorderWidth = 0
+        // Appearance — defaults sourced from ThemeAppearance.default (single source).
+        keyHeightScale = ThemeAppearance.default.keyHeightScale
+        keyFontSizeScale = ThemeAppearance.default.keyFontSizeScale
+        candidateTextSizeScale = ThemeAppearance.default.candidateTextSizeScale
+        keyCornerRadius = ThemeAppearance.default.keyCornerRadius
+        keyBorderWidth = ThemeAppearance.default.keyBorderWidth
         colorSettings = .default
         // 中文: 回到 default 主題(走 colorSettings buffer);不刪除已存的 user themes。
         selectedThemeId = ThemeId.default

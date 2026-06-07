@@ -4,7 +4,7 @@ import XCTest
 
 /// Tests for the built-in theme table (v3.6.2 PR-2b).
 ///
-/// The id invariants are load-bearing: `SharedSettings.resolvedTheme(for:)`
+/// The id invariants are load-bearing: `SharedSettings.resolvedAppearance(for:)`
 /// uses `UUID(uuidString:) != nil` to decide whether to read the user-theme
 /// file, and `ThemeId.default` is the legacy-buffer sentinel. A built-in id
 /// that is a UUID string or equals "default" would be mis-routed.

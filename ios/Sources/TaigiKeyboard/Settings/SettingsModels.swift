@@ -24,7 +24,8 @@ extension InputMode {
 
 /// Font type
 // 中文: 鍵盤字體選擇 enum。除了 system 外,其餘走自訂 PostScript 字體。
-enum FontType: String, CaseIterable {
+// 中文: Codable 以便存入 ThemeAppearance(每主題字型);String raw → 自動合成編解碼。
+enum FontType: String, CaseIterable, Codable {
     // 中文: 系統預設字體。
     case system
     // 中文: jf open 粉圓 (Hân-jī 友善字型)。

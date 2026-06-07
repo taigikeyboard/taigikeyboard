@@ -13,9 +13,12 @@ class CustomLayoutService {
     /// 根據 context 建構鍵盤 layout
     func keyboardLayout(for context: KeyboardContext) -> KeyboardLayout {
         var config = KeyboardLayout.DeviceConfiguration.standard(for: context)
-        let settings = SharedSettings.shared
-        config.rowHeight *= (0.87 * settings.keyHeightScale)
-        config.buttonCornerRadius = settings.keyCornerRadius
+        // Layout geometry follows the active theme (per-theme key height / corner
+        // radius), resolved for the current colorScheme. Non-appearance reads
+        // (inputMode / layoutType / globe) stay on the live settings below.
+        let appearance = SharedSettings.shared.resolvedAppearance(for: context.colorScheme)
+        config.rowHeight *= (0.87 * appearance.keyHeightScale)
+        config.buttonCornerRadius = appearance.keyCornerRadius
         let converter = LayoutConverter(context: context, config: config)
         let keyDefs = selectLayout(for: context)
 

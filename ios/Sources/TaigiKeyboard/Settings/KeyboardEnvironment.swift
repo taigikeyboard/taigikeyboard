@@ -35,9 +35,9 @@ protocol KeyboardEnvironment: AnyObject {
     var isFullAccessEnabled: Bool { get set }
     // 中文: 鍵盤六個顏色面 (背景 / 文字 / 鍵帽 / 候選列 等)。外觀編輯器讀寫此 buffer。
     var colorSettings: KeyboardColorSettings { get }
-    // 中文: 渲染端消費的解析主題(選定主題 + colorScheme → 6 顏色 + 陰影)。"default" 走 colorSettings;
-    // 中文: built-in 主題依 colorScheme 取 light/dark。colorScheme 來源 = keyboardContext.colorScheme。
-    func resolvedTheme(for colorScheme: ColorScheme) -> ResolvedKeyboardTheme
+    // 中文: 渲染端消費的解析外觀(選定主題 + colorScheme → 6 顏色 + 陰影 + 5 尺寸 + 字型)。
+    // 中文: "default" 走全域外觀;built-in 依 colorScheme 取 light/dark。colorScheme 來源 = keyboardContext.colorScheme。
+    func resolvedAppearance(for colorScheme: ColorScheme) -> ThemeAppearance
     // 中文: 鍵帽文字大小縮放係數,預設 1.0。
     var keyFontSizeScale: CGFloat { get }
     // 中文: 鍵帽邊框寬度,預設 0。
@@ -46,6 +46,9 @@ protocol KeyboardEnvironment: AnyObject {
     var candidateTextSizeScale: CGFloat { get }
     // 中文: 鍵盤字體選用 (system / openHuninn / iansui / genYoMin / genYoGothic)。
     var fontType: FontType { get }
+    // 中文: 已解析的字型(per-theme)。供 callout / KeyboardFonts.globalFont 等無 per-render snapshot 的呼叫點;
+    // 中文: "default" = 全域 fontType,其餘 = 選定主題的字型。
+    var resolvedFontType: FontType { get }
     // 中文: 鍵盤排版 (phahTaigi / qwerty / tps / moe1 / moe2)。
     var keyboardLayoutType: KeyboardLayoutType { get }
 

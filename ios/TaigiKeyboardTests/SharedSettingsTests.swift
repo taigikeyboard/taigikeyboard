@@ -219,13 +219,29 @@ final class SharedSettingsTests: XCTestCase {
 
     // MARK: - Theme resolution (v3.6.2 PR-2a — no-migration safety; PR-2b — built-in colorScheme)
 
-    // trace: fresh install → selectedThemeId absent → "default" → resolvedTheme.colors == .default (all nil)
+    // trace: fresh install → selectedThemeId absent → "default" → resolvedAppearance.colors == .default (all nil)
     func test_resolvedTheme_defaultUncustomized_returnsAllNil() {
         XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
-        XCTAssertEqual(
-            settings.resolvedTheme(for: .light),
-            ResolvedKeyboardTheme(colors: .default, keyShadowIntensity: 0),
-        )
+        XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, .default)
+        XCTAssertEqual(settings.resolvedAppearance(for: .light).keyShadowIntensity, 0)
+    }
+
+    // trace: default theme threads ALL customized appearance (5 size scalars + font) through
+    // snapshot, not just colors — the renderer-switch must not drop any global appearance key.
+    func test_snapshot_defaultTheme_carriesCustomizedSizesAndFont() {
+        settings.keyFontSizeScale = 1.1
+        settings.candidateTextSizeScale = 0.9
+        settings.keyCornerRadius = 10
+        settings.keyBorderWidth = 2
+        settings.fontType = .iansui
+
+        let snap = settings.snapshot(for: .light)
+
+        XCTAssertEqual(snap.keyFontSizeScale, 1.1)
+        XCTAssertEqual(snap.candidateTextSizeScale, 0.9)
+        XCTAssertEqual(snap.keyCornerRadius, 10)
+        XCTAssertEqual(snap.keyBorderWidth, 2)
+        XCTAssertEqual(snap.fontType, .iansui)
     }
 
     // trace: a customized user stays on "default" → resolvedTheme preserves their colorSettings verbatim,
@@ -236,8 +252,8 @@ final class SharedSettingsTests: XCTestCase {
         settings.colorSettings = custom
 
         XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
-        XCTAssertEqual(settings.resolvedTheme(for: .light).colors, custom)
-        XCTAssertEqual(settings.resolvedTheme(for: .light).keyShadowIntensity, 0)
+        XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, custom)
+        XCTAssertEqual(settings.resolvedAppearance(for: .light).keyShadowIntensity, 0)
     }
 
     // trace: selectedThemeId = built-in "catppuccin" → resolvedTheme picks the colorScheme variant;
@@ -246,11 +262,11 @@ final class SharedSettingsTests: XCTestCase {
         settings.selectedThemeId = "catppuccin"
         let expected = BuiltInThemes.theme(id: "catppuccin")!
 
-        XCTAssertEqual(settings.resolvedTheme(for: .light).colors, expected.colors(for: .light))
-        XCTAssertEqual(settings.resolvedTheme(for: .dark).colors, expected.colors(for: .dark))
+        XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, expected.colors(for: .light))
+        XCTAssertEqual(settings.resolvedAppearance(for: .dark).colors, expected.colors(for: .dark))
         XCTAssertNotEqual(
-            settings.resolvedTheme(for: .light).colors,
-            settings.resolvedTheme(for: .dark).colors,
+            settings.resolvedAppearance(for: .light).colors,
+            settings.resolvedAppearance(for: .dark).colors,
         )
     }
 }

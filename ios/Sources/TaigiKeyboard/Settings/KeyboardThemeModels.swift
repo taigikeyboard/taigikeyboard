@@ -44,37 +44,86 @@ struct BuiltInTheme: Equatable {
     }
 }
 
+// MARK: - Theme appearance bundle
+
+/// The full set of appearance values a theme captures: 6-role colors plus the
+/// key-shadow intensity, the five size scalars (key height / key font / candidate
+/// font / corner radius / border width), and the font family.
+///
+/// One bundle is the unit of (a) what a `UserTheme` stores, (b) what the
+/// `ThemeResolver` returns, and (c) what the renderer reads — so the eight
+/// values are never spread field-by-field across resolver / snapshot / editor.
+///
+/// `colors` stays OPTIONAL per role (reuses `KeyboardColorSettings`): a `nil`
+/// role inherits KeyboardKit's adaptive color, preserving the "customize 2 of 6"
+/// behavior. The defaults match `AppearanceSettingsViewModel.Defaults`.
+// 中文: 主題外觀整包 — 6 角色配色 + 陰影 + 5 尺寸 scalar + 字型。
+// 中文: 同一個型別同時是「UserTheme 儲存的內容」「resolver 回傳的結果」「render 讀的值」,避免 8 欄到處平鋪。
+struct ThemeAppearance: Codable, Equatable {
+    var colors: KeyboardColorSettings
+    var keyShadowIntensity: Double
+    var keyHeightScale: Double
+    var keyFontSizeScale: Double
+    var candidateTextSizeScale: Double
+    var keyCornerRadius: Double
+    var keyBorderWidth: Double
+    var fontType: FontType
+
+    /// Factory appearance — all-nil adaptive colors, flat shadow, unity scales,
+    /// project-default corner radius / border / font. Used as the base for
+    /// built-in themes (which only define colors) and as the missing-field
+    /// fallback when decoding.
+    // 中文: 原廠外觀。內建主題(只定義配色)以此為底;decode 缺欄位也退回這裡。
+    static let `default` = ThemeAppearance(
+        colors: .default,
+        keyShadowIntensity: 0,
+        keyHeightScale: 1,
+        keyFontSizeScale: 1,
+        candidateTextSizeScale: 1,
+        keyCornerRadius: 6,
+        keyBorderWidth: 0,
+        fontType: .openHuninn,
+    )
+
+}
+
+// 中文: 向前相容 decode 放在 extension,讓 struct 仍自動合成 memberwise init
+// 中文: (ThemeAppearance.default / legacyAppearance / 測試等皆以 memberwise 建構)。
+extension ThemeAppearance {
+    /// Forward-compatible decode: any field absent in a stored theme falls back
+    /// to the project default, so a future appearance field never strands themes
+    /// written by an older build. (Encode + memberwise init are synthesized.)
+    // 中文: 缺欄位退回 default,未來新增外觀欄位不會讓舊主題檔解碼失敗。
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let fallback = ThemeAppearance.default
+        colors = try container.decodeIfPresent(KeyboardColorSettings.self, forKey: .colors) ?? fallback.colors
+        keyShadowIntensity = try container.decodeIfPresent(Double.self, forKey: .keyShadowIntensity) ?? fallback.keyShadowIntensity
+        keyHeightScale = try container.decodeIfPresent(Double.self, forKey: .keyHeightScale) ?? fallback.keyHeightScale
+        keyFontSizeScale = try container.decodeIfPresent(Double.self, forKey: .keyFontSizeScale) ?? fallback.keyFontSizeScale
+        candidateTextSizeScale = try container.decodeIfPresent(Double.self, forKey: .candidateTextSizeScale) ?? fallback.candidateTextSizeScale
+        keyCornerRadius = try container.decodeIfPresent(Double.self, forKey: .keyCornerRadius) ?? fallback.keyCornerRadius
+        keyBorderWidth = try container.decodeIfPresent(Double.self, forKey: .keyBorderWidth) ?? fallback.keyBorderWidth
+        fontType = try container.decodeIfPresent(FontType.self, forKey: .fontType) ?? fallback.fontType
+    }
+}
+
 // MARK: - User-created theme
 
-/// A user-created, named, persisted keyboard theme.
+/// A user-created, named, persisted keyboard theme: identity + name + the full
+/// `ThemeAppearance` bundle + timestamps.
 ///
-/// `colors` is OPTIONAL per role (it reuses `KeyboardColorSettings`): a `nil`
-/// role inherits KeyboardKit's adaptive color, so a theme that customizes only
-/// some roles stays adaptive for the rest — preserving the "customize 2 of 6"
-/// behavior that the legacy free-pick buffer already supports.
-// 中文: 使用者自訂主題。colors 每個角色可為 nil(沿用 KeyboardColorSettings 語意),
-// 中文: 保留「只自訂部分角色」時其餘維持 adaptive 的行為。keyShadowIntensity 渲染接線於 PR-3。
+/// No backward-compat decode is needed: the user-theme write path (CRUD) has
+/// never shipped (PR-3) and no seeding/migration ever wrote `user_themes.json`
+/// (verified — the only `userThemeStore` mutators are the unused CRUD wrappers),
+/// so no legacy envelope can exist on any device. Schema growth is handled
+/// forward by `ThemeAppearance`'s `decodeIfPresent` decoder.
+// 中文: 不需向後相容 decode — user-theme 寫入路徑(CRUD)從未 ship,也無 seeding 寫過檔,
+// 中文: 故無 legacy 格式存在;未來欄位成長由 ThemeAppearance 的 decodeIfPresent 向前相容處理。
 struct UserTheme: Codable, Equatable, Identifiable {
     let id: UUID
     var name: String
-    var colors: KeyboardColorSettings
-    /// 0 = flat (project default). Independent key-shadow control (fork H1);
-    /// the editor slider + render wiring land in PR-3.
-    var keyShadowIntensity: Double
+    var appearance: ThemeAppearance
     var createdAt: Date
     var updatedAt: Date
-}
-
-// MARK: - Resolved render theme
-
-/// The fully-resolved theme the renderer consumes for one (theme, colorScheme)
-/// pair: concrete 6-role colors plus the key-shadow intensity. Returning the
-/// bundle (not just colors) lets PR-3 add the shadow render without re-touching
-/// the resolver signature.
-// 中文: 渲染端實際消費的解析結果。colors 餵 6 個顏色 sink;keyShadowIntensity 於 PR-3 接入按鍵陰影。
-struct ResolvedKeyboardTheme: Equatable {
-    let colors: KeyboardColorSettings
-    let keyShadowIntensity: Double
-
-    static let `default` = ResolvedKeyboardTheme(colors: .default, keyShadowIntensity: 0)
 }
