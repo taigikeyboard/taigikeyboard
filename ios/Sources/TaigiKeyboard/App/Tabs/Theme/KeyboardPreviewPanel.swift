@@ -6,10 +6,12 @@ import SwiftUI
 
 /// A display-only keyboard preview that renders the real `TaigiKeyboardView`
 /// against a supplied `ThemeAppearance` (a draft user theme, or the default
-/// buffer). Colors / sizes / font / shadow all come from the appearance via
+/// buffer). Colors / sizes / shadow come from the appearance via
 /// `ThemePreviewEnvironment`; row height + corner follow it through the injected
-/// `CustomLayoutService` overload. Nothing here writes the live settings.
-// 中文: 顯示用鍵盤預覽。外觀全部來自傳入的 appearance(草稿),layout 也吃同一份 appearance;不接受輸入,候選列為靜態 mock。
+/// `CustomLayoutService` overload. Font is GLOBAL (not part of the theme), so
+/// both the keys and the callout use `settings.fontType`. Nothing here writes
+/// the live settings.
+// 中文: 顯示用鍵盤預覽。外觀來自傳入的 appearance(草稿);字型走全域設定(非主題)。不接受輸入,候選列為靜態 mock。
 struct KeyboardPreviewPanel: View {
     /// The appearance to render — bound draft (theme editor) or default-buffer appearance.
     let appearance: ThemeAppearance
@@ -35,7 +37,7 @@ struct KeyboardPreviewPanel: View {
             services: services,
             layout: layout,
             emojiKeyboardView: { AnyView(EmptyView()) },
-            calloutStyle: .taigi(for: appearance.fontType),
+            calloutStyle: .taigi(for: settings.fontType),
             autocompleteContext: previewState.autocompleteContext,
             keyboardContext: previewState.keyboardContext,
             composingManager: composingManager,

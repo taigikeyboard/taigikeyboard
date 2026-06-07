@@ -3,14 +3,14 @@ import SwiftUI
 import XCTest
 
 /// Tests for `ThemeResolver` — the pure mapping from a selected theme id to
-/// the `ThemeAppearance` the renderer consumes (v3.6.2; full per-theme
-/// appearance: colors + shadow + 5 size scalars + font).
+/// the `ThemeAppearance` the renderer consumes (v3.6.2; per-theme appearance:
+/// colors + shadow + 5 size scalars. Font is global, not part of a theme).
 ///
 /// Behavior under test:
 /// - `default` → the legacy free-pick appearance verbatim (so uncustomized
 ///   users stay all-nil and customized users keep their look with no migration).
 /// - a known `UserTheme` id → that theme's full appearance.
-/// - a known built-in id → factory sizes/font + the built-in's colorScheme
+/// - a known built-in id → factory sizes + the built-in's colorScheme
 ///   color variant.
 /// - an unknown id (deleted user theme, stale built-in id) → fall back to the
 ///   full legacy appearance.
@@ -59,7 +59,6 @@ final class ThemeResolverTests: XCTestCase {
     func testResolved_default_returnsCustomizedLegacyVerbatim() {
         var legacy = makeAppearance(colors: customized(), shadow: 0.2)
         legacy.keyHeightScale = 1.1
-        legacy.fontType = .iansui
         let resolved = ThemeResolver.resolved(
             themeId: ThemeId.default,
             colorScheme: .light,
@@ -69,13 +68,12 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved, legacy)
     }
 
-    // trace: themeId matches a user theme → that theme's FULL appearance (colors + sizes + font + shadow)
+    // trace: themeId matches a user theme → that theme's FULL appearance (colors + sizes + shadow)
     func testResolved_knownUserTheme_carriesFullAppearance() {
         let id = UUID()
         var appearance = makeAppearance(colors: customized(), shadow: 0.3)
         appearance.keyHeightScale = 1.1
         appearance.keyFontSizeScale = 0.9
-        appearance.fontType = .iansui
         let theme = makeUserTheme(id: id, appearance: appearance)
         let resolved = ThemeResolver.resolved(
             themeId: id.uuidString,
@@ -139,11 +137,10 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertNotEqual(expected.colors(for: .light), expected.colors(for: .dark))
     }
 
-    // trace: built-in themes define colors only → factory sizes/font/shadow, regardless of legacy appearance
-    func testResolved_builtIn_usesFactorySizesAndFont() {
+    // trace: built-in themes define colors only → factory sizes/shadow, regardless of legacy appearance
+    func testResolved_builtIn_usesFactorySizes() {
         var legacy = makeAppearance(colors: customized(), shadow: 0.5)
         legacy.keyHeightScale = 1.15
-        legacy.fontType = .iansui
         let resolved = ThemeResolver.resolved(
             themeId: "nord",
             colorScheme: .dark,
@@ -155,7 +152,6 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved.candidateTextSizeScale, ThemeAppearance.default.candidateTextSizeScale)
         XCTAssertEqual(resolved.keyCornerRadius, ThemeAppearance.default.keyCornerRadius)
         XCTAssertEqual(resolved.keyBorderWidth, ThemeAppearance.default.keyBorderWidth)
-        XCTAssertEqual(resolved.fontType, ThemeAppearance.default.fontType)
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 

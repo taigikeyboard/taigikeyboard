@@ -153,6 +153,7 @@ struct AppearanceSettingsView: View {
     }
 
     // 中文: 由 viewModel 即時組出供預覽用的外觀(sliders / 顏色一動就更新)。陰影固定 0(預設 buffer 無陰影控制)。
+    // 中文: 字型不在外觀包內(全域設定),預覽走全域 fontType。
     private var previewAppearance: ThemeAppearance {
         ThemeAppearance(
             colors: viewModel.savedColors,
@@ -162,7 +163,6 @@ struct AppearanceSettingsView: View {
             candidateTextSizeScale: viewModel.candidateTextSizeScale,
             keyCornerRadius: viewModel.keyCornerRadius,
             keyBorderWidth: viewModel.keyBorderWidth,
-            fontType: viewModel.selectedFontType,
         )
     }
 }

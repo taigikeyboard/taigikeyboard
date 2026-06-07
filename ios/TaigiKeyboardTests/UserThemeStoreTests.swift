@@ -106,7 +106,7 @@ final class UserThemeStoreTests: XCTestCase {
         XCTAssertEqual(store.load(), [])
     }
 
-    // trace: a theme with custom sizes + font survives a write/read round-trip intact.
+    // trace: a theme with custom sizes survives a write/read round-trip intact.
     func testAddAndLoad_fullAppearance_roundTrips() {
         let store = UserThemeStore(containerURL: tempDir, onMutated: {})
         var appearance = ThemeAppearance.default
@@ -116,7 +116,6 @@ final class UserThemeStoreTests: XCTestCase {
         appearance.candidateTextSizeScale = 1.05
         appearance.keyCornerRadius = 12
         appearance.keyBorderWidth = 1.5
-        appearance.fontType = .iansui
         appearance.keyShadowIntensity = 0.4
         let theme = UserTheme(
             id: UUID(),
@@ -131,11 +130,13 @@ final class UserThemeStoreTests: XCTestCase {
         XCTAssertEqual(store.load(), [theme])
     }
 
-    // trace: a theme file written before size/font fields existed (only colors +
+    // trace: a theme file written before the size fields existed (only colors +
     // keyShadowIntensity inside `appearance`) decodes with the new fields filled
     // from ThemeAppearance.default — no theme is lost when the schema grows.
+    // Also: a legacy theme carrying the now-removed "fontType" key still decodes
+    // (Codable ignores unknown keys) — locks the font-walk-back backward-compat.
     func testThemeAppearance_decodesPartialJSON_fillsMissingWithDefaults() throws {
-        let json = Data(#"{ "colors": {}, "keyShadowIntensity": 0.25 }"#.utf8)
+        let json = Data(#"{ "colors": {}, "keyShadowIntensity": 0.25, "fontType": "iansui" }"#.utf8)
         let appearance = try JSONDecoder().decode(ThemeAppearance.self, from: json)
 
         XCTAssertEqual(appearance.keyShadowIntensity, 0.25)
@@ -145,6 +146,5 @@ final class UserThemeStoreTests: XCTestCase {
         XCTAssertEqual(appearance.candidateTextSizeScale, ThemeAppearance.default.candidateTextSizeScale)
         XCTAssertEqual(appearance.keyCornerRadius, ThemeAppearance.default.keyCornerRadius)
         XCTAssertEqual(appearance.keyBorderWidth, ThemeAppearance.default.keyBorderWidth)
-        XCTAssertEqual(appearance.fontType, ThemeAppearance.default.fontType)
     }
 }

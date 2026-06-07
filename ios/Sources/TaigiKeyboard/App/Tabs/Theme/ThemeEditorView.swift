@@ -1,11 +1,12 @@
-// 中文: 自訂主題編輯器。命名 + 全外觀(6 配色 + 5 尺寸 + 陰影 + 字型)+ 即時草稿預覽。
-// 中文: 以 sheet 呈現,內含自有 NavigationStack(字型子頁 + 取消/儲存 toolbar)。Save 後自動套用。
+// 中文: 自訂主題編輯器。命名 + 全外觀(6 配色 + 5 尺寸 + 陰影)+ 即時草稿預覽。字型為全域設定,不在編輯器內。
+// 中文: 以 sheet 呈現,內含自有 NavigationStack(取消/儲存 toolbar)。Save 後自動套用。
 
 import SwiftUI
 
 /// The user-theme editor: name + the full appearance bundle + a live draft
-/// preview. Presented as a sheet; reuses `ThemeColorRow` / `ThemeSliderRow` /
-/// `ThemeFontPickerView`. Adds a shadow slider (user-theme-only feature).
+/// preview. Presented as a sheet; reuses `ThemeColorRow` / `ThemeSliderRow`.
+/// Adds a shadow slider (user-theme-only feature). Font is a global setting, not
+/// part of a theme, so the editor has no font control.
 /// Save persists via the view model and auto-applies; Cancel discards.
 // 中文: 自訂主題編輯器。共用控制列 + 陰影 slider(自訂主題專屬)。Save 落盤並自動套用,Cancel 丟棄。
 struct ThemeEditorView: View {
@@ -25,26 +26,6 @@ struct ThemeEditorView: View {
                     // Name
                     Section(header: Text(ThemeTexts.themeNameHeader)) {
                         TextField(ThemeTexts.themeNamePlaceholder, text: $viewModel.name)
-                    }
-
-                    // Font
-                    Section {
-                        NavigationLink {
-                            ThemeFontPickerView(
-                                selectedFont: Binding(
-                                    get: { viewModel.appearance.fontType },
-                                    set: { viewModel.setFontType($0) },
-                                ),
-                                onChange: { _ in },
-                            )
-                        } label: {
-                            HStack {
-                                Text(ThemeTexts.customFont)
-                                Spacer()
-                                Text(viewModel.appearance.fontType.displayName)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
                     }
 
                     // Keyboard overall: background color + height

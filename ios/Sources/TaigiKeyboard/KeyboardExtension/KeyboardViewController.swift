@@ -137,7 +137,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             emojiKeyboardView: { [unowned self] in
                 emojiService.emojiKeyboardView
             },
-            calloutStyle: .taigi(for: keyboardSettings.resolvedFontType),
+            calloutStyle: .taigi(for: keyboardSettings.fontType),
             autocompleteContext: state.autocompleteContext,
             keyboardContext: state.keyboardContext,
             composingManager: composingManager,

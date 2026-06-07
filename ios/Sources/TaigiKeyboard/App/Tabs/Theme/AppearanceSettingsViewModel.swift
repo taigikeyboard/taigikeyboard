@@ -30,7 +30,8 @@ final class AppearanceSettingsViewModel: ObservableObject {
         static let candidateTextSizeScale = ThemeAppearance.default.candidateTextSizeScale
         static let keyCornerRadius = ThemeAppearance.default.keyCornerRadius
         static let keyBorderWidth = ThemeAppearance.default.keyBorderWidth
-        static let fontType = ThemeAppearance.default.fontType
+        // 中文: 字型為全域設定(非主題),預設值取 FontType 單一來源。
+        static let fontType = FontType.keyboardDefault
     }
 
     // MARK: - Sliders

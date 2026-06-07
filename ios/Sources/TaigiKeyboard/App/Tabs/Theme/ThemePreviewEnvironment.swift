@@ -1,5 +1,5 @@
 // 中文: 外觀預覽專用的 KeyboardEnvironment。讓 KeyboardPreviewPanel 用一份固定/草稿 ThemeAppearance
-// 中文: 渲染真實 TaigiKeyboardView,而不去讀寫全域 SharedSettings —— 編輯器是 draft-and-save。
+// 中文: 渲染真實 TaigiKeyboardView;外觀不讀寫全域 SharedSettings(draft-and-save),非外觀項(含全域字型)仍讀全域。
 
 import Foundation
 import SwiftUI
@@ -9,8 +9,9 @@ import SwiftUI
 /// All appearance reads return the supplied `appearance` (a draft user theme, or
 /// the default buffer), so the preview renders exactly what is being edited
 /// without writing the live settings. Non-appearance reads (layout type, the
-/// notification store, translate/TPS flags) are read from `SharedSettings.shared`
-/// so the preview matches the real keyboard's mode.
+/// notification store, translate/TPS flags, and the GLOBAL font — font is not
+/// part of a theme) are read from `SharedSettings.shared` so the preview matches
+/// the real keyboard's mode + font.
 ///
 /// Writable setters are **local, no-op against persistence**: the preview hosts a
 /// real `CandidateView` whose input-mode toggle would otherwise mutate the
@@ -43,15 +44,15 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
     var keyFontSizeScale: CGFloat { CGFloat(appearance.keyFontSizeScale) }
     var keyBorderWidth: CGFloat { CGFloat(appearance.keyBorderWidth) }
     var candidateTextSizeScale: CGFloat { CGFloat(appearance.candidateTextSizeScale) }
-    var fontType: FontType { appearance.fontType }
-    var resolvedFontType: FontType { appearance.fontType }
+    // 中文: 字型為全域設定(非草稿主題的一部分),預覽用全域字型。
+    var fontType: FontType { base.fontType }
     var keyboardLayoutType: KeyboardLayoutType { base.keyboardLayoutType }
     var settingsUserDefaults: UserDefaults { base.settingsUserDefaults }
 
     func snapshot(for _: ColorScheme) -> SettingsSnapshot {
         SettingsSnapshot(
             inputMode: inputMode,
-            fontType: appearance.fontType,
+            fontType: base.fontType,
             keyboardLayoutType: base.keyboardLayoutType,
             isTranslateSwapped: base.isTranslateSwapped,
             isTpsOrMappedToER: base.isTpsOrMappedToER,

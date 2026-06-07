@@ -163,8 +163,8 @@ struct TaigiKeyboardView: View {
                 .receive(on: DispatchQueue.main),
         ) { _ in
             // 中文: host app 改設定 → bump settingsRevision 強制重繪;body 以 live keyboardContext.colorScheme
-            // 中文: 重新解析主題外觀(selectedThemeId / colorSettings / 各尺寸 / fontType / themeRevision 任一變更皆觸發)。
-            // 中文: 尺寸/字型/邊框/陰影全走 settings.snapshot(per-theme resolved),不再各自 @State 鏡像。
+            // 中文: 重新解析主題外觀(selectedThemeId / colorSettings / 各尺寸 / themeRevision 任一變更皆觸發)。
+            // 中文: 尺寸/邊框/陰影走 settings.snapshot(per-theme resolved);字型為全域設定亦由 snapshot 帶入。不再各自 @State 鏡像。
             settingsRevision &+= 1
         }
     }

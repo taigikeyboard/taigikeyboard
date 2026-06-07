@@ -56,18 +56,21 @@ struct BuiltInTheme: Equatable {
 // MARK: - Theme appearance bundle
 
 /// The full set of appearance values a theme captures: 6-role colors plus the
-/// key-shadow intensity, the five size scalars (key height / key font / candidate
-/// font / corner radius / border width), and the font family.
+/// key-shadow intensity and the five size scalars (key height / key font /
+/// candidate font / corner radius / border width).
 ///
 /// One bundle is the unit of (a) what a `UserTheme` stores, (b) what the
-/// `ThemeResolver` returns, and (c) what the renderer reads — so the eight
-/// values are never spread field-by-field across resolver / snapshot / editor.
+/// `ThemeResolver` returns, and (c) what the renderer reads — so the values are
+/// never spread field-by-field across resolver / snapshot / editor.
+///
+/// Font is intentionally NOT part of a theme: it is a GLOBAL setting
+/// (`SharedSettings.fontType`), so switching themes never changes the font.
 ///
 /// `colors` stays OPTIONAL per role (reuses `KeyboardColorSettings`): a `nil`
 /// role inherits KeyboardKit's adaptive color, preserving the "customize 2 of 6"
 /// behavior. The defaults match `AppearanceSettingsViewModel.Defaults`.
-// 中文: 主題外觀整包 — 6 角色配色 + 陰影 + 5 尺寸 scalar + 字型。
-// 中文: 同一個型別同時是「UserTheme 儲存的內容」「resolver 回傳的結果」「render 讀的值」,避免 8 欄到處平鋪。
+// 中文: 主題外觀整包 — 6 角色配色 + 陰影 + 5 尺寸 scalar。字型不屬於主題(全域設定),切主題不改字型。
+// 中文: 同一個型別同時是「UserTheme 儲存的內容」「resolver 回傳的結果」「render 讀的值」,避免各欄到處平鋪。
 struct ThemeAppearance: Codable, Equatable {
     var colors: KeyboardColorSettings
     var keyShadowIntensity: Double
@@ -76,12 +79,11 @@ struct ThemeAppearance: Codable, Equatable {
     var candidateTextSizeScale: Double
     var keyCornerRadius: Double
     var keyBorderWidth: Double
-    var fontType: FontType
 
     /// Factory appearance — all-nil adaptive colors, flat shadow, unity scales,
-    /// project-default corner radius / border / font. Used as the base for
-    /// built-in themes (which only define colors) and as the missing-field
-    /// fallback when decoding.
+    /// project-default corner radius / border. Used as the base for built-in
+    /// themes (which only define colors) and as the missing-field fallback when
+    /// decoding.
     // 中文: 原廠外觀。內建主題(只定義配色)以此為底;decode 缺欄位也退回這裡。
     static let `default` = ThemeAppearance(
         colors: .default,
@@ -91,7 +93,6 @@ struct ThemeAppearance: Codable, Equatable {
         candidateTextSizeScale: 1,
         keyCornerRadius: 6,
         keyBorderWidth: 0,
-        fontType: .openHuninn,
     )
 
 }
@@ -113,7 +114,7 @@ extension ThemeAppearance {
         candidateTextSizeScale = try container.decodeIfPresent(Double.self, forKey: .candidateTextSizeScale) ?? fallback.candidateTextSizeScale
         keyCornerRadius = try container.decodeIfPresent(Double.self, forKey: .keyCornerRadius) ?? fallback.keyCornerRadius
         keyBorderWidth = try container.decodeIfPresent(Double.self, forKey: .keyBorderWidth) ?? fallback.keyBorderWidth
-        fontType = try container.decodeIfPresent(FontType.self, forKey: .fontType) ?? fallback.fontType
+        // 中文: 字型改為全域設定後不再屬於主題。舊 user_themes.json 帶 "fontType" key 仍可解碼(Codable 忽略未知 key)。
     }
 }
 

@@ -24,7 +24,7 @@ extension InputMode {
 
 /// Font type
 // 中文: 鍵盤字體選擇 enum。除了 system 外,其餘走自訂 PostScript 字體。
-// 中文: Codable 以便存入 ThemeAppearance(每主題字型);String raw → 自動合成編解碼。
+// 中文: 字型是「全域」設定(非每主題);String raw → 自動合成編解碼。
 enum FontType: String, CaseIterable, Codable {
     // 中文: 系統預設字體。
     case system
@@ -36,6 +36,11 @@ enum FontType: String, CaseIterable, Codable {
     case genYoMin // 源樣明體
     // 中文: 源樣烏體 (Gen Yo Gothic),非襯線字。
     case genYoGothic // 源樣烏體
+
+    /// The factory default keyboard font. Single source for the `fontType`
+    /// setting default, `resetToDefaults()`, and the appearance-settings default.
+    // 中文: 原廠預設鍵盤字型。fontType 設定預設值、resetToDefaults、外觀設定預設值的單一來源。
+    static let keyboardDefault: FontType = .openHuninn
 
     /// PostScript font name for custom fonts, nil for system
     // 中文: 自訂字體的 PostScript 名稱;system 回傳 nil 走系統預設。

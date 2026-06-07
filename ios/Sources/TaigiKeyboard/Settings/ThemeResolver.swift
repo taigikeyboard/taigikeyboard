@@ -12,7 +12,7 @@ import SwiftUI
 ///   so uncustomized users stay all-nil (Liquid Glass) and customized users
 ///   keep their look with no migration.
 /// - a known `UserTheme` id → that theme's full appearance.
-/// - a known built-in id → factory sizes/font with the built-in's
+/// - a known built-in id → factory sizes with the built-in's
 ///   `colorScheme`-appropriate color variant.
 ///
 /// Unknown ids — a deleted `UserTheme` still selected, or a stale/unknown
@@ -34,7 +34,7 @@ enum ThemeResolver {
             return theme.appearance
         }
         if let builtIn = builtInThemes.first(where: { $0.id == themeId }) {
-            // Built-in themes define colors only → factory sizes/font + their
+            // Built-in themes define colors only → factory sizes + their
             // colorScheme-appropriate color variant.
             var appearance = ThemeAppearance.default
             appearance.colors = builtIn.colors(for: colorScheme)

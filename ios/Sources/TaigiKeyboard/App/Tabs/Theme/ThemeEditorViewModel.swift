@@ -71,12 +71,6 @@ final class ThemeEditorViewModel: ObservableObject {
 
     // MARK: - Publish-safe bindings into the draft
 
-    func setFontType(_ font: FontType) {
-        var next = appearance
-        next.fontType = font
-        appearance = next
-    }
-
     /// Binding for a 6-role color; `nil` field shows `defaultColor` (adaptive).
     func colorBinding(
         _ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>,

@@ -1,7 +1,7 @@
 // 中文: 鍵盤擴充與主 App 共用的字型工具集中地。
 // 中文: 兩條字型解析路徑 — 鍵面字 (ButtonFontProvider,走 per-render snapshot.fontType) 與
-// 中文: 工具列/候選 UI (globalFont / globalUIFont,走 SharedSettings.shared.resolvedFontType)。
-// 中文: 兩者皆解析「當前主題」的字型(per-theme):snapshot 與 resolvedFontType 都會把選定主題納入。
+// 中文: 工具列/候選 UI (globalFont / globalUIFont,走 SharedSettings.shared.fontType)。
+// 中文: 字型是全域設定(非每主題),兩條路徑皆讀同一個全域 fontType。
 
 import SwiftUI
 import UIKit
@@ -34,7 +34,7 @@ enum KeyboardFonts {
     /// Used by toolbar buttons and candidate views (not keyboard keys).
     // 中文: 工具列按鈕、候選詞 view 的 SwiftUI 字型;鍵面字走 ButtonFontProvider,不走這裡。
     static func globalFont(size: CGFloat) -> Font {
-        if let name = SharedSettings.shared.resolvedFontType.customFontName {
+        if let name = SharedSettings.shared.fontType.customFontName {
             return Font.custom(name, size: size)
         }
         return Font.system(size: size)
@@ -44,7 +44,7 @@ enum KeyboardFonts {
     /// Used where UIKit measurement is needed (e.g. candidate cell width calculation).
     // 中文: 候選詞 cell 寬度量測等需要 UIKit UIFont 的場合使用。
     static func globalUIFont(size: CGFloat) -> UIFont {
-        if let name = SharedSettings.shared.resolvedFontType.customFontName {
+        if let name = SharedSettings.shared.fontType.customFontName {
             return UIFont(name: name, size: size) ?? UIFont.systemFont(ofSize: size)
         }
         return UIFont.systemFont(ofSize: size)

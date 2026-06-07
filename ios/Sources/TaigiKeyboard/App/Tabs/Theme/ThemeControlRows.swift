@@ -91,9 +91,9 @@ struct ThemeSliderRow: View {
 
 // MARK: - Font Picker
 
-/// Font-selection subpage listing `FontType.allCases`. Shared by both appearance
-/// editors (default buffer + user-theme draft).
-// 中文: 字型挑選子頁。兩個外觀編輯器共用(預設 buffer + 自訂主題草稿)。
+/// Font-selection subpage listing `FontType.allCases`. Used by the appearance
+/// settings page to pick the GLOBAL keyboard font (font is not part of a theme).
+// 中文: 字型挑選子頁。供「自訂外觀設定」頁挑選全域鍵盤字型(字型非主題的一部分)。
 struct ThemeFontPickerView: View {
     @Binding var selectedFont: FontType
     var onChange: (FontType) -> Void

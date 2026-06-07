@@ -37,7 +37,7 @@ final class SharedSettings {
     private static let inputModeBeforeTpsKey: SettingsKey<InputMode> = .rawRep("inputModeBeforeTps", default: .tl)
     private static let keyboardLayoutTypeKey: SettingsKey<KeyboardLayoutType> = .rawRep("keyboardLayoutType", default: .phahTaigi)
     private static let layoutBeforeTpsKey: SettingsKey<KeyboardLayoutType> = .rawRep("layoutBeforeTps", default: .phahTaigi)
-    private static let fontTypeKey: SettingsKey<FontType> = .rawRep("fontType", default: .openHuninn)
+    private static let fontTypeKey: SettingsKey<FontType> = .rawRep("fontType", default: .keyboardDefault)
 
     private static let isDoubleTapOOEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapOO", default: true)
     private static let isDoubleTapNNEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapNN", default: true)
@@ -155,7 +155,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isTranslateSwappedKey) }
     }
 
-    // 中文: 鍵盤字體選擇。預設 .openHuninn (jf open 粉圓)。
+    // 中文: 鍵盤字體選擇(全域設定,非每主題)。預設見 FontType.keyboardDefault。
     var fontType: FontType {
         get { userDefaults.value(for: Self.fontTypeKey) }
         set { userDefaults.set(newValue, for: Self.fontTypeKey) }
@@ -539,7 +539,7 @@ final class SharedSettings {
     }
 
     // 中文: 全域外觀(= "default" 主題)。由 SharedSettings 自有的外觀鍵組成 —
-    // 中文: colorSettings + 5 尺寸 scalar + fontType;陰影固定 0(自由配色 buffer 無陰影)。
+    // 中文: colorSettings + 5 尺寸 scalar;陰影固定 0(自由配色 buffer 無陰影)。字型為全域設定,不在此包內。
     private var legacyAppearance: ThemeAppearance {
         ThemeAppearance(
             colors: colorSettings,
@@ -549,7 +549,6 @@ final class SharedSettings {
             candidateTextSizeScale: candidateTextSizeScale,
             keyCornerRadius: keyCornerRadius,
             keyBorderWidth: keyBorderWidth,
-            fontType: fontType,
         )
     }
 
@@ -586,24 +585,6 @@ final class SharedSettings {
         return themes
     }
 
-    // 中文: 已解析的字型。KeyboardFonts.globalFont/globalUIFont(~15 caller,無 per-render snapshot)
-    // 中文: 走這裡。字型與 colorScheme 無關,故免 scheme 參數。default 直接回全域(免 I/O);
-    // 中文: 其餘以 (selectedThemeId, themeRevision) 快取,避免每次 globalFont 都讀 user-theme 檔。
-    private var resolvedFontTypeCache: (themeId: String, revision: Int, fontType: FontType)?
-
-    var resolvedFontType: FontType {
-        let id = selectedThemeId
-        if id == ThemeId.default { return fontType }
-        let revision = userDefaults.value(for: Self.themeRevisionKey)
-        if let cache = resolvedFontTypeCache, cache.themeId == id, cache.revision == revision {
-            return cache.fontType
-        }
-        // colorScheme irrelevant for fontType; .light is an arbitrary fixed pick.
-        let resolved = resolvedAppearance(for: .light).fontType
-        resolvedFontTypeCache = (id, revision, resolved)
-        return resolved
-    }
-
     // MARK: - User theme CRUD
 
     // 中文: user theme CRUD 對外接口(委派 private userThemeStore)。主題編輯器 / Custom Themes shelf 用。
@@ -636,7 +617,7 @@ final class SharedSettings {
         let isUserTheme = ThemeId.isUserTheme(selectedThemeId)
         return SettingsSnapshot(
             inputMode: inputMode,
-            fontType: appearance.fontType,
+            fontType: fontType,
             keyboardLayoutType: keyboardLayoutType,
             isTranslateSwapped: isTranslateSwapped,
             isTpsOrMappedToER: isTpsOrMappedToER,
@@ -658,7 +639,7 @@ final class SharedSettings {
         isTranslateSwapped = false
         isOutputBothScripts = false
         isLiteralRomanCandidateEnabled = true
-        fontType = ThemeAppearance.default.fontType
+        fontType = .keyboardDefault
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi
         // Dictionary toggles (iTaigi, TaiHua default off)
