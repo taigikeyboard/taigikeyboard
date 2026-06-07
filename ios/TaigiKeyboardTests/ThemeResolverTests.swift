@@ -111,30 +111,30 @@ final class ThemeResolverTests: XCTestCase {
 
     // MARK: - Built-in themes
 
-    // trace: built-in id "catppuccin" + .light → catppuccin.colors(for: .light); shadow 0
-    func testResolved_builtIn_lightPicksLightVariant() {
-        let expected = BuiltInThemes.theme(id: "catppuccin")!
+    // trace: built-in id "standardBlue" + .light → catalog branch; scaffold → .default colors; shadow 0
+    func testResolved_builtIn_lightResolvesThroughCatalog() {
+        let expected = BuiltInThemes.theme(id: "standardBlue")!
         let resolved = ThemeResolver.resolved(
-            themeId: "catppuccin",
+            themeId: "standardBlue",
             colorScheme: .light,
             legacyAppearance: makeAppearance(colors: customized()),
             userThemes: [],
         )
         XCTAssertEqual(resolved.colors, expected.colors(for: .light))
+        XCTAssertEqual(resolved.colors, .default, "scaffold theme has no palette → .default colors")
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 
-    // trace: same built-in id + .dark → the dark variant; light != dark proves colorScheme drives the pick
-    func testResolved_builtIn_darkPicksDarkVariant() {
-        let expected = BuiltInThemes.theme(id: "catppuccin")!
+    // trace: same built-in id + .dark → catalog branch wins over the legacy appearance
+    func testResolved_builtIn_darkResolvesThroughCatalog() {
+        let expected = BuiltInThemes.theme(id: "standardBlue")!
         let resolved = ThemeResolver.resolved(
-            themeId: "catppuccin",
+            themeId: "standardBlue",
             colorScheme: .dark,
             legacyAppearance: .default,
             userThemes: [],
         )
         XCTAssertEqual(resolved.colors, expected.colors(for: .dark))
-        XCTAssertNotEqual(expected.colors(for: .light), expected.colors(for: .dark))
     }
 
     // trace: built-in themes define colors only → factory sizes/shadow, regardless of legacy appearance
@@ -142,7 +142,7 @@ final class ThemeResolverTests: XCTestCase {
         var legacy = makeAppearance(colors: customized(), shadow: 0.5)
         legacy.keyHeightScale = 1.15
         let resolved = ThemeResolver.resolved(
-            themeId: "nord",
+            themeId: "standardBlue",
             colorScheme: .dark,
             legacyAppearance: legacy,
             userThemes: [],
@@ -159,11 +159,11 @@ final class ThemeResolverTests: XCTestCase {
     func testResolved_builtIn_resolvesEvenWithUnrelatedUserThemes() {
         let other = makeUserTheme(id: UUID(), appearance: makeAppearance(colors: customized()))
         let resolved = ThemeResolver.resolved(
-            themeId: "nord",
+            themeId: "standardBlue",
             colorScheme: .dark,
             legacyAppearance: .default,
             userThemes: [other],
         )
-        XCTAssertEqual(resolved.colors, BuiltInThemes.theme(id: "nord")!.colors(for: .dark))
+        XCTAssertEqual(resolved.colors, BuiltInThemes.theme(id: "standardBlue")!.colors(for: .dark))
     }
 }

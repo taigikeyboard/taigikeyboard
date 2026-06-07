@@ -40,6 +40,13 @@ struct BuiltInTheme: Equatable {
     let light: KeyboardColorSettings?
     let dark: KeyboardColorSettings?
 
+    /// Asset name for the card preview screenshot (sized to match the 齒盤佈局
+    /// page's `layout_*_preview` assets). `nil` → fall back to the live color
+    /// swatch. Scaffold themes set this and leave `light`/`dark` nil until their
+    /// palettes are authored.
+    // 中文: 卡片預覽截圖的 asset 名(尺寸對齊齒盤佈局頁)。nil 則退回即時色塊 swatch。
+    var previewImageName: String? = nil
+
     /// Picks the variant for `scheme`, falling back to the other variant when
     /// one is absent. `.default` (all-nil → KeyboardKit adaptive) is the final
     /// fallback only for a malformed entry with neither variant.
@@ -68,7 +75,7 @@ struct BuiltInTheme: Equatable {
 ///
 /// `colors` stays OPTIONAL per role (reuses `KeyboardColorSettings`): a `nil`
 /// role inherits KeyboardKit's adaptive color, preserving the "customize 2 of 6"
-/// behavior. The defaults match `AppearanceSettingsViewModel.Defaults`.
+/// behavior. The defaults match `ThemeDefaults`.
 // 中文: 主題外觀整包 — 6 角色配色 + 陰影 + 5 尺寸 scalar。字型不屬於主題(全域設定),切主題不改字型。
 // 中文: 同一個型別同時是「UserTheme 儲存的內容」「resolver 回傳的結果」「render 讀的值」,避免各欄到處平鋪。
 struct ThemeAppearance: Codable, Equatable {

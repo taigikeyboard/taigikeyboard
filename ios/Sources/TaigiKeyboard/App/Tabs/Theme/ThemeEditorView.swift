@@ -31,7 +31,7 @@ struct ThemeEditorView: View {
                     // Keyboard overall: background color + height
                     Section(header: Text(ThemeTexts.keyboardSection)) {
                         colorRow(ThemeTexts.colorKeyboardBackground, \.backgroundColor,
-                                 AppearanceSettingsViewModel.Defaults.keyboardBackground)
+                                 ThemeDefaults.keyboardBackground)
                         sliderRow(ThemeTexts.keyHeight, \.keyHeightScale,
                                   ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                     }
@@ -39,11 +39,11 @@ struct ThemeEditorView: View {
                     // Key: colors + font size + corner radius + border width + shadow
                     Section(header: Text(ThemeTexts.colorKeySection)) {
                         colorRow(ThemeTexts.colorKeyText, \.keyTextColor,
-                                 AppearanceSettingsViewModel.Defaults.keyText)
+                                 ThemeDefaults.keyText)
                         colorRow(ThemeTexts.colorNormalKeyFill, \.normalKeyFillColor,
-                                 AppearanceSettingsViewModel.Defaults.normalKeyFill)
+                                 ThemeDefaults.normalKeyFill)
                         colorRow(ThemeTexts.colorSpecialKeyFill, \.specialKeyFillColor,
-                                 AppearanceSettingsViewModel.Defaults.specialKeyFill)
+                                 ThemeDefaults.specialKeyFill)
                         sliderRow(ThemeTexts.keyFontSize, \.keyFontSizeScale,
                                   ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                         sliderRow(ThemeTexts.keyCornerRadius, \.keyCornerRadius,
@@ -57,9 +57,9 @@ struct ThemeEditorView: View {
                     // Candidate: colors + text size
                     Section(header: Text(ThemeTexts.candidateSection)) {
                         colorRow(ThemeTexts.colorCandidateText, \.candidateTextColor,
-                                 AppearanceSettingsViewModel.Defaults.candidateText)
+                                 ThemeDefaults.candidateText)
                         colorRow(ThemeTexts.colorCandidateBackground, \.candidateBackgroundColor,
-                                 AppearanceSettingsViewModel.Defaults.candidateBackground)
+                                 ThemeDefaults.candidateBackground)
                         sliderRow(ThemeTexts.candidateTextSize, \.candidateTextSizeScale,
                                   ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                     }

@@ -1,98 +1,81 @@
-// 中文: 內建主題靜態表 — 6 套 vim/編輯器配色,各帶 light/dark 兩套 6 角色顏色。
-// 中文: hex 來源 docs/ui/theme-presets-brainstorm.md §5。id 為非 UUID、非 "default" 字串,
-// 中文: 供 ThemeResolver 在非-UUID id 分支查表(免讀 user-theme 檔)。iOS-first 手寫表;
-// 中文: Android 端落地時再評估改共用 JSON(brainstorm fork C)。
+// 中文: 內建主題靜態表 — KeyboardKit 風格目錄,依 family(Standard / Swifty / Minimal)分區。
+// 中文: 排版 scaffold 階段:每個 theme 只有名稱 + 截圖 asset 槽,尚無顏色(light/dark = nil)。
+// 中文: USER 流程 — 先把主題頁排版固定,之後再逐一補各 theme 的實際配色。
+// 中文: id 為非 UUID、非 "default" 字串(SharedSettings 以 UUID 判斷是否讀檔)。
+// 中文: family/variant 名稱取自 KeyboardKit 官網(KK Pro themes 閉源,本地 clone 無此表);USER 之後自行增刪。
 
 import Foundation
 
-/// The app-bundled, read-only theme palettes. iOS source-of-truth for v3.6.2;
-/// every value is gated on device dogfood for contrast/legibility per
-/// `code-review-rules.md §9`.
-///
-/// Role mapping per `theme-presets-brainstorm.md §5`: `background` darkest →
-/// `specialKeyFill` mid → `normalKeyFill` lightest; `keyText` and
-/// `candidateText` share the palette's foreground tone.
-// 中文: 內建主題集合。id 規則:唯一、非 "default"、非 UUID 字串(SharedSettings 以 UUID 判斷是否讀檔)。
+/// One built-in theme family — a section header (`title`) plus its variant
+/// themes, shown as a horizontal shelf in the theme picker (mirrors the
+/// KeyboardKit demo's Standard / Swifty / Minimal grouping).
+// 中文: 單一內建主題 family — section 標題 + 該家族的 variant 主題(主題頁一條橫向 shelf)。
+struct BuiltInThemeFamily: Equatable {
+    let title: String
+    let themes: [BuiltInTheme]
+}
+
+/// The app-bundled, read-only theme catalog, grouped by family. Scaffold stage:
+/// themes carry a `previewImageName` (card screenshot slot) but no palette yet.
+// 中文: 內建主題目錄,依 family 分組。scaffold 階段:有截圖槽,無配色。
 enum BuiltInThemes {
     /// Shelf order shown to the user (after `Default`, before user themes).
-    static let all: [BuiltInTheme] = [
-        catppuccin, gruvbox, tokyoNight, solarized, nord, florisDefault,
+    // 中文: 顯示順序(在 Default 之後、使用者自訂主題之前)。
+    static let families: [BuiltInThemeFamily] = [
+        BuiltInThemeFamily(title: "Standard", themes: [
+            // The Standard head IS the app default (adaptive). Its id is the
+            // `ThemeId.default` sentinel so selecting it = reset-to-default, and
+            // it shows selected whenever no other theme is chosen. Resolver /
+            // SharedSettings early-return on this id before any catalog lookup.
+            // 中文: Standard 第一張 = 預設(adaptive)。id 用 ThemeId.default sentinel,選它=回預設、無選取時它就是亮的。
+            BuiltInTheme(
+                id: ThemeId.default,
+                displayName: "Standard",
+                light: nil,
+                dark: nil,
+                previewImageName: "theme_standard_preview",
+            ),
+            scaffold("standardBlue", "Blue"),
+            scaffold("standardGreen", "Green"),
+            scaffold("standardPurple", "Purple"),
+        ]),
+        BuiltInThemeFamily(title: "Swifty", themes: [
+            scaffold("swifty", "Swifty"),
+            scaffold("swiftyBlue", "Swifty Blue"),
+            scaffold("swiftyGreen", "Swifty Green"),
+            scaffold("swiftyPurple", "Swifty Purple"),
+        ]),
+        BuiltInThemeFamily(title: "Minimal", themes: [
+            scaffold("minimal", "Minimal"),
+            scaffold("minimalBlue", "Blue"),
+            scaffold("minimalGreen", "Green"),
+            scaffold("minimalSunset", "Sunset"),
+        ]),
     ]
+
+    /// Flattened lookup roster — used by `ThemeResolver` / `SharedSettings` to
+    /// resolve a selected id. A scaffold id resolves to `.default` colors until
+    /// its palette is authored.
+    // 中文: 攤平後的查表清單(供 resolver/SharedSettings 以 id 解析);scaffold id 暫解析為 .default 配色。
+    static let all: [BuiltInTheme] = families.flatMap(\.themes)
 
     /// Looks up a built-in by id; `nil` when the id is not a built-in.
     static func theme(id: String) -> BuiltInTheme? {
         all.first { $0.id == id }
     }
 
-    // MARK: - Palettes (hex per brainstorm §5)
-
-    // 中文: Catppuccin — Latte(light)/ Mocha(dark)。MIT。
-    private static let catppuccin = BuiltInTheme(
-        id: "catppuccin",
-        displayName: "Catppuccin",
-        light: roles(bg: 0xEFF1F5, candidateBg: 0xE6E9EF, special: 0xCCD0DA, normal: 0xFFFFFF, text: 0x4C4F69),
-        dark: roles(bg: 0x1E1E2E, candidateBg: 0x181825, special: 0x313244, normal: 0x45475A, text: 0xCDD6F4),
-    )
-
-    // 中文: Gruvbox — light / dark(暖色復古)。MIT。
-    private static let gruvbox = BuiltInTheme(
-        id: "gruvbox",
-        displayName: "Gruvbox",
-        light: roles(bg: 0xFBF1C7, candidateBg: 0xF2E5BC, special: 0xEBDBB2, normal: 0xFFFFFF, text: 0x3C3836),
-        dark: roles(bg: 0x282828, candidateBg: 0x1D2021, special: 0x3C3836, normal: 0x504945, text: 0xEBDBB2),
-    )
-
-    // 中文: Tokyo Night — Day(light)/ Night(dark)。MIT。
-    private static let tokyoNight = BuiltInTheme(
-        id: "tokyoNight",
-        displayName: "Tokyo Night",
-        light: roles(bg: 0xE1E2E7, candidateBg: 0xD5D6DB, special: 0xC4C8DA, normal: 0xFFFFFF, text: 0x343B58),
-        dark: roles(bg: 0x1A1B26, candidateBg: 0x16161E, special: 0x292E42, normal: 0x414868, text: 0xC0CAF5),
-    )
-
-    // 中文: Solarized — Light / Dark(經典 light/dark 配對)。BSD/MIT-style。
-    private static let solarized = BuiltInTheme(
-        id: "solarized",
-        displayName: "Solarized",
-        light: roles(bg: 0xEEE8D5, candidateBg: 0xFDF6E3, special: 0xE3DCC4, normal: 0xFDF6E3, text: 0x657B83),
-        dark: roles(bg: 0x073642, candidateBg: 0x002B36, special: 0x0A3A45, normal: 0x0D4A57, text: 0x93A1A1),
-    )
-
-    // 中文: Nord — dark(Polar Night,官方僅深色)+ 自製 light(Snow Storm 色調,USER 2026-06-07)。MIT。
-    private static let nord = BuiltInTheme(
-        id: "nord",
-        displayName: "Nord",
-        light: roles(bg: 0xE5E9F0, candidateBg: 0xECEFF4, special: 0xD8DEE9, normal: 0xFFFFFF, text: 0x2E3440),
-        dark: roles(bg: 0x2E3440, candidateBg: 0x2E3440, special: 0x3B4252, normal: 0x434C5E, text: 0xECEFF4),
-    )
-
-    // 中文: Floris Default — Day / Night(沿用既有 baseline)。apache-2.0。
-    private static let florisDefault = BuiltInTheme(
-        id: "florisDefault",
-        displayName: "Floris Default",
-        light: roles(bg: 0xE0E0E0, candidateBg: 0xF5F5F5, special: 0xD0D0D0, normal: 0xFFFFFF, text: 0x121212),
-        dark: roles(bg: 0x212121, candidateBg: 0x212121, special: 0x313131, normal: 0x424242, text: 0xDCDCDC),
-    )
-
     // MARK: - Helper
 
-    /// Builds a fully-set 6-role `KeyboardColorSettings` from `0xRRGGBB` values.
-    /// `keyText` and `candidateText` intentionally share one foreground tone.
-    // 中文: 從 6 個 hex 組出全填的 6 角色配色;keyText 與 candidateText 共用前景色(§5 規則)。
-    private static func roles(
-        bg: UInt32,
-        candidateBg: UInt32,
-        special: UInt32,
-        normal: UInt32,
-        text: UInt32,
-    ) -> KeyboardColorSettings {
-        var colors = KeyboardColorSettings()
-        colors.backgroundColor = CodableColor(hex: bg)
-        colors.candidateBackgroundColor = CodableColor(hex: candidateBg)
-        colors.specialKeyFillColor = CodableColor(hex: special)
-        colors.normalKeyFillColor = CodableColor(hex: normal)
-        colors.keyTextColor = CodableColor(hex: text)
-        colors.candidateTextColor = CodableColor(hex: text)
-        return colors
+    /// Builds a colorless scaffold theme: a name + a card screenshot slot
+    /// (`theme_<id>_preview`), no palette. Palettes are authored later, per theme.
+    // 中文: 組一個無配色的 scaffold 主題 — 名稱 + 截圖槽(theme_<id>_preview),配色之後再補。
+    private static func scaffold(_ id: String, _ displayName: String) -> BuiltInTheme {
+        BuiltInTheme(
+            id: id,
+            displayName: displayName,
+            light: nil,
+            dark: nil,
+            previewImageName: "theme_\(id)_preview",
+        )
     }
 }

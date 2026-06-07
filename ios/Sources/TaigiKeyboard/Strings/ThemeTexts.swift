@@ -11,12 +11,6 @@ enum ThemeTexts {
     static let tabTitle = "主題"
     static let tabBarTitle = "主題"
 
-    // MARK: - 主題選擇器 Shelf(PR-2b)
-
-    static let builtInThemesSection = "內建主題"
-    static let defaultThemeName = "預設"
-    static let customAppearance = "自訂外觀設定"
-
     // MARK: - 主題選擇器版面 placeholder
 
     // 中文: 版面草稿用字串(暫借 KeyboardKit 原文)。實際主題逐一加回時 USER 會改成自訂版本。
@@ -29,13 +23,11 @@ enum ThemeTexts {
 
     // MARK: - 外觀設定
 
-    static let appearanceSettings = "外觀設定"
     static let keyHeight = "齒盤懸度"
     static let keyFontSize = "揤鈕字大細"
     static let candidateTextSize = "候選詞大細"
     static let keyCornerRadius = "揤鈕圓角"
     static let keyBorderWidth = "揤鈕邊粗幼"
-    static let appearanceResetAll = "恢復預設外觀"
 
     // MARK: - 色水設定
 

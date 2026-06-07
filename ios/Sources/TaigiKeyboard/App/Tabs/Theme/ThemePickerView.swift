@@ -1,15 +1,19 @@
 // 中文: 主題選擇器 — 主題 tab 的 root。Custom Themes shelf(自訂主題 CRUD + Create New)+
-// 中文: 內建主題 shelf(預設 + 6 套內建,點選即套用)+ 「自訂外觀設定」入口(編輯預設 buffer)。
+// 中文: 預設 shelf + 內建主題依 family(Standard/Swifty/Minimal)各一條橫向 shelf。
+// 中文: 排版對齊齒盤佈局頁(200pt 卡 + 截圖預覽);scaffold 階段內建卡顯示截圖槽而非色塊。
 
 import SwiftUI
 
-/// The theme tab root: a gallery of horizontal "shelves".
+/// The theme tab root: a gallery of horizontal shelves (mirrors the齒盤佈局 page
+/// layout — 200pt cards with screenshot previews, horizontal scroll).
 ///
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
-///   per-card menu) plus a `Create New…` card (hidden at the cap).
-/// - **內建主題** — the `Default` (adaptive) theme plus the six built-in
-///   palettes; tapping a card applies it (`selectedThemeId`).
-/// - **自訂外觀設定** — edits the `Default` theme buffer (`AppearanceSettingsView`).
+///   per-card menu) plus a `Create New…` card (hidden at the cap). These keep
+///   the live color swatch (user-picked palettes).
+/// - **預設** — the `Default` (adaptive) theme.
+/// - **Standard / Swifty / Minimal …** — one shelf per built-in family
+///   (`BuiltInThemes.families`); each card shows its screenshot slot and applies
+///   on tap (`selectedThemeId`). Scaffold stage — palettes authored later.
 ///
 /// `selectedThemeId` / `themeRevision` are read via `@AppStorage` on the App
 /// Group store so selection + the user-theme list refresh reactively when the
@@ -28,11 +32,36 @@ struct ThemePickerView: View {
     @State private var userThemes: [UserTheme] = []
     @State private var editorRoute: ThemeEditorRoute?
 
+    // 中文: 全域鍵盤字型(非主題的一部分)。seed 自 SharedSettings,改動即時落盤。
+    @State private var selectedFontType: FontType = SharedSettings.shared.fontType
+
     private let shelfSpacing: CGFloat = 28
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: shelfSpacing) {
+                // Global keyboard font — standalone entry (font is NOT per-theme;
+                // changing it applies to every theme). Placement refined next round.
+                // 中文: 全域鍵盤字型獨立入口(字型非 per-theme,改一次=全部主題)。
+                NavigationLink {
+                    ThemeFontPickerView(
+                        selectedFont: $selectedFontType,
+                        onChange: { SharedSettings.shared.fontType = $0 },
+                    )
+                } label: {
+                    HStack {
+                        Text(ThemeTexts.customFont)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(selectedFontType.displayName)
+                            .foregroundColor(.secondary)
+                        Image(latinSystemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundColor(Color(.tertiaryLabel))
+                    }
+                    .padding(.horizontal, AppStyle.horizontalPadding)
+                }
+
                 // Custom Themes: user's saved themes + Create New.
                 ThemeShelf(title: ThemeTexts.customThemesSection) {
                     if userThemes.count < UserThemeStore.maxUserThemes {
@@ -42,6 +71,7 @@ struct ThemePickerView: View {
                         ThemeGalleryCard(
                             title: theme.name,
                             colors: theme.appearance.colors,
+                            previewImageName: nil,
                             isSelected: selectedThemeId == theme.id.uuidString,
                             onTap: { apply(theme.id.uuidString) },
                             actions: [
@@ -53,39 +83,21 @@ struct ThemePickerView: View {
                     }
                 }
 
-                // Built-in themes: Default (adaptive) + the six palettes.
-                ThemeShelf(title: ThemeTexts.builtInThemesSection) {
-                    ThemeGalleryCard(
-                        title: ThemeTexts.defaultThemeName,
-                        colors: .default,
-                        isSelected: selectedThemeId == ThemeId.default,
-                        onTap: { apply(ThemeId.default) },
-                        actions: [],
-                    )
-                    ForEach(BuiltInThemes.all, id: \.id) { theme in
-                        ThemeGalleryCard(
-                            title: theme.displayName,
-                            colors: theme.colors(for: colorScheme),
-                            isSelected: selectedThemeId == theme.id,
-                            onTap: { apply(theme.id) },
-                            actions: [],
-                        )
+                // Built-in families: one horizontal shelf each (Standard / Swifty / Minimal …).
+                // The Standard family's first card is the app default (id == ThemeId.default).
+                ForEach(BuiltInThemes.families, id: \.title) { family in
+                    ThemeShelf(title: family.title) {
+                        ForEach(family.themes, id: \.id) { theme in
+                            ThemeGalleryCard(
+                                title: theme.displayName,
+                                colors: theme.colors(for: colorScheme),
+                                previewImageName: theme.previewImageName,
+                                isSelected: selectedThemeId == theme.id,
+                                onTap: { apply(theme.id) },
+                                actions: [],
+                            )
+                        }
                     }
-                }
-
-                // Default-buffer editor entry.
-                NavigationLink {
-                    AppearanceSettingsView()
-                } label: {
-                    HStack {
-                        Text(ThemeTexts.customAppearance)
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Image(latinSystemName: "chevron.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundColor(Color(.tertiaryLabel))
-                    }
-                    .padding(.horizontal, AppStyle.horizontalPadding)
                 }
             }
             .padding(.vertical, AppStyle.horizontalPadding)
@@ -141,28 +153,31 @@ enum ThemeEditorRoute: Identifiable {
 
 // MARK: - Card metrics
 
-/// Shared dimensions for every card on a shelf so previews line up across shelves.
-// 中文: 所有 shelf 卡共用尺寸,跨 shelf 對齊。
+/// Shared dimensions for every card so the theme shelves line up with the 齒盤佈局
+/// page. `width` matches `LayoutOptionCard.cardWidth`; `previewAspectRatio`
+/// matches the `layout_*_preview` assets (585×369) so theme screenshots render
+/// at the identical size.
+// 中文: 卡片共用尺寸 — 對齊齒盤佈局頁。width 同 LayoutOptionCard(200);aspect 同 layout 預覽圖(585×369)。
 private enum ThemeCardMetrics {
-    static let width: CGFloat = 220
-    static let previewHeight: CGFloat = 140
-    static let cardSpacing: CGFloat = 14
+    static let width: CGFloat = 200
+    static let previewAspectRatio: CGFloat = 585.0 / 369.0
+    static let cardSpacing: CGFloat = 12
 }
 
 // MARK: - Shelf
 
-/// One horizontal shelf: a gray section header above a horizontally scrolling row
-/// of cards.
-// 中文: 單一 shelf — 灰色標題 + 橫向捲動的卡列。
+/// One shelf: a gray section header above a horizontally scrolling row of cards
+/// (mirrors the 齒盤佈局 page's `layoutSection`).
+// 中文: 單一 shelf — 灰色標題 + 橫向捲動卡列(對齊齒盤佈局頁排版)。
 private struct ThemeShelf<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(AppStyle.headlineFont)
-                .foregroundColor(.secondary)
+                .font(AppStyle.sectionHeaderFont)
+                .foregroundStyle(.secondary)
                 .padding(.horizontal, AppStyle.horizontalPadding)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -189,22 +204,28 @@ private struct CreateNewThemeCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                        .fill(Color(.systemGray4))
+                // Color.clear sets the aspect-ratio box; the panel is overlaid to fill it.
+                // 中文: Color.clear 定 aspect-ratio 外框,面板 overlay 填滿。
+                Color.clear
+                    .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
+                    .overlay(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
+                                .fill(Color(.systemGray4))
 
-                    RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius)
-                        .fill(Color(.systemBackground))
-                        .frame(width: plusTileSize, height: plusTileSize)
-                        .overlay(
-                            Image(latinSystemName: "plus")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: plusGlyphSize, height: plusGlyphSize)
-                                .foregroundColor(.primary),
-                        )
-                }
-                .frame(width: ThemeCardMetrics.width, height: ThemeCardMetrics.previewHeight)
+                            RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius)
+                                .fill(Color(.systemBackground))
+                                .frame(width: plusTileSize, height: plusTileSize)
+                                .overlay(
+                                    Image(latinSystemName: "plus")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: plusGlyphSize, height: plusGlyphSize)
+                                        .foregroundColor(.primary),
+                                )
+                        },
+                    )
+                    .frame(width: ThemeCardMetrics.width)
 
                 Text(ThemeTexts.createNewTheme)
                     .font(AppStyle.bodyFont)
@@ -228,13 +249,15 @@ private struct ThemeCardAction: Identifiable {
     let action: () -> Void
 }
 
-/// A theme cell: a mini `ThemeSwatch` preview + a title with a selection
-/// checkmark + an optional `…` action menu (user themes only). Tapping the
-/// preview applies the theme.
-// 中文: 主題卡 — 迷你 swatch 預覽 + 標題/打勾 + 自訂主題的「…」動作選單(actions 為空則不顯示)。點預覽即套用。
+/// A theme cell: a preview (screenshot when `previewImageName` is set, else the
+/// live color swatch) + a title with a selection checkmark + an optional `…`
+/// action menu (user themes only). Tapping the preview applies the theme.
+// 中文: 主題卡 — 預覽(有 previewImageName 用截圖,否則用即時色塊)+ 標題/打勾 + 「…」選單。點預覽即套用。
 private struct ThemeGalleryCard: View {
     let title: String
     let colors: KeyboardColorSettings
+    /// Screenshot asset name; `nil` → render the live swatch.
+    let previewImageName: String?
     let isSelected: Bool
     let onTap: () -> Void
     let actions: [ThemeCardAction]
@@ -242,9 +265,14 @@ private struct ThemeGalleryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button(action: onTap) {
-                ThemeSwatch(colors: colors)
-                    .frame(width: ThemeCardMetrics.width, height: ThemeCardMetrics.previewHeight)
+                // Color.clear sets the aspect-ratio box (same ratio as the 齒盤佈局
+                // assets); the preview is overlaid to fill it.
+                // 中文: Color.clear 定 aspect-ratio 外框(同齒盤佈局比例),預覽 overlay 填滿。
+                Color.clear
+                    .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
+                    .overlay(preview)
                     .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
+                    .frame(width: ThemeCardMetrics.width)
                     .overlay(
                         RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
                             .strokeBorder(
@@ -281,6 +309,51 @@ private struct ThemeGalleryCard: View {
             }
             .frame(width: ThemeCardMetrics.width)
         }
+        .frame(width: ThemeCardMetrics.width, alignment: .leading)
+    }
+
+    /// Preview content: the screenshot asset (filling the aspect box) when
+    /// `previewImageName` is set and the asset exists; a neutral placeholder when
+    /// the asset is missing (scaffold stage); otherwise the live color swatch.
+    // 中文: 預覽內容 — 有截圖 asset 用截圖;asset 缺(scaffold)用佔位圖;無 previewImageName 用色塊。
+    @ViewBuilder
+    private var preview: some View {
+        if let previewImageName {
+            if let uiImage = UIImage(named: previewImageName) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                ThemeScreenshotPlaceholder(title: title)
+            }
+        } else {
+            ThemeSwatch(colors: colors)
+        }
+    }
+}
+
+// MARK: - Screenshot placeholder
+
+/// Neutral fallback for a built-in card whose screenshot asset is not yet added
+/// (scaffold stage) — mirrors the 齒盤佈局 page's missing-image fallback.
+// 中文: 內建卡截圖尚未加入時的佔位圖(scaffold 階段),對齊齒盤佈局頁缺圖樣式。
+private struct ThemeScreenshotPlaceholder: View {
+    let title: String
+
+    var body: some View {
+        Rectangle()
+            .fill(Color(.tertiarySystemBackground))
+            .overlay(
+                VStack(spacing: 6) {
+                    Image(latinSystemName: "keyboard")
+                        .font(AppStyle.appFont(size: 28))
+                        .foregroundColor(.secondary)
+                    Text(title)
+                        .font(AppStyle.captionFont)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                },
+            )
     }
 }
 
@@ -296,7 +369,7 @@ private struct ThemeSwatch: View {
     var body: some View {
         // nil roles fall back to the SAME adaptive defaults the real keyboard uses,
         // so the "Default" swatch matches what the keyboard renders.
-        let defaults = AppearanceSettingsViewModel.Defaults.self
+        let defaults = ThemeDefaults.self
         let background = colors.backgroundColor?.color ?? defaults.keyboardBackground
         let normalFill = colors.normalKeyFillColor?.color ?? defaults.normalKeyFill
         let specialFill = colors.specialKeyFillColor?.color ?? defaults.specialKeyFill

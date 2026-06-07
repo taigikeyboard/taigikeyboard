@@ -2,34 +2,46 @@
 import SwiftUI
 import XCTest
 
-/// Tests for the built-in theme table (v3.6.2 PR-2b).
+/// Tests for the built-in theme catalog (v3.6.2 scaffold stage).
 ///
 /// The id invariants are load-bearing: `SharedSettings.resolvedAppearance(for:)`
 /// uses `UUID(uuidString:) != nil` to decide whether to read the user-theme
 /// file, and `ThemeId.default` is the legacy-buffer sentinel. A built-in id
 /// that is a UUID string or equals "default" would be mis-routed.
+///
+/// Scaffold stage: themes carry a `previewImageName` (card screenshot slot) and
+/// no palette yet (`light`/`dark` == nil → `colors(for:)` degrades to `.default`).
 final class BuiltInThemesTests: XCTestCase {
-    // trace: every shipped built-in must have at least one variant, or colors(for:) degrades to .default
-    func testAll_eachThemeHasAtLeastOneVariant() {
+    // trace: families flatten into `all`; a non-empty catalog is required for the picker shelves
+    func testFamilies_flattenIntoAll() {
+        XCTAssertFalse(BuiltInThemes.families.isEmpty, "catalog must have at least one family")
+        let flattened = BuiltInThemes.families.flatMap(\.themes)
+        XCTAssertEqual(BuiltInThemes.all.map(\.id), flattened.map(\.id), "all must equal families flattened")
+    }
+
+    // trace: every catalog theme carries a screenshot slot so the card has a preview asset to load
+    func testAll_eachThemeHasPreviewImageName() {
         for theme in BuiltInThemes.all {
-            XCTAssertTrue(
-                theme.light != nil || theme.dark != nil,
-                "Built-in '\(theme.id)' has neither light nor dark variant",
-            )
+            XCTAssertNotNil(theme.previewImageName, "Built-in '\(theme.id)' must carry a screenshot slot name")
         }
+    }
+
+    // trace: the Standard family head IS the app default (id == sentinel) → reset shows it selected
+    func testStandardHead_isDefaultSentinel() {
+        let head = BuiltInThemes.families.first?.themes.first
+        XCTAssertEqual(head?.id, ThemeId.default)
+        XCTAssertEqual(head?.displayName, "Standard")
+    }
+
+    // trace: only the Standard head may be the default sentinel — any other default id would mis-route
+    func testAll_onlyHeadIsDefaultSentinel() {
+        XCTAssertEqual(BuiltInThemes.all.filter { $0.id == ThemeId.default }.count, 1)
     }
 
     // trace: theme(id:) lookup is by id equality → ids must be unique
     func testAll_idsAreUnique() {
         let ids = BuiltInThemes.all.map(\.id)
         XCTAssertEqual(ids.count, Set(ids).count, "Built-in ids must be unique: \(ids)")
-    }
-
-    // trace: id == "default" would collide with the legacy-buffer sentinel
-    func testAll_idsAreNotDefaultSentinel() {
-        for theme in BuiltInThemes.all {
-            XCTAssertNotEqual(theme.id, ThemeId.default, "Built-in id must not be the 'default' sentinel")
-        }
     }
 
     // trace: a UUID-string id would make SharedSettings read the user-theme file for a built-in
@@ -44,24 +56,30 @@ final class BuiltInThemesTests: XCTestCase {
 
     // trace: theme(id:) returns the matching theme and nil for a non-built-in id
     func testThemeById_returnsMatchOrNil() {
-        XCTAssertEqual(BuiltInThemes.theme(id: "catppuccin")?.id, "catppuccin")
+        XCTAssertEqual(BuiltInThemes.theme(id: "standardBlue")?.id, "standardBlue")
         XCTAssertNil(BuiltInThemes.theme(id: "no_such_theme"))
-        XCTAssertNil(BuiltInThemes.theme(id: ThemeId.default))
+        // The default sentinel resolves to the Standard head (the app default card).
+        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "Standard")
     }
 
-    // trace: a dark-only built-in (light == nil) → .light request falls back to the dark variant.
-    // Uses a synthetic theme: every shipped built-in currently has both variants, so Nord no longer
-    // exercises this branch (it has an authored light). Test the ladder directly via colors(for:).
+    // trace: scaffold theme has no palette → colors(for:) degrades to .default in both schemes
+    func testColorsForScheme_scaffoldThemeDegradesToDefault() {
+        let theme = BuiltInThemes.theme(id: "standardBlue")!
+        XCTAssertEqual(theme.colors(for: .light), .default)
+        XCTAssertEqual(theme.colors(for: .dark), .default)
+    }
+
+    // trace: a dark-only theme (light == nil) → .light request falls back to the dark variant
     func testColorsForScheme_darkOnlyFallsBackToDark() {
-        let darkColors = BuiltInThemes.theme(id: "nord")!.colors(for: .dark)
+        let darkColors = makeColors(hex: 0x112233)
         let darkOnly = BuiltInTheme(id: "test_dark_only", displayName: "Dark Only", light: nil, dark: darkColors)
         XCTAssertEqual(darkOnly.colors(for: .light), darkColors, "light request must fall back to dark when no light")
         XCTAssertEqual(darkOnly.colors(for: .dark), darkColors)
     }
 
-    // trace: a light-only built-in (dark == nil) → .dark request falls back to the light variant
+    // trace: a light-only theme (dark == nil) → .dark request falls back to the light variant
     func testColorsForScheme_lightOnlyFallsBackToLight() {
-        let lightColors = BuiltInThemes.theme(id: "catppuccin")!.colors(for: .light)
+        let lightColors = makeColors(hex: 0xAABBCC)
         let lightOnly = BuiltInTheme(id: "test_light_only", displayName: "Light Only", light: lightColors, dark: nil)
         XCTAssertEqual(lightOnly.colors(for: .dark), lightColors, "dark request must fall back to light when no dark")
         XCTAssertEqual(lightOnly.colors(for: .light), lightColors)
@@ -69,9 +87,11 @@ final class BuiltInThemesTests: XCTestCase {
 
     // trace: colors(for:) returns the requested variant when both exist
     func testColorsForScheme_picksRequestedVariant() {
-        let catppuccin = BuiltInThemes.theme(id: "catppuccin")!
-        XCTAssertEqual(catppuccin.colors(for: .light), catppuccin.light)
-        XCTAssertEqual(catppuccin.colors(for: .dark), catppuccin.dark)
+        let light = makeColors(hex: 0x111111)
+        let dark = makeColors(hex: 0x222222)
+        let theme = BuiltInTheme(id: "test_both", displayName: "Both", light: light, dark: dark)
+        XCTAssertEqual(theme.colors(for: .light), light)
+        XCTAssertEqual(theme.colors(for: .dark), dark)
     }
 
     // trace: CodableColor(hex:) — 0x1E1E2E → (30,30,46)/255, alpha 1; high 8 bits ignored
@@ -86,5 +106,13 @@ final class BuiltInThemesTests: XCTestCase {
     // trace: high 8 bits are masked → 0xFF1E1E2E resolves identically to 0x1E1E2E
     func testCodableColorHex_ignoresHighByte() {
         XCTAssertEqual(CodableColor(hex: 0xFF1E1E2E), CodableColor(hex: 0x1E1E2E))
+    }
+
+    // MARK: - Helpers
+
+    private func makeColors(hex: UInt32) -> KeyboardColorSettings {
+        var colors = KeyboardColorSettings()
+        colors.backgroundColor = CodableColor(hex: hex)
+        return colors
     }
 }
