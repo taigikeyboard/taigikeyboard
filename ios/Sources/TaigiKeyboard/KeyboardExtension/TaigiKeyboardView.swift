@@ -22,11 +22,13 @@ struct TaigiKeyboardView: View {
 
     @StateObject private var expandState = CandidateExpandState()
     @State private var currentInputMode: InputMode
-    @State private var colorSettings: KeyboardColorSettings
     @State private var keyFontSizeScale: CGFloat
     @State private var keyBorderWidth: CGFloat
     @State private var candidateTextSizeScale: CGFloat
     @State private var panels = OverlayPanelState()
+    // 中文: 設定編輯軸的 re-render 觸發器。colorScheme 變動由 keyboardContext(@ObservedObject)
+    // 中文: 自動觸發;但 host app 改顏色/主題時 keyboardContext 不變,靠 didChange bump 此值強制重繪。
+    @State private var settingsRevision = 0
 
     init(
         settings: any KeyboardEnvironment,
@@ -53,8 +55,6 @@ struct TaigiKeyboardView: View {
         self.onTranslateToggle = onTranslateToggle
         self.initialInputMode = initialInputMode
         _currentInputMode = State(initialValue: settings.inputMode)
-        // 中文: @State 持有「解析後」的主題顏色(default 主題 = colorSettings buffer);透過 resolvedTheme 取得。
-        _colorSettings = State(initialValue: settings.resolvedTheme.colors)
         _keyFontSizeScale = State(initialValue: settings.keyFontSizeScale)
         _keyBorderWidth = State(initialValue: settings.keyBorderWidth)
         _candidateTextSizeScale = State(initialValue: settings.candidateTextSizeScale)
@@ -80,7 +80,18 @@ struct TaigiKeyboardView: View {
     }
 
     var body: some View {
-        let p = RenderProviders(keyboardContext: keyboardContext, settings: settings.snapshot())
+        // 中文: 建立 settingsRevision → body 的失效邊。body 每次重算顏色(無快取),colorScheme 軸由
+        // 中文: keyboardContext(@ObservedObject)自動觸發;設定編輯軸則靠 didChange bump 此值。必須在 body
+        // 中文: 讀取它,re-render 才保證觸發(避免依賴「@State 寫入即失效」此一未明確保證的行為)。
+        // 中文: 必須用 `let _ =` 宣告形式 — ViewBuilder body 不接受裸 `_ =` 運算式(會被當成 View)。
+        let _ = settingsRevision
+        // 中文: 單次解析,colorScheme 取自 keyboardContext(KK 已隨系統 trait 同步)。
+        // 中文: 六個顏色 sink 全讀這份 p.settings.colorSettings,避免重複解析或來源分裂。
+        let p = RenderProviders(
+            keyboardContext: keyboardContext,
+            settings: settings.snapshot(for: keyboardContext.colorScheme),
+        )
+        let colors = p.settings.colorSettings
 
         // Transform candidate case based on keyboardCase
         let suggestions = SuggestionCaseTransformer.transform(
@@ -93,18 +104,18 @@ struct TaigiKeyboardView: View {
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
         let theme = CandidateTheme.resolved(
             candidateTextSizeScale: candidateTextSizeScale,
-            colorSettings: colorSettings,
+            colorSettings: colors,
         )
         let candidateStyle = Self.candidateStyle(
             for: keyboardContext,
-            colorSettings: colorSettings,
+            colorSettings: colors,
             height: theme.height,
         )
         // Distinct from `candidateStyle.isLiquidGlassEnabled`: that flag checks the
         // *candidate bar* background (`candidateBackgroundColor`); this flag checks
         // the *root keyboard* background (`backgroundColor`). Keep them independent.
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled
-            && colorSettings.backgroundColor == nil
+            && colors.backgroundColor == nil
         let isTPSLayout = p.settings.keyboardLayoutType == .tps
         let orMapsToER = p.settings.isTpsOrMappedToER
 
@@ -142,19 +153,24 @@ struct TaigiKeyboardView: View {
         .background(
             useLiquidGlassBg
                 ? Color.white.opacity(0.001)
-                : (colorSettings.backgroundColor?.color ?? Color.keyboardBackground),
+                : (colors.backgroundColor?.color ?? Color.keyboardBackground),
         )
+        // 中文: 把主題解析所用的 colorScheme 灌進 environment,讓仍讀 @Environment(\.colorScheme)
+        // 中文: 的子 view(CandidateView / CandidateButtonView)與 resolver 同源,避免淺/深色混色。
+        .environment(\.colorScheme, keyboardContext.colorScheme)
         .onAppear {
             if let mode = initialInputMode {
                 currentInputMode = mode
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            // 中文: 重新解析主題顏色。selectedThemeId / colorSettings / themeRevision 任一變更皆觸發此通知。
-            let latest = settings.resolvedTheme.colors
-            if colorSettings != latest {
-                colorSettings = latest
-            }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: UserDefaults.didChangeNotification)
+                .receive(on: DispatchQueue.main),
+        ) { _ in
+            // 中文: host app 改設定 → bump settingsRevision 強制重繪;body 會以 live keyboardContext.colorScheme
+            // 中文: 重新解析主題顏色(selectedThemeId / colorSettings / themeRevision 任一變更皆觸發此通知)。
+            settingsRevision &+= 1
             let latestScale = settings.keyFontSizeScale
             if keyFontSizeScale != latestScale {
                 keyFontSizeScale = latestScale
@@ -322,8 +338,8 @@ struct TaigiKeyboardView: View {
             style.keyboardFont = p.font.buttonKeyboardFont(for: params.action)
             style.cornerRadius = p.settings.keyCornerRadius
 
-            // Apply custom colors from SharedSettings
-            let colors = colorSettings
+            // Apply resolved theme colors (single source: the per-render snapshot).
+            let colors = p.settings.colorSettings
             if let textColor = colors.keyTextColor?.color {
                 style.foregroundColor = textColor
             }

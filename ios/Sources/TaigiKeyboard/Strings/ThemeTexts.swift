@@ -1,15 +1,21 @@
-// 中文: ThemeTab(主題)所有 UI 文字常數。包含 tab 標題 + 外觀設定頁的字型 /
-// 中文: 尺寸 slider / 配色 row / Section header / 重置按鈕文字(PR-1 自 LayoutTexts 移入)。
-// 中文: 主題選擇器 Shelf 與自訂主題編輯器文字將於後續 PR(PR-2b / PR-3)補上。
+// 中文: ThemeTab(主題)所有 UI 文字常數。包含 tab 標題 + 主題選擇器 Shelf(PR-2b)+
+// 中文: 外觀設定頁的字型 / 尺寸 slider / 配色 row / Section header / 重置按鈕文字(PR-1 自 LayoutTexts 移入)。
+// 中文: 自訂主題編輯器(+ 號)文字將於 PR-3 補上。
 
 // MARK: - ThemeTab 主題文字
 
-// 中文: 主題頁文字 namespace。MARK 子區塊對應「外觀設定」頁的 Form Section 切分。
+// 中文: 主題頁文字 namespace。MARK 子區塊對應「主題選擇器」與「外觀設定」頁的切分。
 enum ThemeTexts {
     // MARK: - Tab 標題
 
     static let tabTitle = "主題"
     static let tabBarTitle = "主題"
+
+    // MARK: - 主題選擇器 Shelf(PR-2b)
+
+    static let builtInThemesSection = "內建主題"
+    static let defaultThemeName = "預設"
+    static let customAppearance = "自訂外觀設定"
 
     // MARK: - 字體設定
 

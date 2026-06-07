@@ -34,6 +34,18 @@ struct CodableColor: Codable, Equatable {
         blue = Double(b)
         alpha = Double(a)
     }
+
+    /// Builds an opaque color from a `0xRRGGBB` literal (any high 8 bits are
+    /// ignored — pass `0xRRGGBB`, not `0xAARRGGBB`). sRGB components, matching
+    /// the `Color(red:green:blue:opacity:)` reconstruction in `color`. Used by
+    /// the built-in theme table; no string parse, no failure path.
+    // 中文: 從 0xRRGGBB 直接算 RGBA(alpha=1),高 8 bits 忽略。內建主題表專用,免字串解析、無失敗路徑。
+    init(hex: UInt32) {
+        red = Double((hex >> 16) & 0xFF) / 255.0
+        green = Double((hex >> 8) & 0xFF) / 255.0
+        blue = Double(hex & 0xFF) / 255.0
+        alpha = 1.0
+    }
 }
 
 // MARK: - Keyboard Color Settings

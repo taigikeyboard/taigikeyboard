@@ -37,6 +37,7 @@ final class ThemeResolverTests: XCTestCase {
     func testResolved_default_returnsLegacyBufferAllNil() {
         let resolved = ThemeResolver.resolved(
             themeId: ThemeId.default,
+            colorScheme: .light,
             legacyColorSettings: .default,
             userThemes: [],
         )
@@ -48,6 +49,7 @@ final class ThemeResolverTests: XCTestCase {
         let legacy = customized()
         let resolved = ThemeResolver.resolved(
             themeId: ThemeId.default,
+            colorScheme: .light,
             legacyColorSettings: legacy,
             userThemes: [],
         )
@@ -55,24 +57,26 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 
-    // trace: themeId matches a user theme → that theme's colors + shadow
+    // trace: themeId matches a user theme → that theme's colors + shadow (colorScheme ignored for user themes)
     func testResolved_knownUserTheme_returnsThemeColorsAndShadow() {
         let id = UUID()
         let themeColors = customized()
         let theme = makeUserTheme(id: id, colors: themeColors, shadow: 0.4)
         let resolved = ThemeResolver.resolved(
             themeId: id.uuidString,
+            colorScheme: .dark,
             legacyColorSettings: .default,
             userThemes: [theme],
         )
         XCTAssertEqual(resolved, ResolvedKeyboardTheme(colors: themeColors, keyShadowIntensity: 0.4))
     }
 
-    // trace: unknown id (e.g. a built-in id before PR-2b) → fallback to legacy buffer
+    // trace: a genuinely unknown id (not "default", not a user UUID, not a built-in) → fallback to legacy buffer
     func testResolved_unknownId_fallsBackToLegacyBuffer() {
         let legacy = customized()
         let resolved = ThemeResolver.resolved(
-            themeId: "catppuccin",
+            themeId: "no_such_theme",
+            colorScheme: .light,
             legacyColorSettings: legacy,
             userThemes: [],
         )
@@ -85,9 +89,51 @@ final class ThemeResolverTests: XCTestCase {
         let other = makeUserTheme(id: UUID(), colors: customized())
         let resolved = ThemeResolver.resolved(
             themeId: staleId.uuidString,
+            colorScheme: .light,
             legacyColorSettings: .default,
             userThemes: [other],
         )
         XCTAssertEqual(resolved, ResolvedKeyboardTheme(colors: .default, keyShadowIntensity: 0))
+    }
+
+    // MARK: - Built-in themes (v3.6.2 PR-2b)
+
+    // trace: built-in id "catppuccin" + .light → BuiltInThemes.theme(id:)!.colors(for: .light); shadow 0
+    func testResolved_builtIn_lightPicksLightVariant() {
+        let expected = BuiltInThemes.theme(id: "catppuccin")!
+        let resolved = ThemeResolver.resolved(
+            themeId: "catppuccin",
+            colorScheme: .light,
+            legacyColorSettings: customized(),
+            userThemes: [],
+        )
+        XCTAssertEqual(resolved.colors, expected.colors(for: .light))
+        XCTAssertEqual(resolved.keyShadowIntensity, 0)
+    }
+
+    // trace: same built-in id + .dark → the dark variant; light != dark proves colorScheme drives the pick
+    func testResolved_builtIn_darkPicksDarkVariant() {
+        let expected = BuiltInThemes.theme(id: "catppuccin")!
+        let resolved = ThemeResolver.resolved(
+            themeId: "catppuccin",
+            colorScheme: .dark,
+            legacyColorSettings: .default,
+            userThemes: [],
+        )
+        XCTAssertEqual(resolved.colors, expected.colors(for: .dark))
+        XCTAssertNotEqual(expected.colors(for: .light), expected.colors(for: .dark))
+    }
+
+    // trace: a user theme whose UUID happens to equal a built-in id is impossible (built-in ids are non-UUID),
+    // but a built-in id must NOT be shadowed by the userThemes list → built-in branch wins over fallback
+    func testResolved_builtIn_resolvesEvenWithUnrelatedUserThemes() {
+        let other = makeUserTheme(id: UUID(), colors: customized())
+        let resolved = ThemeResolver.resolved(
+            themeId: "nord",
+            colorScheme: .dark,
+            legacyColorSettings: .default,
+            userThemes: [other],
+        )
+        XCTAssertEqual(resolved.colors, BuiltInThemes.theme(id: "nord")!.colors(for: .dark))
     }
 }

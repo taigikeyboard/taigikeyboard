@@ -4,6 +4,7 @@
 
 import Foundation
 import KeyboardKit
+import SwiftUI
 
 // 中文: 設定中心 singleton。所有持久化都走 App Group UserDefaults,
 // 中文: inputMode 與 keyboardLayoutType 透過 setInputMode / setKeyboardLayoutType 狀態機維持 1:1 連動。
@@ -538,9 +539,9 @@ final class SharedSettings {
     }
 
     // 中文: 渲染端消費的解析主題。"default" 走快路徑(免 file I/O,維持現有行為)。
-    // 中文: 只有 id 為 UUID(user theme)才讀 user-theme 檔;非 UUID(built-in id,PR-2b)不讀檔 —
-    // 中文: 避免 render 熱路徑無謂 I/O,並讓 PR-2b 的 built-in 解析分支自然接在 else。
-    var resolvedTheme: ResolvedKeyboardTheme {
+    // 中文: 只有 id 為 UUID(user theme)才讀 user-theme 檔;非 UUID(built-in id)不讀檔 —
+    // 中文: 避免 render 熱路徑無謂 I/O,built-in 由 ThemeResolver 查 BuiltInThemes 表並依 colorScheme 取 light/dark。
+    func resolvedTheme(for colorScheme: ColorScheme) -> ResolvedKeyboardTheme {
         let id = selectedThemeId
         if id == ThemeId.default {
             return ResolvedKeyboardTheme(colors: colorSettings, keyShadowIntensity: 0)
@@ -548,6 +549,7 @@ final class SharedSettings {
         let userThemes = UUID(uuidString: id) != nil ? userThemeStore.load() : []
         return ThemeResolver.resolved(
             themeId: id,
+            colorScheme: colorScheme,
             legacyColorSettings: colorSettings,
             userThemes: userThemes,
         )
@@ -556,7 +558,7 @@ final class SharedSettings {
     /// Creates an immutable snapshot of render-relevant settings.
     /// Call once per render cycle to avoid repeated UserDefaults reads.
     // 中文: 取得渲染週期一致快照。每次渲染 (~50 個鍵) 呼叫一次,避免每個鍵都打 UserDefaults。
-    func snapshot() -> SettingsSnapshot {
+    func snapshot(for colorScheme: ColorScheme) -> SettingsSnapshot {
         SettingsSnapshot(
             inputMode: inputMode,
             fontType: fontType,
@@ -565,7 +567,7 @@ final class SharedSettings {
             isTpsOrMappedToER: isTpsOrMappedToER,
             keyFontSizeScale: keyFontSizeScale,
             keyCornerRadius: keyCornerRadius,
-            colorSettings: resolvedTheme.colors,
+            colorSettings: resolvedTheme(for: colorScheme).colors,
         )
     }
 

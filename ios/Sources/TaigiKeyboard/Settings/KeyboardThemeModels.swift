@@ -1,7 +1,8 @@
-// 中文: 鍵盤主題模型 — 主題身分 id、使用者自訂主題、解析後的渲染主題。
-// 中文: built-in 主題表於 PR-2b 加入;此檔為 PR-2a 的主題核心型別。
+// 中文: 鍵盤主題模型 — 主題身分 id、內建主題、使用者自訂主題、解析後的渲染主題。
+// 中文: BuiltInTheme(內建主題)於 PR-2b 加入,提供 light/dark 兩套 6 角色顏色。
 
 import Foundation
+import SwiftUI
 
 // MARK: - Theme identity
 
@@ -13,6 +14,34 @@ enum ThemeId {
     /// KeyboardKit adaptive colors + Liquid Glass; customized users keep their
     /// `colorSettings` look without any migration.
     static let `default` = "default"
+}
+
+// MARK: - Built-in theme
+
+/// A read-only, app-bundled theme: a named palette with light and/or dark
+/// 6-role color variants, resolved against the system `colorScheme` at render
+/// time. `light`/`dark` are concrete `KeyboardColorSettings` (every role set);
+/// a `nil` variant (e.g. Nord, which ships dark-only by design) falls back to
+/// the other variant.
+// 中文: 內建主題(唯讀,隨 app 打包)。每個主題帶 light/dark 兩套具名 6 角色配色,
+// 中文: 渲染時依系統 colorScheme 解析;某一 variant 為 nil 時 fallback 另一套。
+struct BuiltInTheme: Equatable {
+    let id: String
+    let displayName: String
+    let light: KeyboardColorSettings?
+    let dark: KeyboardColorSettings?
+
+    /// Picks the variant for `scheme`, falling back to the other variant when
+    /// one is absent. `.default` (all-nil → KeyboardKit adaptive) is the final
+    /// fallback only for a malformed entry with neither variant.
+    // 中文: 依 colorScheme 取對應 variant;缺一套時退到另一套;兩套皆缺才退 .default。
+    func colors(for scheme: ColorScheme) -> KeyboardColorSettings {
+        switch scheme {
+        case .dark: dark ?? light ?? .default
+        case .light: light ?? dark ?? .default
+        @unknown default: light ?? dark ?? .default
+        }
+    }
 }
 
 // MARK: - User-created theme

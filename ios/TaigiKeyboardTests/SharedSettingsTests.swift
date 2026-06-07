@@ -199,7 +199,7 @@ final class SharedSettingsTests: XCTestCase {
         settings.setKeyboardLayoutType(.qwerty)
         settings.setInputMode(.tps)
 
-        let snap = settings.snapshot()
+        let snap = settings.snapshot(for: .light)
 
         XCTAssertEqual(snap.inputMode, .tps)
         XCTAssertEqual(snap.keyboardLayoutType, .tps)
@@ -217,12 +217,15 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(settings.inputMode, .tl, "Each read must hit UserDefaults; no in-memory cache")
     }
 
-    // MARK: - Theme resolution (v3.6.2 PR-2a — no-migration safety)
+    // MARK: - Theme resolution (v3.6.2 PR-2a — no-migration safety; PR-2b — built-in colorScheme)
 
     // trace: fresh install → selectedThemeId absent → "default" → resolvedTheme.colors == .default (all nil)
     func test_resolvedTheme_defaultUncustomized_returnsAllNil() {
         XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
-        XCTAssertEqual(settings.resolvedTheme, ResolvedKeyboardTheme(colors: .default, keyShadowIntensity: 0))
+        XCTAssertEqual(
+            settings.resolvedTheme(for: .light),
+            ResolvedKeyboardTheme(colors: .default, keyShadowIntensity: 0),
+        )
     }
 
     // trace: a customized user stays on "default" → resolvedTheme preserves their colorSettings verbatim,
@@ -233,7 +236,21 @@ final class SharedSettingsTests: XCTestCase {
         settings.colorSettings = custom
 
         XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
-        XCTAssertEqual(settings.resolvedTheme.colors, custom)
-        XCTAssertEqual(settings.resolvedTheme.keyShadowIntensity, 0)
+        XCTAssertEqual(settings.resolvedTheme(for: .light).colors, custom)
+        XCTAssertEqual(settings.resolvedTheme(for: .light).keyShadowIntensity, 0)
+    }
+
+    // trace: selectedThemeId = built-in "catppuccin" → resolvedTheme picks the colorScheme variant;
+    // light != dark proves SharedSettings threads colorScheme through to the resolver / table.
+    func test_resolvedTheme_builtIn_picksColorSchemeVariant() {
+        settings.selectedThemeId = "catppuccin"
+        let expected = BuiltInThemes.theme(id: "catppuccin")!
+
+        XCTAssertEqual(settings.resolvedTheme(for: .light).colors, expected.colors(for: .light))
+        XCTAssertEqual(settings.resolvedTheme(for: .dark).colors, expected.colors(for: .dark))
+        XCTAssertNotEqual(
+            settings.resolvedTheme(for: .light).colors,
+            settings.resolvedTheme(for: .dark).colors,
+        )
     }
 }
