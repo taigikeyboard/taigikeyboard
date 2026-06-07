@@ -78,10 +78,11 @@ struct ThemePickerView: View {
             .padding(.vertical, AppStyle.horizontalPadding)
         }
         .navigationTitle(ThemeTexts.tabTitle)
-        // 中文: themeRevision(任何 CRUD bump)變更即重載清單;新增/編輯/刪除皆涵蓋,免 sheet onDismiss 重複讀。
+        // 中文: themeRevision(任何 CRUD bump)變更即重載清單;新增/編輯/刪除皆涵蓋,pop 回此頁亦 onAppear 重載。
         .onAppear(perform: reloadUserThemes)
         .onChange(of: themeRevision) { _, _ in reloadUserThemes() }
-        .sheet(item: $editorRoute) { route in
+        // 中文: 編輯器改為子頁面 push(非彈出 sheet),用 ThemeTab 的 NavigationStack。route id 穩定(create="create"、edit=theme.id)。
+        .navigationDestination(item: $editorRoute) { route in
             switch route {
             case .create:
                 ThemeEditorView()
@@ -112,9 +113,13 @@ struct ThemePickerView: View {
 
 // MARK: - Editor route
 
-/// Sheet route for the theme editor: create a new theme, or edit an existing one.
-// 中文: 編輯器 sheet 路由 — 新增或編輯既有主題。
-enum ThemeEditorRoute: Identifiable {
+/// Navigation route for the theme editor: create a new theme, or edit an existing one.
+///
+/// `Hashable` is required by `navigationDestination(item:)`; both `==` and
+/// `hash(into:)` key on route `id` only, so `UserTheme` need not be `Hashable`.
+// 中文: 編輯器 navigation 路由(push 子頁面)— 新增或編輯既有主題。
+// 中文: navigationDestination(item:) 要求 Hashable;==/hash 只看 route id,故 UserTheme 不必 Hashable。
+enum ThemeEditorRoute: Hashable {
     case create
     case edit(UserTheme)
 
@@ -123,6 +128,14 @@ enum ThemeEditorRoute: Identifiable {
         case .create: "create"
         case let .edit(theme): theme.id.uuidString
         }
+    }
+
+    static func == (lhs: ThemeEditorRoute, rhs: ThemeEditorRoute) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 

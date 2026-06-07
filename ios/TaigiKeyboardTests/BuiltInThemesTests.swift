@@ -30,7 +30,7 @@ final class BuiltInThemesTests: XCTestCase {
     func testStandardHead_isDefaultSentinel() {
         let head = BuiltInThemes.families.first?.themes.first
         XCTAssertEqual(head?.id, ThemeId.default)
-        XCTAssertEqual(head?.displayName, "Standard")
+        XCTAssertEqual(head?.displayName, "經典")
     }
 
     // trace: only the Standard head may be the default sentinel — any other default id would mis-route
@@ -59,7 +59,7 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: "standardBlue")?.id, "standardBlue")
         XCTAssertNil(BuiltInThemes.theme(id: "no_such_theme"))
         // The default sentinel resolves to the Standard head (the app default card).
-        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "Standard")
+        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "經典")
     }
 
     // trace: scaffold theme has no palette → colors(for:) degrades to .default in both schemes

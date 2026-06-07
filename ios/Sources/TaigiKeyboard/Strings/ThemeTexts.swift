@@ -53,6 +53,9 @@ enum ThemeTexts {
     static let keyShadow = "揤鈕陰影"
     static let editorSave = "儲存"
     static let editorCancel = "取消"
+    static let editorResetAll = "恢復預設設定"
+    // 中文: 儲存時名稱留空 ê fallback(身分為 UUID,名稱可重複,事後可 edit 改)。
+    static let defaultThemeName = "新主題"
 
     // MARK: - Custom Themes shelf 動作選單
 

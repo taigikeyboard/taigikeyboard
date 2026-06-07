@@ -42,9 +42,11 @@ final class ThemeEditorViewModel: ObservableObject {
     /// Whether the title is for an edit (vs. a new theme).
     var isEditing: Bool { editingId != nil }
 
-    /// Non-empty trimmed name is the only save gate.
-    var isSaveEnabled: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    /// For a NEW theme, whether the store is below the cap; always `true` when
+    /// editing (updates never hit the cap). The Save flow checks this before
+    /// prompting for a name so the cap alert and the name alert never chain.
+    var canSaveNewTheme: Bool {
+        editingId != nil || settings.loadUserThemes().count < UserThemeStore.maxUserThemes
     }
 
     /// Persists the draft and auto-applies it. Returns `false` only when adding a
@@ -94,6 +96,13 @@ final class ThemeEditorViewModel: ObservableObject {
         var next = appearance
         next.colors[keyPath: keyPath] = nil
         appearance = next
+    }
+
+    /// Resets the whole draft appearance to factory defaults. Draft-only: the name
+    /// is kept, nothing is persisted, and the applied theme stays untouched until
+    /// `save()`. `ThemeAppearance` is a value type, so this cannot leak to the live theme.
+    func resetToDefaults() {
+        appearance = .default
     }
 
     /// Binding for a scalar appearance field (sliders).
