@@ -28,6 +28,7 @@ struct SettingsSnapshot {
     let candidateTextSizeScale: CGFloat
     // 中文: 鍵帽邊框寬度(每主題)。
     let keyBorderWidth: CGFloat
-    // 中文: 鍵帽陰影強度(每主題,0 = 無陰影)。
-    let keyShadowIntensity: CGFloat
+    // 中文: 鍵帽陰影(每主題,三態):nil = 沿用 KeyboardKit 標準陰影(default / built-in 主題,= HEAD 觀感);
+    // 中文: 0 = 明確無陰影(自訂主題 slider 拉到 0);>0 = 明確指定的陰影 point size。
+    let keyShadowIntensity: CGFloat?
 }

@@ -1,20 +1,21 @@
-// 中文: 外觀設定子頁底部的鍵盤預覽面板。重用真實 TaigiKeyboardView 並注入 mock 候選列。
+// 中文: 外觀編輯器底部的鍵盤預覽面板。用一份 ThemeAppearance(草稿或預設 buffer)
+// 中文: 透過 ThemePreviewEnvironment 渲染真實 TaigiKeyboardView,不讀寫全域設定。
 
 import KeyboardKit
 import SwiftUI
 
-/// A display-only keyboard preview that renders the real `TaigiKeyboardView`.
-/// All appearance settings (key height, font size, candidate text size, corner radius, font)
-/// propagate automatically through the injected `KeyboardEnvironment` →
-/// `CustomLayoutService` / `ButtonFontProvider`.
-// 中文: 顯示用鍵盤預覽 View。外觀參數透過注入的 KeyboardEnvironment 自動傳遞,
-// 中文: 不接受實際輸入,候選列為靜態 mock 項。
+/// A display-only keyboard preview that renders the real `TaigiKeyboardView`
+/// against a supplied `ThemeAppearance` (a draft user theme, or the default
+/// buffer). Colors / sizes / font / shadow all come from the appearance via
+/// `ThemePreviewEnvironment`; row height + corner follow it through the injected
+/// `CustomLayoutService` overload. Nothing here writes the live settings.
+// 中文: 顯示用鍵盤預覽。外觀全部來自傳入的 appearance(草稿),layout 也吃同一份 appearance;不接受輸入,候選列為靜態 mock。
 struct KeyboardPreviewPanel: View {
-    let keyHeightScale: Double
-    let keyFontSizeScale: Double
-    let candidateTextSizeScale: Double
-    let keyCornerRadius: Double
-    let fontType: FontType
+    /// The appearance to render — bound draft (theme editor) or default-buffer appearance.
+    let appearance: ThemeAppearance
+    /// `true` for user-theme drafts (shadow slider 0 = flat); `false` for the
+    /// default buffer (keeps KeyboardKit's standard shadow, matching the keyboard).
+    let appliesThemeShadow: Bool
     let colorScheme: ColorScheme
 
     @State private var previewState = Keyboard.State()
@@ -23,15 +24,18 @@ struct KeyboardPreviewPanel: View {
     var body: some View {
         let services = Keyboard.Services(state: previewState)
         let layout = CustomLayoutService()
-            .keyboardLayout(for: previewState.keyboardContext)
-        let settings = SharedSettings.shared
+            .keyboardLayout(for: previewState.keyboardContext, appearance: appearance)
+        let settings = ThemePreviewEnvironment(
+            appearance: appearance,
+            appliesThemeShadow: appliesThemeShadow,
+        )
 
         TaigiKeyboardView(
             settings: settings,
             services: services,
             layout: layout,
             emojiKeyboardView: { AnyView(EmptyView()) },
-            calloutStyle: Self.createCalloutStyle(fontType: fontType),
+            calloutStyle: .taigi(for: appearance.fontType),
             autocompleteContext: previewState.autocompleteContext,
             keyboardContext: previewState.keyboardContext,
             composingManager: composingManager,
@@ -57,31 +61,5 @@ struct KeyboardPreviewPanel: View {
             .init(text: "kú-nî", title: "kú-nî", subtitle: "久年"),
             .init(text: "gîm-á", title: "gîm-á", subtitle: "砛仔"),
         ]
-    }
-
-    // 中文: 依 fontType 產生對應的 KeyboardKit Callout 樣式,確保彈出 callout 的字型與按鍵一致。
-    private static func createCalloutStyle(fontType: FontType) -> Callouts.CalloutStyle {
-        switch fontType {
-        case .system:
-            return .standard
-        case .openHuninn:
-            let name = KeyboardFonts.openHuninnFontName
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),
-            )
-        case .iansui:
-            let name = KeyboardFonts.iansuiFontName
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),
-            )
-        case .genYoMin, .genYoGothic:
-            let name = fontType.customFontName!
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),
-            )
-        }
     }
 }

@@ -1,25 +1,18 @@
-// 中文: Theme Tab(主題)下的「外觀設定」頁。提供字型、配色、按鍵尺寸、候選列字級
-// 中文: 等可調項目,並在底部錨定 KeyboardPreviewPanel 預覽。
+// 中文: Theme Tab(主題)下的「自訂外觀設定」頁 = 編輯「預設」主題 buffer(live-write SharedSettings)。
+// 中文: 字型、配色、按鍵尺寸、候選列字級等可調項,底部錨定 KeyboardPreviewPanel 預覽。
 
 import KeyboardKit
 import SwiftUI
 
-/// Appearance settings subpage
-///
-/// Provides font selection, 4 sliders for key height, key font size, candidate text size,
-/// and key corner radius, with a keyboard preview anchored at the bottom.
-// 中文: 外觀設定 SwiftUI 子頁。包含字型挑選、4 條尺寸 slider、配色 row,
-// 中文: 與底部固定的 KeyboardPreviewPanel。
+/// The "自訂外觀設定" subpage: edits the **default** theme buffer live (writes
+/// `SharedSettings` immediately via `AppearanceSettingsViewModel`). Reuses the
+/// shared `ThemeColorRow` / `ThemeSliderRow` controls. No shadow control — the
+/// shadow slider is a user-theme-only feature in `ThemeEditorView`; the default
+/// theme keeps KeyboardKit's standard shadow (`appliesThemeShadow: false`).
+// 中文: 編輯「預設」主題 buffer(即時寫入)。共用 ThemeColorRow / ThemeSliderRow;無陰影控制(陰影是自訂主題專屬)。
 struct AppearanceSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = AppearanceSettingsViewModel()
-
-    private let scaleRange: ClosedRange<Double> = 0.85 ... 1.15
-    private let scaleStep: Double = 0.01
-    private let radiusRange: ClosedRange<Double> = 0 ... 15
-    private let radiusStep: Double = 0.5
-    private let borderWidthRange: ClosedRange<Double> = 0 ... 3
-    private let borderWidthStep: Double = 0.5
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,7 +20,7 @@ struct AppearanceSettingsView: View {
                 // Font picker
                 Section {
                     NavigationLink {
-                        AppearanceFontPickerView(
+                        ThemeFontPickerView(
                             selectedFont: $viewModel.selectedFontType,
                             onChange: { viewModel.setFontType($0) },
                         )
@@ -43,16 +36,18 @@ struct AppearanceSettingsView: View {
 
                 // Keyboard overall: background color + height
                 Section(header: Text(ThemeTexts.keyboardSection)) {
-                    colorRow(
+                    ThemeColorRow(
                         label: ThemeTexts.colorKeyboardBackground,
                         color: $viewModel.keyboardBackground,
                         defaultColor: AppearanceSettingsViewModel.Defaults.keyboardBackground,
-                        keyPath: \.backgroundColor,
+                        isCustomized: viewModel.savedColors.backgroundColor != nil,
+                        onChange: { viewModel.applyColorChange(\.backgroundColor, to: $0) },
+                        onReset: { viewModel.resetColor(\.backgroundColor) },
                     )
-                    sliderRow(
+                    ThemeSliderRow(
                         label: ThemeTexts.keyHeight,
                         value: $viewModel.keyHeightScale,
-                        in: scaleRange, step: scaleStep,
+                        range: ThemeSliderRanges.scale, step: ThemeSliderRanges.scaleStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyHeightScale,
                         onChanged: { viewModel.setKeyHeightScale($0) },
                     )
@@ -60,42 +55,48 @@ struct AppearanceSettingsView: View {
 
                 // Key section: colors + font size + corner radius + border width
                 Section(header: Text(ThemeTexts.colorKeySection)) {
-                    colorRow(
+                    ThemeColorRow(
                         label: ThemeTexts.colorKeyText,
                         color: $viewModel.keyText,
                         defaultColor: AppearanceSettingsViewModel.Defaults.keyText,
-                        keyPath: \.keyTextColor,
+                        isCustomized: viewModel.savedColors.keyTextColor != nil,
+                        onChange: { viewModel.applyColorChange(\.keyTextColor, to: $0) },
+                        onReset: { viewModel.resetColor(\.keyTextColor) },
                     )
-                    colorRow(
+                    ThemeColorRow(
                         label: ThemeTexts.colorNormalKeyFill,
                         color: $viewModel.normalKeyFill,
                         defaultColor: AppearanceSettingsViewModel.Defaults.normalKeyFill,
-                        keyPath: \.normalKeyFillColor,
+                        isCustomized: viewModel.savedColors.normalKeyFillColor != nil,
+                        onChange: { viewModel.applyColorChange(\.normalKeyFillColor, to: $0) },
+                        onReset: { viewModel.resetColor(\.normalKeyFillColor) },
                     )
-                    colorRow(
+                    ThemeColorRow(
                         label: ThemeTexts.colorSpecialKeyFill,
                         color: $viewModel.specialKeyFill,
                         defaultColor: AppearanceSettingsViewModel.Defaults.specialKeyFill,
-                        keyPath: \.specialKeyFillColor,
+                        isCustomized: viewModel.savedColors.specialKeyFillColor != nil,
+                        onChange: { viewModel.applyColorChange(\.specialKeyFillColor, to: $0) },
+                        onReset: { viewModel.resetColor(\.specialKeyFillColor) },
                     )
-                    sliderRow(
+                    ThemeSliderRow(
                         label: ThemeTexts.keyFontSize,
                         value: $viewModel.keyFontSizeScale,
-                        in: scaleRange, step: scaleStep,
+                        range: ThemeSliderRanges.scale, step: ThemeSliderRanges.scaleStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyFontSizeScale,
                         onChanged: { viewModel.setKeyFontSizeScale($0) },
                     )
-                    sliderRow(
+                    ThemeSliderRow(
                         label: ThemeTexts.keyCornerRadius,
                         value: $viewModel.keyCornerRadius,
-                        in: radiusRange, step: radiusStep,
+                        range: ThemeSliderRanges.radius, step: ThemeSliderRanges.radiusStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyCornerRadius,
                         onChanged: { viewModel.setKeyCornerRadius($0) },
                     )
-                    sliderRow(
+                    ThemeSliderRow(
                         label: ThemeTexts.keyBorderWidth,
                         value: $viewModel.keyBorderWidth,
-                        in: borderWidthRange, step: borderWidthStep,
+                        range: ThemeSliderRanges.borderWidth, step: ThemeSliderRanges.borderWidthStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.keyBorderWidth,
                         onChanged: { viewModel.setKeyBorderWidth($0) },
                     )
@@ -103,22 +104,26 @@ struct AppearanceSettingsView: View {
 
                 // Candidate section: colors + text size
                 Section(header: Text(ThemeTexts.candidateSection)) {
-                    colorRow(
+                    ThemeColorRow(
                         label: ThemeTexts.colorCandidateText,
                         color: $viewModel.candidateText,
                         defaultColor: AppearanceSettingsViewModel.Defaults.candidateText,
-                        keyPath: \.candidateTextColor,
+                        isCustomized: viewModel.savedColors.candidateTextColor != nil,
+                        onChange: { viewModel.applyColorChange(\.candidateTextColor, to: $0) },
+                        onReset: { viewModel.resetColor(\.candidateTextColor) },
                     )
-                    colorRow(
+                    ThemeColorRow(
                         label: ThemeTexts.colorCandidateBackground,
                         color: $viewModel.candidateBackground,
                         defaultColor: AppearanceSettingsViewModel.Defaults.candidateBackground,
-                        keyPath: \.candidateBackgroundColor,
+                        isCustomized: viewModel.savedColors.candidateBackgroundColor != nil,
+                        onChange: { viewModel.applyColorChange(\.candidateBackgroundColor, to: $0) },
+                        onReset: { viewModel.resetColor(\.candidateBackgroundColor) },
                     )
-                    sliderRow(
+                    ThemeSliderRow(
                         label: ThemeTexts.candidateTextSize,
                         value: $viewModel.candidateTextSizeScale,
-                        in: scaleRange, step: scaleStep,
+                        range: ThemeSliderRanges.scale, step: ThemeSliderRanges.scaleStep,
                         defaultValue: AppearanceSettingsViewModel.Defaults.candidateTextSizeScale,
                         onChanged: { viewModel.setCandidateTextSizeScale($0) },
                     )
@@ -135,13 +140,11 @@ struct AppearanceSettingsView: View {
                 }
             }
 
-            // Keyboard preview anchored at bottom
+            // Keyboard preview anchored at bottom. The default buffer keeps
+            // KeyboardKit's standard shadow → `appliesThemeShadow: false`.
             KeyboardPreviewPanel(
-                keyHeightScale: viewModel.keyHeightScale,
-                keyFontSizeScale: viewModel.keyFontSizeScale,
-                candidateTextSizeScale: viewModel.candidateTextSizeScale,
-                keyCornerRadius: viewModel.keyCornerRadius,
-                fontType: viewModel.selectedFontType,
+                appearance: previewAppearance,
+                appliesThemeShadow: false,
                 colorScheme: colorScheme,
             )
         }
@@ -149,95 +152,17 @@ struct AppearanceSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Slider Row
-
-    private func sliderRow(
-        label: String,
-        value: Binding<Double>,
-        in range: ClosedRange<Double>,
-        step: Double,
-        defaultValue: Double,
-        onChanged: @escaping (Double) -> Void,
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(label)
-                Spacer()
-                if value.wrappedValue != defaultValue {
-                    Button {
-                        value.wrappedValue = defaultValue
-                        onChanged(defaultValue)
-                    } label: {
-                        Image(latinSystemName: "arrow.counterclockwise")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Slider(value: value, in: range, step: step)
-                .onChange(of: value.wrappedValue) { _, newValue in
-                    onChanged(newValue)
-                }
-        }
-    }
-
-    // MARK: - Color Row
-
-    private func colorRow(
-        label: String,
-        color: Binding<Color>,
-        defaultColor: Color,
-        keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>,
-    ) -> some View {
-        HStack {
-            ColorPicker(label, selection: color, supportsOpacity: false)
-                .onChange(of: color.wrappedValue) { _, newValue in
-                    viewModel.applyColorChange(keyPath, to: newValue)
-                }
-
-            if viewModel.savedColors[keyPath: keyPath] != nil {
-                Button {
-                    color.wrappedValue = defaultColor
-                    viewModel.resetColor(keyPath)
-                } label: {
-                    Image(latinSystemName: "arrow.counterclockwise")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-}
-
-// MARK: - Font Picker Subpage
-
-// 中文: 字型挑選子頁。列出 FontType.allCases,點選即更新 binding 與通知 viewModel。
-private struct AppearanceFontPickerView: View {
-    @Binding var selectedFont: FontType
-    var onChange: (FontType) -> Void
-
-    var body: some View {
-        Form {
-            Section {
-                ForEach(FontType.allCases, id: \.self) { font in
-                    Button {
-                        selectedFont = font
-                        onChange(font)
-                    } label: {
-                        HStack {
-                            Text(font.displayName)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if selectedFont == font {
-                                Image(latinSystemName: "checkmark")
-                                    .foregroundColor(AppStyle.accentBlue)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle(ThemeTexts.customFont)
-        .navigationBarTitleDisplayMode(.inline)
+    // 中文: 由 viewModel 即時組出供預覽用的外觀(sliders / 顏色一動就更新)。陰影固定 0(預設 buffer 無陰影控制)。
+    private var previewAppearance: ThemeAppearance {
+        ThemeAppearance(
+            colors: viewModel.savedColors,
+            keyShadowIntensity: 0,
+            keyHeightScale: viewModel.keyHeightScale,
+            keyFontSizeScale: viewModel.keyFontSizeScale,
+            candidateTextSizeScale: viewModel.candidateTextSizeScale,
+            keyCornerRadius: viewModel.keyCornerRadius,
+            keyBorderWidth: viewModel.keyBorderWidth,
+            fontType: viewModel.selectedFontType,
+        )
     }
 }

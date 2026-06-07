@@ -14,6 +14,15 @@ enum ThemeId {
     /// KeyboardKit adaptive colors + Liquid Glass; customized users keep their
     /// `colorSettings` look without any migration.
     static let `default` = "default"
+
+    /// Whether `id` is a user theme. User-theme ids are `UUID` strings; the
+    /// `default` buffer and built-in ids are not. Distinguishes themes that own
+    /// their appearance (incl. explicit shadow) from `default` / built-in themes
+    /// that inherit KeyboardKit's standard look.
+    // 中文: id 是否為自訂主題(自訂 = UUID;default / built-in 不是)。用來判斷主題是否自帶外觀(含明確陰影)。
+    static func isUserTheme(_ id: String) -> Bool {
+        UUID(uuidString: id) != nil
+    }
 }
 
 // MARK: - Built-in theme

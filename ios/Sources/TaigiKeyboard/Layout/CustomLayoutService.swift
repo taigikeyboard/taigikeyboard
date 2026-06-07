@@ -11,12 +11,20 @@ private let layoutLogger = DebugLogger(category: "CustomLayoutService")
 /// 並透過 LayoutConverter 轉換為 KeyboardLayout。
 class CustomLayoutService {
     /// 根據 context 建構鍵盤 layout
-    func keyboardLayout(for context: KeyboardContext) -> KeyboardLayout {
+    ///
+    /// `appearance` 預設 nil = 解析當前選定主題的全域外觀(keyboard extension 用)。
+    /// 外觀編輯器預覽傳入 draft `ThemeAppearance`,讓 row height / corner 跟著草稿走,
+    /// 不必先寫進 SharedSettings(編輯器是 draft-and-save)。
+    // 中文: appearance nil → 走全域選定主題;傳入則用該草稿外觀(預覽專用)。
+    func keyboardLayout(
+        for context: KeyboardContext,
+        appearance: ThemeAppearance? = nil,
+    ) -> KeyboardLayout {
         var config = KeyboardLayout.DeviceConfiguration.standard(for: context)
-        // Layout geometry follows the active theme (per-theme key height / corner
-        // radius), resolved for the current colorScheme. Non-appearance reads
-        // (inputMode / layoutType / globe) stay on the live settings below.
-        let appearance = SharedSettings.shared.resolvedAppearance(for: context.colorScheme)
+        // Layout geometry follows the active (or draft) theme (per-theme key height /
+        // corner radius). Non-appearance reads (inputMode / layoutType / globe) stay on
+        // the live settings below.
+        let appearance = appearance ?? SharedSettings.shared.resolvedAppearance(for: context.colorScheme)
         config.rowHeight *= (0.87 * appearance.keyHeightScale)
         config.buttonCornerRadius = appearance.keyCornerRadius
         let converter = LayoutConverter(context: context, config: config)

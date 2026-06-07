@@ -36,6 +36,13 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     var lastInputMode: InputMode?
     var lastKeyboardLayoutType: KeyboardLayoutType?
 
+    /// Previous resolved key-height scale. Row height lives in the layout, which
+    /// is built once in `createKeyboardView`; when the active/edited theme changes
+    /// it, `syncSettings()` rebuilds the keyboard view so the layout recomputes.
+    /// Colors / font / corner already update in place via `TaigiKeyboardView`.
+    // 中文: 上次解析的鍵高係數。row height 由 layout 一次建好,主題改變其值時 syncSettings 重建鍵盤 view。
+    var lastResolvedKeyHeightScale: Double?
+
     /// Identity of the most recent `UITextInput` seen by `textWillChange`.
     /// Pointer-equality detects field switches without touching the iOS 26
     /// SDK's broken `documentIdentifier` UUID bridge.
@@ -130,7 +137,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             emojiKeyboardView: { [unowned self] in
                 emojiService.emojiKeyboardView
             },
-            calloutStyle: createCalloutStyle(),
+            calloutStyle: .taigi(for: keyboardSettings.resolvedFontType),
             autocompleteContext: state.autocompleteContext,
             keyboardContext: state.keyboardContext,
             composingManager: composingManager,

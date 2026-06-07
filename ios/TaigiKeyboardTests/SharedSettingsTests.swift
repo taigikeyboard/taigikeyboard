@@ -269,4 +269,29 @@ final class SharedSettingsTests: XCTestCase {
             settings.resolvedAppearance(for: .dark).colors,
         )
     }
+
+    // MARK: - Snapshot shadow gate (v3.6.2 PR-B — three-state shadow)
+
+    // trace: default theme → snapshot.keyShadowIntensity == nil → render keeps KeyboardKit's
+    // standard button shadow (HEAD look). Shadow is a user-theme-only feature.
+    func test_snapshot_defaultTheme_shadowIsNil() {
+        XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
+        XCTAssertNil(settings.snapshot(for: .light).keyShadowIntensity)
+    }
+
+    // trace: built-in id is not a UUID → not a user theme → shadow nil → keeps KK standard shadow.
+    func test_snapshot_builtInTheme_shadowIsNil() {
+        settings.selectedThemeId = "catppuccin"
+        XCTAssertNil(settings.snapshot(for: .light).keyShadowIntensity)
+    }
+
+    // trace: a user-theme id (UUID) → explicit shadow semantics → non-nil (0 = flat). An orphan
+    // UUID resolves to legacy appearance (shadow 0) but still carries the explicit 0, proving the
+    // gate keys on id shape, not on the resolved value.
+    func test_snapshot_userThemeId_shadowIsExplicit() {
+        settings.selectedThemeId = UUID().uuidString
+        let snap = settings.snapshot(for: .light)
+        XCTAssertNotNil(snap.keyShadowIntensity)
+        XCTAssertEqual(snap.keyShadowIntensity, 0)
+    }
 }

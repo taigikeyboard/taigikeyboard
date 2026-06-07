@@ -171,6 +171,8 @@ extension KeyboardViewController {
         // 6. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         lastInputMode = keyboardSettings.inputMode
         lastKeyboardLayoutType = keyboardSettings.keyboardLayoutType
+        lastResolvedKeyHeightScale = keyboardSettings
+            .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.
@@ -253,6 +255,20 @@ extension KeyboardViewController {
             state.autocompleteContext.reset()
         }
 
+        // Rebuild the keyboard view when the active/edited theme changes row height.
+        // Row height is baked into the layout (built once in createKeyboardView);
+        // colors / font / corner update in place via TaigiKeyboardView, but height
+        // needs a fresh layout. Gate on the RESOLVED key-height so switching between
+        // two same-height themes (or any non-height change) never rebuilds.
+        // 中文: 主題改變解析後的鍵高才重建鍵盤 view(layout 重算 rowHeight);其餘外觀已即時更新,免重建。
+        let currentKeyHeightScale = keyboardSettings
+            .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
+        if lastResolvedKeyHeightScale != currentKeyHeightScale {
+            setupLogger.debug("[SETTINGS] Key height changed: \(lastResolvedKeyHeightScale.map { String($0) } ?? "nil") -> \(currentKeyHeightScale) — rebuilding keyboard view")
+            lastResolvedKeyHeightScale = currentKeyHeightScale
+            viewWillSetupKeyboardView()
+        }
+
         // Sync auto-capitalization override from KeyboardKit settings
         let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
 
@@ -274,16 +290,4 @@ extension KeyboardViewController {
         }
     }
 
-    // 中文: 依當前主題解析後的字型生成長按 callout 視覺樣式。
-    // 中文: callout 在 setup 期固定 → per-theme 字型於下次開鍵盤(重跑 setup)套用。
-    func createCalloutStyle() -> Callouts.CalloutStyle {
-        guard let fontName = keyboardSettings.resolvedFontType.customFontName else {
-            return Callouts.CalloutStyle.standard
-        }
-
-        return Callouts.CalloutStyle(
-            actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
-            inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
-        )
-    }
 }

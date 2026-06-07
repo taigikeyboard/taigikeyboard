@@ -51,4 +51,25 @@ enum ThemeTexts {
 
     static let keyboardSection = "齒盤介面"
     static let candidateSection = "候選詞介面"
+
+    // MARK: - 主題編輯器(PR-B)
+
+    static let editorTitleNew = "新主題"
+    static let editorTitleEdit = "編輯主題"
+    static let themeNameHeader = "主題名稱"
+    static let themeNamePlaceholder = "輸入主題名稱"
+    static let keyShadow = "揤鈕陰影"
+    static let editorSave = "儲存"
+    static let editorCancel = "取消"
+
+    // MARK: - Custom Themes shelf 動作選單
+
+    static let themeMenuApply = "套用"
+    static let themeMenuEdit = "編輯"
+    static let themeMenuDelete = "刪除"
+
+    // 中文: 自訂主題達上限(UserThemeStore.maxUserThemes = 5)的提示。
+    static let capReachedTitle = "已達主題數量上限"
+    static let capReachedMessage = "自訂主題上限是 5 个,請先刪除一个才會使閣新增。"
+    static let capReachedOK = "好"
 }

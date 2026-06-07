@@ -561,13 +561,29 @@ final class SharedSettings {
         if id == ThemeId.default {
             return legacyAppearance
         }
-        let userThemes = UUID(uuidString: id) != nil ? userThemeStore.load() : []
+        let userThemes = ThemeId.isUserTheme(id) ? cachedUserThemes() : []
         return ThemeResolver.resolved(
             themeId: id,
             colorScheme: colorScheme,
             legacyAppearance: legacyAppearance,
             userThemes: userThemes,
         )
+    }
+
+    // 中文: user-theme JSON 以 themeRevision 快取,避免 render 熱路徑(snapshot 每次重繪)反覆讀檔/解碼。
+    // 中文: 任何 CRUD 變更都會 bump themeRevision → 下次讀失配即重載(跨進程也成立,host app 改 → extension 重載)。
+    private var userThemesCache: (revision: Int, themes: [UserTheme])?
+
+    /// Loads user themes, cached by `themeRevision` (bumped on every mutation),
+    /// so the render snapshot does not re-read `user_themes.json` per redraw.
+    private func cachedUserThemes() -> [UserTheme] {
+        let revision = userDefaults.value(for: Self.themeRevisionKey)
+        if let cache = userThemesCache, cache.revision == revision {
+            return cache.themes
+        }
+        let themes = userThemeStore.load()
+        userThemesCache = (revision, themes)
+        return themes
     }
 
     // 中文: 已解析的字型。KeyboardFonts.globalFont/globalUIFont(~15 caller,無 per-render snapshot)
@@ -591,8 +607,9 @@ final class SharedSettings {
     // MARK: - User theme CRUD
 
     // 中文: user theme CRUD 對外接口(委派 private userThemeStore)。主題編輯器 / Custom Themes shelf 用。
+    // 中文: 走 themeRevision 快取(與 render 路徑同源);CRUD 變更 bump revision 後即重載。
     func loadUserThemes() -> [UserTheme] {
-        userThemeStore.load()
+        cachedUserThemes()
     }
 
     /// Appends a user theme. Returns `false` at the cap or on write failure.
@@ -614,6 +631,9 @@ final class SharedSettings {
     // 中文: 取得渲染週期一致快照。每次渲染 (~50 個鍵) 呼叫一次,避免每個鍵都打 UserDefaults。
     func snapshot(for colorScheme: ColorScheme) -> SettingsSnapshot {
         let appearance = resolvedAppearance(for: colorScheme)
+        // 中文: 只有自訂主題套用明確陰影語意(0 = 無陰影);default / built-in 回 nil →
+        // 中文: 渲染端沿用 KeyboardKit 標準陰影,維持 HEAD 觀感(陰影 slider 是自訂主題專屬功能)。
+        let isUserTheme = ThemeId.isUserTheme(selectedThemeId)
         return SettingsSnapshot(
             inputMode: inputMode,
             fontType: appearance.fontType,
@@ -625,7 +645,7 @@ final class SharedSettings {
             colorSettings: appearance.colors,
             candidateTextSizeScale: appearance.candidateTextSizeScale,
             keyBorderWidth: appearance.keyBorderWidth,
-            keyShadowIntensity: appearance.keyShadowIntensity,
+            keyShadowIntensity: isUserTheme ? CGFloat(appearance.keyShadowIntensity) : nil,
         )
     }
 

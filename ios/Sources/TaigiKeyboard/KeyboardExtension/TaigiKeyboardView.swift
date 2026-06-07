@@ -321,17 +321,17 @@ struct TaigiKeyboardView: View {
             style.keyboardFont = p.font.buttonKeyboardFont(for: params.action)
             style.cornerRadius = p.settings.keyCornerRadius
 
-            // Per-theme key shadow. Intensity 0 → leave KK's standard button shadow
-            // untouched (= HEAD behavior; built-ins/default resolve to 0). Intensity > 0
-            // → override with a per-theme shadow of that point size. PR-A only ADDS
-            // shadow; PR-B's slider semantics (0 = no shadow) will need an explicit
-            // `.noShadow` path, since `params.standardStyle()` already carries one.
-            // KK API: Keyboard.ButtonStyle.shadow / Keyboard.ButtonShadowStyle(color:size:).
-            if p.settings.keyShadowIntensity > 0 {
-                style.shadow = Keyboard.ButtonShadowStyle(
-                    color: .keyboardButtonShadow,
-                    size: p.settings.keyShadowIntensity,
-                )
+            // Per-theme key shadow, three-state (snapshot `keyShadowIntensity` is optional):
+            //   nil → leave KK's standard button shadow (= HEAD; default + built-in themes).
+            //   0   → explicit no shadow (a user theme whose shadow slider is at 0 → flat).
+            //   >0  → explicit per-theme shadow of that point size.
+            // The user-theme slider owns 0 = flat; the default theme must keep KK's standard
+            // shadow, so its snapshot reports nil and we never touch `style.shadow`.
+            // KK API: Keyboard.ButtonStyle.shadow / Keyboard.ButtonShadowStyle.noShadow.
+            if let intensity = p.settings.keyShadowIntensity {
+                style.shadow = intensity > 0
+                    ? Keyboard.ButtonShadowStyle(color: .keyboardButtonShadow, size: intensity)
+                    : .noShadow
             }
 
             // Apply resolved theme colors (single source: the per-render snapshot).
