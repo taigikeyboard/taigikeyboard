@@ -68,6 +68,10 @@ fun KeyboardPreviewPanel(
     keyCornerRadius: Float,
     keyBorderWidth: Float,
     fontType: String,
+    // The theme editor passes the draft theme's shadow so the preview matches the
+    // saved key look. The Layout-tab appearance editor omits it (it has no shadow
+    // control) and stays flat.
+    keyShadowIntensity: Float = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         CandidatePreviewRow(
@@ -120,9 +124,7 @@ fun KeyboardPreviewPanel(
             keyFontSizeScale = keyFontSizeScale,
             keyCornerRadius = keyCornerRadius,
             keyBorderWidth = keyBorderWidth,
-            // Flat — the Layout-tab preview has no shadow control (P4 theme editor
-            // preview will supply the theme's intensity).
-            keyShadowIntensity = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
+            keyShadowIntensity = keyShadowIntensity,
             heightFactor = KeyboardHeightFactor.fromPreferenceString(prefs.heightFactor),
             keyHeightScale = keyHeightScale,
         )

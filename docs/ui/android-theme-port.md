@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking, multi-PR)
 > **Keywords**: `theme`, `android`, `port`, `gradient`, `cross-platform`
-> **Status**: Active — P0–P2 merged (P2 = `aa11ebf1`, PR #415); P3 in review (PR #416, built-in shelves only); custom-theme shelf moved P3→P4
+> **Status**: Active — P0–P3 merged (P3 = `ff0c13a9`, PR #416, built-in shelves only); P4 in review (PR #417, custom shelf + editor CRUD)
 > **iOS source**: chain #400-411 (main `786c8366`); spec in memory `project_v362_theme_picker.md` + `docs/ui/theme.md` / `theme-presets-brainstorm.md`
 
 ---
@@ -53,8 +53,8 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 | P0 | Roadmap doc + memory (admin) | Merged (folded into `ad49504b`) |
 | P1 | Model + persistence + resolver + unit tests (no UI, no render change) | Merged `ad49504b` (PR #414, 40 tests green) |
 | P2 | Render seam: gradient bg + transparent candidate + key shadow (republish Flow deferred to P3/P4) | Merged `aa11ebf1` (PR #415) |
-| P3 | Theme tab (index 1) + built-in shelves + `ThemeTexts` strings | **In review (PR #416)** |
-| P4 | Custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) + theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Pending |
+| P3 | Theme tab (index 1) + built-in shelves + `ThemeTexts` strings | Merged `ff0c13a9` (PR #416) |
+| P4 | Custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) + theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | **In review (PR #417)** |
 | P5 | Cleanup: remove appearance page, font → Settings tab, string migration | Pending |
 
 ## Per-phase file inventory
@@ -97,10 +97,11 @@ Tests (`app/src/test/.../ime/core/`): `ThemeResolverTest`, `BuiltInThemesTest`, 
 - `localization/ThemeTexts.kt` — `tabTitle` only.
 - Built-in gradient selection wakes the dormant P2 render seam → P2 gradient/shadow device dogfood now possible.
 
-### P4 — Custom shelf + editor CRUD
-- custom-theme shelf in `ThemePickerScreen`: `CreateNewThemeCard` + user-theme cards (`CustomThemeButtonPreview` single styled key) + per-card apply/edit/delete menu + delete orphan-guard (deleting the active theme falls back to default).
-- `ThemeEditorScreen` (pushed child; 6 colors + 6 sliders + reset; Save-time name dialog cap-5; auto-apply; bottom `KeyboardPreviewPanel` extended for gradient/shadow)
-- reuse `ColorRow` / `SliderRow` / `ColorPickerDialog`
+### P4 — Custom shelf + editor CRUD (PR #417, in review)
+- custom-theme shelf in `ThemePickerScreen`: `CreateNewThemeCard` (hidden at cap 5) + user-theme cards (`CustomThemeButtonPreview` single styled key; nil roles → KeyboardTheme adaptive attrs) + per-card apply/edit/delete overflow menu + delete orphan-guard (`selectionAfterDelete`, unit-tested). Reactive via new `PrefHelper.observeUserThemes()` (distinctUntilChanged on raw JSON before decode). `ThemeCard` generalized: `preview` slot + optional menu; tap-to-apply on preview only.
+- `ThemeEditorScreen` + `ThemeEditorActivity` (full-screen Activity, mirrors `AppearanceSettingsActivity` — NOT intra-tab nav-child, so the pinned preview is not squeezed by the bottom tab bar): draft `ThemeAppearance` (6 colors + 5 size sliders + key-shadow slider + reset) in `rememberSaveable` (survives rotation); Save-time name dialog (no inline field); cap pre-check; `onSave` returns Boolean so a cap TOCTOU race re-shows the dialog; edit loads latest by id and a missing target is a no-op finish (never create); save strips `backgroundGradient` (custom themes flat).
+- `KeyboardPreviewPanel` +`keyShadowIntensity` param (default flat; Layout-tab caller unaffected). **Gradient deliberately NOT added to the editor preview** — custom themes never carry a gradient (no editor control; new = DEFAULT; user themes are flat), so the draft's `backgroundGradient` is always null and `KeyboardLayout` renders flat correctly. Divergence from the original "extend for gradient/shadow" plan note: shadow only.
+- reuse `ColorRow` / `SliderRow` / `ColorPickerDialog` / `KeyboardPreviewPanel`. `ColorSettingRow` + `ColorPickerTarget` temporarily duplicate the `AppearanceSettingsScreen` private copies (cross-package private; consolidated to `ui/components` in P5 when that screen is deleted — tracked with a `// P5:` note).
 
 ### P5 — Cleanup
 - remove `AppearanceSettingsScreen` / `AppearanceSettingsActivity` + Layout `ActionRow` → Layout layout-only

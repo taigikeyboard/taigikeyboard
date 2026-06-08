@@ -701,6 +701,20 @@ class PrefHelper(
             }.distinctUntilChanged()
 
     /**
+     * Observes the user-theme list as a Flow, so the theme picker's custom shelf
+     * refreshes whenever a theme is added / edited / deleted — including writes
+     * from the editor Activity (DataStore is process-wide). Dedupes on the raw
+     * JSON string BEFORE decoding so an unrelated preference emission never
+     * triggers a re-parse.
+     */
+    fun observeUserThemes(): Flow<List<UserTheme>> =
+        dataStore.data
+            .map { prefs ->
+                prefs[PreferenceKeys.USER_THEMES] ?: DEFAULT_USER_THEMES
+            }.distinctUntilChanged()
+            .map { UserTheme.decodeList(it) }
+
+    /**
      * Migrates data from SharedPreferences to DataStore.
      * This is called once during the first app launch after update.
      *
