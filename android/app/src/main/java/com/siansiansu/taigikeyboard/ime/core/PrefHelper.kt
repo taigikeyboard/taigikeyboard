@@ -74,14 +74,18 @@ class PrefHelper(
         private const val MAX_COLLECTOR_RETRIES = 3L
         private const val COLLECTOR_RETRY_DELAY_MS = 1_000L
 
-        // Appearance default values — single source of truth for getters, reset, and UI
-        const val DEFAULT_KEY_HEIGHT_SCALE = 1.0f
-        const val DEFAULT_KEY_FONT_SIZE_SCALE = 1.0f
-        const val DEFAULT_CANDIDATE_TEXT_SIZE_SCALE = 1.0f
-        const val DEFAULT_KEY_CORNER_RADIUS = 6.0f
-        const val DEFAULT_KEY_BORDER_WIDTH = 0.0f
+        // Appearance size defaults are owned by ThemeAppearance (the model); referenced here for the settings keys.
+        const val DEFAULT_KEY_HEIGHT_SCALE = ThemeAppearance.DEFAULT_KEY_HEIGHT_SCALE
+        const val DEFAULT_KEY_FONT_SIZE_SCALE = ThemeAppearance.DEFAULT_KEY_FONT_SIZE_SCALE
+        const val DEFAULT_CANDIDATE_TEXT_SIZE_SCALE = ThemeAppearance.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
+        const val DEFAULT_KEY_CORNER_RADIUS = ThemeAppearance.DEFAULT_KEY_CORNER_RADIUS
+        const val DEFAULT_KEY_BORDER_WIDTH = ThemeAppearance.DEFAULT_KEY_BORDER_WIDTH
         const val DEFAULT_FONT_TYPE = "openHuninn"
         const val DEFAULT_COLOR_SETTINGS = "{}"
+
+        // Theme defaults (v3.6.2) — "default" = legacy free-pick buffer; empty user-theme list
+        const val DEFAULT_SELECTED_THEME_ID = ThemeId.DEFAULT
+        const val DEFAULT_USER_THEMES = "[]"
     }
 
     // Always resolve via the application context: `Context.preferencesDataStore`
@@ -502,6 +506,41 @@ class PrefHelper(
 
     var colorSettings: String by preference(PreferenceKeys.COLOR_SETTINGS, DEFAULT_COLOR_SETTINGS)
 
+    // Theme settings (v3.6.2)
+    var selectedThemeId: String by preference(PreferenceKeys.SELECTED_THEME_ID, DEFAULT_SELECTED_THEME_ID)
+
+    var userThemes: String by preference(PreferenceKeys.USER_THEMES, DEFAULT_USER_THEMES)
+
+    /** Loads the persisted user themes. */
+    fun loadUserThemes(): List<UserTheme> = UserTheme.decodeList(userThemes)
+
+    /**
+     * The legacy free-pick appearance = the current global color settings + the
+     * five size scalars (flat shadow). This is the `"default"` theme's appearance;
+     * existing customized users keep their look here with no migration.
+     */
+    val legacyAppearance: ThemeAppearance
+        get() =
+            ThemeAppearance(
+                colors = KeyboardColorSettings.fromJson(colorSettings),
+                keyShadowIntensity = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
+                keyHeightScale = keyHeightScale,
+                keyFontSizeScale = keyFontSizeScale,
+                candidateTextSizeScale = candidateTextSizeScale,
+                keyCornerRadius = keyCornerRadius,
+                keyBorderWidth = keyBorderWidth,
+            )
+
+    /**
+     * Resolves the active theme into the appearance the renderer consumes.
+     *
+     * Convenience form — re-parses the colorSettings + userThemes JSON on every
+     * call. NOT for the per-keystroke render path: P2 routes that through
+     * KeyboardAppearanceResolver's string-equality parse cache instead.
+     */
+    fun resolvedAppearance(isDark: Boolean): ThemeAppearance =
+        ThemeResolver.resolved(selectedThemeId, isDark, legacyAppearance, loadUserThemes())
+
     // 異用字開關（預設關閉）
     var variantEnabled: Boolean by preference(PreferenceKeys.VARIANT_DICT_ENABLED, false)
 
@@ -731,6 +770,8 @@ class PrefHelper(
             // 保存需要保留的值
             val versionOnInstall = prefs[PreferenceKeys.VERSION_ON_INSTALL]
             val versionLastUse = prefs[PreferenceKeys.VERSION_LAST_USE]
+            // User-created themes are user content (like the SQLite user DBs) — preserved across a full settings reset.
+            val userThemes = prefs[PreferenceKeys.USER_THEMES]
 
             // 清除所有偏好設定
             prefs.clear()
@@ -738,6 +779,7 @@ class PrefHelper(
             // 恢復需要保留的值
             versionOnInstall?.let { prefs[PreferenceKeys.VERSION_ON_INSTALL] = it }
             versionLastUse?.let { prefs[PreferenceKeys.VERSION_LAST_USE] = it }
+            userThemes?.let { prefs[PreferenceKeys.USER_THEMES] = it }
 
             // 設定預設值（明確寫入，確保一致性）
             prefs[PreferenceKeys.SETTINGS_THEME] = "auto"
@@ -771,6 +813,7 @@ class PrefHelper(
             prefs[PreferenceKeys.ASSOCIATION_RECORDING_ENABLED] = true
             prefs[PreferenceKeys.CUSTOM_DICT_ENABLED] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
+            prefs[PreferenceKeys.SELECTED_THEME_ID] = DEFAULT_SELECTED_THEME_ID
 
             CompositionRoot.shared(context).logger.debug(TAG) { "All preferences reset to defaults" }
         }

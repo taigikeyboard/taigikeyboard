@@ -119,4 +119,8 @@ object PreferenceKeys {
     val KEY_CORNER_RADIUS = floatPreferencesKey("appearance__key_corner_radius")
     val KEY_BORDER_WIDTH = floatPreferencesKey("appearance__key_border_width")
     val COLOR_SETTINGS = stringPreferencesKey("appearance__color_settings")
+
+    // Theme settings (v3.6.2)
+    val SELECTED_THEME_ID = stringPreferencesKey("appearance__selected_theme_id")
+    val USER_THEMES = stringPreferencesKey("appearance__user_themes")
 }

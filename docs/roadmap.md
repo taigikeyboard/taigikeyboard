@@ -92,7 +92,7 @@ Forward-looking candidates only, NOT items already shipped. (v3.5.8-era items th
 
 ### Keyboard theme picker — swipe-select gallery + custom theme + save
 
-**Status**: deferred, unscheduled (user-gated). **Goal** (USER 2026-06-01): swipe left/right through predefined themes, create a custom theme, save the selection — modeled on KeyboardKit Pro's theme shelf.
+**Status**: iOS SHIPPED (chain #400-411, main `786c8366`). **Android port ACTIVE** — multi-PR plan in [`docs/ui/android-theme-port.md`](ui/android-theme-port.md) (P0 done; P1 in flight). **Goal** (USER 2026-06-01): swipe left/right through predefined themes, create a custom theme, save the selection — modeled on KeyboardKit Pro's theme shelf.
 
 **Reference layout** (KeyboardKit Pro `KeyboardTheme.Shelf`, captured from `references/keyboardkit9.9.0` 2026-06-01):
 

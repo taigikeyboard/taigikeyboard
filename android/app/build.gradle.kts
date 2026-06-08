@@ -185,6 +185,10 @@ dependencies {
     // (testOptions.unitTests.isReturnDefaultValues = true), so exercise the
     // exact production SQL string against an in-memory JDBC DB instead.
     testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
+    // Real org.json for JVM unit tests — Android's bundled org.json is stubbed
+    // (testOptions.unitTests.isReturnDefaultValues = true), so theme/color JSON
+    // round-trip tests need the actual implementation on the test classpath.
+    testImplementation("org.json:json:20240303")
 
     // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge
     implementation("com.google.protobuf:protobuf-javalite:3.25.5")
