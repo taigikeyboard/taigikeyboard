@@ -1,5 +1,6 @@
-package com.siansiansu.taigikeyboard.ui.tabs.layout
+package com.siansiansu.taigikeyboard.ui.tabs.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.localization.LayoutTexts
+import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader.FontType
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -38,13 +40,17 @@ fun FontPickerContent(
     onFontSelected: (String) -> Unit,
     onNavigateBack: () -> Unit,
 ) {
+    // Hosted inside the Settings tab (not its own Activity) — intercept system back so
+    // it returns to the tab instead of finishing SettingsMainActivity. Mirrors InputModeScreen.
+    BackHandler(onBack = onNavigateBack)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = LayoutTexts.customFont,
+                        text = ThemeTexts.customFont,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },

@@ -141,14 +141,7 @@ class SettingsMainActivity : AppCompatActivity() {
                         }
 
                         TAB_LAYOUT -> {
-                            LayoutScreen(
-                                prefs = prefs,
-                                onAppearanceSettings = {
-                                    startActivity(
-                                        Intent(this, AppearanceSettingsActivity::class.java),
-                                    )
-                                },
-                            )
+                            LayoutScreen(prefs = prefs)
                         }
 
                         TAB_DICTIONARY -> {

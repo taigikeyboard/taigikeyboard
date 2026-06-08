@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,12 +50,10 @@ import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.LayoutTexts
-import com.siansiansu.taigikeyboard.ui.components.ActionRow
-import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
-// Layout tab main screen: keyboard layout selection and appearance settings navigation
+// Layout tab main screen: keyboard layout selection
 
 private data class LayoutOption(
     val key: String,
@@ -79,10 +76,7 @@ private val phoneticLayouts =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LayoutScreen(
-    prefs: PrefHelper,
-    onAppearanceSettings: () -> Unit,
-) {
+fun LayoutScreen(prefs: PrefHelper) {
     val selectedLayout by prefs
         .observeKeyboardLayoutType()
         .collectAsState(initial = prefs.keyboardLayoutType)
@@ -118,16 +112,6 @@ fun LayoutScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
-            SettingsCard(modifier = Modifier.padding(horizontal = 20.dp)) {
-                ActionRow(
-                    label = LayoutTexts.appearanceSettings,
-                    onClick = onAppearanceSettings,
-                    trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-
             LayoutSection(
                 title = LayoutTexts.romanizationKeyboard,
                 layouts = romanizationLayouts,

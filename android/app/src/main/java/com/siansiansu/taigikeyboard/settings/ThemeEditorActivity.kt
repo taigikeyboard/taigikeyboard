@@ -15,9 +15,9 @@ import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import java.util.UUID
 
 // Hosts the user-theme editor (create or edit). Launched from the theme picker;
-// full-screen like AppearanceSettingsActivity so the pinned preview is not squeezed
-// by the bottom tab bar. Persists via UserThemeStore + auto-applies on save; the
-// picker's shelf and selection refresh reactively via PrefHelper Flows.
+// a full-screen Activity (not an intra-tab nav child) so the pinned preview is not
+// squeezed by the bottom tab bar. Persists via UserThemeStore + auto-applies on save;
+// the picker's shelf and selection refresh reactively via PrefHelper Flows.
 class ThemeEditorActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_THEME_ID = "theme_id"

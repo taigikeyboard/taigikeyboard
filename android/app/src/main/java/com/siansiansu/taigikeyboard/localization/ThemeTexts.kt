@@ -1,13 +1,16 @@
 package com.siansiansu.taigikeyboard.localization
 
 // Theme tab text constants (corresponds to iOS ThemeTexts.swift). Covers the tab
-// title, the custom-theme shelf, and the theme editor (section headers, color-row
-// labels, slider labels, name dialog, menu, cap alert). The appearance labels here
-// temporarily duplicate LayoutTexts (still used by AppearanceSettingsScreen); P5
-// removes that screen and the LayoutTexts copies. Built-in family titles live in
-// BuiltInThemes.families (catalog display data), not here.
+// title, the global font row label (Settings tab), the custom-theme shelf, and the
+// theme editor (section headers, color-row labels, slider labels, name dialog, menu,
+// cap alert). Built-in family titles live in BuiltInThemes.families (catalog display
+// data), not here.
 object ThemeTexts {
     const val tabTitle = "主題"
+
+    // Global keyboard font row label, shown in the Settings tab (font is a global
+    // setting, not a per-theme field). Mirrors iOS ThemeTexts.customFont.
+    const val customFont = "字型設定"
 
     // Custom-theme shelf
     const val customThemesSection = "自訂主題"

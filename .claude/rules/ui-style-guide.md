@@ -81,7 +81,7 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 | Min height (action) | 56dp | system |
 | Min height (switch/setting) | 48dp | system |
 | Icon-to-label spacing | 12dp | system |
-| Reusable components | ActionRow, SwitchRow, NavigationRow, ColorRow, SliderRow | Form + Toggle / NavigationLink |
+| Reusable components | ActionRow, SwitchRow, NavigationRow, SettingNavigationRow, ColorRow, SliderRow | Form + Toggle / NavigationLink |
 
 ### Switch / Toggle
 

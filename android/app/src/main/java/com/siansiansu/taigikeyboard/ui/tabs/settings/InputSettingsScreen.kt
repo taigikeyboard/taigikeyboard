@@ -8,23 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -35,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -45,10 +36,12 @@ import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.SettingsTexts
+import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
+import com.siansiansu.taigikeyboard.ui.components.SettingNavigationRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
@@ -73,8 +66,10 @@ fun InputSettingsScreen(
     val context = LocalContext.current
     var showResetDialog by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
+    var showFontPicker by remember { mutableStateOf(false) }
     // Each state re-reads from prefs when resetCounter changes (after settings reset)
     var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
+    var fontType by remember(resetCounter) { mutableStateOf(prefs.fontType) }
     var outputBoth by remember(resetCounter) { mutableStateOf(prefs.outputBothScripts) }
     var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
@@ -99,6 +94,15 @@ fun InputSettingsScreen(
                 prefs.inputMode = it
             },
             onBack = { showInputModePicker = false },
+        )
+    } else if (showFontPicker) {
+        FontPickerContent(
+            fontType = fontType,
+            onFontSelected = { selected ->
+                fontType = selected
+                prefs.fontType = selected
+            },
+            onNavigateBack = { showFontPicker = false },
         )
     } else {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -134,34 +138,23 @@ fun InputSettingsScreen(
                         .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
                 SettingsCard {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .clickable { showInputModePicker = true }
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = SettingsTexts.inputMode,
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            text = inputModeDisplayName(inputMode),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(AppStyle.trailingChevronSize),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    SettingNavigationRow(
+                        label = SettingsTexts.inputMode,
+                        value = inputModeDisplayName(inputMode),
+                        onClick = { showInputModePicker = true },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Global keyboard font — its own card below 輸入模式 (font is a global
+                // setting, not per-theme). Mirrors iOS SettingsTab font Section.
+                SettingsCard {
+                    SettingNavigationRow(
+                        label = ThemeTexts.customFont,
+                        value = fontDisplayName(fontType),
+                        onClick = { showFontPicker = true },
+                    )
                 }
 
                 Spacer(Modifier.height(24.dp))

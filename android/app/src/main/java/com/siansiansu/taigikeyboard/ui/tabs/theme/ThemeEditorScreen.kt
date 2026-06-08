@@ -380,9 +380,8 @@ private fun ThemeNameDialog(
     )
 }
 
-// P5: ColorSettingRow + ColorPickerTarget duplicate the private copies in
-// AppearanceSettingsScreen.kt. They consolidate into ui/components when P5 deletes
-// that screen — kept separate now to avoid a cross-package hoist mid-migration.
+// Private to the theme editor (its sole consumer) — not hoisted to ui/components
+// since no other screen color-edits anymore.
 @Composable
 private fun ColorSettingRow(
     label: String,
