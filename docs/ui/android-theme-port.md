@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking, multi-PR)
 > **Keywords**: `theme`, `android`, `port`, `gradient`, `cross-platform`
-> **Status**: Active — P0–P3 merged (P3 = `ff0c13a9`, PR #416, built-in shelves only); P4 in review (PR #417, custom shelf + editor CRUD)
+> **Status**: Active — P0–P4 merged (P4 = `4325af61`, PR #417, custom shelf + editor CRUD); P5 cleanup next (last phase)
 > **iOS source**: chain #400-411 (main `786c8366`); spec in memory `project_v362_theme_picker.md` + `docs/ui/theme.md` / `theme-presets-brainstorm.md`
 
 ---
@@ -54,8 +54,8 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 | P1 | Model + persistence + resolver + unit tests (no UI, no render change) | Merged `ad49504b` (PR #414, 40 tests green) |
 | P2 | Render seam: gradient bg + transparent candidate + key shadow (republish Flow deferred to P3/P4) | Merged `aa11ebf1` (PR #415) |
 | P3 | Theme tab (index 1) + built-in shelves + `ThemeTexts` strings | Merged `ff0c13a9` (PR #416) |
-| P4 | Custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) + theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | **In review (PR #417)** |
-| P5 | Cleanup: remove appearance page, font → Settings tab, string migration | Pending |
+| P4 | Custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) + theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Merged `4325af61` (PR #417) |
+| P5 | Cleanup: remove appearance page, font → Settings tab, string migration | **Next (last phase)** |
 
 ## Per-phase file inventory
 
@@ -103,10 +103,15 @@ Tests (`app/src/test/.../ime/core/`): `ThemeResolverTest`, `BuiltInThemesTest`, 
 - `KeyboardPreviewPanel` +`keyShadowIntensity` param (default flat; Layout-tab caller unaffected). **Gradient deliberately NOT added to the editor preview** — custom themes never carry a gradient (no editor control; new = DEFAULT; user themes are flat), so the draft's `backgroundGradient` is always null and `KeyboardLayout` renders flat correctly. Divergence from the original "extend for gradient/shadow" plan note: shadow only.
 - reuse `ColorRow` / `SliderRow` / `ColorPickerDialog` / `KeyboardPreviewPanel`. `ColorSettingRow` + `ColorPickerTarget` temporarily duplicate the `AppearanceSettingsScreen` private copies (cross-package private; consolidated to `ui/components` in P5 when that screen is deleted — tracked with a `// P5:` note).
 
-### P5 — Cleanup
-- remove `AppearanceSettingsScreen` / `AppearanceSettingsActivity` + Layout `ActionRow` → Layout layout-only
-- font picker → `InputSettingsScreen` (Settings tab)
-- migrate appearance strings `LayoutTexts` → `ThemeTexts`
+### P5 — Cleanup (last phase; NEXT round)
+
+Removes the now-superseded appearance editor and consolidates the P4-deferred dups. Pure refactor — behavior-preserving (the theme editor already owns color/size editing; font is the only feature that relocates).
+
+- **Remove the appearance editor**: delete `ui/tabs/layout/AppearanceSettingsScreen.kt` + `settings/AppearanceSettingsActivity.kt` + its manifest `<activity>` entry. In `SettingsMainActivity`, drop the `onAppearanceSettings` lambda passed to `LayoutScreen` (the Intent launch). In `LayoutScreen.kt`, remove the appearance `ActionRow` entry → Layout tab = layout selection only.
+- **Font picker → Settings tab**: `FontPickerContent.kt` currently lives in `ui/tabs/layout` and is shown from `AppearanceSettingsScreen`. Move the font-setting entry point into `ui/tabs/settings/InputSettingsScreen.kt` (the Settings tab). Font stays a global setting (`PrefHelper.fontType`); not a theme field.
+- **String migration**: appearance labels duplicated across `LayoutTexts` (used only by the deleted `AppearanceSettingsScreen`) and `ThemeTexts` (P4) — delete the now-orphaned `LayoutTexts` copies (keyHeight / keyFontSize / candidateTextSize / keyCornerRadius / keyBorderWidth / 6 color labels / section headers / appearanceResetAll / customFont / appearanceSettings) once their only caller is gone. `ThemeTexts` is the survivor.
+- **Consolidate P4-deferred dup**: `ThemeEditorScreen.kt` has `private fun ColorSettingRow` + `private data class ColorPickerTarget` that byte-for-byte duplicate the copies in `AppearanceSettingsScreen.kt` (kept separate in P4 to avoid a cross-package hoist mid-migration; marked with a `// P5:` note). When `AppearanceSettingsScreen` is deleted, hoist the single surviving pair into `ui/components/` (next to `ColorRow`/`SliderRow`) as `internal`, or keep them private in `ThemeEditorScreen` if it becomes the only consumer. Grep `// P5:` for the tracked site.
+- **Verify**: `cd android && ./gradlew :app:assembleDebug` + `:app:testDebugUnitTest`. Engine untouched → no `make build`. Grep for any remaining `AppearanceSettings` / `LayoutTexts.appearance*` references before declaring done. Refactor-freeze: behavior-preserving, no new `INVARIANT_*`.
 
 ## Built-in gradient hex (from `ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift`)
 
