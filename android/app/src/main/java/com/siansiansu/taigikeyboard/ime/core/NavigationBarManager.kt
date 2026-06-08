@@ -4,7 +4,6 @@
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
-import android.content.res.Configuration
 import android.view.Window
 import androidx.core.view.WindowCompat
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -19,13 +18,8 @@ private const val TAG = "NavigationBarManager"
  * 讓鍵盤背景自然延伸到導覽列區域
  */
 class NavigationBarManager {
-    /**
-     * 判斷當前是否為深色模式
-     */
-    private fun isDarkMode(context: Context): Boolean {
-        val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
-    }
+    /** 判斷當前是否為深色模式（共用 [isKeyboardNightMode]，避免重複實作）。 */
+    private fun isDarkMode(context: Context): Boolean = isKeyboardNightMode(context)
 
     /**
      * 更新導覽列的圖示顏色

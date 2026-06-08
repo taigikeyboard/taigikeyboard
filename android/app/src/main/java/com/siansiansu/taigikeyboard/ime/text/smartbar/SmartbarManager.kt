@@ -9,9 +9,10 @@ import android.widget.LinearLayout
 import androidx.core.view.children
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
+import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -81,8 +82,12 @@ class SmartbarManager(
     // `hasCandidates` continue to do so directly; this flow drives only the
     // candidate strip + English 3-col rendering.
     private var candidateUpdateSeq: Long = 0L
-    private var cachedColorSettingsJson: String? = null
-    private var cachedColorSettings: KeyboardColorSettings? = null
+
+    // Resolved-theme cache for the candidate strip colors + text scale. Mirrors the
+    // KeyboardAppearanceResolver cache (keys) so both read the SAME resolved theme,
+    // not raw prefs.colorSettings — a built-in/user theme then drives the candidate
+    // bar too, while the default theme stays byte-identical.
+    private val themeCache = ThemeAppearanceCache(prefs)
     private val _candidateStripState =
         MutableStateFlow(
             CandidateStripState(
@@ -498,8 +503,6 @@ class SmartbarManager(
             activeContainer = SmartbarContainer.CANDIDATES
         }
 
-        view.applyCustomBackgroundColor(colorSettings().candidateBackgroundColor)
-
         logger.debug(TAG) {
             "[DEBUG] updateCandidates completed: count=${transformedSuggestions.size}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}"
         }
@@ -636,19 +639,10 @@ class SmartbarManager(
             )
     }
 
-    private fun colorSettings(): KeyboardColorSettings {
-        val json = prefs.colorSettings
-        val cached = cachedColorSettings
-        if (cached != null && cachedColorSettingsJson == json) return cached
-        return KeyboardColorSettings.fromJson(json).also {
-            cachedColorSettings = it
-            cachedColorSettingsJson = json
-        }
-    }
-
     private fun currentDisplay(): CandidateDisplayParams {
         val context = taigikeyboard.context
-        val colorSettings = colorSettings()
+        val theme = themeCache.resolve(isKeyboardNightMode(context))
+        val colorSettings = theme.colors
         val height =
             smartbarView?.height?.takeIf { it > 0 }
                 ?: context.resources.getDimension(R.dimen.smartbar_height).toInt()
@@ -657,9 +651,13 @@ class SmartbarManager(
             fontType = prefs.fontType,
             layoutType = prefs.keyboardLayoutType,
             orMapsToER = prefs.tpsOrMapsToER,
-            textSizeScale = prefs.candidateTextSizeScale,
+            textSizeScale = theme.candidateTextSizeScale,
             candidateTextColor = colorSettings.candidateTextColor,
-            candidateBackgroundColor = colorSettings.candidateBackgroundColor,
+            // Gradient themes own the background on the common parent, so the Compose
+            // candidate strip must be transparent over it — explicitly, not by relying
+            // on a gradient theme also leaving candidateBackgroundColor null.
+            candidateBackgroundColor =
+                if (colorSettings.hasBackgroundGradient) null else colorSettings.candidateBackgroundColor,
             themeTitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_fgColor),
             themeSubtitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor),
             themeKeyBgColor = getColorFromAttr(context, R.attr.key_bgColor),

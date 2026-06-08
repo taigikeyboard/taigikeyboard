@@ -54,6 +54,14 @@ data class KeyboardColorSettings(
     val hasBackgroundGradient: Boolean
         get() = (backgroundGradient?.stops?.size ?: 0) >= 2
 
+    /**
+     * Renderable gradient stops (top->bottom ARGB) when [hasBackgroundGradient],
+     * else null. Single pure source for the View-layer GradientDrawable build so
+     * the render seam never re-derives the gradient-vs-flat decision. JVM-testable.
+     */
+    fun gradientStops(): IntArray? =
+        if (hasBackgroundGradient) backgroundGradient!!.stops.toIntArray() else null
+
     /** The JSON object form. [toJson] is the string serialization; nested users (e.g. [ThemeAppearance]) embed this directly. */
     fun toJsonObject(): JSONObject {
         val json = JSONObject()

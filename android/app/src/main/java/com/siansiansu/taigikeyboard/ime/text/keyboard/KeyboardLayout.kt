@@ -72,7 +72,14 @@ fun KeyboardLayout(
     val context = LocalContext.current
     val themeColors = remember(context) { ThemePalette.from(context) }
     val themeBgColor = remember(context) { Color(getColorFromAttr(context, R.attr.keyboard_bgColor)) }
-    val bgColor = appearance.colorSettings.backgroundColor?.let { Color(it) } ?: themeBgColor
+    // Gradient themes paint the background once on the common View parent
+    // (`text_input_content`, via KeyboardThemeSurfaceController); the Compose body
+    // stays transparent so that gradient shows continuously candidate-bar -> keys.
+    // Flat themes keep the legacy custom-fill-or-theme background.
+    val bgColor = when {
+        appearance.colorSettings.hasBackgroundGradient -> Color.Transparent
+        else -> appearance.colorSettings.backgroundColor?.let { Color(it) } ?: themeBgColor
+    }
 
     val touchModifier = Modifier.pointerInteropFilter { event ->
         if (!isPreview) return@pointerInteropFilter coordinator.onMotionEvent(event)
@@ -121,6 +128,7 @@ fun KeyboardLayout(
                         fontSizeScale = appearance.keyFontSizeScale,
                         cornerRadiusDp = appearance.keyCornerRadius,
                         borderWidthDp = appearance.keyBorderWidth,
+                        shadowIntensity = appearance.keyShadowIntensity,
                         isPreview = isPreview,
                         pressed = pressedKeyId == idFor(rowIndex, indexInRow),
                         themeColors = themeColors,
@@ -418,6 +426,10 @@ data class KeyboardAppearance(
     val keyFontSizeScale: Float,
     val keyCornerRadius: Float,
     val keyBorderWidth: Float,
+    /** Per-key drop-shadow intensity (0 = none, 1..4 grow). Resolved from the
+     *  active theme; flat for the legacy/default theme. Mirrors iOS
+     *  ThemeAppearance.keyShadowIntensity. */
+    val keyShadowIntensity: Float,
     /** Drives [KeyboardLayoutSolver.solveKeyDimensions] inside
      *  [KeyboardImeRoot]. Surfaced through appearance because per-key
      *  dimensions only need to change when these prefs flip — not on

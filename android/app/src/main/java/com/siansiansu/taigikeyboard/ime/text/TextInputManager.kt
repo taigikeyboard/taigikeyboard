@@ -21,6 +21,7 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.keyboard.ImeKeyEventDispatcher
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyTouchCoordinator
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
+import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardThemeSurfaceController
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardUiCoordinator
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardUiState
 import com.siansiansu.taigikeyboard.ime.text.keyboard.TextInputKeyHandler
@@ -75,6 +76,11 @@ class TextInputManager(
      *  Resolved once after [KeyboardUiCoordinator.mountKeyboardComposeView] so
      *  the popup anchor resolution avoids a `findViewById` walk. */
     private var composeHost: View? = null
+
+    /** Applies the View-layer side of the active theme (background gradient on the
+     *  common `text_input_content` parent + smartbar chrome transparency). Bound in
+     *  [onRegisterInputView]; the Compose key body resolves its own transparency. */
+    private var themeSurface: KeyboardThemeSurfaceController? = null
 
     // --- Delegated handlers ---
 
@@ -233,6 +239,8 @@ class TextInputManager(
             },
         )
 
+        themeSurface = KeyboardThemeSurfaceController(inputView)
+
         val overlayView =
             inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView>(
                 R.id.candidate_overlay,
@@ -354,7 +362,19 @@ class TextInputManager(
     }
 
     override fun onWindowShown() {
+        refreshTheme()
+    }
+
+    /**
+     * Re-pushes the key appearance AND re-applies the View-layer theme (background
+     * gradient on the common parent + smartbar chrome transparency). Called when the
+     * keyboard becomes visible so a theme change made while it was hidden takes
+     * effect. The smartbar child views are reliably registered by this point
+     * (onWindowShown fires after the full attach dispatch).
+     */
+    fun refreshTheme() {
         pushAppearance()
+        themeSurface?.apply(appearanceResolver.resolvedColors())
     }
 
     fun getActiveKeyboardMode(): KeyboardMode = uiCoordinator.activeKeyboardMode

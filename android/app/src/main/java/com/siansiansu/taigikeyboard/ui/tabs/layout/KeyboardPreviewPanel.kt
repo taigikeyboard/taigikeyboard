@@ -34,6 +34,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.Subtype
+import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
 import com.siansiansu.taigikeyboard.ime.popup.NoOpPopupHost
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
@@ -119,6 +120,9 @@ fun KeyboardPreviewPanel(
             keyFontSizeScale = keyFontSizeScale,
             keyCornerRadius = keyCornerRadius,
             keyBorderWidth = keyBorderWidth,
+            // Flat — the Layout-tab preview has no shadow control (P4 theme editor
+            // preview will supply the theme's intensity).
+            keyShadowIntensity = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
             heightFactor = KeyboardHeightFactor.fromPreferenceString(prefs.heightFactor),
             keyHeightScale = keyHeightScale,
         )

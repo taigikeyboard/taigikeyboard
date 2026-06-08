@@ -5,6 +5,7 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
@@ -16,7 +17,9 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
@@ -135,11 +138,25 @@ class SmartbarView : LinearLayout {
     }
 
     /**
-     * Apply custom candidate background color from appearance settings.
+     * Applies the resolved theme to the smartbar chrome. A gradient theme paints
+     * its background on the common parent (`text_input_content`), so the smartbar
+     * root + toolbar-toggle + expand-toggle + candidate container all go transparent
+     * to let the gradient show through. A flat/legacy theme restores the attr-backed
+     * `?smartbar_bgColor` chrome and applies the theme's candidate background (null
+     * candidate background -> cleared, matching the XML default).
      */
-    fun applyCustomBackgroundColor(color: Int?) {
-        if (color != null) {
-            candidatesContainer?.setBackgroundColor(color)
+    fun applyThemeSurface(colors: KeyboardColorSettings) {
+        val gradient = colors.hasBackgroundGradient
+        val chromeBg = if (gradient) Color.TRANSPARENT else getColorFromAttr(context, R.attr.smartbar_bgColor)
+        setBackgroundColor(chromeBg)
+        toolbarToggleButton?.setBackgroundColor(chromeBg)
+        expandToggleButton?.setBackgroundColor(chromeBg)
+
+        val candidateBg = if (gradient) Color.TRANSPARENT else colors.candidateBackgroundColor
+        if (candidateBg != null) {
+            candidatesContainer?.setBackgroundColor(candidateBg)
+        } else {
+            candidatesContainer?.background = null
         }
     }
 

@@ -22,6 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -74,6 +76,7 @@ internal fun KeyContent(
     fontSizeScale: Float,
     cornerRadiusDp: Float,
     borderWidthDp: Float,
+    shadowIntensity: Float,
     isPreview: Boolean,
     pressed: Boolean,
     themeColors: ThemePalette,
@@ -98,8 +101,24 @@ internal fun KeyContent(
         customFill = customFill,
     )
 
+    // Drop shadow is drawn BEFORE the background fill so the key face renders on
+    // top of its shadow (per Compose `dropShadow` ordering). Flat/legacy themes
+    // pass intensity 0 -> no shadow node added, keeping the default path identical.
+    val shadowSpec = remember(shadowIntensity) { keyShadowSpec(shadowIntensity) }
     val backgroundModifier = Modifier
         .fillMaxSize()
+        .let { base ->
+            if (shadowSpec == null) {
+                base
+            } else {
+                base.dropShadow(shape) {
+                    radius = shadowSpec.radiusDp.dp.toPx()
+                    offset = Offset(0f, shadowSpec.offsetYDp.dp.toPx())
+                    alpha = shadowSpec.alpha
+                    color = Color.Black
+                }
+            }
+        }
         .background(Color(backgroundArgb), shape)
     val borderedModifier = if (borderWidthDp > 0f) {
         backgroundModifier.border(borderWidthDp.dp, Color(themeColors.keyFg), shape)
@@ -549,6 +568,28 @@ internal fun computeKeyLetter(
     }
     return KeyLabelCaseCache.getOrCompute(baseLabel, InputMode.fromPrefString(inputMode), caps, capsLock)
 }
+
+/** Resolved drop-shadow geometry for a key. */
+internal data class KeyShadowSpec(
+    val radiusDp: Float,
+    val offsetYDp: Float,
+    val alpha: Float,
+)
+
+/**
+ * Maps a key-shadow intensity to drop-shadow geometry, or null for no shadow.
+ * `0 = none`; `1..4` -> radius = intensity dp, offsetY = intensity/2 dp, fixed
+ * alpha. Pure so the mapping is JVM-unit-testable. Mirrors iOS
+ * `ButtonShadowStyle(size: keyShadowIntensity)`.
+ */
+internal fun keyShadowSpec(intensity: Float): KeyShadowSpec? =
+    if (intensity > 0f) {
+        KeyShadowSpec(radiusDp = intensity, offsetYDp = intensity / 2f, alpha = KEY_SHADOW_ALPHA)
+    } else {
+        null
+    }
+
+private const val KEY_SHADOW_ALPHA = 0.30f
 
 /** Direct port of `KeyView.applyAppearance` "is this a function key?" check. */
 private fun isFunctionKey(data: KeyData): Boolean =

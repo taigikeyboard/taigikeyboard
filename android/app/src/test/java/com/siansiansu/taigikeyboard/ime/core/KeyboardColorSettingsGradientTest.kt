@@ -53,4 +53,20 @@ class KeyboardColorSettingsGradientTest {
         assertEquals(KeyboardColorSettings(), KeyboardColorSettings.fromJson("{}"))
         assertEquals(KeyboardColorSettings(), KeyboardColorSettings.fromJson(""))
     }
+
+    @Test
+    fun gradientStops_returnsStopsWhenRenderable() {
+        val stops = listOf(0xFFBFD2EA.toInt(), 0xFFDCE2EC.toInt())
+        val rendered = KeyboardColorSettings(backgroundGradient = ThemeGradient(stops)).gradientStops()
+        assertEquals(stops, rendered?.toList())
+    }
+
+    @Test
+    fun gradientStops_nullWhenFlatOrUnderTwoStops() {
+        assertNull(KeyboardColorSettings().gradientStops())
+        assertNull(KeyboardColorSettings(backgroundGradient = ThemeGradient(emptyList())).gradientStops())
+        assertNull(
+            KeyboardColorSettings(backgroundGradient = ThemeGradient(listOf(0xFF111111.toInt()))).gradientStops(),
+        )
+    }
 }
