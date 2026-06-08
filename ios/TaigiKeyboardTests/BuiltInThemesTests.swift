@@ -30,7 +30,7 @@ final class BuiltInThemesTests: XCTestCase {
     func testStandardHead_isDefaultSentinel() {
         let head = BuiltInThemes.families.first?.themes.first
         XCTAssertEqual(head?.id, ThemeId.default)
-        XCTAssertEqual(head?.displayName, "經典")
+        XCTAssertEqual(head?.displayName, "預設")
     }
 
     // trace: only the Standard head may be the default sentinel — any other default id would mis-route
@@ -59,7 +59,7 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: "standardBlue")?.id, "standardBlue")
         XCTAssertNil(BuiltInThemes.theme(id: "no_such_theme"))
         // The default sentinel resolves to the Standard head (the app default card).
-        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "經典")
+        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "預設")
     }
 
     // trace: a still-scaffold theme (no palette) → colors(for:) degrades to .default in both schemes
@@ -71,7 +71,7 @@ final class BuiltInThemesTests: XCTestCase {
 
     // trace: the Standard gradient themes each carry a ≥2-stop background gradient in both schemes
     func testStandardGradientThemes_carryGradient() {
-        for id in ["standardBlue", "standardGreen", "standardPurple"] {
+        for id in ["standardPink", "standardGold", "standardBlue", "standardGreen", "standardPurple"] {
             let theme = BuiltInThemes.theme(id: id)!
             XCTAssertTrue(theme.colors(for: .light).hasBackgroundGradient, "\(id) light must carry a gradient")
             XCTAssertTrue(theme.colors(for: .dark).hasBackgroundGradient, "\(id) dark must carry a gradient")

@@ -30,7 +30,7 @@ enum BuiltInThemes {
             // 中文: Standard 第一張 = 預設(adaptive)。id 用 ThemeId.default sentinel,選它=回預設、無選取時它就是亮的。
             BuiltInTheme(
                 id: ThemeId.default,
-                displayName: "經典",
+                displayName: "預設",
                 light: nil,
                 dark: nil,
                 previewImageName: "theme_standard_preview",
@@ -38,10 +38,19 @@ enum BuiltInThemes {
             // Soft single-hue gradient themes matching the KeyboardKit standard
             // theme look (examined the reference shots): a gentle tint at the TOP
             // (candidate bar) fading DOWN to a very pale version of the SAME hue —
-            // it stays tinted to the bottom (no neutral gray). Purple is a soft
-            // blue-leaning lavender (not pink). White keys ride on top. Values are
-            // visual estimates from the reference images; fine-tune on device.
-            // 經典 head stays adaptive.
+            // it stays tinted to the bottom (no neutral gray). White keys ride on
+            // top. Values are visual estimates; fine-tune on device. Shelf order:
+            // 櫻花 → 稻穗 → 海風 → 翠青 → 藤紫 (after the adaptive 預設 head).
+            gradientTheme(
+                "standardPink", "櫻花",
+                lightTop: 0xE6C2D0, lightBottom: 0xEADCE2,
+                darkTop: 0x4A303C, darkBottom: 0x36242E,
+            ),
+            gradientTheme(
+                "standardGold", "稻穗",
+                lightTop: 0xEAD9A6, lightBottom: 0xECE4D2,
+                darkTop: 0x423B22, darkBottom: 0x322C1A,
+            ),
             gradientTheme(
                 "standardBlue", "海風",
                 lightTop: 0xBFD2EA, lightBottom: 0xDCE2EC,

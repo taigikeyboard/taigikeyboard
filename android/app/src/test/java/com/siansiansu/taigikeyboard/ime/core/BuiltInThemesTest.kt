@@ -31,7 +31,7 @@ class BuiltInThemesTest {
     fun standardHead_isDefaultSentinel() {
         val head = BuiltInThemes.families.first().themes.first()
         assertEquals(ThemeId.DEFAULT, head.id)
-        assertEquals("經典", head.displayName)
+        assertEquals("預設", head.displayName)
     }
 
     @Test
@@ -56,7 +56,7 @@ class BuiltInThemesTest {
     fun themeById_returnsMatchOrNull() {
         assertEquals("standardBlue", BuiltInThemes.theme("standardBlue")?.id)
         assertNull(BuiltInThemes.theme("no_such_theme"))
-        assertEquals("經典", BuiltInThemes.theme(ThemeId.DEFAULT)?.displayName)
+        assertEquals("預設", BuiltInThemes.theme(ThemeId.DEFAULT)?.displayName)
     }
 
     @Test
@@ -68,7 +68,7 @@ class BuiltInThemesTest {
 
     @Test
     fun standardGradientThemes_carryGradient() {
-        for (id in listOf("standardBlue", "standardGreen", "standardPurple")) {
+        for (id in listOf("standardPink", "standardGold", "standardBlue", "standardGreen", "standardPurple")) {
             val theme = BuiltInThemes.theme(id)!!
             assertTrue("$id light must carry a gradient", theme.colors(false).hasBackgroundGradient)
             assertTrue("$id dark must carry a gradient", theme.colors(true).hasBackgroundGradient)

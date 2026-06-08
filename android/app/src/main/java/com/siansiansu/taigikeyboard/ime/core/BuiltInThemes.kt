@@ -48,15 +48,25 @@ object BuiltInThemes {
                         // it shows selected whenever no other theme is chosen.
                         BuiltInTheme(
                             id = ThemeId.DEFAULT,
-                            displayName = "經典",
+                            displayName = "預設",
                             light = null,
                             dark = null,
                             previewImageName = "theme_standard_preview",
                         ),
                         // Soft single-hue gradient themes matching the KeyboardKit standard
                         // look: a gentle tint at the TOP fading DOWN to a pale version of the
-                        // SAME hue. White keys ride on top. Hex are visual estimates from the
-                        // reference shots; fine-tune on device.
+                        // SAME hue. White keys ride on top. Hex are visual estimates; fine-tune
+                        // on device. Shelf order: 櫻花 → 稻穗 → 海風 → 翠青 → 藤紫 (after 預設 head).
+                        gradientTheme(
+                            "standardPink", "櫻花",
+                            lightTop = 0xE6C2D0, lightBottom = 0xEADCE2,
+                            darkTop = 0x4A303C, darkBottom = 0x36242E,
+                        ),
+                        gradientTheme(
+                            "standardGold", "稻穗",
+                            lightTop = 0xEAD9A6, lightBottom = 0xECE4D2,
+                            darkTop = 0x423B22, darkBottom = 0x322C1A,
+                        ),
                         gradientTheme(
                             "standardBlue", "海風",
                             lightTop = 0xBFD2EA, lightBottom = 0xDCE2EC,
