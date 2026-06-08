@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking, multi-PR)
 > **Keywords**: `theme`, `android`, `port`, `gradient`, `cross-platform`
-> **Status**: Active — P0–P4 merged (P4 = `4325af61`, PR #417, custom shelf + editor CRUD); P5 cleanup next (last phase)
+> **Status**: Complete — all phases merged (P5 = `0957cbb9`, PR #418, cleanup + `SettingNavigationRow` extraction). ⚠ device dogfood pending.
 > **iOS source**: chain #400-411 (main `786c8366`); spec in memory `project_v362_theme_picker.md` + `docs/ui/theme.md` / `theme-presets-brainstorm.md`
 
 ---
@@ -55,7 +55,7 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 | P2 | Render seam: gradient bg + transparent candidate + key shadow (republish Flow deferred to P3/P4) | Merged `aa11ebf1` (PR #415) |
 | P3 | Theme tab (index 1) + built-in shelves + `ThemeTexts` strings | Merged `ff0c13a9` (PR #416) |
 | P4 | Custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) + theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Merged `4325af61` (PR #417) |
-| P5 | Cleanup: remove appearance page, font → Settings tab, string migration | **Next (last phase)** |
+| P5 | Cleanup: remove appearance page, font → Settings tab, string migration, `SettingNavigationRow` extraction | Merged `0957cbb9` (PR #418) |
 
 ## Per-phase file inventory
 
@@ -112,6 +112,12 @@ Removes the now-superseded appearance editor and consolidates the P4-deferred du
 - **String migration**: appearance labels duplicated across `LayoutTexts` (used only by the deleted `AppearanceSettingsScreen`) and `ThemeTexts` (P4) — delete the now-orphaned `LayoutTexts` copies (keyHeight / keyFontSize / candidateTextSize / keyCornerRadius / keyBorderWidth / 6 color labels / section headers / appearanceResetAll / customFont / appearanceSettings) once their only caller is gone. `ThemeTexts` is the survivor.
 - **Consolidate P4-deferred dup**: `ThemeEditorScreen.kt` has `private fun ColorSettingRow` + `private data class ColorPickerTarget` that byte-for-byte duplicate the copies in `AppearanceSettingsScreen.kt` (kept separate in P4 to avoid a cross-package hoist mid-migration; marked with a `// P5:` note). When `AppearanceSettingsScreen` is deleted, hoist the single surviving pair into `ui/components/` (next to `ColorRow`/`SliderRow`) as `internal`, or keep them private in `ThemeEditorScreen` if it becomes the only consumer. Grep `// P5:` for the tracked site.
 - **Verify**: `cd android && ./gradlew :app:assembleDebug` + `:app:testDebugUnitTest`. Engine untouched → no `make build`. Grep for any remaining `AppearanceSettings` / `LayoutTexts.appearance*` references before declaring done. Refactor-freeze: behavior-preserving, no new `INVARIANT_*`.
+
+**Realized (PR #418 `0957cbb9`)**: plan items ①–④ as written. Two adjustments from review:
+- **`customFont` ownership**: the plan listed `customFont` among the deleted `LayoutTexts` orphans, but `FontPickerContent` still consumes it — so `customFont` was *moved* to `ThemeTexts` (mirrors iOS `ThemeTexts.swift:22`), not deleted. Font *name* strings stay in `LayoutTexts`. Font row hosted as a `showFontPicker` sub-page inside `InputSettingsScreen` (mirrors the existing `showInputModePicker` pattern) with a `BackHandler` (Codex post-impl caught its absence — without it, system back from the picker finishes `SettingsMainActivity`). `Activity.recreate()` dropped (no embedded preview in the Settings tab).
+- **+ `SettingNavigationRow` extraction** (beyond plan, Core Principle #6 direction-first / ui-style-guide Rule 7): the input-mode + font "label + value + chevron" rows were hand-rolled twice → extracted a shared `ui/components/SettingNavigationRow`; both call it. `ui-style-guide.md` reusable-components list updated. Net −421 LOC.
+- Item ④: `ColorSettingRow` / `ColorPickerTarget` kept private in `ThemeEditorScreen` (sole consumer after the appearance page deletion) — not hoisted (YAGNI).
+- ⚠ Device dogfood pending: font row shows/opens picker → keyboard re-renders next open; system back from picker returns to the Settings tab (not app exit); Layout tab = layout-only; theme editor color/size unchanged.
 
 ## Built-in gradient hex (from `ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift`)
 
