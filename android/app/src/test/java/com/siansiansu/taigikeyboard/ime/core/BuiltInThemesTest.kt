@@ -114,6 +114,6 @@ class BuiltInThemesTest {
     @Test
     fun standardBlue_gradientStopsAreExpectedArgb_light() {
         val gradient = BuiltInThemes.theme("standardBlue")!!.colors(isDark = false).backgroundGradient!!
-        assertEquals(listOf(0xFFBFD2EA.toInt(), 0xFFDCE2EC.toInt()), gradient.stops)
+        assertEquals(listOf(0xFFC1E6E6.toInt(), 0xFFDCEAEA.toInt()), gradient.stops)
     }
 }

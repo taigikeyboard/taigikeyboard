@@ -40,21 +40,22 @@ enum BuiltInThemes {
             // (candidate bar) fading DOWN to a very pale version of the SAME hue —
             // it stays tinted to the bottom (no neutral gray). White keys ride on
             // top. Values are visual estimates; fine-tune on device. Shelf order:
-            // 櫻花 → 稻穗 → 海風 → 翠青 → 藤紫 (after the adaptive 預設 head).
+            // 櫻花 → 金煌 → 海風 → 翠青 → 藤紫 (after the adaptive 預設 head).
             gradientTheme(
                 "standardPink", "櫻花",
                 lightTop: 0xE6C2D0, lightBottom: 0xEADCE2,
                 darkTop: 0x4A303C, darkBottom: 0x36242E,
             ),
             gradientTheme(
-                "standardGold", "稻穗",
+                "standardGold", "金煌",
                 lightTop: 0xEAD9A6, lightBottom: 0xECE4D2,
                 darkTop: 0x423B22, darkBottom: 0x322C1A,
             ),
+            // 海風 = 台鐵海風號 teal (#4CB8B8 base), HSL-derived soft gradient.
             gradientTheme(
                 "standardBlue", "海風",
-                lightTop: 0xBFD2EA, lightBottom: 0xDCE2EC,
-                darkTop: 0x323E58, darkBottom: 0x262E40,
+                lightTop: 0xC1E6E6, lightBottom: 0xDCEAEA,
+                darkTop: 0x325353, darkBottom: 0x254141,
             ),
             gradientTheme(
                 "standardGreen", "翠青",
