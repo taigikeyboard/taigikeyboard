@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -108,6 +109,7 @@ fun CandidateOverlayContent(
     orMapsToER: Boolean,
     isTranslateSwapped: Boolean,
     resetKey: Int,
+    backgroundGradient: List<Int>?,
     onSuggestionSelected: (TaigiWord, Int) -> Unit,
     onCollapse: () -> Unit,
     onTranslateToggle: () -> Unit,
@@ -162,7 +164,21 @@ fun CandidateOverlayContent(
         return minOf((suggestionIndex.toFloat() / suggestions.size * rows.size).toInt(), rows.size - 1)
     }
 
-    Box(modifier = modifier.fillMaxSize().background(colors.background)) {
+    // Gradient theme: paint the gradient as an opaque backdrop so the overlay stays
+    // continuous with the gradient-painted keyboard. The overlay is a SIBLING of the
+    // gradient-painted text_input_content (not a child), so it must paint the gradient
+    // itself — a transparent overlay would reveal the transparent IME window. Flat
+    // themes fall back to the solid `?smartbar_bgColor` chrome.
+    val backgroundModifier =
+        remember(backgroundGradient, colors.background) {
+            if (backgroundGradient != null && backgroundGradient.size >= 2) {
+                Modifier.background(Brush.verticalGradient(backgroundGradient.map { Color(it) }))
+            } else {
+                Modifier.background(colors.background)
+            }
+        }
+
+    Box(modifier = modifier.fillMaxSize().then(backgroundModifier)) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),

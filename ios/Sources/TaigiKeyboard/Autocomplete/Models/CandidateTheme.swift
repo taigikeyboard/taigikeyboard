@@ -29,6 +29,12 @@ struct CandidateTheme: Equatable {
     let primaryTextColor: Color
     let secondaryTextColor: Color
 
+    /// Top→bottom stops of the active theme's background gradient, or nil for a
+    /// flat/default theme. Consumed by the expanded candidate overlay so it paints
+    /// the gradient as an opaque backdrop (continuous with the gradient-painted
+    /// keyboard root) instead of inheriting the candidate strip's transparent style.
+    let backgroundGradientColors: [Color]?
+
     /// TPS 主標題字體大小
     var tpsPrimaryFontSize: CGFloat {
         primaryFontSize * Self.tpsScale
@@ -63,12 +69,16 @@ struct CandidateTheme: Equatable {
         }
 
         let customTextColor = colorSettings.candidateTextColor?.color
+        let gradientColors = colorSettings.hasBackgroundGradient
+            ? colorSettings.backgroundGradient?.stops.map(\.color)
+            : nil
         return CandidateTheme(
             height: baseHeight * candidateTextSizeScale + bottomPadding,
             primaryFontSize: primaryBase * candidateTextSizeScale,
             secondaryFontSize: secondaryBase * candidateTextSizeScale,
             primaryTextColor: customTextColor ?? Color(.label),
             secondaryTextColor: customTextColor?.opacity(0.7) ?? Color(.secondaryLabel),
+            backgroundGradientColors: gradientColors,
         )
     }
 
@@ -81,5 +91,6 @@ struct CandidateTheme: Equatable {
         secondaryFontSize: baseSecondaryFontSize,
         primaryTextColor: Color(.label),
         secondaryTextColor: Color(.secondaryLabel),
+        backgroundGradientColors: nil,
     )
 }

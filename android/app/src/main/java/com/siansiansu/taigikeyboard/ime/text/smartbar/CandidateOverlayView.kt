@@ -44,6 +44,11 @@ class CandidateOverlayView : FrameLayout {
     private val suggestionsState = mutableStateOf<List<TaigiWord>>(emptyList())
     private val translateSwappedState = mutableStateOf(false)
 
+    // Resolved theme background gradient stops (ARGB), or null for a flat/default theme.
+    // Set on show() from the theme SmartbarManager already resolved, so the overlay
+    // paints the gradient backdrop instead of the flat `?smartbar_bgColor` chrome.
+    private val backgroundGradientState = mutableStateOf<List<Int>?>(null)
+
     // Bumped on each show() only: re-arms click protection + resets scroll/page (NOT on updateSuggestions).
     private val resetTrigger = mutableIntStateOf(0)
 
@@ -97,6 +102,7 @@ class CandidateOverlayView : FrameLayout {
                     orMapsToER = prefs.tpsOrMapsToER,
                     isTranslateSwapped = isTranslateSwapped,
                     resetKey = resetKey,
+                    backgroundGradient = backgroundGradientState.value,
                     onSuggestionSelected = { word, index -> onSuggestionSelected?.invoke(word, index) },
                     onCollapse = {
                         hide()
@@ -119,16 +125,19 @@ class CandidateOverlayView : FrameLayout {
      * Show overlay.
      * @param suggestions candidate list
      * @param keyboardHeight total keyboard height (overlay covers the full keyboard incl. smartbar)
+     * @param backgroundGradient resolved theme gradient stops (ARGB), or null for a flat theme
      */
     fun show(
         suggestions: List<TaigiWord>,
         keyboardHeight: Int,
+        backgroundGradient: List<Int>?,
     ) {
         if (isShowing) return
         if (suggestions.isEmpty()) return
 
         suggestionsState.value = suggestions
         translateSwappedState.value = cachedTranslateSwapped()
+        backgroundGradientState.value = backgroundGradient
 
         if (keyboardHeight > 0) {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {

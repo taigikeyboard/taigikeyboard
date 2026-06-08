@@ -186,7 +186,14 @@ struct ExpandedCandidateOverlay: View {
 
     private var backgroundView: some View {
         Group {
-            if style.isLiquidGlassEnabled {
+            if let gradientColors = theme.backgroundGradientColors {
+                // Gradient theme: paint the gradient as an opaque backdrop so the
+                // overlay stays continuous with the gradient-painted keyboard root.
+                // Without this it would inherit the candidate strip's `.clear` style
+                // (see TaigiKeyboardView.candidateStyle) and render see-through.
+                LinearGradient(colors: gradientColors, startPoint: .top, endPoint: .bottom)
+                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: -2)
+            } else if style.isLiquidGlassEnabled {
                 Color.keyboardBackground
             } else {
                 (style.backgroundColor ?? Color.keyboardBackground)
