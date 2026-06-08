@@ -29,17 +29,19 @@ import com.siansiansu.taigikeyboard.ui.tabs.layout.LayoutScreen
 import com.siansiansu.taigikeyboard.ui.tabs.settings.DiagnosticViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.settings.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.settings.SettingsResetViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.theme.ThemePickerScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
-// Main settings host — tabbed UI for home, layout, dictionary, and input settings
+// Main settings host — tabbed UI for home, theme, layout, dictionary, and input settings
 class SettingsMainActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_START_TAB = "extra_start_tab"
 
         private const val TAB_HOME = 0
-        private const val TAB_LAYOUT = 1
-        private const val TAB_DICTIONARY = 2
-        private const val TAB_SETTINGS = 3
+        private const val TAB_THEME = 1
+        private const val TAB_LAYOUT = 2
+        private const val TAB_DICTIONARY = 3
+        private const val TAB_SETTINGS = 4
 
         private const val THEME_LIGHT = "light"
         private const val THEME_DARK = "dark"
@@ -77,7 +79,11 @@ class SettingsMainActivity : AppCompatActivity() {
 
         AppVersionTracker.updateVersionOnInstallAndLastUse(this, prefs)
 
-        val initialTab = intent.getIntExtra(EXTRA_START_TAB, TAB_HOME)
+        // Clamp to the valid tab range — the Activity is exported, so a stale or
+        // out-of-range EXTRA_START_TAB from an external launcher must never land on a
+        // blank tab. With a valid initialTab, the bottom-bar only ever selects valid
+        // indices, so the when(selectedTab) dispatch below stays total.
+        val initialTab = intent.getIntExtra(EXTRA_START_TAB, TAB_HOME).coerceIn(TAB_HOME, TAB_SETTINGS)
 
         val versionName =
             try {
@@ -93,6 +99,7 @@ class SettingsMainActivity : AppCompatActivity() {
                     tabs =
                         listOf(
                             TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
+                            TabItem(R.drawable.ic_palette, getString(R.string.tab_theme)),
                             TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
                             TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
                             TabItem(R.drawable.ic_settings, getString(R.string.tab_settings)),
@@ -127,6 +134,10 @@ class SettingsMainActivity : AppCompatActivity() {
                                     openDetailActivity(titleKey, ContentType.FAQ, contentKeys)
                                 },
                             )
+                        }
+
+                        TAB_THEME -> {
+                            ThemePickerScreen(prefs = prefs)
                         }
 
                         TAB_LAYOUT -> {

@@ -1,4 +1,4 @@
-// 中文: 主設定畫面 — Material3 NavigationBar + Scaffold,容納 Home / Dictionary / Layout / Settings 4 個 tab。
+// 中文: 主設定畫面 — Material3 NavigationBar + Scaffold,容納 Home / Theme / Layout / Dictionary / Settings 5 個 tab。
 // 中文: 由 SettingsMainActivity setContent 掛載。
 
 package com.siansiansu.taigikeyboard.ui.tabs

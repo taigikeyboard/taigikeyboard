@@ -690,6 +690,17 @@ class PrefHelper(
             }.distinctUntilChanged()
 
     /**
+     * Observes selectedThemeId changes as a Flow.
+     * Emits the active theme id whenever it changes in DataStore (the theme picker
+     * writes it). Lets the picker reflect selection without rebuilding the screen.
+     */
+    fun observeSelectedThemeId(): Flow<String> =
+        dataStore.data
+            .map { prefs ->
+                prefs[PreferenceKeys.SELECTED_THEME_ID] ?: ThemeId.DEFAULT
+            }.distinctUntilChanged()
+
+    /**
      * Migrates data from SharedPreferences to DataStore.
      * This is called once during the first app launch after update.
      *

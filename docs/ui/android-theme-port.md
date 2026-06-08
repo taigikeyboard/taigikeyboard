@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking, multi-PR)
 > **Keywords**: `theme`, `android`, `port`, `gradient`, `cross-platform`
-> **Status**: Active — P0–P2 merged (P2 = `aa11ebf1`, PR #415); P3 next
+> **Status**: Active — P0–P2 merged (P2 = `aa11ebf1`, PR #415); P3 in review (PR #416, built-in shelves only); custom-theme shelf moved P3→P4
 > **iOS source**: chain #400-411 (main `786c8366`); spec in memory `project_v362_theme_picker.md` + `docs/ui/theme.md` / `theme-presets-brainstorm.md`
 
 ---
@@ -53,8 +53,8 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 | P0 | Roadmap doc + memory (admin) | Merged (folded into `ad49504b`) |
 | P1 | Model + persistence + resolver + unit tests (no UI, no render change) | Merged `ad49504b` (PR #414, 40 tests green) |
 | P2 | Render seam: gradient bg + transparent candidate + key shadow (republish Flow deferred to P3/P4) | Merged `aa11ebf1` (PR #415) |
-| P3 | Theme tab (index 1) + picker gallery + `ThemeTexts` strings | **Next** |
-| P4 | Theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Pending |
+| P3 | Theme tab (index 1) + built-in shelves + `ThemeTexts` strings | **In review (PR #416)** |
+| P4 | Custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) + theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Pending |
 | P5 | Cleanup: remove appearance page, font → Settings tab, string migration | Pending |
 
 ## Per-phase file inventory
@@ -86,13 +86,19 @@ Tests (`app/src/test/.../ime/core/`): `ThemeResolverTest`, `BuiltInThemesTest`, 
 - `TextInputManager.refreshTheme()` (= `pushAppearance` + surface apply) called from `onWindowShown`.
 - Deferred to P3 device dogfood: gradient seam screenshot (no selection UI in P2) + intensity-4 bottom-edge shadow clip (~1dp, cosmetic). Republish Flow deferred to P3/P4 (see Codex decisions).
 
-### P3 — Theme tab + picker
-- insert tab at index 1 (`SettingsMainActivity` / `MainSettingsScreen`; renumber `TAB_*`)
-- `ThemePickerScreen` (shelves, 240dp cards, aspect 585/369; custom-card = `CustomThemeButtonPreview` single styled key; built-in = screenshot drawable / placeholder)
-- apply → `selectedThemeId`; delete via `UserThemeStore` + orphan guard
-- `localization/ThemeTexts.kt`
+### P3 — Theme tab + built-in shelves (PR #416)
 
-### P4 — Editor CRUD
+**Scope refinement**: the custom-theme shelf (Create New + per-card menu + `CustomThemeButtonPreview` + delete/orphan-guard) moved P3→P4. P3 had no theme-creation path (editor is P4), so the custom shelf would be unexercisable this round; P4 owns all custom-theme UI as one coherent unit. USER-confirmed (2026-06-08, option A).
+
+- insert tab at index 1 (`SettingsMainActivity` / `MainSettingsScreen`; renumber `TAB_*`); `initialTab.coerceIn(...)` guards the exported Activity against a stale/external `EXTRA_START_TAB`.
+- `ui/tabs/theme/ThemePickerScreen.kt` — one horizontal shelf per `BuiltInThemes.families` (經典 / Swifty / Minimal); `ThemeCard` reuses the `LayoutCard` selection overlay; cards **200.dp** (matches Android `LayoutCard`, intentional divergence from iOS 240pt); built-in screenshots placeholder until supplied (explicit `R.drawable` map later, never `getIdentifier`).
+- apply → `prefs.selectedThemeId` (tap-write guarded); reactive via new `PrefHelper.observeSelectedThemeId()` + `collectAsStateWithLifecycle`.
+- tab icon = existing `R.drawable.ic_palette` (no new drawable); `strings.xml` `tab_theme`.
+- `localization/ThemeTexts.kt` — `tabTitle` only.
+- Built-in gradient selection wakes the dormant P2 render seam → P2 gradient/shadow device dogfood now possible.
+
+### P4 — Custom shelf + editor CRUD
+- custom-theme shelf in `ThemePickerScreen`: `CreateNewThemeCard` + user-theme cards (`CustomThemeButtonPreview` single styled key) + per-card apply/edit/delete menu + delete orphan-guard (deleting the active theme falls back to default).
 - `ThemeEditorScreen` (pushed child; 6 colors + 6 sliders + reset; Save-time name dialog cap-5; auto-apply; bottom `KeyboardPreviewPanel` extended for gradient/shadow)
 - reuse `ColorRow` / `SliderRow` / `ColorPickerDialog`
 
