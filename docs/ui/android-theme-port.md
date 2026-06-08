@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking, multi-PR)
 > **Keywords**: `theme`, `android`, `port`, `gradient`, `cross-platform`
-> **Status**: Active — P0 done, P1 in flight
+> **Status**: Active — P0 + P1 merged (`ad49504b`, PR #414); P2 next
 > **iOS source**: chain #400-411 (main `786c8366`); spec in memory `project_v362_theme_picker.md` + `docs/ui/theme.md` / `theme-presets-brainstorm.md`
 
 ---
@@ -50,9 +50,9 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 
 | Phase | Scope | Status |
 |---|---|---|
-| P0 | Roadmap doc + memory (admin, direct-to-main) | Done |
-| P1 | Model + persistence + resolver + unit tests (no UI, no render change) | In flight |
-| P2 | Render seam: gradient bg + transparent candidate + key shadow + republish Flow | Pending |
+| P0 | Roadmap doc + memory (admin) | Merged (folded into `ad49504b`) |
+| P1 | Model + persistence + resolver + unit tests (no UI, no render change) | Merged `ad49504b` (PR #414, 40 tests green) |
+| P2 | Render seam: gradient bg + transparent candidate + key shadow + republish Flow | **Next** |
 | P3 | Theme tab (index 1) + picker gallery + `ThemeTexts` strings | Pending |
 | P4 | Theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Pending |
 | P5 | Cleanup: remove appearance page, font → Settings tab, string migration | Pending |
