@@ -83,10 +83,13 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 // add/edit/delete refresh this shelf reactively via observeUserThemes().
 
 // Card metrics — 200.dp matches LayoutCard so the theme tab lines up with the layout
-// tab in-app (intentional divergence from iOS 240pt). The 585/369 aspect matches the
-// layout_*_preview assets so future theme screenshots render at the same size.
+// tab in-app (intentional divergence from iOS 240pt). The 585/395 aspect matches the
+// Android keyboard screenshot proportion (theme_*_preview assets), which is taller than
+// iOS's 585/369 — the Android keyboard is taller, so the card follows the Android
+// keyboard shape rather than the iOS card slot (intentional cross-platform divergence:
+// forcing iOS 585/369 here clipped the screenshots' top tone-mark row).
 private const val THEME_CARD_WIDTH_DP = 200
-private const val THEME_PREVIEW_ASPECT = 585f / 369f
+private const val THEME_PREVIEW_ASPECT = 585f / 395f
 private val THEME_CARD_SPACING = 12.dp
 
 /**
@@ -248,11 +251,14 @@ private fun BuiltInThemeShelf(
                 isSelected = selectedThemeId == theme.id,
                 onClick = { onThemeSelected(theme.id) },
                 preview = {
-                    // Built-in preview screenshots (585x369) wire in here once supplied —
-                    // map theme.previewImageName to an explicit R.drawable.* (NEVER
+                    // Maps theme.previewImageName to an explicit R.drawable.* (NEVER
                     // resources.getIdentifier, which the resource shrinker can't track).
-                    // None bundled yet, so every built-in card shows the neutral placeholder.
-                    BuiltInThemePreview(previewRes = null, title = theme.displayName)
+                    // Only the 5 漸層 themes ship a screenshot; the rest fall through to
+                    // null → neutral placeholder. Mirrors iOS UIImage(named:).
+                    BuiltInThemePreview(
+                        previewRes = builtInThemePreviewRes(theme.previewImageName),
+                        title = theme.displayName,
+                    )
                 },
             )
             if (index < themes.size - 1) {
@@ -509,6 +515,23 @@ private data class ThemePreviewColors(
 // Sample glyph on the preview key — a Taigi romanization letter with a tone mark.
 private const val CUSTOM_PREVIEW_GLYPH = "â"
 private const val CUSTOM_PREVIEW_GLYPH_BASE_SP = 26f
+
+// Maps a built-in theme's previewImageName to its bundled screenshot drawable, or
+// null when none ships (default/scaffold → neutral placeholder). Explicit when —
+// never resources.getIdentifier, which the resource shrinker can't track. Only the
+// 5 漸層 themes (櫻花/金煌/海風/翠青/藤紫) carry a screenshot today; light-only, so a
+// single drawable-xxhdpi asset serves both light and dark. Mirrors iOS
+// UIImage(named: previewImageName) in ThemePickerView.swift.
+@DrawableRes
+private fun builtInThemePreviewRes(previewImageName: String?): Int? =
+    when (previewImageName) {
+        "theme_standardPink_preview" -> R.drawable.theme_standardpink_preview
+        "theme_standardGold_preview" -> R.drawable.theme_standardgold_preview
+        "theme_standardBlue_preview" -> R.drawable.theme_standardblue_preview
+        "theme_standardGreen_preview" -> R.drawable.theme_standardgreen_preview
+        "theme_standardPurple_preview" -> R.drawable.theme_standardpurple_preview
+        else -> null
+    }
 
 // Built-in card preview: the bundled screenshot (585x369) when supplied, else a
 // neutral placeholder fixed to the card aspect so cards never change height once
