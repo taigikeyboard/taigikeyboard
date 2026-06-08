@@ -62,11 +62,20 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "經典")
     }
 
-    // trace: scaffold theme has no palette → colors(for:) degrades to .default in both schemes
+    // trace: a still-scaffold theme (no palette) → colors(for:) degrades to .default in both schemes
     func testColorsForScheme_scaffoldThemeDegradesToDefault() {
-        let theme = BuiltInThemes.theme(id: "standardBlue")!
+        let theme = BuiltInThemes.theme(id: "swiftyBlue")!
         XCTAssertEqual(theme.colors(for: .light), .default)
         XCTAssertEqual(theme.colors(for: .dark), .default)
+    }
+
+    // trace: the Standard gradient themes each carry a ≥2-stop background gradient in both schemes
+    func testStandardGradientThemes_carryGradient() {
+        for id in ["standardBlue", "standardGreen", "standardPurple"] {
+            let theme = BuiltInThemes.theme(id: id)!
+            XCTAssertTrue(theme.colors(for: .light).hasBackgroundGradient, "\(id) light must carry a gradient")
+            XCTAssertTrue(theme.colors(for: .dark).hasBackgroundGradient, "\(id) dark must carry a gradient")
+        }
     }
 
     // trace: a dark-only theme (light == nil) → .light request falls back to the dark variant

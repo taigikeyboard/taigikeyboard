@@ -48,6 +48,18 @@ struct CodableColor: Codable, Equatable {
     }
 }
 
+// MARK: - Theme gradient
+
+/// A vertical (top→bottom) keyboard-background gradient. `stops` are ordered
+/// top→bottom and must have ≥2 entries to render; the render layer ignores a
+/// gradient with fewer than 2 stops and falls back to the flat `backgroundColor`.
+/// Built-in gradient themes (Standard Blue/Green/Purple) set this; flat themes
+/// leave it nil. Synthesized `Codable` — an absent key in old JSON decodes to nil.
+// 中文: 鍵盤背景的垂直漸層(top→bottom),≥2 stops 才渲染;<2 退回平面 backgroundColor。內建漸層主題用,平面主題 nil。
+struct ThemeGradient: Codable, Equatable {
+    let stops: [CodableColor]
+}
+
 // MARK: - Keyboard Color Settings
 
 // 中文: 鍵盤六個可自訂顏色面;任何欄位為 nil 即代表「沿用 KeyboardKit 預設」。
@@ -64,7 +76,16 @@ struct KeyboardColorSettings: Codable, Equatable {
     var candidateTextColor: CodableColor?
     // 中文: 候選列背景色。
     var candidateBackgroundColor: CodableColor?
+    // 中文: 鍵盤背景垂直漸層(top→bottom)。設了即蓋過平面 backgroundColor;候選列會轉透明讓漸層貫穿候選→底部。
+    var backgroundGradient: ThemeGradient?
 
     // 中文: 全部欄位為 nil 的預設值,完全沿用 KeyboardKit 動態色。
     static let `default` = KeyboardColorSettings()
+
+    /// Whether a renderable gradient is set (≥2 stops). Single source for the
+    /// render branch, the liquid-glass gate, and the candidate-bar transparency.
+    // 中文: 是否有可渲染的漸層(≥2 stops)。render 分支 / liquid-glass gate / 候選列透明 共用此單一判斷。
+    var hasBackgroundGradient: Bool {
+        (backgroundGradient?.stops.count ?? 0) >= 2
+    }
 }

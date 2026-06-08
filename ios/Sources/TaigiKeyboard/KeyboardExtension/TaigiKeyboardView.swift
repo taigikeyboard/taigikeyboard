@@ -108,8 +108,10 @@ struct TaigiKeyboardView: View {
         // Distinct from `candidateStyle.isLiquidGlassEnabled`: that flag checks the
         // *candidate bar* background (`candidateBackgroundColor`); this flag checks
         // the *root keyboard* background (`backgroundColor`). Keep them independent.
+        // A gradient theme owns the whole background → never hand it to Liquid Glass.
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled
             && colors.backgroundColor == nil
+            && !colors.hasBackgroundGradient
         let isTPSLayout = p.settings.keyboardLayoutType == .tps
         let orMapsToER = p.settings.isTpsOrMappedToER
 
@@ -144,11 +146,22 @@ struct TaigiKeyboardView: View {
                     : .color(.clear),
             ),
         )
-        .background(
-            useLiquidGlassBg
-                ? Color.white.opacity(0.001)
-                : (colors.backgroundColor?.color ?? Color.keyboardBackground),
-        )
+        .background {
+            // Gradient themes paint a single top→bottom gradient spanning the
+            // candidate bar down to the keyboard bottom (candidate bar is made
+            // transparent in `candidateStyle`). Flat themes keep today's solid fill.
+            if useLiquidGlassBg {
+                Color.white.opacity(0.001)
+            } else if colors.hasBackgroundGradient, let gradient = colors.backgroundGradient {
+                LinearGradient(
+                    colors: gradient.stops.map(\.color),
+                    startPoint: .top,
+                    endPoint: .bottom,
+                )
+            } else {
+                colors.backgroundColor?.color ?? Color.keyboardBackground
+            }
+        }
         // 中文: 把主題解析所用的 colorScheme 灌進 environment,讓仍讀 @Environment(\.colorScheme)
         // 中文: 的子 view(CandidateView / CandidateButtonView)與 resolver 同源,避免淺/深色混色。
         .environment(\.colorScheme, keyboardContext.colorScheme)
@@ -374,7 +387,12 @@ struct TaigiKeyboardView: View {
     ) -> CandidateView.Style {
         var style = CandidateView.Style.adaptive(for: context)
         style.height = height
-        if let bg = colorSettings.candidateBackgroundColor?.color {
+        // Gradient themes: the candidate bar goes transparent so the root gradient
+        // shows through candidate→bottom as one continuous fill (takes precedence
+        // over any explicit candidate background). Flat themes keep their bar color.
+        if colorSettings.hasBackgroundGradient {
+            style.backgroundColor = .clear
+        } else if let bg = colorSettings.candidateBackgroundColor?.color {
             style.backgroundColor = bg
         }
         return style

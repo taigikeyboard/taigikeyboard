@@ -256,15 +256,16 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(settings.resolvedAppearance(for: .light).keyShadowIntensity, 0)
     }
 
-    // trace: selectedThemeId = built-in "standardBlue" → resolvedTheme routes through the catalog.
-    // Scaffold stage: the theme has no palette → resolved colors degrade to .default in both schemes.
+    // trace: selectedThemeId = built-in "standardBlue" → resolvedTheme routes through the catalog,
+    // returning its soft-gradient palette (≠ .default) in both schemes.
     func test_resolvedTheme_builtIn_routesThroughCatalog() {
         settings.selectedThemeId = "standardBlue"
         let expected = BuiltInThemes.theme(id: "standardBlue")!
 
         XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, expected.colors(for: .light))
         XCTAssertEqual(settings.resolvedAppearance(for: .dark).colors, expected.colors(for: .dark))
-        XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, .default)
+        XCTAssertTrue(settings.resolvedAppearance(for: .light).colors.hasBackgroundGradient,
+                      "standardBlue routes through the catalog with a gradient palette")
     }
 
     // MARK: - Snapshot shadow gate (v3.6.2 PR-B — three-state shadow)

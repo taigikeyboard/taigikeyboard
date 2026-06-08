@@ -111,7 +111,8 @@ final class ThemeResolverTests: XCTestCase {
 
     // MARK: - Built-in themes
 
-    // trace: built-in id "standardBlue" + .light → catalog branch; scaffold → .default colors; shadow 0
+    // trace: built-in id "standardBlue" + .light → catalog branch returns its
+    // gradient palette (≠ .default); scalars stay factory (shadow 0).
     func testResolved_builtIn_lightResolvesThroughCatalog() {
         let expected = BuiltInThemes.theme(id: "standardBlue")!
         let resolved = ThemeResolver.resolved(
@@ -121,7 +122,8 @@ final class ThemeResolverTests: XCTestCase {
             userThemes: [],
         )
         XCTAssertEqual(resolved.colors, expected.colors(for: .light))
-        XCTAssertEqual(resolved.colors, .default, "scaffold theme has no palette → .default colors")
+        XCTAssertNotEqual(resolved.colors, .default, "standardBlue defines a gradient palette")
+        XCTAssertTrue(resolved.colors.hasBackgroundGradient, "standardBlue paints a background gradient")
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 
