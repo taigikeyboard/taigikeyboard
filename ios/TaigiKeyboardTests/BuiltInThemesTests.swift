@@ -78,6 +78,66 @@ final class BuiltInThemesTests: XCTestCase {
         }
     }
 
+    // trace: gradient themes are light-only (dark == nil) → dark scheme reuses the
+    // light palette unchanged (USER: these themes keep their light look in dark mode)
+    func testStandardGradientThemes_stayLightInDarkMode() {
+        for id in ["standardPink", "standardGold", "standardBlue", "standardGreen", "standardPurple"] {
+            let theme = BuiltInThemes.theme(id: id)!
+            XCTAssertNil(theme.dark, "\(id) must not define a dark variant — it stays light in dark mode")
+            XCTAssertEqual(theme.colors(for: .dark), theme.colors(for: .light), "\(id) dark scheme must reuse the light palette")
+        }
+    }
+
+    // trace: candidate tints derive from the gradient top stop — highlight LIGHTENED
+    // toward white ×0.5, pressed DEEPENED toward black ×0.65 (each 0-255 component truncated):
+    //   櫻花 top E6C2D0 → highlight F2E0E7, pressed 957E87
+    //   海風 top BFD2EA → highlight DFE8F4, pressed 7C8898
+    func testCodableColor_derivesCandidateTints() {
+        let pinkTop = CodableColor(hex: 0xE6C2D0)
+        XCTAssertEqual(pinkTop.lightened(towardWhite: KeyboardColorSettings.candidateHighlightLightenFactor), CodableColor(hex: 0xF2E0E7))
+        XCTAssertEqual(pinkTop.deepened(by: KeyboardColorSettings.candidatePressedDeepenFactor), CodableColor(hex: 0x957E87))
+        let blueTop = CodableColor(hex: 0xBFD2EA)
+        XCTAssertEqual(blueTop.lightened(towardWhite: KeyboardColorSettings.candidateHighlightLightenFactor), CodableColor(hex: 0xDFE8F4))
+        XCTAssertEqual(blueTop.deepened(by: KeyboardColorSettings.candidatePressedDeepenFactor), CodableColor(hex: 0x7C8898))
+    }
+
+    // trace: state priority is press > firstCandidate > selected. The engine sets
+    // selectedCandidateIndex=0 while typing, so the first candidate is BOTH selected and
+    // first — it must show the LIGHT highlight, not the dark pressed/selection color.
+    func testResolvedBackgroundColor_firstCandidateLightBeatsSelection() {
+        let style = CandidateView.ItemStyle.standard
+        let highlight = Color.green
+        let pressed = Color.red
+
+        // typing: first candidate selected (index 0) but not pressed → LIGHT highlight
+        XCTAssertEqual(
+            style.resolvedBackgroundColor(for: .light, isSelected: true, isFirstCandidate: true,
+                                          firstCandidateThemeColor: highlight, pressedThemeColor: pressed),
+            highlight, "selected first candidate must show the light highlight, not the dark pressed color")
+        // actual press on the first candidate → dark pressed feedback
+        XCTAssertEqual(
+            style.resolvedBackgroundColor(for: .light, isPressed: true, isFirstCandidate: true,
+                                          firstCandidateThemeColor: highlight, pressedThemeColor: pressed),
+            pressed, "an actual press still darkens the first candidate")
+        // a selected NON-first candidate (hardware nav) → dark pressed/selection
+        XCTAssertEqual(
+            style.resolvedBackgroundColor(for: .light, isSelected: true, isFirstCandidate: false,
+                                          firstCandidateThemeColor: highlight, pressedThemeColor: pressed),
+            pressed, "a selected non-first candidate keeps the dark selection color")
+    }
+
+    // trace: a gradient theme's CandidateTheme carries non-nil tints; a flat theme leaves them nil (neutral fallback)
+    func testCandidateTheme_gradientThemeDerivesTints_flatThemeNil() {
+        let gradientColors = BuiltInThemes.theme(id: "standardPink")!.colors(for: .light)
+        let gradientTheme = CandidateTheme.resolved(candidateTextSizeScale: 1, colorSettings: gradientColors, screenSizeClass: .phoneCompact)
+        XCTAssertNotNil(gradientTheme.firstCandidateHighlightColor, "gradient theme must derive a first-candidate highlight")
+        XCTAssertNotNil(gradientTheme.pressedCandidateColor, "gradient theme must derive a pressed tint")
+
+        let flatTheme = CandidateTheme.resolved(candidateTextSizeScale: 1, colorSettings: .default, screenSizeClass: .phoneCompact)
+        XCTAssertNil(flatTheme.firstCandidateHighlightColor, "flat theme must leave first-candidate highlight nil")
+        XCTAssertNil(flatTheme.pressedCandidateColor, "flat theme must leave pressed tint nil")
+    }
+
     // trace: a dark-only theme (light == nil) → .light request falls back to the dark variant
     func testColorsForScheme_darkOnlyFallsBackToDark() {
         let darkColors = makeColors(hex: 0x112233)

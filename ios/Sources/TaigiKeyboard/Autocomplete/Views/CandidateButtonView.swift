@@ -44,6 +44,8 @@ struct CandidateButtonView: View {
             isPressed: isPressed,
             isFirstCandidate: isFirstCandidate,
             isLiquidGlassEnabled: style.isLiquidGlassEnabled,
+            firstCandidateThemeColor: theme.firstCandidateHighlightColor,
+            pressedThemeColor: theme.pressedCandidateColor,
         )
     }
 

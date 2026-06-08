@@ -1,4 +1,5 @@
-// 中文: 內建主題靜態表 — 依 family(經典/Swifty/Minimal)分區。經典含 default + 海風/翠青/藤紫 漸層。
+// 中文: 內建主題靜態表 — 依 family(經典/Swifty/Minimal)分區。經典含 default + 5 個 light-only 漸層。
+// 中文: 漸層主題只帶 light 配色(dark = null)→ 深色模式刻意維持 light 觀感(USER:這些主題色不隨深色變)。
 // 中文: Swifty/Minimal scaffold(無配色,light/dark = null)。id 為非 UUID、非 "default" 字串。對齊 iOS BuiltInThemes。
 
 package com.siansiansu.taigikeyboard.ime.core
@@ -57,31 +58,27 @@ object BuiltInThemes {
                         // look: a gentle tint at the TOP fading DOWN to a pale version of the
                         // SAME hue. White keys ride on top. Hex are visual estimates; fine-tune
                         // on device. Shelf order: 櫻花 → 金煌 → 海風 → 翠青 → 藤紫 (after 預設 head).
+                        // Light-only by design (dark == null): these themes keep their light
+                        // palette in dark mode, so colors(isDark = true) falls back to light.
                         gradientTheme(
                             "standardPink", "櫻花",
-                            lightTop = 0xE6C2D0, lightBottom = 0xEADCE2,
-                            darkTop = 0x4A303C, darkBottom = 0x36242E,
+                            top = 0xE6C2D0, bottom = 0xEADCE2,
                         ),
                         gradientTheme(
                             "standardGold", "金煌",
-                            lightTop = 0xEAD9A6, lightBottom = 0xECE4D2,
-                            darkTop = 0x423B22, darkBottom = 0x322C1A,
+                            top = 0xEAD9A6, bottom = 0xECE4D2,
                         ),
-                        // 海風 = 台鐵海風號 teal (#4CB8B8 base), HSL-derived soft gradient.
                         gradientTheme(
                             "standardBlue", "海風",
-                            lightTop = 0xC1E6E6, lightBottom = 0xDCEAEA,
-                            darkTop = 0x325353, darkBottom = 0x254141,
+                            top = 0xBFD2EA, bottom = 0xDCE2EC,
                         ),
                         gradientTheme(
                             "standardGreen", "翠青",
-                            lightTop = 0xC3D8C8, lightBottom = 0xDCE5DD,
-                            darkTop = 0x324235, darkBottom = 0x28342A,
+                            top = 0xC3D8C8, bottom = 0xDCE5DD,
                         ),
                         gradientTheme(
                             "standardPurple", "藤紫",
-                            lightTop = 0xCDC4E4, lightBottom = 0xDEDAEA,
-                            darkTop = 0x3A3252, darkBottom = 0x2C2640,
+                            top = 0xCDC4E4, bottom = 0xDEDAEA,
                         ),
                     ),
             ),
@@ -113,11 +110,10 @@ object BuiltInThemes {
     /** Looks up a built-in by id; null when [id] is not a built-in. */
     fun theme(id: String): BuiltInTheme? = all.firstOrNull { it.id == id }
 
-    // 中文: 漸層主題中性鍵色 — 功能鍵與字母鍵同色(光面白 / 暗面 soft dark),對齊 iOS Liquid Glass 預設白功能鍵。
+    // 中文: 漸層主題中性鍵色 — 功能鍵與字母鍵同色(白),對齊 iOS Liquid Glass 預設白功能鍵。
+    // 中文: 漸層主題 light-only,深色模式維持 light 觀感,故只需 light 鍵色。
     private const val LIGHT_KEY_FILL = 0xFFFFFF
     private const val LIGHT_KEY_TEXT = 0x1C1C1E
-    private const val DARK_KEY_FILL = 0x3A3A3C
-    private const val DARK_KEY_TEXT = 0xFFFFFF
 
     /** A colorless scaffold theme: a name + a card screenshot slot, no palette. */
     private fun scaffold(id: String, displayName: String): BuiltInTheme =
@@ -129,20 +125,23 @@ object BuiltInThemes {
             previewImageName = "theme_${id}_preview",
         )
 
-    /** A soft single-hue gradient theme — top->bottom gradient over neutral keys. */
+    /**
+     * A soft single-hue gradient theme — top->bottom gradient over neutral white
+     * keys. Light-only (dark == null): in dark mode colors(isDark = true) falls back
+     * to this light palette, so the theme keeps its light look (USER request — these
+     * themes don't darken with the system).
+     */
     private fun gradientTheme(
         id: String,
         displayName: String,
-        lightTop: Int,
-        lightBottom: Int,
-        darkTop: Int,
-        darkBottom: Int,
+        top: Int,
+        bottom: Int,
     ): BuiltInTheme =
         BuiltInTheme(
             id = id,
             displayName = displayName,
-            light = softGradientColors(lightTop, lightBottom, LIGHT_KEY_FILL, LIGHT_KEY_TEXT),
-            dark = softGradientColors(darkTop, darkBottom, DARK_KEY_FILL, DARK_KEY_TEXT),
+            light = softGradientColors(top, bottom, LIGHT_KEY_FILL, LIGHT_KEY_TEXT),
+            dark = null,
             previewImageName = "theme_${id}_preview",
         )
 

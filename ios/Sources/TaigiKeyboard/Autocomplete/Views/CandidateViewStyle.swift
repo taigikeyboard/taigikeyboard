@@ -150,6 +150,8 @@ extension CandidateView.ItemStyle {
     ///   - isPressed: 是否按下
     ///   - isFirstCandidate: 是否為第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
     ///   - isLiquidGlassEnabled: 是否啟用 Liquid Glass
+    ///   - firstCandidateThemeColor: 漸層主題推導的第一候選 highlight 色(nil = 非漸層主題,走中性 fallback)
+    ///   - pressedThemeColor: 漸層主題推導的按壓色(nil = 非漸層主題,走中性 fallback)
     /// - Returns: 實際的背景色
     func resolvedBackgroundColor(
         for colorScheme: ColorScheme,
@@ -157,34 +159,40 @@ extension CandidateView.ItemStyle {
         isPressed: Bool = false,
         isFirstCandidate: Bool = false,
         isLiquidGlassEnabled: Bool = false,
+        firstCandidateThemeColor: Color? = nil,
+        pressedThemeColor: Color? = nil,
     ) -> Color {
-        // iOS 26 Liquid Glass 策略：使用透明背景讓系統 Liquid Glass 效果透出
+        // 狀態優先序(全主題一致):實際按壓(isPressed)→ 深 pressed;第一候選(isFirstCandidate)
+        // → 淺 highlight,即使它被選中 —— 打字時引擎把 selectedCandidateIndex 設為 0,第一候選
+        // 恆為「選中」,但仍要顯示淺色 hint;其他被選中候選(硬體導航)→ 深 pressed;其餘 → idle。
+        // 漸層主題用推導的主題色蓋過中性色;非漸層主題(themeColor == nil)走下方中性 KeyboardKit fallback。
+        if isPressed, let pressedThemeColor {
+            return pressedThemeColor
+        }
+        if isFirstCandidate, let firstCandidateThemeColor {
+            return firstCandidateThemeColor
+        }
+        if isSelected, let pressedThemeColor {
+            return pressedThemeColor
+        }
+
+        // 非漸層主題 fallback。同一優先序:pressed > firstCandidate > selected > idle。
         if isLiquidGlassEnabled {
-            if isPressed || isSelected {
-                // 按下或選中時：參考 KeyboardKit 的 backgroundColorPressedLiquid
-                // 使用閒置顏色加 60% 透明度
-                let idleColor = backgroundColor ?? Color.keyboardButtonBackgroundLiquid(for: colorScheme)
-                return idleColor.opacity(0.6)
-            } else if isFirstCandidate {
-                // 第一候選詞(engine ranker top)：低透明度鍵帽色提示，保留 Liquid Glass 通透感。
-                // 透明度刻意低於 pressed/selected 的 0.6，維持狀態強度層級。
-                return Color.keyboardButtonBackgroundLiquid(for: colorScheme).opacity(0.4)
-            } else {
-                // 未選中時使用極低透明度，保持觸控功能同時讓系統 Liquid Glass 透出
-                return Color.white.opacity(0.001)
-            }
+            // iOS 26 Liquid Glass:透明背景讓系統效果透出;pressed/selected 用閒置色 +0.6,
+            // 第一候選用較低 0.4 維持狀態層級。
+            let pressedLook = (backgroundColor ?? Color.keyboardButtonBackgroundLiquid(for: colorScheme)).opacity(0.6)
+            if isPressed { return pressedLook }
+            if isFirstCandidate { return Color.keyboardButtonBackgroundLiquid(for: colorScheme).opacity(0.4) }
+            if isSelected { return pressedLook }
+            return Color.white.opacity(0.001)
         } else {
-            // 非 Liquid Glass 模式：參考 KeyboardKit 的 backgroundColorPressed
-            if isPressed || isSelected {
-                // 按壓時使用深色按鈕背景（與 KeyboardKit 一致）
-                return selectedBackgroundColor ?? Color.keyboardDarkButtonBackground(for: colorScheme)
-            } else if isFirstCandidate {
-                // 第一候選詞:填滿鍵帽底色作為視覺提示(淺色主題=白),對齊 Android key_bgColor
-                // 與 Rime 家族 (trime / Hamster) 的 highlighted-candidate 慣例。
-                return Color.keyboardButtonBackground
-            } else {
-                return backgroundColor ?? Color.clear
-            }
+            // 參考 KeyboardKit backgroundColorPressed;第一候選填滿鍵帽底色(淺色 hint,對齊
+            // Android key_bgColor 與 Rime 家族 highlighted-candidate 慣例)。
+            let pressedLook = selectedBackgroundColor ?? Color.keyboardDarkButtonBackground(for: colorScheme)
+            if isPressed { return pressedLook }
+            if isFirstCandidate { return Color.keyboardButtonBackground }
+            if isSelected { return pressedLook }
+            return backgroundColor ?? Color.clear
         }
     }
 }

@@ -60,6 +60,10 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR
+import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_PRESSED_DEEPEN_FACTOR
+import com.siansiansu.taigikeyboard.ime.core.deepenedArgb
+import com.siansiansu.taigikeyboard.ime.core.lightenedArgb
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import kotlinx.coroutines.delay
@@ -117,7 +121,7 @@ fun CandidateOverlayContent(
 ) {
     val context = LocalContext.current
     val fontScale = LocalConfiguration.current.fontScale
-    val colors = rememberCandidateOverlayColors(resetKey)
+    val colors = rememberCandidateOverlayColors(resetKey, backgroundGradient)
     val fontFamily = remember(typeface) { FontFamily(ComposeTypeface(typeface)) }
 
     // Click protection re-arms on every show() (resetKey bump); updateSuggestions must NOT re-arm.
@@ -493,15 +497,22 @@ private data class CandidateOverlayColors(
 )
 
 @Composable
-private fun rememberCandidateOverlayColors(refreshKey: Int): CandidateOverlayColors {
+private fun rememberCandidateOverlayColors(refreshKey: Int, backgroundGradient: List<Int>?): CandidateOverlayColors {
     val context = LocalContext.current
-    return remember(refreshKey, context) {
+    return remember(refreshKey, context, backgroundGradient) {
+        // Gradient themes tint first-candidate + pressed with the theme hue (deepened top stop),
+        // matching the strip; flat themes keep the neutral key_bgColor / semiTransparentColor attrs.
+        val gradientTop = backgroundGradient?.takeIf { it.size >= 2 }?.first()
         CandidateOverlayColors(
             background = Color(getColorFromAttr(context, R.attr.smartbar_bgColor)),
             primary = Color(getColorFromAttr(context, R.attr.smartbar_candidate_fgColor)),
             subtitle = Color(getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor)),
-            firstCandidateBackground = Color(getColorFromAttr(context, R.attr.key_bgColor)),
-            pressed = Color(getColorFromAttr(context, R.attr.semiTransparentColor)),
+            firstCandidateBackground =
+                gradientTop?.let { Color(lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR)) }
+                    ?: Color(getColorFromAttr(context, R.attr.key_bgColor)),
+            pressed =
+                gradientTop?.let { Color(deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR)) }
+                    ?: Color(getColorFromAttr(context, R.attr.semiTransparentColor)),
             controlTint = Color(getColorFromAttr(context, R.attr.smartbar_fgColor)),
             buttonPressed = Color(getColorFromAttr(context, R.attr.overlay_button_bgColorPressed)),
         )

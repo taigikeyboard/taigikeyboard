@@ -35,6 +35,14 @@ struct CandidateTheme: Equatable {
     /// keyboard root) instead of inheriting the candidate strip's transparent style.
     let backgroundGradientColors: [Color]?
 
+    /// Candidate-strip first-candidate highlight + pressed tints, derived from the
+    /// gradient theme's top stop so those states match the theme hue: highlight is a
+    /// light tint (lightened toward white), pressed is darker (deepened toward black).
+    /// nil for a flat/default theme — the candidate view then keeps its neutral
+    /// KeyboardKit fallback (white keycap / dark pressed).
+    let firstCandidateHighlightColor: Color?
+    let pressedCandidateColor: Color?
+
     /// TPS 主標題字體大小
     var tpsPrimaryFontSize: CGFloat {
         primaryFontSize * Self.tpsScale
@@ -69,9 +77,11 @@ struct CandidateTheme: Equatable {
         }
 
         let customTextColor = colorSettings.candidateTextColor?.color
-        let gradientColors = colorSettings.hasBackgroundGradient
-            ? colorSettings.backgroundGradient?.stops.map(\.color)
-            : nil
+        let gradientStops = colorSettings.hasBackgroundGradient ? colorSettings.backgroundGradient?.stops : nil
+        let gradientColors = gradientStops?.map(\.color)
+        // Gradient themes tint the strip's first-candidate + pressed states with a
+        // deepened version of the top stop; flat themes leave these nil (neutral fallback).
+        let topStop = gradientStops?.first
         return CandidateTheme(
             height: baseHeight * candidateTextSizeScale + bottomPadding,
             primaryFontSize: primaryBase * candidateTextSizeScale,
@@ -79,6 +89,8 @@ struct CandidateTheme: Equatable {
             primaryTextColor: customTextColor ?? Color(.label),
             secondaryTextColor: customTextColor?.opacity(0.7) ?? Color(.secondaryLabel),
             backgroundGradientColors: gradientColors,
+            firstCandidateHighlightColor: topStop.map { $0.lightened(towardWhite: KeyboardColorSettings.candidateHighlightLightenFactor).color },
+            pressedCandidateColor: topStop.map { $0.deepened(by: KeyboardColorSettings.candidatePressedDeepenFactor).color },
         )
     }
 
@@ -92,5 +104,7 @@ struct CandidateTheme: Equatable {
         primaryTextColor: Color(.label),
         secondaryTextColor: Color(.secondaryLabel),
         backgroundGradientColors: nil,
+        firstCandidateHighlightColor: nil,
+        pressedCandidateColor: nil,
     )
 }

@@ -88,4 +88,51 @@ struct KeyboardColorSettings: Codable, Equatable {
     var hasBackgroundGradient: Bool {
         (backgroundGradient?.stops.count ?? 0) >= 2
     }
+
+    /// Factors used to derive the candidate strip's first-candidate highlight and
+    /// pressed tints from a gradient theme's top stop, so those states match the theme
+    /// hue instead of a neutral keycap color. The highlight is LIGHTENED toward white
+    /// (a light tint of the hue, lighter than the gradient bar so it stays visible);
+    /// the pressed state is DEEPENED toward black (a darker press feedback). A
+    /// flat/scaffold theme (no gradient) keeps the neutral KeyboardKit fallback.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/KeyboardColorSettings.kt
+    // CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR / CANDIDATE_PRESSED_DEEPEN_FACTOR. Drift causes silent divergence.
+    static let candidateHighlightLightenFactor: Double = 0.5
+    static let candidatePressedDeepenFactor: Double = 0.65
+}
+
+extension CodableColor {
+    /// Returns an opaque variant lightened toward white by `factor`: each 0-255 RGB
+    /// component is lifted by `component + (255 - component) * factor`, truncated
+    /// toward zero. Used to derive the candidate first-candidate highlight — a light
+    /// tint of the gradient theme's top stop.
+    // 中文: 把顏色往白提亮(各分量 + (255-分量)×factor 取整),維持不透明。用來推導第一候選 highlight(主題淺色)。
+    func lightened(towardWhite factor: Double) -> CodableColor {
+        func scaled(_ component: Double) -> UInt32 {
+            let byte = UInt32((component * 255).rounded())
+            return byte + UInt32(Double(255 - byte) * factor)
+        }
+        let hex = (scaled(red) << 16) | (scaled(green) << 8) | scaled(blue)
+        return CodableColor(hex: hex)
+    }
+
+    /// Returns an opaque variant deepened toward black by `factor`: each 0-255 RGB
+    /// component is recovered, multiplied, and truncated toward zero. Used to derive
+    /// the candidate pressed tint from a gradient theme's top stop.
+    ///
+    /// The 0-1 → 0-255 → 0-1 (`init(hex:)`) round-trip is deliberate, not redundant:
+    /// it forces per-byte integer truncation so the result is byte-identical to
+    /// Android's `deepenedArgb` (`.toInt()`), keeping the CROSS-PLATFORM INVARIANT
+    /// exact. A direct `Color(red: red * factor, …)` would keep float precision and
+    /// drift from Android by sub-byte amounts. Do not "simplify" away the round-trip.
+    // 中文: 把顏色往黑加深(各 0-255 分量 × factor 取整),維持不透明。0-1→0-255→0-1 來回是刻意的:
+    // 中文: 強制逐 byte 整數截斷,與 Android deepenedArgb 完全一致(跨平台 byte 對齊),勿簡化。
+    func deepened(by factor: Double) -> CodableColor {
+        func scaled(_ component: Double) -> UInt32 {
+            let byte = UInt32((component * 255).rounded())
+            return UInt32(Double(byte) * factor)
+        }
+        let hex = (scaled(red) << 16) | (scaled(green) << 8) | scaled(blue)
+        return CodableColor(hex: hex)
+    }
 }

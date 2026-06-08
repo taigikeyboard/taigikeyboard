@@ -101,3 +101,38 @@ data class KeyboardColorSettings(
         private fun JSONObject.optIntOrNull(key: String): Int? = if (has(key) && !isNull(key)) getInt(key) else null
     }
 }
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift
+// candidateHighlightLightenFactor / candidatePressedDeepenFactor. Drift causes silent divergence.
+// Factors used to derive the candidate strip's first-candidate highlight + pressed tints from a
+// gradient theme's top stop, so those states match the theme hue instead of a neutral keycap color.
+// The highlight is LIGHTENED toward white (a light tint, lighter than the gradient bar so it stays
+// visible); the pressed state is DEEPENED toward black. A flat/scaffold theme (no gradient) keeps
+// the neutral attr-based fallback.
+const val CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR = 0.5
+const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
+
+/**
+ * Returns an opaque ARGB color lightened toward white by [factor]: each 0-255 RGB component is
+ * lifted by `c + (255 - c) * factor`, truncated toward zero (alpha forced 0xFF). Used to derive the
+ * candidate first-candidate highlight — a light tint of a gradient theme's top stop.
+ */
+fun lightenedArgb(argb: Int, factor: Double): Int {
+    fun lift(c: Int): Int = c + ((255 - c) * factor).toInt()
+    val r = lift(argb shr 16 and 0xFF)
+    val g = lift(argb shr 8 and 0xFF)
+    val b = lift(argb and 0xFF)
+    return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+}
+
+/**
+ * Returns an opaque ARGB color deepened toward black by [factor]: each 0-255 RGB component is
+ * multiplied and truncated toward zero (alpha forced 0xFF). Used to derive the candidate pressed
+ * tint from a gradient theme's top stop.
+ */
+fun deepenedArgb(argb: Int, factor: Double): Int {
+    val r = ((argb shr 16 and 0xFF) * factor).toInt()
+    val g = ((argb shr 8 and 0xFF) * factor).toInt()
+    val b = ((argb and 0xFF) * factor).toInt()
+    return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+}

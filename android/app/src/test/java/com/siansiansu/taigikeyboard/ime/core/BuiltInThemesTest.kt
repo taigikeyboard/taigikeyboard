@@ -75,6 +75,17 @@ class BuiltInThemesTest {
         }
     }
 
+    // Gradient themes are light-only (dark == null) → dark scheme reuses the light
+    // palette unchanged (USER: these themes keep their light look in dark mode).
+    @Test
+    fun standardGradientThemes_stayLightInDarkMode() {
+        for (id in listOf("standardPink", "standardGold", "standardBlue", "standardGreen", "standardPurple")) {
+            val theme = BuiltInThemes.theme(id)!!
+            assertNull("$id must not define a dark variant — it stays light in dark mode", theme.dark)
+            assertEquals("$id dark scheme must reuse the light palette", theme.colors(false), theme.colors(true))
+        }
+    }
+
     @Test
     fun colorsForScheme_darkOnlyFallsBackToDark() {
         val dark = KeyboardColorSettings(backgroundColor = 0xFF112233.toInt())
@@ -114,6 +125,6 @@ class BuiltInThemesTest {
     @Test
     fun standardBlue_gradientStopsAreExpectedArgb_light() {
         val gradient = BuiltInThemes.theme("standardBlue")!!.colors(isDark = false).backgroundGradient!!
-        assertEquals(listOf(0xFFC1E6E6.toInt(), 0xFFDCEAEA.toInt()), gradient.stops)
+        assertEquals(listOf(0xFFBFD2EA.toInt(), 0xFFDCE2EC.toInt()), gradient.stops)
     }
 }

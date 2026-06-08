@@ -8,11 +8,15 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR
+import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_PRESSED_DEEPEN_FACTOR
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
+import com.siansiansu.taigikeyboard.ime.core.deepenedArgb
 import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
+import com.siansiansu.taigikeyboard.ime.core.lightenedArgb
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -650,6 +654,9 @@ class SmartbarManager(
         val height =
             smartbarView?.height?.takeIf { it > 0 }
                 ?: context.resources.getDimension(R.dimen.smartbar_height).toInt()
+        // Gradient themes tint first-candidate + pressed with the theme hue (deepened top stop);
+        // flat themes keep the neutral key_bgColor / semiTransparentColor attrs.
+        val gradientTop = colorSettings.gradientStops()?.firstOrNull()
         return CandidateDisplayParams(
             isTranslateSwapped = cachedIsTranslateSwapped,
             fontType = prefs.fontType,
@@ -664,8 +671,12 @@ class SmartbarManager(
                 if (colorSettings.hasBackgroundGradient) null else colorSettings.candidateBackgroundColor,
             themeTitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_fgColor),
             themeSubtitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor),
-            themeKeyBgColor = getColorFromAttr(context, R.attr.key_bgColor),
-            themePressedHighlightColor = getColorFromAttr(context, R.attr.semiTransparentColor),
+            themeKeyBgColor =
+                gradientTop?.let { lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR) }
+                    ?: getColorFromAttr(context, R.attr.key_bgColor),
+            themePressedHighlightColor =
+                gradientTop?.let { deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
+                    ?: getColorFromAttr(context, R.attr.semiTransparentColor),
             smartbarHeightPx = height,
         )
     }
