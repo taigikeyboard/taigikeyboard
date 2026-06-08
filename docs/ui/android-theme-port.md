@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking, multi-PR)
 > **Keywords**: `theme`, `android`, `port`, `gradient`, `cross-platform`
-> **Status**: Active — P0 + P1 merged (`ad49504b`, PR #414); P2 next
+> **Status**: Active — P0–P2 merged (P2 = `aa11ebf1`, PR #415); P3 next
 > **iOS source**: chain #400-411 (main `786c8366`); spec in memory `project_v362_theme_picker.md` + `docs/ui/theme.md` / `theme-presets-brainstorm.md`
 
 ---
@@ -33,7 +33,7 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 - **Gradient continuity** → paint the vertical gradient ONCE on the common parent (`InputView` container); keep both the Smartbar and Keyboard Compose hosts transparent. Avoids per-host coordinate alignment + handles dynamic smartbar height. Risk: confirm the parent span is exactly candidate-top→keyboard-bottom.
 - **Key shadow** → Compose `dropShadow()` (NOT `Modifier.shadow`, which is Material elevation). Map intensity `0 = none`, `1..4 = radius intensity.dp, offsetY intensity/2.dp, alpha 0.30`. Fallback `Modifier.shadow(elevation = intensity*1.5.dp, shape, clip=false)` if the Compose BOM lacks `dropShadow()`. Device-screenshot verify (clipping risk).
 - **Persistence** → DataStore JSON string keys (matches existing `colorSettings`); write `userThemes` + `selectedThemeId` in one transaction.
-- **No `themeRevision` counter** (intentional divergence from iOS). DataStore write does not auto-trigger `publishAppearance()`, so P2 adds an appearance-republish Flow observing `selectedThemeId + userThemes + colorSettings + scalars` so a *visible* keyboard updates without a keystroke (iOS uses `didChangeNotification`). Observing `selectedThemeId` alone is insufficient (editing the active theme keeps the id).
+- **No `themeRevision` counter** (intentional divergence from iOS). DataStore write does not auto-trigger `publishAppearance()`. The appearance-republish Flow (observing `selectedThemeId + userThemes + colorSettings + scalars` so a *visible* keyboard updates without a keystroke; observing `selectedThemeId` alone is insufficient since editing the active theme keeps the id) was **deferred from P2 to P3/P4** — P2 is dormant (themes unselectable), and `onWindowShown → refreshTheme()` already covers the settings-Activity-return case. Add the Flow when an in-keyboard or live theme-change surface lands.
 - **Resolver threading** preserves existing customized users: `selectedThemeId == "default"` → `legacyAppearance` (current `colorSettings` + 5 scalars + shadow 0). `fontType` stays global, not a theme field. Smartbar must read the same resolved appearance, not raw `prefs.colorSettings`.
 - **Model shape** → mirror semantics, not Swift types. `data class` + `BuiltInThemes` object; `ThemeId` = string constants; `UserThemeStore` = plain JSON parse/write (no repository abstraction).
 
@@ -52,8 +52,8 @@ So the port is **additive on solid existing infra**. Genuinely new: the theme co
 |---|---|---|
 | P0 | Roadmap doc + memory (admin) | Merged (folded into `ad49504b`) |
 | P1 | Model + persistence + resolver + unit tests (no UI, no render change) | Merged `ad49504b` (PR #414, 40 tests green) |
-| P2 | Render seam: gradient bg + transparent candidate + key shadow + republish Flow | **Next** |
-| P3 | Theme tab (index 1) + picker gallery + `ThemeTexts` strings | Pending |
+| P2 | Render seam: gradient bg + transparent candidate + key shadow (republish Flow deferred to P3/P4) | Merged `aa11ebf1` (PR #415) |
+| P3 | Theme tab (index 1) + picker gallery + `ThemeTexts` strings | **Next** |
 | P4 | Theme editor CRUD (Save-time name dialog, cap 5, auto-apply, bottom preview) | Pending |
 | P5 | Cleanup: remove appearance page, font → Settings tab, string migration | Pending |
 
@@ -78,11 +78,13 @@ Modified:
 
 Tests (`app/src/test/.../ime/core/`): `ThemeResolverTest`, `BuiltInThemesTest`, `UserThemeStoreTest`, `KeyboardColorSettingsGradientTest`, `ThemeAppearanceJsonTest` — mirror the iOS XCTest suites.
 
-### P2 — Render seam
-- `KeyboardAppearanceResolver.snapshot()` → resolve `ThemeAppearance` (isDark from resources night-mode); map scalars + new `keyShadowIntensity` into `KeyboardAppearance`
-- gradient on the common parent container; both hosts transparent; `SmartbarManager.currentDisplay()` reads resolved appearance
-- `dropShadow()` in `KeyContent`
-- appearance-republish Flow (idle update)
+### P2 — Render seam (merged `aa11ebf1`, PR #415)
+- `ThemeAppearanceCache` (new, `ime/core`) — string-eq cache over `ThemeResolver` inputs; delegates `PrefHelper.resolvedAppearance`. Held by `KeyboardAppearanceResolver` (keys) + `SmartbarManager` (candidates) so both read the SAME resolved theme. `+isKeyboardNightMode` shared helper (`NavigationBarManager.isDarkMode` delegates).
+- `KeyboardAppearanceResolver.snapshot()` resolves `ThemeAppearance`; maps scalars + new `keyShadowIntensity` into `KeyboardAppearance`. `+resolvedColors()` for the View-layer apply.
+- `KeyboardLayout` bg transparent when `hasBackgroundGradient`; `KeyContent` `dropShadow(shape)` before background, pure `keyShadowSpec(i)` map (`0=none, 1..4 → radius i / offsetY i/2 / alpha .30`).
+- `KeyboardThemeSurfaceController` (new) — paints `GradientDrawable(TOP_BOTTOM)` on `text_input_content`; `SmartbarView.applyThemeSurface` toggles chrome transparency. Candidate-bg ownership consolidated here (removed per-update `applyCustomBackgroundColor`); `currentDisplay()` forces the candidate strip transparent over a gradient explicitly.
+- `TextInputManager.refreshTheme()` (= `pushAppearance` + surface apply) called from `onWindowShown`.
+- Deferred to P3 device dogfood: gradient seam screenshot (no selection UI in P2) + intensity-4 bottom-edge shadow clip (~1dp, cosmetic). Republish Flow deferred to P3/P4 (see Codex decisions).
 
 ### P3 — Theme tab + picker
 - insert tab at index 1 (`SettingsMainActivity` / `MainSettingsScreen`; renumber `TAB_*`)
