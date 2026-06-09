@@ -529,8 +529,9 @@ private const val CUSTOM_PREVIEW_GLYPH_BASE_SP = 26f
 // Mirrors iOS UIImage(named: previewImageName) in ThemePickerView.swift — except iOS
 // byte-copies phahtaigi into a name-keyed theme_standard_preview imageset, while this
 // ID-keyed map points 預設 straight at R.drawable.layout_phahtaigi_preview (no copy).
-// 框線 family ships its own screenshots: theme_framed_preview carries light + night
-// buckets (adaptive 預設); the 5 漸層 theme_framed*_preview are light-only single bucket.
+// 框線 / 簡潔 families ship their own screenshots: theme_framed_preview /
+// theme_clean_preview carry light + night buckets (adaptive 預設); the 5 漸層
+// theme_framed*_preview / theme_clean*_preview are light-only single bucket.
 @DrawableRes
 private fun builtInThemePreviewRes(previewImageName: String?): Int? =
     when (previewImageName) {
@@ -546,6 +547,12 @@ private fun builtInThemePreviewRes(previewImageName: String?): Int? =
         "theme_framedBlue_preview" -> R.drawable.theme_framedblue_preview
         "theme_framedGreen_preview" -> R.drawable.theme_framedgreen_preview
         "theme_framedPurple_preview" -> R.drawable.theme_framedpurple_preview
+        "theme_clean_preview" -> R.drawable.theme_clean_preview
+        "theme_cleanPink_preview" -> R.drawable.theme_cleanpink_preview
+        "theme_cleanGold_preview" -> R.drawable.theme_cleangold_preview
+        "theme_cleanBlue_preview" -> R.drawable.theme_cleanblue_preview
+        "theme_cleanGreen_preview" -> R.drawable.theme_cleangreen_preview
+        "theme_cleanPurple_preview" -> R.drawable.theme_cleanpurple_preview
         else -> null
     }
 
