@@ -187,11 +187,11 @@ private fun IconContent(
     // Legacy `KeyView.onDraw` icon sizing: aspect-ratio center crop to a
     // square of side = min(w,h), then inset 0.15 × height padding on all
     // four sides. Result: icon side length = min(w,h) - 2 × 0.15h.
-    val effectiveTint = if (visual.useEnterColor) {
-        Color(visual.tintArgb)
-    } else {
-        colors.keyTextColor?.let { Color(it) } ?: Color(visual.tintArgb)
-    }
+    // Theme keyTextColor role wins for ALL icons (incl. enter). A light-only theme
+    // sets it to a fixed dark color so the glyph stays readable in system dark mode;
+    // the adaptive default theme leaves it null and falls back to the night-aware
+    // `visual.tintArgb` (keyEnterFg for enter, keyFg otherwise).
+    val effectiveTint = colors.keyTextColor?.let { Color(it) } ?: Color(visual.tintArgb)
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -224,10 +224,12 @@ private fun LabelContent(
     fontSizeScale: Float,
     themeColors: ThemePalette,
 ) {
-    val labelColorArgb = if (data.code == KeyCode.ENTER) {
+    // keyTextColor role wins for all labels (incl. the enter confirm-text); null
+    // (adaptive default theme) falls back to the night-aware enter/normal attr.
+    val labelColorArgb = colors.keyTextColor ?: if (data.code == KeyCode.ENTER) {
         themeColors.keyEnterFg
     } else {
-        colors.keyTextColor ?: themeColors.keyFg
+        themeColors.keyFg
     }
     val labelPaint = remember {
         Paint().apply {
@@ -368,10 +370,9 @@ private sealed interface KeyVisual {
 
     data class Icon(
         @DrawableRes val drawableRes: Int,
+        /** Fallback tint when the theme leaves `keyTextColor` null — `keyEnterFg`
+         *  for the enter key, `keyFg` otherwise. `keyTextColor` overrides both. */
         val tintArgb: Int,
-        /** Enter key keeps its dedicated `key_enter_fgColor`; other icons
-         *  honor `colors.keyTextColor` override. */
-        val useEnterColor: Boolean,
     ) : KeyVisual
 }
 
@@ -434,8 +435,8 @@ private fun resolveKeyVisual(
     }
 
     return when (data.code) {
-        KeyCode.TRANSLATE -> KeyVisual.Icon(R.drawable.ic_translate, themeColors.keyFg, useEnterColor = false)
-        KeyCode.DELETE -> KeyVisual.Icon(R.drawable.ic_backspace, themeColors.keyFg, useEnterColor = false)
+        KeyCode.TRANSLATE -> KeyVisual.Icon(R.drawable.ic_translate, themeColors.keyFg)
+        KeyCode.DELETE -> KeyVisual.Icon(R.drawable.ic_backspace, themeColors.keyFg)
         KeyCode.ENTER -> resolveEnterVisual(
             isPreview = isPreview,
             isComposing = isComposing,
@@ -443,13 +444,13 @@ private fun resolveKeyVisual(
             imeOptions = imeOptions,
             enterFg = themeColors.keyEnterFg,
         )
-        KeyCode.LANGUAGE_SWITCH -> KeyVisual.Icon(R.drawable.ic_language, themeColors.keyFg, useEnterColor = false)
+        KeyCode.LANGUAGE_SWITCH -> KeyVisual.Icon(R.drawable.ic_language, themeColors.keyFg)
         KeyCode.PHONE_PAUSE -> KeyVisual.Label(resources.getString(R.string.key__phone_pause))
         KeyCode.PHONE_WAIT -> KeyVisual.Label(resources.getString(R.string.key__phone_wait))
         KeyCode.SHIFT -> resolveShiftVisual(caps, capsLock, themeColors)
         KeyCode.SPACE -> resolveSpaceVisual(mode, inputMode, themeColors.keyFg)
         KeyCode.SWITCH_TO_MEDIA_CONTEXT ->
-            KeyVisual.Icon(R.drawable.ic_sentiment_satisfied, themeColors.keyFg, useEnterColor = false)
+            KeyVisual.Icon(R.drawable.ic_sentiment_satisfied, themeColors.keyFg)
         KeyCode.SWITCH_TO_TEXT_CONTEXT,
         KeyCode.VIEW_CHARACTERS,
         -> KeyVisual.Label(resources.getString(R.string.key__view_characters))
@@ -479,7 +480,7 @@ private fun resolveEnterVisual(
     enterFg: Int,
 ): KeyVisual {
     if (isPreview) {
-        return KeyVisual.Icon(R.drawable.ic_keyboard_return, enterFg, useEnterColor = true)
+        return KeyVisual.Icon(R.drawable.ic_keyboard_return, enterFg)
     }
     if (isComposing) {
         return KeyVisual.Label(confirmKeyLabel)
@@ -499,7 +500,7 @@ private fun resolveEnterVisual(
             else -> R.drawable.ic_arrow_right_alt
         }
     }
-    return KeyVisual.Icon(drawableRes, enterFg, useEnterColor = true)
+    return KeyVisual.Icon(drawableRes, enterFg)
 }
 
 private fun resolveShiftVisual(
@@ -512,7 +513,7 @@ private fun resolveShiftVisual(
         caps -> R.drawable.ic_keyboard_capslock to themeColors.keyFg
         else -> R.drawable.ic_keyboard_arrow_up to themeColors.keyFg
     }
-    return KeyVisual.Icon(drawable, tint, useEnterColor = false)
+    return KeyVisual.Icon(drawable, tint)
 }
 
 private fun resolveSpaceVisual(
@@ -525,7 +526,7 @@ private fun resolveSpaceVisual(
         KeyboardMode.NUMERIC_ADVANCED,
         KeyboardMode.PHONE,
         KeyboardMode.PHONE2,
-        -> KeyVisual.Icon(R.drawable.ic_space_bar, keyFg, useEnterColor = false)
+        -> KeyVisual.Icon(R.drawable.ic_space_bar, keyFg)
         KeyboardMode.CHARACTERS -> {
             val label = when (inputMode) {
                 "poj" -> "POJ"

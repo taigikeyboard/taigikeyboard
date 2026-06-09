@@ -49,6 +49,11 @@ class CandidateOverlayView : FrameLayout {
     // paints the gradient backdrop instead of the flat `?smartbar_bgColor` chrome.
     private val backgroundGradientState = mutableStateOf<List<Int>?>(null)
 
+    // Resolved theme candidateTextColor (ARGB), or null for the adaptive default theme.
+    // A light-only theme sets it so overlay text/control glyphs stay dark over the light
+    // gradient in system dark mode instead of flipping white via the night attrs.
+    private val candidateTextColorState = mutableStateOf<Int?>(null)
+
     // Bumped on each show() only: re-arms click protection + resets scroll/page (NOT on updateSuggestions).
     private val resetTrigger = mutableIntStateOf(0)
 
@@ -103,6 +108,7 @@ class CandidateOverlayView : FrameLayout {
                     isTranslateSwapped = isTranslateSwapped,
                     resetKey = resetKey,
                     backgroundGradient = backgroundGradientState.value,
+                    candidateTextColor = candidateTextColorState.value,
                     onSuggestionSelected = { word, index -> onSuggestionSelected?.invoke(word, index) },
                     onCollapse = {
                         hide()
@@ -126,11 +132,13 @@ class CandidateOverlayView : FrameLayout {
      * @param suggestions candidate list
      * @param keyboardHeight total keyboard height (overlay covers the full keyboard incl. smartbar)
      * @param backgroundGradient resolved theme gradient stops (ARGB), or null for a flat theme
+     * @param candidateTextColor resolved theme candidate text color (ARGB), or null for the adaptive default
      */
     fun show(
         suggestions: List<TaigiWord>,
         keyboardHeight: Int,
         backgroundGradient: List<Int>?,
+        candidateTextColor: Int?,
     ) {
         if (isShowing) return
         if (suggestions.isEmpty()) return
@@ -138,6 +146,7 @@ class CandidateOverlayView : FrameLayout {
         suggestionsState.value = suggestions
         translateSwappedState.value = cachedTranslateSwapped()
         backgroundGradientState.value = backgroundGradient
+        candidateTextColorState.value = candidateTextColor
 
         if (keyboardHeight > 0) {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {

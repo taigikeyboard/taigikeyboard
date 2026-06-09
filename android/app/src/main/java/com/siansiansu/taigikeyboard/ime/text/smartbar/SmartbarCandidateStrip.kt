@@ -147,7 +147,10 @@ fun EnglishCandidateStrip(
                 roman = word?.roman.orEmpty(),
                 visible = word != null,
                 textSp = englishTextSp,
-                titleColor = Color(display.themeTitleColor),
+                // Role-first like the Taigi cell (:240): a light-only theme's fixed
+                // candidateTextColor wins so the text stays dark on a light gradient
+                // in system dark mode; null (adaptive default) falls back to the attr.
+                titleColor = display.candidateTextColor?.let { Color(it) } ?: Color(display.themeTitleColor),
                 pressedHighlight = Color(display.themePressedHighlightColor),
                 fontFamily = fontFamily,
                 onClick = { onEnglishCandidateClick(slot) },

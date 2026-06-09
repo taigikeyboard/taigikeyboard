@@ -605,7 +605,12 @@ class SmartbarManager(
         // Resolve the active theme once so the overlay paints the gradient backdrop
         // (continuous with the keyboard) instead of the flat `?smartbar_bgColor` chrome.
         val colorSettings = themeCache.resolve(isKeyboardNightMode(taigikeyboard.context)).colors
-        overlay.show(currentSuggestions, keyboardHeight, colorSettings.gradientStops()?.toList())
+        overlay.show(
+            currentSuggestions,
+            keyboardHeight,
+            colorSettings.gradientStops()?.toList(),
+            colorSettings.candidateTextColor,
+        )
     }
 
     private fun collapseCandidateView() {

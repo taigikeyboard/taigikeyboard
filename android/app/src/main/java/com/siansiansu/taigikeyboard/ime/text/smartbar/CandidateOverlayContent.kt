@@ -114,6 +114,7 @@ fun CandidateOverlayContent(
     isTranslateSwapped: Boolean,
     resetKey: Int,
     backgroundGradient: List<Int>?,
+    candidateTextColor: Int?,
     onSuggestionSelected: (TaigiWord, Int) -> Unit,
     onCollapse: () -> Unit,
     onTranslateToggle: () -> Unit,
@@ -121,7 +122,7 @@ fun CandidateOverlayContent(
 ) {
     val context = LocalContext.current
     val fontScale = LocalConfiguration.current.fontScale
-    val colors = rememberCandidateOverlayColors(resetKey, backgroundGradient)
+    val colors = rememberCandidateOverlayColors(resetKey, backgroundGradient, candidateTextColor)
     val fontFamily = remember(typeface) { FontFamily(ComposeTypeface(typeface)) }
 
     // Click protection re-arms on every show() (resetKey bump); updateSuggestions must NOT re-arm.
@@ -497,23 +498,31 @@ private data class CandidateOverlayColors(
 )
 
 @Composable
-private fun rememberCandidateOverlayColors(refreshKey: Int, backgroundGradient: List<Int>?): CandidateOverlayColors {
+private fun rememberCandidateOverlayColors(
+    refreshKey: Int,
+    backgroundGradient: List<Int>?,
+    candidateTextColor: Int?,
+): CandidateOverlayColors {
     val context = LocalContext.current
-    return remember(refreshKey, context, backgroundGradient) {
+    return remember(refreshKey, context, backgroundGradient, candidateTextColor) {
         // Gradient themes tint first-candidate + pressed with the theme hue (deepened top stop),
         // matching the strip; flat themes keep the neutral key_bgColor / semiTransparentColor attrs.
         val gradientTop = backgroundGradient?.takeIf { it.size >= 2 }?.first()
+        // Role-first foreground (mirrors the strip): a light-only theme's fixed
+        // candidateTextColor keeps text/control glyphs dark on a light gradient in
+        // system dark mode; null (adaptive default) falls back to the night attrs.
+        val roleFg = candidateTextColor?.let { Color(it) }
         CandidateOverlayColors(
             background = Color(getColorFromAttr(context, R.attr.smartbar_bgColor)),
-            primary = Color(getColorFromAttr(context, R.attr.smartbar_candidate_fgColor)),
-            subtitle = Color(getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor)),
+            primary = roleFg ?: Color(getColorFromAttr(context, R.attr.smartbar_candidate_fgColor)),
+            subtitle = roleFg ?: Color(getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor)),
             firstCandidateBackground =
                 gradientTop?.let { Color(lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR)) }
                     ?: Color(getColorFromAttr(context, R.attr.key_bgColor)),
             pressed =
                 gradientTop?.let { Color(deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR)) }
                     ?: Color(getColorFromAttr(context, R.attr.semiTransparentColor)),
-            controlTint = Color(getColorFromAttr(context, R.attr.smartbar_fgColor)),
+            controlTint = roleFg ?: Color(getColorFromAttr(context, R.attr.smartbar_fgColor)),
             buttonPressed = Color(getColorFromAttr(context, R.attr.overlay_button_bgColorPressed)),
         )
     }

@@ -7,8 +7,8 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
-import android.util.TypedValue
 import android.view.View
+import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.compose.runtime.getValue
@@ -61,6 +61,12 @@ class SmartbarView : LinearLayout {
         private set
     var toolbarGlobeButton: ImageButton? = null
         private set
+
+    // Resolved chrome foreground tint (light-only theme's candidateTextColor), or null
+    // for the adaptive default theme (chrome then follows the night-aware attr). Set by
+    // applyThemeSurface; read by setExpandButtonState/applyExpandButtonTint so an expand
+    // toggle re-tint doesn't revert to the night attr over a light gradient.
+    private var chromeForegroundTint: Int? = null
 
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
@@ -158,7 +164,43 @@ class SmartbarView : LinearLayout {
         } else {
             candidatesContainer?.background = null
         }
+
+        applyChromeForeground(colors.candidateTextColor)
     }
+
+    /**
+     * Tints the View-layer smartbar chrome (toolbar toggle, expand toggle, toolbar icon
+     * buttons, mode text buttons) from the theme's `candidateTextColor` role. A light-only
+     * theme keeps a fixed dark color so the glyphs stay readable over its light gradient in
+     * system dark mode; a null role (adaptive default theme) restores the night-aware
+     * `?smartbar_fgColor` / `?smartbar_button_fgColor` attr so the default path is unchanged.
+     */
+    private fun applyChromeForeground(candidateTextColor: Int?) {
+        chromeForegroundTint = candidateTextColor
+        val iconFg = candidateTextColor ?: getColorFromAttr(context, R.attr.smartbar_fgColor)
+        val buttonFg = candidateTextColor ?: getColorFromAttr(context, R.attr.smartbar_button_fgColor)
+
+        val iconTint = ColorStateList.valueOf(iconFg)
+        toolbarToggleButton?.imageTintList = iconTint
+        expandToggleButton?.imageTintList = iconTint
+
+        val buttonTint = ColorStateList.valueOf(buttonFg)
+        for (id in TOOLBAR_ICON_BUTTON_IDS) {
+            findViewById<ImageButton>(id)?.imageTintList = buttonTint
+        }
+        val modeTextColors = modeButtonTextColors(buttonFg)
+        for (id in TOOLBAR_MODE_BUTTON_IDS) {
+            findViewById<Button>(id)?.setTextColor(modeTextColors)
+        }
+    }
+
+    // Mirrors @color/mode_button_text: selected mode keeps white text (over the blue
+    // accent fill); the unselected default takes the resolved chrome foreground.
+    private fun modeButtonTextColors(defaultColor: Int): ColorStateList =
+        ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()),
+            intArrayOf(Color.WHITE, defaultColor),
+        )
 
     /**
      * 設定展開按鈕可見性
@@ -182,10 +224,8 @@ class SmartbarView : LinearLayout {
                     R.drawable.ic_keyboard_arrow_down
                 },
             )
-            // 根據鍵盤主題動態設定圖示顏色
-            val typedValue = TypedValue()
-            context.theme.resolveAttribute(R.attr.smartbar_fgColor, typedValue, true)
-            imageTintList = ColorStateList.valueOf(typedValue.data)
+            // 根據鍵盤主題動態設定圖示顏色 (light-only theme role wins over the night attr)
+            imageTintList = ColorStateList.valueOf(resolvedChromeIconTint())
         }
     }
 
@@ -202,10 +242,28 @@ class SmartbarView : LinearLayout {
      * 根據鍵盤主題設定展開按鈕的 tint
      */
     private fun applyExpandButtonTint() {
-        expandToggleButton?.apply {
-            val typedValue = TypedValue()
-            context.theme.resolveAttribute(R.attr.smartbar_fgColor, typedValue, true)
-            imageTintList = ColorStateList.valueOf(typedValue.data)
-        }
+        expandToggleButton?.imageTintList = ColorStateList.valueOf(resolvedChromeIconTint())
+    }
+
+    // Chrome icon tint: the active light-only theme's role, else the night-aware attr.
+    private fun resolvedChromeIconTint(): Int =
+        chromeForegroundTint ?: getColorFromAttr(context, R.attr.smartbar_fgColor)
+
+    companion object {
+        private val TOOLBAR_ICON_BUTTON_IDS =
+            intArrayOf(
+                R.id.toolbar_symbol_button,
+                R.id.toolbar_layout_button,
+                R.id.toolbar_globe_button,
+                R.id.toolbar_dismiss_button,
+                R.id.toolbar_settings_button,
+            )
+        private val TOOLBAR_MODE_BUTTON_IDS =
+            intArrayOf(
+                R.id.toolbar_mode_poj,
+                R.id.toolbar_mode_tl,
+                R.id.toolbar_mode_en,
+                R.id.toolbar_mode_tps,
+            )
     }
 }
