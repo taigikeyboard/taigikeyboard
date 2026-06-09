@@ -253,8 +253,9 @@ private fun BuiltInThemeShelf(
                 preview = {
                     // Maps theme.previewImageName to an explicit R.drawable.* (NEVER
                     // resources.getIdentifier, which the resource shrinker can't track).
-                    // Only the 5 漸層 themes ship a screenshot; the rest fall through to
-                    // null → neutral placeholder. Mirrors iOS UIImage(named:).
+                    // 預設 (reuses phahtaigi) + the 5 漸層 themes ship a screenshot; the
+                    // rest fall through to null → neutral placeholder. Mirrors iOS
+                    // UIImage(named:).
                     BuiltInThemePreview(
                         previewRes = builtInThemePreviewRes(theme.previewImageName),
                         title = theme.displayName,
@@ -517,14 +518,18 @@ private const val CUSTOM_PREVIEW_GLYPH = "â"
 private const val CUSTOM_PREVIEW_GLYPH_BASE_SP = 26f
 
 // Maps a built-in theme's previewImageName to its bundled screenshot drawable, or
-// null when none ships (default/scaffold → neutral placeholder). Explicit when —
-// never resources.getIdentifier, which the resource shrinker can't track. Only the
-// 5 漸層 themes (櫻花/金煌/海風/翠青/藤紫) carry a screenshot today; light-only, so a
-// single drawable-xxhdpi asset serves both light and dark. Mirrors iOS
-// UIImage(named: previewImageName) in ThemePickerView.swift.
+// null when none ships (scaffold → neutral placeholder). Explicit when — never
+// resources.getIdentifier, which the resource shrinker can't track. The 預設 default
+// (adaptive) reuses the phahtaigi layout screenshot (light + night buckets), so its
+// card adapts to dark mode like the theme does. The 5 漸層 themes (櫻花/金煌/海風/翠青/
+// 藤紫) are light-only, so a single drawable-xxhdpi asset serves both light and dark.
+// Mirrors iOS UIImage(named: previewImageName) in ThemePickerView.swift — except iOS
+// byte-copies phahtaigi into a name-keyed theme_standard_preview imageset, while this
+// ID-keyed map points 預設 straight at R.drawable.layout_phahtaigi_preview (no copy).
 @DrawableRes
 private fun builtInThemePreviewRes(previewImageName: String?): Int? =
     when (previewImageName) {
+        "theme_standard_preview" -> R.drawable.layout_phahtaigi_preview
         "theme_standardPink_preview" -> R.drawable.theme_standardpink_preview
         "theme_standardGold_preview" -> R.drawable.theme_standardgold_preview
         "theme_standardBlue_preview" -> R.drawable.theme_standardblue_preview
