@@ -63,14 +63,14 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "預設")
     }
 
-    // trace: three key-style families (經典/框線/簡潔), each carrying the same 6 colors
-    func testFamilies_threeKeyStyleFamiliesEachWithSixColors() {
+    // trace: three key-style families (經典/框線/簡潔), each carrying the same 7 colors
+    func testFamilies_threeKeyStyleFamiliesEachWithSevenColors() {
         XCTAssertEqual(BuiltInThemes.families.map(\.title), ["經典", "框線", "簡潔"])
         for family in BuiltInThemes.families {
-            XCTAssertEqual(family.themes.count, 6, "\(family.title) must carry all 6 shared colors")
-            XCTAssertEqual(family.themes.map(\.displayName), ["預設", "櫻花", "金煌", "海風", "翠青", "藤紫"])
+            XCTAssertEqual(family.themes.count, 7, "\(family.title) must carry all 7 shared colors")
+            XCTAssertEqual(family.themes.map(\.displayName), ["預設", "櫻花", "金煌", "海風", "翠青", "藤紫", "暗眠山貓"])
         }
-        XCTAssertEqual(BuiltInThemes.all.count, 18, "3 families × 6 colors")
+        XCTAssertEqual(BuiltInThemes.all.count, 21, "3 families × 7 colors")
     }
 
     // trace: 經典 keeps filled keys; 框線/簡潔 recolor keys to transparent (key == background)
@@ -136,6 +136,36 @@ final class BuiltInThemesTests: XCTestCase {
             let theme = BuiltInThemes.theme(id: id)!
             XCTAssertNil(theme.dark, "\(id) must not define a dark variant — it stays light in dark mode")
             XCTAssertEqual(theme.colors(for: .dark), theme.colors(for: .light), "\(id) dark scheme must reuse the light palette")
+        }
+    }
+
+    // trace: 暗眠山貓 is the dark-only Catppuccin Mocha theme across all 3 families —
+    // light == nil so BOTH schemes resolve to the dark variant (always dark, the mirror of
+    // the 5 light-only gradients). gradient top #1E1E2E (Base) → #181825 (Mantle);
+    // key+candidate text #CDD6F4 (Text); 經典 keys (letter + function) share #313244
+    // (Surface0); 框線/簡潔 keep transparent keys.
+    func testCatppuccinTheme_isDarkOnlyAcrossFamilies() {
+        for id in ["standardCatppuccin", "framedCatppuccin", "cleanCatppuccin"] {
+            let theme = BuiltInThemes.theme(id: id)!
+            XCTAssertNil(theme.light, "\(id) must be dark-only (light == nil)")
+            XCTAssertNotNil(theme.dark, "\(id) must define the dark variant")
+            let colors = theme.colors(for: .dark)
+            XCTAssertEqual(theme.colors(for: .light), colors, "\(id) light request falls back to the dark variant")
+            XCTAssertTrue(colors.hasBackgroundGradient, "\(id) must carry the Catppuccin gradient")
+            XCTAssertEqual(colors.backgroundGradient?.stops.first, CodableColor(hex: 0x1E1E2E), "\(id) gradient top = Mocha Base")
+            XCTAssertEqual(colors.backgroundGradient?.stops.last, CodableColor(hex: 0x181825), "\(id) gradient bottom = Mocha Mantle")
+            XCTAssertEqual(colors.keyTextColor, CodableColor(hex: 0xCDD6F4), "\(id) key text = Mocha Text")
+            XCTAssertEqual(colors.candidateTextColor, CodableColor(hex: 0xCDD6F4), "\(id) candidate text = Mocha Text")
+        }
+        // 經典 暗眠山貓: letter + function keys share the Surface0 neutral fill.
+        let classic = BuiltInThemes.theme(id: "standardCatppuccin")!.colors(for: .dark)
+        XCTAssertEqual(classic.normalKeyFillColor, CodableColor(hex: 0x313244), "經典 暗眠山貓 letter key = Mocha Surface0")
+        XCTAssertEqual(classic.specialKeyFillColor, CodableColor(hex: 0x313244), "經典 暗眠山貓 function key shares the Surface0 fill")
+        // 框線/簡潔 keep keys transparent (gradient shows through).
+        for id in ["framedCatppuccin", "cleanCatppuccin"] {
+            let colors = BuiltInThemes.theme(id: id)!.colors(for: .dark)
+            XCTAssertEqual(colors.normalKeyFillColor?.alpha, 0, "\(id) letter keys must be transparent")
+            XCTAssertEqual(colors.specialKeyFillColor?.alpha, 0, "\(id) function keys must be transparent")
         }
     }
 

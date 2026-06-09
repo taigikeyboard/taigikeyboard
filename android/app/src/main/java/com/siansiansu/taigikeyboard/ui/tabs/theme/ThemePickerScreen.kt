@@ -78,7 +78,7 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 // Theme tab main screen: a custom-theme shelf (Create New + saved themes with an
 // apply/edit/delete menu) above one built-in shelf per key-style family (經典 /
-// 框線 / 簡潔 — same 6 colors, different key style). Selecting any card writes
+// 框線 / 簡潔 — same 7 colors, different key style). Selecting any card writes
 // selectedThemeId, which wakes the P2 render seam (gradient background + key shadow
 // + key border). The editor lives in ThemeEditorActivity; add/edit/delete refresh
 // this shelf reactively via observeUserThemes().
@@ -541,18 +541,21 @@ private fun builtInThemePreviewRes(previewImageName: String?): Int? =
         "theme_standardBlue_preview" -> R.drawable.theme_standardblue_preview
         "theme_standardGreen_preview" -> R.drawable.theme_standardgreen_preview
         "theme_standardPurple_preview" -> R.drawable.theme_standardpurple_preview
+        "theme_standardCatppuccin_preview" -> R.drawable.theme_standardcatppuccin_preview
         "theme_framed_preview" -> R.drawable.theme_framed_preview
         "theme_framedPink_preview" -> R.drawable.theme_framedpink_preview
         "theme_framedGold_preview" -> R.drawable.theme_framedgold_preview
         "theme_framedBlue_preview" -> R.drawable.theme_framedblue_preview
         "theme_framedGreen_preview" -> R.drawable.theme_framedgreen_preview
         "theme_framedPurple_preview" -> R.drawable.theme_framedpurple_preview
+        "theme_framedCatppuccin_preview" -> R.drawable.theme_framedcatppuccin_preview
         "theme_clean_preview" -> R.drawable.theme_clean_preview
         "theme_cleanPink_preview" -> R.drawable.theme_cleanpink_preview
         "theme_cleanGold_preview" -> R.drawable.theme_cleangold_preview
         "theme_cleanBlue_preview" -> R.drawable.theme_cleanblue_preview
         "theme_cleanGreen_preview" -> R.drawable.theme_cleangreen_preview
         "theme_cleanPurple_preview" -> R.drawable.theme_cleanpurple_preview
+        "theme_cleanCatppuccin_preview" -> R.drawable.theme_cleancatppuccin_preview
         else -> null
     }
 

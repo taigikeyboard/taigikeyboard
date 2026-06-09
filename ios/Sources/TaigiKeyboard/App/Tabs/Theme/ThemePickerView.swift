@@ -11,8 +11,8 @@ import SwiftUI
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
 ///   live button preview (background + a styled centered key).
 /// - **經典 / 框線 / 簡潔** — one shelf per built-in key-style family
-///   (`BuiltInThemes.families`). All three carry the SAME 6 colors (預設 + 5
-///   gradients); they differ only in key style (經典 = filled keys, 框線 =
+///   (`BuiltInThemes.families`). All three carry the SAME 7 colors (預設 + 5 light
+///   gradients + dark 暗眠山貓); they differ only in key style (經典 = filled keys, 框線 =
 ///   transparent keys + outline, 簡潔 = transparent keys). Each card shows its
 ///   screenshot (or a neutral placeholder until one ships) and applies on tap.
 ///

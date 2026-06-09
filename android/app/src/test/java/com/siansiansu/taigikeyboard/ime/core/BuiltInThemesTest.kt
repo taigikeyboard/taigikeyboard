@@ -59,15 +59,15 @@ class BuiltInThemesTest {
         assertEquals("預設", BuiltInThemes.theme(ThemeId.DEFAULT)?.displayName)
     }
 
-    // Three key-style families (經典/框線/簡潔), each carrying the same 6 colors.
+    // Three key-style families (經典/框線/簡潔), each carrying the same 7 colors.
     @Test
-    fun families_threeKeyStyleFamiliesEachWithSixColors() {
+    fun families_threeKeyStyleFamiliesEachWithSevenColors() {
         assertEquals(listOf("經典", "框線", "簡潔"), BuiltInThemes.families.map { it.title })
         BuiltInThemes.families.forEach { family ->
-            assertEquals("${family.title} must carry all 6 shared colors", 6, family.themes.size)
-            assertEquals(listOf("預設", "櫻花", "金煌", "海風", "翠青", "藤紫"), family.themes.map { it.displayName })
+            assertEquals("${family.title} must carry all 7 shared colors", 7, family.themes.size)
+            assertEquals(listOf("預設", "櫻花", "金煌", "海風", "翠青", "藤紫", "暗眠山貓"), family.themes.map { it.displayName })
         }
-        assertEquals(18, BuiltInThemes.all.size)
+        assertEquals(21, BuiltInThemes.all.size)
     }
 
     // 經典 keeps filled keys; 框線/簡潔 recolor keys to transparent (key == background).
@@ -139,6 +139,37 @@ class BuiltInThemesTest {
             val theme = BuiltInThemes.theme(id)!!
             assertNull("$id must not define a dark variant — it stays light in dark mode", theme.dark)
             assertEquals("$id dark scheme must reuse the light palette", theme.colors(false), theme.colors(true))
+        }
+    }
+
+    // 暗眠山貓 is the dark-only Catppuccin Mocha theme across all 3 families — light == null
+    // so BOTH schemes resolve to the dark variant (always dark, the mirror of the 5
+    // light-only gradients). gradient top #1E1E2E (Base) → #181825 (Mantle); key+candidate
+    // text #CDD6F4 (Text); 經典 keys (letter + function) share #313244 (Surface0);
+    // 框線/簡潔 keep transparent keys.
+    @Test
+    fun catppuccinTheme_isDarkOnlyAcrossFamilies() {
+        for (id in listOf("standardCatppuccin", "framedCatppuccin", "cleanCatppuccin")) {
+            val theme = BuiltInThemes.theme(id)!!
+            assertNull("$id must be dark-only (light == null)", theme.light)
+            assertNotNull("$id must define the dark variant", theme.dark)
+            val colors = theme.colors(isDark = true)
+            assertEquals("$id light request falls back to the dark variant", colors, theme.colors(isDark = false))
+            assertTrue("$id must carry the Catppuccin gradient", colors.hasBackgroundGradient)
+            assertEquals("$id gradient top = Mocha Base", 0xFF1E1E2E.toInt(), colors.backgroundGradient!!.stops.first())
+            assertEquals("$id gradient bottom = Mocha Mantle", 0xFF181825.toInt(), colors.backgroundGradient!!.stops.last())
+            assertEquals("$id key text = Mocha Text", 0xFFCDD6F4.toInt(), colors.keyTextColor)
+            assertEquals("$id candidate text = Mocha Text", 0xFFCDD6F4.toInt(), colors.candidateTextColor)
+        }
+        // 經典 暗眠山貓: letter + function keys share the Surface0 neutral fill.
+        val classic = BuiltInThemes.theme("standardCatppuccin")!!.colors(isDark = true)
+        assertEquals("經典 暗眠山貓 letter key = Mocha Surface0", 0xFF313244.toInt(), classic.normalKeyFillColor)
+        assertEquals("經典 暗眠山貓 function key shares the Surface0 fill", 0xFF313244.toInt(), classic.specialKeyFillColor)
+        // 框線/簡潔 keep keys transparent (gradient shows through).
+        for (id in listOf("framedCatppuccin", "cleanCatppuccin")) {
+            val colors = BuiltInThemes.theme(id)!!.colors(isDark = true)
+            assertEquals("$id letter keys must be transparent", 0, colors.normalKeyFillColor)
+            assertEquals("$id function keys must be transparent", 0, colors.specialKeyFillColor)
         }
     }
 

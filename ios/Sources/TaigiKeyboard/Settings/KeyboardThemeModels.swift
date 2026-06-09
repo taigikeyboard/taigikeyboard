@@ -30,8 +30,8 @@ enum ThemeId {
 /// A read-only, app-bundled theme: a named palette with light and/or dark
 /// 6-role color variants, resolved against the system `colorScheme` at render
 /// time. `light`/`dark` are concrete `KeyboardColorSettings` (every role set);
-/// a `nil` variant (e.g. Nord, which ships dark-only by design) falls back to
-/// the other variant.
+/// a `nil` variant (e.g. 暗眠山貓/Catppuccin, which ships dark-only by design)
+/// falls back to the other variant.
 // 中文: 內建主題(唯讀,隨 app 打包)。每個主題帶 light/dark 兩套具名 6 角色配色,
 // 中文: 渲染時依系統 colorScheme 解析;某一 variant 為 nil 時 fallback 另一套。
 struct BuiltInTheme: Equatable {
