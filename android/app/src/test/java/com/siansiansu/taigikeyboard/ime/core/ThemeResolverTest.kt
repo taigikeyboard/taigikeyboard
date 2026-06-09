@@ -91,6 +91,25 @@ class ThemeResolverTest {
         assertEquals(0f, resolved.keyShadowIntensity, 0f)
     }
 
+    // A 框線 family theme (id "framedBlue") carries keyBorderWidth=1.0 ON TOP of
+    // factory sizes; other scalars stay factory.
+    @Test
+    fun resolved_framedFamily_carriesKeyBorderWidth() {
+        val resolved = ThemeResolver.resolved("framedBlue", false, ThemeAppearance.DEFAULT, emptyList())
+        assertEquals(1.0f, resolved.keyBorderWidth, 0f)
+        assertNotEquals(ThemeAppearance.DEFAULT.keyBorderWidth, resolved.keyBorderWidth)
+        assertEquals(ThemeAppearance.DEFAULT.keyCornerRadius, resolved.keyCornerRadius, 0f)
+    }
+
+    // 經典 / 簡潔 family themes keep the factory border (0).
+    @Test
+    fun resolved_classicAndCleanFamilies_keepFactoryKeyBorderWidth() {
+        for (id in listOf("standardBlue", "cleanBlue")) {
+            val resolved = ThemeResolver.resolved(id, false, ThemeAppearance.DEFAULT, emptyList())
+            assertEquals(ThemeAppearance.DEFAULT.keyBorderWidth, resolved.keyBorderWidth, 0f)
+        }
+    }
+
     @Test
     fun resolved_builtIn_winsOverUnrelatedUserThemes() {
         val other = userTheme(UUID.randomUUID().toString(), appearance(customizedColors()))

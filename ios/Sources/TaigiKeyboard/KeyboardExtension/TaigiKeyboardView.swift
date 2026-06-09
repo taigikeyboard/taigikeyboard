@@ -270,9 +270,13 @@ struct TaigiKeyboardView: View {
             buttonView: { params in
                 let borderWidth = p.settings.keyBorderWidth
                 if borderWidth > 0, params.item.action != .none {
+                    // Border follows the key text color (role-first → adaptive
+                    // Color(.label) when the theme leaves keyTextColor nil), so the
+                    // 框線 outline stays visible on both light and adaptive-dark
+                    // backgrounds (a hardcoded black border vanishes in dark mode).
                     params.view.overlay(
                         RoundedRectangle(cornerRadius: p.settings.keyCornerRadius)
-                            .strokeBorder(Color.black, lineWidth: borderWidth)
+                            .strokeBorder(p.keyTextColor, lineWidth: borderWidth)
                             .padding(params.item.edgeInsets),
                     )
                 } else {

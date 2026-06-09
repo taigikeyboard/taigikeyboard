@@ -59,11 +59,67 @@ class BuiltInThemesTest {
         assertEquals("預設", BuiltInThemes.theme(ThemeId.DEFAULT)?.displayName)
     }
 
+    // Three key-style families (經典/框線/簡潔), each carrying the same 6 colors.
     @Test
-    fun colorsForScheme_scaffoldDegradesToDefault() {
-        val theme = BuiltInThemes.theme("swiftyBlue")!!
-        assertEquals(KeyboardColorSettings(), theme.colors(isDark = false))
-        assertEquals(KeyboardColorSettings(), theme.colors(isDark = true))
+    fun families_threeKeyStyleFamiliesEachWithSixColors() {
+        assertEquals(listOf("經典", "框線", "簡潔"), BuiltInThemes.families.map { it.title })
+        BuiltInThemes.families.forEach { family ->
+            assertEquals("${family.title} must carry all 6 shared colors", 6, family.themes.size)
+            assertEquals(listOf("預設", "櫻花", "金煌", "海風", "翠青", "藤紫"), family.themes.map { it.displayName })
+        }
+        assertEquals(18, BuiltInThemes.all.size)
+    }
+
+    // 經典 keeps filled keys; 框線/簡潔 recolor keys to transparent (key == background).
+    @Test
+    fun keyStyleFamilies_framedAndCleanHaveTransparentKeys() {
+        val classic = BuiltInThemes.theme("standardBlue")!!.colors(isDark = false)
+        assertEquals(0xFFFFFFFF.toInt(), classic.normalKeyFillColor) // opaque white
+        for (id in listOf("framedBlue", "cleanBlue")) {
+            val colors = BuiltInThemes.theme(id)!!.colors(isDark = false)
+            assertEquals("$id normal key must be transparent", 0, colors.normalKeyFillColor)
+            assertEquals("$id special key must be transparent", 0, colors.specialKeyFillColor)
+        }
+    }
+
+    // Only the 框線 family draws the outline; 經典/簡潔 leave keyBorderWidth null.
+    @Test
+    fun keyStyleFamilies_onlyFramedCarriesKeyBorderWidth() {
+        assertEquals(1.0f, BuiltInThemes.theme("framedBlue")!!.keyBorderWidth!!, 0f)
+        assertNull(BuiltInThemes.theme("standardBlue")!!.keyBorderWidth)
+        assertNull(BuiltInThemes.theme("cleanBlue")!!.keyBorderWidth)
+    }
+
+    // The three families SHARE colors — only the key fill differs (gradient + text identical).
+    @Test
+    fun keyStyleFamilies_shareBackgroundAndTextAcrossFamilies() {
+        val classic = BuiltInThemes.theme("standardBlue")!!.colors(isDark = false)
+        for (id in listOf("framedBlue", "cleanBlue")) {
+            val variant = BuiltInThemes.theme(id)!!.colors(isDark = false)
+            assertEquals("$id keeps the same gradient", classic.backgroundGradient, variant.backgroundGradient)
+            assertEquals("$id keeps the same text color", classic.keyTextColor, variant.keyTextColor)
+        }
+    }
+
+    // framed/clean gradient themes keep the gradient → candidate tints still derive from it.
+    @Test
+    fun keyStyleFamilies_framedGradientStillCarriesGradient() {
+        for (id in listOf("framedPink", "cleanPink")) {
+            assertTrue("$id must keep the gradient", BuiltInThemes.theme(id)!!.colors(isDark = false).hasBackgroundGradient)
+        }
+    }
+
+    // framed/clean 預設 stay adaptive (bg/text null) but carry transparent keys; 經典 預設 fully adaptive.
+    @Test
+    fun keyStyleFamilies_defaultVariantsAdaptiveWithTransparentKeys() {
+        for (id in listOf("framedDefault", "cleanDefault")) {
+            val colors = BuiltInThemes.theme(id)!!.colors(isDark = false)
+            assertNull("$id keeps adaptive background", colors.backgroundColor)
+            assertFalse("$id is the adaptive 預設, no gradient", colors.hasBackgroundGradient)
+            assertNull("$id keeps adaptive text", colors.keyTextColor)
+            assertEquals("$id keys are transparent", 0, colors.normalKeyFillColor)
+        }
+        assertEquals(KeyboardColorSettings(), BuiltInThemes.theme(ThemeId.DEFAULT)!!.colors(isDark = false))
     }
 
     @Test

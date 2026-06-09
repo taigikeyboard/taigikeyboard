@@ -157,6 +157,33 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 
+    // trace: a 框線 family theme (id "framedBlue") carries keyBorderWidth=1.0 ON TOP
+    // of factory sizes; other scalars stay factory.
+    func testResolved_framedFamily_carriesKeyBorderWidth() {
+        let resolved = ThemeResolver.resolved(
+            themeId: "framedBlue",
+            colorScheme: .light,
+            legacyAppearance: .default,
+            userThemes: [],
+        )
+        XCTAssertEqual(resolved.keyBorderWidth, 1.0)
+        XCTAssertNotEqual(resolved.keyBorderWidth, ThemeAppearance.default.keyBorderWidth, "框線 overrides the factory border")
+        XCTAssertEqual(resolved.keyCornerRadius, ThemeAppearance.default.keyCornerRadius, "other scalars stay factory")
+    }
+
+    // trace: 經典 / 簡潔 family themes keep the factory border (0)
+    func testResolved_classicAndCleanFamilies_keepFactoryKeyBorderWidth() {
+        for id in ["standardBlue", "cleanBlue"] {
+            let resolved = ThemeResolver.resolved(
+                themeId: id,
+                colorScheme: .light,
+                legacyAppearance: .default,
+                userThemes: [],
+            )
+            XCTAssertEqual(resolved.keyBorderWidth, ThemeAppearance.default.keyBorderWidth, "\(id) keeps the factory border")
+        }
+    }
+
     // trace: a built-in id must NOT be shadowed by the userThemes list → built-in branch wins over fallback
     func testResolved_builtIn_resolvesEvenWithUnrelatedUserThemes() {
         let other = makeUserTheme(id: UUID(), appearance: makeAppearance(colors: customized()))

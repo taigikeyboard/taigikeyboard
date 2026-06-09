@@ -30,9 +30,13 @@ object ThemeResolver {
             userThemes.firstOrNull { it.id == themeId }?.let { return it.appearance }
         }
         builtInThemes.firstOrNull { it.id == themeId }?.let { builtIn ->
-            // Built-in themes define colors only -> factory sizes + their
-            // night-mode-appropriate color variant.
-            return ThemeAppearance.DEFAULT.copy(colors = builtIn.colors(isDark))
+            // Built-in themes are colors-first -> factory sizes + their night-mode
+            // color variant, plus an optional per-theme appearance override
+            // (keyBorderWidth, used by the 框線 family).
+            return ThemeAppearance.DEFAULT.copy(
+                colors = builtIn.colors(isDark),
+                keyBorderWidth = builtIn.keyBorderWidth ?: ThemeAppearance.DEFAULT.keyBorderWidth,
+            )
         }
         return legacyAppearance
     }

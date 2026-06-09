@@ -120,8 +120,12 @@ internal fun KeyContent(
             }
         }
         .background(Color(backgroundArgb), shape)
+    // Border follows the theme keyTextColor role first (falling back to the
+    // adaptive keyFg), so the 框線 outline stays visible on a light-only gradient in
+    // dark mode — same role-first rule the key glyph/label uses (mirrors iOS).
+    val borderColor = colors.keyTextColor?.let { Color(it) } ?: Color(themeColors.keyFg)
     val borderedModifier = if (borderWidthDp > 0f) {
-        backgroundModifier.border(borderWidthDp.dp, Color(themeColors.keyFg), shape)
+        backgroundModifier.border(borderWidthDp.dp, borderColor, shape)
     } else {
         backgroundModifier
     }

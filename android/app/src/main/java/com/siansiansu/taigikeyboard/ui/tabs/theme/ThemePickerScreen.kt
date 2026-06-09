@@ -77,10 +77,11 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 // Theme tab main screen: a custom-theme shelf (Create New + saved themes with an
-// apply/edit/delete menu) above one built-in shelf per family (經典 / Swifty /
-// Minimal). Selecting any card writes selectedThemeId, which wakes the P2 render
-// seam (gradient background + key shadow). The editor lives in ThemeEditorActivity;
-// add/edit/delete refresh this shelf reactively via observeUserThemes().
+// apply/edit/delete menu) above one built-in shelf per key-style family (經典 /
+// 框線 / 簡潔 — same 6 colors, different key style). Selecting any card writes
+// selectedThemeId, which wakes the P2 render seam (gradient background + key shadow
+// + key border). The editor lives in ThemeEditorActivity; add/edit/delete refresh
+// this shelf reactively via observeUserThemes().
 
 // Card metrics — 200.dp matches LayoutCard so the theme tab lines up with the layout
 // tab in-app (intentional divergence from iOS 240pt). The 585/395 aspect matches the
@@ -494,7 +495,9 @@ private fun CustomThemeButtonPreview(appearance: ThemeAppearance) {
                     .size(width = 88.dp, height = 54.dp)
                     .let { if (shadow > 0f) it.shadow(shadow.dp, cornerShape, clip = false) else it }
                     .background(Color(resolved.keyFill), cornerShape)
-                    .let { if (borderWidth > 0f) it.border(borderWidth.dp, Color.Black, cornerShape) else it },
+                    // Border follows the key text color (mirrors the real keyboard's
+                    // role-first border) so the preview matches the live 框線 look.
+                    .let { if (borderWidth > 0f) it.border(borderWidth.dp, Color(resolved.keyText), cornerShape) else it },
             contentAlignment = Alignment.Center,
         ) {
             Text(

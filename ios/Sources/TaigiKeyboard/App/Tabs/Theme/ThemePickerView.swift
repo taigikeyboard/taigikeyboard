@@ -1,6 +1,6 @@
 // 中文: 主題選擇器 — 主題 tab 的 root。Custom Themes shelf(自訂主題 CRUD + Create New)+
-// 中文: 預設 shelf + 內建主題依 family(Standard/Swifty/Minimal)各一條橫向 shelf。
-// 中文: 排版對齊齒盤佈局頁(240pt 卡 + 截圖預覽);scaffold 階段內建卡顯示截圖槽而非色塊。
+// 中文: 內建主題依 family(經典/框線/簡潔)各一條橫向 shelf。三 family 同 6 色,差在按鍵風格。
+// 中文: 排版對齊齒盤佈局頁(240pt 卡 + 截圖預覽);尚未補截圖的內建卡顯示佔位圖而非色塊。
 
 import SwiftUI
 
@@ -10,10 +10,11 @@ import SwiftUI
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
 ///   live button preview (background + a styled centered key).
-/// - **預設** — the `Default` (adaptive) theme.
-/// - **Standard / Swifty / Minimal …** — one shelf per built-in family
-///   (`BuiltInThemes.families`); each card shows its screenshot slot and applies
-///   on tap (`selectedThemeId`). Scaffold stage — palettes authored later.
+/// - **經典 / 框線 / 簡潔** — one shelf per built-in key-style family
+///   (`BuiltInThemes.families`). All three carry the SAME 6 colors (預設 + 5
+///   gradients); they differ only in key style (經典 = filled keys, 框線 =
+///   transparent keys + outline, 簡潔 = transparent keys). Each card shows its
+///   screenshot (or a neutral placeholder until one ships) and applies on tap.
 ///
 /// `selectedThemeId` / `themeRevision` are read via `@AppStorage` on the App
 /// Group store so selection + the user-theme list refresh reactively when the
@@ -390,8 +391,10 @@ private struct CustomThemeButtonPreview: View {
             .fill(keyFill)
             .overlay {
                 if borderWidth > 0 {
+                    // Border follows the key text color (mirrors the real keyboard's
+                    // role-first border), so the preview matches the live 框線 look.
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(Color.black, lineWidth: borderWidth)
+                        .strokeBorder(keyText, lineWidth: borderWidth)
                 }
             }
             .overlay {

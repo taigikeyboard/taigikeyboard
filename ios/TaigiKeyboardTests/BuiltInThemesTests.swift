@@ -2,15 +2,16 @@
 import SwiftUI
 import XCTest
 
-/// Tests for the built-in theme catalog (v3.6.2 scaffold stage).
+/// Tests for the built-in theme catalog.
 ///
 /// The id invariants are load-bearing: `SharedSettings.resolvedAppearance(for:)`
 /// uses `UUID(uuidString:) != nil` to decide whether to read the user-theme
 /// file, and `ThemeId.default` is the legacy-buffer sentinel. A built-in id
 /// that is a UUID string or equals "default" would be mis-routed.
 ///
-/// Scaffold stage: themes carry a `previewImageName` (card screenshot slot) and
-/// no palette yet (`light`/`dark` == nil → `colors(for:)` degrades to `.default`).
+/// The catalog is a key-STYLE axis: three families (經典 / 框線 / 簡潔) share the
+/// same 6 colors and differ only in key style — 經典 fills keys, 框線 / 簡潔 make
+/// keys transparent (background shows through), 框線 adding an outline.
 final class BuiltInThemesTests: XCTestCase {
     // trace: families flatten into `all`; a non-empty catalog is required for the picker shelves
     func testFamilies_flattenIntoAll() {
@@ -62,11 +63,61 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "預設")
     }
 
-    // trace: a still-scaffold theme (no palette) → colors(for:) degrades to .default in both schemes
-    func testColorsForScheme_scaffoldThemeDegradesToDefault() {
-        let theme = BuiltInThemes.theme(id: "swiftyBlue")!
-        XCTAssertEqual(theme.colors(for: .light), .default)
-        XCTAssertEqual(theme.colors(for: .dark), .default)
+    // trace: three key-style families (經典/框線/簡潔), each carrying the same 6 colors
+    func testFamilies_threeKeyStyleFamiliesEachWithSixColors() {
+        XCTAssertEqual(BuiltInThemes.families.map(\.title), ["經典", "框線", "簡潔"])
+        for family in BuiltInThemes.families {
+            XCTAssertEqual(family.themes.count, 6, "\(family.title) must carry all 6 shared colors")
+            XCTAssertEqual(family.themes.map(\.displayName), ["預設", "櫻花", "金煌", "海風", "翠青", "藤紫"])
+        }
+        XCTAssertEqual(BuiltInThemes.all.count, 18, "3 families × 6 colors")
+    }
+
+    // trace: 經典 keeps filled keys; 框線/簡潔 recolor keys to transparent (key == background)
+    func testKeyStyleFamilies_framedAndCleanHaveTransparentKeys() {
+        let classic = BuiltInThemes.theme(id: "standardBlue")!.colors(for: .light)
+        XCTAssertEqual(classic.normalKeyFillColor?.alpha, 1, "經典 keys are opaque (white)")
+        for id in ["framedBlue", "cleanBlue"] {
+            let colors = BuiltInThemes.theme(id: id)!.colors(for: .light)
+            XCTAssertEqual(colors.normalKeyFillColor?.alpha, 0, "\(id) normal key must be transparent")
+            XCTAssertEqual(colors.specialKeyFillColor?.alpha, 0, "\(id) special key must be transparent")
+        }
+    }
+
+    // trace: only the 框線 family draws the outline; 經典/簡潔 leave keyBorderWidth nil
+    func testKeyStyleFamilies_onlyFramedCarriesKeyBorderWidth() {
+        XCTAssertEqual(BuiltInThemes.theme(id: "framedBlue")?.keyBorderWidth, 1.0)
+        XCTAssertNil(BuiltInThemes.theme(id: "standardBlue")?.keyBorderWidth)
+        XCTAssertNil(BuiltInThemes.theme(id: "cleanBlue")?.keyBorderWidth)
+    }
+
+    // trace: the three families SHARE colors — only the key fill differs (gradient + text identical)
+    func testKeyStyleFamilies_shareBackgroundAndTextAcrossFamilies() {
+        let classic = BuiltInThemes.theme(id: "standardBlue")!.colors(for: .light)
+        for id in ["framedBlue", "cleanBlue"] {
+            let variant = BuiltInThemes.theme(id: id)!.colors(for: .light)
+            XCTAssertEqual(variant.backgroundGradient, classic.backgroundGradient, "\(id) keeps the same gradient")
+            XCTAssertEqual(variant.keyTextColor, classic.keyTextColor, "\(id) keeps the same text color")
+        }
+    }
+
+    // trace: framed/clean gradient themes keep the gradient → candidate tints still derive from it
+    func testKeyStyleFamilies_framedGradientStillCarriesGradient() {
+        for id in ["framedPink", "cleanPink"] {
+            XCTAssertTrue(BuiltInThemes.theme(id: id)!.colors(for: .light).hasBackgroundGradient, "\(id) must keep the gradient")
+        }
+    }
+
+    // trace: framed/clean 預設 stay adaptive (bg/text nil) but carry transparent keys; 經典 預設 fully adaptive
+    func testKeyStyleFamilies_defaultVariantsAdaptiveWithTransparentKeys() {
+        for id in ["framedDefault", "cleanDefault"] {
+            let colors = BuiltInThemes.theme(id: id)!.colors(for: .light)
+            XCTAssertNil(colors.backgroundColor, "\(id) keeps adaptive background")
+            XCTAssertFalse(colors.hasBackgroundGradient, "\(id) is the adaptive 預設, no gradient")
+            XCTAssertNil(colors.keyTextColor, "\(id) keeps adaptive text")
+            XCTAssertEqual(colors.normalKeyFillColor?.alpha, 0, "\(id) keys are transparent")
+        }
+        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.colors(for: .light), .default, "經典 預設 stays fully adaptive")
     }
 
     // trace: the Standard gradient themes each carry a ≥2-stop background gradient in both schemes

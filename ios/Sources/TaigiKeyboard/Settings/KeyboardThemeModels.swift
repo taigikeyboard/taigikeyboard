@@ -42,10 +42,16 @@ struct BuiltInTheme: Equatable {
 
     /// Asset name for the card preview screenshot (sized to match the 齒盤佈局
     /// page's `layout_*_preview` assets). `nil` → fall back to the live color
-    /// swatch. Scaffold themes set this and leave `light`/`dark` nil until their
-    /// palettes are authored.
+    /// swatch.
     // 中文: 卡片預覽截圖的 asset 名(尺寸對齊齒盤佈局頁)。nil 則退回即時色塊 swatch。
     var previewImageName: String? = nil
+
+    /// Optional key-outline width override. Built-in themes are colors-first, but
+    /// a theme may carry this one appearance scalar so the resolver applies it on
+    /// top of the factory sizes (used by the 框線 key-style family). `nil` keeps
+    /// the factory `keyBorderWidth` (0 = no border).
+    // 中文: 選用的鍵邊框寬度 override。內建主題以配色為主,但可帶這一個外觀 scalar(框線 family 用),resolver 疊在原廠尺寸上;nil = 原廠 0(無框)。
+    var keyBorderWidth: Double? = nil
 
     /// Picks the variant for `scheme`, falling back to the other variant when
     /// one is absent. `.default` (all-nil → KeyboardKit adaptive) is the final
