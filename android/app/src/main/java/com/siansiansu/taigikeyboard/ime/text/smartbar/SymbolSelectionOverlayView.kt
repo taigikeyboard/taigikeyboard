@@ -11,6 +11,8 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
@@ -29,6 +31,8 @@ class SymbolSelectionOverlayView : FrameLayout {
     private var isShowing: Boolean = false
     private var composeView: ComposeView? = null
 
+    // A7: IME-only overlay; `context` resolves to the `TaigiKeyboard` service.
+    private val prefs: PrefHelper get() = (context as TaigiKeyboard).prefs
     private val logger by lazy { CompositionRoot.shared(context).logger }
 
     // Bumped on each show() to re-resolve keyboard colors + reset the active tab to FULL_WIDTH.
@@ -71,7 +75,7 @@ class SymbolSelectionOverlayView : FrameLayout {
             TaigiKeyboardTheme {
                 val trigger by refreshTrigger
                 SymbolOverlayContent(
-                    chromeColors = rememberKeyboardChromeColors(trigger),
+                    appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
                     resetKey = trigger,
                     onSymbolSelected = { onSymbolSelected?.invoke(it) },
                 )

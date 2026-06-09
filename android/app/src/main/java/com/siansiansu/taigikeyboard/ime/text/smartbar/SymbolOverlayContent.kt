@@ -1,9 +1,9 @@
 // Compose content for the keyboard symbol selection overlay — M3 PrimaryTabRow +
-// LazyVerticalGrid. Honors user-customizable keyboard chrome colors (KeyboardChromeColors).
+// LazyVerticalGrid. Honors the user-customizable keyboard overlay appearance
+// (gradient backdrop + role-first foreground + chrome accent).
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,14 +38,15 @@ private val GridContentPadding = 8.dp
  * Symbol picker: a fixed tab row over the 5 [SymbolCategory] tabs and a lazy grid of the
  * selected category's symbols.
  *
- * @param chromeColors user keyboard colors (tab/grid honor these, not the M3 brand palette).
+ * @param appearance user keyboard overlay colors — gradient backdrop + role-first foreground +
+ *   chrome accent (tab/grid honor these, not the M3 brand palette).
  * @param resetKey bumped on each overlay show() — resets the active tab to FULL_WIDTH,
  *   preserving the legacy View behavior where reopening the overlay starts on the first tab.
  * @param onSymbolSelected invoked with the tapped symbol string.
  */
 @Composable
 fun SymbolOverlayContent(
-    chromeColors: KeyboardChromeColors,
+    appearance: KeyboardOverlayAppearance,
     resetKey: Int,
     onSymbolSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -56,15 +57,23 @@ fun SymbolOverlayContent(
 
     val selectedIndex = SymbolCategoryValues.indexOf(selectedCategory)
 
-    Column(modifier = modifier.fillMaxSize().background(chromeColors.background)) {
+    // Panel sits below the smartbar; offset the gradient by it so the slice stays continuous.
+    val topInsetPx = rememberSmartbarInsetPx()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .keyboardOverlayBackdrop(appearance.gradientStops, appearance.solidBackground, topInsetPx),
+    ) {
         PrimaryTabRow(
             selectedTabIndex = selectedIndex,
-            containerColor = chromeColors.background,
-            contentColor = chromeColors.foreground,
+            // Transparent so the column's gradient/solid backdrop shows through uniformly.
+            containerColor = Color.Transparent,
+            contentColor = appearance.foreground,
             indicator = {
                 TabRowDefaults.PrimaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(selectedIndex, matchContentSize = false),
-                    color = chromeColors.accent,
+                    color = appearance.accent,
                 )
             },
         ) {
@@ -72,8 +81,8 @@ fun SymbolOverlayContent(
                 Tab(
                     selected = index == selectedIndex,
                     onClick = { selectedCategory = category },
-                    selectedContentColor = chromeColors.accent,
-                    unselectedContentColor = chromeColors.foreground,
+                    selectedContentColor = appearance.accent,
+                    unselectedContentColor = appearance.foreground,
                     text = { Text(category.label) },
                 )
             }
@@ -94,7 +103,7 @@ fun SymbolOverlayContent(
                 SymbolCell(
                     symbol = symbol,
                     fontSizeSp = selectedCategory.fontSize,
-                    color = chromeColors.foreground,
+                    color = appearance.foreground,
                     onClick = { onSymbolSelected(symbol) },
                 )
             }

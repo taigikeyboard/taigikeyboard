@@ -63,16 +63,7 @@ struct SettingsSelectionOverlay: View {
     }
 
     var body: some View {
-        Group {
-            if isExpanded {
-                GeometryReader { geometry in
-                    let toolbarHeight = theme.height
-                    contentView
-                        .frame(maxWidth: .infinity)
-                        .frame(height: geometry.size.height - toolbarHeight)
-                }
-            }
-        }
+        contentView.keyboardOverlayPanel(isExpanded: isExpanded, theme: theme)
     }
 
     // MARK: - Content
@@ -130,7 +121,6 @@ struct SettingsSelectionOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.keyboardBackground)
         .onAppear {
             let s = SharedSettings.shared
             isOutputBothScripts = s.isOutputBothScripts

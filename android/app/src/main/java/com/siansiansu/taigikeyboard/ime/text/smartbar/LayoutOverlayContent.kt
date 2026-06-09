@@ -1,5 +1,6 @@
 // Compose content for the keyboard layout selection overlay — M3 Surface preview cards in
-// horizontally-scrolling sections. Honors user-customizable keyboard chrome colors (KeyboardChromeColors).
+// horizontally-scrolling sections. Honors the user-customizable keyboard overlay appearance
+// (gradient backdrop + role-first foreground + chrome accent).
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
@@ -83,14 +84,15 @@ private const val SelectedScrimAlpha = 0.25f
  * Layout picker: two horizontally-scrolling sections (romanization + phonetic) of preview cards.
  * The selected card shows an accent border + checkmark; tapping a card reports its layout key.
  *
- * @param chromeColors user keyboard colors (cards honor these, not the M3 brand palette).
+ * @param appearance user keyboard overlay colors — gradient backdrop + role-first foreground +
+ *   chrome accent (cards honor these, not the M3 brand palette).
  * @param selectedKey the currently active layout key (re-read from prefs on each overlay show()).
  * @param resetKey bumped on each overlay show() — re-seeds the local selection to [selectedKey].
  * @param onLayoutSelected invoked with the tapped layout key.
  */
 @Composable
 fun LayoutOverlayContent(
-    chromeColors: KeyboardChromeColors,
+    appearance: KeyboardOverlayAppearance,
     selectedKey: String,
     resetKey: Int,
     onLayoutSelected: (String) -> Unit,
@@ -107,19 +109,22 @@ fun LayoutOverlayContent(
         onLayoutSelected(key)
     }
 
+    // Panel sits below the smartbar; offset the gradient by it so the slice stays continuous.
+    val topInsetPx = rememberSmartbarInsetPx()
+
     Column(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(chromeColors.background)
+                .keyboardOverlayBackdrop(appearance.gradientStops, appearance.solidBackground, topInsetPx)
                 .verticalScroll(rememberScrollState())
                 .padding(top = 10.dp, bottom = 4.dp),
     ) {
-        SectionHeader(LayoutTexts.romanizationKeyboard, chromeColors.foreground, topPadding = 0.dp)
-        LayoutCardRow(RomanizationLayouts, activeKey, chromeColors, onSelect)
+        SectionHeader(LayoutTexts.romanizationKeyboard, appearance.foreground, topPadding = 0.dp)
+        LayoutCardRow(RomanizationLayouts, activeKey, appearance, onSelect)
 
-        SectionHeader(LayoutTexts.taigiPhonetic, chromeColors.foreground, topPadding = 12.dp)
-        LayoutCardRow(PhoneticLayouts, activeKey, chromeColors, onSelect)
+        SectionHeader(LayoutTexts.taigiPhonetic, appearance.foreground, topPadding = 12.dp)
+        LayoutCardRow(PhoneticLayouts, activeKey, appearance, onSelect)
     }
 }
 
@@ -147,7 +152,7 @@ private fun SectionHeader(
 private fun LayoutCardRow(
     options: List<LayoutOption>,
     activeKey: String,
-    chromeColors: KeyboardChromeColors,
+    appearance: KeyboardOverlayAppearance,
     onSelect: (String) -> Unit,
 ) {
     Row(
@@ -162,7 +167,7 @@ private fun LayoutCardRow(
             LayoutCard(
                 option = option,
                 isSelected = option.key == activeKey,
-                chromeColors = chromeColors,
+                appearance = appearance,
                 onClick = { onSelect(option.key) },
             )
         }
@@ -173,7 +178,7 @@ private fun LayoutCardRow(
 private fun LayoutCard(
     option: LayoutOption,
     isSelected: Boolean,
-    chromeColors: KeyboardChromeColors,
+    appearance: KeyboardOverlayAppearance,
     onClick: () -> Unit,
 ) {
     Column(
@@ -187,7 +192,7 @@ private fun LayoutCard(
         Surface(
             shape = RoundedCornerShape(CardCornerRadius),
             color = Color.Transparent,
-            border = if (isSelected) BorderStroke(SelectedBorderWidth, chromeColors.accent) else null,
+            border = if (isSelected) BorderStroke(SelectedBorderWidth, appearance.accent) else null,
         ) {
             Box {
                 Image(
@@ -211,7 +216,7 @@ private fun LayoutCard(
                                 .align(Alignment.Center)
                                 .size(CheckmarkSize)
                                 .clip(CircleShape)
-                                .background(chromeColors.accent),
+                                .background(appearance.accent),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -229,7 +234,7 @@ private fun LayoutCard(
 
         Text(
             text = option.label,
-            color = chromeColors.foreground,
+            color = appearance.foreground,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,

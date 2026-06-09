@@ -26,16 +26,7 @@ struct LayoutSelectionOverlay: View {
     }
 
     var body: some View {
-        Group {
-            if isExpanded {
-                GeometryReader { geometry in
-                    let toolbarHeight = theme.height
-                    contentView
-                        .frame(maxWidth: .infinity)
-                        .frame(height: geometry.size.height - toolbarHeight)
-                }
-            }
-        }
+        contentView.keyboardOverlayPanel(isExpanded: isExpanded, theme: theme)
     }
 
     // MARK: - Content
@@ -66,7 +57,6 @@ struct LayoutSelectionOverlay: View {
             .padding(.bottom, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.keyboardBackground)
         .onAppear {
             selectedLayout = SharedSettings.shared.keyboardLayoutType
         }

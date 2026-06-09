@@ -76,7 +76,7 @@ class LayoutSelectionOverlayView : FrameLayout {
             TaigiKeyboardTheme {
                 val trigger by refreshTrigger
                 LayoutOverlayContent(
-                    chromeColors = rememberKeyboardChromeColors(trigger),
+                    appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
                     selectedKey = remember(trigger) { prefs.keyboardLayoutType },
                     resetKey = trigger,
                     onLayoutSelected = { key ->

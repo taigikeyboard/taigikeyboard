@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,13 +76,20 @@ fun SettingsOverlayContent(
         }
     }
 
-    val labelColor = MaterialTheme.colorScheme.onSurface
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
+    // Role-first overlay colors so a light-only gradient theme stays readable in system dark mode
+    // (the keyboard theme owns these, not the M3 app palette). Matches symbol / layout overlays.
+    val appearance = rememberKeyboardOverlayAppearance(prefs, refreshTrigger)
+    val labelColor = appearance.foreground
+    val iconTint = appearance.foreground
+
+    // Panel sits below the smartbar; offset the gradient by it so the slice stays continuous.
+    val topInsetPx = rememberSmartbarInsetPx()
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
+                .keyboardOverlayBackdrop(appearance.gradientStops, appearance.solidBackground, topInsetPx)
                 .verticalScroll(rememberScrollState())
                 .padding(top = 4.dp, bottom = 8.dp),
     ) {
@@ -244,6 +250,7 @@ fun SettingsOverlayContent(
         ) {
             Text(
                 text = SettingsTexts.openApp,
+                color = appearance.accent,
                 fontFamily = fontFamily,
             )
         }
