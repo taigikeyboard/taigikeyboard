@@ -69,6 +69,17 @@ object HomeTexts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.6.2",
+                "2026/06/10",
+                listOf(
+                    "New: keyboard themes — a new 主題 tab lets you pick a look. Built-in themes come in three key styles (經典 filled / 框線 outlined / 簡潔 borderless) across several colours, including soft gradients (櫻花 / 金煌 / 海風 / 翠青 / 藤紫) and a dark 暗眠山貓 (Catppuccin) theme.",
+                    "New: create your own themes — a theme editor lets you set keyboard colours, key sizes, and key shadow, and save up to 5 custom themes.",
+                    "New: 顯示羅馬字 (show romanization) is now a toggle — when on, the romanization you type appears as the first candidate; turn it off to free up candidate-strip space.",
+                    "Fixed: the five light gradient themes now keep their light look in system dark mode, so key glyphs and candidate text stay readable.",
+                    "Changed: the global keyboard font moved to 齒盤設定 (keyboard settings), separate from themes.",
+                ),
+            ),
+            VersionEntry(
                 "3.6.1",
                 "2026/06/06",
                 listOf(
