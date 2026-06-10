@@ -82,7 +82,7 @@ final class BackupService: @unchecked Sendable {
     func exportAll() async throws -> Data {
         let customEntries = try await customDictionaryService.fetchAll()
         // R5: row-level export preserves each `(word, tl)` reading (#7) —
-        // NOT `topWordsAsync`, which aggregates by word for the viewer.
+        // NOT an aggregated-by-word query.
         let frequencyData = await userFrequencyRepository.allFrequencyRowsAsync()
         let associationData = await nextWordService.allAssociations()
 

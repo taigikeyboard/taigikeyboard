@@ -334,72 +334,12 @@ class UserFrequencyService(
         }
 
     /**
-     * Top-[limit] most frequent words for the viewer. R5: aggregates the
-     * per-reading rows back to one row per word (`GROUP BY word`) — the
-     * dictionary browser shows hanji + total count, no reading column.
-     */
-    suspend fun topWords(limit: Int = 100): List<Pair<String, Int>> =
-        withContext(Dispatchers.IO) {
-            try {
-                ensureInitialized()
-                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
-
-                val cursor =
-                    db.rawQuery(
-                        """
-                        SELECT ${Table.WORD}, SUM(${Table.COUNT})
-                        FROM ${Table.NAME}
-                        GROUP BY ${Table.WORD}
-                        ORDER BY SUM(${Table.COUNT}) DESC, MAX(${Table.LAST_USED}) DESC
-                        LIMIT ?
-                        """.trimIndent(),
-                        arrayOf(limit.toString()),
-                    )
-
-                collectWordCountPairs(cursor)
-            } catch (e: Exception) {
-                logger.e(TAG, "[QUERY] Failed to get top words", e)
-                emptyList()
-            }
-        }
-
-    /**
-     * All frequency data for the viewer — R5 aggregates by word (one row
-     * per word, total count) so the list + CSV export stay single-row-per-
-     * word. Backup uses [getAllFrequencyRows] to preserve `(word, tl)`.
-     */
-    suspend fun getAllFrequencies(): List<Pair<String, Int>> =
-        withContext(Dispatchers.IO) {
-            try {
-                ensureInitialized()
-                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
-
-                val cursor =
-                    db.rawQuery(
-                        """
-                        SELECT ${Table.WORD}, SUM(${Table.COUNT})
-                        FROM ${Table.NAME}
-                        GROUP BY ${Table.WORD}
-                        ORDER BY SUM(${Table.COUNT}) DESC, MAX(${Table.LAST_USED}) DESC
-                        """.trimIndent(),
-                        null,
-                    )
-
-                collectWordCountPairs(cursor)
-            } catch (e: Exception) {
-                logger.e(TAG, "[QUERY] Failed to get all frequencies", e)
-                emptyList()
-            }
-        }
-
-    /**
      * All `(word, tl, count)` rows, one per learned reading + any legacy
-     * `tl == ''` row. Preserves the R5 per-reading identity (#7). Shared by
-     * two consumers: the `.taigi` backup export AND the 詞頻 management viewer
-     * (which lists + deletes per `(word, tl)`). [getAllFrequencies] is the
-     * merged `(word, SUM(count))` form, now used only by the hand-editable
-     * CSV export. Do NOT add viewer-only SQL (limit / filter) here — it would
-     * leak into backup; split a wrapper if their needs diverge.
+     * `tl == ''` row. Preserves the R5 per-reading identity (#7). Shared by all
+     * three consumers — the `.taigi` backup export, the 詞頻 management viewer
+     * (which lists + deletes per `(word, tl)`), AND the hand-editable CSV
+     * export — all per-reading. Do NOT add viewer-only SQL (limit / filter)
+     * here — it would leak into backup; split a wrapper if their needs diverge.
      * Deterministic tie-break `(word, tl)` keeps equal count/time rows stable.
      */
     suspend fun getAllFrequencyRows(): List<Triple<String, String, Int>> =
@@ -440,18 +380,6 @@ class UserFrequencyService(
         } catch (_: Exception) {
             -1
         }
-    }
-
-    private fun collectWordCountPairs(cursor: android.database.Cursor): List<Pair<String, Int>> {
-        val results = mutableListOf<Pair<String, Int>>()
-        cursor.use {
-            while (it.moveToNext()) {
-                val word = it.getString(0)
-                val count = it.getInt(1)
-                results.add(word to count)
-            }
-        }
-        return results
     }
 
     // ------------------------------------------------------------------ //

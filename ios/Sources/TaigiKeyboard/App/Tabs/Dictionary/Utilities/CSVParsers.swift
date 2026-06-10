@@ -6,29 +6,50 @@ import Foundation
 extension CSVDocument {
     // MARK: - Frequency
 
-    // 中文: 解析詞頻 CSV(2 欄:word,count);過濾掉空 word 與非正整數 count。
-    static func decodeFrequencyCSV(_ csv: String) -> [(word: String, count: Int)] {
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../ime/dictionary/DictionaryCsvCodec.kt
+    // (encode/decodeFrequencyCSV). Drift causes silent divergence; both serialize byte-for-byte.
+    // Pins INVARIANT_USER_FREQ_PAIR_KEY (docs/architecture/behavioral-invariants.md §28).
+
+    /// Parse the frequency CSV. The current format is 3 columns
+    /// `word,tl,count` carrying the `(漢字, 羅馬字)` pair (Core Principle #7).
+    /// A legacy 2-column `word,count` file (pre-roman-column export or a
+    /// hand-edited file) decodes with `tl = ""` — the tolerant legacy bucket.
+    /// Any other column count is skipped (an exact discriminator, not `>= 2`,
+    /// so a malformed row is never silently eaten as legacy).
+    // 中文: 解析詞頻 CSV — 3 欄 (word,tl,count) 為現格式;2 欄 (word,count) 舊檔 → tl=""(legacy bucket);其餘欄數跳過。
+    static func decodeFrequencyCSV(_ csv: String) -> [(word: String, tl: String, count: Int)] {
         let lines = csv.components(separatedBy: .newlines)
-        var entries: [(word: String, count: Int)] = []
+        var entries: [(word: String, tl: String, count: Int)] = []
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
-            let columns = parseLine(trimmed)
-            guard columns.count >= 2 else { continue }
-            let word = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !word.isEmpty,
-                  let count = Int(columns[1].trimmingCharacters(in: .whitespacesAndNewlines)),
-                  count > 0 else { continue }
-            entries.append((word: word, count: count))
+            let columns = parseLine(trimmed).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            let word: String
+            let tl: String
+            let countField: String
+            switch columns.count {
+            case 3:
+                word = columns[0]
+                tl = columns[1]
+                countField = columns[2]
+            case 2:
+                word = columns[0]
+                tl = ""
+                countField = columns[1]
+            default:
+                continue
+            }
+            guard !word.isEmpty, let count = Int(countField), count > 0 else { continue }
+            entries.append((word: word, tl: tl, count: count))
         }
         return entries
     }
 
-    // 中文: 把詞頻清單編成 CSV 字串(每列 word,count\n);word 走 escape() 轉義。
-    static func encodeFrequencyCSV(_ entries: [(word: String, count: Int)]) -> String {
+    // 中文: 把詞頻清單編成 CSV 字串(每列 word,tl,count\n);word 與 tl 走 escape() 轉義。
+    static func encodeFrequencyCSV(_ entries: [(word: String, tl: String, count: Int)]) -> String {
         var csv = ""
         for item in entries {
-            csv += "\(escape(item.word)),\(item.count)\n"
+            csv += "\(escape(item.word)),\(escape(item.tl)),\(item.count)\n"
         }
         return csv
     }

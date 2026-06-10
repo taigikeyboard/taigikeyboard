@@ -33,16 +33,32 @@ struct CSVDocument: FileDocument {
 
     // MARK: - Shared CSV Helpers
 
-    /// Parse a single CSV line, handling quoted fields.
-    // 中文: 解析單行 CSV,支援雙引號包覆的欄位(含逗號、跳脫雙引號)。
+    /// Parse a single CSV line, handling quoted fields and RFC 4180 doubled
+    /// quotes (`""` inside a quoted field → one literal `"`), so round-trip
+    /// with `escape()` is lossless.
+    // 中文: 解析單行 CSV,支援雙引號包覆欄位(含逗號)與 RFC 4180 跳脫雙引號 ("" → 單一 ");與 escape() 對等,round-trip 不失真。
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../ime/dictionary/DictionaryCsvCodec.kt parseLine.
     static func parseLine(_ line: String) -> [String] {
         var fields: [String] = []
         var current = ""
         var inQuotes = false
-        for char in line {
-            if char == "\"" { inQuotes.toggle() }
-            else if char == ",", !inQuotes { fields.append(current); current = "" }
-            else { current.append(char) }
+        let chars = Array(line)
+        var index = 0
+        while index < chars.count {
+            let char = chars[index]
+            if char == "\"", inQuotes, index + 1 < chars.count, chars[index + 1] == "\"" {
+                // Doubled quote inside a quoted field → literal ".
+                current.append("\"")
+                index += 1
+            } else if char == "\"" {
+                inQuotes.toggle()
+            } else if char == ",", !inQuotes {
+                fields.append(current)
+                current = ""
+            } else {
+                current.append(char)
+            }
+            index += 1
         }
         fields.append(current)
         return fields

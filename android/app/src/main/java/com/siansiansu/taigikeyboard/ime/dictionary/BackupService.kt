@@ -36,7 +36,7 @@ class BackupService(
         withContext(Dispatchers.IO) {
             val customEntries = customDict.fetchAll()
             // R5: row-level export preserves each `(word, tl)` reading (#7) —
-            // NOT getAllFrequencies(), which aggregates by word for the viewer.
+            // NOT an aggregated-by-word query.
             val frequencyData = userFreq.getAllFrequencyRows()
             val associationData = nextWord.allAssociations()
 

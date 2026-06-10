@@ -81,14 +81,10 @@ class FrequencyDataViewModel(
         }
     }
 
+    // 中文: 匯出全部詞頻為 CSV(逐 (word, tl) 讀音,保留羅馬字 #7);每列 word,tl,count。
     suspend fun exportCSV(): String =
         withContext(Dispatchers.IO) {
-            val data = userFreq.getAllFrequencies()
-            buildString {
-                for ((word, count) in data) {
-                    append("${DictionaryCsvCodec.escape(word)},$count\n")
-                }
-            }
+            DictionaryCsvCodec.encodeFrequencyCSV(userFreq.getAllFrequencyRows())
         }
 
     suspend fun importCSV(uri: Uri): ImportOutcome {
@@ -100,33 +96,17 @@ class FrequencyDataViewModel(
                         it.bufferedReader(Charsets.UTF_8).readText()
                     } ?: throw Exception("Cannot read file")
                 }
-            val entries = parseCSV(csvString)
-            // R5: the user-facing frequency CSV stays `(word, count)` — a
-            // hand-editable format with no reading column. Imported rows land
-            // in the legacy `tl == ""` fallback bucket (#7 tolerant). Full
-            // per-reading fidelity lives in the `.taigi` backup, not the CSV.
-            val triples = entries.map { Triple(it.first, "", it.second) }
-            val imported = withContext(Dispatchers.IO) { userFreq.batchImportMerge(triples) }
+            // 3-column rows carry the reading; legacy 2-column rows decode to
+            // tl="" (the tolerant fallback bucket, #7). Upsert is
+            // ON CONFLICT(word, tl), so each (漢字, 羅馬字) reading merges
+            // into its own bucket.
+            val entries = DictionaryCsvCodec.decodeFrequencyCSV(csvString)
+            val imported = withContext(Dispatchers.IO) { userFreq.batchImportMerge(entries) }
             val refreshed = withContext(Dispatchers.IO) { userFreq.getAllFrequencyRows() }
             _allData.value = refreshed.toListItems()
             return ImportOutcome(imported = imported, skipped = entries.size - imported)
         } finally {
             _isImporting.value = false
         }
-    }
-
-    private fun parseCSV(csv: String): List<Pair<String, Int>> {
-        val entries = mutableListOf<Pair<String, Int>>()
-        for (line in csv.split("\n")) {
-            val trimmed = line.trim()
-            if (trimmed.isEmpty()) continue
-            val columns = DictionaryCsvCodec.parseLine(trimmed)
-            if (columns.size < 2) continue
-            val word = columns[0].trim()
-            val count = columns[1].trim().toIntOrNull() ?: continue
-            if (word.isEmpty() || count <= 0) continue
-            entries.add(word to count)
-        }
-        return entries
     }
 }

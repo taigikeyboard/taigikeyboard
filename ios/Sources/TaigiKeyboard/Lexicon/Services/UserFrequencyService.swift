@@ -51,10 +51,6 @@ final class UserFrequencyService: @unchecked Sendable {
         repository.frequencyDataBatch(for: words)
     }
 
-    func topWords(limit: Int = 100) -> [(word: String, count: Int)] {
-        repository.topWords(limit: limit)
-    }
-
     func isConnected() -> Bool {
         repository.isConnected()
     }

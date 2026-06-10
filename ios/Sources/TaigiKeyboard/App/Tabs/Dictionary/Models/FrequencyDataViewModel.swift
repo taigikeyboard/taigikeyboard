@@ -71,9 +71,9 @@ final class FrequencyDataViewModel: ObservableObject {
         }
     }
 
-    // 中文: 匯出全部詞頻資料為 CSV 字串(交給 CSVDocument 編碼)。
+    // 中文: 匯出全部詞頻資料為 CSV 字串(逐 (word, tl) 讀音,保留羅馬字 #7)。
     func exportCSV() async throws -> String {
-        let data = await repository.topWordsAsync(limit: Int.max)
+        let data = await repository.allFrequencyRowsAsync()
         return CSVDocument.encodeFrequencyCSV(data)
     }
 
@@ -89,13 +89,11 @@ final class FrequencyDataViewModel: ObservableObject {
         }
         let entries = CSVDocument.decodeFrequencyCSV(csvString)
         try await repository.ensureInitialized()
-        // R5: the user-facing frequency CSV stays `(word, count)` — a hand
-        // editable format with no reading column. Imported rows land in the
-        // legacy `tl == ""` fallback bucket (#7 tolerant). Full per-reading
-        // fidelity lives in the `.taigi` backup, not the CSV.
-        let imported = try await repository.batchImportMerge(
-            entries: entries.map { (word: $0.word, tl: "", count: $0.count) },
-        )
+        // 3-column rows carry the reading; legacy 2-column rows decode to
+        // `tl == ""` (the tolerant fallback bucket, #7). Upsert is
+        // `ON CONFLICT(word, tl)`, so each `(漢字, 羅馬字)` reading merges
+        // into its own bucket.
+        let imported = try await repository.batchImportMerge(entries: entries)
         return (imported: imported, skipped: entries.count - imported)
     }
 

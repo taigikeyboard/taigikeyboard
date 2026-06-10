@@ -125,33 +125,6 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
-    /// Top N words by count then recency. Sync variant used by the UI layer
-    /// that already awaited `ensureInitialized()` upstream.
-    // 中文: 取使用次數最多的前 N 個詞(同步版),呼叫端要先 ensureInitialized。
-    func topWords(limit: Int = 100) -> [(word: String, count: Int)] {
-        guard connectionManager.isConnected() else { return [] }
-        do {
-            return try connectionManager.executeSync { db in
-                Self.queryTopWords(db: db, limit: limit)
-            }
-        } catch {
-            return []
-        }
-    }
-
-    /// Top N words with explicit init — safer from backup / management flows.
-    // 中文: 取使用次數最多的前 N 個詞(async 版),含明確初始化,適合備份 / 管理流程。
-    func topWordsAsync(limit: Int = 100) async -> [(word: String, count: Int)] {
-        do {
-            try await ensureInitialized()
-            return try await connectionManager.execute { db in
-                Self.queryTopWords(db: db, limit: limit)
-            }
-        } catch {
-            return []
-        }
-    }
-
     // MARK: - Mutations
 
     /// Import with merge-by-max strategy so restoring an older backup never
@@ -196,14 +169,13 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// All `(word, tl, count)` rows, one per learned reading + any legacy
-    /// `tl == ""` row. Preserves the R5 per-reading identity. Shared by two
-    /// consumers: the `.taigi` backup export AND the 詞頻 management viewer
-    /// (which lists + deletes per `(word, tl)`). `topWords` is the merged
-    /// `(word, SUM(count))` form, now used only by the hand-editable CSV
-    /// export. Do NOT add viewer-only SQL (limit / filter) here — it would
-    /// leak into backup; split a wrapper if their needs diverge.
+    /// `tl == ""` row. Preserves the R5 per-reading identity. Shared by all
+    /// three consumers — the `.taigi` backup export, the 詞頻 management viewer
+    /// (which lists + deletes per `(word, tl)`), AND the hand-editable CSV
+    /// export — all per-reading. Do NOT add viewer-only SQL (limit / filter)
+    /// here — it would leak into backup; split a wrapper if their needs diverge.
     // 中文: 每個 (word, tl, count) 列(含 legacy '' 桶),保留 R5 讀音身分。
-    // 中文: 備份匯出 + 詞頻管理 viewer 共用(viewer 逐讀音列出 + 刪除);topWords 合併版只給 CSV 匯出。
+    // 中文: 備份匯出 + 詞頻管理 viewer + CSV 匯出三者共用,皆逐讀音。
     func allFrequencyRowsAsync() async -> [(word: String, tl: String, count: Int)] {
         do {
             try await ensureInitialized()
@@ -399,33 +371,6 @@ final class UserFrequencyRepository: @unchecked Sendable {
             rows.append(FrequencyRow(word: word, tl: tl, data: FrequencyData(count: count, lastUsedMillis: lastUsedMillis)))
         }
         return rows
-    }
-
-    private static func queryTopWords(db: OpaquePointer, limit: Int) -> [(word: String, count: Int)] {
-        // R5: aggregate the per-reading rows back to one row per word for the
-        // hand-editable `(word, count)` CSV export (no reading column). The
-        // 詞頻 viewer + backup both use `queryAllFrequencyRows` to preserve
-        // the `(word, tl)` readings.
-        let sql = """
-            SELECT word, SUM(count) AS total FROM \(UserFrequencySchema.tableName)
-            GROUP BY word
-            ORDER BY total DESC, MAX(last_used) DESC
-            LIMIT ?;
-        """
-
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-        defer { sqlite3_finalize(stmt) }
-
-        sqlite3_bind_int64(stmt, 1, Int64(limit))
-
-        var results: [(word: String, count: Int)] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let word = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
-            let count = Int(sqlite3_column_int(stmt, 1))
-            results.append((word: word, count: count))
-        }
-        return results
     }
 
     private static func queryAllFrequencyRows(db: OpaquePointer) -> [(word: String, tl: String, count: Int)] {
