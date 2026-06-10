@@ -27,6 +27,7 @@ struct CandidateSuggestionsRow: View {
             } else if currentInputMode == .english, let englishView = englishAutocompleteView {
                 englishView
                     .frame(maxHeight: .infinity)
+                    .autocompleteToolbarStyle(englishCandidateToolbarStyle)
             } else {
                 taigiCandidateList
 
@@ -38,6 +39,23 @@ struct CandidateSuggestionsRow: View {
                 expandChevronButton
             }
         }
+    }
+
+    /// English (En-mode) suggestions render through KeyboardKit's own autocomplete
+    /// toolbar, which paints item text with a system-adaptive color that ignores the
+    /// active app theme — so on a themed gradient the words night-flip (white on a light
+    /// gradient in system dark mode, dark on the 暗眠山貓 dark gradient in light mode).
+    /// Push the theme's candidate text role into the toolbar item style so En-mode words
+    /// match the Taigi candidates. The toolbar re-applies its `style.item` to every item,
+    /// so the toolbar-level style (NOT `.autocompleteToolbarItemStyle`, which the toolbar
+    /// overrides) is the lever that wins. `candidateTextColor` nil (預設 adaptive) keeps
+    /// `theme.primaryTextColor` == `Color(.label)`, preserving the prior adaptive behavior.
+    /// Mirrors Android's role-first `EnglishCandidateCell` (#425).
+    private var englishCandidateToolbarStyle: Autocomplete.ToolbarStyle {
+        var style = Autocomplete.ToolbarStyle.standard
+        style.item.titleColor = theme.primaryTextColor
+        style.item.subtitleColor = theme.secondaryTextColor
+        return style
     }
 
     /// 台語模式下的候選詞橫向滾動列表

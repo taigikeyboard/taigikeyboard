@@ -266,6 +266,18 @@ struct TaigiKeyboardView: View {
                     keyTextColor: p.keyTextColor,
                     inputMode: p.settings.inputMode,
                 )
+                // The emoji-switch key renders KeyboardKit's `keyboardEmoji` TEMPLATE
+                // asset, which ships a dark-luminosity variant selected by `\.colorScheme`.
+                // Under a themed keyboard the variant must follow the THEME palette, not the
+                // system appearance: a light theme in dark mode would otherwise pick the dark
+                // (filled) variant and the dark keyText tint renders it as a black blob. Force
+                // only this key's content scheme to the palette-matched value; every other key
+                // keeps the system colorScheme (the keyboard-root environment, line ~172).
+                .environment(
+                    \.colorScheme,
+                    Self.emojiAssetColorScheme(for: params.item.action, colors: p.settings.colorSettings)
+                        ?? keyboardContext.colorScheme,
+                )
             },
             buttonView: { params in
                 let borderWidth = p.settings.keyBorderWidth
@@ -381,6 +393,20 @@ struct TaigiKeyboardView: View {
         }
         .keyboardCalloutActions(Callouts.taigiCalloutActions)
         .keyboardCalloutStyle(calloutStyle)
+    }
+
+    /// The colorScheme the emoji-switch key's content should render in, so KeyboardKit's
+    /// `keyboardEmoji` template asset picks the variant matching the active theme's palette
+    /// instead of the system appearance. Returns nil for non-emoji keys and for the
+    /// default/adaptive theme (keyTextColor nil) — both keep the system colorScheme.
+    /// Dark keyText ⇒ light-palette theme ⇒ `.light` (light asset variant); light keyText
+    /// (e.g. 暗眠山貓) ⇒ `.dark` (dark variant, correctly tinted light on a dark keycap).
+    private static func emojiAssetColorScheme(
+        for action: KeyboardAction,
+        colors: KeyboardColorSettings,
+    ) -> ColorScheme? {
+        guard action == .keyboardType(.emojis), let keyText = colors.keyTextColor else { return nil }
+        return keyText.isDark ? .light : .dark
     }
 
     // 中文: 依當前 keyboardContext 與顏色設定組合出 CandidateView 樣式,套用使用者選的高度與背景。

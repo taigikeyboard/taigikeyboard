@@ -24,6 +24,13 @@ struct CodableColor: Codable, Equatable {
         Color(red: red, green: green, blue: blue, opacity: alpha)
     }
 
+    /// Perceived luminance below mid-gray (Rec. 601 weighting). Used to derive a
+    /// theme's palette appearance (dark keyText ⇒ light-palette theme) so the emoji
+    /// key can pick the matching KeyboardKit asset variant.
+    var isDark: Bool {
+        (0.299 * red + 0.587 * green + 0.114 * blue) < 0.5
+    }
+
     // 中文: 從 SwiftUI Color 透過 UIColor 萃取 RGBA 分量,寫入持久化欄位。
     init(_ color: Color) {
         let uiColor = UIColor(color)
