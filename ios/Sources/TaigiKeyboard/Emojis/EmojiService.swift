@@ -26,6 +26,9 @@ final class EmojiService: NSObject {
         keyboardSettings.isShowPopPreview = true
         keyboardSettings.needToShowDeleteButton = true
         keyboardSettings.updateRecentEmojiImmediately = true
+        // 中文: 表情符號資料來源 = 共用 taigi-emojis dist/emoji.json(單一來源)。
+        // 中文: 載入失敗在 TaigiEmojiData 直接 assert 炸出錯點,不做 plist fallback(USER:不要冗餘 fallback)。
+        keyboardSettings.customEmojis = TaigiEmojiData.loadISEmojiCategories()
 
         emojiView = EmojiView(keyboardSettings: keyboardSettings)
         super.init()
