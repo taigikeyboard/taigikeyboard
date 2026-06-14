@@ -284,6 +284,47 @@ fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
     }
 }
 
+/// Convert the TPS digit-popup `9` to the tone-9 mark `ˆ` (U+02C6) when a
+/// toneable syllable is pending. Tone-9 is the ONLY Taiwanese tone with no
+/// dedicated TPS mark key — neither layout exposes `ˆ`, so its sole input
+/// affordance is the digit-`9` popup (Android) / numeric pad (iOS). Without
+/// this normalization the literal `9` dangles as a non-syllable char and the
+/// tone-9 dictionary words (昨昏 `ㄗㄤˆ`, 才 `ㄘㄞˆ`, the 日語借詞 set) stay
+/// unreachable.
+///
+/// Fires only when `raw_input` ends in a TPS syllable body that can carry a
+/// non-entering tone — a Bopomofo nucleus / nasal-coda / nasalized-vowel
+/// final. Kept as a literal `9` when:
+///   - `raw_input` is empty (standalone digit → committed verbatim upstream),
+///   - the last char is already a tone mark (no double-toning),
+///   - the last char is an entering-tone stop coda `ㆴㆵㆻㆷ` (tone 4/8 only),
+///   - the last char is a space / non-Bopomofo (literal-digit context).
+///
+/// Mirrors the non-entering tone marks (ˋˊˇ˫˪) the user types via dedicated
+/// keys; tone-9 alone must be reconstructed from the digit. Runs first in
+/// [`adjust`] so the produced `ˆ` feeds [`syllabic_nasal_replacement`]
+/// identically to a directly-typed mark (Rule 2b parity).
+// 中文: 把 TPS 數字鍵 9 在有可標調音節時轉成第九調符號 ˆ(U+02C6)。第九調是唯一沒有
+// 中文:   專屬 TPS 調號鍵的聲調(兩平台佈局皆無 ˆ),只能靠數字 9 popup 輸入;不轉換則
+// 中文:   字面 9 落單,第九調詞(昨昏 ㄗㄤˆ / 才 ㄘㄞˆ / 日語借詞)永遠查不到。
+// 中文:   僅在 raw_input 結尾為可承載非入聲調的注音音節主體(韻核/鼻韻尾/鼻化母音)時觸發;
+// 中文:   空輸入、已帶調、入聲塞音尾 ㆴㆵㆻㆷ、空白/非注音 → 保留字面 9。
+fn adjust_tone_nine_digit(char_str: &str, raw_input: &str) -> String {
+    if char_str != "9" {
+        return char_str.to_string();
+    }
+    let Some(last) = raw_input.chars().last() else {
+        return char_str.to_string();
+    };
+    // Entering-tone stop codas are part of a tone-4/8 syllable body and cannot
+    // take tone-9. Every other Bopomofo body char (nucleus / nasal coda /
+    // nasalized-vowel final) is a valid tone-9 attachment point.
+    if crate::tps::is_tps_char(last) && !matches!(last, 'ㆴ' | 'ㆵ' | 'ㆻ' | 'ㆷ') {
+        return "\u{02c6}".to_string();
+    }
+    char_str.to_string()
+}
+
 /// Returns syllabic replacement for `lastRawChar`, or None.
 // 中文: 鼻化抽象音節觸發:在聲調符號接續下,把前一個 ㄇ/ㄫ 改成 ㆬ/ㆭ。
 fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
@@ -324,7 +365,8 @@ fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 /// Returns `(adjusted, replace_last?)`. Caller MUST gate by TPS layout.
 // 中文: TPS 鍵入即時調整單一入口,回傳 (調整後字元, 是否要替換最後一字)。呼叫端必須先確認是 TPS 配置。
 pub(crate) fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
-    let mut adjusted = adjust_initial_key(incoming, raw_input);
+    let mut adjusted = adjust_tone_nine_digit(incoming, raw_input);
+    adjusted = adjust_initial_key(&adjusted, raw_input);
     adjusted = adjust_nasalized_vowel_key(&adjusted, raw_input);
 
     let last_char = raw_input.chars().last();
@@ -336,7 +378,7 @@ pub(crate) fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>
 
 #[cfg(test)]
 mod tests {
-    use super::adjust_initial_key;
+    use super::{adjust_initial_key, adjust_tone_nine_digit};
 
     // INVARIANT_TPS_STOPCODA_PHONOTACTIC_GATE — a dual-form STOP (ㄅㄉㄍㄏ)
     // after a pure vowel converts to its entering-tone coda ONLY when the
@@ -471,6 +513,85 @@ mod tests {
         // Non-coda chars return None.
         assert_eq!(defold_coda_to_initial('ㄚ'), None);
         assert_eq!(defold_coda_to_initial('ㄍ'), None); // onset, not a coda
+    }
+
+    // INVARIANT_TPS_TONE9_DIGIT_TO_MARK — the digit `9` is the only input
+    // affordance for tone-9 (no `ˆ` key in either layout); convert it to the
+    // `ˆ` mark when a toneable syllable body is pending so tone-9 dictionary
+    // words (昨昏 ㄗㄤˆ, 才 ㄘㄞˆ) become reachable.
+
+    #[test]
+    fn tone_nine_digit_becomes_mark_after_syllable_body() {
+        // Nucleus / nasal-coda / nasalized-vowel finals all carry tone-9.
+        for raw in [
+            "ㄗㄤ",   // tsang → 昨昏
+            "ㄘㄞ",   // tshai → 才
+            "ㄗㄨ",   // tsu → 喌
+            "ㄒㄧㄢ", // sian (an nasal-coda final) → 日語借詞 せんせい
+            "ㄍㄚ",   // bare onset+vowel
+            "ㆦ",     // zero-onset vowel
+        ] {
+            assert_eq!(
+                adjust_tone_nine_digit("9", raw),
+                "\u{02c6}",
+                "{raw}+9 should become the ˆ tone-9 mark",
+            );
+        }
+    }
+
+    #[test]
+    fn tone_nine_digit_stays_literal_when_not_toneable() {
+        // No pending syllable, already toned, entering-tone stop coda, space,
+        // or non-Bopomofo context → keep the literal `9`.
+        for raw in [
+            "",               // standalone digit (committed verbatim upstream)
+            "ㄗㄤ\u{02c6}",   // already tone-9 — no double-toning
+            "ㄍㄚ\u{02cb}",   // already tone-2
+            "ㄍㄚㆵ",         // kat — entering-tone stop coda (tone 4/8 only)
+            "ㄗㄤ ",          // after a space boundary
+            "abc",            // non-Bopomofo
+        ] {
+            assert_eq!(
+                adjust_tone_nine_digit("9", raw),
+                "9",
+                "{raw:?}+9 should stay the literal digit",
+            );
+        }
+    }
+
+    #[test]
+    fn tone_nine_only_digit_nine_converts() {
+        // Scope = tone-9 only (USER 2026-06-14). Other digits pass through
+        // unchanged even after a toneable body.
+        for digit in ["1", "2", "3", "4", "5", "6", "7", "8", "0"] {
+            assert_eq!(
+                adjust_tone_nine_digit(digit, "ㄗㄤ"),
+                digit,
+                "digit {digit} must not be rewritten",
+            );
+        }
+    }
+
+    #[test]
+    fn tone_nine_digit_through_adjust_entry() {
+        // End-to-end through the collapsed entry point: produces the mark and
+        // no retroactive last-char replacement for a plain nucleus body.
+        let (adjusted, replace_last) = super::adjust("9", "ㄗㄤ");
+        assert_eq!(adjusted, "\u{02c6}");
+        assert_eq!(replace_last, None);
+        // Standalone digit stays literal.
+        assert_eq!(super::adjust("9", ""), ("9".to_string(), None));
+    }
+
+    #[test]
+    fn tone_nine_digit_folds_kept_nasal_via_rule_2b() {
+        // Rule 2b parity: a `9` that becomes `ˆ` after a gate-kept ㄇ folds it
+        // to ㆬ exactly like a directly-typed tone mark (mirrors
+        // `nasal_rule2b_interaction_is_benign`).
+        assert_eq!(adjust_initial_key("ㄇ", "ㄍㄨ"), "ㄇ"); // kum invalid → kept
+        let (adjusted, replace_last) = super::adjust("9", "ㄍㄨㄇ");
+        assert_eq!(adjusted, "\u{02c6}");
+        assert_eq!(replace_last.as_deref(), Some("ㆬ"));
     }
 
     #[test]
