@@ -66,7 +66,7 @@ class EmojiKeyboardView : FrameLayout {
             val layouts =
                 mainScope
                     .async(Dispatchers.IO) {
-                        parseRawEmojiSpecsFile(context, "ime/media/emoji/root.txt")
+                        loadEmojiLayoutData(context)
                     }.await()
 
             // 資料載入完成後設定 Compose content
