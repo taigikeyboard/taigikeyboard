@@ -29,8 +29,8 @@ use crate::api::{
 };
 use crate::derivation::{derive_abbrev, derive_notone};
 use crate::tps::{
-    from_zhuyin, is_tps_tone_mark, tps_abbrev_from_tl, tps_notone_from_tl, tps_notone_or_variant,
-    tps_num_from_tl,
+    from_zhuyin, is_tps_tone_mark, normalize_tps_tone8_scalar, tps_abbrev_from_tl,
+    tps_notone_from_tl, tps_notone_or_variant, tps_num_from_tl,
 };
 use std::collections::HashSet;
 
@@ -182,7 +182,7 @@ fn strip_tps_input(input: &str, keep_tone_marks: bool) -> String {
         if ch == '-' || ch.is_whitespace() {
             continue;
         }
-        let normalized = if ch == '\u{02d9}' { '\u{0307}' } else { ch };
+        let normalized = normalize_tps_tone8_scalar(ch);
         if !keep_tone_marks && is_tps_tone_mark(normalized) {
             continue;
         }

@@ -253,6 +253,33 @@ pub fn is_tps_tone_mark(ch: char) -> bool {
     )
 }
 
+/// Canonicalize a single TPS tone-8 scalar: platform keyboards type the
+/// standalone modifier-letter dot `U+02D9` (˙), but the build pipeline
+/// stores tone-8 as the combining dot above `U+0307` in every `tps:<tps_num>`
+/// FST key (see [`ZHUYIN_TONES`] vs [`ZHUYIN_TONES_ENCODE_SAFE`]). Map
+/// `U+02D9 → U+0307` so a raw-buffer TPS span matches the stored toned key;
+/// every other char (including the already-combining `U+0307`) passes through.
+///
+/// Char-level shared source for the key-shaping sites that build a `tps:` key
+/// from raw buffer input: `lexicon::key_normalizer` (Tab3 search),
+/// `custom_search` (custom-dictionary keys), and `composing::shadow`
+/// (continuous explicit-tone key). The continuous syllabifier probe
+/// (`composing::syllabifier::tps`) applies the same `U+02D9 → U+0307`
+/// substitution inline at the string level (allocating only when the buffer
+/// contains `U+02D9`) — same mapping, kept separate for that hot-path's
+/// allocation tuning.
+// 中文: TPS tone-8 調號正規化 — 鍵盤打獨立點 U+02D9,build pipeline 的 tps:<tps_num> 鍵用組合點 U+0307;
+// 中文:   把 U+02D9 換成 U+0307 讓原始 buffer 對齊已存 toned key,其餘字元原樣通過。
+// 中文:   char 級共用源:三個由 raw buffer 組 tps: 鍵的點 (key_normalizer / custom_search / shadow);
+// 中文:   syllabifier probe 為熱路徑配置調校,以字串級 inline 做同一替換 (僅含 U+02D9 才配置)。
+pub fn normalize_tps_tone8_scalar(ch: char) -> char {
+    if ch == '\u{02d9}' {
+        '\u{0307}'
+    } else {
+        ch
+    }
+}
+
 /// Split a TPS syllable token into `(canonical_toneless, tone_mark)`.
 ///
 /// Mirrors [`crate::canonicalize_syllable`] (TL) and

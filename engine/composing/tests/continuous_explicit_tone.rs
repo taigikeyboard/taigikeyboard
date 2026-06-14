@@ -225,10 +225,15 @@ fn req(method: Method) -> ComposingRequest {
     }
 }
 
-/// Drive `raw` through `Start → EnterContinuous → FetchAtPos` and return
-/// the candidate hanji set.
+/// Drive `raw` through `Start → EnterContinuous → FetchAtPos` in TL mode and
+/// return the candidate hanji set.
 fn fetch_hanji(raw: &str) -> Vec<String> {
-    let cfg = config("tl");
+    fetch_hanji_in(raw, "tl")
+}
+
+/// Mode-parameterized driver shared by the TL and TPS fetch helpers.
+fn fetch_hanji_in(raw: &str, input_mode: &str) -> Vec<String> {
+    let cfg = config(input_mode);
     let mut engine = Engine::new();
     dispatch::handle(
         &req(Method::Start(Start { text: raw.into() })),
@@ -345,5 +350,133 @@ fn longest_match_suppresses_shorter_prefix_syllable() {
     assert!(
         !toneless.iter().any(|h| h == "珠"),
         "toneless tsua must NOT surface 珠 (shorter prefix syllable); got {toneless:?}"
+    );
+}
+
+// ----- B2 (§17 TPS) — explicit-tone filtering for TPS Bopomofo input -----
+//
+// TPS tones are Bopomofo diacritic scalars, not ASCII digits, so #367 left
+// TPS on the unconditional toneless strip — every tone of a syllable surfaced
+// regardless of the typed tone mark. B2 extends the filter to TPS: a span
+// closed by a mark-bearing tone (2/3/5/6/7/8/9) keeps its mark and queries the
+// `tps:<tps_num>` family. The fixture's TPS keys are DERIVED from the same TL
+// readings via `phonetics::tps_num_from_tl` / `tps_notone_from_tl` (the runtime
+// mirrors of the build pipeline), so the test cannot drift from production key
+// shapes. 紙/tsuá (tone 2) vs 蛇/tsuâ (tone 5) differ ONLY by the tone mark.
+
+/// Emit the toneless `tps:<tps_notone>` family AND the toned `tps:<tps_num>`
+/// family per row, both derived from the row's TL reading — mirrors
+/// `create_fst.py:136` (`tps_num` + `tps_notone`). A tone-1 row (`tsu`) has
+/// `tps_num == tps_notone`, so only one key is emitted (dedup handles it).
+fn build_dictionary_fst_tps(rows: &[Row]) -> PathBuf {
+    let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len() * 2);
+    for (idx, row) in rows.iter().enumerate() {
+        let rowid = (idx + 1) as u32;
+        let mut push_key = |body: &str| {
+            let mut e = Vec::with_capacity(body.len() + 4 + 5);
+            e.extend_from_slice(b"tps:");
+            e.extend_from_slice(body.as_bytes());
+            e.push(SEPARATOR);
+            e.extend_from_slice(&rowid.to_le_bytes());
+            entries.push(e);
+        };
+        push_key(&phonetics::tps_notone_from_tl(row.tl));
+        push_key(&phonetics::tps_num_from_tl(row.tl));
+    }
+    entries.sort();
+    entries.dedup();
+    let path = write_temp("dictionary-tps.fst", &[]);
+    let file = std::fs::File::create(&path).expect("create dictionary-tps.fst");
+    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
+    for entry in &entries {
+        builder.insert(entry).expect("fst insert");
+    }
+    builder.finish().expect("fst finish");
+    path
+}
+
+/// TPS syllables.fst: emit BOTH the toned and toneless `tps:` syllable keys so
+/// the lattice recognizes a toned syllable (the `is_false_toneless_boundary_tps`
+/// guard then makes the toned form win when a tone mark is typed).
+fn build_syllables_fst_tps(rows: &[Row]) -> PathBuf {
+    let mut keys: Vec<String> = Vec::new();
+    for row in rows {
+        keys.push(format!("tps:{}", phonetics::tps_notone_from_tl(row.tl)));
+        keys.push(format!("tps:{}", phonetics::tps_num_from_tl(row.tl)));
+    }
+    keys.sort();
+    keys.dedup();
+    let path = write_temp("syllables-tps.fst", &[]);
+    let file = std::fs::File::create(&path).expect("create syllables-tps.fst");
+    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
+    for key in &keys {
+        builder.insert(key.as_bytes()).expect("insert");
+    }
+    builder.finish().expect("finish");
+    path
+}
+
+fn install_fixture_tps() {
+    let rows = fixture_rows();
+    let dict_path = write_temp("dictionary-tps.bin", &build_tkdb_v3(&rows));
+    let fst_path = build_dictionary_fst_tps(&rows);
+    let assoc_path = write_temp("association-tps.bin", &empty_association_bin());
+    let syllables_path = build_syllables_fst_tps(&rows);
+    let paths = LexiconPaths::validated(
+        fst_path.to_str().unwrap(),
+        dict_path.to_str().unwrap(),
+        assoc_path.to_str().unwrap(),
+        syllables_path.to_str().unwrap(),
+        2,
+    )
+    .expect("LexiconPaths::validated");
+    LexiconHandle::install(paths).expect("EngineHandle::install");
+}
+
+fn fetch_hanji_tps(raw: &str) -> Vec<String> {
+    fetch_hanji_in(raw, "tps")
+}
+
+#[test]
+fn explicit_tone_filters_to_typed_tone_tps() {
+    let _lock = engine_install_lock();
+    install_fixture_tps();
+    // tone-2 TPS input (紙/tsuá) must surface 紙 ONLY — 蛇 (tsuâ, tone 5)
+    // shares the toneless key but is the wrong tone.
+    let tone2 = phonetics::tps_num_from_tl("tsuá");
+    let hanji = fetch_hanji_tps(&tone2);
+    assert!(
+        hanji.iter().any(|h| h == "紙"),
+        "TPS {tone2:?} (tsuá) must surface 紙; got {hanji:?}"
+    );
+    assert!(
+        !hanji.iter().any(|h| h == "蛇"),
+        "TPS {tone2:?} must NOT surface 蛇 (wrong tone); got {hanji:?}"
+    );
+
+    // Symmetric: tone-5 surfaces 蛇 only.
+    let tone5 = phonetics::tps_num_from_tl("tsuâ");
+    let hanji5 = fetch_hanji_tps(&tone5);
+    assert!(
+        hanji5.iter().any(|h| h == "蛇"),
+        "TPS {tone5:?} (tsuâ) must surface 蛇; got {hanji5:?}"
+    );
+    assert!(
+        !hanji5.iter().any(|h| h == "紙"),
+        "TPS {tone5:?} must NOT surface 紙 (wrong tone); got {hanji5:?}"
+    );
+}
+
+#[test]
+fn toneless_input_still_surfaces_all_tones_tps() {
+    let _lock = engine_install_lock();
+    install_fixture_tps();
+    // No-tone affordance preserved for TPS: toneless Bopomofo surfaces every
+    // tone (both 紙 and 蛇).
+    let toneless = phonetics::tps_notone_from_tl("tsuá");
+    let hanji = fetch_hanji_tps(&toneless);
+    assert!(
+        hanji.iter().any(|h| h == "紙") && hanji.iter().any(|h| h == "蛇"),
+        "toneless TPS {toneless:?} must surface both 紙 and 蛇; got {hanji:?}"
     );
 }

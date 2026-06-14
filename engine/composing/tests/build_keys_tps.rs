@@ -38,16 +38,14 @@ fn mapped(keys: &[((u32, u32), String)]) -> Vec<((u32, u32), String)> {
 
 #[test]
 fn tps_lattice_emits_tps_prefix_for_tone_marked_input() {
-    // `ㄉㄞˋㆣㄧˊ` — 2 syllables, both with explicit tone marks
-    // (tone-2 ˋ U+02CB then tone-5 ˊ U+02CA). After mode-aware tone
-    // strip the toneless syllables `ㄉㄞ` (6 bytes) and `ㆣㄧ` (6 bytes)
-    // remain; the lattice walks both as `(0, end_of_first_syllable)`
-    // and `(0, end_of_phrase)` left-anchored edges. Per-syllable byte
-    // counts: ㄉ ㄞ ㆣ ㄧ each 3 bytes (Bopomofo block / extended);
-    // ˋ ˊ each 2 bytes (modifier letters U+02CA / U+02CB).
-    //
-    // First syllable shadow ending: 3+3+2 = 8.
-    // Phrase shadow ending: 8 + 3+3+2 = 16.
+    // B2 (§17 TPS) — `ㄉㄞˋㆣㄧˊ`, 2 syllables both with explicit tone marks
+    // (tone-2 ˋ U+02CB then tone-5 ˊ U+02CA). Both syllables are fully toned,
+    // so the left-anchored keys KEEP their tone marks verbatim (the toned
+    // `tps:<tps_num>` family) — the candidate set is then filtered to exactly
+    // the typed tones. Pre-B2 the marks were unconditionally stripped to
+    // `tps:ㄉㄞ` / `tps:ㄉㄞㆣㄧ` (the bug). Per-syllable byte counts: ㄉ ㄞ ㆣ ㄧ
+    // each 3 bytes (Bopomofo block / extended); ˋ ˊ each 2 bytes (modifier
+    // letters U+02CA / U+02CB).
     let inv = build_tps_inventory(&[
         "ㄉㄞ", "ㄉㄞˋ", // tone-2 / toneless ㄉㄞ
         "ㆣㄧ", "ㆣㄧˊ", // tone-5 / toneless ㆣㄧ
@@ -57,15 +55,14 @@ fn tps_lattice_emits_tps_prefix_for_tone_marked_input() {
         &inv,
         phonetics::InputMode::Tps,
     );
-    // Strip-tones drops ˋ (2 bytes) and ˊ (2 bytes) → body = ㄉㄞ then ㄉㄞㆣㄧ.
     let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
-        texts.contains(&"tps:\u{3109}\u{311e}"),
-        "expected tps:ㄉㄞ left-anchored key, got {texts:?}",
+        texts.contains(&"tps:\u{3109}\u{311e}\u{02cb}"),
+        "expected toned tps:ㄉㄞˋ left-anchored key, got {texts:?}",
     );
     assert!(
-        texts.contains(&"tps:\u{3109}\u{311e}\u{31a3}\u{3127}"),
-        "expected tps:ㄉㄞㆣㄧ phrase key, got {texts:?}",
+        texts.contains(&"tps:\u{3109}\u{311e}\u{02cb}\u{31a3}\u{3127}\u{02ca}"),
+        "expected toned tps:ㄉㄞˋㆣㄧˊ phrase key, got {texts:?}",
     );
     // No interior keys (start != 0) — left-anchored projection only.
     for ((start, _), key) in &keys {

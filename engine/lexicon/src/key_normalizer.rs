@@ -19,7 +19,7 @@
 // 中文: 建立 FST 查詢用的前綴 key — 四大族群:tl: / poj: / tps: / hanzi:。
 // 中文: TL/POJ 走 phonetics::normalize_input 規範化;TPS 維持注音原樣,僅剝除連字號/空白並把獨立 tone-8 點 (U+02D9) 換成組合形式 (U+0307) 以對齊 build pipeline。
 
-use phonetics::normalize_input;
+use phonetics::{normalize_input, normalize_tps_tone8_scalar};
 
 /// Build the trie lookup key for an input + input-type/mode pair.
 ///
@@ -53,8 +53,7 @@ fn normalize_tps_key_body(input: &str) -> String {
     for ch in input.chars() {
         match ch {
             '-' | ' ' | '\t' => {}
-            '\u{02D9}' => out.push('\u{0307}'),
-            _ => out.push(ch),
+            _ => out.push(normalize_tps_tone8_scalar(ch)),
         }
     }
     out

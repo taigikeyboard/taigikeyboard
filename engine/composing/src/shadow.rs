@@ -115,31 +115,105 @@ fn span_is_fully_toned_ascii(span: &str) -> bool {
     !group_has_letter
 }
 
-/// FST lookup body for a continuous-input span. When `span` is a
-/// fully-toned TL/POJ reading ([`span_is_fully_toned_ascii`]), return it
-/// verbatim (digits kept) so `lookup_exact` / `lookup_prefix` filters by
-/// the typed tone — the fix for the bug where explicit `tai5` surfaced
-/// every tone of `tai`. Otherwise return the toneless form
-/// ([`strip_tones_for_mode`]): toneless continuous input intentionally
-/// surfaces all tones, and mixed/partial-tone spans have no fully-toned
-/// FST key family. This is a key-SELECTION rule (one branch per span
-/// shape), NOT a runtime fallback — there is no "toned miss → retry
-/// toneless" path.
+/// TPS analogue of [`span_is_fully_toned_ascii`]: true iff `span` matches the
+/// `(bopomofo-body+ mark-bearing-tone)+` grammar — a non-empty sequence of
+/// Bopomofo bodies each closed by a standalone TPS tone scalar (tones
+/// 2/3/5/6/7/8/9 per `phonetics::is_tps_tone_mark`, including the
+/// `U+02D9`/`U+0307` tone-8 pair) — with no orphan/leading mark and a
+/// **trailing** mark. Such a span maps verbatim, after tone-8 scalar
+/// normalization, onto the `tps:<tps_num>` FST family, so an exact lookup
+/// filters candidates to the typed tone(s).
 ///
-/// Only TL and POJ are tone-eligible. `English` mode has no tone
-/// semantics (a trailing digit in an English buffer is not a tone), so it
-/// keeps the legacy digit-strip — excluded here to avoid changing English
-/// continuous behavior. TPS tones are Bopomofo scalars, not ASCII digits,
-/// so [`span_is_fully_toned_ascii`] returns false for any non-ASCII
-/// content and TPS always takes the toneless branch unchanged.
-// 中文: 連續輸入 span 的 FST 查詢主體:全含調 TL/POJ → verbatim(保留數字)讓 lookup 按聲調過濾;
-// 中文:   否則回去調形。為「鍵選擇規則」非 runtime fallback(無 toned-miss→retry-toneless)。
-// 中文:   僅 TL/POJ 可含調;English 無聲調語意(尾端數字非聲調)維持去調;TPS 為注音聲調符非 ASCII 數字,恆走去調。
+/// **Tones 1 and 4 produce no mark, so a span whose LAST syllable is tone-1/4
+/// returns false → toneless all-tones key.** Tone-1 carries no mark (its
+/// keyboard space separator is stripped upstream by [`build_separator_shadow`])
+/// and tone-4 is a bare stop-coda glyph (ㆴㆵㆻㆷ, part of the body, NOT in
+/// `is_tps_tone_mark`); neither has a distinguishing `tps:<tps_num>` key
+/// (`tps_num == tps_notone`), so surfacing all tones is the only correct
+/// behavior for them.
+///
+/// **Same text-only limitation as [`span_is_fully_toned_ascii`]**: with no
+/// inventory it cannot split a fused multi-syllable body, so a tone-1/4
+/// syllable that is *leading or interior* (followed later by a marked
+/// syllable) is NOT detected — `ㄍㄠㄉㄞˊ` (kau1+tai5, e.g. the §18 `ㄍㄠ ␣ ㄉㄞˊ`
+/// space-phrase after the separator strip) reads as fully toned and keys the
+/// verbatim `tps:ㄍㄠㄉㄞˊ`. This is exact, NOT a wrong-tone hit: a tone-1/4
+/// syllable contributes no mark to `tps_num` either, so the verbatim span
+/// equals the phrase's real toned key (kau**1**-tai5) — the unmarked leading
+/// syllable resolves to its no-mark tone, mirroring how the TL/POJ path keys
+/// `tl:taigi5` for `taigi5`. The per-syllable all-tones affordance for the
+/// unmarked syllable is preserved separately via the shorter single-syllable
+/// span (`tps:ㄍㄠ`, toneless), which §18 keeps alongside the phrase; only the
+/// multi-syllable PHRASE candidate is tone-pinned. A fully-toned-LOOKING but
+/// nonexistent body simply MISSES the FST (zero candidates).
+///
+/// The span reaching here is already hyphen- and separator-stripped, so it is
+/// pure Bopomofo + tone marks; any other char is a leak and returns false.
+// 中文: span_is_fully_toned_ascii 的 TPS 版 — 比對 (注音主體+「有調號」TPS 聲調)+ 文法:每段主體由
+// 中文:   標準調號 (2/3/5/6/7/8/9,含 U+02D9/U+0307 tone-8) 收尾、無孤兒/前導調號、且尾端為調號。
+// 中文:   經 tone-8 正規化後 verbatim 對齊 tps:<tps_num>,exact lookup 按聲調過濾。
+// 中文: 第 1/4 調無調號 → 末音節為 1/4 者回 false 走去調全聲調 (tone-1 space 已上游剝除;tone-4 是入聲
+// 中文:   韻尾 glyph 屬主體,不在 is_tps_tone_mark;兩者 tps_num==tps_notone 無可區分鍵)。
+// 中文: 與 span_is_fully_toned_ascii 同的 text-only 限制:無 inventory 無法切分融合多音節,故「前導/中間」
+// 中文:   的 1/4 調音節 (後面接有調號音節) 偵測不到 — ㄍㄠㄉㄞˊ (kau1+tai5,即 §18 ㄍㄠ ␣ ㄉㄞˊ 去分隔符後)
+// 中文:   會被當全含調並 key verbatim tps:ㄍㄠㄉㄞˊ。此為精確非錯調:1/4 調對 tps_num 同樣不貢獻調號,
+// 中文:   verbatim 即等於該詞真正 toned key (kau1-tai5),前導未標音節解析為其無調號調,與 TL/POJ 對
+// 中文:   taigi5 key tl:taigi5 同理。未標音節的全聲調可由較短單音節 span (tps:ㄍㄠ 去調,§18 保留) 取得,
+// 中文:   只有多音節「詞」候選被釘調。看似全含調但不存在的 body 只會 miss FST 回空。
+fn span_is_fully_toned_tps(span: &str) -> bool {
+    if span.is_empty() {
+        return false;
+    }
+    let mut group_has_body = false;
+    for c in span.chars() {
+        if phonetics::is_tps_tone_mark(c) {
+            if !group_has_body {
+                return false; // orphan tone mark — no body opened this group
+            }
+            group_has_body = false; // tone mark closes the current syllable group
+        } else if phonetics::is_tps_char(c) {
+            group_has_body = true;
+        } else {
+            return false; // leaked separator / non-TPS — not a clean toned reading
+        }
+    }
+    // A trailing un-marked body (tone 1 / tone 4) leaves a group open.
+    !group_has_body
+}
+
+/// FST lookup body for a continuous-input span. When `span` is a
+/// fully-toned reading, return its verbatim toned key so
+/// `lookup_exact` / `lookup_prefix` filters by the typed tone(s) — the fix
+/// for the bug where explicit `tai5` surfaced every tone of `tai`:
+/// - **TL / POJ** ([`span_is_fully_toned_ascii`]): digits kept verbatim,
+///   matching the `tl:<tl_num>` / `poj:<poj_num>` family.
+/// - **TPS** ([`span_is_fully_toned_tps`]): Bopomofo + tone marks kept, with
+///   the tone-8 dot normalized `U+02D9 → U+0307`
+///   ([`phonetics::normalize_tps_tone8_scalar`]) so it matches the
+///   `tps:<tps_num>` family the build pipeline stores. Tones 1/4 carry no
+///   mark and fall through to the toneless branch (see
+///   [`span_is_fully_toned_tps`]).
+///
+/// Otherwise return the toneless form ([`strip_tones_for_mode`]): toneless
+/// continuous input intentionally surfaces all tones, and mixed/partial-tone
+/// spans have no fully-toned FST key family. This is a key-SELECTION rule
+/// (one branch per span shape), NOT a runtime fallback — there is no
+/// "toned miss → retry toneless" path.
+///
+/// `English` mode has no tone semantics (a trailing digit in an English
+/// buffer is not a tone), so it keeps the legacy digit-strip.
+// 中文: 連續輸入 span 的 FST 查詢主體:全含調 → verbatim toned key 讓 lookup 按聲調過濾。
+// 中文:   TL/POJ 保留數字對齊 tl:/poj:<num>;TPS 保留注音+調號,tone-8 點正規化 U+02D9→U+0307
+// 中文:   對齊 tps:<tps_num>(第 1/4 調無調號 → 落去調分支)。否則回去調形(全聲調)。
+// 中文:   為「鍵選擇規則」非 runtime fallback;English 無聲調語意維持去調。
 pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
-    if matches!(mode, InputMode::Tl | InputMode::Poj) && span_is_fully_toned_ascii(span) {
-        span.to_string()
-    } else {
-        strip_tones_for_mode(span, mode)
+    match mode {
+        InputMode::Tl | InputMode::Poj if span_is_fully_toned_ascii(span) => span.to_string(),
+        InputMode::Tps if span_is_fully_toned_tps(span) => span
+            .chars()
+            .map(phonetics::normalize_tps_tone8_scalar)
+            .collect(),
+        _ => strip_tones_for_mode(span, mode),
     }
 }
 
@@ -1792,14 +1866,36 @@ mod tests {
     }
 
     #[test]
-    fn build_partial_prefix_key_tps_strips_tone_marks() {
-        // `ㄉㄞˊ` (with U+02CA tone-5 mark) → `tps:ㄉㄞ`. The 8 Bopomofo
-        // tone scalars (per `phonetics::is_tps_tone_mark`) are stripped
-        // by `strip_tones_for_mode(_, Tps)` exactly like ASCII digits
-        // are stripped for TL/POJ.
+    fn build_partial_prefix_key_tps_keeps_explicit_tone_mark() {
+        // B2 (§17 TPS) — a fully-toned TPS span keeps its tone mark verbatim
+        // so the `tps:<tps_num>` family filters to the typed tone, mirroring
+        // the TL/POJ digit-keeping path. `ㄉㄞˊ` (U+02CA tone-5) → `tps:ㄉㄞˊ`,
+        // NOT the toneless `tps:ㄉㄞ` (pre-B2 unconditional strip, the bug).
         let (_, key) =
             build_partial_prefix_key("\u{3109}\u{311e}\u{02ca}", InputMode::Tps).unwrap();
-        assert_eq!(key, "tps:\u{3109}\u{311e}");
+        assert_eq!(key, "tps:\u{3109}\u{311e}\u{02ca}");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tps_normalizes_tone8_dot_to_combining() {
+        // B2 — tone-8 byte-identity: the keyboard types the standalone dot
+        // `U+02D9` (˙) but the stored `tps:<tps_num>` key uses combining
+        // `U+0307`. The verbatim toned key must normalize so it matches.
+        // `ㄍㄚㆵ˙` (U+02D9) → `tps:ㄍㄚㆵ̇` (U+0307).
+        let (_, key) =
+            build_partial_prefix_key("\u{310d}\u{311a}\u{31b5}\u{02d9}", InputMode::Tps).unwrap();
+        assert_eq!(key, "tps:\u{310d}\u{311a}\u{31b5}\u{0307}");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tps_tone4_coda_stays_toneless() {
+        // B2 — tone-4 is a bare stop-coda glyph (ㆵ U+31B5), part of the
+        // syllable body with no tone mark; it has no distinguishing
+        // `tps:<tps_num>` key, so the span stays on the toneless all-tones
+        // key. `ㄍㄚㆵ` (no dot) → `tps:ㄍㄚㆵ` (NOT a toned key).
+        let (_, key) =
+            build_partial_prefix_key("\u{310d}\u{311a}\u{31b5}", InputMode::Tps).unwrap();
+        assert_eq!(key, "tps:\u{310d}\u{311a}\u{31b5}");
     }
 
     #[test]
@@ -1810,6 +1906,93 @@ mod tests {
         assert!(build_partial_prefix_key("\u{02ca}", InputMode::Tps).is_none());
         assert!(build_partial_prefix_key("\u{02cb}", InputMode::Tps).is_none());
         assert!(build_partial_prefix_key("\u{0307}", InputMode::Tps).is_none());
+    }
+
+    // ----- B2 (§17 TPS) span_is_fully_toned_tps + fst_body_for_span -----
+
+    #[test]
+    fn span_is_fully_toned_tps_single_marked_tone_is_toned() {
+        // Each mark-bearing tone (2/3/5/6/7/8/9) closes the syllable.
+        for tone_mark in [
+            '\u{02cb}', // 2 ˋ
+            '\u{02ea}', // 3 ˪
+            '\u{02ca}', // 5 ˊ
+            '\u{02c7}', // 6 ˇ
+            '\u{02eb}', // 7 ˫
+            '\u{0307}', // 8 combining dot
+            '\u{02d9}', // 8 standalone dot (keyboard form)
+            '\u{02c6}', // 9 ˆ
+        ] {
+            let span = format!("\u{3109}\u{311e}{tone_mark}"); // ㄉㄞ + tone
+            assert!(
+                span_is_fully_toned_tps(&span),
+                "tone mark U+{:04X} should mark the span fully toned",
+                tone_mark as u32
+            );
+        }
+    }
+
+    #[test]
+    fn span_is_fully_toned_tps_multi_syllable_each_toned() {
+        // ㄍㄠˋㄉㄞˊ — two syllables, both marked → fully toned.
+        assert!(span_is_fully_toned_tps(
+            "\u{310d}\u{3120}\u{02cb}\u{3109}\u{311e}\u{02ca}"
+        ));
+    }
+
+    #[test]
+    fn span_is_fully_toned_tps_excludes_tone1_and_tone4_and_mixed() {
+        // tone-1 / tone-4 (no trailing mark) and mixed partial-tone spans are
+        // NOT fully toned → toneless all-tones key.
+        assert!(!span_is_fully_toned_tps("\u{3109}\u{311e}")); // ㄉㄞ tone-1 (no mark)
+        assert!(!span_is_fully_toned_tps("\u{310d}\u{311a}\u{31b5}")); // ㄍㄚㆵ tone-4 coda
+                                                                       // ㄍㄠˋㄉㄞ — first syllable toned, second toneless → mixed.
+        assert!(!span_is_fully_toned_tps(
+            "\u{310d}\u{3120}\u{02cb}\u{3109}\u{311e}"
+        ));
+        assert!(!span_is_fully_toned_tps("")); // empty
+        assert!(!span_is_fully_toned_tps("\u{02ca}")); // orphan tone mark
+    }
+
+    #[test]
+    fn fst_body_for_span_tps_toned_keeps_mark_toneless_strips() {
+        // Toned span kept verbatim (tone-8 normalized); toneless stripped.
+        assert_eq!(
+            fst_body_for_span("\u{3109}\u{311e}\u{02ca}", InputMode::Tps),
+            "\u{3109}\u{311e}\u{02ca}"
+        );
+        assert_eq!(
+            fst_body_for_span("\u{310d}\u{311a}\u{31b5}\u{02d9}", InputMode::Tps),
+            "\u{310d}\u{311a}\u{31b5}\u{0307}"
+        );
+        assert_eq!(
+            fst_body_for_span("\u{3109}\u{311e}", InputMode::Tps),
+            "\u{3109}\u{311e}"
+        );
+    }
+
+    #[test]
+    fn span_is_fully_toned_tps_leading_untoned_syllable_reads_as_toned() {
+        // Documented text-only limitation (mirrors `span_is_fully_toned_ascii`
+        // on `taigi5`): a LEADING tone-1 syllable followed by a marked syllable
+        // cannot be split without an inventory, so `ㄍㄠㄉㄞˊ` (kau1+tai5, the
+        // §18 `ㄍㄠ ␣ ㄉㄞˊ` space-phrase after the separator strip) reads as
+        // fully toned and keys the verbatim `tps:ㄍㄠㄉㄞˊ`. This is EXACT, not a
+        // wrong-tone hit — kau's tone-1 contributes no mark to `tps_num` either,
+        // so the verbatim span equals the real kau1-tai5 phrase key. The
+        // per-syllable all-tones affordance for kau stays available via the
+        // shorter single-syllable `tps:ㄍㄠ` span (§18).
+        assert!(span_is_fully_toned_tps(
+            "\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}"
+        ));
+        assert_eq!(
+            fst_body_for_span("\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}", InputMode::Tps),
+            "\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}"
+        );
+        // A leading tone-4 stop-coda syllable behaves the same way.
+        assert!(span_is_fully_toned_tps(
+            "\u{310d}\u{311a}\u{31b5}\u{3109}\u{311e}\u{02ca}"
+        ));
     }
 
     // ----- v3.5.8 S5 — no-dict carve-out (greedy + min-hop helpers) -----
