@@ -2,7 +2,7 @@
 
 > **Type**: Reference index
 > **Purpose**: Centralised cross-reference of every mainstream IME / keyboard repo cloned under `references/`, plus a few external projects worth knowing. Read this **before** writing a `最佳實踐對齊` section in a plan, before designing a new engine slice, or before asserting "Project X already does Y".
-> **Status**: Authoritative as of 2026-05-30. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
+> **Status**: Authoritative as of 2026-06-14. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
 > **Related deep-dives**:
 > - [`azookey-reference.md`](./azookey-reference.md) — azooKey iOS UI / CustardKit / action model
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
@@ -47,6 +47,8 @@
 | 18 | `rakukan/` | Rust | Windows (TSF) | Full IME (Japanese, LLM) | LLM (llama.cpp `jinen`) + mozc/SKK dict merge; live-conversion + range-select flow | Dict-merge + user-dict learning + literal (digit/alpha) protection | `rakukan-dict` user dict; immediate commit learning | Kana/romaji (`engine/kana.rs`, `romaji/`) | MIT | **Rust IME with out-of-process engine-host** (`rakukan-engine-host.exe` over Named-Pipe + postcard RPC) + **live conversion**. Closest arch analogue for our Rust-engine FFI + continuous input. `ea8e151` (2026-05-29) |
 | 19 | `PIME/` | C++ + Python/Node/Go | Windows (TSF) | IME framework (multi-backend host) | per-backend (hosts libchewing, McBopomofoWeb, …) | per-backend | per-backend | per-backend | LGPL-2.1 (mixed; per-part) | **Out-of-process multi-backend IME host**: TSF C++ shell ↔ python/node/go server over JSON (`backends.json`). Reference for hosting a foreign engine (e.g. McBopomofoWeb node backend) behind one Windows IME shell. `571759f` (2026-05-16) |
 | 20 | `MacishType/` | Swift + JavaScript | macOS (IMK) | IME shell (JS-pluggable) | engine-defined (external JS) | engine-defined | engine-defined | engine-defined | MIT | **Native-look candidate window** (horizontal / vertical / expandable, app-accent-color match) + **JS-pluggable engine** with `manifest.json`-generated Settings UI. Reference for candidate-window layouts + config-driven engine plugin. `8a6cb3a` (2026-05-27) |
+| 21 | `PhahTaigi_iOS/` | Swift (Realm + RxSwift) | iOS (KeyboardExt) | Full IME (Taigi) | Prefix lookup over Realm dict; no lattice | Realm dict frequency | None on-device | POJ/TL (tone-optional) | GPL-3.0 | **Closest iOS Taigi-IME prior art** — keyboard-extension structure, Realm dict store, Han-lo mixed candidates. The "漢羅 commits romanization in one tap" UX our §34/S22 literal-roman candidate mirrors ("PhahTaigi parity"). Stale (`bd91e46`, 2022-03-03) |
+| 22 | `rime-phah-taibun/` | YAML + Lua + Python | Cross (RIME schema) | Schema data | DAG inherits from librime | Frequency from 7 public corpora (~220K entries) | Auto user-phrase via librime | POJ/TL (tone-optional) + Mandarin reverse lookup | MIT | **Second mainstream RIME Taigi schema** (sibling of #10 `rime-moetaigi`) — larger corpus, 16 Lua modules, Han/Roman mixed output, tone-optional typing. Reference for POJ/TL-unified schema + corpus merge + Mandarin reverse-lookup. Active (`d569c0e`, 2026-06-10) |
 
 ---
 
@@ -119,6 +121,8 @@ If you are working on… → read these in order.
 1. **`moe_taigi_apk`** — MOE official, ships on Android. Reference for what Taiwanese users see as "default".
 2. **`aiongtaigi-sushi`** — `hanji_corrections.csv` (preferred → deprecated form). Reference data for orthography normalisation.
 3. **`rime-moetaigi`** — 中文反查 (Mandarin reverse-lookup), 注音顯示 (show TPS next to candidate). Both features we have considered.
+4. **`rime-phah-taibun`** — second RIME Taigi schema (#22): POJ/TL-unified spelling (no mode switch), tone-optional input, Han/Roman mixed output, 中文反查; ~220K-entry corpus-merge pipeline.
+5. **`PhahTaigi_iOS`** — iOS Taigi-keyboard prior art (#21): keyboard-extension structure, Realm dict store, one-tap 漢羅 commit ("PhahTaigi parity" for §34/S22).
 
 ---
 
@@ -215,7 +219,7 @@ If you are working on… → read these in order.
 
 ### 10. rime-moetaigi — `references/rime-moetaigi/`
 
-- **What**: The only mainstream Taigi schema for RIME. Built on the MOE 《臺灣閩南語常用詞辭典》 corpus (~20k entries) by Whyjay Zheng. CC0.
+- **What**: A mainstream Taigi schema for RIME (see also #22 `rime-phah-taibun`). Built on the MOE 《臺灣閩南語常用詞辭典》 corpus (~20k entries) by Whyjay Zheng. CC0.
 - **Why we care**: Reference data for **TPS tone-mark placement**, **中文反查** (Mandarin reverse-lookup) mode, **注音顯示** (TPS-next-to-candidate) mode, and **shift-modified Bopomofo keys** for Taigi-only phonemes (ㄫ, etc.).
 - **Where to look**:
   - `moetaigi-tsuim.schema.yaml` — main schema
@@ -388,12 +392,35 @@ If you are working on… → read these in order.
   - **Manifest-declares-or-exposes** pattern — a clean rule for "config sets it OR user controls it"; reusable framing for our settings-vs-defaults seams.
 - **Caveat**: macOS IMK + a JS plugin runtime; we ship neither. Mine the **candidate-window UX spec** and the **config/settings model**, not the IMK or JS-host code.
 
+### 21. PhahTaigi_iOS — `references/PhahTaigi_iOS/`
+
+- **What**: iOS Taigi keyboard by the PhahTaigi team. Swift, KeyboardKit-era keyboard extension; Realm-backed dictionary, RxSwift, Firebase. GPL-3.0. Stale checkout (`bd91e46`, 2022-03-03).
+- **Why we care**: The closest **iOS Taigi-IME prior art** — the only open iOS keyboard built specifically for Taiwanese before ours. Its "type romanization, commit Hanji or roman in one tap" flow is what our §34/S22 literal-roman candidate is checked against ("PhahTaigi parity").
+- **Where to look**:
+  - `PhahTaigi/PhahTaigiKeyboard/` — keyboard-extension target (`Extension/`, `KeyboardUI/`, `ViewController/`)
+  - `PhahTaigi/PhahTaigiKeyboard/DictDatabase/` — Realm dict store + prefix lookup
+- **Inspiration takeaways**: keyboard-extension layout for a Taigi-specific keyboard; Han-lo mixed candidate presentation; Realm as a bundled read-only dict store (we use a Rust-engine `.bin` instead).
+- **Caveat**: pre-dates our architecture by years; UX reference, not code-to-copy. No lattice / no on-device learning.
+
+### 22. rime-phah-taibun — `references/rime-phah-taibun/`
+
+- **What**: 拍台文 Phah Tai-bun — an open RIME input method for Taiwanese Hokkien by soanseng. YAML schema + 16 Lua modules + Python build pipeline; ~220K dict entries merged from 7 public corpora. MIT. Active (`d569c0e`, 2026-06-10). Ships for Weasel / Squirrel / fcitx5-rime / ibus-rime.
+- **Why we care**: The **second mainstream RIME Taigi schema** (sibling of #10 `rime-moetaigi`), and the more actively-developed / larger-corpus one. POJ and TL are unified so users don't choose a romanization; tone-optional typing; Han/Roman mixed output; Mandarin reverse lookup.
+- **Where to look**:
+  - `schema/` — RIME schema YAML (segmentation, spelling algebra, candidate ordering)
+  - `lua/` — 16 Lua filter/translator modules (tone handling, Han-lo mixing, reverse lookup)
+  - `scripts/` + `main.py` + `pyproject.toml` — corpus-merge build pipeline (7 sources → dict)
+  - `roadmap.md` / `PLAN.md` — design intent + priorities
+- **Inspiration takeaways**: POJ/TL-unified spelling (no mode switch) + tone-optional input — directly comparable to our TL/POJ handling; public-corpus merge pipeline as a reference for dictionary sourcing; Mandarin reverse-lookup design.
+- **Caveat**: RIME/librime engine semantics, not our Rust engine — mine the **schema/UX decisions + corpus pipeline**, not the engine code (that lives in #8 `librime`).
+
 ### Cloned but out-of-engine-scope (not IME engines)
 
-Two repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
+Three repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
 
 - **`ISEmojiView/`** (`fec2d03`, 2025-11-27, MIT) — an iOS **emoji-keyboard UI component** (categories, skin-tone variants, recently-used, system-style bottom bar). Not an IME. Relevance: **UI-only** reference for our emoji palette (`EmojiPaletteView`), if we revisit emoji-picker layout. `Sources/ISEmojiView/`.
 - **`KeSi/`** (`826e787`, 2025-12-16, MIT) — `i3thuan5/KeSi`, a **Tâi-bûn NLP toolkit** (Python) by 意傳科技: 斷詞, 輕聲標註, Unicode NFC + 教育部造字碼 normalisation, 漢羅↔全羅. Not an IME. Relevance: **phonetics / dictionary** tooling (see `memory/project_kesi_deprecated.md`), not the engine comparison — read `knowledge/taigi-phonetics-reference.md` + `taigi-converter/` first per CLAUDE.md Core Principle #3.
+- **`Taigi-Input-method-dictionary-supplement/`** (`ada348a`, 2026-01-14) — 建中's CSV supplement tables for the MOE 教育部臺灣台語輸入法 (一府五院 / 行政區 / 數字·時間·日期 / 台·臺 / 菜市仔名 / …). **Dictionary data, not an engine** — the dev-supplement source behind PR #368/#369 (see `memory/project_dev_supplement_dict.md`). Relevance: **dictionary entries** to fold into our build, gated by CLAUDE.md Core Principle #3 + #7 `(漢字, 羅馬字)` identity — not an algorithm reference.
 
 ---
 
@@ -453,5 +480,6 @@ For Phase II+ (cross-platform alignment), read:
 - **2026-05-12** — Initial version. Indexed 13 repos under `references/` + 4 external pointers (Mozc, libchewing, Gboard, OpenVanilla). Built on top of existing deep-dives (azookey/khiin/rime/moe-taigi).
 - **2026-05-17** — Added repo #16 `trime/` (osfans/trime, RIME IME for Android, GPL-3.0, nightly `277b8ea2`). Matrix row + per-repo card + new "Native-engine embedding / FFI threading" topic section + Custom-UI / Schema-deploy / Phase II+ pointers. Index-only (no deep-dive): Trime's engine internals are already covered by `librime` (#8) + `rime-reference.md`; its value is the Android integration layer. Deep-dive deferred until an Android FFI/daemon slice needs it.
 - **2026-05-30** — Indexed 4 newly-cloned IMEs as cards/rows #17–20: **mozc** (`afbf1d089`, BSD-3, promoted from external pointer → cloned; Mozc external entry now a redirect), **rakukan** (`ea8e151`, MIT, Rust + LLM Windows IME, out-of-process engine-host + live conversion), **PIME** (`571759f`, LGPL-2.1, Windows TSF multi-backend host), **MacishType** (`8a6cb3a`, MIT, macOS IMK, JS-pluggable engine + native candidate window). Topic-index additions: lattice (mozc Viterbi), predictive (mozc predictor + rakukan live-conv), native-engine FFI (rakukan/PIME out-of-process), candidate UI (MacishType), config-driven (PIME `backends.json` + MacishType `manifest.json`). Added a "Cloned but out-of-engine-scope" note for `ISEmojiView/` (iOS emoji UI lib, not an IME) + `KeSi/` (Tâi-bûn NLP toolkit, not an IME) so they aren't re-explored as engine refs. Index-only (no deep-dives): create `docs/references/<repo>-reference.md` if a slice ever needs >500 LOC read-through of mozc's Viterbi or rakukan's RPC/live-conv.
+- **2026-06-14** — Indexed 2 previously-uncatalogued Taigi IMEs as cards/rows #21–22: **PhahTaigi_iOS** (`bd91e46`, GPL-3.0, iOS Taigi keyboard, Realm dict, stale 2022 checkout — the iOS Taigi prior art behind the §34/S22 "PhahTaigi parity" cite) + **rime-phah-taibun** (`d569c0e`, MIT, second RIME Taigi schema, ~220K-entry corpus merge, sibling of #10). Softened #10 `rime-moetaigi` "only mainstream RIME Taigi schema" → cross-ref #22. Topic-index "Taigi-specific UX / data" additions for both. Added a third "Cloned but out-of-engine-scope" bullet for `Taigi-Input-method-dictionary-supplement/` (`ada348a`, MOE-IME CSV supplement = dev-supplement source behind PR #368/#369; dictionary data, not an engine). Index-only (no deep-dives). All 25 repos under `references/` now catalogued.
 
 When adding a new repo under `references/`, append a card here and a row in the TL;DR matrix; if the repo is deep enough to warrant its own deep-dive (>500 LOC of read-through), create `docs/references/<repo>-reference.md` and link both ways.
