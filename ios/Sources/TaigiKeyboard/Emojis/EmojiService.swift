@@ -18,6 +18,7 @@ protocol EmojiServiceDelegate: AnyObject {
 final class EmojiService: NSObject {
     weak var delegate: EmojiServiceDelegate?
     private let emojiView: EmojiView
+    private let logger = DebugLogger(category: "Emoji")
 
     override init() {
         let keyboardSettings = KeyboardSettings(bottomType: .categories)
@@ -26,10 +27,18 @@ final class EmojiService: NSObject {
         keyboardSettings.isShowPopPreview = true
         keyboardSettings.needToShowDeleteButton = true
         keyboardSettings.updateRecentEmojiImmediately = true
+        // 中文: 表情符號資料來源 = 共用 taigi-emojis dist/emoji.json(取代 ISEmojiView 內建 plist)。
+        // 中文: nil = 資源缺失時退回 ISEmojiView 內建 plist(防呆,資源已隨擴充打包)。
+        let taigiEmojiCategories = TaigiEmojiData.loadISEmojiCategories()
+        keyboardSettings.customEmojis = taigiEmojiCategories
 
         emojiView = EmojiView(keyboardSettings: keyboardSettings)
         super.init()
         emojiView.delegate = self
+        // 中文: 載入失敗才會走 ISEmojiView plist fallback — 出 log 讓 dogfood 抓得到「資源沒打包進擴充」。
+        if taigiEmojiCategories == nil {
+            logger.debug("[EMOJI] emoji.json missing/unreadable — fell back to ISEmojiView plist; emoji source NOT swapped")
+        }
     }
 
     // 中文: 把 ISEmojiView 包成 SwiftUI 可用的 AnyView。
