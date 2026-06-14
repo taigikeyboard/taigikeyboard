@@ -4,3 +4,4 @@
 [submodule "taigi-emojis"]
 	path = taigi-emojis
 	url = https://github.com/taigikeyboard/taigi-emojis.git
+	branch = main
