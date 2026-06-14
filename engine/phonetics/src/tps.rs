@@ -534,6 +534,18 @@ pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
 
     for (tl, tps) in ZHUYIN_INITIALS {
         if remaining.starts_with(tl) {
+            // The palatalized sibilant/affricate initials (`tsi`/`tshi`/`si`/
+            // `ji`, all ending in the medial `i` → ㄧ) must NOT match when the
+            // `i` is actually the head of the `ir` [ɨ] central vowel — i.e. the
+            // next char is `r` (`tsir`/`sir`/`tshir`/`jir`). Taking the
+            // palatalized form there strands `r` as residue and the `ir` final
+            // never forms (the build pipeline then drops the row's `tps_num`).
+            // Fall through to the bare initial (`ts`/`tsh`/`s`/`j`) so `ir`
+            // matches. `r` is not a TL initial, so `<sibilant>i` + `r` is
+            // unambiguously the `ir` vowel. Mirrors `taigi-converter/src/zhuyin.js`.
+            if tl.ends_with('i') && remaining[tl.len()..].starts_with('r') {
+                continue;
+            }
             consonant.push_str(tps);
             remaining = remaining[tl.len()..].to_string();
             break;
@@ -755,6 +767,27 @@ mod tests {
     #[test]
     fn from_zhuyin_basic_round_trip() {
         assert_eq!(from_zhuyin("ㄉㄧㄠˊ"), "tiau5");
+    }
+
+    /// `ir` [ɨ] central vowel after a sibilant/affricate initial must NOT
+    /// palatalize — the greedy `tsi`/`tshi`/`si`/`ji` initial used to eat the
+    /// `i` and strand `r`, emptying `tps_num` for ~426 dict rows (自 tsir7,
+    /// 事 sir7, …). Parity with `taigi-converter/src/zhuyin.js`.
+    #[test]
+    fn to_zhuyin_ir_after_sibilant_no_palatalization() {
+        // ts/tsh/s/j + ir → bare initial + ㆨ (no medial ㄧ, no stray `r`).
+        assert_eq!(to_zhuyin("tsir7", false, true), "ㄗㆨ˫");
+        assert_eq!(to_zhuyin("sir7", false, true), "ㄙㆨ˫");
+        assert_eq!(to_zhuyin("tshir1", false, true), "ㄘㆨ ");
+        assert_eq!(to_zhuyin("jir5", false, true), "ㆡㆨˊ");
+        // ir-family codas (irinn / irng) ride the same fix.
+        assert_eq!(to_zhuyin("tsirinn5", false, true), "ㄗㆨㆪˊ");
+        assert_eq!(to_zhuyin("sirng1", false, true), "ㄙㆨㆭ ");
+        // Non-sibilant `ir` was always fine; genuine palatalization (non-`r`
+        // medial) is unchanged — the guard fires only before `r`.
+        assert_eq!(to_zhuyin("kir1", false, true), "ㄍㆨ ");
+        assert_eq!(to_zhuyin("tsinn5", false, true), "ㄐㆪˊ");
+        assert_eq!(to_zhuyin("tsia2", false, true), "ㄐㄧㄚˋ");
     }
 
     #[test]
