@@ -1,225 +1,102 @@
-// 中文: 英文輸入模式的拼字建議服務 — 使用 Android SpellCheckerSession,
-// 中文: 對應 iOS UITextChecker。提供拼字校正 + 受限的自動補全(系統限制)。
+// 中文: 英文輸入模式的拼字建議服務 — 使用自帶英文頻率詞表 (EnglishWordMatcher)。
+// 中文: 對應 iOS UITextChecker,但 iOS 留用系統 UITextChecker (deliberate cross-platform
+// 中文: divergence) — Android 改自帶詞表,擺脫裝置系統 SpellCheckerSession 的相依性。
 // 中文: 僅 English InputMode 使用,Taigi 路徑走 TaigiAutocompleteService + Rust lexicon。
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.content.Context
-import android.os.Bundle
-import android.view.textservice.SentenceSuggestionsInfo
-import android.view.textservice.SpellCheckerSession
-import android.view.textservice.SuggestionsInfo
-import android.view.textservice.TextInfo
-import android.view.textservice.TextServicesManager
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import java.util.Locale
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TAG = "ENSPELL"
 
 /**
  * 英文自動補全服務
  *
- * 使用 Android 系統的 SpellCheckerSession 提供英文拼字建議。
- * 類似 iOS 的 UITextChecker 功能。
+ * 使用自帶的英文頻率詞表 (assets/english_freq.txt) 提供拼字補全 + 校正,
+ * 不依賴裝置的系統 SpellCheckerSession (部分機型未內建,候選會永遠空白)。
  *
- * 功能：
- * - 拼字校正：偵測拼錯的單字並提供建議
- * - 自動補全：根據部分輸入預測完整單字（受系統限制）
+ * 功能:
+ * - 拼字校正:Damerau-Levenshtein (OSA) 距離 <= 2 的相近詞
+ * - 自動補全:依輸入前綴預測完整單字
+ *
+ * 詞表載入失敗時 fail-closed (回空候選,不 crash IME)。比對邏輯在純 Kotlin 的
+ * [EnglishWordMatcher];本類別只負責 asset I/O 與生命週期。
  */
 class EnglishAutocompleteService(
     private val context: Context,
 ) {
     companion object {
         private const val MAX_SUGGESTIONS = 3
+        private const val ASSET_NAME = "english_freq.txt"
     }
 
     private val logger = CompositionRoot.shared(context).logger
 
-    // SpellChecker Session（懶載入）
-    private var spellCheckerSession: SpellCheckerSession? = null
-    private var pendingSuggestions: ((List<String>) -> Unit)? = null
+    private val matcherLock = Any()
 
-    // SpellCheckerSessionListener 實作
-    private val spellCheckerListener = object : SpellCheckerSession.SpellCheckerSessionListener {
-        override fun onGetSuggestions(results: Array<out SuggestionsInfo>?) {
-            logger.debug(TAG) { "[CALLBACK] onGetSuggestions: ${results?.size} results" }
+    @Volatile
+    private var matcher: EnglishWordMatcher? = null
 
-            val suggestions = mutableListOf<String>()
-            results?.forEachIndexed { idx, info ->
-                if (info == null) return@forEachIndexed
-                val attrs = info.suggestionsAttributes
-                logger.debug(TAG) { "[CALLBACK] result[$idx] attrs=$attrs, count=${info.suggestionsCount}" }
-                for (i in 0 until info.suggestionsCount) {
-                    suggestions.add(info.getSuggestionAt(i))
-                }
-            }
-
-            logger.debug(TAG) { "[CALLBACK] Parsed ${suggestions.size} suggestions: $suggestions" }
-
-            pendingSuggestions?.invoke(suggestions.take(MAX_SUGGESTIONS))
-            pendingSuggestions = null
-        }
-
-        override fun onGetSentenceSuggestions(results: Array<out SentenceSuggestionsInfo>?) {
-            logger.debug(TAG) { "[CALLBACK] onGetSentenceSuggestions: ${results?.size} results" }
-
-            val suggestions = mutableListOf<String>()
-            results?.forEachIndexed { resultIdx, sentenceInfo ->
-                if (sentenceInfo == null) return@forEachIndexed
-                logger.debug(TAG) {
-                    "[CALLBACK] result[$resultIdx] suggestionsCount=${sentenceInfo.suggestionsCount}"
-                }
-                for (i in 0 until sentenceInfo.suggestionsCount) {
-                    val suggestionsInfo = sentenceInfo.getSuggestionsInfoAt(i)
-                        ?: continue
-                    val attrs = suggestionsInfo.suggestionsAttributes
-                    logger.debug(TAG) {
-                        "[CALLBACK]   [$i] attrs=$attrs, count=${suggestionsInfo.suggestionsCount}"
-                    }
-                    for (j in 0 until suggestionsInfo.suggestionsCount) {
-                        suggestions.add(suggestionsInfo.getSuggestionAt(j))
-                    }
-                }
-            }
-
-            logger.debug(TAG) { "[CALLBACK] Parsed ${suggestions.size} suggestions: $suggestions" }
-
-            pendingSuggestions?.invoke(suggestions.take(MAX_SUGGESTIONS))
-            pendingSuggestions = null
-        }
-    }
+    @Volatile
+    private var loadFailed = false
 
     /**
-     * 初始化 SpellChecker Session
-     */
-    private fun initSpellChecker() {
-        if (spellCheckerSession != null) {
-            logger.debug(TAG) { "[7] SpellCheckerSession already exists" }
-            return
-        }
-
-        logger.debug(TAG) { "[7] Initializing SpellCheckerSession..." }
-
-        try {
-            val tsm = context.getSystemService(Context.TEXT_SERVICES_MANAGER_SERVICE) as? TextServicesManager
-            if (tsm == null) {
-                logger.w(TAG, "[7] TextServicesManager not available")
-                return
-            }
-
-            logger.debug(TAG) { "[7] TextServicesManager available, creating session..." }
-
-            spellCheckerSession = tsm.newSpellCheckerSession(
-                Bundle(),
-                Locale.ENGLISH,
-                spellCheckerListener,
-                false, // referToSpellCheckerLanguageSettings
-            )
-
-            if (spellCheckerSession != null) {
-                logger.debug(TAG) { "[7] SpellCheckerSession created successfully" }
-            } else {
-                logger.w(TAG, "[7] newSpellCheckerSession returned null - no spell checker available on device?")
-            }
-        } catch (e: Exception) {
-            logger.e(TAG, "[7] Failed to init SpellCheckerSession", e)
-        }
-    }
-
-    /**
-     * 取得英文建議
+     * 取得英文建議。
      *
-     * @param text 目前輸入的文字（游標前的完整文字）
-     * @return 建議列表
+     * @param text 目前輸入的文字(游標前的完整文字)
+     * @return 建議列表(re-cased 對齊輸入大小寫),無 match 或載入失敗時為空
      */
     suspend fun getSuggestions(text: String): List<EnglishSuggestion> {
-        logger.debug(TAG) { "[GET] getSuggestions() called with text='$text'" }
-
         val currentWord = extractCurrentWord(text)
-        if (currentWord.isEmpty()) {
-            logger.debug(TAG) { "[GET] currentWord is empty, returning" }
-            return emptyList()
-        }
+        if (currentWord.isEmpty()) return emptyList()
 
-        logger.debug(TAG) { "[GET] currentWord='$currentWord'" }
+        val activeMatcher = ensureMatcher() ?: return emptyList()
 
-        // 嘗試使用系統 SpellChecker
-        logger.debug(TAG) { "[GET] Calling getSpellCheckerSuggestions()..." }
-        val spellSuggestions = getSpellCheckerSuggestions(currentWord)
-        logger.debug(TAG) {
-            "[GET] getSpellCheckerSuggestions() returned ${spellSuggestions.size} suggestions"
+        val suggestions = withContext(Dispatchers.Default) {
+            activeMatcher.suggest(currentWord, MAX_SUGGESTIONS)
         }
-
-        return if (spellSuggestions.isNotEmpty()) {
-            spellSuggestions.map { EnglishSuggestion(text = it) }
-        } else {
-            // 無建議時，至少回傳當前輸入
-            logger.debug(TAG) { "[GET] No suggestions, returning empty list" }
-            emptyList()
-        }
+        logger.debug(TAG) { "[GET] '$currentWord' → ${suggestions.size} suggestions" }
+        return suggestions.map { EnglishSuggestion(text = it) }
     }
 
-    /**
-     * 從系統 SpellChecker 取得建議
-     */
-    private suspend fun getSpellCheckerSuggestions(word: String): List<String> {
-        logger.debug(TAG) { "[SPELL-GET] getSpellCheckerSuggestions('$word') called" }
-
-        initSpellChecker()
-
-        val session = spellCheckerSession
-        if (session == null) {
-            logger.w(TAG, "[SPELL-GET] SpellCheckerSession is null, returning empty")
-            return emptyList()
-        }
-
-        logger.debug(TAG) { "[SPELL-GET] Session available, calling suspendCoroutine..." }
-
-        return try {
-            kotlinx.coroutines.withTimeout(2000L) {
-                // 2秒超時
-                suspendCoroutine { continuation ->
-                    pendingSuggestions = { suggestions ->
-                        logger.debug(TAG) {
-                            "[SPELL-CALLBACK] Received ${suggestions.size} suggestions"
-                        }
-                        continuation.resume(suggestions)
-                    }
-
-                    try {
-                        // 使用 getSentenceSuggestions 檢查單一詞彙
-                        val textInfo = TextInfo(word)
-                        logger.debug(TAG) {
-                            "[SPELL-GET] Calling session.getSentenceSuggestions()..."
-                        }
-                        session.getSentenceSuggestions(arrayOf(textInfo), MAX_SUGGESTIONS)
-
-                        logger.debug(TAG) {
-                            "[SPELL-GET] getSuggestions() called, waiting for callback..."
-                        }
-                    } catch (e: Exception) {
-                        logger.e(TAG, "[SPELL-GET] Failed to call getSuggestions", e)
-                        continuation.resume(emptyList())
-                    }
-                }
+    // Lazily builds the matcher from the bundled asset on first use. Fail-closed:
+    // a load failure is logged once and cached so we never re-attempt or crash.
+    private suspend fun ensureMatcher(): EnglishWordMatcher? {
+        matcher?.let { return it }
+        if (loadFailed) return null
+        return withContext(Dispatchers.IO) {
+            synchronized(matcherLock) {
+                // Re-check both under the lock so a concurrent first caller neither
+                // reloads a matcher already built nor re-attempts a load that failed.
+                matcher ?: if (loadFailed) null else loadMatcher()?.also { matcher = it }
             }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            logger.w(TAG, "[SPELL-GET] Timeout waiting for spell checker callback")
-            emptyList()
         }
     }
 
+    private fun loadMatcher(): EnglishWordMatcher? = try {
+        val entries = context.assets.open(ASSET_NAME).bufferedReader().use { reader ->
+            EnglishWordMatcher.parseEntries(reader.lineSequence())
+        }
+        logger.debug(TAG) { "[LOAD] english_freq.txt → ${entries.size} entries" }
+        EnglishWordMatcher(entries)
+    } catch (e: Exception) {
+        loadFailed = true
+        logger.e(TAG, "[LOAD] failed to load $ASSET_NAME — English suggestions disabled", e)
+        null
+    }
+
     /**
-     * 從輸入文字中提取當前單字（最後一個空白後的文字）
+     * 從輸入文字中提取當前單字(最後一個分隔符後的文字)。
+     * 分隔符 = 空白 + `.,!?;:`;撇號/連字號不分隔(`don't` 視為單一 token)。
      */
     private fun extractCurrentWord(text: String): String {
         val trimmed = text.trimEnd()
         if (trimmed.isEmpty()) return ""
 
-        // 找到最後一個空白或標點
         val lastSeparatorIndex = trimmed.indexOfLast { it.isWhitespace() || it in ".,!?;:" }
 
         return if (lastSeparatorIndex >= 0) {
@@ -230,14 +107,13 @@ class EnglishAutocompleteService(
     }
 
     /**
-     * 關閉 SpellChecker Session
+     * 釋放詞表記憶體(在 onDestroy 呼叫)。
      */
     fun close() {
-        spellCheckerSession?.close()
-        spellCheckerSession = null
-        pendingSuggestions = null
-
-        logger.debug(TAG) { "[SPELL] SpellCheckerSession closed" }
+        synchronized(matcherLock) {
+            matcher = null
+        }
+        logger.debug(TAG) { "[CLOSE] matcher released" }
     }
 }
 
