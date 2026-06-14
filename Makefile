@@ -10,7 +10,8 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt fmt-fast fmt-check fmt-check-fast lint \
         fmt-rust fmt-check-rust lint-rust lint-rust-fast \
         fmt-swift fmt-check-swift \
-        fmt-kotlin fmt-check-kotlin lint-kotlin
+        fmt-kotlin fmt-check-kotlin lint-kotlin \
+        update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
 # + Android jniLibs. Build ONLY — does NOT run tests (use `make test`).
@@ -125,6 +126,15 @@ fmt-check-kotlin:
 
 lint-kotlin: fmt-check-kotlin
 
+# Pull the latest tracked-branch commit for every submodule (taigi-emojis -> main,
+# taigi-converter -> its remote default branch) into the working tree. Submodules
+# always record a pinned SHA, so review + commit the gitlink bumps afterwards.
+update-submodules:
+	git submodule update --init --remote --recursive
+	@echo ""
+	@echo "✓ submodules pulled to latest. Gitlink bumps to review + commit:"
+	@git submodule status
+
 help:
 	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android (no tests)"
 	@echo "  make test               cargo test --workspace (canonical, includes doctests)"
@@ -133,6 +143,7 @@ help:
 	@echo "  make test-crate-fast    cargo nextest run -p \$$CRATE (touched + faster run)"
 	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"
 	@echo "  make dict               Full dictionary regen + deploy to Android/iOS"
+	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
 	@echo "  make fmt-fast           Apply formatting Rust+Swift only (skips Gradle/Spotless)"
