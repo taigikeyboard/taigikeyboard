@@ -31,7 +31,7 @@ enum TaigiEmojiData {
     // splits smileys_emotion + people_body; ISEmojiView merges both into .smileysAndPeople, so they
     // concatenate (smileys first). The remaining seven map 1:1. Order matches ISEmojiView's own
     // EmojiLoader.availableCategories so the category bar looks identical to the previous build.
-    private static let categoryLayout: [(category: Category, sourceIDs: [String])] = [
+    private static let categoryLayout: [(category: ISEmojiView.Category, sourceIDs: [String])] = [
         (.smileysAndPeople, ["smileys_emotion", "people_body"]),
         (.animalsAndNature, ["animals_nature"]),
         (.foodAndDrink, ["food_drink"]),
@@ -43,15 +43,18 @@ enum TaigiEmojiData {
     ]
 
     /// Builds ISEmojiView categories from the bundled `emoji.json`, dropping any emoji the device
-    /// font cannot render. Returns `nil` if the resource is missing or unreadable — ISEmojiView then
-    /// falls back to its own bundled plist (a defensive guard; the resource ships in the bundle).
-    static func loadISEmojiCategories() -> [EmojiCategory]? {
+    /// font cannot render. `emoji.json` is the single source — a missing/unreadable resource is a
+    /// packaging bug, so it asserts (loud in debug) and returns `[]`; NO plist fallback.
+    static func loadISEmojiCategories() -> [EmojiCategory] {
         guard
             let url = Bundle.main.url(forResource: resourceName, withExtension: resourceExtension),
             let data = try? Data(contentsOf: url),
             let document = try? JSONDecoder().decode(Document.self, from: data)
         else {
-            return nil
+            // 中文: 單一資料源 = emoji.json。缺失/壞檔 = 打包錯誤,直接 assert 把錯點炸出來,
+            // 中文: 不做 plist fallback(USER:不要冗餘 fallback,否則看不到錯在哪)。
+            assertionFailure("[EMOJI] emoji.json missing/unreadable — must be bundled in the keyboard-extension target")
+            return []
         }
 
         let emojiBySourceID = Dictionary(
