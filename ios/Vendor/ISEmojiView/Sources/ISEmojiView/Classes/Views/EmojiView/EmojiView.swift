@@ -337,7 +337,7 @@ extension EmojiView {
         
         addConstraints(
             NSLayoutConstraint.constraints(
-                withVisualFormat: "V:|-5-[emojiCollectionView]-(0)-[bottomContainerView(44)]",
+                withVisualFormat: "V:|-2-[emojiCollectionView]-(0)-[bottomContainerView(44)]",
                 options: NSLayoutConstraint.FormatOptions(rawValue: 0),
                 metrics: nil,
                 views: views
