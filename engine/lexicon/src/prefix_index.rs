@@ -86,6 +86,91 @@ impl PrefixIndex {
         decode_rowids(&mut stream, prefix_bytes.len())
     }
 
+    /// Prefix lookup whose hydration budget (`cap`) is spent on the
+    /// **shortest matched keys first**, with optional per-key exclusion via
+    /// `skip(matched_key)`. Returns at most `cap` rowids.
+    ///
+    /// Motivation: the wire format is `key || 0xFF || rowid_le_4`, and the
+    /// `0xFF` separator is greater than any UTF-8 byte, so a short exact key
+    /// (`tps:ㄍㄚ`) byte-sorts AFTER every longer extension of it
+    /// (`tps:ㄍㄚㄅㄧ`…). A plain byte-ordered `lookup_prefix(..).take(cap)`
+    /// therefore front-loads the deepest, longest (and usually rarest)
+    /// entries and buries the shortest readings — for a single-initial
+    /// continuous query (`ㄍ`) that means the high-frequency single-syllable
+    /// candidates never reach the downstream ranker. Bucketing the
+    /// survivors by matched-key byte length and filling `cap` shortest-first
+    /// fixes the budget bias.
+    ///
+    /// This is a **hydration budget policy only** — the visible candidate
+    /// order is still decided by the caller's `SortKey` (recency / score /
+    /// frequency). Length just decides which rowids enter the pool.
+    ///
+    /// `skip` is evaluated on each `matched_key` during the scan (e.g. to
+    /// drop TPS acronym / abbrev key surfaces) so excluded keys never
+    /// consume a bucket slot. `matched_key` is the UTF-8 key reconstructed
+    /// from the wire entry by dropping the trailing `0xFF || rowid_le_4`;
+    /// the separator sits at the fixed offset `entry.len() - 5` (the rowid
+    /// little-endian bytes may contain `0xFF`, so it is located by offset,
+    /// never by searching for `0xFF`). `lookup_prefix` is unchanged so
+    /// normal `search` keeps its byte-order acronym matching.
+    // 中文: 前綴查詢,但 hydration 預算 (cap) 優先給「最短 matched key」,並可用
+    // 中文:   skip(matched_key) 逐 key 排除。回傳至多 cap 個 rowid。
+    // 中文: 動機:wire = key||0xFF||rowid,0xFF 大於任何 UTF-8 byte,故短 exact key
+    // 中文:   (tps:ㄍㄚ) byte 序排在其所有長延伸 (tps:ㄍㄚㄅㄧ…) 之後。直接
+    // 中文:   lookup_prefix(..).take(cap) 會 front-load 最長最冷僻的詞、埋掉短讀音 →
+    // 中文:   裸聲母 (ㄍ) 連續查詢時高頻單音節候選進不了 ranker。依 matched key 長度
+    // 中文:   分桶、短鍵優先填 cap,即修正此預算偏差。
+    // 中文: 此為「hydration 預算政策」,非最終排序 — 畫面順序仍由 caller 的 SortKey 決定。
+    // 中文:   matched_key 由 wire entry 去尾端 0xFF||rowid_le_4 還原;separator 在固定偏移
+    // 中文:   entry.len()-5 (rowid bytes 可能含 0xFF,以偏移定位,絕不搜尋 0xFF)。
+    pub fn lookup_prefix_shortest_first(
+        &self,
+        prefix: &str,
+        cap: usize,
+        mut skip: impl FnMut(&str) -> bool,
+    ) -> Vec<u32> {
+        let prefix_bytes = prefix.as_bytes();
+        if prefix_bytes.is_empty() || cap == 0 {
+            return Vec::new();
+        }
+        let lo: Vec<u8> = prefix_bytes.to_vec();
+        let Some(hi) = next_lex_sibling(prefix_bytes) else {
+            // prefix is all 0xFF — no successor (mirrors `lookup_prefix`;
+            // never reached for `tps:` / `tl:` / `poj:` prefixes). Bucketing
+            // adds no value on this edge; fall back to a plain filtered scan.
+            let mut stream = self.set.range().ge(&lo).into_stream();
+            let mut out = decode_rowids_filtered(&mut stream, lo.len(), &mut skip);
+            out.truncate(cap);
+            return out;
+        };
+        let mut stream = self.set.range().ge(&lo).lt(&hi).into_stream();
+        let min_key_len = prefix_bytes.len();
+        // Bucket survivors by matched-key byte length. The full range is
+        // scanned (byte order ≠ length order, so a short key can appear
+        // anywhere); the `BTreeMap` then yields the buckets in ascending
+        // length order, so draining it into the cap is shortest-first with
+        // no extra sort. Same total rowid memory as `lookup_prefix`, one
+        // extra O(n) bucketing pass. Within a length, scan (byte) order is
+        // preserved as the stable tiebreak.
+        let mut buckets: std::collections::BTreeMap<usize, Vec<u32>> =
+            std::collections::BTreeMap::new();
+        use fst::Streamer;
+        while let Some(entry) = stream.next() {
+            if let Some((key_len, rowid)) = decode_entry_filtered(entry, min_key_len, &mut skip) {
+                buckets.entry(key_len).or_default().push(rowid);
+            }
+        }
+        let mut out: Vec<u32> = Vec::with_capacity(cap);
+        for (_len, bucket) in buckets {
+            if out.len() >= cap {
+                break;
+            }
+            let remaining = cap - out.len();
+            out.extend(bucket.into_iter().take(remaining));
+        }
+        out
+    }
+
     fn scan_from(&self, lo: &[u8]) -> Vec<u32> {
         let mut stream = self.set.range().ge(lo).into_stream();
         decode_rowids(&mut stream, lo.len())
@@ -153,6 +238,54 @@ fn decode_rowids(
         let mut buf = [0u8; 4];
         buf.copy_from_slice(&entry[entry.len() - 4..]);
         out.push(u32::from_le_bytes(buf));
+    }
+    out
+}
+
+/// Parse one wire entry `key_bytes || 0xFF || rowid_le_4`, applying
+/// `skip(matched_key)`. Returns `(matched_key_len, rowid)` for a surviving
+/// entry, or `None` when the entry is too short or skipped. The separator
+/// is at the fixed offset `entry.len() - 5`; the rowid little-endian bytes
+/// may contain `0xFF`, so it is located by offset, never by searching for
+/// `0xFF`. A non-UTF-8 key (never produced by the build pipeline) is kept
+/// rather than dropped — the skip predicate is a filter, not a validator.
+// 中文: 解析單一 wire entry (key||0xFF||rowid),套 skip(matched_key)。存活回
+// 中文:   (matched_key_len, rowid),太短或被 skip 回 None。separator 在固定偏移
+// 中文:   entry.len()-5 (rowid bytes 可能含 0xFF,以偏移定位)。非 UTF-8 key (build
+// 中文:   pipeline 不會產生) 保留而非丟棄 — skip 是過濾器,不是驗證器。
+fn decode_entry_filtered(
+    entry: &[u8],
+    min_key_len: usize,
+    skip: &mut impl FnMut(&str) -> bool,
+) -> Option<(usize, u32)> {
+    if entry.len() < min_key_len + 1 + 4 {
+        return None;
+    }
+    let key_bytes = &entry[..entry.len() - 5];
+    if let Ok(key) = std::str::from_utf8(key_bytes) {
+        if skip(key) {
+            return None;
+        }
+    }
+    let mut buf = [0u8; 4];
+    buf.copy_from_slice(&entry[entry.len() - 4..]);
+    Some((key_bytes.len(), u32::from_le_bytes(buf)))
+}
+
+/// [`decode_rowids`] variant that drops an entry when `skip(matched_key)`
+/// is `true`. Thin stream wrapper over [`decode_entry_filtered`].
+// 中文: decode_rowids 變體;skip 為真丟棄該 entry。為 decode_entry_filtered 的 stream 薄包裝。
+fn decode_rowids_filtered(
+    stream: &mut fst::set::Stream<'_, fst::automaton::AlwaysMatch>,
+    min_key_len: usize,
+    skip: &mut impl FnMut(&str) -> bool,
+) -> Vec<u32> {
+    use fst::Streamer;
+    let mut out: Vec<u32> = Vec::new();
+    while let Some(entry) = stream.next() {
+        if let Some((_, rowid)) = decode_entry_filtered(entry, min_key_len, skip) {
+            out.push(rowid);
+        }
     }
     out
 }

@@ -890,12 +890,40 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // trigger a whole-FST scan.
     // 中文: Item 12 — fst_key 空 + custom 非空時會走到這裡,須擋掉 lookup_prefix("") 全表掃描。
     if !fst_key.is_empty() {
-        for rowid in ctx
-            .prefix_index
-            .lookup_prefix(fst_key)
-            .into_iter()
-            .take(PARTIAL_PREFIX_HYDRATE_CAP)
-        {
+        // Spend the hydrate budget on the SHORTEST matched keys first (all
+        // modes). The FST wire separator `0xFF` is greater than any UTF-8
+        // byte, so a short exact key (`tps:ㄍㄚ` / `tl:ka`) byte-sorts AFTER
+        // every longer extension of it; a plain `lookup_prefix(..).take(cap)`
+        // therefore front-loads the deepest, longest (rarest) words and
+        // buries the short high-frequency single-syllable readings past the
+        // cap — user-reported: typing `ㄍ` surfaced only multi-syllable
+        // phrases, the common single chars never reached the ranker. Length
+        // bucketing is a hydration-budget policy only; the visible order is
+        // still the downstream `SortKey` (recency / score / frequency).
+        //
+        // For TPS, additionally drop acronym (initial-only) `tps_abbrev` key
+        // surfaces: Bopomofo orders all initials ahead of all vowels, so
+        // those short abbrev keys would otherwise win the shortest-first
+        // budget. `is_tps_initial_only` is conservative; the record-level
+        // `matches_continuous_tps_toneless_prefix_key` guard below still
+        // validates every surviving rowid. TL/POJ keep all key families
+        // (their abbrev keys are real prefix words under the toneless guard).
+        // 中文: hydrate 預算優先給「最短 matched key」(三模式皆同)。FST wire 分隔符 0xFF
+        // 中文:   大於任何 UTF-8 byte → 短 exact key (tps:ㄍㄚ / tl:ka) byte 序排在其長延伸
+        // 中文:   之後;直接 take(cap) 會 front-load 最長最冷僻詞、把高頻短讀音埋到 cap 外
+        // 中文:   (回報:拍 ㄍ 只剩多音節詞)。長度分桶僅為預算政策,畫面順序仍由 SortKey 決定。
+        // 中文: TPS 另剔除 initial-only 縮寫 key surface(注音子音排母音前,短縮寫鍵會搶 budget);
+        // 中文:   record 層 guard 仍逐一驗證。TL/POJ 保留全部 key 家族(其縮寫命中在 toneless
+        // 中文:   guard 下本就是合法前綴詞)。
+        let rowids = ctx.prefix_index.lookup_prefix_shortest_first(
+            fst_key,
+            PARTIAL_PREFIX_HYDRATE_CAP,
+            |key| {
+                ctx.mode == phonetics::InputMode::Tps
+                    && phonetics::is_tps_initial_only(key.strip_prefix("tps:").unwrap_or(key))
+            },
+        );
+        for rowid in rowids {
             let Some(record) = ctx.dict.record(rowid) else {
                 continue;
             };
