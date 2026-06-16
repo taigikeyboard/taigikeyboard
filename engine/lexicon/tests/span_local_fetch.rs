@@ -1314,7 +1314,12 @@ fn partial_prefix_output_caps_at_output_cap() {
         .map(|i| {
             // Generate unique 3-char `t` + 2-letter lowercase suffix
             // (`taa`, `tab`, …, `tcz`).
-            let hi = (b'a' + (i / 26) as u8) as char;
+            // Vowel as 2nd char so every key is a full reading, NOT an
+            // all-consonant acronym surface that `is_roman_acronym_key`
+            // would skip (this test exercises the OUTPUT cap, not that
+            // filter).
+            let vowels = [b'a', b'e', b'i', b'o', b'u'];
+            let hi = vowels[(i / 26) % vowels.len()] as char;
             let lo = (b'a' + (i % 26) as u8) as char;
             Row {
                 toneless_key: Box::leak(format!("t{hi}{lo}").into_boxed_str()),

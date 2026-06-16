@@ -34,7 +34,8 @@ pub use api::{
 pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
 pub use poj::to_poj;
 pub use syllable::{
-    canonicalize_poj_syllable, canonicalize_syllable, is_valid_syllable, normalize_to_poj,
+    canonicalize_poj_syllable, canonicalize_syllable, is_roman_acronym_key, is_valid_syllable,
+    normalize_to_poj,
     normalize_to_tl, strip_tone_mark, NORMALIZE_TO_POJ_GLYPH_RULES, NORMALIZE_TO_POJ_RULES,
     NORMALIZE_TO_TL_RULES, TL_ENCODING_RULES,
 };

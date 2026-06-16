@@ -123,11 +123,12 @@ fn lookup_prefix_shortest_first_drops_abbrev_and_orders_short_first() {
     );
 }
 
-/// All-mode policy lock: length bucketing applies to TL/POJ too (no abbrev
-/// skip). A short exact key must surface ahead of its longer extension even
-/// though the `0xFF` separator byte-sorts the short key LAST. Codex
-/// post-impl flagged the regression file was TPS-only while the policy is
-/// "all modes" — this pins the TL path in CI.
+/// Length-bucketing primitive lock: `lookup_prefix_shortest_first` orders a
+/// short exact key ahead of its longer extension even though the `0xFF`
+/// separator byte-sorts the short key LAST — exercised here with a no-op
+/// skip (`|_| false`) to isolate the bucketing from any family filter.
+/// (Production TL/POJ now ALSO pass an acronym skip predicate, pinned in
+/// `tlpoj_partial_prefix_abbrev.rs`.)
 #[test]
 fn lookup_prefix_shortest_first_orders_short_before_long_no_skip_tl() {
     let idx = build_index(

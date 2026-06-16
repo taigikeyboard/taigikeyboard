@@ -901,26 +901,39 @@ pub fn fetch_partial_prefix_candidates_unbounded(
         // bucketing is a hydration-budget policy only; the visible order is
         // still the downstream `SortKey` (recency / score / frequency).
         //
-        // For TPS, additionally drop acronym (initial-only) `tps_abbrev` key
-        // surfaces: Bopomofo orders all initials ahead of all vowels, so
-        // those short abbrev keys would otherwise win the shortest-first
-        // budget. `is_tps_initial_only` is conservative; the record-level
-        // `matches_continuous_tps_toneless_prefix_key` guard below still
-        // validates every surviving rowid. TL/POJ keep all key families
-        // (their abbrev keys are real prefix words under the toneless guard).
+        // The three phonetic modes (TPS/TL/POJ; English has no FST family)
+        // additionally drop acronym `*_abbrev` key surfaces: their
+        // short keys interleave with the single-syllable full keys in the
+        // shortest length bucket (TPS: Bopomofo orders all initials ahead of
+        // all vowels; TL/POJ: a 2-syllable acronym like `tl:sb` is the same
+        // byte length as the full single-syllable `tl:si` and sorts between
+        // `tl:sa` and `tl:si`), so they would otherwise win the
+        // shortest-first budget and starve the single-char readings out of
+        // the cap (user-reported: typing `s` surfaced only 沙 + 2-syllable
+        // phrases, never 是/sī). `is_tps_initial_only` / `is_roman_acronym_key`
+        // are conservative; the record-level `matches_continuous_*_toneless_prefix_key`
+        // guard below still validates every surviving rowid.
         // 中文: hydrate 預算優先給「最短 matched key」(三模式皆同)。FST wire 分隔符 0xFF
         // 中文:   大於任何 UTF-8 byte → 短 exact key (tps:ㄍㄚ / tl:ka) byte 序排在其長延伸
         // 中文:   之後;直接 take(cap) 會 front-load 最長最冷僻詞、把高頻短讀音埋到 cap 外
         // 中文:   (回報:拍 ㄍ 只剩多音節詞)。長度分桶僅為預算政策,畫面順序仍由 SortKey 決定。
-        // 中文: TPS 另剔除 initial-only 縮寫 key surface(注音子音排母音前,短縮寫鍵會搶 budget);
-        // 中文:   record 層 guard 仍逐一驗證。TL/POJ 保留全部 key 家族(其縮寫命中在 toneless
-        // 中文:   guard 下本就是合法前綴詞)。
+        // 中文: 三模式皆剔除 *_abbrev 縮寫 key surface — 其短鍵在最短長度桶內與單音節完整
+        // 中文:   key 交錯 (TPS 注音子音排母音前;TL/POJ 雙音節縮寫 tl:sb 與完整 tl:si 同長度、
+        // 中文:   排在 tl:sa 與 tl:si 之間),否則會搶 budget 把單字讀音擠出 cap
+        // 中文:   (回報:拍 s 只剩 沙 + 雙字詞,撈不到 是/sī)。record 層 guard 仍逐一驗證存活 rowid。
         let rowids = ctx.prefix_index.lookup_prefix_shortest_first(
             fst_key,
             PARTIAL_PREFIX_HYDRATE_CAP,
-            |key| {
-                ctx.mode == phonetics::InputMode::Tps
-                    && phonetics::is_tps_initial_only(key.strip_prefix("tps:").unwrap_or(key))
+            |key| match ctx.mode {
+                phonetics::InputMode::Tps => {
+                    phonetics::is_tps_initial_only(key.strip_prefix("tps:").unwrap_or(key))
+                }
+                phonetics::InputMode::Tl | phonetics::InputMode::Poj => phonetics::is_roman_acronym_key(
+                    key.strip_prefix("tl:")
+                        .or_else(|| key.strip_prefix("poj:"))
+                        .unwrap_or(key),
+                ),
+                _ => false,
             },
         );
         for rowid in rowids {
