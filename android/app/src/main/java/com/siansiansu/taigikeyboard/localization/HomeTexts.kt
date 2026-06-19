@@ -69,6 +69,20 @@ object HomeTexts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.6.3",
+                "2026/06/19",
+                listOf(
+                    "New: typing a tone in TPS (注音) now shows only that tone's readings, matching TL / POJ; typing without a tone still shows all tones.",
+                    "New: TPS ninth tone (ˆ) can now be typed via the 9 digit key.",
+                    "Fixed: TPS words with the ir vowel after ts / tsh / s / j (自 / 事 / 故事) can now be typed.",
+                    "Fixed: typing a single initial in TL / POJ / TPS now surfaces common single characters again, not only longer words.",
+                    "Fixed: English-mode autocorrect now works on devices without a system spell checker (e.g. some Samsung phones), using a bundled word list.",
+                    "Fixed: key-press vibration now follows the in-app vibration toggle even when the system touch-vibration setting is off.",
+                    "Changed: the emoji set is refreshed.",
+                    "Changed: 顯示羅馬字 (show romanization) now defaults off — turn it on in settings to keep the romanization you type as the first candidate.",
+                ),
+            ),
+            VersionEntry(
                 "3.6.2",
                 "2026/06/10",
                 listOf(

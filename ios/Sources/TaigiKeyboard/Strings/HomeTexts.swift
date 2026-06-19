@@ -62,6 +62,14 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.6.3", "2026/06/19", [
+            "New: typing a tone in TPS (注音) now shows only that tone's readings, matching TL / POJ; typing without a tone still shows all tones.",
+            "New: TPS ninth tone (ˆ) can now be typed via the 9 digit key.",
+            "Fixed: TPS words with the ir vowel after ts / tsh / s / j (自 / 事 / 故事) can now be typed.",
+            "Fixed: typing a single initial in TL / POJ / TPS now surfaces common single characters again, not only longer words.",
+            "Fixed: the emoji keyboard shows 4 rows again, and the emoji set is refreshed.",
+            "Changed: 顯示羅馬字 (show romanization) now defaults off — turn it on in settings to keep the romanization you type as the first candidate.",
+        ]),
         ("3.6.2", "2026/06/10", [
             "New: keyboard themes — a new 主題 tab lets you pick a look. Built-in themes come in three key styles (經典 filled / 框線 outlined / 簡潔 borderless) across several colours, including soft gradients (櫻花 / 金煌 / 海風 / 翠青 / 藤紫) and a dark 暗眠山貓 (Catppuccin) theme.",
             "New: create your own themes — a theme editor lets you set keyboard colours, key sizes, and key shadow, and save up to 5 custom themes.",

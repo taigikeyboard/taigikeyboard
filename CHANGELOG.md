@@ -1,5 +1,6 @@
 # Changelog
 
+- [v3.6.3](changelog/v3.6.3.md)
 - [v3.6.2](changelog/v3.6.2.md)
 - [v3.6.1](changelog/v3.6.1.md)
 - [v3.6.0](changelog/v3.6.0.md)
