@@ -2,6 +2,11 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Direct Vibrator key-press haptics (KeyPressVibrator) so the in-app
+         vibration toggle decides, independent of the OS touch-haptic setting.
+         VIBRATE is a normal permission, auto-granted at install. -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
     <!--
       Backup posture (R7 — INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP,
       docs/architecture/behavioral-invariants.md §29):

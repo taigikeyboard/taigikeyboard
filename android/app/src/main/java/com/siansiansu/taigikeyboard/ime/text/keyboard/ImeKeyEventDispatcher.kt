@@ -1,13 +1,11 @@
 // Adapter the keyboard-body Composable uses to call back into the IME service.
 // Lives next to the KeyEventDispatcher interface it satisfies.
-// Constructor providers preserve the legacy null-tolerant behaviour for the
-// host / compose-host views (popup anchor resolution stays a no-op until the
-// keyboard view is mounted).
+// The compose-host provider preserves the legacy null-tolerant behaviour
+// (popup anchor resolution stays a no-op until the keyboard view is mounted).
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.content.Context
-import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -21,7 +19,6 @@ internal class ImeKeyEventDispatcher(
     private val taigikeyboard: TaigiKeyboard,
     private val prefs: PrefHelper,
     private val capsStateManager: CapsStateManager,
-    private val hostViewProvider: () -> View?,
     private val composeHostProvider: () -> View?,
     private val onDispatchKeyPress: (KeyData) -> Unit,
 ) : KeyEventDispatcher {
@@ -34,10 +31,7 @@ internal class ImeKeyEventDispatcher(
         im.showInputMethodPicker()
     }
 
-    override fun keyPressVibrate() {
-        if (!prefs.isVibrationFeedbackEnabled) return
-        hostViewProvider()?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-    }
+    override fun keyPressVibrate() = taigikeyboard.keyPressVibrate()
 
     override fun keyPressSound(data: KeyData) = taigikeyboard.keyPressSound(data)
 

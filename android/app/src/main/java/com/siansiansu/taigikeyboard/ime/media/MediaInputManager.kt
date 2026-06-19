@@ -104,7 +104,7 @@ class MediaInputManager(
             }
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                taigikeyboard.keyPressVibrate(view)
+                taigikeyboard.keyPressVibrate()
                 taigikeyboard.keyPressSound(data)
                 if (data?.code == KeyCode.DELETE && data.type == KeyType.ENTER_EDITING) {
                     isDeletePressed = true

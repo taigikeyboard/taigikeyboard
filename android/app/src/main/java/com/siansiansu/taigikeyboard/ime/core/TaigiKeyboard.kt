@@ -53,6 +53,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     private var inputView: InputView? = null
 
     private var audioManager: AudioManager? = null
+    private var keyPressVibrator: KeyPressVibrator? = null
     private val osHandler = Handler(Looper.getMainLooper())
 
     /**
@@ -153,6 +154,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         val app = application as TaigiKeyboardApplication
         prefs = app.prefs
         compositionRoot = app.compositionRoot
+        keyPressVibrator = KeyPressVibrator(this, prefs)
 
         compositionRoot.logger.i(TAG, "onCreate()")
 
@@ -367,16 +369,14 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     /**
-     * Makes a key press vibration through [view]'s
-     * [android.view.View.performHapticFeedback]. The text-input keyboard body
-     * routes vibration through
-     * [com.siansiansu.taigikeyboard.ime.text.keyboard.ImeKeyEventDispatcher]
-     * directly; this overload remains for the legacy view-based media input
-     * (`MediaInputManager` bottom buttons).
+     * Makes a key press vibration via [KeyPressVibrator] (direct Vibrator, so
+     * the app toggle — not the OS touch-haptic setting — decides). Shared by
+     * the text-input keyboard body (through
+     * [com.siansiansu.taigikeyboard.ime.text.keyboard.ImeKeyEventDispatcher])
+     * and the view-based media input (`MediaInputManager` bottom buttons).
      */
-    fun keyPressVibrate(view: View) {
-        if (!prefs.isVibrationFeedbackEnabled) return
-        view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+    fun keyPressVibrate() {
+        keyPressVibrator?.vibrate()
     }
 
     /**

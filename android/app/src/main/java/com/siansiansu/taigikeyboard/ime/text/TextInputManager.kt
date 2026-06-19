@@ -68,11 +68,7 @@ class TextInputManager(
     /** Single popup window stack reused for the IME-service lifetime. */
     private val popupHost: KeyPopupManager = KeyPopupManager(taigikeyboard)
 
-    /** Lazy view used both as the popup `showAtLocation` parent and as the
-     *  reference for vibration haptics. Bound in [onRegisterInputView]. */
-    private var hostView: View? = null
-
-    /** Cached reference to the keyboard ComposeView host inside [hostView].
+    /** Cached reference to the keyboard ComposeView host inside the input view.
      *  Resolved once after [KeyboardUiCoordinator.mountKeyboardComposeView] so
      *  the popup anchor resolution avoids a `findViewById` walk. */
     private var composeHost: View? = null
@@ -138,7 +134,6 @@ class TextInputManager(
                 taigikeyboard = taigikeyboard,
                 prefs = prefs,
                 capsStateManager = capsStateManager,
-                hostViewProvider = { hostView },
                 composeHostProvider = { composeHost },
                 onDispatchKeyPress = { data -> sendKeyPress(data) },
             ),
@@ -210,7 +205,6 @@ class TextInputManager(
         // child (`media_input`) — visible as the emoji keyboard appearing on
         // first install. Pins
         // `INVARIANT_keyboard_register_input_view_main_thread_setup`.
-        hostView = inputView
         popupHost.attachHostView(inputView)
         popupHost.installPopupViewTreeOwnersIfNeeded()
 
