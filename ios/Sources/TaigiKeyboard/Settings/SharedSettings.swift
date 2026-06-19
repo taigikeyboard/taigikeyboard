@@ -47,7 +47,7 @@ final class SharedSettings {
     private static let isAutoSpaceEnabledKey: SettingsKey<Bool> = .bool("autoSpaceEnabled", default: false)
     private static let isFrequencyRecordingEnabledKey: SettingsKey<Bool> = .bool("frequencyRecordingEnabled", default: true)
     private static let isAssociationRecordingEnabledKey: SettingsKey<Bool> = .bool("associationRecordingEnabled", default: true)
-    private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: true)
+    private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: false)
     private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
 
     private static let isMoeDictEnabledKey: SettingsKey<Bool> = .bool("moeDictEnabled", default: true)
@@ -638,7 +638,7 @@ final class SharedSettings {
         isDoubleTapNNEnabled = true
         isTranslateSwapped = false
         isOutputBothScripts = false
-        isLiteralRomanCandidateEnabled = true
+        isLiteralRomanCandidateEnabled = false
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi

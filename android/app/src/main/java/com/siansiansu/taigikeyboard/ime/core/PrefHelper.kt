@@ -318,8 +318,8 @@ class PrefHelper(
 
     var outputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
-    // §34/S22 — 顯示羅馬字 toggle. Default true (always-on legacy behaviour).
-    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, true)
+    // §34/S22 — 顯示羅馬字 toggle. Default false (off; user opts in).
+    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, false)
 
     // Taigi-specific settings
     var enableDoubleTapOO: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
