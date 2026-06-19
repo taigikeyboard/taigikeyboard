@@ -103,3 +103,4 @@ ios/build/
 # top-level cloned IME repos only — anchored so it does NOT match docs/references/ or spec/references
 /references/
 .tmp/
+client_secret.json
