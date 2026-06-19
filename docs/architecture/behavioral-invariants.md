@@ -878,3 +878,21 @@ This is the recovery complement to §32/§33's prevention: the phonotactic gate 
 **Tests**: `phonetics/src/tps_adjust.rs` (`defold_is_inverse_of_dual_final_form`), `phonetics/src/tps.rs` (`is_tps_vowel_material_accepts_nuclei_rejects_coda_nasals`), `composing/src/shadow.rs` (`defold_single_coda_*` — single-site swap, byte-length preserved, separator boundary respected, zero/multi-site skipped). End-to-end (production artifacts) confirmed via `composing/tests/candidate_dump.rs`: TPS `ㄍㆤㆷㄧㄥ`→雞胸, `ㆦㆴㆤㆷ`→烏白, `ㄅㄠㆷㆦㆻ`→包袱 all appear; 交代/結 (controls) unchanged. Cross-platform device acceptance: **S21** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
 
 **Known follow-up (USER-gated)**: (1) librime ambiguity-penalty (score multiplier) on the de-fold candidate; (2) ranking cohesion (whole-word > both-high-freq single-char split; McBopomofo epsilon-boost); (3) de-fold participating in slot-0; (4) mixed multi-coda (>1 site) readings.
+
+## 36. Key-press feedback — app toggle gates sound + haptics (intentional OS-master divergence)
+
+### `INVARIANT_KEYPRESS_FEEDBACK_APP_TOGGLE_GATE`
+
+The in-app sound and vibration toggles gate key-press feedback on both platforms: toggle OFF → no feedback; toggle ON **and** the relevant system feedback enabled → feedback fires. This much MUST match.
+
+Where the platforms **intentionally diverge** is the interaction with the OS master feedback setting — documented here so a future reader does NOT "fix" the iOS case as a bug:
+
+- **Android (vibration)**: a **direct `Vibrator`** (`KeyPressVibrator`, default `USAGE` — not `USAGE_TOUCH`) drives the haptic, so the in-app toggle is the authoritative gate **independent of** `Settings.System.HAPTIC_FEEDBACK_ENABLED` (the OS touch-haptic gate). Fixes the Samsung dead-toggle bug where app-ON + OS-touch-haptic-OFF produced no vibration (PR #444). The direct-Vibrator approach does NOT bypass the master `VIBRATE_ON`, battery-saver, OEM policy, or absent-hardware (intended — those still suppress).
+- **Android (sound)**: `AudioManager.playSoundEffect` remains ANDed with `Settings.System.SOUND_EFFECTS_ENABLED` (industry norm, unchanged) — so app-sound-ON + system-keyboard-sound-OFF → silent is expected, not a bug.
+- **iOS (both)**: feedback is KeyboardKit-managed (`UIImpactFeedbackGenerator` + audio). Apple gives a keyboard extension **no** app-side bypass of the **System Haptics** master (Settings → Sounds & Haptics). So app-toggle-ON + System-Haptics-OFF → no vibration is **expected platform behavior, not a fixable bug**. `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)` and a custom CoreHaptics engine were deliberately NOT adopted (old full-device buzz / same gate + more complexity / Apple-discouraged).
+
+**Net divergence**: with the in-app toggle ON, Android still vibrates when the OS *touch-haptic* setting is off (direct Vibrator); iOS does not vibrate when the OS *System Haptics* master is off (no bypass API). This is **intentional** (platform-imposed), classified per `.claude/rules/cross-platform-alignment.md` §3.
+
+**Scope**: platform-side only — no shared Rust engine. Android `ime/core/KeyPressVibrator.kt` (+ callers `ImeKeyEventDispatcher`, `MediaInputManager`); iOS KeyboardKit `feedbackService` + `state.feedbackContext` (`KeyboardViewController+Setup.swift`), custom-key path `ActionHandler+CustomActions.swift`. Android-only diff in PR #444 — no `make build`.
+
+**Tests**: device-matrix dogfood only (haptics + audio are not unit-testable on JVM/sim). Cross-platform device acceptance: Android Samsung+Pixel matrix + iOS 5-item checklist, both PASS 2026-06-19 (`memory/project_keypress_vibration_feedback.md`).

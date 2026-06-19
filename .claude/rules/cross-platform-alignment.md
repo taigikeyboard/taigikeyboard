@@ -74,6 +74,8 @@ When the same logical behavior requires different code on each platform — plat
 
 Silent divergence is the failure mode this rule exists to prevent.
 
+**Intentional-divergence example (key-press feedback, PR #444)**: the in-app sound/vibration toggle gates feedback on both platforms, but the OS-master interaction differs — Android drives a direct `Vibrator` that bypasses the OS touch-haptic gate (`HAPTIC_FEEDBACK_ENABLED`), while iOS has no app-side bypass of the System Haptics master, so app-ON + System-Haptics-OFF → no vibration on iOS is expected, not a bug. Classified **intentional** (platform-imposed). Full contract: `docs/architecture/behavioral-invariants.md` §36 `INVARIANT_KEYPRESS_FEEDBACK_APP_TOGGLE_GATE`.
+
 ### 3a. Cross-platform invariants — constants, tests, docs update together
 
 Behavior that MUST match between iOS and Android is captured in `docs/architecture/behavioral-invariants.md` with named `INVARIANT_*` labels.
