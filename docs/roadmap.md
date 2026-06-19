@@ -90,6 +90,12 @@ Detailed plan archives are added retroactively only when source material exists;
 
 Forward-looking candidates only, NOT items already shipped. (v3.5.8-era items that read like candidates but shipped — `整句 lattice + walker`, `continuous compound-hyphen`, `Phase 9 user-freq plumb` — live in [`docs/releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md).)
 
+### App UI i18n — multi-language (台語 TL / POJ / 漢字 + 日語 + 英語)
+
+**Status**: Design approved + Codex design co-review folded in (2026-06-19); NO code. **Full plan**: [`docs/architecture/i18n-multilang-plan.md`](architecture/i18n-multilang-plan.md).
+
+Localize app UI (host **+ keyboard-extension overlays + FAQ content** — not host-only) into 5 display languages + an Automatic (`system`) state. Single source of truth = new in-repo `i18n/` dir (NOT separate repo — flip trigger = external translator workflow) → **codegen NATIVE resources** (`.xcstrings` / `values-*/strings.xml`), hybrid: en/ja/漢字 use OS-locale resolution + `setApplicationLocales()`, TL/POJ via an app-level `DisplayLanguage` enum selecting an explicit resource set (BCP-47 is metadata only, never the persisted key). Scope-aware key/completeness checks kill today's manual iOS↔Android mirror; native plural via codegen typed fns (no ICU); POJ default-derived from TL + override + diff review. Phases: P0 reconcile+inventory → P1 schema+native codegen+**live-switch reactive prototype** → P2 English vertical slice → P3a ja / P3b TL / P3c POJ (picker shows only gated languages). **#1 risk = live-switch UI invalidation** (static getter won't refresh SwiftUI/Compose; extension is a separate process). USER constraints: i18n best practices + normalize divergent wording. USER 2026-06-19: in-repo confirmed, changelog EXCLUDED from multi-language, tentatively v3.6.4 (「可能」/possibly — not firm). Remaining extension/FAQ scope + timing user-gated.
+
 ### Keyboard theme picker — swipe-select gallery + custom theme + save
 
 **Status**: iOS SHIPPED (chain #400-411, main `786c8366`). **Android port ACTIVE** — multi-PR plan in [`docs/ui/android-theme-port.md`](ui/android-theme-port.md) (P0 done; P1 in flight). **Goal** (USER 2026-06-01): swipe left/right through predefined themes, create a custom theme, save the selection — modeled on KeyboardKit Pro's theme shelf.
