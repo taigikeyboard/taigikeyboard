@@ -65,7 +65,37 @@ Two facts shape the design:
 
 ### 1. Single source of truth — in-repo `i18n/` directory  *(Codex: CONFIRM)*
 
-`i18n/` holds semantic keys → per-`DisplayLanguage` values, namespaced (`settings`, `home`, `dictionary`, `theme`, `layout`, `common`, `extension`, `content`). Source JSON, matching `content/*.json` + `taigi-emojis/dist/emoji.json` precedents. NOT a separate submodule repo (rationale + flip trigger below).
+`i18n/` holds semantic keys → per-`DisplayLanguage` values, namespaced (`settings`, `home`, `dictionary`, `theme`, `layout`, `common`, `extension`, `content`). NOT a separate submodule repo (rationale + flip trigger below).
+
+**Source format (locked, USER 2026-06-19): JSON, ARB-shaped.** One file per namespace (`i18n/settings.json`, …), one entry per key with metadata + per-language values:
+
+```jsonc
+// i18n/settings.json
+{
+  "settings.inputMode.title": {
+    "comment": "Settings row label — keyboard input-mode picker",   // translator context
+    "scope": "shared-host",                       // shared/ios/android × host/extension (D5)
+    "values": {
+      "hanji": "輸入模式",
+      "tailo": "...",                             // human-authored
+      "ja": "入力モード",
+      "en": "Input Mode"
+      // poj omitted → derived from tailo at build (D4)
+    }
+  },
+  "dictionary.importResult": {
+    "comment": "Toast after CSV import",
+    "scope": "shared-host",
+    "placeholders": { "imported": "int", "duplicates": "int" },     // named, not %d (D6)
+    "values": {
+      "hanji": "匯入 {imported} 項成功，{duplicates} 項重複",
+      "en": "Imported {imported}, {duplicates} duplicates"
+    }
+  }
+}
+```
+
+Rationale: JSON (ARB-shaped) is the i18n best-practice choice — machine-safe, TMS-ready (Crowdin/Weblate ingest ARB/XLIFF; JSON↔ARB↔XLIFF convert cleanly), native placeholder/plural metadata, matches repo precedents (`content/*.json`, `taigi-emojis/dist/emoji.json`). Named placeholders `{imported}` (not positional `%d`); plurals via key-suffix entries (`x.count.one` / `x.count.other`) → codegen to native plurals; `poj` blank = derive, string = override, `"skip"` = no derive.
 
 ⚠ Do not make the symlink the only build integration — add a **generated-output freshness check** (archive builds, non-symlink checkouts, Gradle/Xcode packaging must all see current output).
 
@@ -134,6 +164,7 @@ A static `L10n.foo` getter does NOT tell SwiftUI/Compose to refresh → switchin
 - **Separate i18n repo** (taigi-emojis model) — solo maintainer, external-translator isolation is speculative (YAGNI); UI keys are screen-coupled → renames need same-commit atomicity a submodule can't give; emojis are a reusable dataset, UI strings are not. **Flip trigger**: external translation workflow (Crowdin/Weblate) / cross-product reuse → `git filter-repo` extract. Stay extraction-ready; no submodule tax now.
 - **ICU MessageFormat runtime lib** — use native plural instead (above).
 - **Singleton `LocalizedText`/`LanguageManager`** — use reactive root state (Decision 7).
+- **TSV / CSV source format** — considered for spreadsheet manageability; rejected as canonical (USER 2026-06-19 chose JSON on best-practice grounds). Not a standard i18n format (no TMS ingests it), structure-poor (placeholders/plurals need ad-hoc conventions), round-trip-unsafe through spreadsheets. If spreadsheet editing is later wanted, generate a TSV/Sheet *view* from the JSON and import back — JSON stays the committed source.
 - **RTL rollout** — none of the 5 languages need it; but shared components must avoid new hardcoded leading/trailing assumptions.
 
 ---
