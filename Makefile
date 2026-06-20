@@ -11,6 +11,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt-rust fmt-check-rust lint-rust \
         fmt-swift fmt-check-swift \
         fmt-kotlin fmt-check-kotlin lint-kotlin \
+        i18n i18n-check \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -52,6 +53,16 @@ doc:
 dict:
 	bash $(DICT)/run.sh
 	bash $(DICT)/build.sh
+
+# Generate i18n native resources + Kotlin accessors from i18n/*.json (mirror of `make dict`:
+# committed output, not a per-compile step). Re-run after editing any i18n/ source.
+i18n:
+	python3 tools/i18n/generate.py
+
+# Fail if committed i18n generated output is stale vs i18n/*.json. No worktree mutation;
+# the Android Gradle `checkI18nGenerated` task (preBuild) calls the same checker.
+i18n-check:
+	python3 tools/i18n/check.py
 
 # Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
 # built dictionary.csv. Random each run; prints to stdout for manual on-device

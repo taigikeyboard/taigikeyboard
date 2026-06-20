@@ -129,6 +129,27 @@ base {
     archivesName.set("TaigiKeyboard-${android.defaultConfig.versionName}-$buildDate")
 }
 
+// Fail the build if committed i18n generated output (res/values/strings_i18n.xml + the
+// i18n/generated Kotlin) is stale vs the i18n/*.json sources. A Make-only gate cannot protect
+// Android Studio / archive / direct `assemble`, so this hooks into preBuild. Run `make i18n` to fix.
+tasks.register<Exec>("checkI18nGenerated") {
+    val repoRoot = rootProject.projectDir.parentFile
+    workingDir = repoRoot
+    commandLine("python3", "tools/i18n/check.py")
+    // Declare inputs/outputs so Gradle skips the python run on builds that touched neither the
+    // i18n sources, the generator, nor the committed generated output (otherwise it runs every build).
+    inputs.dir(repoRoot.resolve("i18n"))
+    inputs.file(repoRoot.resolve("tools/i18n/check.py"))
+    inputs.file(repoRoot.resolve("tools/i18n/i18n_lib.py"))
+    inputs.dir(layout.projectDirectory.dir("src/main/java/com/siansiansu/taigikeyboard/i18n/generated"))
+    inputs.file(layout.projectDirectory.file("src/main/res/values/strings_i18n.xml"))
+    outputs.upToDateWhen { true }
+}
+
+tasks.named("preBuild") {
+    dependsOn("checkI18nGenerated")
+}
+
 // Task 用於顯示目前的 versionCode（用於驗證）
 tasks.register("printVersionCode") {
     doLast {

@@ -1,0 +1,15 @@
+{
+  "namespace": "probe",
+  "keys": {
+    "appHeaderTitle": {
+      "comment": "i18n pipeline probe — app header title. Proves the HANJI native-resource path. Debug-only until R2a-2 introduces the real common/settings namespaces.",
+      "scope": { "platforms": ["android"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "台語齒盤" }
+    },
+    "liveSwitchDemo": {
+      "comment": "i18n pipeline probe — live-switch demo string. Proves the GeneratedMap / Pseudo path live-switches alongside the native path.",
+      "scope": { "platforms": ["android"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "即時切換語言示範" }
+    }
+  }
+}

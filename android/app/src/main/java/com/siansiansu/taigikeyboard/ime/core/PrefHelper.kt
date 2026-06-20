@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
@@ -317,6 +318,9 @@ class PrefHelper(
     override var isTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
 
     var outputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
+
+    // App UI display language tag (i18n). Default keeps the app behaviour-frozen on Hanji.
+    var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
 
     // §34/S22 — 顯示羅馬字 toggle. Default false (off; user opts in).
     var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, false)
@@ -687,6 +691,16 @@ class PrefHelper(
         dataStore.data
             .map { prefs ->
                 prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] ?: "phahTaigi"
+            }.distinctUntilChanged()
+
+    /**
+     * Observes the app UI display-language tag as a Flow, so the host app + keyboard IME Compose
+     * surfaces recompose live whenever it changes (any writer: host picker or in-keyboard overlay).
+     */
+    fun observeDisplayLanguage(): Flow<String> =
+        dataStore.data
+            .map { prefs ->
+                prefs[PreferenceKeys.DISPLAY_LANGUAGE] ?: DisplayLanguage.DEFAULT_TAG
             }.distinctUntilChanged()
 
     /**

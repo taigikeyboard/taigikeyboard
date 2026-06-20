@@ -15,6 +15,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -94,90 +96,97 @@ class SettingsMainActivity : AppCompatActivity() {
 
         setContent {
             val resetCounter by resetViewModel.resetCounter.collectAsStateWithLifecycle()
-            TaigiKeyboardTheme {
-                MainSettingsScreen(
-                    tabs =
-                        listOf(
-                            TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
-                            TabItem(R.drawable.ic_palette, getString(R.string.tab_theme)),
-                            TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
-                            TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
-                            TabItem(R.drawable.ic_settings, getString(R.string.tab_settings)),
-                        ),
-                    initialTab = initialTab,
-                ) { selectedTab ->
-                    when (selectedTab) {
-                        TAB_HOME -> {
-                            HomeScreen(
-                                versionName = versionName,
-                                onSetupGuide = {
-                                    startActivity(Intent(this, SetupGuideActivity::class.java))
-                                },
-                                onFeatureClick = { titleKey, contentType, contentKeys ->
-                                    openDetailActivity(titleKey, contentType, contentKeys)
-                                },
-                                onUrlClick = ::openUrl,
-                                onCopyright = {
-                                    startActivity(Intent(this, CopyrightActivity::class.java))
-                                },
-                                onAboutDeveloper = {
-                                    openDetailActivity(
-                                        ContentType.KEY_ABOUT_DEVELOPER,
-                                        ContentType.ABOUT_DEVELOPER,
-                                        emptyArray(),
-                                    )
-                                },
-                                onVersionHistory = {
-                                    openDetailActivity(ContentType.KEY_VERSION_HISTORY, ContentType.VERSION, emptyArray())
-                                },
-                                onFaqClick = { titleKey, contentKeys ->
-                                    openDetailActivity(titleKey, ContentType.FAQ, contentKeys)
-                                },
-                            )
-                        }
+            // i18n live-switch root: writing prefs.displayLanguageTag (host picker or IME overlay)
+            // re-provides this value and recomposes every stringRes consumer — no Activity recreate.
+            val displayLanguageTag by prefs
+                .observeDisplayLanguage()
+                .collectAsStateWithLifecycle(initialValue = prefs.displayLanguageTag)
+            ProvideDisplayLanguage(DisplayLanguage.fromTag(displayLanguageTag)) {
+                TaigiKeyboardTheme {
+                    MainSettingsScreen(
+                        tabs =
+                            listOf(
+                                TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
+                                TabItem(R.drawable.ic_palette, getString(R.string.tab_theme)),
+                                TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
+                                TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
+                                TabItem(R.drawable.ic_settings, getString(R.string.tab_settings)),
+                            ),
+                        initialTab = initialTab,
+                    ) { selectedTab ->
+                        when (selectedTab) {
+                            TAB_HOME -> {
+                                HomeScreen(
+                                    versionName = versionName,
+                                    onSetupGuide = {
+                                        startActivity(Intent(this, SetupGuideActivity::class.java))
+                                    },
+                                    onFeatureClick = { titleKey, contentType, contentKeys ->
+                                        openDetailActivity(titleKey, contentType, contentKeys)
+                                    },
+                                    onUrlClick = ::openUrl,
+                                    onCopyright = {
+                                        startActivity(Intent(this, CopyrightActivity::class.java))
+                                    },
+                                    onAboutDeveloper = {
+                                        openDetailActivity(
+                                            ContentType.KEY_ABOUT_DEVELOPER,
+                                            ContentType.ABOUT_DEVELOPER,
+                                            emptyArray(),
+                                        )
+                                    },
+                                    onVersionHistory = {
+                                        openDetailActivity(ContentType.KEY_VERSION_HISTORY, ContentType.VERSION, emptyArray())
+                                    },
+                                    onFaqClick = { titleKey, contentKeys ->
+                                        openDetailActivity(titleKey, ContentType.FAQ, contentKeys)
+                                    },
+                                )
+                            }
 
-                        TAB_THEME -> {
-                            ThemePickerScreen(prefs = prefs)
-                        }
+                            TAB_THEME -> {
+                                ThemePickerScreen(prefs = prefs)
+                            }
 
-                        TAB_LAYOUT -> {
-                            LayoutScreen(prefs = prefs)
-                        }
+                            TAB_LAYOUT -> {
+                                LayoutScreen(prefs = prefs)
+                            }
 
-                        TAB_DICTIONARY -> {
-                            DictionarySettingsScreen(
-                                prefs = prefs,
-                                onCustomDictionary = {
-                                    startActivity(CustomDictionaryActivity.createIntent(this))
-                                },
-                                onNavigateToFrequency = {
-                                    startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_FREQUENCY))
-                                },
-                                onNavigateToAssociation = {
-                                    startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_ASSOCIATION))
-                                },
-                                onBackupRestore = {
-                                    startActivity(DataManagementActivity.createIntent(this))
-                                },
-                                searchViewModel = searchViewModel,
-                                resetCounter = resetCounter,
-                            )
-                        }
+                            TAB_DICTIONARY -> {
+                                DictionarySettingsScreen(
+                                    prefs = prefs,
+                                    onCustomDictionary = {
+                                        startActivity(CustomDictionaryActivity.createIntent(this))
+                                    },
+                                    onNavigateToFrequency = {
+                                        startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_FREQUENCY))
+                                    },
+                                    onNavigateToAssociation = {
+                                        startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_ASSOCIATION))
+                                    },
+                                    onBackupRestore = {
+                                        startActivity(DataManagementActivity.createIntent(this))
+                                    },
+                                    searchViewModel = searchViewModel,
+                                    resetCounter = resetCounter,
+                                )
+                            }
 
-                        TAB_SETTINGS -> {
-                            InputSettingsScreen(
-                                prefs = prefs,
-                                diagnosticViewModel = diagnosticViewModel,
-                                onResetSettings = {
-                                    resetViewModel.resetAllSettings(prefs) { success ->
-                                        val message = if (success) SettingsTexts.resetSuccess else SettingsTexts.resetFailed
-                                        Toast
-                                            .makeText(this, message, Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                },
-                                resetCounter = resetCounter,
-                            )
+                            TAB_SETTINGS -> {
+                                InputSettingsScreen(
+                                    prefs = prefs,
+                                    diagnosticViewModel = diagnosticViewModel,
+                                    onResetSettings = {
+                                        resetViewModel.resetAllSettings(prefs) { success ->
+                                            val message = if (success) SettingsTexts.resetSuccess else SettingsTexts.resetFailed
+                                            Toast
+                                                .makeText(this, message, Toast.LENGTH_SHORT)
+                                                .show()
+                                        }
+                                    },
+                                    resetCounter = resetCounter,
+                                )
+                            }
                         }
                     }
                 }

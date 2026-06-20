@@ -184,6 +184,21 @@ Old P2 (show 5 picker options all falling back to 漢字) was a visible fake fea
 
 Picker shows a language only after it passes completeness + layout + accessibility gates. P1 alone delivers value (single source of truth) independent of multi-language shipping.
 
+### Delivery status (rounds)
+
+P0 and P1 are delivered as small per-PR rounds (Codex pre-impl 2026-06-20 refuted a single large P1 PR; namespace-atomic split avoids a JSON-vs-`*Texts` dual-source-of-truth drift window):
+
+| Round | Scope | Status |
+|---|---|---|
+| **R0** | Wording reconcile (`台語齒盤` / `建中整理、提供`) | Merged — PR #447 |
+| **R1** | Android live-switch architecture spike (throwaway) | Gate pass — PR #448 closed (D2 hybrid + D7 confirmed on device) |
+| **R2a-1** | Codegen pipeline (`tools/i18n/`, `make i18n`, Gradle freshness gate) + Android resolution infra (`DisplayLanguage` / `StringResolution` / `StringResolver` / `ProvideDisplayLanguage`) + debug probe fixture (`i18n/probe.json`, no real namespace data) | **PR #449 — Android gate pass, dogfood pending** |
+| **R2a-2** | `i18n/common.json` + migrate all `CommonTexts.*` call sites + delete `CommonTexts.kt` (same PR) | Not started |
+| **R2a-3** | `i18n/settings.json` + migrate all `SettingsTexts.*` call sites + delete `SettingsTexts.kt` (keep `confirmKeyLabel`) | Not started |
+| **R2b** | iOS infra (`.xcstrings` + per-`.lproj`) | Blocked — needs USER pbxproj edits (`CFBundleLocalizations`, `knownRegions`, Resources phase) |
+
+Deferred to P2 (recorded during R2a-1 review): emit the pseudo-locale map under a `src/debug/` source set (it is dead bytecode in release at full keyset); add a "superseded by `i18n/`" pointer on the legacy `*Texts` objects. P3c POJ-derive reuses `dictionary/common/taigi_bridge.py::convert_tl_to_poj` (do not reinvent).
+
 ---
 
 ## Design gaps to resolve (from Codex)

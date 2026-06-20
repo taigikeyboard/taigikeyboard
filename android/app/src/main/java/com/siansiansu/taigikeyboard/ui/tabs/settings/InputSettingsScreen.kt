@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
+import com.siansiansu.taigikeyboard.i18n.I18nProbeBar
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.SettingsTexts
@@ -137,6 +138,8 @@ fun InputSettingsScreen(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
+                // Debug-only i18n live-switch probe (no-op in release).
+                I18nProbeBar(prefs)
                 SettingsCard {
                     SettingNavigationRow(
                         label = SettingsTexts.inputMode,
