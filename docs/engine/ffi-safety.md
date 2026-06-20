@@ -14,6 +14,8 @@
 - **Does NOT apply** to internal Rust code that never crosses the FFI boundary. Pure-engine and phonetics crates (`engine`, `phonetics`) follow the broader Rust idioms in `.claude/rules/rust-best-practices.md`; this spec only governs the FFI seam.
 - **Authoritative companion**: `.claude/rules/rust-ffi-safety.md` §1 (FFI boundary discipline) and §4 (opaque handle pattern). Any deviation from this spec or that rules file requires inline `// JUSTIFICATION:` prose at the deviation site, per `.claude/rules/rust-ffi-safety.md` §5.
 
+> **AS-BUILT divergence (post-D9)**: the engine implemented this contract as a **process-singleton, bytes-in / bytes-out** seam — NOT the per-session opaque-handle design that §3/§4 below pre-authored. Concretely: the FFI entry takes only `bytes: &[u8]` and reaches the engine via `EngineHandle::instance()` (`engine/composing/src/handle.rs`); **no opaque `*mut` handle crosses the boundary and there is no `engine_shutdown` FFI** (the singleton owns lifetime). There is **no `EngineError` type** — a caught panic maps directly to `ErrorCode::FAIL_INTERNAL` via `catch_unwind`. Live entrypoints: `process_request_bytes` / `install_logger_sink` / `set_log_level` / `panic_for_test` (swift-ffi) and `processRequestBytes` / `registerLogger` / `setLogLevel` / `panicForTest` (android-jni). §2 (catch_unwind mandatory) holds as-built; §3 `Mutex<Engine>` exists but is locked inside the singleton, not at the seam; §3/§4 opaque-handle + shutdown remain as pre-impl design record.
+
 ---
 
 ## 2. Panic discipline — `catch_unwind` mandatory

@@ -3,7 +3,7 @@
 > **Type**: Reference
 > **Keywords**: `dictionary.bin`, `association.bin`, `dictionary.fst`, `fst`, `bitmask`, `mmap`, `cross-platform invariant`
 > **Related**: `nextword.md`, `custom-dictionary.md`, `engine/lexicon`
-> **Audience**: anyone touching the Rust `engine/lexicon` readers (`DictionaryReader`, `AssociationReader`, `PrefixIndex`), the platform `EnabledDictionaries` DTOs, or the Python build script (`dictionary/build/`).
+> **Audience**: anyone touching the Rust `engine/lexicon` readers (`DictionaryReader`, `AssociationReader`, `PrefixIndex`), the filter logic (`engine/lexicon::dictionary_filters`) + platform `DictionarySource` DTO, or the Python build script (`dictionary/build/`).
 
 ---
 
@@ -217,7 +217,7 @@ There is no on-device build pathway — the fst is a read-only asset shipped in 
 
 ## 4. Bitmask Layout (cross-platform invariant)
 
-Bit positions are **shared** by `dictionary.bin`, `association.bin`, `EnabledDictionaries.sourceBitmask()`, and the build script.
+Bit positions are **shared** by `dictionary.bin`, `association.bin`, the filter logic (`engine/lexicon::dictionary_filters`), and the build script (`dictionary/common/source_bits.py`).
 
 ```
 bit  0  kautian      (教育部臺灣台語常用詞辭典)
@@ -337,7 +337,7 @@ When ANY of the following changes, ALL listed files MUST be updated in the same 
 |---|---|
 | `dictionary.bin` byte layout | build script, Rust `engine/lexicon::dictionary_reader`, this doc |
 | `association.bin` byte layout | build script, Rust `engine/lexicon::association_reader`, this doc |
-| Bitmask bit positions | build script, iOS `EnabledDictionaries.swift`, Android `EnabledDictionaries.kt`, Rust filter constants in `engine/lexicon`, this doc |
+| Bitmask bit positions | build script (`dictionary/common/source_bits.py`), Rust `engine/lexicon::dictionary_filters`, platform `DictionarySource` DTO, this doc |
 | `kautian_subtag` + wire subcollection-enable bit layout (§4.5) | `dictionary/common/source_bits.py` (`encode_kautian_subtag`), `dictionary/build/create_dictionary_bin.py`, Rust `engine/lexicon::dictionary_reader` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`), this doc |
 | Key prefix list (`tl:` / `poj:` / `hanzi:`) | build script (`create_fst.py`), Rust `lexicon::key_normalizer`, this doc |
 | Magic bytes (`TKDB` / `TKWA`) | build script, Rust readers, this doc |

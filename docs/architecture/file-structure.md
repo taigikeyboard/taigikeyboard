@@ -90,7 +90,7 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 | Lifecycle service | (iOS `LexiconService.swift` deleted v3.5.8 Item 13; install via `KeyboardViewController+Setup`) | `ime/dictionary/LexiconService.kt` (Tab3 + asset lifecycle) |
 | Search service (Tab3) | `Lexicon/Services/DictionarySearchService.swift` | (Tab3 methods in `LexiconService.kt`) |
 | Word model | `Lexicon/Models/TaigiWord.swift` | `ime/dictionary/TaigiWord.kt` |
-| Enabled dictionaries | `Lexicon/Models/EnabledDictionaries.swift` | `ime/dictionary/EnabledDictionaries.kt` |
+| Enabled dictionaries | `Lexicon/Models/DictionarySource.swift` (+ Rust `lexicon::dictionary_filters`) | `ime/dictionary/DictionarySource.kt` |
 | Custom dictionary service | `Lexicon/Services/CustomDictionaryService.swift` | `ime/dictionary/CustomDictionaryService.kt` |
 | Custom dict repo (iOS) | `Lexicon/Database/CustomDictionaryRepository.swift` | (built into Service) |
 | Custom dict model | `Lexicon/Models/CustomDictionaryEntry.swift` | (in `TaigiWord.kt` + `CustomDictionaryService.kt`) |

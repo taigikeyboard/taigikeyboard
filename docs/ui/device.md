@@ -31,8 +31,8 @@
 |----------|---------|---------|-------|-----|
 | primaryFontSize | 20 | 21 | 20 | 23 |
 | secondaryFontSize | 15 | 16 | 15 | 17 |
-| longCellPrimaryFontSize | 19 | 20 | 19 | 22 |
-| longCellSecondaryFontSize | 13 | 14 | 13 | 15 |
+
+(`CandidateTheme` also derives `tpsPrimaryFontSize` / `tpsSecondaryFontSize` from these.)
 
 ---
 

@@ -118,15 +118,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 ## Localization Architecture
 
-| File | Purpose |
-|------|---------|
-| `LocalizedText.kt` | Core structure (Android only) |
-| `HomeTexts.swift` / `.kt` | Home tab text |
-| `LayoutTexts.swift` / `.kt` | Layout tab text |
-| `DictionaryTexts.swift` / `.kt` | Dictionary tab text |
-| `SettingsTexts.swift` / `.kt` | Settings tab text |
-| `LanguageManager.kt` | Android language selection (StateFlow) |
-| `DisplayLanguage.kt` | Android display language enum |
+**Mid-migration — per-file correspondence is in flux.** App-UI strings are moving to a generated-resource pipeline (`i18n/*.json` → `tools/i18n/generate.py` → `i18n/generated/{L10n,StringKey,GeneratedPseudoStrings,GeneratedTaigiStrings}.kt`). Android migrated namespaces use the generated accessors; not-yet-migrated namespaces keep hand-written `localization/*Texts.kt`. iOS still uses `Strings/*Texts.swift`. Authoritative status: [`../architecture/i18n-multilang-plan.md`](../architecture/i18n-multilang-plan.md).
 
 ---
 
@@ -148,7 +140,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 When layout appearance changes (font size, key labels, etc.), update these screenshots.
 
-**iOS** — `ios/Sources/TaigiKeyboard/Styling/LayoutPreviewAssets.xcassets/`
+**iOS** — `ios/Resources/Assets/LayoutPreviewAssets.xcassets/`
 
 | Layout | Light | Dark |
 |--------|-------|------|
@@ -191,5 +183,5 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 |-----------|------|
 | Tab container | `SettingsMainActivity.kt` + `MainSettingsScreen.kt` |
 | Navigation | Compose Navigation (no XML) |
-| Theme | `Theme.kt` + `Type.kt` |
-| Strings | `LocalizedText.kt` + `HomeTexts.kt` / `LayoutTexts.kt` / `DictionaryTexts.kt` / `SettingsTexts.kt` |
+| Theme | `Theme.kt` + `AppStyle.kt` |
+| Strings | generated `i18n/generated/L10n.kt` (migrated namespaces) + residual `localization/*Texts.kt` — see Localization Architecture above |

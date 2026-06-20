@@ -311,9 +311,13 @@ struct FlickKeyPosition: Hashable {
 enum KeyboardLayoutType: String {
     case phahTaigi  // PhahTaigi layout
     case qwerty     // Standard QWERTY
-    case flick      // Flick tone
+    case tps        // 方音符號 (Taiwanese Phonetic Symbols)
+    case moe1       // MOE layout 1
+    case moe2       // MOE layout 2
 }
 ```
+
+> Flick is **not yet implemented** (see Status above); there is no `flick` case in the shipped enum.
 
 ### Switching Flow
 

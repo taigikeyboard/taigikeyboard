@@ -41,18 +41,7 @@ Output character
 
 ## KeyboardKit Settings Sync
 
-```swift
-func syncToKeyboardContext(_ context: KeyboardContext) {
-    context.settings.isAutocapitalizationEnabled = isAutoCapitalizationEnabled
-
-    if !isAutoCapitalizationEnabled {
-        context.autocapitalizationTypeOverride = .none
-        if context.keyboardCase == .uppercased {
-            context.keyboardCase = .lowercased
-        }
-    }
-}
-```
+Auto-capitalization syncs through KeyboardKit's own `KeyboardSettings` — `SharedSettings.swift` sets `isAutocapitalizationEnabled` on the KeyboardKit context. There is no custom `syncToKeyboardContext` helper.
 
 ---
 
@@ -63,7 +52,7 @@ All case-mapping math lives in Rust `engine/phonetics::case_transform` (since ca
 | Component | Location | Description |
 |-----------|----------|-------------|
 | Case-letter math (POJ/TL aware upper/lower, full-upper, candidate capitalization, suggestion transform, nasal-marker case adjust) | Rust `engine/phonetics/src/case_transform.rs` | Cross-platform canonical |
-| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `capitalizeCandidate` / `transformSuggestion` / `uppercaseToneChar` / `fullUppercaseToneString` / `lowercaseToneChar` |
+| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `capitalizeCandidate` / `transformSuggestionCase` / `uppercaseToneChar` / `fullUppercaseToneString` / `lowercaseToneChar` |
 | Android bridge | `engine/CaseTransformBridge.kt` | Same surface, JVM signatures |
 | iOS shift / capslock state | KeyboardKit (managed) | Drives `LetterCase` value passed into bridge |
 | Android shift / capslock state | `ime/text/CapsStateManager.kt` | Same role, calls bridge per keystroke |
@@ -93,4 +82,4 @@ All case-mapping math lives in Rust `engine/phonetics::case_transform` (since ca
 | State tracking | KeyboardKit managed | `CapsStateManager.kt` (extracted from TextInputManager in v3.4.6) |
 | Control method | Settings sync | `updateCapsState()` |
 | Real-time update | NotificationCenter | DataStore Flow |
-| Suggestion case | `RustEngineBridge.transformSuggestion(...)` (called from `Autocomplete/Services/SuggestionCaseTransformer.swift` thin wrapper) | `RustEngineBridge.transformSuggestion(...)` (called from `ime/dictionary/SuggestionCaseTransformer.kt` thin wrapper that retains platform skip-rule guards) |
+| Suggestion case | `RustEngineBridge.transformSuggestionCase(...)` (called from `Autocomplete/Services/SuggestionCaseTransformer.swift` thin wrapper) | `RustEngineBridge.transformSuggestion(...)` (called from `ime/dictionary/SuggestionCaseTransformer.kt` thin wrapper that retains platform skip-rule guards) |
