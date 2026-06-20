@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataViewModel
@@ -35,28 +37,31 @@ class FrequentWordsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val type = intent.getStringExtra(EXTRA_TYPE) ?: TYPE_FREQUENCY
+        val prefs = PrefHelper(this)
 
         setupEdgeToEdge()
 
         setContent {
-            TaigiKeyboardTheme {
-                when (type) {
-                    TYPE_FREQUENCY -> {
-                        FrequencyDataScreen(
-                            viewModel = frequencyViewModel,
-                            onNavigateBack = {
-                                onBackPressedDispatcher.onBackPressed()
-                            },
-                        )
-                    }
+            ProvideDisplayLanguage(prefs) {
+                TaigiKeyboardTheme {
+                    when (type) {
+                        TYPE_FREQUENCY -> {
+                            FrequencyDataScreen(
+                                viewModel = frequencyViewModel,
+                                onNavigateBack = {
+                                    onBackPressedDispatcher.onBackPressed()
+                                },
+                            )
+                        }
 
-                    TYPE_ASSOCIATION -> {
-                        AssociationDataScreen(
-                            viewModel = associationViewModel,
-                            onNavigateBack = {
-                                onBackPressedDispatcher.onBackPressed()
-                            },
-                        )
+                        TYPE_ASSOCIATION -> {
+                            AssociationDataScreen(
+                                viewModel = associationViewModel,
+                                onNavigateBack = {
+                                    onBackPressedDispatcher.onBackPressed()
+                                },
+                            )
+                        }
                     }
                 }
             }

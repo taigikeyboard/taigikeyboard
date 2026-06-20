@@ -15,7 +15,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
-import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -96,12 +95,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
         setContent {
             val resetCounter by resetViewModel.resetCounter.collectAsStateWithLifecycle()
-            // i18n live-switch root: writing prefs.displayLanguageTag (host picker or IME overlay)
-            // re-provides this value and recomposes every stringRes consumer — no Activity recreate.
-            val displayLanguageTag by prefs
-                .observeDisplayLanguage()
-                .collectAsStateWithLifecycle(initialValue = prefs.displayLanguageTag)
-            ProvideDisplayLanguage(DisplayLanguage.fromTag(displayLanguageTag)) {
+            // i18n live-switch root: prefs.displayLanguageTag changes (host picker or IME overlay)
+            // re-provide this subtree and recompose every stringRes consumer — no Activity recreate.
+            ProvideDisplayLanguage(prefs) {
                 TaigiKeyboardTheme {
                     MainSettingsScreen(
                         tabs =

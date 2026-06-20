@@ -5,6 +5,20 @@ package com.siansiansu.taigikeyboard.i18n.generated
 object GeneratedPseudoStrings {
     private val map: Map<StringKey, String> =
         mapOf(
+            StringKey.COMMON_CANCEL to "⟦取消··⟧",
+            StringKey.COMMON_OK to "⟦好··⟧",
+            StringKey.COMMON_VIEW_WEBSITE to "⟦官方網站··⟧",
+            StringKey.COMMON_EXPORT_FAILED to "⟦匯出失敗··⟧",
+            StringKey.COMMON_IMPORT_FAILED to "⟦匯入失敗··⟧",
+            StringKey.COMMON_MOE_DICT to "⟦教育部臺灣台語常用詞辭典·····⟧",
+            StringKey.COMMON_NEWWORD_DICT to "⟦公視台語台台語新詞辭庫·····⟧",
+            StringKey.COMMON_KUNGGE_DICT to "⟦工藝中心臺灣台語工藝詞庫·····⟧",
+            StringKey.COMMON_I_TAIGI_DICT to "⟦íŤáíǧí愛台語····⟧",
+            StringKey.COMMON_TAIWAN_JAPAN_DICT to "⟦臺日大辭典台語譯本····⟧",
+            StringKey.COMMON_TAI_HUA_DICT to "⟦台華線頂對照典···⟧",
+            StringKey.COMMON_TAIWAN_PLANT_DICT to "⟦台灣植物名彙···⟧",
+            StringKey.COMMON_STTI_DICT to "⟦教育部學科術語臺灣台語對譯······⟧",
+            StringKey.COMMON_ACCENT_DICT to "⟦腔口差··⟧",
             StringKey.PROBE_APP_HEADER_TITLE to "⟦台語齒盤··⟧",
             StringKey.PROBE_LIVE_SWITCH_DEMO to "⟦即時切換語言示範····⟧",
         )

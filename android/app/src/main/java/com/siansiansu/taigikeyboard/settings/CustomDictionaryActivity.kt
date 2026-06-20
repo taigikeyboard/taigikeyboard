@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.CustomDictionaryScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.CustomDictionaryViewModel
@@ -22,16 +24,20 @@ class CustomDictionaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val prefs = PrefHelper(this)
+
         setupEdgeToEdge()
 
         setContent {
-            TaigiKeyboardTheme {
-                CustomDictionaryScreen(
-                    viewModel = viewModel,
-                    onNavigateBack = {
-                        onBackPressedDispatcher.onBackPressed()
-                    },
-                )
+            ProvideDisplayLanguage(prefs) {
+                TaigiKeyboardTheme {
+                    CustomDictionaryScreen(
+                        viewModel = viewModel,
+                        onNavigateBack = {
+                            onBackPressedDispatcher.onBackPressed()
+                        },
+                    )
+                }
             }
         }
     }

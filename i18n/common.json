@@ -1,0 +1,75 @@
+{
+  "namespace": "common",
+  "keys": {
+    "cancel": {
+      "comment": "Dialog dismiss button — cancels the action and closes the dialog.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "取消" }
+    },
+    "ok": {
+      "comment": "Generic confirm button on an informational result dialog (acknowledge / dismiss).",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "好" }
+    },
+    "viewWebsite": {
+      "comment": "Link button opening a data source's official website in the browser.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "官方網站" }
+    },
+    "exportFailed": {
+      "comment": "Error message shown when exporting user dictionary data fails.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "匯出失敗" }
+    },
+    "importFailed": {
+      "comment": "Error message shown when importing user dictionary data fails.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "匯入失敗" }
+    },
+    "moeDict": {
+      "comment": "Display name of the MOE Taiwanese dictionary data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "教育部臺灣台語常用詞辭典" }
+    },
+    "newwordDict": {
+      "comment": "Display name of the PTS Taigi new-word lexicon data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "公視台語台台語新詞辭庫" }
+    },
+    "kunggeDict": {
+      "comment": "Display name of the NTCRI craft-terminology lexicon data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "工藝中心臺灣台語工藝詞庫" }
+    },
+    "iTaigiDict": {
+      "comment": "Display name of the iTaigi crowd-sourced dictionary data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "iTaigi愛台語" }
+    },
+    "taiwanJapanDict": {
+      "comment": "Display name of the Taiwanese-Japanese Grand Dictionary (Taigi translation) data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "臺日大辭典台語譯本" }
+    },
+    "taiHuaDict": {
+      "comment": "Display name of the online Taigi-Mandarin cross-reference dictionary data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台華線頂對照典" }
+    },
+    "taiwanPlantDict": {
+      "comment": "Display name of the Taiwan plant-name glossary data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台灣植物名彙" }
+    },
+    "sttiDict": {
+      "comment": "Display name of the MOE academic-subject terminology Taigi translation data source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "教育部學科術語臺灣台語對譯" }
+    },
+    "accentDict": {
+      "comment": "Display name of the regional accent / pronunciation-variation supplement data source (Android key was khpooDict; canonical name unified with iOS).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "腔口差" }
+    }
+  }
+}

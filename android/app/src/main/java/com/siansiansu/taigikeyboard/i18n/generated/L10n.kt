@@ -6,6 +6,34 @@ import com.siansiansu.taigikeyboard.i18n.stringRes
 
 /** Typed Compose accessors — one per i18n key, resolved under the active display language. */
 object L10n {
+    val commonCancel: String
+        @Composable get() = stringRes(StringKey.COMMON_CANCEL)
+    val commonOk: String
+        @Composable get() = stringRes(StringKey.COMMON_OK)
+    val commonViewWebsite: String
+        @Composable get() = stringRes(StringKey.COMMON_VIEW_WEBSITE)
+    val commonExportFailed: String
+        @Composable get() = stringRes(StringKey.COMMON_EXPORT_FAILED)
+    val commonImportFailed: String
+        @Composable get() = stringRes(StringKey.COMMON_IMPORT_FAILED)
+    val commonMoeDict: String
+        @Composable get() = stringRes(StringKey.COMMON_MOE_DICT)
+    val commonNewwordDict: String
+        @Composable get() = stringRes(StringKey.COMMON_NEWWORD_DICT)
+    val commonKunggeDict: String
+        @Composable get() = stringRes(StringKey.COMMON_KUNGGE_DICT)
+    val commonITaigiDict: String
+        @Composable get() = stringRes(StringKey.COMMON_I_TAIGI_DICT)
+    val commonTaiwanJapanDict: String
+        @Composable get() = stringRes(StringKey.COMMON_TAIWAN_JAPAN_DICT)
+    val commonTaiHuaDict: String
+        @Composable get() = stringRes(StringKey.COMMON_TAI_HUA_DICT)
+    val commonTaiwanPlantDict: String
+        @Composable get() = stringRes(StringKey.COMMON_TAIWAN_PLANT_DICT)
+    val commonSttiDict: String
+        @Composable get() = stringRes(StringKey.COMMON_STTI_DICT)
+    val commonAccentDict: String
+        @Composable get() = stringRes(StringKey.COMMON_ACCENT_DICT)
     val probeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.PROBE_APP_HEADER_TITLE)
     val probeLiveSwitchDemo: String

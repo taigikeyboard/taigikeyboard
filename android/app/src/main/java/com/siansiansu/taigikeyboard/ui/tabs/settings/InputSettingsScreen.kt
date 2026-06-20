@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.i18n.I18nProbeBar
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -316,7 +316,7 @@ fun InputSettingsScreen(
                 title = SettingsTexts.resetSettings,
                 message = SettingsTexts.resetSettingsMessage,
                 confirmLabel = SettingsTexts.reset,
-                dismissLabel = CommonTexts.cancel,
+                dismissLabel = L10n.commonCancel,
                 onConfirm = {
                     showResetDialog = false
                     onResetSettings()

@@ -32,8 +32,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
@@ -169,7 +169,7 @@ fun DictionarySettingsScreen(
 
                 SettingsCard {
                     DictionaryRowWithDescription(
-                        label = CommonTexts.moeDict,
+                        label = L10n.commonMoeDict,
                         checked = moeEnabled,
                         description = "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
                         url = "https://sutian.moe.edu.tw/",
@@ -241,7 +241,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryRowWithDescription(
-                        label = CommonTexts.newwordDict,
+                        label = L10n.commonNewwordDict,
                         checked = newwordEnabled,
                         description = "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
                         url = "https://www.taigitv.org.tw/taigi-words",
@@ -252,7 +252,7 @@ fun DictionarySettingsScreen(
                     )
                     SettingsDivider()
                     DictionaryRowWithDescription(
-                        label = CommonTexts.sttiDict,
+                        label = L10n.commonSttiDict,
                         checked = sttiEnabled,
                         description = "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
                         url = "https://stti.moe.edu.tw/index.html?lang=sutgi",
@@ -263,7 +263,7 @@ fun DictionarySettingsScreen(
                     )
                     SettingsDivider()
                     DictionaryRowWithDescription(
-                        label = CommonTexts.kunggeDict,
+                        label = L10n.commonKunggeDict,
                         checked = kunggeEnabled,
                         description = "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項。",
                         url = "https://kanggesu.ntcri.org.tw",
@@ -281,7 +281,7 @@ fun DictionarySettingsScreen(
 
                 SettingsCard {
                     DictionaryInfoSwitch(
-                        CommonTexts.iTaigiDict,
+                        L10n.commonITaigiDict,
                         itaigiEnabled,
                         DictionaryInfoData.iTaigi,
                     ) {
@@ -290,7 +290,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        CommonTexts.taiwanJapanDict,
+                        L10n.commonTaiwanJapanDict,
                         taiwanJapanEnabled,
                         DictionaryInfoData.taiwanJapan,
                     ) {
@@ -299,7 +299,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        CommonTexts.taiHuaDict,
+                        L10n.commonTaiHuaDict,
                         taiHuaEnabled,
                         DictionaryInfoData.taiHua,
                     ) {
@@ -308,7 +308,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        CommonTexts.taiwanPlantDict,
+                        L10n.commonTaiwanPlantDict,
                         taiwanPlantEnabled,
                         DictionaryInfoData.taiwanPlant,
                     ) {
@@ -338,7 +338,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        CommonTexts.khpooDict,
+                        L10n.commonAccentDict,
                         khpooEnabled,
                         DictionaryInfoData.khpoo,
                     ) {

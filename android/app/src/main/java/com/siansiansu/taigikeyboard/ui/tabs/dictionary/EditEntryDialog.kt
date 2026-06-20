@@ -14,8 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import java.util.UUID
 
@@ -76,7 +76,7 @@ internal fun EditEntryDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(CommonTexts.cancel)
+                Text(L10n.commonCancel)
             }
         },
     )

@@ -8,6 +8,20 @@ import com.siansiansu.taigikeyboard.R
 enum class StringKey(
     @StringRes val resId: Int,
 ) {
+    COMMON_CANCEL(R.string.i18n_common_cancel),
+    COMMON_OK(R.string.i18n_common_ok),
+    COMMON_VIEW_WEBSITE(R.string.i18n_common_viewWebsite),
+    COMMON_EXPORT_FAILED(R.string.i18n_common_exportFailed),
+    COMMON_IMPORT_FAILED(R.string.i18n_common_importFailed),
+    COMMON_MOE_DICT(R.string.i18n_common_moeDict),
+    COMMON_NEWWORD_DICT(R.string.i18n_common_newwordDict),
+    COMMON_KUNGGE_DICT(R.string.i18n_common_kunggeDict),
+    COMMON_I_TAIGI_DICT(R.string.i18n_common_iTaigiDict),
+    COMMON_TAIWAN_JAPAN_DICT(R.string.i18n_common_taiwanJapanDict),
+    COMMON_TAI_HUA_DICT(R.string.i18n_common_taiHuaDict),
+    COMMON_TAIWAN_PLANT_DICT(R.string.i18n_common_taiwanPlantDict),
+    COMMON_STTI_DICT(R.string.i18n_common_sttiDict),
+    COMMON_ACCENT_DICT(R.string.i18n_common_accentDict),
     PROBE_APP_HEADER_TITLE(R.string.i18n_probe_appHeaderTitle),
     PROBE_LIVE_SWITCH_DEMO(R.string.i18n_probe_liveSwitchDemo),
 }

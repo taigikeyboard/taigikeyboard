@@ -11,7 +11,8 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.siansiansu.taigikeyboard.localization.CommonTexts
+import com.siansiansu.taigikeyboard.i18n.currentStringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementScreen
@@ -54,7 +55,7 @@ class DataManagementActivity : ComponentActivity() {
                             Toast.LENGTH_SHORT,
                         ).show()
                 } catch (_: Exception) {
-                    Toast.makeText(this@DataManagementActivity, CommonTexts.exportFailed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, commonString(StringKey.COMMON_EXPORT_FAILED), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -81,10 +82,14 @@ class DataManagementActivity : ComponentActivity() {
                             Toast.LENGTH_LONG,
                         ).show()
                 } catch (_: Exception) {
-                    Toast.makeText(this@DataManagementActivity, CommonTexts.importFailed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, commonString(StringKey.COMMON_IMPORT_FAILED), Toast.LENGTH_SHORT).show()
                 }
             }
         }
+
+    // The export/import failure Toasts fire from launcher callbacks, outside any Composition,
+    // so they resolve via the non-Compose entry point instead of a Compose-local resolver.
+    private fun commonString(key: StringKey): String = currentStringResolver().resolve(key)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

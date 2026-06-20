@@ -6,12 +6,15 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.generated.GeneratedPseudoStrings
 import com.siansiansu.taigikeyboard.i18n.generated.GeneratedTaigiStrings
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import java.util.Locale
 
 /**
@@ -61,6 +64,14 @@ fun buildStringResolver(
     return StringResolver(hanjiContext, activeContext, language)
 }
 
+/**
+ * Non-Compose resolver for the currently-persisted display language — the counterpart to [stringRes]
+ * for class-load data sources and Activity callbacks resolving outside a Composition. Reads the warmed
+ * PrefHelper cache synchronously, so it reflects the language selected at call time.
+ */
+fun Context.currentStringResolver(): StringResolver =
+    buildStringResolver(this, DisplayLanguage.fromTag(PrefHelper(this).displayLanguageTag))
+
 /** The active display language, so debug/probe UI can read the current selection. */
 val LocalDisplayLanguage = staticCompositionLocalOf { DisplayLanguage.HANJI }
 
@@ -86,6 +97,20 @@ fun ProvideDisplayLanguage(
     ) {
         content()
     }
+}
+
+/**
+ * Activity-root overload: subscribes to the persisted display-language tag and re-provides the
+ * subtree on every change, so the whole screen live-switches with no Activity recreate (plan D7).
+ * Standalone Activities call `ProvideDisplayLanguage(prefs) { TaigiKeyboardTheme { ... } }`.
+ */
+@Composable
+fun ProvideDisplayLanguage(
+    prefs: PrefHelper,
+    content: @Composable () -> Unit,
+) {
+    val tag by prefs.observeDisplayLanguage().collectAsStateWithLifecycle(initialValue = prefs.displayLanguageTag)
+    ProvideDisplayLanguage(DisplayLanguage.fromTag(tag), content)
 }
 
 /** Compose accessor: resolves [key] under the current [LocalStringResolver]. */

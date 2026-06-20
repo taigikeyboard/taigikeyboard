@@ -4,9 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.CopyrightDataSource
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
@@ -26,17 +29,20 @@ class CopyrightActivity : ComponentActivity() {
         setupEdgeToEdge()
 
         setContent {
-            TaigiKeyboardTheme {
-                CopyrightScreen(
-                    copyrightPages = CopyrightDataSource.copyrightPages,
-                    fontFamily = fontFamily,
-                    onButtonClick = { url ->
-                        startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-                    },
-                    onNavigateBack = {
-                        onBackPressedDispatcher.onBackPressed()
-                    },
-                )
+            ProvideDisplayLanguage(prefs) {
+                val resolver = LocalStringResolver.current
+                TaigiKeyboardTheme {
+                    CopyrightScreen(
+                        copyrightPages = remember(resolver) { CopyrightDataSource.copyrightPages(resolver) },
+                        fontFamily = fontFamily,
+                        onButtonClick = { url ->
+                            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        },
+                        onNavigateBack = {
+                            onBackPressedDispatcher.onBackPressed()
+                        },
+                    )
+                }
             }
         }
     }

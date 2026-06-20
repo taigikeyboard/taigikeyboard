@@ -1,10 +1,11 @@
 package com.siansiansu.taigikeyboard.content
 
-import com.siansiansu.taigikeyboard.localization.CommonTexts
+import com.siansiansu.taigikeyboard.i18n.StringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.localization.HomeTexts
 
-// Static copyright data for fonts, dictionaries, and data sources displayed in the Home tab
+// Copyright data for fonts, dictionaries, and data sources displayed in the Home tab
 
 private const val SIL_OFL_LICENSE_URL = "https://openfontlicense.org/"
 private const val CC_BY_SA_4_LICENSE_URL =
@@ -24,7 +25,8 @@ data class CopyrightButton(
 )
 
 object CopyrightDataSource {
-    val copyrightPages =
+    // Resolver-driven so the common-namespace strings re-resolve under the active display language.
+    fun copyrightPages(resolver: StringResolver): List<CopyrightPage> =
         listOf(
             // 字體
             CopyrightPage(
@@ -39,7 +41,7 @@ object CopyrightDataSource {
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://justfont.com/huninn/",
                         ),
                     ),
@@ -56,7 +58,7 @@ object CopyrightDataSource {
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://github.com/ButTaiwan/iansui",
                         ),
                     ),
@@ -74,7 +76,7 @@ object CopyrightDataSource {
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://github.com/ButTaiwan/genyo-font",
                         ),
                     ),
@@ -92,7 +94,7 @@ object CopyrightDataSource {
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://github.com/ButTaiwan/genyog-font",
                         ),
                     ),
@@ -101,7 +103,7 @@ object CopyrightDataSource {
             // 1. 教育部臺灣台語常用詞辭典
             CopyrightPage(
                 id = 4,
-                title = CommonTexts.moeDict,
+                title = resolver.resolve(StringKey.COMMON_MOE_DICT),
                 description = HomeTexts.moeCopyright,
                 license = HomeTexts.ccLicense,
                 buttons =
@@ -111,7 +113,7 @@ object CopyrightDataSource {
                             url = "https://creativecommons.org/licenses/by-nd/3.0/tw/",
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://sutian.moe.edu.tw/",
                         ),
                     ),
@@ -119,7 +121,7 @@ object CopyrightDataSource {
             // 2. 台語新詞辭庫
             CopyrightPage(
                 id = 5,
-                title = CommonTexts.newwordDict,
+                title = resolver.resolve(StringKey.COMMON_NEWWORD_DICT),
                 description = HomeTexts.newwordCopyright,
                 license = HomeTexts.ccBy4License,
                 buttons =
@@ -129,7 +131,7 @@ object CopyrightDataSource {
                             url = "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://www.taigitv.org.tw/taigi-words",
                         ),
                     ),
@@ -137,7 +139,7 @@ object CopyrightDataSource {
             // 3. 台語工藝詞庫
             CopyrightPage(
                 id = 6,
-                title = CommonTexts.kunggeDict,
+                title = resolver.resolve(StringKey.COMMON_KUNGGE_DICT),
                 description = HomeTexts.kunggeCopyright,
                 license = HomeTexts.ccByNcLicense,
                 buttons =
@@ -147,7 +149,7 @@ object CopyrightDataSource {
                             url = "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite",
                         ),
                     ),
@@ -155,7 +157,7 @@ object CopyrightDataSource {
             // 4. iTaigi 華台對照典
             CopyrightPage(
                 id = 7,
-                title = CommonTexts.iTaigiDict,
+                title = resolver.resolve(StringKey.COMMON_I_TAIGI_DICT),
                 description = HomeTexts.iTaigiCopyright,
                 license = HomeTexts.cc0License,
                 buttons =
@@ -165,7 +167,7 @@ object CopyrightDataSource {
                             url = "https://creativecommons.org/public-domain/cc0/",
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://itaigi.tw/",
                         ),
                     ),
@@ -173,7 +175,7 @@ object CopyrightDataSource {
             // 5. 台日大辭典
             CopyrightPage(
                 id = 8,
-                title = CommonTexts.taiwanJapanDict,
+                title = resolver.resolve(StringKey.COMMON_TAIWAN_JAPAN_DICT),
                 description = HomeTexts.taiwanJapanCopyright,
                 license = HomeTexts.ccByNcSA3License,
                 buttons =
@@ -183,7 +185,7 @@ object CopyrightDataSource {
                             url = "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "http://taigi.fhl.net/dict/",
                         ),
                     ),
@@ -191,7 +193,7 @@ object CopyrightDataSource {
             // 6. 台華線頂對照典
             CopyrightPage(
                 id = 9,
-                title = CommonTexts.taiHuaDict,
+                title = resolver.resolve(StringKey.COMMON_TAI_HUA_DICT),
                 description = HomeTexts.taiHuaCopyright,
                 license = HomeTexts.ccBySA4License,
                 buttons =
@@ -205,7 +207,7 @@ object CopyrightDataSource {
             // 7. 台灣植物名彙
             CopyrightPage(
                 id = 10,
-                title = CommonTexts.taiwanPlantDict,
+                title = resolver.resolve(StringKey.COMMON_TAIWAN_PLANT_DICT),
                 description = HomeTexts.taiwanPlantCopyright,
                 license = HomeTexts.ccBySA4License,
                 buttons =
@@ -215,7 +217,7 @@ object CopyrightDataSource {
                             url = CC_BY_SA_4_LICENSE_URL,
                         ),
                         CopyrightButton(
-                            text = CommonTexts.viewWebsite,
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
                             url = "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106",
                         ),
                     ),
@@ -223,7 +225,7 @@ object CopyrightDataSource {
             // 8. 腔口補充資料
             CopyrightPage(
                 id = 11,
-                title = CommonTexts.khpooDict,
+                title = resolver.resolve(StringKey.COMMON_ACCENT_DICT),
                 description = HomeTexts.accentDictCredit,
                 license = "",
                 buttons = emptyList(),

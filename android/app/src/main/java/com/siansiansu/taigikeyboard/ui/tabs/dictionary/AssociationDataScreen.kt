@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.siansiansu.taigikeyboard.localization.CommonTexts
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
@@ -70,6 +73,8 @@ fun AssociationDataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Captured for the non-Composable export/import callbacks; tracks the live display language.
+    val stringResolver by rememberUpdatedState(LocalStringResolver.current)
 
     val allData by viewModel.allData.collectAsStateWithLifecycle()
     val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
@@ -111,7 +116,7 @@ fun AssociationDataScreen(
                     resultMessage = DictionaryTexts.exportSuccess
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: CommonTexts.exportFailed
+                    resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
                     showResultDialog = true
                 }
             }
@@ -134,7 +139,7 @@ fun AssociationDataScreen(
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: CommonTexts.importFailed
+                    resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
                     showResultDialog = true
                 }
             }
@@ -358,7 +363,7 @@ fun AssociationDataScreen(
             title = DictionaryTexts.clearAllAssociation,
             message = DictionaryTexts.clearAssociationMessage,
             confirmLabel = DictionaryTexts.clear,
-            dismissLabel = CommonTexts.cancel,
+            dismissLabel = L10n.commonCancel,
             onConfirm = {
                 showClearDialog = false
                 viewModel.clearAll()
@@ -370,7 +375,7 @@ fun AssociationDataScreen(
     if (showResultDialog) {
         ResultDialog(
             message = resultMessage,
-            confirmLabel = CommonTexts.ok,
+            confirmLabel = L10n.commonOk,
             onDismiss = { showResultDialog = false },
         )
     }
