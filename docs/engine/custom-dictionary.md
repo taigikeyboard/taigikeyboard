@@ -40,8 +40,9 @@ CREATE TABLE custom_dictionary (
     id              TEXT PRIMARY KEY,
     roman           TEXT NOT NULL,
     hanzi           TEXT NOT NULL,
-    notone          TEXT DEFAULT '',
-    abbrev          TEXT DEFAULT '',
+    notone          TEXT DEFAULT '',           -- derived
+    abbrev          TEXT DEFAULT '',           -- derived
+    roman_num       TEXT DEFAULT '',           -- derived (v3.6.1-R3)
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -49,7 +50,10 @@ CREATE TABLE custom_dictionary (
 CREATE INDEX idx_custom_roman ON custom_dictionary(roman);
 CREATE INDEX idx_custom_notone ON custom_dictionary(notone);
 CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
+CREATE INDEX idx_custom_roman_num ON custom_dictionary(roman_num);
 ```
+
+A `custom_search_key` side table backs cross-input-mode (三索引 TL / POJ / TPS) lookup — see `CustomDictionarySchema.swift` (iOS) / `CustomDictionaryService.kt` (Android) for its DDL.
 
 ---
 
@@ -59,7 +63,7 @@ CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
 |-----------|-----|---------|
 | Create/Update | `upsert(_ entry)` async | `save(entry)` suspend |
 | Read all | `fetchAll()` async | `fetchAll()` suspend |
-| Search | `searchSync(romanPrefix:, notonePrefix:, limit:)` | `search(romanPrefix, notonePrefix?, limit)` suspend |
+| Search | `searchSync(family:, form:, key:, limit:)` | `search(family, form, key, limit)` suspend |
 | Delete one | `delete(id:)` async | `delete(id)` suspend |
 | Delete all | `deleteAll()` async | `deleteAll()` suspend |
 | Count | `count()` async | `totalCount()` sync |
@@ -158,7 +162,7 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 | Function | iOS | Android |
 |----------|-----|---------|
 | Service | `CustomDictionaryRepository.swift` | `CustomDictionaryService.kt` |
-| Entry model | `CustomDictionaryEntry.swift` | `CustomDictionaryEntry.kt` |
+| Entry model | `CustomDictionaryEntry.swift` | nested `Entry` in `CustomDictionaryService.kt` |
 | List view | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` |
 | Edit view | `CustomDictionaryEditView.swift` | (inline dialog) |
 | Localization | `DictionaryTexts.swift` | `DictionaryTexts.kt` |

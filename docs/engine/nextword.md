@@ -78,7 +78,7 @@ Authoritative scoring lives in Rust `engine/nextword/src/scorer.rs`. The decay c
 
 | Source | Score component |
 |--------|----------------|
-| User association (`user_association.db`) | `count × USER_BONUS × decay(ageHours)` plus `LEARNING_BONUS` for fresh learns |
+| User association (`user_association.db`) | `count × USER_WEIGHT × decay(ageHours)` plus `LEARNING_BONUS` for fresh learns |
 | Dictionary bigram (`association.bin`) | `count × DICT_WEIGHT` |
 | Decay model | RIME-style exponential, ~one-week half-life (configurable in `scorer.rs`) |
 

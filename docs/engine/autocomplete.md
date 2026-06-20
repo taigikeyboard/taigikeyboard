@@ -46,9 +46,9 @@ rawInput → RustEngineBridge.classifyInput → RustEngineBridge.search → Rust
 | `我` | `Hanzi` | Contains Hanzi (漢字) |
 | `guá` | `RomanWithTone` | Contains tone marks |
 | `gua2` | `RomanWithTone` | Contains numeric tone (2,3,5,6,7,8,9) |
-| `gua` | `RomanWithoutTone` | No tone |
-| `gua1` | `RomanWithoutTone` | Tone 1 not considered as "with tone" |
-| `gua4` | `RomanWithoutTone` | Tone 4 not considered as "with tone" |
+| `gua` | `RomanNoTone` | No tone |
+| `gua1` | `RomanNoTone` | Tone 1 not considered as "with tone" |
+| `gua4` | `RomanNoTone` | Tone 4 not considered as "with tone" |
 
 ### containsNumericTone Rules
 

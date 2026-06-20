@@ -145,7 +145,7 @@ Text output
 | Composing wrapper | `ComposingManager.swift` + `ComposingDelegate.swift` | `ComposingManager.kt` + `ComposingDelegate.kt` | — |
 | Autocomplete / classify + search | `TaigiAutocompleteService.swift` (engine-only post v3.5.8 Item 13 retire) | `TaigiAutocompleteService.kt`; `LexiconService.kt` retained for Tab3 `searchWithSources` / `searchByHanzi` only | `engine/lexicon` |
 | Ranking | (calls `processCandidates` via bridge) | (calls `processCandidates` via bridge) | `engine/ranking` |
-| Phonetics / case | (calls bridge) | (calls bridge) | `engine/phonetics`, `engine/case-transform` |
+| Phonetics / case | (calls bridge) | (calls bridge) | `engine/phonetics` (incl. `case_transform` module) |
 | Display | `TaigiKeyboardView.swift`, `CandidateView.swift` | `SmartbarView.kt`, `CandidateAdapter.kt` | — |
 | Selection | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` | — |
 | NextWord engine | (Rust) | (Rust) | `engine/nextword` |

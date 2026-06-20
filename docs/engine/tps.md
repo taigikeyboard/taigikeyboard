@@ -420,9 +420,9 @@ Called from:
 
 ### Multi-Syllable Boundary Detection (v3.4.7)
 
-TPS multi-syllable input inserts automatic spaces at syllable boundaries when a tone mark or entering tone coda is followed by a new consonant or vowel.
+TPS multi-syllable input inserts an automatic syllable separator (`-`) at boundaries when a tone mark or entering tone coda is followed by a new consonant or vowel.
 
-**Implementation**: space insertion logic inside Rust `phonetics::tps::from_zhuyin` uses tone marks (ˋ ˪ ˊ ˇ ˫ ˙) and entering tone codas (ㆴ ㆵ ㆻ ㆷ) as boundary signals.
+**Implementation**: hyphen-insertion logic inside Rust `phonetics::tps::from_zhuyin` uses tone marks (ˋ ˪ ˊ ˇ ˫ ˙) and entering tone codas (ㆴ ㆵ ㆻ ㆷ) as boundary signals.
 
 ---
 

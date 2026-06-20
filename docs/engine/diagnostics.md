@@ -85,5 +85,5 @@ Located in the **Settings** tab, "裝置資訊" section.
 |----------|-----|---------|
 | Service | `DiagnosticService.swift` | `DiagnosticService.kt` |
 | UI | `SettingsTab.swift` (lines 92-130) | `InputSettingsScreen.kt` (lines 204-257) |
-| Strings | `SettingsTexts.swift` | `SettingsTexts.kt` |
+| Strings | `SettingsTexts.swift` | `L10n` (generated — settings namespace migrated to i18n codegen) |
 | Pattern | Enum with static methods | Singleton object |

@@ -38,11 +38,11 @@ The pointer hit-box of every key matches the visible bounding box of that key, i
 
 ### `INVARIANT_keyboard_long_press_delay_unchanged`
 
-Long-press popup extension fires at `prefs.longPressDelay` ms after `ACTION_DOWN` (default 500 ms; user-configurable). Special long-press paths — SPACE → IME picker, LANGUAGE_SWITCH → IME picker, DELETE repeat (50 ms repeat after 500 ms initial delay) — preserve their pre-D timings.
+Long-press popup extension fires at `prefs.longPressDelay` ms after `ACTION_DOWN` (default 300 ms; user-configurable). Special long-press paths — SPACE → IME picker, LANGUAGE_SWITCH → IME picker, DELETE repeat (50 ms repeat after 500 ms initial delay) — preserve their pre-D timings.
 
 ### `INVARIANT_keyboard_popup_drag_select_tracks_pointer`
 
-While the extended popup is showing, finger movement across the popup glyph row updates `activeIndex` per `KeyPopupManager.propagateMotionEvent` boundary math (`anchorSide` + `row0count` + `row1count` + `anchorOffset` from `KeyboardLayoutSolver.solveExtendedPopupGeometry`). Y-axis bounds: `event.y < -keyPopupHeight` or `event.y > 0.9f * keyPopupHeight` returns `false` (out of bounds). On `ACTION_UP`, `getActiveKeyData` returns the popup variant at `activeExtIndex`, falling back to `keyView.data` if no variant is active.
+While the extended popup is showing, finger movement across the popup glyph row updates `activeIndex` per `KeyPopupManager.propagateMotionEvent` boundary math (`anchorSide` + `row0count` + `row1count` + `anchorOffset` from `KeyboardLayoutSolver.solveExtendedPopupGeometry`). Y-axis bounds: `event.y < -keyPopupHeight` or `event.y > 0.9f * keyPopupHeight` returns `false` (out of bounds). On `ACTION_UP`, `activeKeyData()` returns the popup variant at `activeExtIndex`, falling back to `anchor.data` if no variant is active.
 
 ### `INVARIANT_keyboard_multi_touch_first_pointer_cancels`
 
@@ -56,7 +56,7 @@ The bottom padding of the keyboard body equals `max(navigationBars.bottom, manda
 
 ### `INVARIANT_keyboard_navbar_dismiss_bug_stays_resolved`
 
-Opening the IME in Discord, Chrome, and any default `WRAP_CONTENT`-host app does not cause an "open then immediately dismiss" cycle. This is the regression surface for the `project_ime_window_arch.md` 3-element hazard (`onConfigureWindow` overridden to `MATCH_PARENT × MATCH_PARENT` + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE`). Phase D removes the `inner_input_view_container.setPadding` workaround AND the `InputView.onApplyWindowInsets` log-only override, replacing them with declarative `WindowInsets`-derived padding inside the Compose `KeyboardImeRoot`.
+Opening the IME in Discord, Chrome, and any default `WRAP_CONTENT`-host app does not cause an "open then immediately dismiss" cycle. This is the regression surface for the `project_ime_window_arch.md` 3-element hazard (`onConfigureWindow` overridden to `MATCH_PARENT × MATCH_PARENT` + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE`). Phase D removed the `inner_input_view_container.setPadding` workaround; `InputView.onApplyWindowInsets` now derives the `WindowInsets`-based bottom padding declaratively (see `INVARIANT_keyboard_navbar_inset_padding_factor`), applied through the Compose `KeyboardImeRoot`.
 
 ### `INVARIANT_keyboard_action_cancel_unconditional_cleanup`
 
@@ -84,7 +84,7 @@ A keyboard press is initiated only on `ACTION_DOWN` / `ACTION_POINTER_DOWN`. If 
 
 ### Tests
 
-- **JVM unit** — `KeyboardLayoutSolverTest` (P2) already pins per-mode key dimensions, popup dimensions, and extended-popup geometry math. Phase D adds `KeyTouchCoordinatorTest` covering single-pointer state, multi-pointer first-cancel, popup-drag boundary checks, and long-press scheduling.
+- **JVM unit** — `KeyboardLayoutSolverTest` (P2) pins key dimensions, popup dimensions, and extended-popup geometry math (container-width-based, mode-agnostic). The `KeyTouchCoordinator` touch state machine (single-pointer state, multi-pointer first-cancel, popup-drag boundary, long-press scheduling) has no JVM test today — covered by the real-device dogfood below.
 - **Real device dogfood (qualitative, per `feedback_perf_gate`)** — S1/S2/S3 sequences plus explicit Discord/Chrome regression check for the dismiss bug.
 - **iOS** — N/A (no iOS mirror; KeyboardKit owns equivalent invariants on the iOS side).
 
