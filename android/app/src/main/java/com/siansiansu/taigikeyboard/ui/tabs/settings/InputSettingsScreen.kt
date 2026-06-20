@@ -41,7 +41,6 @@ import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
@@ -158,7 +157,7 @@ fun InputSettingsScreen(
                 // setting, not per-theme). Mirrors iOS SettingsTab font Section.
                 SettingsCard {
                     SettingNavigationRow(
-                        label = ThemeTexts.customFont,
+                        label = L10n.themeCustomFont,
                         value = fontDisplayName(fontType),
                         onClick = { showFontPicker = true },
                     )

@@ -27,17 +27,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
-import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ColorRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
@@ -99,13 +103,17 @@ fun ThemeEditorScreen(
 
     val onColorsChanged: (KeyboardColorSettings) -> Unit = { draft = draft.copy(colors = it) }
 
+    // Resolver captured for the name-dialog callback (runs outside composition), so the
+    // blank-name fallback resolves under the live display language at save time.
+    val stringResolver by rememberUpdatedState(LocalStringResolver.current)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (editing != null) ThemeTexts.editorTitleEdit else ThemeTexts.editorTitleNew,
+                        text = if (editing != null) L10n.themeEditorTitleEdit else L10n.themeEditorTitleNew,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
@@ -113,7 +121,7 @@ fun ThemeEditorScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = ThemeTexts.editorCancel,
+                            contentDescription = L10n.commonCancel,
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -130,7 +138,7 @@ fun ThemeEditorScreen(
                             }
                         },
                     ) {
-                        Text(ThemeTexts.editorSave)
+                        Text(L10n.themeEditorSave)
                     }
                 },
                 colors =
@@ -154,11 +162,11 @@ fun ThemeEditorScreen(
                         .padding(horizontal = 20.dp)
                         .padding(top = 16.dp, bottom = 24.dp),
             ) {
-                SectionHeader(ThemeTexts.keyboardSection)
+                SectionHeader(L10n.themeKeyboardSection)
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         ColorSettingRow(
-                            label = ThemeTexts.colorKeyboardBackground,
+                            labelKey = StringKey.THEME_COLOR_KEYBOARD_BACKGROUND,
                             currentColor = draft.colors.backgroundColor,
                             colors = draft.colors,
                             onUpdate = { c, v -> c.copy(backgroundColor = v) },
@@ -167,7 +175,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
-                            label = ThemeTexts.keyHeight,
+                            label = L10n.themeKeyHeight,
                             value = draft.keyHeightScale,
                             valueFrom = SCALE_MIN,
                             valueTo = SCALE_MAX,
@@ -180,11 +188,11 @@ fun ThemeEditorScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(ThemeTexts.colorKeySection)
+                SectionHeader(L10n.themeColorKeySection)
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         ColorSettingRow(
-                            label = ThemeTexts.colorKeyText,
+                            labelKey = StringKey.THEME_COLOR_KEY_TEXT,
                             currentColor = draft.colors.keyTextColor,
                             colors = draft.colors,
                             onUpdate = { c, v -> c.copy(keyTextColor = v) },
@@ -193,7 +201,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         ColorSettingRow(
-                            label = ThemeTexts.colorNormalKeyFill,
+                            labelKey = StringKey.THEME_COLOR_NORMAL_KEY_FILL,
                             currentColor = draft.colors.normalKeyFillColor,
                             colors = draft.colors,
                             onUpdate = { c, v -> c.copy(normalKeyFillColor = v) },
@@ -202,7 +210,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         ColorSettingRow(
-                            label = ThemeTexts.colorSpecialKeyFill,
+                            labelKey = StringKey.THEME_COLOR_SPECIAL_KEY_FILL,
                             currentColor = draft.colors.specialKeyFillColor,
                             colors = draft.colors,
                             onUpdate = { c, v -> c.copy(specialKeyFillColor = v) },
@@ -211,7 +219,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
-                            label = ThemeTexts.keyFontSize,
+                            label = L10n.themeKeyFontSize,
                             value = draft.keyFontSizeScale,
                             valueFrom = SCALE_MIN,
                             valueTo = SCALE_MAX,
@@ -221,7 +229,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
-                            label = ThemeTexts.keyCornerRadius,
+                            label = L10n.themeKeyCornerRadius,
                             value = draft.keyCornerRadius,
                             valueFrom = 0f,
                             valueTo = CORNER_RADIUS_MAX,
@@ -231,7 +239,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
-                            label = ThemeTexts.keyBorderWidth,
+                            label = L10n.themeKeyBorderWidth,
                             value = draft.keyBorderWidth,
                             valueFrom = 0f,
                             valueTo = BORDER_WIDTH_MAX,
@@ -241,7 +249,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
-                            label = ThemeTexts.keyShadow,
+                            label = L10n.themeKeyShadow,
                             value = draft.keyShadowIntensity,
                             valueFrom = 0f,
                             valueTo = SHADOW_MAX,
@@ -254,11 +262,11 @@ fun ThemeEditorScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(ThemeTexts.candidateSection)
+                SectionHeader(L10n.themeCandidateSection)
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         ColorSettingRow(
-                            label = ThemeTexts.colorCandidateText,
+                            labelKey = StringKey.THEME_COLOR_CANDIDATE_TEXT,
                             currentColor = draft.colors.candidateTextColor,
                             colors = draft.colors,
                             onUpdate = { c, v -> c.copy(candidateTextColor = v) },
@@ -267,7 +275,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         ColorSettingRow(
-                            label = ThemeTexts.colorCandidateBackground,
+                            labelKey = StringKey.THEME_COLOR_CANDIDATE_BACKGROUND,
                             currentColor = draft.colors.candidateBackgroundColor,
                             colors = draft.colors,
                             onUpdate = { c, v -> c.copy(candidateBackgroundColor = v) },
@@ -276,7 +284,7 @@ fun ThemeEditorScreen(
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
-                            label = ThemeTexts.candidateTextSize,
+                            label = L10n.themeCandidateTextSize,
                             value = draft.candidateTextSizeScale,
                             valueFrom = SCALE_MIN,
                             valueTo = SCALE_MAX,
@@ -293,7 +301,7 @@ fun ThemeEditorScreen(
 
                 SettingsCard {
                     ActionRow(
-                        label = ThemeTexts.editorResetAll,
+                        label = L10n.themeEditorResetAll,
                         // Draft-only: resets the appearance, keeps the name, persists nothing
                         // and never touches the applied theme until Save.
                         onClick = { draft = ThemeAppearance.DEFAULT },
@@ -319,7 +327,7 @@ fun ThemeEditorScreen(
 
         colorPickerTarget?.let { target ->
             ColorPickerDialog(
-                title = target.label,
+                title = stringRes(target.labelKey),
                 currentColor = target.currentColor,
                 onDismiss = { colorPickerTarget = null },
                 onColorSelected = { target.onColorSelected(it) },
@@ -332,7 +340,7 @@ fun ThemeEditorScreen(
                 onConfirm = { entered ->
                     showNameDialog = false
                     draftName = entered
-                    val finalName = entered.trim().ifEmpty { ThemeTexts.defaultThemeName }
+                    val finalName = entered.trim().ifEmpty { stringResolver.resolve(StringKey.THEME_DEFAULT_NAME) }
                     if (!onSave(finalName, draft)) showCapDialog = true
                 },
                 onDismiss = { showNameDialog = false },
@@ -342,10 +350,10 @@ fun ThemeEditorScreen(
         if (showCapDialog) {
             AlertDialog(
                 onDismissRequest = { showCapDialog = false },
-                title = { Text(ThemeTexts.capReachedTitle) },
-                text = { Text(ThemeTexts.capReachedMessage) },
+                title = { Text(L10n.themeCapReachedTitle) },
+                text = { Text(L10n.themeCapReachedMessage) },
                 confirmButton = {
-                    TextButton(onClick = { showCapDialog = false }) { Text(ThemeTexts.capReachedOK) }
+                    TextButton(onClick = { showCapDialog = false }) { Text(L10n.commonOk) }
                 },
             )
         }
@@ -361,21 +369,21 @@ private fun ThemeNameDialog(
     var name by rememberSaveable(initialName) { mutableStateOf(initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(ThemeTexts.themeNameHeader) },
+        title = { Text(L10n.themeNameHeader) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
-                placeholder = { Text(ThemeTexts.themeNamePlaceholder) },
+                placeholder = { Text(L10n.themeNamePlaceholder) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name) }) { Text(ThemeTexts.editorSave) }
+            TextButton(onClick = { onConfirm(name) }) { Text(L10n.themeEditorSave) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(ThemeTexts.editorCancel) }
+            TextButton(onClick = onDismiss) { Text(L10n.commonCancel) }
         },
     )
 }
@@ -384,7 +392,7 @@ private fun ThemeNameDialog(
 // since no other screen color-edits anymore.
 @Composable
 private fun ColorSettingRow(
-    label: String,
+    labelKey: StringKey,
     currentColor: Int?,
     colors: KeyboardColorSettings,
     onUpdate: (KeyboardColorSettings, Int?) -> KeyboardColorSettings,
@@ -392,12 +400,14 @@ private fun ColorSettingRow(
     onPickerOpen: (ColorPickerTarget) -> Unit,
 ) {
     ColorRow(
-        label = label,
+        label = stringRes(labelKey),
         color = currentColor,
         onColorClick = {
             onPickerOpen(
                 ColorPickerTarget(
-                    label = label,
+                    // Store the key, not the resolved label, so the picker title live-switches
+                    // with the display language instead of pinning the string captured at open.
+                    labelKey = labelKey,
                     currentColor = currentColor,
                     onColorSelected = { newColor -> onColorsChanged(onUpdate(colors, newColor)) },
                 ),
@@ -408,7 +418,7 @@ private fun ColorSettingRow(
 }
 
 private data class ColorPickerTarget(
-    val label: String,
+    val labelKey: StringKey,
     val currentColor: Int?,
     val onColorSelected: (Int?) -> Unit,
 )

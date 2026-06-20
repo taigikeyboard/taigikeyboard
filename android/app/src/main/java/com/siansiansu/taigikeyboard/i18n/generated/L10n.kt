@@ -136,4 +136,78 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_EMAIL)
     val settingsOpenApp: String
         @Composable get() = stringRes(StringKey.SETTINGS_OPEN_APP)
+    val themeCustomFont: String
+        @Composable get() = stringRes(StringKey.THEME_CUSTOM_FONT)
+    val themeCustomThemesSection: String
+        @Composable get() = stringRes(StringKey.THEME_CUSTOM_THEMES_SECTION)
+    val themeCreateNewTheme: String
+        @Composable get() = stringRes(StringKey.THEME_CREATE_NEW_THEME)
+    val themeKeyboardSection: String
+        @Composable get() = stringRes(StringKey.THEME_KEYBOARD_SECTION)
+    val themeColorKeySection: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_KEY_SECTION)
+    val themeCandidateSection: String
+        @Composable get() = stringRes(StringKey.THEME_CANDIDATE_SECTION)
+    val themeColorKeyboardBackground: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_KEYBOARD_BACKGROUND)
+    val themeColorKeyText: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_KEY_TEXT)
+    val themeColorNormalKeyFill: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_NORMAL_KEY_FILL)
+    val themeColorSpecialKeyFill: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_SPECIAL_KEY_FILL)
+    val themeColorCandidateText: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_CANDIDATE_TEXT)
+    val themeColorCandidateBackground: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_CANDIDATE_BACKGROUND)
+    val themeKeyHeight: String
+        @Composable get() = stringRes(StringKey.THEME_KEY_HEIGHT)
+    val themeKeyFontSize: String
+        @Composable get() = stringRes(StringKey.THEME_KEY_FONT_SIZE)
+    val themeCandidateTextSize: String
+        @Composable get() = stringRes(StringKey.THEME_CANDIDATE_TEXT_SIZE)
+    val themeKeyCornerRadius: String
+        @Composable get() = stringRes(StringKey.THEME_KEY_CORNER_RADIUS)
+    val themeKeyBorderWidth: String
+        @Composable get() = stringRes(StringKey.THEME_KEY_BORDER_WIDTH)
+    val themeKeyShadow: String
+        @Composable get() = stringRes(StringKey.THEME_KEY_SHADOW)
+    val themeEditorTitleNew: String
+        @Composable get() = stringRes(StringKey.THEME_EDITOR_TITLE_NEW)
+    val themeEditorTitleEdit: String
+        @Composable get() = stringRes(StringKey.THEME_EDITOR_TITLE_EDIT)
+    val themeNameHeader: String
+        @Composable get() = stringRes(StringKey.THEME_NAME_HEADER)
+    val themeNamePlaceholder: String
+        @Composable get() = stringRes(StringKey.THEME_NAME_PLACEHOLDER)
+    val themeEditorSave: String
+        @Composable get() = stringRes(StringKey.THEME_EDITOR_SAVE)
+    val themeEditorResetAll: String
+        @Composable get() = stringRes(StringKey.THEME_EDITOR_RESET_ALL)
+    val themeDefaultName: String
+        @Composable get() = stringRes(StringKey.THEME_DEFAULT_NAME)
+    val themeCardMenuApply: String
+        @Composable get() = stringRes(StringKey.THEME_CARD_MENU_APPLY)
+    val themeCardMenuEdit: String
+        @Composable get() = stringRes(StringKey.THEME_CARD_MENU_EDIT)
+    val themeCardMenuDelete: String
+        @Composable get() = stringRes(StringKey.THEME_CARD_MENU_DELETE)
+    val themeCapReachedTitle: String
+        @Composable get() = stringRes(StringKey.THEME_CAP_REACHED_TITLE)
+    val themeCapReachedMessage: String
+        @Composable get() = stringRes(StringKey.THEME_CAP_REACHED_MESSAGE)
+    val themeCardMenu: String
+        @Composable get() = stringRes(StringKey.THEME_CARD_MENU)
+    val themeColorPickerGrid: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_PICKER_GRID)
+    val themeColorPickerSpectrum: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_PICKER_SPECTRUM)
+    val themeColorPickerSliders: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_PICKER_SLIDERS)
+    val themeColorRed: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_RED)
+    val themeColorGreen: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_GREEN)
+    val themeColorBlue: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_BLUE)
 }

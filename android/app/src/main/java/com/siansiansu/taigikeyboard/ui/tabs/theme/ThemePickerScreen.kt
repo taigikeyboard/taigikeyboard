@@ -57,12 +57,14 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.BuiltInTheme
 import com.siansiansu.taigikeyboard.ime.core.BuiltInThemes
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -71,7 +73,6 @@ import com.siansiansu.taigikeyboard.ime.core.ThemeId
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeStore
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
-import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.settings.ThemeEditorActivity
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
@@ -140,7 +141,7 @@ fun ThemePickerScreen(prefs: PrefHelper) {
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = ThemeTexts.tabTitle,
+                        text = stringResource(R.string.tab_theme),
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },
@@ -200,7 +201,7 @@ private fun CustomThemeShelf(
     onEdit: (UserTheme) -> Unit,
     onDelete: (UserTheme) -> Unit,
 ) {
-    SectionHeader(ThemeTexts.customThemesSection)
+    SectionHeader(L10n.themeCustomThemesSection)
     Row(
         modifier =
             Modifier
@@ -219,9 +220,9 @@ private fun CustomThemeShelf(
                 onClick = { onApply(theme.id) },
                 menuActions =
                     listOf(
-                        ThemeCardAction(ThemeTexts.themeMenuApply) { onApply(theme.id) },
-                        ThemeCardAction(ThemeTexts.themeMenuEdit) { onEdit(theme) },
-                        ThemeCardAction(ThemeTexts.themeMenuDelete, isDestructive = true) { onDelete(theme) },
+                        ThemeCardAction(L10n.themeCardMenuApply) { onApply(theme.id) },
+                        ThemeCardAction(L10n.themeCardMenuEdit) { onEdit(theme) },
+                        ThemeCardAction(L10n.themeCardMenuDelete, isDestructive = true) { onDelete(theme) },
                     ),
                 preview = { CustomThemeButtonPreview(theme.appearance) },
             )
@@ -383,7 +384,7 @@ private fun ThemeCardMenu(actions: List<ThemeCardAction>) {
         IconButton(onClick = { expanded = true }, modifier = Modifier.size(28.dp)) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = ThemeTexts.themeMenu,
+                contentDescription = L10n.themeCardMenu,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -439,7 +440,7 @@ private fun CreateNewThemeCard(onClick: () -> Unit) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = ThemeTexts.createNewTheme,
+                        contentDescription = L10n.themeCreateNewTheme,
                         modifier = Modifier.size(28.dp),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
@@ -450,7 +451,7 @@ private fun CreateNewThemeCard(onClick: () -> Unit) {
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = ThemeTexts.createNewTheme,
+            text = L10n.themeCreateNewTheme,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,

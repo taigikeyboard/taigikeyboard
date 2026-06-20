@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
-import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader.FontType
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -50,7 +49,7 @@ fun FontPickerContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = ThemeTexts.customFont,
+                        text = L10n.themeCustomFont,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },

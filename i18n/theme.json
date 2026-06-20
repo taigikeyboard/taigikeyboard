@@ -1,0 +1,190 @@
+{
+  "namespace": "theme",
+  "keys": {
+    "customFont": {
+      "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). iOS keeps the same label in ThemeTexts.swift.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "字型設定" }
+    },
+    "customThemesSection": {
+      "comment": "Section header above the custom-theme shelf in the theme picker.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "自訂主題" }
+    },
+    "createNewTheme": {
+      "comment": "Label + content description for the create-new-theme card on the theme picker shelf.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "新主題…" }
+    },
+    "keyboardSection": {
+      "comment": "Theme editor section header: the keyboard-surface group (background color + key height).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "齒盤介面" }
+    },
+    "colorKeySection": {
+      "comment": "Theme editor section header: the key-surface group (key colors + sizing).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "揤鈕介面" }
+    },
+    "candidateSection": {
+      "comment": "Theme editor section header: the candidate-bar group (candidate colors + text size).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "候選詞介面" }
+    },
+    "colorKeyboardBackground": {
+      "comment": "Theme editor color-row label: the keyboard background color.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "齒盤色水" }
+    },
+    "colorKeyText": {
+      "comment": "Theme editor color-row label: the key glyph (text) color.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "揤鈕文字" }
+    },
+    "colorNormalKeyFill": {
+      "comment": "Theme editor color-row label: the fill color of normal (letter) keys.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "一般揤鈕色水" }
+    },
+    "colorSpecialKeyFill": {
+      "comment": "Theme editor color-row label: the fill color of special (function) keys.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "特殊揤鈕色水" }
+    },
+    "colorCandidateText": {
+      "comment": "Theme editor color-row label: the candidate text color.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "候選詞文字" }
+    },
+    "colorCandidateBackground": {
+      "comment": "Theme editor color-row label: the candidate-bar background color.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "候選詞背景" }
+    },
+    "keyHeight": {
+      "comment": "Theme editor slider label: keyboard height scale.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "齒盤懸度" }
+    },
+    "keyFontSize": {
+      "comment": "Theme editor slider label: key glyph font size.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "揤鈕字大細" }
+    },
+    "candidateTextSize": {
+      "comment": "Theme editor slider label: candidate text size.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "候選詞大細" }
+    },
+    "keyCornerRadius": {
+      "comment": "Theme editor slider label: key corner radius.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "揤鈕圓角" }
+    },
+    "keyBorderWidth": {
+      "comment": "Theme editor slider label: key border width.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "揤鈕邊粗幼" }
+    },
+    "keyShadow": {
+      "comment": "Theme editor slider label: key shadow intensity.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "揤鈕陰影" }
+    },
+    "editorTitleNew": {
+      "comment": "Theme editor top-bar title in create mode.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "新主題" }
+    },
+    "editorTitleEdit": {
+      "comment": "Theme editor top-bar title in edit mode.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "編輯主題" }
+    },
+    "nameHeader": {
+      "comment": "Theme name dialog header.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "主題名稱" }
+    },
+    "namePlaceholder": {
+      "comment": "Theme name dialog text-field placeholder.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "輸入主題名稱" }
+    },
+    "editorSave": {
+      "comment": "Theme editor / name dialog save button.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "儲存" }
+    },
+    "editorResetAll": {
+      "comment": "Theme editor button: reset the draft appearance back to defaults.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "恢復預設設定" }
+    },
+    "defaultName": {
+      "comment": "Fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "新主題" }
+    },
+    "cardMenuApply": {
+      "comment": "Custom-theme card action-menu item: apply this theme.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "套用" }
+    },
+    "cardMenuEdit": {
+      "comment": "Custom-theme card action-menu item: edit this theme.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "編輯" }
+    },
+    "cardMenuDelete": {
+      "comment": "Custom-theme card action-menu item: delete this theme.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "刪除" }
+    },
+    "capReachedTitle": {
+      "comment": "Title of the alert shown when the custom-theme count cap (5) is reached.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "已達主題數量上限" }
+    },
+    "capReachedMessage": {
+      "comment": "Body of the custom-theme cap-reached alert (cap is UserThemeStore.MAX_USER_THEMES = 5).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。" }
+    },
+    "cardMenu": {
+      "comment": "Accessibility content description for the custom-theme card's action-menu button. Android-only (iOS has no equivalent a11y label).",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "主題選項" }
+    },
+    "colorPickerGrid": {
+      "comment": "Color picker dialog tab label: the swatch-grid picker. Android-only (iOS uses a native color picker).",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "格仔" }
+    },
+    "colorPickerSpectrum": {
+      "comment": "Color picker dialog tab label: the spectrum picker. Android-only.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "光譜" }
+    },
+    "colorPickerSliders": {
+      "comment": "Color picker dialog tab label: the RGB sliders picker. Android-only.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "滑桿" }
+    },
+    "colorRed": {
+      "comment": "Color picker RGB slider label: red channel. Android-only.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "紅色" }
+    },
+    "colorGreen": {
+      "comment": "Color picker RGB slider label: green channel. Android-only.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "綠色" }
+    },
+    "colorBlue": {
+      "comment": "Color picker RGB slider label: blue channel. Android-only.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "藍色" }
+    }
+  }
+}
