@@ -6,7 +6,7 @@ DICT := dictionary
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test test-crate doc dict help \
+.PHONY: build test test-crate doc dict dogfood help \
         fmt fmt-check lint \
         fmt-rust fmt-check-rust lint-rust \
         fmt-swift fmt-check-swift \
@@ -52,6 +52,12 @@ doc:
 dict:
 	bash $(DICT)/run.sh
 	bash $(DICT)/build.sh
+
+# Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
+# built dictionary.csv. Random each run; prints to stdout for manual on-device
+# testing. Requires `make dict` to have produced dictionary/output/dictionary.csv.
+dogfood:
+	python3 $(DICT)/tools/gen_dogfood.py
 
 # ---------------------------------------------------------------------------
 # Formatting & lint
@@ -114,6 +120,7 @@ help:
 	@echo "  make test-crate         cargo test -p \$$CRATE (touched-target round workflow)"
 	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"
 	@echo "  make dict               Full dictionary regen + deploy to Android/iOS"
+	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
