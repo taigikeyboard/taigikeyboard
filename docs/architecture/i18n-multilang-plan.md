@@ -138,10 +138,10 @@ Net: the app leans on native resource machinery for 3 of 5 languages; the only c
 
 A static `L10n.foo` getter does NOT tell SwiftUI/Compose to refresh → switching language could leave a screen mixing old/new text until a view rebuild / Activity restart / extension restart.
 
-- iOS: app-root **observable locale state** injected via SwiftUI environment; the resolver itself stateless. Do NOT re-add per-view `@StateObject` wrappers (the Stage-7 boilerplate).
-- Android: prefer `setApplicationLocales()`; for TL/POJ custom resource context, drive via root state / `CompositionLocal`.
-- Keyboard extension is a **separate process/lifecycle** — needs its own defined update contract.
-- **Gate**: build a root-to-leaf reactive prototype proving live-switch for BOTH host app and extension **before P1 closes**.
+- iOS: app-root **observable locale state** + a **per-bundle `.lproj` override** (`Text(key, bundle:)`). ⚠ `.environment(\.locale,…)` does NOT switch string tables (formatting only) — see *Verified platform mechanisms* below. Do NOT re-add per-view `@StateObject` wrappers (the Stage-7 boilerplate).
+- Android: ⚠ NOT `setApplicationLocales()` for TL/POJ (it strips `-x-` private-use subtags). Use the florisboard model — `DisplayLanguage` enum in DataStore → `createConfigurationContext` Context held as Compose state → `LocalResourcesContext` + custom `stringRes()`. See *Verified platform mechanisms* below.
+- Keyboard extension: iOS = **separate process** (App Group `UserDefaults` channel); Android IME = **same process** (reuse the existing `onCreateInputView()` rebuild). Each needs its own update contract.
+- **Gate**: a root-to-leaf reactive prototype proving live-switch for host + extension — pulled into its own **R1 spike, Android-first, BEFORE P1** (see *Execution rollout*).
 
 ---
 
@@ -228,3 +228,63 @@ Verdicts folded in above: D1 CONFIRM / D2 REFUTE (→ hybrid native resources) /
 - TL→POJ converter: `taigi-converter/` (`src/converter.js:9`, `:39`)
 - Android in-app language: `AppCompatDelegate.setApplicationLocales()` (developer.android.com app-languages)
 - Process: `~/.claude/rules/planning.md`, `.claude/rules/cross-platform-alignment.md`
+
+---
+
+## Verified platform mechanisms (grounded in authoritative docs, 2026-06-20)
+
+> Verified via `find-docs` / `ctx7` + Apple & Android official docs + local KeyboardKit 9.9.0 source + `references/florisboard` / `references/azooKey`, per `.claude/rules/doc-lookup.md`. **Supersedes any earlier API speculation in Decisions 2 & 7.** Method = 3 parallel research agents (iOS API / Android API / reference-IME + codegen grounding).
+
+### iOS (Swift / SwiftUI / KeyboardKit 9.9, iOS 26.1)
+
+- ⚠ **CRITICAL CORRECTION (D7)**: `.environment(\.locale, Locale(identifier:))` does **NOT** switch which string table `Text("key")` reads — it drives **formatting only** (number / date / measurement / collation). String-table selection is a separate path. Source: Apple `EnvironmentValues.locale` + `Bundle.localizedString(forKey:value:table:)` (takes no `Locale`). Relying on environment-locale for UI language is the #1 trap.
+- **String-table selection = per-bundle `.lproj` override**: resolve a per-language `Bundle(path: Bundle.main.path(forResource: <full-identifier>, ofType: "lproj"))` and read every string via `Text(key, bundle: chosenBundle)` / `NSLocalizedString(_, bundle:)`. Works for private-use tags (lookup is by raw identifier string, no OS-locale validation). This is the **same pattern KeyboardKit itself uses** (`references/keyboardkit9.9.0/.../Bundle+Locale.swift:23-27`). Preferred over the `AppleLanguages` UserDefaults + `Bundle` swizzle approach (no swizzling).
+- **`.xcstrings` String Catalog** is the source resource (compiles to per-locale `.lproj` at build; runtime lookup identical to legacy). Holds arbitrary locale keys incl. private-use. azooKey confirms it works in an iOS IME (`Localizable.xcstrings`, dual-target Resources membership).
+- **`CFBundleLocalizations`** (Info.plist) is **mandatory** to make `nan-Latn-TW-x-tailo` / `nan-Latn-TW-x-poj` resolvable; `knownRegions` must also be extended. **USER-only edit** (Core Principle #1).
+- Name each `.lproj` by the **full identifier** (`nan-Latn-TW-x-tailo.lproj`) — KeyboardKit/Foundation only does identifier→languageCode fallback, will not synthesize the private-use part.
+- **Live switch** = root `@Observable` language store → computed per-language `Bundle`; publishing a change re-renders the tree, no restart. Set `\.locale` additionally for number/date formatting.
+- **Extension** (separate process from host) follows the host via **App Group shared `UserDefaults(suiteName:)`**; mirrors the same bundle resolver; sets `KeyboardContext.locale` for KeyboardKit's own keycap labels. Add the `.xcstrings` to BOTH targets' Resources phases (each target compiles its own copy — azooKey pattern; no App Group needed for the strings themselves).
+
+### Android (Kotlin / Compose / FlorisBoard base; minSdk 28, AppCompat 1.7.1, Compose BOM 2026.01.01)
+
+- ⚠ **`AppCompatDelegate.setApplicationLocales()` is the WRONG tool for TL/POJ**: `LocaleList` normalization strips `-x-` private-use subtags, and the system per-app-language picker only surfaces real OS locales. Verified limitation.
+- **Resource qualifier dirs cannot encode `-x-` private-use** → cannot split TL vs POJ as two `values-b+nan+Latn+TW+x+…` dirs.
+- **VERIFIED model (florisboard, the app's base)**: identity = app-level `DisplayLanguage` enum in **DataStore** (NOT `setApplicationLocales`) → build a localized Context via `createConfigurationContext(Configuration().apply { setLocale(...) })` held as Compose `mutableStateOf` → expose through a `LocalResourcesContext` CompositionLocal + a custom `stringRes()` reading `LocalResourcesContext.current.resources.getString(id)`. Gives **live switch with zero Activity/IME `recreate()`**. Source: `references/florisboard/.../Resources.kt:40-88`, `FlorisAppActivity.kt:99-104`, `OtherScreen.kt:85-148`.
+- **3 real locales** (en/ja/zh-Hant) → native `values/`, `values-ja/`, `values-b+zh+Hant/` (rename legacy `values-zh-rTW/`; `b+` qualifiers are API 24+). **TL/POJ** → an **enum-selected generated string set read by the custom resolver** (not a `values-*` dir, since both map to `nan-Latn-TW` and qualifiers can't split them). This is exactly D2's hybrid.
+- **IME runs in the SAME app process** (not a separate process like the iOS extension — verified `TaigiKeyboard : LifecycleInputMethodService`, no `android:process`). Reuse the existing `onConfigurationChanged` → `onCreateInputView()` / `setInputView()` rebuild hook (`android/.../ime/core/TaigiKeyboard.kt:316`) + collect the same DataStore Flow → recompose the input view. No service restart.
+- **No pbxproj-equivalent blocker** — `build.gradle.kts`, `res/`, and the manifest are all Claude-editable.
+
+### Cross-platform conclusion
+
+D2 (hybrid) and D7 (reactive root state) **CONFIRMED + sharpened**: 3 real locales lean on native resources; TL/POJ resolve through a custom indirection on BOTH platforms (iOS per-bundle `.lproj`; Android `LocalResourcesContext`). **No reference IME implements a non-OS-locale display language** — florisboard/azooKey switch only real locales. So TL/POJ resolution + cross-process live-switch is the genuinely unprecedented part, validating the spike-first gate.
+
+### Codegen (Python, mirrors `dictionary/` convention)
+
+- Tool under `tools/i18n/`; new **`make i18n` target** (mirrors `make dict` — explicit committed output, NOT a per-compile Xcode/Gradle phase, so archive / non-symlink builds stay fresh). POJ-derive (D4) shells out to the Node `taigi-converter` (precedent: `dictionary/common/taigi_bridge.py` Python→Node bridge).
+- Emits: iOS `Localizable.xcstrings` + `L10n.swift` typed accessors (into a synced group → Swift auto-includes, no pbxproj edit); Android `values-*/strings.xml` + a Kotlin accessor object + the TL/POJ generated string maps. `content/*.json` grows `tailo`/`ja`/`en` keys (already symlinked + multilang-shaped — lowest-risk, highest-volume path).
+
+### USER project-config hand-offs (iOS only — Claude cannot edit pbxproj/Info.plist)
+
+1. Add generated `Localizable.xcstrings` to **both** the host app and Keyboard extension Resources build phases (String Catalogs are resources, NOT covered by synced-group Swift auto-include).
+2. Add `CFBundleLocalizations` (the 5 identifiers incl. the two private-use tags) to both `Info.plist`.
+3. Extend `knownRegions`.
+4. Possibly add `.lproj` folder references for the TL/POJ custom-orthography sets.
+
+Android has **no** equivalent gate.
+
+---
+
+## Execution rollout (risk-first sequencing, USER-gated)
+
+Reorders the Phase table for de-risking: the D7 live-switch prototype (the #1 risk) runs as a throwaway spike **before** the P1 infra investment; Android leads because it has no pbxproj gate and its IME (same-process) + host both prove the cross-surface live-switch with full Claude control. iOS follows once USER does the project-config hand-offs.
+
+| Round | Content | Platform | PR boundary | Gate |
+|---|---|---|---|---|
+| **R0** (P0 finish) | 2 wording reconciles (`HomeTexts.kt:15` drop `Android ` → `台語齒盤`; iOS `HomeTexts.swift:288` drop `「」` → `建中整理、提供`); optionally commit the Tier-1 report | iOS + Android | branch + PR, <10 LOC | visual dogfood; no test; Codex sandwich skippable (trivial value swap) |
+| **R1** live-switch spike | Throwaway: root `DisplayLanguage` DataStore state → host (Compose) + IME (same-process) recompose via `LocalResourcesContext` / `createConfigurationContext`, incl. a TL/POJ enum-selected set. 2 strings × 2 langs, hardcoded | **Android first** | scratch / draft PR (not a feature) | **architecture go/no-go** — proves the unprecedented TL/POJ + live-switch part; pass → R2, fail → rethink D2/D7 before any infra |
+| **R1′** iOS spike | Same minimal prototype: `@Observable` store → per-bundle `.lproj` override + `Text(key, bundle:)`; extension reads App Group `UserDefaults` | iOS | scratch | ⛔ BLOCKED on USER pbxproj (`CFBundleLocalizations` + TL/POJ `.lproj`) |
+| **R2** (P1 infra) | `i18n/` JSON schema (1-2 namespaces first: `common` + `settings`) + Python codegen + `make i18n` + native resources + typed accessors + scope-aware key check + pseudo-locale + freshness check; hand-mirror dies incrementally | both (iOS resources USER-gated) | split R2a (codegen + schema + Android) / R2b (iOS); ~300-500 LOC each | spike passed |
+| **R3** (P2) | locale state + persistence + picker (English only) + live-switch wired for real + native plural + dynamic-type / long-string layout + a11y locale | both | vertical slice | completeness + layout + a11y |
+| **R4a/b/c** (P3) | ja (font verify) / TL authoring (Core Principle #3 — never invent TL) / POJ (derive + override + diff review). `content/*.json` per-language authoring rides here | both | one language per round | per-language gate before entering picker |
+
+Only change from the Phase table above: the D7 prototype is pulled out of P1 into its own R1 spike, run **before** P1 infra, Android-first.

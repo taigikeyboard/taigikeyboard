@@ -12,7 +12,7 @@ object HomeTexts {
 
     // MARK: - 頁面標題
 
-    const val appHeaderTitle = "Android 台語齒盤"
+    const val appHeaderTitle = "台語齒盤"
 
     // MARK: - 區塊標題
 
