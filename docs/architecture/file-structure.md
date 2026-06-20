@@ -161,7 +161,7 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 
 | Side | Current state (main) |
 |------|----------------------|
-| Android | Migrated namespaces (common, settings, layout, theme) use generated `i18n/generated/{L10n,StringKey,GeneratedPseudoStrings,GeneratedTaigiStrings}.kt`. Not-yet-migrated namespaces keep `localization/{HomeTexts,DictionaryTexts}.kt`. |
+| Android | Migrated namespaces use generated `i18n/generated/{L10n,StringKey,GeneratedPseudoStrings,GeneratedTaigiStrings}.kt`. Namespaces not yet migrated keep hand-written `localization/*Texts.kt` (set shrinks one namespace per phase — current status in the plan). |
 | iOS | Not migrated (R2b blocked on `.pbxproj` hand-off) — all strings still in `Strings/*Texts.swift` (`Home`, `Layout`, `Theme`, `Dictionary`, `Common`, `Settings`). |
 
 ### Shared Components
@@ -317,7 +317,7 @@ taigikeyboard/
 │       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, NextWordHandler, ToolbarManager
 ├── content/         # ContentResolver entry point
 ├── i18n/generated/  # Generated i18n: L10n, StringKey, GeneratedPseudoStrings, GeneratedTaigiStrings
-├── localization/    # Residual {Home,Dictionary}Texts (pre-migration namespaces) — see i18n-multilang-plan.md
+├── localization/    # Residual hand-written *Texts (namespaces not yet migrated) — see i18n-multilang-plan.md
 ├── settings/        # Activity wrappers (Compose host) + LauncherIconController
 ├── typeface/        # TypefaceLoader (R.font → android.graphics.Typeface)
 ├── ui/
