@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Tests for the i18n codegen core. Run: python3 tools/i18n/test_i18n.py
 
+from __future__ import annotations  # keep `dict | None` annotations importable on system Python 3.9
+
 import json
 import sys
 import tempfile
