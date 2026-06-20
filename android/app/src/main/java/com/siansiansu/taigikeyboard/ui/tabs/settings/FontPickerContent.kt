@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.localization.LayoutTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader.FontType
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
@@ -81,31 +81,31 @@ fun FontPickerContent(
             SettingsCard {
                 Column {
                     FontPickerRow(
-                        label = LayoutTexts.fontSystemDefault,
+                        label = L10n.commonFontSystemDefault,
                         isSelected = fontType == FontType.SYSTEM.value,
                         onClick = { onFontSelected(FontType.SYSTEM.value) },
                     )
                     SettingsDivider()
                     FontPickerRow(
-                        label = LayoutTexts.fontOpenHuninn,
+                        label = L10n.commonFontOpenHuninn,
                         isSelected = fontType == FontType.OPEN_HUNINN.value,
                         onClick = { onFontSelected(FontType.OPEN_HUNINN.value) },
                     )
                     SettingsDivider()
                     FontPickerRow(
-                        label = LayoutTexts.fontIansui,
+                        label = L10n.commonFontIansui,
                         isSelected = fontType == FontType.IANSUI.value,
                         onClick = { onFontSelected(FontType.IANSUI.value) },
                     )
                     SettingsDivider()
                     FontPickerRow(
-                        label = LayoutTexts.fontGenYoMin,
+                        label = L10n.commonFontGenYoMin,
                         isSelected = fontType == FontType.GEN_YO_MIN.value,
                         onClick = { onFontSelected(FontType.GEN_YO_MIN.value) },
                     )
                     SettingsDivider()
                     FontPickerRow(
-                        label = LayoutTexts.fontGenYoGothic,
+                        label = L10n.commonFontGenYoGothic,
                         isSelected = fontType == FontType.GEN_YO_GOTHIC.value,
                         onClick = { onFontSelected(FontType.GEN_YO_GOTHIC.value) },
                     )
@@ -147,12 +147,13 @@ private fun FontPickerRow(
     }
 }
 
+@Composable
 internal fun fontDisplayName(fontType: String): String =
     when (fontType) {
-        FontType.SYSTEM.value -> LayoutTexts.fontSystemDefault
-        FontType.OPEN_HUNINN.value -> LayoutTexts.fontOpenHuninn
-        FontType.IANSUI.value -> LayoutTexts.fontIansui
-        FontType.GEN_YO_MIN.value -> LayoutTexts.fontGenYoMin
-        FontType.GEN_YO_GOTHIC.value -> LayoutTexts.fontGenYoGothic
+        FontType.SYSTEM.value -> L10n.commonFontSystemDefault
+        FontType.OPEN_HUNINN.value -> L10n.commonFontOpenHuninn
+        FontType.IANSUI.value -> L10n.commonFontIansui
+        FontType.GEN_YO_MIN.value -> L10n.commonFontGenYoMin
+        FontType.GEN_YO_GOTHIC.value -> L10n.commonFontGenYoGothic
         else -> fontType
     }

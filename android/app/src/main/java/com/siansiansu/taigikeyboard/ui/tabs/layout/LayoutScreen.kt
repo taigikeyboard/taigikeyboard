@@ -44,12 +44,15 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.LayoutTexts
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
@@ -57,21 +60,21 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 private data class LayoutOption(
     val key: String,
-    val label: String,
+    val labelKey: StringKey,
     @param:DrawableRes val previewRes: Int,
 )
 
 private val romanizationLayouts =
     listOf(
-        LayoutOption("phahTaigi", LayoutTexts.phahTaigiLayout, R.drawable.layout_phahtaigi_preview),
-        LayoutOption("qwerty", LayoutTexts.standardLayout, R.drawable.layout_standard_preview),
-        LayoutOption("moe1", LayoutTexts.moe1Layout, R.drawable.layout_moe1_preview),
-        LayoutOption("moe2", LayoutTexts.moe2Layout, R.drawable.layout_moe2_preview),
+        LayoutOption("phahTaigi", StringKey.LAYOUT_PHAH_TAIGI_LAYOUT, R.drawable.layout_phahtaigi_preview),
+        LayoutOption("qwerty", StringKey.LAYOUT_STANDARD_LAYOUT, R.drawable.layout_standard_preview),
+        LayoutOption("moe1", StringKey.LAYOUT_MOE1_LAYOUT, R.drawable.layout_moe1_preview),
+        LayoutOption("moe2", StringKey.LAYOUT_MOE2_LAYOUT, R.drawable.layout_moe2_preview),
     )
 
 private val phoneticLayouts =
     listOf(
-        LayoutOption("tps", LayoutTexts.tpsLayout, R.drawable.layout_tps_preview),
+        LayoutOption("tps", StringKey.LAYOUT_TPS_LAYOUT, R.drawable.layout_tps_preview),
     )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,7 +93,7 @@ fun LayoutScreen(prefs: PrefHelper) {
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = LayoutTexts.tabTitle,
+                        text = stringResource(R.string.tab_layout),
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },
@@ -113,7 +116,7 @@ fun LayoutScreen(prefs: PrefHelper) {
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
             LayoutSection(
-                title = LayoutTexts.romanizationKeyboard,
+                title = L10n.layoutRomanizationKeyboard,
                 layouts = romanizationLayouts,
                 selectedLayout = selectedLayout,
                 onLayoutSelected = { prefs.keyboardLayoutType = it },
@@ -123,7 +126,7 @@ fun LayoutScreen(prefs: PrefHelper) {
             Spacer(Modifier.height(24.dp))
 
             LayoutSection(
-                title = LayoutTexts.taigiPhonetic,
+                title = L10n.layoutTaigiPhonetic,
                 layouts = phoneticLayouts,
                 selectedLayout = selectedLayout,
                 onLayoutSelected = { prefs.keyboardLayoutType = it },
@@ -154,7 +157,7 @@ private fun LayoutSection(
     ) {
         layouts.forEachIndexed { index, layout ->
             LayoutCard(
-                label = layout.label,
+                label = stringRes(layout.labelKey),
                 previewRes = layout.previewRes,
                 isSelected = selectedLayout == layout.key,
                 onClick = {

@@ -70,6 +70,31 @@
       "comment": "Display name of the regional accent / pronunciation-variation supplement data source (Android key was khpooDict; canonical name unified with iOS).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "腔口差" }
+    },
+    "fontSystemDefault": {
+      "comment": "Keyboard font option: the OS system default typeface.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "系統" }
+    },
+    "fontOpenHuninn": {
+      "comment": "Keyboard font option: JF Open Huninn (粉圓) typeface.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "粉圓" }
+    },
+    "fontIansui": {
+      "comment": "Keyboard font option: Iansui (芫荽) typeface.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "芫荽" }
+    },
+    "fontGenYoMin": {
+      "comment": "Keyboard font option: GenYoMin (源樣明體) serif typeface.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "源樣明體" }
+    },
+    "fontGenYoGothic": {
+      "comment": "Keyboard font option: GenYoGothic (源樣烏體) sans-serif typeface.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "源樣烏體" }
     }
   }
 }

@@ -5,12 +5,15 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.FrameLayout
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -75,19 +78,26 @@ class LayoutSelectionOverlayView : FrameLayout {
         composeView?.setContent {
             TaigiKeyboardTheme {
                 val trigger by refreshTrigger
-                LayoutOverlayContent(
-                    appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
-                    selectedKey = remember(trigger) { prefs.keyboardLayoutType },
-                    resetKey = trigger,
-                    onLayoutSelected = { key ->
-                        // Persist BEFORE notifying so onKeyboardLayoutTypeChanged sees the new pref.
-                        prefs.keyboardLayoutType = key
-                        onLayoutSelected?.invoke(key)
-                        // The registered callback already hides synchronously; this defensive close
-                        // covers a null callback so the overlay still collapses on selection.
-                        hide()
-                    },
-                )
+                // i18n live-switch: the IME (same process) follows the SAME DataStore tag the host
+                // writes, so a host-side change recomposes this overlay live (no IME service restart).
+                val displayLanguageTag by prefs
+                    .observeDisplayLanguage()
+                    .collectAsState(initial = prefs.displayLanguageTag)
+                ProvideDisplayLanguage(DisplayLanguage.fromTag(displayLanguageTag)) {
+                    LayoutOverlayContent(
+                        appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
+                        selectedKey = remember(trigger) { prefs.keyboardLayoutType },
+                        resetKey = trigger,
+                        onLayoutSelected = { key ->
+                            // Persist BEFORE notifying so onKeyboardLayoutTypeChanged sees the new pref.
+                            prefs.keyboardLayoutType = key
+                            onLayoutSelected?.invoke(key)
+                            // The registered callback already hides synchronously; this defensive close
+                            // covers a null callback so the overlay still collapses on selection.
+                            hide()
+                        },
+                    )
+                }
             }
         }
     }

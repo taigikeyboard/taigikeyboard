@@ -60,7 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
 import androidx.core.graphics.toColorInt
-import com.siansiansu.taigikeyboard.localization.LayoutTexts
+import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
@@ -157,9 +157,9 @@ fun ColorPickerDialog(
 
             val tabLabels =
                 listOf(
-                    LayoutTexts.colorPickerGrid,
-                    LayoutTexts.colorPickerSpectrum,
-                    LayoutTexts.colorPickerSliders,
+                    ThemeTexts.colorPickerGrid,
+                    ThemeTexts.colorPickerSpectrum,
+                    ThemeTexts.colorPickerSliders,
                 )
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 tabLabels.forEachIndexed { index, label ->
@@ -412,7 +412,7 @@ private fun ColorSlidersContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         GradientColorSlider(
-            label = LayoutTexts.colorRed,
+            label = ThemeTexts.colorRed,
             value = r / 255f,
             trackColors =
                 listOf(
@@ -423,7 +423,7 @@ private fun ColorSlidersContent(
             onValueChange = { onColorChanged(AndroidColor.rgb((it * 255).toInt(), g, b)) },
         )
         GradientColorSlider(
-            label = LayoutTexts.colorGreen,
+            label = ThemeTexts.colorGreen,
             value = g / 255f,
             trackColors =
                 listOf(
@@ -434,7 +434,7 @@ private fun ColorSlidersContent(
             onValueChange = { onColorChanged(AndroidColor.rgb(r, (it * 255).toInt(), b)) },
         )
         GradientColorSlider(
-            label = LayoutTexts.colorBlue,
+            label = ThemeTexts.colorBlue,
             value = b / 255f,
             trackColors =
                 listOf(

@@ -47,27 +47,29 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.localization.LayoutTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 
 private data class LayoutOption(
     val key: String,
-    val label: String,
+    val labelKey: StringKey,
     @DrawableRes val previewRes: Int,
 )
 
 // Section 1 — romanization keyboards (matches iOS LayoutSelectionOverlay).
 private val RomanizationLayouts =
     listOf(
-        LayoutOption("phahTaigi", LayoutTexts.phahTaigiLayout, R.drawable.layout_phahtaigi_preview),
-        LayoutOption("qwerty", LayoutTexts.standardLayout, R.drawable.layout_standard_preview),
-        LayoutOption("moe1", LayoutTexts.moe1Layout, R.drawable.layout_moe1_preview),
-        LayoutOption("moe2", LayoutTexts.moe2Layout, R.drawable.layout_moe2_preview),
+        LayoutOption("phahTaigi", StringKey.LAYOUT_PHAH_TAIGI_LAYOUT, R.drawable.layout_phahtaigi_preview),
+        LayoutOption("qwerty", StringKey.LAYOUT_STANDARD_LAYOUT, R.drawable.layout_standard_preview),
+        LayoutOption("moe1", StringKey.LAYOUT_MOE1_LAYOUT, R.drawable.layout_moe1_preview),
+        LayoutOption("moe2", StringKey.LAYOUT_MOE2_LAYOUT, R.drawable.layout_moe2_preview),
     )
 
 // Section 2 — Taigi phonetic keyboards.
 private val PhoneticLayouts =
     listOf(
-        LayoutOption("tps", LayoutTexts.tpsLayout, R.drawable.layout_tps_preview),
+        LayoutOption("tps", StringKey.LAYOUT_TPS_LAYOUT, R.drawable.layout_tps_preview),
     )
 
 private val CardWidth = 120.dp
@@ -120,10 +122,10 @@ fun LayoutOverlayContent(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 10.dp, bottom = 4.dp),
     ) {
-        SectionHeader(LayoutTexts.romanizationKeyboard, appearance.foreground, topPadding = 0.dp)
+        SectionHeader(L10n.layoutRomanizationKeyboard, appearance.foreground, topPadding = 0.dp)
         LayoutCardRow(RomanizationLayouts, activeKey, appearance, onSelect)
 
-        SectionHeader(LayoutTexts.taigiPhonetic, appearance.foreground, topPadding = 12.dp)
+        SectionHeader(L10n.layoutTaigiPhonetic, appearance.foreground, topPadding = 12.dp)
         LayoutCardRow(PhoneticLayouts, activeKey, appearance, onSelect)
     }
 }
@@ -181,6 +183,7 @@ private fun LayoutCard(
     appearance: KeyboardOverlayAppearance,
     onClick: () -> Unit,
 ) {
+    val label = stringRes(option.labelKey)
     Column(
         modifier =
             Modifier
@@ -197,7 +200,7 @@ private fun LayoutCard(
             Box {
                 Image(
                     painter = painterResource(option.previewRes),
-                    contentDescription = option.label,
+                    contentDescription = label,
                     // FillWidth mirrors the legacy ImageView FIT_CENTER + adjustViewBounds: pin
                     // width to the card, let height follow the preview's aspect ratio.
                     modifier = Modifier.fillMaxWidth(),
@@ -233,7 +236,7 @@ private fun LayoutCard(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = option.label,
+            text = label,
             color = appearance.foreground,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,

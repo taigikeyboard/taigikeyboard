@@ -34,6 +34,30 @@ object L10n {
         @Composable get() = stringRes(StringKey.COMMON_STTI_DICT)
     val commonAccentDict: String
         @Composable get() = stringRes(StringKey.COMMON_ACCENT_DICT)
+    val commonFontSystemDefault: String
+        @Composable get() = stringRes(StringKey.COMMON_FONT_SYSTEM_DEFAULT)
+    val commonFontOpenHuninn: String
+        @Composable get() = stringRes(StringKey.COMMON_FONT_OPEN_HUNINN)
+    val commonFontIansui: String
+        @Composable get() = stringRes(StringKey.COMMON_FONT_IANSUI)
+    val commonFontGenYoMin: String
+        @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_MIN)
+    val commonFontGenYoGothic: String
+        @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_GOTHIC)
+    val layoutRomanizationKeyboard: String
+        @Composable get() = stringRes(StringKey.LAYOUT_ROMANIZATION_KEYBOARD)
+    val layoutTaigiPhonetic: String
+        @Composable get() = stringRes(StringKey.LAYOUT_TAIGI_PHONETIC)
+    val layoutStandardLayout: String
+        @Composable get() = stringRes(StringKey.LAYOUT_STANDARD_LAYOUT)
+    val layoutPhahTaigiLayout: String
+        @Composable get() = stringRes(StringKey.LAYOUT_PHAH_TAIGI_LAYOUT)
+    val layoutTpsLayout: String
+        @Composable get() = stringRes(StringKey.LAYOUT_TPS_LAYOUT)
+    val layoutMoe1Layout: String
+        @Composable get() = stringRes(StringKey.LAYOUT_MOE1_LAYOUT)
+    val layoutMoe2Layout: String
+        @Composable get() = stringRes(StringKey.LAYOUT_MOE2_LAYOUT)
     val probeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.PROBE_APP_HEADER_TITLE)
     val probeLiveSwitchDemo: String

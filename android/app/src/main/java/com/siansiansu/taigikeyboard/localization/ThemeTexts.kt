@@ -60,4 +60,12 @@ object ThemeTexts {
     const val capReachedTitle = "已達主題數量上限"
     const val capReachedMessage = "自訂主題上限是 5 个,請先刪除一个才會使閣新增。"
     const val capReachedOK = "好"
+
+    // Color picker dialog (ColorPickerDialog, opened from the theme editor): tab labels + RGB slider labels.
+    const val colorPickerGrid = "格仔"
+    const val colorPickerSpectrum = "光譜"
+    const val colorPickerSliders = "滑桿"
+    const val colorRed = "紅色"
+    const val colorGreen = "綠色"
+    const val colorBlue = "藍色"
 }
