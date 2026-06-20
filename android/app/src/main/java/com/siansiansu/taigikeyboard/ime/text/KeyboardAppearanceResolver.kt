@@ -10,7 +10,6 @@ import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
 import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardHeightFactor
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 /**
@@ -47,7 +46,7 @@ internal class KeyboardAppearanceResolver(
             isComposing = isComposingProvider(),
             isTranslateSwapped = translateSwappedProvider(),
             imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0,
-            confirmKeyLabel = SettingsTexts.confirmKeyLabel(prefs.inputMode, prefs.isTranslateSwapped),
+            confirmKeyLabel = KeyboardAppearance.confirmKeyLabel(prefs.inputMode, prefs.isTranslateSwapped),
             colorSettings = theme.colors,
             typeface = resolveTypeface(),
             keyFontSizeScale = theme.keyFontSizeScale,

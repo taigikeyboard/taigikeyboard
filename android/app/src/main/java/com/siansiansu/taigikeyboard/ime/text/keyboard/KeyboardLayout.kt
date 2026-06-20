@@ -436,7 +436,20 @@ data class KeyboardAppearance(
      *  per-keystroke recomposition. */
     val heightFactor: KeyboardHeightFactor,
     val keyHeightScale: Float,
-)
+) {
+    companion object {
+        /** Confirm-key label per input mode (used by KeyView). Keycap content, not app chrome — not i18n. */
+        fun confirmKeyLabel(
+            inputMode: String,
+            isTranslateSwapped: Boolean,
+        ): String =
+            when {
+                inputMode == "tps" || isTranslateSwapped -> "選"
+                inputMode == "poj" -> "soán"
+                else -> "suán"
+            }
+    }
+}
 
 /** Detect landscape orientation — used inside [KeyboardImeRoot] when solving
  *  [KeyDimensionsInput.isLandscape] and inside the settings preview panel. */

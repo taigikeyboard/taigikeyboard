@@ -11,15 +11,17 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
@@ -169,12 +171,18 @@ class SettingsMainActivity : AppCompatActivity() {
                             }
 
                             TAB_SETTINGS -> {
+                                // Reset toast fires from a ViewModel completion callback — capture the
+                                // live resolver here, same seam as the R2a-2 dictionary screens.
+                                val stringResolver by rememberUpdatedState(LocalStringResolver.current)
                                 InputSettingsScreen(
                                     prefs = prefs,
                                     diagnosticViewModel = diagnosticViewModel,
                                     onResetSettings = {
                                         resetViewModel.resetAllSettings(prefs) { success ->
-                                            val message = if (success) SettingsTexts.resetSuccess else SettingsTexts.resetFailed
+                                            val message =
+                                                stringResolver.resolve(
+                                                    if (success) StringKey.SETTINGS_RESET_SUCCESS else StringKey.SETTINGS_RESET_FAILED,
+                                                )
                                             Toast
                                                 .makeText(this, message, Toast.LENGTH_SHORT)
                                                 .show()

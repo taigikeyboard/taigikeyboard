@@ -26,17 +26,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.i18n.I18nProbeBar
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.localization.ThemeTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
@@ -115,7 +119,7 @@ fun InputSettingsScreen(
                 LargeTopAppBar(
                     title = {
                         Text(
-                            text = SettingsTexts.tabTitle,
+                            text = stringResource(R.string.tab_settings),
                             style = MaterialTheme.typography.headlineLarge,
                         )
                     },
@@ -142,7 +146,7 @@ fun InputSettingsScreen(
                 I18nProbeBar(prefs)
                 SettingsCard {
                     SettingNavigationRow(
-                        label = SettingsTexts.inputMode,
+                        label = L10n.settingsInputMode,
                         value = inputModeDisplayName(inputMode),
                         onClick = { showInputModePicker = true },
                     )
@@ -162,10 +166,10 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(SettingsTexts.typingSectionTitle)
+                SectionHeader(L10n.settingsTypingSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = SettingsTexts.outputBothScripts,
+                        label = L10n.settingsOutputBothScripts,
                         checked = outputBoth,
                         infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
@@ -175,9 +179,9 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = SettingsTexts.literalRomanCandidate,
+                        label = L10n.settingsLiteralRomanCandidate,
                         checked = literalRomanCandidate,
-                        infoText = SettingsTexts.literalRomanCandidateInfo,
+                        infoText = L10n.settingsLiteralRomanCandidateInfo,
                         onCheckedChange = {
                             literalRomanCandidate = it
                             prefs.literalRomanCandidateEnabled = it
@@ -185,7 +189,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = SettingsTexts.autoCapitalization,
+                        label = L10n.settingsAutoCapitalization,
                         checked = autoCap,
                         infoText = featureSummary(FEATURE_ID_CASE_SWITCH),
                         onCheckedChange = {
@@ -195,7 +199,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = SettingsTexts.autoSpace,
+                        label = L10n.settingsAutoSpace,
                         checked = autoSpace,
                         infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
@@ -207,13 +211,13 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(SettingsTexts.keyboardSectionTitle)
+                SectionHeader(L10n.settingsKeyboardSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = SettingsTexts.toolbarAutoCollapse,
+                        label = L10n.settingsToolbarAutoCollapse,
                         checked = toolbarAutoCollapse,
                         icon = SettingsIcons.toolbar,
-                        infoText = SettingsTexts.toolbarAutoCollapseInfo,
+                        infoText = L10n.settingsToolbarAutoCollapseInfo,
                         onCheckedChange = {
                             toolbarAutoCollapse = it
                             prefs.isToolbarAutoCollapse = it
@@ -221,10 +225,10 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = SettingsTexts.globeKey,
+                        label = L10n.settingsGlobeKey,
                         checked = isGlobeKeyEnabled,
                         icon = SettingsIcons.globe,
-                        infoText = SettingsTexts.globeKeyInfo,
+                        infoText = L10n.settingsGlobeKeyInfo,
                         onCheckedChange = {
                             isGlobeKeyEnabled = it
                             prefs.isGlobeKeyEnabled = it
@@ -234,10 +238,10 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(SettingsTexts.feedbackSectionTitle)
+                SectionHeader(L10n.settingsFeedbackSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = SettingsTexts.soundFeedback,
+                        label = L10n.settingsSoundFeedback,
                         checked = soundFeedback,
                         icon = SettingsIcons.sound,
                         onCheckedChange = {
@@ -247,7 +251,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = SettingsTexts.vibrationFeedback,
+                        label = L10n.settingsVibrationFeedback,
                         checked = vibrationFeedback,
                         icon = SettingsIcons.vibration,
                         onCheckedChange = {
@@ -259,10 +263,10 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(SettingsTexts.pojSettingsSectionTitle)
+                SectionHeader(L10n.settingsPojSettingsSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = SettingsTexts.doubleTapOO,
+                        label = L10n.settingsDoubleTapOO,
                         checked = doubleOO,
                         onCheckedChange = {
                             doubleOO = it
@@ -271,7 +275,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = SettingsTexts.doubleTapNN,
+                        label = L10n.settingsDoubleTapNN,
                         checked = doubleNN,
                         onCheckedChange = {
                             doubleNN = it
@@ -282,12 +286,12 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(SettingsTexts.tpsSettingsSectionTitle)
+                SectionHeader(L10n.settingsTpsSettingsSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = SettingsTexts.tpsOrMapsToER,
+                        label = L10n.settingsTpsOrMapsToER,
                         checked = tpsOrMapsToER,
-                        infoText = SettingsTexts.tpsOrMapsToERInfo,
+                        infoText = L10n.settingsTpsOrMapsToERInfo,
                         onCheckedChange = {
                             tpsOrMapsToER = it
                             prefs.tpsOrMapsToER = it
@@ -303,7 +307,7 @@ fun InputSettingsScreen(
 
                 SettingsCard {
                     ActionRow(
-                        label = SettingsTexts.resetSettings,
+                        label = L10n.settingsResetSettings,
                         onClick = { showResetDialog = true },
                         textColor = MaterialTheme.colorScheme.error,
                     )
@@ -313,9 +317,9 @@ fun InputSettingsScreen(
 
         if (showResetDialog) {
             ConfirmationDialog(
-                title = SettingsTexts.resetSettings,
-                message = SettingsTexts.resetSettingsMessage,
-                confirmLabel = SettingsTexts.reset,
+                title = L10n.settingsResetSettings,
+                message = L10n.settingsResetSettingsMessage,
+                confirmLabel = L10n.settingsReset,
                 dismissLabel = L10n.commonCancel,
                 onConfirm = {
                     showResetDialog = false
@@ -330,10 +334,13 @@ fun InputSettingsScreen(
 @Composable
 private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
     val context = LocalContext.current
-    SectionHeader(SettingsTexts.diagnosticSectionTitle)
+    // Toast strings fire from onClick (outside Composition) — capture the live resolver here
+    // (same seam as the R2a-2 dictionary screens).
+    val stringResolver by rememberUpdatedState(LocalStringResolver.current)
+    SectionHeader(L10n.settingsDiagnosticSectionTitle)
     SettingsCard {
         ActionRow(
-            label = SettingsTexts.diagnosticCopy,
+            label = L10n.settingsDiagnosticCopy,
             icon = Icons.Outlined.ContentCopy,
             onClick = {
                 val info = viewModel.gather()
@@ -341,12 +348,12 @@ private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
                 clipboard.setPrimaryClip(
                     ClipData.newPlainText(DIAGNOSTIC_CLIP_LABEL, info.formatted()),
                 )
-                Toast.makeText(context, SettingsTexts.diagnosticCopied, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, stringResolver.resolve(StringKey.SETTINGS_DIAGNOSTIC_COPIED), Toast.LENGTH_SHORT).show()
             },
         )
         SettingsDivider()
         ActionRow(
-            label = SettingsTexts.diagnosticShare,
+            label = L10n.settingsDiagnosticShare,
             icon = Icons.AutoMirrored.Outlined.OpenInNew,
             textColor = MaterialTheme.colorScheme.primary,
             onClick = {
@@ -362,7 +369,7 @@ private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
         )
         SettingsDivider()
         ActionRow(
-            label = SettingsTexts.diagnosticEmail,
+            label = L10n.settingsDiagnosticEmail,
             icon = Icons.AutoMirrored.Outlined.OpenInNew,
             textColor = MaterialTheme.colorScheme.primary,
             onClick = {
@@ -373,7 +380,7 @@ private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
                 try {
                     context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
                 } catch (_: Exception) {
-                    Toast.makeText(context, SettingsTexts.noEmailApp, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, stringResolver.resolve(StringKey.SETTINGS_NO_EMAIL_APP), Toast.LENGTH_SHORT).show()
                 }
             },
         )

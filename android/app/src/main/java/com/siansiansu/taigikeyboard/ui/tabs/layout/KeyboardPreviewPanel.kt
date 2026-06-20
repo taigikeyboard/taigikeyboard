@@ -52,7 +52,6 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.isLandscape
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 // Live keyboard preview panel with candidate bar for appearance settings
@@ -118,7 +117,7 @@ fun KeyboardPreviewPanel(
             isComposing = false,
             isTranslateSwapped = false,
             imeOptions = EditorInfo.IME_ACTION_NONE,
-            confirmKeyLabel = SettingsTexts.confirmKeyLabel(previewInputMode, false),
+            confirmKeyLabel = KeyboardAppearance.confirmKeyLabel(previewInputMode, false),
             colorSettings = colorSettings,
             typeface = typeface,
             keyFontSizeScale = keyFontSizeScale,

@@ -22,8 +22,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.I18nProbeBar
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import kotlinx.coroutines.delay
@@ -98,7 +98,7 @@ fun SettingsOverlayContent(
         I18nProbeBar(prefs)
         // General settings
         SwitchRow(
-            label = SettingsTexts.outputBothScripts,
+            label = L10n.settingsOutputBothScripts,
             checked = outputBoth,
             icon = SettingsIcons.outputBothScripts,
             iconTint = iconTint,
@@ -111,7 +111,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.literalRomanCandidate,
+            label = L10n.settingsLiteralRomanCandidate,
             checked = literalRomanCandidate,
             icon = SettingsIcons.literalRomanCandidate,
             iconTint = iconTint,
@@ -124,7 +124,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.autoCapitalization,
+            label = L10n.settingsAutoCapitalization,
             checked = autoCap,
             icon = SettingsIcons.autoCapitalization,
             iconTint = iconTint,
@@ -137,7 +137,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.autoSpace,
+            label = L10n.settingsAutoSpace,
             checked = autoSpace,
             icon = SettingsIcons.autoSpace,
             iconTint = iconTint,
@@ -150,7 +150,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.toolbarAutoCollapse,
+            label = L10n.settingsToolbarAutoCollapse,
             checked = toolbarAutoCollapse,
             icon = SettingsIcons.toolbar,
             iconTint = iconTint,
@@ -163,7 +163,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.globeKey,
+            label = L10n.settingsGlobeKey,
             checked = isGlobeKeyEnabled,
             icon = SettingsIcons.globe,
             iconTint = iconTint,
@@ -178,7 +178,7 @@ fun SettingsOverlayContent(
 
         // Feedback settings
         SwitchRow(
-            label = SettingsTexts.soundFeedback,
+            label = L10n.settingsSoundFeedback,
             checked = soundFeedback,
             icon = SettingsIcons.sound,
             iconTint = iconTint,
@@ -191,7 +191,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.vibrationFeedback,
+            label = L10n.settingsVibrationFeedback,
             checked = vibrationFeedback,
             icon = SettingsIcons.vibration,
             iconTint = iconTint,
@@ -206,7 +206,7 @@ fun SettingsOverlayContent(
 
         // POJ settings
         SwitchRow(
-            label = SettingsTexts.doubleTapOO,
+            label = L10n.settingsDoubleTapOO,
             checked = doubleOO,
             onCheckedChange = {
                 doubleOO = it
@@ -217,7 +217,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = SettingsTexts.doubleTapNN,
+            label = L10n.settingsDoubleTapNN,
             checked = doubleNN,
             onCheckedChange = {
                 doubleNN = it
@@ -230,7 +230,7 @@ fun SettingsOverlayContent(
 
         // TPS settings
         SwitchRow(
-            label = SettingsTexts.tpsOrMapsToER,
+            label = L10n.settingsTpsOrMapsToER,
             checked = tpsOrER,
             onCheckedChange = {
                 tpsOrER = it
@@ -252,7 +252,7 @@ fun SettingsOverlayContent(
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             Text(
-                text = SettingsTexts.openApp,
+                text = L10n.settingsOpenApp,
                 color = appearance.accent,
                 fontFamily = fontFamily,
             )

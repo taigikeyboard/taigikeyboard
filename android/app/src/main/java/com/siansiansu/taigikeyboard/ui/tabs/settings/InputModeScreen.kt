@@ -25,21 +25,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
-// Shared input mode key→label pairs, used by InputModeScreen and InputSettingsScreen
-val inputModeOptions =
+// Shared input-mode key→label-key pairs, used by InputModeScreen and InputSettingsScreen.
+// Structural (no resolved strings) so it stays class-load safe; the label is resolved at render.
+val inputModeOptions: List<Pair<String, StringKey>> =
     listOf(
-        "poj" to SettingsTexts.pojMode,
-        "tl" to SettingsTexts.tlMode,
-        "english" to SettingsTexts.englishMode,
-        "tps" to SettingsTexts.tpsMode,
+        "poj" to StringKey.SETTINGS_POJ_MODE,
+        "tl" to StringKey.SETTINGS_TL_MODE,
+        "english" to StringKey.SETTINGS_ENGLISH_MODE,
+        "tps" to StringKey.SETTINGS_TPS_MODE,
     )
 
-fun inputModeDisplayName(mode: String): String = inputModeOptions.firstOrNull { it.first == mode }?.second ?: SettingsTexts.tlMode
+@Composable
+fun inputModeDisplayName(mode: String): String =
+    stringRes(inputModeOptions.firstOrNull { it.first == mode }?.second ?: StringKey.SETTINGS_TL_MODE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +58,7 @@ fun InputModeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(SettingsTexts.inputMode) },
+                title = { Text(L10n.settingsInputMode) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -73,7 +78,7 @@ fun InputModeScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             SettingsCard {
-                inputModeOptions.forEachIndexed { index, (value, text) ->
+                inputModeOptions.forEachIndexed { index, (value, labelKey) ->
                     Row(
                         modifier =
                             Modifier
@@ -84,7 +89,7 @@ fun InputModeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = text,
+                            text = stringRes(labelKey),
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,

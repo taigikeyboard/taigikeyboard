@@ -38,4 +38,78 @@ object L10n {
         @Composable get() = stringRes(StringKey.PROBE_APP_HEADER_TITLE)
     val probeLiveSwitchDemo: String
         @Composable get() = stringRes(StringKey.PROBE_LIVE_SWITCH_DEMO)
+    val settingsReset: String
+        @Composable get() = stringRes(StringKey.SETTINGS_RESET)
+    val settingsInputMode: String
+        @Composable get() = stringRes(StringKey.SETTINGS_INPUT_MODE)
+    val settingsPojMode: String
+        @Composable get() = stringRes(StringKey.SETTINGS_POJ_MODE)
+    val settingsTlMode: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TL_MODE)
+    val settingsEnglishMode: String
+        @Composable get() = stringRes(StringKey.SETTINGS_ENGLISH_MODE)
+    val settingsTpsMode: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TPS_MODE)
+    val settingsTypingSectionTitle: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TYPING_SECTION_TITLE)
+    val settingsOutputBothScripts: String
+        @Composable get() = stringRes(StringKey.SETTINGS_OUTPUT_BOTH_SCRIPTS)
+    val settingsLiteralRomanCandidate: String
+        @Composable get() = stringRes(StringKey.SETTINGS_LITERAL_ROMAN_CANDIDATE)
+    val settingsLiteralRomanCandidateInfo: String
+        @Composable get() = stringRes(StringKey.SETTINGS_LITERAL_ROMAN_CANDIDATE_INFO)
+    val settingsAutoCapitalization: String
+        @Composable get() = stringRes(StringKey.SETTINGS_AUTO_CAPITALIZATION)
+    val settingsAutoSpace: String
+        @Composable get() = stringRes(StringKey.SETTINGS_AUTO_SPACE)
+    val settingsKeyboardSectionTitle: String
+        @Composable get() = stringRes(StringKey.SETTINGS_KEYBOARD_SECTION_TITLE)
+    val settingsToolbarAutoCollapse: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TOOLBAR_AUTO_COLLAPSE)
+    val settingsToolbarAutoCollapseInfo: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TOOLBAR_AUTO_COLLAPSE_INFO)
+    val settingsGlobeKey: String
+        @Composable get() = stringRes(StringKey.SETTINGS_GLOBE_KEY)
+    val settingsGlobeKeyInfo: String
+        @Composable get() = stringRes(StringKey.SETTINGS_GLOBE_KEY_INFO)
+    val settingsFeedbackSectionTitle: String
+        @Composable get() = stringRes(StringKey.SETTINGS_FEEDBACK_SECTION_TITLE)
+    val settingsSoundFeedback: String
+        @Composable get() = stringRes(StringKey.SETTINGS_SOUND_FEEDBACK)
+    val settingsVibrationFeedback: String
+        @Composable get() = stringRes(StringKey.SETTINGS_VIBRATION_FEEDBACK)
+    val settingsPojSettingsSectionTitle: String
+        @Composable get() = stringRes(StringKey.SETTINGS_POJ_SETTINGS_SECTION_TITLE)
+    val settingsDoubleTapOO: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DOUBLE_TAP_O_O)
+    val settingsDoubleTapNN: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DOUBLE_TAP_N_N)
+    val settingsTpsSettingsSectionTitle: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TPS_SETTINGS_SECTION_TITLE)
+    val settingsTpsOrMapsToER: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TPS_OR_MAPS_TO_E_R)
+    val settingsTpsOrMapsToERInfo: String
+        @Composable get() = stringRes(StringKey.SETTINGS_TPS_OR_MAPS_TO_E_R_INFO)
+    val settingsResetSettings: String
+        @Composable get() = stringRes(StringKey.SETTINGS_RESET_SETTINGS)
+    val settingsResetSettingsMessage: String
+        @Composable get() = stringRes(StringKey.SETTINGS_RESET_SETTINGS_MESSAGE)
+    val settingsResetSuccess: String
+        @Composable get() = stringRes(StringKey.SETTINGS_RESET_SUCCESS)
+    val settingsResetFailed: String
+        @Composable get() = stringRes(StringKey.SETTINGS_RESET_FAILED)
+    val settingsNoEmailApp: String
+        @Composable get() = stringRes(StringKey.SETTINGS_NO_EMAIL_APP)
+    val settingsDiagnosticSectionTitle: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_SECTION_TITLE)
+    val settingsDiagnosticCopy: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_COPY)
+    val settingsDiagnosticCopied: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_COPIED)
+    val settingsDiagnosticShare: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_SHARE)
+    val settingsDiagnosticEmail: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_EMAIL)
+    val settingsOpenApp: String
+        @Composable get() = stringRes(StringKey.SETTINGS_OPEN_APP)
 }
