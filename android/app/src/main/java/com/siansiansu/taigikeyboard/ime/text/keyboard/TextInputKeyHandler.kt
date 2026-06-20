@@ -8,6 +8,7 @@ package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.content.Context
 import android.os.Handler
+import android.text.InputType
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -30,6 +31,7 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+import java.text.BreakIterator
 import java.util.Locale
 
 /**
@@ -60,6 +62,12 @@ internal class TextInputKeyHandler(
     companion object {
         private const val TAG = "TextInputKeyHandler"
         private val DOUBLE_SPACE_PERIOD_REGEX = """[.!?‽\s][\s]""".toRegex()
+
+        // UTF-16 look-behind window for last-grapheme deletion. A bounded
+        // heuristic: 64 units covers any practical grapheme cluster (ZWJ family
+        // emoji, flags, skin-tone modifiers) without scanning the whole field on
+        // each backspace. Clusters have no hard length cap; this is pragmatic.
+        private const val GRAPHEME_LOOKBEHIND = 64
     }
 
     // Clears any residual host composing region without committing its
@@ -248,15 +256,7 @@ internal class TextInputKeyHandler(
         }
         logger.debug(TAG) { "[DELETE] deleteBackward=false or composingManager=null" }
 
-        ic.beginBatchEdit()
-        resetComposingText()
-        ic.sendKeyEvent(
-            KeyEvent(
-                KeyEvent.ACTION_DOWN,
-                KeyEvent.KEYCODE_DEL,
-            ),
-        )
-        ic.endBatchEdit()
+        deleteCommittedTextBackward(ic)
 
         // English mode: update candidates after backspace
         if (prefs.inputMode == "english") {
@@ -267,6 +267,45 @@ internal class TextInputKeyHandler(
         // NextWord: re-predict from remaining text
         val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
         smartbarManager.handleBackspaceForNextWord(textBeforeCursor)
+    }
+
+    // Deletes one unit of committed text backward, dispatching by editor
+    // capability. Android contract: raw key events are intended for TYPE_NULL
+    // editors; rich editors delete via InputConnection editing APIs. Rich web
+    // editors (e.g. Gmail Google Chat, inputType TYPE_CLASS_TEXT) silently drop
+    // a synthetic KEYCODE_DEL, so committed-text deletion must use the semantic
+    // path. Mirrors florisboard AbstractEditorInstance, aiongtaigi-sushi, and
+    // MOE Taigi. The composing-delete path is separate (ComposingManager).
+    //
+    // Any stale host composing region is dropped without being committed
+    // (INVARIANT_composing_clear_preedit_does_not_commit): the selection branch's
+    // commitText clears it atomically, the no-selection branch calls
+    // resetComposingText (zero-then-finish) first. The clear is deliberately
+    // skipped when a selection is present — there setComposingText("") would
+    // itself delete the selection and the following delete would double-delete.
+    private fun deleteCommittedTextBackward(ic: InputConnection) {
+        val inputType = taigikeyboard.currentInputEditorInfo?.inputType ?: InputType.TYPE_NULL
+        val isRawEditor = (inputType and InputType.TYPE_MASK_CLASS) == InputType.TYPE_NULL
+        val hasSelection = !isRawEditor && !ic.getSelectedText(0).isNullOrEmpty()
+
+        // Only the no-selection rich path reads cursor context + defensively
+        // clears a stale composing region; TYPE_NULL and selection need neither.
+        val readsContext = !isRawEditor && !hasSelection
+        if (readsContext) resetComposingText()
+        val textBefore =
+            if (readsContext) ic.getTextBeforeCursor(GRAPHEME_LOOKBEHIND, 0)?.toString() else null
+
+        when (val deletion = resolveBackspaceDeletion(inputType, hasSelection, textBefore)) {
+            BackspaceDeletion.RawKeyEvent -> taigikeyboard.sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+            BackspaceDeletion.Selection -> ic.commitText("", 1)
+            BackspaceDeletion.NoOp -> Unit
+            // Editor refused context (some password / custom editors). Code-point
+            // delete keeps surrogate pairs whole; some editors don't implement it
+            // (returns false pre-Android-13), so fall back to UTF-16 delete.
+            BackspaceDeletion.CodePoint ->
+                if (!ic.deleteSurroundingTextInCodePoints(1, 0)) ic.deleteSurroundingText(1, 0)
+            is BackspaceDeletion.Grapheme -> ic.deleteSurroundingText(deletion.length, 0)
+        }
     }
 
     /**
@@ -592,4 +631,61 @@ internal fun isComposingCharacter(char: String): Boolean {
         first == '˪' ||
         first == '˫' ||
         first == '˙'
+}
+
+/**
+ * Backspace deletion action chosen from editor capability + cursor context.
+ * Resolved by [resolveBackspaceDeletion], applied by [TextInputKeyHandler] —
+ * split out so the dispatch table is unit-testable without an InputConnection
+ * mock.
+ */
+internal sealed interface BackspaceDeletion {
+    // TYPE_NULL editor (terminal / some games): raw DOWN+UP key event.
+    object RawKeyEvent : BackspaceDeletion
+
+    // Active selection: replace it with empty text.
+    object Selection : BackspaceDeletion
+
+    // Cursor at field start: nothing to delete.
+    object NoOp : BackspaceDeletion
+
+    // Editor refused to expose context: degraded single code-point delete.
+    object CodePoint : BackspaceDeletion
+
+    // Rich editor: delete the last grapheme cluster ([length] UTF-16 units).
+    data class Grapheme(val length: Int) : BackspaceDeletion
+}
+
+/**
+ * Pure backspace dispatch: maps editor capability + cursor context to a
+ * [BackspaceDeletion]. TYPE_NULL wins first (raw key only), then an active
+ * selection, then the cursor-context cases. Exposed at file scope so pure-JVM
+ * tests lock the table; the InputConnection calls that apply each action stay
+ * dogfood-verified.
+ */
+internal fun resolveBackspaceDeletion(
+    inputType: Int,
+    hasSelection: Boolean,
+    textBefore: String?,
+): BackspaceDeletion =
+    when {
+        (inputType and InputType.TYPE_MASK_CLASS) == InputType.TYPE_NULL -> BackspaceDeletion.RawKeyEvent
+        hasSelection -> BackspaceDeletion.Selection
+        textBefore == null -> BackspaceDeletion.CodePoint
+        textBefore.isEmpty() -> BackspaceDeletion.NoOp
+        else -> BackspaceDeletion.Grapheme(lastGraphemeLength(textBefore))
+    }
+
+/**
+ * UTF-16 length of the last grapheme cluster in [text], for backspace
+ * deletion. [BreakIterator] keeps emoji / ZWJ sequences / combining marks /
+ * flags as one user-perceived character on-device (ICU-backed); code-point
+ * counting would split them. A fresh iterator per call: the type is not
+ * thread-safe.
+ */
+internal fun lastGraphemeLength(text: String): Int {
+    if (text.isEmpty()) return 0
+    val iterator = BreakIterator.getCharacterInstance()
+    iterator.setText(text)
+    return iterator.last() - iterator.previous()
 }
