@@ -62,7 +62,7 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
-        ("3.6.3", "2026/06/19", [
+        ("3.6.3", "2026/06/20", [
             "New: typing a tone in TPS (注音) now shows only that tone's readings, matching TL / POJ; typing without a tone still shows all tones.",
             "New: TPS ninth tone (ˆ) can now be typed via the 9 digit key.",
             "Fixed: TPS words with the ir vowel after ts / tsh / s / j (自 / 事 / 故事) can now be typed.",

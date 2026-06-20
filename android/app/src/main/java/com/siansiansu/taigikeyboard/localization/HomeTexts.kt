@@ -70,7 +70,7 @@ object HomeTexts {
         listOf(
             VersionEntry(
                 "3.6.3",
-                "2026/06/19",
+                "2026/06/20",
                 listOf(
                     "New: typing a tone in TPS (注音) now shows only that tone's readings, matching TL / POJ; typing without a tone still shows all tones.",
                     "New: TPS ninth tone (ˆ) can now be typed via the 9 digit key.",
@@ -78,6 +78,7 @@ object HomeTexts {
                     "Fixed: typing a single initial in TL / POJ / TPS now surfaces common single characters again, not only longer words.",
                     "Fixed: English-mode autocorrect now works on devices without a system spell checker (e.g. some Samsung phones), using a bundled word list.",
                     "Fixed: key-press vibration now follows the in-app vibration toggle even when the system touch-vibration setting is off.",
+                    "Fixed: backspace now deletes text in rich web editors such as Gmail and Google Chat message boxes.",
                     "Changed: the emoji set is refreshed.",
                     "Changed: 顯示羅馬字 (show romanization) now defaults off — turn it on in settings to keep the romanization you type as the first candidate.",
                 ),
