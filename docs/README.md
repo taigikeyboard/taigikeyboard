@@ -44,13 +44,15 @@
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (effect enum, race rules) | Active |
 | `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer) | Active |
+| `architecture/keyboard-body-invariants-android.md` | Android Compose keyboard-body geometry / touch-target invariants (refactor-freeze contract) | Active |
 | `architecture/data-artifacts-portability.md` | Binary artifacts + SQLite portability contract | Active |
+| `architecture/i18n-multilang-plan.md` | App-UI multi-language plan — `i18n/` JSON → codegen resources, multi-PR (in-flight) | Active |
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
 | `architecture/codex-review-2026-04-19.md` | Strategic Codex review of shared-core roadmap | Historical |
 | `architecture/file-structure.md` | File index, directory structure, naming conventions | Reference |
 
-### `ui/` — Presentation & Layout (6)
+### `ui/` — Presentation & Layout (8)
 
 | File | Description | Status |
 |------|-------------|--------|
@@ -60,11 +62,14 @@
 | `ui/device.md` | Device adaptation for iPhone and iPad | Active |
 | `ui/app-ui.md` | Main App UI structure (tabs, settings) | Active |
 | `ui/theme.md` | Theme & styling (colors, fonts, user customization) | Active |
+| `ui/android-theme-port.md` | Android theme-picker port spec (v3.6.2, multi-PR) | Reference |
+| `ui/theme-presets-brainstorm.md` | Theme presets / custom-theme brainstorm (v3.6.2, evolving) | Brainstorm |
 
-### `references/` — External IME Research (5)
+### `references/` — External IME Research (7)
 
 | File | Description | Status |
 |------|-------------|--------|
+| `references/mainstream-ime-comparison.md` | IME comparison index (TL;DR matrix + per-repo cards) — entry point for best-practice cites | Reference |
 | `references/azookey-reference.md` | azooKey research (SwiftUI, Flick, CustardKit) | Reference |
 | `references/khiin-reference.md` | khiin-rs research (DPSegment, Bigram, Trie) | Reference |
 | `references/moe-taigi-reference.md` | MOE Taigi IME analysis (Segmentation, Nail) | Reference |
@@ -85,16 +90,30 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | `reports/2026-04-03-architecture-review.md` | Cross-platform architecture review (B+ baseline) | Historical |
 | `reports/2026-04-18-dynamic-font-download-plan.md` | Forward-looking feature plan | Plan |
 | `reports/2026-05-04-migration-residue.md` | Rust migration residue audit (P1/P2/P3 dimensions) | Historical |
+| `reports/2026-05-11-moe-segmentation-audit.md` | MOE Tâi-gí segmentation architecture/flow audit (read-only) | Historical |
+| `reports/2026-05-18-v3.5.9-refactor-plan-draft.md` | v3.5.9 refactor / maintainability plan (DRAFT, not approved) | Plan |
+| `reports/2026-05-18-v358-refactor-design-spec.md` | v3.5.9 refactor implementation design spec (S0/A2/A1) | Historical |
+| `reports/2026-05-20-triple-index-eval.md` | 三索引 (POJ+TL+TPS first-class lattice) feasibility eval | Historical |
+| `reports/2026-05-20-v359-b-plan.md` | v3.5.9-B dual-index (POJ first-class lattice) plan (Codex-converged v3) | Historical |
+| `reports/2026-06-03-user-data-cross-mode-audit.md` | User-data cross-input-mode + single→triple-index compatibility audit (v3.6.1 fix candidates) | Historical |
+| `reports/2026-06-19-i18n-string-inventory.md` | i18n Tier-1 string inventory + scope classification + divergence audit (frozen) | Historical |
 | `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
 | `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
 
-### `perf/` — Performance Methodology (3)
+### `perf/` — Performance Methodology (4)
 
 | File | Description | Status |
 |------|-------------|--------|
 | `perf/keyboard-baseline-2026-04.md` | iOS keystroke latency methodology | Reference |
 | `perf/extension-memory-2026-04.md` | iOS keyboard-extension memory methodology | Reference |
 | `perf/android-keyboard-baseline-2026-04.md` | Android keystroke latency methodology | Reference |
+| `perf/android-compose-stability.md` | Android Compose stability report generation + decision rule | Reference |
+
+### `releases/` — Per-Release Archives (1)
+
+| File | Description | Status |
+|------|-------------|--------|
+| `releases/v3.5.8/plan.md` | v3.5.8 continuous-input plan & archive (SHIPPED) | Historical |
 
 ### Root — Guides & Planning
 
