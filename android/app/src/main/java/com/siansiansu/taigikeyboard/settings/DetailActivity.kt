@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.ContentType
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
@@ -31,37 +32,39 @@ class DetailActivity : ComponentActivity() {
         setupEdgeToEdge()
 
         setContent {
-            TaigiKeyboardTheme {
-                DetailScreen(
-                    titleKey = titleKey,
-                    contentType = contentType,
-                    contentKeys = contentKeys,
-                    fontFamily = fontFamily,
-                    onNavigationAction = { action ->
-                        when (action) {
-                            ACTION_SETUP_GUIDE -> {
-                                startActivity(Intent(this, SetupGuideActivity::class.java))
-                            }
+            ProvideDisplayLanguage(prefs) {
+                TaigiKeyboardTheme {
+                    DetailScreen(
+                        titleKey = titleKey,
+                        contentType = contentType,
+                        contentKeys = contentKeys,
+                        fontFamily = fontFamily,
+                        onNavigationAction = { action ->
+                            when (action) {
+                                ACTION_SETUP_GUIDE -> {
+                                    startActivity(Intent(this, SetupGuideActivity::class.java))
+                                }
 
-                            ACTION_ABOUT_DEVELOPER -> {
-                                startActivity(
-                                    createIntent(
-                                        this,
-                                        titleKey = ContentType.KEY_ABOUT_DEVELOPER,
-                                        contentType = ContentType.ABOUT_DEVELOPER,
-                                        contentKeys = emptyArray(),
-                                    ),
-                                )
+                                ACTION_ABOUT_DEVELOPER -> {
+                                    startActivity(
+                                        createIntent(
+                                            this,
+                                            titleKey = ContentType.KEY_ABOUT_DEVELOPER,
+                                            contentType = ContentType.ABOUT_DEVELOPER,
+                                            contentKeys = emptyArray(),
+                                        ),
+                                    )
+                                }
                             }
-                        }
-                    },
-                    onExternalUrl = { url ->
-                        startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-                    },
-                    onNavigateBack = {
-                        onBackPressedDispatcher.onBackPressed()
-                    },
-                )
+                        },
+                        onExternalUrl = { url ->
+                            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        },
+                        onNavigateBack = {
+                            onBackPressedDispatcher.onBackPressed()
+                        },
+                    )
+                }
             }
         }
     }

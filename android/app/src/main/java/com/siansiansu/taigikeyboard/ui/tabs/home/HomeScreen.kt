@@ -33,7 +33,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.content.FeatureContent
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
-import com.siansiansu.taigikeyboard.localization.HomeTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.NavigationRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -67,7 +67,7 @@ fun HomeScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = HomeTexts.appHeaderTitle,
+                        text = L10n.homeAppHeaderTitle,
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },
@@ -90,13 +90,13 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
-            SectionHeader(HomeTexts.setupKeyboard)
+            SectionHeader(L10n.homeSetupKeyboard)
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
                 NavigationRow(
                     icon = painterResource(R.drawable.keyboard_24),
-                    label = HomeTexts.setupGuide,
+                    label = L10n.homeSetupGuide,
                     trailingIcon = chevronRight,
                     onClick = onSetupGuide,
                 )
@@ -109,7 +109,7 @@ fun HomeScreen(
             val typingGuideFeatures = features.take(6)
             val settingsFeatures = features.drop(6)
 
-            SectionHeader(HomeTexts.typingGuide)
+            SectionHeader(L10n.homeTypingGuide)
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
@@ -123,7 +123,7 @@ fun HomeScreen(
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            SectionHeader(HomeTexts.newFeatures)
+            SectionHeader(L10n.homeNewFeatures)
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
@@ -141,21 +141,21 @@ fun HomeScreen(
             SettingsCard {
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = HomeTexts.userGuide,
+                    label = L10n.homeUserGuide,
                     labelColor = linkBlue,
                     onClick = { onUrlClick("https://www.taigikeyboard.tw/") },
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = HomeTexts.privacyPolicy,
+                    label = L10n.homePrivacyPolicy,
                     labelColor = linkBlue,
                     onClick = { onUrlClick("https://taigikeyboard.tw/privacypolicy.html") },
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = HomeTexts.rateUs,
+                    label = L10n.homeRateUs,
                     labelColor = linkBlue,
                     onClick = {
                         onUrlClick(
@@ -166,21 +166,21 @@ fun HomeScreen(
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_document),
-                    label = HomeTexts.copyrightNotice,
+                    label = L10n.homeCopyrightNotice,
                     trailingIcon = chevronRight,
                     onClick = onCopyright,
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_info),
-                    label = HomeTexts.aboutDeveloper,
+                    label = L10n.homeAboutDeveloper,
                     trailingIcon = chevronRight,
                     onClick = onAboutDeveloper,
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_history),
-                    label = HomeTexts.versionHistory,
+                    label = L10n.homeVersionHistory,
                     trailingIcon = chevronRight,
                     onClick = onVersionHistory,
                 )
@@ -201,7 +201,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = HomeTexts.version,
+                        text = L10n.homeVersion,
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge,
@@ -216,7 +216,7 @@ fun HomeScreen(
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            SectionHeader(HomeTexts.faq)
+            SectionHeader(L10n.homeFaq)
             Spacer(Modifier.height(8.dp))
 
             val faqs = remember { FeatureContentLoader.loadFAQs(context) }

@@ -5,7 +5,9 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.content.FeatureContent
 import com.siansiansu.taigikeyboard.content.ParagraphAttachment
-import com.siansiansu.taigikeyboard.localization.HomeTexts
+import com.siansiansu.taigikeyboard.content.VersionHistory
+import com.siansiansu.taigikeyboard.i18n.StringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ui.components.resolveDrawableResId
 
 // Detail screen data model and content builders for feature/FAQ/about-developer/version pages
@@ -43,13 +45,14 @@ sealed interface DetailItem {
 }
 
 internal fun buildDetailItems(
+    resolver: StringResolver,
     contentType: String,
     contentKeys: Array<String>,
 ): List<DetailItem> =
     when (contentType) {
-        ContentType.ABOUT_DEVELOPER -> buildAboutDeveloperItems()
+        ContentType.ABOUT_DEVELOPER -> buildAboutDeveloperItems(resolver)
         ContentType.VERSION -> buildVersionItems()
-        else -> buildGenericItems(contentKeys)
+        else -> buildGenericItems(resolver, contentKeys)
     }
 
 internal fun buildContentItems(
@@ -107,33 +110,39 @@ internal fun buildContentItems(
     return items
 }
 
-internal fun getTextByKey(key: String): String? =
+internal fun getTextByKey(
+    resolver: StringResolver,
+    key: String,
+): String? =
     when (key) {
-        ContentType.KEY_ABOUT_DEVELOPER -> HomeTexts.aboutDeveloper
-        ContentType.KEY_VERSION_HISTORY -> HomeTexts.versionHistory
+        ContentType.KEY_ABOUT_DEVELOPER -> resolver.resolve(StringKey.HOME_ABOUT_DEVELOPER)
+        ContentType.KEY_VERSION_HISTORY -> resolver.resolve(StringKey.HOME_VERSION_HISTORY)
         else -> null
     }
 
-private fun buildAboutDeveloperItems(): List<DetailItem> =
+private fun buildAboutDeveloperItems(resolver: StringResolver): List<DetailItem> =
     listOf(
-        DetailItem.Paragraph(HomeTexts.freePromise),
+        DetailItem.Paragraph(resolver.resolve(StringKey.HOME_FREE_PROMISE)),
         DetailItem.ExternalLink(
-            HomeTexts.officialWebsite,
+            resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
             R.drawable.ic_open_in_new,
             "https://www.taigikeyboard.tw/",
         ),
     )
 
 private fun buildVersionItems(): List<DetailItem> =
-    HomeTexts.versionHistoryEntries.map { entry ->
+    VersionHistory.entries.map { entry ->
         DetailItem.VersionCard(entry.version, entry.date, entry.changes)
     }
 
-private fun buildGenericItems(contentKeys: Array<String>): List<DetailItem> {
+private fun buildGenericItems(
+    resolver: StringResolver,
+    contentKeys: Array<String>,
+): List<DetailItem> {
     val items = mutableListOf<DetailItem>()
 
     contentKeys.forEach { key ->
-        val text = getTextByKey(key)
+        val text = getTextByKey(resolver, key)
         if (text != null) {
             items.add(DetailItem.Paragraph(text))
         }

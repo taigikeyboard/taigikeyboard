@@ -31,7 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.content.CopyrightButton
 import com.siansiansu.taigikeyboard.content.CopyrightPage
-import com.siansiansu.taigikeyboard.localization.HomeTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -52,7 +52,7 @@ fun CopyrightScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = HomeTexts.copyrightNotice,
+                        text = L10n.homeCopyrightNotice,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },

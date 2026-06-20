@@ -3,13 +3,23 @@ package com.siansiansu.taigikeyboard.content
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
-import com.siansiansu.taigikeyboard.localization.HomeTexts
 
 // Copyright data for fonts, dictionaries, and data sources displayed in the Home tab
 
 private const val SIL_OFL_LICENSE_URL = "https://openfontlicense.org/"
 private const val CC_BY_SA_4_LICENSE_URL =
     "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
+
+// License identifiers are standardized short codes — language-invariant, never translated (kept as
+// constants rather than i18n keys per the multi-language plan; SPDX-aligned).
+private const val SIL_OPEN_FONT_LICENSE = "SIL Open Font License"
+private const val SIL_OPEN_FONT_LICENSE_11 = "SIL Open Font License 1.1"
+private const val CC_BY_ND_3_TW_LICENSE = "CC BY-ND 3.0 TW"
+private const val CC_BY_4_LICENSE = "CC BY 4.0"
+private const val CC_BY_NC_4_LICENSE = "CC BY-NC 4.0"
+private const val CC0_LICENSE = "CC0"
+private const val CC_BY_NC_SA_3_TW_LICENSE = "CC BY-NC-SA 3.0 TW"
+private const val CC_BY_SA_4_LICENSE = "CC BY-SA 4.0"
 
 data class CopyrightPage(
     val id: Int,
@@ -25,19 +35,19 @@ data class CopyrightButton(
 )
 
 object CopyrightDataSource {
-    // Resolver-driven so the common-namespace strings re-resolve under the active display language.
+    // Resolver-driven so the i18n strings re-resolve under the active display language.
     fun copyrightPages(resolver: StringResolver): List<CopyrightPage> =
         listOf(
             // 字體
             CopyrightPage(
                 id = 0,
-                title = HomeTexts.openFontTitle,
-                description = HomeTexts.openFontCopyright,
-                license = HomeTexts.silOpenFontLicense,
+                title = resolver.resolve(StringKey.COMMON_FONT_OPEN_HUNINN),
+                description = resolver.resolve(StringKey.HOME_OPEN_FONT_COPYRIGHT),
+                license = SIL_OPEN_FONT_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -48,13 +58,13 @@ object CopyrightDataSource {
             ),
             CopyrightPage(
                 id = 1,
-                title = HomeTexts.iansuiFontTitle,
-                description = HomeTexts.iansuiFontCopyright,
-                license = HomeTexts.silOpenFontLicense11,
+                title = resolver.resolve(StringKey.COMMON_FONT_IANSUI),
+                description = resolver.resolve(StringKey.HOME_BUT_TAIWAN_COPYRIGHT),
+                license = SIL_OPEN_FONT_LICENSE_11,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -66,13 +76,13 @@ object CopyrightDataSource {
             // 源樣明體
             CopyrightPage(
                 id = 2,
-                title = HomeTexts.genYoMinFontTitle,
-                description = HomeTexts.butTaiwanCopyright,
-                license = HomeTexts.silOpenFontLicense11,
+                title = resolver.resolve(StringKey.COMMON_FONT_GEN_YO_MIN),
+                description = resolver.resolve(StringKey.HOME_BUT_TAIWAN_COPYRIGHT),
+                license = SIL_OPEN_FONT_LICENSE_11,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -84,13 +94,13 @@ object CopyrightDataSource {
             // 源樣烏體
             CopyrightPage(
                 id = 3,
-                title = HomeTexts.genYoGothicFontTitle,
-                description = HomeTexts.butTaiwanCopyright,
-                license = HomeTexts.silOpenFontLicense11,
+                title = resolver.resolve(StringKey.COMMON_FONT_GEN_YO_GOTHIC),
+                description = resolver.resolve(StringKey.HOME_BUT_TAIWAN_COPYRIGHT),
+                license = SIL_OPEN_FONT_LICENSE_11,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -104,12 +114,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 4,
                 title = resolver.resolve(StringKey.COMMON_MOE_DICT),
-                description = HomeTexts.moeCopyright,
-                license = HomeTexts.ccLicense,
+                description = resolver.resolve(StringKey.HOME_MOE_COPYRIGHT),
+                license = CC_BY_ND_3_TW_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = "https://creativecommons.org/licenses/by-nd/3.0/tw/",
                         ),
                         CopyrightButton(
@@ -122,12 +132,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 5,
                 title = resolver.resolve(StringKey.COMMON_NEWWORD_DICT),
-                description = HomeTexts.newwordCopyright,
-                license = HomeTexts.ccBy4License,
+                description = resolver.resolve(StringKey.HOME_NEWWORD_COPYRIGHT),
+                license = CC_BY_4_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
                         ),
                         CopyrightButton(
@@ -140,12 +150,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 6,
                 title = resolver.resolve(StringKey.COMMON_KUNGGE_DICT),
-                description = HomeTexts.kunggeCopyright,
-                license = HomeTexts.ccByNcLicense,
+                description = resolver.resolve(StringKey.HOME_KUNGGE_COPYRIGHT),
+                license = CC_BY_NC_4_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
                         ),
                         CopyrightButton(
@@ -158,12 +168,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 7,
                 title = resolver.resolve(StringKey.COMMON_I_TAIGI_DICT),
-                description = HomeTexts.iTaigiCopyright,
-                license = HomeTexts.cc0License,
+                description = resolver.resolve(StringKey.HOME_I_TAIGI_COPYRIGHT),
+                license = CC0_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = "https://creativecommons.org/public-domain/cc0/",
                         ),
                         CopyrightButton(
@@ -176,12 +186,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 8,
                 title = resolver.resolve(StringKey.COMMON_TAIWAN_JAPAN_DICT),
-                description = HomeTexts.taiwanJapanCopyright,
-                license = HomeTexts.ccByNcSA3License,
+                description = resolver.resolve(StringKey.HOME_TAIWAN_JAPAN_COPYRIGHT),
+                license = CC_BY_NC_SA_3_TW_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
                         ),
                         CopyrightButton(
@@ -194,12 +204,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 9,
                 title = resolver.resolve(StringKey.COMMON_TAI_HUA_DICT),
-                description = HomeTexts.taiHuaCopyright,
-                license = HomeTexts.ccBySA4License,
+                description = resolver.resolve(StringKey.HOME_TAI_HUA_COPYRIGHT),
+                license = CC_BY_SA_4_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = CC_BY_SA_4_LICENSE_URL,
                         ),
                     ),
@@ -208,12 +218,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 10,
                 title = resolver.resolve(StringKey.COMMON_TAIWAN_PLANT_DICT),
-                description = HomeTexts.taiwanPlantCopyright,
-                license = HomeTexts.ccBySA4License,
+                description = resolver.resolve(StringKey.HOME_TAIWAN_PLANT_COPYRIGHT),
+                license = CC_BY_SA_4_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = HomeTexts.viewLicense,
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
                             url = CC_BY_SA_4_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -226,7 +236,7 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 11,
                 title = resolver.resolve(StringKey.COMMON_ACCENT_DICT),
-                description = HomeTexts.accentDictCredit,
+                description = resolver.resolve(StringKey.HOME_ACCENT_DICT_CREDIT),
                 license = "",
                 buttons = emptyList(),
             ),
@@ -234,7 +244,7 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 12,
                 title = DictionaryTexts.devSupplementDict,
-                description = HomeTexts.devSupplementCredit,
+                description = resolver.resolve(StringKey.HOME_DEV_SUPPLEMENT_CREDIT),
                 license = "",
                 buttons = emptyList(),
             ),

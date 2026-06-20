@@ -1,72 +1,15 @@
-package com.siansiansu.taigikeyboard.localization
+package com.siansiansu.taigikeyboard.content
 
-/**
- * 頭頁文字
- * 包含：頭頁、啟用方法、新功能、FAQ、版本紀錄、關於開發者、版權聲明
- * 對應 iOS HomeTexts.swift
- */
-object HomeTexts {
-    // MARK: - Tab 標題
+// App version-history changelog. Body text is language-invariant English (synced from
+// changelog/<version>.md by the release-helper skill); excluded from i18n per the multi-language plan.
+data class VersionEntry(
+    val version: String,
+    val date: String,
+    val changes: List<String>,
+)
 
-    const val tabTitle = "頭頁"
-
-    // MARK: - 頁面標題
-
-    const val appHeaderTitle = "台語齒盤"
-
-    // MARK: - 區塊標題
-
-    const val setupKeyboard = "齒盤愛拍開才會當使用"
-    const val typingGuide = "拍字說明"
-    const val newFeatures = "功能設定"
-    const val faq = "其他"
-
-    // MARK: - 啟用方法
-
-    const val setupGuide = "啟用方法"
-    const val setupGuideDescription = "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。"
-    const val setupInfoMessage = "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。"
-    const val setupBrandWarning = "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。"
-
-    const val setupGuideStartSetup = "啟用齒盤"
-
-    // MARK: - 設定引導步驟（全螢幕模式使用）
-
-    const val setupGuideCompletedMessage = "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤"
-    const val setupGuideGoToSettings = "去設定頁"
-    const val setupGuideCloseButton = "關閉"
-    const val setupGuideStep1Settings = "點揤「齒盤」"
-    const val setupGuideStep2AddKeyboard = "點揤「增加齒盤」、「允准完整取用」"
-
-    // MARK: - 新功能 & FAQ
-    // Feature and FAQ content (title, paragraphs, attachments) is now loaded from
-    // assets/tab1-features.json and assets/tab1-faq.json via FeatureContentLoader.
-
-    // MARK: - 資源連結
-
-    const val userGuide = "網站紹介"
-    const val rateUs = "為阮評分"
-    const val aboutDeveloper = "關於"
-    const val privacyPolicy = "隱私權政策"
-
-    // MARK: - 關於開發者
-
-    const val freePromise =
-        "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
-    const val officialWebsite = "官方網站"
-
-    // MARK: - 版本資訊
-
-    const val version = "當前版本"
-    const val versionHistory = "版本紀錄"
-
-    data class VersionEntry(
-        val version: String,
-        val date: String,
-        val changes: List<String>,
-    )
-
-    val versionHistoryEntries =
+object VersionHistory {
+    val entries: List<VersionEntry> =
         listOf(
             VersionEntry(
                 "3.6.3",
@@ -353,61 +296,4 @@ object HomeTexts {
                 ),
             ),
         )
-
-    // MARK: - 版權聲明
-
-    const val copyrightNotice = "致謝"
-    const val viewLicense = "授權條款"
-
-    // 教育部臺灣台語常用詞辭典
-    const val moeCopyright = "© 教育部"
-    const val ccLicense = "CC BY-ND 3.0 TW"
-
-    // iTaigi 華台辭典
-    const val iTaigiCopyright = "© iTaigi愛台語"
-    const val cc0License = "CC0"
-
-    // 台語新詞辭庫
-    const val newwordCopyright = "© 公視台語台"
-    const val ccBy4License = "CC BY 4.0"
-
-    // 粉圓字型
-    const val openFontTitle = "粉圓"
-    const val openFontCopyright = "© justfont"
-    const val silOpenFontLicense = "SIL Open Font License"
-
-    // 芫荽字型
-    const val iansuiFontTitle = "芫荽"
-    const val iansuiFontCopyright = "© ButTaiwan"
-    const val silOpenFontLicense11 = "SIL Open Font License 1.1"
-
-    // ButTaiwan 字型（源樣明體、源樣烏體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
-    const val butTaiwanCopyright = "© ButTaiwan"
-    const val genYoMinFontTitle = "源樣明體"
-    const val genYoGothicFontTitle = "源樣烏體"
-
-    // 台灣植物名彙
-    const val taiwanPlantCopyright = "© 佐佐木舜一"
-    const val ccBySA4License = "CC BY-SA 4.0"
-
-    // 台華線頂對照典
-    const val taiHuaCopyright = "© 鄭良偉"
-
-    // 台日大辭典
-    const val taiwanJapanCopyright = "© 小川尚義"
-    const val ccByNcSA3License = "CC BY-NC-SA 3.0 TW"
-
-    // 台語工藝詞庫
-    const val kunggeCopyright = "© 國立臺灣工藝研究發展中心"
-    const val ccByNcLicense = "CC BY-NC 4.0"
-
-    // 學科術語辭典
-    const val sttiCopyright = "© 教育部"
-    const val ogdlTaiwanLicense = "OGDL-Taiwan-1.0"
-
-    // 腔口差
-    const val accentDictCredit = "實齋整理、提供"
-
-    // 詞庫增補檔案
-    const val devSupplementCredit = "建中整理、提供"
 }

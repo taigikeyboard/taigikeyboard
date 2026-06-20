@@ -44,6 +44,74 @@ object L10n {
         @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_MIN)
     val commonFontGenYoGothic: String
         @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_GOTHIC)
+    val homeAppHeaderTitle: String
+        @Composable get() = stringRes(StringKey.HOME_APP_HEADER_TITLE)
+    val homeSetupKeyboard: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_KEYBOARD)
+    val homeTypingGuide: String
+        @Composable get() = stringRes(StringKey.HOME_TYPING_GUIDE)
+    val homeNewFeatures: String
+        @Composable get() = stringRes(StringKey.HOME_NEW_FEATURES)
+    val homeFaq: String
+        @Composable get() = stringRes(StringKey.HOME_FAQ)
+    val homeSetupGuide: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE)
+    val homeSetupGuideDescription: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_DESCRIPTION)
+    val homeSetupInfoMessage: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_INFO_MESSAGE)
+    val homeSetupBrandWarning: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_BRAND_WARNING)
+    val homeSetupGuideCompletedMessage: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_COMPLETED_MESSAGE)
+    val homeSetupGuideGoToSettings: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_GO_TO_SETTINGS)
+    val homeSetupGuideCloseButton: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_CLOSE_BUTTON)
+    val homeSetupGuideStep1Settings: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP1_SETTINGS)
+    val homeSetupGuideStep2AddKeyboard: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP2_ADD_KEYBOARD)
+    val homeUserGuide: String
+        @Composable get() = stringRes(StringKey.HOME_USER_GUIDE)
+    val homeRateUs: String
+        @Composable get() = stringRes(StringKey.HOME_RATE_US)
+    val homeAboutDeveloper: String
+        @Composable get() = stringRes(StringKey.HOME_ABOUT_DEVELOPER)
+    val homePrivacyPolicy: String
+        @Composable get() = stringRes(StringKey.HOME_PRIVACY_POLICY)
+    val homeFreePromise: String
+        @Composable get() = stringRes(StringKey.HOME_FREE_PROMISE)
+    val homeVersion: String
+        @Composable get() = stringRes(StringKey.HOME_VERSION)
+    val homeVersionHistory: String
+        @Composable get() = stringRes(StringKey.HOME_VERSION_HISTORY)
+    val homeCopyrightNotice: String
+        @Composable get() = stringRes(StringKey.HOME_COPYRIGHT_NOTICE)
+    val homeViewLicense: String
+        @Composable get() = stringRes(StringKey.HOME_VIEW_LICENSE)
+    val homeMoeCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_MOE_COPYRIGHT)
+    val homeITaigiCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_I_TAIGI_COPYRIGHT)
+    val homeNewwordCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_NEWWORD_COPYRIGHT)
+    val homeOpenFontCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_OPEN_FONT_COPYRIGHT)
+    val homeButTaiwanCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_BUT_TAIWAN_COPYRIGHT)
+    val homeTaiwanPlantCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_TAIWAN_PLANT_COPYRIGHT)
+    val homeTaiHuaCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_TAI_HUA_COPYRIGHT)
+    val homeTaiwanJapanCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_TAIWAN_JAPAN_COPYRIGHT)
+    val homeKunggeCopyright: String
+        @Composable get() = stringRes(StringKey.HOME_KUNGGE_COPYRIGHT)
+    val homeAccentDictCredit: String
+        @Composable get() = stringRes(StringKey.HOME_ACCENT_DICT_CREDIT)
+    val homeDevSupplementCredit: String
+        @Composable get() = stringRes(StringKey.HOME_DEV_SUPPLEMENT_CREDIT)
     val layoutRomanizationKeyboard: String
         @Composable get() = stringRes(StringKey.LAYOUT_ROMANIZATION_KEYBOARD)
     val layoutTaigiPhonetic: String

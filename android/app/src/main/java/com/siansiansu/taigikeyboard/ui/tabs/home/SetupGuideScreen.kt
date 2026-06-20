@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.localization.HomeTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
@@ -57,7 +57,7 @@ fun SetupGuideScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = HomeTexts.setupGuide,
+                        text = L10n.homeSetupGuide,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
@@ -89,7 +89,7 @@ fun SetupGuideScreen(
                     .padding(top = 16.dp, bottom = AppStyle.scrollContentBottomPadding),
         ) {
             Text(
-                text = HomeTexts.setupGuideDescription,
+                text = L10n.homeSetupGuideDescription,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
@@ -99,7 +99,7 @@ fun SetupGuideScreen(
 
             StepCard(
                 stepNumber = 1,
-                title = HomeTexts.setupGuideStep1Settings,
+                title = L10n.homeSetupGuideStep1Settings,
                 imageResId = R.drawable.setup_step1,
             )
 
@@ -107,14 +107,14 @@ fun SetupGuideScreen(
 
             StepCard(
                 stepNumber = 2,
-                title = HomeTexts.setupGuideStep2AddKeyboard,
+                title = L10n.homeSetupGuideStep2AddKeyboard,
                 imageResId = R.drawable.setup_step2,
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = HomeTexts.setupGuideCompletedMessage,
+                text = L10n.homeSetupGuideCompletedMessage,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
@@ -127,7 +127,7 @@ fun SetupGuideScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = HomeTexts.setupGuideGoToSettings,
+                    text = L10n.homeSetupGuideGoToSettings,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -135,11 +135,11 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            WarningRow(HomeTexts.setupInfoMessage)
+            WarningRow(L10n.homeSetupInfoMessage)
 
             Spacer(Modifier.height(12.dp))
 
-            WarningRow(HomeTexts.setupBrandWarning)
+            WarningRow(L10n.homeSetupBrandWarning)
 
             if (isFullScreen) {
                 Spacer(Modifier.height(24.dp))
@@ -159,7 +159,7 @@ fun SetupGuideScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = HomeTexts.setupGuideCloseButton,
+                        text = L10n.homeSetupGuideCloseButton,
                         color = MaterialTheme.colorScheme.onError,
                     )
                 }

@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.home.SetupGuideScreen
@@ -31,24 +33,27 @@ class SetupGuideActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val isFullScreen = intent.getBooleanExtra(EXTRA_IS_FULL_SCREEN, false)
+        val prefs = PrefHelper(this)
 
         setupEdgeToEdge()
 
         setContent {
-            TaigiKeyboardTheme {
-                SetupGuideScreen(
-                    isFullScreen = isFullScreen,
-                    onGoToSettings = {
-                        hasNavigatedToSettings = true
-                        startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-                    },
-                    onClose = {
-                        finish()
-                    },
-                    onNavigateBack = {
-                        onBackPressedDispatcher.onBackPressed()
-                    },
-                )
+            ProvideDisplayLanguage(prefs) {
+                TaigiKeyboardTheme {
+                    SetupGuideScreen(
+                        isFullScreen = isFullScreen,
+                        onGoToSettings = {
+                            hasNavigatedToSettings = true
+                            startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                        },
+                        onClose = {
+                            finish()
+                        },
+                        onNavigateBack = {
+                            onBackPressedDispatcher.onBackPressed()
+                        },
+                    )
+                }
             }
         }
     }

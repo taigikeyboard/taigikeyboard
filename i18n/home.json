@@ -1,0 +1,175 @@
+{
+  "namespace": "home",
+  "keys": {
+    "appHeaderTitle": {
+      "comment": "Home tab large title — the app name.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台語齒盤" }
+    },
+    "setupKeyboard": {
+      "comment": "Home section header above the keyboard-activation guide row.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "齒盤愛拍開才會當使用" }
+    },
+    "typingGuide": {
+      "comment": "Home section header above the typing-guide feature list.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "拍字說明" }
+    },
+    "newFeatures": {
+      "comment": "Home section header above the feature-settings list.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "功能設定" }
+    },
+    "faq": {
+      "comment": "Home section header above the FAQ / other list.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "其他" }
+    },
+    "setupGuide": {
+      "comment": "Setup-guide navigation row label + sub-page title.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "啟用方法" }
+    },
+    "setupGuideDescription": {
+      "comment": "Setup-guide intro paragraph: third-party keyboards must be enabled manually.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。" }
+    },
+    "setupInfoMessage": {
+      "comment": "Setup-guide note explaining what 'Allow Full Access' means and the privacy stance.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。" }
+    },
+    "setupBrandWarning": {
+      "comment": "Setup-guide note: steps may differ slightly across phone brands.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。" }
+    },
+    "setupGuideCompletedMessage": {
+      "comment": "Setup-guide full-screen closing paragraph: restart the app and switch via the globe key.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤" }
+    },
+    "setupGuideGoToSettings": {
+      "comment": "Setup-guide button: open the system input-method settings page.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "去設定頁" }
+    },
+    "setupGuideCloseButton": {
+      "comment": "Setup-guide full-screen close button.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "關閉" }
+    },
+    "setupGuideStep1Settings": {
+      "comment": "Setup-guide step 1 title: tap 'Keyboards'.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "點揤「齒盤」" }
+    },
+    "setupGuideStep2AddKeyboard": {
+      "comment": "Setup-guide step 2 title: tap 'Add keyboard' and 'Allow Full Access'.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "點揤「增加齒盤」、「允准完整取用」" }
+    },
+    "userGuide": {
+      "comment": "Home resource link: the project website introduction.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "網站紹介" }
+    },
+    "rateUs": {
+      "comment": "Home resource link: rate the app on the store.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "為阮評分" }
+    },
+    "aboutDeveloper": {
+      "comment": "Home resource link + about-developer page title.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "關於" }
+    },
+    "privacyPolicy": {
+      "comment": "Home resource link: open the privacy policy.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "隱私權政策" }
+    },
+    "freePromise": {
+      "comment": "About-developer page body: the maintainer's promise that the keyboard stays free.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。" }
+    },
+    "version": {
+      "comment": "Home row label for the current app version.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "當前版本" }
+    },
+    "versionHistory": {
+      "comment": "Home resource link + version-history page title.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "版本紀錄" }
+    },
+    "copyrightNotice": {
+      "comment": "Home resource link + copyright/acknowledgement page title.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "致謝" }
+    },
+    "viewLicense": {
+      "comment": "Copyright page button: open the license text for a source.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "授權條款" }
+    },
+    "moeCopyright": {
+      "comment": "Copyright attribution for the MOE Taiwanese dictionary. Non-Hanji languages may use the rights-holder's official name; absent override falls back to Hanji.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© 教育部" }
+    },
+    "iTaigiCopyright": {
+      "comment": "Copyright attribution for the iTaigi crowd-sourced dictionary.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© iTaigi愛台語" }
+    },
+    "newwordCopyright": {
+      "comment": "Copyright attribution for the PTS Taigi new-word lexicon.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© 公視台語台" }
+    },
+    "openFontCopyright": {
+      "comment": "Copyright attribution for the JF Open Huninn (粉圓) font.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© justfont" }
+    },
+    "butTaiwanCopyright": {
+      "comment": "Copyright attribution for ButTaiwan fonts (芫荽 Iansui + 源樣明體/源樣烏體 GenYo families).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© ButTaiwan" }
+    },
+    "taiwanPlantCopyright": {
+      "comment": "Copyright attribution for the Taiwan plant-name glossary.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© 佐佐木舜一" }
+    },
+    "taiHuaCopyright": {
+      "comment": "Copyright attribution for the online Taigi-Mandarin cross-reference dictionary.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© 鄭良偉" }
+    },
+    "taiwanJapanCopyright": {
+      "comment": "Copyright attribution for the Taiwanese-Japanese Grand Dictionary.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© 小川尚義" }
+    },
+    "kunggeCopyright": {
+      "comment": "Copyright attribution for the NTCRI craft-terminology lexicon.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "© 國立臺灣工藝研究發展中心" }
+    },
+    "accentDictCredit": {
+      "comment": "Credit line for the regional-accent supplement source (compiled and provided by 實齋).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "實齋整理、提供" }
+    },
+    "devSupplementCredit": {
+      "comment": "Credit line for the word-list supplement source (compiled and provided by 建中).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "建中整理、提供" }
+    }
+  }
+}

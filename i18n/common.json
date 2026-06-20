@@ -12,7 +12,7 @@
       "values": { "hanji": "好" }
     },
     "viewWebsite": {
-      "comment": "Link button opening a data source's official website in the browser.",
+      "comment": "Link button opening an official website in the browser (data sources + the app's own site).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "官方網站" }
     },
