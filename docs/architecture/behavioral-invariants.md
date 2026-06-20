@@ -204,7 +204,7 @@ Outside that regime, raw dictionary frequency becomes the leading factor — thi
 | 4 | 台語工藝詞庫 (kungge) | 6 | 11 | 1.1× |
 | 5 (default) | 其他來源 / 補充資料 / `nil` bitmask | — | 10 | 1.0× |
 
-Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is in the ranking tier list but **not** in `dictionary/build/01_merge_csv.py:80` OFFICIAL_SOURCES (which governs dedup priority only) — intentional divergence.
+Bit positions mirror `dictionary/build/create_dictionary_bin.py`. `stti` is in the ranking tier list but **not** in `dictionary/build/merge_csv.py:116` OFFICIAL_SOURCES (which governs dedup priority only) — intentional divergence.
 
 **Why**: the scoring formula is the user-visible ordering of every candidate. Drift means the keyboard ranks differently on iOS vs Android for the same word + same user state.
 

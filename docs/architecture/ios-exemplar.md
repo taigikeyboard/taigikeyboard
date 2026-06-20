@@ -273,7 +273,7 @@ Android Studio's `// region` / `// endregion` pair gives the same code-folding h
 Already used in `NextWordScorer.swift` and `TaigiUnicode.swift`. Required wherever a numeric constant is duplicated in Kotlin. Explicit list of constants that need this marker after Phase I implementation:
 
 - **Scoring constants** (`NextWordScorer.swift`): `userWeight (50.0)`, `dictWeight (1.0)`, `decayHalfLifeHours (168.0)`, `learningBonus (300.0)`, `highUsageDecayFloor (0.95)`, `lowUsageDecayFloor (0.3)`, `highUsageThreshold (3)`.
-- **Candidate scoring** (`CandidateProcessor.swift`): recency window (`1 hour`), `cappedUserFreq` cap (`100`), user-freq multiplier (`100`), completion penalty (`-1000`), closeness max (`500`), exact bonus (`100`), recency bonus (`200`), **tier multipliers `SOURCE_TIERS` (`kautian=15, taigitv=13, stti=12, kungge=11`) + `TIER_DENOMINATOR (10)`** — bit positions mirror `dictionary/build/10_create_dictionary_bin.py`; first-match-wins traversal.
+- **Candidate scoring** (`CandidateProcessor.swift`): recency window (`1 hour`), `cappedUserFreq` cap (`100`), user-freq multiplier (`100`), completion penalty (`-1000`), closeness max (`500`), exact bonus (`100`), recency bonus (`200`), **tier multipliers `SOURCE_TIERS` (`kautian=15, taigitv=13, stti=12, kungge=11`) + `TIER_DENOMINATOR (10)`** — bit positions mirror `dictionary/build/create_dictionary_bin.py`; first-match-wins traversal.
 - **NextWord timing** (`NextWordEngine.swift` after G5-impl): `associationTimeoutMs (10_000)`, `contextTimeoutSeconds (30)`.
 - **Taigi Unicode preprocessing** (`TaigiUnicode.swift`): `U+207F` / `U+1D3A` / `U+0358` codepoint handling.
 

@@ -90,9 +90,9 @@ Read-only next-word bigram/phrase table. Sibling to `dictionary.bin` with a dist
 
 ### Format
 
-- **Producer**: `dictionary/build/11_create_association_bin.py`.
+- **Producer**: `dictionary/build/create_association_bin.py`.
 - **Header (20 bytes)**: magic `"TKWA"` (4) · `version: u32` (currently `1`) · `key_count: u32` · `entry_count: u32` · `build_ts: u32`.
-- **Cohesion contract**: `build_ts` **must match** `dictionary.bin`. The build pipeline shares `.build_ts` between the two writers (`dictionary/build/10_create_dictionary_bin.py` and `dictionary/build/11_create_association_bin.py`). Readers on both platforms expose `buildTimestamp`.
+- **Cohesion contract**: `build_ts` **must match** `dictionary.bin`. The build pipeline shares `.build_ts` between the two writers (`dictionary/build/create_dictionary_bin.py` and `dictionary/build/create_association_bin.py`). Readers on both platforms expose `buildTimestamp`.
 - **Key offset table**: `key_count × u32` absolute offsets.
 - **Key entry**: `prev_word_len: u8 · prev_word: utf8 · entry_offset: u32 · entry_count: u16`. Keys sorted by UTF-8 byte order for binary search.
 - **Entry**: `bitmask: u16 · count: u32 · next_word_len: u8 · next_tl_len: u8 · next_word: utf8 · next_tl: utf8`.

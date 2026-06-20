@@ -2,7 +2,7 @@
 
 > **Type**: Index
 > **Keywords**: `Files`, `Structure`, `Mapping`, `Naming`
-> **Related**: README.md, engine/migration-inventory.csv
+> **Related**: system-overview.md (Mermaid architecture diagrams), README.md, engine/migration-inventory.csv
 
 ---
 
@@ -157,16 +157,12 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 
 ### Localization
 
-| iOS File | Android File | Content |
-|----------|--------------|---------|
-| - | `LocalizedText.kt` | Core structure (Android only) |
-| - | `DisplayLanguage.kt` | Display language enum |
-| - | `LanguageManager.kt` | Language management (StateFlow) |
-| `HomeTexts.swift` | `HomeTexts.kt` | Home tab text |
-| `LayoutTexts.swift` | `LayoutTexts.kt` | Layout tab text |
-| `DictionaryTexts.swift` | `DictionaryTexts.kt` | Dictionary tab text |
-| `SettingsTexts.swift` | `SettingsTexts.kt` | Settings tab text |
-| `KeyboardTexts.swift` | (in `SettingsTexts.kt`) | Keyboard UI text (e.g. confirmKey) |
+**Mid-migration — per-file correspondence is in flux.** The app-UI strings are moving from hand-written `*Texts` classes to a generated-resource pipeline (`i18n/*.json` → `tools/i18n/generate.py` → committed output). Authoritative plan + phase status: [`i18n-multilang-plan.md`](i18n-multilang-plan.md).
+
+| Side | Current state (main) |
+|------|----------------------|
+| Android | Migrated namespaces (common, settings, layout, theme) use generated `i18n/generated/{L10n,StringKey,GeneratedPseudoStrings,GeneratedTaigiStrings}.kt`. Not-yet-migrated namespaces keep `localization/{HomeTexts,DictionaryTexts}.kt`. |
+| iOS | Not migrated (R2b blocked on `.pbxproj` hand-off) — all strings still in `Strings/*Texts.swift` (`Home`, `Layout`, `Theme`, `Dictionary`, `Common`, `Settings`). |
 
 ### Shared Components
 
@@ -206,7 +202,7 @@ engine/
 
 ### Engine crate layering
 
-Dependency edges flow **one way, top → bottom** (caller depends on callee). The dependency-direction invariant + enforcement notes live in `.claude/rules/rust-best-practices.md` §1a.
+Dependency edges flow **one way, top → bottom** (caller depends on callee). The dependency-direction invariant + enforcement notes live in `.claude/rules/rust-best-practices.md` §1a. Exact per-crate edge graph (Mermaid): [`system-overview.md`](system-overview.md) §2.
 
 ```
 ┌─ adapters ─────────────────────────────────────────────────┐
@@ -286,10 +282,9 @@ TaigiKeyboard/
 │   ├── Repository/  # SQLite repo (legacy) + schema
 │   ├── Services/    # NextWordService
 │   └── NextWordController.swift
-├── Localization/    # Localization
 ├── Overlays/        # System overlays
 ├── Settings/        # SharedSettings, EngineSettings/Provider, InputMode, ToneToggles
-├── Strings/         # Strings catalogs
+├── Strings/         # *Texts.swift localization (Home/Layout/Theme/Dictionary/Common/Settings) — pre-i18n-migration
 └── Styling/         # Button styling & theming
     ├── Helpers/
     └── Providers/
@@ -321,7 +316,8 @@ taigikeyboard/
 │       ├── layout/      # LayoutManager, LayoutData
 │       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, NextWordHandler, ToolbarManager
 ├── content/         # ContentResolver entry point
-├── localization/    # LocalizedText, LanguageManager, {Home/Layout/Dictionary/Settings}Texts
+├── i18n/generated/  # Generated i18n: L10n, StringKey, GeneratedPseudoStrings, GeneratedTaigiStrings
+├── localization/    # Residual {Home,Dictionary}Texts (pre-migration namespaces) — see i18n-multilang-plan.md
 ├── settings/        # Activity wrappers (Compose host) + LauncherIconController
 ├── typeface/        # TypefaceLoader (R.font → android.graphics.Typeface)
 ├── ui/

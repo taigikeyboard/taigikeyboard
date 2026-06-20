@@ -40,6 +40,7 @@
 
 | File | Description | Status |
 |------|-------------|--------|
+| `architecture/system-overview.md` | Mermaid architecture diagrams: system context, engine crate graph, build pipeline, keystroke flow | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (effect enum, race rules) | Active |
 | `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer) | Active |
