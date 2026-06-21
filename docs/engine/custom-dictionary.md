@@ -89,6 +89,35 @@ tsia̍h-pá--buē,食飽未
 4. Deduplicate by `roman|hanzi` key
 5. Return `ImportResult { imported: Int, skipped: Int }`
 
+CSV is **custom-dictionary-only**. For whole-user-data backup see `.taigi` below.
+
+---
+
+## `.taigi` Backup (whole user data)
+
+A `.taigi` file is a single plain-text **JSON** document carrying **all three** user-writable SQLite DBs in one container — `custom_dictionary.db`, `user_frequency.db`, `user_association.db`. It is the **only** cross-device user-data path (the three DBs are excluded from OS auto-backup — behavioral-invariants.md §29).
+
+| File | Responsibility |
+|------|----------------|
+| iOS `Lexicon/Services/BackupService.swift` (+ `BackupDocument.swift`) | export/import + `BackupData` Codable schema; `UTType.taigiBackup` = `tw.taigikeyboard.backup` |
+| Android `ime/dictionary/BackupService.kt` | export/import via `org.json` |
+
+### Format
+
+- Top-level: `version`, `exportedAt` (ISO-8601 UTC), `platform` (`ios`/`android`), `appVersion`, plus `customDictionary[]` (`roman`, `hanzi`), `userFrequency[]` (`word`, `tl`, `count`, `lastUsed`), `userAssociation[]` (`prevWord`, `prevTl`, `nextWord`, `nextTl`, `count`, `lastUsed`).
+- **Version**: export writes `2`; import accepts `version >= 1`.
+- **v1 → v2**: v2 adds the per-row `tl` (canonical-TL) field to `userFrequency`, supporting the `(漢字, canonical-TL)` pair identity (Core Principle #7 / R5). `tl` is optional on decode — a pre-R5 v1 backup with no `tl` imports into the legacy `tl=""` bucket.
+- Custom-dict rows carry only `roman`+`hanzi`; internal id/timestamps/derived columns are regenerated on import.
+
+### Import semantics — **merge, never replace**
+
+- Custom dictionary: adds non-duplicates only (dedup by `roman\thanzi`).
+- Frequency + association: **higher-count-wins** merge. Associations are normalized POJ→canonical-TL (`RustEngineBridge.pojToTl`) so cross-platform backups round-trip.
+
+The format is **round-trip compatible across platforms** (same schema, same v2, both tolerate missing `tl`).
+
+> ⚠ **Row-cap divergence (backup path)**: when a restore crosses the 30000-row custom-dict cap, **Android grandfather-stops** (partial restore, no throw) but **iOS aborts the whole custom-dict import** (per-entry `save()` throws out of `importCustomDictionary`). Reachable only at ~30000 existing rows. iOS *CSV* import grandfather-stops correctly — only the iOS *backup* path aborts. Documented at behavioral-invariants.md §27; aligning iOS is a separate parity round.
+
 ---
 
 ## Autocomplete Integration

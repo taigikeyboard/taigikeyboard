@@ -108,3 +108,34 @@ Index 2: candidate 2 (e.g., 瓜)
 | `gua2` | `guá` | [guá, 我, 瓜, ...] |
 | `soo1` | `soo1` | [soo1, 所, 鎖, ...] |
 | `soo` | `soo` | [soo, 所, 鎖, 蘇, ...] |
+
+---
+
+## English-mode Autocomplete (non-Taigi path)
+
+> Scope: this is the **English** input-mode path, separate from the Taigi lexicon path above. It never touches the Rust engine or the Taigi dictionary. It is current — not covered by any SUPERSEDED note on the Taigi path.
+
+Runs when `inputMode == english` (a distinct mode from TL / POJ / TPS). This is an **intentional, documented cross-platform divergence** (`EnglishAutocompleteService.kt` header): iOS keeps Apple's OS spell-checker; Android self-bundles a wordlist because some devices' system `SpellCheckerSession` returns null (candidates would otherwise always be empty — Samsung is the observed instance).
+
+| File | Responsibility |
+|------|----------------|
+| iOS `Autocomplete/Services/EnglishAutocompleteService.swift` | Wraps Apple `UITextChecker` (completions + correction guesses); conforms to `KeyboardKit.AutocompleteService` |
+| Android `ime/text/composing/EnglishAutocompleteService.kt` | Asset I/O + lazy fail-closed loading; delegates matching to `EnglishWordMatcher` |
+| Android `ime/text/composing/EnglishWordMatcher.kt` | Pure-Kotlin matcher (Shared-Core Candidate): prefix completion (binary search) + bounded OSA correction |
+| Android `assets/english_freq.txt` | Bundled wordlist — 30000 words, `word\tcount` freq-descending (SymSpell / SCOWL, MIT) |
+
+### Cross-platform divergence
+
+| Aspect | iOS | Android |
+|---|---|---|
+| Engine | Apple `UITextChecker` (OS-provided) | Self-bundled 30k wordlist + `EnglishWordMatcher` |
+| Completion | `checker.completions(forPartialWordRange:)` | prefix binary search over sorted index |
+| Correction | `checker.guesses(...)` — **fallback** only when completions empty | OSA edit-distance ≤ 2, length-pruned — runs **alongside** prefix hits, gated `len ≥ 3` + all `a-z` |
+| Ranking | UITextChecker order | EXACT < PREFIX < CORRECTION, then distance asc, freq desc, alpha |
+| Current-word split | last **space** only | last whitespace OR `.,!?;:` (apostrophe/hyphen do not split — `don't` is one token) |
+| Casing | UITextChecker native | `applyCasing` mirrors input (lower / Title / ALL-CAPS) |
+| Max suggestions | 3 | 3 (`MAX_SUGGESTIONS`) |
+| Integration | KeyboardKit framework trigger | `CandidateUpdateCoordinator` + `SmartbarManager`, 50 ms debounce |
+| Tests | none | `EnglishWordMatcherTest.kt` (JVM) |
+
+Android candidates are wrapped as `TaigiWord(id = -100 - index, roman = text, hanzi = null)`; the `id <= -100` sentinel marks them English (distinct from NextWord `id < 0`). Commit-on-tap deletes the current word and `commitText`s the suggestion — no frequency learning. Constants: `MAX_EDIT_DISTANCE = 2`, `MIN_CORRECTION_LENGTH = 3`, `MAX_SUGGESTIONS = 3`, wordlist `TOP_N = 30000`.

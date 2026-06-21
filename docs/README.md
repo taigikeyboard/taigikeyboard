@@ -35,6 +35,7 @@
 | `engine/tps.md` | TPS Taiwanese Phonetic Symbols (方音符號) — Rust `engine/phonetics::tps` | Active |
 | `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) — platform SQLite | Active |
 | `engine/diagnostics.md` | Device-info collection for bug reporting | Active |
+| `engine/syllabifier.md` | Syllable parse primitive + `SyllableInventory` (`syllables.fst`) + lattice consumption | Active |
 
 ### `architecture/` — Architectural Contracts
 
@@ -52,7 +53,7 @@
 | `architecture/codex-review-2026-04-19.md` | Strategic Codex review of shared-core roadmap | Historical |
 | `architecture/file-structure.md` | File index, directory structure, naming conventions | Reference |
 
-### `ui/` — Presentation & Layout (8)
+### `ui/` — Presentation & Layout (10)
 
 | File | Description | Status |
 |------|-------------|--------|
@@ -62,6 +63,8 @@
 | `ui/device.md` | Device adaptation for iPhone and iPad | Active |
 | `ui/app-ui.md` | Main App UI structure (tabs, settings) | Active |
 | `ui/theme.md` | Theme & styling (colors, fonts, user customization) | Active |
+| `ui/emoji.md` | Emoji keyboard (ISEmojiView iOS / Compose Android, taigi-emojis data) | Active |
+| `ui/callouts.md` | Long-press callouts + tone-variation menus (engine map + platform popups) | Active |
 | `ui/android-theme-port.md` | Android theme-picker port spec (v3.6.2, multi-PR) | Reference |
 | `ui/theme-presets-brainstorm.md` | Theme presets / custom-theme brainstorm (v3.6.2, evolving) | Brainstorm |
 
