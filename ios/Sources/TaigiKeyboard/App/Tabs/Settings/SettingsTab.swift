@@ -96,9 +96,9 @@ struct SettingsTab: View {
                         )
                     } label: {
                         HStack {
-                            Text(SettingsTexts.inputMode)
+                            Text(lang.string(.settingsInputMode))
                             Spacer()
-                            Text(selectedInputMode.displayName)
+                            Text(lang.string(selectedInputMode.displayNameKey))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -128,7 +128,7 @@ struct SettingsTab: View {
                 Section {
                     Toggle(isOn: $isOutputBothScripts) {
                         HStack {
-                            Text(SettingsTexts.isOutputBothScripts)
+                            Text(lang.string(.settingsOutputBothScripts))
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
@@ -138,8 +138,8 @@ struct SettingsTab: View {
 
                     Toggle(isOn: $literalRomanCandidateEnabled) {
                         HStack {
-                            Text(SettingsTexts.literalRomanCandidate)
-                            SettingInfoButton(description: SettingsTexts.literalRomanCandidateInfo)
+                            Text(lang.string(.settingsLiteralRomanCandidate))
+                            SettingInfoButton(description: lang.string(.settingsLiteralRomanCandidateInfo))
                         }
                     }
                     .onChange(of: literalRomanCandidateEnabled) { _, newValue in
@@ -148,14 +148,14 @@ struct SettingsTab: View {
 
                     Toggle(isOn: $autoCapitalizationEnabled) {
                         HStack {
-                            Text(SettingsTexts.autoCapitalization)
+                            Text(lang.string(.settingsAutoCapitalization))
                             SettingInfoButton(description: featureSummary("caseSwitch"))
                         }
                     }
 
                     Toggle(isOn: $autoSpaceEnabled) {
                         HStack {
-                            Text(SettingsTexts.autoSpace)
+                            Text(lang.string(.settingsAutoSpace))
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
@@ -163,7 +163,7 @@ struct SettingsTab: View {
                         settings.isAutoSpaceEnabled = newValue
                     }
                 } header: {
-                    Text(SettingsTexts.typingSectionTitle)
+                    Text(lang.string(.settingsTypingSectionTitle))
                 }
 
                 // Keyboard settings
@@ -171,12 +171,12 @@ struct SettingsTab: View {
                     Toggle(isOn: $toolbarAutoCollapse) {
                         HStack {
                             Label {
-                                Text(SettingsTexts.toolbarAutoCollapse)
+                                Text(lang.string(.settingsToolbarAutoCollapse))
                             } icon: {
                                 Image(latinSystemName: SettingsIcons.toolbar)
                                     .foregroundColor(AppStyle.accentBlue)
                             }
-                            SettingInfoButton(description: SettingsTexts.toolbarAutoCollapseInfo)
+                            SettingInfoButton(description: lang.string(.settingsToolbarAutoCollapseInfo))
                         }
                     }
                     .onChange(of: toolbarAutoCollapse) { _, newValue in
@@ -186,48 +186,48 @@ struct SettingsTab: View {
                     Toggle(isOn: $isGlobeKeyEnabled) {
                         HStack {
                             Label {
-                                Text(SettingsTexts.globeKey)
+                                Text(lang.string(.settingsGlobeKey))
                             } icon: {
                                 Image(latinSystemName: SettingsIcons.globeKey)
                                     .foregroundColor(AppStyle.accentBlue)
                             }
-                            SettingInfoButton(description: SettingsTexts.globeKeyInfo)
+                            SettingInfoButton(description: lang.string(.settingsGlobeKeyInfo))
                         }
                     }
                     .onChange(of: isGlobeKeyEnabled) { _, newValue in
                         settings.isGlobeKeyEnabled = newValue
                     }
                 } header: {
-                    Text(SettingsTexts.keyboardSectionTitle)
+                    Text(lang.string(.settingsKeyboardSectionTitle))
                 }
 
                 // Feedback
                 Section {
                     Toggle(isOn: $isAudioFeedbackEnabled) {
-                        Label(SettingsTexts.soundFeedback, systemImage: SettingsIcons.soundFeedback)
+                        Label(lang.string(.settingsSoundFeedback), systemImage: SettingsIcons.soundFeedback)
                     }
 
                     Toggle(isOn: $isHapticFeedbackEnabled) {
-                        Label(SettingsTexts.vibrationFeedback, systemImage: SettingsIcons.vibrationFeedback)
+                        Label(lang.string(.settingsVibrationFeedback), systemImage: SettingsIcons.vibrationFeedback)
                     }
                 } header: {
-                    Text(SettingsTexts.feedbackSectionTitle)
+                    Text(lang.string(.settingsFeedbackSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
                 // POJ settings
                 Section {
-                    Toggle(SettingsTexts.doubleTapOO, isOn: $isDoubleTapOOEnabled)
+                    Toggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled)
                         .onChange(of: isDoubleTapOOEnabled) { _, newValue in
                             settings.isDoubleTapOOEnabled = newValue
                         }
 
-                    Toggle(SettingsTexts.doubleTapNN, isOn: $isDoubleTapNNEnabled)
+                    Toggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled)
                         .onChange(of: isDoubleTapNNEnabled) { _, newValue in
                             settings.isDoubleTapNNEnabled = newValue
                         }
                 } header: {
-                    Text(SettingsTexts.pojSettingsSectionTitle)
+                    Text(lang.string(.settingsPojSettingsSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -235,15 +235,15 @@ struct SettingsTab: View {
                 Section {
                     Toggle(isOn: $isTpsOrMappedToER) {
                         HStack {
-                            Text(SettingsTexts.isTpsOrMappedToER)
-                            SettingInfoButton(description: SettingsTexts.isTpsOrMappedToERInfo)
+                            Text(lang.string(.settingsTpsOrMapsToER))
+                            SettingInfoButton(description: lang.string(.settingsTpsOrMapsToERInfo))
                         }
                     }
                     .onChange(of: isTpsOrMappedToER) { _, newValue in
                         settings.isTpsOrMappedToER = newValue
                     }
                 } header: {
-                    Text(SettingsTexts.tpsSettingsSectionTitle)
+                    Text(lang.string(.settingsTpsSettingsSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -259,8 +259,8 @@ struct SettingsTab: View {
                     } label: {
                         Label(
                             diagnosticCopied
-                                ? SettingsTexts.diagnosticCopied
-                                : SettingsTexts.diagnosticCopy,
+                                ? lang.string(.settingsDiagnosticCopied)
+                                : lang.string(.settingsDiagnosticCopy),
                             systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc",
                         )
                         .foregroundColor(.primary)
@@ -271,7 +271,7 @@ struct SettingsTab: View {
                         subject: Text("台語齒盤 Bug 回報"),
                         message: Text(diagnosticText),
                     ) {
-                        Label(SettingsTexts.diagnosticShare, systemImage: "arrow.up.forward.square")
+                        Label(lang.string(.settingsDiagnosticShare), systemImage: "arrow.up.forward.square")
                     }
 
                     Button {
@@ -284,10 +284,10 @@ struct SettingsTab: View {
                             openURL(url)
                         }
                     } label: {
-                        Label(SettingsTexts.diagnosticEmail, systemImage: "arrow.up.forward.square")
+                        Label(lang.string(.settingsDiagnosticEmail), systemImage: "arrow.up.forward.square")
                     }
                 } header: {
-                    Text(SettingsTexts.diagnosticSectionTitle)
+                    Text(lang.string(.settingsDiagnosticSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -296,11 +296,11 @@ struct SettingsTab: View {
                     Button(role: .destructive) {
                         showResetSettingsAlert = true
                     } label: {
-                        Text(SettingsTexts.resetSettings)
+                        Text(lang.string(.settingsResetSettings))
                     }
                 }
             }
-            .navigationTitle(SettingsTexts.tabTitle)
+            .navigationTitle(TabType.settings.title)
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 selectedInputMode = settings.inputMode
@@ -308,13 +308,13 @@ struct SettingsTab: View {
                 diagnosticText = DiagnosticService.gather().formatted()
             }
         }
-        .alert(SettingsTexts.resetSettings, isPresented: $showResetSettingsAlert) {
+        .alert(lang.string(.settingsResetSettings), isPresented: $showResetSettingsAlert) {
             Button(lang.string(.commonCancel), role: .cancel) {}
-            Button(SettingsTexts.reset, role: .destructive) {
+            Button(lang.string(.settingsReset), role: .destructive) {
                 resetAllSettings()
             }
         } message: {
-            Text(SettingsTexts.resetSettingsMessage)
+            Text(lang.string(.settingsResetSettingsMessage))
         }
     }
 

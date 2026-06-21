@@ -8,12 +8,14 @@ import SwiftUI
 /// Keyboard layout selection (PhahTaigi, QWERTY, MOE, TPS) with horizontal swipe cards.
 // 中文: Layout Tab View — 兩段橫向卡片(羅馬字鍵盤 / 台語注音)。
 struct LayoutTab: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @State private var selectedLayout: KeyboardLayoutType
 
     private let settings = SharedSettings.shared
 
-    private static let tpsEntry: (KeyboardLayoutType, String, String, String?, Bool) =
-        (.tps, LayoutTexts.tpsLayout, "layout_tps_preview", nil, false)
+    // Title element is a StringKey, resolved at render via `lang` so the layout name live-switches.
+    private static let tpsEntry: (KeyboardLayoutType, StringKey, String, String?, Bool) =
+        (.tps, .layoutTpsLayout, "layout_tps_preview", nil, false)
 
     init() {
         _selectedLayout = State(initialValue: SharedSettings.shared.keyboardLayoutType)
@@ -25,18 +27,18 @@ struct LayoutTab: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Section 1: Romanization keyboards
                     layoutSection(
-                        header: LayoutTexts.romanizationKeyboard,
+                        header: .layoutRomanizationKeyboard,
                         layouts: [
-                            (.phahTaigi, LayoutTexts.phahTaigiLayout, "layout_phahtaigi_preview", nil, false),
-                            (.qwerty, LayoutTexts.standardLayout, "layout_standard_preview", nil, false),
-                            (.moe1, LayoutTexts.moe1Layout, "layout_moe1_preview", nil, false),
-                            (.moe2, LayoutTexts.moe2Layout, "layout_moe2_preview", nil, false),
+                            (.phahTaigi, .layoutPhahTaigiLayout, "layout_phahtaigi_preview", nil, false),
+                            (.qwerty, .layoutStandardLayout, "layout_standard_preview", nil, false),
+                            (.moe1, .layoutMoe1Layout, "layout_moe1_preview", nil, false),
+                            (.moe2, .layoutMoe2Layout, "layout_moe2_preview", nil, false),
                         ],
                     )
 
                     // Section 2: Taigi phonetic
                     layoutSection(
-                        header: LayoutTexts.taigiPhonetic,
+                        header: .layoutTaigiPhonetic,
                         layouts: [Self.tpsEntry],
                     )
                 }
@@ -44,7 +46,7 @@ struct LayoutTab: View {
                 .padding(.bottom)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(LayoutTexts.tabTitle)
+            .navigationTitle(TabType.layout.title)
             .navigationBarTitleDisplayMode(.large)
         }
     }
@@ -52,20 +54,20 @@ struct LayoutTab: View {
     // MARK: - Section builder
 
     private func layoutSection(
-        header: String,
-        layouts: [(KeyboardLayoutType, String, String, String?, Bool)],
+        header: StringKey,
+        layouts: [(KeyboardLayoutType, StringKey, String, String?, Bool)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(header)
+            Text(lang.string(header))
                 .font(AppStyle.sectionHeaderFont)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(layouts, id: \.0) { layoutType, titleText, imageName, subtitleText, isDisabled in
+                    ForEach(layouts, id: \.0) { layoutType, titleKey, imageName, subtitleText, isDisabled in
                         LayoutOptionCard(
-                            title: titleText,
+                            title: lang.string(titleKey),
                             subtitle: subtitleText.map(\.self),
                             previewImageName: imageName,
                             isSelected: selectedLayout == layoutType,

@@ -16,6 +16,7 @@ struct LayoutSelectionOverlay: View {
     @State private var selectedLayout: KeyboardLayoutType
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateTheme) private var theme
+    @Environment(DisplayLanguageStore.self) private var lang
 
     private static let tpsDisabled = false
 
@@ -36,20 +37,20 @@ struct LayoutSelectionOverlay: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Section 1: Romanization keyboards
                 layoutSection(
-                    header: LayoutTexts.romanizationKeyboard,
+                    header: lang.string(.layoutRomanizationKeyboard),
                     layouts: [
-                        (.phahTaigi, LayoutTexts.phahTaigiLayout, "layout_phahtaigi_preview", false),
-                        (.qwerty, LayoutTexts.standardLayout, "layout_standard_preview", false),
-                        (.moe1, LayoutTexts.moe1Layout, "layout_moe1_preview", false),
-                        (.moe2, LayoutTexts.moe2Layout, "layout_moe2_preview", false),
+                        (.phahTaigi, lang.string(.layoutPhahTaigiLayout), "layout_phahtaigi_preview", false),
+                        (.qwerty, lang.string(.layoutStandardLayout), "layout_standard_preview", false),
+                        (.moe1, lang.string(.layoutMoe1Layout), "layout_moe1_preview", false),
+                        (.moe2, lang.string(.layoutMoe2Layout), "layout_moe2_preview", false),
                     ],
                 )
 
                 // Section 2: Taigi phonetic
                 layoutSection(
-                    header: LayoutTexts.taigiPhonetic,
+                    header: lang.string(.layoutTaigiPhonetic),
                     layouts: [
-                        (.tps, LayoutTexts.tpsLayout, "layout_tps_preview", Self.tpsDisabled),
+                        (.tps, lang.string(.layoutTpsLayout), "layout_tps_preview", Self.tpsDisabled),
                     ],
                 )
             }
@@ -58,6 +59,8 @@ struct LayoutSelectionOverlay: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
+            // 中文: 開啟 overlay 時重讀 App-Group 顯示語言 tag — 跨程序(host 改語言)可靠的重讀點。
+            lang.syncFromSettings()
             selectedLayout = SharedSettings.shared.keyboardLayoutType
         }
     }
@@ -122,6 +125,7 @@ private struct LayoutCard: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateTheme) private var theme
+    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         Button(action: action) {
@@ -135,7 +139,7 @@ private struct LayoutCard: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.black.opacity(0.5))
 
-                        Text(LayoutTexts.comingSoon)
+                        Text(lang.string(.layoutComingSoon))
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)

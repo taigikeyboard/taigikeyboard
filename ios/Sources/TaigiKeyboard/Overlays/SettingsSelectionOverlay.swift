@@ -33,6 +33,7 @@ struct SettingsSelectionOverlay: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateTheme) private var theme
+    @Environment(DisplayLanguageStore.self) private var lang
 
     private static let autoCapKey = "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled"
     private static let audioFeedbackKey = "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled"
@@ -73,43 +74,43 @@ struct SettingsSelectionOverlay: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     // General settings
-                    settingsToggle(SettingsTexts.isOutputBothScripts, isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
+                    settingsToggle(lang.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
                         SharedSettings.shared.isOutputBothScripts = $0
                     }
-                    settingsToggle(SettingsTexts.literalRomanCandidate, isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
+                    settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
                         SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
                     }
-                    settingsToggle(SettingsTexts.autoCapitalization, isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
+                    settingsToggle(lang.string(.settingsAutoCapitalization), isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
                     }
-                    settingsToggle(SettingsTexts.autoSpace, isOn: $autoSpaceEnabled, icon: SettingsIcons.autoSpace) {
+                    settingsToggle(lang.string(.settingsAutoSpace), isOn: $autoSpaceEnabled, icon: SettingsIcons.autoSpace) {
                         SharedSettings.shared.isAutoSpaceEnabled = $0
                     }
-                    settingsToggle(SettingsTexts.toolbarAutoCollapse, isOn: $toolbarAutoCollapse, icon: SettingsIcons.toolbar) {
+                    settingsToggle(lang.string(.settingsToolbarAutoCollapse), isOn: $toolbarAutoCollapse, icon: SettingsIcons.toolbar) {
                         SharedSettings.shared.isToolbarAutoCollapse = $0
                     }
-                    settingsToggle(SettingsTexts.globeKey, isOn: $isGlobeKeyEnabled, icon: SettingsIcons.globeKey) {
+                    settingsToggle(lang.string(.settingsGlobeKey), isOn: $isGlobeKeyEnabled, icon: SettingsIcons.globeKey) {
                         SharedSettings.shared.isGlobeKeyEnabled = $0
                     }
 
                     // Feedback settings
-                    settingsToggle(SettingsTexts.soundFeedback, isOn: $isAudioFeedbackEnabled, icon: SettingsIcons.soundFeedback) {
+                    settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled, icon: SettingsIcons.soundFeedback) {
                         KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
                     }
-                    settingsToggle(SettingsTexts.vibrationFeedback, isOn: $isHapticFeedbackEnabled, icon: SettingsIcons.vibrationFeedback) {
+                    settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled, icon: SettingsIcons.vibrationFeedback) {
                         KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
                     // POJ settings
-                    settingsToggle(SettingsTexts.doubleTapOO, isOn: $isDoubleTapOOEnabled) {
+                    settingsToggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled) {
                         SharedSettings.shared.isDoubleTapOOEnabled = $0
                     }
-                    settingsToggle(SettingsTexts.doubleTapNN, isOn: $isDoubleTapNNEnabled) {
+                    settingsToggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled) {
                         SharedSettings.shared.isDoubleTapNNEnabled = $0
                     }
 
                     // TPS settings
-                    settingsToggle(SettingsTexts.isTpsOrMappedToER, isOn: $isTpsOrMappedToER) {
+                    settingsToggle(lang.string(.settingsTpsOrMapsToER), isOn: $isTpsOrMappedToER) {
                         SharedSettings.shared.isTpsOrMappedToER = $0
                     }
 
@@ -122,6 +123,8 @@ struct SettingsSelectionOverlay: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
+            // 中文: 開啟 overlay 時重讀 App-Group 顯示語言 tag — 跨程序(host 改語言)可靠的重讀點。
+            lang.syncFromSettings()
             let s = SharedSettings.shared
             isOutputBothScripts = s.isOutputBothScripts
             literalRomanCandidateEnabled = s.isLiteralRomanCandidateEnabled
@@ -173,7 +176,7 @@ struct SettingsSelectionOverlay: View {
             onOpenApp()
             onDismiss()
         }) {
-            Text(SettingsTexts.openApp)
+            Text(lang.string(.settingsOpenApp))
                 .font(KeyboardFonts.globalFont(size: 15))
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity)

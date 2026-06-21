@@ -501,10 +501,10 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
-                "nan-Hant-TW",
-                "nan-Latn-TW-x-tailo",
-                "nan-Latn-TW-x-poj",
-                "ja",
+				"nan-Hant-TW",
+				"nan-Latn-TW-x-tailo",
+				"nan-Latn-TW-x-poj",
+				ja,
 				Base,
 				smn,
 				de,

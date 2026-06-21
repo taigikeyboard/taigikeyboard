@@ -26,6 +26,9 @@ struct TaigiKeyboardView: View {
     // 中文: 設定編輯軸的 re-render 觸發器。colorScheme 變動由 keyboardContext(@ObservedObject)
     // 中文: 自動觸發;但 host app 改顏色/主題時 keyboardContext 不變,靠 didChange bump 此值強制重繪。
     @State private var settingsRevision = 0
+    // 中文: extension 程序自己的 i18n 顯示語言 store(host 是另一程序)。view-owned @State 讓直接建構
+    // 中文: TaigiKeyboardView 的路徑(如 KeyboardPreviewPanel)自帶 store;注入 environment 供 overlay 讀取。
+    @State private var displayLanguageStore = DisplayLanguageStore()
 
     init(
         settings: any KeyboardEnvironment,
@@ -165,6 +168,9 @@ struct TaigiKeyboardView: View {
         // 中文: 把主題解析所用的 colorScheme 灌進 environment,讓仍讀 @Environment(\.colorScheme)
         // 中文: 的子 view(CandidateView / CandidateButtonView)與 resolver 同源,避免淺/深色混色。
         .environment(\.colorScheme, keyboardContext.colorScheme)
+        // 中文: 把 extension 的顯示語言 store 灌進 environment;overlay 以 @Environment(DisplayLanguageStore.self)
+        // 中文: 讀取並 live-switch。套在 overlay 已掛載之後仍會傳入(與上面 colorScheme 同路徑)。
+        .environment(displayLanguageStore)
         .onAppear {
             if let mode = initialInputMode {
                 currentInputMode = mode
@@ -179,6 +185,10 @@ struct TaigiKeyboardView: View {
             // 中文: 重新解析主題外觀(selectedThemeId / colorSettings / 各尺寸 / themeRevision 任一變更皆觸發)。
             // 中文: 尺寸/邊框/陰影走 settings.snapshot(per-theme resolved);字型為全域設定亦由 snapshot 帶入。不再各自 @State 鏡像。
             settingsRevision &+= 1
+            // 中文: 同程序內盡力同步顯示語言。跨程序(host 改語言)的可靠重讀點在 overlay .onAppear,因
+            // 中文: UserDefaults.didChangeNotification 依 Apple 契約只在本程序寫入時送出,外部程序寫入不保證觸發
+            // 中文: (Codex pre-impl F1c)。此處冪等:語言未變則 store didSet 不動作。
+            displayLanguageStore.syncFromSettings()
         }
     }
 

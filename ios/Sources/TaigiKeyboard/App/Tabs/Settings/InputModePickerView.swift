@@ -5,6 +5,7 @@ import SwiftUI
 /// Picker subpage for `SettingsTab` input-mode row.
 // 中文: 輸入模式挑選子頁。透過 binding + onChange 立刻寫回 SettingsTab 的 ViewModel。
 struct InputModePickerView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @Binding var selectedMode: InputMode
     var onChange: (InputMode) -> Void
 
@@ -17,7 +18,7 @@ struct InputModePickerView: View {
                         onChange(mode)
                     } label: {
                         HStack {
-                            Text(mode.displayName)
+                            Text(lang.string(mode.displayNameKey))
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedMode == mode {
@@ -29,7 +30,7 @@ struct InputModePickerView: View {
                 }
             }
         }
-        .navigationTitle(SettingsTexts.inputMode)
+        .navigationTitle(lang.string(.settingsInputMode))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

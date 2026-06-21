@@ -23,15 +23,23 @@ enum TabType: Int, CaseIterable, Hashable {
         }
     }
 
-    /// Localized tab title.
-    // 中文: 該 tab 的本地化標題,從各 *Texts 取出。
+    /// Tab title.
+    ///
+    /// Tab-strip + page chrome. Deliberately NOT an i18n key — it does not live-switch with the in-app
+    /// display-language picker, matching Android's hand-written native `R.string.tab_*` nav-chrome
+    /// classification (tab strip + page title follow OS locale, not the picker). `.layout` / `.settings`
+    /// are inline literals after their `*Texts` files were deleted in R2b-2; the other three keep their
+    /// `*Texts` refs until their own migration rounds inline likewise.
+    // 中文: tab strip + 頁面標題的 nav chrome。刻意非 i18n key — 不隨 app 顯示語言 picker live-switch,
+    // 中文: 對齊 Android native R.string.tab_*(跟 OS locale,不跟 picker)。layout/settings 於 R2b-2
+    // 中文: 刪除 *Texts 後改 inline 字面值;其餘三個待各自遷移輪次比照處理。
     var title: String {
         switch self {
         case .home: HomeTexts.tabTitle
         case .theme: ThemeTexts.tabBarTitle
-        case .layout: LayoutTexts.tabBarTitle
+        case .layout: "佈局"
         case .dictionary: DictionaryTexts.tabBarTitle
-        case .settings: SettingsTexts.tabBarTitle
+        case .settings: "設定"
         }
     }
 }

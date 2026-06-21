@@ -7,15 +7,16 @@ import Foundation
 
 /// Platform-side localization for `InputMode` (defined in `InputMode.swift`
 /// as a Foundation-only shared-core candidate).
-// 中文: InputMode 的 UI 端 displayName,從 SettingsTexts 拉本地化字串。
+// 中文: InputMode 的 UI 端 displayName i18n key。
 extension InputMode {
-    // 中文: 設定頁顯示用名稱 (POJ / TL / English / TPS)。
-    var displayName: String {
+    // 中文: 設定頁顯示用名稱的 i18n key (POJ / TL / English / TPS)。View 端用 lang.string(mode.displayNameKey)
+    // 中文: 解析,確保語言切換即時更新。Reactive: 在 call site 解析,非 class-load-time getter (對齊 FontType.displayNameKey)。
+    var displayNameKey: StringKey {
         switch self {
-        case .poj: SettingsTexts.pojMode
-        case .tl: SettingsTexts.tlMode
-        case .english: SettingsTexts.englishMode
-        case .tps: SettingsTexts.tpsMode
+        case .poj: .settingsPojMode
+        case .tl: .settingsTlMode
+        case .english: .settingsEnglishMode
+        case .tps: .settingsTpsMode
         }
     }
 }
@@ -56,7 +57,7 @@ enum FontType: String, CaseIterable, Codable {
 
     // 中文: 設定頁顯示用名稱的 i18n key。View 端用 lang.string(font.displayNameKey) 解析,確保語言切換即時更新。
     // Reactive: resolved at the call site via the environment store, not a non-reactive getter (Codex Q4).
-    // All five names live in the `common` namespace (`.system` was the former LayoutTexts.fontSystemDefault).
+    // All five names live in the `common` namespace (`.system` = `commonFontSystemDefault`).
     var displayNameKey: StringKey {
         switch self {
         case .system: .commonFontSystemDefault

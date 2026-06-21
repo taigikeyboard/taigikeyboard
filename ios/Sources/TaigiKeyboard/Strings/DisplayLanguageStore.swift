@@ -9,8 +9,10 @@ import SwiftUI
 /// string — no Activity/keyboard restart (plan D7 live-switch).
 ///
 /// Host: a single store injected at `AppRootView`; `setLanguage` persists the selection to App-Group
-/// settings. Extension: its own store (separate process), kept in sync from `SharedSettings.displayLanguage`
-/// on the settings-change notification — the App-Group value is the cross-process channel.
+/// settings. Extension: its own store (separate process). The App-Group value is the cross-process data
+/// channel, but `UserDefaults.didChangeNotification` only fires for in-process writes (Apple contract), so
+/// it is a best-effort wake at most; the reliable re-read is `syncFromSettings()` at each language surface's
+/// appear point (the keyboard overlays call it from `.onAppear`).
 @MainActor
 @Observable
 final class DisplayLanguageStore {
@@ -46,8 +48,9 @@ final class DisplayLanguageStore {
         self.language = language
     }
 
-    /// Re-reads the persisted tag into the live state. The extension calls this from its settings-change
-    /// observer so a host-side language change reflects without a keyboard restart.
+    /// Re-reads the persisted tag into the live state. The extension calls this when a language surface
+    /// appears (overlay `.onAppear`) so a host-side language change reflects without a keyboard restart.
+    /// Idempotent — `language`'s `didSet` guards on equality, so an unchanged tag rebuilds nothing.
     func syncFromSettings() {
         language = DisplayLanguage.fromTag(SharedSettings.shared.displayLanguage)
     }
