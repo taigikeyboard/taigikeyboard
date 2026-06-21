@@ -5,6 +5,12 @@
       "comment": "Display name of the regional accent / pronunciation-variation supplement data source (Android key was khpooDict; canonical name unified with iOS).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accent Variations"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -17,6 +23,12 @@
       "comment": "Dialog dismiss button — cancels the action and closes the dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -29,6 +41,12 @@
       "comment": "Generic delete action label / a11y description (custom-theme card menu item, dictionary row delete).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -41,6 +59,12 @@
       "comment": "Keyboard font option: GenYoGothic (源樣烏體) sans-serif typeface.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GenYoGothic"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -53,6 +77,12 @@
       "comment": "Keyboard font option: GenYoMin (源樣明體) serif typeface.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GenYoMin"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -65,6 +95,12 @@
       "comment": "Keyboard font option: Iansui (芫荽) typeface.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iansui"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -77,6 +113,12 @@
       "comment": "Keyboard font option: JF Open Huninn (粉圓) typeface.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Huninn"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -89,6 +131,12 @@
       "comment": "Keyboard font option: the OS system default typeface.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -101,6 +149,12 @@
       "comment": "Display name of the iTaigi crowd-sourced dictionary data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -113,6 +167,12 @@
       "comment": "Display name of the NTCRI craft-terminology lexicon data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NTCRI Taiwanese Craft Glossary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -125,6 +185,12 @@
       "comment": "Display name of the MOE Taiwanese dictionary data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Dictionary of Common Taiwanese Words"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -137,6 +203,12 @@
       "comment": "Display name of the PTS Taigi new-word lexicon data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PTS Taigi New-Word Lexicon"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -149,6 +221,12 @@
       "comment": "Generic confirm button on an informational result dialog (acknowledge / dismiss); iOS reuses it for the custom-theme cap-reached alert.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -161,6 +239,12 @@
       "comment": "Display name of the MOE academic-subject terminology Taigi translation data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Academic Subject Terminology (Taigi)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -173,6 +257,12 @@
       "comment": "Display name of the online Taigi-Mandarin cross-reference dictionary data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi-Mandarin Online Cross-Reference"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -185,6 +275,12 @@
       "comment": "Display name of the Taiwanese-Japanese Grand Dictionary (Taigi translation) data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taiwanese-Japanese Dictionary (Taigi Edition)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -197,6 +293,12 @@
       "comment": "Display name of the Taiwan plant-name glossary data source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taiwan Plant Name Glossary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -209,6 +311,12 @@
       "comment": "Link button opening an official website in the browser (data sources + the app's own site).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Official Website"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +329,12 @@
       "comment": "Title of the add-custom-entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Word"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -233,6 +347,12 @@
       "comment": "Description of the word-association CSV format (5-column layout).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Association records use a plain-text CSV file with 5 columns: previous word, previous romanization, next word, next romanization, count. No header row."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -245,6 +365,12 @@
       "comment": "Button: export the word-association records to a CSV file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Association Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -257,6 +383,12 @@
       "comment": "Button: import word-association records from a CSV file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Association Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -269,6 +401,12 @@
       "comment": "Page/section title for word-association record management.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Association Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -281,6 +419,12 @@
       "comment": "Privacy warning about sharing word-association data for research.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Association records are valuable data for Taiwanese-language research. If you share them for research, please delete sensitive content first. You can also turn recording off, though next-word prediction will then be less accurate."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -293,6 +437,12 @@
       "comment": "Toggle label: enable recording of word-association (bigram) data.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record Word Associations"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -305,6 +455,12 @@
       "comment": "Info-dialog body explaining what association recording does for next-word prediction.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, the keyboard records which words follow which, making continuous suggestions more accurate over time."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -317,6 +473,12 @@
       "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup files contain all your usage records and work on both iOS and Android, so you need not worry when switching phones."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -329,6 +491,12 @@
       "comment": "Section title for full backup/restore of all user data.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup and Restore"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -341,6 +509,12 @@
       "comment": "Generic clear button label (e.g. confirm clearing all frequency/association records).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -353,6 +527,12 @@
       "comment": "Destructive action: delete all word-association records.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All Association Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -365,6 +545,12 @@
       "comment": "Destructive action: delete all word-frequency records.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All Frequency Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -377,6 +563,12 @@
       "comment": "Confirmation dialog body for deleting all word-association records.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all association records?"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -389,6 +581,12 @@
       "comment": "Confirmation dialog body for deleting all word-frequency records.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all frequency records?"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -401,6 +599,12 @@
       "comment": "Description of the custom-dictionary CSV format (column layout).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The custom dictionary uses a plain-text CSV file: column 1 holds the romanization to type, column 2 holds the Hanji. No header row."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -413,6 +617,12 @@
       "comment": "Empty-state hint shown when the custom dictionary has no entries.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap + to add a custom word"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -425,6 +635,12 @@
       "comment": "Toggle label: enable the user's custom dictionary in candidate suggestions.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable Custom Dictionary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -437,6 +653,12 @@
       "comment": "Info-dialog body explaining what enabling the custom dictionary does.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, words you add appear among the candidates. When off, your custom words no longer show up."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -449,6 +671,12 @@
       "comment": "Privacy warning against storing sensitive personal data in the custom dictionary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please do not store sensitive personal data in the custom dictionary, such as ID numbers, account passwords, or credit-card numbers. Mind your information security."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -461,6 +689,12 @@
       "comment": "Custom dictionary section/page title.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom Dictionary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -473,6 +707,12 @@
       "comment": "Section title for personal-data management (backup/import/export of user data).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal Data"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -485,6 +725,12 @@
       "comment": "Destructive action: delete all custom-dictionary entries.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All Custom Words"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -497,6 +743,12 @@
       "comment": "Confirmation dialog body for deleting all custom-dictionary entries.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all custom words?"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -509,6 +761,12 @@
       "comment": "Display name of the developer supplement dictionary file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supplementary Word List"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -521,6 +779,12 @@
       "comment": "Title of the edit-custom-entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Word"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -533,6 +797,12 @@
       "comment": "Button: export a full backup of all user data in one file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export All at Once"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -545,6 +815,12 @@
       "comment": "Toast/dialog confirming the full backup exported successfully.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup exported successfully"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -557,6 +833,12 @@
       "comment": "Button: export the custom dictionary to a CSV file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Dictionary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -569,6 +851,12 @@
       "comment": "Toast/dialog confirming the custom dictionary exported successfully.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV exported successfully"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -581,6 +869,12 @@
       "comment": "Error: the imported file exceeds the 5 MB size limit.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File too large (5 MB limit)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -593,6 +887,12 @@
       "comment": "Hint explaining the 100-item display cap and pointing to the search field.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At most 100 words are shown above. If you cannot find a word, use the \"Type to search\" field below."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -605,6 +905,12 @@
       "comment": "Description of the word-frequency CSV format (column layout).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequency records use a plain-text CSV file: column 1 holds the word, column 2 holds the count. No header row."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -617,6 +923,12 @@
       "comment": "Button: export the word-frequency records to a CSV file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Frequency Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -629,6 +941,12 @@
       "comment": "Button: import word-frequency records from a CSV file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Frequency Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -641,6 +959,12 @@
       "comment": "Page/section title for word-frequency record management.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequency Records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -653,6 +977,12 @@
       "comment": "Privacy warning about sharing word-frequency data for research.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequency records are valuable data for Taiwanese-language research. If you share them for research or model training, please delete sensitive private data first. You can also turn recording off, though candidate ranking will then be less accurate."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -665,6 +995,12 @@
       "comment": "Toggle label: enable recording of word-selection frequency.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record Word Frequency"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -677,6 +1013,12 @@
       "comment": "Info-dialog body explaining what frequency recording does for candidate ranking.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, the keyboard records how often you pick each word and uses it to rank candidates. Words you choose often move toward the front, so the candidates get more accurate over time."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -689,6 +1031,12 @@
       "comment": "Field label for the Hanji (對應) column in the custom-entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanji"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -701,6 +1049,12 @@
       "comment": "Placeholder example for the Hanji field in the custom-entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Example: 𠢙早"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -713,6 +1067,12 @@
       "comment": "Button: import a full backup of all user data from one file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import All at Once"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -725,6 +1085,12 @@
       "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported %1$lld custom entries, %2$lld frequency records, %3$lld association records"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -737,6 +1103,12 @@
       "comment": "Button: import the custom dictionary from a CSV file.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Dictionary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -749,6 +1121,12 @@
       "comment": "Section title for the import/export controls.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import / Export"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -761,6 +1139,12 @@
       "comment": "Import-result message: number of entries imported and number skipped (duplicates / overflow / write failures). Shared by custom-dictionary, frequency, and association imports (iOS importResultFormat).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported %1$lld, skipped %2$lld"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -773,6 +1157,12 @@
       "comment": "Error: the imported file is not valid CSV.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid file format. Please use CSV."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -785,6 +1175,12 @@
       "comment": "MOE dictionary accent sub-source: Yilan Zhangzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yilan (Zhangzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -797,6 +1193,12 @@
       "comment": "MOE dictionary accent sub-source: Kaohsiung mixed accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaohsiung (Mixed)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -809,6 +1211,12 @@
       "comment": "MOE dictionary accent sub-source: Kinmen Quanzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kinmen (Quanzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -821,6 +1229,12 @@
       "comment": "MOE dictionary accent sub-source: Lukang Quanzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lukang (Quanzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -833,6 +1247,12 @@
       "comment": "MOE dictionary accent sub-source: Makung Quanzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makung (Quanzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -845,6 +1265,12 @@
       "comment": "MOE dictionary accent sub-source: Sansia Quanzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sansia (Quanzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -857,6 +1283,12 @@
       "comment": "MOE dictionary accent sub-source: Hsinchu Quanzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hsinchu (Quanzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -869,6 +1301,12 @@
       "comment": "MOE dictionary accent sub-source: Taichung Zhangzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taichung (Zhangzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -881,6 +1319,12 @@
       "comment": "MOE dictionary accent sub-source: Tainan mixed accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tainan (Mixed)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -893,6 +1337,12 @@
       "comment": "MOE dictionary accent sub-source: Taipei Quanzhou-leaning accent.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taipei (Quanzhou-leaning)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -905,6 +1355,12 @@
       "comment": "MOE dictionary sub-source: surname appendix.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surname Appendix"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -917,6 +1373,12 @@
       "comment": "Toggle/section label for the Khiin (在來字) dictionary source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Native Characters"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -929,6 +1391,12 @@
       "comment": "Display name of the Han-Lo recommended-character dictionary source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Han-Lo Recommended Characters"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -941,6 +1409,12 @@
       "comment": "External-lookup option: ChhoeTaigi dictionary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChhoeTaigi Dictionary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -953,6 +1427,12 @@
       "comment": "External-lookup option: MOE dictionary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Dictionary"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -965,6 +1445,12 @@
       "comment": "Section header grouping MOE dictionary sources.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Characters"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -977,6 +1463,12 @@
       "comment": "Empty-state message when a record list has no data.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No data"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -989,6 +1481,12 @@
       "comment": "Empty-state message when a dictionary search returns nothing.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No results"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1499,12 @@
       "comment": "Section header grouping non-MOE dictionary sources.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other Dictionaries"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1013,6 +1517,12 @@
       "comment": "Field label for the romanization (拍字) column in the custom-entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romanization"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1025,6 +1535,12 @@
       "comment": "Placeholder example for the romanization field in the custom-entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Example: gâu-tsá"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1037,6 +1553,12 @@
       "comment": "Save button in the custom-dictionary add/edit entry dialog.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1049,6 +1571,12 @@
       "comment": "Search-field placeholder in the dictionary browser.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type to search"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1061,6 +1589,12 @@
       "comment": "Section header grouping supplementary dictionary data.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supplementary Data"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1073,6 +1607,12 @@
       "comment": "Error: the import exceeds the 30,000-entry cap.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many entries (30,000 limit)"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1085,6 +1625,12 @@
       "comment": "Toggle/section label for the variant-character (異用字) dictionary source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variant Characters"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1097,6 +1643,12 @@
       "comment": "Home resource link + about-developer page title.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1109,6 +1661,12 @@
       "comment": "Credit line for the regional-accent supplement source (compiled and provided by 實齋).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compiled and provided by 實齋"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1121,6 +1679,12 @@
       "comment": "Home tab large title — the app name.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi Keyboard"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1133,6 +1697,12 @@
       "comment": "Copyright attribution for ButTaiwan fonts (芫荽 Iansui + 源樣明體/源樣烏體 GenYo families).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© ButTaiwan"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1145,6 +1715,12 @@
       "comment": "Home resource link + copyright/acknowledgement page title.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acknowledgements"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1157,6 +1733,12 @@
       "comment": "Credit line for the word-list supplement source (compiled and provided by 建中).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compiled and provided by 建中"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1169,6 +1751,12 @@
       "comment": "Home section header above the FAQ / other list.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1181,6 +1769,12 @@
       "comment": "About-developer page body: the maintainer's promise that the keyboard stays free.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi Keyboard will always be free, with no paid features. Taiwanese is our mother tongue, and no one should be unable to use a good tool over money. My hope is that everyone who wants to learn and write Taiwanese can use it without any burden — that is the most important wish behind this keyboard."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1193,6 +1787,12 @@
       "comment": "Copyright attribution for the iTaigi crowd-sourced dictionary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© iTaigi"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1205,6 +1805,12 @@
       "comment": "Copyright attribution for the NTCRI craft-terminology lexicon.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© National Taiwan Craft Research and Development Institute"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1217,6 +1823,12 @@
       "comment": "Copyright attribution for the MOE (教育部 / Ministry of Education) — used for both the MOE Taiwanese dictionary and (iOS) the STTI academic-terminology source, which share the same rights-holder. Non-Hanji languages may use the rights-holder's official name; absent override falls back to Hanji.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© Ministry of Education"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1229,6 +1841,12 @@
       "comment": "Home section header above the feature-settings list.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feature Settings"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1241,6 +1859,12 @@
       "comment": "Copyright attribution for the PTS Taigi new-word lexicon.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© PTS Taigi"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1253,6 +1877,12 @@
       "comment": "Copyright attribution for the JF Open Huninn (粉圓) font.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© justfont"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1265,6 +1895,12 @@
       "comment": "Home resource link: open the privacy policy.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1277,6 +1913,12 @@
       "comment": "Home resource link: rate the app on the store.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate Us"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1289,6 +1931,12 @@
       "comment": "Setup-guide note: steps may differ slightly across phone brands.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steps may differ slightly between phone brands, but the overall process is much the same."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1301,6 +1949,12 @@
       "comment": "Setup-guide navigation row label + sub-page title.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How to Enable"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1313,6 +1967,12 @@
       "comment": "Setup-guide full-screen close button.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1325,6 +1985,12 @@
       "comment": "Setup-guide full-screen closing paragraph: restart the app and switch via the globe key.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once done, restart the app you are using so it reloads the keyboard list. Then, wherever you can type, press and hold the globe icon to switch to Taigi Keyboard."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1337,6 +2003,12 @@
       "comment": "Setup-guide intro paragraph: third-party keyboards must be enabled manually.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1349,6 +2021,12 @@
       "comment": "Setup-guide button: open the system input-method settings page.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1361,6 +2039,12 @@
       "comment": "Setup-guide step 1 title: tap 'Keyboards'.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap \"Keyboards\""
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1373,6 +2057,12 @@
       "comment": "Setup-guide step 2 title: tap 'Add keyboard' and 'Allow Full Access'.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap \"Add keyboard\" and \"Allow Full Access\""
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1385,6 +2075,12 @@
       "comment": "Setup-guide note explaining what 'Allow Full Access' means and the privacy stance.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"Allow Full Access\" lets the keyboard recognize your key presses and turn them into the text you type. Rest assured, the app does not record your data."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1397,6 +2093,12 @@
       "comment": "Home section header above the keyboard-activation guide row.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable the keyboard to start using it"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1409,6 +2111,12 @@
       "comment": "Copyright attribution for the online Taigi-Mandarin cross-reference dictionary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© Tēⁿ Liông-uí"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1421,6 +2129,12 @@
       "comment": "Copyright attribution for the Taiwanese-Japanese Grand Dictionary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© Ogawa Naoyoshi"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1433,6 +2147,12 @@
       "comment": "Copyright attribution for the Taiwan plant-name glossary.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© Sasaki Shun'ichi"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1445,6 +2165,12 @@
       "comment": "Home section header above the typing-guide feature list.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typing Guide"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1457,6 +2183,12 @@
       "comment": "Home resource link: the project website introduction.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project Website"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1469,6 +2201,12 @@
       "comment": "Home row label for the current app version.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Version"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1481,6 +2219,12 @@
       "comment": "Home resource link + version-history page title.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version History"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1493,6 +2237,12 @@
       "comment": "Copyright page button: open the license text for a source.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1505,6 +2255,12 @@
       "comment": "Placeholder badge for a layout that is not yet available. iOS-only: shown in the iOS layout-selection overlay (LayoutSelectionOverlay.swift); Android has no such placeholder.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coming soon"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1517,6 +2273,12 @@
       "comment": "Layout name: the MOE input-method keyboard, variant 1.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Input Method 1"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1529,6 +2291,12 @@
       "comment": "Layout name: the MOE input-method keyboard, variant 2.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Input Method 2"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1541,6 +2309,12 @@
       "comment": "Layout name: the PhahTaigi romanization layout.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PhahTaigi"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1553,6 +2327,12 @@
       "comment": "Section header for the romanization keyboard layouts (host tab + IME layout overlay).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romanization Keyboards"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1565,6 +2345,12 @@
       "comment": "Layout name: the standard QWERTY-style romanization layout (Lohankha).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lohankha"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1577,6 +2363,12 @@
       "comment": "Section header for the Taiwanese phonetic (TPS) keyboard layouts.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taiwanese Phonetic Symbols"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1589,6 +2381,12 @@
       "comment": "Layout name: the Taiwanese Phonetic Symbols (方音符號) keyboard.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phonetic Symbols"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1601,6 +2399,12 @@
       "comment": "Toggle label: automatic capitalization in English mode.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-Capitalization"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1613,6 +2417,12 @@
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-Space"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1625,6 +2435,12 @@
       "comment": "Toast confirming diagnostic info was copied.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1637,6 +2453,12 @@
       "comment": "Action row: copy device diagnostic info to clipboard.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Device Info"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1649,6 +2471,12 @@
       "comment": "Action row: email a bug report with diagnostic info attached.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email a Bug Report"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1661,6 +2489,12 @@
       "comment": "Section header for device-diagnostics actions.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device Info"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1673,6 +2507,12 @@
       "comment": "Action row: share device diagnostic info via the share sheet.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share Device Info"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1685,6 +2525,12 @@
       "comment": "Toggle label: double-tap nn composes ⁿ (POJ nasal).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap nn → ⁿ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1697,6 +2543,12 @@
       "comment": "Toggle label: double-tap oo composes o͘ (POJ).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap oo → o͘"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1709,6 +2561,12 @@
       "comment": "Input-mode option: English keyboard.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1721,6 +2579,12 @@
       "comment": "Section header for key-press feedback settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key-Press Feedback"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1733,6 +2597,12 @@
       "comment": "Toggle label: show the globe / keyboard-switch key.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard-Switch Key"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1745,6 +2615,12 @@
       "comment": "Help text for the globe-key toggle.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a globe key to the keyboard; tap it to switch to another keyboard."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1757,6 +2633,12 @@
       "comment": "Settings row + sub-screen title for selecting the active input mode.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Input Mode"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1769,6 +2651,12 @@
       "comment": "Section header for keyboard-chrome settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1781,6 +2669,12 @@
       "comment": "Toggle label: show the literal romanization candidate in the strip.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Romanization"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1793,6 +2687,12 @@
       "comment": "Help text for the show-romanization toggle.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Places the romanization in the first slot of the candidate bar; tap it or press Enter to commit. When off, you can only commit with Enter (tapping is disabled), but the candidate bar has more room."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1805,6 +2705,12 @@
       "comment": "Keyboard-overlay button linking to the host app's full settings screen.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust in App"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1817,6 +2723,12 @@
       "comment": "Toggle label: annotate committed text with the other script in brackets.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annotate in Brackets"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1829,6 +2741,12 @@
       "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pe̍h-ōe-jī"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1841,6 +2759,12 @@
       "comment": "Section header for Pe̍h-ōe-jī-specific settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pe̍h-ōe-jī"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1853,6 +2777,12 @@
       "comment": "Generic confirm-action label on the reset-settings dialog (恢復 = restore).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1865,6 +2795,12 @@
       "comment": "Destructive action row + dialog title: reset all settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset Settings"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1877,6 +2813,12 @@
       "comment": "Confirmation-dialog body for resetting all settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This will reset all settings. Continue?"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1889,6 +2831,12 @@
       "comment": "Toggle label: key-press sound feedback.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Sound"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1901,6 +2849,12 @@
       "comment": "Input-mode option: Tâi-lô (台羅) romanization.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tâi-lô"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1913,6 +2867,12 @@
       "comment": "Toggle label: auto-hide the candidate toolbar after selecting.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-Hide Toolbar"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1925,6 +2885,12 @@
       "comment": "Help text for the auto-hide-toolbar toggle.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After you pick a word, the toolbar collapses automatically to give the keyboard more room."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1937,6 +2903,12 @@
       "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phonetic Symbols"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1949,6 +2921,12 @@
       "comment": "Toggle label: render TL 'or' final as TPS ㄜ.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map or → ㄜ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1961,6 +2939,12 @@
       "comment": "Help text for the or→ㄜ toggle (multi-paragraph).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tâi-lô 'or' is not a standard spelling; the phonetic symbol ㄜ officially corresponds only to 'er'. This setting only controls how candidates are displayed — dictionary search already maps 'er' and 'or' to the same phoneme, so words are found whether this is on or off.\n\nOn (default): 'or' shows as ㄜ.\nOff: 'or' shows as ㄛ (back to Tâi-lô o)."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1973,6 +2957,12 @@
       "comment": "Section header for TPS-specific settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phonetic Symbols"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1985,6 +2975,12 @@
       "comment": "Section header for typing-behaviour settings.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typing"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1997,6 +2993,12 @@
       "comment": "Toggle label: key-press vibration feedback.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vibration"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2009,6 +3011,12 @@
       "comment": "Theme editor section header: the candidate-bar group (candidate colors + text size).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate Bar"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2021,6 +3029,12 @@
       "comment": "Theme editor slider label: candidate text size.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate Text Size"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2033,6 +3047,12 @@
       "comment": "Body of the custom-theme cap-reached alert (cap is UserThemeStore.MAX_USER_THEMES = 5).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The custom-theme limit is 5. Delete one before adding another."
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2045,6 +3065,12 @@
       "comment": "Title of the alert shown when the custom-theme count cap (5) is reached.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theme Limit Reached"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2057,6 +3083,12 @@
       "comment": "Custom-theme card action-menu item: apply this theme.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2069,6 +3101,12 @@
       "comment": "Custom-theme card action-menu item: edit this theme.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2081,6 +3119,12 @@
       "comment": "Theme editor color-row label: the candidate-bar background color.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate Background"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2093,6 +3137,12 @@
       "comment": "Theme editor color-row label: the candidate text color.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate Text"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2105,6 +3155,12 @@
       "comment": "Theme editor section header: the key-surface group (key colors + sizing).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keys"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2117,6 +3173,12 @@
       "comment": "Theme editor color-row label: the key glyph (text) color.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Text"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2129,6 +3191,12 @@
       "comment": "Theme editor color-row label: the keyboard background color.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard Background"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2141,6 +3209,12 @@
       "comment": "Theme editor color-row label: the fill color of normal (letter) keys.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal Key Fill"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2153,6 +3227,12 @@
       "comment": "Theme editor color-row label: the fill color of special (function) keys.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Special Key Fill"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2165,6 +3245,12 @@
       "comment": "Label + content description for the create-new-theme card on the theme picker shelf.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Theme…"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2177,6 +3263,12 @@
       "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). Shared by iOS and Android.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Font"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2189,6 +3281,12 @@
       "comment": "Section header above the custom-theme shelf in the theme picker.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom Themes"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2201,6 +3299,12 @@
       "comment": "Fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Theme"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2213,6 +3317,12 @@
       "comment": "Theme editor button: reset the draft appearance back to defaults.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to Defaults"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2225,6 +3335,12 @@
       "comment": "Theme editor / name dialog save button.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2237,6 +3353,12 @@
       "comment": "Theme editor top-bar title in edit mode.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Theme"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2249,6 +3371,12 @@
       "comment": "Theme editor top-bar title in create mode.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Theme"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2261,6 +3389,12 @@
       "comment": "Theme editor slider label: key border width.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Border Width"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2273,6 +3407,12 @@
       "comment": "Theme editor slider label: key corner radius.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Corner Radius"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2285,6 +3425,12 @@
       "comment": "Theme editor slider label: key glyph font size.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Font Size"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2297,6 +3443,12 @@
       "comment": "Theme editor slider label: keyboard height scale.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard Height"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2309,6 +3461,12 @@
       "comment": "Theme editor slider label: key shadow intensity.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Shadow"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2321,6 +3479,12 @@
       "comment": "Theme editor section header: the keyboard-surface group (background color + key height).",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard Surface"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2333,6 +3497,12 @@
       "comment": "Theme name dialog header.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theme Name"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2345,6 +3515,12 @@
       "comment": "Theme name dialog text-field placeholder.",
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a theme name"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",

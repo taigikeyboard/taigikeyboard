@@ -1,10 +1,11 @@
 // Debug-only language probe bar — proves live-switch across both D2 resolution paths (R2a-1).
 //
-// Renders only in debug builds. Switching HANJI (native resource) <-> PSEUDO (generated map)
-// recomposes the probe label live, exercising both halves of the hybrid with one tap. Only these
-// two are offered so the persisted production tag stays safe: HANJI is the default and PSEUDO is
-// neutralized to HANJI in release (DisplayLanguage.fromTag), so a leftover probe selection can
-// never surface a half-authored language in production. Removed once the picker lands (P2).
+// Renders only in debug builds. Switching HANJI / ENGLISH (native resource) <-> PSEUDO (generated
+// map) recomposes the probe label live, exercising both halves of the hybrid with one tap. ENGLISH
+// exercises the real authored English (P2 R3-1); PSEUDO is the layout-inflated probe, neutralized to
+// HANJI in release (DisplayLanguage.fromTag) so a leftover probe selection can never surface it in
+// production. ENGLISH is safe in release too, but the production picker that exposes it lands in R3-3.
+// Removed once the picker lands (P2).
 
 package com.siansiansu.taigikeyboard.i18n
 
@@ -23,7 +24,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 
-private val PROBE_LANGUAGES = listOf(DisplayLanguage.HANJI, DisplayLanguage.PSEUDO)
+private val PROBE_LANGUAGES = listOf(DisplayLanguage.HANJI, DisplayLanguage.ENGLISH, DisplayLanguage.PSEUDO)
 
 @Composable
 fun I18nProbeBar(prefs: PrefHelper) {

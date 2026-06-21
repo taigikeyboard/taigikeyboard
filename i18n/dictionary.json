@@ -4,369 +4,369 @@
     "clear": {
       "comment": "Generic clear button label (e.g. confirm clearing all frequency/association records).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "清除" }
+      "values": { "hanji": "清除", "en": "Clear" }
     },
     "save": {
       "comment": "Save button in the custom-dictionary add/edit entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "儉起來" }
+      "values": { "hanji": "儉起來", "en": "Save" }
     },
     "customDictionary": {
       "comment": "Custom dictionary section/page title.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂詞庫" }
+      "values": { "hanji": "自訂詞庫", "en": "Custom Dictionary" }
     },
     "customDictEnabled": {
       "comment": "Toggle label: enable the user's custom dictionary in candidate suggestions.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "啟用自訂詞庫" }
+      "values": { "hanji": "啟用自訂詞庫", "en": "Enable Custom Dictionary" }
     },
     "customDictEnabledInfo": {
       "comment": "Info-dialog body explaining what enabling the custom dictionary does.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍開了後，家己加入 ê 詞會出現佇候選詞內底。關起來了後，自訂詞就袂閣出現。" }
+      "values": { "hanji": "拍開了後，家己加入 ê 詞會出現佇候選詞內底。關起來了後，自訂詞就袂閣出現。", "en": "When on, words you add appear among the candidates. When off, your custom words no longer show up." }
     },
     "dataManagement": {
       "comment": "Section title for personal-data management (backup/import/export of user data).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "個人資料" }
+      "values": { "hanji": "個人資料", "en": "Personal Data" }
     },
     "variantDictionary": {
       "comment": "Toggle/section label for the variant-character (異用字) dictionary source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "異用字" }
+      "values": { "hanji": "異用字", "en": "Variant Characters" }
     },
     "khiin": {
       "comment": "Toggle/section label for the Khiin (在來字) dictionary source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "在來字" }
+      "values": { "hanji": "在來字", "en": "Native Characters" }
     },
     "customDictDescription": {
       "comment": "Description of the custom-dictionary CSV format (column layout).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。" }
+      "values": { "hanji": "自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。", "en": "The custom dictionary uses a plain-text CSV file: column 1 holds the romanization to type, column 2 holds the Hanji. No header row." }
     },
     "customDictEmpty": {
       "comment": "Empty-state hint shown when the custom dictionary has no entries.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤 + 符號加入自訂詞" }
+      "values": { "hanji": "揤 + 符號加入自訂詞", "en": "Tap + to add a custom word" }
     },
     "addEntry": {
       "comment": "Title of the add-custom-entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "增加詞" }
+      "values": { "hanji": "增加詞", "en": "Add Word" }
     },
     "editEntry": {
       "comment": "Title of the edit-custom-entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "編輯詞" }
+      "values": { "hanji": "編輯詞", "en": "Edit Word" }
     },
     "romanLabel": {
       "comment": "Field label for the romanization (拍字) column in the custom-entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍字" }
+      "values": { "hanji": "拍字", "en": "Romanization" }
     },
     "romanPlaceholder": {
       "comment": "Placeholder example for the romanization field in the custom-entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "見本：gâu-tsá" }
+      "values": { "hanji": "見本：gâu-tsá", "en": "Example: gâu-tsá" }
     },
     "hanziLabel": {
       "comment": "Field label for the Hanji (對應) column in the custom-entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "對應" }
+      "values": { "hanji": "對應", "en": "Hanji" }
     },
     "hanziPlaceholder": {
       "comment": "Placeholder example for the Hanji field in the custom-entry dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "見本：𠢕早" }
+      "values": { "hanji": "見本：𠢕早", "en": "Example: 𠢙早" }
     },
     "deleteAll": {
       "comment": "Destructive action: delete all custom-dictionary entries.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "刪除全部自訂詞" }
+      "values": { "hanji": "刪除全部自訂詞", "en": "Delete All Custom Words" }
     },
     "deleteAllMessage": {
       "comment": "Confirmation dialog body for deleting all custom-dictionary entries.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "敢確定欲刪除所有自訂詞？" }
+      "values": { "hanji": "敢確定欲刪除所有自訂詞？", "en": "Delete all custom words?" }
     },
     "customDictPrivacyWarning": {
       "comment": "Privacy warning against storing sensitive personal data in the custom dictionary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "請毋通佇自訂詞庫囥敏感 ê 個人資料，親像身分證字號、口座密碼、信用卡號碼，請注意家己 ê 資訊安全。" }
+      "values": { "hanji": "請毋通佇自訂詞庫囥敏感 ê 個人資料，親像身分證字號、口座密碼、信用卡號碼，請注意家己 ê 資訊安全。", "en": "Please do not store sensitive personal data in the custom dictionary, such as ID numbers, account passwords, or credit-card numbers. Mind your information security." }
     },
     "importCSV": {
       "comment": "Button: import the custom dictionary from a CSV file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯入詞庫" }
+      "values": { "hanji": "匯入詞庫", "en": "Import Dictionary" }
     },
     "exportCSV": {
       "comment": "Button: export the custom dictionary to a CSV file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯出詞庫" }
+      "values": { "hanji": "匯出詞庫", "en": "Export Dictionary" }
     },
     "exportSuccess": {
       "comment": "Toast/dialog confirming the custom dictionary exported successfully.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "CSV 順利匯出" }
+      "values": { "hanji": "CSV 順利匯出", "en": "CSV exported successfully" }
     },
     "importResult": {
       "comment": "Import-result message: number of entries imported and number skipped (duplicates / overflow / write failures). Shared by custom-dictionary, frequency, and association imports (iOS importResultFormat).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "placeholders": { "imported": "int", "skipped": "int" },
-      "values": { "hanji": "匯入 {imported} 項成功，{skipped} 項重複" }
+      "values": { "hanji": "匯入 {imported} 項成功，{skipped} 項重複", "en": "Imported {imported}, skipped {skipped}" }
     },
     "invalidCSVFormat": {
       "comment": "Error: the imported file is not valid CSV.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "檔案格式無正確，請使用 CSV 格式" }
+      "values": { "hanji": "檔案格式無正確，請使用 CSV 格式", "en": "Invalid file format. Please use CSV." }
     },
     "fileTooLarge": {
       "comment": "Error: the imported file exceeds the 5 MB size limit.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "檔案傷大（上限 5 MB）" }
+      "values": { "hanji": "檔案傷大（上限 5 MB）", "en": "File too large (5 MB limit)" }
     },
     "tooManyEntries": {
       "comment": "Error: the import exceeds the 30,000-entry cap.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞傷濟（上限 30,000 項）" }
+      "values": { "hanji": "詞傷濟（上限 30,000 項）", "en": "Too many entries (30,000 limit)" }
     },
     "importExportTitle": {
       "comment": "Section title for the import/export controls.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯出匯入" }
+      "values": { "hanji": "匯出匯入", "en": "Import / Export" }
     },
     "frequencyExportCSV": {
       "comment": "Button: export the word-frequency records to a CSV file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯出詞頻紀錄" }
+      "values": { "hanji": "匯出詞頻紀錄", "en": "Export Frequency Records" }
     },
     "frequencyImportCSV": {
       "comment": "Button: import word-frequency records from a CSV file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯入詞頻紀錄" }
+      "values": { "hanji": "匯入詞頻紀錄", "en": "Import Frequency Records" }
     },
     "frequencyDescription": {
       "comment": "Description of the word-frequency CSV format (column layout).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞頻紀錄使用 CSV 純文字檔案，第 1 欄囥詞，第 2 欄囥次數，毋免囥標題。" }
+      "values": { "hanji": "詞頻紀錄使用 CSV 純文字檔案，第 1 欄囥詞，第 2 欄囥次數，毋免囥標題。", "en": "Frequency records use a plain-text CSV file: column 1 holds the word, column 2 holds the count. No header row." }
     },
     "associationExportCSV": {
       "comment": "Button: export the word-association records to a CSV file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯出詞關聯紀錄" }
+      "values": { "hanji": "匯出詞關聯紀錄", "en": "Export Association Records" }
     },
     "associationImportCSV": {
       "comment": "Button: import word-association records from a CSV file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "匯入詞關聯紀錄" }
+      "values": { "hanji": "匯入詞關聯紀錄", "en": "Import Association Records" }
     },
     "associationDescription": {
       "comment": "Description of the word-association CSV format (5-column layout).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞關聯紀錄使用 CSV 純文字檔案，共 5 欄：頭前詞、頭前拍字、後壁詞、後壁拍字、次數，毋免囥標題。" }
+      "values": { "hanji": "詞關聯紀錄使用 CSV 純文字檔案，共 5 欄：頭前詞、頭前拍字、後壁詞、後壁拍字、次數，毋免囥標題。", "en": "Association records use a plain-text CSV file with 5 columns: previous word, previous romanization, next word, next romanization, count. No header row." }
     },
     "moeSectionTitle": {
       "comment": "Section header grouping MOE dictionary sources.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "教育部用字" }
+      "values": { "hanji": "教育部用字", "en": "MOE Characters" }
     },
     "otherSectionTitle": {
       "comment": "Section header grouping non-MOE dictionary sources.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "其他辭典" }
+      "values": { "hanji": "其他辭典", "en": "Other Dictionaries" }
     },
     "supplementSectionTitle": {
       "comment": "Section header grouping supplementary dictionary data.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "補充資料" }
+      "values": { "hanji": "補充資料", "en": "Supplementary Data" }
     },
     "lkkDict": {
       "comment": "Display name of the Han-Lo recommended-character dictionary source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "漢羅合用建議用字" }
+      "values": { "hanji": "漢羅合用建議用字", "en": "Han-Lo Recommended Characters" }
     },
     "devSupplementDict": {
       "comment": "Display name of the developer supplement dictionary file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞庫增補檔案" }
+      "values": { "hanji": "詞庫增補檔案", "en": "Supplementary Word List" }
     },
     "kautianAccentLukang": {
       "comment": "MOE dictionary accent sub-source: Lukang Quanzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "鹿港偏泉腔" }
+      "values": { "hanji": "鹿港偏泉腔", "en": "Lukang (Quanzhou-leaning)" }
     },
     "kautianAccentSansia": {
       "comment": "MOE dictionary accent sub-source: Sansia Quanzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "三峽偏泉腔" }
+      "values": { "hanji": "三峽偏泉腔", "en": "Sansia (Quanzhou-leaning)" }
     },
     "kautianAccentTaipak": {
       "comment": "MOE dictionary accent sub-source: Taipei Quanzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "臺北偏泉腔" }
+      "values": { "hanji": "臺北偏泉腔", "en": "Taipei (Quanzhou-leaning)" }
     },
     "kautianAccentGilan": {
       "comment": "MOE dictionary accent sub-source: Yilan Zhangzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "宜蘭偏漳腔" }
+      "values": { "hanji": "宜蘭偏漳腔", "en": "Yilan (Zhangzhou-leaning)" }
     },
     "kautianAccentTainan": {
       "comment": "MOE dictionary accent sub-source: Tainan mixed accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "臺南混合腔" }
+      "values": { "hanji": "臺南混合腔", "en": "Tainan (Mixed)" }
     },
     "kautianAccentKaohsiung": {
       "comment": "MOE dictionary accent sub-source: Kaohsiung mixed accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "高雄混合腔" }
+      "values": { "hanji": "高雄混合腔", "en": "Kaohsiung (Mixed)" }
     },
     "kautianAccentKinmen": {
       "comment": "MOE dictionary accent sub-source: Kinmen Quanzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "金門偏泉腔" }
+      "values": { "hanji": "金門偏泉腔", "en": "Kinmen (Quanzhou-leaning)" }
     },
     "kautianAccentMakung": {
       "comment": "MOE dictionary accent sub-source: Makung Quanzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "馬公偏泉腔" }
+      "values": { "hanji": "馬公偏泉腔", "en": "Makung (Quanzhou-leaning)" }
     },
     "kautianAccentSintik": {
       "comment": "MOE dictionary accent sub-source: Hsinchu Quanzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "新竹偏泉腔" }
+      "values": { "hanji": "新竹偏泉腔", "en": "Hsinchu (Quanzhou-leaning)" }
     },
     "kautianAccentTaichung": {
       "comment": "MOE dictionary accent sub-source: Taichung Zhangzhou-leaning accent.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "臺中偏漳腔" }
+      "values": { "hanji": "臺中偏漳腔", "en": "Taichung (Zhangzhou-leaning)" }
     },
     "kautianNameAppendix": {
       "comment": "MOE dictionary sub-source: surname appendix.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "姓名附錄" }
+      "values": { "hanji": "姓名附錄", "en": "Surname Appendix" }
     },
     "searchPlaceholder": {
       "comment": "Search-field placeholder in the dictionary browser.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍字揣詞" }
+      "values": { "hanji": "拍字揣詞", "en": "Type to search" }
     },
     "noResults": {
       "comment": "Empty-state message when a dictionary search returns nothing.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揣無結果" }
+      "values": { "hanji": "揣無結果", "en": "No results" }
     },
     "lookupChhoe": {
       "comment": "External-lookup option: ChhoeTaigi dictionary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "ChhoeTaigi 辭典" }
+      "values": { "hanji": "ChhoeTaigi 辭典", "en": "ChhoeTaigi Dictionary" }
     },
     "lookupMoe": {
       "comment": "External-lookup option: MOE dictionary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "教育部辭典" }
+      "values": { "hanji": "教育部辭典", "en": "MOE Dictionary" }
     },
     "frequencyManagement": {
       "comment": "Page/section title for word-frequency record management.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞頻紀錄" }
+      "values": { "hanji": "詞頻紀錄", "en": "Frequency Records" }
     },
     "frequencyRecordingEnabled": {
       "comment": "Toggle label: enable recording of word-selection frequency.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "開啟詞頻紀錄" }
+      "values": { "hanji": "開啟詞頻紀錄", "en": "Record Word Frequency" }
     },
     "frequencyRecordingEnabledInfo": {
       "comment": "Info-dialog body explaining what frequency recording does for candidate ranking.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍開了後，齒盤會記錄你揀過 ê 詞幾擺，予候選詞排序做參考，定定揀 ê 詞就會排較頭前，按呢候選詞就會愈來愈準。" }
+      "values": { "hanji": "拍開了後，齒盤會記錄你揀過 ê 詞幾擺，予候選詞排序做參考，定定揀 ê 詞就會排較頭前，按呢候選詞就會愈來愈準。", "en": "When on, the keyboard records how often you pick each word and uses it to rank candidates. Words you choose often move toward the front, so the candidates get more accurate over time." }
     },
     "associationManagement": {
       "comment": "Page/section title for word-association record management.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞關聯紀錄" }
+      "values": { "hanji": "詞關聯紀錄", "en": "Association Records" }
     },
     "associationRecordingEnabled": {
       "comment": "Toggle label: enable recording of word-association (bigram) data.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "開啟詞關聯紀錄" }
+      "values": { "hanji": "開啟詞關聯紀錄", "en": "Record Word Associations" }
     },
     "associationRecordingEnabledInfo": {
       "comment": "Info-dialog body explaining what association recording does for next-word prediction.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍開了後，齒盤會記錄頭前、後壁 ê 關聯詞，予連紲建議愈來愈準。" }
+      "values": { "hanji": "拍開了後，齒盤會記錄頭前、後壁 ê 關聯詞，予連紲建議愈來愈準。", "en": "When on, the keyboard records which words follow which, making continuous suggestions more accurate over time." }
     },
     "frequencyPrivacyWarning": {
       "comment": "Privacy warning about sharing word-frequency data for research.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞頻紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人研究訓練模型，請先刪除敏感 ê 私人資料。紀錄功能嘛會使關起來，毋過按呢候選詞 ê 排序就會較無準。" }
+      "values": { "hanji": "詞頻紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人研究訓練模型，請先刪除敏感 ê 私人資料。紀錄功能嘛會使關起來，毋過按呢候選詞 ê 排序就會較無準。", "en": "Frequency records are valuable data for Taiwanese-language research. If you share them for research or model training, please delete sensitive private data first. You can also turn recording off, though candidate ranking will then be less accurate." }
     },
     "clearAllFrequency": {
       "comment": "Destructive action: delete all word-frequency records.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "刪除所有詞頻紀錄" }
+      "values": { "hanji": "刪除所有詞頻紀錄", "en": "Delete All Frequency Records" }
     },
     "associationPrivacyWarning": {
       "comment": "Privacy warning about sharing word-association data for research.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "詞關聯紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人做研究，請先刪除敏感 ê 內容。紀錄功能嘛會使關起來，毋過後一詞預測會較無準。" }
+      "values": { "hanji": "詞關聯紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人做研究，請先刪除敏感 ê 內容。紀錄功能嘛會使關起來，毋過後一詞預測會較無準。", "en": "Association records are valuable data for Taiwanese-language research. If you share them for research, please delete sensitive content first. You can also turn recording off, though next-word prediction will then be less accurate." }
     },
     "clearAllAssociation": {
       "comment": "Destructive action: delete all word-association records.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "刪除所有詞關聯紀錄" }
+      "values": { "hanji": "刪除所有詞關聯紀錄", "en": "Delete All Association Records" }
     },
     "clearFrequencyMessage": {
       "comment": "Confirmation dialog body for deleting all word-frequency records.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "確定欲刪除所有詞頻紀錄？" }
+      "values": { "hanji": "確定欲刪除所有詞頻紀錄？", "en": "Delete all frequency records?" }
     },
     "clearAssociationMessage": {
       "comment": "Confirmation dialog body for deleting all word-association records.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "確定欲刪除所有詞關聯紀錄？" }
+      "values": { "hanji": "確定欲刪除所有詞關聯紀錄？", "en": "Delete all association records?" }
     },
     "noData": {
       "comment": "Empty-state message when a record list has no data.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "無資料" }
+      "values": { "hanji": "無資料", "en": "No data" }
     },
     "filterHint": {
       "comment": "Hint explaining the 100-item display cap and pointing to the search field.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "頂面上濟顯示 100 个詞，若揣無詞，請用下跤 ê「拍字揣詞」功能搜揣。" }
+      "values": { "hanji": "頂面上濟顯示 100 个詞，若揣無詞，請用下跤 ê「拍字揣詞」功能搜揣。", "en": "At most 100 words are shown above. If you cannot find a word, use the \"Type to search\" field below." }
     },
     "backupRestore": {
       "comment": "Section title for full backup/restore of all user data.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "備份復原" }
+      "values": { "hanji": "備份復原", "en": "Backup and Restore" }
     },
     "exportBackup": {
       "comment": "Button: export a full backup of all user data in one file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "一擺全出" }
+      "values": { "hanji": "一擺全出", "en": "Export All at Once" }
     },
     "importBackup": {
       "comment": "Button: import a full backup of all user data from one file.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "一擺全入" }
+      "values": { "hanji": "一擺全入", "en": "Import All at Once" }
     },
     "exportBackupSuccess": {
       "comment": "Toast/dialog confirming the full backup exported successfully.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "備份順利匯出" }
+      "values": { "hanji": "備份順利匯出", "en": "Backup exported successfully" }
     },
     "importBackupResult": {
       "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "placeholders": { "customDict": "int", "frequency": "int", "association": "int" },
-      "values": { "hanji": "匯入 {customDict} 項自訂詞、{frequency} 項詞頻、{association} 項詞關聯" }
+      "values": { "hanji": "匯入 {customDict} 項自訂詞、{frequency} 項詞頻、{association} 項詞關聯", "en": "Imported {customDict} custom entries, {frequency} frequency records, {association} association records" }
     },
     "backupPrivacyWarning": {
       "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "備份檔案內底包含你所有 ê 使用紀錄，佇 iOS 佮 Android 攏通用，準講換機仔嘛毋免煩惱。" }
+      "values": { "hanji": "備份檔案內底包含你所有 ê 使用紀錄，佇 iOS 佮 Android 攏通用，準講換機仔嘛毋免煩惱。", "en": "Backup files contain all your usage records and work on both iOS and Android, so you need not worry when switching phones." }
     }
   }
 }

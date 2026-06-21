@@ -4,42 +4,42 @@
     "romanizationKeyboard": {
       "comment": "Section header for the romanization keyboard layouts (host tab + IME layout overlay).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "羅馬字齒盤" }
+      "values": { "hanji": "羅馬字齒盤", "en": "Romanization Keyboards" }
     },
     "taigiPhonetic": {
       "comment": "Section header for the Taiwanese phonetic (TPS) keyboard layouts.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "方音符號" }
+      "values": { "hanji": "方音符號", "en": "Taiwanese Phonetic Symbols" }
     },
     "standardLayout": {
       "comment": "Layout name: the standard QWERTY-style romanization layout (Lohankha).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "Lohankha" }
+      "values": { "hanji": "Lohankha", "en": "Lohankha" }
     },
     "phahTaigiLayout": {
       "comment": "Layout name: the PhahTaigi romanization layout.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "PhahTaigi" }
+      "values": { "hanji": "PhahTaigi", "en": "PhahTaigi" }
     },
     "tpsLayout": {
       "comment": "Layout name: the Taiwanese Phonetic Symbols (方音符號) keyboard.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "方音符號齒佈" }
+      "values": { "hanji": "方音符號齒佈", "en": "Phonetic Symbols" }
     },
     "moe1Layout": {
       "comment": "Layout name: the MOE input-method keyboard, variant 1.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "教育部輸入法齒佈1" }
+      "values": { "hanji": "教育部輸入法齒佈1", "en": "MOE Input Method 1" }
     },
     "moe2Layout": {
       "comment": "Layout name: the MOE input-method keyboard, variant 2.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "教育部輸入法齒佈2" }
+      "values": { "hanji": "教育部輸入法齒佈2", "en": "MOE Input Method 2" }
     },
     "comingSoon": {
       "comment": "Placeholder badge for a layout that is not yet available. iOS-only: shown in the iOS layout-selection overlay (LayoutSelectionOverlay.swift); Android has no such placeholder.",
       "scope": { "platforms": ["ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "連鞭上市" }
+      "values": { "hanji": "連鞭上市", "en": "Coming soon" }
     }
   }
 }

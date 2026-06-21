@@ -68,15 +68,16 @@ struct SettingsTab: View {
         NavigationStack {
             Form {
                 #if DEBUG
-                // 中文: i18n 顯示語言除錯切換 (HANJI↔PSEUDO),dogfood 用以驗證 live-switch;release build 完全不存在。
-                // DEBUG-only probe: flips the display language so the layout-inflated PSEUDO strings make
-                // a live language switch visible (all real languages still fall back to Hanji in R2b).
+                // 中文: i18n 顯示語言除錯切換 (HANJI↔EN↔PSEUDO),dogfood 用以驗證 live-switch;release build 完全不存在。
+                // DEBUG-only probe: flips the display language. EN exercises the real authored English
+                // (P2 R3-1), PSEUDO the layout-inflated probe; the production picker arrives in R3-3.
                 Section {
                     Picker(
                         "i18n display language",
                         selection: Binding(get: { lang.language }, set: { lang.setLanguage($0) }),
                     ) {
                         Text("HANJI").tag(DisplayLanguage.hanji)
+                        Text("EN").tag(DisplayLanguage.english)
                         Text("PSEUDO").tag(DisplayLanguage.pseudo)
                     }
                     .pickerStyle(.segmented)
