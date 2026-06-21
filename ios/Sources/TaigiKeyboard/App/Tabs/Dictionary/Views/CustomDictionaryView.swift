@@ -50,8 +50,8 @@ struct CustomDictionaryView: View {
                         ),
                     ) {
                         HStack {
-                            Text(DictionaryTexts.isCustomDictEnabled)
-                            SettingInfoButton(description: DictionaryTexts.isCustomDictEnabledInfo)
+                            Text(lang.string(.dictionaryCustomDictEnabled))
+                            SettingInfoButton(description: lang.string(.dictionaryCustomDictEnabledInfo))
                         }
                     }
                 }
@@ -63,13 +63,13 @@ struct CustomDictionaryView: View {
                         .aspectRatio(contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
                         .listRowSeparator(.hidden)
-                    Text(DictionaryTexts.customDictDescription)
+                    Text(lang.string(.dictionaryCustomDictDescription))
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await viewModel.exportCSV() }
                     } label: {
                         Label(
-                            DictionaryTexts.exportCSV,
+                            lang.string(.dictionaryExportCSV),
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -82,13 +82,13 @@ struct CustomDictionaryView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                DictionaryTexts.importCSV,
+                                lang.string(.dictionaryImportCSV),
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(DictionaryTexts.importExportTitle)
+                    Text(lang.string(.dictionaryImportExportTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -97,14 +97,14 @@ struct CustomDictionaryView: View {
                     Button(role: .destructive) {
                         showDeleteAllAlert = true
                     } label: {
-                        Text(DictionaryTexts.deleteAll)
+                        Text(lang.string(.dictionaryDeleteAll))
                     }
                     .disabled(importExport.isImporting)
                 }
 
                 // Privacy warning
                 Section {
-                    Text(DictionaryTexts.customDictPrivacyWarning)
+                    Text(lang.string(.dictionaryCustomDictPrivacyWarning))
                 }
 
                 // Entry list
@@ -114,13 +114,13 @@ struct CustomDictionaryView: View {
                             Image(latinSystemName: "book.closed")
                                 .font(AppStyle.appFont(size: 48))
                                 .foregroundColor(.secondary)
-                            Text(DictionaryTexts.customDictEmpty)
+                            Text(lang.string(.dictionaryCustomDictEmpty))
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else if !filterText.isEmpty, filteredEntries.isEmpty {
-                        Text(DictionaryTexts.noResults)
+                        Text(lang.string(.dictionaryNoResults))
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredEntries) { entry in
@@ -151,17 +151,17 @@ struct CustomDictionaryView: View {
                     }
                 } header: {
                     HStack {
-                        Text(DictionaryTexts.customDictionary)
+                        Text(lang.string(.dictionaryCustomDictionary))
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: DictionaryTexts.filterHint)
+                        SettingInfoButton(description: lang.string(.dictionaryFilterHint))
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: DictionaryTexts.searchPlaceholder)
+            SearchBar(text: $filterText, placeholder: lang.string(.dictionarySearchPlaceholder))
         }
-        .navigationTitle(DictionaryTexts.customDictionary)
+        .navigationTitle(lang.string(.dictionaryCustomDictionary))
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -176,36 +176,36 @@ struct CustomDictionaryView: View {
             }
         }
         .alert(
-            editingEntry != nil ? DictionaryTexts.editEntry : DictionaryTexts.addEntry,
+            editingEntry != nil ? lang.string(.dictionaryEditEntry) : lang.string(.dictionaryAddEntry),
             isPresented: $showEntryAlert,
         ) {
-            TextField(DictionaryTexts.romanPlaceholder, text: $romanInput)
+            TextField(lang.string(.dictionaryRomanPlaceholder), text: $romanInput)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            TextField(DictionaryTexts.hanziPlaceholder, text: $hanziInput)
+            TextField(lang.string(.dictionaryHanziPlaceholder), text: $hanziInput)
             Button(lang.string(.commonCancel), role: .cancel) {
                 editingEntry = nil
             }
-            Button(DictionaryTexts.save) {
+            Button(lang.string(.dictionarySave)) {
                 saveEntryFromAlert()
             }
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: DictionaryTexts.importCSV,
-            exportAlertTitle: DictionaryTexts.exportCSV,
+            importAlertTitle: lang.string(.dictionaryImportCSV),
+            exportAlertTitle: lang.string(.dictionaryExportCSV),
             exportFilename: { ImportExportHandler.exportFilename(prefix: "自訂詞庫") },
-            okText: DictionaryTexts.ok,
-            exportSuccessText: DictionaryTexts.exportSuccess,
+            okText: lang.string(.commonOk),
+            exportSuccessText: lang.string(.dictionaryExportSuccess),
             onFileImport: { handleImport($0) },
         )
-        .alert(DictionaryTexts.deleteAll, isPresented: $showDeleteAllAlert) {
+        .alert(lang.string(.dictionaryDeleteAll), isPresented: $showDeleteAllAlert) {
             Button(lang.string(.commonCancel), role: .cancel) {}
-            Button(DictionaryTexts.clear, role: .destructive) {
+            Button(lang.string(.dictionaryClear), role: .destructive) {
                 Task { await viewModel.deleteAll() }
             }
         } message: {
-            Text(DictionaryTexts.deleteAllMessage)
+            Text(lang.string(.dictionaryDeleteAllMessage))
         }
         .task {
             await viewModel.load()
@@ -240,8 +240,33 @@ struct CustomDictionaryView: View {
         importExport.handleFileImport(
             result,
             importAction: { url in try await viewModel.importFile(url: url) },
-            resultFormat: DictionaryTexts.importResultFormat,
+            formatResult: { lang.resolver.dictionaryImportResult(imported: $0, skipped: $1) },
+            formatError: localizedImportMessage,
             onComplete: { await viewModel.load() },
         )
+    }
+
+    // 中文: App 層把 Engine 的 CustomDictionaryError 映射到對應的 i18n key 並解析;
+    // 中文: 其餘錯誤回退 localizedDescription。對應 Android CustomDictionaryScreen 的 e.message 對照。
+    // Maps the engine's typed import error to a localized message at the display boundary — keeps the
+    // `Lexicon/` service unaware of `StringKey` (presentation layer). Mirrors Android's
+    // `CustomDictionaryScreen` error → `StringKey` resolution.
+    private func localizedImportMessage(_ error: Error) -> String {
+        guard let key = (error as? CustomDictionaryError)?.messageKey else {
+            return error.localizedDescription
+        }
+        return lang.string(key)
+    }
+}
+
+// 中文: CustomDictionaryError → i18n StringKey 對照,留在 App 層(Strings 屬 presentation layer)。
+private extension CustomDictionaryError {
+    var messageKey: StringKey? {
+        switch self {
+        case .invalidCSVFormat: .dictionaryInvalidCSVFormat
+        case .fileTooLarge: .dictionaryFileTooLarge
+        case .tooManyEntries: .dictionaryTooManyEntries
+        case .invalidCSVData: nil
+        }
     }
 }

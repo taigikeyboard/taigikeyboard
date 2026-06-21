@@ -84,19 +84,19 @@ struct DictionaryTab: View {
                 // Data management
                 Section {
                     NavigationLink(destination: CustomDictionaryView()) {
-                        Text(DictionaryTexts.customDictionary)
+                        Text(lang.string(.dictionaryCustomDictionary))
                     }
                     NavigationLink(destination: FrequencyDataView()) {
-                        Text(DictionaryTexts.frequencyManagement)
+                        Text(lang.string(.dictionaryFrequencyManagement))
                     }
                     NavigationLink(destination: AssociationDataView()) {
-                        Text(DictionaryTexts.associationManagement)
+                        Text(lang.string(.dictionaryAssociationManagement))
                     }
                     NavigationLink(destination: DataManagementView()) {
-                        Text(DictionaryTexts.backupRestore)
+                        Text(lang.string(.dictionaryBackupRestore))
                     }
                 } header: {
-                    Text(DictionaryTexts.dataManagement)
+                    Text(lang.string(.dictionaryDataManagement))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -110,37 +110,37 @@ struct DictionaryTab: View {
                     ) { settings.isMoeDictEnabled = $0 }
                     // Kautian subcollections — nested under the master row,
                     // greyed when the MOE/kautian master is off (DD7).
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentLukang, isOn: $isKautianAccentLukangEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentLukang), isOn: $isKautianAccentLukangEnabled) {
                         settings.isKautianAccentLukangEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentSansia, isOn: $isKautianAccentSansiaEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentSansia), isOn: $isKautianAccentSansiaEnabled) {
                         settings.isKautianAccentSansiaEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentTaipak, isOn: $isKautianAccentTaipakEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentTaipak), isOn: $isKautianAccentTaipakEnabled) {
                         settings.isKautianAccentTaipakEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentGilan, isOn: $isKautianAccentGilanEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentGilan), isOn: $isKautianAccentGilanEnabled) {
                         settings.isKautianAccentGilanEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentTainan, isOn: $isKautianAccentTainanEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentTainan), isOn: $isKautianAccentTainanEnabled) {
                         settings.isKautianAccentTainanEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentKaohsiung, isOn: $isKautianAccentKaohsiungEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentKaohsiung), isOn: $isKautianAccentKaohsiungEnabled) {
                         settings.isKautianAccentKaohsiungEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentKinmen, isOn: $isKautianAccentKinmenEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentKinmen), isOn: $isKautianAccentKinmenEnabled) {
                         settings.isKautianAccentKinmenEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentMakung, isOn: $isKautianAccentMakungEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentMakung), isOn: $isKautianAccentMakungEnabled) {
                         settings.isKautianAccentMakungEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentSintik, isOn: $isKautianAccentSintikEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentSintik), isOn: $isKautianAccentSintikEnabled) {
                         settings.isKautianAccentSintikEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianAccentTaichung, isOn: $isKautianAccentTaichungEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianAccentTaichung), isOn: $isKautianAccentTaichungEnabled) {
                         settings.isKautianAccentTaichungEnabled = $0
                     }
-                    kautianSubcollToggle(DictionaryTexts.kautianNameAppendix, isOn: $isKautianNameAppendixEnabled) {
+                    kautianSubcollToggle(lang.string(.dictionaryKautianNameAppendix), isOn: $isKautianNameAppendixEnabled) {
                         settings.isKautianNameAppendixEnabled = $0
                     }
                     dictToggleWithDescription(
@@ -162,7 +162,7 @@ struct DictionaryTab: View {
                         description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
                     ) { settings.isKunggeDictEnabled = $0 }
                 } header: {
-                    Text(DictionaryTexts.moeSectionTitle)
+                    Text(lang.string(.dictionaryMoeSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -181,17 +181,17 @@ struct DictionaryTab: View {
                         settings.isTaiwanPlantDictEnabled = $0
                     }
                 } header: {
-                    Text(DictionaryTexts.otherSectionTitle)
+                    Text(lang.string(.dictionaryOtherSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
                 // Variant characters / legacy characters / accent data
                 Section {
-                    dictionaryToggle(DictionaryTexts.variantDictionary, isOn: $isVariantEnabled, info: .variant) {
+                    dictionaryToggle(lang.string(.dictionaryVariantDictionary), isOn: $isVariantEnabled, info: .variant) {
                         settings.isVariantEnabled = $0
                     }
 
-                    dictionaryToggle(DictionaryTexts.khiin, isOn: $isKhiinEnabled, info: .khiin) {
+                    dictionaryToggle(lang.string(.dictionaryKhiin), isOn: $isKhiinEnabled, info: .khiin) {
                         settings.isKhiinEnabled = $0
                     }
 
@@ -200,24 +200,24 @@ struct DictionaryTab: View {
                     }
 
                     dictToggleWithDescription(
-                        title: DictionaryTexts.lkkDict,
+                        title: lang.string(.dictionaryLkkDict),
                         url: "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
                         isOn: $isLkkDictEnabled,
                         description: "李江却台語文教基金會漢羅合用建議用字。",
                     ) { settings.isLkkDictEnabled = $0 }
 
                     dictToggleWithDescription(
-                        title: DictionaryTexts.devSupplementDict,
+                        title: lang.string(.dictionaryDevSupplementDict),
                         url: "https://github.com/luke871016/Taigi-Input-method-dictionary-supplement",
                         isOn: $isDevDictEnabled,
                         description: "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。",
                     ) { settings.isDevDictEnabled = $0 }
                 } header: {
-                    Text(DictionaryTexts.supplementSectionTitle)
+                    Text(lang.string(.dictionarySupplementSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(DictionaryTexts.tabTitle)
+            .navigationTitle(TabType.dictionary.title)
             .navigationBarTitleDisplayMode(.large)
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
@@ -226,7 +226,7 @@ struct DictionaryTab: View {
                     // Search results above search bar
                     if !searchVM.searchText.isEmpty {
                         if searchVM.results.isEmpty, !searchVM.isSearching {
-                            Text(DictionaryTexts.noResults)
+                            Text(lang.string(.dictionaryNoResults))
                                 .font(AppStyle.captionFont)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -255,7 +255,7 @@ struct DictionaryTab: View {
                         Image(latinSystemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                         TextField(
-                            DictionaryTexts.searchPlaceholder,
+                            lang.string(.dictionarySearchPlaceholder),
                             text: $searchVM.searchText,
                         )
                         .focused($isSearchFocused)
@@ -287,12 +287,12 @@ struct DictionaryTab: View {
         .confirmationDialog("", isPresented: $showLookupDialog) {
             if let result = selectedResult {
                 if let moeURL = result.moeURL {
-                    Button(DictionaryTexts.lookupMoe) {
+                    Button(lang.string(.dictionaryLookupMoe)) {
                         UIApplication.shared.open(moeURL)
                     }
                 }
                 if let chhoeURL = result.chhoeURL {
-                    Button(DictionaryTexts.lookupChhoe) {
+                    Button(lang.string(.dictionaryLookupChhoe)) {
                         UIApplication.shared.open(chhoeURL)
                     }
                 }

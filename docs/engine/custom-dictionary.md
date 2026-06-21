@@ -194,4 +194,4 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 | Entry model | `CustomDictionaryEntry.swift` | nested `Entry` in `CustomDictionaryService.kt` |
 | List view | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` |
 | Edit view | `CustomDictionaryEditView.swift` | (inline dialog) |
-| Localization | `DictionaryTexts.swift` | `DictionaryTexts.kt` |
+| Localization | `i18n/dictionary.json` → `StringKey.dictionary*` (resolver) | `i18n/dictionary.json` → `L10n` / `StringKey` |

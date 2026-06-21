@@ -47,21 +47,21 @@ struct FrequencyDataView: View {
                         ),
                     ) {
                         HStack {
-                            Text(DictionaryTexts.isFrequencyRecordingEnabled)
-                            SettingInfoButton(description: DictionaryTexts.isFrequencyRecordingEnabledInfo)
+                            Text(lang.string(.dictionaryFrequencyRecordingEnabled))
+                            SettingInfoButton(description: lang.string(.dictionaryFrequencyRecordingEnabledInfo))
                         }
                     }
                 }
 
                 // Import/Export
                 Section {
-                    Text(DictionaryTexts.frequencyDescription)
+                    Text(lang.string(.dictionaryFrequencyDescription))
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await viewModel.exportCSV() }
                     } label: {
                         Label(
-                            DictionaryTexts.frequencyExportCSV,
+                            lang.string(.dictionaryFrequencyExportCSV),
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -74,13 +74,13 @@ struct FrequencyDataView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                DictionaryTexts.frequencyImportCSV,
+                                lang.string(.dictionaryFrequencyImportCSV),
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(DictionaryTexts.importExportTitle)
+                    Text(lang.string(.dictionaryImportExportTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -89,22 +89,22 @@ struct FrequencyDataView: View {
                     Button(role: .destructive) {
                         showClearAlert = true
                     } label: {
-                        Text(DictionaryTexts.clearAllFrequency)
+                        Text(lang.string(.dictionaryClearAllFrequency))
                     }
                 }
 
                 // Privacy warning
                 Section {
-                    Text(DictionaryTexts.frequencyPrivacyWarning)
+                    Text(lang.string(.dictionaryFrequencyPrivacyWarning))
                 }
 
                 // Data list
                 Section {
                     if viewModel.allData.isEmpty {
-                        Text(DictionaryTexts.noData)
+                        Text(lang.string(.dictionaryNoData))
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
-                        Text(DictionaryTexts.noResults)
+                        Text(lang.string(.dictionaryNoResults))
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredData) { item in
@@ -133,33 +133,33 @@ struct FrequencyDataView: View {
                     }
                 } header: {
                     HStack {
-                        Text(DictionaryTexts.frequencyManagement)
+                        Text(lang.string(.dictionaryFrequencyManagement))
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: DictionaryTexts.filterHint)
+                        SettingInfoButton(description: lang.string(.dictionaryFilterHint))
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: DictionaryTexts.searchPlaceholder)
+            SearchBar(text: $filterText, placeholder: lang.string(.dictionarySearchPlaceholder))
         }
-        .navigationTitle(DictionaryTexts.frequencyManagement)
+        .navigationTitle(lang.string(.dictionaryFrequencyManagement))
         .navigationBarTitleDisplayMode(.large)
-        .alert(DictionaryTexts.clearAllFrequency, isPresented: $showClearAlert) {
+        .alert(lang.string(.dictionaryClearAllFrequency), isPresented: $showClearAlert) {
             Button(lang.string(.commonCancel), role: .cancel) {}
-            Button(DictionaryTexts.clear, role: .destructive) {
+            Button(lang.string(.dictionaryClear), role: .destructive) {
                 viewModel.clearAll()
             }
         } message: {
-            Text(DictionaryTexts.clearFrequencyMessage)
+            Text(lang.string(.dictionaryClearFrequencyMessage))
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: DictionaryTexts.frequencyImportCSV,
-            exportAlertTitle: DictionaryTexts.frequencyExportCSV,
+            importAlertTitle: lang.string(.dictionaryFrequencyImportCSV),
+            exportAlertTitle: lang.string(.dictionaryFrequencyExportCSV),
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞頻紀錄") },
-            okText: DictionaryTexts.ok,
-            exportSuccessText: DictionaryTexts.exportSuccess,
+            okText: lang.string(.commonOk),
+            exportSuccessText: lang.string(.dictionaryExportSuccess),
             onFileImport: { handleImport($0) },
         )
         .task {
@@ -174,7 +174,7 @@ struct FrequencyDataView: View {
         importExport.handleFileImport(
             result,
             importAction: { url in try await viewModel.importCSV(url: url) },
-            resultFormat: DictionaryTexts.importResultFormat,
+            formatResult: { lang.resolver.dictionaryImportResult(imported: $0, skipped: $1) },
             onComplete: { await viewModel.load() },
         )
     }

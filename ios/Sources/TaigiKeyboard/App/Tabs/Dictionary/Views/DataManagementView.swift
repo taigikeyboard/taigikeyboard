@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 /// Provides export and import of all user data
 // 中文: 備份 / 復原子頁的根 View。資料層由 DataManagementViewModel + BackupService 提供。
 struct DataManagementView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = DataManagementViewModel()
 
     @State private var showBackupExporter = false
@@ -26,7 +27,7 @@ struct DataManagementView: View {
         List {
             // Privacy warning
             Section {
-                Text(DictionaryTexts.backupPrivacyWarning)
+                Text(lang.string(.dictionaryBackupPrivacyWarning))
             }
 
             // Backup/Restore
@@ -35,7 +36,7 @@ struct DataManagementView: View {
                     exportBackup()
                 } label: {
                     Label(
-                        DictionaryTexts.exportBackup,
+                        lang.string(.dictionaryExportBackup),
                         systemImage: "square.and.arrow.up",
                     )
                 }
@@ -48,14 +49,14 @@ struct DataManagementView: View {
                         showBackupImporter = true
                     } label: {
                         Label(
-                            DictionaryTexts.importBackup,
+                            lang.string(.dictionaryImportBackup),
                             systemImage: "square.and.arrow.down",
                         )
                     }
                 }
             }
         }
-        .navigationTitle(DictionaryTexts.backupRestore)
+        .navigationTitle(lang.string(.dictionaryBackupRestore))
         .navigationBarTitleDisplayMode(.large)
         .fileExporter(
             isPresented: $showBackupExporter,
@@ -74,18 +75,18 @@ struct DataManagementView: View {
         ) { result in
             handleBackupImport(result)
         }
-        .alert(DictionaryTexts.exportBackup, isPresented: $showExportSuccessAlert) {
-            Button(DictionaryTexts.ok) {}
+        .alert(lang.string(.dictionaryExportBackup), isPresented: $showExportSuccessAlert) {
+            Button(lang.string(.commonOk)) {}
         } message: {
-            Text(DictionaryTexts.exportBackupSuccess)
+            Text(lang.string(.dictionaryExportBackupSuccess))
         }
-        .alert(DictionaryTexts.importBackup, isPresented: $showBackupResultAlert) {
-            Button(DictionaryTexts.ok) {}
+        .alert(lang.string(.dictionaryImportBackup), isPresented: $showBackupResultAlert) {
+            Button(lang.string(.commonOk)) {}
         } message: {
             Text(backupResultMessage)
         }
         .alert("Error", isPresented: $showBackupErrorAlert) {
-            Button(DictionaryTexts.ok) {}
+            Button(lang.string(.commonOk)) {}
         } message: {
             Text(backupErrorMessage)
         }
@@ -116,11 +117,10 @@ struct DataManagementView: View {
             Task {
                 do {
                     let importResult = try await viewModel.importBackup(url: url)
-                    backupResultMessage = String(
-                        format: DictionaryTexts.importBackupResult,
-                        importResult.customDict,
-                        importResult.frequency,
-                        importResult.association,
+                    backupResultMessage = lang.resolver.dictionaryImportBackupResult(
+                        customDict: importResult.customDict,
+                        frequency: importResult.frequency,
+                        association: importResult.association,
                     )
                     showBackupResultAlert = true
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()

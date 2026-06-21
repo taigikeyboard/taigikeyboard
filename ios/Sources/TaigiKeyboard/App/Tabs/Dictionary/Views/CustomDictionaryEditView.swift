@@ -47,26 +47,26 @@ struct CustomDictionaryEditView: View {
             Form {
                 Section {
                     TextField(
-                        DictionaryTexts.romanPlaceholder,
+                        lang.string(.dictionaryRomanPlaceholder),
                         text: $roman,
                     )
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 } header: {
-                    Text(DictionaryTexts.romanLabel)
+                    Text(lang.string(.dictionaryRomanLabel))
                 }
 
                 Section {
                     TextField(
-                        DictionaryTexts.hanziPlaceholder,
+                        lang.string(.dictionaryHanziPlaceholder),
                         text: $hanzi,
                     )
                 } header: {
-                    Text(DictionaryTexts.hanziLabel)
+                    Text(lang.string(.dictionaryHanziLabel))
                 }
             }
             .navigationTitle(
-                isEditing ? DictionaryTexts.editEntry : DictionaryTexts.addEntry,
+                isEditing ? lang.string(.dictionaryEditEntry) : lang.string(.dictionaryAddEntry),
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -76,7 +76,7 @@ struct CustomDictionaryEditView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(DictionaryTexts.save) {
+                    Button(lang.string(.dictionarySave)) {
                         saveEntry()
                     }
                     .disabled(!canSave)

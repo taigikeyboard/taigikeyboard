@@ -145,7 +145,7 @@ struct CopyrightView: View {
             // Developer supplement dictionary (詞庫增補檔案)
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(DictionaryTexts.devSupplementDict)
+                    Text(lang.string(.dictionaryDevSupplementDict))
                         .font(AppStyle.headlineFont)
 
                     Text(lang.string(.homeDevSupplementCredit))

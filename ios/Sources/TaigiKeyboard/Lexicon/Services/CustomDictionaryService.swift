@@ -195,6 +195,12 @@ final class CustomDictionaryService: @unchecked Sendable {
 // MARK: - Custom Dictionary Errors
 
 // 中文: CSV 匯入流程的錯誤型別 — 編碼壞掉、格式錯誤、檔案太大、entry 太多。
+//
+// Engine-layer error — stays a plain typed enum, unaware of the App/Strings presentation layer
+// (`StringKey`/resolver). The App layer maps each case to a localized message at the display boundary
+// (see `CustomDictionaryView.localizedImportMessage`), mirroring Android where the service raises a bare
+// error and `CustomDictionaryScreen` resolves it. `errorDescription` carries an English developer
+// fallback so an unmapped case stays diagnosable rather than degrading to a generic Foundation error.
 enum CustomDictionaryError: LocalizedError {
     case invalidCSVData
     case invalidCSVFormat
@@ -206,11 +212,11 @@ enum CustomDictionaryError: LocalizedError {
         case .invalidCSVData:
             "Invalid CSV data"
         case .invalidCSVFormat:
-            DictionaryTexts.invalidCSVFormat
+            "Invalid CSV format"
         case .fileTooLarge:
-            DictionaryTexts.fileTooLarge
+            "File too large"
         case .tooManyEntries:
-            DictionaryTexts.tooManyEntries
+            "Too many entries"
         }
     }
 }

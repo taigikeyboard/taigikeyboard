@@ -20,7 +20,7 @@ final class ImportExportHandler: ObservableObject {
     // 中文: 待匯出的 CSV 文件實體;在 performExport 完成後填入。
     @Published var csvDocument: CSVDocument?
 
-    // 中文: 匯入結果 alert 開關 + 顯示文字(由 resultFormat 格式化)。
+    // 中文: 匯入結果 alert 開關 + 顯示文字(由 formatResult closure 格式化)。
     @Published var showImportResultAlert = false
     @Published var importResultMessage = ""
     // 中文: 匯出成功 alert 開關。
@@ -30,6 +30,11 @@ final class ImportExportHandler: ObservableObject {
     @Published var errorMessage = ""
 
     nonisolated init() {}
+
+    // 中文: 預設錯誤格式化 — 直接顯示 localizedDescription。單一來源,供 handleFileImport / showError 共用。
+    // nonisolated: the stored value is referenced as a default-argument from a nonisolated context; the
+    // closure itself stays @MainActor-typed and is only ever invoked on the main actor.
+    nonisolated private static let defaultErrorFormatter: @MainActor (Error) -> String = { $0.localizedDescription }
 
     /// Exports data as CSV and triggers the file exporter sheet.
     // 中文: 把 csvGenerator() 產生的字串包成 CSVDocument 並觸發 fileExporter sheet。
@@ -47,11 +52,18 @@ final class ImportExportHandler: ObservableObject {
 
     /// Handles the `.fileImporter` result with shared boilerplate:
     /// progress tracking, error handling, and result alert display.
+    ///
+    /// `formatResult` turns the imported/skipped counts into the result message — counts are computed
+    /// inside this handler, so the caller passes a formatter (backed by the generated typed i18n
+    /// accessor) rather than a pre-built string. `formatError` localizes a thrown error at the display
+    /// boundary; the default surfaces `localizedDescription`, and a caller whose service raises a typed
+    /// error (e.g. `CustomDictionaryError`) maps it to a localized string via the App-layer resolver.
     // 中文: 統一處理 fileImporter 結果 — 設定 isImporting、跑 importAction、組訊息、彈 alert。
     func handleFileImport(
         _ result: Result<[URL], Error>,
         importAction: @escaping (URL) async throws -> (imported: Int, skipped: Int),
-        resultFormat: String,
+        formatResult: @MainActor @escaping (_ imported: Int, _ skipped: Int) -> String,
+        formatError: @MainActor @escaping (Error) -> String = ImportExportHandler.defaultErrorFormatter,
         onComplete: (() async -> Void)? = nil,
     ) {
         switch result {
@@ -62,18 +74,15 @@ final class ImportExportHandler: ObservableObject {
                 defer { isImporting = false }
                 do {
                     let importResult = try await importAction(url)
-                    importResultMessage = String(
-                        format: resultFormat,
-                        importResult.imported, importResult.skipped,
-                    )
+                    importResultMessage = formatResult(importResult.imported, importResult.skipped)
                     showImportResultAlert = true
                     await onComplete?()
                 } catch {
-                    showError(error)
+                    showError(error, formatError)
                 }
             }
         case let .failure(error):
-            showError(error)
+            showError(error, formatError)
         }
     }
 
@@ -85,9 +94,9 @@ final class ImportExportHandler: ObservableObject {
         return "\(prefix)_\(formatter.string(from: Date())).csv"
     }
 
-    // 中文: 設定錯誤訊息並彈出 error alert。
-    private func showError(_ error: Error) {
-        errorMessage = error.localizedDescription
+    // 中文: 設定錯誤訊息並彈出 error alert。formatError 在顯示邊界把錯誤轉成(可能本地化的)字串。
+    private func showError(_ error: Error, _ formatError: @MainActor (Error) -> String = ImportExportHandler.defaultErrorFormatter) {
+        errorMessage = formatError(error)
         showErrorAlert = true
     }
 }

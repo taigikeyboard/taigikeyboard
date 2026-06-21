@@ -27,18 +27,17 @@ enum TabType: Int, CaseIterable, Hashable {
     ///
     /// Tab-strip + page chrome. Deliberately NOT an i18n key — it does not live-switch with the in-app
     /// display-language picker, matching Android's hand-written native `R.string.tab_*` nav-chrome
-    /// classification (tab strip + page title follow OS locale, not the picker). `.layout` / `.settings`
-    /// are inline literals after their `*Texts` files were deleted in R2b-2/R2b-3/R2b-4; `.dictionary`
-    /// keeps its `*Texts` ref until its own migration round inlines likewise.
+    /// classification (tab strip + page title follow OS locale, not the picker). All five are inline
+    /// literals after their `*Texts` files were deleted across R2b-2…R2b-5.
     // 中文: tab strip + 頁面標題的 nav chrome。刻意非 i18n key — 不隨 app 顯示語言 picker live-switch,
-    // 中文: 對齊 Android native R.string.tab_*(跟 OS locale,不跟 picker)。home/theme/layout/settings 於
-    // 中文: R2b-2/R2b-3/R2b-4 刪除 *Texts 後改 inline 字面值;dictionary 待自身遷移輪次比照處理。
+    // 中文: 對齊 Android native R.string.tab_*(跟 OS locale,不跟 picker)。五個 tab 於 R2b-2…R2b-5
+    // 中文: 刪除各自 *Texts 後皆改 inline 字面值。
     var title: String {
         switch self {
         case .home: "頭頁"
         case .theme: "主題"
         case .layout: "佈局"
-        case .dictionary: DictionaryTexts.tabBarTitle
+        case .dictionary: "詞庫"
         case .settings: "設定"
         }
     }
