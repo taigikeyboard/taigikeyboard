@@ -83,5 +83,6 @@ struct ContentView_Previews: PreviewProvider {
         let viewModel = SetupGuideViewModel(keyboardStatus: keyboardStatus)
 
         ContentView(viewModel: viewModel)
+            .environment(DisplayLanguageStore())
     }
 }

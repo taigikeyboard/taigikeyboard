@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 // 中文: 自訂詞庫管理子頁的根 View。資料層由 CustomDictionaryViewModel 提供;
 // 中文: 匯入匯出由 ImportExportHandler 負責。
 struct CustomDictionaryView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = CustomDictionaryViewModel()
     @StateObject private var importExport = ImportExportHandler()
 
@@ -182,7 +183,7 @@ struct CustomDictionaryView: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
             TextField(DictionaryTexts.hanziPlaceholder, text: $hanziInput)
-            Button(CommonTexts.cancel, role: .cancel) {
+            Button(lang.string(.commonCancel), role: .cancel) {
                 editingEntry = nil
             }
             Button(DictionaryTexts.save) {
@@ -199,7 +200,7 @@ struct CustomDictionaryView: View {
             onFileImport: { handleImport($0) },
         )
         .alert(DictionaryTexts.deleteAll, isPresented: $showDeleteAllAlert) {
-            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(lang.string(.commonCancel), role: .cancel) {}
             Button(DictionaryTexts.clear, role: .destructive) {
                 Task { await viewModel.deleteAll() }
             }

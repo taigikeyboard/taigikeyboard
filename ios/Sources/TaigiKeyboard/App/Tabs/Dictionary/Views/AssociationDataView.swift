@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 // 中文: 詞關聯資料子頁的根 View。資料層由 AssociationDataViewModel 提供;
 // 中文: 匯入匯出由 ImportExportHandler 負責。
 struct AssociationDataView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = AssociationDataViewModel()
     @StateObject private var importExport = ImportExportHandler()
 
@@ -141,7 +142,7 @@ struct AssociationDataView: View {
         .navigationTitle(DictionaryTexts.associationManagement)
         .navigationBarTitleDisplayMode(.large)
         .alert(DictionaryTexts.clearAllAssociation, isPresented: $showClearAlert) {
-            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(lang.string(.commonCancel), role: .cancel) {}
             Button(DictionaryTexts.clear, role: .destructive) {
                 Task { await viewModel.clearAll() }
             }

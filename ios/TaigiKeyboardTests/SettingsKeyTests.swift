@@ -225,6 +225,9 @@ final class SettingsKeyTests: XCTestCase {
         settings.setKeyboardLayoutType(.qwerty)
         settings.fontType = .system
 
+        // App UI display language (String descriptor).
+        settings.displayLanguage = DisplayLanguage.tailo.tag
+
         // CGFloat appearance.
         settings.keyHeightScale = 2.0
         settings.keyFontSizeScale = 2.0
@@ -242,6 +245,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.inputMode, .tl)
         XCTAssertEqual(settings.keyboardLayoutType, .phahTaigi)
         XCTAssertEqual(settings.fontType, .openHuninn)
+        XCTAssertEqual(settings.displayLanguage, DisplayLanguage.defaultTag)
         XCTAssertTrue(settings.isDoubleTapOOEnabled)
         XCTAssertTrue(settings.isDoubleTapNNEnabled)
         XCTAssertFalse(settings.isTranslateSwapped)
@@ -312,6 +316,9 @@ final class SettingsKeyTests: XCTestCase {
         defaults.set(KeyboardLayoutType.qwerty.rawValue, forKey: "keyboardLayoutType")
         defaults.set(FontType.system.rawValue, forKey: "fontType")
 
+        // App UI display language (frozen key "displayLanguage").
+        defaults.set(DisplayLanguage.tailo.tag, forKey: "displayLanguage")
+
         // CGFloat / Double appearance.
         defaults.set(1.5, forKey: "keyHeightScale")
         defaults.set(1.5, forKey: "keyFontSizeScale")
@@ -347,6 +354,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.inputMode, .poj)
         XCTAssertEqual(settings.keyboardLayoutType, .qwerty)
         XCTAssertEqual(settings.fontType, .system)
+        XCTAssertEqual(settings.displayLanguage, DisplayLanguage.tailo.tag)
         XCTAssertEqual(settings.keyHeightScale, 1.5)
         XCTAssertEqual(settings.keyFontSizeScale, 1.5)
         XCTAssertEqual(settings.candidateTextSizeScale, 1.5)

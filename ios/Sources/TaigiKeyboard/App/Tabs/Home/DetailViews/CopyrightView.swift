@@ -5,11 +5,12 @@ import SwiftUI
 /// Copyright notices for dictionaries and open-source projects.
 // 中文: 版權聲明頁。各區段透過 CopyrightSection 渲染:title、描述、授權、連結。
 struct CopyrightView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     var body: some View {
         Form {
             // Open Huninn (粉圓體)
             CopyrightSection(
-                title: CommonTexts.fontOpenHuninn,
+                title: lang.string(.commonFontOpenHuninn),
                 description: HomeTexts.openFontCopyright,
                 license: HomeTexts.silOpenFontLicense,
                 licenseURL: "https://openfontlicense.org/",
@@ -18,7 +19,7 @@ struct CopyrightView: View {
 
             // Iansui (芫荽體)
             CopyrightSection(
-                title: CommonTexts.fontIansui,
+                title: lang.string(.commonFontIansui),
                 description: HomeTexts.iansuiFontCopyright,
                 license: HomeTexts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
@@ -27,7 +28,7 @@ struct CopyrightView: View {
 
             // GenYoMin (源樣明體)
             CopyrightSection(
-                title: CommonTexts.fontGenYoMin,
+                title: lang.string(.commonFontGenYoMin),
                 description: HomeTexts.butTaiwanCopyright,
                 license: HomeTexts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
@@ -36,7 +37,7 @@ struct CopyrightView: View {
 
             // GenYoGothic (源樣烏體)
             CopyrightSection(
-                title: CommonTexts.fontGenYoGothic,
+                title: lang.string(.commonFontGenYoGothic),
                 description: HomeTexts.butTaiwanCopyright,
                 license: HomeTexts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
@@ -45,7 +46,7 @@ struct CopyrightView: View {
 
             // MOE Taiwanese Dictionary (教育部臺灣台語常用詞辭典)
             CopyrightSection(
-                title: CommonTexts.moeDict,
+                title: lang.string(.commonMoeDict),
                 description: HomeTexts.moeCopyright,
                 license: HomeTexts.ccLicense,
                 licenseURL: "https://creativecommons.org/licenses/by-nd/3.0/tw/",
@@ -54,7 +55,7 @@ struct CopyrightView: View {
 
             // New Words Dictionary (新詞新語)
             CopyrightSection(
-                title: CommonTexts.newwordDict,
+                title: lang.string(.commonNewwordDict),
                 description: HomeTexts.newwordCopyright,
                 license: HomeTexts.ccBy4License,
                 licenseURL: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
@@ -63,7 +64,7 @@ struct CopyrightView: View {
 
             // Craft Dictionary (工藝詞庫)
             CopyrightSection(
-                title: CommonTexts.kunggeDict,
+                title: lang.string(.commonKunggeDict),
                 description: HomeTexts.kunggeCopyright,
                 license: HomeTexts.ccByNcLicense,
                 licenseURL: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
@@ -72,7 +73,7 @@ struct CopyrightView: View {
 
             // iTaigi
             CopyrightSection(
-                title: CommonTexts.iTaigiDict,
+                title: lang.string(.commonITaigiDict),
                 description: HomeTexts.iTaigiCopyright,
                 license: HomeTexts.cc0License,
                 licenseURL: "https://creativecommons.org/public-domain/cc0/",
@@ -81,7 +82,7 @@ struct CopyrightView: View {
 
             // Taiwan-Japan Dictionary (台日大辭典)
             CopyrightSection(
-                title: CommonTexts.taiwanJapanDict,
+                title: lang.string(.commonTaiwanJapanDict),
                 description: HomeTexts.taiwanJapanCopyright,
                 license: HomeTexts.ccByNcSA3License,
                 licenseURL: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
@@ -90,7 +91,7 @@ struct CopyrightView: View {
 
             // Tai-Hua Dictionary (台華線頂辭典)
             CopyrightSection(
-                title: CommonTexts.taiHuaDict,
+                title: lang.string(.commonTaiHuaDict),
                 description: HomeTexts.taiHuaCopyright,
                 license: HomeTexts.ccBySA4License,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
@@ -99,7 +100,7 @@ struct CopyrightView: View {
 
             // Taiwan Plant Dictionary (台灣植物名彙)
             CopyrightSection(
-                title: CommonTexts.taiwanPlantDict,
+                title: lang.string(.commonTaiwanPlantDict),
                 description: HomeTexts.taiwanPlantCopyright,
                 license: HomeTexts.ccBySA4License,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
@@ -108,7 +109,7 @@ struct CopyrightView: View {
 
             // Subject Terminology Dictionary (學科術語)
             CopyrightSection(
-                title: CommonTexts.sttiDict,
+                title: lang.string(.commonSttiDict),
                 description: HomeTexts.sttiCopyright,
                 license: HomeTexts.ogdlTaiwanLicense,
                 licenseURL: "https://spdx.org/licenses/OGDL-Taiwan-1.0.html",
@@ -118,7 +119,7 @@ struct CopyrightView: View {
             // Accent/dialect supplementary data (腔口補充)
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(CommonTexts.accentDict)
+                    Text(lang.string(.commonAccentDict))
                         .font(AppStyle.headlineFont)
 
                     Text(HomeTexts.accentDictCredit)
@@ -146,6 +147,7 @@ struct CopyrightView: View {
 
 // 中文: 單一版權項目的 Section 子 View。licenseURL 必填,websiteURL 可選。
 private struct CopyrightSection: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     let title: String
     let description: String
     let license: String
@@ -173,7 +175,7 @@ private struct CopyrightSection: View {
 
             if let websiteURL {
                 Link(destination: URL(string: websiteURL)!) {
-                    Label(CommonTexts.viewWebsite, systemImage: "globe")
+                    Label(lang.string(.commonViewWebsite), systemImage: "globe")
                 }
             }
         }

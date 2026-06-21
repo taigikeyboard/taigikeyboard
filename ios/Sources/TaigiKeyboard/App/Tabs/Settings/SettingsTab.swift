@@ -12,6 +12,7 @@ import UIKit
 // 中文: Settings Tab View。集中所有設定 row,並透過 SharedSettings / KeyboardKit
 // 中文: App Group UserDefaults 雙路徑落盤。
 struct SettingsTab: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     private let settings = SharedSettings.shared
 
     @State private var selectedInputMode: InputMode
@@ -66,6 +67,24 @@ struct SettingsTab: View {
     var body: some View {
         NavigationStack {
             Form {
+                #if DEBUG
+                // 中文: i18n 顯示語言除錯切換 (HANJI↔PSEUDO),dogfood 用以驗證 live-switch;release build 完全不存在。
+                // DEBUG-only probe: flips the display language so the layout-inflated PSEUDO strings make
+                // a live language switch visible (all real languages still fall back to Hanji in R2b).
+                Section {
+                    Picker(
+                        "i18n display language",
+                        selection: Binding(get: { lang.language }, set: { lang.setLanguage($0) }),
+                    ) {
+                        Text("HANJI").tag(DisplayLanguage.hanji)
+                        Text("PSEUDO").tag(DisplayLanguage.pseudo)
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("DEBUG · i18n probe")
+                }
+                #endif
+
                 // Input mode
                 Section {
                     NavigationLink {
@@ -99,7 +118,7 @@ struct SettingsTab: View {
                         HStack {
                             Text(ThemeTexts.customFont)
                             Spacer()
-                            Text(selectedFontType.displayName)
+                            Text(lang.string(selectedFontType.displayNameKey))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -290,7 +309,7 @@ struct SettingsTab: View {
             }
         }
         .alert(SettingsTexts.resetSettings, isPresented: $showResetSettingsAlert) {
-            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(lang.string(.commonCancel), role: .cancel) {}
             Button(SettingsTexts.reset, role: .destructive) {
                 resetAllSettings()
             }
@@ -329,6 +348,8 @@ struct SettingsTab: View {
         isTpsOrMappedToER = settings.isTpsOrMappedToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled
+        // 中文: reset 把 persisted displayLanguage 寫回 hanji,但 live store 是注入的;同步回來才會即時還原畫面語言。
+        lang.syncFromSettings()
 
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()

@@ -54,14 +54,16 @@ enum FontType: String, CaseIterable, Codable {
         }
     }
 
-    // 中文: 設定頁顯示用名稱。
-    var displayName: String {
+    // 中文: 設定頁顯示用名稱的 i18n key。View 端用 lang.string(font.displayNameKey) 解析,確保語言切換即時更新。
+    // Reactive: resolved at the call site via the environment store, not a non-reactive getter (Codex Q4).
+    // All five names live in the `common` namespace (`.system` was the former LayoutTexts.fontSystemDefault).
+    var displayNameKey: StringKey {
         switch self {
-        case .system: LayoutTexts.fontSystemDefault
-        case .openHuninn: CommonTexts.fontOpenHuninn
-        case .iansui: CommonTexts.fontIansui
-        case .genYoMin: CommonTexts.fontGenYoMin
-        case .genYoGothic: CommonTexts.fontGenYoGothic
+        case .system: .commonFontSystemDefault
+        case .openHuninn: .commonFontOpenHuninn
+        case .iansui: .commonFontIansui
+        case .genYoMin: .commonFontGenYoMin
+        case .genYoGothic: .commonFontGenYoGothic
         }
     }
 }

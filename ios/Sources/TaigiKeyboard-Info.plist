@@ -8,6 +8,14 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>nan-Hant-TW</string>
+		<string>nan-Latn-TW-x-tailo</string>
+		<string>nan-Latn-TW-x-poj</string>
+		<string>ja</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>

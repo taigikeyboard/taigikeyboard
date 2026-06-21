@@ -159,6 +159,12 @@ class PlaceholderValidationTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._validate({"k": _android_key({"hanji": "{fun}"}, placeholders={"fun": "int"})})
 
+    def test_swift_keyword_placeholder_name_rejected(self):
+        # `default` is a legal Kotlin identifier but a Swift keyword; the placeholder becomes a Swift
+        # function parameter, so it must be rejected for the iOS emitter (Codex post-impl).
+        with self.assertRaises(ValueError):
+            self._validate({"k": _android_key({"hanji": "{default}"}, placeholders={"default": "int"})})
+
     def test_declared_but_unused_rejected(self):
         with self.assertRaises(ValueError):
             self._validate({"k": _android_key({"hanji": "no placeholder"}, placeholders={"count": "int"})})
@@ -223,6 +229,90 @@ class FormatEmitTest(unittest.TestCase):
             formats = build_outputs(repo)[f"{i18n_lib.GEN_PKG_DIR}/StringResolverFormats.kt"]
             self.assertIn("No format-arg keys", formats)
             self.assertNotIn("import", formats)  # no unused imports when there are no accessors
+
+
+def _ios_key(values: dict, placeholders: dict | None = None, comment: str | None = None) -> dict:
+    entry = {"scope": {"platforms": ["android", "ios"], "surfaces": ["host"]}, "values": values}
+    if placeholders is not None:
+        entry["placeholders"] = placeholders
+    if comment is not None:
+        entry["comment"] = comment
+    return entry
+
+
+class IOSEmitTest(unittest.TestCase):
+    def _outputs(self, keys, namespace="probe"):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, namespace, keys)
+            return build_outputs(repo)
+
+    def test_xcstrings_source_language_is_hanji_not_en(self):
+        # Codex Q1: sourceLanguage MUST be the Hanji base. "en" makes Xcode emit the synthetic key as
+        # its own en value, defeating the runtime sentinel fallback so English renders the raw key.
+        catalog = json.loads(self._outputs({"k": _ios_key({"hanji": "字"})})[i18n_lib.IOS_XCSTRINGS])
+        self.assertEqual(catalog["sourceLanguage"], i18n_lib.BCP47_HANJI)
+
+    def test_xcstrings_keyed_by_res_name_with_only_authored_langs(self):
+        catalog = json.loads(self._outputs({"k": _ios_key({"hanji": "字"}, comment="c")})[i18n_lib.IOS_XCSTRINGS])
+        unit = catalog["strings"]["i18n_probe_k"]
+        self.assertEqual(unit["comment"], "c")
+        # Only Hanji authored -> only the nan-Hant-TW localization exists; en/ja absent (no fake fill).
+        self.assertEqual(list(unit["localizations"]), ["nan-Hant-TW"])
+        self.assertEqual(unit["localizations"]["nan-Hant-TW"]["stringUnit"]["value"], "字")
+
+    def test_xcstrings_authored_language_uses_bcp47_tag(self):
+        catalog = json.loads(self._outputs({"k": _ios_key({"hanji": "字", "en": "Word"})})[i18n_lib.IOS_XCSTRINGS])
+        self.assertIn("en", catalog["strings"]["i18n_probe_k"]["localizations"])
+
+    def test_ios_scope_filter_excludes_android_only(self):
+        outputs = self._outputs(
+            {
+                "shared": _ios_key({"hanji": "共用"}),
+                "androidOnly": {"scope": {"platforms": ["android"], "surfaces": ["host"]}, "values": {"hanji": "A"}},
+            },
+        )
+        string_key_swift = outputs[f"{i18n_lib.IOS_GEN_DIR}/StringKey.swift"]
+        self.assertIn('case probeShared = "i18n_probe_shared"', string_key_swift)
+        self.assertNotIn("androidOnly", string_key_swift)  # android-only key absent from iOS catalog
+
+    def test_ios_format_uses_lld_and_int64_cast(self):
+        # iOS %lld (Swift Int is 64-bit) + Int64() cast — NOT Android's %d.
+        outputs = self._outputs(
+            {"imp": _ios_key({"hanji": "{imported} ok {skipped}"}, placeholders={"imported": "int", "skipped": "int"})},
+        )
+        catalog = json.loads(outputs[i18n_lib.IOS_XCSTRINGS])
+        self.assertEqual(catalog["strings"]["i18n_probe_imp"]["localizations"]["nan-Hant-TW"]["stringUnit"]["value"], "%1$lld ok %2$lld")
+        formats = outputs[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]
+        self.assertIn("func probeImp(imported: Int, skipped: Int) -> String", formats)
+        self.assertIn("format(.probeImp, Int64(imported), Int64(skipped))", formats)
+        # Android side stays %d in the same build.
+        self.assertIn("%1$d ok %2$d", outputs[f"{i18n_lib.ANDROID_RES_ROOT}/values/strings_i18n.xml"])
+
+    def test_ios_pseudo_map_is_debug_gated(self):
+        pseudo_swift = self._outputs({"k": _ios_key({"hanji": "字"})})[f"{i18n_lib.IOS_GEN_DIR}/GeneratedPseudoStrings.swift"]
+        self.assertIn("#if DEBUG", pseudo_swift)
+        self.assertIn("#endif", pseudo_swift)
+        self.assertIn(".probeK:", pseudo_swift)
+
+    def test_ios_no_format_keys_emits_comment(self):
+        formats = self._outputs({"k": _ios_key({"hanji": "字"})})[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]
+        self.assertIn("No format-arg keys", formats)
+        self.assertNotIn("extension StringResolver", formats)
+
+
+class GlobalValidationTest(unittest.TestCase):
+    def test_duplicate_accessor_across_namespaces_rejected(self):
+        # l10n_accessor("common","fooBar") == l10n_accessor("commonFoo","bar") == "commonFooBar".
+        # Both keys are valid lowerCamelCase per-namespace, so only the cross-namespace global check
+        # catches the collision that would emit two identical Swift cases / Kotlin vals.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "common", {"fooBar": _android_key({"hanji": "1"})})
+            _write_namespace(repo, "commonFoo", {"bar": _android_key({"hanji": "2"})})
+            with self.assertRaises(ValueError) as ctx:
+                build_outputs(repo)
+            self.assertIn("duplicate accessor", str(ctx.exception))
 
 
 if __name__ == "__main__":

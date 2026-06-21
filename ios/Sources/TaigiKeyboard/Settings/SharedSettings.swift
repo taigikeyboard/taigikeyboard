@@ -105,6 +105,11 @@ final class SharedSettings {
     // 中文: 主題版本計數。每次 user-theme 檔變更 +1,寫入觸發 didChangeNotification,讓 extension 重新解析。
     private static let themeRevisionKey: SettingsKey<Int> = .int("themeRevision", default: 0)
 
+    // 中文: App UI 顯示語言 tag (與鍵盤輸入模式正交)。持久於 App Group,host↔extension 共用同一值;
+    // 中文: extension 透過 didChangeNotification 反映變更。預設 hanji。Key 拼字凍結。
+    // App UI display-language tag (orthogonal to keyboard input mode) — see DisplayLanguage.
+    private static let displayLanguageKey: SettingsKey<String> = .string("displayLanguage", default: DisplayLanguage.defaultTag)
+
     // 中文: process 內 singleton。整個 app + extension 共用同一份設定 facade。
     static let shared = SharedSettings()
 
@@ -135,6 +140,13 @@ final class SharedSettings {
     var inputMode: InputMode {
         get { userDefaults.value(for: Self.inputModeKey) }
         set { setInputMode(newValue) }
+    }
+
+    // 中文: App UI 顯示語言 tag (DisplayLanguage.tag)。寫入觸發 didChangeNotification,
+    // 中文: host + extension 兩端的 DisplayLanguageStore 都重新解析 → live-switch 免重啟。
+    var displayLanguage: String {
+        get { userDefaults.value(for: Self.displayLanguageKey) }
+        set { userDefaults.set(newValue, for: Self.displayLanguageKey) }
     }
 
     // 中文: POJ「雙擊 OO」預處理開關。預設 true。供 ToneToggles 打包後給 ToneConverter。
@@ -683,6 +695,9 @@ final class SharedSettings {
         colorSettings = .default
         // 中文: 回到 default 主題(走 colorSettings buffer);不刪除已存的 user themes。
         selectedThemeId = ThemeId.default
+        // 中文: 顯示語言回到預設 (hanji)。寫的是 persisted 值;呼叫端 (resetAllSettings) 必須接著呼叫
+        // 中文: DisplayLanguageStore.syncFromSettings() 把 live store 同步回來,否則畫面語言不會跟著還原。
+        displayLanguage = DisplayLanguage.defaultTag
 
         // KeyboardKit-owned defaults live in a separate store; reset via
         // `SettingsResetCoordinator.resetAll()` when you need both sides.

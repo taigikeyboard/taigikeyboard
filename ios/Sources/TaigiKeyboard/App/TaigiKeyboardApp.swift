@@ -97,6 +97,9 @@ struct TaigiKeyboardApp: App {
 struct AppRootView: View {
     @ObservedObject var keyboardStatus: KeyboardStatusContext
     @StateObject private var viewModel: SetupGuideViewModel
+    // 中文: App UI 顯示語言 root state。注入在 AppRootView(ContentView + setup-guide cover 的共同祖先),
+    // 中文: 讓 TabView 與全螢幕 cover 兩處都繼承同一份 store(plan D7 live-switch)。
+    @State private var displayLanguageStore = DisplayLanguageStore()
 
     init(keyboardStatus: KeyboardStatusContext) {
         self.keyboardStatus = keyboardStatus
@@ -118,6 +121,7 @@ struct AppRootView: View {
             .task {
                 viewModel.checkKeyboardStatus()
             }
+            .environment(displayLanguageStore)
     }
 
     /// Handle deep link (e.g. taigikeyboard://settings).

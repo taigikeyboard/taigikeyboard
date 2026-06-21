@@ -6,6 +6,7 @@ import SwiftUI
 /// Add/Edit form for a custom dictionary entry
 // 中文: 自訂詞庫單筆編輯畫面。羅馬字 + 漢字兩欄;canSave 需兩欄都非空白。
 struct CustomDictionaryEditView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
 
     @State private var roman: String
@@ -70,7 +71,7 @@ struct CustomDictionaryEditView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(CommonTexts.cancel) {
+                    Button(lang.string(.commonCancel)) {
                         dismiss()
                     }
                 }

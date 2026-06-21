@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F31221022FE77EA100931D4E /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F31221012FE77EA100931D4E /* Localizable.xcstrings */; };
+		F31221032FE77EA100931D4E /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F31221012FE77EA100931D4E /* Localizable.xcstrings */; };
 		F312E9272F9E93A300E53A7F /* RustTaigi.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9262F9E93A300E53A7F /* RustTaigi.swift */; };
 		F312E9282F9E93A300E53A7F /* RustTaigi.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9262F9E93A300E53A7F /* RustTaigi.swift */; };
 		F312E92A2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */; };
@@ -93,6 +95,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F31221012FE77EA100931D4E /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F312E9262F9E93A300E53A7F /* RustTaigi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RustTaigi.swift; path = RustEngine/RustTaigi.swift; sourceTree = "<group>"; };
 		F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SwiftBridgeCore.swift; path = RustEngine/SwiftBridgeCore.swift; sourceTree = "<group>"; };
 		F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaigiKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -311,6 +314,7 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F31221012FE77EA100931D4E /* Localizable.xcstrings */,
 				F37672962FDF06B5007F0CF7 /* emoji.json */,
 				F3C05ADF2FABCC1900CB82BE /* Logging */,
 				F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */,
@@ -497,6 +501,10 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+                "nan-Hant-TW",
+                "nan-Latn-TW-x-tailo",
+                "nan-Latn-TW-x-poj",
+                "ja",
 				Base,
 				smn,
 				de,
@@ -584,6 +592,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F31221022FE77EA100931D4E /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -592,6 +601,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F37672972FDF06B5007F0CF7 /* emoji.json in Resources */,
+				F31221032FE77EA100931D4E /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -710,6 +720,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -769,6 +780,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

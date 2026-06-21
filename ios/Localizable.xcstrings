@@ -1,0 +1,2346 @@
+{
+  "sourceLanguage": "nan-Hant-TW",
+  "strings": {
+    "i18n_common_accentDict": {
+      "comment": "Display name of the regional accent / pronunciation-variation supplement data source (Android key was khpooDict; canonical name unified with iOS).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "腔口差"
+          }
+        }
+      }
+    },
+    "i18n_common_cancel": {
+      "comment": "Dialog dismiss button — cancels the action and closes the dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
+        }
+      }
+    },
+    "i18n_common_delete": {
+      "comment": "Generic delete action label / a11y description (custom-theme card menu item, dictionary row delete).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除"
+          }
+        }
+      }
+    },
+    "i18n_common_fontGenYoGothic": {
+      "comment": "Keyboard font option: GenYoGothic (源樣烏體) sans-serif typeface.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "源樣烏體"
+          }
+        }
+      }
+    },
+    "i18n_common_fontGenYoMin": {
+      "comment": "Keyboard font option: GenYoMin (源樣明體) serif typeface.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "源樣明體"
+          }
+        }
+      }
+    },
+    "i18n_common_fontIansui": {
+      "comment": "Keyboard font option: Iansui (芫荽) typeface.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "芫荽"
+          }
+        }
+      }
+    },
+    "i18n_common_fontOpenHuninn": {
+      "comment": "Keyboard font option: JF Open Huninn (粉圓) typeface.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粉圓"
+          }
+        }
+      }
+    },
+    "i18n_common_fontSystemDefault": {
+      "comment": "Keyboard font option: the OS system default typeface.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系統"
+          }
+        }
+      }
+    },
+    "i18n_common_iTaigiDict": {
+      "comment": "Display name of the iTaigi crowd-sourced dictionary data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi愛台語"
+          }
+        }
+      }
+    },
+    "i18n_common_kunggeDict": {
+      "comment": "Display name of the NTCRI craft-terminology lexicon data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工藝中心臺灣台語工藝詞庫"
+          }
+        }
+      }
+    },
+    "i18n_common_moeDict": {
+      "comment": "Display name of the MOE Taiwanese dictionary data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部臺灣台語常用詞辭典"
+          }
+        }
+      }
+    },
+    "i18n_common_newwordDict": {
+      "comment": "Display name of the PTS Taigi new-word lexicon data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公視台語台台語新詞辭庫"
+          }
+        }
+      }
+    },
+    "i18n_common_sttiDict": {
+      "comment": "Display name of the MOE academic-subject terminology Taigi translation data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部學科術語臺灣台語對譯"
+          }
+        }
+      }
+    },
+    "i18n_common_taiHuaDict": {
+      "comment": "Display name of the online Taigi-Mandarin cross-reference dictionary data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台華線頂對照典"
+          }
+        }
+      }
+    },
+    "i18n_common_taiwanJapanDict": {
+      "comment": "Display name of the Taiwanese-Japanese Grand Dictionary (Taigi translation) data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "臺日大辭典台語譯本"
+          }
+        }
+      }
+    },
+    "i18n_common_taiwanPlantDict": {
+      "comment": "Display name of the Taiwan plant-name glossary data source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台灣植物名彙"
+          }
+        }
+      }
+    },
+    "i18n_common_viewWebsite": {
+      "comment": "Link button opening an official website in the browser (data sources + the app's own site).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "官方網站"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_addEntry": {
+      "comment": "Title of the add-custom-entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "增加詞"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationDescription": {
+      "comment": "Description of the word-association CSV format (5-column layout).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞關聯紀錄使用 CSV 純文字檔案，共 5 欄：頭前詞、頭前拍字、後壁詞、後壁拍字、次數，毋免囥標題。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationExportCSV": {
+      "comment": "Button: export the word-association records to a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出詞關聯紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationImportCSV": {
+      "comment": "Button: import word-association records from a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入詞關聯紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationManagement": {
+      "comment": "Page/section title for word-association record management.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞關聯紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationPrivacyWarning": {
+      "comment": "Privacy warning about sharing word-association data for research.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞關聯紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人做研究，請先刪除敏感 ê 內容。紀錄功能嘛會使關起來，毋過後一詞預測會較無準。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationRecordingEnabled": {
+      "comment": "Toggle label: enable recording of word-association (bigram) data.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟詞關聯紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_associationRecordingEnabledInfo": {
+      "comment": "Info-dialog body explaining what association recording does for next-word prediction.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍開了後，齒盤會記錄頭前、後壁 ê 關聯詞，予連紲建議愈來愈準。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_backupPrivacyWarning": {
+      "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "備份檔案內底包含你所有 ê 使用紀錄，佇 iOS 佮 Android 攏通用，準講換機仔嘛毋免煩惱。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_backupRestore": {
+      "comment": "Section title for full backup/restore of all user data.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "備份復原"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clear": {
+      "comment": "Generic clear button label (e.g. confirm clearing all frequency/association records).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearAllAssociation": {
+      "comment": "Destructive action: delete all word-association records.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除所有詞關聯紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearAllFrequency": {
+      "comment": "Destructive action: delete all word-frequency records.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除所有詞頻紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearAssociationMessage": {
+      "comment": "Confirmation dialog body for deleting all word-association records.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確定欲刪除所有詞關聯紀錄？"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearFrequencyMessage": {
+      "comment": "Confirmation dialog body for deleting all word-frequency records.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確定欲刪除所有詞頻紀錄？"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_customDictDescription": {
+      "comment": "Description of the custom-dictionary CSV format (column layout).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_customDictEmpty": {
+      "comment": "Empty-state hint shown when the custom dictionary has no entries.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤 + 符號加入自訂詞"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_customDictEnabled": {
+      "comment": "Toggle label: enable the user's custom dictionary in candidate suggestions.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用自訂詞庫"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_customDictEnabledInfo": {
+      "comment": "Info-dialog body explaining what enabling the custom dictionary does.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍開了後，家己加入 ê 詞會出現佇候選詞內底。關起來了後，自訂詞就袂閣出現。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_customDictPrivacyWarning": {
+      "comment": "Privacy warning against storing sensitive personal data in the custom dictionary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請毋通佇自訂詞庫囥敏感 ê 個人資料，親像身分證字號、口座密碼、信用卡號碼，請注意家己 ê 資訊安全。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_customDictionary": {
+      "comment": "Custom dictionary section/page title.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂詞庫"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_dataManagement": {
+      "comment": "Section title for personal-data management (backup/import/export of user data).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人資料"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_deleteAll": {
+      "comment": "Destructive action: delete all custom-dictionary entries.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除全部自訂詞"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_deleteAllMessage": {
+      "comment": "Confirmation dialog body for deleting all custom-dictionary entries.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "敢確定欲刪除所有自訂詞？"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_devSupplementDict": {
+      "comment": "Display name of the developer supplement dictionary file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞庫增補檔案"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_editEntry": {
+      "comment": "Title of the edit-custom-entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯詞"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_exportBackup": {
+      "comment": "Button: export a full backup of all user data in one file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一擺全出"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_exportBackupSuccess": {
+      "comment": "Toast/dialog confirming the full backup exported successfully.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "備份順利匯出"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_exportCSV": {
+      "comment": "Button: export the custom dictionary to a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出詞庫"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_exportSuccess": {
+      "comment": "Toast/dialog confirming the custom dictionary exported successfully.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV 順利匯出"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_fileTooLarge": {
+      "comment": "Error: the imported file exceeds the 5 MB size limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案傷大（上限 5 MB）"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_filterHint": {
+      "comment": "Hint explaining the 100-item display cap and pointing to the search field.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "頂面上濟顯示 100 个詞，若揣無詞，請用下跤 ê「拍字揣詞」功能搜揣。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyDescription": {
+      "comment": "Description of the word-frequency CSV format (column layout).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞頻紀錄使用 CSV 純文字檔案，第 1 欄囥詞，第 2 欄囥次數，毋免囥標題。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyExportCSV": {
+      "comment": "Button: export the word-frequency records to a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出詞頻紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyImportCSV": {
+      "comment": "Button: import word-frequency records from a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入詞頻紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyManagement": {
+      "comment": "Page/section title for word-frequency record management.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞頻紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyPrivacyWarning": {
+      "comment": "Privacy warning about sharing word-frequency data for research.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞頻紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人研究訓練模型，請先刪除敏感 ê 私人資料。紀錄功能嘛會使關起來，毋過按呢候選詞 ê 排序就會較無準。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyRecordingEnabled": {
+      "comment": "Toggle label: enable recording of word-selection frequency.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟詞頻紀錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyRecordingEnabledInfo": {
+      "comment": "Info-dialog body explaining what frequency recording does for candidate ranking.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍開了後，齒盤會記錄你揀過 ê 詞幾擺，予候選詞排序做參考，定定揀 ê 詞就會排較頭前，按呢候選詞就會愈來愈準。"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_hanziLabel": {
+      "comment": "Field label for the Hanji (對應) column in the custom-entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "對應"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_hanziPlaceholder": {
+      "comment": "Placeholder example for the Hanji field in the custom-entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見本：𠢕早"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_importBackup": {
+      "comment": "Button: import a full backup of all user data from one file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一擺全入"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_importBackupResult": {
+      "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入 %1$lld 項自訂詞、%2$lld 項詞頻、%3$lld 項詞關聯"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_importCSV": {
+      "comment": "Button: import the custom dictionary from a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入詞庫"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_importExportTitle": {
+      "comment": "Section title for the import/export controls.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出匯入"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_importResult": {
+      "comment": "Import-result message: number of entries imported and number skipped (duplicates / overflow / write failures). Shared by custom-dictionary, frequency, and association imports (iOS importResultFormat).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入 %1$lld 項成功，%2$lld 項重複"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_invalidCSVFormat": {
+      "comment": "Error: the imported file is not valid CSV.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案格式無正確，請使用 CSV 格式"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentGilan": {
+      "comment": "MOE dictionary accent sub-source: Yilan Zhangzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "宜蘭偏漳腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentKaohsiung": {
+      "comment": "MOE dictionary accent sub-source: Kaohsiung mixed accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高雄混合腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentKinmen": {
+      "comment": "MOE dictionary accent sub-source: Kinmen Quanzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金門偏泉腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentLukang": {
+      "comment": "MOE dictionary accent sub-source: Lukang Quanzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鹿港偏泉腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentMakung": {
+      "comment": "MOE dictionary accent sub-source: Makung Quanzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "馬公偏泉腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentSansia": {
+      "comment": "MOE dictionary accent sub-source: Sansia Quanzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "三峽偏泉腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentSintik": {
+      "comment": "MOE dictionary accent sub-source: Hsinchu Quanzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新竹偏泉腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentTaichung": {
+      "comment": "MOE dictionary accent sub-source: Taichung Zhangzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "臺中偏漳腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentTainan": {
+      "comment": "MOE dictionary accent sub-source: Tainan mixed accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "臺南混合腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianAccentTaipak": {
+      "comment": "MOE dictionary accent sub-source: Taipei Quanzhou-leaning accent.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "臺北偏泉腔"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kautianNameAppendix": {
+      "comment": "MOE dictionary sub-source: surname appendix.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "姓名附錄"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_khiin": {
+      "comment": "Toggle/section label for the Khiin (在來字) dictionary source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在來字"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_lkkDict": {
+      "comment": "Display name of the Han-Lo recommended-character dictionary source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢羅合用建議用字"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_lookupChhoe": {
+      "comment": "External-lookup option: ChhoeTaigi dictionary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChhoeTaigi 辭典"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_lookupMoe": {
+      "comment": "External-lookup option: MOE dictionary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部辭典"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_moeSectionTitle": {
+      "comment": "Section header grouping MOE dictionary sources.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部用字"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_noData": {
+      "comment": "Empty-state message when a record list has no data.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無資料"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_noResults": {
+      "comment": "Empty-state message when a dictionary search returns nothing.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揣無結果"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_otherSectionTitle": {
+      "comment": "Section header grouping non-MOE dictionary sources.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他辭典"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_romanLabel": {
+      "comment": "Field label for the romanization (拍字) column in the custom-entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍字"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_romanPlaceholder": {
+      "comment": "Placeholder example for the romanization field in the custom-entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見本：gâu-tsá"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_save": {
+      "comment": "Save button in the custom-dictionary add/edit entry dialog.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儉起來"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_searchPlaceholder": {
+      "comment": "Search-field placeholder in the dictionary browser.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍字揣詞"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_supplementSectionTitle": {
+      "comment": "Section header grouping supplementary dictionary data.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補充資料"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_tooManyEntries": {
+      "comment": "Error: the import exceeds the 30,000-entry cap.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詞傷濟（上限 30,000 項）"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_variantDictionary": {
+      "comment": "Toggle/section label for the variant-character (異用字) dictionary source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "異用字"
+          }
+        }
+      }
+    },
+    "i18n_home_aboutDeveloper": {
+      "comment": "Home resource link + about-developer page title.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於"
+          }
+        }
+      }
+    },
+    "i18n_home_accentDictCredit": {
+      "comment": "Credit line for the regional-accent supplement source (compiled and provided by 實齋).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "實齋整理、提供"
+          }
+        }
+      }
+    },
+    "i18n_home_appHeaderTitle": {
+      "comment": "Home tab large title — the app name.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台語齒盤"
+          }
+        }
+      }
+    },
+    "i18n_home_butTaiwanCopyright": {
+      "comment": "Copyright attribution for ButTaiwan fonts (芫荽 Iansui + 源樣明體/源樣烏體 GenYo families).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© ButTaiwan"
+          }
+        }
+      }
+    },
+    "i18n_home_copyrightNotice": {
+      "comment": "Home resource link + copyright/acknowledgement page title.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "致謝"
+          }
+        }
+      }
+    },
+    "i18n_home_devSupplementCredit": {
+      "comment": "Credit line for the word-list supplement source (compiled and provided by 建中).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建中整理、提供"
+          }
+        }
+      }
+    },
+    "i18n_home_faq": {
+      "comment": "Home section header above the FAQ / other list.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
+          }
+        }
+      }
+    },
+    "i18n_home_freePromise": {
+      "comment": "About-developer page body: the maintainer's promise that the keyboard stays free.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
+          }
+        }
+      }
+    },
+    "i18n_home_iTaigiCopyright": {
+      "comment": "Copyright attribution for the iTaigi crowd-sourced dictionary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© iTaigi愛台語"
+          }
+        }
+      }
+    },
+    "i18n_home_kunggeCopyright": {
+      "comment": "Copyright attribution for the NTCRI craft-terminology lexicon.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 國立臺灣工藝研究發展中心"
+          }
+        }
+      }
+    },
+    "i18n_home_moeCopyright": {
+      "comment": "Copyright attribution for the MOE Taiwanese dictionary. Non-Hanji languages may use the rights-holder's official name; absent override falls back to Hanji.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 教育部"
+          }
+        }
+      }
+    },
+    "i18n_home_newFeatures": {
+      "comment": "Home section header above the feature-settings list.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能設定"
+          }
+        }
+      }
+    },
+    "i18n_home_newwordCopyright": {
+      "comment": "Copyright attribution for the PTS Taigi new-word lexicon.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 公視台語台"
+          }
+        }
+      }
+    },
+    "i18n_home_openFontCopyright": {
+      "comment": "Copyright attribution for the JF Open Huninn (粉圓) font.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© justfont"
+          }
+        }
+      }
+    },
+    "i18n_home_privacyPolicy": {
+      "comment": "Home resource link: open the privacy policy.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱私權政策"
+          }
+        }
+      }
+    },
+    "i18n_home_rateUs": {
+      "comment": "Home resource link: rate the app on the store.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為阮評分"
+          }
+        }
+      }
+    },
+    "i18n_home_setupBrandWarning": {
+      "comment": "Setup-guide note: steps may differ slightly across phone brands.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuide": {
+      "comment": "Setup-guide navigation row label + sub-page title.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用方法"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuideCloseButton": {
+      "comment": "Setup-guide full-screen close button.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuideCompletedMessage": {
+      "comment": "Setup-guide full-screen closing paragraph: restart the app and switch via the globe key.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuideDescription": {
+      "comment": "Setup-guide intro paragraph: third-party keyboards must be enabled manually.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuideGoToSettings": {
+      "comment": "Setup-guide button: open the system input-method settings page.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "去設定頁"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuideStep1Settings": {
+      "comment": "Setup-guide step 1 title: tap 'Keyboards'.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點揤「齒盤」"
+          }
+        }
+      }
+    },
+    "i18n_home_setupGuideStep2AddKeyboard": {
+      "comment": "Setup-guide step 2 title: tap 'Add keyboard' and 'Allow Full Access'.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點揤「增加齒盤」、「允准完整取用」"
+          }
+        }
+      }
+    },
+    "i18n_home_setupInfoMessage": {
+      "comment": "Setup-guide note explaining what 'Allow Full Access' means and the privacy stance.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。"
+          }
+        }
+      }
+    },
+    "i18n_home_setupKeyboard": {
+      "comment": "Home section header above the keyboard-activation guide row.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "齒盤愛拍開才會當使用"
+          }
+        }
+      }
+    },
+    "i18n_home_taiHuaCopyright": {
+      "comment": "Copyright attribution for the online Taigi-Mandarin cross-reference dictionary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 鄭良偉"
+          }
+        }
+      }
+    },
+    "i18n_home_taiwanJapanCopyright": {
+      "comment": "Copyright attribution for the Taiwanese-Japanese Grand Dictionary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 小川尚義"
+          }
+        }
+      }
+    },
+    "i18n_home_taiwanPlantCopyright": {
+      "comment": "Copyright attribution for the Taiwan plant-name glossary.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 佐佐木舜一"
+          }
+        }
+      }
+    },
+    "i18n_home_typingGuide": {
+      "comment": "Home section header above the typing-guide feature list.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍字說明"
+          }
+        }
+      }
+    },
+    "i18n_home_userGuide": {
+      "comment": "Home resource link: the project website introduction.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "網站紹介"
+          }
+        }
+      }
+    },
+    "i18n_home_version": {
+      "comment": "Home row label for the current app version.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當前版本"
+          }
+        }
+      }
+    },
+    "i18n_home_versionHistory": {
+      "comment": "Home resource link + version-history page title.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本紀錄"
+          }
+        }
+      }
+    },
+    "i18n_home_viewLicense": {
+      "comment": "Copyright page button: open the license text for a source.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授權條款"
+          }
+        }
+      }
+    },
+    "i18n_layout_comingSoon": {
+      "comment": "Placeholder badge for a layout that is not yet available. iOS-only: shown in the iOS layout-selection overlay (LayoutSelectionOverlay.swift); Android has no such placeholder.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連鞭上市"
+          }
+        }
+      }
+    },
+    "i18n_layout_moe1Layout": {
+      "comment": "Layout name: the MOE input-method keyboard, variant 1.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部輸入法齒佈1"
+          }
+        }
+      }
+    },
+    "i18n_layout_moe2Layout": {
+      "comment": "Layout name: the MOE input-method keyboard, variant 2.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部輸入法齒佈2"
+          }
+        }
+      }
+    },
+    "i18n_layout_phahTaigiLayout": {
+      "comment": "Layout name: the PhahTaigi romanization layout.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PhahTaigi"
+          }
+        }
+      }
+    },
+    "i18n_layout_romanizationKeyboard": {
+      "comment": "Section header for the romanization keyboard layouts (host tab + IME layout overlay).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "羅馬字齒盤"
+          }
+        }
+      }
+    },
+    "i18n_layout_standardLayout": {
+      "comment": "Layout name: the standard QWERTY-style romanization layout (Lohankha).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lohankha"
+          }
+        }
+      }
+    },
+    "i18n_layout_taigiPhonetic": {
+      "comment": "Section header for the Taiwanese phonetic (TPS) keyboard layouts.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符號"
+          }
+        }
+      }
+    },
+    "i18n_layout_tpsLayout": {
+      "comment": "Layout name: the Taiwanese Phonetic Symbols (方音符號) keyboard.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符號齒佈"
+          }
+        }
+      }
+    },
+    "i18n_settings_autoCapitalization": {
+      "comment": "Toggle label: automatic capitalization in English mode.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動大本字"
+          }
+        }
+      }
+    },
+    "i18n_settings_autoSpace": {
+      "comment": "Toggle label: auto-insert a space after committing a word.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動空白"
+          }
+        }
+      }
+    },
+    "i18n_settings_diagnosticCopied": {
+      "comment": "Toast confirming diagnostic info was copied.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已 khó͘-phih"
+          }
+        }
+      }
+    },
+    "i18n_settings_diagnosticCopy": {
+      "comment": "Action row: copy device diagnostic info to clipboard.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khó͘-phih 裝置資訊"
+          }
+        }
+      }
+    },
+    "i18n_settings_diagnosticEmail": {
+      "comment": "Action row: email a bug report with diagnostic info attached.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email 回報問題"
+          }
+        }
+      }
+    },
+    "i18n_settings_diagnosticSectionTitle": {
+      "comment": "Section header for device-diagnostics actions.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裝置資訊"
+          }
+        }
+      }
+    },
+    "i18n_settings_diagnosticShare": {
+      "comment": "Action row: share device diagnostic info via the share sheet.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享裝置資訊"
+          }
+        }
+      }
+    },
+    "i18n_settings_doubleTapNN": {
+      "comment": "Toggle label: double-tap nn composes ⁿ (POJ nasal).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連紲拍 nn → ⁿ"
+          }
+        }
+      }
+    },
+    "i18n_settings_doubleTapOO": {
+      "comment": "Toggle label: double-tap oo composes o͘ (POJ).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連紲拍 oo → o͘"
+          }
+        }
+      }
+    },
+    "i18n_settings_englishMode": {
+      "comment": "Input-mode option: English keyboard.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "英文"
+          }
+        }
+      }
+    },
+    "i18n_settings_feedbackSectionTitle": {
+      "comment": "Section header for key-press feedback settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍字反應"
+          }
+        }
+      }
+    },
+    "i18n_settings_globeKey": {
+      "comment": "Toggle label: show the globe / keyboard-switch key.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "齒盤切換揤鈕"
+          }
+        }
+      }
+    },
+    "i18n_settings_globeKeyInfo": {
+      "comment": "Help text for the globe-key toggle.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "佇齒盤面頂加 1 粒地球揤鈕，揤著會使切換去其他齒盤。"
+          }
+        }
+      }
+    },
+    "i18n_settings_inputMode": {
+      "comment": "Settings row + sub-screen title for selecting the active input mode.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入模式"
+          }
+        }
+      }
+    },
+    "i18n_settings_keyboardSectionTitle": {
+      "comment": "Section header for keyboard-chrome settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "齒盤設定"
+          }
+        }
+      }
+    },
+    "i18n_settings_literalRomanCandidate": {
+      "comment": "Toggle label: show the literal romanization candidate in the strip.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示羅馬字"
+          }
+        }
+      }
+    },
+    "i18n_settings_literalRomanCandidateInfo": {
+      "comment": "Help text for the show-romanization toggle.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。"
+          }
+        }
+      }
+    },
+    "i18n_settings_openApp": {
+      "comment": "Keyboard-overlay button linking to the host app's full settings screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "去APP調整"
+          }
+        }
+      }
+    },
+    "i18n_settings_outputBothScripts": {
+      "comment": "Toggle label: annotate committed text with the other script in brackets.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "括號標註"
+          }
+        }
+      }
+    },
+    "i18n_settings_pojMode": {
+      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白話字"
+          }
+        }
+      }
+    },
+    "i18n_settings_pojSettingsSectionTitle": {
+      "comment": "Section header for Pe̍h-ōe-jī-specific settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白話字"
+          }
+        }
+      }
+    },
+    "i18n_settings_reset": {
+      "comment": "Generic confirm-action label on the reset-settings dialog (恢復 = restore).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢復"
+          }
+        }
+      }
+    },
+    "i18n_settings_resetSettings": {
+      "comment": "Destructive action row + dialog title: reset all settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢復設定"
+          }
+        }
+      }
+    },
+    "i18n_settings_resetSettingsMessage": {
+      "comment": "Confirmation-dialog body for resetting all settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這个動作會恢復所有設定，敢欲繼續？"
+          }
+        }
+      }
+    },
+    "i18n_settings_soundFeedback": {
+      "comment": "Toggle label: key-press sound feedback.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤仔聲"
+          }
+        }
+      }
+    },
+    "i18n_settings_tlMode": {
+      "comment": "Input-mode option: Tâi-lô (台羅) romanization.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台羅"
+          }
+        }
+      }
+    },
+    "i18n_settings_toolbarAutoCollapse": {
+      "comment": "Toggle label: auto-hide the candidate toolbar after selecting.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動隱藏工具列"
+          }
+        }
+      }
+    },
+    "i18n_settings_toolbarAutoCollapseInfo": {
+      "comment": "Help text for the auto-hide-toolbar toggle.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選字了後工具列會自動合起來，予齒盤面頂空間較大。"
+          }
+        }
+      }
+    },
+    "i18n_settings_tpsMode": {
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符號"
+          }
+        }
+      }
+    },
+    "i18n_settings_tpsOrMapsToER": {
+      "comment": "Toggle label: render TL 'or' final as TPS ㄜ.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or 對應 ㄜ"
+          }
+        }
+      }
+    },
+    "i18n_settings_tpsOrMapsToERInfo": {
+      "comment": "Help text for the or→ㄜ toggle (multi-paragraph).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。本設定只控制候選詞按怎顯示;字典揣詞已經共 er 佮 or 攏對應做仝一个音位，無論本設定開抑無開攏揣會著。\n\n開啟（預設）：or 顯示做 ㄜ。\n關閉：or 顯示做 ㄛ（恢復台羅 o）。"
+          }
+        }
+      }
+    },
+    "i18n_settings_tpsSettingsSectionTitle": {
+      "comment": "Section header for TPS-specific settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符號"
+          }
+        }
+      }
+    },
+    "i18n_settings_typingSectionTitle": {
+      "comment": "Section header for typing-behaviour settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍字設定"
+          }
+        }
+      }
+    },
+    "i18n_settings_vibrationFeedback": {
+      "comment": "Toggle label: key-press vibration feedback.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "震動反應"
+          }
+        }
+      }
+    },
+    "i18n_theme_candidateSection": {
+      "comment": "Theme editor section header: the candidate-bar group (candidate colors + text size).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候選詞介面"
+          }
+        }
+      }
+    },
+    "i18n_theme_candidateTextSize": {
+      "comment": "Theme editor slider label: candidate text size.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候選詞大細"
+          }
+        }
+      }
+    },
+    "i18n_theme_capReachedMessage": {
+      "comment": "Body of the custom-theme cap-reached alert (cap is UserThemeStore.MAX_USER_THEMES = 5).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。"
+          }
+        }
+      }
+    },
+    "i18n_theme_capReachedTitle": {
+      "comment": "Title of the alert shown when the custom-theme count cap (5) is reached.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已達主題數量上限"
+          }
+        }
+      }
+    },
+    "i18n_theme_cardMenuApply": {
+      "comment": "Custom-theme card action-menu item: apply this theme.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "套用"
+          }
+        }
+      }
+    },
+    "i18n_theme_cardMenuEdit": {
+      "comment": "Custom-theme card action-menu item: edit this theme.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorCandidateBackground": {
+      "comment": "Theme editor color-row label: the candidate-bar background color.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候選詞背景"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorCandidateText": {
+      "comment": "Theme editor color-row label: the candidate text color.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候選詞文字"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorKeySection": {
+      "comment": "Theme editor section header: the key-surface group (key colors + sizing).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤鈕介面"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorKeyText": {
+      "comment": "Theme editor color-row label: the key glyph (text) color.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤鈕文字"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorKeyboardBackground": {
+      "comment": "Theme editor color-row label: the keyboard background color.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "齒盤色水"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorNormalKeyFill": {
+      "comment": "Theme editor color-row label: the fill color of normal (letter) keys.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一般揤鈕色水"
+          }
+        }
+      }
+    },
+    "i18n_theme_colorSpecialKeyFill": {
+      "comment": "Theme editor color-row label: the fill color of special (function) keys.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "特殊揤鈕色水"
+          }
+        }
+      }
+    },
+    "i18n_theme_createNewTheme": {
+      "comment": "Label + content description for the create-new-theme card on the theme picker shelf.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新主題…"
+          }
+        }
+      }
+    },
+    "i18n_theme_customFont": {
+      "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). iOS keeps the same label in ThemeTexts.swift.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字型設定"
+          }
+        }
+      }
+    },
+    "i18n_theme_customThemesSection": {
+      "comment": "Section header above the custom-theme shelf in the theme picker.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂主題"
+          }
+        }
+      }
+    },
+    "i18n_theme_defaultName": {
+      "comment": "Fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新主題"
+          }
+        }
+      }
+    },
+    "i18n_theme_editorResetAll": {
+      "comment": "Theme editor button: reset the draft appearance back to defaults.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢復預設設定"
+          }
+        }
+      }
+    },
+    "i18n_theme_editorSave": {
+      "comment": "Theme editor / name dialog save button.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存"
+          }
+        }
+      }
+    },
+    "i18n_theme_editorTitleEdit": {
+      "comment": "Theme editor top-bar title in edit mode.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯主題"
+          }
+        }
+      }
+    },
+    "i18n_theme_editorTitleNew": {
+      "comment": "Theme editor top-bar title in create mode.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新主題"
+          }
+        }
+      }
+    },
+    "i18n_theme_keyBorderWidth": {
+      "comment": "Theme editor slider label: key border width.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤鈕邊粗幼"
+          }
+        }
+      }
+    },
+    "i18n_theme_keyCornerRadius": {
+      "comment": "Theme editor slider label: key corner radius.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤鈕圓角"
+          }
+        }
+      }
+    },
+    "i18n_theme_keyFontSize": {
+      "comment": "Theme editor slider label: key glyph font size.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤鈕字大細"
+          }
+        }
+      }
+    },
+    "i18n_theme_keyHeight": {
+      "comment": "Theme editor slider label: keyboard height scale.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "齒盤懸度"
+          }
+        }
+      }
+    },
+    "i18n_theme_keyShadow": {
+      "comment": "Theme editor slider label: key shadow intensity.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "揤鈕陰影"
+          }
+        }
+      }
+    },
+    "i18n_theme_keyboardSection": {
+      "comment": "Theme editor section header: the keyboard-surface group (background color + key height).",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "齒盤介面"
+          }
+        }
+      }
+    },
+    "i18n_theme_nameHeader": {
+      "comment": "Theme name dialog header.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主題名稱"
+          }
+        }
+      }
+    },
+    "i18n_theme_namePlaceholder": {
+      "comment": "Theme name dialog text-field placeholder.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入主題名稱"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

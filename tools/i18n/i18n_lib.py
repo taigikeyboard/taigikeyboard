@@ -27,6 +27,37 @@ ANDROID_PKG = "android/app/src/main/java/com/siansiansu/taigikeyboard"
 ANDROID_RES_ROOT = "android/app/src/main/res"
 GEN_PKG_DIR = f"{ANDROID_PKG}/i18n/generated"
 
+# iOS output locations. Both the String Catalog and the generated Swift live where the build
+# already picks them up: the catalog is in the host+extension Copy-Bundle-Resources phase, and
+# Strings/ is an Xcode synchronized group (auto-includes new files, no pbxproj edit).
+IOS_XCSTRINGS = "ios/Localizable.xcstrings"
+IOS_STRINGS_DIR = "ios/Sources/TaigiKeyboard/Strings"
+IOS_GEN_DIR = f"{IOS_STRINGS_DIR}/Generated"
+
+# Hanji has no OS locale; pin a Taiwanese-Hanji BCP-47 that maps NO Android resource-qualifier dir
+# (so a Context built from it always yields the default values/ set) and is the iOS catalog's
+# source language (see XCSTRINGS_SOURCE_LANGUAGE). Mirrors the Kotlin BCP47_HANJI top-level const.
+BCP47_HANJI = "nan-Hant-TW"
+
+# Authored language -> BCP-47 tag for the iOS String Catalog. TL/POJ use private-use subtags
+# (RFC5646 §2.2.7); Xcode emits a loadable .lproj for them (R2b architecture probe).
+# MIRROR: each tag here MUST equal `DisplayLanguage.bcp47` in
+# ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift — the catalog emits each localization under
+# this tag and the runtime resolver loads `<tag>.lproj`; drift silently breaks resolution.
+LANG_TO_BCP47 = {
+    "hanji": BCP47_HANJI,
+    "tailo": "nan-Latn-TW-x-tailo",
+    "poj": "nan-Latn-TW-x-poj",
+    "ja": "ja",
+    "en": "en",
+}
+
+# The catalog's source language MUST be the canonical base (Hanji), NOT "en". With sourceLanguage
+# "en", Xcode emits every key into en.lproj as its own identifier value (`"i18n_x"="i18n_x"`) even
+# when only Hanji is authored, which defeats the runtime sentinel fallback so English would render
+# the raw synthetic key. Verified on Xcode 26.5 xcstringstool (Codex pre-impl Q1).
+XCSTRINGS_SOURCE_LANGUAGE = BCP47_HANJI
+
 # Languages resolved via native Android resource dirs (plan D2). hanji -> default values/ (always
 # emitted); en/ja -> language-qualified dirs, emitted only once a key actually carries that value.
 NATIVE_RESOURCE_DIRS = {
@@ -43,11 +74,35 @@ DUPLICATE_KEY_ERROR = "duplicate key"
 # Identifier shape shared by namespace keys and placeholder names (both become Kotlin symbols).
 IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 
-# Placeholder type vocabulary: schema type -> (Kotlin param type, Java format conversion char).
-# Both facets live here so the table is the single, complete extension point — adding e.g.
-# "string": ("String", "s") propagates to both the typed accessor signature and the emitted
-# format spec. Only `int` is needed today (every format arg is a count).
-PLACEHOLDER_TYPES = {"int": ("Int", "d")}
+# Placeholder type vocabulary: schema type -> per-target facets. The table is the single, complete
+# extension point — adding a type propagates to both the typed accessor signature and the emitted
+# format spec on every platform. Facets per target:
+#   param — accessor signature type (Kotlin / Swift).
+#   conv  — printf conversion char. Android `%d` (Java int); iOS `%lld` because Swift Int is 64-bit
+#           and Apple's `%d` is 32-bit, so the unsuffixed spec would truncate large counts (Codex Q8.1).
+#   cast  — (iOS only) expression wrapping the arg before String(format:) to match its conv char.
+#           Android needs no cast (`%d` takes Int directly).
+# Only `int` is needed today (every format arg is a count).
+PLACEHOLDER_TYPES = {
+    "int": {
+        "android": {"param": "Int", "conv": "d"},
+        "ios": {"param": "Int", "conv": "lld", "cast": "Int64"},
+    },
+}
+
+# Swift hard keywords — a generated accessor name maps to a Swift symbol, so reject any that
+# cannot be one. The accessor is namespace-prefixed (`commonCancel`), so a collision is unlikely,
+# but the codegen validates it loudly rather than emit code that fails to compile.
+SWIFT_KEYWORDS = frozenset(
+    {
+        "associatedtype", "class", "deinit", "enum", "extension", "fileprivate", "func", "import",
+        "init", "inout", "internal", "let", "open", "operator", "private", "protocol", "public",
+        "rethrows", "static", "struct", "subscript", "typealias", "var", "break", "case", "continue",
+        "default", "defer", "do", "else", "fallthrough", "for", "guard", "if", "in", "repeat",
+        "return", "switch", "where", "while", "as", "catch", "false", "is", "nil", "super", "self",
+        "throw", "throws", "true", "try",
+    }
+)
 
 # Kotlin hard keywords — a placeholder name maps directly to a function parameter, so reject any
 # name that cannot be a Kotlin identifier.
@@ -74,28 +129,29 @@ def _placeholder_names_in_order(text: str) -> list:
     return seen
 
 
-def _to_positional(text: str, order: list, declared: dict) -> str:
-    # Convert authored {name} placeholders to Android/Java positional args (%1$d, %2$d, ...), assigning
-    # each name the index it has in `order` (the base-text appearance order) so a reordered translation
-    # still maps each name to the right argument; the conversion char comes from the declared type.
-    # Run AFTER escaping/pseudo so the inserted % specifiers are not themselves accented or re-escaped.
+def _to_positional(text: str, order: list, declared: dict, target: str) -> str:
+    # Convert authored {name} placeholders to positional args (%1$d, %2$d, ...), assigning each name
+    # the index it has in `order` (the base-text appearance order) so a reordered translation still
+    # maps each name to the right argument; the conversion char comes from the declared type + target
+    # (Android %d vs iOS %lld). Run AFTER escaping/pseudo so the inserted specs are not accented/re-escaped.
     if not order:
         return text  # plain key: leave literal % untouched (it is never String.format'd)
     out = text.replace("%", "%%")  # escape literal % first; the named text has no positional specs yet
     for index, name in enumerate(order):
-        conversion = PLACEHOLDER_TYPES[declared[name]][1]
+        conversion = PLACEHOLDER_TYPES[declared[name]][target]["conv"]
         out = out.replace("{" + name + "}", f"%{index + 1}${conversion}")
     return out
 
 
-def _finalize_value(raw: str, escape, entry: dict) -> str:
-    # Convert any placeholders to positional specs, THEN escape for the target (XML / Kotlin). Escaping
-    # last is load-bearing: `kotlin_escape` must turn the inserted `%1$d`'s `$` into `\$` so the Kotlin
-    # source string is not read as a template (`$d` interpolation); `xml_escape` leaves it untouched.
-    # `raw` is already pseudo-transformed by the caller where applicable, so pseudo never accents `%N$d`.
-    # Order + declared types come from the base-language text, so every language shares one mapping.
+def _finalize_value(raw: str, escape, entry: dict, target: str) -> str:
+    # Convert any placeholders to positional specs for `target`, THEN escape for the output (XML /
+    # Kotlin / Swift / JSON-identity). Escaping last is load-bearing: `kotlin_escape` must turn the
+    # inserted `%1$d`'s `$` into `\$` so the Kotlin source string is not read as a template; xml_escape
+    # and the JSON-identity escape leave it untouched. `raw` is already pseudo-transformed by the caller
+    # where applicable, so pseudo never accents `%N$d`. Order + declared types come from the base-language
+    # text, so every language shares one mapping.
     base_text = entry["values"][BASE_LANGUAGE]
-    return escape(_to_positional(raw, _placeholder_names_in_order(base_text), entry.get("placeholders", {})))
+    return escape(_to_positional(raw, _placeholder_names_in_order(base_text), entry.get("placeholders", {}), target))
 
 
 # --- Parsing (with duplicate-key detection) ---------------------------------
@@ -157,7 +213,11 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
             if set(declared) != base_placeholder_names:
                 raise ValueError(f"{path}:{key}: declared placeholders {sorted(declared)} != base text {sorted(base_placeholder_names)}")
             for name, ptype in declared.items():
-                if not IDENTIFIER_RE.fullmatch(name) or name in KOTLIN_KEYWORDS:
+                # A placeholder name becomes a function parameter on BOTH platforms (Kotlin in
+                # StringResolverFormats.kt, Swift in StringResolverFormats.swift), so reject a name
+                # that is a keyword on either — e.g. `default` is legal in Kotlin but emits an illegal
+                # Swift `default: Int` parameter (Codex post-impl).
+                if not IDENTIFIER_RE.fullmatch(name) or name in KOTLIN_KEYWORDS or name in SWIFT_KEYWORDS:
                     raise ValueError(f"{path}:{key}: placeholder name {name!r} must be a lowerCamelCase non-keyword identifier")
                 if ptype not in PLACEHOLDER_TYPES:
                     raise ValueError(f"{path}:{key}: placeholder {name!r} type {ptype!r} not in {sorted(PLACEHOLDER_TYPES)}")
@@ -249,7 +309,43 @@ def kotlin_escape(value: str) -> str:
     )
 
 
+def swift_escape(value: str) -> str:
+    # Swift string-literal escaping. Backslash first so a literal `\(` becomes `\\(` (a backslash +
+    # paren, not a string interpolation). Swift has no `$` template syntax, so `%1$lld` is left as-is.
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+    )
+
+
+def _json_identity(value: str) -> str:
+    # The xcstrings emitter serializes via json.dumps, which performs all JSON escaping; values are
+    # passed through unchanged so placeholder conversion is the only transform applied beforehand.
+    return value
+
+
 # --- Emitters ---------------------------------------------------------------
+
+
+def _validate_global(entries) -> None:
+    # Cross-namespace checks the per-file validator cannot see: the synthetic resource name and the
+    # typed accessor are both global symbols, so two namespaces must never collapse to the same one,
+    # and no accessor may be a reserved keyword on either platform (it becomes a Kotlin val / Swift case).
+    seen_res = {}
+    seen_accessor = {}
+    for namespace, key, _entry in entries:
+        origin = f"{namespace}:{key}"
+        name = res_name(namespace, key)
+        if name in seen_res:
+            raise ValueError(f"duplicate resource name {name!r}: {seen_res[name]} and {origin}")
+        seen_res[name] = origin
+        accessor = l10n_accessor(namespace, key)
+        if accessor in seen_accessor:
+            raise ValueError(f"duplicate accessor {accessor!r}: {seen_accessor[accessor]} and {origin}")
+        seen_accessor[accessor] = origin
+        if accessor in KOTLIN_KEYWORDS or accessor in SWIFT_KEYWORDS:
+            raise ValueError(f"accessor {accessor!r} ({origin}) is a reserved Kotlin/Swift keyword")
 
 
 def _collect_entries(repo_root: Path):
@@ -262,6 +358,7 @@ def _collect_entries(repo_root: Path):
         validate_namespace(namespace, data, path)
         for key, entry in data["keys"].items():
             entries.append((namespace, key, entry))
+    _validate_global(entries)
     return entries
 
 
@@ -270,7 +367,7 @@ def _emit_strings_xml(entries, lang: str) -> str:
     for namespace, key, entry in entries:
         if lang not in entry["values"]:
             continue
-        value = _finalize_value(entry["values"][lang], xml_escape, entry)
+        value = _finalize_value(entry["values"][lang], xml_escape, entry, "android")
         lines.append(f'    <string name="{res_name(namespace, key)}">{value}</string>')
     lines.append("</resources>")
     return "\n".join(lines) + "\n"
@@ -314,7 +411,7 @@ def _emit_taigi_map(entries) -> str:
             lines.append(f"    private val {lang}: Map<StringKey, String> =")
             lines.append("        mapOf(")
             for namespace, key, entry in pairs:
-                value = _finalize_value(entry["values"][lang], kotlin_escape, entry)
+                value = _finalize_value(entry["values"][lang], kotlin_escape, entry, "android")
                 lines.append(f'            StringKey.{string_key_const(namespace, key)} to "{value}",')
             lines.append("        )")
         else:
@@ -350,7 +447,7 @@ def _emit_pseudo_map(entries) -> str:
     for namespace, key, entry in entries:
         # Pseudo runs on the named text first (keeps {placeholders} verbatim); _finalize_value then
         # converts to positional and kotlin-escapes — so `%N$d` is neither accented nor left unescaped.
-        value = _finalize_value(pseudo(entry["values"][BASE_LANGUAGE]), kotlin_escape, entry)
+        value = _finalize_value(pseudo(entry["values"][BASE_LANGUAGE]), kotlin_escape, entry, "android")
         lines.append(f'            StringKey.{string_key_const(namespace, key)} to "{value}",')
     lines.extend(
         [
@@ -415,13 +512,114 @@ def _emit_string_resolver_formats(entries) -> str:
     for namespace, key, entry in fmt_entries:
         order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
         declared = entry["placeholders"]
-        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]][0]}" for name in order)
+        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['android']['param']}" for name in order)
         args = ", ".join(order)
         accessor = l10n_accessor(namespace, key)
         const = string_key_const(namespace, key)
         lines.append("")
         lines.append(f"fun StringResolver.{accessor}({params}): String =")
         lines.append(f"    formatString(StringKey.{const}, {args})")
+    return "\n".join(lines) + "\n"
+
+
+# --- iOS emitters -----------------------------------------------------------
+
+
+def _ios_format_arg(ptype: str, name: str) -> str:
+    cast = PLACEHOLDER_TYPES[ptype]["ios"]["cast"]
+    return f"{cast}({name})" if cast else name
+
+
+def _emit_xcstrings(entries) -> str:
+    # iOS String Catalog. Keyed by the synthetic res_name (shared with the Android R.string name, so
+    # one naming function owns both platforms). Each authored language becomes a localization keyed by
+    # its BCP-47 tag; Xcode compiles each into a per-tag .lproj (incl. the private-use TL/POJ tags).
+    # sort_keys makes the committed catalog byte-stable for `make i18n-check` and aligns the key order
+    # with Xcode's own alphabetical sort (comment < extractionState < localizations, state < value).
+    strings = {}
+    for namespace, key, entry in entries:
+        localizations = {}
+        for lang, text in entry["values"].items():
+            value = _finalize_value(text, _json_identity, entry, "ios")
+            localizations[LANG_TO_BCP47[lang]] = {"stringUnit": {"state": "translated", "value": value}}
+        unit = {"extractionState": "manual", "localizations": localizations}
+        comment = entry.get("comment")
+        if comment:
+            unit["comment"] = comment
+        strings[res_name(namespace, key)] = unit
+    catalog = {"sourceLanguage": XCSTRINGS_SOURCE_LANGUAGE, "strings": strings, "version": "1.0"}
+    return json.dumps(catalog, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+
+
+def _emit_ios_string_key(entries) -> str:
+    lines = [
+        f"// {GENERATED_HEADER}",
+        "",
+        "/// Typed key for every iOS i18n string. The raw value is the String Catalog key.",
+        "enum StringKey: String {",
+    ]
+    for namespace, key, _entry in entries:
+        lines.append(f'    case {l10n_accessor(namespace, key)} = "{res_name(namespace, key)}"')
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def _emit_ios_pseudo(entries) -> str:
+    # Debug-only length-inflated layout probe. Wrapped in #if DEBUG so neither the strings nor the
+    # lookup exist in a release binary (the resolver's pseudo branch is likewise DEBUG-gated).
+    lines = [
+        f"// {GENERATED_HEADER}",
+        "",
+        "#if DEBUG",
+        "import Foundation",
+        "",
+        "/// Debug-only pseudo-locale strings (length-inflated layout/clipping probe). Never shipped.",
+        "enum GeneratedPseudoStrings {",
+        "    private static let map: [StringKey: String] = [",
+    ]
+    for namespace, key, entry in entries:
+        # Pseudo runs on the named text first (keeps {placeholders} verbatim); _finalize_value then
+        # converts to positional + swift-escapes, so `%N$lld` is neither accented nor mis-escaped.
+        value = _finalize_value(pseudo(entry["values"][BASE_LANGUAGE]), swift_escape, entry, "ios")
+        lines.append(f'        .{l10n_accessor(namespace, key)}: "{value}",')
+    lines.extend(
+        [
+            "    ]",
+            "",
+            "    static func lookup(_ key: StringKey) -> String? { map[key] }",
+            "}",
+            "#endif",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _emit_ios_formats(entries) -> str:
+    # Typed format accessors on StringResolver — one per placeholder-bearing key, args in canonical
+    # (base-text first-appearance) order, each cast to match the %lld spec. The raw template never
+    # reaches a call site; `format(_:_:)` is the hand-written variadic helper in StringResolver.swift.
+    fmt_entries = [
+        (namespace, key, entry)
+        for namespace, key, entry in entries
+        if _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
+    ]
+    lines = [f"// {GENERATED_HEADER}", ""]
+    if not fmt_entries:
+        lines.append("// No format-arg keys are currently authored.")
+        return "\n".join(lines) + "\n"
+    lines.extend(["import Foundation", "", "extension StringResolver {"])
+    for index, (namespace, key, entry) in enumerate(fmt_entries):
+        order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
+        declared = entry["placeholders"]
+        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['ios']['param']}" for name in order)
+        args = ", ".join(_ios_format_arg(declared[name], name) for name in order)
+        accessor = l10n_accessor(namespace, key)
+        if index:
+            lines.append("")
+        lines.append(f"    func {accessor}({params}) -> String {{")
+        lines.append(f"        format(.{accessor}, {args})")
+        lines.append("    }")
+    lines.append("}")
     return "\n".join(lines) + "\n"
 
 
@@ -443,4 +641,13 @@ def build_outputs(repo_root: Path) -> dict:
     outputs[f"{GEN_PKG_DIR}/GeneratedPseudoStrings.kt"] = _emit_pseudo_map(entries)
     outputs[f"{GEN_PKG_DIR}/L10n.kt"] = _emit_l10n(entries)
     outputs[f"{GEN_PKG_DIR}/StringResolverFormats.kt"] = _emit_string_resolver_formats(entries)
+
+    # iOS artifacts cover only ios-scoped keys. The String Catalog holds all 5 languages and is the
+    # single resolution path — the .lproj it compiles to works for every tag (no Native/GeneratedMap
+    # split; that is Android-only). Pseudo is a Swift map because it is not a CFBundleLocalization.
+    ios_entries = [item for item in all_entries if "ios" in item[2]["scope"]["platforms"]]
+    outputs[IOS_XCSTRINGS] = _emit_xcstrings(ios_entries)
+    outputs[f"{IOS_GEN_DIR}/StringKey.swift"] = _emit_ios_string_key(ios_entries)
+    outputs[f"{IOS_GEN_DIR}/GeneratedPseudoStrings.swift"] = _emit_ios_pseudo(ios_entries)
+    outputs[f"{IOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_ios_formats(ios_entries)
     return outputs

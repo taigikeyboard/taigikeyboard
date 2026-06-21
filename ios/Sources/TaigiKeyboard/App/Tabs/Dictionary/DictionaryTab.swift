@@ -10,6 +10,7 @@ import UIKit
 /// Manage dictionary toggles, custom dictionary, frequency/association data, and search.
 // 中文: Dictionary 分頁的根 View,組裝詞典開關區塊、底部搜尋列與查詢結果浮層。
 struct DictionaryTab: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var searchVM = DictionarySearchViewModel()
 
     private let settings = SharedSettings.shared
@@ -102,7 +103,7 @@ struct DictionaryTab: View {
                 // MOE dictionaries (教育部)
                 Section {
                     dictToggleWithDescription(
-                        title: CommonTexts.moeDict,
+                        title: lang.string(.commonMoeDict),
                         url: "https://sutian.moe.edu.tw/",
                         isOn: $isMoeDictEnabled,
                         description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
@@ -143,19 +144,19 @@ struct DictionaryTab: View {
                         settings.isKautianNameAppendixEnabled = $0
                     }
                     dictToggleWithDescription(
-                        title: CommonTexts.newwordDict,
+                        title: lang.string(.commonNewwordDict),
                         url: "https://www.taigitv.org.tw/taigi-words",
                         isOn: $isNewwordDictEnabled,
                         description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
                     ) { settings.isNewwordDictEnabled = $0 }
                     dictToggleWithDescription(
-                        title: CommonTexts.sttiDict,
+                        title: lang.string(.commonSttiDict),
                         url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
                         isOn: $isSttiDictEnabled,
                         description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
                     ) { settings.isSttiDictEnabled = $0 }
                     dictToggleWithDescription(
-                        title: CommonTexts.kunggeDict,
+                        title: lang.string(.commonKunggeDict),
                         url: "https://kanggesu.ntcri.org.tw",
                         isOn: $isKunggeDictEnabled,
                         description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
@@ -167,16 +168,16 @@ struct DictionaryTab: View {
 
                 // Other dictionaries
                 Section {
-                    dictionaryToggle(CommonTexts.iTaigiDict, isOn: $isITaigiDictEnabled, info: .iTaigi) {
+                    dictionaryToggle(lang.string(.commonITaigiDict), isOn: $isITaigiDictEnabled, info: .iTaigi) {
                         settings.isITaigiDictEnabled = $0
                     }
-                    dictionaryToggle(CommonTexts.taiwanJapanDict, isOn: $isTaiwanJapanDictEnabled, info: .taiwanJapan) {
+                    dictionaryToggle(lang.string(.commonTaiwanJapanDict), isOn: $isTaiwanJapanDictEnabled, info: .taiwanJapan) {
                         settings.isTaiwanJapanDictEnabled = $0
                     }
-                    dictionaryToggle(CommonTexts.taiHuaDict, isOn: $isTaiHuaDictEnabled, info: .taiHua) {
+                    dictionaryToggle(lang.string(.commonTaiHuaDict), isOn: $isTaiHuaDictEnabled, info: .taiHua) {
                         settings.isTaiHuaDictEnabled = $0
                     }
-                    dictionaryToggle(CommonTexts.taiwanPlantDict, isOn: $isTaiwanPlantDictEnabled, info: .taiwanPlant) {
+                    dictionaryToggle(lang.string(.commonTaiwanPlantDict), isOn: $isTaiwanPlantDictEnabled, info: .taiwanPlant) {
                         settings.isTaiwanPlantDictEnabled = $0
                     }
                 } header: {
@@ -194,7 +195,7 @@ struct DictionaryTab: View {
                         settings.isKhiinEnabled = $0
                     }
 
-                    dictionaryToggle(CommonTexts.accentDict, isOn: $isKhpooDictEnabled, info: .khpoo) {
+                    dictionaryToggle(lang.string(.commonAccentDict), isOn: $isKhpooDictEnabled, info: .khpoo) {
                         settings.isKhpooDictEnabled = $0
                     }
 
@@ -296,7 +297,7 @@ struct DictionaryTab: View {
                     }
                 }
             }
-            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(lang.string(.commonCancel), role: .cancel) {}
         }
     }
 

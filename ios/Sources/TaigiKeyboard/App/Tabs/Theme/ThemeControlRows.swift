@@ -92,6 +92,7 @@ struct ThemeSliderRow: View {
 /// page's font entry to pick the GLOBAL keyboard font (font is not part of a theme).
 // 中文: 字型挑選子頁。從主題頁的字型入口進入,挑選全域鍵盤字型(字型非主題的一部分)。
 struct ThemeFontPickerView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     @Binding var selectedFont: FontType
     var onChange: (FontType) -> Void
 
@@ -104,7 +105,7 @@ struct ThemeFontPickerView: View {
                         onChange(font)
                     } label: {
                         HStack {
-                            Text(font.displayName)
+                            Text(lang.string(font.displayNameKey))
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedFont == font {
