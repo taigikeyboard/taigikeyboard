@@ -276,26 +276,21 @@ final class SettingsKeyTests: XCTestCase {
 
     // MARK: - DisplayLanguage roster + clamp
 
-    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_pinsHanjiAndEnglish() {
+    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_pinsHanjiEnglishAndJapanese() {
         // CROSS-PLATFORM INVARIANT — must equal the Android productionLanguages roster (behavioral-invariants.md §37).
-        XCTAssertEqual(DisplayLanguage.productionLanguages.map(\.tag), ["hanji", "en"])
+        XCTAssertEqual(DisplayLanguage.productionLanguages.map(\.tag), ["hanji", "en", "ja"])
     }
 
     func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_fromTagClampsToSelectable() {
+        // Production languages resolve to themselves in every build.
         XCTAssertEqual(DisplayLanguage.fromTag("hanji"), .hanji)
         XCTAssertEqual(DisplayLanguage.fromTag("en"), .english)
+        XCTAssertEqual(DisplayLanguage.fromTag("ja"), .japanese)
         // Not-yet-selectable identities (tl/poj) + unknown tags clamp to Hanji so the picker selection
         // always matches the rendered language; the persisted tag is left untouched (see migration tests).
         XCTAssertEqual(DisplayLanguage.fromTag("tailo"), .hanji)
         XCTAssertEqual(DisplayLanguage.fromTag("poj"), .hanji)
         XCTAssertEqual(DisplayLanguage.fromTag("xx"), .hanji)
-    }
-
-    func test_DISPLAY_LANGUAGE_japaneseResolvesInDebugBuild() {
-        // Japanese is authored but not yet a production language; it is debug-selectable so a debug
-        // build can dogfood its strings + font rendering before it joins productionLanguages. The test
-        // target builds in DEBUG, so the ja tag survives fromTag (mirrors Android DisplayLanguageTest).
-        XCTAssertEqual(DisplayLanguage.fromTag("ja"), .japanese)
     }
 
     // MARK: - Raw-key migration parity

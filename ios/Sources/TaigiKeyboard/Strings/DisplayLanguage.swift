@@ -9,9 +9,9 @@ let BCP47_HANJI = "nan-Hant-TW"
 
 /// App UI display language — orthogonal to the keyboard input mode.
 ///
-/// Hanji + English are authored and user-selectable (`productionLanguages`); every other language falls
-/// back to Hanji until its authoring phase populates the catalog (P3a ja / P3b TL / P3c POJ) and it joins
-/// `productionLanguages`. `.pseudo` is a DEBUG-only layout probe, offered only in debug builds.
+/// Hanji, English, and Japanese are authored and user-selectable (`productionLanguages`); the remaining
+/// languages fall back to Hanji until their authoring phase populates the catalog (P3b TL / P3c POJ) and
+/// they join `productionLanguages`. `.pseudo` is a DEBUG-only layout probe, offered only in debug builds.
 ///
 /// `system` (Automatic) is deliberately absent — it is a locale-negotiation policy, not a string set,
 /// deferred to a later round. The raw value IS the persisted tag.
@@ -62,25 +62,23 @@ enum DisplayLanguage: String, CaseIterable {
     static let defaultTag = "hanji"
 
     /// Authored, user-selectable production languages. Drives the Settings language picker and clamps
-    /// `fromTag`. Grows by one entry as each language's authoring phase lands (P3a ja / P3b TL / P3c POJ).
+    /// `fromTag`. Grows by one entry as each language's authoring phase lands (P3b TL / P3c POJ remain).
     /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
     /// android .../i18n/DisplayLanguage.kt:79 `productionLanguages`. Drift causes silent divergence.
-    static let productionLanguages: [DisplayLanguage] = [.hanji, .english]
+    static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese]
 
-    /// What the picker offers: the production roster, plus debug-only previews — Japanese (authored but
-    /// not yet a production language) and the `.pseudo` layout probe. Debug-selecting `.japanese`
-    /// dogfoods its strings + font/glyph rendering before it joins `productionLanguages` in a later
-    /// round; release builds only ever offer `productionLanguages`.
+    /// What the picker offers: the production roster, plus the `.pseudo` layout probe in DEBUG only.
+    /// Release builds only ever offer `productionLanguages`.
     static var selectableLanguages: [DisplayLanguage] {
         #if DEBUG
-        productionLanguages + [.japanese, .pseudo]
+        productionLanguages + [.pseudo]
         #else
         productionLanguages
         #endif
     }
 
     /// Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or one
-    /// whose language is not yet user-selectable (a leftover `.pseudo` in release, or a `ja`/`tl`/`poj`
+    /// whose language is not yet user-selectable (a leftover `.pseudo` in release, or a `tl`/`poj`
     /// tag from a future build) resolves to `.hanji`, so the effective language always matches a picker
     /// option. The persisted tag itself is left untouched, so it restores once that language ships.
     static func fromTag(_ tag: String) -> DisplayLanguage {

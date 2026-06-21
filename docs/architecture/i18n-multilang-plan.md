@@ -178,7 +178,7 @@ Old P2 (show 5 picker options all falling back to 漢字) was a visible fake fea
 | **P0** | Wording reconciliation (iOS↔Android diff → one canonical form, USER-authorized edits) + full string **inventory & scope classification** (host/extension, shared/platform-only, FAQ content) | behavior-preserving | kills drift; scopes the work |
 | **P1** | Canonical `i18n/` schema + **native-resource codegen** + typed accessors + scope-aware key/completeness checks + **pseudo-locale** + **live-switch reactive prototype** (host + extension) | behavior-preserving | single source of truth; mirror dies; proves the hard part |
 | **P2** | Locale **state + persistence + live-switch**, done as a complete vertical slice in **English** (incl. native plural, dynamic-type/long-string layout, a11y locale) | adds picker (English only) | first real switchable language, fully gated |
-| **P3a** | Japanese (incl. font/glyph-shaping verification — global Open Huninn may render Taiwan glyph forms; likely system font for `ja`) | adds language | — |
+| **P3a** | Japanese (font verified: global Open Huninn keeps full kana coverage — Hiragana/Katakana/halfwidth — only kanji render in Taiwan rounded-gothic forms; kept for a consistent app aesthetic, no per-`ja` font swap) | adds language | — |
 | **P3b** | TL authoring (Taigi prose; Core Principle #3 authoritative-source-only; never invent TL) | adds language | — |
 | **P3c** | POJ derive + override + human diff review | adds language | — |
 
@@ -208,7 +208,7 @@ Deferred to P2 (recorded during R2a-1 review): emit the pseudo-locale map under 
 - **FAQ/features content** (`content/*.json`) — host-app UI text, currently `hanji`-only; must enter a phase.
 - **Fallback policy** — production completeness should fail build; `→ 漢字` is anti-crash only, else mixed-language UI.
 - **Accessibility / TTS** — each language needs a speech locale; verify VoiceOver/TalkBack support for `nan-*` on device.
-- **Japanese font** — verify kana coverage + glyph forms; likely system font, not forced Open Huninn.
+- **Japanese font** — RESOLVED (P3a R4-2): Open Huninn cmap has full kana coverage (Hiragana 88/96, Katakana 93/96, halfwidth 59/59; derived from Kosugi Maru). Kanji render in Taiwan rounded-gothic forms — accepted for a consistent app aesthetic; no per-`ja` font swap. The forced-Open-Huninn global modifier stays.
 - **Dynamic Type / long strings** — English is longer; truncation + screenshot tests on tab titles, settings rows, dialogs, overlays.
 - **Number/date/plural formatting** — locale policy, not just template translation.
 - **App metadata** — InfoPlist, Android app name, permission/setup copy, App Store / Play listing = separate localization scope.

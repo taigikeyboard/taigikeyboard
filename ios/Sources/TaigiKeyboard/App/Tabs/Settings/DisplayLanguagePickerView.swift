@@ -1,4 +1,4 @@
-// 中文: SettingsTab 「顯示語言」row 點進去的子頁,列出可選的 App UI 顯示語言(漢字 / English),用各自的母語名稱(endonym)顯示。
+// 中文: SettingsTab 「顯示語言」row 點進去的子頁,列出可選的 App UI 顯示語言(漢字 / English / 日本語),用各自的母語名稱(endonym)顯示。
 
 import SwiftUI
 

@@ -29,9 +29,9 @@ sealed interface StringResolution {
 /**
  * App UI display language — orthogonal to the keyboard input mode.
  *
- * Hanji + English are authored and user-selectable ([productionLanguages]); every other language
- * falls back to Hanji until its authoring phase populates it (P3a ja / P3b TL / P3c POJ) and it joins
- * [productionLanguages]. [PSEUDO] is a debug-only layout probe, offered only in debug builds.
+ * Hanji, English, and Japanese are authored and user-selectable ([productionLanguages]); the remaining
+ * languages fall back to Hanji until their authoring phase populates them (P3b TL / P3c POJ) and they
+ * join [productionLanguages]. [PSEUDO] is a debug-only layout probe, offered only in debug builds.
  *
  * `system` (Automatic) is deliberately absent — it is a locale-negotiation policy, not a string
  * set, deferred to a later round.
@@ -72,24 +72,22 @@ enum class DisplayLanguage(
 
         /**
          * Authored, user-selectable production languages. Drives the Settings language picker and clamps
-         * [fromTag]. Grows by one entry as each language's authoring phase lands (P3a ja / P3b TL / P3c POJ).
+         * [fromTag]. Grows by one entry as each language's authoring phase lands (P3b TL / P3c POJ remain).
          * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
          * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift:68 `productionLanguages`. Drift causes silent divergence.
          */
-        val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH)
+        val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH, JAPANESE)
 
         /**
-         * What the picker offers: the production roster, plus debug-only previews — Japanese (authored
-         * but not yet a production language) and the [PSEUDO] layout probe. Debug-selecting [JAPANESE]
-         * dogfoods its strings + font/glyph rendering before it joins [productionLanguages] in a later
-         * round; release builds only ever offer [productionLanguages].
+         * What the picker offers: the production roster, plus the [PSEUDO] layout probe in DEBUG only.
+         * Release builds only ever offer [productionLanguages].
          */
         val selectableLanguages: List<DisplayLanguage>
-            get() = if (BuildConfig.DEBUG) productionLanguages + JAPANESE + PSEUDO else productionLanguages
+            get() = if (BuildConfig.DEBUG) productionLanguages + PSEUDO else productionLanguages
 
         /**
          * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or
-         * one whose language is not yet user-selectable (a leftover "pseudo" in release, or a ja/tl/poj
+         * one whose language is not yet user-selectable (a leftover "pseudo" in release, or a tl/poj
          * tag from a future build) resolves to [HANJI], so the effective language always matches a picker
          * option. The persisted tag itself is left untouched, so it restores once that language ships.
          */
