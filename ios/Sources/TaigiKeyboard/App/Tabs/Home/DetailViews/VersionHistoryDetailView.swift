@@ -1,14 +1,16 @@
-// 中文: 版本歷史頁,顯示 App 更新 changelog。資料來自 HomeTexts.versionHistoryEntries。
+// 中文: 版本歷史頁,顯示 App 更新 changelog。資料來自 VersionHistory.entries。
 
 import SwiftUI
 
 /// Version history page showing app update changelog.
 // 中文: 版本歷史頁。每筆 entry 為一段 Section:版本號 / 日期 / 變更條列。
 struct VersionHistoryDetailView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
+
     var body: some View {
         Form {
-            ForEach(HomeTexts.versionHistoryEntries.indices, id: \.self) { index in
-                let entry = HomeTexts.versionHistoryEntries[index]
+            ForEach(VersionHistory.entries.indices, id: \.self) { index in
+                let entry = VersionHistory.entries[index]
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
                         // Version number and date
@@ -38,7 +40,7 @@ struct VersionHistoryDetailView: View {
                 }
             }
         }
-        .navigationTitle(HomeTexts.versionHistory)
+        .navigationTitle(lang.string(.homeVersionHistory))
         .navigationBarTitleDisplayMode(.large)
     }
 }

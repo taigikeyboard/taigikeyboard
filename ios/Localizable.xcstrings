@@ -1214,7 +1214,7 @@
       }
     },
     "i18n_home_moeCopyright": {
-      "comment": "Copyright attribution for the MOE Taiwanese dictionary. Non-Hanji languages may use the rights-holder's official name; absent override falls back to Hanji.",
+      "comment": "Copyright attribution for the MOE (教育部 / Ministry of Education) — used for both the MOE Taiwanese dictionary and (iOS) the STTI academic-terminology source, which share the same rights-holder. Non-Hanji languages may use the rights-holder's official name; absent override falls back to Hanji.",
       "extractionState": "manual",
       "localizations": {
         "nan-Hant-TW": {

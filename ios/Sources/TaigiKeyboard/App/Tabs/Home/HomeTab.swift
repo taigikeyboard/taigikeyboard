@@ -10,6 +10,7 @@ import SwiftUI
 // 中文: → 外部連結與 in-app 導覽 → 版本資訊 → FAQ。features / faqs 由 FeatureContentLoader 提供。
 struct HomeTab: View {
     @ObservedObject var viewModel: SetupGuideViewModel
+    @Environment(DisplayLanguageStore.self) private var lang
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -23,10 +24,10 @@ struct HomeTab: View {
                     NavigationLink {
                         SetupGuideView(viewModel: viewModel)
                     } label: {
-                        Label(HomeTexts.setupGuide, systemImage: "keyboard.badge.ellipsis")
+                        Label(lang.string(.homeSetupGuide), systemImage: "keyboard.badge.ellipsis")
                     }
                 } header: {
-                    Text(HomeTexts.setupKeyboard)
+                    Text(lang.string(.homeSetupKeyboard))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -45,7 +46,7 @@ struct HomeTab: View {
                         }
                     }
                 } header: {
-                    Text(HomeTexts.typingGuide)
+                    Text(lang.string(.homeTypingGuide))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -64,7 +65,7 @@ struct HomeTab: View {
                         }
                     }
                 } header: {
-                    Text(HomeTexts.newFeatures)
+                    Text(lang.string(.homeNewFeatures))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -72,39 +73,39 @@ struct HomeTab: View {
                 Section {
                     // External links
                     Link(destination: URL(string: "https://www.taigikeyboard.tw/")!) {
-                        Label(HomeTexts.userGuide, systemImage: "arrow.up.right.square")
+                        Label(lang.string(.homeUserGuide), systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://taigikeyboard.tw/privacypolicy")!) {
-                        Label(HomeTexts.privacyPolicy, systemImage: "arrow.up.right.square")
+                        Label(lang.string(.homePrivacyPolicy), systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://apps.apple.com/app/id6751871806?action=write-review")!) {
-                        Label(HomeTexts.rateUs, systemImage: "arrow.up.right.square")
+                        Label(lang.string(.homeRateUs), systemImage: "arrow.up.right.square")
                     }
 
                     // In-app navigation
                     NavigationLink {
                         CopyrightView()
                     } label: {
-                        Label(HomeTexts.copyrightNotice, systemImage: "doc.text")
+                        Label(lang.string(.homeCopyrightNotice), systemImage: "doc.text")
                     }
 
                     NavigationLink {
                         AboutDeveloperView()
                     } label: {
-                        Label(HomeTexts.aboutDeveloper, systemImage: "info.circle")
+                        Label(lang.string(.homeAboutDeveloper), systemImage: "info.circle")
                     }
 
                     NavigationLink {
                         VersionHistoryDetailView()
                     } label: {
-                        Label(HomeTexts.versionHistory, systemImage: "clock.arrow.circlepath")
+                        Label(lang.string(.homeVersionHistory), systemImage: "clock.arrow.circlepath")
                     }
 
                     // Version info
                     HStack {
-                        Label(HomeTexts.version, systemImage: "info.circle")
+                        Label(lang.string(.homeVersion), systemImage: "info.circle")
                         Spacer()
                         Text(appVersion)
                             .foregroundColor(.secondary)
@@ -125,11 +126,11 @@ struct HomeTab: View {
                         }
                     }
                 } header: {
-                    Text(HomeTexts.faq)
+                    Text(lang.string(.homeFaq))
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(HomeTexts.appHeaderTitle)
+            .navigationTitle(lang.string(.homeAppHeaderTitle))
             .navigationBarTitleDisplayMode(.large)
         }
     }

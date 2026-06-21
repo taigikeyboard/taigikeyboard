@@ -2,6 +2,21 @@
 
 import SwiftUI
 
+// Standardized short license names — language-invariant, never translated (kept as constants rather
+// than i18n keys per the multi-language plan). Mirrors Android content/CopyrightData.kt.
+// OGDL-Taiwan-1.0 is iOS-only (Android has no STTI copyright section).
+private enum License {
+    static let silOpenFont = "SIL Open Font License"
+    static let silOpenFont11 = "SIL Open Font License 1.1"
+    static let ccByNd3Tw = "CC BY-ND 3.0 TW"
+    static let ccBy4 = "CC BY 4.0"
+    static let ccByNc4 = "CC BY-NC 4.0"
+    static let cc0 = "CC0"
+    static let ccByNcSa3Tw = "CC BY-NC-SA 3.0 TW"
+    static let ccBySa4 = "CC BY-SA 4.0"
+    static let ogdlTaiwan10 = "OGDL-Taiwan-1.0"
+}
+
 /// Copyright notices for dictionaries and open-source projects.
 // 中文: 版權聲明頁。各區段透過 CopyrightSection 渲染:title、描述、授權、連結。
 struct CopyrightView: View {
@@ -11,8 +26,8 @@ struct CopyrightView: View {
             // Open Huninn (粉圓體)
             CopyrightSection(
                 title: lang.string(.commonFontOpenHuninn),
-                description: HomeTexts.openFontCopyright,
-                license: HomeTexts.silOpenFontLicense,
+                description: lang.string(.homeOpenFontCopyright),
+                license: License.silOpenFont,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://justfont.com/huninn/",
             )
@@ -20,8 +35,8 @@ struct CopyrightView: View {
             // Iansui (芫荽體)
             CopyrightSection(
                 title: lang.string(.commonFontIansui),
-                description: HomeTexts.iansuiFontCopyright,
-                license: HomeTexts.silOpenFontLicense11,
+                description: lang.string(.homeButTaiwanCopyright),
+                license: License.silOpenFont11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/iansui",
             )
@@ -29,8 +44,8 @@ struct CopyrightView: View {
             // GenYoMin (源樣明體)
             CopyrightSection(
                 title: lang.string(.commonFontGenYoMin),
-                description: HomeTexts.butTaiwanCopyright,
-                license: HomeTexts.silOpenFontLicense11,
+                description: lang.string(.homeButTaiwanCopyright),
+                license: License.silOpenFont11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/genyo-font",
             )
@@ -38,8 +53,8 @@ struct CopyrightView: View {
             // GenYoGothic (源樣烏體)
             CopyrightSection(
                 title: lang.string(.commonFontGenYoGothic),
-                description: HomeTexts.butTaiwanCopyright,
-                license: HomeTexts.silOpenFontLicense11,
+                description: lang.string(.homeButTaiwanCopyright),
+                license: License.silOpenFont11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/genyog-font",
             )
@@ -47,8 +62,8 @@ struct CopyrightView: View {
             // MOE Taiwanese Dictionary (教育部臺灣台語常用詞辭典)
             CopyrightSection(
                 title: lang.string(.commonMoeDict),
-                description: HomeTexts.moeCopyright,
-                license: HomeTexts.ccLicense,
+                description: lang.string(.homeMoeCopyright),
+                license: License.ccByNd3Tw,
                 licenseURL: "https://creativecommons.org/licenses/by-nd/3.0/tw/",
                 websiteURL: "https://sutian.moe.edu.tw/",
             )
@@ -56,8 +71,8 @@ struct CopyrightView: View {
             // New Words Dictionary (新詞新語)
             CopyrightSection(
                 title: lang.string(.commonNewwordDict),
-                description: HomeTexts.newwordCopyright,
-                license: HomeTexts.ccBy4License,
+                description: lang.string(.homeNewwordCopyright),
+                license: License.ccBy4,
                 licenseURL: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
                 websiteURL: "https://www.taigitv.org.tw/taigi-words",
             )
@@ -65,8 +80,8 @@ struct CopyrightView: View {
             // Craft Dictionary (工藝詞庫)
             CopyrightSection(
                 title: lang.string(.commonKunggeDict),
-                description: HomeTexts.kunggeCopyright,
-                license: HomeTexts.ccByNcLicense,
+                description: lang.string(.homeKunggeCopyright),
+                license: License.ccByNc4,
                 licenseURL: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
                 websiteURL: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite",
             )
@@ -74,8 +89,8 @@ struct CopyrightView: View {
             // iTaigi
             CopyrightSection(
                 title: lang.string(.commonITaigiDict),
-                description: HomeTexts.iTaigiCopyright,
-                license: HomeTexts.cc0License,
+                description: lang.string(.homeITaigiCopyright),
+                license: License.cc0,
                 licenseURL: "https://creativecommons.org/public-domain/cc0/",
                 websiteURL: "https://itaigi.tw/",
             )
@@ -83,8 +98,8 @@ struct CopyrightView: View {
             // Taiwan-Japan Dictionary (台日大辭典)
             CopyrightSection(
                 title: lang.string(.commonTaiwanJapanDict),
-                description: HomeTexts.taiwanJapanCopyright,
-                license: HomeTexts.ccByNcSA3License,
+                description: lang.string(.homeTaiwanJapanCopyright),
+                license: License.ccByNcSa3Tw,
                 licenseURL: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
                 websiteURL: "http://taigi.fhl.net/dict/",
             )
@@ -92,8 +107,8 @@ struct CopyrightView: View {
             // Tai-Hua Dictionary (台華線頂辭典)
             CopyrightSection(
                 title: lang.string(.commonTaiHuaDict),
-                description: HomeTexts.taiHuaCopyright,
-                license: HomeTexts.ccBySA4License,
+                description: lang.string(.homeTaiHuaCopyright),
+                license: License.ccBySa4,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
                 websiteURL: nil,
             )
@@ -101,17 +116,17 @@ struct CopyrightView: View {
             // Taiwan Plant Dictionary (台灣植物名彙)
             CopyrightSection(
                 title: lang.string(.commonTaiwanPlantDict),
-                description: HomeTexts.taiwanPlantCopyright,
-                license: HomeTexts.ccBySA4License,
+                description: lang.string(.homeTaiwanPlantCopyright),
+                license: License.ccBySa4,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
                 websiteURL: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106",
             )
 
-            // Subject Terminology Dictionary (學科術語)
+            // Subject Terminology Dictionary (學科術語) — same rights-holder (教育部) as the MOE dictionary.
             CopyrightSection(
                 title: lang.string(.commonSttiDict),
-                description: HomeTexts.sttiCopyright,
-                license: HomeTexts.ogdlTaiwanLicense,
+                description: lang.string(.homeMoeCopyright),
+                license: License.ogdlTaiwan10,
                 licenseURL: "https://spdx.org/licenses/OGDL-Taiwan-1.0.html",
                 websiteURL: "https://stti.moe.edu.tw/",
             )
@@ -122,7 +137,7 @@ struct CopyrightView: View {
                     Text(lang.string(.commonAccentDict))
                         .font(AppStyle.headlineFont)
 
-                    Text(HomeTexts.accentDictCredit)
+                    Text(lang.string(.homeAccentDictCredit))
                         .foregroundColor(.secondary)
                 }
             }
@@ -133,12 +148,12 @@ struct CopyrightView: View {
                     Text(DictionaryTexts.devSupplementDict)
                         .font(AppStyle.headlineFont)
 
-                    Text(HomeTexts.devSupplementCredit)
+                    Text(lang.string(.homeDevSupplementCredit))
                         .foregroundColor(.secondary)
                 }
             }
         }
-        .navigationTitle(HomeTexts.copyrightNotice)
+        .navigationTitle(lang.string(.homeCopyrightNotice))
         .navigationBarTitleDisplayMode(.large)
     }
 }
@@ -170,7 +185,7 @@ private struct CopyrightSection: View {
             }
 
             Link(destination: URL(string: licenseURL)!) {
-                Label(HomeTexts.viewLicense, systemImage: "doc.text")
+                Label(lang.string(.homeViewLicense), systemImage: "doc.text")
             }
 
             if let websiteURL {

@@ -1,67 +1,11 @@
-// 中文: HomeTab(頭頁)所有 UI 文字常數。包含啟用導引、功能說明、版本歷史、
-// 中文: 關於開發者、版權聲明等。對應 Android `HomeTexts.kt`。
-// 中文: Feature / FAQ 內容已外移到 content/tab1-features.json + tab1-faq.json,
-// 中文: 由 FeatureContentLoader 動態載入。
+// App version-history changelog. Body text is language-invariant English (synced from
+// changelog/<version>.md by the release-helper skill); excluded from i18n per the multi-language plan.
+// 中文: App 版本歷史。內容為語言無關英文(release 時由 release-helper 從 changelog/<v>.md 同步),
+// 中文: 依多語計畫排除於 i18n 之外。對應 Android content/VersionHistory.kt(僅對齊放置方式,內容各平台可不同)。
 
-// MARK: - HomeTab 頭頁文字
-
-// 包含：頭頁、啟用方法、新功能、已知問題、預計功能、FAQ、版本紀錄、關於開發者、版權聲明
-// 對應 Android HomeTexts.kt
-
-// 中文: 頭頁文字 namespace。MARK 子區塊與頁面 Section 對應。
-enum HomeTexts {
-    // MARK: - Tab 標題
-
-    static let tabTitle = "頭頁"
-    static let appHeaderTitle = "台語齒盤"
-
-    // MARK: - 區塊標題
-
-    static let setupKeyboard = "齒盤愛拍開才會當使用"
-    static let typingGuide = "拍字說明"
-    static let newFeatures = "功能設定"
-    static let faq = "其他"
-
-    // MARK: - 啟用方法
-
-    static let setupGuide = "啟用方法"
-    static let setupGuideDescription = "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。"
-    static let setupInfoMessage = "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。"
-    static let setupBrandWarning = "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。"
-
-    // MARK: - Setup Guide 步驟（全螢幕模式使用）
-
-    static let setupGuideCompletedMessage = "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤"
-    static let setupGuideGoToSettings = "去設定頁"
-    static let setupGuideCloseButton = "關閉"
-    static let setupGuideStep1Settings = "點揤「齒盤」"
-    static let setupGuideStep2AddKeyboard = "點揤「增加齒盤」、「允准完整取用」"
-
-    // MARK: - 新功能 & FAQ
-
-    // Feature and FAQ content (title, paragraphs, attachments) is now loaded from
-    // content/tab1-features.json and content/tab1-faq.json via FeatureContentLoader.
-
-    // MARK: - 資源連結
-
-    static let userGuide = "網站紹介"
-    static let rateUs = "為阮評分"
-    static let aboutDeveloper = "關於"
-    static let privacyPolicy = "隱私權政策"
-
-    // MARK: - 關於開發者
-
-    static let freePromise = "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
-    static let officialWebsite = "官方網站"
-
-    // MARK: - 版本資訊
-
-    static let version = "當前版本"
-    static let versionHistory = "版本紀錄"
-
-    // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
-    // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
-    static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+// 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
+enum VersionHistory {
+    static let entries: [(version: String, date: String, changes: [String])] = [
         ("3.6.3", "2026/06/20", [
             "New: typing a tone in TPS (注音) now shows only that tone's readings, matching TL / POJ; typing without a tone still shows all tones.",
             "New: TPS ninth tone (ˆ) can now be typed via the 9 digit key.",
@@ -233,57 +177,4 @@ enum HomeTexts {
             "Refreshed the app interface and improved in-app explanations for better clarity.",
         ]),
     ]
-
-    // MARK: - 版權聲明
-
-    static let copyrightNotice = "致謝"
-    static let viewLicense = "授權條款"
-
-    // 教育部臺灣台語常用詞辭典
-    static let moeCopyright = "© 教育部"
-    static let ccLicense = "CC BY-ND 3.0 TW"
-
-    // iTaigi 華台辭典
-    static let iTaigiCopyright = "© iTaigi愛台語"
-    static let cc0License = "CC0"
-
-    // 台語新詞辭庫
-    static let newwordCopyright = "© 公視台語台"
-    static let ccBy4License = "CC BY 4.0"
-
-    // 粉圓字型
-    static let openFontCopyright = "© justfont"
-    static let silOpenFontLicense = "SIL Open Font License"
-
-    // 芫荽字型
-    static let iansuiFontCopyright = "© ButTaiwan"
-    static let silOpenFontLicense11 = "SIL Open Font License 1.1"
-
-    /// ButTaiwan 字型（源樣明體、源樣烏體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
-    static let butTaiwanCopyright = "© ButTaiwan"
-
-    // 台灣植物名彙
-    static let taiwanPlantCopyright = "© 佐佐木舜一"
-    static let ccBySA4License = "CC BY-SA 4.0"
-
-    /// 台華線頂對照典
-    static let taiHuaCopyright = "© 鄭良偉"
-
-    // 台日大辭典
-    static let taiwanJapanCopyright = "© 小川尚義"
-    static let ccByNcSA3License = "CC BY-NC-SA 3.0 TW"
-
-    // 台語工藝詞庫
-    static let kunggeCopyright = "© 國立臺灣工藝研究發展中心"
-    static let ccByNcLicense = "CC BY-NC 4.0"
-
-    // 學科術語辭典
-    static let sttiCopyright = "© 教育部"
-    static let ogdlTaiwanLicense = "OGDL-Taiwan-1.0"
-
-    /// 腔口差
-    static let accentDictCredit = "實齋整理、提供"
-
-    /// 詞庫增補檔案
-    static let devSupplementCredit = "建中整理、提供"
 }

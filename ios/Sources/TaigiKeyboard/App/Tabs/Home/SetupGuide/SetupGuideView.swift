@@ -9,6 +9,7 @@ import SwiftUI
 struct SetupGuideView: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @Environment(\.openURL) private var openURL
+    @Environment(DisplayLanguageStore.self) private var lang
 
     /// Full-screen mode (matches Android SetupGuideActivity.isFullScreen).
     // 中文: 全螢幕模式旗標,對齊 Android SetupGuideActivity.isFullScreen。
@@ -23,7 +24,7 @@ struct SetupGuideView: View {
             // Full-screen title
             if isFullScreen {
                 Section {
-                    Text(HomeTexts.setupGuide)
+                    Text(lang.string(.homeSetupGuide))
                         .font(AppStyle.appFont(size: AppStyle.navBarLargeTitleSize))
                         .fontWeight(.bold)
                 }
@@ -31,7 +32,7 @@ struct SetupGuideView: View {
 
             // Description
             Section {
-                Text(HomeTexts.setupGuideDescription)
+                Text(lang.string(.homeSetupGuideDescription))
                     .lineSpacing(4)
             }
 
@@ -39,20 +40,20 @@ struct SetupGuideView: View {
             Section {
                 SetupGuideStepRow(
                     stepNumber: 1,
-                    title: HomeTexts.setupGuideStep1Settings,
+                    title: lang.string(.homeSetupGuideStep1Settings),
                     screenshotName: "setup_step1",
                 )
 
                 SetupGuideStepRow(
                     stepNumber: 2,
-                    title: HomeTexts.setupGuideStep2AddKeyboard,
+                    title: lang.string(.homeSetupGuideStep2AddKeyboard),
                     screenshotName: "setup_step2",
                 )
             }
 
             // Completion message
             Section {
-                Text(HomeTexts.setupGuideCompletedMessage)
+                Text(lang.string(.homeSetupGuideCompletedMessage))
             }
 
             // Open Settings button
@@ -62,7 +63,7 @@ struct SetupGuideView: View {
                         openURL(url)
                     }
                 } label: {
-                    Label(HomeTexts.setupGuideGoToSettings, systemImage: "gearshape.fill")
+                    Label(lang.string(.homeSetupGuideGoToSettings), systemImage: "gearshape.fill")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
@@ -70,7 +71,7 @@ struct SetupGuideView: View {
             // Warnings
             Section {
                 Label {
-                    Text(HomeTexts.setupInfoMessage)
+                    Text(lang.string(.homeSetupInfoMessage))
                         .lineSpacing(4)
                 } icon: {
                     Image(latinSystemName: "exclamationmark.triangle.fill")
@@ -78,7 +79,7 @@ struct SetupGuideView: View {
                 }
 
                 Label {
-                    Text(HomeTexts.setupBrandWarning)
+                    Text(lang.string(.homeSetupBrandWarning))
                         .lineSpacing(4)
                 } icon: {
                     Image(latinSystemName: "exclamationmark.triangle.fill")
@@ -92,13 +93,13 @@ struct SetupGuideView: View {
                     Button(role: .destructive) {
                         onComplete()
                     } label: {
-                        Label(HomeTexts.setupGuideCloseButton, systemImage: "xmark")
+                        Label(lang.string(.homeSetupGuideCloseButton), systemImage: "xmark")
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
             }
         }
-        .navigationTitle(isFullScreen ? "" : HomeTexts.setupGuide)
+        .navigationTitle(isFullScreen ? "" : lang.string(.homeSetupGuide))
         .navigationBarTitleDisplayMode(.large)
         .navigationBarHidden(isFullScreen)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in

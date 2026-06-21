@@ -5,22 +5,23 @@ import SwiftUI
 /// About-developer page with link to the official website.
 // 中文: 關於開發者。連到官方網站取得進一步資訊。
 struct AboutDeveloperView: View {
+    @Environment(DisplayLanguageStore.self) private var lang
     private let websiteURL = "https://www.taigikeyboard.tw/"
 
     var body: some View {
         Form {
             Section {
-                Text(HomeTexts.freePromise)
+                Text(lang.string(.homeFreePromise))
                     .lineSpacing(6)
             }
 
             Section {
                 Link(destination: URL(string: websiteURL)!) {
-                    Label(HomeTexts.officialWebsite, systemImage: "arrow.up.right.square")
+                    Label(lang.string(.commonViewWebsite), systemImage: "arrow.up.right.square")
                 }
             }
         }
-        .navigationTitle(HomeTexts.aboutDeveloper)
+        .navigationTitle(lang.string(.homeAboutDeveloper))
         .navigationBarTitleDisplayMode(.large)
     }
 }

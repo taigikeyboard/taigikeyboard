@@ -69,10 +69,10 @@ State the chosen mode before step 5 ("mode: incremental, N new commits since `<t
 | --- | --- |
 | `CHANGELOG.md` | `- [<target>](changelog/<target>.md)` |
 | `changelog/<target>.md` | Categories: iOS / Android / Dictionary / Shared. Sub: New Features, Bug Fixes, Refactoring, Removed, Changes, New Files. Regenerate fully from step 3 diff. |
-| `ios/Sources/TaigiKeyboard/Strings/HomeTexts.swift` | `("x.y.z", "YYYY/MM/DD", [LocalizedText(hanji: "…"), …])` |
+| `ios/Sources/TaigiKeyboard/App/Tabs/Home/VersionHistory.swift` | `VersionHistory.entries`: `("x.y.z", "YYYY/MM/DD", ["…", …])` (plain English strings) |
 | `android/app/src/main/java/com/siansiansu/taigikeyboard/content/VersionHistory.kt` | `VersionHistory.entries`: `VersionEntry("x.y.z", "YYYY/MM/DD", listOf("…", …))` (plain English strings) |
 
-Version-history entry rules (both platforms — iOS `versionHistoryEntries`, Android `VersionHistory.entries`):
+Version-history entry rules (both platforms — iOS `VersionHistory.entries`, Android `VersionHistory.entries`):
 - Include: user-visible features, UI changes, noticeable bug fixes, new layouts, new dictionary sources
 - Exclude: refactors, internal cleanups, docs, tests, dev tooling, silent dep bumps
 - Group small related fixes into one line
