@@ -7,6 +7,7 @@ import Foundation
 enum GeneratedPseudoStrings {
     private static let map: [StringKey: String] = [
         .commonCancel: "⟦取消··⟧",
+        .commonOk: "⟦好··⟧",
         .commonDelete: "⟦刪除··⟧",
         .commonViewWebsite: "⟦官方網站··⟧",
         .commonMoeDict: "⟦教育部臺灣台語常用詞辭典·····⟧",

@@ -117,7 +117,7 @@ struct ThemeFontPickerView: View {
                 }
             }
         }
-        .navigationTitle(ThemeTexts.customFont)
+        .navigationTitle(lang.string(.themeCustomFont))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

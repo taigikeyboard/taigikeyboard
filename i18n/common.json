@@ -7,8 +7,8 @@
       "values": { "hanji": "取消" }
     },
     "ok": {
-      "comment": "Generic confirm button on an informational result dialog (acknowledge / dismiss).",
-      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "comment": "Generic confirm button on an informational result dialog (acknowledge / dismiss); iOS reuses it for the custom-theme cap-reached alert.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "好" }
     },
     "delete": {

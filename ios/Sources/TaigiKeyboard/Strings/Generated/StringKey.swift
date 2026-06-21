@@ -3,6 +3,7 @@
 /// Typed key for every iOS i18n string. The raw value is the String Catalog key.
 enum StringKey: String {
     case commonCancel = "i18n_common_cancel"
+    case commonOk = "i18n_common_ok"
     case commonDelete = "i18n_common_delete"
     case commonViewWebsite = "i18n_common_viewWebsite"
     case commonMoeDict = "i18n_common_moeDict"

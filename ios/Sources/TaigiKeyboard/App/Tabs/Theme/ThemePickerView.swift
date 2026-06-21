@@ -31,13 +31,15 @@ struct ThemePickerView: View {
     @State private var userThemes: [UserTheme] = []
     @State private var editorRoute: ThemeEditorRoute?
 
+    @Environment(DisplayLanguageStore.self) private var lang
+
     private let shelfSpacing: CGFloat = 28
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: shelfSpacing) {
                 // Custom Themes: user's saved themes + Create New.
-                ThemeShelf(title: ThemeTexts.customThemesSection) {
+                ThemeShelf(title: lang.string(.themeCustomThemesSection)) {
                     if userThemes.count < UserThemeStore.maxUserThemes {
                         CreateNewThemeCard { editorRoute = .create }
                     }
@@ -49,9 +51,9 @@ struct ThemePickerView: View {
                             isSelected: selectedThemeId == theme.id.uuidString,
                             onTap: { apply(theme.id.uuidString) },
                             actions: [
-                                ThemeCardAction(title: ThemeTexts.themeMenuApply) { apply(theme.id.uuidString) },
-                                ThemeCardAction(title: ThemeTexts.themeMenuEdit) { editorRoute = .edit(theme) },
-                                ThemeCardAction(title: ThemeTexts.themeMenuDelete, role: .destructive) { delete(theme) },
+                                ThemeCardAction(title: lang.string(.themeCardMenuApply)) { apply(theme.id.uuidString) },
+                                ThemeCardAction(title: lang.string(.themeCardMenuEdit)) { editorRoute = .edit(theme) },
+                                ThemeCardAction(title: lang.string(.commonDelete), role: .destructive) { delete(theme) },
                             ],
                         )
                     }
@@ -75,7 +77,7 @@ struct ThemePickerView: View {
             }
             .padding(.vertical, AppStyle.horizontalPadding)
         }
-        .navigationTitle(ThemeTexts.tabTitle)
+        .navigationTitle(TabType.theme.title)
         // 中文: themeRevision(任何 CRUD bump)變更即重載清單;新增/編輯/刪除皆涵蓋,pop 回此頁亦 onAppear 重載。
         .onAppear(perform: reloadUserThemes)
         .onChange(of: themeRevision) { _, _ in reloadUserThemes() }
@@ -184,6 +186,8 @@ private struct ThemeShelf<Content: View>: View {
 private struct CreateNewThemeCard: View {
     let onTap: () -> Void
 
+    @Environment(DisplayLanguageStore.self) private var lang
+
     private let plusTileSize: CGFloat = 84
     private let plusGlyphSize: CGFloat = 28
 
@@ -213,7 +217,7 @@ private struct CreateNewThemeCard: View {
                     )
                     .frame(width: ThemeCardMetrics.width)
 
-                Text(ThemeTexts.createNewTheme)
+                Text(lang.string(.themeCreateNewTheme))
                     .font(AppStyle.captionFont)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)

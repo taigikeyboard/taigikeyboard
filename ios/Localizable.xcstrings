@@ -145,6 +145,18 @@
         }
       }
     },
+    "i18n_common_ok": {
+      "comment": "Generic confirm button on an informational result dialog (acknowledge / dismiss); iOS reuses it for the custom-theme cap-reached alert.",
+      "extractionState": "manual",
+      "localizations": {
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        }
+      }
+    },
     "i18n_common_sttiDict": {
       "comment": "Display name of the MOE academic-subject terminology Taigi translation data source.",
       "extractionState": "manual",
@@ -2162,7 +2174,7 @@
       }
     },
     "i18n_theme_customFont": {
-      "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). iOS keeps the same label in ThemeTexts.swift.",
+      "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). Shared by iOS and Android.",
       "extractionState": "manual",
       "localizations": {
         "nan-Hant-TW": {

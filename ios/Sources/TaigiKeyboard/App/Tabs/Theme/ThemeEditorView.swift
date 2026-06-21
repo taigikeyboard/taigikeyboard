@@ -17,6 +17,7 @@ import SwiftUI
 struct ThemeEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel: ThemeEditorViewModel
     @State private var showsCapAlert = false
     @State private var showsNameAlert = false
@@ -30,38 +31,38 @@ struct ThemeEditorView: View {
         VStack(spacing: 0) {
             Form {
                 // Keyboard overall: background color + height
-                Section(header: Text(ThemeTexts.keyboardSection)) {
-                    colorRow(ThemeTexts.colorKeyboardBackground, \.backgroundColor,
+                Section(header: Text(lang.string(.themeKeyboardSection))) {
+                    colorRow(lang.string(.themeColorKeyboardBackground), \.backgroundColor,
                              ThemeDefaults.keyboardBackground)
-                    sliderRow(ThemeTexts.keyHeight, \.keyHeightScale,
+                    sliderRow(lang.string(.themeKeyHeight), \.keyHeightScale,
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                 }
 
                 // Key: colors + font size + corner radius + border width + shadow
-                Section(header: Text(ThemeTexts.colorKeySection)) {
-                    colorRow(ThemeTexts.colorKeyText, \.keyTextColor,
+                Section(header: Text(lang.string(.themeColorKeySection))) {
+                    colorRow(lang.string(.themeColorKeyText), \.keyTextColor,
                              ThemeDefaults.keyText)
-                    colorRow(ThemeTexts.colorNormalKeyFill, \.normalKeyFillColor,
+                    colorRow(lang.string(.themeColorNormalKeyFill), \.normalKeyFillColor,
                              ThemeDefaults.normalKeyFill)
-                    colorRow(ThemeTexts.colorSpecialKeyFill, \.specialKeyFillColor,
+                    colorRow(lang.string(.themeColorSpecialKeyFill), \.specialKeyFillColor,
                              ThemeDefaults.specialKeyFill)
-                    sliderRow(ThemeTexts.keyFontSize, \.keyFontSizeScale,
+                    sliderRow(lang.string(.themeKeyFontSize), \.keyFontSizeScale,
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
-                    sliderRow(ThemeTexts.keyCornerRadius, \.keyCornerRadius,
+                    sliderRow(lang.string(.themeKeyCornerRadius), \.keyCornerRadius,
                               ThemeSliderRanges.radius, ThemeSliderRanges.radiusStep)
-                    sliderRow(ThemeTexts.keyBorderWidth, \.keyBorderWidth,
+                    sliderRow(lang.string(.themeKeyBorderWidth), \.keyBorderWidth,
                               ThemeSliderRanges.borderWidth, ThemeSliderRanges.borderWidthStep)
-                    sliderRow(ThemeTexts.keyShadow, \.keyShadowIntensity,
+                    sliderRow(lang.string(.themeKeyShadow), \.keyShadowIntensity,
                               ThemeSliderRanges.shadow, ThemeSliderRanges.shadowStep)
                 }
 
                 // Candidate: colors + text size
-                Section(header: Text(ThemeTexts.candidateSection)) {
-                    colorRow(ThemeTexts.colorCandidateText, \.candidateTextColor,
+                Section(header: Text(lang.string(.themeCandidateSection))) {
+                    colorRow(lang.string(.themeColorCandidateText), \.candidateTextColor,
                              ThemeDefaults.candidateText)
-                    colorRow(ThemeTexts.colorCandidateBackground, \.candidateBackgroundColor,
+                    colorRow(lang.string(.themeColorCandidateBackground), \.candidateBackgroundColor,
                              ThemeDefaults.candidateBackground)
-                    sliderRow(ThemeTexts.candidateTextSize, \.candidateTextSizeScale,
+                    sliderRow(lang.string(.themeCandidateTextSize), \.candidateTextSizeScale,
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                 }
 
@@ -71,7 +72,7 @@ struct ThemeEditorView: View {
                     Button(role: .destructive) {
                         viewModel.resetToDefaults()
                     } label: {
-                        Text(ThemeTexts.editorResetAll)
+                        Text(lang.string(.themeEditorResetAll))
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
@@ -88,11 +89,11 @@ struct ThemeEditorView: View {
                 colorScheme: colorScheme,
             )
         }
-        .navigationTitle(viewModel.isEditing ? ThemeTexts.editorTitleEdit : ThemeTexts.editorTitleNew)
+        .navigationTitle(viewModel.isEditing ? lang.string(.themeEditorTitleEdit) : lang.string(.themeEditorTitleNew))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button(ThemeTexts.editorSave) {
+                Button(lang.string(.themeEditorSave)) {
                     // Cap-check NEW themes up front so the cap alert and the name
                     // alert never present back-to-back.
                     guard viewModel.canSaveNewTheme else {
@@ -104,15 +105,15 @@ struct ThemeEditorView: View {
                 }
             }
         }
-        .alert(ThemeTexts.themeNameHeader, isPresented: $showsNameAlert) {
-            TextField(ThemeTexts.themeNamePlaceholder, text: $pendingName)
-            Button(ThemeTexts.editorSave) { commit() }
-            Button(ThemeTexts.editorCancel, role: .cancel) {}
+        .alert(lang.string(.themeNameHeader), isPresented: $showsNameAlert) {
+            TextField(lang.string(.themeNamePlaceholder), text: $pendingName)
+            Button(lang.string(.themeEditorSave)) { commit() }
+            Button(lang.string(.commonCancel), role: .cancel) {}
         }
-        .alert(ThemeTexts.capReachedTitle, isPresented: $showsCapAlert) {
-            Button(ThemeTexts.capReachedOK, role: .cancel) {}
+        .alert(lang.string(.themeCapReachedTitle), isPresented: $showsCapAlert) {
+            Button(lang.string(.commonOk), role: .cancel) {}
         } message: {
-            Text(ThemeTexts.capReachedMessage)
+            Text(lang.string(.themeCapReachedMessage))
         }
     }
 
@@ -121,7 +122,9 @@ struct ThemeEditorView: View {
     /// a belt-and-braces guard for a TOCTOU race.
     private func commit() {
         let trimmed = pendingName.trimmingCharacters(in: .whitespacesAndNewlines)
-        viewModel.name = trimmed.isEmpty ? ThemeTexts.defaultThemeName : trimmed
+        // CROSS-PLATFORM INVARIANT — mirrors android ThemeEditorScreen.kt:343 `ifEmpty { resolve(THEME_DEFAULT_NAME) }`.
+        // Persisted name freezes the creation-language label (an editable user value); release falls back to「新主題」.
+        viewModel.name = trimmed.isEmpty ? lang.string(.themeDefaultName) : trimmed
         if viewModel.save() {
             dismiss()
         } else {

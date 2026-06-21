@@ -116,7 +116,7 @@ struct SettingsTab: View {
                         )
                     } label: {
                         HStack {
-                            Text(ThemeTexts.customFont)
+                            Text(lang.string(.themeCustomFont))
                             Spacer()
                             Text(lang.string(selectedFontType.displayNameKey))
                                 .foregroundColor(.secondary)
