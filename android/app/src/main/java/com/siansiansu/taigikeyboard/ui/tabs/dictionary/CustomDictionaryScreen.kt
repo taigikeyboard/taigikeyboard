@@ -54,8 +54,8 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportResult
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
@@ -123,19 +123,17 @@ fun CustomDictionaryScreen(
                 try {
                     val result = viewModel.importFile(uri)
                     resultMessage =
-                        String.format(
-                            Locale.TAIWAN,
-                            DictionaryTexts.importResult,
-                            result.imported,
-                            result.skipped,
+                        stringResolver.dictionaryImportResult(
+                            imported = result.imported,
+                            skipped = result.skipped,
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
                     resultMessage =
                         when {
-                            e.message == "fileTooLarge" -> DictionaryTexts.fileTooLarge
-                            e.message == "tooManyEntries" -> DictionaryTexts.tooManyEntries
-                            e.message?.contains("格式") == true -> DictionaryTexts.invalidCSVFormat
+                            e.message == "fileTooLarge" -> stringResolver.resolve(StringKey.DICTIONARY_FILE_TOO_LARGE)
+                            e.message == "tooManyEntries" -> stringResolver.resolve(StringKey.DICTIONARY_TOO_MANY_ENTRIES)
+                            e.message?.contains("格式") == true -> stringResolver.resolve(StringKey.DICTIONARY_INVALID_C_S_V_FORMAT)
                             else -> e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
                         }
                     showResultDialog = true
@@ -157,7 +155,7 @@ fun CustomDictionaryScreen(
                             outputStream.write(csv.toByteArray(Charsets.UTF_8))
                         }
                     }
-                    resultMessage = DictionaryTexts.exportSuccess
+                    resultMessage = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
                     showResultDialog = true
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
@@ -171,7 +169,7 @@ fun CustomDictionaryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = DictionaryTexts.customDictionary,
+                        text = L10n.dictionaryCustomDictionary,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -213,9 +211,9 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = DictionaryTexts.customDictEnabled,
+                            label = L10n.dictionaryCustomDictEnabled,
                             checked = isCustomDictEnabled,
-                            infoText = DictionaryTexts.customDictEnabledInfo,
+                            infoText = L10n.dictionaryCustomDictEnabledInfo,
                             onCheckedChange = { viewModel.setCustomDictEnabled(it) },
                         )
                     }
@@ -225,7 +223,7 @@ fun CustomDictionaryScreen(
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = DictionaryTexts.importExportTitle,
+                        text = L10n.dictionaryImportExportTitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
@@ -244,14 +242,14 @@ fun CustomDictionaryScreen(
                             contentScale = ContentScale.FillWidth,
                         )
                         Text(
-                            text = DictionaryTexts.customDictDescription,
+                            text = L10n.dictionaryCustomDictDescription,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = DictionaryTexts.exportCSV,
+                            label = L10n.dictionaryExportCSV,
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -266,7 +264,7 @@ fun CustomDictionaryScreen(
                             LoadingRow()
                         } else {
                             ActionRow(
-                                label = DictionaryTexts.importCSV,
+                                label = L10n.dictionaryImportCSV,
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -280,7 +278,7 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = DictionaryTexts.deleteAll,
+                            label = L10n.dictionaryDeleteAll,
                             onClick = { if (!isImporting) showDeleteAllDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -292,7 +290,7 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = DictionaryTexts.customDictPrivacyWarning,
+                            text = L10n.dictionaryCustomDictPrivacyWarning,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -308,12 +306,12 @@ fun CustomDictionaryScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = DictionaryTexts.customDictionary,
+                            text = L10n.dictionaryCustomDictionary,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
-                        SettingInfoButton(description = DictionaryTexts.filterHint)
+                        SettingInfoButton(description = L10n.dictionaryFilterHint)
                     }
                 }
 
@@ -335,7 +333,7 @@ fun CustomDictionaryScreen(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    text = DictionaryTexts.customDictEmpty,
+                                    text = L10n.dictionaryCustomDictEmpty,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
@@ -346,7 +344,7 @@ fun CustomDictionaryScreen(
                     item {
                         SettingsCard {
                             Text(
-                                text = DictionaryTexts.noResults,
+                                text = L10n.dictionaryNoResults,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -384,7 +382,7 @@ fun CustomDictionaryScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = DictionaryTexts.delete,
+                                    contentDescription = L10n.commonDelete,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -405,7 +403,7 @@ fun CustomDictionaryScreen(
             FilterSearchBar(
                 value = filterText,
                 onValueChange = { filterText = it },
-                placeholder = DictionaryTexts.searchPlaceholder,
+                placeholder = L10n.dictionarySearchPlaceholder,
             )
         }
     }
@@ -425,9 +423,9 @@ fun CustomDictionaryScreen(
     // Delete all confirmation
     if (showDeleteAllDialog) {
         ConfirmationDialog(
-            title = DictionaryTexts.deleteAll,
-            message = DictionaryTexts.deleteAllMessage,
-            confirmLabel = DictionaryTexts.clear,
+            title = L10n.dictionaryDeleteAll,
+            message = L10n.dictionaryDeleteAllMessage,
+            confirmLabel = L10n.dictionaryClear,
             dismissLabel = L10n.commonCancel,
             onConfirm = {
                 showDeleteAllDialog = false

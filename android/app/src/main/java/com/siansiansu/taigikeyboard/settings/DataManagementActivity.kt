@@ -11,9 +11,11 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.currentStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
+import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportBackupResult
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementViewModel
@@ -51,7 +53,7 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            DictionaryTexts.exportBackupSuccess,
+                            commonString(StringKey.DICTIONARY_EXPORT_BACKUP_SUCCESS),
                             Toast.LENGTH_SHORT,
                         ).show()
                 } catch (_: Exception) {
@@ -72,12 +74,10 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            String.format(
-                                Locale.TAIWAN,
-                                DictionaryTexts.importBackupResult,
-                                result.customDict,
-                                result.frequency,
-                                result.association,
+                            currentStringResolver().dictionaryImportBackupResult(
+                                customDict = result.customDict,
+                                frequency = result.frequency,
+                                association = result.association,
                             ),
                             Toast.LENGTH_LONG,
                         ).show()
@@ -96,23 +96,26 @@ class DataManagementActivity : ComponentActivity() {
 
         setupEdgeToEdge()
 
+        val prefs = PrefHelper(this)
         setContent {
-            TaigiKeyboardTheme {
-                val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
+            ProvideDisplayLanguage(prefs) {
+                TaigiKeyboardTheme {
+                    val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
 
-                DataManagementScreen(
-                    isProcessing = isProcessing,
-                    onNavigateBack = {
-                        onBackPressedDispatcher.onBackPressed()
-                    },
-                    onExportBackup = {
-                        val dateStr = SimpleDateFormat(BACKUP_DATE_FORMAT, Locale.US).format(Date())
-                        exportBackupLauncher.launch("備份復原_$dateStr.taigi")
-                    },
-                    onImportBackup = {
-                        importBackupLauncher.launch(arrayOf("application/json", "*/*"))
-                    },
-                )
+                    DataManagementScreen(
+                        isProcessing = isProcessing,
+                        onNavigateBack = {
+                            onBackPressedDispatcher.onBackPressed()
+                        },
+                        onExportBackup = {
+                            val dateStr = SimpleDateFormat(BACKUP_DATE_FORMAT, Locale.US).format(Date())
+                            exportBackupLauncher.launch("備份復原_$dateStr.taigi")
+                        },
+                        onImportBackup = {
+                            importBackupLauncher.launch(arrayOf("application/json", "*/*"))
+                        },
+                    )
+                }
             }
         }
     }

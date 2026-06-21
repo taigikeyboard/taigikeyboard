@@ -222,7 +222,7 @@ private fun CustomThemeShelf(
                     listOf(
                         ThemeCardAction(L10n.themeCardMenuApply) { onApply(theme.id) },
                         ThemeCardAction(L10n.themeCardMenuEdit) { onEdit(theme) },
-                        ThemeCardAction(L10n.themeCardMenuDelete, isDestructive = true) { onDelete(theme) },
+                        ThemeCardAction(L10n.commonDelete, isDestructive = true) { onDelete(theme) },
                     ),
                 preview = { CustomThemeButtonPreview(theme.appearance) },
             )

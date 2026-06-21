@@ -4,12 +4,14 @@ package com.siansiansu.taigikeyboard.i18n.generated
 import androidx.compose.runtime.Composable
 import com.siansiansu.taigikeyboard.i18n.stringRes
 
-/** Typed Compose accessors — one per i18n key, resolved under the active display language. */
+/** Typed Compose accessors — one per plain i18n key, resolved under the active display language. */
 object L10n {
     val commonCancel: String
         @Composable get() = stringRes(StringKey.COMMON_CANCEL)
     val commonOk: String
         @Composable get() = stringRes(StringKey.COMMON_OK)
+    val commonDelete: String
+        @Composable get() = stringRes(StringKey.COMMON_DELETE)
     val commonViewWebsite: String
         @Composable get() = stringRes(StringKey.COMMON_VIEW_WEBSITE)
     val commonExportFailed: String
@@ -44,6 +46,148 @@ object L10n {
         @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_MIN)
     val commonFontGenYoGothic: String
         @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_GOTHIC)
+    val dictionaryClear: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR)
+    val dictionarySave: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_SAVE)
+    val dictionaryCustomDictionary: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICTIONARY)
+    val dictionaryCustomDictEnabled: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_ENABLED)
+    val dictionaryCustomDictEnabledInfo: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_ENABLED_INFO)
+    val dictionaryDataManagement: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_DATA_MANAGEMENT)
+    val dictionaryVariantDictionary: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_VARIANT_DICTIONARY)
+    val dictionaryKhiin: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KHIIN)
+    val dictionaryCustomDictDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_DESCRIPTION)
+    val dictionaryCustomDictEmpty: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_EMPTY)
+    val dictionaryAddEntry: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ADD_ENTRY)
+    val dictionaryEditEntry: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_EDIT_ENTRY)
+    val dictionaryRomanLabel: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ROMAN_LABEL)
+    val dictionaryRomanPlaceholder: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ROMAN_PLACEHOLDER)
+    val dictionaryHanziLabel: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_HANZI_LABEL)
+    val dictionaryHanziPlaceholder: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_HANZI_PLACEHOLDER)
+    val dictionaryDeleteAll: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_DELETE_ALL)
+    val dictionaryDeleteAllMessage: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_DELETE_ALL_MESSAGE)
+    val dictionaryCustomDictPrivacyWarning: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_PRIVACY_WARNING)
+    val dictionaryImportCSV: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_IMPORT_C_S_V)
+    val dictionaryExportCSV: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_C_S_V)
+    val dictionaryExportSuccess: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_SUCCESS)
+    val dictionaryInvalidCSVFormat: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_INVALID_C_S_V_FORMAT)
+    val dictionaryFileTooLarge: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FILE_TOO_LARGE)
+    val dictionaryTooManyEntries: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TOO_MANY_ENTRIES)
+    val dictionaryImportExportTitle: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_IMPORT_EXPORT_TITLE)
+    val dictionaryFrequencyExportCSV: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_EXPORT_C_S_V)
+    val dictionaryFrequencyImportCSV: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_IMPORT_C_S_V)
+    val dictionaryFrequencyDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_DESCRIPTION)
+    val dictionaryAssociationExportCSV: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_EXPORT_C_S_V)
+    val dictionaryAssociationImportCSV: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_IMPORT_C_S_V)
+    val dictionaryAssociationDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_DESCRIPTION)
+    val dictionaryMoeSectionTitle: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_MOE_SECTION_TITLE)
+    val dictionaryOtherSectionTitle: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_OTHER_SECTION_TITLE)
+    val dictionarySupplementSectionTitle: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_SUPPLEMENT_SECTION_TITLE)
+    val dictionaryLkkDict: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LKK_DICT)
+    val dictionaryDevSupplementDict: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_DEV_SUPPLEMENT_DICT)
+    val dictionaryKautianAccentLukang: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_LUKANG)
+    val dictionaryKautianAccentSansia: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_SANSIA)
+    val dictionaryKautianAccentTaipak: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_TAIPAK)
+    val dictionaryKautianAccentGilan: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_GILAN)
+    val dictionaryKautianAccentTainan: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_TAINAN)
+    val dictionaryKautianAccentKaohsiung: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_KAOHSIUNG)
+    val dictionaryKautianAccentKinmen: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_KINMEN)
+    val dictionaryKautianAccentMakung: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_MAKUNG)
+    val dictionaryKautianAccentSintik: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_SINTIK)
+    val dictionaryKautianAccentTaichung: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_TAICHUNG)
+    val dictionaryKautianNameAppendix: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_NAME_APPENDIX)
+    val dictionarySearchPlaceholder: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_SEARCH_PLACEHOLDER)
+    val dictionaryNoResults: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_NO_RESULTS)
+    val dictionaryLookupChhoe: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LOOKUP_CHHOE)
+    val dictionaryLookupMoe: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LOOKUP_MOE)
+    val dictionaryFrequencyManagement: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_MANAGEMENT)
+    val dictionaryFrequencyRecordingEnabled: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_RECORDING_ENABLED)
+    val dictionaryFrequencyRecordingEnabledInfo: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_RECORDING_ENABLED_INFO)
+    val dictionaryAssociationManagement: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_MANAGEMENT)
+    val dictionaryAssociationRecordingEnabled: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_RECORDING_ENABLED)
+    val dictionaryAssociationRecordingEnabledInfo: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_RECORDING_ENABLED_INFO)
+    val dictionaryFrequencyPrivacyWarning: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_PRIVACY_WARNING)
+    val dictionaryClearAllFrequency: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_ALL_FREQUENCY)
+    val dictionaryAssociationPrivacyWarning: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_PRIVACY_WARNING)
+    val dictionaryClearAllAssociation: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_ALL_ASSOCIATION)
+    val dictionaryClearFrequencyMessage: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_FREQUENCY_MESSAGE)
+    val dictionaryClearAssociationMessage: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_ASSOCIATION_MESSAGE)
+    val dictionaryNoData: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_NO_DATA)
+    val dictionaryFilterHint: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FILTER_HINT)
+    val dictionaryBackupRestore: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_BACKUP_RESTORE)
+    val dictionaryExportBackup: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_BACKUP)
+    val dictionaryImportBackup: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_IMPORT_BACKUP)
+    val dictionaryExportBackupSuccess: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_BACKUP_SUCCESS)
+    val dictionaryBackupPrivacyWarning: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_BACKUP_PRIVACY_WARNING)
     val homeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.HOME_APP_HEADER_TITLE)
     val homeSetupKeyboard: String
@@ -258,8 +402,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_CARD_MENU_APPLY)
     val themeCardMenuEdit: String
         @Composable get() = stringRes(StringKey.THEME_CARD_MENU_EDIT)
-    val themeCardMenuDelete: String
-        @Composable get() = stringRes(StringKey.THEME_CARD_MENU_DELETE)
     val themeCapReachedTitle: String
         @Composable get() = stringRes(StringKey.THEME_CAP_REACHED_TITLE)
     val themeCapReachedMessage: String

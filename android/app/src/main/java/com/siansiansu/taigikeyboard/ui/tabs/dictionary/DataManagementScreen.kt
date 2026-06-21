@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
 import com.siansiansu.taigikeyboard.ui.components.FileUpload
@@ -41,7 +41,7 @@ fun DataManagementScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = DictionaryTexts.backupRestore,
+                        text = L10n.dictionaryBackupRestore,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -70,7 +70,7 @@ fun DataManagementScreen(
                 Spacer(Modifier.height(8.dp))
                 SettingsCard {
                     Text(
-                        text = DictionaryTexts.backupPrivacyWarning,
+                        text = L10n.dictionaryBackupPrivacyWarning,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         style = MaterialTheme.typography.bodyLarge,
@@ -83,7 +83,7 @@ fun DataManagementScreen(
                 Spacer(Modifier.height(16.dp))
 
                 Text(
-                    text = DictionaryTexts.backupRestore,
+                    text = L10n.dictionaryBackupRestore,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     style = MaterialTheme.typography.titleMedium,
@@ -91,7 +91,7 @@ fun DataManagementScreen(
 
                 SettingsCard {
                     ActionRow(
-                        label = DictionaryTexts.exportBackup,
+                        label = L10n.dictionaryExportBackup,
                         onClick = { if (!isProcessing) onExportBackup() },
                         icon = Icons.Outlined.FileUpload,
                         textColor = MaterialTheme.colorScheme.primary,
@@ -101,7 +101,7 @@ fun DataManagementScreen(
                         LoadingRow()
                     } else {
                         ActionRow(
-                            label = DictionaryTexts.importBackup,
+                            label = L10n.dictionaryImportBackup,
                             onClick = onImportBackup,
                             icon = Icons.Outlined.FileDownload,
                             textColor = MaterialTheme.colorScheme.primary,

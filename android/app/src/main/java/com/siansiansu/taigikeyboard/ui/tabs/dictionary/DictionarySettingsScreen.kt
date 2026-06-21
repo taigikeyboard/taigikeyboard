@@ -30,11 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
@@ -108,7 +109,7 @@ fun DictionarySettingsScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = DictionaryTexts.tabTitle,
+                        text = stringResource(R.string.tab_dictionary),
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },
@@ -134,29 +135,29 @@ fun DictionarySettingsScreen(
                         .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
                 // Data management
-                SectionHeader(DictionaryTexts.dataManagement)
+                SectionHeader(L10n.dictionaryDataManagement)
 
                 SettingsCard {
                     ActionRow(
-                        label = DictionaryTexts.customDictionary,
+                        label = L10n.dictionaryCustomDictionary,
                         onClick = onCustomDictionary,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
                     ActionRow(
-                        label = DictionaryTexts.frequencyManagement,
+                        label = L10n.dictionaryFrequencyManagement,
                         onClick = onNavigateToFrequency,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
                     ActionRow(
-                        label = DictionaryTexts.associationManagement,
+                        label = L10n.dictionaryAssociationManagement,
                         onClick = onNavigateToAssociation,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
                     ActionRow(
-                        label = DictionaryTexts.backupRestore,
+                        label = L10n.dictionaryBackupRestore,
                         onClick = onBackupRestore,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
@@ -165,7 +166,7 @@ fun DictionarySettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // MOE dictionaries (教育部)
-                SectionHeader(DictionaryTexts.moeSectionTitle)
+                SectionHeader(L10n.dictionaryMoeSectionTitle)
 
                 SettingsCard {
                     DictionaryRowWithDescription(
@@ -184,47 +185,47 @@ fun DictionarySettingsScreen(
                     // DictionarySubToggleRow; each writes its own pref + state.
                     val kautianSubcollRows: List<Triple<String, Boolean, (Boolean) -> Unit>> =
                         listOf(
-                            Triple(DictionaryTexts.kautianAccentLukang, kautianLukangEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentLukang, kautianLukangEnabled) { on ->
                                 kautianLukangEnabled = on
                                 prefs.kautianAccentLukangEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentSansia, kautianSansiaEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentSansia, kautianSansiaEnabled) { on ->
                                 kautianSansiaEnabled = on
                                 prefs.kautianAccentSansiaEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentTaipak, kautianTaipakEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentTaipak, kautianTaipakEnabled) { on ->
                                 kautianTaipakEnabled = on
                                 prefs.kautianAccentTaipakEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentGilan, kautianGilanEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentGilan, kautianGilanEnabled) { on ->
                                 kautianGilanEnabled = on
                                 prefs.kautianAccentGilanEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentTainan, kautianTainanEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentTainan, kautianTainanEnabled) { on ->
                                 kautianTainanEnabled = on
                                 prefs.kautianAccentTainanEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentKaohsiung, kautianKaohsiungEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentKaohsiung, kautianKaohsiungEnabled) { on ->
                                 kautianKaohsiungEnabled = on
                                 prefs.kautianAccentKaohsiungEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentKinmen, kautianKinmenEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentKinmen, kautianKinmenEnabled) { on ->
                                 kautianKinmenEnabled = on
                                 prefs.kautianAccentKinmenEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentMakung, kautianMakungEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentMakung, kautianMakungEnabled) { on ->
                                 kautianMakungEnabled = on
                                 prefs.kautianAccentMakungEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentSintik, kautianSintikEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentSintik, kautianSintikEnabled) { on ->
                                 kautianSintikEnabled = on
                                 prefs.kautianAccentSintikEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianAccentTaichung, kautianTaichungEnabled) { on ->
+                            Triple(L10n.dictionaryKautianAccentTaichung, kautianTaichungEnabled) { on ->
                                 kautianTaichungEnabled = on
                                 prefs.kautianAccentTaichungEnabled = on
                             },
-                            Triple(DictionaryTexts.kautianNameAppendix, kautianNameAppendixEnabled) { on ->
+                            Triple(L10n.dictionaryKautianNameAppendix, kautianNameAppendixEnabled) { on ->
                                 kautianNameAppendixEnabled = on
                                 prefs.kautianNameAppendixEnabled = on
                             },
@@ -277,7 +278,7 @@ fun DictionarySettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Other dictionaries
-                SectionHeader(DictionaryTexts.otherSectionTitle)
+                SectionHeader(L10n.dictionaryOtherSectionTitle)
 
                 SettingsCard {
                     DictionaryInfoSwitch(
@@ -320,11 +321,11 @@ fun DictionarySettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Supplementary data
-                SectionHeader(DictionaryTexts.supplementSectionTitle)
+                SectionHeader(L10n.dictionarySupplementSectionTitle)
 
                 SettingsCard {
                     DictionaryInfoSwitch(
-                        DictionaryTexts.variantDictionary,
+                        L10n.dictionaryVariantDictionary,
                         variantEnabled,
                         DictionaryInfoData.variant,
                     ) {
@@ -332,7 +333,7 @@ fun DictionarySettingsScreen(
                         prefs.variantEnabled = it
                     }
                     SettingsDivider()
-                    DictionaryInfoSwitch(DictionaryTexts.khiin, khiinEnabled, DictionaryInfoData.khiin) {
+                    DictionaryInfoSwitch(L10n.dictionaryKhiin, khiinEnabled, DictionaryInfoData.khiin) {
                         khiinEnabled = it
                         prefs.khiin = it
                     }
@@ -347,7 +348,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryRowWithDescription(
-                        label = DictionaryTexts.lkkDict,
+                        label = L10n.dictionaryLkkDict,
                         checked = lkkEnabled,
                         description = "李江却台語文教基金會漢羅合用建議用字。",
                         url = "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
@@ -358,7 +359,7 @@ fun DictionarySettingsScreen(
                     )
                     SettingsDivider()
                     DictionaryRowWithDescription(
-                        label = DictionaryTexts.devSupplementDict,
+                        label = L10n.dictionaryDevSupplementDict,
                         checked = devEnabled,
                         description = "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。",
                         url = "https://github.com/luke871016/Taigi-Input-method-dictionary-supplement",
@@ -377,7 +378,7 @@ fun DictionarySettingsScreen(
                     if (searchText.isNotEmpty()) {
                         if (searchResults.isEmpty() && !isSearching) {
                             Text(
-                                text = DictionaryTexts.noResults,
+                                text = L10n.dictionaryNoResults,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier =
@@ -416,7 +417,7 @@ fun DictionarySettingsScreen(
                     FilterSearchBar(
                         value = searchText,
                         onValueChange = { searchViewModel.updateSearchText(it) },
-                        placeholder = DictionaryTexts.searchPlaceholder,
+                        placeholder = L10n.dictionarySearchPlaceholder,
                         onClear = { focusManager.clearFocus() },
                     )
                 }

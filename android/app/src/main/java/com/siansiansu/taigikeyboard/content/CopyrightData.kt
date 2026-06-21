@@ -2,7 +2,6 @@ package com.siansiansu.taigikeyboard.content
 
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 
 // Copyright data for fonts, dictionaries, and data sources displayed in the Home tab
 
@@ -243,7 +242,7 @@ object CopyrightDataSource {
             // 9. 詞庫增補檔案
             CopyrightPage(
                 id = 12,
-                title = DictionaryTexts.devSupplementDict,
+                title = resolver.resolve(StringKey.DICTIONARY_DEV_SUPPLEMENT_DICT),
                 description = resolver.resolve(StringKey.HOME_DEV_SUPPLEMENT_CREDIT),
                 license = "",
                 buttons = emptyList(),

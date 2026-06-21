@@ -18,7 +18,8 @@ archive / `assemble` builds cannot link stale output.
 - `android/app/src/main/res/values/strings_i18n.xml` — Hanji default (the native-resource path).
 - `android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/generated/` — `StringKey`,
   `GeneratedTaigiStrings` (TL/POJ map), `GeneratedPseudoStrings` (debug layout probe), `L10n`
-  (typed Compose accessors). Excluded from spotless via `**/generated/**`.
+  (typed Compose accessors for plain keys), `StringResolverFormats` (typed non-Compose
+  `StringResolver.<key>(args)` accessors for format keys). Excluded from spotless via `**/generated/**`.
 
 ## Source schema
 
@@ -47,6 +48,17 @@ the generator's job):
 - Duplicate JSON keys are rejected (not silently last-wins).
 - `scope.platforms` ⊆ {ios, android}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
 - Every key must define the base language (`hanji`).
-- Every authored language must carry the same `{placeholder}` set as the base.
+- Every authored language must carry the same `{placeholder}` set as the base (order may differ —
+  substitution is by name, not position, so a reordered translation is allowed).
+
+### Format keys (placeholders)
+
+- A key whose base text contains `{placeholder}` spans MUST declare `placeholders` (name → type).
+  The only supported type today is `int`; the name must be a lowerCamelCase non-keyword identifier.
+- The canonical positional order (`%1$d`, `%2$d`, …) comes from first appearance in the base text;
+  every language substitutes by name, so a translation may reorder the placeholders.
+- Format keys do NOT get an `L10n` Compose getter (that would expose the raw `%1$d` template). They
+  get a typed `StringResolver.<accessor>(name: Int, …)` function in `StringResolverFormats.kt`, backed
+  by the hand-written `StringResolver.formatString` helper — call sites never touch a raw `%d`.
 
 POJ derive-from-TL (via `taigi-converter`) is deliberately not wired until TL strings exist (P3c).

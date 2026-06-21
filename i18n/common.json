@@ -11,6 +11,11 @@
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
       "values": { "hanji": "好" }
     },
+    "delete": {
+      "comment": "Generic delete action label / a11y description (custom-theme card menu item, dictionary row delete).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "刪除" }
+    },
     "viewWebsite": {
       "comment": "Link button opening an official website in the browser (data sources + the app's own site).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

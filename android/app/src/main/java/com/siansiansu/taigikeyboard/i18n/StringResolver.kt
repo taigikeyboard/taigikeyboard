@@ -37,7 +37,29 @@ class StringResolver(
             StringResolution.GeneratedMap -> GeneratedTaigiStrings.lookup(language, key) ?: hanjiContext.getString(key.resId)
             StringResolution.Pseudo -> GeneratedPseudoStrings.lookup(key) ?: hanjiContext.getString(key.resId)
         }
+
+    /**
+     * Locale used by [formatString] when interpolating numeric format args. Native languages use
+     * their own locale; the no-OS-locale paths (TL/POJ) and the debug Pseudo probe fall back to the
+     * Hanji locale. `%d` carries no grouping, so this is locale-stable for current counts, but it keeps
+     * the formatter honest if a grouped/`%,d` spec is ever authored.
+     */
+    val formattingLocale: Locale =
+        when (val resolution = language.resolution) {
+            is StringResolution.Native -> Locale.forLanguageTag(resolution.bcp47)
+            else -> Locale.forLanguageTag(BCP47_HANJI)
+        }
 }
+
+/**
+ * Resolves a format key's template under the active language and interpolates [args]. Backs the
+ * generated typed accessors in `StringResolverFormats.kt`, so call sites never touch a raw `%1$d`
+ * template (plan D6 — forbid raw `%d` at call sites).
+ */
+fun StringResolver.formatString(
+    key: StringKey,
+    vararg args: Any,
+): String = String.format(formattingLocale, resolve(key), *args)
 
 // Copies the base configuration and overrides only the locale (mirrors florisboard
 // FlorisAppActivity.kt:100). The returned context is used solely for getString(), which depends

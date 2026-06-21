@@ -136,11 +136,6 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "編輯" }
     },
-    "cardMenuDelete": {
-      "comment": "Custom-theme card action-menu item: delete this theme.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "刪除" }
-    },
     "capReachedTitle": {
       "comment": "Title of the alert shown when the custom-theme count cap (5) is reached.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

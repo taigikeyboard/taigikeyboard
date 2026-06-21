@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import java.util.UUID
 
 // Dialog for adding or editing a custom dictionary entry
@@ -35,7 +34,7 @@ internal fun EditEntryDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (isEditing) DictionaryTexts.editEntry else DictionaryTexts.addEntry,
+                if (isEditing) L10n.dictionaryEditEntry else L10n.dictionaryAddEntry,
             )
         },
         text = {
@@ -43,16 +42,16 @@ internal fun EditEntryDialog(
                 OutlinedTextField(
                     value = roman,
                     onValueChange = { roman = it },
-                    label = { Text(DictionaryTexts.romanLabel) },
-                    placeholder = { Text(DictionaryTexts.romanPlaceholder) },
+                    label = { Text(L10n.dictionaryRomanLabel) },
+                    placeholder = { Text(L10n.dictionaryRomanPlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = hanzi,
                     onValueChange = { hanzi = it },
-                    label = { Text(DictionaryTexts.hanziLabel) },
-                    placeholder = { Text(DictionaryTexts.hanziPlaceholder) },
+                    label = { Text(L10n.dictionaryHanziLabel) },
+                    placeholder = { Text(L10n.dictionaryHanziPlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -71,7 +70,7 @@ internal fun EditEntryDialog(
                 },
                 enabled = canSave,
             ) {
-                Text(DictionaryTexts.save)
+                Text(L10n.dictionarySave)
             }
         },
         dismissButton = {

@@ -30,8 +30,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
@@ -137,7 +137,7 @@ internal fun SearchResultRow(
                             modifier = Modifier.size(AppStyle.smallIconSize),
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(DictionaryTexts.lookupMoe)
+                        Text(L10n.dictionaryLookupMoe)
                     }
                 }
                 if (chhoeUrl != null) {
@@ -154,7 +154,7 @@ internal fun SearchResultRow(
                             modifier = Modifier.size(AppStyle.smallIconSize),
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(DictionaryTexts.lookupChhoe)
+                        Text(L10n.dictionaryLookupChhoe)
                     }
                 }
             }

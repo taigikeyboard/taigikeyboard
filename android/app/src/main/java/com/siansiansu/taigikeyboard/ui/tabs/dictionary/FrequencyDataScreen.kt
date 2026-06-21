@@ -44,7 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
+import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportResult
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
@@ -111,7 +111,7 @@ fun FrequencyDataScreen(
                             it.write(csv.toByteArray(Charsets.UTF_8))
                         }
                     }
-                    resultMessage = DictionaryTexts.exportSuccess
+                    resultMessage = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
                     showResultDialog = true
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
@@ -129,11 +129,9 @@ fun FrequencyDataScreen(
                 try {
                     val outcome = viewModel.importCSV(uri)
                     resultMessage =
-                        String.format(
-                            Locale.TAIWAN,
-                            DictionaryTexts.frequencyImportResult,
-                            outcome.imported,
-                            outcome.skipped,
+                        stringResolver.dictionaryImportResult(
+                            imported = outcome.imported,
+                            skipped = outcome.skipped,
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
@@ -148,7 +146,7 @@ fun FrequencyDataScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = DictionaryTexts.frequencyManagement,
+                        text = L10n.dictionaryFrequencyManagement,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -182,9 +180,9 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = DictionaryTexts.frequencyRecordingEnabled,
+                            label = L10n.dictionaryFrequencyRecordingEnabled,
                             checked = isRecordingEnabled,
-                            infoText = DictionaryTexts.frequencyRecordingEnabledInfo,
+                            infoText = L10n.dictionaryFrequencyRecordingEnabledInfo,
                             onCheckedChange = { viewModel.setRecordingEnabled(it) },
                         )
                     }
@@ -194,21 +192,21 @@ fun FrequencyDataScreen(
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = DictionaryTexts.importExportTitle,
+                        text = L10n.dictionaryImportExportTitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     SettingsCard {
                         Text(
-                            text = DictionaryTexts.frequencyDescription,
+                            text = L10n.dictionaryFrequencyDescription,
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = DictionaryTexts.frequencyExportCSV,
+                            label = L10n.dictionaryFrequencyExportCSV,
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -223,7 +221,7 @@ fun FrequencyDataScreen(
                             LoadingRow()
                         } else {
                             ActionRow(
-                                label = DictionaryTexts.frequencyImportCSV,
+                                label = L10n.dictionaryFrequencyImportCSV,
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -237,7 +235,7 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = DictionaryTexts.clearAllFrequency,
+                            label = L10n.dictionaryClearAllFrequency,
                             onClick = { if (!isImporting) showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -249,7 +247,7 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = DictionaryTexts.frequencyPrivacyWarning,
+                            text = L10n.dictionaryFrequencyPrivacyWarning,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -265,12 +263,12 @@ fun FrequencyDataScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = DictionaryTexts.frequencyManagement,
+                            text = L10n.dictionaryFrequencyManagement,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
-                        SettingInfoButton(description = DictionaryTexts.filterHint)
+                        SettingInfoButton(description = L10n.dictionaryFilterHint)
                     }
                 }
                 if (allData.isEmpty()) {
@@ -283,7 +281,7 @@ fun FrequencyDataScreen(
                                         .padding(horizontal = 20.dp, vertical = 16.dp),
                             ) {
                                 Text(
-                                    text = DictionaryTexts.noData,
+                                    text = L10n.dictionaryNoData,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -293,7 +291,7 @@ fun FrequencyDataScreen(
                     item {
                         SettingsCard {
                             Text(
-                                text = DictionaryTexts.noResults,
+                                text = L10n.dictionaryNoResults,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -343,7 +341,7 @@ fun FrequencyDataScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = DictionaryTexts.delete,
+                                    contentDescription = L10n.commonDelete,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -364,16 +362,16 @@ fun FrequencyDataScreen(
             FilterSearchBar(
                 value = filterText,
                 onValueChange = { filterText = it },
-                placeholder = DictionaryTexts.searchPlaceholder,
+                placeholder = L10n.dictionarySearchPlaceholder,
             )
         }
     }
 
     if (showClearDialog) {
         ConfirmationDialog(
-            title = DictionaryTexts.clearAllFrequency,
-            message = DictionaryTexts.clearFrequencyMessage,
-            confirmLabel = DictionaryTexts.clear,
+            title = L10n.dictionaryClearAllFrequency,
+            message = L10n.dictionaryClearFrequencyMessage,
+            confirmLabel = L10n.dictionaryClear,
             dismissLabel = L10n.commonCancel,
             onConfirm = {
                 showClearDialog = false

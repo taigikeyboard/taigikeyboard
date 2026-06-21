@@ -43,7 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
-import com.siansiansu.taigikeyboard.localization.DictionaryTexts
+import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportResult
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
@@ -113,7 +113,7 @@ fun AssociationDataScreen(
                             it.write(csv.toByteArray(Charsets.UTF_8))
                         }
                     }
-                    resultMessage = DictionaryTexts.exportSuccess
+                    resultMessage = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
                     showResultDialog = true
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
@@ -131,11 +131,9 @@ fun AssociationDataScreen(
                 try {
                     val outcome = viewModel.importCSV(uri)
                     resultMessage =
-                        String.format(
-                            Locale.TAIWAN,
-                            DictionaryTexts.associationImportResult,
-                            outcome.imported,
-                            outcome.skipped,
+                        stringResolver.dictionaryImportResult(
+                            imported = outcome.imported,
+                            skipped = outcome.skipped,
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
@@ -150,7 +148,7 @@ fun AssociationDataScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = DictionaryTexts.associationManagement,
+                        text = L10n.dictionaryAssociationManagement,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -184,9 +182,9 @@ fun AssociationDataScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = DictionaryTexts.associationRecordingEnabled,
+                            label = L10n.dictionaryAssociationRecordingEnabled,
                             checked = isRecordingEnabled,
-                            infoText = DictionaryTexts.associationRecordingEnabledInfo,
+                            infoText = L10n.dictionaryAssociationRecordingEnabledInfo,
                             onCheckedChange = { viewModel.setRecordingEnabled(it) },
                         )
                     }
@@ -196,21 +194,21 @@ fun AssociationDataScreen(
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = DictionaryTexts.importExportTitle,
+                        text = L10n.dictionaryImportExportTitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     SettingsCard {
                         Text(
-                            text = DictionaryTexts.associationDescription,
+                            text = L10n.dictionaryAssociationDescription,
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = DictionaryTexts.associationExportCSV,
+                            label = L10n.dictionaryAssociationExportCSV,
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -225,7 +223,7 @@ fun AssociationDataScreen(
                             LoadingRow()
                         } else {
                             ActionRow(
-                                label = DictionaryTexts.associationImportCSV,
+                                label = L10n.dictionaryAssociationImportCSV,
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -239,7 +237,7 @@ fun AssociationDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = DictionaryTexts.clearAllAssociation,
+                            label = L10n.dictionaryClearAllAssociation,
                             onClick = { if (!isImporting) showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -251,7 +249,7 @@ fun AssociationDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = DictionaryTexts.associationPrivacyWarning,
+                            text = L10n.dictionaryAssociationPrivacyWarning,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -267,12 +265,12 @@ fun AssociationDataScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = DictionaryTexts.associationManagement,
+                            text = L10n.dictionaryAssociationManagement,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
-                        SettingInfoButton(description = DictionaryTexts.filterHint)
+                        SettingInfoButton(description = L10n.dictionaryFilterHint)
                     }
                 }
                 if (allData.isEmpty()) {
@@ -285,7 +283,7 @@ fun AssociationDataScreen(
                                         .padding(horizontal = 20.dp, vertical = 16.dp),
                             ) {
                                 Text(
-                                    text = DictionaryTexts.noData,
+                                    text = L10n.dictionaryNoData,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -295,7 +293,7 @@ fun AssociationDataScreen(
                     item {
                         SettingsCard {
                             Text(
-                                text = DictionaryTexts.noResults,
+                                text = L10n.dictionaryNoResults,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -332,7 +330,7 @@ fun AssociationDataScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = DictionaryTexts.delete,
+                                    contentDescription = L10n.commonDelete,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -353,16 +351,16 @@ fun AssociationDataScreen(
             FilterSearchBar(
                 value = filterText,
                 onValueChange = { filterText = it },
-                placeholder = DictionaryTexts.searchPlaceholder,
+                placeholder = L10n.dictionarySearchPlaceholder,
             )
         }
     }
 
     if (showClearDialog) {
         ConfirmationDialog(
-            title = DictionaryTexts.clearAllAssociation,
-            message = DictionaryTexts.clearAssociationMessage,
-            confirmLabel = DictionaryTexts.clear,
+            title = L10n.dictionaryClearAllAssociation,
+            message = L10n.dictionaryClearAssociationMessage,
+            confirmLabel = L10n.dictionaryClear,
             dismissLabel = L10n.commonCancel,
             onConfirm = {
                 showClearDialog = false
