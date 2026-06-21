@@ -60,7 +60,7 @@ fun CopyrightScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = L10n.commonBack,
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }

@@ -12,6 +12,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.COMMON_OK)
     val commonDelete: String
         @Composable get() = stringRes(StringKey.COMMON_DELETE)
+    val commonBack: String
+        @Composable get() = stringRes(StringKey.COMMON_BACK)
     val commonViewWebsite: String
         @Composable get() = stringRes(StringKey.COMMON_VIEW_WEBSITE)
     val commonExportFailed: String

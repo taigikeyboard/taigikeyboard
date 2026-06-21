@@ -8,6 +8,7 @@ object GeneratedPseudoStrings {
             StringKey.COMMON_CANCEL to "⟦取消··⟧",
             StringKey.COMMON_OK to "⟦好··⟧",
             StringKey.COMMON_DELETE to "⟦刪除··⟧",
+            StringKey.COMMON_BACK to "⟦返回··⟧",
             StringKey.COMMON_VIEW_WEBSITE to "⟦官方網站··⟧",
             StringKey.COMMON_EXPORT_FAILED to "⟦匯出失敗··⟧",
             StringKey.COMMON_IMPORT_FAILED to "⟦匯入失敗··⟧",

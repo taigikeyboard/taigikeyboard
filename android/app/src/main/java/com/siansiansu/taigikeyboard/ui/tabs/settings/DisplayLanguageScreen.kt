@@ -53,7 +53,7 @@ fun DisplayLanguageScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = L10n.commonBack,
                         )
                     }
                 },
