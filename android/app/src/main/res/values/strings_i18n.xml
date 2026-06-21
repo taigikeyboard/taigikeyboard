@@ -135,10 +135,9 @@
     <string name="i18n_layout_tpsLayout">方音符號齒佈</string>
     <string name="i18n_layout_moe1Layout">教育部輸入法齒佈1</string>
     <string name="i18n_layout_moe2Layout">教育部輸入法齒佈2</string>
-    <string name="i18n_probe_appHeaderTitle">台語齒盤</string>
-    <string name="i18n_probe_liveSwitchDemo">即時切換語言示範</string>
     <string name="i18n_settings_reset">恢復</string>
     <string name="i18n_settings_inputMode">輸入模式</string>
+    <string name="i18n_settings_displayLanguage">顯示語言</string>
     <string name="i18n_settings_pojMode">白話字</string>
     <string name="i18n_settings_tlMode">台羅</string>
     <string name="i18n_settings_englishMode">英文</string>

@@ -36,7 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
-import com.siansiansu.taigikeyboard.i18n.I18nProbeBar
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
@@ -69,8 +70,12 @@ fun InputSettingsScreen(
 ) {
     val context = LocalContext.current
     var showResetDialog by remember { mutableStateOf(false) }
+    var showDisplayLanguagePicker by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
     var showFontPicker by remember { mutableStateOf(false) }
+    // Authoritative selected display language — driven by the Activity-root ProvideDisplayLanguage(prefs)
+    // Flow, so it stays correct across reset/live-switch without a local snapshot.
+    val displayLanguage = LocalDisplayLanguage.current
     // Each state re-reads from prefs when resetCounter changes (after settings reset)
     var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
     var fontType by remember(resetCounter) { mutableStateOf(prefs.fontType) }
@@ -90,7 +95,13 @@ fun InputSettingsScreen(
 
     fun featureSummary(featureId: String): String? = features.firstOrNull { it.id == featureId }?.summary
 
-    if (showInputModePicker) {
+    if (showDisplayLanguagePicker) {
+        DisplayLanguageScreen(
+            selectedLanguage = displayLanguage,
+            onLanguageSelected = { prefs.displayLanguageTag = it.tag },
+            onBack = { showDisplayLanguagePicker = false },
+        )
+    } else if (showInputModePicker) {
         InputModeScreen(
             selectedMode = inputMode,
             onModeSelected = {
@@ -141,8 +152,18 @@ fun InputSettingsScreen(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
-                // Debug-only i18n live-switch probe (no-op in release).
-                I18nProbeBar(prefs)
+                // App UI display language — its own card, kept distinct from the input-mode card below
+                // so the two "language / mode" pickers don't read as related. Mirrors iOS SettingsTab.
+                SettingsCard {
+                    SettingNavigationRow(
+                        label = L10n.settingsDisplayLanguage,
+                        value = displayLanguage.endonym,
+                        onClick = { showDisplayLanguagePicker = true },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 SettingsCard {
                     SettingNavigationRow(
                         label = L10n.settingsInputMode,

@@ -29,12 +29,12 @@ sealed interface StringResolution {
 /**
  * App UI display language — orthogonal to the keyboard input mode.
  *
- * R2a-1 is behaviour-frozen infra: only [HANJI] carries real strings; every other language
- * falls back to Hanji until its authoring phase populates it (P2 en / P3a ja / P3b TL / P3c POJ).
- * [PSEUDO] is a debug-only layout probe, never offered in the production picker.
+ * Hanji + English are authored and user-selectable ([productionLanguages]); every other language
+ * falls back to Hanji until its authoring phase populates it (P3a ja / P3b TL / P3c POJ) and it joins
+ * [productionLanguages]. [PSEUDO] is a debug-only layout probe, offered only in debug builds.
  *
  * `system` (Automatic) is deliberately absent — it is a locale-negotiation policy, not a string
- * set, and is introduced with the picker in P2; R2a-1 keeps the app pinned to Hanji.
+ * set, deferred to a later round.
  */
 enum class DisplayLanguage(
     val tag: String,
@@ -48,18 +48,49 @@ enum class DisplayLanguage(
     PSEUDO("pseudo", StringResolution.Pseudo),
     ;
 
+    /**
+     * The language's own name in its own script (endonym), shown in the picker regardless of the
+     * current UI language (W3C-recommended) so a user can always find their language. Language-invariant,
+     * so it is NOT an i18n key. The endonym strings MUST match across platforms.
+     * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
+     * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift:34 `endonym`. Drift causes silent divergence.
+     */
+    val endonym: String
+        get() =
+            when (this) {
+                HANJI -> "漢字"
+                TAILO -> "Tâi-lô"
+                POJ -> "Pe̍h-ōe-jī"
+                JAPANESE -> "日本語"
+                ENGLISH -> "English"
+                PSEUDO -> "PSEUDO · DEBUG"
+            }
+
     companion object {
         // Default tag persisted before the user ever picks a language. Keeps the app on Hanji.
         const val DEFAULT_TAG = "hanji"
 
         /**
-         * Maps a persisted tag to a language. Unknown tags fall back to [HANJI] (anti-crash).
-         * A leftover "pseudo" tag from a debug build resolves to [HANJI] in release, so production
-         * never renders the layout-probe strings.
+         * Authored, user-selectable production languages. Drives the Settings language picker and clamps
+         * [fromTag]. Grows by one entry as each language's authoring phase lands (P3a ja / P3b TL / P3c POJ).
+         * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
+         * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift:68 `productionLanguages`. Drift causes silent divergence.
+         */
+        val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH)
+
+        /** What the picker offers: the production roster, plus the [PSEUDO] layout probe in debug only. */
+        val selectableLanguages: List<DisplayLanguage>
+            get() = if (BuildConfig.DEBUG) productionLanguages + PSEUDO else productionLanguages
+
+        /**
+         * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or
+         * one whose language is not yet user-selectable (a leftover "pseudo" in release, or a ja/tl/poj
+         * tag from a future build) resolves to [HANJI], so the effective language always matches a picker
+         * option. The persisted tag itself is left untouched, so it restores once that language ships.
          */
         fun fromTag(tag: String): DisplayLanguage {
             val match = entries.firstOrNull { it.tag == tag } ?: HANJI
-            return if (match == PSEUDO && !BuildConfig.DEBUG) HANJI else match
+            return if (match in selectableLanguages) match else HANJI
         }
     }
 }

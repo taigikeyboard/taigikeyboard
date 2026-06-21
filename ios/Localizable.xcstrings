@@ -2521,6 +2521,24 @@
         }
       }
     },
+    "i18n_settings_displayLanguage": {
+      "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Option labels are endonyms, not i18n keys.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display Language"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示語言"
+          }
+        }
+      }
+    },
     "i18n_settings_doubleTapNN": {
       "comment": "Toggle label: double-tap nn composes ⁿ (POJ nasal).",
       "extractionState": "manual",

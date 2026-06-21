@@ -137,6 +137,7 @@ enum StringKey: String {
     case layoutComingSoon = "i18n_layout_comingSoon"
     case settingsReset = "i18n_settings_reset"
     case settingsInputMode = "i18n_settings_inputMode"
+    case settingsDisplayLanguage = "i18n_settings_displayLanguage"
     case settingsPojMode = "i18n_settings_pojMode"
     case settingsTlMode = "i18n_settings_tlMode"
     case settingsEnglishMode = "i18n_settings_englishMode"

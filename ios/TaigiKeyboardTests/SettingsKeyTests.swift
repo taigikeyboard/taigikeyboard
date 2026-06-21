@@ -274,6 +274,24 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.colorSettings, .default)
     }
 
+    // MARK: - DisplayLanguage roster + clamp
+
+    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_pinsHanjiAndEnglish() {
+        // CROSS-PLATFORM INVARIANT — must equal the Android productionLanguages roster (behavioral-invariants.md §37).
+        XCTAssertEqual(DisplayLanguage.productionLanguages.map(\.tag), ["hanji", "en"])
+    }
+
+    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_fromTagClampsToSelectable() {
+        XCTAssertEqual(DisplayLanguage.fromTag("hanji"), .hanji)
+        XCTAssertEqual(DisplayLanguage.fromTag("en"), .english)
+        // Unauthored identities + unknown tags clamp to Hanji so the picker selection always matches
+        // the rendered language; the persisted tag itself is left untouched (see the migration tests).
+        XCTAssertEqual(DisplayLanguage.fromTag("tailo"), .hanji)
+        XCTAssertEqual(DisplayLanguage.fromTag("poj"), .hanji)
+        XCTAssertEqual(DisplayLanguage.fromTag("ja"), .hanji)
+        XCTAssertEqual(DisplayLanguage.fromTag("xx"), .hanji)
+    }
+
     // MARK: - Raw-key migration parity
 
     /// Locks in the exact persisted `UserDefaults` key strings per

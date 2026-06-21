@@ -67,24 +67,20 @@ struct SettingsTab: View {
     var body: some View {
         NavigationStack {
             Form {
-                #if DEBUG
-                // 中文: i18n 顯示語言除錯切換 (HANJI↔EN↔PSEUDO),dogfood 用以驗證 live-switch;release build 完全不存在。
-                // DEBUG-only probe: flips the display language. EN exercises the real authored English
-                // (P2 R3-1), PSEUDO the layout-inflated probe; the production picker arrives in R3-3.
+                // App UI display language — its own Section (separate card), kept distinct from the
+                // input-mode row below so the two "language / mode" pickers don't read as related.
                 Section {
-                    Picker(
-                        "i18n display language",
-                        selection: Binding(get: { lang.language }, set: { lang.setLanguage($0) }),
-                    ) {
-                        Text("HANJI").tag(DisplayLanguage.hanji)
-                        Text("EN").tag(DisplayLanguage.english)
-                        Text("PSEUDO").tag(DisplayLanguage.pseudo)
+                    NavigationLink {
+                        DisplayLanguagePickerView()
+                    } label: {
+                        HStack {
+                            Text(lang.string(.settingsDisplayLanguage))
+                            Spacer()
+                            Text(lang.language.endonym)
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    .pickerStyle(.segmented)
-                } header: {
-                    Text("DEBUG · i18n probe")
                 }
-                #endif
 
                 // Input mode
                 Section {

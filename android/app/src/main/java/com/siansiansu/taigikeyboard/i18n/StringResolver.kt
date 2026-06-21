@@ -109,7 +109,7 @@ fun buildStringResolver(
 fun Context.currentStringResolver(): StringResolver =
     buildStringResolver(this, DisplayLanguage.fromTag(PrefHelper(this).displayLanguageTag))
 
-/** The active display language, so debug/probe UI can read the current selection. */
+/** The active display language — drives the Settings language picker's selected state + trailing value. */
 val LocalDisplayLanguage = staticCompositionLocalOf { DisplayLanguage.HANJI }
 
 val LocalStringResolver =

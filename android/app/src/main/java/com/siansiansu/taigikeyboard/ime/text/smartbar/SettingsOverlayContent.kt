@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.i18n.I18nProbeBar
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
@@ -94,8 +93,6 @@ fun SettingsOverlayContent(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 4.dp, bottom = 8.dp),
     ) {
-        // Debug-only i18n live-switch probe (no-op in release).
-        I18nProbeBar(prefs)
         // General settings
         SwitchRow(
             label = L10n.settingsOutputBothScripts,

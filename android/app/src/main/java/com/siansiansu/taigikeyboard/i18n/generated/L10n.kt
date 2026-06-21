@@ -270,14 +270,12 @@ object L10n {
         @Composable get() = stringRes(StringKey.LAYOUT_MOE1_LAYOUT)
     val layoutMoe2Layout: String
         @Composable get() = stringRes(StringKey.LAYOUT_MOE2_LAYOUT)
-    val probeAppHeaderTitle: String
-        @Composable get() = stringRes(StringKey.PROBE_APP_HEADER_TITLE)
-    val probeLiveSwitchDemo: String
-        @Composable get() = stringRes(StringKey.PROBE_LIVE_SWITCH_DEMO)
     val settingsReset: String
         @Composable get() = stringRes(StringKey.SETTINGS_RESET)
     val settingsInputMode: String
         @Composable get() = stringRes(StringKey.SETTINGS_INPUT_MODE)
+    val settingsDisplayLanguage: String
+        @Composable get() = stringRes(StringKey.SETTINGS_DISPLAY_LANGUAGE)
     val settingsPojMode: String
         @Composable get() = stringRes(StringKey.SETTINGS_POJ_MODE)
     val settingsTlMode: String

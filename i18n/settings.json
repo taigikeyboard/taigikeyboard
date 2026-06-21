@@ -11,6 +11,11 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "輸入模式", "en": "Input Mode" }
     },
+    "displayLanguage": {
+      "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Option labels are endonyms, not i18n keys.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "顯示語言", "en": "Display Language" }
+    },
     "pojMode": {
       "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

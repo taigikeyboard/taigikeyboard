@@ -8,12 +8,24 @@ import org.junit.Test
 
 class DisplayLanguageTest {
     @Test
-    fun fromTag_knownTags_roundTrip() {
+    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_pinsHanjiAndEnglish() {
+        // CROSS-PLATFORM INVARIANT — must equal the iOS productionLanguages roster (behavioral-invariants.md §37).
+        assertEquals(listOf("hanji", "en"), DisplayLanguage.productionLanguages.map { it.tag })
+    }
+
+    @Test
+    fun fromTag_selectableTags_survive() {
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("hanji"))
-        assertEquals(DisplayLanguage.TAILO, DisplayLanguage.fromTag("tailo"))
-        assertEquals(DisplayLanguage.POJ, DisplayLanguage.fromTag("poj"))
-        assertEquals(DisplayLanguage.JAPANESE, DisplayLanguage.fromTag("ja"))
         assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.fromTag("en"))
+    }
+
+    @Test
+    fun fromTag_unauthoredTags_clampToHanji() {
+        // ja/tl/poj are valid identities but not yet user-selectable, so the effective language is
+        // Hanji — the picker selection and the rendered strings always agree. Persisted tag untouched.
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("tailo"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("poj"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("ja"))
     }
 
     @Test
@@ -24,7 +36,7 @@ class DisplayLanguageTest {
 
     @Test
     fun fromTag_pseudoInDebugBuild_resolvesPseudo() {
-        // testDebugUnitTest runs with BuildConfig.DEBUG == true, so the probe tag survives.
+        // testDebugUnitTest runs with BuildConfig.DEBUG == true, so the debug-only probe tag survives.
         assertEquals(DisplayLanguage.PSEUDO, DisplayLanguage.fromTag("pseudo"))
     }
 

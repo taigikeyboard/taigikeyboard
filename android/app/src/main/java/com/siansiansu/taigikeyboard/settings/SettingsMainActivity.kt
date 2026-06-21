@@ -97,7 +97,7 @@ class SettingsMainActivity : AppCompatActivity() {
 
         setContent {
             val resetCounter by resetViewModel.resetCounter.collectAsStateWithLifecycle()
-            // i18n live-switch root: prefs.displayLanguageTag changes (host picker or IME overlay)
+            // i18n live-switch root: when the host Settings language picker changes prefs.displayLanguageTag,
             // re-provide this subtree and recompose every stringRes consumer — no Activity recreate.
             ProvideDisplayLanguage(prefs) {
                 TaigiKeyboardTheme {
