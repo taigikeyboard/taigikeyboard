@@ -315,5 +315,135 @@ class GlobalValidationTest(unittest.TestCase):
             self.assertIn("duplicate accessor", str(ctx.exception))
 
 
+def _plural_key(values: dict, placeholders: dict) -> dict:
+    # A format key scoped to both platforms so the Kotlin AND Swift format emitters both produce it.
+    return {"scope": {"platforms": ["android", "ios"], "surfaces": ["host"]}, "values": values, "placeholders": placeholders}
+
+
+# A two-count plural message: each count selects its own one/other arm independently.
+_PLURAL_VALUES = {
+    "hanji": "匯入 {customDict} 自訂、{frequency} 詞頻",
+    "en": "Imported {customDict, plural, one {# custom entry} other {# custom entries}}, "
+    "{frequency, plural, one {# frequency record} other {# frequency records}}",
+}
+_PLURAL_PLACEHOLDERS = {"customDict": "int", "frequency": "int"}
+
+
+class PluralParseTest(unittest.TestCase):
+    def test_flat_message_parses_to_lit_and_arg(self):
+        self.assertEqual(
+            i18n_lib.parse_message("a {x} b"),
+            [("lit", "a "), ("arg", "x"), ("lit", " b")],
+        )
+
+    def test_plural_parses_arms_and_hash_is_the_count(self):
+        nodes = i18n_lib.parse_message("{n, plural, one {# item} other {# items}}")
+        self.assertEqual(nodes[0][0], "plural")
+        self.assertEqual(nodes[0][1], "n")
+        # `#` inside an arm lowers to the plural's own count argument.
+        self.assertEqual(nodes[0][2]["one"], [("arg", "n"), ("lit", " item")])
+        self.assertEqual(nodes[0][2]["other"], [("arg", "n"), ("lit", " items")])
+
+    def test_names_in_order_collects_plural_names(self):
+        names = i18n_lib._placeholder_names_in_order(_PLURAL_VALUES["en"])
+        self.assertEqual(names, ["customDict", "frequency"])
+
+    def test_missing_other_arm_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            i18n_lib.parse_message("{n, plural, one {# item}}")
+        self.assertIn("other", str(ctx.exception))
+
+    def test_unsupported_category_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            i18n_lib.parse_message("{n, plural, many {# items} other {# items}}")
+        self.assertIn("category", str(ctx.exception))
+
+    def test_nested_placeholder_in_arm_rejected(self):
+        with self.assertRaises(ValueError):
+            i18n_lib.parse_message("{n, plural, one {# {x}} other {# items}}")
+
+    def test_non_plural_argument_keyword_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            i18n_lib.parse_message("{n, select, other {x}}")
+        self.assertIn("plural", str(ctx.exception))
+
+    def test_icu_quoted_brace_rejected(self):
+        # `'{n}'` is ICU quoting (literal braces); unsupported, must raise rather than mis-parse.
+        with self.assertRaises(ValueError) as ctx:
+            i18n_lib.parse_message("a '{n}' b")
+        self.assertIn("quoting", str(ctx.exception))
+
+    def test_icu_quoted_hash_in_arm_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            i18n_lib.parse_message("{n, plural, one {'#' item} other {# items}}")
+        self.assertIn("quoting", str(ctx.exception))
+
+    def test_lone_apostrophe_in_prose_is_literal(self):
+        # A lone apostrophe (not beginning ICU quoting) stays literal — real copy has `user's`.
+        self.assertEqual(i18n_lib.parse_message("user's data"), [("lit", "user's data")])
+
+
+class PluralValidateTest(unittest.TestCase):
+    def _validate(self, keys: dict) -> None:
+        validate_namespace("probe", {"namespace": "probe", "keys": keys}, Path("probe.json"))
+
+    def test_translation_plural_with_flat_base_passes(self):
+        self._validate({"k": _plural_key(_PLURAL_VALUES, _PLURAL_PLACEHOLDERS)})
+
+    def test_plural_in_base_language_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            self._validate({"k": _plural_key({"hanji": "{n, plural, one {#} other {#}}"}, {"n": "int"})})
+        self.assertIn("must not use plural", str(ctx.exception))
+
+
+class PluralEmitTest(unittest.TestCase):
+    def _outputs(self) -> dict:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "probe", {"imp": _plural_key(_PLURAL_VALUES, _PLURAL_PLACEHOLDERS)})
+            return build_outputs(repo)
+
+    def test_android_resource_holds_other_arm(self):
+        # Native resources render the `other` arm — the runtime fallback the typed accessor overrides.
+        en_xml = self._outputs()[f"{i18n_lib.ANDROID_RES_ROOT}/values-en/strings_i18n.xml"]
+        self.assertIn("%1$d custom entries, %2$d frequency records", en_xml)
+        self.assertNotIn("plural", en_xml)
+        self.assertNotIn("custom entry,", en_xml)  # the singular arm never reaches the resource
+
+    def test_kotlin_accessor_selects_arm_by_language_and_count(self):
+        formats = self._outputs()[f"{i18n_lib.GEN_PKG_DIR}/StringResolverFormats.kt"]
+        self.assertIn("if (displayLanguage == DisplayLanguage.ENGLISH)", formats)
+        # Each count selects its own arm independently (assert the 1st AND 2nd placeholder).
+        self.assertIn('(if (customDict == 1) "%1\\$d custom entry" else "%1\\$d custom entries")', formats)
+        self.assertIn('(if (frequency == 1) "%2\\$d frequency record" else "%2\\$d frequency records")', formats)
+        self.assertIn("formatTemplate(", formats)
+        self.assertIn("formatString(StringKey.PROBE_IMP, customDict, frequency)", formats)  # else fallback
+        self.assertIn("import com.siansiansu.taigikeyboard.i18n.DisplayLanguage", formats)
+        self.assertIn("import com.siansiansu.taigikeyboard.i18n.formatTemplate", formats)
+
+    def test_swift_accessor_selects_arm_by_language_and_count(self):
+        formats = self._outputs()[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]
+        self.assertIn("if language == .english", formats)
+        # Each count selects its own arm independently (assert the 1st AND 2nd placeholder).
+        self.assertIn('(customDict == 1 ? "%1$lld custom entry" : "%1$lld custom entries")', formats)
+        self.assertIn('(frequency == 1 ? "%2$lld frequency record" : "%2$lld frequency records")', formats)
+        self.assertIn("formatTemplate(", formats)
+        self.assertIn("format(.probeImp, Int64(customDict), Int64(frequency))", formats)  # default fallback
+
+    def test_plural_authored_for_non_english_rejected(self):
+        # Only English carries a plural selector (CLDR en: n == 1); a plural in another language would
+        # silently apply the wrong rule, so the codegen rejects it loudly.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "probe",
+                {"imp": _plural_key({"hanji": "{n} x", "ja": "{n, plural, one {#} other {#}}"}, {"n": "int"})},
+            )
+            with self.assertRaises(ValueError) as ctx:
+                build_outputs(repo)
+            self.assertIn("only English", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

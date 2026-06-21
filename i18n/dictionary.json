@@ -361,7 +361,7 @@
       "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "placeholders": { "customDict": "int", "frequency": "int", "association": "int" },
-      "values": { "hanji": "匯入 {customDict} 項自訂詞、{frequency} 項詞頻、{association} 項詞關聯", "en": "Imported {customDict} custom entries, {frequency} frequency records, {association} association records" }
+      "values": { "hanji": "匯入 {customDict} 項自訂詞、{frequency} 項詞頻、{association} 項詞關聯", "en": "Imported {customDict, plural, one {# custom entry} other {# custom entries}}, {frequency, plural, one {# frequency record} other {# frequency records}}, {association, plural, one {# association record} other {# association records}}" }
     },
     "backupPrivacyWarning": {
       "comment": "Privacy note that backup files contain all usage records and are cross-platform.",

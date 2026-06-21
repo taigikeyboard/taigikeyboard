@@ -58,6 +58,13 @@ LANG_TO_BCP47 = {
 # the raw synthetic key. Verified on Xcode 26.5 xcstringstool (Codex pre-impl Q1).
 XCSTRINGS_SOURCE_LANGUAGE = BCP47_HANJI
 
+# DisplayLanguage enum case for English, per platform — the only count-inflecting display language, so
+# the plural-aware typed accessor branches on it alone (`displayLanguage == DisplayLanguage.ENGLISH` /
+# `language == .english`). MIRROR: must equal the enum case in the matching DisplayLanguage source —
+# android/.../i18n/DisplayLanguage.kt and ios/.../Strings/DisplayLanguage.swift; drift breaks the branch.
+ANDROID_ENGLISH_ENUM = "ENGLISH"
+IOS_ENGLISH_ENUM = "english"
+
 # Languages resolved via native Android resource dirs (plan D2). hanji -> default values/ (always
 # emitted); en/ja -> language-qualified dirs, emitted only once a key actually carries that value.
 NATIVE_RESOURCE_DIRS = {
@@ -115,32 +122,184 @@ KOTLIN_KEYWORDS = frozenset(
 )
 
 
-# --- Placeholder transforms -------------------------------------------------
+# --- Message parsing (placeholders + ICU plural subset) ---------------------
+#
+# A message is parsed into a small AST so a flat `{name}` and an inline ICU plural
+# `{name, plural, one {# entry} other {# entries}}` share one code path. The supported grammar is a
+# STRICT subset of ICU MessageFormat (the ARB/TMS-standard authoring syntax):
+#   - `{name}`                                   simple argument
+#   - `{name, plural, one {...} other {...}}`    plural; `one` arm optional, `other` arm required
+#   - `#` inside a plural arm                     the enclosing plural's count
+# Deliberately NOT supported (rejected loudly, not silently mis-parsed): nested plural/select,
+# `offset:`, `=N` exact selectors, the CLDR `zero`/`two`/`few`/`many` categories, nested `{...}`
+# inside an arm, and `'...'` quoting. Plural is authored only in translations whose language inflects
+# nouns by count — only English among the 5 display languages — so the runtime selector is `n == 1`
+# (CLDR `en`); the codegen rejects a plural authored for any other language (see _emit_*_formats).
+
+PLURAL_CATEGORIES = ("one", "other")  # the CLDR subset this codegen renders
+
+
+def parse_message(text: str) -> list:
+    # Parse a message into AST nodes: ("lit", str) | ("arg", name) | ("plural", name, {category: [nodes]}).
+    nodes, _ = _parse_segment(text, 0, len(text), enclosing_plural=None)
+    return nodes
+
+
+def _parse_segment(text: str, i: int, end: int, enclosing_plural):
+    # Parse a run of literals / `{...}` placeholders / `#` (only meaningful inside a plural arm).
+    nodes = []
+    buffer = []
+
+    def flush():
+        if buffer:
+            nodes.append(("lit", "".join(buffer)))
+            buffer.clear()
+
+    while i < end:
+        char = text[i]
+        if char == "'" and i + 1 < end and text[i + 1] in "{}#'":
+            # ICU quoting (`'{'`, `''`, `'#'`) is not supported — it would silently change meaning
+            # (a quoted `#` is a literal hash, not the count). A lone apostrophe in prose (`user's`,
+            # `Shun'ichi`) is fine: only an apostrophe that begins quoting (next char is ICU syntax)
+            # is rejected.
+            raise ValueError(f"ICU quoting ('...') is not supported in message: {text!r}")
+        if char == "#" and enclosing_plural is not None:
+            flush()
+            nodes.append(("arg", enclosing_plural))  # `#` == the enclosing plural's count
+            i += 1
+        elif char == "{":
+            flush()
+            node, i = _parse_brace(text, i, end)
+            nodes.append(node)
+        elif char == "}":
+            raise ValueError(f"unbalanced '}}' in message: {text!r}")
+        else:
+            buffer.append(char)
+            i += 1
+    flush()
+    return nodes, i
+
+
+def _parse_brace(text: str, i: int, end: int):
+    # text[i] == '{'. Returns ("arg", name) for `{name}` or ("plural", name, arms) for a plural.
+    i += 1
+    name, i = _read_until(text, i, end, ",}")
+    name = name.strip()
+    if i >= end:
+        raise ValueError(f"unterminated '{{' in message: {text!r}")
+    if not IDENTIFIER_RE.fullmatch(name):
+        raise ValueError(f"placeholder name {name!r} must be a lowerCamelCase identifier")
+    if text[i] == "}":
+        return ("arg", name), i + 1
+    # text[i] == ',' → a plural argument: `{name, plural, <category> {<arm>} ...}`.
+    i += 1  # skip the ',' after the name
+    keyword, i = _read_until(text, i, end, ",}")
+    if keyword.strip() != "plural":
+        raise ValueError(f"only 'plural' arguments are supported, got {keyword.strip()!r} in {text!r}")
+    if i >= end or text[i] != ",":
+        raise ValueError(f"plural argument {name!r} is missing its categories in {text!r}")
+    i += 1  # skip the ',' after 'plural'
+    arms = {}
+    while True:
+        category, i = _read_until(text, i, end, "{}")
+        category = category.strip()
+        if i < end and text[i] == "}":
+            if category:
+                raise ValueError(f"plural category {category!r} is missing its arm {{...}} in {text!r}")
+            break  # the plural argument's closing brace
+        if i >= end:
+            raise ValueError(f"unterminated plural argument {name!r} in {text!r}")
+        # text[i] == '{' → an arm begins; `category` is the selector for it.
+        if category not in PLURAL_CATEGORIES:
+            raise ValueError(f"unsupported plural category {category!r} (only {list(PLURAL_CATEGORIES)}) in {text!r}")
+        if category in arms:
+            raise ValueError(f"duplicate plural category {category!r} in {text!r}")
+        arm_nodes, i = _parse_arm(text, i, end, name)
+        arms[category] = arm_nodes
+    i += 1  # skip the plural argument's closing '}'
+    if "other" not in arms:
+        raise ValueError(f"plural argument {name!r} must define the 'other' category in {text!r}")
+    return ("plural", name, arms), i
+
+
+def _parse_arm(text: str, i: int, end: int, plural_name: str):
+    # text[i] == '{'. An arm body holds only literals and `#`; nested placeholders/braces are rejected.
+    i += 1
+    body = []
+    while i < end and text[i] != "}":
+        if text[i] == "{":
+            raise ValueError(f"nested placeholder inside a plural arm is not supported in {text!r}")
+        body.append(text[i])
+        i += 1
+    if i >= end:
+        raise ValueError(f"unterminated plural arm in {text!r}")
+    # arm_text is brace-free by construction (nested `{` rejected above, `}` ends the body), so the
+    # recursive parse only exercises the literal / `#` / quoting branches — never another `{...}`.
+    arm_text = "".join(body)
+    arm_nodes, _ = _parse_segment(arm_text, 0, len(arm_text), enclosing_plural=plural_name)
+    return arm_nodes, i + 1  # +1 skips the arm's closing '}'
+
+
+def _read_until(text: str, i: int, end: int, stop_chars: str):
+    # Reads up to (not including) the first stop char; returns (token, index_at_stop).
+    start = i
+    while i < end and text[i] not in stop_chars:
+        i += 1
+    return text[start:i], i
+
+
+def _names_in_order(nodes: list, accumulator: list) -> list:
+    for node in nodes:
+        if node[0] in ("arg", "plural"):
+            if node[1] not in accumulator:
+                accumulator.append(node[1])
+            if node[0] == "plural":
+                for arm in node[2].values():
+                    _names_in_order(arm, accumulator)
+    return accumulator
+
+
+def _has_plural(nodes: list) -> bool:
+    return any(node[0] == "plural" for node in nodes)
 
 
 def _placeholder_names_in_order(text: str) -> list:
-    # Names of the {placeholder} spans, de-duplicated, in order of first appearance. The base-language
-    # text defines the canonical positional order shared by every language (Fork 6: substitute by name).
-    seen = []
-    for match in PLACEHOLDER_RE.finditer(text):
-        name = match.group()[1:-1]
-        if name not in seen:
-            seen.append(name)
-    return seen
+    # Names of the placeholders, de-duplicated, in order of first appearance. The base-language text
+    # defines the canonical positional order shared by every language (Fork 6: substitute by name).
+    return _names_in_order(parse_message(text), [])
+
+
+def _lower_atom(node, order: list, declared: dict, target: str) -> str:
+    # Lower one non-plural node to its positional-template fragment. Shared by the native-resource path
+    # (_lower_nodes) and the runtime plural path (_plural_template_parts) so the %N$conv mapping has
+    # one definition. `arg` covers both `{name}` and a plural arm's `#` (which parses to an arg node).
+    if node[0] == "lit":
+        return node[1].replace("%", "%%")  # literal % must survive String.format untouched
+    index = order.index(node[1]) + 1
+    conversion = PLACEHOLDER_TYPES[declared[node[1]]][target]["conv"]
+    return f"%{index}${conversion}"
+
+
+def _lower_nodes(nodes: list, order: list, declared: dict, target: str, category: str) -> str:
+    # Render AST nodes to a positional format template (%1$d / %1$lld) under one plural `category`.
+    out = []
+    for node in nodes:
+        if node[0] == "plural":
+            arm = node[2][category] if category in node[2] else node[2]["other"]
+            out.append(_lower_nodes(arm, order, declared, target, category))
+        else:
+            out.append(_lower_atom(node, order, declared, target))
+    return "".join(out)
 
 
 def _to_positional(text: str, order: list, declared: dict, target: str) -> str:
-    # Convert authored {name} placeholders to positional args (%1$d, %2$d, ...), assigning each name
-    # the index it has in `order` (the base-text appearance order) so a reordered translation still
-    # maps each name to the right argument; the conversion char comes from the declared type + target
-    # (Android %d vs iOS %lld). Run AFTER escaping/pseudo so the inserted specs are not accented/re-escaped.
+    # Convert authored placeholders to positional args (%1$d, %2$d, ...) for `target` (Android %d vs
+    # iOS %lld). `order` (base-text appearance order) keeps a reordered translation mapping each name to
+    # the right argument. Run AFTER escaping/pseudo so the inserted specs are not accented/re-escaped.
+    # Native resources render the `other` arm — the fallback the plural-aware typed accessors override.
     if not order:
         return text  # plain key: leave literal % untouched (it is never String.format'd)
-    out = text.replace("%", "%%")  # escape literal % first; the named text has no positional specs yet
-    for index, name in enumerate(order):
-        conversion = PLACEHOLDER_TYPES[declared[name]][target]["conv"]
-        out = out.replace("{" + name + "}", f"%{index + 1}${conversion}")
-    return out
+    return _lower_nodes(parse_message(text), order, declared, target, "other")
 
 
 def _finalize_value(raw: str, escape, entry: dict, target: str) -> str:
@@ -205,7 +364,16 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
         # Placeholder discipline. Canonical names = those used in the base (Hanji) text; positional
         # index is assigned by first appearance there (see _to_positional). A format key MUST declare
         # `placeholders` (name -> type) so the generated typed accessor has an explicit signature.
-        base_placeholder_names = set(_placeholder_names_in_order(values[BASE_LANGUAGE]))
+        try:
+            base_nodes = parse_message(values[BASE_LANGUAGE])
+        except ValueError as exc:
+            raise ValueError(f"{path}:{key}: base '{BASE_LANGUAGE}': {exc}") from exc
+        # The base/source language defines the canonical argument order and feeds the pseudo-locale
+        # transform, both of which assume a flat message. Hanji (the base) does not inflect nouns by
+        # count, so plural belongs only in translations — reject it in the base to keep both invariants.
+        if _has_plural(base_nodes):
+            raise ValueError(f"{path}:{key}: base language '{BASE_LANGUAGE}' must not use plural (author plural only in translations)")
+        base_placeholder_names = set(_names_in_order(base_nodes, []))
         declared = entry.get("placeholders")
         if base_placeholder_names:
             if not declared:
@@ -227,9 +395,13 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
             # Reject empty authored values — a blank string would render blank, not fall back to base.
             if not text:
                 raise ValueError(f"{path}:{key}: empty value for '{lang}'")
+            try:
+                lang_names = set(_placeholder_names_in_order(text))
+            except ValueError as exc:
+                raise ValueError(f"{path}:{key}: '{lang}': {exc}") from exc
             # Every authored language must use the same placeholder names as base (order may differ —
             # substitution is by name, not position, so a reordered translation is allowed).
-            if set(_placeholder_names_in_order(text)) != base_placeholder_names:
+            if lang_names != base_placeholder_names:
                 raise ValueError(f"{path}:{key}: placeholder names in '{lang}' differ from base")
 
 
@@ -484,12 +656,52 @@ def _emit_l10n(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _plural_languages(entry: dict) -> list:
+    # [(lang, nodes)] for authored languages whose message uses plural. Only English may be
+    # plural-bearing: the generated selector is the CLDR `en` rule (n == 1), so a plural authored in
+    # any other language would silently apply the wrong rule — reject it loudly instead.
+    result = []
+    for lang, text in entry["values"].items():
+        nodes = parse_message(text)
+        if _has_plural(nodes):
+            if lang != "en":
+                raise ValueError(
+                    f"plural authored for {lang!r}, but only English has a plural selector "
+                    f"(CLDR en: n == 1); add a per-language category rule before authoring plural in {lang!r}"
+                )
+            result.append((lang, nodes))
+    return result
+
+
+def _plural_template_parts(nodes, order, declared, target, escape, ternary) -> list:
+    # AST -> a list of platform expression fragments (joined with `+`) that assemble the positional
+    # template at runtime, selecting each plural arm by count. Literal/arg/`#` lower exactly as the
+    # native-resource path does; a plural node becomes a per-count ternary over its lowered arms.
+    def quoted(text: str) -> str:
+        return '"' + escape(text) + '"'
+
+    parts = []
+    for node in nodes:
+        if node[0] == "plural":
+            other = quoted(_lower_nodes(node[2]["other"], order, declared, target, "other"))
+            if "one" in node[2]:
+                one = quoted(_lower_nodes(node[2]["one"], order, declared, target, "one"))
+                parts.append(ternary(node[1], one, other))
+            else:
+                parts.append(other)
+        else:
+            parts.append(quoted(_lower_atom(node, order, declared, target)))
+    return parts
+
+
 def _emit_string_resolver_formats(entries) -> str:
     # Typed non-Compose format accessors: one extension fn per format key, args in canonical
     # (base-text first-appearance) order. Callers resolve outside a Composition (coroutine lambdas,
-    # Activity callbacks); formatString() is the hand-written helper in StringResolver.kt.
+    # Activity callbacks); formatString()/formatTemplate() are the hand-written helpers in StringResolver.kt.
+    # Decorate each format entry with its plural languages once (parsing is the cost), so the import
+    # block and the bodies share one pass instead of re-parsing every value twice.
     fmt_entries = [
-        (namespace, key, entry)
+        (namespace, key, entry, _plural_languages(entry))
         for namespace, key, entry in entries
         if _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
     ]
@@ -501,15 +713,22 @@ def _emit_string_resolver_formats(entries) -> str:
     if not fmt_entries:
         lines.append("// No format-arg keys are currently authored.")
         return "\n".join(lines) + "\n"
+    has_plural_key = any(plural_langs for *_rest, plural_langs in fmt_entries)
+    imports = [
+        "import com.siansiansu.taigikeyboard.i18n.StringResolver",
+        "import com.siansiansu.taigikeyboard.i18n.formatString",
+    ]
+    if has_plural_key:
+        imports.insert(0, "import com.siansiansu.taigikeyboard.i18n.DisplayLanguage")
+        imports.append("import com.siansiansu.taigikeyboard.i18n.formatTemplate")
     lines.extend(
-        [
-            "import com.siansiansu.taigikeyboard.i18n.StringResolver",
-            "import com.siansiansu.taigikeyboard.i18n.formatString",
+        imports
+        + [
             "",
             "// Typed format accessors for placeholder-bearing keys (the raw \"%1\\$d\" template never reaches a call site).",
         ]
     )
-    for namespace, key, entry in fmt_entries:
+    for namespace, key, entry, plural_langs in fmt_entries:
         order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
         declared = entry["placeholders"]
         params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['android']['param']}" for name in order)
@@ -517,8 +736,31 @@ def _emit_string_resolver_formats(entries) -> str:
         accessor = l10n_accessor(namespace, key)
         const = string_key_const(namespace, key)
         lines.append("")
-        lines.append(f"fun StringResolver.{accessor}({params}): String =")
-        lines.append(f"    formatString(StringKey.{const}, {args})")
+        if not plural_langs:
+            lines.append(f"fun StringResolver.{accessor}({params}): String =")
+            lines.append(f"    formatString(StringKey.{const}, {args})")
+            continue
+        # Only English is plural-bearing (enforced above); its arms are selected at runtime, every
+        # other language renders the native-resource `other` fallback via formatString.
+        _lang, nodes = plural_langs[0]
+        parts = _plural_template_parts(
+            nodes, order, declared, "android", kotlin_escape, lambda n, o, t: f"(if ({n} == 1) {o} else {t})"
+        )
+        template_expr = " +\n                ".join(parts)
+        lines.extend(
+            [
+                f"fun StringResolver.{accessor}({params}): String =",
+                f"    if (displayLanguage == DisplayLanguage.{ANDROID_ENGLISH_ENUM}) {{",
+                "        // CLDR en plural: category 'one' iff n == 1; native resources hold the 'other' fallback.",
+                "        formatTemplate(",
+                f"            {template_expr},",
+                f"            {args},",
+                "        )",
+                "    } else {",
+                f"        formatString(StringKey.{const}, {args})",
+                "    }",
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -599,7 +841,7 @@ def _emit_ios_formats(entries) -> str:
     # (base-text first-appearance) order, each cast to match the %lld spec. The raw template never
     # reaches a call site; `format(_:_:)` is the hand-written variadic helper in StringResolver.swift.
     fmt_entries = [
-        (namespace, key, entry)
+        (namespace, key, entry, _plural_languages(entry))
         for namespace, key, entry in entries
         if _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
     ]
@@ -608,7 +850,7 @@ def _emit_ios_formats(entries) -> str:
         lines.append("// No format-arg keys are currently authored.")
         return "\n".join(lines) + "\n"
     lines.extend(["import Foundation", "", "extension StringResolver {"])
-    for index, (namespace, key, entry) in enumerate(fmt_entries):
+    for index, (namespace, key, entry, plural_langs) in enumerate(fmt_entries):
         order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
         declared = entry["placeholders"]
         params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['ios']['param']}" for name in order)
@@ -616,9 +858,32 @@ def _emit_ios_formats(entries) -> str:
         accessor = l10n_accessor(namespace, key)
         if index:
             lines.append("")
-        lines.append(f"    func {accessor}({params}) -> String {{")
-        lines.append(f"        format(.{accessor}, {args})")
-        lines.append("    }")
+        if not plural_langs:
+            lines.append(f"    func {accessor}({params}) -> String {{")
+            lines.append(f"        format(.{accessor}, {args})")
+            lines.append("    }")
+            continue
+        # Only English is plural-bearing (enforced above); its arms are selected at runtime, every
+        # other language renders the catalog `other` fallback via format(_:_:).
+        _lang, nodes = plural_langs[0]
+        parts = _plural_template_parts(
+            nodes, order, declared, "ios", swift_escape, lambda n, o, t: f"({n} == 1 ? {o} : {t})"
+        )
+        template_expr = "\n                + ".join(parts)
+        lines.extend(
+            [
+                f"    func {accessor}({params}) -> String {{",
+                f"        if language == .{IOS_ENGLISH_ENUM} {{",
+                "            // CLDR en plural: category 'one' iff n == 1; the catalog holds the 'other' fallback.",
+                "            return formatTemplate(",
+                f"                {template_expr},",
+                f"                {args}",
+                "            )",
+                "        }",
+                f"        return format(.{accessor}, {args})",
+                "    }",
+            ]
+        )
     lines.append("}")
     return "\n".join(lines) + "\n"
 

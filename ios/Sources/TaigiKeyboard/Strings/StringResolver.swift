@@ -44,6 +44,15 @@ struct StringResolver {
         String(format: resolve(key), arguments: args)
     }
 
+    /// Interpolates a ready-made positional `template`. Backs the plural-aware generated accessors,
+    /// which select each count's plural arm at runtime. The codegen emits a flat catalog string for
+    /// every language and the TL/POJ display languages have no OS plural locale at all, so one runtime
+    /// arm-selector serves all five languages — a native String Catalog plural would be a second,
+    /// English-only mechanism (plan R3-2). The active `language` drives which arm each count selects.
+    func formatTemplate(_ template: String, _ args: CVarArg...) -> String {
+        String(format: template, arguments: args)
+    }
+
     private func hanjiDefault(_ key: StringKey) -> String {
         hanjiBundle?.localizedString(forKey: key.rawValue, value: key.rawValue, table: nil) ?? key.rawValue
     }

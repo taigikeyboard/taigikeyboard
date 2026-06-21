@@ -31,6 +31,9 @@ class StringResolver(
     private val activeContext: Context,
     private val language: DisplayLanguage,
 ) {
+    /** The active display language, so plural-aware generated accessors can pick a count-based arm. */
+    val displayLanguage: DisplayLanguage get() = language
+
     fun resolve(key: StringKey): String =
         when (language.resolution) {
             is StringResolution.Native -> activeContext.getString(key.resId)
@@ -60,6 +63,18 @@ fun StringResolver.formatString(
     key: StringKey,
     vararg args: Any,
 ): String = String.format(formattingLocale, resolve(key), *args)
+
+/**
+ * Interpolates a ready-made positional [template] under the active formatting locale. Backs the
+ * plural-aware generated accessors, which select each count's plural arm at runtime. The codegen
+ * emits flat string resources for every language and the TL/POJ display languages have no OS plural
+ * locale at all, so one runtime arm-selector serves all five languages — a native `<plurals>` would
+ * be a second, English-only mechanism (plan R3-2).
+ */
+fun StringResolver.formatTemplate(
+    template: String,
+    vararg args: Any,
+): String = String.format(formattingLocale, template, *args)
 
 // Copies the base configuration and overrides only the locale (mirrors florisboard
 // FlorisAppActivity.kt:100). The returned context is used solely for getString(), which depends

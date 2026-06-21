@@ -8,6 +8,18 @@ extension StringResolver {
     }
 
     func dictionaryImportBackupResult(customDict: Int, frequency: Int, association: Int) -> String {
-        format(.dictionaryImportBackupResult, Int64(customDict), Int64(frequency), Int64(association))
+        if language == .english {
+            // CLDR en plural: category 'one' iff n == 1; the catalog holds the 'other' fallback.
+            return formatTemplate(
+                "Imported "
+                + (customDict == 1 ? "%1$lld custom entry" : "%1$lld custom entries")
+                + ", "
+                + (frequency == 1 ? "%2$lld frequency record" : "%2$lld frequency records")
+                + ", "
+                + (association == 1 ? "%3$lld association record" : "%3$lld association records"),
+                Int64(customDict), Int64(frequency), Int64(association)
+            )
+        }
+        return format(.dictionaryImportBackupResult, Int64(customDict), Int64(frequency), Int64(association))
     }
 }
