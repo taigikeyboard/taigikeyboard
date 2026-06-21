@@ -4,172 +4,172 @@
     "appHeaderTitle": {
       "comment": "Home tab large title — the app name.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台語齒盤", "en": "Taigi Keyboard" }
+      "values": { "hanji": "台語齒盤", "en": "Taigi Keyboard", "ja": "台湾語キーボード" }
     },
     "setupKeyboard": {
       "comment": "Home section header above the keyboard-activation guide row.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "齒盤愛拍開才會當使用", "en": "Enable the keyboard to start using it" }
+      "values": { "hanji": "齒盤愛拍開才會當使用", "en": "Enable the keyboard to start using it", "ja": "キーボードを有効にして使い始めましょう" }
     },
     "typingGuide": {
       "comment": "Home section header above the typing-guide feature list.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍字說明", "en": "Typing Guide" }
+      "values": { "hanji": "拍字說明", "en": "Typing Guide", "ja": "入力ガイド" }
     },
     "newFeatures": {
       "comment": "Home section header above the feature-settings list.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "功能設定", "en": "Feature Settings" }
+      "values": { "hanji": "功能設定", "en": "Feature Settings", "ja": "機能設定" }
     },
     "faq": {
       "comment": "Home section header above the FAQ / other list.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "其他", "en": "More" }
+      "values": { "hanji": "其他", "en": "More", "ja": "その他" }
     },
     "setupGuide": {
       "comment": "Setup-guide navigation row label + sub-page title.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "啟用方法", "en": "How to Enable" }
+      "values": { "hanji": "啟用方法", "en": "How to Enable", "ja": "有効化の方法" }
     },
     "setupGuideDescription": {
       "comment": "Setup-guide intro paragraph: third-party keyboards must be enabled manually.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。", "en": "Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup." }
+      "values": { "hanji": "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。", "en": "Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup.", "ja": "スマートフォンの仕様上、サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従って設定を完了してください。" }
     },
     "setupInfoMessage": {
       "comment": "Setup-guide note explaining what 'Allow Full Access' means and the privacy stance.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。", "en": "\"Allow Full Access\" lets the keyboard recognize your key presses and turn them into the text you type. Rest assured, the app does not record your data." }
+      "values": { "hanji": "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。", "en": "\"Allow Full Access\" lets the keyboard recognize your key presses and turn them into the text you type. Rest assured, the app does not record your data.", "ja": "「フルアクセスを許可」とは、キーボードがあなたのキー操作を認識し、入力した文字に変換できるようにすることです。ご安心ください。本アプリがあなたのデータを記録することはありません。" }
     },
     "setupBrandWarning": {
       "comment": "Setup-guide note: steps may differ slightly across phone brands.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。", "en": "Steps may differ slightly between phone brands, but the overall process is much the same." }
+      "values": { "hanji": "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。", "en": "Steps may differ slightly between phone brands, but the overall process is much the same.", "ja": "スマートフォンのメーカーによって設定方法が少し異なる場合がありますが、大まかな流れはほぼ同じです。" }
     },
     "setupGuideCompletedMessage": {
       "comment": "Setup-guide full-screen closing paragraph: restart the app and switch via the globe key.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤", "en": "Once done, restart the app you are using so it reloads the keyboard list. Then, wherever you can type, press and hold the globe icon to switch to Taigi Keyboard." }
+      "values": { "hanji": "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤", "en": "Once done, restart the app you are using so it reloads the keyboard list. Then, wherever you can type, press and hold the globe icon to switch to Taigi Keyboard.", "ja": "完了したら、使用中のアプリを再起動してキーボード一覧を読み込み直してください。その後、文字を入力できる場所で地球儀アイコンを長押しして、台湾語キーボードに切り替えます。" }
     },
     "setupGuideGoToSettings": {
       "comment": "Setup-guide button: open the system input-method settings page.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "去設定頁", "en": "Open Settings" }
+      "values": { "hanji": "去設定頁", "en": "Open Settings", "ja": "設定を開く" }
     },
     "setupGuideCloseButton": {
       "comment": "Setup-guide full-screen close button.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "關閉", "en": "Close" }
+      "values": { "hanji": "關閉", "en": "Close", "ja": "閉じる" }
     },
     "setupGuideStep1Settings": {
       "comment": "Setup-guide step 1 title: tap 'Keyboards'.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "點揤「齒盤」", "en": "Tap \"Keyboards\"" }
+      "values": { "hanji": "點揤「齒盤」", "en": "Tap \"Keyboards\"", "ja": "「キーボード」をタップ" }
     },
     "setupGuideStep2AddKeyboard": {
       "comment": "Setup-guide step 2 title: tap 'Add keyboard' and 'Allow Full Access'.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "點揤「增加齒盤」、「允准完整取用」", "en": "Tap \"Add keyboard\" and \"Allow Full Access\"" }
+      "values": { "hanji": "點揤「增加齒盤」、「允准完整取用」", "en": "Tap \"Add keyboard\" and \"Allow Full Access\"", "ja": "「キーボードを追加」「フルアクセスを許可」をタップ" }
     },
     "userGuide": {
       "comment": "Home resource link: the project website introduction.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "網站紹介", "en": "Project Website" }
+      "values": { "hanji": "網站紹介", "en": "Project Website", "ja": "プロジェクトのサイト" }
     },
     "rateUs": {
       "comment": "Home resource link: rate the app on the store.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "為阮評分", "en": "Rate Us" }
+      "values": { "hanji": "為阮評分", "en": "Rate Us", "ja": "評価する" }
     },
     "aboutDeveloper": {
       "comment": "Home resource link + about-developer page title.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "關於", "en": "About" }
+      "values": { "hanji": "關於", "en": "About", "ja": "このアプリについて" }
     },
     "privacyPolicy": {
       "comment": "Home resource link: open the privacy policy.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "隱私權政策", "en": "Privacy Policy" }
+      "values": { "hanji": "隱私權政策", "en": "Privacy Policy", "ja": "プライバシーポリシー" }
     },
     "freePromise": {
       "comment": "About-developer page body: the maintainer's promise that the keyboard stays free.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。", "en": "Taigi Keyboard will always be free, with no paid features. Taiwanese is our mother tongue, and no one should be unable to use a good tool over money. My hope is that everyone who wants to learn and write Taiwanese can use it without any burden — that is the most important wish behind this keyboard." }
+      "values": { "hanji": "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。", "en": "Taigi Keyboard will always be free, with no paid features. Taiwanese is our mother tongue, and no one should be unable to use a good tool over money. My hope is that everyone who wants to learn and write Taiwanese can use it without any burden — that is the most important wish behind this keyboard.", "ja": "台湾語キーボードは永久に無料で、有料機能を設けることはありません。台湾語は私たちの母語であり、お金のせいで良い道具が使えないことがあってはなりません。台湾語を学びたい、書きたいと願うすべての人が負担なく使えること——それがこのキーボードを作る上で最も大切な願いです。" }
     },
     "version": {
       "comment": "Home row label for the current app version.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "當前版本", "en": "Current Version" }
+      "values": { "hanji": "當前版本", "en": "Current Version", "ja": "現在のバージョン" }
     },
     "versionHistory": {
       "comment": "Home resource link + version-history page title.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "版本紀錄", "en": "Version History" }
+      "values": { "hanji": "版本紀錄", "en": "Version History", "ja": "更新履歴" }
     },
     "copyrightNotice": {
       "comment": "Home resource link + copyright/acknowledgement page title.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "致謝", "en": "Acknowledgements" }
+      "values": { "hanji": "致謝", "en": "Acknowledgements", "ja": "謝辞" }
     },
     "viewLicense": {
       "comment": "Copyright page button: open the license text for a source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "授權條款", "en": "License" }
+      "values": { "hanji": "授權條款", "en": "License", "ja": "ライセンス" }
     },
     "moeCopyright": {
       "comment": "Copyright attribution for the MOE (教育部 / Ministry of Education) — used for both the MOE Taiwanese dictionary and (iOS) the STTI academic-terminology source, which share the same rights-holder. Non-Hanji languages may use the rights-holder's official name; absent override falls back to Hanji.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© 教育部", "en": "© Ministry of Education" }
+      "values": { "hanji": "© 教育部", "en": "© Ministry of Education", "ja": "© 教育部" }
     },
     "iTaigiCopyright": {
       "comment": "Copyright attribution for the iTaigi crowd-sourced dictionary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© iTaigi愛台語", "en": "© iTaigi" }
+      "values": { "hanji": "© iTaigi愛台語", "en": "© iTaigi", "ja": "© iTaigi" }
     },
     "newwordCopyright": {
       "comment": "Copyright attribution for the PTS Taigi new-word lexicon.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© 公視台語台", "en": "© PTS Taigi" }
+      "values": { "hanji": "© 公視台語台", "en": "© PTS Taigi", "ja": "© 公視台語台" }
     },
     "openFontCopyright": {
       "comment": "Copyright attribution for the JF Open Huninn (粉圓) font.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© justfont", "en": "© justfont" }
+      "values": { "hanji": "© justfont", "en": "© justfont", "ja": "© justfont" }
     },
     "butTaiwanCopyright": {
       "comment": "Copyright attribution for ButTaiwan fonts (芫荽 Iansui + 源樣明體/源樣烏體 GenYo families).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© ButTaiwan", "en": "© ButTaiwan" }
+      "values": { "hanji": "© ButTaiwan", "en": "© ButTaiwan", "ja": "© ButTaiwan" }
     },
     "taiwanPlantCopyright": {
       "comment": "Copyright attribution for the Taiwan plant-name glossary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© 佐佐木舜一", "en": "© Sasaki Shun'ichi" }
+      "values": { "hanji": "© 佐佐木舜一", "en": "© Sasaki Shun'ichi", "ja": "© 佐々木舜一" }
     },
     "taiHuaCopyright": {
       "comment": "Copyright attribution for the online Taigi-Mandarin cross-reference dictionary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© 鄭良偉", "en": "© Tēⁿ Liông-uí" }
+      "values": { "hanji": "© 鄭良偉", "en": "© Tēⁿ Liông-uí", "ja": "© 鄭良偉" }
     },
     "taiwanJapanCopyright": {
       "comment": "Copyright attribution for the Taiwanese-Japanese Grand Dictionary.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© 小川尚義", "en": "© Ogawa Naoyoshi" }
+      "values": { "hanji": "© 小川尚義", "en": "© Ogawa Naoyoshi", "ja": "© 小川尚義" }
     },
     "kunggeCopyright": {
       "comment": "Copyright attribution for the NTCRI craft-terminology lexicon.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "© 國立臺灣工藝研究發展中心", "en": "© National Taiwan Craft Research and Development Institute" }
+      "values": { "hanji": "© 國立臺灣工藝研究發展中心", "en": "© National Taiwan Craft Research and Development Institute", "ja": "© 国立台湾工芸研究発展センター" }
     },
     "accentDictCredit": {
       "comment": "Credit line for the regional-accent supplement source (compiled and provided by 實齋).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "實齋整理、提供", "en": "Compiled and provided by 實齋" }
+      "values": { "hanji": "實齋整理、提供", "en": "Compiled and provided by 實齋", "ja": "實齋 整理・提供" }
     },
     "devSupplementCredit": {
       "comment": "Credit line for the word-list supplement source (compiled and provided by 建中).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "建中整理、提供", "en": "Compiled and provided by 建中" }
+      "values": { "hanji": "建中整理、提供", "en": "Compiled and provided by 建中", "ja": "建中 整理・提供" }
     }
   }
 }

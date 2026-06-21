@@ -11,6 +11,12 @@
             "value": "Accent Variations"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセント差"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -27,6 +33,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cancel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
           }
         },
         "nan-Hant-TW": {
@@ -47,6 +59,12 @@
             "value": "Delete"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -60,6 +78,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GenYoGothic"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "GenYoGothic"
@@ -83,6 +107,12 @@
             "value": "GenYoMin"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GenYoMin"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -96,6 +126,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iansui"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Iansui"
@@ -119,6 +155,12 @@
             "value": "Open Huninn"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Huninn"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -137,6 +179,12 @@
             "value": "System"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -150,6 +198,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "iTaigi"
@@ -173,6 +227,12 @@
             "value": "NTCRI Taiwanese Craft Glossary"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工芸センター 台湾語工芸用語辞書"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -189,6 +249,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "MOE Dictionary of Common Taiwanese Words"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部 台湾語常用語辞典"
           }
         },
         "nan-Hant-TW": {
@@ -209,6 +275,12 @@
             "value": "PTS Taigi New-Word Lexicon"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公視台語台 台湾語新語辞書"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -222,6 +294,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "OK"
@@ -245,6 +323,12 @@
             "value": "MOE Academic Subject Terminology (Taigi)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部 学術用語 台湾語対訳"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -261,6 +345,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taigi-Mandarin Online Cross-Reference"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台湾語・華語オンライン対照辞典"
           }
         },
         "nan-Hant-TW": {
@@ -281,6 +371,12 @@
             "value": "Taiwanese-Japanese Dictionary (Taigi Edition)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台日大辞典 台湾語訳"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -297,6 +393,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taiwan Plant Name Glossary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台湾植物名彙"
           }
         },
         "nan-Hant-TW": {
@@ -317,6 +419,12 @@
             "value": "Official Website"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公式サイト"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -333,6 +441,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add Word"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語を追加"
           }
         },
         "nan-Hant-TW": {
@@ -353,6 +467,12 @@
             "value": "Association records use a plain-text CSV file with 5 columns: previous word, previous romanization, next word, next romanization, count. No header row."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語連携の記録は 5 列のプレーンテキスト CSV ファイルを使用します：前の単語、前のローマ字、次の単語、次のローマ字、回数。ヘッダー行は不要です。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -369,6 +489,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export Association Records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語連携の記録をエクスポート"
           }
         },
         "nan-Hant-TW": {
@@ -389,6 +515,12 @@
             "value": "Import Association Records"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語連携の記録をインポート"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -405,6 +537,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Association Records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語連携の記録"
           }
         },
         "nan-Hant-TW": {
@@ -425,6 +563,12 @@
             "value": "Association records are valuable data for Taiwanese-language research. If you share them for research, please delete sensitive content first. You can also turn recording off, though next-word prediction will then be less accurate."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語連携の記録は台湾語研究にとって貴重なデータです。研究のために提供する場合は、機密性の高い内容を先に削除してください。記録機能はオフにもできますが、その場合は次の単語の予測精度が下がります。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -441,6 +585,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Record Word Associations"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語連携を記録"
           }
         },
         "nan-Hant-TW": {
@@ -461,6 +611,12 @@
             "value": "When on, the keyboard records which words follow which, making continuous suggestions more accurate over time."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、どの単語の後にどの単語が続くかをキーボードが記録し、連続入力の予測が次第に正確になります。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -477,6 +633,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Backup files contain all your usage records and work on both iOS and Android, so you need not worry when switching phones."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップファイルにはすべての利用記録が含まれ、iOS と Android の両方で使用できます。機種変更の際もご安心ください。"
           }
         },
         "nan-Hant-TW": {
@@ -497,6 +659,12 @@
             "value": "Backup and Restore"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップと復元"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -513,6 +681,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clear"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリア"
           }
         },
         "nan-Hant-TW": {
@@ -533,6 +707,12 @@
             "value": "Delete All Association Records"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての単語連携の記録を削除"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -549,6 +729,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete All Frequency Records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての単語頻度の記録を削除"
           }
         },
         "nan-Hant-TW": {
@@ -569,6 +755,12 @@
             "value": "Delete all association records?"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての単語連携の記録を削除しますか？"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -585,6 +777,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete all frequency records?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての単語頻度の記録を削除しますか？"
           }
         },
         "nan-Hant-TW": {
@@ -605,6 +803,12 @@
             "value": "The custom dictionary uses a plain-text CSV file: column 1 holds the romanization to type, column 2 holds the Hanji. No header row."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書はプレーンテキストの CSV ファイルを使用します。1 列目に入力するローマ字、2 列目に漢字を記入します。ヘッダー行は不要です。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -621,6 +825,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tap + to add a custom word"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "＋ をタップしてカスタム単語を追加"
           }
         },
         "nan-Hant-TW": {
@@ -641,6 +851,12 @@
             "value": "Enable Custom Dictionary"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書を有効にする"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -657,6 +873,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "When on, words you add appear among the candidates. When off, your custom words no longer show up."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、追加した単語が候補に表示されます。オフにすると、カスタム単語は表示されなくなります。"
           }
         },
         "nan-Hant-TW": {
@@ -677,6 +899,12 @@
             "value": "Please do not store sensitive personal data in the custom dictionary, such as ID numbers, account passwords, or credit-card numbers. Mind your information security."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人情報保護のため、カスタム辞書には機密性の高い個人データ（身分証番号、口座のパスワード、クレジットカード番号など）を保存しないでください。情報セキュリティにご注意ください。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -693,6 +921,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書"
           }
         },
         "nan-Hant-TW": {
@@ -713,6 +947,12 @@
             "value": "Personal Data"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人データ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -729,6 +969,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete All Custom Words"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのカスタム単語を削除"
           }
         },
         "nan-Hant-TW": {
@@ -749,6 +995,12 @@
             "value": "Delete all custom words?"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのカスタム単語を削除しますか？"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -765,6 +1017,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supplementary Word List"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補足単語リスト"
           }
         },
         "nan-Hant-TW": {
@@ -785,6 +1043,12 @@
             "value": "Edit Word"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語を編集"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -801,6 +1065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export All at Once"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを一括エクスポート"
           }
         },
         "nan-Hant-TW": {
@@ -821,6 +1091,12 @@
             "value": "Backup exported successfully"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップをエクスポートしました"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -837,6 +1113,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書をエクスポート"
           }
         },
         "nan-Hant-TW": {
@@ -857,6 +1139,12 @@
             "value": "CSV exported successfully"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV をエクスポートしました"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -873,6 +1161,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "File too large (5 MB limit)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが大きすぎます（上限 5 MB）"
           }
         },
         "nan-Hant-TW": {
@@ -893,6 +1187,12 @@
             "value": "At most 100 words are shown above. If you cannot find a word, use the \"Type to search\" field below."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上部には最大 100 件の単語が表示されます。見つからない場合は、下の「入力して検索」をご利用ください。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -909,6 +1209,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Frequency records use a plain-text CSV file: column 1 holds the word, column 2 holds the count. No header row."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語頻度の記録はプレーンテキストの CSV ファイルを使用します。1 列目に単語、2 列目に回数を記入します。ヘッダー行は不要です。"
           }
         },
         "nan-Hant-TW": {
@@ -929,6 +1235,12 @@
             "value": "Export Frequency Records"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語頻度の記録をエクスポート"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -945,6 +1257,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Import Frequency Records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語頻度の記録をインポート"
           }
         },
         "nan-Hant-TW": {
@@ -965,6 +1283,12 @@
             "value": "Frequency Records"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語頻度の記録"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -981,6 +1305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Frequency records are valuable data for Taiwanese-language research. If you share them for research or model training, please delete sensitive private data first. You can also turn recording off, though candidate ranking will then be less accurate."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語頻度の記録は台湾語研究にとって貴重なデータです。研究やモデル学習のために提供する場合は、機密性の高い個人データを先に削除してください。記録機能はオフにもできますが、その場合は候補の並び替えの精度が下がります。"
           }
         },
         "nan-Hant-TW": {
@@ -1001,6 +1331,12 @@
             "value": "Record Word Frequency"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語頻度を記録"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1017,6 +1353,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "When on, the keyboard records how often you pick each word and uses it to rank candidates. Words you choose often move toward the front, so the candidates get more accurate over time."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、各単語を選んだ回数をキーボードが記録し、候補の並び替えに利用します。よく選ぶ単語が前に移動し、候補が次第に正確になります。"
           }
         },
         "nan-Hant-TW": {
@@ -1037,6 +1379,12 @@
             "value": "Hanji"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢字"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1053,6 +1401,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Example: 𠢙早"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：𠢕早"
           }
         },
         "nan-Hant-TW": {
@@ -1073,6 +1427,12 @@
             "value": "Import All at Once"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを一括インポート"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1089,6 +1449,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Imported %1$lld custom entries, %2$lld frequency records, %3$lld association records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 件のカスタム単語、%2$lld 件の単語頻度、%3$lld 件の単語連携をインポートしました"
           }
         },
         "nan-Hant-TW": {
@@ -1109,6 +1475,12 @@
             "value": "Import Dictionary"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書をインポート"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1125,6 +1497,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Import / Export"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インポート / エクスポート"
           }
         },
         "nan-Hant-TW": {
@@ -1145,6 +1523,12 @@
             "value": "Imported %1$lld, skipped %2$lld"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 件をインポート、%2$lld 件をスキップ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1161,6 +1545,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Invalid file format. Please use CSV."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル形式が正しくありません。CSV 形式を使用してください。"
           }
         },
         "nan-Hant-TW": {
@@ -1181,6 +1571,12 @@
             "value": "Yilan (Zhangzhou-leaning)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "宜蘭（漳州寄り）"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1197,6 +1593,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kaohsiung (Mixed)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高雄（混合）"
           }
         },
         "nan-Hant-TW": {
@@ -1217,6 +1619,12 @@
             "value": "Kinmen (Quanzhou-leaning)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金門（泉州寄り）"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1233,6 +1641,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lukang (Quanzhou-leaning)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鹿港（泉州寄り）"
           }
         },
         "nan-Hant-TW": {
@@ -1253,6 +1667,12 @@
             "value": "Makung (Quanzhou-leaning)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "馬公（泉州寄り）"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1269,6 +1689,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sansia (Quanzhou-leaning)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "三峡（泉州寄り）"
           }
         },
         "nan-Hant-TW": {
@@ -1289,6 +1715,12 @@
             "value": "Hsinchu (Quanzhou-leaning)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新竹（泉州寄り）"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1305,6 +1737,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taichung (Zhangzhou-leaning)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台中（漳州寄り）"
           }
         },
         "nan-Hant-TW": {
@@ -1325,6 +1763,12 @@
             "value": "Tainan (Mixed)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台南（混合）"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1341,6 +1785,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taipei (Quanzhou-leaning)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台北（泉州寄り）"
           }
         },
         "nan-Hant-TW": {
@@ -1361,6 +1811,12 @@
             "value": "Surname Appendix"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "姓名付録"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1377,6 +1833,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Native Characters"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在来字"
           }
         },
         "nan-Hant-TW": {
@@ -1397,6 +1859,12 @@
             "value": "Han-Lo Recommended Characters"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢羅併用 推奨用字"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1413,6 +1881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ChhoeTaigi Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChhoeTaigi 辞典"
           }
         },
         "nan-Hant-TW": {
@@ -1433,6 +1907,12 @@
             "value": "MOE Dictionary"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部辞典"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1449,6 +1929,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "MOE Characters"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部の用字"
           }
         },
         "nan-Hant-TW": {
@@ -1469,6 +1955,12 @@
             "value": "No data"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "データがありません"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1485,6 +1977,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "No results"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果がありません"
           }
         },
         "nan-Hant-TW": {
@@ -1505,6 +2003,12 @@
             "value": "Other Dictionaries"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他の辞書"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1521,6 +2025,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Romanization"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローマ字"
           }
         },
         "nan-Hant-TW": {
@@ -1541,6 +2051,12 @@
             "value": "Example: gâu-tsá"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：gâu-tsá"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1557,6 +2073,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
           }
         },
         "nan-Hant-TW": {
@@ -1577,6 +2099,12 @@
             "value": "Type to search"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力して検索"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1593,6 +2121,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supplementary Data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補足データ"
           }
         },
         "nan-Hant-TW": {
@@ -1613,6 +2147,12 @@
             "value": "Too many entries (30,000 limit)"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語が多すぎます（上限 30,000 件）"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1629,6 +2169,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Variant Characters"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "異体字"
           }
         },
         "nan-Hant-TW": {
@@ -1649,6 +2195,12 @@
             "value": "About"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアプリについて"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1665,6 +2217,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Compiled and provided by 實齋"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "實齋 整理・提供"
           }
         },
         "nan-Hant-TW": {
@@ -1685,6 +2243,12 @@
             "value": "Taigi Keyboard"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台湾語キーボード"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1698,6 +2262,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© ButTaiwan"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "© ButTaiwan"
@@ -1721,6 +2291,12 @@
             "value": "Acknowledgements"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "謝辞"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1737,6 +2313,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Compiled and provided by 建中"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建中 整理・提供"
           }
         },
         "nan-Hant-TW": {
@@ -1757,6 +2339,12 @@
             "value": "More"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1775,6 +2363,12 @@
             "value": "Taigi Keyboard will always be free, with no paid features. Taiwanese is our mother tongue, and no one should be unable to use a good tool over money. My hope is that everyone who wants to learn and write Taiwanese can use it without any burden — that is the most important wish behind this keyboard."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台湾語キーボードは永久に無料で、有料機能を設けることはありません。台湾語は私たちの母語であり、お金のせいで良い道具が使えないことがあってはなりません。台湾語を学びたい、書きたいと願うすべての人が負担なく使えること——それがこのキーボードを作る上で最も大切な願いです。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1788,6 +2382,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© iTaigi"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "© iTaigi"
@@ -1811,6 +2411,12 @@
             "value": "© National Taiwan Craft Research and Development Institute"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 国立台湾工芸研究発展センター"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1827,6 +2433,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "© Ministry of Education"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 教育部"
           }
         },
         "nan-Hant-TW": {
@@ -1847,6 +2459,12 @@
             "value": "Feature Settings"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機能設定"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1865,6 +2483,12 @@
             "value": "© PTS Taigi"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 公視台語台"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1878,6 +2502,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© justfont"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "© justfont"
@@ -1901,6 +2531,12 @@
             "value": "Privacy Policy"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーポリシー"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1917,6 +2553,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rate Us"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価する"
           }
         },
         "nan-Hant-TW": {
@@ -1937,6 +2579,12 @@
             "value": "Steps may differ slightly between phone brands, but the overall process is much the same."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマートフォンのメーカーによって設定方法が少し異なる場合がありますが、大まかな流れはほぼ同じです。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1953,6 +2601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "How to Enable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効化の方法"
           }
         },
         "nan-Hant-TW": {
@@ -1973,6 +2627,12 @@
             "value": "Close"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -1989,6 +2649,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Once done, restart the app you are using so it reloads the keyboard list. Then, wherever you can type, press and hold the globe icon to switch to Taigi Keyboard."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了したら、使用中のアプリを再起動してキーボード一覧を読み込み直してください。その後、文字を入力できる場所で地球儀アイコンを長押しして、台湾語キーボードに切り替えます。"
           }
         },
         "nan-Hant-TW": {
@@ -2009,6 +2675,12 @@
             "value": "Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマートフォンの仕様上、サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従って設定を完了してください。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2025,6 +2697,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open Settings"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を開く"
           }
         },
         "nan-Hant-TW": {
@@ -2045,6 +2723,12 @@
             "value": "Tap \"Keyboards\""
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「キーボード」をタップ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2061,6 +2745,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tap \"Add keyboard\" and \"Allow Full Access\""
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「キーボードを追加」「フルアクセスを許可」をタップ"
           }
         },
         "nan-Hant-TW": {
@@ -2081,6 +2771,12 @@
             "value": "\"Allow Full Access\" lets the keyboard recognize your key presses and turn them into the text you type. Rest assured, the app does not record your data."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「フルアクセスを許可」とは、キーボードがあなたのキー操作を認識し、入力した文字に変換できるようにすることです。ご安心ください。本アプリがあなたのデータを記録することはありません。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2097,6 +2793,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enable the keyboard to start using it"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードを有効にして使い始めましょう"
           }
         },
         "nan-Hant-TW": {
@@ -2117,6 +2819,12 @@
             "value": "© Tēⁿ Liông-uí"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 鄭良偉"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2133,6 +2841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "© Ogawa Naoyoshi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 小川尚義"
           }
         },
         "nan-Hant-TW": {
@@ -2153,6 +2867,12 @@
             "value": "© Sasaki Shun'ichi"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 佐々木舜一"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2169,6 +2889,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Typing Guide"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力ガイド"
           }
         },
         "nan-Hant-TW": {
@@ -2189,6 +2915,12 @@
             "value": "Project Website"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトのサイト"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2205,6 +2937,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Current Version"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のバージョン"
           }
         },
         "nan-Hant-TW": {
@@ -2225,6 +2963,12 @@
             "value": "Version History"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新履歴"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2241,6 +2985,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "License"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス"
           }
         },
         "nan-Hant-TW": {
@@ -2261,6 +3011,12 @@
             "value": "Coming soon"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "近日公開"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2277,6 +3033,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "MOE Input Method 1"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部入力方式1"
           }
         },
         "nan-Hant-TW": {
@@ -2297,6 +3059,12 @@
             "value": "MOE Input Method 2"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部入力方式2"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2310,6 +3078,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PhahTaigi"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "PhahTaigi"
@@ -2333,6 +3107,12 @@
             "value": "Romanization Keyboards"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローマ字キーボード"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2346,6 +3126,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lohankha"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Lohankha"
@@ -2369,6 +3155,12 @@
             "value": "Taiwanese Phonetic Symbols"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符号"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2385,6 +3177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Phonetic Symbols"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符号"
           }
         },
         "nan-Hant-TW": {
@@ -2405,6 +3203,12 @@
             "value": "Auto-Capitalization"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動大文字化"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2421,6 +3225,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auto-Space"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動スペース"
           }
         },
         "nan-Hant-TW": {
@@ -2441,6 +3251,12 @@
             "value": "Copied"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーしました"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2457,6 +3273,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copy Device Info"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス情報をコピー"
           }
         },
         "nan-Hant-TW": {
@@ -2477,6 +3299,12 @@
             "value": "Email a Bug Report"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メールで問題を報告"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2493,6 +3321,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Device Info"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス情報"
           }
         },
         "nan-Hant-TW": {
@@ -2513,6 +3347,12 @@
             "value": "Share Device Info"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス情報を共有"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2529,6 +3369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Display Language"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示言語"
           }
         },
         "nan-Hant-TW": {
@@ -2549,6 +3395,12 @@
             "value": "Double-tap nn → ⁿ"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nn を続けて入力 → ⁿ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2565,6 +3417,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Double-tap oo → o͘"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "oo を続けて入力 → o͘"
           }
         },
         "nan-Hant-TW": {
@@ -2585,6 +3443,12 @@
             "value": "English"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "英語"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2601,6 +3465,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Key-Press Feedback"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力フィードバック"
           }
         },
         "nan-Hant-TW": {
@@ -2621,6 +3491,12 @@
             "value": "Keyboard-Switch Key"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボード切替キー"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2637,6 +3513,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adds a globe key to the keyboard; tap it to switch to another keyboard."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードに地球儀キーを追加します。タップすると他のキーボードに切り替えられます。"
           }
         },
         "nan-Hant-TW": {
@@ -2657,6 +3539,12 @@
             "value": "Input Mode"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力モード"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2673,6 +3561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keyboard"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボード"
           }
         },
         "nan-Hant-TW": {
@@ -2693,6 +3587,12 @@
             "value": "Show Romanization"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローマ字を表示"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2709,6 +3609,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Places the romanization in the first slot of the candidate bar; tap it or press Enter to commit. When off, you can only commit with Enter (tapping is disabled), but the candidate bar has more room."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補バーの先頭にローマ字を表示します。タップするか Enter で確定できます。オフにすると Enter でのみ確定でき（タップは無効）、その分候補バーが広くなります。"
           }
         },
         "nan-Hant-TW": {
@@ -2729,6 +3635,12 @@
             "value": "Adjust in App"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリで調整"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2747,6 +3659,12 @@
             "value": "Annotate in Brackets"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "括弧で併記"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2760,6 +3678,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pe̍h-ōe-jī"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Pe̍h-ōe-jī"
@@ -2783,6 +3707,12 @@
             "value": "Pe̍h-ōe-jī"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pe̍h-ōe-jī"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2799,6 +3729,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reset"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リセット"
           }
         },
         "nan-Hant-TW": {
@@ -2819,6 +3755,12 @@
             "value": "Reset Settings"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定をリセット"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2835,6 +3777,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "This will reset all settings. Continue?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての設定がリセットされます。続けますか？"
           }
         },
         "nan-Hant-TW": {
@@ -2855,6 +3803,12 @@
             "value": "Key Sound"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キー音"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2868,6 +3822,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tâi-lô"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Tâi-lô"
@@ -2891,6 +3851,12 @@
             "value": "Auto-Hide Toolbar"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールバーを自動的に隠す"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2907,6 +3873,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "After you pick a word, the toolbar collapses automatically to give the keyboard more room."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語を選ぶとツールバーが自動的に閉じ、キーボードの表示領域が広くなります。"
           }
         },
         "nan-Hant-TW": {
@@ -2927,6 +3899,12 @@
             "value": "Phonetic Symbols"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符号"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2943,6 +3921,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Map or → ㄜ"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or を ㄜ に対応"
           }
         },
         "nan-Hant-TW": {
@@ -2963,6 +3947,12 @@
             "value": "Tâi-lô 'or' is not a standard spelling; the phonetic symbol ㄜ officially corresponds only to 'er'. This setting only controls how candidates are displayed — dictionary search already maps 'er' and 'or' to the same phoneme, so words are found whether this is on or off.\n\nOn (default): 'or' shows as ㄜ.\nOff: 'or' shows as ㄛ (back to Tâi-lô o)."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tâi-lô の「or」は正式な綴りではなく、方音符号 ㄜ は正式には「er」にのみ対応します。この設定は候補の表示方法を変えるだけです。辞書検索は「er」と「or」を同じ音素として扱うため、オン・オフどちらでも単語は見つかります。\n\nオン（既定）：「or」を ㄜ と表示します。\nオフ：「or」を ㄛ と表示します（Tâi-lô の o に戻ります）。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -2979,6 +3969,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Phonetic Symbols"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "方音符号"
           }
         },
         "nan-Hant-TW": {
@@ -2999,6 +3995,12 @@
             "value": "Typing"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3015,6 +4017,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vibration"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バイブレーション"
           }
         },
         "nan-Hant-TW": {
@@ -3035,6 +4043,12 @@
             "value": "Candidate Bar"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補バー"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3051,6 +4065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Candidate Text Size"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補の文字の大きさ"
           }
         },
         "nan-Hant-TW": {
@@ -3071,6 +4091,12 @@
             "value": "The custom-theme limit is 5. Delete one before adding another."
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3087,6 +4113,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Theme Limit Reached"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テーマ数の上限に達しました"
           }
         },
         "nan-Hant-TW": {
@@ -3107,6 +4139,12 @@
             "value": "Apply"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3123,6 +4161,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集"
           }
         },
         "nan-Hant-TW": {
@@ -3143,6 +4187,12 @@
             "value": "Candidate Background"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補の背景"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3159,6 +4209,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Candidate Text"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補の文字"
           }
         },
         "nan-Hant-TW": {
@@ -3179,6 +4235,12 @@
             "value": "Keys"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キー"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3195,6 +4257,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Key Text"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キー文字"
           }
         },
         "nan-Hant-TW": {
@@ -3215,6 +4283,12 @@
             "value": "Keyboard Background"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボード背景"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3231,6 +4305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Normal Key Fill"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通常キーの色"
           }
         },
         "nan-Hant-TW": {
@@ -3251,6 +4331,12 @@
             "value": "Special Key Fill"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "特殊キーの色"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3267,6 +4353,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "New Theme…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいテーマ…"
           }
         },
         "nan-Hant-TW": {
@@ -3287,6 +4379,12 @@
             "value": "Font"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォント"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3303,6 +4401,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom Themes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムテーマ"
           }
         },
         "nan-Hant-TW": {
@@ -3323,6 +4427,12 @@
             "value": "New Theme"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいテーマ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3339,6 +4449,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reset to Defaults"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既定値に戻す"
           }
         },
         "nan-Hant-TW": {
@@ -3359,6 +4475,12 @@
             "value": "Save"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3375,6 +4497,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit Theme"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テーマを編集"
           }
         },
         "nan-Hant-TW": {
@@ -3395,6 +4523,12 @@
             "value": "New Theme"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいテーマ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3411,6 +4545,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Key Border Width"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーの枠線の太さ"
           }
         },
         "nan-Hant-TW": {
@@ -3431,6 +4571,12 @@
             "value": "Key Corner Radius"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーの角丸"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3447,6 +4593,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Key Font Size"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キー文字の大きさ"
           }
         },
         "nan-Hant-TW": {
@@ -3467,6 +4619,12 @@
             "value": "Keyboard Height"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードの高さ"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3483,6 +4641,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Key Shadow"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーの影"
           }
         },
         "nan-Hant-TW": {
@@ -3503,6 +4667,12 @@
             "value": "Keyboard Surface"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボード面"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3521,6 +4691,12 @@
             "value": "Theme Name"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テーマ名"
+          }
+        },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
@@ -3537,6 +4713,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter a theme name"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テーマ名を入力"
           }
         },
         "nan-Hant-TW": {

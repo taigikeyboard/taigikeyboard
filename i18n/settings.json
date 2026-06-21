@@ -4,192 +4,192 @@
     "reset": {
       "comment": "Generic confirm-action label on the reset-settings dialog (恢復 = restore).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復", "en": "Reset" }
+      "values": { "hanji": "恢復", "en": "Reset", "ja": "リセット" }
     },
     "inputMode": {
       "comment": "Settings row + sub-screen title for selecting the active input mode.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "輸入模式", "en": "Input Mode" }
+      "values": { "hanji": "輸入模式", "en": "Input Mode", "ja": "入力モード" }
     },
     "displayLanguage": {
       "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Option labels are endonyms, not i18n keys.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "顯示語言", "en": "Display Language" }
+      "values": { "hanji": "顯示語言", "en": "Display Language", "ja": "表示言語" }
     },
     "pojMode": {
       "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "白話字", "en": "Pe̍h-ōe-jī" }
+      "values": { "hanji": "白話字", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "tlMode": {
       "comment": "Input-mode option: Tâi-lô (台羅) romanization.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台羅", "en": "Tâi-lô" }
+      "values": { "hanji": "台羅", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
     "englishMode": {
       "comment": "Input-mode option: English keyboard.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "英文", "en": "English" }
+      "values": { "hanji": "英文", "en": "English", "ja": "英語" }
     },
     "tpsMode": {
       "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "方音符號", "en": "Phonetic Symbols" }
+      "values": { "hanji": "方音符號", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
     "typingSectionTitle": {
       "comment": "Section header for typing-behaviour settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍字設定", "en": "Typing" }
+      "values": { "hanji": "拍字設定", "en": "Typing", "ja": "入力" }
     },
     "outputBothScripts": {
       "comment": "Toggle label: annotate committed text with the other script in brackets.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "括號標註", "en": "Annotate in Brackets" }
+      "values": { "hanji": "括號標註", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "literalRomanCandidate": {
       "comment": "Toggle label: show the literal romanization candidate in the strip.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "顯示羅馬字", "en": "Show Romanization" }
+      "values": { "hanji": "顯示羅馬字", "en": "Show Romanization", "ja": "ローマ字を表示" }
     },
     "literalRomanCandidateInfo": {
       "comment": "Help text for the show-romanization toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。", "en": "Places the romanization in the first slot of the candidate bar; tap it or press Enter to commit. When off, you can only commit with Enter (tapping is disabled), but the candidate bar has more room." }
+      "values": { "hanji": "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。", "en": "Places the romanization in the first slot of the candidate bar; tap it or press Enter to commit. When off, you can only commit with Enter (tapping is disabled), but the candidate bar has more room.", "ja": "候補バーの先頭にローマ字を表示します。タップするか Enter で確定できます。オフにすると Enter でのみ確定でき（タップは無効）、その分候補バーが広くなります。" }
     },
     "autoCapitalization": {
       "comment": "Toggle label: automatic capitalization in English mode.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "自動大本字", "en": "Auto-Capitalization" }
+      "values": { "hanji": "自動大本字", "en": "Auto-Capitalization", "ja": "自動大文字化" }
     },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "自動空白", "en": "Auto-Space" }
+      "values": { "hanji": "自動空白", "en": "Auto-Space", "ja": "自動スペース" }
     },
     "keyboardSectionTitle": {
       "comment": "Section header for keyboard-chrome settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "齒盤設定", "en": "Keyboard" }
+      "values": { "hanji": "齒盤設定", "en": "Keyboard", "ja": "キーボード" }
     },
     "toolbarAutoCollapse": {
       "comment": "Toggle label: auto-hide the candidate toolbar after selecting.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "自動隱藏工具列", "en": "Auto-Hide Toolbar" }
+      "values": { "hanji": "自動隱藏工具列", "en": "Auto-Hide Toolbar", "ja": "ツールバーを自動的に隠す" }
     },
     "toolbarAutoCollapseInfo": {
       "comment": "Help text for the auto-hide-toolbar toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "選字了後工具列會自動合起來，予齒盤面頂空間較大。", "en": "After you pick a word, the toolbar collapses automatically to give the keyboard more room." }
+      "values": { "hanji": "選字了後工具列會自動合起來，予齒盤面頂空間較大。", "en": "After you pick a word, the toolbar collapses automatically to give the keyboard more room.", "ja": "単語を選ぶとツールバーが自動的に閉じ、キーボードの表示領域が広くなります。" }
     },
     "globeKey": {
       "comment": "Toggle label: show the globe / keyboard-switch key.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "齒盤切換揤鈕", "en": "Keyboard-Switch Key" }
+      "values": { "hanji": "齒盤切換揤鈕", "en": "Keyboard-Switch Key", "ja": "キーボード切替キー" }
     },
     "globeKeyInfo": {
       "comment": "Help text for the globe-key toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "佇齒盤面頂加 1 粒地球揤鈕，揤著會使切換去其他齒盤。", "en": "Adds a globe key to the keyboard; tap it to switch to another keyboard." }
+      "values": { "hanji": "佇齒盤面頂加 1 粒地球揤鈕，揤著會使切換去其他齒盤。", "en": "Adds a globe key to the keyboard; tap it to switch to another keyboard.", "ja": "キーボードに地球儀キーを追加します。タップすると他のキーボードに切り替えられます。" }
     },
     "feedbackSectionTitle": {
       "comment": "Section header for key-press feedback settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍字反應", "en": "Key-Press Feedback" }
+      "values": { "hanji": "拍字反應", "en": "Key-Press Feedback", "ja": "入力フィードバック" }
     },
     "soundFeedback": {
       "comment": "Toggle label: key-press sound feedback.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "揤仔聲", "en": "Key Sound" }
+      "values": { "hanji": "揤仔聲", "en": "Key Sound", "ja": "キー音" }
     },
     "vibrationFeedback": {
       "comment": "Toggle label: key-press vibration feedback.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "震動反應", "en": "Vibration" }
+      "values": { "hanji": "震動反應", "en": "Vibration", "ja": "バイブレーション" }
     },
     "pojSettingsSectionTitle": {
       "comment": "Section header for Pe̍h-ōe-jī-specific settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "白話字", "en": "Pe̍h-ōe-jī" }
+      "values": { "hanji": "白話字", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "doubleTapOO": {
       "comment": "Toggle label: double-tap oo composes o͘ (POJ).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "連紲拍 oo → o͘", "en": "Double-tap oo → o͘" }
+      "values": { "hanji": "連紲拍 oo → o͘", "en": "Double-tap oo → o͘", "ja": "oo を続けて入力 → o͘" }
     },
     "doubleTapNN": {
       "comment": "Toggle label: double-tap nn composes ⁿ (POJ nasal).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "連紲拍 nn → ⁿ", "en": "Double-tap nn → ⁿ" }
+      "values": { "hanji": "連紲拍 nn → ⁿ", "en": "Double-tap nn → ⁿ", "ja": "nn を続けて入力 → ⁿ" }
     },
     "tpsSettingsSectionTitle": {
       "comment": "Section header for TPS-specific settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "方音符號", "en": "Phonetic Symbols" }
+      "values": { "hanji": "方音符號", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
     "tpsOrMapsToER": {
       "comment": "Toggle label: render TL 'or' final as TPS ㄜ.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "or 對應 ㄜ", "en": "Map or → ㄜ" }
+      "values": { "hanji": "or 對應 ㄜ", "en": "Map or → ㄜ", "ja": "or を ㄜ に対応" }
     },
     "tpsOrMapsToERInfo": {
       "comment": "Help text for the or→ㄜ toggle (multi-paragraph).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。本設定只控制候選詞按怎顯示;字典揣詞已經共 er 佮 or 攏對應做仝一个音位，無論本設定開抑無開攏揣會著。\n\n開啟（預設）：or 顯示做 ㄜ。\n關閉：or 顯示做 ㄛ（恢復台羅 o）。", "en": "Tâi-lô 'or' is not a standard spelling; the phonetic symbol ㄜ officially corresponds only to 'er'. This setting only controls how candidates are displayed — dictionary search already maps 'er' and 'or' to the same phoneme, so words are found whether this is on or off.\n\nOn (default): 'or' shows as ㄜ.\nOff: 'or' shows as ㄛ (back to Tâi-lô o)." }
+      "values": { "hanji": "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。本設定只控制候選詞按怎顯示;字典揣詞已經共 er 佮 or 攏對應做仝一个音位，無論本設定開抑無開攏揣會著。\n\n開啟（預設）：or 顯示做 ㄜ。\n關閉：or 顯示做 ㄛ（恢復台羅 o）。", "en": "Tâi-lô 'or' is not a standard spelling; the phonetic symbol ㄜ officially corresponds only to 'er'. This setting only controls how candidates are displayed — dictionary search already maps 'er' and 'or' to the same phoneme, so words are found whether this is on or off.\n\nOn (default): 'or' shows as ㄜ.\nOff: 'or' shows as ㄛ (back to Tâi-lô o).", "ja": "Tâi-lô の「or」は正式な綴りではなく、方音符号 ㄜ は正式には「er」にのみ対応します。この設定は候補の表示方法を変えるだけです。辞書検索は「er」と「or」を同じ音素として扱うため、オン・オフどちらでも単語は見つかります。\n\nオン（既定）：「or」を ㄜ と表示します。\nオフ：「or」を ㄛ と表示します（Tâi-lô の o に戻ります）。" }
     },
     "resetSettings": {
       "comment": "Destructive action row + dialog title: reset all settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復設定", "en": "Reset Settings" }
+      "values": { "hanji": "恢復設定", "en": "Reset Settings", "ja": "設定をリセット" }
     },
     "resetSettingsMessage": {
       "comment": "Confirmation-dialog body for resetting all settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "這个動作會恢復所有設定，敢欲繼續？", "en": "This will reset all settings. Continue?" }
+      "values": { "hanji": "這个動作會恢復所有設定，敢欲繼續？", "en": "This will reset all settings. Continue?", "ja": "すべての設定がリセットされます。続けますか？" }
     },
     "resetSuccess": {
       "comment": "Toast shown after settings were reset successfully.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "設定已恢復", "en": "Settings reset" }
+      "values": { "hanji": "設定已恢復", "en": "Settings reset", "ja": "設定をリセットしました" }
     },
     "resetFailed": {
       "comment": "Toast shown when resetting settings fails.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復設定失敗，請重試", "en": "Failed to reset settings. Please try again." }
+      "values": { "hanji": "恢復設定失敗，請重試", "en": "Failed to reset settings. Please try again.", "ja": "設定のリセットに失敗しました。もう一度お試しください。" }
     },
     "noEmailApp": {
       "comment": "Toast shown when no email app is available to send the bug report.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "揣無 Email App", "en": "No email app found" }
+      "values": { "hanji": "揣無 Email App", "en": "No email app found", "ja": "メールアプリが見つかりません" }
     },
     "diagnosticSectionTitle": {
       "comment": "Section header for device-diagnostics actions.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "裝置資訊", "en": "Device Info" }
+      "values": { "hanji": "裝置資訊", "en": "Device Info", "ja": "デバイス情報" }
     },
     "diagnosticCopy": {
       "comment": "Action row: copy device diagnostic info to clipboard.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "Khó͘-phih 裝置資訊", "en": "Copy Device Info" }
+      "values": { "hanji": "Khó͘-phih 裝置資訊", "en": "Copy Device Info", "ja": "デバイス情報をコピー" }
     },
     "diagnosticCopied": {
       "comment": "Toast confirming diagnostic info was copied.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "已 khó͘-phih", "en": "Copied" }
+      "values": { "hanji": "已 khó͘-phih", "en": "Copied", "ja": "コピーしました" }
     },
     "diagnosticShare": {
       "comment": "Action row: share device diagnostic info via the share sheet.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "分享裝置資訊", "en": "Share Device Info" }
+      "values": { "hanji": "分享裝置資訊", "en": "Share Device Info", "ja": "デバイス情報を共有" }
     },
     "diagnosticEmail": {
       "comment": "Action row: email a bug report with diagnostic info attached.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "Email 回報問題", "en": "Email a Bug Report" }
+      "values": { "hanji": "Email 回報問題", "en": "Email a Bug Report", "ja": "メールで問題を報告" }
     },
     "openApp": {
       "comment": "Keyboard-overlay button linking to the host app's full settings screen.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "去APP調整", "en": "Adjust in App" }
+      "values": { "hanji": "去APP調整", "en": "Adjust in App", "ja": "アプリで調整" }
     }
   }
 }

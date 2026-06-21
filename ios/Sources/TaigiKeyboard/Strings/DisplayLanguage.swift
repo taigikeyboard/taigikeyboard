@@ -67,10 +67,13 @@ enum DisplayLanguage: String, CaseIterable {
     /// android .../i18n/DisplayLanguage.kt:79 `productionLanguages`. Drift causes silent divergence.
     static let productionLanguages: [DisplayLanguage] = [.hanji, .english]
 
-    /// What the picker offers: the production roster, plus the `.pseudo` layout probe in DEBUG only.
+    /// What the picker offers: the production roster, plus debug-only previews — Japanese (authored but
+    /// not yet a production language) and the `.pseudo` layout probe. Debug-selecting `.japanese`
+    /// dogfoods its strings + font/glyph rendering before it joins `productionLanguages` in a later
+    /// round; release builds only ever offer `productionLanguages`.
     static var selectableLanguages: [DisplayLanguage] {
         #if DEBUG
-        productionLanguages + [.pseudo]
+        productionLanguages + [.japanese, .pseudo]
         #else
         productionLanguages
         #endif

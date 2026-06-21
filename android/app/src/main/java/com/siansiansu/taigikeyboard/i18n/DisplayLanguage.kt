@@ -78,9 +78,14 @@ enum class DisplayLanguage(
          */
         val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH)
 
-        /** What the picker offers: the production roster, plus the [PSEUDO] layout probe in debug only. */
+        /**
+         * What the picker offers: the production roster, plus debug-only previews — Japanese (authored
+         * but not yet a production language) and the [PSEUDO] layout probe. Debug-selecting [JAPANESE]
+         * dogfoods its strings + font/glyph rendering before it joins [productionLanguages] in a later
+         * round; release builds only ever offer [productionLanguages].
+         */
         val selectableLanguages: List<DisplayLanguage>
-            get() = if (BuildConfig.DEBUG) productionLanguages + PSEUDO else productionLanguages
+            get() = if (BuildConfig.DEBUG) productionLanguages + JAPANESE + PSEUDO else productionLanguages
 
         /**
          * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or

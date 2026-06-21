@@ -21,17 +21,24 @@ class DisplayLanguageTest {
 
     @Test
     fun fromTag_unauthoredTags_clampToHanji() {
-        // ja/tl/poj are valid identities but not yet user-selectable, so the effective language is
+        // tl/poj are valid identities but not yet selectable in any build, so the effective language is
         // Hanji — the picker selection and the rendered strings always agree. Persisted tag untouched.
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("tailo"))
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("poj"))
-        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("ja"))
     }
 
     @Test
     fun fromTag_unknownTag_fallsBackToHanji() {
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("xx"))
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag(""))
+    }
+
+    @Test
+    fun fromTag_japaneseInDebugBuild_resolvesJapanese() {
+        // Japanese is authored but not yet a production language; it is debug-selectable so a debug
+        // build can dogfood its strings + font rendering before it joins productionLanguages.
+        // testDebugUnitTest runs with BuildConfig.DEBUG == true, so the ja tag survives.
+        assertEquals(DisplayLanguage.JAPANESE, DisplayLanguage.fromTag("ja"))
     }
 
     @Test
