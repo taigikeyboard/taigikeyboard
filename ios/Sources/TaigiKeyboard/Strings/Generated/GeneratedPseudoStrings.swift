@@ -9,6 +9,7 @@ enum GeneratedPseudoStrings {
         .commonCancel: "⟦取消··⟧",
         .commonOk: "⟦好··⟧",
         .commonDelete: "⟦刪除··⟧",
+        .commonError: "⟦錯誤··⟧",
         .commonViewWebsite: "⟦官方網站··⟧",
         .commonMoeDict: "⟦教育部臺灣台語常用詞辭典·····⟧",
         .commonNewwordDict: "⟦公視台語台台語新詞辭庫·····⟧",

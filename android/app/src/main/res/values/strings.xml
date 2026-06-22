@@ -39,7 +39,6 @@
 
     <!-- Content Descriptions for Accessibility -->
     <string name="content_desc__icon_delete">刪除圖示</string>
-    <string name="content_desc__icon_arrow_forward">前往圖示</string>
     <string name="content_desc__toggle_toolbar">展開或收合工具列</string>
     <string name="content_desc__symbol_panel">符號面板</string>
     <string name="content_desc__switch_layout">切換齒佈</string>

@@ -153,6 +153,7 @@ struct AssociationDataView: View {
             handler: importExport,
             importAlertTitle: lang.string(.dictionaryAssociationImportCSV),
             exportAlertTitle: lang.string(.dictionaryAssociationExportCSV),
+            errorTitle: lang.string(.commonError),
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞關聯紀錄") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),

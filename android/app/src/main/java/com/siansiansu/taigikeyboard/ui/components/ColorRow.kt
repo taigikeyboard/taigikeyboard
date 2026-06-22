@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
@@ -65,7 +66,7 @@ fun ColorRow(
             Spacer(Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Default.Refresh,
-                contentDescription = "Reset",
+                contentDescription = L10n.settingsReset,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =
                     Modifier

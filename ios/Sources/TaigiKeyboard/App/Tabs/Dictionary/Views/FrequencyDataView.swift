@@ -157,6 +157,7 @@ struct FrequencyDataView: View {
             handler: importExport,
             importAlertTitle: lang.string(.dictionaryFrequencyImportCSV),
             exportAlertTitle: lang.string(.dictionaryFrequencyExportCSV),
+            errorTitle: lang.string(.commonError),
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞頻紀錄") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),

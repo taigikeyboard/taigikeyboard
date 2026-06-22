@@ -109,6 +109,7 @@ private struct ImportExportModifiers: ViewModifier {
     @ObservedObject var handler: ImportExportHandler
     let importAlertTitle: String
     let exportAlertTitle: String
+    let errorTitle: String
     let exportFilename: () -> String
     let okText: String
     let exportSuccessText: String
@@ -143,7 +144,7 @@ private struct ImportExportModifiers: ViewModifier {
             } message: {
                 Text(exportSuccessText)
             }
-            .alert("Error", isPresented: $handler.showErrorAlert) {
+            .alert(errorTitle, isPresented: $handler.showErrorAlert) {
                 Button(okText) {}
             } message: {
                 Text(handler.errorMessage)
@@ -157,6 +158,7 @@ extension View {
         handler: ImportExportHandler,
         importAlertTitle: String,
         exportAlertTitle: String,
+        errorTitle: String,
         exportFilename: @escaping () -> String,
         okText: String,
         exportSuccessText: String,
@@ -166,6 +168,7 @@ extension View {
             handler: handler,
             importAlertTitle: importAlertTitle,
             exportAlertTitle: exportAlertTitle,
+            errorTitle: errorTitle,
             exportFilename: exportFilename,
             okText: okText,
             exportSuccessText: exportSuccessText,

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 /**
@@ -37,13 +38,13 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 @Composable
 fun SettingInfoButton(
     description: String,
-    dismissLabel: String = "OK",
+    dismissLabel: String = L10n.commonOk,
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
     Icon(
         painter = painterResource(id = R.drawable.ic_help),
-        contentDescription = "Info",
+        contentDescription = L10n.commonInfo,
         tint = MaterialTheme.colorScheme.primary,
         modifier =
             Modifier

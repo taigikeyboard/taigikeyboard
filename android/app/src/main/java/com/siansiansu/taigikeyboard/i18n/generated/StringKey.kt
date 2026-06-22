@@ -11,6 +11,8 @@ enum class StringKey(
     COMMON_CANCEL(R.string.i18n_common_cancel),
     COMMON_OK(R.string.i18n_common_ok),
     COMMON_DELETE(R.string.i18n_common_delete),
+    COMMON_INFO(R.string.i18n_common_info),
+    COMMON_CLOSE(R.string.i18n_common_close),
     COMMON_BACK(R.string.i18n_common_back),
     COMMON_VIEW_WEBSITE(R.string.i18n_common_viewWebsite),
     COMMON_EXPORT_FAILED(R.string.i18n_common_exportFailed),

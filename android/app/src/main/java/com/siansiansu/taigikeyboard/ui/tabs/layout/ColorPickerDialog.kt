@@ -144,7 +144,7 @@ fun ColorPickerDialog(
                 )
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
+                    contentDescription = L10n.commonClose,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier =
                         Modifier

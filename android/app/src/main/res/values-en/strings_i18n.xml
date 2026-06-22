@@ -4,6 +4,8 @@
     <string name="i18n_common_cancel">Cancel</string>
     <string name="i18n_common_ok">OK</string>
     <string name="i18n_common_delete">Delete</string>
+    <string name="i18n_common_info">Info</string>
+    <string name="i18n_common_close">Close</string>
     <string name="i18n_common_back">Back</string>
     <string name="i18n_common_viewWebsite">Official Website</string>
     <string name="i18n_common_exportFailed">Export failed</string>

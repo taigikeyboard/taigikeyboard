@@ -5,6 +5,7 @@ enum StringKey: String {
     case commonCancel = "i18n_common_cancel"
     case commonOk = "i18n_common_ok"
     case commonDelete = "i18n_common_delete"
+    case commonError = "i18n_common_error"
     case commonViewWebsite = "i18n_common_viewWebsite"
     case commonMoeDict = "i18n_common_moeDict"
     case commonNewwordDict = "i18n_common_newwordDict"

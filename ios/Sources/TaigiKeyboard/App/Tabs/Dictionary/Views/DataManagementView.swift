@@ -85,7 +85,7 @@ struct DataManagementView: View {
         } message: {
             Text(backupResultMessage)
         }
-        .alert("Error", isPresented: $showBackupErrorAlert) {
+        .alert(lang.string(.commonError), isPresented: $showBackupErrorAlert) {
             Button(lang.string(.commonOk)) {}
         } message: {
             Text(backupErrorMessage)

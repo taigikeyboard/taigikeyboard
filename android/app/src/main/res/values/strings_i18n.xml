@@ -4,6 +4,8 @@
     <string name="i18n_common_cancel">取消</string>
     <string name="i18n_common_ok">好</string>
     <string name="i18n_common_delete">刪除</string>
+    <string name="i18n_common_info">說明</string>
+    <string name="i18n_common_close">關閉</string>
     <string name="i18n_common_back">返回</string>
     <string name="i18n_common_viewWebsite">官方網站</string>
     <string name="i18n_common_exportFailed">匯出失敗</string>

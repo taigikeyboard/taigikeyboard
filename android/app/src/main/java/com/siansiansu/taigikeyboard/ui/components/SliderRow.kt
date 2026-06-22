@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
@@ -42,7 +43,7 @@ fun SliderRow(
             if (defaultValue != null && value != defaultValue) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Reset",
+                    contentDescription = L10n.settingsReset,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier =
                         Modifier

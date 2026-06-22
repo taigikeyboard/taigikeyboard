@@ -194,6 +194,7 @@ struct CustomDictionaryView: View {
             handler: importExport,
             importAlertTitle: lang.string(.dictionaryImportCSV),
             exportAlertTitle: lang.string(.dictionaryExportCSV),
+            errorTitle: lang.string(.commonError),
             exportFilename: { ImportExportHandler.exportFilename(prefix: "自訂詞庫") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),
