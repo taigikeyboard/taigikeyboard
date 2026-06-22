@@ -4,107 +4,107 @@
     "cancel": {
       "comment": "Dialog dismiss button — cancels the action and closes the dialog.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "取消", "tailo": "tshú-siau", "en": "Cancel", "ja": "キャンセル" }
+      "values": { "hanji": "取消", "tailo": "tshú-siau", "poj": "chhú-siau", "en": "Cancel", "ja": "キャンセル" }
     },
     "ok": {
       "comment": "Generic confirm button on an informational result dialog (acknowledge / dismiss); iOS reuses it for the custom-theme cap-reached alert.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "好", "tailo": "hó", "en": "OK", "ja": "OK" }
+      "values": { "hanji": "好", "tailo": "hó", "poj": "hó", "en": "OK", "ja": "OK" }
     },
     "delete": {
       "comment": "Generic delete action label / a11y description (custom-theme card menu item, dictionary row delete).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "刪除", "tailo": "san-tî", "en": "Delete", "ja": "削除" }
+      "values": { "hanji": "刪除", "tailo": "san-tî", "poj": "san-tî", "en": "Delete", "ja": "削除" }
     },
     "back": {
       "comment": "Back-navigation a11y contentDescription for the TopAppBar navigationIcon on Android host sub-screens. Android-only: iOS uses the system NavigationStack back button (OS-locale, not overridable to the in-app picker). Custom in-app nav controls follow the display-language picker; only OS-locale nav chrome (tab titles) stays on the OS locale.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "返回", "tailo": "tńg huê", "en": "Back", "ja": "戻る" }
+      "values": { "hanji": "返回", "tailo": "tńg huê", "poj": "tńg hôe", "en": "Back", "ja": "戻る" }
     },
     "viewWebsite": {
       "comment": "Link button opening an official website in the browser (data sources + the app's own site).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "官方網站", "tailo": "kuann-hong bāng-tsām", "en": "Official Website", "ja": "公式サイト" }
+      "values": { "hanji": "官方網站", "tailo": "kuann-hong bāng-tsām", "poj": "koaⁿ-hong bāng-chām", "en": "Official Website", "ja": "公式サイト" }
     },
     "exportFailed": {
       "comment": "Error message shown when exporting user dictionary data fails.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "匯出失敗", "tailo": "huē-tshut sit-pāi", "en": "Export failed", "ja": "エクスポートに失敗しました" }
+      "values": { "hanji": "匯出失敗", "tailo": "huē-tshut sit-pāi", "poj": "hōe-chhut sit-pāi", "en": "Export failed", "ja": "エクスポートに失敗しました" }
     },
     "importFailed": {
       "comment": "Error message shown when importing user dictionary data fails.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "匯入失敗", "tailo": "huē-ji̍p sit-pāi", "en": "Import failed", "ja": "インポートに失敗しました" }
+      "values": { "hanji": "匯入失敗", "tailo": "huē-ji̍p sit-pāi", "poj": "hōe-ji̍p sit-pāi", "en": "Import failed", "ja": "インポートに失敗しました" }
     },
     "moeDict": {
       "comment": "Display name of the MOE Taiwanese dictionary data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "教育部臺灣台語常用詞辭典", "tailo": "kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián", "en": "MOE Dictionary of Common Taiwanese Words", "ja": "教育部 台湾語常用語辞典" }
+      "values": { "hanji": "教育部臺灣台語常用詞辭典", "tailo": "kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián", "poj": "kàu-io̍k-pō͘ tâi-oân-tâi-gí siâng-iōng-sû sû-tián", "en": "MOE Dictionary of Common Taiwanese Words", "ja": "教育部 台湾語常用語辞典" }
     },
     "newwordDict": {
       "comment": "Display name of the PTS Taigi new-word lexicon data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "公視台語台台語新詞辭庫", "tailo": "kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo", "en": "PTS Taigi New-Word Lexicon", "ja": "公視台語台 台湾語新語辞書" }
+      "values": { "hanji": "公視台語台台語新詞辭庫", "tailo": "kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo", "poj": "kong-sī tâi-gí-tâi tâi-gí sin sû sî khò͘", "en": "PTS Taigi New-Word Lexicon", "ja": "公視台語台 台湾語新語辞書" }
     },
     "kunggeDict": {
       "comment": "Display name of the NTCRI craft-terminology lexicon data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "工藝中心臺灣台語工藝詞庫", "tailo": "kang-gē tiong-sim tâi-uân-tâi-gí kang-gē sû khòo", "en": "NTCRI Taiwanese Craft Glossary", "ja": "工芸センター 台湾語工芸用語辞書" }
+      "values": { "hanji": "工藝中心臺灣台語工藝詞庫", "tailo": "kang-gē tiong-sim tâi-uân-tâi-gí kang-gē sû khòo", "poj": "kang-gē tiong-sim tâi-oân-tâi-gí kang-gē sû khò͘", "en": "NTCRI Taiwanese Craft Glossary", "ja": "工芸センター 台湾語工芸用語辞書" }
     },
     "iTaigiDict": {
       "comment": "Display name of the iTaigi crowd-sourced dictionary data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "iTaigi愛台語", "tailo": "iTaigi ài-tâi-gí", "en": "iTaigi", "ja": "iTaigi" }
+      "values": { "hanji": "iTaigi愛台語", "tailo": "iTaigi ài-tâi-gí", "poj": "iTaigi ài-tâi-gí", "en": "iTaigi", "ja": "iTaigi" }
     },
     "taiwanJapanDict": {
       "comment": "Display name of the Taiwanese-Japanese Grand Dictionary (Taigi translation) data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "臺日大辭典台語譯本", "tailo": "tâi ji̍t tuā sû-tián tâi-gí i̍k-pún", "en": "Taiwanese-Japanese Dictionary (Taigi Edition)", "ja": "台日大辞典 台湾語訳" }
+      "values": { "hanji": "臺日大辭典台語譯本", "tailo": "tâi ji̍t tuā sû-tián tâi-gí i̍k-pún", "poj": "tâi ji̍t tōa sû-tián tâi-gí e̍k-pún", "en": "Taiwanese-Japanese Dictionary (Taigi Edition)", "ja": "台日大辞典 台湾語訳" }
     },
     "taiHuaDict": {
       "comment": "Display name of the online Taigi-Mandarin cross-reference dictionary data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台華線頂對照典", "tailo": "tâi huâ suànn-tíng tuì-tsiàu tián", "en": "Taigi-Mandarin Online Cross-Reference", "ja": "台湾語・華語オンライン対照辞典" }
+      "values": { "hanji": "台華線頂對照典", "tailo": "tâi huâ suànn-tíng tuì-tsiàu tián", "poj": "tâi hôa sòaⁿ-téng tùi-chiàu tián", "en": "Taigi-Mandarin Online Cross-Reference", "ja": "台湾語・華語オンライン対照辞典" }
     },
     "taiwanPlantDict": {
       "comment": "Display name of the Taiwan plant-name glossary data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台灣植物名彙", "tailo": "tâi-uân tsi̍t-bu̍t miâ luī", "en": "Taiwan Plant Name Glossary", "ja": "台湾植物名彙" }
+      "values": { "hanji": "台灣植物名彙", "tailo": "tâi-uân tsi̍t-bu̍t miâ luī", "poj": "tâi-oân chi̍t-bu̍t miâ lūi", "en": "Taiwan Plant Name Glossary", "ja": "台湾植物名彙" }
     },
     "sttiDict": {
       "comment": "Display name of the MOE academic-subject terminology Taigi translation data source.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "教育部學科術語臺灣台語對譯", "tailo": "kàu-io̍k-pōo ha̍k-kho su̍t-gí tâi-uân-tâi-gí tuì-i̍k", "en": "MOE Academic Subject Terminology (Taigi)", "ja": "教育部 学術用語 台湾語対訳" }
+      "values": { "hanji": "教育部學科術語臺灣台語對譯", "tailo": "kàu-io̍k-pōo ha̍k-kho su̍t-gí tâi-uân-tâi-gí tuì-i̍k", "poj": "kàu-io̍k-pō͘ ha̍k-kho su̍t-gí tâi-oân-tâi-gí tùi-e̍k", "en": "MOE Academic Subject Terminology (Taigi)", "ja": "教育部 学術用語 台湾語対訳" }
     },
     "accentDict": {
       "comment": "Display name of the regional accent / pronunciation-variation supplement data source (Android key was khpooDict; canonical name unified with iOS).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "腔口差", "tailo": "khiunn-kháu tsha", "en": "Accent Variations", "ja": "アクセント差" }
+      "values": { "hanji": "腔口差", "tailo": "khiunn-kháu tsha", "poj": "khiuⁿ-kháu chha", "en": "Accent Variations", "ja": "アクセント差" }
     },
     "fontSystemDefault": {
       "comment": "Keyboard font option: the OS system default typeface.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "系統", "tailo": "hē-thóng", "en": "System", "ja": "システム" }
+      "values": { "hanji": "系統", "tailo": "hē-thóng", "poj": "hē-thóng", "en": "System", "ja": "システム" }
     },
     "fontOpenHuninn": {
       "comment": "Keyboard font option: JF Open Huninn (粉圓) typeface.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "粉圓", "tailo": "hún-înn", "en": "Open Huninn", "ja": "Open Huninn" }
+      "values": { "hanji": "粉圓", "tailo": "hún-înn", "poj": "hún-îⁿ", "en": "Open Huninn", "ja": "Open Huninn" }
     },
     "fontIansui": {
       "comment": "Keyboard font option: Iansui (芫荽) typeface.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "芫荽", "tailo": "ian-sui", "en": "Iansui", "ja": "Iansui" }
+      "values": { "hanji": "芫荽", "tailo": "ian-sui", "poj": "ian-sui", "en": "Iansui", "ja": "Iansui" }
     },
     "fontGenYoMin": {
       "comment": "Keyboard font option: GenYoMin (源樣明體) serif typeface.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "源樣明體", "tailo": "guân iūnn bîng-thé", "en": "GenYoMin", "ja": "GenYoMin" }
+      "values": { "hanji": "源樣明體", "tailo": "guân iūnn bîng-thé", "poj": "goân iūⁿ bêng-thé", "en": "GenYoMin", "ja": "GenYoMin" }
     },
     "fontGenYoGothic": {
       "comment": "Keyboard font option: GenYoGothic (源樣烏體) sans-serif typeface.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "源樣烏體", "tailo": "guân iūnn oo thé", "en": "GenYoGothic", "ja": "GenYoGothic" }
+      "values": { "hanji": "源樣烏體", "tailo": "guân iūnn oo thé", "poj": "goân iūⁿ o͘ thé", "en": "GenYoGothic", "ja": "GenYoGothic" }
     }
   }
 }

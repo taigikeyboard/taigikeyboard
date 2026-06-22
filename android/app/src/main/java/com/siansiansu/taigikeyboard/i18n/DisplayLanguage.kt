@@ -35,9 +35,9 @@ sealed interface StringResolution {
 /**
  * App UI display language — orthogonal to the keyboard input mode.
  *
- * Hanji, English, and Japanese are authored and user-selectable ([productionLanguages]); the remaining
- * languages fall back to Hanji until their authoring phase populates them (P3b TL / P3c POJ) and they
- * join [productionLanguages]. [PSEUDO] is a debug-only layout probe, offered only in debug builds.
+ * Hanji, English, and Japanese are authored and user-selectable ([productionLanguages]). TL and POJ are
+ * authored too but only DEBUG-selectable for now; they fall back to Hanji in release until a review-gated
+ * promotion round adds them to [productionLanguages]. [PSEUDO] is a debug-only layout probe.
  *
  * [SYSTEM] (Automatic) is a selection POLICY, not a language: it has no authored strings and never
  * appears in [productionLanguages]. It is persisted (the user can return to it) and resolves to a
@@ -95,9 +95,10 @@ enum class DisplayLanguage(
 
         /**
          * Authored, user-selectable production languages. Drives the picker's authored roster and clamps
-         * [fromTag]. Grows by one entry as each language's authoring phase lands (P3b TL / P3c POJ remain).
-         * SEPARATE from [selectableLanguages], which leads with the [SYSTEM] selection policy — [SYSTEM]
-         * has no strings of its own, so it is NOT in this authored roster.
+         * [fromTag]. Grows by one entry when an authored language is promoted (TL/POJ are authored +
+         * debug-selectable but await their review-gated promotion round). SEPARATE from
+         * [selectableLanguages], which leads with the [SYSTEM] selection policy — [SYSTEM] has no strings
+         * of its own, so it is NOT in this authored roster.
          * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
          * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift `productionLanguages`. Drift causes silent divergence.
          */
@@ -105,15 +106,15 @@ enum class DisplayLanguage(
 
         /**
          * What the picker offers: the [SYSTEM] (Automatic) selection policy first, then the authored
-         * production roster, plus DEBUG-only previews — [TAILO] (authored but not yet a production
-         * language; debug-selectable so a debug build can dogfood its strings + rendering before it
-         * joins [productionLanguages]) and the [PSEUDO] layout probe. Release builds offer only
+         * production roster, plus DEBUG-only previews — [TAILO] and [POJ] (authored but not yet production
+         * languages; debug-selectable so a debug build can dogfood their strings + rendering before they
+         * join [productionLanguages]) and the [PSEUDO] layout probe. Release builds offer only
          * [SYSTEM] + [productionLanguages]. Mirrors ios `selectableLanguages`.
          */
         val selectableLanguages: List<DisplayLanguage>
             get() {
                 val base = listOf(SYSTEM) + productionLanguages
-                return if (BuildConfig.DEBUG) base + TAILO + PSEUDO else base
+                return if (BuildConfig.DEBUG) base + TAILO + POJ + PSEUDO else base
             }
 
         /**
@@ -131,14 +132,24 @@ enum class DisplayLanguage(
 
         /**
          * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or
-         * one whose language is not user-selectable in this build (a "pseudo"/"tailo" preview in release,
-         * or an unauthored "poj" tag) resolves to [HANJI], so the effective language always matches a
-         * picker option. "system" is now selectable, so it round-trips to [SYSTEM]. The persisted tag
-         * itself is left untouched, so it restores once that language ships.
+         * one whose language is not user-selectable in this build (a "pseudo"/"tailo"/"poj" preview in a
+         * release build) resolves to [HANJI], so the effective language always matches a picker option.
+         * "system" is now selectable, so it round-trips to [SYSTEM]. The persisted tag itself is left
+         * untouched, so it restores once that language ships.
          */
-        fun fromTag(tag: String): DisplayLanguage {
-            val match = entries.firstOrNull { it.tag == tag } ?: HANJI
-            return if (match in selectableLanguages) match else HANJI
-        }
+        fun fromTag(tag: String): DisplayLanguage =
+            clampToSelectable(entries.firstOrNull { it.tag == tag } ?: HANJI, selectableLanguages)
+
+        /**
+         * Clamps a language to a selectable roster: a known case the roster does not offer (a debug-only
+         * preview when given a release roster) falls back to [HANJI], so the effective language always
+         * matches a picker option. Pure + roster-injectable so the release clamp — unreachable from a DEBUG
+         * unit-test build, where every case is selectable — stays testable.
+         * CROSS-PLATFORM INVARIANT — mirrors ios .../Strings/DisplayLanguage.swift `clampToSelectable`.
+         */
+        internal fun clampToSelectable(
+            language: DisplayLanguage,
+            selectable: List<DisplayLanguage>,
+        ): DisplayLanguage = if (language in selectable) language else HANJI
     }
 }

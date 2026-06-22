@@ -3,14 +3,18 @@
 
 from __future__ import annotations  # keep `dict | None` annotations importable on system Python 3.9
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import derive_poj
 import i18n_lib
 from i18n_lib import (
     DUPLICATE_KEY_ERROR,
@@ -177,10 +181,11 @@ class BuildOutputsTest(unittest.TestCase):
             _write_namespace(repo, "probe", {"k": _android_key({"hanji": "字"})})
             self.assertEqual(build_outputs(repo), build_outputs(repo))
 
-    def test_generated_map_emits_tailo_and_leaves_poj_empty(self):
-        # GeneratedMap path (tailo/poj have no OS locale): an authored tailo value lands in the Kotlin
-        # tailo map AND the iOS private-use tailo localization, while an unauthored poj stays an empty
-        # map / absent tag. Mirrors P3b R5-1: tailo fully authored, poj not yet (P3c).
+    def test_generated_map_partial_fixture_emits_tailo_only(self):
+        # GeneratedMap path (tailo/poj have no OS locale): a fixture with tailo but no poj lands in the
+        # Kotlin tailo map + iOS private-use tailo localization, while poj stays an empty map / absent tag.
+        # This partial shape is exercised only by unit fixtures via the default (unenforced) build; the real
+        # source is held to the tailo/poj lockstep by validate_generated_map_completeness (see below).
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             _write_namespace(repo, "probe", {"k": _ios_key({"hanji": "字", "tailo": "jī"})})
@@ -191,6 +196,47 @@ class BuildOutputsTest(unittest.TestCase):
             xcstrings = outputs[i18n_lib.IOS_XCSTRINGS]
             self.assertIn("nan-Latn-TW-x-tailo", xcstrings)
             self.assertNotIn("nan-Latn-TW-x-poj", xcstrings)
+
+    def test_generated_map_emits_both_tailo_and_poj(self):
+        # Authored as a lockstep pair (poj derived from tailo): both land in the Kotlin map AND the iOS
+        # catalog under their private-use tags. Mirrors the real source after P3c R6-1.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            # Distinct tailo/poj so the map is proven to carry the poj value, not a copy of tailo.
+            _write_namespace(repo, "probe", {"k": _ios_key({"hanji": "字", "tailo": "tsuā", "poj": "chōa"})})
+            outputs = build_outputs(repo)
+            taigi_map = outputs[f"{i18n_lib.GEN_PKG_DIR}/GeneratedTaigiStrings.kt"]
+            self.assertIn('StringKey.PROBE_K to "tsuā"', taigi_map)  # under `private val tailo`
+            self.assertIn('StringKey.PROBE_K to "chōa"', taigi_map)  # under `private val poj`
+            self.assertNotIn("emptyMap()", taigi_map)
+            xcstrings = outputs[i18n_lib.IOS_XCSTRINGS]
+            self.assertIn("nan-Latn-TW-x-tailo", xcstrings)
+            self.assertIn("nan-Latn-TW-x-poj", xcstrings)
+
+
+class GeneratedMapCompletenessTest(unittest.TestCase):
+    def _build(self, values: dict) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "probe", {"k": _ios_key(values)})
+            build_outputs(repo, enforce_production_completeness=True)
+
+    def test_tailo_without_poj_rejected(self):
+        # The lockstep gate fires only on the enforced CLI path. tailo authored, poj missing -> error
+        # (a new key that added tailo without re-deriving poj would otherwise silently fall back to Hanji).
+        with self.assertRaisesRegex(ValueError, "lockstep"):
+            self._build({"hanji": "字", "tailo": "jī", "ja": "字", "en": "char"})
+
+    def test_poj_without_tailo_rejected(self):
+        with self.assertRaisesRegex(ValueError, "lockstep"):
+            self._build({"hanji": "字", "poj": "jī", "ja": "字", "en": "char"})
+
+    def test_both_present_passes(self):
+        self._build({"hanji": "字", "tailo": "jī", "poj": "jī", "ja": "字", "en": "char"})
+
+    def test_neither_present_passes(self):
+        # tailo/poj are still optional as a pair — a key authoring neither is a deliberate Hanji fallback.
+        self._build({"hanji": "字", "ja": "字", "en": "char"})
 
 
 class PlaceholderValidationTest(unittest.TestCase):
@@ -493,6 +539,111 @@ class PluralEmitTest(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 build_outputs(repo)
             self.assertIn("only English", str(ctx.exception))
+
+
+class DerivePojTest(unittest.TestCase):
+    # Tests the derive tool's WIRING — regex inject, structural validation, escaping, atomicity — with the
+    # taigi-converter bridge MOCKED (conversion correctness is the canonical converter's own concern, so
+    # this stays pure-Python / no Node). The fake reverses the tailo string: deterministic, != identity,
+    # and not a substring of the input, so a wrong inject is visible.
+    FAKE = staticmethod(lambda tl: tl[::-1])
+
+    def setUp(self):
+        self._patch = mock.patch.object(derive_poj, "convert_tl_to_poj_strict", side_effect=self.FAKE)
+        self._patch.start()
+        self.addCleanup(self._patch.stop)
+
+    def _run(self, namespaces: dict, check: bool = False) -> tuple[int, dict]:
+        # Write each namespace's RAW json text, point the tool at the temp repo, run main(), return
+        # (exit_code, {namespace: text_on_disk_after}).
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "i18n").mkdir()
+            for name, text in namespaces.items():
+                (repo / "i18n" / f"{name}.json").write_text(text, encoding="utf-8")
+            argv = ["derive_poj.py", "--check"] if check else ["derive_poj.py"]
+            with mock.patch.object(derive_poj, "REPO_ROOT", repo), mock.patch.object(sys, "argv", argv), \
+                    contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                code = derive_poj.main()
+            after = {name: (repo / "i18n" / f"{name}.json").read_text(encoding="utf-8") for name in namespaces}
+            return code, after
+
+    def test_injects_poj_after_tailo(self):
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
+        code, after = self._run({"n": src})
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            after["n"],
+            '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "poj": "cba", "en": "x"}}}}',
+        )
+
+    def test_idempotent_replaces_stale_poj(self):
+        # A re-run REPLACES the adjacent poj (does not duplicate it), even if the existing poj is stale.
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "poj": "STALE", "en": "x"}}}}'
+        code, after = self._run({"n": src})
+        self.assertEqual(code, 0)
+        self.assertIn('"tailo": "abc", "poj": "cba"', after["n"])
+        self.assertNotIn("STALE", after["n"])
+        # Running again is a no-op (already fresh).
+        code2, after2 = self._run({"n": after["n"]})
+        self.assertEqual(after2["n"], after["n"])
+
+    def test_entry_without_tailo_untouched(self):
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "en": "x"}}}}'
+        code, after = self._run({"n": src})
+        self.assertEqual(code, 0)
+        self.assertEqual(after["n"], src)
+
+    def test_escaped_characters_round_trip(self):
+        # A tailo with JSON-escaped quote / backslash / newline derives + re-escapes correctly. The fake
+        # reverses the decoded string, so the poj is reverse("a\"b\\c") = "c\\b\"a", re-escaped.
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "a\\"b\\\\c", "en": "x"}}}}'
+        code, after = self._run({"n": src})
+        self.assertEqual(code, 0)
+        # The derived poj decodes back to the reversed original.
+        derived = json.loads(after["n"])["keys"]["k"]["values"]["poj"]
+        self.assertEqual(derived, "c\\b\"a")
+
+    def test_non_adjacent_poj_rejected(self):
+        # A pre-existing poj NOT adjacent to tailo would become a duplicate key after the regex inject;
+        # the duplicate-rejecting re-parse fails the run, and nothing is written.
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x", "poj": "z"}}}}'
+        code, after = self._run({"n": src})
+        self.assertEqual(code, 1)
+        self.assertEqual(after["n"], src)  # untouched
+
+    def test_atomic_no_write_when_one_namespace_fails(self):
+        # Two namespaces; the second is malformed (non-adjacent poj). main() derives+validates ALL before
+        # writing, so the VALID namespace must also be left untouched.
+        good = '{"namespace": "a", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
+        bad = '{"namespace": "b", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x", "poj": "z"}}}}'
+        code, after = self._run({"a": good, "b": bad})
+        self.assertEqual(code, 1)
+        self.assertEqual(after["a"], good)
+        self.assertEqual(after["b"], bad)
+
+    def test_strict_bridge_failure_writes_nothing(self):
+        # A converter/Node failure (strict bridge raises RuntimeError) aborts with no write.
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
+        self._patch.stop()
+        with mock.patch.object(derive_poj, "convert_tl_to_poj_strict", side_effect=RuntimeError("node died")):
+            code, after = self._run({"n": src})
+        self._patch.start()  # keep addCleanup's stop balanced
+        self.assertEqual(code, 1)
+        self.assertEqual(after["n"], src)
+
+    def test_check_mode_reports_stale_and_writes_nothing(self):
+        # --check exits 1 on stale poj without mutating the file.
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
+        code, after = self._run({"n": src}, check=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(after["n"], src)
+
+    def test_check_mode_passes_when_fresh(self):
+        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "poj": "cba", "en": "x"}}}}'
+        code, after = self._run({"n": src}, check=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(after["n"], src)
 
 
 if __name__ == "__main__":

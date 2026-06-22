@@ -11,18 +11,20 @@ from pathlib import Path
 
 # --- Schema constants -------------------------------------------------------
 
-# Base language: every key MUST define this. Other languages are authored in later phases
-# (P2 en / P3a ja / P3b TL / P3c POJ); their absence is a deliberate fallback, not an error.
+# Base language: every key MUST define this. en/ja are real OS locales; tailo/poj are authored as a
+# derived pair (P3b/P3c). A language's absence on a key is a deliberate fallback, not an error — except
+# the tailo/poj lockstep enforced by validate_generated_map_completeness.
 BASE_LANGUAGE = "hanji"
 
-# Display languages emitted to the Kotlin TL/POJ map (no OS locale -> GeneratedMap path).
+# Display languages emitted to the Kotlin TL/POJ map (no OS locale -> GeneratedMap path). poj is the
+# deterministic derivation of tailo (tools/i18n/derive_poj.py), so the two are authored in lockstep.
 GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 
 # Authored, user-selectable production languages: every key MUST define ALL of these (non-empty), so a
-# picker option never renders a silent Hanji fallback for a missing translation. tailo/poj are NOT here
-# yet — they are authored in later phases (P3b TL / P3c POJ) and join this tuple when their authoring
-# lands, exactly as they join the platform `productionLanguages` roster. The lint config disables
-# Android `MissingTranslation`, so this completeness check is the generator's job (R4-3).
+# picker option never renders a silent Hanji fallback for a missing translation. tailo/poj are authored
+# (debug-selectable) but NOT here yet — promotion into this tuple (and the platform `productionLanguages`
+# roster) is a later, review-gated step (R5-2 / R6-2). The lint config disables Android
+# `MissingTranslation`, so this completeness check is the generator's job (R4-3).
 # CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — must mirror the picker roster
 # in android/.../i18n/DisplayLanguage.kt `productionLanguages` and ios/.../Strings/DisplayLanguage.swift
 # `productionLanguages` (hanji/en/ja today). Drift would either gate an unshipped language or let a
@@ -549,6 +551,24 @@ def validate_production_completeness(entries) -> None:
             )
 
 
+def validate_generated_map_completeness(entries) -> None:
+    # tailo and poj are authored in lockstep: poj is the deterministic derivation of tailo for the SAME
+    # key (tools/i18n/derive_poj.py), so a key authoring one MUST author the other. This catches a new key
+    # that added tailo without re-deriving poj (or vice versa), which would otherwise render a silent
+    # Hanji fallback for that key under the missing GeneratedMap language. Enforced at the CLI boundary
+    # only (generate.py / check.py / Gradle) — the unit tests intentionally drive partial fixtures (tailo
+    # without poj) to exercise the not-yet-authored emission path.
+    for namespace, key, entry in entries:
+        values = entry["values"]
+        authored = [lang for lang in GENERATED_MAP_LANGUAGES if values.get(lang)]
+        if authored and len(authored) != len(GENERATED_MAP_LANGUAGES):
+            missing = [lang for lang in GENERATED_MAP_LANGUAGES if not values.get(lang)]
+            raise ValueError(
+                f"{namespace}:{key}: GeneratedMap languages must be authored in lockstep — has "
+                f"{authored} but missing {missing} (poj is derived from tailo; run `make i18n-derive-poj`)"
+            )
+
+
 def _collect_entries(repo_root: Path):
     # Returns an ordered list of (namespace, key, entry) across all i18n/*.json sources.
     src_dir = repo_root / "i18n"
@@ -602,7 +622,7 @@ def _emit_taigi_map(entries) -> str:
         "",
         "/**",
         " * TL/POJ string overrides (the GeneratedMap resolution path — these languages have no OS locale).",
-        " * Empty entries fall back to the Hanji default; later phases (P3b TL / P3c POJ) populate them.",
+        " * Authored as a lockstep pair (poj derived from tailo); a missing language falls back to Hanji.",
         " */",
         "object GeneratedTaigiStrings {",
     ]
@@ -924,6 +944,7 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     # exercise scope filtering / partial-language emission, which the completeness gate would reject.
     if enforce_production_completeness:
         validate_production_completeness(all_entries)
+        validate_generated_map_completeness(all_entries)
     # Android artifacts cover only android-scoped keys (D5 scope filtering); an iOS-only key
     # must not leak into the Android resource set.
     entries = [item for item in all_entries if "android" in item[2]["scope"]["platforms"]]

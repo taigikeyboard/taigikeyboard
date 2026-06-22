@@ -11,7 +11,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt-rust fmt-check-rust lint-rust \
         fmt-swift fmt-check-swift \
         fmt-kotlin fmt-check-kotlin lint-kotlin \
-        i18n i18n-check i18n-test \
+        i18n i18n-check i18n-test i18n-derive-poj \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -68,6 +68,13 @@ i18n-check:
 # Pure-Python, no Android/iOS toolchain needed — runs the same logic the platform builds compile against.
 i18n-test:
 	python3 tools/i18n/test_i18n.py
+
+# Derive each key's POJ value from its authored Tâi-lô (tailo) via the canonical taigi-converter bridge
+# and write it back into i18n/*.json (an AUTHORING step, NOT a build/check dependency — needs Node). Run
+# after editing any tailo value, then `make i18n` to regenerate. `--check` (see derive_poj.py) verifies
+# freshness without writing.
+i18n-derive-poj:
+	python3 tools/i18n/derive_poj.py
 
 # Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
 # built dictionary.csv. Random each run; prints to stdout for manual on-device

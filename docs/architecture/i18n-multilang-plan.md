@@ -78,9 +78,9 @@ Two facts shape the design:
     "values": {
       "hanji": "輸入模式",
       "tailo": "...",                             // human-authored
+      "poj": "...",                               // derived-and-stored from tailo (`make i18n-derive-poj`)
       "ja": "入力モード",
       "en": "Input Mode"
-      // poj omitted → derived from tailo at build (D4)
     }
   },
   "dictionary.importResult": {
@@ -95,7 +95,7 @@ Two facts shape the design:
 }
 ```
 
-Rationale: JSON (ARB-shaped) is the i18n best-practice choice — machine-safe, TMS-ready (Crowdin/Weblate ingest ARB/XLIFF; JSON↔ARB↔XLIFF convert cleanly), native placeholder/plural metadata, matches repo precedents (`content/*.json`, `taigi-emojis/dist/emoji.json`). Named placeholders `{imported}` (not positional `%d`); plurals via key-suffix entries (`x.count.one` / `x.count.other`) → codegen to native plurals; `poj` blank = derive, string = override, `"skip"` = no derive.
+Rationale: JSON (ARB-shaped) is the i18n best-practice choice — machine-safe, TMS-ready (Crowdin/Weblate ingest ARB/XLIFF; JSON↔ARB↔XLIFF convert cleanly), native placeholder/plural metadata, matches repo precedents (`content/*.json`, `taigi-emojis/dist/emoji.json`). Named placeholders `{imported}` (not positional `%d`); plurals via key-suffix entries (`x.count.one` / `x.count.other`) → codegen to native plurals; `poj` is derived-and-stored from `tailo` (`make i18n-derive-poj`) — see Decision 4 for the superseded blank/override/skip schema.
 
 ⚠ Do not make the symlink the only build integration — add a **generated-output freshness check** (archive builds, non-symlink checkouts, Gradle/Xcode packaging must all see current output).
 
@@ -121,8 +121,10 @@ Net: the app leans on native resource machinery for 3 of 5 languages; the only c
 
 `taigi-converter` converts Latin runs, keeps non-matching text verbatim (`converter.js:9`, `:39`; tests cover mixed Hanji/case/punctuation `converter.test.js:93`) — but it has **no semantics**: brand names / URLs / filenames / abbreviations matching a TL syllable get rewritten; placeholders/markup need protection; some dialectal finals have no standard POJ (reference itself carries `POJ = —`). So:
 
-- Schema: default `poj = derive(tl)`, plus `pojOverride` and `derivePoj: false`, plus protected-span / placeholder handling.
-- **Generated-diff human review** — "build succeeded" ≠ "language correct".
+- ~~Schema: default `poj = derive(tl)`, plus `pojOverride` and `derivePoj: false`, plus protected-span / placeholder handling.~~ **SUPERSEDED** — see the Implemented note below (no override schema; the audit found zero corruption).
+- **Generated-diff human review** — "build succeeded" ≠ "language correct". (Still applies — see below.)
+
+**Implemented (P3c R6-1) — derive-and-store, override schema dropped.** POJ is derived from `tailo` by `tools/i18n/derive_poj.py` (`make i18n-derive-poj`, strict `convert_tl_to_poj` bridge) and **stored** as the `poj` value in `i18n/*.json`, exactly like every other language; the codegen reads it (no Node at `make i18n` / `make i18n-check` time — a graceful bridge inside the freshness gate would be a false-green hazard). An empirical audit of all 211 strings (Codex-confirmed) showed the converter preserves every brand / acronym / `{placeholder}` token verbatim — zero corruption — so the `pojOverride` / `derivePoj:false` / protected-span schema was **not** built (YAGNI; add a minimal override only if a real exception surfaces in review). tailo↔poj lockstep is enforced by `validate_generated_map_completeness`. Re-run the derive after any `tailo` correction; the generated-diff human review still applies (POJ correctness = TL correctness × the canonical converter).
 
 ### 5. Codegen + scope-aware key checks  *(Codex: CONFIRM codegen, REFUTE hard iOS==Android equality)*
 
@@ -180,7 +182,7 @@ Old P2 (show 5 picker options all falling back to 漢字) was a visible fake fea
 | **P2** | Locale **state + persistence + live-switch**, done as a complete vertical slice in **English** (incl. native plural, dynamic-type/long-string layout, a11y locale) | adds picker (English only) | first real switchable language, fully gated |
 | **P3a** | Japanese (font verified: global Open Huninn keeps full kana coverage — Hiragana/Katakana/halfwidth — only kanji render in Taiwan rounded-gothic forms; kept for a consistent app aesthetic, no per-`ja` font swap) | adds language | — |
 | **P3b** | TL authoring (Taigi prose; Core Principle #3 authoritative-source-only; never invent TL) | adds language | — |
-| **P3c** | POJ derive + override + human diff review | adds language | — |
+| **P3c** | POJ derive-and-store from tailo (`derive_poj.py`, lockstep-gated) + human diff review | adds language | — |
 
 Picker shows a language only after it passes completeness + layout + accessibility gates. P1 alone delivers value (single source of truth) independent of multi-language shipping.
 
@@ -221,7 +223,7 @@ Deferred to P2 (recorded during R2a-1 review): emit the pseudo-locale map under 
 
 - **Live-switch invalidation has no architectural definition** — the #1 risk. Static `L10n.foo` won't trigger SwiftUI/Compose refresh; extension is a separate process. Mitigation = the P1 reactive prototype gate (Decision 7).
 - **TL authoring is a real linguistic task** — never invent TL (Core Principle #3 + taigi-emojis lesson); the long pole, not the engineering.
-- **POJ auto-derive can corrupt non-Taigi tokens** — default-derive + override + diff review (Decision 4).
+- ~~**POJ auto-derive can corrupt non-Taigi tokens**~~ — RESOLVED (P3c R6-1): an audit of all 211 strings (Codex-confirmed) found zero corruption (the converter preserves every brand / acronym / `{placeholder}` token), so no override schema was needed (Decision 4 Implemented note). Diff review still applies.
 - **`HomeTexts` version-history changelog EXCLUDED from multi-language** (USER 2026-06-19: changelog 不需要納入多語) — stays 漢字-only; do not codegen/translate those keys.
 - **Repo location CONFIRMED in-repo** (USER 2026-06-19). Separate-repo flip trigger (external-translator workflow) still documented in Decision 1.
 - **Version / timing** — tentatively v3.6.4 (USER said 「可能」, not firm); remains USER-gated.
@@ -300,6 +302,6 @@ Reorders the Phase table for de-risking: the D7 live-switch prototype (the #1 ri
 | **R1′** iOS spike | Same minimal prototype: `@Observable` store → per-bundle `.lproj` override + `Text(key, bundle:)`; extension reads App Group `UserDefaults` | iOS | scratch | ⛔ BLOCKED on USER pbxproj (`CFBundleLocalizations` + TL/POJ `.lproj`) |
 | **R2** (P1 infra) | `i18n/` JSON schema (1-2 namespaces first: `common` + `settings`) + Python codegen + `make i18n` + native resources + typed accessors + scope-aware key check + pseudo-locale + freshness check; hand-mirror dies incrementally | both (iOS resources USER-gated) | split R2a (codegen + schema + Android) / R2b (iOS); ~300-500 LOC each | spike passed |
 | **R3** (P2) | locale state + persistence + picker (English only) + live-switch wired for real + native plural + dynamic-type / long-string layout + a11y locale | both | vertical slice | completeness + layout + a11y |
-| **R4a/b/c** (P3) | ja (font verify) / TL authoring (Core Principle #3 — never invent TL) / POJ (derive + override + diff review). `content/*.json` per-language authoring rides here | both | one language per round | per-language gate before entering picker |
+| **R4a/b/c** (P3) | ja (font verify) / TL authoring (Core Principle #3 — never invent TL) / POJ (derive-and-store from tailo + diff review). `content/*.json` per-language authoring rides here | both | one language per round | per-language gate before entering picker |
 
 Only change from the Phase table above: the D7 prototype is pulled out of P1 into its own R1 spike, run **before** P1 infra, Android-first.

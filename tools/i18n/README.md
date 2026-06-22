@@ -33,9 +33,11 @@ archive / `assemble` builds cannot link stale output.
       "placeholders": { "count": "int" },   // optional; named {count}, never %d
       "values": {
         "hanji": "輸入模式",                 // required base language
+        "tailo": "su-ji̍p bôo-sik",          // authored (Tâi-lô)
+        "poj": "su-ji̍p bô͘-sek",            // derived from tailo by `make i18n-derive-poj`
         "ja": "入力モード",                   // authored per language phase
         "en": "Input Mode"
-        // tailo/poj omitted -> derived/fallback in a later phase
+        // a key omitting tailo/poj falls back to Hanji (the pair must be present together)
       }
     }
   }
@@ -66,4 +68,15 @@ the generator's job):
   get a typed `StringResolver.<accessor>(name: Int, …)` function in `StringResolverFormats.kt`, backed
   by the hand-written `StringResolver.formatString` helper — call sites never touch a raw `%d`.
 
-POJ derive-from-TL (via `taigi-converter`) is deliberately not wired until TL strings exist (P3c).
+### POJ (Pe̍h-ōe-jī)
+
+POJ is a deterministic transliteration of TL (ts→ch, tsh→chh, oo→o͘, nn→ⁿ, ua→oa, ...) with no semantics
+of its own, so it is **derived-and-stored**, not hand-authored. `tools/i18n/derive_poj.py` (`make
+i18n-derive-poj`) runs every `tailo` value through the canonical `taigi-converter` bridge
+(`convert_tl_to_poj_strict`) and writes the result back as the `poj` value in `i18n/*.json`; `make i18n`
+then emits it like any other language. Re-run the derive after any `tailo` correction — `--check` exits
+non-zero if a committed `poj` is stale. The codegen itself reads `poj` from the JSON like every other
+language (no Node at `make i18n` / `make i18n-check` time). tailo and poj are authored in lockstep:
+`validate_generated_map_completeness` rejects a key that has one but not the other. (The earlier plan-D4
+`pojOverride` / `derivePoj:false` / protected-span schema proved unnecessary — an audit of all real
+strings showed the converter preserves every brand / acronym / `{placeholder}` token verbatim.)

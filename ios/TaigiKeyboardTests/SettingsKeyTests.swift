@@ -286,10 +286,9 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(DisplayLanguage.fromTag("hanji"), .hanji)
         XCTAssertEqual(DisplayLanguage.fromTag("en"), .english)
         XCTAssertEqual(DisplayLanguage.fromTag("ja"), .japanese)
-        // Unauthored poj + unknown tags clamp to Hanji so the picker selection always matches the rendered
-        // language; the persisted tag is left untouched (see migration tests). tailo is now authored +
-        // debug-selectable (separate test below).
-        XCTAssertEqual(DisplayLanguage.fromTag("poj"), .hanji)
+        // An unknown tag clamps to Hanji so the picker selection always matches the rendered language; the
+        // persisted tag is left untouched (see migration tests). tailo/poj are now authored +
+        // debug-selectable (separate tests below).
         XCTAssertEqual(DisplayLanguage.fromTag("xx"), .hanji)
     }
 
@@ -300,11 +299,31 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(DisplayLanguage.fromTag("tailo"), .tailo)
     }
 
+    func test_DISPLAY_LANGUAGE_pojResolvesInDebugBuild() {
+        // POJ is authored (derived from tailo) + debug-selectable, on the same authoring-not-yet-promoted
+        // footing as tailo. The test target builds in DEBUG, so the poj tag survives fromTag instead of
+        // clamping to Hanji (it clamps only in a release build, where it is not selectable).
+        XCTAssertEqual(DisplayLanguage.fromTag("poj"), .poj)
+    }
+
+    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_releaseClampsDebugPreviews() {
+        // The release roster ([system] + productionLanguages) excludes the debug-only previews. clampToSelectable
+        // pins the release clamp directly: a known-but-not-offered case (tailo/poj/pseudo) falls back to Hanji,
+        // while production languages + system survive. This is the only executable proof of the release path —
+        // a DEBUG test build offers every case, so fromTag itself cannot reach the clamp branch.
+        let release = [DisplayLanguage.system] + DisplayLanguage.productionLanguages
+        for preview in [DisplayLanguage.tailo, .poj, .pseudo] {
+            XCTAssertEqual(DisplayLanguage.clampToSelectable(preview, release), .hanji)
+        }
+        XCTAssertEqual(DisplayLanguage.clampToSelectable(.english, release), .english)
+        XCTAssertEqual(DisplayLanguage.clampToSelectable(.system, release), .system)
+    }
+
     func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_debugSelectableRoster() {
         // Pin the exact DEBUG picker order: Automatic first, the production roster, then the debug-only
-        // tailo preview + pseudo probe. Release drops the last two (asserted by the source #if; not
-        // reachable from a DEBUG test build). Guards against reorders / accidental promotion.
-        XCTAssertEqual(DisplayLanguage.selectableLanguages.map(\.tag), ["system", "hanji", "en", "ja", "tailo", "pseudo"])
+        // tailo + poj previews + pseudo probe. Release drops the last three (asserted by the source #if;
+        // not reachable from a DEBUG test build). Guards against reorders / accidental promotion.
+        XCTAssertEqual(DisplayLanguage.selectableLanguages.map(\.tag), ["system", "hanji", "en", "ja", "tailo", "poj", "pseudo"])
     }
 
     func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_systemLeadsSelectableButNotRoster() {

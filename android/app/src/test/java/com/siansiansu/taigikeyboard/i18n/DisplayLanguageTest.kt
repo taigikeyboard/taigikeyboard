@@ -22,14 +22,6 @@ class DisplayLanguageTest {
     }
 
     @Test
-    fun fromTag_unauthoredTags_clampToHanji() {
-        // poj is a valid identity but unauthored (no strings yet), so it is not selectable in any build and
-        // clamps to Hanji — the picker selection and the rendered strings always agree. Persisted tag
-        // untouched. tailo is now authored + debug-selectable (separate test below).
-        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("poj"))
-    }
-
-    @Test
     fun fromTag_tailoInDebugBuild_resolvesTailo() {
         // Tâi-lô is authored but not yet a production language; it is debug-selectable so a debug build can
         // dogfood its strings + rendering before it joins productionLanguages (mirrors ja R4-1).
@@ -38,12 +30,34 @@ class DisplayLanguageTest {
     }
 
     @Test
+    fun fromTag_pojInDebugBuild_resolvesPoj() {
+        // POJ is authored (derived from tailo) + debug-selectable, on the same authoring-not-yet-promoted
+        // footing as tailo. testDebugUnitTest runs with BuildConfig.DEBUG == true, so the poj tag survives
+        // instead of clamping to Hanji (it clamps only in a release build, where it is not selectable).
+        assertEquals(DisplayLanguage.POJ, DisplayLanguage.fromTag("poj"))
+    }
+
+    @Test
+    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_releaseClampsDebugPreviews() {
+        // The release roster ([system] + productionLanguages) excludes the debug-only previews. clampToSelectable
+        // pins the release clamp directly: a known-but-not-offered case (tailo/poj/pseudo) falls back to Hanji,
+        // while production languages + system survive. This is the only executable proof of the release path —
+        // a DEBUG unit-test build offers every case, so fromTag itself cannot reach the clamp branch.
+        val release = listOf(DisplayLanguage.SYSTEM) + DisplayLanguage.productionLanguages
+        for (preview in listOf(DisplayLanguage.TAILO, DisplayLanguage.POJ, DisplayLanguage.PSEUDO)) {
+            assertEquals(DisplayLanguage.HANJI, DisplayLanguage.clampToSelectable(preview, release))
+        }
+        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.clampToSelectable(DisplayLanguage.ENGLISH, release))
+        assertEquals(DisplayLanguage.SYSTEM, DisplayLanguage.clampToSelectable(DisplayLanguage.SYSTEM, release))
+    }
+
+    @Test
     fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_debugSelectableRoster() {
         // Pin the exact DEBUG picker order: Automatic first, the production roster, then the debug-only
-        // tailo preview + pseudo probe. Release drops the last two (asserted by the source #if; not
-        // reachable from a DEBUG unit-test build). Guards against reorders / accidental promotion.
+        // tailo + poj previews + pseudo probe. Release drops the last three (asserted by the source #if;
+        // not reachable from a DEBUG unit-test build). Guards against reorders / accidental promotion.
         assertEquals(
-            listOf("system", "hanji", "en", "ja", "tailo", "pseudo"),
+            listOf("system", "hanji", "en", "ja", "tailo", "poj", "pseudo"),
             DisplayLanguage.selectableLanguages.map { it.tag },
         )
     }
