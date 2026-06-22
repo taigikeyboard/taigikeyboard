@@ -293,6 +293,37 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(DisplayLanguage.fromTag("xx"), .hanji)
     }
 
+    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_systemLeadsSelectableButNotRoster() {
+        // System (Automatic) is a selection policy, not an authored language: it leads the picker but
+        // never joins the production (authored-catalog) roster.
+        XCTAssertEqual(DisplayLanguage.productionLanguages.map(\.tag), ["hanji", "en", "ja"])
+        XCTAssertEqual(DisplayLanguage.selectableLanguages.first, .system)
+        XCTAssertFalse(DisplayLanguage.productionLanguages.contains(.system))
+        // "system" is selectable, so it round-trips (not clamped to Hanji like tl/poj).
+        XCTAssertEqual(DisplayLanguage.fromTag("system"), .system)
+    }
+
+    // MARK: - Automatic (system) resolution
+
+    func test_INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_mapsDeviceSubtagToConcreteLanguage() {
+        // resolveAutomatic maps the device OS language subtag to a concrete authored language:
+        // ja* → Japanese, zh* → Hanji, anything else (incl. empty) → English.
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("ja"), .japanese)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("zh"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("en"), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("fr"), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic(""), .english)
+    }
+
+    func test_INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_effectiveLanguageDefersOnlyForSystem() {
+        // An explicit language resolves to itself regardless of the device subtag.
+        XCTAssertEqual(DisplayLanguage.hanji.effectiveLanguage("ja"), .hanji)
+        // .system defers to the device subtag via resolveAutomatic.
+        XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("ja"), .japanese)
+        XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("zh"), .hanji)
+        XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("de"), .english)
+    }
+
     // MARK: - Raw-key migration parity
 
     /// Locks in the exact persisted `UserDefaults` key strings per

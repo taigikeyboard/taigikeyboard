@@ -12,6 +12,9 @@ import Foundation
 /// not yet authored) returns the sentinel, which routes to the always-present Hanji `.lproj`. Hanji is
 /// authored for every key, so it is the guaranteed base.
 struct StringResolver {
+    /// The effective (concrete) display language. `DisplayLanguageStore` resolves `.system` to a real
+    /// authored language via `effectiveLanguage(_:)` before constructing the resolver, so `.system` must
+    /// never reach here — its `bcp47` is `nil` and the `language == .english` plural branch would miss.
     let language: DisplayLanguage
     private let activeBundle: Bundle?
     private let hanjiBundle: Bundle?
@@ -21,6 +24,11 @@ struct StringResolver {
     private static let missSentinel = "\u{0}__i18n_miss__"
 
     init(_ language: DisplayLanguage) {
+        // Fail fast on a boundary regression: `.system` has no authored strings, so it must be resolved
+        // to an effective language before here. `assert` (DEBUG-only) mirrors Android's `error(...)` in
+        // StringResolver.resolve, but degrades to the Hanji fallback in release rather than crashing the
+        // keyboard extension (`.system.bcp47` is nil → activeBundle nil → hanjiDefault for every key).
+        assert(language != .system, "StringResolver must be built from an effective language, never .system")
         self.language = language
         hanjiBundle = Self.lprojBundle(BCP47_HANJI)
         activeBundle = language.bcp47.flatMap(Self.lprojBundle)

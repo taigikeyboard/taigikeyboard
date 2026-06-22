@@ -76,7 +76,7 @@ struct SettingsTab: View {
                         HStack {
                             Text(lang.string(.settingsDisplayLanguage))
                             Spacer()
-                            Text(lang.language.endonym)
+                            Text(lang.selectionLabel(for: lang.selected))
                                 .foregroundColor(.secondary)
                         }
                     }

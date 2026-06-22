@@ -146,6 +146,7 @@ enum class StringKey(
     SETTINGS_RESET(R.string.i18n_settings_reset),
     SETTINGS_INPUT_MODE(R.string.i18n_settings_inputMode),
     SETTINGS_DISPLAY_LANGUAGE(R.string.i18n_settings_displayLanguage),
+    SETTINGS_DISPLAY_LANGUAGE_AUTOMATIC(R.string.i18n_settings_displayLanguageAutomatic),
     SETTINGS_POJ_MODE(R.string.i18n_settings_pojMode),
     SETTINGS_TL_MODE(R.string.i18n_settings_tlMode),
     SETTINGS_ENGLISH_MODE(R.string.i18n_settings_englishMode),

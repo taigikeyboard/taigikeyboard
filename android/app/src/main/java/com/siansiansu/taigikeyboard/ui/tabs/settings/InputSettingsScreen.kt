@@ -37,7 +37,7 @@ import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
-import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.LocalSelectedDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
@@ -73,9 +73,11 @@ fun InputSettingsScreen(
     var showDisplayLanguagePicker by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
     var showFontPicker by remember { mutableStateOf(false) }
-    // Authoritative selected display language — driven by the Activity-root ProvideDisplayLanguage(prefs)
-    // Flow, so it stays correct across reset/live-switch without a local snapshot.
-    val displayLanguage = LocalDisplayLanguage.current
+    // Authoritative SELECTED display language (may be SYSTEM) — driven by the Activity-root
+    // ProvideDisplayLanguage(prefs) Flow, so it stays correct across reset/live-switch without a local
+    // snapshot. The picker checkmark + settings-row label must reflect the persisted selection, so this
+    // reads LocalSelectedDisplayLanguage (the as-picked value), not LocalDisplayLanguage (the effective one).
+    val displayLanguage = LocalSelectedDisplayLanguage.current
     // Each state re-reads from prefs when resetCounter changes (after settings reset)
     var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
     var fontType by remember(resetCounter) { mutableStateOf(prefs.fontType) }
@@ -157,7 +159,7 @@ fun InputSettingsScreen(
                 SettingsCard {
                     SettingNavigationRow(
                         label = L10n.settingsDisplayLanguage,
-                        value = displayLanguage.endonym,
+                        value = displayLanguageLabel(displayLanguage),
                         onClick = { showDisplayLanguagePicker = true },
                     )
                 }

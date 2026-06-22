@@ -100,6 +100,9 @@ struct AppRootView: View {
     // 中文: App UI 顯示語言 root state。注入在 AppRootView(ContentView + setup-guide cover 的共同祖先),
     // 中文: 讓 TabView 與全螢幕 cover 兩處都繼承同一份 store(plan D7 live-switch)。
     @State private var displayLanguageStore = DisplayLanguageStore()
+    // Re-reads the persisted tag AND recomputes Automatic's effective language from the OS locale on
+    // foreground, so a device-language change (while display = Automatic) takes effect without a relaunch.
+    @Environment(\.scenePhase) private var scenePhase
 
     init(keyboardStatus: KeyboardStatusContext) {
         self.keyboardStatus = keyboardStatus
@@ -120,6 +123,11 @@ struct AppRootView: View {
             }
             .task {
                 viewModel.checkKeyboardStatus()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    displayLanguageStore.syncFromSettings()
+                }
             }
             .environment(displayLanguageStore)
     }

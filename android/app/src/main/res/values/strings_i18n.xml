@@ -139,6 +139,7 @@
     <string name="i18n_settings_reset">恢復</string>
     <string name="i18n_settings_inputMode">輸入模式</string>
     <string name="i18n_settings_displayLanguage">顯示語言</string>
+    <string name="i18n_settings_displayLanguageAutomatic">自動</string>
     <string name="i18n_settings_pojMode">白話字</string>
     <string name="i18n_settings_tlMode">台羅</string>
     <string name="i18n_settings_englishMode">英文</string>

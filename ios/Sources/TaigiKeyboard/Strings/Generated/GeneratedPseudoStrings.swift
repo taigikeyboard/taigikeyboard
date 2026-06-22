@@ -142,6 +142,7 @@ enum GeneratedPseudoStrings {
         .settingsReset: "⟦恢復··⟧",
         .settingsInputMode: "⟦輸入模式··⟧",
         .settingsDisplayLanguage: "⟦顯示語言··⟧",
+        .settingsDisplayLanguageAutomatic: "⟦自動··⟧",
         .settingsPojMode: "⟦白話字··⟧",
         .settingsTlMode: "⟦台羅··⟧",
         .settingsEnglishMode: "⟦英文··⟧",

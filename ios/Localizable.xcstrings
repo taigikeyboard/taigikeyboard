@@ -3362,7 +3362,7 @@
       }
     },
     "i18n_settings_displayLanguage": {
-      "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Option labels are endonyms, not i18n keys.",
+      "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Most option labels are endonyms (own-script, not i18n keys); the Automatic option uses displayLanguageAutomatic.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3381,6 +3381,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示語言"
+          }
+        }
+      }
+    },
+    "i18n_settings_displayLanguageAutomatic": {
+      "comment": "Display-language picker option that follows the OS/device language (ja->日本語, zh->漢字, else->English). Unlike the other rows this is a translated label, not an endonym.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
           }
         }
       }

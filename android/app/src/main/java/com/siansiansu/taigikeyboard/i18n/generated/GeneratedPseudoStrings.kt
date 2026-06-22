@@ -143,6 +143,7 @@ object GeneratedPseudoStrings {
             StringKey.SETTINGS_RESET to "⟦恢復··⟧",
             StringKey.SETTINGS_INPUT_MODE to "⟦輸入模式··⟧",
             StringKey.SETTINGS_DISPLAY_LANGUAGE to "⟦顯示語言··⟧",
+            StringKey.SETTINGS_DISPLAY_LANGUAGE_AUTOMATIC to "⟦自動··⟧",
             StringKey.SETTINGS_POJ_MODE to "⟦白話字··⟧",
             StringKey.SETTINGS_TL_MODE to "⟦台羅··⟧",
             StringKey.SETTINGS_ENGLISH_MODE to "⟦英文··⟧",

@@ -2,14 +2,18 @@
 
 package com.siansiansu.taigikeyboard.i18n
 
+import android.app.LocaleManager
 import android.content.Context
 import android.content.res.Configuration
+import android.content.res.Resources
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.generated.GeneratedPseudoStrings
 import com.siansiansu.taigikeyboard.i18n.generated.GeneratedTaigiStrings
@@ -39,6 +43,9 @@ class StringResolver(
             is StringResolution.Native -> activeContext.getString(key.resId)
             StringResolution.GeneratedMap -> GeneratedTaigiStrings.lookup(language, key) ?: hanjiContext.getString(key.resId)
             StringResolution.Pseudo -> GeneratedPseudoStrings.lookup(key) ?: hanjiContext.getString(key.resId)
+            // SYSTEM/Automatic is resolved to an effective language in buildStringResolver before the
+            // resolver is constructed, so this branch is unreachable — fail fast if it ever isn't.
+            StringResolution.Automatic -> error("Automatic must be resolved to an effective language before the resolver")
         }
 
     /**
@@ -80,25 +87,48 @@ fun StringResolver.formatTemplate(
 // FlorisAppActivity.kt:100). The returned context is used solely for getString(), which depends
 // only on the locale qualifier — copying other qualifiers (fontScale / uiMode) is harmless because
 // the strings have no such variants, and ProvideDisplayLanguage rebuilds the resolver on every
-// base-Context change (remember(base, language)), so nothing goes stale across a configuration change.
+// base-Context / selected-language / device-locale change (remember(base, language, deviceSubtag)), so
+// nothing goes stale across a configuration change.
 private fun Context.localizedFor(bcp47: String): Context {
     val config = Configuration(resources.configuration)
     config.setLocale(Locale.forLanguageTag(bcp47))
     return createConfigurationContext(config)
 }
 
-/** Builds a [StringResolver] for [language] from a base Context (the Native locale + the Hanji fallback). */
+// The DEVICE locale (immune to any app-level locale override), used only to resolve SYSTEM/Automatic.
+// On API 33+ LocaleManager.getSystemLocales() ignores per-app locale overrides — unlike
+// Locale.getDefault(); on <33 there is no per-app override, so the system Resources locale is the device
+// locale. Returns the lowercased language subtag (e.g. "ja", "zh", "en"), or "" when no locale is present.
+private fun deviceLanguageSubtag(context: Context): String {
+    val locale =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.getSystemService(LocaleManager::class.java)?.systemLocales?.get(0)
+        } else {
+            null
+        } ?: ConfigurationCompat.getLocales(Resources.getSystem().configuration).get(0)
+    return locale?.language?.lowercase().orEmpty()
+}
+
+/**
+ * Builds a [StringResolver] for [language] from a base Context (the Native locale + the Hanji fallback).
+ * [DisplayLanguage.SYSTEM] is resolved to its effective authored language from the device OS locale
+ * first, so the resolver holds a concrete language — the English-only plural arm fires when SYSTEM→ENGLISH.
+ */
 fun buildStringResolver(
     base: Context,
     language: DisplayLanguage,
 ): StringResolver {
+    // Only SYSTEM's effective language depends on the device locale; reading it for an explicit
+    // selection would fire a LocaleManager binder IPC for a subtag effectiveLanguage immediately discards.
+    val effective =
+        if (language == DisplayLanguage.SYSTEM) language.effectiveLanguage(deviceLanguageSubtag(base)) else language
     val hanjiContext = base.localizedFor(BCP47_HANJI)
     val activeContext =
-        when (val resolution = language.resolution) {
+        when (val resolution = effective.resolution) {
             is StringResolution.Native -> base.localizedFor(resolution.bcp47)
             else -> hanjiContext
         }
-    return StringResolver(hanjiContext, activeContext, language)
+    return StringResolver(hanjiContext, activeContext, effective)
 }
 
 /**
@@ -109,8 +139,19 @@ fun buildStringResolver(
 fun Context.currentStringResolver(): StringResolver =
     buildStringResolver(this, DisplayLanguage.fromTag(PrefHelper(this).displayLanguageTag))
 
-/** The active display language — drives the Settings language picker's selected state + trailing value. */
+/**
+ * The EFFECTIVE display language — the concrete authored language whose strings render now (SYSTEM is
+ * already resolved away). Drives the resolver + the plural arm. For the picker's selected-state and
+ * trailing label (which must show "system" when the user picked Automatic), use [LocalSelectedDisplayLanguage].
+ */
 val LocalDisplayLanguage = staticCompositionLocalOf { DisplayLanguage.HANJI }
+
+/**
+ * The SELECTED display language as the user picked it — may be [DisplayLanguage.SYSTEM]. Drives the
+ * Settings language picker's selected-row checkmark and the settings-row trailing label, which must
+ * reflect the persisted selection (Automatic), not the language SYSTEM currently resolves to.
+ */
+val LocalSelectedDisplayLanguage = staticCompositionLocalOf { DisplayLanguage.HANJI }
 
 val LocalStringResolver =
     staticCompositionLocalOf<StringResolver> {
@@ -120,6 +161,11 @@ val LocalStringResolver =
 /**
  * Provides [language]'s resolver to the Compose tree. Changing [language] rebuilds the resolver and
  * recomposes every [stringRes] consumer with no Activity/IME recreate (plan D7 live-switch).
+ *
+ * [LocalSelectedDisplayLanguage] carries [language] as-picked (may be [DisplayLanguage.SYSTEM]) for the
+ * picker; [LocalDisplayLanguage] carries the effective language for the resolver. The device language
+ * subtag is part of the memo key so an OS-locale change rebuilds the resolver even when the SELECTED
+ * value (`system`) is unchanged — the SYSTEM live-refresh on the next recompose / config change.
  */
 @Composable
 fun ProvideDisplayLanguage(
@@ -127,9 +173,15 @@ fun ProvideDisplayLanguage(
     content: @Composable () -> Unit,
 ) {
     val base = LocalContext.current
-    val resolver = remember(base, language) { buildStringResolver(base, language) }
+    // Only SYSTEM's effective language depends on the device locale, so only SYSTEM reads it (a
+    // LocaleManager binder IPC) and keys the resolver memo on it — an explicit selection neither pays
+    // the IPC nor rebuilds spuriously when the OS locale changes. The resolver already carries the
+    // effective language, so reuse it for LocalDisplayLanguage instead of recomputing.
+    val localeMemoKey = if (language == DisplayLanguage.SYSTEM) deviceLanguageSubtag(base) else ""
+    val resolver = remember(base, language, localeMemoKey) { buildStringResolver(base, language) }
     CompositionLocalProvider(
-        LocalDisplayLanguage provides language,
+        LocalSelectedDisplayLanguage provides language,
+        LocalDisplayLanguage provides resolver.displayLanguage,
         LocalStringResolver provides resolver,
     ) {
         content()

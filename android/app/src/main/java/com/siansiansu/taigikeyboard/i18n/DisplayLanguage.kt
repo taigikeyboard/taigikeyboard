@@ -15,6 +15,10 @@ const val BCP47_HANJI = "nan-Hant-TW"
  * - [Native] — backed by an Android resource set selected via a per-locale Context (en/ja/漢字).
  * - [GeneratedMap] — TL/POJ have no OS locale, so strings come from a generated Kotlin map.
  * - [Pseudo] — debug-only length-inflated layout probe, served from a generated map.
+ * - [Automatic] — [DisplayLanguage.SYSTEM]'s sentinel: a selection policy with NO authored strings.
+ *   The resolver must never read it; the boundary maps it to a concrete language via
+ *   [DisplayLanguage.effectiveLanguage] first. Modelled as its own case (not a Hanji sentinel) so a
+ *   missed resolution fails fast instead of silently rendering Hanji.
  */
 sealed interface StringResolution {
     data class Native(
@@ -24,6 +28,8 @@ sealed interface StringResolution {
     data object GeneratedMap : StringResolution
 
     data object Pseudo : StringResolution
+
+    data object Automatic : StringResolution
 }
 
 /**
@@ -33,13 +39,18 @@ sealed interface StringResolution {
  * languages fall back to Hanji until their authoring phase populates them (P3b TL / P3c POJ) and they
  * join [productionLanguages]. [PSEUDO] is a debug-only layout probe, offered only in debug builds.
  *
- * `system` (Automatic) is deliberately absent — it is a locale-negotiation policy, not a string
- * set, deferred to a later round.
+ * [SYSTEM] (Automatic) is a selection POLICY, not a language: it has no authored strings and never
+ * appears in [productionLanguages]. It is persisted (the user can return to it) and resolves to a
+ * concrete authored language from the device OS locale via [effectiveLanguage] / [resolveAutomatic]
+ * at the resolver boundary. Its [StringResolution.Automatic] resolution must be mapped to an effective
+ * language BEFORE the resolver reads it.
  */
 enum class DisplayLanguage(
     val tag: String,
     val resolution: StringResolution,
 ) {
+    // SYSTEM leads so the picker (driven by selectableLanguages) offers Automatic first.
+    SYSTEM("system", StringResolution.Automatic),
     HANJI("hanji", StringResolution.Native(BCP47_HANJI)),
     TAILO("tailo", StringResolution.GeneratedMap),
     POJ("poj", StringResolution.GeneratedMap),
@@ -53,7 +64,10 @@ enum class DisplayLanguage(
      * current UI language (W3C-recommended) so a user can always find their language. Language-invariant,
      * so it is NOT an i18n key. The endonym strings MUST match across platforms.
      * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
-     * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift:34 `endonym`. Drift causes silent divergence.
+     * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift `endonym`. Drift causes silent divergence.
+     *
+     * [SYSTEM] has no endonym — it is not a language. The picker special-cases it and renders the i18n
+     * key `settings.displayLanguageAutomatic` instead; calling [endonym] on it is a programmer error.
      */
     val endonym: String
         get() =
@@ -64,32 +78,61 @@ enum class DisplayLanguage(
                 JAPANESE -> "日本語"
                 ENGLISH -> "English"
                 PSEUDO -> "PSEUDO · DEBUG"
+                SYSTEM -> error("system has no endonym; use settings.displayLanguageAutomatic")
             }
 
+    /**
+     * Resolves this selection to the language whose strings should actually render: [SYSTEM] maps to a
+     * concrete authored language via [resolveAutomatic]; every other case is itself. [deviceLanguageSubtag]
+     * is the lowercased device-OS language subtag (e.g. "ja", "zh", "en"), injected by the caller.
+     */
+    fun effectiveLanguage(deviceLanguageSubtag: String): DisplayLanguage =
+        if (this == SYSTEM) resolveAutomatic(deviceLanguageSubtag) else this
+
     companion object {
-        // Default tag persisted before the user ever picks a language. Keeps the app on Hanji.
+        // Default tag persisted before the user ever picks a language. Keeps the app on Hanji (NOT system).
         const val DEFAULT_TAG = "hanji"
 
         /**
-         * Authored, user-selectable production languages. Drives the Settings language picker and clamps
+         * Authored, user-selectable production languages. Drives the picker's authored roster and clamps
          * [fromTag]. Grows by one entry as each language's authoring phase lands (P3b TL / P3c POJ remain).
+         * SEPARATE from [selectableLanguages], which leads with the [SYSTEM] selection policy — [SYSTEM]
+         * has no strings of its own, so it is NOT in this authored roster.
          * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
-         * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift:68 `productionLanguages`. Drift causes silent divergence.
+         * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift `productionLanguages`. Drift causes silent divergence.
          */
         val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH, JAPANESE)
 
         /**
-         * What the picker offers: the production roster, plus the [PSEUDO] layout probe in DEBUG only.
-         * Release builds only ever offer [productionLanguages].
+         * What the picker offers: the [SYSTEM] (Automatic) selection policy first, then the authored
+         * production roster, plus the [PSEUDO] layout probe in DEBUG only. Release builds offer
+         * [SYSTEM] + [productionLanguages]. Mirrors ios `selectableLanguages`.
          */
         val selectableLanguages: List<DisplayLanguage>
-            get() = if (BuildConfig.DEBUG) productionLanguages + PSEUDO else productionLanguages
+            get() {
+                val base = listOf(SYSTEM) + productionLanguages
+                return if (BuildConfig.DEBUG) base + PSEUDO else base
+            }
+
+        /**
+         * Resolves [SYSTEM]/Automatic to a concrete authored language from the device OS locale's
+         * language subtag (lowercased): Japanese device → [JAPANESE], Chinese device → [HANJI],
+         * everything else (incl. absent locale) → [ENGLISH]. Pure — the OS read happens at the call
+         * site, so this stays unit-testable.
+         */
+        fun resolveAutomatic(deviceLanguageSubtag: String): DisplayLanguage =
+            when {
+                deviceLanguageSubtag.startsWith("ja") -> JAPANESE
+                deviceLanguageSubtag.startsWith("zh") -> HANJI
+                else -> ENGLISH
+            }
 
         /**
          * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or
          * one whose language is not yet user-selectable (a leftover "pseudo" in release, or a tl/poj
          * tag from a future build) resolves to [HANJI], so the effective language always matches a picker
-         * option. The persisted tag itself is left untouched, so it restores once that language ships.
+         * option. "system" is now selectable, so it round-trips to [SYSTEM]. The persisted tag itself is
+         * left untouched, so it restores once that language ships.
          */
         fun fromTag(tag: String): DisplayLanguage {
             val match = entries.firstOrNull { it.tag == tag } ?: HANJI

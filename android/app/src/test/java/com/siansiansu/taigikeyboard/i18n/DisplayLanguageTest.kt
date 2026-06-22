@@ -45,4 +45,38 @@ class DisplayLanguageTest {
     fun defaultTag_resolvesToHanji() {
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag(DisplayLanguage.DEFAULT_TAG))
     }
+
+    @Test
+    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_excludesSystemSelectionPolicy() {
+        // CROSS-PLATFORM INVARIANT — the authored roster stays [hanji, en, ja]; SYSTEM is a selection
+        // policy with no strings and must NOT join productionLanguages (behavioral-invariants.md §37).
+        assertEquals(listOf("hanji", "en", "ja"), DisplayLanguage.productionLanguages.map { it.tag })
+        assertEquals(false, DisplayLanguage.SYSTEM in DisplayLanguage.productionLanguages)
+    }
+
+    @Test
+    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_selectableLeadsWithSystem() {
+        // The picker offers Automatic (SYSTEM) first, ahead of the authored roster.
+        assertEquals(DisplayLanguage.SYSTEM, DisplayLanguage.selectableLanguages.first())
+        assertEquals(DisplayLanguage.SYSTEM, DisplayLanguage.fromTag("system"))
+    }
+
+    @Test
+    fun INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_mapsDeviceSubtagToAuthoredLanguage() {
+        // Japanese device → Japanese; Chinese device → Hanji; everything else (incl. absent locale) → English.
+        assertEquals(DisplayLanguage.JAPANESE, DisplayLanguage.resolveAutomatic("ja"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.resolveAutomatic("zh"))
+        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.resolveAutomatic("en"))
+        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.resolveAutomatic("fr"))
+        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.resolveAutomatic(""))
+    }
+
+    @Test
+    fun INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_effectiveLanguageOnlyResolvesSystem() {
+        // An explicitly-picked language is itself regardless of the device locale; SYSTEM follows the device.
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.HANJI.effectiveLanguage("ja"))
+        assertEquals(DisplayLanguage.JAPANESE, DisplayLanguage.SYSTEM.effectiveLanguage("ja"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.SYSTEM.effectiveLanguage("zh"))
+        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.SYSTEM.effectiveLanguage("de"))
+    }
 }

@@ -13,9 +13,12 @@ let BCP47_HANJI = "nan-Hant-TW"
 /// languages fall back to Hanji until their authoring phase populates the catalog (P3b TL / P3c POJ) and
 /// they join `productionLanguages`. `.pseudo` is a DEBUG-only layout probe, offered only in debug builds.
 ///
-/// `system` (Automatic) is deliberately absent — it is a locale-negotiation policy, not a string set,
-/// deferred to a later round. The raw value IS the persisted tag.
+/// `system` (Automatic) is a selection policy, not a string set: it has NO authored strings and never
+/// reaches the resolver. The picker boundary maps it to a concrete language via `effectiveLanguage(_:)`
+/// (driven by the device OS locale) before any string lookup. It IS a persisted selection — the user can
+/// return to it, and the raw value `"system"` is the persisted tag.
 enum DisplayLanguage: String, CaseIterable {
+    case system
     case hanji
     case tailo
     case poj
@@ -29,8 +32,10 @@ enum DisplayLanguage: String, CaseIterable {
     /// The language's own name in its own script (endonym), shown in the picker regardless of the
     /// current UI language — the W3C-recommended convention, so a user can always find their language.
     /// Language-invariant, so it is NOT an i18n key. The endonym strings MUST match across platforms.
+    /// `.system` has no endonym — it is a policy, not a language, so the picker special-cases it and
+    /// labels it with the localized `settingsDisplayLanguageAutomatic` string instead.
     /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
-    /// android .../i18n/DisplayLanguage.kt:58 `endonym`. Drift causes silent divergence.
+    /// android .../i18n/DisplayLanguage.kt `endonym`. Drift causes silent divergence.
     var endonym: String {
         switch self {
         case .hanji: "漢字"
@@ -39,11 +44,15 @@ enum DisplayLanguage: String, CaseIterable {
         case .japanese: "日本語"
         case .english: "English"
         case .pseudo: "PSEUDO · DEBUG"
+        case .system: fatalError("system has no endonym; use settings.displayLanguageAutomatic")
         }
     }
 
     /// BCP-47 tag naming the compiled `.lproj` bundle that holds this language's strings. `nil` for
-    /// `.pseudo`, which is a generated Swift map (not a CFBundleLocalization, so it has no `.lproj`).
+    /// `.pseudo`, which is a generated Swift map (not a CFBundleLocalization, so it has no `.lproj`),
+    /// and `nil` for `.system`, which has no authored bundle: `nil` means "no authored lproj — system
+    /// must be resolved to an effective language before the resolver; it must never be passed to
+    /// `lprojBundle` directly".
     ///
     /// MIRROR: must equal `tools/i18n/i18n_lib.py` `LANG_TO_BCP47` — the codegen emits each catalog
     /// localization under this exact tag; drift silently breaks `.lproj` resolution.
@@ -55,32 +64,55 @@ enum DisplayLanguage: String, CaseIterable {
         case .japanese: "ja"
         case .english: "en"
         case .pseudo: nil
+        case .system: nil
         }
     }
 
     /// Default tag persisted before the user ever picks a language. Keeps the app on Hanji.
     static let defaultTag = "hanji"
 
-    /// Authored, user-selectable production languages. Drives the Settings language picker and clamps
+    /// Authored, user-selectable production languages — the catalog roster, SEPARATE from
+    /// `selectableLanguages` (which leads with `.system`). `.system` is a resolution policy with no
+    /// authored strings, so it never appears here. Drives the per-language string catalog and clamps
     /// `fromTag`. Grows by one entry as each language's authoring phase lands (P3b TL / P3c POJ remain).
     /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
-    /// android .../i18n/DisplayLanguage.kt:79 `productionLanguages`. Drift causes silent divergence.
+    /// android .../i18n/DisplayLanguage.kt `productionLanguages`. Drift causes silent divergence.
     static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese]
 
-    /// What the picker offers: the production roster, plus the `.pseudo` layout probe in DEBUG only.
-    /// Release builds only ever offer `productionLanguages`.
+    /// What the picker offers: `.system` (Automatic) first, then the production roster, plus the
+    /// `.pseudo` layout probe in DEBUG only. Release builds only ever offer `.system + productionLanguages`.
+    /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `selectableLanguages`.
     static var selectableLanguages: [DisplayLanguage] {
         #if DEBUG
-        productionLanguages + [.pseudo]
+        [.system] + productionLanguages + [.pseudo]
         #else
-        productionLanguages
+        [.system] + productionLanguages
         #endif
+    }
+
+    /// Resolves the Automatic policy to a concrete authored language from the device OS language subtag
+    /// (lowercased ISO 639). Pure + injectable for tests — never reads `Locale` itself; the store passes
+    /// the device subtag in. `ja*` → Japanese, `zh*` → Hanji, anything else (incl. absent) → English.
+    /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `resolveAutomatic`.
+    static func resolveAutomatic(_ deviceLanguageSubtag: String) -> DisplayLanguage {
+        if deviceLanguageSubtag.hasPrefix("ja") { return .japanese }
+        if deviceLanguageSubtag.hasPrefix("zh") { return .hanji }
+        return .english
+    }
+
+    /// The concrete language this selection resolves to: `.system` defers to the device locale via
+    /// `resolveAutomatic`; every explicit language resolves to itself. The resolver / `.lproj` lookup
+    /// always run against this effective language, never against `.system`.
+    /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `effectiveLanguage`.
+    func effectiveLanguage(_ deviceLanguageSubtag: String) -> DisplayLanguage {
+        self == .system ? DisplayLanguage.resolveAutomatic(deviceLanguageSubtag) : self
     }
 
     /// Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or one
     /// whose language is not yet user-selectable (a leftover `.pseudo` in release, or a `tl`/`poj`
     /// tag from a future build) resolves to `.hanji`, so the effective language always matches a picker
-    /// option. The persisted tag itself is left untouched, so it restores once that language ships.
+    /// option. `"system"` is selectable, so it round-trips to `.system`. The persisted tag itself is left
+    /// untouched, so it restores once a clamped language ships.
     static func fromTag(_ tag: String) -> DisplayLanguage {
         let match = DisplayLanguage(rawValue: tag) ?? .hanji
         return selectableLanguages.contains(match) ? match : .hanji

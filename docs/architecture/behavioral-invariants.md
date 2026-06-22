@@ -901,10 +901,29 @@ Where the platforms **intentionally diverge** is the interaction with the OS mas
 
 ### `INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER`
 
-The set of user-selectable app UI display languages MUST match across iOS and Android. The authored, production-selectable roster is exactly **[hanji, english, japanese]** (tags `["hanji", "en", "ja"]`, in that order); `.pseudo` is appended ONLY in debug builds as a layout probe and never ships. Each remaining language's authoring phase (P3b TL / P3c POJ) adds one entry to this roster on BOTH platforms in the same round.
+Two distinct sets, both of which MUST match across iOS and Android:
 
-The display-language picker offers exactly this roster. `DisplayLanguage.fromTag` clamps any persisted tag whose language is not in the (debug-aware) selectable set — a leftover `pseudo` in release, or a not-yet-authored `tl`/`poj` tag — to `hanji`, so the effective language always matches a picker option, while the raw persisted tag is preserved so it can restore once that language ships. Display is **orthogonal to the keyboard input mode** (`INVARIANT_*` input-mode rows are unaffected).
+- **Authored production roster** = the languages that have their own authored string set: exactly **[hanji, english, japanese]** (tags `["hanji", "en", "ja"]`, in that order). This is what the codegen completeness gate (`tools/i18n` `PRODUCTION_LANGUAGES`) enforces and what each future authoring phase (P3b TL / P3c POJ) extends by one entry on BOTH platforms in the same round.
+- **Selectable set** = what the picker offers = **[system] + production roster** (`.pseudo` appended ONLY in debug). `system` (Automatic) is selectable but is NOT in the production roster — it has no authored strings; it is a resolution *policy* (see `INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION`).
 
-**Scope**: platform-side UI only — no shared Rust engine. iOS `Strings/DisplayLanguage.swift` (`productionLanguages` / `selectableLanguages` / `endonym` / `fromTag`); Android `i18n/DisplayLanguage.kt` (mirror, same four). Option labels are **endonyms** (each language in its own script — W3C language-selector guidance), language-invariant, not i18n keys — they too MUST match across platforms.
+`DisplayLanguage.fromTag` clamps any persisted tag whose language is not in the (debug-aware) selectable set — a leftover `pseudo` in release, or a not-yet-authored `tl`/`poj` tag — to `hanji`, so the effective language always matches a picker option, while the raw persisted tag is preserved so it can restore once that language ships. `fromTag("system")` returns `system` (it is selectable). The persisted default tag stays `hanji` (adding `system` does not change the default). Display is **orthogonal to the keyboard input mode** (`INVARIANT_*` input-mode rows are unaffected).
 
-**Tests**: iOS `SettingsKeyTests.swift` (`test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_*` — roster == `["hanji","en","ja"]` + `fromTag` clamp matrix). Android `DisplayLanguageTest.kt` (`INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_*` — same roster pin + clamp matrix incl. debug `pseudo` survival). Each side pins its own roster literal; the `CROSS-PLATFORM INVARIANT` source comments + same-PR discipline are the drift guard (no runtime loads both platforms). The picker UI + cross-process live-switch are dogfood-pinned.
+**Scope**: platform-side UI only — no shared Rust engine. iOS `Strings/DisplayLanguage.swift` (`productionLanguages` / `selectableLanguages` / `endonym` / `fromTag`); Android `i18n/DisplayLanguage.kt` (mirror, same four). Production-language option labels are **endonyms** (each language in its own script — W3C language-selector guidance), language-invariant, not i18n keys — they too MUST match across platforms. The `system` row is the ONE exception: it is a translated label (i18n key `settings.displayLanguageAutomatic`), not an endonym.
+
+**Tests**: iOS `SettingsKeyTests.swift` (`test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_*` — production roster == `["hanji","en","ja"]`, selectable-first == `system`, `fromTag` clamp matrix incl. `fromTag("system")==system`). Android `DisplayLanguageTest.kt` (`INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_*` — same pins + clamp matrix incl. debug `pseudo` survival). Each side pins its own literals; the `CROSS-PLATFORM INVARIANT` source comments + same-PR discipline are the drift guard (no runtime loads both platforms). The picker UI + cross-process live-switch are dogfood-pinned.
+
+### `INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION`
+
+When the selected display language is `system` (Automatic), the **effective** language is resolved from the OS/device locale by a pure mapping, identical on both platforms:
+
+| Device language subtag | Effective display language |
+|---|---|
+| `ja*` | japanese |
+| `zh*` | hanji |
+| anything else / absent | english |
+
+`system` is a persisted *state* (the user can always return to it), never a one-time seed. Resolution is a boundary step: the effective language drives the string resolver AND the English-only plural branch, while the **selected** value (`system`) drives the picker checkmark + the host settings-row label. An explicit (non-`system`) selection is unaffected by the OS locale (and is NOT rebuilt when the OS locale changes — only `system` keys its resolver on the device locale). The OS-locale source is the **device** locale, immune to any app-level override: Android `LocaleManager.systemLocales[0]` (API 33+) / `Resources.getSystem().configuration.locales[0]` (API 28–32) — NOT `Locale.getDefault()`; iOS `Locale.preferredLanguages.first`. Live OS-language changes are picked up at the next refresh point, not in real time (matches platform norms): Android — the device-locale subtag is part of the resolver's memo key for `system`, so a recompose / configuration change rebuilds it; iOS — `syncFromSettings()` recomputes effective even when the selected value is unchanged, driven from the host root on `scenePhase == .active` (foreground) and from each keyboard-extension overlay's `.onAppear`. The refresh wiring (Compose memo key / SwiftUI scenePhase + onAppear) is dogfood-pinned; the pure mapping (`resolveAutomatic` / `effectiveLanguage`) is unit-tested.
+
+**Scope**: platform-side UI only. iOS `Strings/DisplayLanguage.swift` (`resolveAutomatic` / `effectiveLanguage`) + `DisplayLanguageStore.swift`; Android `i18n/DisplayLanguage.kt` (mirror) + `StringResolver.kt`.
+
+**Tests**: iOS `SettingsKeyTests.swift` + Android `DisplayLanguageTest.kt` (`INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_*` — `ja*→japanese`, `zh*→hanji`, `en/fr/absent→english`; explicit selection ignores locale). Cross-process effective-language agreement + live OS-language refresh are dogfood-pinned.

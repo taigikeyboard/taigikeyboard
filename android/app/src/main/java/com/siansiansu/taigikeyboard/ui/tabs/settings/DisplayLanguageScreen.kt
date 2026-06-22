@@ -33,9 +33,17 @@ import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
+// The picker/settings-row label for a [DisplayLanguage]: SYSTEM is a selection policy with no endonym,
+// so it renders the i18n "Automatic" key (translated with the UI language); every authored language
+// renders its endonym (own script, language-invariant). Shared by the picker rows and the settings-row
+// trailing value so the SYSTEM special-case lives in one place.
+@Composable
+fun displayLanguageLabel(language: DisplayLanguage): String =
+    if (language == DisplayLanguage.SYSTEM) L10n.settingsDisplayLanguageAutomatic else language.endonym
+
 // Rows use selectable(role = RadioButton) so the selected state is announced by TalkBack — the
-// checkmark is decorative (contentDescription = null) and must not be read twice. Labels are endonyms
-// (each language in its own script), not i18n strings, so they read the same regardless of UI language.
+// checkmark is decorative (contentDescription = null) and must not be read twice. Labels come from
+// displayLanguageLabel (endonyms for authored languages, the i18n Automatic key for SYSTEM).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplayLanguageScreen(
@@ -87,7 +95,7 @@ fun DisplayLanguageScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = language.endonym,
+                            text = displayLanguageLabel(language),
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
