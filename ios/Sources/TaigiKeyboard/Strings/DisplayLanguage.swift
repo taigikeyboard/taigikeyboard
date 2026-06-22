@@ -9,9 +9,9 @@ let BCP47_HANJI = "nan-Hant-TW"
 
 /// App UI display language — orthogonal to the keyboard input mode.
 ///
-/// Hanji, English, and Japanese are authored and user-selectable (`productionLanguages`). TL and POJ are
-/// authored too but only DEBUG-selectable for now; they fall back to Hanji in release until a review-gated
-/// promotion round adds them to `productionLanguages`. `.pseudo` is a DEBUG-only layout probe.
+/// Hanji, English, Japanese, Tâi-lô, and Pe̍h-ōe-jī are all authored and user-selectable
+/// (`productionLanguages`); a language not in that roster falls back to Hanji. `.pseudo` is a DEBUG-only
+/// layout probe, offered only in debug builds.
 ///
 /// `system` (Automatic) is a selection policy, not a string set: it has NO authored strings and never
 /// reaches the resolver. The picker boundary maps it to a concrete language via `effectiveLanguage(_:)`
@@ -74,20 +74,19 @@ enum DisplayLanguage: String, CaseIterable {
     /// Authored, user-selectable production languages — the catalog roster, SEPARATE from
     /// `selectableLanguages` (which leads with `.system`). `.system` is a resolution policy with no
     /// authored strings, so it never appears here. Drives the per-language string catalog and clamps
-    /// `fromTag`. Grows by one entry when an authored language is promoted (TL/POJ are authored +
-    /// debug-selectable but await their review-gated promotion round).
+    /// `fromTag`. Grows by one entry when an authored language is promoted (TL/POJ were promoted in
+    /// R5-2 / R6-2).
     /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
-    /// android .../i18n/DisplayLanguage.kt `productionLanguages`. Drift causes silent divergence.
-    static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese]
+    /// android .../i18n/DisplayLanguage.kt `productionLanguages` + tools/i18n `PRODUCTION_LANGUAGES`,
+    /// SAME ORDER. Drift causes silent divergence.
+    static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese, .tailo, .poj]
 
-    /// What the picker offers: `.system` (Automatic) first, then the production roster, plus DEBUG-only
-    /// previews — `.tailo` and `.poj` (authored but not yet production languages; debug-selectable so a
-    /// debug build can dogfood their strings + rendering before they join `productionLanguages`) and the
-    /// `.pseudo` layout probe. Release builds only ever offer `.system + productionLanguages`.
+    /// What the picker offers: `.system` (Automatic) first, then the production roster, plus the
+    /// `.pseudo` layout probe in DEBUG only. Release builds only ever offer `.system + productionLanguages`.
     /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `selectableLanguages`.
     static var selectableLanguages: [DisplayLanguage] {
         #if DEBUG
-        [.system] + productionLanguages + [.tailo, .poj, .pseudo]
+        [.system] + productionLanguages + [.pseudo]
         #else
         [.system] + productionLanguages
         #endif
@@ -112,10 +111,10 @@ enum DisplayLanguage: String, CaseIterable {
     }
 
     /// Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or one
-    /// whose language is not user-selectable in this build (a `.pseudo`/`.tailo`/`.poj` preview in a
-    /// release build) resolves to `.hanji`, so the effective language always matches a picker option.
-    /// `"system"` is selectable, so it round-trips to `.system`. The persisted tag itself is left
-    /// untouched, so it restores once a clamped language ships.
+    /// whose language is not user-selectable in this build (a `.pseudo` preview in a release build)
+    /// resolves to `.hanji`, so the effective language always matches a picker option. `"system"` is
+    /// selectable, so it round-trips to `.system`. The persisted tag itself is left untouched, so it
+    /// restores once a clamped language ships.
     static func fromTag(_ tag: String) -> DisplayLanguage {
         clampToSelectable(DisplayLanguage(rawValue: tag) ?? .hanji, selectableLanguages)
     }

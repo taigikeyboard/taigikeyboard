@@ -35,9 +35,9 @@ sealed interface StringResolution {
 /**
  * App UI display language — orthogonal to the keyboard input mode.
  *
- * Hanji, English, and Japanese are authored and user-selectable ([productionLanguages]). TL and POJ are
- * authored too but only DEBUG-selectable for now; they fall back to Hanji in release until a review-gated
- * promotion round adds them to [productionLanguages]. [PSEUDO] is a debug-only layout probe.
+ * Hanji, English, Japanese, Tâi-lô, and Pe̍h-ōe-jī are all authored and user-selectable
+ * ([productionLanguages]); a language not in that roster falls back to Hanji. [PSEUDO] is a debug-only
+ * layout probe, offered only in debug builds.
  *
  * [SYSTEM] (Automatic) is a selection POLICY, not a language: it has no authored strings and never
  * appears in [productionLanguages]. It is persisted (the user can return to it) and resolves to a
@@ -95,26 +95,24 @@ enum class DisplayLanguage(
 
         /**
          * Authored, user-selectable production languages. Drives the picker's authored roster and clamps
-         * [fromTag]. Grows by one entry when an authored language is promoted (TL/POJ are authored +
-         * debug-selectable but await their review-gated promotion round). SEPARATE from
-         * [selectableLanguages], which leads with the [SYSTEM] selection policy — [SYSTEM] has no strings
-         * of its own, so it is NOT in this authored roster.
+         * [fromTag]. Grows by one entry when an authored language is promoted (TL/POJ were promoted in
+         * R5-2 / R6-2). SEPARATE from [selectableLanguages], which leads with the [SYSTEM] selection
+         * policy — [SYSTEM] has no strings of its own, so it is NOT in this authored roster.
          * CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
-         * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift `productionLanguages`. Drift causes silent divergence.
+         * ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift `productionLanguages` + tools/i18n
+         * `PRODUCTION_LANGUAGES`, SAME ORDER. Drift causes silent divergence.
          */
-        val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH, JAPANESE)
+        val productionLanguages: List<DisplayLanguage> = listOf(HANJI, ENGLISH, JAPANESE, TAILO, POJ)
 
         /**
          * What the picker offers: the [SYSTEM] (Automatic) selection policy first, then the authored
-         * production roster, plus DEBUG-only previews — [TAILO] and [POJ] (authored but not yet production
-         * languages; debug-selectable so a debug build can dogfood their strings + rendering before they
-         * join [productionLanguages]) and the [PSEUDO] layout probe. Release builds offer only
+         * production roster, plus the [PSEUDO] layout probe in DEBUG only. Release builds offer only
          * [SYSTEM] + [productionLanguages]. Mirrors ios `selectableLanguages`.
          */
         val selectableLanguages: List<DisplayLanguage>
             get() {
                 val base = listOf(SYSTEM) + productionLanguages
-                return if (BuildConfig.DEBUG) base + TAILO + POJ + PSEUDO else base
+                return if (BuildConfig.DEBUG) base + PSEUDO else base
             }
 
         /**
@@ -132,10 +130,10 @@ enum class DisplayLanguage(
 
         /**
          * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or
-         * one whose language is not user-selectable in this build (a "pseudo"/"tailo"/"poj" preview in a
-         * release build) resolves to [HANJI], so the effective language always matches a picker option.
-         * "system" is now selectable, so it round-trips to [SYSTEM]. The persisted tag itself is left
-         * untouched, so it restores once that language ships.
+         * one whose language is not user-selectable in this build (a "pseudo" preview in a release build)
+         * resolves to [HANJI], so the effective language always matches a picker option. "system" is
+         * selectable, so it round-trips to [SYSTEM]. The persisted tag itself is left untouched, so it
+         * restores once that language ships.
          */
         fun fromTag(tag: String): DisplayLanguage =
             clampToSelectable(entries.firstOrNull { it.tag == tag } ?: HANJI, selectableLanguages)

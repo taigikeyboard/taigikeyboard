@@ -186,6 +186,8 @@ Old P2 (show 5 picker options all falling back to 漢字) was a visible fake fea
 
 Picker shows a language only after it passes completeness + layout + accessibility gates. P1 alone delivers value (single source of truth) independent of multi-language shipping.
 
+**Promotion status**: P3a (ja, R4-2), P3b (tailo, R5-2), and P3c (poj, R6-2) are all promoted into the production picker — release roster = `[hanji, english, japanese, tailo, poj]` (+ `system`). TL/POJ prose stays review-pending: USER proofreads + re-derives on his own schedule, a data-only edit (`i18n/*.json` tailo + `make i18n-derive-poj`), not a code or roster gate. Round-by-round status lives in memory; the per-round table below stops at the early P1 rounds and is not the live tracker.
+
 ### Delivery status (rounds)
 
 P0 and P1 are delivered as small per-PR rounds (Codex pre-impl 2026-06-20 refuted a single large P1 PR; namespace-atomic split avoids a JSON-vs-`*Texts` dual-source-of-truth drift window):

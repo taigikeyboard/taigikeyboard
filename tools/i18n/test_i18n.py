@@ -18,6 +18,7 @@ import derive_poj
 import i18n_lib
 from i18n_lib import (
     DUPLICATE_KEY_ERROR,
+    PRODUCTION_LANGUAGES,
     build_outputs,
     kotlin_escape,
     l10n_accessor,
@@ -121,34 +122,58 @@ class ValidateTest(unittest.TestCase):
 
 
 class ProductionCompletenessTest(unittest.TestCase):
+    # A fully-authored key: every production language present + non-empty. tailo/poj joined the roster
+    # at promotion (R5-2 / R6-2), so a complete key now carries all five.
+    _FULL = {"hanji": "字", "en": "x", "ja": "字", "tailo": "jī", "poj": "jī"}
+
     def _entries(self, values):
         return [("ns", "k", {"scope": {"platforms": ["android"], "surfaces": ["host"]}, "values": values})]
 
-    def test_all_production_languages_passes(self):
-        validate_production_completeness(self._entries({"hanji": "字", "ja": "字", "en": "x"}))
+    def _without(self, lang):
+        values = dict(self._FULL)
+        del values[lang]
+        return self._entries(values)
 
-    def test_optional_languages_absent_passes(self):
-        # tailo/poj are not production yet — their absence must not fail completeness.
-        validate_production_completeness(self._entries({"hanji": "字", "ja": "字", "en": "x"}))
+    def test_production_languages_roster_matches_platform_order(self):
+        # CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — same set + order as the
+        # platform productionLanguages rosters (ios DisplayLanguage.swift / android DisplayLanguage.kt §37).
+        self.assertEqual(PRODUCTION_LANGUAGES, ("hanji", "en", "ja", "tailo", "poj"))
+
+    def test_all_production_languages_passes(self):
+        validate_production_completeness(self._entries(dict(self._FULL)))
 
     def test_missing_ja_rejected(self):
         with self.assertRaises(ValueError) as ctx:
-            validate_production_completeness(self._entries({"hanji": "字", "en": "x"}))
+            validate_production_completeness(self._without("ja"))
         self.assertIn("ja", str(ctx.exception))
 
     def test_missing_en_rejected(self):
         with self.assertRaises(ValueError) as ctx:
-            validate_production_completeness(self._entries({"hanji": "字", "ja": "字"}))
+            validate_production_completeness(self._without("en"))
         self.assertIn("en", str(ctx.exception))
 
+    def test_missing_tailo_rejected(self):
+        # tailo joined the production roster (R5-2) — its absence now fails completeness.
+        with self.assertRaises(ValueError) as ctx:
+            validate_production_completeness(self._without("tailo"))
+        self.assertIn("tailo", str(ctx.exception))
+
+    def test_missing_poj_rejected(self):
+        # poj joined the production roster (R6-2) — its absence now fails completeness.
+        with self.assertRaises(ValueError) as ctx:
+            validate_production_completeness(self._without("poj"))
+        self.assertIn("poj", str(ctx.exception))
+
     def test_empty_production_value_rejected(self):
+        values = dict(self._FULL)
+        values["en"] = ""
         with self.assertRaises(ValueError):
-            validate_production_completeness(self._entries({"hanji": "字", "ja": "字", "en": ""}))
+            validate_production_completeness(self._entries(values))
 
     def test_build_outputs_enforces_when_flagged(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            _write_namespace(repo, "probe", {"k": _android_key({"hanji": "字", "en": "x"})})  # no ja
+            _write_namespace(repo, "probe", {"k": _android_key({"hanji": "字", "en": "x"})})  # partial
             build_outputs(repo)  # default: completeness off -> partial fixture allowed
             with self.assertRaises(ValueError):
                 build_outputs(repo, enforce_production_completeness=True)
@@ -222,8 +247,9 @@ class GeneratedMapCompletenessTest(unittest.TestCase):
             build_outputs(repo, enforce_production_completeness=True)
 
     def test_tailo_without_poj_rejected(self):
-        # The lockstep gate fires only on the enforced CLI path. tailo authored, poj missing -> error
-        # (a new key that added tailo without re-deriving poj would otherwise silently fall back to Hanji).
+        # The lockstep gate runs first on the enforced CLI path. tailo authored, poj missing -> lockstep
+        # error (it names the fix: "run make i18n-derive-poj"), ahead of the generic production-completeness
+        # error that the now-promoted poj would otherwise also raise.
         with self.assertRaisesRegex(ValueError, "lockstep"):
             self._build({"hanji": "字", "tailo": "jī", "ja": "字", "en": "char"})
 
@@ -234,9 +260,11 @@ class GeneratedMapCompletenessTest(unittest.TestCase):
     def test_both_present_passes(self):
         self._build({"hanji": "字", "tailo": "jī", "poj": "jī", "ja": "字", "en": "char"})
 
-    def test_neither_present_passes(self):
-        # tailo/poj are still optional as a pair — a key authoring neither is a deliberate Hanji fallback.
-        self._build({"hanji": "字", "ja": "字", "en": "char"})
+    def test_neither_present_rejected(self):
+        # tailo + poj are production languages now (R5-2 / R6-2): a key authoring neither passes the lockstep
+        # gate (nothing to keep in step) but fails production completeness — every picker option must render.
+        with self.assertRaisesRegex(ValueError, "production"):
+            self._build({"hanji": "字", "ja": "字", "en": "char"})
 
 
 class PlaceholderValidationTest(unittest.TestCase):

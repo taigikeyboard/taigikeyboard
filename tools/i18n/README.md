@@ -51,10 +51,12 @@ the generator's job):
 - `scope.platforms` ⊆ {ios, android}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
 - Every key must define the base language (`hanji`).
 - **Production completeness**: every key must author all user-selectable production languages
-  (`hanji`, `ja`, `en` today — mirrors the platform `DisplayLanguage.productionLanguages` roster), so a
-  picker option never renders a silent Hanji fallback. `tailo`/`poj` stay optional until they ship and
-  join the roster. Enforced by `make i18n` / `make i18n-check` / Gradle `checkI18nGenerated` (not by the
-  generic `build_outputs`, which tests drive with partial fixtures).
+  (`hanji`, `en`, `ja`, `tailo`, `poj` — mirrors the platform `DisplayLanguage.productionLanguages`
+  roster), so a picker option never renders a silent Hanji fallback. `tailo`/`poj` joined the roster at
+  promotion (R5-2 / R6-2); the `tailo`↔`poj` lockstep gate runs first to give the actionable "run
+  `make i18n-derive-poj`" diagnostic for a half-authored pair. Enforced by `make i18n` /
+  `make i18n-check` / Gradle `checkI18nGenerated` (not by the generic `build_outputs`, which tests drive
+  with partial fixtures).
 - Every authored language must carry the same `{placeholder}` set as the base (order may differ —
   substitution is by name, not position, so a reordered translation is allowed).
 
