@@ -6085,6 +6085,186 @@
         }
       }
     },
+    "i18n_symbol_fullWidth": {
+      "comment": "Symbol overlay category tab: full-width punctuation (extension-only).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full-width"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全角"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全形"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "choân-hêng"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsuân-hîng"
+          }
+        }
+      }
+    },
+    "i18n_symbol_halfWidth": {
+      "comment": "Symbol overlay category tab: half-width punctuation (extension-only).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Half-width"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "半角"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "半形"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pòaⁿ-hêng"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "puànn-hîng"
+          }
+        }
+      }
+    },
+    "i18n_symbol_hiragana": {
+      "comment": "Symbol overlay category tab: Japanese hiragana (extension-only).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiragana"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ひらがな"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平仮名"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pêng-ké-miâ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pîng-ké-miâ"
+          }
+        }
+      }
+    },
+    "i18n_symbol_kaomoji": {
+      "comment": "Symbol overlay category tab: kaomoji / emoticons (extension-only).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaomoji"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顔文字"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顏文字"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gân-bûn-jī"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gân-bûn-jī"
+          }
+        }
+      }
+    },
+    "i18n_symbol_katakana": {
+      "comment": "Symbol overlay category tab: Japanese katakana (extension-only).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Katakana"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カタカナ"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片仮名"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phiàn-ké-miâ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phiàn-ké-miâ"
+          }
+        }
+      }
+    },
     "i18n_theme_candidateSection": {
       "comment": "Theme editor section header: the candidate-bar group (candidate colors + text size).",
       "extractionState": "manual",

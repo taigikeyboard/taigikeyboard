@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.i18n.stringRes
 
 private val SymbolCategoryValues = SymbolCategory.entries
 private val SymbolCellMinHeight = 40.dp
@@ -83,7 +84,7 @@ fun SymbolOverlayContent(
                     onClick = { selectedCategory = category },
                     selectedContentColor = appearance.accent,
                     unselectedContentColor = appearance.foreground,
-                    text = { Text(category.label) },
+                    text = { Text(stringRes(category.labelKey)) },
                 )
             }
         }

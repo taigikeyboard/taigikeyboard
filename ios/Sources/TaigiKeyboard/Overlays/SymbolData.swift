@@ -11,13 +11,15 @@ enum SymbolCategory: CaseIterable {
     case katakana
     case kaomoji
 
-    var label: String {
+    // i18n string key for the category tab label — resolved by DisplayLanguageStore under the
+    // active display language (replaces the previously hardcoded Hanji label).
+    var labelKey: StringKey {
         switch self {
-        case .fullWidth: "全形"
-        case .halfWidth: "半形"
-        case .hiragana: "平仮名"
-        case .katakana: "片仮名"
-        case .kaomoji: "顏文字"
+        case .fullWidth: .symbolFullWidth
+        case .halfWidth: .symbolHalfWidth
+        case .hiragana: .symbolHiragana
+        case .katakana: .symbolKatakana
+        case .kaomoji: .symbolKaomoji
         }
     }
 

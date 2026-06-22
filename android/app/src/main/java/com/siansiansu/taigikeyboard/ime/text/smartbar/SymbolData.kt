@@ -1,18 +1,21 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+
 /**
  * Symbol categories for the symbol selection overlay.
  */
 enum class SymbolCategory(
-    val label: String,
+    // i18n string key for the category tab label — resolved at render via the active display language.
+    val labelKey: StringKey,
     val columnCount: Int = 6,
     val fontSize: Float = 20f,
 ) {
-    FULL_WIDTH("全形"),
-    HALF_WIDTH("半形"),
-    HIRAGANA("平仮名"),
-    KATAKANA("片仮名"),
-    KAOMOJI("顏文字", columnCount = 2, fontSize = 14f),
+    FULL_WIDTH(StringKey.SYMBOL_FULL_WIDTH),
+    HALF_WIDTH(StringKey.SYMBOL_HALF_WIDTH),
+    HIRAGANA(StringKey.SYMBOL_HIRAGANA),
+    KATAKANA(StringKey.SYMBOL_KATAKANA),
+    KAOMOJI(StringKey.SYMBOL_KAOMOJI, columnCount = 2, fontSize = 14f),
 }
 
 /**

@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Symbol selection overlay panel
 ///
-/// Displays symbol grids across 7 category tabs in a scrollable tab bar,
+/// Displays symbol grids across 5 category tabs in a scrollable tab bar,
 /// allowing the user to insert symbols directly from the keyboard toolbar.
 /// Follows the same overlay pattern as `LayoutSelectionOverlay`.
 // 中文: 符號選擇面板 — 與 LayoutSelectionOverlay 採用相同的 overlay 樣式。
@@ -16,6 +16,7 @@ struct SymbolSelectionOverlay: View {
 
     @State private var selectedTab: SymbolCategory = .fullWidth
     @Environment(\.candidateTheme) private var theme
+    @Environment(DisplayLanguageStore.self) private var lang
 
     /// Grid columns based on selected tab's column count.
     // 中文: 依當前分類的 columnCount 動態建立 GridItem。
@@ -58,6 +59,11 @@ struct SymbolSelectionOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            // Re-read the App Group display-language tag when the overlay appears — the reliable
+            // cross-process resync point (host app may have changed the language).
+            lang.syncFromSettings()
+        }
     }
 
     // MARK: - Tab Bar
@@ -76,7 +82,7 @@ struct SymbolSelectionOverlay: View {
         return Button(action: {
             selectedTab = category
         }) {
-            Text(category.label)
+            Text(lang.string(category.labelKey))
                 .font(KeyboardFonts.globalFont(size: 13))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .white : theme.primaryTextColor)

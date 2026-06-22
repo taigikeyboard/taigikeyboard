@@ -350,6 +350,16 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_EMAIL)
     val settingsOpenApp: String
         @Composable get() = stringRes(StringKey.SETTINGS_OPEN_APP)
+    val symbolFullWidth: String
+        @Composable get() = stringRes(StringKey.SYMBOL_FULL_WIDTH)
+    val symbolHalfWidth: String
+        @Composable get() = stringRes(StringKey.SYMBOL_HALF_WIDTH)
+    val symbolHiragana: String
+        @Composable get() = stringRes(StringKey.SYMBOL_HIRAGANA)
+    val symbolKatakana: String
+        @Composable get() = stringRes(StringKey.SYMBOL_KATAKANA)
+    val symbolKaomoji: String
+        @Composable get() = stringRes(StringKey.SYMBOL_KAOMOJI)
     val themeCustomFont: String
         @Composable get() = stringRes(StringKey.THEME_CUSTOM_FONT)
     val themeCustomThemesSection: String

@@ -175,6 +175,11 @@
     <string name="i18n_settings_diagnosticShare">分享裝置資訊</string>
     <string name="i18n_settings_diagnosticEmail">Email 回報問題</string>
     <string name="i18n_settings_openApp">去APP調整</string>
+    <string name="i18n_symbol_fullWidth">全形</string>
+    <string name="i18n_symbol_halfWidth">半形</string>
+    <string name="i18n_symbol_hiragana">平仮名</string>
+    <string name="i18n_symbol_katakana">片仮名</string>
+    <string name="i18n_symbol_kaomoji">顏文字</string>
     <string name="i18n_theme_customFont">字型設定</string>
     <string name="i18n_theme_customThemesSection">自訂主題</string>
     <string name="i18n_theme_createNewTheme">新主題…</string>

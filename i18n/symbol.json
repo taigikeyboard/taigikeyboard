@@ -1,0 +1,30 @@
+{
+  "namespace": "symbol",
+  "keys": {
+    "fullWidth": {
+      "comment": "Symbol overlay category tab: full-width punctuation (extension-only).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "全形", "tailo": "tsuân-hîng", "poj": "choân-hêng", "en": "Full-width", "ja": "全角" }
+    },
+    "halfWidth": {
+      "comment": "Symbol overlay category tab: half-width punctuation (extension-only).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "半形", "tailo": "puànn-hîng", "poj": "pòaⁿ-hêng", "en": "Half-width", "ja": "半角" }
+    },
+    "hiragana": {
+      "comment": "Symbol overlay category tab: Japanese hiragana (extension-only).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "平仮名", "tailo": "pîng-ké-miâ", "poj": "pêng-ké-miâ", "en": "Hiragana", "ja": "ひらがな" }
+    },
+    "katakana": {
+      "comment": "Symbol overlay category tab: Japanese katakana (extension-only).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "片仮名", "tailo": "phiàn-ké-miâ", "poj": "phiàn-ké-miâ", "en": "Katakana", "ja": "カタカナ" }
+    },
+    "kaomoji": {
+      "comment": "Symbol overlay category tab: kaomoji / emoticons (extension-only).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "顏文字", "tailo": "gân-bûn-jī", "poj": "gân-bûn-jī", "en": "Kaomoji", "ja": "顔文字" }
+    }
+  }
+}
