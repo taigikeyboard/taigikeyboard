@@ -13,20 +13,20 @@ from pathlib import Path
 
 # Base language: every key MUST define this (structural — validate_namespace). en/ja are real OS locales;
 # tailo/poj are hand-authored in lockstep (P3b/P3c). Beyond the base, the production CLI additionally
-# requires every PRODUCTION_LANGUAGES value (validate_production_completeness) + the tailo/poj lockstep
-# (validate_generated_map_completeness); only a NON-production language's absence is a deliberate fallback.
+# requires every PRODUCTION_LANGUAGES value (validate_production_completeness) — which covers the tailo/poj
+# pair too, both being production languages; only a NON-production language's absence is a deliberate fallback.
 BASE_LANGUAGE = "hanji"
 
 # Display languages emitted to the Kotlin TL/POJ map (no OS locale -> GeneratedMap path). poj is the POJ
-# rendering of the same reading as tailo; both are hand-authored, so the two are kept in lockstep.
+# rendering of the same reading as tailo; both are hand-authored as a pair (kept in step by
+# validate_production_completeness — both are production languages, so neither can be missing alone).
 GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 
 # Authored, user-selectable production languages: every key MUST define ALL of these (non-empty), so a
 # picker option never renders a silent Hanji fallback for a missing translation. tailo/poj joined this
 # roster when they were promoted out of debug-only preview (R5-2 / R6-2), so they are now enforced like
-# every other production language; the tailo/poj lockstep gate (validate_generated_map_completeness) still
-# runs first to give the more-specific "author both tailo + poj" diagnostic. The lint config disables
-# Android `MissingTranslation`, so this completeness check is the generator's job (R4-3).
+# every other production language — including the tailo/poj pair, which needs no separate lockstep gate.
+# The lint config disables Android `MissingTranslation`, so this completeness check is the generator's job (R4-3).
 # CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — must mirror the picker roster
 # in android/.../i18n/DisplayLanguage.kt `productionLanguages` and ios/.../Strings/DisplayLanguage.swift
 # `productionLanguages` (hanji/en/ja/tailo/poj), SAME ORDER. Drift would either gate an unshipped language
@@ -540,8 +540,9 @@ def validate_production_completeness(entries) -> None:
     # never renders a silent Hanji fallback. This is a property of the FULL real source set, enforced at
     # the CLI boundary (generate.py / check.py / Gradle checkI18nGenerated) — NOT inside the generic
     # build_outputs machinery, whose unit tests intentionally use partial fixtures to exercise other
-    # paths (scope filtering, partial-language emission). Runs AFTER the structural + lockstep validators
-    # so their more specific errors surface first.
+    # paths (scope filtering, partial-language emission). Runs after the structural validators so their
+    # more specific errors surface first. tailo and poj are production languages, so this single gate also
+    # enforces the tailo/poj pair (neither can be authored without the other passing this check).
     for namespace, key, entry in entries:
         values = entry["values"]
         missing = [lang for lang in PRODUCTION_LANGUAGES if not values.get(lang)]
@@ -549,24 +550,6 @@ def validate_production_completeness(entries) -> None:
             raise ValueError(
                 f"{namespace}:{key}: missing production language(s) {missing} — every user-selectable "
                 f"language {list(PRODUCTION_LANGUAGES)} must be authored"
-            )
-
-
-def validate_generated_map_completeness(entries) -> None:
-    # tailo and poj are authored in lockstep: poj is the POJ rendering of the SAME reading as tailo, so a
-    # key authoring one MUST author the other. Now that both are production languages,
-    # validate_production_completeness would also reject a half-authored pair — but this gate runs first
-    # (build_outputs) and names the fix ("author both"), so the actionable diagnostic wins. Enforced at the
-    # CLI boundary only (generate.py / check.py / Gradle) — the unit tests intentionally drive partial
-    # fixtures (tailo without poj) to exercise this path in isolation.
-    for namespace, key, entry in entries:
-        values = entry["values"]
-        authored = [lang for lang in GENERATED_MAP_LANGUAGES if values.get(lang)]
-        if authored and len(authored) != len(GENERATED_MAP_LANGUAGES):
-            missing = [lang for lang in GENERATED_MAP_LANGUAGES if not values.get(lang)]
-            raise ValueError(
-                f"{namespace}:{key}: GeneratedMap languages must be authored in lockstep — has "
-                f"{authored} but missing {missing} (tailo and poj are hand-authored as a pair)"
             )
 
 
@@ -956,11 +939,8 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     # fails the build. Unit tests default False — they drive build_outputs with partial fixtures to
     # exercise scope filtering / partial-language emission, which the completeness gate would reject.
     if enforce_production_completeness:
-        # Lockstep gate first: tailo + poj are both production languages now, so a half-authored pair
-        # (tailo without poj, or vice versa) would also trip validate_production_completeness — but the
-        # lockstep error names the fix ("author both"), so surface it ahead of the generic
-        # missing-production-language error.
-        validate_generated_map_completeness(all_entries)
+        # tailo + poj are production languages, so this one gate also enforces the tailo/poj pair (a
+        # half-authored pair fails as a missing production language). No separate lockstep gate needed.
         validate_production_completeness(all_entries)
     # Android artifacts cover only android-scoped keys (D5 scope filtering); an iOS-only key
     # must not leak into the Android resource set.

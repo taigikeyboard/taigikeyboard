@@ -55,9 +55,10 @@ the generator's job):
 - **Production completeness**: every key must author all user-selectable production languages
   (`hanji`, `en`, `ja`, `tailo`, `poj` — mirrors the platform `DisplayLanguage.productionLanguages`
   roster), so a picker option never renders a silent Hanji fallback. `tailo`/`poj` joined the roster at
-  promotion (R5-2 / R6-2); the `tailo`↔`poj` lockstep gate runs first to give the actionable "author
-  both" diagnostic for a half-authored pair. Enforced by `make i18n` / `check.py` / Gradle
-  `checkI18nGenerated` (not by the generic `build_outputs`, which tests drive with partial fixtures).
+  promotion (R5-2 / R6-2); because both are production languages, this one completeness gate also enforces
+  the `tailo`↔`poj` pair (a half-authored pair fails as a missing production language — no separate gate).
+  Enforced by `make i18n` / `check.py` / Gradle `checkI18nGenerated` (not by the generic `build_outputs`,
+  which tests drive with partial fixtures).
 - Every authored language must carry the same `{placeholder}` set as the base (order may differ —
   substitution is by name, not position, so a reordered translation is allowed).
 
@@ -77,5 +78,5 @@ POJ is the Pe̍h-ōe-jī rendering of the same reading as TL (ts→ch, tsh→chh
 **hand-authored** as the `poj` value in `i18n/*.json`, alongside `tailo`, exactly like every other
 language; `make i18n` emits it directly. The maintainer authors and proofreads POJ by hand (POJ↔TL is a
 mechanical correspondence, easy to verify by eye), so there is no derive tool or Node dependency in the
-codegen path. tailo and poj are authored in lockstep: `validate_generated_map_completeness` rejects a key
-that has one but not the other.
+codegen path. tailo and poj are authored as a pair; since both are production languages,
+`validate_production_completeness` already rejects a key missing either (no separate lockstep gate).

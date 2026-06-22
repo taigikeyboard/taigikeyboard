@@ -206,7 +206,7 @@ class BuildOutputsTest(unittest.TestCase):
         # GeneratedMap path (tailo/poj have no OS locale): a fixture with tailo but no poj lands in the
         # Kotlin tailo map + iOS private-use tailo localization, while poj stays an empty map / absent tag.
         # This partial shape is exercised only by unit fixtures via the default (unenforced) build; the real
-        # source is held to the tailo/poj lockstep by validate_generated_map_completeness (see below).
+        # real source is held to tailo/poj completeness by validate_production_completeness (see below).
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             _write_namespace(repo, "probe", {"k": _ios_key({"hanji": "字", "tailo": "jī"})})
@@ -243,23 +243,21 @@ class GeneratedMapCompletenessTest(unittest.TestCase):
             build_outputs(repo, enforce_production_completeness=True)
 
     def test_tailo_without_poj_rejected(self):
-        # The lockstep gate runs first on the enforced CLI path. tailo authored, poj missing -> lockstep
-        # error (author both tailo + poj), ahead of the generic production-completeness error that the
-        # now-promoted poj would otherwise also raise.
-        with self.assertRaisesRegex(ValueError, "lockstep"):
+        # tailo + poj are production languages, so a half-authored pair fails the single production gate:
+        # poj missing -> "missing production language(s) ['poj']". (No separate lockstep gate.)
+        with self.assertRaisesRegex(ValueError, "missing production language"):
             self._build({"hanji": "字", "tailo": "jī", "ja": "字", "en": "char"})
 
     def test_poj_without_tailo_rejected(self):
-        with self.assertRaisesRegex(ValueError, "lockstep"):
+        with self.assertRaisesRegex(ValueError, "missing production language"):
             self._build({"hanji": "字", "poj": "jī", "ja": "字", "en": "char"})
 
     def test_both_present_passes(self):
         self._build({"hanji": "字", "tailo": "jī", "poj": "jī", "ja": "字", "en": "char"})
 
     def test_neither_present_rejected(self):
-        # tailo + poj are production languages now (R5-2 / R6-2): a key authoring neither passes the lockstep
-        # gate (nothing to keep in step) but fails production completeness — every picker option must render.
-        with self.assertRaisesRegex(ValueError, "production"):
+        # A key authoring neither tailo nor poj fails production completeness — every picker option must render.
+        with self.assertRaisesRegex(ValueError, "missing production language"):
             self._build({"hanji": "字", "ja": "字", "en": "char"})
 
 
