@@ -18,6 +18,17 @@ BASE_LANGUAGE = "hanji"
 # Display languages emitted to the Kotlin TL/POJ map (no OS locale -> GeneratedMap path).
 GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 
+# Authored, user-selectable production languages: every key MUST define ALL of these (non-empty), so a
+# picker option never renders a silent Hanji fallback for a missing translation. tailo/poj are NOT here
+# yet — they are authored in later phases (P3b TL / P3c POJ) and join this tuple when their authoring
+# lands, exactly as they join the platform `productionLanguages` roster. The lint config disables
+# Android `MissingTranslation`, so this completeness check is the generator's job (R4-3).
+# CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — must mirror the picker roster
+# in android/.../i18n/DisplayLanguage.kt `productionLanguages` and ios/.../Strings/DisplayLanguage.swift
+# `productionLanguages` (hanji/en/ja today). Drift would either gate an unshipped language or let a
+# shipped one render incomplete.
+PRODUCTION_LANGUAGES = ("hanji", "ja", "en")
+
 VALID_PLATFORMS = {"ios", "android"}
 VALID_SURFACES = {"host", "extension"}
 VALID_VALUE_LANGUAGES = {"hanji", "tailo", "poj", "ja", "en"}
@@ -520,6 +531,24 @@ def _validate_global(entries) -> None:
             raise ValueError(f"accessor {accessor!r} ({origin}) is a reserved Kotlin/Swift keyword")
 
 
+def validate_production_completeness(entries) -> None:
+    # Every production (user-selectable) language MUST be authored for every key, so a picker option
+    # never renders a silent Hanji fallback. This is a property of the FULL real source set, enforced at
+    # the CLI boundary (generate.py / check.py / Gradle checkI18nGenerated) — NOT inside the generic
+    # build_outputs machinery, whose unit tests intentionally use partial fixtures to exercise other
+    # paths (scope filtering, partial-language emission for not-yet-shipped tailo/poj). Runs AFTER the
+    # structural validators so their more specific errors surface first.
+    for namespace, key, entry in entries:
+        values = entry["values"]
+        missing = [lang for lang in PRODUCTION_LANGUAGES if not values.get(lang)]
+        if missing:
+            raise ValueError(
+                f"{namespace}:{key}: missing production language(s) {missing} — every user-selectable "
+                f"language {list(PRODUCTION_LANGUAGES)} must be authored (tailo/poj stay optional until "
+                f"they ship and join the roster)"
+            )
+
+
 def _collect_entries(repo_root: Path):
     # Returns an ordered list of (namespace, key, entry) across all i18n/*.json sources.
     src_dir = repo_root / "i18n"
@@ -888,8 +917,13 @@ def _emit_ios_formats(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_outputs(repo_root: Path) -> dict:
+def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = False) -> dict:
     all_entries = _collect_entries(repo_root)
+    # Real CLI builds (generate.py / check.py / Gradle) pass True so a missing production translation
+    # fails the build. Unit tests default False — they drive build_outputs with partial fixtures to
+    # exercise scope filtering / partial-language emission, which the completeness gate would reject.
+    if enforce_production_completeness:
+        validate_production_completeness(all_entries)
     # Android artifacts cover only android-scoped keys (D5 scope filtering); an iOS-only key
     # must not leak into the Android resource set.
     entries = [item for item in all_entries if "android" in item[2]["scope"]["platforms"]]

@@ -48,6 +48,11 @@ the generator's job):
 - Duplicate JSON keys are rejected (not silently last-wins).
 - `scope.platforms` ⊆ {ios, android}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
 - Every key must define the base language (`hanji`).
+- **Production completeness**: every key must author all user-selectable production languages
+  (`hanji`, `ja`, `en` today — mirrors the platform `DisplayLanguage.productionLanguages` roster), so a
+  picker option never renders a silent Hanji fallback. `tailo`/`poj` stay optional until they ship and
+  join the roster. Enforced by `make i18n` / `make i18n-check` / Gradle `checkI18nGenerated` (not by the
+  generic `build_outputs`, which tests drive with partial fixtures).
 - Every authored language must carry the same `{placeholder}` set as the base (order may differ —
   substitution is by name, not position, so a reordered translation is allowed).
 

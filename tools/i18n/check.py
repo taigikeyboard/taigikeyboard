@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def main() -> int:
     try:
-        outputs = build_outputs(REPO_ROOT)
+        outputs = build_outputs(REPO_ROOT, enforce_production_completeness=True)
     except ValueError as exc:
         print(f"i18n: {exc}", file=sys.stderr)
         return 1

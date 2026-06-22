@@ -22,6 +22,7 @@ from i18n_lib import (
     res_name,
     string_key_const,
     validate_namespace,
+    validate_production_completeness,
     xml_escape,
 )
 
@@ -113,6 +114,40 @@ class ValidateTest(unittest.TestCase):
 
     def test_valid_passes(self):
         self._validate({"k": _android_key({"hanji": "字", "en": "x"})})
+
+
+class ProductionCompletenessTest(unittest.TestCase):
+    def _entries(self, values):
+        return [("ns", "k", {"scope": {"platforms": ["android"], "surfaces": ["host"]}, "values": values})]
+
+    def test_all_production_languages_passes(self):
+        validate_production_completeness(self._entries({"hanji": "字", "ja": "字", "en": "x"}))
+
+    def test_optional_languages_absent_passes(self):
+        # tailo/poj are not production yet — their absence must not fail completeness.
+        validate_production_completeness(self._entries({"hanji": "字", "ja": "字", "en": "x"}))
+
+    def test_missing_ja_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            validate_production_completeness(self._entries({"hanji": "字", "en": "x"}))
+        self.assertIn("ja", str(ctx.exception))
+
+    def test_missing_en_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            validate_production_completeness(self._entries({"hanji": "字", "ja": "字"}))
+        self.assertIn("en", str(ctx.exception))
+
+    def test_empty_production_value_rejected(self):
+        with self.assertRaises(ValueError):
+            validate_production_completeness(self._entries({"hanji": "字", "ja": "字", "en": ""}))
+
+    def test_build_outputs_enforces_when_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "probe", {"k": _android_key({"hanji": "字", "en": "x"})})  # no ja
+            build_outputs(repo)  # default: completeness off -> partial fixture allowed
+            with self.assertRaises(ValueError):
+                build_outputs(repo, enforce_production_completeness=True)
 
 
 class BuildOutputsTest(unittest.TestCase):
