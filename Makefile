@@ -7,10 +7,7 @@ DICT := dictionary
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 .PHONY: build test test-crate doc dict dogfood help \
-        fmt fmt-check lint \
-        fmt-rust fmt-check-rust lint-rust \
-        fmt-swift fmt-check-swift \
-        fmt-kotlin fmt-check-kotlin lint-kotlin \
+        fmt lint \
         i18n i18n-test \
         update-submodules
 
@@ -73,50 +70,21 @@ dogfood:
 	python3 $(DICT)/tools/gen_dogfood.py
 
 # ---------------------------------------------------------------------------
-# Formatting & lint
+# Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
-# Umbrella targets fan out to per-platform recipes. Per-platform recipes can
-# also be invoked directly (e.g. `make fmt-rust`) when iterating on one stack.
-#
-#   Rust    rustfmt + clippy (canonical local pre-commit gate)
-#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat
-#           Install:  brew install swiftformat
-#   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle
-#           No extra install; uses the project's Gradle wrapper.
+#   Rust    rustfmt (fmt) + clippy -D warnings (lint)
+#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat. Install: brew install swiftformat
+#   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle (spotlessCheck doubles as ktlint).
+# To check Rust formatting without writing: `cd engine && cargo fmt --all -- --check`.
 
-fmt: fmt-rust fmt-swift fmt-kotlin
-
-fmt-check: fmt-check-rust fmt-check-swift fmt-check-kotlin
-
-lint: lint-rust lint-kotlin
-
-# --- Rust ---
-fmt-rust:
+fmt:
 	cd $(ENGINE) && cargo fmt --all
-
-fmt-check-rust:
-	cd $(ENGINE) && cargo fmt --all -- --check
-
-lint-rust:
-	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
-
-# --- Swift ---
-fmt-swift:
 	swiftformat ios
-
-fmt-check-swift:
-	swiftformat --lint ios
-
-# --- Kotlin ---
-# Requires Spotless plugin in android/app/build.gradle (see CLAUDE-managed
-# Makefile docs). `spotlessCheck` doubles as ktlint lint.
-fmt-kotlin:
 	cd android && ./gradlew spotlessApply
 
-fmt-check-kotlin:
+lint:
+	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
 	cd android && ./gradlew spotlessCheck
-
-lint-kotlin: fmt-check-kotlin
 
 # Pull the latest tracked-branch commit for every submodule (taigi-emojis -> main,
 # taigi-converter -> its remote default branch) into the working tree. Submodules
@@ -139,9 +107,4 @@ help:
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
-	@echo "  make fmt-check          Verify formatting without writes (CI-style)"
 	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
-	@echo ""
-	@echo "  Per-platform: fmt-rust / fmt-swift / fmt-kotlin"
-	@echo "                fmt-check-rust / fmt-check-swift / fmt-check-kotlin"
-	@echo "                lint-rust / lint-kotlin"

@@ -129,8 +129,8 @@ Type-shape preferences that cross FFI:
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
 - **MSRV pinned at Rust 1.86** in root `Cargo.toml` (`rust-version = "1.86"`). Rationale: 1.85 (Feb 2025) stabilises edition2024 and 1.86 (Apr 2025) is the next stable. Bumped during Phase III D9.2 because `cargo-ndk` 4.x requires 1.86 and the dev-tool gap is not worth carrying a 3.5.x sidegrade for. Earlier pins (1.75 → 1.85 in D9.1) similarly bumped to clear active-tooling gaps. Bumping MSRV further remains a PR-level decision with CI verification.
 - **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
-- **`rustfmt` default config**, no deviations. `cargo fmt --check` available via `make fmt-check-rust` (§7 is judgment-gated, not mandatory).
-- **`clippy` with `-D warnings`** available via `make lint-rust`. Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
+- **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (§7 is judgment-gated, not mandatory).
+- **`clippy` with `-D warnings`** available via `make lint` (runs clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
 ## 7. Pre-commit gate + supply chain `[A]`
 
