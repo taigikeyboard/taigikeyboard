@@ -11,7 +11,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt-rust fmt-check-rust lint-rust \
         fmt-swift fmt-check-swift \
         fmt-kotlin fmt-check-kotlin lint-kotlin \
-        i18n i18n-check \
+        i18n i18n-check i18n-test \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -63,6 +63,11 @@ i18n:
 # the Android Gradle `checkI18nGenerated` task (preBuild) calls the same checker.
 i18n-check:
 	python3 tools/i18n/check.py
+
+# Unit tests for the i18n codegen core (validation, escaping, scope filter, GeneratedMap, format/plural).
+# Pure-Python, no Android/iOS toolchain needed — runs the same logic the platform builds compile against.
+i18n-test:
+	python3 tools/i18n/test_i18n.py
 
 # Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
 # built dictionary.csv. Random each run; prints to stdout for manual on-device

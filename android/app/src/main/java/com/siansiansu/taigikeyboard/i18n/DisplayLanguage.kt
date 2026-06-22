@@ -105,13 +105,15 @@ enum class DisplayLanguage(
 
         /**
          * What the picker offers: the [SYSTEM] (Automatic) selection policy first, then the authored
-         * production roster, plus the [PSEUDO] layout probe in DEBUG only. Release builds offer
+         * production roster, plus DEBUG-only previews — [TAILO] (authored but not yet a production
+         * language; debug-selectable so a debug build can dogfood its strings + rendering before it
+         * joins [productionLanguages]) and the [PSEUDO] layout probe. Release builds offer only
          * [SYSTEM] + [productionLanguages]. Mirrors ios `selectableLanguages`.
          */
         val selectableLanguages: List<DisplayLanguage>
             get() {
                 val base = listOf(SYSTEM) + productionLanguages
-                return if (BuildConfig.DEBUG) base + PSEUDO else base
+                return if (BuildConfig.DEBUG) base + TAILO + PSEUDO else base
             }
 
         /**
@@ -129,10 +131,10 @@ enum class DisplayLanguage(
 
         /**
          * Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or
-         * one whose language is not yet user-selectable (a leftover "pseudo" in release, or a tl/poj
-         * tag from a future build) resolves to [HANJI], so the effective language always matches a picker
-         * option. "system" is now selectable, so it round-trips to [SYSTEM]. The persisted tag itself is
-         * left untouched, so it restores once that language ships.
+         * one whose language is not user-selectable in this build (a "pseudo"/"tailo" preview in release,
+         * or an unauthored "poj" tag) resolves to [HANJI], so the effective language always matches a
+         * picker option. "system" is now selectable, so it round-trips to [SYSTEM]. The persisted tag
+         * itself is left untouched, so it restores once that language ships.
          */
         fun fromTag(tag: String): DisplayLanguage {
             val match = entries.firstOrNull { it.tag == tag } ?: HANJI

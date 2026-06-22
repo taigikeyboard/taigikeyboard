@@ -22,6 +22,12 @@
             "state": "translated",
             "value": "腔口差"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khiunn-kháu tsha"
+          }
         }
       }
     },
@@ -45,6 +51,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshú-siau"
           }
         }
       }
@@ -70,6 +82,12 @@
             "state": "translated",
             "value": "刪除"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "san-tî"
+          }
         }
       }
     },
@@ -93,6 +111,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "源樣烏體"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "guân iūnn oo thé"
           }
         }
       }
@@ -118,6 +142,12 @@
             "state": "translated",
             "value": "源樣明體"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "guân iūnn bîng-thé"
+          }
         }
       }
     },
@@ -141,6 +171,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "芫荽"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ian-sui"
           }
         }
       }
@@ -166,6 +202,12 @@
             "state": "translated",
             "value": "粉圓"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hún-înn"
+          }
         }
       }
     },
@@ -189,6 +231,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "系統"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hē-thóng"
           }
         }
       }
@@ -214,6 +262,12 @@
             "state": "translated",
             "value": "iTaigi愛台語"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi ài-tâi-gí"
+          }
         }
       }
     },
@@ -237,6 +291,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "工藝中心臺灣台語工藝詞庫"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kang-gē tiong-sim tâi-uân-tâi-gí kang-gē sû khòo"
           }
         }
       }
@@ -262,6 +322,12 @@
             "state": "translated",
             "value": "教育部臺灣台語常用詞辭典"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián"
+          }
         }
       }
     },
@@ -285,6 +351,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "公視台語台台語新詞辭庫"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo"
           }
         }
       }
@@ -310,6 +382,12 @@
             "state": "translated",
             "value": "好"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hó"
+          }
         }
       }
     },
@@ -333,6 +411,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "教育部學科術語臺灣台語對譯"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-io̍k-pōo ha̍k-kho su̍t-gí tâi-uân-tâi-gí tuì-i̍k"
           }
         }
       }
@@ -358,6 +442,12 @@
             "state": "translated",
             "value": "台華線頂對照典"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi huâ suànn-tíng tuì-tsiàu tián"
+          }
         }
       }
     },
@@ -381,6 +471,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "臺日大辭典台語譯本"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi ji̍t tuā sû-tián tâi-gí i̍k-pún"
           }
         }
       }
@@ -406,6 +502,12 @@
             "state": "translated",
             "value": "台灣植物名彙"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-uân tsi̍t-bu̍t miâ luī"
+          }
         }
       }
     },
@@ -429,6 +531,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "官方網站"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kuann-hong bāng-tsām"
           }
         }
       }
@@ -454,6 +562,12 @@
             "state": "translated",
             "value": "增加詞"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsing-ka sû"
+          }
         }
       }
     },
@@ -477,6 +591,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "詞關聯紀錄使用 CSV 純文字檔案，共 5 欄：頭前詞、頭前拍字、後壁詞、後壁拍字、次數，毋免囥標題。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû kuan-liân kì-lio̍k sú-iōng CSV sûn bûn-jī-tòng àn， kā 5 nuâ： thâu-tsîng sû、 thâu-tsîng phah-jī、 āu-piah sû、 āu-piah phah-jī、 tshù siàu， m̄-bián khǹg piau-tuê。"
           }
         }
       }
@@ -502,6 +622,12 @@
             "state": "translated",
             "value": "匯出詞關聯紀錄"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-tshut sû kuan-liân kì-lio̍k"
+          }
         }
       }
     },
@@ -525,6 +651,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯入詞關聯紀錄"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-ji̍p sû kuan-liân kì-lio̍k"
           }
         }
       }
@@ -550,6 +682,12 @@
             "state": "translated",
             "value": "詞關聯紀錄"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû kuan-liân kì-lio̍k"
+          }
         }
       }
     },
@@ -573,6 +711,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "詞關聯紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人做研究，請先刪除敏感 ê 內容。紀錄功能嘛會使關起來，毋過後一詞預測會較無準。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû kuan-liân kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu。 nā-beh thê-kiong hōo-lâng tsuè gián-kiù， tshiánn sian san-tî bín-kám ê luē-iông。 kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi， m̄-koh āu tsi̍t sû ī-tshik huē khah bô tsún。"
           }
         }
       }
@@ -598,6 +742,12 @@
             "state": "translated",
             "value": "開啟詞關聯紀錄"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khai-khé sû kuan-liân kì-lio̍k"
+          }
         }
       }
     },
@@ -621,6 +771,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "拍開了後，齒盤會記錄頭前、後壁 ê 關聯詞，予連紲建議愈來愈準。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-khui liáu-āu， khí-puânn huē kì-lio̍k thâu-tsîng、 āu-piah ê kuan-liân sû， hōo liân-suà kiàn-gī jú-lâi-jú tsún。"
           }
         }
       }
@@ -646,6 +802,12 @@
             "state": "translated",
             "value": "備份檔案內底包含你所有 ê 使用紀錄，佇 iOS 佮 Android 攏通用，準講換機仔嘛毋免煩惱。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pī-hūn tòng-àn lāi-té pau-hâm lí sóo-iú ê sú-iōng kì-lio̍k， tī iOS kah Android láng thong-iōng， tsún-kóng uānn ki-á mā m̄-bián huân-ló。"
+          }
         }
       }
     },
@@ -669,6 +831,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "備份復原"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pī-hūn ho̍k-guân"
           }
         }
       }
@@ -694,6 +862,12 @@
             "state": "translated",
             "value": "清除"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshing-tî"
+          }
         }
       }
     },
@@ -717,6 +891,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除所有詞關聯紀錄"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "san-tî sóo-iú sû kuan-liân kì-lio̍k"
           }
         }
       }
@@ -742,6 +922,12 @@
             "state": "translated",
             "value": "刪除所有詞頻紀錄"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "san-tî sóo-iú sû pîn kì-lio̍k"
+          }
         }
       }
     },
@@ -765,6 +951,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "確定欲刪除所有詞關聯紀錄？"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khak-tīng beh san-tî sóo-iú sû kuan-liân kì-lio̍k？"
           }
         }
       }
@@ -790,6 +982,12 @@
             "state": "translated",
             "value": "確定欲刪除所有詞頻紀錄？"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khak-tīng beh san-tî sóo-iú sû pîn kì-lio̍k？"
+          }
         }
       }
     },
@@ -813,6 +1011,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū tīng sû khòo sú-iōng CSV sûn bûn-jī-tòng àn， tē 1 nuâ khǹg beh phah ê lô-má-jī， tē 2 nuâ khǹg hàn-jī， m̄-bián khǹg piau-tuê。"
           }
         }
       }
@@ -838,6 +1042,12 @@
             "state": "translated",
             "value": "揤 + 符號加入自訂詞"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h + hû-hō ka-ji̍p tsū tīng sû"
+          }
         }
       }
     },
@@ -861,6 +1071,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "啟用自訂詞庫"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khé-iōng tsū tīng sû khòo"
           }
         }
       }
@@ -886,6 +1102,12 @@
             "state": "translated",
             "value": "拍開了後，家己加入 ê 詞會出現佇候選詞內底。關起來了後，自訂詞就袂閣出現。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-khui liáu-āu， ka-kī ka-ji̍p ê sû huē tshut-hiān tī hāu-suán sû lāi-té。 kuainn--khí-lâi liáu-āu， tsū tīng sû tsiū buē koh tshut-hiān。"
+          }
         }
       }
     },
@@ -909,6 +1131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "請毋通佇自訂詞庫囥敏感 ê 個人資料，親像身分證字號、口座密碼、信用卡號碼，請注意家己 ê 資訊安全。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshiánn m̄-thang tī tsū tīng sû khòo khǹg bín-kám ê kò-jîn-tsu-liāu， tshin-tshiūnn sin-hūn-tsìng jī-hō、 kháu-tsō bi̍t-bé、 sìn-iōng-khah hō-bé， tshiánn tsù-ì ka-kī ê tsu-sìn an-tsuân。"
           }
         }
       }
@@ -934,6 +1162,12 @@
             "state": "translated",
             "value": "自訂詞庫"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū tīng sû khòo"
+          }
         }
       }
     },
@@ -957,6 +1191,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "個人資料"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kò-jîn-tsu-liāu"
           }
         }
       }
@@ -982,6 +1222,12 @@
             "state": "translated",
             "value": "刪除全部自訂詞"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "san-tî tsuân-pōo tsū tīng sû"
+          }
         }
       }
     },
@@ -1005,6 +1251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "敢確定欲刪除所有自訂詞？"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kám khak-tīng beh san-tî sóo-iú tsū tīng sû？"
           }
         }
       }
@@ -1030,6 +1282,12 @@
             "state": "translated",
             "value": "詞庫增補檔案"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû khòo tsing-póo tòng-àn"
+          }
         }
       }
     },
@@ -1053,6 +1311,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯詞"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pian-tsi̍p sû"
           }
         }
       }
@@ -1078,6 +1342,12 @@
             "state": "translated",
             "value": "一擺全出"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsi̍t-pái tsuân tshut"
+          }
         }
       }
     },
@@ -1101,6 +1371,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "備份順利匯出"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pī-hūn sūn-lī huē-tshut"
           }
         }
       }
@@ -1126,6 +1402,12 @@
             "state": "translated",
             "value": "匯出詞庫"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-tshut sû khòo"
+          }
         }
       }
     },
@@ -1149,6 +1431,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "CSV 順利匯出"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV sūn-lī huē-tshut"
           }
         }
       }
@@ -1174,6 +1462,12 @@
             "state": "translated",
             "value": "檔案傷大（上限 5 MB）"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tòng-àn siong tuā（siōng hān 5 MB）"
+          }
         }
       }
     },
@@ -1197,6 +1491,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "頂面上濟顯示 100 个詞，若揣無詞，請用下跤 ê「拍字揣詞」功能搜揣。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tíng-bīn siāng tsuē hián-sī 100 ê sû， nā tshuē-bô sû， tshiánn iōng ē-kha ê「phah-jī tshuē sû」 kong-lîng tshiau-tshuē。"
           }
         }
       }
@@ -1222,6 +1522,12 @@
             "state": "translated",
             "value": "詞頻紀錄使用 CSV 純文字檔案，第 1 欄囥詞，第 2 欄囥次數，毋免囥標題。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû pîn kì-lio̍k sú-iōng CSV sûn bûn-jī-tòng àn， tē 1 nuâ khǹg sû， tē 2 nuâ khǹg tshù siàu， m̄-bián khǹg piau-tuê。"
+          }
         }
       }
     },
@@ -1245,6 +1551,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯出詞頻紀錄"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-tshut sû pîn kì-lio̍k"
           }
         }
       }
@@ -1270,6 +1582,12 @@
             "state": "translated",
             "value": "匯入詞頻紀錄"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-ji̍p sû pîn kì-lio̍k"
+          }
         }
       }
     },
@@ -1293,6 +1611,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "詞頻紀錄"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû pîn kì-lio̍k"
           }
         }
       }
@@ -1318,6 +1642,12 @@
             "state": "translated",
             "value": "詞頻紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人研究訓練模型，請先刪除敏感 ê 私人資料。紀錄功能嘛會使關起來，毋過按呢候選詞 ê 排序就會較無準。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû pîn kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu。 nā-beh thê-kiong hōo-lâng gián-kiù hùn-liān bôo-hîng， tshiánn sian san-tî bín-kám ê su-jîn tsu-liāu。 kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi， m̄-koh án-ne hāu-suán sû ê pâi-sī tsiū huē khah bô tsún。"
+          }
         }
       }
     },
@@ -1341,6 +1671,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟詞頻紀錄"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khai-khé sû pîn kì-lio̍k"
           }
         }
       }
@@ -1366,6 +1702,12 @@
             "state": "translated",
             "value": "拍開了後，齒盤會記錄你揀過 ê 詞幾擺，予候選詞排序做參考，定定揀 ê 詞就會排較頭前，按呢候選詞就會愈來愈準。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-khui liáu-āu， khí-puânn huē kì-lio̍k lí kíng kuè ê sû kuí-pái， hōo hāu-suán sû pâi-sī tsuè tsham-khó， tiānn-tiānn kíng ê sû tsiū huē pâi khah thâu-tsîng， án-ne hāu-suán sû tsiū huē jú-lâi-jú tsún。"
+          }
         }
       }
     },
@@ -1389,6 +1731,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "對應"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tuì-ìng"
           }
         }
       }
@@ -1414,6 +1762,12 @@
             "state": "translated",
             "value": "見本：𠢕早"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kiàn-pún： gâu-tsá"
+          }
         }
       }
     },
@@ -1437,6 +1791,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "一擺全入"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsi̍t-pái tsuân ji̍p"
           }
         }
       }
@@ -1462,6 +1822,12 @@
             "state": "translated",
             "value": "匯入 %1$lld 項自訂詞、%2$lld 項詞頻、%3$lld 項詞關聯"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-ji̍p %1$lld hāng tsū tīng sû、%2$lld hāng sû pîn、%3$lld hāng sû kuan-liân"
+          }
         }
       }
     },
@@ -1485,6 +1851,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯入詞庫"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-ji̍p sû khòo"
           }
         }
       }
@@ -1510,6 +1882,12 @@
             "state": "translated",
             "value": "匯出匯入"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-tshut huē-ji̍p"
+          }
         }
       }
     },
@@ -1533,6 +1911,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯入 %1$lld 項成功，%2$lld 項重複"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-ji̍p %1$lld hāng sîng-kong，%2$lld hāng-tāng ho̍k"
           }
         }
       }
@@ -1558,6 +1942,12 @@
             "state": "translated",
             "value": "檔案格式無正確，請使用 CSV 格式"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tòng-àn keh-sik bô tsìng-khak， tshiánn sú-iōng CSV keh-sik"
+          }
         }
       }
     },
@@ -1581,6 +1971,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "宜蘭偏漳腔"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gî-lân phian tsiang-khiunn"
           }
         }
       }
@@ -1606,6 +2002,12 @@
             "state": "translated",
             "value": "高雄混合腔"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ko-hiông hūn-ha̍p khiunn"
+          }
         }
       }
     },
@@ -1629,6 +2031,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金門偏泉腔"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kim-mn̂g phian tsuân-khiunn"
           }
         }
       }
@@ -1654,6 +2062,12 @@
             "state": "translated",
             "value": "鹿港偏泉腔"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lo̍k-káng phian tsuân-khiunn"
+          }
         }
       }
     },
@@ -1677,6 +2091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "馬公偏泉腔"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bé-kang phian tsuân-khiunn"
           }
         }
       }
@@ -1702,6 +2122,12 @@
             "state": "translated",
             "value": "三峽偏泉腔"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sam-kiap phian tsuân-khiunn"
+          }
         }
       }
     },
@@ -1725,6 +2151,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新竹偏泉腔"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sin-tik phian tsuân-khiunn"
           }
         }
       }
@@ -1750,6 +2182,12 @@
             "state": "translated",
             "value": "臺中偏漳腔"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-tiong phian tsiang-khiunn"
+          }
         }
       }
     },
@@ -1773,6 +2211,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "臺南混合腔"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-lâm hūn-ha̍p khiunn"
           }
         }
       }
@@ -1798,6 +2242,12 @@
             "state": "translated",
             "value": "臺北偏泉腔"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-pak phian tsuân-khiunn"
+          }
         }
       }
     },
@@ -1821,6 +2271,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "姓名附錄"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sènn-miâ hù-lio̍k"
           }
         }
       }
@@ -1846,6 +2302,12 @@
             "state": "translated",
             "value": "在來字"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsāi-lâi jī"
+          }
         }
       }
     },
@@ -1869,6 +2331,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "漢羅合用建議用字"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hàn-lô ha̍h-īng kiàn-gī iōng-jī"
           }
         }
       }
@@ -1894,6 +2362,12 @@
             "state": "translated",
             "value": "ChhoeTaigi 辭典"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChhoeTaigi sû-tián"
+          }
         }
       }
     },
@@ -1917,6 +2391,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "教育部辭典"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-io̍k-pōo sû-tián"
           }
         }
       }
@@ -1942,6 +2422,12 @@
             "state": "translated",
             "value": "教育部用字"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-io̍k-pōo iōng-jī"
+          }
         }
       }
     },
@@ -1965,6 +2451,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無資料"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bô tsu-liāu"
           }
         }
       }
@@ -1990,6 +2482,12 @@
             "state": "translated",
             "value": "揣無結果"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshuē-bô kiat-kó"
+          }
         }
       }
     },
@@ -2013,6 +2511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "其他辭典"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kî-thann sû-tián"
           }
         }
       }
@@ -2038,6 +2542,12 @@
             "state": "translated",
             "value": "拍字"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-jī"
+          }
         }
       }
     },
@@ -2061,6 +2571,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "見本：gâu-tsá"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kiàn-pún：gâu-tsá"
           }
         }
       }
@@ -2086,6 +2602,12 @@
             "state": "translated",
             "value": "儉起來"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khiām khí-lâi"
+          }
         }
       }
     },
@@ -2109,6 +2631,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "拍字揣詞"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-jī tshuē sû"
           }
         }
       }
@@ -2134,6 +2662,12 @@
             "state": "translated",
             "value": "補充資料"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "póo-tshiong tsu-liāu"
+          }
         }
       }
     },
@@ -2157,6 +2691,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "詞傷濟（上限 30,000 項）"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sû siunn-tse（siōng hān 30,000 hāng）"
           }
         }
       }
@@ -2182,6 +2722,12 @@
             "state": "translated",
             "value": "異用字"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ī iōng-jī"
+          }
         }
       }
     },
@@ -2205,6 +2751,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "關於"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kuan-î"
           }
         }
       }
@@ -2230,6 +2782,12 @@
             "state": "translated",
             "value": "實齋整理、提供"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "si̍t tse tsíng-lí、 thê-kiong"
+          }
         }
       }
     },
@@ -2254,6 +2812,12 @@
             "state": "translated",
             "value": "台語齒盤"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-gí khí-puânn"
+          }
         }
       }
     },
@@ -2274,6 +2838,12 @@
           }
         },
         "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© ButTaiwan"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
             "value": "© ButTaiwan"
@@ -2302,6 +2872,12 @@
             "state": "translated",
             "value": "致謝"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tì-siā"
+          }
         }
       }
     },
@@ -2325,6 +2901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "建中整理、提供"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kiàn-tiong tsíng-lí、 thê-kiong"
           }
         }
       }
@@ -2350,6 +2932,12 @@
             "state": "translated",
             "value": "其他"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kî-thann"
+          }
         }
       }
     },
@@ -2373,6 +2961,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-gí khí-puânn pó-tsìng íng-uán bián-huì， mā buē tsuè hù-huì kong-lîng。 tâi-gí sī lán ê bó-gí， bô ìng-kai in-uī tsînn ê būn-tê iōng buē tio̍h hó ke-si。 guá ǹg-bāng ta̍k-ke siūnn-beh ha̍k tâi-gí、 siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng， tse-sī guá tsuè tsit ê khí-puânn siōng tiōng-iàu ê sim-guān。"
           }
         }
       }
@@ -2398,6 +2992,12 @@
             "state": "translated",
             "value": "© iTaigi愛台語"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© iTaigi ài-tâi-gí"
+          }
         }
       }
     },
@@ -2421,6 +3021,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "© 國立臺灣工藝研究發展中心"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© kok-li̍p tâi-uân kang-gē gián-kiù huat-tián tiong-sim"
           }
         }
       }
@@ -2446,6 +3052,12 @@
             "state": "translated",
             "value": "© 教育部"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© kàu-io̍k-pōo"
+          }
         }
       }
     },
@@ -2469,6 +3081,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "功能設定"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kong-lîng siat-tīng"
           }
         }
       }
@@ -2494,6 +3112,12 @@
             "state": "translated",
             "value": "© 公視台語台"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© kong-sī tâi-gí-tâi"
+          }
         }
       }
     },
@@ -2514,6 +3138,12 @@
           }
         },
         "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© justfont"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
             "value": "© justfont"
@@ -2542,6 +3172,12 @@
             "state": "translated",
             "value": "隱私權政策"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ín-su-khuân tsìng-tshik"
+          }
         }
       }
     },
@@ -2565,6 +3201,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "為阮評分"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "uî guán phîng-hun"
           }
         }
       }
@@ -2590,6 +3232,12 @@
             "state": "translated",
             "value": "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bô kâng pâi-tsú ê tshiú-ki-á， siat-tīng ê hong-sik khó-lîng huē tām-po̍h-á bô-kāng-khuán， m̄-koh hong-sik ìng-kai láng tsha-put-to。"
+          }
         }
       }
     },
@@ -2613,6 +3261,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "啟用方法"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khé-iōng hong-huat"
           }
         }
       }
@@ -2638,6 +3292,12 @@
             "state": "translated",
             "value": "關閉"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kuan pì"
+          }
         }
       }
     },
@@ -2661,6 +3321,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成了後，重開你目前使用 ê App，予 App 重掠新 ê 齒盤清單。紲落來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "uân-sîng liáu-āu， tîng-khui lí ba̍k-tsîng sú-iōng ê App， hōo App tāng lia̍h sin ê khí-puânn tshing-tuann。 suà--lo̍h-lâi， tī ē-tàng phah-jī ê sóo-tsāi， tshi̍h tiâu tuē-kiû-tôo sī tshiat khì tâi-gí khí-puânn"
           }
         }
       }
@@ -2686,6 +3352,12 @@
             "state": "translated",
             "value": "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshiú-ki-á hē-thóng kui-tīng tē-sann hong khí-puânn ài tshiú-tōng khé-iōng tsiah ē tng sú-iōng， tshiánn tsiàu ē-kha ê suat-bîng uân-sîng siat-tīng。"
+          }
         }
       }
     },
@@ -2709,6 +3381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "去設定頁"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khì siat-tīng ia̍h"
           }
         }
       }
@@ -2734,6 +3412,12 @@
             "state": "translated",
             "value": "點揤「齒盤」"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tiám-tshi̍h「khí-puânn」"
+          }
         }
       }
     },
@@ -2757,6 +3441,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "點揤「增加齒盤」、「允准完整取用」"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tiám-tshi̍h「tsing-ka khí-puânn」、「ún-tsún uân-tsíng tshú-iōng」"
           }
         }
       }
@@ -2782,6 +3472,12 @@
             "state": "translated",
             "value": "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ún-tsún uân-tsíng tshú-iōng」 ì-sù sī hōo khí-puânn ē-tàng bat lí tshi̍h ê tōng-tsok， tsiânn-tsuè lí phah ê jī。 tshiánn hòng-sim，App buē kì-lio̍k lí ê tsu-liāu。"
+          }
         }
       }
     },
@@ -2805,6 +3501,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "齒盤愛拍開才會當使用"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khí-puânn ài phah-khui tsiah ē tng sú-iōng"
           }
         }
       }
@@ -2830,6 +3532,12 @@
             "state": "translated",
             "value": "© 鄭良偉"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© tēnn liông uí"
+          }
         }
       }
     },
@@ -2853,6 +3561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "© 小川尚義"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© siáu-tshuan siōng gī"
           }
         }
       }
@@ -2878,6 +3592,12 @@
             "state": "translated",
             "value": "© 佐佐木舜一"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© tsò-tsò-bo̍k sùn tsi̍t"
+          }
         }
       }
     },
@@ -2901,6 +3621,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "拍字說明"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-jī suat-bîng"
           }
         }
       }
@@ -2926,6 +3652,12 @@
             "state": "translated",
             "value": "網站紹介"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bāng-tsām siāu-kài"
+          }
         }
       }
     },
@@ -2949,6 +3681,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "當前版本"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tong-tsiân pán-pún"
           }
         }
       }
@@ -2974,6 +3712,12 @@
             "state": "translated",
             "value": "版本紀錄"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pán-pún kì-lio̍k"
+          }
         }
       }
     },
@@ -2997,6 +3741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "授權條款"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "siū-khuân tiâu-khuán"
           }
         }
       }
@@ -3022,6 +3772,12 @@
             "state": "translated",
             "value": "連鞭上市"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "liâm-mi tsiūnn-tshī"
+          }
         }
       }
     },
@@ -3045,6 +3801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "教育部輸入法齒佈1"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-io̍k-pōo su-ji̍p-hoat khí pòo1"
           }
         }
       }
@@ -3070,6 +3832,12 @@
             "state": "translated",
             "value": "教育部輸入法齒佈2"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-io̍k-pōo su-ji̍p-hoat khí pòo2"
+          }
         }
       }
     },
@@ -3090,6 +3858,12 @@
           }
         },
         "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PhahTaigi"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
             "value": "PhahTaigi"
@@ -3118,6 +3892,12 @@
             "state": "translated",
             "value": "羅馬字齒盤"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lô-má-jī khí-puânn"
+          }
         }
       }
     },
@@ -3138,6 +3918,12 @@
           }
         },
         "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lohankha"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
             "value": "Lohankha"
@@ -3166,6 +3952,12 @@
             "state": "translated",
             "value": "方音符號"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hong-im-hû-hō"
+          }
         }
       }
     },
@@ -3189,6 +3981,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "方音符號齒佈"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hong-im-hû-hō khí pòo"
           }
         }
       }
@@ -3214,6 +4012,12 @@
             "state": "translated",
             "value": "自動大本字"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū-tōng tuā-pún-jī"
+          }
         }
       }
     },
@@ -3237,6 +4041,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動空白"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū-tōng khàng-pe̍h"
           }
         }
       }
@@ -3262,6 +4072,12 @@
             "state": "translated",
             "value": "已 khó͘-phih"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "í khó͘-phih"
+          }
         }
       }
     },
@@ -3285,6 +4101,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Khó͘-phih 裝置資訊"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khó͘-phih tsong-tì tsu-sìn"
           }
         }
       }
@@ -3310,6 +4132,12 @@
             "state": "translated",
             "value": "Email 回報問題"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email huê-pò būn-tê"
+          }
         }
       }
     },
@@ -3333,6 +4161,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "裝置資訊"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsong-tì tsu-sìn"
           }
         }
       }
@@ -3358,6 +4192,12 @@
             "state": "translated",
             "value": "分享裝置資訊"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hun-hióng tsong-tì tsu-sìn"
+          }
         }
       }
     },
@@ -3381,6 +4221,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示語言"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hián-sī gí-giân"
           }
         }
       }
@@ -3406,6 +4252,12 @@
             "state": "translated",
             "value": "自動"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū-tōng"
+          }
         }
       }
     },
@@ -3429,6 +4281,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "連紲拍 nn → ⁿ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "liân-suà phah nn → ⁿ"
           }
         }
       }
@@ -3454,6 +4312,12 @@
             "state": "translated",
             "value": "連紲拍 oo → o͘"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "liân-suà phah oo → o͘"
+          }
         }
       }
     },
@@ -3477,6 +4341,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "英文"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ing-bûn"
           }
         }
       }
@@ -3502,6 +4372,12 @@
             "state": "translated",
             "value": "拍字反應"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-jī huán-ìng"
+          }
         }
       }
     },
@@ -3525,6 +4401,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "齒盤切換揤鈕"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khí-puânn tshiat-uānn tshi̍h-liú"
           }
         }
       }
@@ -3550,6 +4432,12 @@
             "state": "translated",
             "value": "佇齒盤面頂加 1 粒地球揤鈕，揤著會使切換去其他齒盤。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tī khí-puânn bīn-tíng ka 1 lia̍p tuē-kiû tshi̍h-liú， tshi̍h tio̍h ē-sái tshiat-uānn khì kî-thann khí-puânn。"
+          }
         }
       }
     },
@@ -3573,6 +4461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "輸入模式"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "su-ji̍p bôo-sik"
           }
         }
       }
@@ -3598,6 +4492,12 @@
             "state": "translated",
             "value": "齒盤設定"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khí-puânn siat-tīng"
+          }
         }
       }
     },
@@ -3621,6 +4521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示羅馬字"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hián-sī lô-má-jī"
           }
         }
       }
@@ -3646,6 +4552,12 @@
             "state": "translated",
             "value": "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hāu-suán sû lia̍t tē-it ê uī khǹg lô-má-jī， ē-tàng iōng tshiú tiám ah-sī tshi̍h Enter sàng-tshut， nā kuan， kan-tann-ē-tàng tshi̍h Enter sàng-tshut， buē-tàng iōng tshiú tiám， tān-sī hāu-suán sû lia̍t khang-king khah-tōa。"
+          }
         }
       }
     },
@@ -3669,6 +4581,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "去APP調整"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khìAPP tiâu-tsíng"
           }
         }
       }
@@ -3694,6 +4612,12 @@
             "state": "translated",
             "value": "括號標註"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kuat-hō phiau-tsù"
+          }
         }
       }
     },
@@ -3717,6 +4641,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "白話字"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pe̍h-uē-jī"
           }
         }
       }
@@ -3742,6 +4672,12 @@
             "state": "translated",
             "value": "白話字"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pe̍h-uē-jī"
+          }
         }
       }
     },
@@ -3765,6 +4701,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "恢復"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hue-ho̍k"
           }
         }
       }
@@ -3790,6 +4732,12 @@
             "state": "translated",
             "value": "恢復設定"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hue-ho̍k siat-tīng"
+          }
         }
       }
     },
@@ -3813,6 +4761,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "這个動作會恢復所有設定，敢欲繼續？"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsit ê tōng-tsok huē hue-ho̍k sóo-iú siat-tīng， kám beh kè-sio̍k？"
           }
         }
       }
@@ -3838,6 +4792,12 @@
             "state": "translated",
             "value": "揤仔聲"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h á siann"
+          }
         }
       }
     },
@@ -3861,6 +4821,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "台羅"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-lô"
           }
         }
       }
@@ -3886,6 +4852,12 @@
             "state": "translated",
             "value": "自動隱藏工具列"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū-tōng ún-tsông kang-khū-lia̍t"
+          }
         }
       }
     },
@@ -3909,6 +4881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "選字了後工具列會自動合起來，予齒盤面頂空間較大。"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "suán jī liáu-āu kang-khū-lia̍t huē tsū-tōng ha̍p--khí-lâi， hōo khí-puânn bīn-tíng khang-king khah-tōa。"
           }
         }
       }
@@ -3934,6 +4912,12 @@
             "state": "translated",
             "value": "方音符號"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hong-im-hû-hō"
+          }
         }
       }
     },
@@ -3957,6 +4941,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "or 對應 ㄜ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or tuì-ìng ㄜ"
           }
         }
       }
@@ -3982,6 +4972,12 @@
             "state": "translated",
             "value": "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。本設定只控制候選詞按怎顯示;字典揣詞已經共 er 佮 or 攏對應做仝一个音位，無論本設定開抑無開攏揣會著。\n\n開啟（預設）：or 顯示做 ㄜ。\n關閉：or 顯示做 ㄛ（恢復台羅 o）。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-lô or m̄-sī tsìng-sik siá-huat， hong-im-hû-hō ㄜ tsìng-sik kan-na tuì-ìng er。 pún siat-tīng tsí khòng-tsè hāu-suán sû án-nuá hián-sī; jī-tián tshuē sû í-king kā er kah or láng tuì-ìng tsuè kāng tsi̍t-ê im-uī， bô-lūn pún siat-tīng khui ah-bô khui láng tshuē huē tio̍h。 khai-khé（ī-siat）：or hián-sī tsuè ㄜ。 kuan pì：or hián-sī tsuè ㄛ（hue-ho̍k tâi-lô o）。"
+          }
         }
       }
     },
@@ -4005,6 +5001,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "方音符號"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hong-im-hû-hō"
           }
         }
       }
@@ -4030,6 +5032,12 @@
             "state": "translated",
             "value": "拍字設定"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "phah-jī siat-tīng"
+          }
         }
       }
     },
@@ -4053,6 +5061,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "震動反應"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tín-tāng huán-ìng"
           }
         }
       }
@@ -4078,6 +5092,12 @@
             "state": "translated",
             "value": "候選詞介面"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hāu-suán sû kài-bīn"
+          }
         }
       }
     },
@@ -4101,6 +5121,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "候選詞大細"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hāu-suán sû tuā-sè"
           }
         }
       }
@@ -4126,6 +5152,12 @@
             "state": "translated",
             "value": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah-ē-sái koh sin-tsing。"
+          }
         }
       }
     },
@@ -4149,6 +5181,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已達主題數量上限"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "í ta̍t tsú-tê sòo-liōng siōng hān"
           }
         }
       }
@@ -4174,6 +5212,12 @@
             "state": "translated",
             "value": "套用"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "thò-iōng"
+          }
         }
       }
     },
@@ -4197,6 +5241,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pian-tsi̍p"
           }
         }
       }
@@ -4222,6 +5272,12 @@
             "state": "translated",
             "value": "候選詞背景"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hāu-suán sû puē-kíng"
+          }
         }
       }
     },
@@ -4245,6 +5301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "候選詞文字"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hāu-suán sû bûn-jī"
           }
         }
       }
@@ -4270,6 +5332,12 @@
             "state": "translated",
             "value": "揤鈕介面"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h-liú kài-bīn"
+          }
         }
       }
     },
@@ -4293,6 +5361,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "揤鈕文字"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h-liú bûn-jī"
           }
         }
       }
@@ -4318,6 +5392,12 @@
             "state": "translated",
             "value": "齒盤色水"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khí-puânn sik-tsuí"
+          }
         }
       }
     },
@@ -4341,6 +5421,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "一般揤鈕色水"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "it-puann tshi̍h-liú sik-tsuí"
           }
         }
       }
@@ -4366,6 +5452,12 @@
             "state": "translated",
             "value": "特殊揤鈕色水"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ti̍k-sû tshi̍h-liú sik-tsuí"
+          }
         }
       }
     },
@@ -4389,6 +5481,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新主題…"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sin tsú-tê…"
           }
         }
       }
@@ -4414,6 +5512,12 @@
             "state": "translated",
             "value": "字型設定"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jī-hîng siat-tīng"
+          }
         }
       }
     },
@@ -4437,6 +5541,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自訂主題"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsū tīng tsú-tê"
           }
         }
       }
@@ -4462,6 +5572,12 @@
             "state": "translated",
             "value": "新主題"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sin tsú-tê"
+          }
         }
       }
     },
@@ -4485,6 +5601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "恢復預設設定"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hue-ho̍k ī-siat siat-tīng"
           }
         }
       }
@@ -4510,6 +5632,12 @@
             "state": "translated",
             "value": "儲存"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "thú-tsûn"
+          }
         }
       }
     },
@@ -4533,6 +5661,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯主題"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pian-tsi̍p tsú-tê"
           }
         }
       }
@@ -4558,6 +5692,12 @@
             "state": "translated",
             "value": "新主題"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sin tsú-tê"
+          }
         }
       }
     },
@@ -4581,6 +5721,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "揤鈕邊粗幼"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h-liú pinn tshoo-iù"
           }
         }
       }
@@ -4606,6 +5752,12 @@
             "state": "translated",
             "value": "揤鈕圓角"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h-liú înn kak"
+          }
         }
       }
     },
@@ -4629,6 +5781,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "揤鈕字大細"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h-liú jī tuā-sè"
           }
         }
       }
@@ -4654,6 +5812,12 @@
             "state": "translated",
             "value": "齒盤懸度"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khí-puânn kuân-tōo"
+          }
         }
       }
     },
@@ -4677,6 +5841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "揤鈕陰影"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshi̍h-liú im-iánn"
           }
         }
       }
@@ -4702,6 +5872,12 @@
             "state": "translated",
             "value": "齒盤介面"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khí-puânn kài-bīn"
+          }
         }
       }
     },
@@ -4726,6 +5902,12 @@
             "state": "translated",
             "value": "主題名稱"
           }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tsú-tê miâ-tshing"
+          }
         }
       }
     },
@@ -4749,6 +5931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "輸入主題名稱"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "su-ji̍p tsú-tê miâ-tshing"
           }
         }
       }

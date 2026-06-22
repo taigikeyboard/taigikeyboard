@@ -286,11 +286,25 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(DisplayLanguage.fromTag("hanji"), .hanji)
         XCTAssertEqual(DisplayLanguage.fromTag("en"), .english)
         XCTAssertEqual(DisplayLanguage.fromTag("ja"), .japanese)
-        // Not-yet-selectable identities (tl/poj) + unknown tags clamp to Hanji so the picker selection
-        // always matches the rendered language; the persisted tag is left untouched (see migration tests).
-        XCTAssertEqual(DisplayLanguage.fromTag("tailo"), .hanji)
+        // Unauthored poj + unknown tags clamp to Hanji so the picker selection always matches the rendered
+        // language; the persisted tag is left untouched (see migration tests). tailo is now authored +
+        // debug-selectable (separate test below).
         XCTAssertEqual(DisplayLanguage.fromTag("poj"), .hanji)
         XCTAssertEqual(DisplayLanguage.fromTag("xx"), .hanji)
+    }
+
+    func test_DISPLAY_LANGUAGE_tailoResolvesInDebugBuild() {
+        // Tâi-lô is authored but not yet a production language; it is debug-selectable so a debug build can
+        // dogfood its strings + rendering before it joins productionLanguages. The test target builds in
+        // DEBUG, so the tl tag survives fromTag (mirrors Android DisplayLanguageTest + ja R4-1).
+        XCTAssertEqual(DisplayLanguage.fromTag("tailo"), .tailo)
+    }
+
+    func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_debugSelectableRoster() {
+        // Pin the exact DEBUG picker order: Automatic first, the production roster, then the debug-only
+        // tailo preview + pseudo probe. Release drops the last two (asserted by the source #if; not
+        // reachable from a DEBUG test build). Guards against reorders / accidental promotion.
+        XCTAssertEqual(DisplayLanguage.selectableLanguages.map(\.tag), ["system", "hanji", "en", "ja", "tailo", "pseudo"])
     }
 
     func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_systemLeadsSelectableButNotRoster() {

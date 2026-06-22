@@ -79,12 +79,14 @@ enum DisplayLanguage: String, CaseIterable {
     /// android .../i18n/DisplayLanguage.kt `productionLanguages`. Drift causes silent divergence.
     static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese]
 
-    /// What the picker offers: `.system` (Automatic) first, then the production roster, plus the
-    /// `.pseudo` layout probe in DEBUG only. Release builds only ever offer `.system + productionLanguages`.
+    /// What the picker offers: `.system` (Automatic) first, then the production roster, plus DEBUG-only
+    /// previews — `.tailo` (authored but not yet a production language; debug-selectable so a debug build
+    /// can dogfood its strings + rendering before it joins `productionLanguages`) and the `.pseudo` layout
+    /// probe. Release builds only ever offer `.system + productionLanguages`.
     /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `selectableLanguages`.
     static var selectableLanguages: [DisplayLanguage] {
         #if DEBUG
-        [.system] + productionLanguages + [.pseudo]
+        [.system] + productionLanguages + [.tailo, .pseudo]
         #else
         [.system] + productionLanguages
         #endif
@@ -109,8 +111,8 @@ enum DisplayLanguage: String, CaseIterable {
     }
 
     /// Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or one
-    /// whose language is not yet user-selectable (a leftover `.pseudo` in release, or a `tl`/`poj`
-    /// tag from a future build) resolves to `.hanji`, so the effective language always matches a picker
+    /// whose language is not user-selectable in this build (a `.pseudo`/`.tailo` preview in release, or an
+    /// unauthored `poj` tag) resolves to `.hanji`, so the effective language always matches a picker
     /// option. `"system"` is selectable, so it round-trips to `.system`. The persisted tag itself is left
     /// untouched, so it restores once a clamped language ships.
     static func fromTag(_ tag: String) -> DisplayLanguage {

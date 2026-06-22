@@ -177,6 +177,21 @@ class BuildOutputsTest(unittest.TestCase):
             _write_namespace(repo, "probe", {"k": _android_key({"hanji": "字"})})
             self.assertEqual(build_outputs(repo), build_outputs(repo))
 
+    def test_generated_map_emits_tailo_and_leaves_poj_empty(self):
+        # GeneratedMap path (tailo/poj have no OS locale): an authored tailo value lands in the Kotlin
+        # tailo map AND the iOS private-use tailo localization, while an unauthored poj stays an empty
+        # map / absent tag. Mirrors P3b R5-1: tailo fully authored, poj not yet (P3c).
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "probe", {"k": _ios_key({"hanji": "字", "tailo": "jī"})})
+            outputs = build_outputs(repo)
+            taigi_map = outputs[f"{i18n_lib.GEN_PKG_DIR}/GeneratedTaigiStrings.kt"]
+            self.assertIn('StringKey.PROBE_K to "jī"', taigi_map)
+            self.assertIn("private val poj: Map<StringKey, String> = emptyMap()", taigi_map)
+            xcstrings = outputs[i18n_lib.IOS_XCSTRINGS]
+            self.assertIn("nan-Latn-TW-x-tailo", xcstrings)
+            self.assertNotIn("nan-Latn-TW-x-poj", xcstrings)
+
 
 class PlaceholderValidationTest(unittest.TestCase):
     def _validate(self, keys):

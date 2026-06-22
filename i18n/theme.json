@@ -4,182 +4,182 @@
     "customFont": {
       "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). Shared by iOS and Android.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "字型設定", "en": "Font", "ja": "フォント" }
+      "values": { "hanji": "字型設定", "tailo": "jī-hîng siat-tīng", "en": "Font", "ja": "フォント" }
     },
     "customThemesSection": {
       "comment": "Section header above the custom-theme shelf in the theme picker.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂主題", "en": "Custom Themes", "ja": "カスタムテーマ" }
+      "values": { "hanji": "自訂主題", "tailo": "tsū tīng tsú-tê", "en": "Custom Themes", "ja": "カスタムテーマ" }
     },
     "createNewTheme": {
       "comment": "Label + content description for the create-new-theme card on the theme picker shelf.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "新主題…", "en": "New Theme…", "ja": "新しいテーマ…" }
+      "values": { "hanji": "新主題…", "tailo": "sin tsú-tê…", "en": "New Theme…", "ja": "新しいテーマ…" }
     },
     "keyboardSection": {
       "comment": "Theme editor section header: the keyboard-surface group (background color + key height).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "齒盤介面", "en": "Keyboard Surface", "ja": "キーボード面" }
+      "values": { "hanji": "齒盤介面", "tailo": "khí-puânn kài-bīn", "en": "Keyboard Surface", "ja": "キーボード面" }
     },
     "colorKeySection": {
       "comment": "Theme editor section header: the key-surface group (key colors + sizing).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤鈕介面", "en": "Keys", "ja": "キー" }
+      "values": { "hanji": "揤鈕介面", "tailo": "tshi̍h-liú kài-bīn", "en": "Keys", "ja": "キー" }
     },
     "candidateSection": {
       "comment": "Theme editor section header: the candidate-bar group (candidate colors + text size).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞介面", "en": "Candidate Bar", "ja": "候補バー" }
+      "values": { "hanji": "候選詞介面", "tailo": "hāu-suán sû kài-bīn", "en": "Candidate Bar", "ja": "候補バー" }
     },
     "colorKeyboardBackground": {
       "comment": "Theme editor color-row label: the keyboard background color.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "齒盤色水", "en": "Keyboard Background", "ja": "キーボード背景" }
+      "values": { "hanji": "齒盤色水", "tailo": "khí-puânn sik-tsuí", "en": "Keyboard Background", "ja": "キーボード背景" }
     },
     "colorKeyText": {
       "comment": "Theme editor color-row label: the key glyph (text) color.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤鈕文字", "en": "Key Text", "ja": "キー文字" }
+      "values": { "hanji": "揤鈕文字", "tailo": "tshi̍h-liú bûn-jī", "en": "Key Text", "ja": "キー文字" }
     },
     "colorNormalKeyFill": {
       "comment": "Theme editor color-row label: the fill color of normal (letter) keys.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "一般揤鈕色水", "en": "Normal Key Fill", "ja": "通常キーの色" }
+      "values": { "hanji": "一般揤鈕色水", "tailo": "it-puann tshi̍h-liú sik-tsuí", "en": "Normal Key Fill", "ja": "通常キーの色" }
     },
     "colorSpecialKeyFill": {
       "comment": "Theme editor color-row label: the fill color of special (function) keys.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "特殊揤鈕色水", "en": "Special Key Fill", "ja": "特殊キーの色" }
+      "values": { "hanji": "特殊揤鈕色水", "tailo": "ti̍k-sû tshi̍h-liú sik-tsuí", "en": "Special Key Fill", "ja": "特殊キーの色" }
     },
     "colorCandidateText": {
       "comment": "Theme editor color-row label: the candidate text color.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞文字", "en": "Candidate Text", "ja": "候補の文字" }
+      "values": { "hanji": "候選詞文字", "tailo": "hāu-suán sû bûn-jī", "en": "Candidate Text", "ja": "候補の文字" }
     },
     "colorCandidateBackground": {
       "comment": "Theme editor color-row label: the candidate-bar background color.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞背景", "en": "Candidate Background", "ja": "候補の背景" }
+      "values": { "hanji": "候選詞背景", "tailo": "hāu-suán sû puē-kíng", "en": "Candidate Background", "ja": "候補の背景" }
     },
     "keyHeight": {
       "comment": "Theme editor slider label: keyboard height scale.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "齒盤懸度", "en": "Keyboard Height", "ja": "キーボードの高さ" }
+      "values": { "hanji": "齒盤懸度", "tailo": "khí-puânn kuân-tōo", "en": "Keyboard Height", "ja": "キーボードの高さ" }
     },
     "keyFontSize": {
       "comment": "Theme editor slider label: key glyph font size.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤鈕字大細", "en": "Key Font Size", "ja": "キー文字の大きさ" }
+      "values": { "hanji": "揤鈕字大細", "tailo": "tshi̍h-liú jī tuā-sè", "en": "Key Font Size", "ja": "キー文字の大きさ" }
     },
     "candidateTextSize": {
       "comment": "Theme editor slider label: candidate text size.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞大細", "en": "Candidate Text Size", "ja": "候補の文字の大きさ" }
+      "values": { "hanji": "候選詞大細", "tailo": "hāu-suán sû tuā-sè", "en": "Candidate Text Size", "ja": "候補の文字の大きさ" }
     },
     "keyCornerRadius": {
       "comment": "Theme editor slider label: key corner radius.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤鈕圓角", "en": "Key Corner Radius", "ja": "キーの角丸" }
+      "values": { "hanji": "揤鈕圓角", "tailo": "tshi̍h-liú înn kak", "en": "Key Corner Radius", "ja": "キーの角丸" }
     },
     "keyBorderWidth": {
       "comment": "Theme editor slider label: key border width.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤鈕邊粗幼", "en": "Key Border Width", "ja": "キーの枠線の太さ" }
+      "values": { "hanji": "揤鈕邊粗幼", "tailo": "tshi̍h-liú pinn tshoo-iù", "en": "Key Border Width", "ja": "キーの枠線の太さ" }
     },
     "keyShadow": {
       "comment": "Theme editor slider label: key shadow intensity.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "揤鈕陰影", "en": "Key Shadow", "ja": "キーの影" }
+      "values": { "hanji": "揤鈕陰影", "tailo": "tshi̍h-liú im-iánn", "en": "Key Shadow", "ja": "キーの影" }
     },
     "editorTitleNew": {
       "comment": "Theme editor top-bar title in create mode.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "新主題", "en": "New Theme", "ja": "新しいテーマ" }
+      "values": { "hanji": "新主題", "tailo": "sin tsú-tê", "en": "New Theme", "ja": "新しいテーマ" }
     },
     "editorTitleEdit": {
       "comment": "Theme editor top-bar title in edit mode.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "編輯主題", "en": "Edit Theme", "ja": "テーマを編集" }
+      "values": { "hanji": "編輯主題", "tailo": "pian-tsi̍p tsú-tê", "en": "Edit Theme", "ja": "テーマを編集" }
     },
     "nameHeader": {
       "comment": "Theme name dialog header.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "主題名稱", "en": "Theme Name", "ja": "テーマ名" }
+      "values": { "hanji": "主題名稱", "tailo": "tsú-tê miâ-tshing", "en": "Theme Name", "ja": "テーマ名" }
     },
     "namePlaceholder": {
       "comment": "Theme name dialog text-field placeholder.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "輸入主題名稱", "en": "Enter a theme name", "ja": "テーマ名を入力" }
+      "values": { "hanji": "輸入主題名稱", "tailo": "su-ji̍p tsú-tê miâ-tshing", "en": "Enter a theme name", "ja": "テーマ名を入力" }
     },
     "editorSave": {
       "comment": "Theme editor / name dialog save button.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "儲存", "en": "Save", "ja": "保存" }
+      "values": { "hanji": "儲存", "tailo": "thú-tsûn", "en": "Save", "ja": "保存" }
     },
     "editorResetAll": {
       "comment": "Theme editor button: reset the draft appearance back to defaults.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復預設設定", "en": "Reset to Defaults", "ja": "既定値に戻す" }
+      "values": { "hanji": "恢復預設設定", "tailo": "hue-ho̍k ī-siat siat-tīng", "en": "Reset to Defaults", "ja": "既定値に戻す" }
     },
     "defaultName": {
       "comment": "Fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "新主題", "en": "New Theme", "ja": "新しいテーマ" }
+      "values": { "hanji": "新主題", "tailo": "sin tsú-tê", "en": "New Theme", "ja": "新しいテーマ" }
     },
     "cardMenuApply": {
       "comment": "Custom-theme card action-menu item: apply this theme.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "套用", "en": "Apply", "ja": "適用" }
+      "values": { "hanji": "套用", "tailo": "thò-iōng", "en": "Apply", "ja": "適用" }
     },
     "cardMenuEdit": {
       "comment": "Custom-theme card action-menu item: edit this theme.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "編輯", "en": "Edit", "ja": "編集" }
+      "values": { "hanji": "編輯", "tailo": "pian-tsi̍p", "en": "Edit", "ja": "編集" }
     },
     "capReachedTitle": {
       "comment": "Title of the alert shown when the custom-theme count cap (5) is reached.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "已達主題數量上限", "en": "Theme Limit Reached", "ja": "テーマ数の上限に達しました" }
+      "values": { "hanji": "已達主題數量上限", "tailo": "í ta̍t tsú-tê sòo-liōng siōng hān", "en": "Theme Limit Reached", "ja": "テーマ数の上限に達しました" }
     },
     "capReachedMessage": {
       "comment": "Body of the custom-theme cap-reached alert (cap is UserThemeStore.MAX_USER_THEMES = 5).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。", "en": "The custom-theme limit is 5. Delete one before adding another.", "ja": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。" }
+      "values": { "hanji": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。", "tailo": "tsū tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah-ē-sái koh sin-tsing。", "en": "The custom-theme limit is 5. Delete one before adding another.", "ja": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。" }
     },
     "cardMenu": {
       "comment": "Accessibility content description for the custom-theme card's action-menu button. Android-only (iOS has no equivalent a11y label).",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "主題選項", "en": "Theme options", "ja": "テーマのオプション" }
+      "values": { "hanji": "主題選項", "tailo": "tsú-tê suán-hāng", "en": "Theme options", "ja": "テーマのオプション" }
     },
     "colorPickerGrid": {
       "comment": "Color picker dialog tab label: the swatch-grid picker. Android-only (iOS uses a native color picker).",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "格仔", "en": "Grid", "ja": "グリッド" }
+      "values": { "hanji": "格仔", "tailo": "keh-á", "en": "Grid", "ja": "グリッド" }
     },
     "colorPickerSpectrum": {
       "comment": "Color picker dialog tab label: the spectrum picker. Android-only.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "光譜", "en": "Spectrum", "ja": "スペクトル" }
+      "values": { "hanji": "光譜", "tailo": "kong phóo", "en": "Spectrum", "ja": "スペクトル" }
     },
     "colorPickerSliders": {
       "comment": "Color picker dialog tab label: the RGB sliders picker. Android-only.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "滑桿", "en": "Sliders", "ja": "スライダー" }
+      "values": { "hanji": "滑桿", "tailo": "ku̍t kuáinn", "en": "Sliders", "ja": "スライダー" }
     },
     "colorRed": {
       "comment": "Color picker RGB slider label: red channel. Android-only.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "紅色", "en": "Red", "ja": "赤" }
+      "values": { "hanji": "紅色", "tailo": "âng-sik", "en": "Red", "ja": "赤" }
     },
     "colorGreen": {
       "comment": "Color picker RGB slider label: green channel. Android-only.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "綠色", "en": "Green", "ja": "緑" }
+      "values": { "hanji": "綠色", "tailo": "li̍k-sik", "en": "Green", "ja": "緑" }
     },
     "colorBlue": {
       "comment": "Color picker RGB slider label: blue channel. Android-only.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "藍色", "en": "Blue", "ja": "青" }
+      "values": { "hanji": "藍色", "tailo": "nâ-sik", "en": "Blue", "ja": "青" }
     }
   }
 }

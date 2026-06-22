@@ -23,10 +23,29 @@ class DisplayLanguageTest {
 
     @Test
     fun fromTag_unauthoredTags_clampToHanji() {
-        // tl/poj are valid identities but not yet selectable in any build, so the effective language is
-        // Hanji — the picker selection and the rendered strings always agree. Persisted tag untouched.
-        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("tailo"))
+        // poj is a valid identity but unauthored (no strings yet), so it is not selectable in any build and
+        // clamps to Hanji — the picker selection and the rendered strings always agree. Persisted tag
+        // untouched. tailo is now authored + debug-selectable (separate test below).
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("poj"))
+    }
+
+    @Test
+    fun fromTag_tailoInDebugBuild_resolvesTailo() {
+        // Tâi-lô is authored but not yet a production language; it is debug-selectable so a debug build can
+        // dogfood its strings + rendering before it joins productionLanguages (mirrors ja R4-1).
+        // testDebugUnitTest runs with BuildConfig.DEBUG == true, so the tl tag survives.
+        assertEquals(DisplayLanguage.TAILO, DisplayLanguage.fromTag("tailo"))
+    }
+
+    @Test
+    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_debugSelectableRoster() {
+        // Pin the exact DEBUG picker order: Automatic first, the production roster, then the debug-only
+        // tailo preview + pseudo probe. Release drops the last two (asserted by the source #if; not
+        // reachable from a DEBUG unit-test build). Guards against reorders / accidental promotion.
+        assertEquals(
+            listOf("system", "hanji", "en", "ja", "tailo", "pseudo"),
+            DisplayLanguage.selectableLanguages.map { it.tag },
+        )
     }
 
     @Test
