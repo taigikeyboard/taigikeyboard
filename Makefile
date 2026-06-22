@@ -12,6 +12,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt-swift fmt-check-swift \
         fmt-kotlin fmt-check-kotlin lint-kotlin \
         i18n i18n-check i18n-test i18n-derive-poj \
+        content-derive-poj content-poj-check content-poj-test poj-check \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -75,6 +76,26 @@ i18n-test:
 # freshness without writing.
 i18n-derive-poj:
 	python3 tools/i18n/derive_poj.py
+
+# Derive the POJ value of every in-app CONTENT string (content/*.json) from its authored Tâi-lô via the same
+# canonical taigi-converter bridge. content/*.json is a NESTED tree (not the i18n flat schema), so it has its
+# own derive tool. AUTHORING step, NOT a build dependency (needs Node). Re-run after editing any content tailo.
+content-derive-poj:
+	python3 tools/i18n/derive_content_poj.py
+
+# Verify committed content/*.json poj is the fresh strict derivation of its tailo; write nothing, exit 1 on drift.
+content-poj-check:
+	python3 tools/i18n/derive_content_poj.py --check
+
+# Unit tests for the content poj-derive tool (traversal, protection, validation, --check). Pure-Python, Node mocked.
+content-poj-test:
+	python3 tools/i18n/test_content_poj.py
+
+# Umbrella freshness gate: BOTH poj sources (i18n namespaces + in-app content) fresh vs their tailo. Run this
+# after any tailo correction so neither poj source is silently forgotten. No worktree mutation.
+poj-check:
+	python3 tools/i18n/derive_poj.py --check
+	python3 tools/i18n/derive_content_poj.py --check
 
 # Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
 # built dictionary.csv. Random each run; prints to stdout for manual on-device
