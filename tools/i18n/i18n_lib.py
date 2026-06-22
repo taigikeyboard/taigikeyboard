@@ -661,19 +661,31 @@ def _emit_pseudo_map(entries) -> str:
         f"// {GENERATED_HEADER}",
         "package com.siansiansu.taigikeyboard.i18n.generated",
         "",
-        "/** Debug-only pseudo-locale strings (length-inflated layout/clipping probe). Never shown in release. */",
+        "import com.siansiansu.taigikeyboard.BuildConfig",
+        "",
+        "/**",
+        " * Debug-only pseudo-locale strings (length-inflated layout/clipping probe). Never shown in release:",
+        " * the picker offers pseudo only in DEBUG and release `DisplayLanguage.fromTag` clamps it to Hanji. The",
+        " * map literal is built only when BuildConfig.DEBUG — a release-time constant — so R8 dead-strips the",
+        " * whole branch (the ~hundreds of inflated string literals) from the release APK. Mirrors the iOS",
+        " * `#if DEBUG` gate on GeneratedPseudoStrings.swift.",
+        " */",
         "object GeneratedPseudoStrings {",
         "    private val map: Map<StringKey, String> =",
-        "        mapOf(",
+        "        if (BuildConfig.DEBUG) {",
+        "            mapOf(",
     ]
     for namespace, key, entry in entries:
         # Pseudo runs on the named text first (keeps {placeholders} verbatim); _finalize_value then
         # converts to positional and kotlin-escapes — so `%N$d` is neither accented nor left unescaped.
         value = _finalize_value(pseudo(entry["values"][BASE_LANGUAGE]), kotlin_escape, entry, "android")
-        lines.append(f'            StringKey.{string_key_const(namespace, key)} to "{value}",')
+        lines.append(f'                StringKey.{string_key_const(namespace, key)} to "{value}",')
     lines.extend(
         [
-            "        )",
+            "            )",
+            "        } else {",
+            "            emptyMap()",
+            "        }",
             "",
             "    fun lookup(key: StringKey): String? = map[key]",
             "}",

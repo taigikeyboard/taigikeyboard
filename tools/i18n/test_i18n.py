@@ -419,6 +419,18 @@ class IOSEmitTest(unittest.TestCase):
         self.assertIn("#endif", pseudo_swift)
         self.assertIn(".probeK:", pseudo_swift)
 
+    def test_android_pseudo_map_is_debug_gated(self):
+        # Mirror the iOS #if DEBUG gate: the Android map literal is built only under BuildConfig.DEBUG, so
+        # R8 dead-strips it from the release APK (pseudo is never selected in release — fromTag clamps it
+        # to Hanji). Assert the else-branch too, so a future regression to a bare guard / different fallback
+        # is caught (Codex pre-impl flag).
+        pseudo_kt = self._outputs({"k": _android_key({"hanji": "字"})})[f"{i18n_lib.GEN_PKG_DIR}/GeneratedPseudoStrings.kt"]
+        self.assertIn("import com.siansiansu.taigikeyboard.BuildConfig", pseudo_kt)
+        self.assertIn("if (BuildConfig.DEBUG) {", pseudo_kt)
+        self.assertIn("} else {", pseudo_kt)
+        self.assertIn("emptyMap()", pseudo_kt)
+        self.assertIn("StringKey.PROBE_K to", pseudo_kt)  # the debug-branch map literal is still emitted
+
     def test_ios_no_format_keys_emits_comment(self):
         formats = self._outputs({"k": _ios_key({"hanji": "字"})})[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]
         self.assertIn("No format-arg keys", formats)
