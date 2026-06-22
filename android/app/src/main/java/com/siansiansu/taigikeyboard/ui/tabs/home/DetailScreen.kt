@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
+import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
@@ -66,6 +67,7 @@ fun DetailScreen(
 ) {
     val context = LocalContext.current
     val resolver = LocalStringResolver.current
+    val language = LocalDisplayLanguage.current
 
     // Load from JSON for feature/faq; fall back to key-based resolution for other types
     val contentItem =
@@ -82,16 +84,16 @@ fun DetailScreen(
         }
 
     val title =
-        remember(titleKey, contentItem, resolver) {
-            contentItem?.title
+        remember(titleKey, contentItem, resolver, language) {
+            contentItem?.title?.resolve(language)
                 ?: getTextByKey(resolver, titleKey)
                 ?: ""
         }
 
     val items =
-        remember(contentType, contentKeys, contentItem, resolver) {
+        remember(contentType, contentKeys, contentItem, resolver, language) {
             if (contentItem != null) {
-                buildContentItems(contentItem, context)
+                buildContentItems(contentItem, context, language)
             } else {
                 buildDetailItems(resolver, contentType, contentKeys)
             }

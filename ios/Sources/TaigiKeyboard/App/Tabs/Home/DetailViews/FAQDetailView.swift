@@ -10,6 +10,7 @@ import SwiftUI
 struct FAQDetailView: View {
     let faq: FeatureContent
     @ObservedObject var viewModel: SetupGuideViewModel
+    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         Form {
@@ -27,7 +28,7 @@ struct FAQDetailView: View {
                             navigationDestination(destination)
                         } label: {
                             Label(
-                                navText,
+                                navText.resolve(for: lang.language),
                                 systemImage: navIcon.ios,
                             )
                         }
@@ -35,7 +36,7 @@ struct FAQDetailView: View {
                 }
             }
         }
-        .navigationTitle(faq.title)
+        .navigationTitle(faq.title.resolve(for: lang.language))
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -65,7 +66,7 @@ struct FAQDetailView: View {
     }
 
     private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
-        Text(paragraph.text)
+        Text(paragraph.text.resolve(for: lang.language))
             .lineSpacing(6)
             .fixedSize(horizontal: false, vertical: true)
     }

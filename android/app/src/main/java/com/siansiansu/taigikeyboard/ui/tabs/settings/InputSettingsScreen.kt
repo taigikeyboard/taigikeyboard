@@ -37,6 +37,7 @@ import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalSelectedDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
@@ -94,8 +95,10 @@ fun InputSettingsScreen(
     var tpsOrMapsToER by remember(resetCounter) { mutableStateOf(prefs.tpsOrMapsToER) }
 
     val features = remember { FeatureContentLoader.loadFeatures(context) }
+    val displayLanguageForSummary = LocalDisplayLanguage.current
 
-    fun featureSummary(featureId: String): String? = features.firstOrNull { it.id == featureId }?.summary
+    fun featureSummary(featureId: String): String? =
+        features.firstOrNull { it.id == featureId }?.summary?.resolve(displayLanguageForSummary)
 
     if (showDisplayLanguagePicker) {
         DisplayLanguageScreen(

@@ -40,6 +40,12 @@ final class DisplayLanguageStore {
         resolver.resolve(key)
     }
 
+    /// The EFFECTIVE display language currently rendering — already resolved away from `.system` (the
+    /// resolver is built from `effectiveLanguage`). JSON content models resolve against it via
+    /// `LocalizedContentText.resolve(for:)`. Reading it in a `body` registers the same live-switch
+    /// dependency on `resolver` as `string(_:)`.
+    var language: DisplayLanguage { resolver.language }
+
     /// Display label for a selectable `DisplayLanguage`, shared by the picker rows and the Settings-row
     /// trailing value so neither special-cases `.system` on its own: `.system` → the localized Automatic
     /// string, every authored language → its (language-invariant) endonym.

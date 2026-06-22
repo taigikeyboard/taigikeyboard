@@ -321,7 +321,7 @@ struct SettingsTab: View {
     private func featureSummary(_ featureId: String) -> String {
         FeatureContentLoader.features
             .first(where: { $0.id == featureId })?
-            .summary ?? ""
+            .summary?.resolve(for: lang.language) ?? ""
     }
 
     // MARK: - Actions

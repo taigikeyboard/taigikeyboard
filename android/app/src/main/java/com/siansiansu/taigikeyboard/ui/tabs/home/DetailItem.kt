@@ -6,6 +6,7 @@ import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.content.FeatureContent
 import com.siansiansu.taigikeyboard.content.ParagraphAttachment
 import com.siansiansu.taigikeyboard.content.VersionHistory
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ui.components.resolveDrawableResId
@@ -58,11 +59,12 @@ internal fun buildDetailItems(
 internal fun buildContentItems(
     content: FeatureContent,
     context: android.content.Context,
+    language: DisplayLanguage,
 ): List<DetailItem> {
     val items = mutableListOf<DetailItem>()
 
     content.paragraphs.forEach { paragraph ->
-        items.add(DetailItem.Paragraph(paragraph.text))
+        items.add(DetailItem.Paragraph(paragraph.text.resolve(language)))
 
         when (val attachment = paragraph.attachment) {
             is ParagraphAttachment.Slideshow -> {
@@ -86,7 +88,7 @@ internal fun buildContentItems(
             is ParagraphAttachment.Link -> {
                 items.add(
                     DetailItem.ExternalLink(
-                        attachment.text,
+                        attachment.text.resolve(language),
                         R.drawable.ic_open_in_new,
                         attachment.url,
                     ),
@@ -96,7 +98,7 @@ internal fun buildContentItems(
             is ParagraphAttachment.Navigation -> {
                 items.add(
                     DetailItem.NavigationLink(
-                        attachment.text,
+                        attachment.text.resolve(language),
                         resolveDrawableResId(context, attachment.icon.android, R.drawable.keyboard_24),
                         attachment.destination,
                     ),

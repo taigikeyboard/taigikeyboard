@@ -33,6 +33,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.content.FeatureContent
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
+import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.NavigationRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
@@ -220,12 +221,13 @@ fun HomeScreen(
             Spacer(Modifier.height(8.dp))
 
             val faqs = remember { FeatureContentLoader.loadFAQs(context) }
+            val language = LocalDisplayLanguage.current
 
             SettingsCard {
                 faqs.forEachIndexed { index, faq ->
                     NavigationRow(
                         icon = painterResource(resolveDrawableResId(context, faq.icon.android, R.drawable.keyboard_24)),
-                        label = faq.title,
+                        label = faq.title.resolve(language),
                         trailingIcon = chevronRight,
                         onClick = {
                             onFaqClick(faq.id, arrayOf(faq.id))
@@ -247,10 +249,11 @@ private fun FeatureList(
     onFeatureClick: (String, String, Array<String>) -> Unit,
     iconTint: Color = MaterialTheme.colorScheme.primary,
 ) {
+    val language = LocalDisplayLanguage.current
     features.forEachIndexed { index, feature ->
         NavigationRow(
             icon = painterResource(resolveDrawableResId(context, feature.icon.android, R.drawable.lightbulb_24)),
-            label = feature.title,
+            label = feature.title.resolve(language),
             trailingIcon = chevronRight,
             iconTint = iconTint,
             onClick = { onFeatureClick(feature.id, ContentType.FEATURE, arrayOf(feature.id)) },

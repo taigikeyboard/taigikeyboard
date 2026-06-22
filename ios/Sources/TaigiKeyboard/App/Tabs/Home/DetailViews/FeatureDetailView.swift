@@ -9,6 +9,7 @@ import SwiftUI
 // 中文: 段落 attachment 為 .link 時渲染為獨立 section 的外部連結。
 struct FeatureDetailView: View {
     let feature: FeatureContent
+    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         Form {
@@ -23,13 +24,13 @@ struct FeatureDetailView: View {
                 if case let .link(linkText, url) = paragraph.attachment {
                     Section {
                         Link(destination: URL(string: url)!) {
-                            Label(linkText, systemImage: "arrow.up.right.square")
+                            Label(linkText.resolve(for: lang.language), systemImage: "arrow.up.right.square")
                         }
                     }
                 }
             }
         }
-        .navigationTitle(feature.title)
+        .navigationTitle(feature.title.resolve(for: lang.language))
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -58,7 +59,7 @@ struct FeatureDetailView: View {
     }
 
     private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
-        Text(paragraph.text)
+        Text(paragraph.text.resolve(for: lang.language))
             .lineSpacing(6)
             .fixedSize(horizontal: false, vertical: true)
     }

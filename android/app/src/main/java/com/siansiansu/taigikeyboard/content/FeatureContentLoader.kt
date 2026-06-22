@@ -11,6 +11,10 @@ object FeatureContentLoader {
     private const val JSON_KEY_FEATURES = "features"
     private const val JSON_KEY_FAQS = "faqs"
     private const val JSON_KEY_HANJI = "hanji"
+    private const val JSON_KEY_TAILO = "tailo"
+    private const val JSON_KEY_POJ = "poj"
+    private const val JSON_KEY_JA = "ja"
+    private const val JSON_KEY_EN = "en"
 
     @Volatile private var cachedFeatures: List<FeatureContent>? = null
 
@@ -52,11 +56,28 @@ object FeatureContentLoader {
     private fun parseFeature(obj: JSONObject): FeatureContent =
         FeatureContent(
             id = obj.getString("id"),
-            title = obj.getJSONObject("title").getString(JSON_KEY_HANJI),
+            title = parseLocalizedText(obj.getJSONObject("title")),
             icon = parseIcon(obj.getJSONObject("icon")),
-            summary = if (obj.has("summary")) obj.getJSONObject("summary").getString(JSON_KEY_HANJI) else null,
+            summary = if (obj.has("summary")) parseLocalizedText(obj.getJSONObject("summary")) else null,
             paragraphs = parseParagraphs(obj.getJSONArray("paragraphs")),
         )
+
+    // Parses a localized-text object: hanji is required; the other languages are absent until C2
+    // authoring fills them.
+    private fun parseLocalizedText(obj: JSONObject): LocalizedContentText =
+        LocalizedContentText(
+            hanji = obj.getString(JSON_KEY_HANJI),
+            tailo = obj.optStringOrNull(JSON_KEY_TAILO),
+            poj = obj.optStringOrNull(JSON_KEY_POJ),
+            ja = obj.optStringOrNull(JSON_KEY_JA),
+            en = obj.optStringOrNull(JSON_KEY_EN),
+        )
+
+    // Returns the authored value (incl. an explicit empty string) or null when the key is absent/JSON
+    // null. NOT optString — optString collapses absent and "" to "", losing the unauthored signal a
+    // language fallback needs. Extension form mirrors the JSONObject.optIntOrNull / optFloatOrNull idiom.
+    private fun JSONObject.optStringOrNull(key: String): String? =
+        if (has(key) && !isNull(key)) getString(key) else null
 
     private fun parseIcon(obj: JSONObject): PlatformIcon =
         PlatformIcon(
@@ -68,7 +89,7 @@ object FeatureContentLoader {
         (0 until array.length()).map { i ->
             val obj = array.getJSONObject(i)
             FeatureParagraph(
-                text = obj.getJSONObject("text").getString(JSON_KEY_HANJI),
+                text = parseLocalizedText(obj.getJSONObject("text")),
                 attachment = if (obj.has("attachment")) parseAttachment(obj.getJSONObject("attachment")) else null,
             )
         }
@@ -89,14 +110,14 @@ object FeatureContentLoader {
 
             "link" -> {
                 ParagraphAttachment.Link(
-                    text = obj.getJSONObject("text").getString(JSON_KEY_HANJI),
+                    text = parseLocalizedText(obj.getJSONObject("text")),
                     url = obj.getString("url"),
                 )
             }
 
             "navigation" -> {
                 ParagraphAttachment.Navigation(
-                    text = obj.getJSONObject("text").getString(JSON_KEY_HANJI),
+                    text = parseLocalizedText(obj.getJSONObject("text")),
                     destination = obj.getString("destination"),
                     icon = parseIcon(obj.getJSONObject("icon")),
                 )

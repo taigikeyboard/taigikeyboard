@@ -38,7 +38,7 @@ struct HomeTab: View {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(feature.title)
+                                Text(feature.title.resolve(for: lang.language))
                             } icon: {
                                 Image(latinSystemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.warningOrange)
@@ -57,7 +57,7 @@ struct HomeTab: View {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(feature.title)
+                                Text(feature.title.resolve(for: lang.language))
                             } icon: {
                                 Image(latinSystemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.accentBlue)
@@ -119,7 +119,7 @@ struct HomeTab: View {
                             FAQDetailView(faq: faq, viewModel: viewModel)
                         } label: {
                             Label {
-                                Text(faq.title)
+                                Text(faq.title.resolve(for: lang.language))
                             } icon: {
                                 Image(latinSystemName: faq.icon.ios)
                             }
