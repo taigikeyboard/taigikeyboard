@@ -5,7 +5,7 @@ import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 
 /**
  * TL/POJ string overrides (the GeneratedMap resolution path — these languages have no OS locale).
- * Authored as a lockstep pair (poj derived from tailo); a missing language falls back to Hanji.
+ * Authored as a lockstep pair (tailo + poj hand-authored); a missing language falls back to Hanji.
  */
 object GeneratedTaigiStrings {
     private val tailo: Map<StringKey, String> =

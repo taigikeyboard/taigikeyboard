@@ -8,10 +8,12 @@ tool generates the platform artifacts; **do not hand-edit the generated files.**
 | Command | Effect |
 |---|---|
 | `make i18n` | Regenerate all artifacts from `i18n/*.json` (commit the result). |
-| `make i18n-check` | Fail if committed output is stale (no worktree mutation). |
+| `make i18n-test` | Run the codegen unit tests (`test_i18n.py`). |
 
-The Android Gradle `checkI18nGenerated` task runs the same checker on `preBuild`, so Android Studio /
-archive / `assemble` builds cannot link stale output.
+Staleness is guarded automatically, not by a manual make target: the Android Gradle `checkI18nGenerated`
+task runs `tools/i18n/check.py` on `preBuild`, so Android Studio / archive / `assemble` builds cannot
+link stale output. iOS has no equivalent preBuild guard, so `release-helper` runs `make i18n` at release
+time to guarantee the committed xcstrings are fresh.
 
 ## Generated artifacts (Android, R2a-1)
 
@@ -34,7 +36,7 @@ archive / `assemble` builds cannot link stale output.
       "values": {
         "hanji": "輸入模式",                 // required base language
         "tailo": "su-ji̍p bôo-sik",          // authored (Tâi-lô)
-        "poj": "su-ji̍p bô͘-sek",            // derived from tailo by `make i18n-derive-poj`
+        "poj": "su-ji̍p bô͘-sek",            // hand-authored alongside tailo (POJ rendering)
         "ja": "入力モード",                   // authored per language phase
         "en": "Input Mode"
         // a key omitting tailo/poj falls back to Hanji (the pair must be present together)
@@ -53,10 +55,9 @@ the generator's job):
 - **Production completeness**: every key must author all user-selectable production languages
   (`hanji`, `en`, `ja`, `tailo`, `poj` — mirrors the platform `DisplayLanguage.productionLanguages`
   roster), so a picker option never renders a silent Hanji fallback. `tailo`/`poj` joined the roster at
-  promotion (R5-2 / R6-2); the `tailo`↔`poj` lockstep gate runs first to give the actionable "run
-  `make i18n-derive-poj`" diagnostic for a half-authored pair. Enforced by `make i18n` /
-  `make i18n-check` / Gradle `checkI18nGenerated` (not by the generic `build_outputs`, which tests drive
-  with partial fixtures).
+  promotion (R5-2 / R6-2); the `tailo`↔`poj` lockstep gate runs first to give the actionable "author
+  both" diagnostic for a half-authored pair. Enforced by `make i18n` / `check.py` / Gradle
+  `checkI18nGenerated` (not by the generic `build_outputs`, which tests drive with partial fixtures).
 - Every authored language must carry the same `{placeholder}` set as the base (order may differ —
   substitution is by name, not position, so a reordered translation is allowed).
 
@@ -72,13 +73,9 @@ the generator's job):
 
 ### POJ (Pe̍h-ōe-jī)
 
-POJ is a deterministic transliteration of TL (ts→ch, tsh→chh, oo→o͘, nn→ⁿ, ua→oa, ...) with no semantics
-of its own, so it is **derived-and-stored**, not hand-authored. `tools/i18n/derive_poj.py` (`make
-i18n-derive-poj`) runs every `tailo` value through the canonical `taigi-converter` bridge
-(`convert_tl_to_poj_strict`) and writes the result back as the `poj` value in `i18n/*.json`; `make i18n`
-then emits it like any other language. Re-run the derive after any `tailo` correction — `--check` exits
-non-zero if a committed `poj` is stale. The codegen itself reads `poj` from the JSON like every other
-language (no Node at `make i18n` / `make i18n-check` time). tailo and poj are authored in lockstep:
-`validate_generated_map_completeness` rejects a key that has one but not the other. (The earlier plan-D4
-`pojOverride` / `derivePoj:false` / protected-span schema proved unnecessary — an audit of all real
-strings showed the converter preserves every brand / acronym / `{placeholder}` token verbatim.)
+POJ is the Pe̍h-ōe-jī rendering of the same reading as TL (ts→ch, tsh→chh, oo→o͘, nn→ⁿ, ua→oa, ...). It is
+**hand-authored** as the `poj` value in `i18n/*.json`, alongside `tailo`, exactly like every other
+language; `make i18n` emits it directly. The maintainer authors and proofreads POJ by hand (POJ↔TL is a
+mechanical correspondence, easy to verify by eye), so there is no derive tool or Node dependency in the
+codegen path. tailo and poj are authored in lockstep: `validate_generated_map_completeness` rejects a key
+that has one but not the other.

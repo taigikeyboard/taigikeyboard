@@ -11,8 +11,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt-rust fmt-check-rust lint-rust \
         fmt-swift fmt-check-swift \
         fmt-kotlin fmt-check-kotlin lint-kotlin \
-        i18n i18n-check i18n-test i18n-derive-poj \
-        content-derive-poj content-poj-check content-poj-test poj-check \
+        i18n i18n-test \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -56,46 +55,16 @@ dict:
 	bash $(DICT)/build.sh
 
 # Generate i18n native resources + Kotlin accessors from i18n/*.json (mirror of `make dict`:
-# committed output, not a per-compile step). Re-run after editing any i18n/ source.
+# committed output, not a per-compile step). Re-run after editing any i18n/*.json source. (in-app
+# content/*.json is a separate nested schema the platforms decode directly — NOT emitted here.)
+# POJ is hand-authored alongside tailo (the `poj` value in each key); no derive step.
 i18n:
 	python3 tools/i18n/generate.py
-
-# Fail if committed i18n generated output is stale vs i18n/*.json. No worktree mutation;
-# the Android Gradle `checkI18nGenerated` task (preBuild) calls the same checker.
-i18n-check:
-	python3 tools/i18n/check.py
 
 # Unit tests for the i18n codegen core (validation, escaping, scope filter, GeneratedMap, format/plural).
 # Pure-Python, no Android/iOS toolchain needed — runs the same logic the platform builds compile against.
 i18n-test:
 	python3 tools/i18n/test_i18n.py
-
-# Derive each key's POJ value from its authored Tâi-lô (tailo) via the canonical taigi-converter bridge
-# and write it back into i18n/*.json (an AUTHORING step, NOT a build/check dependency — needs Node). Run
-# after editing any tailo value, then `make i18n` to regenerate. `--check` (see derive_poj.py) verifies
-# freshness without writing.
-i18n-derive-poj:
-	python3 tools/i18n/derive_poj.py
-
-# Derive the POJ value of every in-app CONTENT string (content/*.json) from its authored Tâi-lô via the same
-# canonical taigi-converter bridge. content/*.json is a NESTED tree (not the i18n flat schema), so it has its
-# own derive tool. AUTHORING step, NOT a build dependency (needs Node). Re-run after editing any content tailo.
-content-derive-poj:
-	python3 tools/i18n/derive_content_poj.py
-
-# Verify committed content/*.json poj is the fresh strict derivation of its tailo; write nothing, exit 1 on drift.
-content-poj-check:
-	python3 tools/i18n/derive_content_poj.py --check
-
-# Unit tests for the content poj-derive tool (traversal, protection, validation, --check). Pure-Python, Node mocked.
-content-poj-test:
-	python3 tools/i18n/test_content_poj.py
-
-# Umbrella freshness gate: BOTH poj sources (i18n namespaces + in-app content) fresh vs their tailo. Run this
-# after any tailo correction so neither poj source is silently forgotten. No worktree mutation.
-poj-check:
-	python3 tools/i18n/derive_poj.py --check
-	python3 tools/i18n/derive_content_poj.py --check
 
 # Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
 # built dictionary.csv. Random each run; prints to stdout for manual on-device
@@ -164,6 +133,8 @@ help:
 	@echo "  make test-crate         cargo test -p \$$CRATE (touched-target round workflow)"
 	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"
 	@echo "  make dict               Full dictionary regen + deploy to Android/iOS"
+	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
+	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""

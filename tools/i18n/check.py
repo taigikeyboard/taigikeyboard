@@ -2,8 +2,8 @@
 # Fails if any committed generated i18n artifact is stale vs the i18n/*.json sources.
 #
 # Generates outputs in memory (no worktree mutation) and byte-compares against the on-disk tree.
-# Wired into `make i18n-check` and the Gradle `checkI18nGenerated` task (preBuild) so Android
-# Studio / archive / direct `assemble` builds cannot link against stale committed output.
+# Run by the Gradle `checkI18nGenerated` task (preBuild) so Android Studio / archive / direct `assemble`
+# builds cannot link against stale committed output. Run by hand with `python3 tools/i18n/check.py`.
 
 import sys
 from pathlib import Path

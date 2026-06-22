@@ -37,6 +37,7 @@ If `<target>` tag exists locally or on origin, note it once (informational — t
 ## 4. Rebuild (sequential, abort on failure)
 
 - `RELEASE_VERSION=<target> make dict` — passing the version sets the dict build's diff base to the newest release tag strictly older than `<target>` (so it excludes `<target>` even on a re-run) and prints the build-drop + vs-previous-release diff summary. The previous release's `dictionary.csv` is read via `git show <prev-tag>:…`; no snapshot file is written or committed.
+- `make i18n` — regenerate committed i18n native resources from `i18n/*.json` (mirror of `make dict`). Guarantees release freshness: Android has the Gradle `checkI18nGenerated` preBuild guard, but iOS reads committed xcstrings with no equivalent auto-check, so the release MUST regenerate here. Byte-identical output (clean tree) means nothing to commit.
 - `make build`
 
 ## 4.5 Mode selection (auto)

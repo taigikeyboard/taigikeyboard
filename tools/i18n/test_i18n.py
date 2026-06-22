@@ -3,18 +3,14 @@
 
 from __future__ import annotations  # keep `dict | None` annotations importable on system Python 3.9
 
-import contextlib
-import io
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import derive_poj
 import i18n_lib
 from i18n_lib import (
     DUPLICATE_KEY_ERROR,
@@ -223,8 +219,8 @@ class BuildOutputsTest(unittest.TestCase):
             self.assertNotIn("nan-Latn-TW-x-poj", xcstrings)
 
     def test_generated_map_emits_both_tailo_and_poj(self):
-        # Authored as a lockstep pair (poj derived from tailo): both land in the Kotlin map AND the iOS
-        # catalog under their private-use tags. Mirrors the real source after P3c R6-1.
+        # Authored as a lockstep pair (tailo + poj both hand-authored): both land in the Kotlin map AND the
+        # iOS catalog under their private-use tags. Mirrors the real source after P3c R6-1.
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             # Distinct tailo/poj so the map is proven to carry the poj value, not a copy of tailo.
@@ -248,8 +244,8 @@ class GeneratedMapCompletenessTest(unittest.TestCase):
 
     def test_tailo_without_poj_rejected(self):
         # The lockstep gate runs first on the enforced CLI path. tailo authored, poj missing -> lockstep
-        # error (it names the fix: "run make i18n-derive-poj"), ahead of the generic production-completeness
-        # error that the now-promoted poj would otherwise also raise.
+        # error (author both tailo + poj), ahead of the generic production-completeness error that the
+        # now-promoted poj would otherwise also raise.
         with self.assertRaisesRegex(ValueError, "lockstep"):
             self._build({"hanji": "字", "tailo": "jī", "ja": "字", "en": "char"})
 
@@ -581,109 +577,55 @@ class PluralEmitTest(unittest.TestCase):
             self.assertIn("only English", str(ctx.exception))
 
 
-class DerivePojTest(unittest.TestCase):
-    # Tests the derive tool's WIRING — regex inject, structural validation, escaping, atomicity — with the
-    # taigi-converter bridge MOCKED (conversion correctness is the canonical converter's own concern, so
-    # this stays pure-Python / no Node). The fake reverses the tailo string: deterministic, != identity,
-    # and not a substring of the input, so a wrong inject is visible.
-    FAKE = staticmethod(lambda tl: tl[::-1])
+# In-app content (content/*.json) is a nested tree with its OWN schema, separate from the flat i18n/*.json
+# namespaces and NOT emitted by `make i18n`; the platforms decode it directly. The constants below mirror
+# the iOS/Android LocalizedContentText model.
+CONTENT_FILES = ["content/tab1-features.json", "content/tab1-faq.json"]
+EXPECTED_CONTENT_LANGS = {"hanji", "tailo", "poj", "en", "ja"}
+EXPECTED_CONTENT_STRING_COUNT = 80
 
-    def setUp(self):
-        self._patch = mock.patch.object(derive_poj, "convert_tl_to_poj_strict", side_effect=self.FAKE)
-        self._patch.start()
-        self.addCleanup(self._patch.stop)
 
-    def _run(self, namespaces: dict, check: bool = False) -> tuple[int, dict]:
-        # Write each namespace's RAW json text, point the tool at the temp repo, run main(), return
-        # (exit_code, {namespace: text_on_disk_after}).
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "i18n").mkdir()
-            for name, text in namespaces.items():
-                (repo / "i18n" / f"{name}.json").write_text(text, encoding="utf-8")
-            argv = ["derive_poj.py", "--check"] if check else ["derive_poj.py"]
-            with mock.patch.object(derive_poj, "REPO_ROOT", repo), mock.patch.object(sys, "argv", argv), \
-                    contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-                code = derive_poj.main()
-            after = {name: (repo / "i18n" / f"{name}.json").read_text(encoding="utf-8") for name in namespaces}
-            return code, after
+def _content_canonical(doc: dict) -> str:
+    # The one serialization content/*.json is stored in — json.dumps(indent=2, ensure_ascii=False).
+    return json.dumps(doc, ensure_ascii=False, indent=2)
 
-    def test_injects_poj_after_tailo(self):
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
-        code, after = self._run({"n": src})
-        self.assertEqual(code, 0)
-        self.assertEqual(
-            after["n"],
-            '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "poj": "cba", "en": "x"}}}}',
-        )
 
-    def test_idempotent_replaces_stale_poj(self):
-        # A re-run REPLACES the adjacent poj (does not duplicate it), even if the existing poj is stale.
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "poj": "STALE", "en": "x"}}}}'
-        code, after = self._run({"n": src})
-        self.assertEqual(code, 0)
-        self.assertIn('"tailo": "abc", "poj": "cba"', after["n"])
-        self.assertNotIn("STALE", after["n"])
-        # Running again is a no-op (already fresh).
-        code2, after2 = self._run({"n": after["n"]})
-        self.assertEqual(after2["n"], after["n"])
+class ProductionContentTests(unittest.TestCase):
+    # Smoke test against the REAL committed content/*.json (no Node, no mock). A normal iOS/Android build
+    # does NOT prove the bundled JSON decodes — the iOS loader silently returns [] on a decode failure — so
+    # this gates that production content is well-formed, canonical, and complete in all 5 languages.
+    def _localizable(self, doc):
+        items = doc.get("features")
+        if items is None:
+            items = doc.get("faqs")
+        out = []
+        for entry in items:
+            out.append(entry["title"])
+            if "summary" in entry:
+                out.append(entry["summary"])
+            for paragraph in entry["paragraphs"]:
+                out.append(paragraph["text"])
+                attachment = paragraph.get("attachment")
+                if isinstance(attachment, dict) and "text" in attachment:
+                    out.append(attachment["text"])
+        return out
 
-    def test_entry_without_tailo_untouched(self):
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "en": "x"}}}}'
-        code, after = self._run({"n": src})
-        self.assertEqual(code, 0)
-        self.assertEqual(after["n"], src)
-
-    def test_escaped_characters_round_trip(self):
-        # A tailo with JSON-escaped quote / backslash / newline derives + re-escapes correctly. The fake
-        # reverses the decoded string, so the poj is reverse("a\"b\\c") = "c\\b\"a", re-escaped.
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "a\\"b\\\\c", "en": "x"}}}}'
-        code, after = self._run({"n": src})
-        self.assertEqual(code, 0)
-        # The derived poj decodes back to the reversed original.
-        derived = json.loads(after["n"])["keys"]["k"]["values"]["poj"]
-        self.assertEqual(derived, "c\\b\"a")
-
-    def test_non_adjacent_poj_rejected(self):
-        # A pre-existing poj NOT adjacent to tailo would become a duplicate key after the regex inject;
-        # the duplicate-rejecting re-parse fails the run, and nothing is written.
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x", "poj": "z"}}}}'
-        code, after = self._run({"n": src})
-        self.assertEqual(code, 1)
-        self.assertEqual(after["n"], src)  # untouched
-
-    def test_atomic_no_write_when_one_namespace_fails(self):
-        # Two namespaces; the second is malformed (non-adjacent poj). main() derives+validates ALL before
-        # writing, so the VALID namespace must also be left untouched.
-        good = '{"namespace": "a", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
-        bad = '{"namespace": "b", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x", "poj": "z"}}}}'
-        code, after = self._run({"a": good, "b": bad})
-        self.assertEqual(code, 1)
-        self.assertEqual(after["a"], good)
-        self.assertEqual(after["b"], bad)
-
-    def test_strict_bridge_failure_writes_nothing(self):
-        # A converter/Node failure (strict bridge raises RuntimeError) aborts with no write.
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
-        self._patch.stop()
-        with mock.patch.object(derive_poj, "convert_tl_to_poj_strict", side_effect=RuntimeError("node died")):
-            code, after = self._run({"n": src})
-        self._patch.start()  # keep addCleanup's stop balanced
-        self.assertEqual(code, 1)
-        self.assertEqual(after["n"], src)
-
-    def test_check_mode_reports_stale_and_writes_nothing(self):
-        # --check exits 1 on stale poj without mutating the file.
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "en": "x"}}}}'
-        code, after = self._run({"n": src}, check=True)
-        self.assertEqual(code, 1)
-        self.assertEqual(after["n"], src)
-
-    def test_check_mode_passes_when_fresh(self):
-        src = '{"namespace": "n", "keys": {"k": {"values": {"hanji": "字", "tailo": "abc", "poj": "cba", "en": "x"}}}}'
-        code, after = self._run({"n": src}, check=True)
-        self.assertEqual(code, 0)
-        self.assertEqual(after["n"], src)
+    def test_production_content_well_formed_canonical_and_complete(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        total = 0
+        for rel in CONTENT_FILES:
+            path = repo_root / rel
+            text = path.read_text(encoding="utf-8")
+            doc = json.loads(text)
+            self.assertEqual(text, _content_canonical(doc), f"{rel} is not in canonical json.dumps(indent=2) form")
+            for obj in self._localizable(doc):
+                total += 1
+                self.assertEqual(set(obj), EXPECTED_CONTENT_LANGS,
+                                 f"{rel}: localizable object missing/extra languages: {sorted(obj)}")
+                for lang, value in obj.items():
+                    self.assertIsInstance(value, str, f"{rel}: {lang} is not a string")
+                    self.assertTrue(value.strip(), f"{rel}: {lang} is empty")
+        self.assertEqual(total, EXPECTED_CONTENT_STRING_COUNT, "expected 80 localizable content strings")
 
 
 if __name__ == "__main__":

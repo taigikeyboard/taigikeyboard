@@ -12,20 +12,20 @@ from pathlib import Path
 # --- Schema constants -------------------------------------------------------
 
 # Base language: every key MUST define this (structural — validate_namespace). en/ja are real OS locales;
-# tailo/poj are authored as a derived pair (P3b/P3c). Beyond the base, the production CLI additionally
+# tailo/poj are hand-authored in lockstep (P3b/P3c). Beyond the base, the production CLI additionally
 # requires every PRODUCTION_LANGUAGES value (validate_production_completeness) + the tailo/poj lockstep
 # (validate_generated_map_completeness); only a NON-production language's absence is a deliberate fallback.
 BASE_LANGUAGE = "hanji"
 
-# Display languages emitted to the Kotlin TL/POJ map (no OS locale -> GeneratedMap path). poj is the
-# deterministic derivation of tailo (tools/i18n/derive_poj.py), so the two are authored in lockstep.
+# Display languages emitted to the Kotlin TL/POJ map (no OS locale -> GeneratedMap path). poj is the POJ
+# rendering of the same reading as tailo; both are hand-authored, so the two are kept in lockstep.
 GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 
 # Authored, user-selectable production languages: every key MUST define ALL of these (non-empty), so a
 # picker option never renders a silent Hanji fallback for a missing translation. tailo/poj joined this
 # roster when they were promoted out of debug-only preview (R5-2 / R6-2), so they are now enforced like
 # every other production language; the tailo/poj lockstep gate (validate_generated_map_completeness) still
-# runs first to give the more-actionable "run make i18n-derive-poj" diagnostic. The lint config disables
+# runs first to give the more-specific "author both tailo + poj" diagnostic. The lint config disables
 # Android `MissingTranslation`, so this completeness check is the generator's job (R4-3).
 # CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — must mirror the picker roster
 # in android/.../i18n/DisplayLanguage.kt `productionLanguages` and ios/.../Strings/DisplayLanguage.swift
@@ -553,12 +553,12 @@ def validate_production_completeness(entries) -> None:
 
 
 def validate_generated_map_completeness(entries) -> None:
-    # tailo and poj are authored in lockstep: poj is the deterministic derivation of tailo for the SAME
-    # key (tools/i18n/derive_poj.py), so a key authoring one MUST author the other. Now that both are
-    # production languages, validate_production_completeness would also reject a half-authored pair — but
-    # this gate runs first (build_outputs) and names the fix ("run make i18n-derive-poj"), so the actionable
-    # diagnostic wins. Enforced at the CLI boundary only (generate.py / check.py / Gradle) — the unit tests
-    # intentionally drive partial fixtures (tailo without poj) to exercise this path in isolation.
+    # tailo and poj are authored in lockstep: poj is the POJ rendering of the SAME reading as tailo, so a
+    # key authoring one MUST author the other. Now that both are production languages,
+    # validate_production_completeness would also reject a half-authored pair — but this gate runs first
+    # (build_outputs) and names the fix ("author both"), so the actionable diagnostic wins. Enforced at the
+    # CLI boundary only (generate.py / check.py / Gradle) — the unit tests intentionally drive partial
+    # fixtures (tailo without poj) to exercise this path in isolation.
     for namespace, key, entry in entries:
         values = entry["values"]
         authored = [lang for lang in GENERATED_MAP_LANGUAGES if values.get(lang)]
@@ -566,7 +566,7 @@ def validate_generated_map_completeness(entries) -> None:
             missing = [lang for lang in GENERATED_MAP_LANGUAGES if not values.get(lang)]
             raise ValueError(
                 f"{namespace}:{key}: GeneratedMap languages must be authored in lockstep — has "
-                f"{authored} but missing {missing} (poj is derived from tailo; run `make i18n-derive-poj`)"
+                f"{authored} but missing {missing} (tailo and poj are hand-authored as a pair)"
             )
 
 
@@ -623,7 +623,7 @@ def _emit_taigi_map(entries) -> str:
         "",
         "/**",
         " * TL/POJ string overrides (the GeneratedMap resolution path — these languages have no OS locale).",
-        " * Authored as a lockstep pair (poj derived from tailo); a missing language falls back to Hanji.",
+        " * Authored as a lockstep pair (tailo + poj hand-authored); a missing language falls back to Hanji.",
         " */",
         "object GeneratedTaigiStrings {",
     ]
@@ -838,7 +838,7 @@ def _emit_xcstrings(entries) -> str:
     # iOS String Catalog. Keyed by the synthetic res_name (shared with the Android R.string name, so
     # one naming function owns both platforms). Each authored language becomes a localization keyed by
     # its BCP-47 tag; Xcode compiles each into a per-tag .lproj (incl. the private-use TL/POJ tags).
-    # sort_keys makes the committed catalog byte-stable for `make i18n-check` and aligns the key order
+    # sort_keys makes the committed catalog byte-stable for the freshness check (check.py / Gradle) and aligns the key order
     # with Xcode's own alphabetical sort (comment < extractionState < localizations, state < value).
     strings = {}
     for namespace, key, entry in entries:
@@ -958,7 +958,7 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     if enforce_production_completeness:
         # Lockstep gate first: tailo + poj are both production languages now, so a half-authored pair
         # (tailo without poj, or vice versa) would also trip validate_production_completeness — but the
-        # lockstep error names the fix ("run make i18n-derive-poj"), so surface it ahead of the generic
+        # lockstep error names the fix ("author both"), so surface it ahead of the generic
         # missing-production-language error.
         validate_generated_map_completeness(all_entries)
         validate_production_completeness(all_entries)
