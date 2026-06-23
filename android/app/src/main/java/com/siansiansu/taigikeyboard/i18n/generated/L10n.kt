@@ -272,6 +272,20 @@ object L10n {
         @Composable get() = stringRes(StringKey.KEYBOARD_TRANSLATE_TOGGLE)
     val keyboardMorePopupHint: String
         @Composable get() = stringRes(StringKey.KEYBOARD_MORE_POPUP_HINT)
+    val keyboardToggleToolbar: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_TOGGLE_TOOLBAR)
+    val keyboardSymbolPanel: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_SYMBOL_PANEL)
+    val keyboardSwitchLayout: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_SWITCH_LAYOUT)
+    val keyboardSwitchInputMethod: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_SWITCH_INPUT_METHOD)
+    val keyboardDismissKeyboard: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_DISMISS_KEYBOARD)
+    val keyboardSettings: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_SETTINGS)
+    val keyboardDeleteIcon: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_DELETE_ICON)
     val layoutRomanizationKeyboard: String
         @Composable get() = stringRes(StringKey.LAYOUT_ROMANIZATION_KEYBOARD)
     val layoutTaigiPhonetic: String

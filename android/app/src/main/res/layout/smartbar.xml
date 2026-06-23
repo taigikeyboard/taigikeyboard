@@ -9,7 +9,7 @@
     android:background="?smartbar_bgColor"
     android:baselineAligned="false"
     android:clipChildren="true"
-    tools:ignore="Overdraw">
+    tools:ignore="Overdraw,ContentDescription">
 
     <!-- Toolbar toggle button: top-level, always visible (except number_row / layout_selection) -->
     <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
@@ -18,7 +18,6 @@
         android:layout_height="match_parent"
         android:layout_marginStart="2dp"
         android:background="?smartbar_bgColor"
-        android:contentDescription="@string/content_desc__toggle_toolbar"
         android:padding="6dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_add"
@@ -80,7 +79,6 @@
                 android:layout_marginEnd="4dp"
                 android:background="?smartbar_bgColor"
                 android:foreground="?android:attr/selectableItemBackground"
-                android:contentDescription="@string/smartbar__expand_toggle__alt"
                 android:padding="2dp"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_keyboard_arrow_down"
@@ -148,35 +146,30 @@
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
                 android:id="@+id/toolbar_symbol_button"
                 style="@style/SmartbarToolbarIcon"
-                android:contentDescription="@string/content_desc__symbol_panel"
                 android:src="@drawable/ic_tag" />
 
             <!-- Layout selection -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
                 android:id="@+id/toolbar_layout_button"
                 style="@style/SmartbarToolbarIcon"
-                android:contentDescription="@string/content_desc__switch_layout"
                 android:src="@drawable/ic_photo" />
 
             <!-- Globe (system IME picker) -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
                 android:id="@+id/toolbar_globe_button"
                 style="@style/SmartbarToolbarIcon"
-                android:contentDescription="@string/content_desc__switch_input_method"
                 android:src="@drawable/ic_language" />
 
             <!-- Dismiss keyboard -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
                 android:id="@+id/toolbar_dismiss_button"
                 style="@style/SmartbarToolbarIcon"
-                android:contentDescription="@string/content_desc__dismiss_keyboard"
                 android:src="@drawable/ic_keyboard_hide" />
 
             <!-- Settings -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
                 android:id="@+id/toolbar_settings_button"
                 style="@style/SmartbarToolbarIcon"
-                android:contentDescription="@string/content_desc__settings"
                 android:src="@drawable/ic_settings" />
 
         </LinearLayout>

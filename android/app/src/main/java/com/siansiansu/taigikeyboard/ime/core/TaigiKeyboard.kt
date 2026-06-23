@@ -24,6 +24,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.TaigiKeyboardApplication
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.StringResolver
+import com.siansiansu.taigikeyboard.i18n.buildStringResolver
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
@@ -186,6 +189,18 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             }
         }
 
+        // Observe display-language changes and refresh the legacy View smartbar /
+        // media-input a11y labels. Compose overlays follow the picker via
+        // ProvideDisplayLanguage; the non-Compose buttons need this imperative
+        // push because the input view is reused across show() (a one-time
+        // inflation set would go stale on live-switch). Build the resolver from
+        // the flow tag so it reflects the just-selected language.
+        serviceScope.launch {
+            prefs.observeDisplayLanguage().collect { tag ->
+                inputView?.applyAccessibilityStrings(displayLanguageResolver(tag))
+            }
+        }
+
         setTheme(R.style.KeyboardTheme)
 
         AppVersionTracker.updateVersionOnInstallAndLastUse(this, prefs)
@@ -255,9 +270,20 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         this.inputView = inputView
 
+        // Apply a11y labels for the current display language on attach. The
+        // observeDisplayLanguage collector emits the current tag on collection
+        // start, but that first emission can land while inputView is still null,
+        // and the Flow is not a replayed StateFlow — a freshly-inflated smartbar
+        // (first show / config change) is never re-served, so it needs this seed.
+        inputView.applyAccessibilityStrings(displayLanguageResolver())
+
         textInputManager.onRegisterInputView(inputView)
         mediaInputManager.onRegisterInputView(inputView)
     }
+
+    /** Builds a [StringResolver] for the display-language [tag] (defaults to the persisted selection). */
+    private fun displayLanguageResolver(tag: String = prefs.displayLanguageTag): StringResolver =
+        buildStringResolver(this, DisplayLanguage.fromTag(tag))
 
     override fun onDestroy() {
         compositionRoot.logger.i(TAG, "onDestroy()")

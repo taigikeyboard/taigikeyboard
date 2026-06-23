@@ -25,6 +25,41 @@
       "comment": "Key-preview popup three-dots-indicator a11y contentDescription (long-press reveals more glyphs). Android extension popup only.",
       "scope": { "platforms": ["android"], "surfaces": ["extension"] },
       "values": { "hanji": "長揤有較濟字", "tailo": "tn̂g tshi̍h ū khah-tsē jī", "poj": "tn̂g chhi̍h ū khah-chē jī", "en": "Long-press for more characters", "ja": "長押しでさらに文字を入力できます" }
+    },
+    "toggleToolbar": {
+      "comment": "Smartbar toolbar-toggle View button a11y contentDescription (the +-icon expands/collapses the toolbar row). Android smartbar View only; applied programmatically via InputView.applyAccessibilityStrings so it follows the display-language picker.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "展開抑是收合工具列", "tailo": "tián-khui ah-sī siu-ha̍p kang-khū-lia̍t", "poj": "tián-khui ah-sī siu-ha̍p kang-khū-lia̍t", "en": "Expand or collapse the toolbar", "ja": "ツールバーを展開または折りたたむ" }
+    },
+    "symbolPanel": {
+      "comment": "Smartbar toolbar symbol-panel View button a11y contentDescription (opens the symbol/punctuation panel). Android smartbar View only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "符號面板", "tailo": "hû-hō bīn-pán", "poj": "hû-hō bīn-pán", "en": "Symbol panel", "ja": "記号パネル" }
+    },
+    "switchLayout": {
+      "comment": "Smartbar toolbar layout-switch View button a11y contentDescription (opens the keyboard-layout selector). Android smartbar View only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "切換佈局", "tailo": "tshiat-uānn pòo-kio̍k", "poj": "chhiat-ōaⁿ pò͘-kio̍k", "en": "Switch layout", "ja": "レイアウトを切り替え" }
+    },
+    "switchInputMethod": {
+      "comment": "Smartbar toolbar globe View button a11y contentDescription (opens the system input-method picker). Android smartbar View only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "切換輸入法", "tailo": "tshiat-uānn su-ji̍p-hoat", "poj": "chhiat-ōaⁿ su-ji̍p-hoat", "en": "Switch input method", "ja": "入力方法を切り替え" }
+    },
+    "dismissKeyboard": {
+      "comment": "Smartbar toolbar dismiss View button a11y contentDescription (hides the keyboard). Android smartbar View only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "收合齒盤", "tailo": "siu-ha̍p khí-puânn", "poj": "siu-ha̍p khí-pôaⁿ", "en": "Hide keyboard", "ja": "キーボードを閉じる" }
+    },
+    "settings": {
+      "comment": "Smartbar toolbar settings View button a11y contentDescription (opens the app settings). Android smartbar View only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "設定", "tailo": "siat-tīng", "poj": "siat-tēng", "en": "Settings", "ja": "設定" }
+    },
+    "deleteIcon": {
+      "comment": "Media-input (emoji panel) backspace View button a11y contentDescription. Android media-input View only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "刪除", "tailo": "san-tî", "poj": "san-tî", "en": "Delete", "ja": "削除" }
     }
   }
 }

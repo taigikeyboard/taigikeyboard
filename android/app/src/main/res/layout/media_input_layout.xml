@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/media_input"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:ignore="ContentDescription">
 
     <ViewFlipper
         android:id="@+id/media_input_view_flipper"
@@ -43,8 +45,7 @@
             android:soundEffectsEnabled="false"
             android:hapticFeedbackEnabled="false"
             android:src="@drawable/ic_backspace"
-            app:tint="?android:textColor"
-            android:contentDescription="@string/content_desc__icon_delete"/>
+            app:tint="?android:textColor"/>
 
     </LinearLayout>
 

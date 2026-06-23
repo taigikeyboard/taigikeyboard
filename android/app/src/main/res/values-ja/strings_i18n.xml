@@ -136,6 +136,13 @@
     <string name="i18n_keyboard_pageDown">次のページ</string>
     <string name="i18n_keyboard_translateToggle">翻訳を切り替え</string>
     <string name="i18n_keyboard_morePopupHint">長押しでさらに文字を入力できます</string>
+    <string name="i18n_keyboard_toggleToolbar">ツールバーを展開または折りたたむ</string>
+    <string name="i18n_keyboard_symbolPanel">記号パネル</string>
+    <string name="i18n_keyboard_switchLayout">レイアウトを切り替え</string>
+    <string name="i18n_keyboard_switchInputMethod">入力方法を切り替え</string>
+    <string name="i18n_keyboard_dismissKeyboard">キーボードを閉じる</string>
+    <string name="i18n_keyboard_settings">設定</string>
+    <string name="i18n_keyboard_deleteIcon">削除</string>
     <string name="i18n_layout_romanizationKeyboard">ローマ字キーボード</string>
     <string name="i18n_layout_taigiPhonetic">方音符号</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>

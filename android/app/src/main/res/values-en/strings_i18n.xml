@@ -136,6 +136,13 @@
     <string name="i18n_keyboard_pageDown">Next page</string>
     <string name="i18n_keyboard_translateToggle">Toggle translation</string>
     <string name="i18n_keyboard_morePopupHint">Long-press for more characters</string>
+    <string name="i18n_keyboard_toggleToolbar">Expand or collapse the toolbar</string>
+    <string name="i18n_keyboard_symbolPanel">Symbol panel</string>
+    <string name="i18n_keyboard_switchLayout">Switch layout</string>
+    <string name="i18n_keyboard_switchInputMethod">Switch input method</string>
+    <string name="i18n_keyboard_dismissKeyboard">Hide keyboard</string>
+    <string name="i18n_keyboard_settings">Settings</string>
+    <string name="i18n_keyboard_deleteIcon">Delete</string>
     <string name="i18n_layout_romanizationKeyboard">Romanization Keyboards</string>
     <string name="i18n_layout_taigiPhonetic">Taiwanese Phonetic Symbols</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>

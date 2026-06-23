@@ -136,6 +136,13 @@
     <string name="i18n_keyboard_pageDown">後一頁</string>
     <string name="i18n_keyboard_translateToggle">切換翻譯</string>
     <string name="i18n_keyboard_morePopupHint">長揤有較濟字</string>
+    <string name="i18n_keyboard_toggleToolbar">展開抑是收合工具列</string>
+    <string name="i18n_keyboard_symbolPanel">符號面板</string>
+    <string name="i18n_keyboard_switchLayout">切換佈局</string>
+    <string name="i18n_keyboard_switchInputMethod">切換輸入法</string>
+    <string name="i18n_keyboard_dismissKeyboard">收合齒盤</string>
+    <string name="i18n_keyboard_settings">設定</string>
+    <string name="i18n_keyboard_deleteIcon">刪除</string>
     <string name="i18n_layout_romanizationKeyboard">羅馬字齒盤</string>
     <string name="i18n_layout_taigiPhonetic">方音符號</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>

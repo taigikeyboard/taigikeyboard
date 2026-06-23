@@ -11,9 +11,6 @@
     <string name="key__view_symbols">\?123</string>
     <string name="key__view_symbols2">=\\&lt;</string>
 
-    <!-- Smartbar (smartbar__expand_toggle__alt: View expand button — migrated to keyboard.expandCandidates in the Compose overlay; this legacy key stays until the smartbar View migrates) -->
-    <string name="smartbar__expand_toggle__alt">展開或收合候選詞列表</string>
-
     <!-- Tab titles (referenced by SettingsMainActivity) -->
     <string name="tab_home">頭頁</string>
     <string name="tab_theme">主題</string>
@@ -29,14 +26,5 @@
 
     <!-- AndroidManifest activity label -->
     <string name="copyright__title">版權聲明</string>
-
-    <!-- Content Descriptions for Accessibility -->
-    <string name="content_desc__icon_delete">刪除圖示</string>
-    <string name="content_desc__toggle_toolbar">展開或收合工具列</string>
-    <string name="content_desc__symbol_panel">符號面板</string>
-    <string name="content_desc__switch_layout">切換齒佈</string>
-    <string name="content_desc__switch_input_method">切換輸入法</string>
-    <string name="content_desc__dismiss_keyboard">收合齒盤</string>
-    <string name="content_desc__settings">設定</string>
 
 </resources>

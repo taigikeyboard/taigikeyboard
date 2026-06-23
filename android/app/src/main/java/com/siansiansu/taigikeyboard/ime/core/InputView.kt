@@ -6,12 +6,15 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.View
 import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ViewFlipper
 import androidx.core.view.WindowInsetsCompat
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.StringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 
 /**
  * Root keyboard view inflated by `TaigiKeyboard.onCreateInputView`. Hosts the
@@ -79,5 +82,34 @@ class InputView : FrameLayout {
             }
         }
         return super.onApplyWindowInsets(insets)
+    }
+
+    /**
+     * Sets the a11y `contentDescription` on the legacy View-based smartbar +
+     * media-input buttons from the in-app display-language [resolver], so the
+     * labels follow the display-language picker (Hanji/en/ja/TL/POJ) rather than
+     * the OS locale. The XML carries no `android:contentDescription` for these
+     * buttons; `TaigiKeyboard` applies it here on attach (via
+     * `registerInputView`) and re-applies on every display-language change.
+     *
+     * The Compose candidate/symbol/layout overlays follow the picker through
+     * `ProvideDisplayLanguage`; this is the imperative counterpart for the
+     * non-Compose smartbar/media buttons.
+     */
+    fun applyAccessibilityStrings(resolver: StringResolver) {
+        fun setDescription(
+            viewId: Int,
+            key: StringKey,
+        ) {
+            findViewById<View>(viewId)?.contentDescription = resolver.resolve(key)
+        }
+        setDescription(R.id.toolbar_toggle_button, StringKey.KEYBOARD_TOGGLE_TOOLBAR)
+        setDescription(R.id.toolbar_symbol_button, StringKey.KEYBOARD_SYMBOL_PANEL)
+        setDescription(R.id.toolbar_layout_button, StringKey.KEYBOARD_SWITCH_LAYOUT)
+        setDescription(R.id.toolbar_globe_button, StringKey.KEYBOARD_SWITCH_INPUT_METHOD)
+        setDescription(R.id.toolbar_dismiss_button, StringKey.KEYBOARD_DISMISS_KEYBOARD)
+        setDescription(R.id.toolbar_settings_button, StringKey.KEYBOARD_SETTINGS)
+        setDescription(R.id.expand_toggle_button, StringKey.KEYBOARD_EXPAND_CANDIDATES)
+        setDescription(R.id.media_input_backspace_button, StringKey.KEYBOARD_DELETE_ICON)
     }
 }
