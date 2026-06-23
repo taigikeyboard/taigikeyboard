@@ -53,7 +53,8 @@ dict:
 
 # Generate i18n native resources + Kotlin accessors from i18n/*.json (mirror of `make dict`:
 # committed output, not a per-compile step). Re-run after editing any i18n/*.json source. (in-app
-# content/*.json is a separate nested schema the platforms decode directly — NOT emitted here.)
+# i18n/content/*.json is a separate nested schema the platforms decode directly — NOT emitted here;
+# the glob is non-recursive, so the content/ subfolder is skipped.)
 # POJ is hand-authored alongside tailo (the `poj` value in each key); no derive step.
 i18n:
 	python3 tools/i18n/generate.py

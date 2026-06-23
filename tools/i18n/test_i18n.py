@@ -575,10 +575,11 @@ class PluralEmitTest(unittest.TestCase):
             self.assertIn("only English", str(ctx.exception))
 
 
-# In-app content (content/*.json) is a nested tree with its OWN schema, separate from the flat i18n/*.json
-# namespaces and NOT emitted by `make i18n`; the platforms decode it directly. The constants below mirror
-# the iOS/Android LocalizedContentText model.
-CONTENT_FILES = ["content/tab1-features.json", "content/tab1-faq.json"]
+# In-app content (i18n/content/*.json) is a nested tree with its OWN schema, separate from the flat
+# i18n/*.json namespaces and NOT emitted by `make i18n` (the codegen glob is non-recursive — i18n_lib.py
+# scans i18n/*.json only, so the i18n/content/ subfolder is skipped); the platforms decode it directly.
+# The constants below mirror the iOS/Android LocalizedContentText model.
+CONTENT_FILES = ["i18n/content/tab1-features.json", "i18n/content/tab1-faq.json"]
 EXPECTED_CONTENT_LANGS = {"hanji", "tailo", "poj", "en", "ja"}
 EXPECTED_CONTENT_STRING_COUNT = 80
 
