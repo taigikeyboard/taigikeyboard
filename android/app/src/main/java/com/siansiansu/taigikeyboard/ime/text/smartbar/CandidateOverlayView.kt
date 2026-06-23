@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.FrameLayout
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -12,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -99,23 +102,30 @@ class CandidateOverlayView : FrameLayout {
                 val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
                 val fontType = prefs.fontType
                 val typeface = remember(fontType) { TypefaceLoader.getTypefaceByType(fontType, context) }
-
-                CandidateOverlayContent(
-                    suggestions = suggestions,
-                    typeface = typeface,
-                    isTPSLayout = isTPSLayout,
-                    orMapsToER = prefs.tpsOrMapsToER,
-                    isTranslateSwapped = isTranslateSwapped,
-                    resetKey = resetKey,
-                    backgroundGradient = backgroundGradientState.value,
-                    candidateTextColor = candidateTextColorState.value,
-                    onSuggestionSelected = { word, index -> onSuggestionSelected?.invoke(word, index) },
-                    onCollapse = {
-                        hide()
-                        onCollapse?.invoke()
-                    },
-                    onTranslateToggle = { onTranslateToggle?.invoke() },
-                )
+                // i18n live-switch: the IME (same process) follows the SAME DataStore tag the host
+                // writes, so a host-side change recomposes this overlay's a11y strings live (no IME
+                // service restart). Mirrors SymbolSelectionOverlayView.
+                val displayLanguageTag by prefs
+                    .observeDisplayLanguage()
+                    .collectAsState(initial = prefs.displayLanguageTag)
+                ProvideDisplayLanguage(DisplayLanguage.fromTag(displayLanguageTag)) {
+                    CandidateOverlayContent(
+                        suggestions = suggestions,
+                        typeface = typeface,
+                        isTPSLayout = isTPSLayout,
+                        orMapsToER = prefs.tpsOrMapsToER,
+                        isTranslateSwapped = isTranslateSwapped,
+                        resetKey = resetKey,
+                        backgroundGradient = backgroundGradientState.value,
+                        candidateTextColor = candidateTextColorState.value,
+                        onSuggestionSelected = { word, index -> onSuggestionSelected?.invoke(word, index) },
+                        onCollapse = {
+                            hide()
+                            onCollapse?.invoke()
+                        },
+                        onTranslateToggle = { onTranslateToggle?.invoke() },
+                    )
+                }
             }
         }
     }

@@ -262,6 +262,16 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_ACCENT_DICT_CREDIT)
     val homeDevSupplementCredit: String
         @Composable get() = stringRes(StringKey.HOME_DEV_SUPPLEMENT_CREDIT)
+    val keyboardExpandCandidates: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_EXPAND_CANDIDATES)
+    val keyboardPageUp: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_PAGE_UP)
+    val keyboardPageDown: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_PAGE_DOWN)
+    val keyboardTranslateToggle: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_TRANSLATE_TOGGLE)
+    val keyboardMorePopupHint: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_MORE_POPUP_HINT)
     val layoutRomanizationKeyboard: String
         @Composable get() = stringRes(StringKey.LAYOUT_ROMANIZATION_KEYBOARD)
     val layoutTaigiPhonetic: String

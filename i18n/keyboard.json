@@ -1,0 +1,30 @@
+{
+  "namespace": "keyboard",
+  "keys": {
+    "expandCandidates": {
+      "comment": "Candidate-overlay collapse-button a11y contentDescription (the up-chevron toggles the expanded candidate grid). Android-only: iOS ExpandedCandidateOverlay has no localized a11y label yet (parity gap, out of scope). Bidirectional wording — the same button expands or collapses.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "展開抑是收合候選詞列", "tailo": "tián-khui ah-sī siu-ha̍p hāu-suán sû lia̍t", "poj": "tián-khui ah-sī siu-ha̍p hāu-soán sû lia̍t", "en": "Expand or collapse the candidate list", "ja": "候補リストを展開または折りたたむ" }
+    },
+    "pageUp": {
+      "comment": "Candidate-overlay page-up control-button a11y contentDescription (scrolls to the previous page of candidates). Android extension overlay only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "頂一頁", "tailo": "tíng tsi̍t ia̍h", "poj": "téng chi̍t ia̍h", "en": "Previous page", "ja": "前のページ" }
+    },
+    "pageDown": {
+      "comment": "Candidate-overlay page-down control-button a11y contentDescription (scrolls to the next page of candidates). Android extension overlay only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "後一頁", "tailo": "āu tsi̍t ia̍h", "poj": "āu chi̍t ia̍h", "en": "Next page", "ja": "次のページ" }
+    },
+    "translateToggle": {
+      "comment": "Candidate-overlay translate-toggle control-button a11y contentDescription (swaps the romanization/Hanji primary line). Android extension overlay only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "切換翻譯", "tailo": "tshiat-uānn huan-i̍k", "poj": "chhiat-ōaⁿ hoan-e̍k", "en": "Toggle translation", "ja": "翻訳を切り替え" }
+    },
+    "morePopupHint": {
+      "comment": "Key-preview popup three-dots-indicator a11y contentDescription (long-press reveals more glyphs). Android extension popup only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "長揤有較濟字", "tailo": "tn̂g tshi̍h ū khah-tsē jī", "poj": "tn̂g chhi̍h ū khah-chē jī", "en": "Long-press for more characters", "ja": "長押しでさらに文字を入力できます" }
+    }
+  }
+}

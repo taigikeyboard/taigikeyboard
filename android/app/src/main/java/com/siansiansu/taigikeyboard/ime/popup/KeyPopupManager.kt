@@ -14,6 +14,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
@@ -117,8 +118,14 @@ class KeyPopupManager(
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 TaigiKeyboardTheme {
-                    val s by state.collectAsStateWithLifecycle()
-                    content(s)
+                    // Popups compose in a SEPARATE PopupWindow tree from the keyboard body, so they
+                    // need their own ProvideDisplayLanguage scope — KeyPopupBox resolves its a11y
+                    // contentDescription via stringRes, which crashes without LocalStringResolver in
+                    // scope. Follows the same DataStore tag as the rest of the IME for live switch.
+                    ProvideDisplayLanguage(ime.prefs) {
+                        val s by state.collectAsStateWithLifecycle()
+                        content(s)
+                    }
                 }
             }
         }

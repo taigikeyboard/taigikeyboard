@@ -131,6 +131,11 @@
     <string name="i18n_home_kunggeCopyright">© 國立臺灣工藝研究發展中心</string>
     <string name="i18n_home_accentDictCredit">實齋整理、提供</string>
     <string name="i18n_home_devSupplementCredit">建中整理、提供</string>
+    <string name="i18n_keyboard_expandCandidates">展開抑是收合候選詞列</string>
+    <string name="i18n_keyboard_pageUp">頂一頁</string>
+    <string name="i18n_keyboard_pageDown">後一頁</string>
+    <string name="i18n_keyboard_translateToggle">切換翻譯</string>
+    <string name="i18n_keyboard_morePopupHint">長揤有較濟字</string>
     <string name="i18n_layout_romanizationKeyboard">羅馬字齒盤</string>
     <string name="i18n_layout_taigiPhonetic">方音符號</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>

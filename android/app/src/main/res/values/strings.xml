@@ -11,15 +11,8 @@
     <string name="key__view_symbols">\?123</string>
     <string name="key__view_symbols2">=\\&lt;</string>
 
-    <string name="key_popup__threedots_alt">Three-dot icon. If visible, indicates that more letters can be used if longer pressed.</string>
-
-    <!-- Smartbar -->
+    <!-- Smartbar (smartbar__expand_toggle__alt: View expand button — migrated to keyboard.expandCandidates in the Compose overlay; this legacy key stays until the smartbar View migrates) -->
     <string name="smartbar__expand_toggle__alt">展開或收合候選詞列表</string>
-
-    <!-- Overlay -->
-    <string name="overlay__page_up">上一頁</string>
-    <string name="overlay__page_down">下一頁</string>
-    <string name="overlay__translate_toggle">切換翻譯</string>
 
     <!-- Tab titles (referenced by SettingsMainActivity) -->
     <string name="tab_home">頭頁</string>

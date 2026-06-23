@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 import androidx.compose.ui.text.style.TextAlign
@@ -56,9 +55,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR
 import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_PRESSED_DEEPEN_FACTOR
 import com.siansiansu.taigikeyboard.ime.core.deepenedArgb
@@ -405,7 +405,7 @@ private fun ControlPanel(
     ) {
         ControlButton(
             iconRes = R.drawable.ic_keyboard_arrow_up,
-            contentDescription = R.string.smartbar__expand_toggle__alt,
+            contentDescription = stringRes(StringKey.KEYBOARD_EXPAND_CANDIDATES),
             colors = colors,
             modifier = Modifier.fillMaxWidth().height(CollapseButtonHeight),
             iconPadding = 12.dp,
@@ -414,7 +414,7 @@ private fun ControlPanel(
         Spacer(Modifier.height(3.dp))
         ControlButton(
             iconRes = R.drawable.ic_arrow_triangle_up,
-            contentDescription = R.string.overlay__page_up,
+            contentDescription = stringRes(StringKey.KEYBOARD_PAGE_UP),
             colors = colors,
             modifier = Modifier.size(PageButtonSize),
             iconPadding = 10.dp,
@@ -423,7 +423,7 @@ private fun ControlPanel(
         Spacer(Modifier.height(16.dp))
         ControlButton(
             iconRes = R.drawable.ic_arrow_triangle_down,
-            contentDescription = R.string.overlay__page_down,
+            contentDescription = stringRes(StringKey.KEYBOARD_PAGE_DOWN),
             colors = colors,
             modifier = Modifier.size(PageButtonSize),
             iconPadding = 10.dp,
@@ -433,7 +433,7 @@ private fun ControlPanel(
             Spacer(Modifier.height(25.dp))
             ControlButton(
                 iconRes = R.drawable.ic_translate,
-                contentDescription = R.string.overlay__translate_toggle,
+                contentDescription = stringRes(StringKey.KEYBOARD_TRANSLATE_TOGGLE),
                 colors = colors,
                 modifier = Modifier.size(PageButtonSize),
                 iconPadding = 10.dp,
@@ -447,7 +447,7 @@ private fun ControlPanel(
 @Composable
 private fun ControlButton(
     @DrawableRes iconRes: Int,
-    @StringRes contentDescription: Int,
+    contentDescription: String,
     colors: CandidateOverlayColors,
     modifier: Modifier,
     iconPadding: Dp,
@@ -468,7 +468,7 @@ private fun ControlButton(
     ) {
         Icon(
             painter = painterResource(iconRes),
-            contentDescription = stringResource(contentDescription),
+            contentDescription = contentDescription,
             tint = colors.controlTint,
             modifier = Modifier.fillMaxSize().padding(iconPadding),
         )

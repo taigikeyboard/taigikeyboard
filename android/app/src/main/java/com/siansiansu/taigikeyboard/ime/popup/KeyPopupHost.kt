@@ -26,11 +26,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
@@ -69,7 +70,7 @@ fun KeyPopupBox(state: PreviewState.Visible) {
                 if (state.showThreeDots) {
                     Image(
                         painter = painterResource(R.drawable.ic_more_horiz),
-                        contentDescription = stringResource(R.string.key_popup__threedots_alt),
+                        contentDescription = stringRes(StringKey.KEYBOARD_MORE_POPUP_HINT),
                         modifier = Modifier.size(threeDotsSizeDp),
                         colorFilter =
                             ColorFilter.tint(Color(display.fgColorArgb), BlendMode.SrcAtop),

@@ -131,6 +131,11 @@
     <string name="i18n_home_kunggeCopyright">© 国立台湾工芸研究発展センター</string>
     <string name="i18n_home_accentDictCredit">實齋 整理・提供</string>
     <string name="i18n_home_devSupplementCredit">建中 整理・提供</string>
+    <string name="i18n_keyboard_expandCandidates">候補リストを展開または折りたたむ</string>
+    <string name="i18n_keyboard_pageUp">前のページ</string>
+    <string name="i18n_keyboard_pageDown">次のページ</string>
+    <string name="i18n_keyboard_translateToggle">翻訳を切り替え</string>
+    <string name="i18n_keyboard_morePopupHint">長押しでさらに文字を入力できます</string>
     <string name="i18n_layout_romanizationKeyboard">ローマ字キーボード</string>
     <string name="i18n_layout_taigiPhonetic">方音符号</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>

@@ -131,6 +131,11 @@
     <string name="i18n_home_kunggeCopyright">© National Taiwan Craft Research and Development Institute</string>
     <string name="i18n_home_accentDictCredit">Compiled and provided by 實齋</string>
     <string name="i18n_home_devSupplementCredit">Compiled and provided by 建中</string>
+    <string name="i18n_keyboard_expandCandidates">Expand or collapse the candidate list</string>
+    <string name="i18n_keyboard_pageUp">Previous page</string>
+    <string name="i18n_keyboard_pageDown">Next page</string>
+    <string name="i18n_keyboard_translateToggle">Toggle translation</string>
+    <string name="i18n_keyboard_morePopupHint">Long-press for more characters</string>
     <string name="i18n_layout_romanizationKeyboard">Romanization Keyboards</string>
     <string name="i18n_layout_taigiPhonetic">Taiwanese Phonetic Symbols</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
