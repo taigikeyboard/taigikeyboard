@@ -4537,6 +4537,186 @@
         }
       }
     },
+    "i18n_keyboard_dismissKeyboard": {
+      "comment": "Smartbar toolbar dismiss button a11y label (hides the keyboard). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide keyboard"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードを閉じる"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收合齒盤"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "siu-ha̍p khí-pôaⁿ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "siu-ha̍p khí-puânn"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_settings": {
+      "comment": "Smartbar toolbar settings button a11y label (opens the app settings). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "siat-tēng"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "siat-tīng"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_switchInputMethod": {
+      "comment": "Smartbar toolbar globe button a11y label (opens the system input-method picker). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch input method"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力方法を切り替え"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換輸入法"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chhiat-ōaⁿ su-ji̍p-hoat"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshiat-uānn su-ji̍p-hoat"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_switchLayout": {
+      "comment": "Smartbar toolbar layout-switch button a11y label (opens the keyboard-layout selector). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch layout"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レイアウトを切り替え"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換佈局"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chhiat-ōaⁿ pò͘-kio̍k"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshiat-uānn pòo-kio̍k"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_symbolPanel": {
+      "comment": "Smartbar toolbar symbol-panel button a11y label (opens the symbol/punctuation panel). Android applies it via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol panel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記号パネル"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符號面板"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hû-hō bīn-pán"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hû-hō bīn-pán"
+          }
+        }
+      }
+    },
     "i18n_layout_comingSoon": {
       "comment": "Placeholder badge for a layout that is not yet available. iOS-only: shown in the iOS layout-selection overlay (LayoutSelectionOverlay.swift); Android has no such placeholder.",
       "extractionState": "manual",

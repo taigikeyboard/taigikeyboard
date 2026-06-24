@@ -17,6 +17,9 @@ struct ToolShortcutsToolbar: View {
     let onSettingsTap: () -> Void
 
     @Environment(\.candidateTheme) private var theme
+    // Resolves smartbar a11y labels under the picker's display language (mirrors Android
+    // InputView.applyAccessibilityStrings). Reading lang.string(_:) in body registers the live-switch.
+    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         HStack(spacing: 0) {
@@ -60,14 +63,14 @@ struct ToolShortcutsToolbar: View {
 
             ToolShortcutButton(
                 systemName: "number",
-                accessibilityLabel: "符號面板",
+                accessibilityLabel: lang.string(.keyboardSymbolPanel),
                 accessibilityHint: "點擊以開啟符號選擇面板",
                 action: onSymbolTap,
             )
 
             ToolShortcutButton(
                 systemName: "photo",
-                accessibilityLabel: "佈局選擇",
+                accessibilityLabel: lang.string(.keyboardSwitchLayout),
                 accessibilityHint: "點擊以開啟佈局選擇面板",
                 action: onLayoutTap,
             )
@@ -76,14 +79,14 @@ struct ToolShortcutsToolbar: View {
 
             ToolShortcutButton(
                 systemName: "keyboard.chevron.compact.down",
-                accessibilityLabel: "Dismiss Keyboard",
+                accessibilityLabel: lang.string(.keyboardDismissKeyboard),
                 accessibilityHint: "Tap to dismiss keyboard",
                 action: onDismissKeyboard,
             )
 
             ToolShortcutButton(
                 systemName: "gearshape",
-                accessibilityLabel: "設定",
+                accessibilityLabel: lang.string(.keyboardSettings),
                 accessibilityHint: "點擊以開啟鍵盤設定",
                 action: onSettingsTap,
             )
@@ -121,7 +124,7 @@ struct ToolShortcutsToolbar: View {
             ToolShortcutIcon(systemName: "globe")
         }
         .frame(maxWidth: .infinity)
-        .accessibilityLabel("切換鍵盤")
+        .accessibilityLabel(lang.string(.keyboardSwitchInputMethod))
         .accessibilityHint("點擊切換下一個鍵盤，長按選取鍵盤")
     }
 }
