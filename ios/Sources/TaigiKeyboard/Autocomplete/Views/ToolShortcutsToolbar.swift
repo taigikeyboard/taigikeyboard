@@ -80,7 +80,7 @@ struct ToolShortcutsToolbar: View {
             ToolShortcutButton(
                 systemName: "keyboard.chevron.compact.down",
                 accessibilityLabel: lang.string(.keyboardDismissKeyboard),
-                accessibilityHint: "Tap to dismiss keyboard",
+                accessibilityHint: "點擊以收起鍵盤",
                 action: onDismissKeyboard,
             )
 
