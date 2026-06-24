@@ -194,6 +194,32 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_BACKUP_SUCCESS)
     val dictionaryBackupPrivacyWarning: String
         @Composable get() = stringRes(StringKey.DICTIONARY_BACKUP_PRIVACY_WARNING)
+    val dictionaryMoeDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_MOE_DESCRIPTION)
+    val dictionaryNewwordDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_NEWWORD_DESCRIPTION)
+    val dictionarySttiDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_STTI_DESCRIPTION)
+    val dictionaryKunggeDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KUNGGE_DESCRIPTION)
+    val dictionaryLkkDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LKK_DESCRIPTION)
+    val dictionaryDevDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_DEV_DESCRIPTION)
+    val dictionaryITaigiDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_I_TAIGI_DESCRIPTION)
+    val dictionaryTaiwanJapanDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TAIWAN_JAPAN_DESCRIPTION)
+    val dictionaryTaiHuaDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TAI_HUA_DESCRIPTION)
+    val dictionaryTaiwanPlantDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TAIWAN_PLANT_DESCRIPTION)
+    val dictionaryVariantDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_VARIANT_DESCRIPTION)
+    val dictionaryKhpooDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KHPOO_DESCRIPTION)
+    val dictionaryKhiinDescription: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KHIIN_DESCRIPTION)
     val homeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.HOME_APP_HEADER_TITLE)
     val homeSetupKeyboard: String

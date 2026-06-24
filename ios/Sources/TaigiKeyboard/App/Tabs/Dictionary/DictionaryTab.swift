@@ -106,7 +106,7 @@ struct DictionaryTab: View {
                         title: lang.string(.commonMoeDict),
                         url: "https://sutian.moe.edu.tw/",
                         isOn: $isMoeDictEnabled,
-                        description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
+                        description: lang.string(.dictionaryMoeDescription),
                     ) { settings.isMoeDictEnabled = $0 }
                     // Kautian subcollections — nested under the master row,
                     // greyed when the MOE/kautian master is off (DD7).
@@ -147,19 +147,19 @@ struct DictionaryTab: View {
                         title: lang.string(.commonNewwordDict),
                         url: "https://www.taigitv.org.tw/taigi-words",
                         isOn: $isNewwordDictEnabled,
-                        description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
+                        description: lang.string(.dictionaryNewwordDescription),
                     ) { settings.isNewwordDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: lang.string(.commonSttiDict),
                         url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
                         isOn: $isSttiDictEnabled,
-                        description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
+                        description: lang.string(.dictionarySttiDescription),
                     ) { settings.isSttiDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: lang.string(.commonKunggeDict),
                         url: "https://kanggesu.ntcri.org.tw",
                         isOn: $isKunggeDictEnabled,
-                        description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
+                        description: lang.string(.dictionaryKunggeDescription),
                     ) { settings.isKunggeDictEnabled = $0 }
                 } header: {
                     Text(lang.string(.dictionaryMoeSectionTitle))
@@ -203,14 +203,14 @@ struct DictionaryTab: View {
                         title: lang.string(.dictionaryLkkDict),
                         url: "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
                         isOn: $isLkkDictEnabled,
-                        description: "李江却台語文教基金會漢羅合用建議用字。",
+                        description: lang.string(.dictionaryLkkDescription),
                     ) { settings.isLkkDictEnabled = $0 }
 
                     dictToggleWithDescription(
                         title: lang.string(.dictionaryDevSupplementDict),
                         url: "https://github.com/luke871016/Taigi-Input-method-dictionary-supplement",
                         isOn: $isDevDictEnabled,
-                        description: "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。",
+                        description: lang.string(.dictionaryDevDescription),
                     ) { settings.isDevDictEnabled = $0 }
                 } header: {
                     Text(lang.string(.dictionarySupplementSectionTitle))
@@ -375,7 +375,7 @@ struct DictionaryTab: View {
 
     // MARK: - Dictionary Toggle with Info Button
 
-    // 中文: 帶資訊按鈕的詞典開關列(顯示 DictionaryInfo.description 彈窗)。
+    // 中文: 帶資訊按鈕的詞典開關列(顯示 DictionaryInfo.descriptionKey 解析後的彈窗)。
     private func dictionaryToggle(
         _ text: String,
         isOn: Binding<Bool>,
@@ -385,7 +385,7 @@ struct DictionaryTab: View {
         Toggle(isOn: isOn) {
             HStack {
                 Text(text)
-                SettingInfoButton(description: info.description)
+                SettingInfoButton(description: lang.string(info.descriptionKey))
             }
         }
         .onChange(of: isOn.wrappedValue) { _, newValue in

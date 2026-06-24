@@ -367,6 +367,71 @@
       "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "備份檔案內底包含你所有 ê 使用紀錄，佇 iOS 佮 Android 攏通用，準講換機仔嘛毋免煩惱。", "tailo": "pī-hūn tòng-àn lāi-té pau-hâm lí sóo-iú ê sú-iōng kì-lio̍k， tī iOS kah Android láng thong-iōng， tsún-kóng uānn ki-á mā m̄-bián huân-ló。", "poj": "pī-hūn tòng-àn lāi-té pau-hâm lí só͘-iú ê sú-iōng kì-lio̍k， tī iOS kah Android láng thong-iōng， chún-kóng ōaⁿ ki-á mā m̄-bián hoân-ló。", "en": "Backup files contain all your usage records and work on both iOS and Android, so you need not worry when switching phones.", "ja": "バックアップファイルにはすべての利用記録が含まれ、iOS と Android の両方で使用できます。機種変更の際もご安心ください。" }
+    },
+    "moeDescription": {
+      "comment": "MOE Sutian dictionary — long description shown under its toggle in dictionary settings.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。", "tailo": "Thê-kiong Tâi-uân tâi-gí tshiau-tshuê ki̍p huâ-gí tshiau-tshuê, khó lîng-thìng sû-ba̍k hàn lē-kù huat-im, hong-piān ha̍k-si̍p. Hù-ū hun-luī sik-ín、pōo-siú pit-uē sik-ín ki̍p hù-lio̍k.", "poj": "Thê-kiong Tâi-oân tâi-gí chhiau-chhôe ki̍p hôa-gí chhiau-chhôe, khó lêng-thèng sû-ba̍k hàn lē-kù hoat-im, hong-piān ha̍k-si̍p. Hù-ū hun-lūi sek-ín、pō͘-siú pit-ōe sek-ín ki̍p hù-lio̍k.", "en": "Search Taiwanese Taigi and Mandarin, with audio for headwords and example sentences for easy learning. Includes category and radical-stroke indexes plus appendices.", "ja": "台湾語と中国語で検索でき、見出し語と例文の発音を聞いて学習できます。分類索引・部首画数索引・付録付き。" }
+    },
+    "newwordDescription": {
+      "comment": "Taigi TV new-words dictionary — toggle description in dictionary settings.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。", "tailo": "Tâi-gí-tâi iau-tshiánn tsuan-ka ha̍k-tsiá, tīng-kî tiàu-khui huē-gī, thó-lūn sin-hing sû-luī ê si̍t-tong tâi-gí kóng-huat, kiàn-li̍p sû-khòo hōo bîn-tsiòng tsa-sûn sú-iōng.", "poj": "Tâi-gí-tâi iau-chhiáⁿ choan-ka ha̍k-chiá, tēng-kî tiàu-khui hōe-gī, thó-lūn sin-heng sû-lūi ê si̍t-tong tâi-gí kóng-hoat, kiàn-li̍p sû-khò͘ hō͘ bîn-chiòng cha-sûn sú-iōng.", "en": "Taigi TV invites experts and scholars to meet regularly, settle fitting Taigi terms for emerging words, and build a public lookup glossary.", "ja": "台語テレビ局が専門家・学者を招き、定期的に会議を開いて新語の適切な台湾語表現を検討し、一般向けの検索辞書を構築しています。" }
+    },
+    "sttiDescription": {
+      "comment": "MOE academic-terminology (STTI) dictionary — toggle description in dictionary settings.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。", "tailo": "Tī 106 nî khí tsìn-hîng gí-bûn、sòo-ha̍k、siā-huē、tsū-jiân kho-ha̍k、gē-su̍t、tsong-ha̍p ua̍h-tōng、kho-ki、kiān-khong kap thé-io̍k tíng 8 tāi líng-i̍k ha̍k-kho su̍t-gí tsī tâi-gí pian-i̍k.", "poj": "Tī 106 nî khí chìn-hêng gí-bûn、sò͘-ha̍k、siā-hōe、chū-jiân kho-ha̍k、gē-su̍t、chong-ha̍p oa̍h-tōng、kho-ki、kiān-khong kap thé-io̍k téng 8 tāi léng-e̍k ha̍k-kho su̍t-gí chī tâi-gí pian-e̍k.", "en": "Since 2017, academic terminology across eight fields — language arts, mathematics, social studies, natural science, arts, integrative activities, technology, and health & physical education — translated into Taigi.", "ja": "2017年から、国語・数学・社会・自然科学・芸術・総合的活動・科学技術・保健体育の8領域の学科用語を台湾語に翻訳。" }
+    },
+    "kunggeDescription": {
+      "comment": "Craft-terms (Kungge) dictionary — toggle description in dictionary settings.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。", "tailo": "Siu-lio̍k to-ta̍t it-tshian nn̄g-pah tsoo kuan-kiān tâi-gí kang-gē sû-luī, hâm-kài tô-tsû、bo̍k-gē、kim-kang、tik-tîn、siam-uî、po-lê、tshat-gē、tsio̍h-gē、phuê-kik、tsuá-gē tíng tsa̍p-it hāng kang-gē luī-pia̍t.", "poj": "Siu-lio̍k to-ta̍t it-chhian nn̄g-pah cho͘ koan-kiān tâi-gí kang-gē sû-lūi, hâm-kài tô-chû、bo̍k-gē、kim-kang、tek-tîn、siam-ûi、po-lê、chhat-gē、chio̍h-gē、phôe-kek、chóa-gē téng cha̍p-it hāng kang-gē lūi-pia̍t.", "en": "Over 1,200 key Taigi craft terms covering eleven categories such as ceramics, woodcraft, metalwork, bamboo and rattan, fiber, glass, lacquer, stonework, leather, and paper craft.", "ja": "陶磁・木工・金工・竹藤・繊維・ガラス・漆芸・石工・皮革・紙工など11分野にわたる、1,200組を超える台湾語の工芸用語を収録。" }
+    },
+    "lkkDescription": {
+      "comment": "Lí Kang-Khioh Foundation Han-Roman dictionary — toggle description in dictionary settings.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "李江却台語文教基金會漢羅合用建議用字。", "tailo": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-huē hàn-lô ha̍p-iōng kiàn-gī iōng-jī.", "poj": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-hōe hàn-lô ha̍p-iōng kiàn-gī iōng-jī.", "en": "Suggested Han-Roman mixed-script characters from the Lí Kang-Khioh Taigi Culture and Education Foundation.", "ja": "李江却台語文教基金会による漢字ローマ字混在表記の推奨用字。" }
+    },
+    "devDescription": {
+      "comment": "Developer supplement dictionary — toggle description in dictionary settings.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。", "tailo": "It-hú gōo-īnn、tshài-tshī-á-miâ、Tâi/Tâi、kàu-tián phiah-tì-sik、sòo-jī sî-kan ji̍t-kî、hîng-tsìng-khu.", "poj": "It-hú gō͘-īⁿ、chhài-chhī-á-miâ、Tâi/Tâi、kàu-tián phiah-tì-sek、sò͘-jī sî-kan ji̍t-kî、hêng-chèng-khu.", "en": "Government branches, common given names, 台/臺 variants, dictionary trivia, numbers/times/dates, and administrative districts.", "ja": "一府五院、よくある名前、台/臺、辞典の豆知識、数字・時間・日付、行政区。" }
+    },
+    "iTaigiDescription": {
+      "comment": "iTaigi dictionary — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "一个群眾編輯ê開放台語辭典", "tailo": "Tsi̍t-ê kûn-tsiòng pian-tsi̍p ê khai-hòng tâi-gí sû-tián", "poj": "Chi̍t-ê kûn-chiòng pian-chi̍p ê khai-hòng tâi-gí sû-tián", "en": "A crowd-edited open Taigi dictionary.", "ja": "みんなで編集するオープンな台湾語辞典。" }
+    },
+    "taiwanJapanDescription": {
+      "comment": "Taiwan-Japan (Ogawa) dictionary — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "日本時代小川尚義編纂ê台語辭典。", "tailo": "Ji̍t-pún sî-tāi Siáu-tshuan Siōng-gī pian-tshuàn ê tâi-gí sû-tián.", "poj": "Ji̍t-pún sî-tāi Siáu-chhoan Siōng-gī pian-chhoàn ê tâi-gí sû-tián.", "en": "A Taigi dictionary compiled by Ogawa Naoyoshi during the Japanese era.", "ja": "日本統治時代に小川尚義が編纂した台湾語辞典。" }
+    },
+    "taiHuaDescription": {
+      "comment": "Taiwanese-Mandarin online dictionary — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修", "tailo": "「Tâi-huâ suànn-tíng sû-tián」sī Tīng Liông-uí kàu-siū thê-kiong tsu-liāu、Iûnn Ín-giân kàu-siū pian-siu", "poj": "「Tâi-hôa sòaⁿ-téng sû-tián」sī Tēng Liông-úi kàu-siū thê-kiong chu-liāu、Iûⁿ Ín-giân kàu-siū pian-siu", "en": "The Taiwanese–Mandarin Online Dictionary: data provided by Prof. Tīng Liông-uí, edited by Prof. Iûnn Ín-giân.", "ja": "「台華オンライン辞典」鄭良偉教授が資料を提供し、楊允言教授が編集。" }
+    },
+    "taiwanPlantDescription": {
+      "comment": "Taiwan plant-names dictionary — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "日本時代佐佐木舜一整理ê台灣植物台語名。", "tailo": "Ji̍t-pún sî-tāi Tsò-tsò-bo̍k Sùn-it tsíng-lí ê Tâi-uân si̍t-bu̍t tâi-gí miâ.", "poj": "Ji̍t-pún sî-tāi Chò-chò-bo̍k Sùn-it chéng-lí ê Tâi-oân si̍t-bu̍t tâi-gí miâ.", "en": "Taigi names for Taiwanese plants, compiled by Sasaki Shun'ichi during the Japanese era.", "ja": "日本統治時代に佐々木舜一がまとめた台湾の植物の台湾語名。" }
+    },
+    "variantDescription": {
+      "comment": "Variant-characters source — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "依據教典資料標示台語異用字。", "tailo": "I-kì kàu-tián tsu-liāu phiau-sī tâi-gí ī-iōng-jī.", "poj": "I-kì kàu-tián chu-liāu phiau-sī tâi-gí ī-iōng-jī.", "en": "Marks Taigi variant characters based on MOE dictionary data.", "ja": "教育部辞典のデータに基づき台湾語の異体字を表示。" }
+    },
+    "khpooDescription": {
+      "comment": "Regional-accent supplement — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "補充在地腔口差異", "tailo": "Póo-tshiong tsāi-tuē khiunn-kháu tsha-ī.", "poj": "Pó͘-chhiong chāi-tōe khiuⁿ-kháu chha-ī.", "en": "Supplements regional accent differences.", "ja": "各地の発音の違いを補足。" }
+    },
+    "khiinDescription": {
+      "comment": "Khiin (native-characters) source — info-button popup description.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "「水台文」、「台字田」用字", "tailo": "「Tsuí-tâi-bûn」、「Tâi-jī-tshân」iōng-jī", "poj": "「Chúi-tâi-bûn」、「Tâi-jī-chhân」iōng-jī", "en": "Characters used by 'Tsuí Tâi-bûn' and 'Tâi-jī-tshân'.", "ja": "「水台文」「台字田」の用字。" }
     }
   }
 }

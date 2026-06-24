@@ -31,24 +31,28 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // Helper composables and data for DictionarySettingsScreen
 
+// Carries the i18n key for a source's description; the call site resolves it
+// via the active display language (`stringRes(info.descriptionKey)`).
 internal data class DictionaryInfo(
-    val description: String,
+    val descriptionKey: StringKey,
 )
 
 internal object DictionaryInfoData {
-    val iTaigi = DictionaryInfo(description = "一个群眾編輯ê開放台語辭典")
-    val taiwanJapan = DictionaryInfo(description = "日本時代小川尚義編纂ê台語辭典。")
-    val taiHua = DictionaryInfo(description = "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修")
-    val taiwanPlant = DictionaryInfo(description = "日本時代佐佐木舜一整理ê台灣植物台語名。")
-    val variant = DictionaryInfo(description = "依據教典資料標示台語異用字。")
-    val khpoo = DictionaryInfo(description = "補充在地腔口差異")
-    val khiin = DictionaryInfo(description = "「水台文」、「台字田」用字")
+    val iTaigi = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_I_TAIGI_DESCRIPTION)
+    val taiwanJapan = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_TAIWAN_JAPAN_DESCRIPTION)
+    val taiHua = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_TAI_HUA_DESCRIPTION)
+    val taiwanPlant = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_TAIWAN_PLANT_DESCRIPTION)
+    val variant = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_VARIANT_DESCRIPTION)
+    val khpoo = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_KHPOO_DESCRIPTION)
+    val khiin = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_KHIIN_DESCRIPTION)
 }
 
 @Composable
@@ -186,7 +190,7 @@ internal fun DictionaryInfoSwitch(
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(modifier = Modifier.width(6.dp))
-        SettingInfoButton(description = info.description)
+        SettingInfoButton(description = stringRes(info.descriptionKey))
         Spacer(modifier = Modifier.weight(1f))
         Switch(
             checked = checked,

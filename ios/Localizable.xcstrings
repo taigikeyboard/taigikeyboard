@@ -1585,6 +1585,42 @@
         }
       }
     },
+    "i18n_dictionary_devDescription": {
+      "comment": "Developer supplement dictionary — toggle description in dictionary settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Government branches, common given names, 台/臺 variants, dictionary trivia, numbers/times/dates, and administrative districts."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一府五院、よくある名前、台/臺、辞典の豆知識、数字・時間・日付、行政区。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It-hú gō͘-īⁿ、chhài-chhī-á-miâ、Tâi/Tâi、kàu-tián phiah-tì-sek、sò͘-jī sî-kan ji̍t-kî、hêng-chèng-khu."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It-hú gōo-īnn、tshài-tshī-á-miâ、Tâi/Tâi、kàu-tián phiah-tì-sik、sòo-jī sî-kan ji̍t-kî、hîng-tsìng-khu."
+          }
+        }
+      }
+    },
     "i18n_dictionary_devSupplementDict": {
       "comment": "Display name of the developer supplement dictionary file.",
       "extractionState": "manual",
@@ -2193,6 +2229,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "kiàn-pún： gâu-tsá"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_iTaigiDescription": {
+      "comment": "iTaigi dictionary — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A crowd-edited open Taigi dictionary."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "みんなで編集するオープンな台湾語辞典。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一个群眾編輯ê開放台語辭典"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chi̍t-ê kûn-chiòng pian-chi̍p ê khai-hòng tâi-gí sû-tián"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tsi̍t-ê kûn-tsiòng pian-tsi̍p ê khai-hòng tâi-gí sû-tián"
           }
         }
       }
@@ -2845,6 +2917,150 @@
         }
       }
     },
+    "i18n_dictionary_khiinDescription": {
+      "comment": "Khiin (native-characters) source — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters used by 'Tsuí Tâi-bûn' and 'Tâi-jī-tshân'."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「水台文」「台字田」の用字。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「水台文」、「台字田」用字"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「Chúi-tâi-bûn」、「Tâi-jī-chhân」iōng-jī"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「Tsuí-tâi-bûn」、「Tâi-jī-tshân」iōng-jī"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_khpooDescription": {
+      "comment": "Regional-accent supplement — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supplements regional accent differences."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各地の発音の違いを補足。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補充在地腔口差異"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pó͘-chhiong chāi-tōe khiuⁿ-kháu chha-ī."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Póo-tshiong tsāi-tuē khiunn-kháu tsha-ī."
+          }
+        }
+      }
+    },
+    "i18n_dictionary_kunggeDescription": {
+      "comment": "Craft-terms (Kungge) dictionary — toggle description in dictionary settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over 1,200 key Taigi craft terms covering eleven categories such as ceramics, woodcraft, metalwork, bamboo and rattan, fiber, glass, lacquer, stonework, leather, and paper craft."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "陶磁・木工・金工・竹藤・繊維・ガラス・漆芸・石工・皮革・紙工など11分野にわたる、1,200組を超える台湾語の工芸用語を収録。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siu-lio̍k to-ta̍t it-chhian nn̄g-pah cho͘ koan-kiān tâi-gí kang-gē sû-lūi, hâm-kài tô-chû、bo̍k-gē、kim-kang、tek-tîn、siam-ûi、po-lê、chhat-gē、chio̍h-gē、phôe-kek、chóa-gē téng cha̍p-it hāng kang-gē lūi-pia̍t."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siu-lio̍k to-ta̍t it-tshian nn̄g-pah tsoo kuan-kiān tâi-gí kang-gē sû-luī, hâm-kài tô-tsû、bo̍k-gē、kim-kang、tik-tîn、siam-uî、po-lê、tshat-gē、tsio̍h-gē、phuê-kik、tsuá-gē tíng tsa̍p-it hāng kang-gē luī-pia̍t."
+          }
+        }
+      }
+    },
+    "i18n_dictionary_lkkDescription": {
+      "comment": "Lí Kang-Khioh Foundation Han-Roman dictionary — toggle description in dictionary settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested Han-Roman mixed-script characters from the Lí Kang-Khioh Taigi Culture and Education Foundation."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "李江却台語文教基金会による漢字ローマ字混在表記の推奨用字。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "李江却台語文教基金會漢羅合用建議用字。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-hōe hàn-lô ha̍p-iōng kiàn-gī iōng-jī."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-huē hàn-lô ha̍p-iōng kiàn-gī iōng-jī."
+          }
+        }
+      }
+    },
     "i18n_dictionary_lkkDict": {
       "comment": "Display name of the Han-Lo recommended-character dictionary source.",
       "extractionState": "manual",
@@ -2953,6 +3169,42 @@
         }
       }
     },
+    "i18n_dictionary_moeDescription": {
+      "comment": "MOE Sutian dictionary — long description shown under its toggle in dictionary settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Taiwanese Taigi and Mandarin, with audio for headwords and example sentences for easy learning. Includes category and radical-stroke indexes plus appendices."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台湾語と中国語で検索でき、見出し語と例文の発音を聞いて学習できます。分類索引・部首画数索引・付録付き。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thê-kiong Tâi-oân tâi-gí chhiau-chhôe ki̍p hôa-gí chhiau-chhôe, khó lêng-thèng sû-ba̍k hàn lē-kù hoat-im, hong-piān ha̍k-si̍p. Hù-ū hun-lūi sek-ín、pō͘-siú pit-ōe sek-ín ki̍p hù-lio̍k."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thê-kiong Tâi-uân tâi-gí tshiau-tshuê ki̍p huâ-gí tshiau-tshuê, khó lîng-thìng sû-ba̍k hàn lē-kù huat-im, hong-piān ha̍k-si̍p. Hù-ū hun-luī sik-ín、pōo-siú pit-uē sik-ín ki̍p hù-lio̍k."
+          }
+        }
+      }
+    },
     "i18n_dictionary_moeSectionTitle": {
       "comment": "Section header grouping MOE dictionary sources.",
       "extractionState": "manual",
@@ -2985,6 +3237,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "kàu-io̍k-pōo iōng-jī"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_newwordDescription": {
+      "comment": "Taigi TV new-words dictionary — toggle description in dictionary settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi TV invites experts and scholars to meet regularly, settle fitting Taigi terms for emerging words, and build a public lookup glossary."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台語テレビ局が専門家・学者を招き、定期的に会議を開いて新語の適切な台湾語表現を検討し、一般向けの検索辞書を構築しています。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tâi-gí-tâi iau-chhiáⁿ choan-ka ha̍k-chiá, tēng-kî tiàu-khui hōe-gī, thó-lūn sin-heng sû-lūi ê si̍t-tong tâi-gí kóng-hoat, kiàn-li̍p sû-khò͘ hō͘ bîn-chiòng cha-sûn sú-iōng."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tâi-gí-tâi iau-tshiánn tsuan-ka ha̍k-tsiá, tīng-kî tiàu-khui huē-gī, thó-lūn sin-hing sû-luī ê si̍t-tong tâi-gí kóng-huat, kiàn-li̍p sû-khòo hōo bîn-tsiòng tsa-sûn sú-iōng."
           }
         }
       }
@@ -3241,6 +3529,42 @@
         }
       }
     },
+    "i18n_dictionary_sttiDescription": {
+      "comment": "MOE academic-terminology (STTI) dictionary — toggle description in dictionary settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Since 2017, academic terminology across eight fields — language arts, mathematics, social studies, natural science, arts, integrative activities, technology, and health & physical education — translated into Taigi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2017年から、国語・数学・社会・自然科学・芸術・総合的活動・科学技術・保健体育の8領域の学科用語を台湾語に翻訳。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tī 106 nî khí chìn-hêng gí-bûn、sò͘-ha̍k、siā-hōe、chū-jiân kho-ha̍k、gē-su̍t、chong-ha̍p oa̍h-tōng、kho-ki、kiān-khong kap thé-io̍k téng 8 tāi léng-e̍k ha̍k-kho su̍t-gí chī tâi-gí pian-e̍k."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tī 106 nî khí tsìn-hîng gí-bûn、sòo-ha̍k、siā-huē、tsū-jiân kho-ha̍k、gē-su̍t、tsong-ha̍p ua̍h-tōng、kho-ki、kiān-khong kap thé-io̍k tíng 8 tāi líng-i̍k ha̍k-kho su̍t-gí tsī tâi-gí pian-i̍k."
+          }
+        }
+      }
+    },
     "i18n_dictionary_supplementSectionTitle": {
       "comment": "Section header grouping supplementary dictionary data.",
       "extractionState": "manual",
@@ -3277,6 +3601,114 @@
         }
       }
     },
+    "i18n_dictionary_taiHuaDescription": {
+      "comment": "Taiwanese-Mandarin online dictionary — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Taiwanese–Mandarin Online Dictionary: data provided by Prof. Tīng Liông-uí, edited by Prof. Iûnn Ín-giân."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「台華オンライン辞典」鄭良偉教授が資料を提供し、楊允言教授が編集。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「Tâi-hôa sòaⁿ-téng sû-tián」sī Tēng Liông-úi kàu-siū thê-kiong chu-liāu、Iûⁿ Ín-giân kàu-siū pian-siu"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「Tâi-huâ suànn-tíng sû-tián」sī Tīng Liông-uí kàu-siū thê-kiong tsu-liāu、Iûnn Ín-giân kàu-siū pian-siu"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_taiwanJapanDescription": {
+      "comment": "Taiwan-Japan (Ogawa) dictionary — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Taigi dictionary compiled by Ogawa Naoyoshi during the Japanese era."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日本統治時代に小川尚義が編纂した台湾語辞典。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日本時代小川尚義編纂ê台語辭典。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ji̍t-pún sî-tāi Siáu-chhoan Siōng-gī pian-chhoàn ê tâi-gí sû-tián."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ji̍t-pún sî-tāi Siáu-tshuan Siōng-gī pian-tshuàn ê tâi-gí sû-tián."
+          }
+        }
+      }
+    },
+    "i18n_dictionary_taiwanPlantDescription": {
+      "comment": "Taiwan plant-names dictionary — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi names for Taiwanese plants, compiled by Sasaki Shun'ichi during the Japanese era."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日本統治時代に佐々木舜一がまとめた台湾の植物の台湾語名。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日本時代佐佐木舜一整理ê台灣植物台語名。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ji̍t-pún sî-tāi Chò-chò-bo̍k Sùn-it chéng-lí ê Tâi-oân si̍t-bu̍t tâi-gí miâ."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ji̍t-pún sî-tāi Tsò-tsò-bo̍k Sùn-it tsíng-lí ê Tâi-uân si̍t-bu̍t tâi-gí miâ."
+          }
+        }
+      }
+    },
     "i18n_dictionary_tooManyEntries": {
       "comment": "Error: the import exceeds the 30,000-entry cap.",
       "extractionState": "manual",
@@ -3309,6 +3741,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "sû siunn-tse（siōng hān 30,000 hāng）"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_variantDescription": {
+      "comment": "Variant-characters source — info-button popup description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marks Taigi variant characters based on MOE dictionary data."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部辞典のデータに基づき台湾語の異体字を表示。"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依據教典資料標示台語異用字。"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I-kì kàu-tián chu-liāu phiau-sī tâi-gí ī-iōng-jī."
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I-kì kàu-tián tsu-liāu phiau-sī tâi-gí ī-iōng-jī."
           }
         }
       }
