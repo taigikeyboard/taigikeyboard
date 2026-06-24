@@ -1,5 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.core
 
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -31,7 +32,7 @@ class BuiltInThemesTest {
     fun standardHead_isDefaultSentinel() {
         val head = BuiltInThemes.families.first().themes.first()
         assertEquals(ThemeId.DEFAULT, head.id)
-        assertEquals("預設", head.displayName)
+        assertEquals(StringKey.THEME_PALETTE_DEFAULT, head.displayNameKey)
     }
 
     @Test
@@ -56,16 +57,30 @@ class BuiltInThemesTest {
     fun themeById_returnsMatchOrNull() {
         assertEquals("standardBlue", BuiltInThemes.theme("standardBlue")?.id)
         assertNull(BuiltInThemes.theme("no_such_theme"))
-        assertEquals("預設", BuiltInThemes.theme(ThemeId.DEFAULT)?.displayName)
+        assertEquals(StringKey.THEME_PALETTE_DEFAULT, BuiltInThemes.theme(ThemeId.DEFAULT)?.displayNameKey)
     }
 
     // Three key-style families (經典/框線/簡潔), each carrying the same 7 colors.
     @Test
     fun families_threeKeyStyleFamiliesEachWithSevenColors() {
-        assertEquals(listOf("經典", "框線", "簡潔"), BuiltInThemes.families.map { it.title })
+        assertEquals(
+            listOf(StringKey.THEME_FAMILY_CLASSIC, StringKey.THEME_FAMILY_FRAMED, StringKey.THEME_FAMILY_CLEAN),
+            BuiltInThemes.families.map { it.titleKey },
+        )
         BuiltInThemes.families.forEach { family ->
-            assertEquals("${family.title} must carry all 7 shared colors", 7, family.themes.size)
-            assertEquals(listOf("預設", "櫻花", "金煌", "海風", "翠青", "藤紫", "暗眠山貓"), family.themes.map { it.displayName })
+            assertEquals("${family.titleKey} must carry all 7 shared colors", 7, family.themes.size)
+            assertEquals(
+                listOf(
+                    StringKey.THEME_PALETTE_DEFAULT,
+                    StringKey.THEME_PALETTE_PINK,
+                    StringKey.THEME_PALETTE_GOLD,
+                    StringKey.THEME_PALETTE_BLUE,
+                    StringKey.THEME_PALETTE_GREEN,
+                    StringKey.THEME_PALETTE_PURPLE,
+                    StringKey.THEME_PALETTE_CATPPUCCIN,
+                ),
+                family.themes.map { it.displayNameKey },
+            )
         }
         assertEquals(21, BuiltInThemes.all.size)
     }
@@ -176,7 +191,7 @@ class BuiltInThemesTest {
     @Test
     fun colorsForScheme_darkOnlyFallsBackToDark() {
         val dark = KeyboardColorSettings(backgroundColor = 0xFF112233.toInt())
-        val theme = BuiltInTheme("test_dark_only", "Dark Only", light = null, dark = dark)
+        val theme = BuiltInTheme("test_dark_only", StringKey.THEME_PALETTE_DEFAULT, light = null, dark = dark)
         assertEquals(dark, theme.colors(isDark = false))
         assertEquals(dark, theme.colors(isDark = true))
     }
@@ -184,7 +199,7 @@ class BuiltInThemesTest {
     @Test
     fun colorsForScheme_lightOnlyFallsBackToLight() {
         val light = KeyboardColorSettings(backgroundColor = 0xFFAABBCC.toInt())
-        val theme = BuiltInTheme("test_light_only", "Light Only", light = light, dark = null)
+        val theme = BuiltInTheme("test_light_only", StringKey.THEME_PALETTE_DEFAULT, light = light, dark = null)
         assertEquals(light, theme.colors(isDark = true))
         assertEquals(light, theme.colors(isDark = false))
     }
@@ -193,7 +208,7 @@ class BuiltInThemesTest {
     fun colorsForScheme_picksRequestedVariant() {
         val light = KeyboardColorSettings(backgroundColor = 0xFF111111.toInt())
         val dark = KeyboardColorSettings(backgroundColor = 0xFF222222.toInt())
-        val theme = BuiltInTheme("test_both", "Both", light = light, dark = dark)
+        val theme = BuiltInTheme("test_both", StringKey.THEME_PALETTE_DEFAULT, light = light, dark = dark)
         assertEquals(light, theme.colors(isDark = false))
         assertEquals(dark, theme.colors(isDark = true))
     }

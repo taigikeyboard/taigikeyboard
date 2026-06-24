@@ -7273,6 +7273,114 @@
         }
       }
     },
+    "i18n_theme_familyClassic": {
+      "comment": "Built-in theme key-style family header: filled keys. DRAFT TL/POJ (king-tián, full dict entry) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Classic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クラシック"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "經典"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "keng-tián"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "king-tián"
+          }
+        }
+      }
+    },
+    "i18n_theme_familyClean": {
+      "comment": "Built-in theme key-style family header: transparent keys, no border. DRAFT TL/POJ (kán-kiat, full dict entry) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimal"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニマル"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "簡潔"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kán-kiat"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kán-kiat"
+          }
+        }
+      }
+    },
+    "i18n_theme_familyFramed": {
+      "comment": "Built-in theme key-style family header: transparent keys with an outline border. DRAFT TL/POJ (框 khing + 線 suànn, component-grounded) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outlined"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アウトライン"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "框線"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kheng-sòaⁿ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "khing-suànn"
+          }
+        }
+      }
+    },
     "i18n_theme_keyBorderWidth": {
       "comment": "Theme editor slider label: key border width.",
       "extractionState": "manual",
@@ -7557,6 +7665,258 @@
           "stringUnit": {
             "state": "translated",
             "value": "su-ji̍p tsú-tê miâ-tshing"
+          }
+        }
+      }
+    },
+    "i18n_theme_paletteBlue": {
+      "comment": "Built-in theme color name: blue gradient (value = 'Sea Breeze'). DRAFT TL/POJ (hái-hong, full dict entry) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sea Breeze"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "潮風"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "海風"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hái-hong"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hái-hong"
+          }
+        }
+      }
+    },
+    "i18n_theme_paletteCatppuccin": {
+      "comment": "Built-in theme color name: the dark-only Catppuccin Mocha palette. Hanji 暗眠山貓 is a pun (山貓=mountain cat≈cat, 暗眠=dark sleep≈dark mode). DRAFT TL/POJ (暗 àm + 眠 bîn + 山貓 suann-niau, component-grounded) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catppuccin"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャットプチン"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗眠山貓"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "àm-bîn-soaⁿ-niau"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "àm-bîn-suann-niau"
+          }
+        }
+      }
+    },
+    "i18n_theme_paletteDefault": {
+      "comment": "Built-in theme color name: the adaptive default palette (value = 'Default'). DRAFT TL/POJ (ī-siat, full dict main reading) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルト"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ī-siat"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ī-siat"
+          }
+        }
+      }
+    },
+    "i18n_theme_paletteGold": {
+      "comment": "Built-in theme color name: golden gradient (value = 'Gold'). DRAFT TL/POJ (金 kim + 煌 hông, component-grounded) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gold"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴールド"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金煌"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kim-hông"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kim-hông"
+          }
+        }
+      }
+    },
+    "i18n_theme_paletteGreen": {
+      "comment": "Built-in theme color name: green gradient (value = 'Jade' / jade green). DRAFT TL/POJ (翠 tshuì + 青 tshing, component-grounded) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jade"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翡翠"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翠青"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chhùi-chheng"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshuì-tshing"
+          }
+        }
+      }
+    },
+    "i18n_theme_palettePink": {
+      "comment": "Built-in theme color name: soft pink gradient (value = 'Sakura' / cherry blossom). DRAFT TL/POJ (ing-hue, full dict entry) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sakura"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桜"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "櫻花"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eng-hoe"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ing-hue"
+          }
+        }
+      }
+    },
+    "i18n_theme_palettePurple": {
+      "comment": "Built-in theme color name: purple gradient (value = 'Wisteria'). DRAFT TL/POJ (藤 tîn + 紫 tsí, component-grounded) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wisteria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤紫"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤紫"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tîn-chí"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tîn-tsí"
           }
         }
       }

@@ -197,6 +197,16 @@
     <string name="i18n_theme_customFont">字型設定</string>
     <string name="i18n_theme_customThemesSection">自訂主題</string>
     <string name="i18n_theme_createNewTheme">新主題…</string>
+    <string name="i18n_theme_familyClassic">經典</string>
+    <string name="i18n_theme_familyFramed">框線</string>
+    <string name="i18n_theme_familyClean">簡潔</string>
+    <string name="i18n_theme_paletteDefault">預設</string>
+    <string name="i18n_theme_palettePink">櫻花</string>
+    <string name="i18n_theme_paletteGold">金煌</string>
+    <string name="i18n_theme_paletteBlue">海風</string>
+    <string name="i18n_theme_paletteGreen">翠青</string>
+    <string name="i18n_theme_palettePurple">藤紫</string>
+    <string name="i18n_theme_paletteCatppuccin">暗眠山貓</string>
     <string name="i18n_theme_keyboardSection">齒盤介面</string>
     <string name="i18n_theme_colorKeySection">揤鈕介面</string>
     <string name="i18n_theme_candidateSection">候選詞介面</string>

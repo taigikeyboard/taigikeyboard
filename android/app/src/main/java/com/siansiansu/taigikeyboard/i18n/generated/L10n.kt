@@ -394,6 +394,26 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_CUSTOM_THEMES_SECTION)
     val themeCreateNewTheme: String
         @Composable get() = stringRes(StringKey.THEME_CREATE_NEW_THEME)
+    val themeFamilyClassic: String
+        @Composable get() = stringRes(StringKey.THEME_FAMILY_CLASSIC)
+    val themeFamilyFramed: String
+        @Composable get() = stringRes(StringKey.THEME_FAMILY_FRAMED)
+    val themeFamilyClean: String
+        @Composable get() = stringRes(StringKey.THEME_FAMILY_CLEAN)
+    val themePaletteDefault: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_DEFAULT)
+    val themePalettePink: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_PINK)
+    val themePaletteGold: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_GOLD)
+    val themePaletteBlue: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_BLUE)
+    val themePaletteGreen: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_GREEN)
+    val themePalettePurple: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_PURPLE)
+    val themePaletteCatppuccin: String
+        @Composable get() = stringRes(StringKey.THEME_PALETTE_CATPPUCCIN)
     val themeKeyboardSection: String
         @Composable get() = stringRes(StringKey.THEME_KEYBOARD_SECTION)
     val themeColorKeySection: String

@@ -36,7 +36,11 @@ enum ThemeId {
 // 中文: 渲染時依系統 colorScheme 解析;某一 variant 為 nil 時 fallback 另一套。
 struct BuiltInTheme: Equatable {
     let id: String
-    let displayName: String
+    /// i18n key for the display name, resolved at the picker call site via the
+    /// `DisplayLanguageStore` so the name follows the user's chosen display
+    /// language (mirrors `InputMode.displayNameKey` / `FontType.displayNameKey`).
+    // 中文: 顯示名稱的 i18n key,在 picker call site 用 DisplayLanguageStore 解析,跟隨使用者選的顯示語言。
+    let displayNameKey: StringKey
     let light: KeyboardColorSettings?
     let dark: KeyboardColorSettings?
 

@@ -31,7 +31,7 @@ final class BuiltInThemesTests: XCTestCase {
     func testStandardHead_isDefaultSentinel() {
         let head = BuiltInThemes.families.first?.themes.first
         XCTAssertEqual(head?.id, ThemeId.default)
-        XCTAssertEqual(head?.displayName, "預設")
+        XCTAssertEqual(head?.displayNameKey, .themePaletteDefault)
     }
 
     // trace: only the Standard head may be the default sentinel — any other default id would mis-route
@@ -60,15 +60,18 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: "standardBlue")?.id, "standardBlue")
         XCTAssertNil(BuiltInThemes.theme(id: "no_such_theme"))
         // The default sentinel resolves to the Standard head (the app default card).
-        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayName, "預設")
+        XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayNameKey, .themePaletteDefault)
     }
 
     // trace: three key-style families (經典/框線/簡潔), each carrying the same 7 colors
     func testFamilies_threeKeyStyleFamiliesEachWithSevenColors() {
-        XCTAssertEqual(BuiltInThemes.families.map(\.title), ["經典", "框線", "簡潔"])
+        XCTAssertEqual(BuiltInThemes.families.map(\.titleKey), [.themeFamilyClassic, .themeFamilyFramed, .themeFamilyClean])
         for family in BuiltInThemes.families {
-            XCTAssertEqual(family.themes.count, 7, "\(family.title) must carry all 7 shared colors")
-            XCTAssertEqual(family.themes.map(\.displayName), ["預設", "櫻花", "金煌", "海風", "翠青", "藤紫", "暗眠山貓"])
+            XCTAssertEqual(family.themes.count, 7, "\(family.titleKey) must carry all 7 shared colors")
+            XCTAssertEqual(
+                family.themes.map(\.displayNameKey),
+                [.themePaletteDefault, .themePalettePink, .themePaletteGold, .themePaletteBlue, .themePaletteGreen, .themePalettePurple, .themePaletteCatppuccin],
+            )
         }
         XCTAssertEqual(BuiltInThemes.all.count, 21, "3 families × 7 colors")
     }
@@ -222,7 +225,7 @@ final class BuiltInThemesTests: XCTestCase {
     // trace: a dark-only theme (light == nil) → .light request falls back to the dark variant
     func testColorsForScheme_darkOnlyFallsBackToDark() {
         let darkColors = makeColors(hex: 0x112233)
-        let darkOnly = BuiltInTheme(id: "test_dark_only", displayName: "Dark Only", light: nil, dark: darkColors)
+        let darkOnly = BuiltInTheme(id: "test_dark_only", displayNameKey: .themePaletteDefault, light: nil, dark: darkColors)
         XCTAssertEqual(darkOnly.colors(for: .light), darkColors, "light request must fall back to dark when no light")
         XCTAssertEqual(darkOnly.colors(for: .dark), darkColors)
     }
@@ -230,7 +233,7 @@ final class BuiltInThemesTests: XCTestCase {
     // trace: a light-only theme (dark == nil) → .dark request falls back to the light variant
     func testColorsForScheme_lightOnlyFallsBackToLight() {
         let lightColors = makeColors(hex: 0xAABBCC)
-        let lightOnly = BuiltInTheme(id: "test_light_only", displayName: "Light Only", light: lightColors, dark: nil)
+        let lightOnly = BuiltInTheme(id: "test_light_only", displayNameKey: .themePaletteDefault, light: lightColors, dark: nil)
         XCTAssertEqual(lightOnly.colors(for: .dark), lightColors, "dark request must fall back to light when no dark")
         XCTAssertEqual(lightOnly.colors(for: .light), lightColors)
     }
@@ -239,7 +242,7 @@ final class BuiltInThemesTests: XCTestCase {
     func testColorsForScheme_picksRequestedVariant() {
         let light = makeColors(hex: 0x111111)
         let dark = makeColors(hex: 0x222222)
-        let theme = BuiltInTheme(id: "test_both", displayName: "Both", light: light, dark: dark)
+        let theme = BuiltInTheme(id: "test_both", displayNameKey: .themePaletteDefault, light: light, dark: dark)
         XCTAssertEqual(theme.colors(for: .light), light)
         XCTAssertEqual(theme.colors(for: .dark), dark)
     }

@@ -6,6 +6,8 @@
 
 package com.siansiansu.taigikeyboard.ime.core
 
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+
 /**
  * One built-in, read-only theme: a named palette with optional light/dark 6-role
  * color variants resolved against night-mode at render time. A null variant falls
@@ -14,7 +16,10 @@ package com.siansiansu.taigikeyboard.ime.core
  */
 data class BuiltInTheme(
     val id: String,
-    val displayName: String,
+    // i18n key for the display name, resolved at the picker call site via the
+    // active StringResolver so the name follows the user's chosen display language.
+    // 中文: 顯示名稱的 i18n key,在 picker call site 用 StringResolver 解析,跟隨使用者選的顯示語言。
+    val displayNameKey: StringKey,
     val light: KeyboardColorSettings?,
     val dark: KeyboardColorSettings?,
     val previewImageName: String? = null,
@@ -35,7 +40,7 @@ data class BuiltInTheme(
  * of 7 colors.
  */
 data class BuiltInThemeFamily(
-    val title: String,
+    val titleKey: StringKey,
     val themes: List<BuiltInTheme>,
 )
 
@@ -52,9 +57,9 @@ object BuiltInThemes {
     // `baseColors` would still be null. iOS gets this for free (`static let` is lazy).
     val families: List<BuiltInThemeFamily> by lazy {
         listOf(
-            BuiltInThemeFamily("經典", familyThemes(KeyStyle.CLASSIC)),
-            BuiltInThemeFamily("框線", familyThemes(KeyStyle.FRAMED)),
-            BuiltInThemeFamily("簡潔", familyThemes(KeyStyle.CLEAN)),
+            BuiltInThemeFamily(StringKey.THEME_FAMILY_CLASSIC, familyThemes(KeyStyle.CLASSIC)),
+            BuiltInThemeFamily(StringKey.THEME_FAMILY_FRAMED, familyThemes(KeyStyle.FRAMED)),
+            BuiltInThemeFamily(StringKey.THEME_FAMILY_CLEAN, familyThemes(KeyStyle.CLEAN)),
         )
     }
 
@@ -87,7 +92,7 @@ object BuiltInThemes {
      */
     private data class BaseColor(
         val key: String,
-        val displayName: String,
+        val displayNameKey: StringKey,
         val gradient: Pair<Int, Int>?,
         // 中文: dark 主題:深漸層配 light 字 + 深中性鍵色,放 dark slot(light=null),不隨系統明暗變。
         val isDarkPalette: Boolean = false,
@@ -96,14 +101,14 @@ object BuiltInThemes {
     // 中文: 7 色順序:預設(adaptive)→ 櫻花 → 金煌 → 海風 → 翠青 → 藤紫(以上 light)→ 暗眠山貓(dark)。漸層 hex 為視覺估值。
     private val baseColors: List<BaseColor> =
         listOf(
-            BaseColor("default", "預設", null),
-            BaseColor("pink", "櫻花", 0xE6C2D0 to 0xEADCE2),
-            BaseColor("gold", "金煌", 0xEAD9A6 to 0xECE4D2),
-            BaseColor("blue", "海風", 0xBFD2EA to 0xDCE2EC),
-            BaseColor("green", "翠青", 0xC3D8C8 to 0xDCE5DD),
-            BaseColor("purple", "藤紫", 0xCDC4E4 to 0xDEDAEA),
+            BaseColor("default", StringKey.THEME_PALETTE_DEFAULT, null),
+            BaseColor("pink", StringKey.THEME_PALETTE_PINK, 0xE6C2D0 to 0xEADCE2),
+            BaseColor("gold", StringKey.THEME_PALETTE_GOLD, 0xEAD9A6 to 0xECE4D2),
+            BaseColor("blue", StringKey.THEME_PALETTE_BLUE, 0xBFD2EA to 0xDCE2EC),
+            BaseColor("green", StringKey.THEME_PALETTE_GREEN, 0xC3D8C8 to 0xDCE5DD),
+            BaseColor("purple", StringKey.THEME_PALETTE_PURPLE, 0xCDC4E4 to 0xDEDAEA),
             // 暗眠山貓: Catppuccin Mocha — 背景 Base→Mantle 漸層(比鍵深),鍵 Surface0,字 Text。
-            BaseColor("catppuccin", "暗眠山貓", 0x1E1E2E to 0x181825, isDarkPalette = true),
+            BaseColor("catppuccin", StringKey.THEME_PALETTE_CATPPUCCIN, 0x1E1E2E to 0x181825, isDarkPalette = true),
         )
 
     // 中文: 漸層中性鍵色 + 鍵字色 — light 主題(經典白鍵 / ≈經典黑字)與 dark 主題(暗眠山貓:Catppuccin Mocha Surface0 鍵 / Text 字)各一組。
@@ -144,7 +149,7 @@ object BuiltInThemes {
             val scheme = colorsFor(base, style)
             BuiltInTheme(
                 id = id,
-                displayName = base.displayName,
+                displayNameKey = base.displayNameKey,
                 light = if (base.isDarkPalette) null else scheme,
                 dark = if (base.isDarkPalette) scheme else null,
                 previewImageName = previewName,

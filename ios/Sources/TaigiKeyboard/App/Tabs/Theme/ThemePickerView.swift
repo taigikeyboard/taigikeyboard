@@ -61,11 +61,11 @@ struct ThemePickerView: View {
 
                 // Built-in families: one horizontal shelf each (Standard / Swifty / Minimal …).
                 // The Standard family's first card is the app default (id == ThemeId.default).
-                ForEach(BuiltInThemes.families, id: \.title) { family in
-                    ThemeShelf(title: family.title) {
+                ForEach(BuiltInThemes.families, id: \.titleKey) { family in
+                    ThemeShelf(title: lang.string(family.titleKey)) {
                         ForEach(family.themes, id: \.id) { theme in
                             ThemeGalleryCard(
-                                title: theme.displayName,
+                                title: lang.string(theme.displayNameKey),
                                 previewImageName: theme.previewImageName,
                                 isSelected: selectedThemeId == theme.id,
                                 onTap: { apply(theme.id) },

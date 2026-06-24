@@ -16,6 +16,56 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "新主題…", "tailo": "sin tsú-tê…", "poj": "sin chú-tê…", "en": "New Theme…", "ja": "新しいテーマ…" }
     },
+    "familyClassic": {
+      "comment": "Built-in theme key-style family header: filled keys. DRAFT TL/POJ (king-tián, full dict entry) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "經典", "tailo": "king-tián", "poj": "keng-tián", "en": "Classic", "ja": "クラシック" }
+    },
+    "familyFramed": {
+      "comment": "Built-in theme key-style family header: transparent keys with an outline border. DRAFT TL/POJ (框 khing + 線 suànn, component-grounded) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "框線", "tailo": "khing-suànn", "poj": "kheng-sòaⁿ", "en": "Outlined", "ja": "アウトライン" }
+    },
+    "familyClean": {
+      "comment": "Built-in theme key-style family header: transparent keys, no border. DRAFT TL/POJ (kán-kiat, full dict entry) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "簡潔", "tailo": "kán-kiat", "poj": "kán-kiat", "en": "Minimal", "ja": "ミニマル" }
+    },
+    "paletteDefault": {
+      "comment": "Built-in theme color name: the adaptive default palette (value = 'Default'). DRAFT TL/POJ (ī-siat, full dict main reading) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "預設", "tailo": "ī-siat", "poj": "ī-siat", "en": "Default", "ja": "デフォルト" }
+    },
+    "palettePink": {
+      "comment": "Built-in theme color name: soft pink gradient (value = 'Sakura' / cherry blossom). DRAFT TL/POJ (ing-hue, full dict entry) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "櫻花", "tailo": "ing-hue", "poj": "eng-hoe", "en": "Sakura", "ja": "桜" }
+    },
+    "paletteGold": {
+      "comment": "Built-in theme color name: golden gradient (value = 'Gold'). DRAFT TL/POJ (金 kim + 煌 hông, component-grounded) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "金煌", "tailo": "kim-hông", "poj": "kim-hông", "en": "Gold", "ja": "ゴールド" }
+    },
+    "paletteBlue": {
+      "comment": "Built-in theme color name: blue gradient (value = 'Sea Breeze'). DRAFT TL/POJ (hái-hong, full dict entry) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "海風", "tailo": "hái-hong", "poj": "hái-hong", "en": "Sea Breeze", "ja": "潮風" }
+    },
+    "paletteGreen": {
+      "comment": "Built-in theme color name: green gradient (value = 'Jade' / jade green). DRAFT TL/POJ (翠 tshuì + 青 tshing, component-grounded) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "翠青", "tailo": "tshuì-tshing", "poj": "chhùi-chheng", "en": "Jade", "ja": "翡翠" }
+    },
+    "palettePurple": {
+      "comment": "Built-in theme color name: purple gradient (value = 'Wisteria'). DRAFT TL/POJ (藤 tîn + 紫 tsí, component-grounded) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "藤紫", "tailo": "tîn-tsí", "poj": "tîn-chí", "en": "Wisteria", "ja": "藤紫" }
+    },
+    "paletteCatppuccin": {
+      "comment": "Built-in theme color name: the dark-only Catppuccin Mocha palette. Hanji 暗眠山貓 is a pun (山貓=mountain cat≈cat, 暗眠=dark sleep≈dark mode). DRAFT TL/POJ (暗 àm + 眠 bîn + 山貓 suann-niau, component-grounded) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "暗眠山貓", "tailo": "àm-bîn-suann-niau", "poj": "àm-bîn-soaⁿ-niau", "en": "Catppuccin", "ja": "キャットプチン" }
+    },
     "keyboardSection": {
       "comment": "Theme editor section header: the keyboard-surface group (background color + key height).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

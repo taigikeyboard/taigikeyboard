@@ -11,7 +11,7 @@ import Foundation
 /// (經典 / 框線 / 簡潔) are a key-STYLE axis over one shared set of 7 colors.
 // 中文: 單一內建主題 family — section 標題 + variant 主題(主題頁一條橫向 shelf)。三 family = 按鍵風格軸。
 struct BuiltInThemeFamily: Equatable {
-    let title: String
+    let titleKey: StringKey
     let themes: [BuiltInTheme]
 }
 
@@ -24,9 +24,9 @@ enum BuiltInThemes {
     /// Shelf order shown to the user (after `Default`, before user themes).
     // 中文: 顯示順序(在 Default 之後、使用者自訂主題之前)。
     static let families: [BuiltInThemeFamily] = [
-        BuiltInThemeFamily(title: "經典", themes: familyThemes(.classic)),
-        BuiltInThemeFamily(title: "框線", themes: familyThemes(.framed)),
-        BuiltInThemeFamily(title: "簡潔", themes: familyThemes(.clean)),
+        BuiltInThemeFamily(titleKey: .themeFamilyClassic, themes: familyThemes(.classic)),
+        BuiltInThemeFamily(titleKey: .themeFamilyFramed, themes: familyThemes(.framed)),
+        BuiltInThemeFamily(titleKey: .themeFamilyClean, themes: familyThemes(.clean)),
     ]
 
     /// Flattened lookup roster — used by `ThemeResolver` / `SharedSettings` to
@@ -72,7 +72,7 @@ enum BuiltInThemes {
     // 中文: 7 個共用顏色之一。gradient == nil = adaptive 預設;接著 5 個是柔和單色相 light 漸層;最後 1 個是 dark-only 暗眠山貓(Catppuccin Mocha),放 dark slot。
     private struct BaseColor {
         let key: String
-        let displayName: String
+        let displayNameKey: StringKey
         let gradient: (top: UInt32, bottom: UInt32)?
         /// Dark palette (e.g. 暗眠山貓/Catppuccin): light text over a dark gradient,
         /// with a dark neutral key fill; builds into the `dark` variant slot
@@ -83,14 +83,14 @@ enum BuiltInThemes {
 
     // 中文: 7 色順序:預設(adaptive)→ 櫻花 → 金煌 → 海風 → 翠青 → 藤紫(以上 light)→ 暗眠山貓(dark)。漸層 hex 為視覺估值。
     private static let baseColors: [BaseColor] = [
-        BaseColor(key: "default", displayName: "預設", gradient: nil),
-        BaseColor(key: "pink", displayName: "櫻花", gradient: (0xE6C2D0, 0xEADCE2)),
-        BaseColor(key: "gold", displayName: "金煌", gradient: (0xEAD9A6, 0xECE4D2)),
-        BaseColor(key: "blue", displayName: "海風", gradient: (0xBFD2EA, 0xDCE2EC)),
-        BaseColor(key: "green", displayName: "翠青", gradient: (0xC3D8C8, 0xDCE5DD)),
-        BaseColor(key: "purple", displayName: "藤紫", gradient: (0xCDC4E4, 0xDEDAEA)),
+        BaseColor(key: "default", displayNameKey: .themePaletteDefault, gradient: nil),
+        BaseColor(key: "pink", displayNameKey: .themePalettePink, gradient: (0xE6C2D0, 0xEADCE2)),
+        BaseColor(key: "gold", displayNameKey: .themePaletteGold, gradient: (0xEAD9A6, 0xECE4D2)),
+        BaseColor(key: "blue", displayNameKey: .themePaletteBlue, gradient: (0xBFD2EA, 0xDCE2EC)),
+        BaseColor(key: "green", displayNameKey: .themePaletteGreen, gradient: (0xC3D8C8, 0xDCE5DD)),
+        BaseColor(key: "purple", displayNameKey: .themePalettePurple, gradient: (0xCDC4E4, 0xDEDAEA)),
         // 暗眠山貓: Catppuccin Mocha — 背景 Base→Mantle 漸層(比鍵深),鍵 Surface0,字 Text。
-        BaseColor(key: "catppuccin", displayName: "暗眠山貓", gradient: (0x1E1E2E, 0x181825), isDarkPalette: true),
+        BaseColor(key: "catppuccin", displayNameKey: .themePaletteCatppuccin, gradient: (0x1E1E2E, 0x181825), isDarkPalette: true),
     ]
 
     // 中文: 漸層中性鍵色 + 鍵字色 — light 主題(經典白鍵 / ≈經典黑字)與 dark 主題(暗眠山貓:Catppuccin Mocha Surface0 鍵 / Text 字)各一組。
@@ -127,7 +127,7 @@ enum BuiltInThemes {
             let scheme = colors(for: base, style: style)
             return BuiltInTheme(
                 id: id,
-                displayName: base.displayName,
+                displayNameKey: base.displayNameKey,
                 light: base.isDarkPalette ? nil : scheme,
                 dark: base.isDarkPalette ? scheme : nil,
                 previewImageName: previewName,

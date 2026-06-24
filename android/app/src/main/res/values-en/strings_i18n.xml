@@ -197,6 +197,16 @@
     <string name="i18n_theme_customFont">Font</string>
     <string name="i18n_theme_customThemesSection">Custom Themes</string>
     <string name="i18n_theme_createNewTheme">New Theme…</string>
+    <string name="i18n_theme_familyClassic">Classic</string>
+    <string name="i18n_theme_familyFramed">Outlined</string>
+    <string name="i18n_theme_familyClean">Minimal</string>
+    <string name="i18n_theme_paletteDefault">Default</string>
+    <string name="i18n_theme_palettePink">Sakura</string>
+    <string name="i18n_theme_paletteGold">Gold</string>
+    <string name="i18n_theme_paletteBlue">Sea Breeze</string>
+    <string name="i18n_theme_paletteGreen">Jade</string>
+    <string name="i18n_theme_palettePurple">Wisteria</string>
+    <string name="i18n_theme_paletteCatppuccin">Catppuccin</string>
     <string name="i18n_theme_keyboardSection">Keyboard Surface</string>
     <string name="i18n_theme_colorKeySection">Keys</string>
     <string name="i18n_theme_candidateSection">Candidate Bar</string>

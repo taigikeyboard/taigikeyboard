@@ -197,6 +197,16 @@
     <string name="i18n_theme_customFont">フォント</string>
     <string name="i18n_theme_customThemesSection">カスタムテーマ</string>
     <string name="i18n_theme_createNewTheme">新しいテーマ…</string>
+    <string name="i18n_theme_familyClassic">クラシック</string>
+    <string name="i18n_theme_familyFramed">アウトライン</string>
+    <string name="i18n_theme_familyClean">ミニマル</string>
+    <string name="i18n_theme_paletteDefault">デフォルト</string>
+    <string name="i18n_theme_palettePink">桜</string>
+    <string name="i18n_theme_paletteGold">ゴールド</string>
+    <string name="i18n_theme_paletteBlue">潮風</string>
+    <string name="i18n_theme_paletteGreen">翡翠</string>
+    <string name="i18n_theme_palettePurple">藤紫</string>
+    <string name="i18n_theme_paletteCatppuccin">キャットプチン</string>
     <string name="i18n_theme_keyboardSection">キーボード面</string>
     <string name="i18n_theme_colorKeySection">キー</string>
     <string name="i18n_theme_candidateSection">候補バー</string>

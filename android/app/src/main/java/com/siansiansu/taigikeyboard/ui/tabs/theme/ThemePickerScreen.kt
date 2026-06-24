@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.BuiltInTheme
 import com.siansiansu.taigikeyboard.ime.core.BuiltInThemes
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -179,7 +180,7 @@ fun ThemePickerScreen(prefs: PrefHelper) {
 
             BuiltInThemes.families.forEachIndexed { index, family ->
                 BuiltInThemeShelf(
-                    title = family.title,
+                    title = stringRes(family.titleKey),
                     themes = family.themes,
                     selectedThemeId = selectedThemeId,
                     onThemeSelected = applyTheme,
@@ -248,8 +249,10 @@ private fun BuiltInThemeShelf(
                 .padding(horizontal = 20.dp),
     ) {
         themes.forEachIndexed { index, theme ->
+            // Resolve once for both the card title and the preview's contentDescription.
+            val title = stringRes(theme.displayNameKey)
             ThemeCard(
-                title = theme.displayName,
+                title = title,
                 isSelected = selectedThemeId == theme.id,
                 onClick = { onThemeSelected(theme.id) },
                 preview = {
@@ -260,7 +263,7 @@ private fun BuiltInThemeShelf(
                     // UIImage(named:).
                     BuiltInThemePreview(
                         previewRes = builtInThemePreviewRes(theme.previewImageName),
-                        title = theme.displayName,
+                        title = title,
                     )
                 },
             )
