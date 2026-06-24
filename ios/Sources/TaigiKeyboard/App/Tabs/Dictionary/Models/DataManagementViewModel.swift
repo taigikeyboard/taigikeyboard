@@ -34,7 +34,7 @@ final class DataManagementViewModel: ObservableObject {
         let data = try await service.exportAll()
         return BackupExportPayload(
             data: data,
-            filename: "備份復原_\(Self.formattedDate()).taigi",
+            filename: "taigi_backup_\(Self.formattedDate()).taigi",
         )
     }
 
@@ -57,6 +57,9 @@ final class DataManagementViewModel: ObservableObject {
 
     private static func formattedDate() -> String {
         let formatter = DateFormatter()
+        // Pin POSIX locale so the backup-filename date suffix is always Gregorian + ASCII
+        // digits, matching Android's Locale.US — keeps the filename a stable ASCII artifact.
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }

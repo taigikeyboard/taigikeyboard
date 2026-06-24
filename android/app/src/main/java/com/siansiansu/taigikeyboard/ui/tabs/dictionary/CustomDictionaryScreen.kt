@@ -183,7 +183,7 @@ fun CustomDictionaryScreen(
                         editingEntry = null
                         showEditDialog = true
                     }) {
-                        Icon(Icons.Default.Add, contentDescription = null)
+                        Icon(Icons.Default.Add, contentDescription = L10n.dictionaryAddEntry)
                     }
                 },
                 colors =
@@ -253,7 +253,7 @@ fun CustomDictionaryScreen(
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                                    exportLauncher.launch("自訂詞庫_$dateStr.csv")
+                                    exportLauncher.launch("taigi_custom_dictionary_$dateStr.csv")
                                 }
                             },
                             icon = Icons.Outlined.FileUpload,

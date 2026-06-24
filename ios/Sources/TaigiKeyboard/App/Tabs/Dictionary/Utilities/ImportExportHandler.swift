@@ -90,6 +90,9 @@ final class ImportExportHandler: ObservableObject {
     // 中文: 產生帶日期後綴的匯出檔名,格式 "<prefix>_yyyy-MM-dd.csv"。
     static func exportFilename(prefix: String) -> String {
         let formatter = DateFormatter()
+        // Pin POSIX locale so the date suffix is always Gregorian + ASCII digits,
+        // matching Android's Locale.US — keeps the filename a stable ASCII artifact.
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return "\(prefix)_\(formatter.string(from: Date())).csv"
     }

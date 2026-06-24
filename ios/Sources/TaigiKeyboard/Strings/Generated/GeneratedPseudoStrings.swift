@@ -11,6 +11,7 @@ enum GeneratedPseudoStrings {
         .commonDelete: "⟦刪除··⟧",
         .commonError: "⟦錯誤··⟧",
         .commonViewWebsite: "⟦官方網站··⟧",
+        .commonImportFailed: "⟦匯入失敗··⟧",
         .commonMoeDict: "⟦教育部臺灣台語常用詞辭典·····⟧",
         .commonNewwordDict: "⟦公視台語台台語新詞辭庫·····⟧",
         .commonKunggeDict: "⟦工藝中心臺灣台語工藝詞庫·····⟧",

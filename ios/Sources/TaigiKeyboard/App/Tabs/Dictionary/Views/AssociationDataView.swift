@@ -154,7 +154,7 @@ struct AssociationDataView: View {
             importAlertTitle: lang.string(.dictionaryAssociationImportCSV),
             exportAlertTitle: lang.string(.dictionaryAssociationExportCSV),
             errorTitle: lang.string(.commonError),
-            exportFilename: { ImportExportHandler.exportFilename(prefix: "詞關聯紀錄") },
+            exportFilename: { ImportExportHandler.exportFilename(prefix: "taigi_associations") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),
             onFileImport: { handleImport($0) },
@@ -181,6 +181,7 @@ struct AssociationDataView: View {
             result,
             importAction: { url in try await viewModel.importCSV(url: url) },
             formatResult: { lang.resolver.dictionaryImportResult(imported: $0, skipped: $1) },
+            formatError: { _ in lang.string(.commonImportFailed) },
             onComplete: { await viewModel.load() },
         )
     }

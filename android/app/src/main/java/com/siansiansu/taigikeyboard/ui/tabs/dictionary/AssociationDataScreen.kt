@@ -137,7 +137,10 @@ fun AssociationDataScreen(
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
+                    // Surface a localized failure message — the raw exception text (e.g. internal
+                    // "Cannot read file") must not leak to the user. Mirrors iOS AssociationDataView's
+                    // blanket formatError → commonImportFailed.
+                    resultMessage = stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
                     showResultDialog = true
                 }
             }
@@ -212,7 +215,7 @@ fun AssociationDataScreen(
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                                    exportLauncher.launch("詞關聯紀錄_$dateStr.csv")
+                                    exportLauncher.launch("taigi_associations_$dateStr.csv")
                                 }
                             },
                             icon = Icons.Outlined.FileUpload,

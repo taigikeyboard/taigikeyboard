@@ -158,7 +158,7 @@ struct FrequencyDataView: View {
             importAlertTitle: lang.string(.dictionaryFrequencyImportCSV),
             exportAlertTitle: lang.string(.dictionaryFrequencyExportCSV),
             errorTitle: lang.string(.commonError),
-            exportFilename: { ImportExportHandler.exportFilename(prefix: "詞頻紀錄") },
+            exportFilename: { ImportExportHandler.exportFilename(prefix: "taigi_frequency") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),
             onFileImport: { handleImport($0) },
@@ -176,6 +176,7 @@ struct FrequencyDataView: View {
             result,
             importAction: { url in try await viewModel.importCSV(url: url) },
             formatResult: { lang.resolver.dictionaryImportResult(imported: $0, skipped: $1) },
+            formatError: { _ in lang.string(.commonImportFailed) },
             onComplete: { await viewModel.load() },
         )
     }

@@ -135,7 +135,10 @@ fun FrequencyDataScreen(
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
+                    // Surface a localized failure message — the raw exception text (e.g. internal
+                    // "Cannot read file") must not leak to the user. Mirrors iOS FrequencyDataView's
+                    // blanket formatError → commonImportFailed.
+                    resultMessage = stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
                     showResultDialog = true
                 }
             }
@@ -210,7 +213,7 @@ fun FrequencyDataScreen(
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                                    exportLauncher.launch("詞頻紀錄_$dateStr.csv")
+                                    exportLauncher.launch("taigi_frequency_$dateStr.csv")
                                 }
                             },
                             icon = Icons.Outlined.FileUpload,

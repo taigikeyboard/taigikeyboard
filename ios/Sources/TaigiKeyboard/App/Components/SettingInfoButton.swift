@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingInfoButton: View {
     let description: String
 
+    @Environment(DisplayLanguageStore.self) private var lang
     @State private var showAlert = false
 
     var body: some View {
@@ -19,7 +20,7 @@ struct SettingInfoButton: View {
         }
         .buttonStyle(.plain)
         .alert("", isPresented: $showAlert) {
-            Button("OK", role: .cancel) {}
+            Button(lang.string(.commonOk), role: .cancel) {}
         } message: {
             Text(description)
         }

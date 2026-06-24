@@ -361,6 +361,42 @@
         }
       }
     },
+    "i18n_common_importFailed": {
+      "comment": "Error message shown when importing user dictionary data fails (incl. unreadable / non-UTF-8 file on both platforms).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import failed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インポートに失敗しました"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入失敗"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hōe-ji̍p sit-pāi"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "huē-ji̍p sit-pāi"
+          }
+        }
+      }
+    },
     "i18n_common_kunggeDict": {
       "comment": "Display name of the NTCRI craft-terminology lexicon data source.",
       "extractionState": "manual",

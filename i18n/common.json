@@ -47,8 +47,8 @@
       "values": { "hanji": "匯出失敗", "tailo": "huē-tshut sit-pāi", "poj": "hōe-chhut sit-pāi", "en": "Export failed", "ja": "エクスポートに失敗しました" }
     },
     "importFailed": {
-      "comment": "Error message shown when importing user dictionary data fails.",
-      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "comment": "Error message shown when importing user dictionary data fails (incl. unreadable / non-UTF-8 file on both platforms).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "匯入失敗", "tailo": "huē-ji̍p sit-pāi", "poj": "hōe-ji̍p sit-pāi", "en": "Import failed", "ja": "インポートに失敗しました" }
     },
     "moeDict": {

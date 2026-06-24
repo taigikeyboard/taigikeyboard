@@ -399,7 +399,7 @@ private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
             textColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 val info = viewModel.gather()
-                val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
+                val subject = Uri.encode("Taigi Keyboard Bug Report (v${info.appVersion})")
                 val body = Uri.encode(info.formatted())
                 val uri = "mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body".toUri()
                 try {

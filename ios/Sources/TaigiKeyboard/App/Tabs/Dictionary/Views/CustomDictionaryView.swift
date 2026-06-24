@@ -195,7 +195,7 @@ struct CustomDictionaryView: View {
             importAlertTitle: lang.string(.dictionaryImportCSV),
             exportAlertTitle: lang.string(.dictionaryExportCSV),
             errorTitle: lang.string(.commonError),
-            exportFilename: { ImportExportHandler.exportFilename(prefix: "自訂詞庫") },
+            exportFilename: { ImportExportHandler.exportFilename(prefix: "taigi_custom_dictionary") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),
             onFileImport: { handleImport($0) },
