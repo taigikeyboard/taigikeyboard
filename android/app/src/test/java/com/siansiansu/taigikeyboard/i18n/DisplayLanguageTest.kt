@@ -62,8 +62,11 @@ class DisplayLanguageTest {
     }
 
     @Test
-    fun defaultTag_resolvesToHanji() {
-        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag(DisplayLanguage.DEFAULT_TAG))
+    fun defaultTag_resolvesToSystemAutomatic() {
+        // Default before any user pick = system (Automatic), so a fresh install follows the device OS locale.
+        // CROSS-PLATFORM INVARIANT — mirrors iOS SettingsKeyTests defaultTagIsSystemAutomatic.
+        assertEquals("system", DisplayLanguage.DEFAULT_TAG)
+        assertEquals(DisplayLanguage.SYSTEM, DisplayLanguage.fromTag(DisplayLanguage.DEFAULT_TAG))
     }
 
     @Test

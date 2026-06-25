@@ -345,7 +345,7 @@ struct SettingsTab: View {
         isTpsOrMappedToER = settings.isTpsOrMappedToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled
-        // 中文: reset 把 persisted displayLanguage 寫回 hanji,但 live store 是注入的;同步回來才會即時還原畫面語言。
+        // 中文: reset 把 persisted displayLanguage 寫回 system (Automatic),但 live store 是注入的;同步回來才會即時還原畫面語言。
         lang.syncFromSettings()
 
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)

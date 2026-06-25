@@ -319,7 +319,7 @@ class PrefHelper(
 
     var outputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
-    // App UI display language tag (i18n). Default keeps the app behaviour-frozen on Hanji.
+    // App UI display language tag (i18n). Default = system (Automatic) — fresh install follows device OS locale.
     var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
 
     // §34/S22 — 顯示羅馬字 toggle. Default false (off; user opts in).

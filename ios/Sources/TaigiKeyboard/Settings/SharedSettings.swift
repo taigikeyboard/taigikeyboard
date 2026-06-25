@@ -106,7 +106,7 @@ final class SharedSettings {
     private static let themeRevisionKey: SettingsKey<Int> = .int("themeRevision", default: 0)
 
     // 中文: App UI 顯示語言 tag (與鍵盤輸入模式正交)。持久於 App Group,host↔extension 共用同一值;
-    // 中文: extension 透過 didChangeNotification 反映變更。預設 hanji。Key 拼字凍結。
+    // 中文: extension 透過 didChangeNotification 反映變更。預設 system (Automatic),首次啟動跟隨裝置 OS locale。Key 拼字凍結。
     // App UI display-language tag (orthogonal to keyboard input mode) — see DisplayLanguage.
     private static let displayLanguageKey: SettingsKey<String> = .string("displayLanguage", default: DisplayLanguage.defaultTag)
 
@@ -695,7 +695,7 @@ final class SharedSettings {
         colorSettings = .default
         // 中文: 回到 default 主題(走 colorSettings buffer);不刪除已存的 user themes。
         selectedThemeId = ThemeId.default
-        // 中文: 顯示語言回到預設 (hanji)。寫的是 persisted 值;呼叫端 (resetAllSettings) 必須接著呼叫
+        // 中文: 顯示語言回到預設 (system/Automatic)。寫的是 persisted 值;呼叫端 (resetAllSettings) 必須接著呼叫
         // 中文: DisplayLanguageStore.syncFromSettings() 把 live store 同步回來,否則畫面語言不會跟著還原。
         displayLanguage = DisplayLanguage.defaultTag
 

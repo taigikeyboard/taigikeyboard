@@ -29,7 +29,7 @@ object PreferenceKeys {
     val SETTINGS_THEME = stringPreferencesKey("advanced__settings_theme")
     val SHOW_APP_ICON = booleanPreferencesKey("advanced__show_app_icon")
 
-    // App UI display language (i18n). Tag of DisplayLanguage; default "hanji" = current single language.
+    // App UI display language (i18n). Tag of DisplayLanguage; default "system" (Automatic) = follow device OS locale.
     val DISPLAY_LANGUAGE = stringPreferencesKey("app__display_language")
 
     // Correction settings

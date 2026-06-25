@@ -294,6 +294,13 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(DisplayLanguage.fromTag("xx"), .hanji)
     }
 
+    func test_INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_defaultTagIsSystemAutomatic() {
+        // Default before any user pick = system (Automatic), so a fresh install follows the device OS locale.
+        // CROSS-PLATFORM INVARIANT — mirrors Android DisplayLanguageTest.defaultTag_resolvesToSystemAutomatic.
+        XCTAssertEqual(DisplayLanguage.defaultTag, "system")
+        XCTAssertEqual(DisplayLanguage.fromTag(DisplayLanguage.defaultTag), .system)
+    }
+
     func test_INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_releaseClampsDebugPreviews() {
         // The release roster ([system] + productionLanguages) excludes the debug-only preview. clampToSelectable
         // pins the release clamp directly: the only known-but-not-offered case (.pseudo) falls back to Hanji,

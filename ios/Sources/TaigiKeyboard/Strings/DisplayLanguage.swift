@@ -68,8 +68,9 @@ enum DisplayLanguage: String, CaseIterable {
         }
     }
 
-    /// Default tag persisted before the user ever picks a language. Keeps the app on Hanji.
-    static let defaultTag = "hanji"
+    /// Default selection before the user ever picks a language: `system` (Automatic), so a fresh install
+    /// follows the device OS locale (platform convention) via `resolveAutomatic` instead of pinning Hanji.
+    static let defaultTag = "system"
 
     /// Authored, user-selectable production languages — the catalog roster, SEPARATE from
     /// `selectableLanguages` (which leads with `.system`). `.system` is a resolution policy with no

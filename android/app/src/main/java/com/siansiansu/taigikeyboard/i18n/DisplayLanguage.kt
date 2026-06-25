@@ -90,8 +90,9 @@ enum class DisplayLanguage(
         if (this == SYSTEM) resolveAutomatic(deviceLanguageSubtag) else this
 
     companion object {
-        // Default tag persisted before the user ever picks a language. Keeps the app on Hanji (NOT system).
-        const val DEFAULT_TAG = "hanji"
+        // Default selection before the user ever picks a language: SYSTEM (Automatic), so a fresh install
+        // follows the device OS locale (platform convention) via resolveAutomatic instead of pinning Hanji.
+        const val DEFAULT_TAG = "system"
 
         /**
          * Authored, user-selectable production languages. Drives the picker's authored roster and clamps
