@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Tâi-gí Khí-pôaⁿ</string>
+    <string name="app_name">TaigiKeyboard</string>
 
     <!-- Key labels (referenced by KeyView and layout XML) -->
     <string name="key__phone_pause">Pause</string>
