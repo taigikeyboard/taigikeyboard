@@ -34,6 +34,7 @@ import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
+import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
@@ -54,6 +55,29 @@ internal object DictionaryInfoData {
     val khpoo = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_KHPOO_DESCRIPTION)
     val khiin = DictionaryInfo(descriptionKey = StringKey.DICTIONARY_KHIIN_DESCRIPTION)
 }
+
+// i18n key for a dictionary source's compact badge label, resolved at the call
+// site via the active display language. Kept here (UI layer) so the shared-core
+// `DictionarySource` enum stays free of app i18n types.
+// 中文: 來源 badge 短標籤的 i18n key — 放 UI 層映射,讓 shared-core enum 不依賴 i18n 型別。
+private fun DictionarySource.tagKey(): StringKey =
+    when (this) {
+        DictionarySource.KAUTIAN -> StringKey.DICTIONARY_KAUTIAN_TAG
+        DictionarySource.TAIGITV -> StringKey.DICTIONARY_TAIGITV_TAG
+        DictionarySource.ITAIGI -> StringKey.DICTIONARY_I_TAIGI_TAG
+        DictionarySource.SITBUT -> StringKey.DICTIONARY_SITBUT_TAG
+        DictionarySource.TAIHOA -> StringKey.DICTIONARY_TAIHOA_TAG
+        DictionarySource.TAIJIT -> StringKey.DICTIONARY_TAIJIT_TAG
+        DictionarySource.KUNGGE -> StringKey.DICTIONARY_KUNGGE_TAG
+        DictionarySource.STTI -> StringKey.DICTIONARY_STTI_TAG
+        DictionarySource.LKK -> StringKey.DICTIONARY_LKK_TAG
+        // khpoo/khiin/dev/custom collapse to one "補充資料" badge (reuses the section-title key).
+        DictionarySource.KHPOO,
+        DictionarySource.KHIIN,
+        DictionarySource.DEV,
+        DictionarySource.CUSTOM,
+        -> StringKey.DICTIONARY_SUPPLEMENT_SECTION_TITLE
+    }
 
 @Composable
 internal fun SearchResultRow(
@@ -91,14 +115,16 @@ internal fun SearchResultRow(
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
-            result.sources.map { it.displayName }.filter { it.isNotEmpty() }.distinct().forEach { tag ->
+            // Dedup by key (not resolved string) so the 4 supplementary sources
+            // collapse to one badge regardless of the active display language.
+            result.sources.map { it.tagKey() }.distinct().forEach { tagKey ->
                 Spacer(Modifier.width(4.dp))
                 Surface(
                     shape = RoundedCornerShape(4.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Text(
-                        text = tag,
+                        text = stringRes(tagKey),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),

@@ -220,6 +220,24 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_KHPOO_DESCRIPTION)
     val dictionaryKhiinDescription: String
         @Composable get() = stringRes(StringKey.DICTIONARY_KHIIN_DESCRIPTION)
+    val dictionaryKautianTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_TAG)
+    val dictionaryTaigitvTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TAIGITV_TAG)
+    val dictionaryITaigiTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_I_TAIGI_TAG)
+    val dictionarySitbutTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_SITBUT_TAG)
+    val dictionaryTaihoaTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TAIHOA_TAG)
+    val dictionaryTaijitTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_TAIJIT_TAG)
+    val dictionaryKunggeTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KUNGGE_TAG)
+    val dictionarySttiTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_STTI_TAG)
+    val dictionaryLkkTag: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LKK_TAG)
     val homeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.HOME_APP_HEADER_TITLE)
     val homeSetupKeyboard: String

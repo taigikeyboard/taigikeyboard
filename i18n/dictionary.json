@@ -178,7 +178,7 @@
       "values": { "hanji": "其他辭典", "tailo": "kî-thann sû-tián", "poj": "kî-thaⁿ sû-tián", "en": "Other Dictionaries", "ja": "その他の辞書" }
     },
     "supplementSectionTitle": {
-      "comment": "Section header grouping supplementary dictionary data.",
+      "comment": "Supplementary-data label. Section header grouping supplementary dictionary data AND the compact source badge for khpoo/khiin/dev/custom search results.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "補充資料", "tailo": "póo-tshiong tsu-liāu", "poj": "pó͘-chhiong chu-liāu", "en": "Supplementary Data", "ja": "補足データ" }
     },
@@ -432,6 +432,51 @@
       "comment": "Khiin (native-characters) source — info-button popup description.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "「水台文」、「台字田」用字", "tailo": "「Tsuí-tâi-bûn」、「Tâi-jī-tshân」iōng-jī", "poj": "「Chúi-tâi-bûn」、「Tâi-jī-chhân」iōng-jī", "en": "Characters used by 'Tsuí Tâi-bûn' and 'Tâi-jī-tshân'.", "ja": "「水台文」「台字田」の用字。" }
+    },
+    "kautianTag": {
+      "comment": "Dictionary-source badge tag for 教育部臺灣台語常用詞辭典 (MOE). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "教典", "tailo": "kàu-tián", "poj": "kàu-tián", "en": "MOE Dict", "ja": "教育部辞典" }
+    },
+    "taigitvTag": {
+      "comment": "Dictionary-source badge tag for 台語新詞辭庫 (PTS Taigi new-word lexicon). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台語新詞", "tailo": "tâi-gí sin-sû", "poj": "tâi-gí sin-sû", "en": "Taigi New Words", "ja": "台湾語新語" }
+    },
+    "iTaigiTag": {
+      "comment": "Dictionary-source badge tag for iTaigi 華台對照典. Brand name — verbatim across all languages.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "iTaigi", "tailo": "iTaigi", "poj": "iTaigi", "en": "iTaigi", "ja": "iTaigi" }
+    },
+    "sitbutTag": {
+      "comment": "Dictionary-source badge tag for 台灣植物名彙 (Taiwan plant-name glossary). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "植物名彙", "tailo": "si̍t-bu̍t bîng-luī", "poj": "si̍t-bu̍t bêng-lūi", "en": "Plant Names", "ja": "植物名彙" }
+    },
+    "taihoaTag": {
+      "comment": "Dictionary-source badge tag for 台華線頂對照典 (Taigi-Mandarin cross-reference). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "台華對照", "tailo": "tâi-huâ tuì-tsiàu", "poj": "tâi-hôa tùi-chiàu", "en": "Taigi-Mandarin", "ja": "台華対照" }
+    },
+    "taijitTag": {
+      "comment": "Dictionary-source badge tag for 台日大辭典 (Taiwanese-Japanese dictionary). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "臺日", "tailo": "tâi-ji̍t", "poj": "tâi-ji̍t", "en": "Taigi-Japanese", "ja": "台日" }
+    },
+    "kunggeTag": {
+      "comment": "Dictionary-source badge tag for 台語工藝詞庫 (NTCRI Taiwanese craft glossary). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "工藝辭典", "tailo": "kang-gē sû-tián", "poj": "kang-gē sû-tián", "en": "Craft Glossary", "ja": "工芸用語" }
+    },
+    "sttiTag": {
+      "comment": "Dictionary-source badge tag for 學科術語辭典 (MOE academic-subject terminology). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "學科術語", "tailo": "ha̍k-kho su̍t-gí", "poj": "ha̍k-kho su̍t-gí", "en": "Academic Terms", "ja": "学術用語" }
+    },
+    "lkkTag": {
+      "comment": "Dictionary-source badge tag for LKK 漢羅合用建議用字 (Han-Roman combined-use suggestion). Compact label on search-result rows.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "漢羅合用", "tailo": "hàn-lô ha̍h-īng", "poj": "hàn-lô ha̍h-ēng", "en": "Han-Roman", "ja": "漢羅併用" }
     }
   }
 }

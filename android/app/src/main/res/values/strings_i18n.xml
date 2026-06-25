@@ -110,6 +110,15 @@
     <string name="i18n_dictionary_variantDescription">依據教典資料標示台語異用字。</string>
     <string name="i18n_dictionary_khpooDescription">補充在地腔口差異</string>
     <string name="i18n_dictionary_khiinDescription">「水台文」、「台字田」用字</string>
+    <string name="i18n_dictionary_kautianTag">教典</string>
+    <string name="i18n_dictionary_taigitvTag">台語新詞</string>
+    <string name="i18n_dictionary_iTaigiTag">iTaigi</string>
+    <string name="i18n_dictionary_sitbutTag">植物名彙</string>
+    <string name="i18n_dictionary_taihoaTag">台華對照</string>
+    <string name="i18n_dictionary_taijitTag">臺日</string>
+    <string name="i18n_dictionary_kunggeTag">工藝辭典</string>
+    <string name="i18n_dictionary_sttiTag">學科術語</string>
+    <string name="i18n_dictionary_lkkTag">漢羅合用</string>
     <string name="i18n_home_appHeaderTitle">台語齒盤</string>
     <string name="i18n_home_setupKeyboard">齒盤愛拍開才會當使用</string>
     <string name="i18n_home_typingGuide">拍字說明</string>

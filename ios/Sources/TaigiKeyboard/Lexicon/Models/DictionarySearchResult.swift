@@ -27,16 +27,4 @@ struct DictionarySearchResult {
     var moeURL: URL? {
         ExternalLookupURLBuilder.moeURL(forTL: tl)
     }
-
-    /// Unique source display-name tags for badge rendering.
-    /// Preserves `sources` order; skips empty names and duplicates.
-    // 中文: 給 badge 用的去重 source 顯示名 — 保留原排序,過濾空字串與重複。
-    var uniqueTagNames: [String] {
-        var seen = Set<String>()
-        return sources.compactMap { source in
-            let name = source.displayName
-            guard !name.isEmpty, seen.insert(name).inserted else { return nil }
-            return name
-        }
-    }
 }

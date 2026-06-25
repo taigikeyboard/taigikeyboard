@@ -2269,6 +2269,42 @@
         }
       }
     },
+    "i18n_dictionary_iTaigiTag": {
+      "comment": "Dictionary-source badge tag for iTaigi 華台對照典. Brand name — verbatim across all languages.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iTaigi"
+          }
+        }
+      }
+    },
     "i18n_dictionary_importBackup": {
       "comment": "Button: import a full backup of all user data from one file.",
       "extractionState": "manual",
@@ -2881,6 +2917,42 @@
         }
       }
     },
+    "i18n_dictionary_kautianTag": {
+      "comment": "Dictionary-source badge tag for 教育部臺灣台語常用詞辭典 (MOE). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOE Dict"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教育部辞典"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教典"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-tián"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kàu-tián"
+          }
+        }
+      }
+    },
     "i18n_dictionary_khiin": {
       "comment": "Toggle/section label for the Khiin (在來字) dictionary source.",
       "extractionState": "manual",
@@ -3025,6 +3097,42 @@
         }
       }
     },
+    "i18n_dictionary_kunggeTag": {
+      "comment": "Dictionary-source badge tag for 台語工藝詞庫 (NTCRI Taiwanese craft glossary). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Craft Glossary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工芸用語"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工藝辭典"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kang-gē sû-tián"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kang-gē sû-tián"
+          }
+        }
+      }
+    },
     "i18n_dictionary_lkkDescription": {
       "comment": "Lí Kang-Khioh Foundation Han-Roman dictionary — toggle description in dictionary settings.",
       "extractionState": "manual",
@@ -3093,6 +3201,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "hàn-lô ha̍h-īng kiàn-gī iōng-jī"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_lkkTag": {
+      "comment": "Dictionary-source badge tag for LKK 漢羅合用建議用字 (Han-Roman combined-use suggestion). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Han-Roman"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢羅併用"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢羅合用"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hàn-lô ha̍h-ēng"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hàn-lô ha̍h-īng"
           }
         }
       }
@@ -3529,6 +3673,42 @@
         }
       }
     },
+    "i18n_dictionary_sitbutTag": {
+      "comment": "Dictionary-source badge tag for 台灣植物名彙 (Taiwan plant-name glossary). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plant Names"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "植物名彙"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "植物名彙"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "si̍t-bu̍t bêng-lūi"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "si̍t-bu̍t bîng-luī"
+          }
+        }
+      }
+    },
     "i18n_dictionary_sttiDescription": {
       "comment": "MOE academic-terminology (STTI) dictionary — toggle description in dictionary settings.",
       "extractionState": "manual",
@@ -3565,8 +3745,44 @@
         }
       }
     },
+    "i18n_dictionary_sttiTag": {
+      "comment": "Dictionary-source badge tag for 學科術語辭典 (MOE academic-subject terminology). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Academic Terms"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学術用語"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "學科術語"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ha̍k-kho su̍t-gí"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ha̍k-kho su̍t-gí"
+          }
+        }
+      }
+    },
     "i18n_dictionary_supplementSectionTitle": {
-      "comment": "Section header grouping supplementary dictionary data.",
+      "comment": "Supplementary-data label. Section header grouping supplementary dictionary data AND the compact source badge for khpoo/khiin/dev/custom search results.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3633,6 +3849,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "「Tâi-huâ suànn-tíng sû-tián」sī Tīng Liông-uí kàu-siū thê-kiong tsu-liāu、Iûnn Ín-giân kàu-siū pian-siu"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_taigitvTag": {
+      "comment": "Dictionary-source badge tag for 台語新詞辭庫 (PTS Taigi new-word lexicon). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi New Words"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台湾語新語"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台語新詞"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-gí sin-sû"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-gí sin-sû"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_taihoaTag": {
+      "comment": "Dictionary-source badge tag for 台華線頂對照典 (Taigi-Mandarin cross-reference). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi-Mandarin"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台華対照"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台華對照"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-hôa tùi-chiàu"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-huâ tuì-tsiàu"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_taijitTag": {
+      "comment": "Dictionary-source badge tag for 台日大辭典 (Taiwanese-Japanese dictionary). Compact label on search-result rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taigi-Japanese"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "台日"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "臺日"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-ji̍t"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tâi-ji̍t"
           }
         }
       }

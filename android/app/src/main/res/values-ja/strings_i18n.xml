@@ -110,6 +110,15 @@
     <string name="i18n_dictionary_variantDescription">教育部辞典のデータに基づき台湾語の異体字を表示。</string>
     <string name="i18n_dictionary_khpooDescription">各地の発音の違いを補足。</string>
     <string name="i18n_dictionary_khiinDescription">「水台文」「台字田」の用字。</string>
+    <string name="i18n_dictionary_kautianTag">教育部辞典</string>
+    <string name="i18n_dictionary_taigitvTag">台湾語新語</string>
+    <string name="i18n_dictionary_iTaigiTag">iTaigi</string>
+    <string name="i18n_dictionary_sitbutTag">植物名彙</string>
+    <string name="i18n_dictionary_taihoaTag">台華対照</string>
+    <string name="i18n_dictionary_taijitTag">台日</string>
+    <string name="i18n_dictionary_kunggeTag">工芸用語</string>
+    <string name="i18n_dictionary_sttiTag">学術用語</string>
+    <string name="i18n_dictionary_lkkTag">漢羅併用</string>
     <string name="i18n_home_appHeaderTitle">台湾語キーボード</string>
     <string name="i18n_home_setupKeyboard">キーボードを有効にして使い始めましょう</string>
     <string name="i18n_home_typingGuide">入力ガイド</string>

@@ -315,8 +315,8 @@ struct DictionaryTab: View {
                     Text(hanzi)
                         .foregroundStyle(.primary)
                 }
-                ForEach(result.uniqueTagNames, id: \.self) { tag in
-                    Text(tag)
+                ForEach(uniqueTagKeys(for: result), id: \.self) { tagKey in
+                    Text(lang.string(tagKey))
                         .font(AppStyle.captionFont)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
@@ -333,6 +333,40 @@ struct DictionaryTab: View {
             .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Source Badge Tags
+
+    /// i18n key for a dictionary source's compact badge label. Resolved at the
+    /// call site via the active display language, so the shared-core
+    /// `DictionarySource` enum stays free of App-layer i18n types.
+    // 中文: 來源 badge 短標籤的 i18n key — 在此 App 層映射,讓 shared-core enum 不依賴 i18n 型別。
+    private func tagKey(for source: DictionarySource) -> StringKey {
+        switch source {
+        case .kautian: .dictionaryKautianTag
+        case .taigitv: .dictionaryTaigitvTag
+        case .itaigi: .dictionaryITaigiTag
+        case .sitbut: .dictionarySitbutTag
+        case .taihoa: .dictionaryTaihoaTag
+        case .taijit: .dictionaryTaijitTag
+        case .kungge: .dictionaryKunggeTag
+        case .stti: .dictionarySttiTag
+        case .lkk: .dictionaryLkkTag
+        // khpoo/khiin/dev/custom collapse to one "補充資料" badge (reuses the section-title key).
+        case .khpoo, .khiin, .dev, .custom: .dictionarySupplementSectionTitle
+        }
+    }
+
+    /// Deduplicated badge keys for a result, preserving `sources` order. Dedup by
+    /// key (not resolved string) so the 4 supplementary sources collapse to one
+    /// badge regardless of the active display language.
+    // 中文: 去重後的 badge key — 以 key 去重(非解析後字串),保留 sources 原排序。
+    private func uniqueTagKeys(for result: DictionarySearchResult) -> [StringKey] {
+        var seen = Set<StringKey>()
+        return result.sources.compactMap { source in
+            let key = tagKey(for: source)
+            return seen.insert(key).inserted ? key : nil
+        }
     }
 
     // MARK: - Dictionary Toggle with Description + Link

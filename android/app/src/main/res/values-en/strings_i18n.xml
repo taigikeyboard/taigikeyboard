@@ -110,6 +110,15 @@
     <string name="i18n_dictionary_variantDescription">Marks Taigi variant characters based on MOE dictionary data.</string>
     <string name="i18n_dictionary_khpooDescription">Supplements regional accent differences.</string>
     <string name="i18n_dictionary_khiinDescription">Characters used by \'Tsuí Tâi-bûn\' and \'Tâi-jī-tshân\'.</string>
+    <string name="i18n_dictionary_kautianTag">MOE Dict</string>
+    <string name="i18n_dictionary_taigitvTag">Taigi New Words</string>
+    <string name="i18n_dictionary_iTaigiTag">iTaigi</string>
+    <string name="i18n_dictionary_sitbutTag">Plant Names</string>
+    <string name="i18n_dictionary_taihoaTag">Taigi-Mandarin</string>
+    <string name="i18n_dictionary_taijitTag">Taigi-Japanese</string>
+    <string name="i18n_dictionary_kunggeTag">Craft Glossary</string>
+    <string name="i18n_dictionary_sttiTag">Academic Terms</string>
+    <string name="i18n_dictionary_lkkTag">Han-Roman</string>
     <string name="i18n_home_appHeaderTitle">Taigi Keyboard</string>
     <string name="i18n_home_setupKeyboard">Enable the keyboard to start using it</string>
     <string name="i18n_home_typingGuide">Typing Guide</string>
