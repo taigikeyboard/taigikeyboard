@@ -23,22 +23,19 @@ enum TabType: Int, CaseIterable, Hashable {
         }
     }
 
-    /// Tab title.
+    /// i18n key for this tab's title (tab strip + top-level page chrome).
     ///
-    /// Tab-strip + page chrome. Deliberately NOT an i18n key — it does not live-switch with the in-app
-    /// display-language picker, matching Android's hand-written native `R.string.tab_*` nav-chrome
-    /// classification (tab strip + page title follow OS locale, not the picker). All five are inline
-    /// literals after their `*Texts` files were deleted across R2b-2…R2b-5.
-    // 中文: tab strip + 頁面標題的 nav chrome。刻意非 i18n key — 不隨 app 顯示語言 picker live-switch,
-    // 中文: 對齊 Android native R.string.tab_*(跟 OS locale,不跟 picker)。五個 tab 於 R2b-2…R2b-5
-    // 中文: 刪除各自 *Texts 後皆改 inline 字面值。
-    var title: String {
+    /// Resolved at the call site via `DisplayLanguageStore`, so the title live-switches with the in-app
+    /// display-language picker. Mirrors Android `i18n_nav_tab*` (`StringKey.NAV_TAB_*`).
+    // 中文: 該 tab 標題的 i18n key(tab strip + 頁面 chrome)。在 call site 用 DisplayLanguageStore 解析,
+    // 中文: 隨 app 顯示語言 picker live-switch。對齊 Android i18n_nav_tab*。
+    var titleKey: StringKey {
         switch self {
-        case .home: "頭頁"
-        case .theme: "主題"
-        case .layout: "佈局"
-        case .dictionary: "詞庫"
-        case .settings: "設定"
+        case .home: .navTabHome
+        case .theme: .navTabTheme
+        case .layout: .navTabLayout
+        case .dictionary: .navTabDictionary
+        case .settings: .navTabSettings
         }
     }
 }

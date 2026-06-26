@@ -31,10 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
@@ -134,7 +132,7 @@ fun InputSettingsScreen(
                 LargeTopAppBar(
                     title = {
                         Text(
-                            text = stringResource(R.string.tab_settings),
+                            text = L10n.navTabSettings,
                             style = MaterialTheme.typography.headlineLarge,
                         )
                     },

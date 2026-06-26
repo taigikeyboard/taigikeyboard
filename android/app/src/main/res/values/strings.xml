@@ -11,13 +11,6 @@
     <string name="key__view_symbols">\?123</string>
     <string name="key__view_symbols2">=\\&lt;</string>
 
-    <!-- Tab titles (referenced by SettingsMainActivity) -->
-    <string name="tab_home">頭頁</string>
-    <string name="tab_theme">主題</string>
-    <string name="tab_layout">佈局</string>
-    <string name="tab_dictionary">詞庫</string>
-    <string name="tab_settings">設定</string>
-
     <!-- Settings (referenced by AndroidManifest and menu XML) -->
     <string name="settings__title">設定</string>
     <string name="settings__menu">More options</string>

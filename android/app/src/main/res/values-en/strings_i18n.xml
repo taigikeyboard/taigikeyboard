@@ -172,6 +172,11 @@
     <string name="i18n_layout_tpsLayout">Phonetic Symbols</string>
     <string name="i18n_layout_moe1Layout">MOE Input Method 1</string>
     <string name="i18n_layout_moe2Layout">MOE Input Method 2</string>
+    <string name="i18n_nav_tabHome">Home</string>
+    <string name="i18n_nav_tabTheme">Theme</string>
+    <string name="i18n_nav_tabLayout">Layout</string>
+    <string name="i18n_nav_tabDictionary">Dictionary</string>
+    <string name="i18n_nav_tabSettings">Settings</string>
     <string name="i18n_settings_reset">Reset</string>
     <string name="i18n_settings_inputMode">Input Mode</string>
     <string name="i18n_settings_displayLanguage">Display Language</string>

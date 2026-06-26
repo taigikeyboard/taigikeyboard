@@ -344,6 +344,16 @@ object L10n {
         @Composable get() = stringRes(StringKey.LAYOUT_MOE1_LAYOUT)
     val layoutMoe2Layout: String
         @Composable get() = stringRes(StringKey.LAYOUT_MOE2_LAYOUT)
+    val navTabHome: String
+        @Composable get() = stringRes(StringKey.NAV_TAB_HOME)
+    val navTabTheme: String
+        @Composable get() = stringRes(StringKey.NAV_TAB_THEME)
+    val navTabLayout: String
+        @Composable get() = stringRes(StringKey.NAV_TAB_LAYOUT)
+    val navTabDictionary: String
+        @Composable get() = stringRes(StringKey.NAV_TAB_DICTIONARY)
+    val navTabSettings: String
+        @Composable get() = stringRes(StringKey.NAV_TAB_SETTINGS)
     val settingsReset: String
         @Composable get() = stringRes(StringKey.SETTINGS_RESET)
     val settingsInputMode: String

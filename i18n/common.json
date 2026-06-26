@@ -32,7 +32,7 @@
       "values": { "hanji": "關閉", "tailo": "kuan pì", "poj": "koan pì", "en": "Close", "ja": "閉じる" }
     },
     "back": {
-      "comment": "Back-navigation a11y contentDescription for the TopAppBar navigationIcon on Android host sub-screens. Android-only: iOS uses the system NavigationStack back button (OS-locale, not overridable to the in-app picker). Custom in-app nav controls follow the display-language picker; only OS-locale nav chrome (tab titles) stays on the OS locale.",
+      "comment": "Back-navigation a11y contentDescription for the TopAppBar navigationIcon on Android host sub-screens. Android-only: iOS uses the system NavigationStack back button (OS-locale, not overridable to the in-app picker). Custom in-app nav controls — including the main-app tab titles (i18n_nav_tab*) — follow the display-language picker; only the OS-provided system back affordance stays on the OS locale.",
       "scope": { "platforms": ["android"], "surfaces": ["host"] },
       "values": { "hanji": "返回", "tailo": "tńg huê", "poj": "tńg hôe", "en": "Back", "ja": "戻る" }
     },

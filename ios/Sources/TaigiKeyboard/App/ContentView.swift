@@ -11,6 +11,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var selectedTab: TabType = .home
     @ObservedObject var viewModel: SetupGuideViewModel
+    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -18,7 +19,7 @@ struct ContentView: View {
             HomeTab(viewModel: viewModel)
                 .tabItem {
                     Label {
-                        Text(TabType.home.title)
+                        Text(lang.string(TabType.home.titleKey))
                     } icon: {
                         Image(latinSystemName: TabType.home.icon)
                     }
@@ -29,7 +30,7 @@ struct ContentView: View {
             ThemeTab()
                 .tabItem {
                     Label {
-                        Text(TabType.theme.title)
+                        Text(lang.string(TabType.theme.titleKey))
                     } icon: {
                         Image(latinSystemName: TabType.theme.icon)
                     }
@@ -40,7 +41,7 @@ struct ContentView: View {
             LayoutTab()
                 .tabItem {
                     Label {
-                        Text(TabType.layout.title)
+                        Text(lang.string(TabType.layout.titleKey))
                     } icon: {
                         Image(latinSystemName: TabType.layout.icon)
                     }
@@ -51,7 +52,7 @@ struct ContentView: View {
             DictionaryTab()
                 .tabItem {
                     Label {
-                        Text(TabType.dictionary.title)
+                        Text(lang.string(TabType.dictionary.titleKey))
                     } icon: {
                         Image(latinSystemName: TabType.dictionary.icon)
                     }
@@ -62,7 +63,7 @@ struct ContentView: View {
             SettingsTab()
                 .tabItem {
                     Label {
-                        Text(TabType.settings.title)
+                        Text(lang.string(TabType.settings.titleKey))
                     } icon: {
                         Image(latinSystemName: TabType.settings.icon)
                     }

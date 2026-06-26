@@ -104,11 +104,11 @@ class SettingsMainActivity : AppCompatActivity() {
                     MainSettingsScreen(
                         tabs =
                             listOf(
-                                TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
-                                TabItem(R.drawable.ic_palette, getString(R.string.tab_theme)),
-                                TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
-                                TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
-                                TabItem(R.drawable.ic_settings, getString(R.string.tab_settings)),
+                                TabItem(R.drawable.ic_home, StringKey.NAV_TAB_HOME),
+                                TabItem(R.drawable.ic_palette, StringKey.NAV_TAB_THEME),
+                                TabItem(R.drawable.keyboard_24, StringKey.NAV_TAB_LAYOUT),
+                                TabItem(R.drawable.dictionary_24, StringKey.NAV_TAB_DICTIONARY),
+                                TabItem(R.drawable.ic_settings, StringKey.NAV_TAB_SETTINGS),
                             ),
                         initialTab = initialTab,
                     ) { selectedTab ->

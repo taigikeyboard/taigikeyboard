@@ -1,0 +1,30 @@
+{
+  "namespace": "nav",
+  "keys": {
+    "tabHome": {
+      "comment": "Main app bottom-nav tab title + the tab's top-level page title (Home). Follows the in-app display-language picker.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "頭頁", "tailo": "thâu-ia̍h", "poj": "thâu-ia̍h", "en": "Home", "ja": "ホーム" }
+    },
+    "tabTheme": {
+      "comment": "Main app bottom-nav tab title + the tab's top-level page title (Theme / keyboard appearance). Follows the in-app display-language picker.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "主題", "tailo": "tsú-tê", "poj": "chú-tê", "en": "Theme", "ja": "テーマ" }
+    },
+    "tabLayout": {
+      "comment": "Main app bottom-nav tab title + the tab's top-level page title (Layout). Follows the in-app display-language picker.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "佈局", "tailo": "pòo-kio̍k", "poj": "pò͘-kio̍k", "en": "Layout", "ja": "レイアウト" }
+    },
+    "tabDictionary": {
+      "comment": "Main app bottom-nav tab title + the tab's top-level page title (Dictionary management). Follows the in-app display-language picker.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "詞庫", "tailo": "sû-khòo", "poj": "sû-khò͘", "en": "Dictionary", "ja": "辞書" }
+    },
+    "tabSettings": {
+      "comment": "Main app bottom-nav tab title + the tab's top-level page title (Settings). Follows the in-app display-language picker.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "設定", "tailo": "siat-tīng", "poj": "siat-tēng", "en": "Settings", "ja": "設定" }
+    }
+  }
+}

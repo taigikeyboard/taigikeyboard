@@ -19,10 +19,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.stringRes
 
 data class TabItem(
     val iconResId: Int,
-    val label: String,
+    val label: StringKey,
 )
 
 @Composable
@@ -37,14 +39,15 @@ fun MainSettingsScreen(
         bottomBar = {
             NavigationBar {
                 tabs.forEachIndexed { index, tab ->
+                    val label = stringRes(tab.label)
                     NavigationBarItem(
                         icon = {
                             Icon(
                                 painter = painterResource(tab.iconResId),
-                                contentDescription = tab.label,
+                                contentDescription = label,
                             )
                         },
-                        label = { Text(tab.label) },
+                        label = { Text(label) },
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         colors =

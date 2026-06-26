@@ -77,7 +77,7 @@ struct ThemePickerView: View {
             }
             .padding(.vertical, AppStyle.horizontalPadding)
         }
-        .navigationTitle(TabType.theme.title)
+        .navigationTitle(lang.string(TabType.theme.titleKey))
         // 中文: themeRevision(任何 CRUD bump)變更即重載清單;新增/編輯/刪除皆涵蓋,pop 回此頁亦 onAppear 重載。
         .onAppear(perform: reloadUserThemes)
         .onChange(of: themeRevision) { _, _ in reloadUserThemes() }

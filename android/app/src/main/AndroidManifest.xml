@@ -89,7 +89,6 @@
         <!-- Theme Editor Activity (custom-theme CRUD) -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.ThemeEditorActivity"
-            android:label="@string/tab_theme"
             android:theme="@style/SettingsTheme"
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>

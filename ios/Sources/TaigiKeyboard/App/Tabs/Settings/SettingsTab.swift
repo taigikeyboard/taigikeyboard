@@ -297,7 +297,7 @@ struct SettingsTab: View {
                     }
                 }
             }
-            .navigationTitle(TabType.settings.title)
+            .navigationTitle(lang.string(TabType.settings.titleKey))
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 selectedInputMode = settings.inputMode

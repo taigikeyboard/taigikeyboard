@@ -217,7 +217,7 @@ struct DictionaryTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(TabType.dictionary.title)
+            .navigationTitle(lang.string(TabType.dictionary.titleKey))
             .navigationBarTitleDisplayMode(.large)
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {

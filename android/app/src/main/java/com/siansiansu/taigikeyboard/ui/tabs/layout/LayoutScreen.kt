@@ -44,7 +44,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -93,7 +92,7 @@ fun LayoutScreen(prefs: PrefHelper) {
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.tab_layout),
+                        text = L10n.navTabLayout,
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },

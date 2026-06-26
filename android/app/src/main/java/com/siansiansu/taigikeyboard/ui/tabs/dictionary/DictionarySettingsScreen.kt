@@ -30,10 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -109,7 +107,7 @@ fun DictionarySettingsScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.tab_dictionary),
+                        text = L10n.navTabDictionary,
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },

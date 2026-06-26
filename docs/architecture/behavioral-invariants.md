@@ -927,3 +927,17 @@ When the selected display language is `system` (Automatic), the **effective** la
 **Scope**: platform-side UI only. iOS `Strings/DisplayLanguage.swift` (`resolveAutomatic` / `effectiveLanguage`) + `DisplayLanguageStore.swift`; Android `i18n/DisplayLanguage.kt` (mirror) + `StringResolver.kt`.
 
 **Tests**: iOS `SettingsKeyTests.swift` + Android `DisplayLanguageTest.kt` (`INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_*` — `ja*→japanese`, `zh*→hanji`, `en/fr/absent→english`; explicit selection ignores locale). Cross-process effective-language agreement + live OS-language refresh are dogfood-pinned.
+
+## §38 — Main-app tab titles follow the display-language picker
+
+### `INVARIANT_NAV_TAB_TITLES_FOLLOW_PICKER`
+
+The five main-app bottom-nav tab titles (Home / Theme / Layout / Dictionary / Settings) are i18n keys in the `nav` namespace and follow the **in-app display-language picker**, live-switching with it like every other host-app string — they do NOT follow the OS locale. Each key is the tab-strip label; for Theme / Layout / Dictionary / Settings it is ALSO that tab's top-level page title. The Home tab keeps its existing app-header page title (`homeAppHeaderTitle` = 台語齒盤), so `navTabHome` is the tab-strip label only. (Before 2026-06-26 all five were frozen Hanji literals classified as "OS-locale nav chrome"; that classification is retired — visible tab text now matches the chosen display language.)
+
+- **iOS**: `TabType.titleKey: StringKey` maps each case to its `nav` key; resolved at every call site via `DisplayLanguageStore` (`lang.string(tab.titleKey)`) — tab strip in `ContentView.swift`, page chrome via `.navigationTitle(...)` in `SettingsTab` / `LayoutTab` / `ThemePickerView` / `DictionaryTab`. There is no `TabType.title` literal.
+- **Android**: `TabItem.label: StringKey` (resolved once per tab via `stringRes(...)` inside `MainSettingsScreen`, applied to BOTH the `NavigationBarItem` text AND the icon `contentDescription`); page chrome via `L10n.navTab*` in the Theme / Layout / Dictionary / Settings screens' `LargeTopAppBar` (the Home screen keeps `L10n.homeAppHeaderTitle`). The native `R.string.tab_*` strings are deleted.
+- **Out of scope — Android system chrome stays OS/native**: an Activity's task-switcher/recents `android:label` is a system-resource (OS-locale) surface, not picker-driven. `ThemeEditorActivity` no longer sets a label → it inherits the application label (`app_name`), matching its sibling sub-activities.
+
+**Scope**: platform-side host UI only — no shared Rust engine. Tab-title strings authored in `i18n/nav.json` (all five production languages); TL/POJ are romanization renderings, not new identities.
+
+**Tests**: the i18n completeness gate (`tools/i18n/test_i18n.py` + `validate_production_completeness`) pins that `nav.json` authors all five production languages; the enum→key mapping is compile-checked (exhaustive `switch` / `when`). The picker-driven live-switch of the tab strip + page titles is dogfood-pinned on both platforms (consistent with §37's picker-UI dogfood pinning).

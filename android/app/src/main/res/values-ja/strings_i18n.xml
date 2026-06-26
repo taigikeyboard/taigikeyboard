@@ -172,6 +172,11 @@
     <string name="i18n_layout_tpsLayout">方音符号</string>
     <string name="i18n_layout_moe1Layout">教育部入力方式1</string>
     <string name="i18n_layout_moe2Layout">教育部入力方式2</string>
+    <string name="i18n_nav_tabHome">ホーム</string>
+    <string name="i18n_nav_tabTheme">テーマ</string>
+    <string name="i18n_nav_tabLayout">レイアウト</string>
+    <string name="i18n_nav_tabDictionary">辞書</string>
+    <string name="i18n_nav_tabSettings">設定</string>
     <string name="i18n_settings_reset">リセット</string>
     <string name="i18n_settings_inputMode">入力モード</string>
     <string name="i18n_settings_displayLanguage">表示言語</string>

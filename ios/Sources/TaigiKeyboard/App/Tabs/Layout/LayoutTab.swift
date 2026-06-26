@@ -46,7 +46,7 @@ struct LayoutTab: View {
                 .padding(.bottom)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(TabType.layout.title)
+            .navigationTitle(lang.string(TabType.layout.titleKey))
             .navigationBarTitleDisplayMode(.large)
         }
     }
