@@ -97,5 +97,6 @@ struct ExpandedCandidateGridCell: View {
             }
         }, perform: {})
         .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

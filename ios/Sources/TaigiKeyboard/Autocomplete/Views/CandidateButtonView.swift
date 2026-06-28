@@ -93,5 +93,10 @@ struct CandidateButtonView: View {
                 isPressed = pressing
             }
         }, perform: {})
+        // Explicit label with `, ` separator (matches ExpandedCandidateGridCell) instead of the
+        // auto-derived title+subtitle concat; announce the navigated selection so VoiceOver does
+        // not leave the highlighted candidate state purely visual.
+        .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

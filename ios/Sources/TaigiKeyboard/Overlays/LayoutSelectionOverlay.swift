@@ -176,6 +176,9 @@ private struct LayoutCard: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
+        // Selected layout is shown only by a checkmark + accent border; announce it so VoiceOver
+        // conveys which layout is active.
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// Preview image with fallback for layouts without screenshots
