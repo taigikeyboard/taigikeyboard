@@ -19,6 +19,8 @@ struct CandidateSuggestionsRow: View {
 
     @EnvironmentObject private var expandState: CandidateExpandState
     @Environment(\.candidateTheme) private var theme
+    // Resolves the expand-chevron a11y label under the display-language picker (live-switch on read).
+    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         HStack(spacing: 0) {
@@ -117,7 +119,6 @@ struct CandidateSuggestionsRow: View {
                 .offset(y: 7)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(expandState.isExpanded ? "收合候選詞" : "展開候選詞")
-        .accessibilityHint("點擊以\(expandState.isExpanded ? "收合" : "展開")更多候選詞選項")
+        .accessibilityLabel(lang.string(.keyboardExpandCandidates))
     }
 }

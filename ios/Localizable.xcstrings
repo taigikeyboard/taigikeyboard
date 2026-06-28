@@ -5401,6 +5401,114 @@
         }
       }
     },
+    "i18n_keyboard_expandCandidates": {
+      "comment": "Candidate expand/collapse a11y label; bidirectional wording covers both states. Android: smartbar strip chevron + overlay collapse via stringRes. iOS: CandidateSuggestionsRow strip chevron + ExpandedCandidateOverlay collapse via DisplayLanguageStore.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand or collapse the candidate list"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補リストを展開または折りたたむ"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開抑是收合候選詞列"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tián-khui ah-sī siu-ha̍p hāu-soán sû lia̍t"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tián-khui ah-sī siu-ha̍p hāu-suán sû lia̍t"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_pageDown": {
+      "comment": "Candidate-overlay page-down control-button a11y label (scrolls to the next page of candidates). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next page"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のページ"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "後一頁"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "āu chi̍t ia̍h"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "āu tsi̍t ia̍h"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_pageUp": {
+      "comment": "Candidate-overlay page-up control-button a11y label (scrolls to the previous page of candidates). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous page"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前のページ"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "頂一頁"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "téng chi̍t ia̍h"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tíng tsi̍t ia̍h"
+          }
+        }
+      }
+    },
     "i18n_keyboard_settings": {
       "comment": "Smartbar toolbar settings button a11y label (opens the app settings). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
       "extractionState": "manual",
@@ -5473,6 +5581,42 @@
         }
       }
     },
+    "i18n_keyboard_switchInputMethodHint": {
+      "comment": "Globe / next-keyboard button a11y HINT conveying the non-obvious long-press affordance (the tap action is announced automatically by VoiceOver, so the hint only adds the long-press behaviour). iOS-only: Android has no accessibilityHint equivalent (it folds operation hints into contentDescription). TL/POJ DRAFT — pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Long-press to choose a keyboard"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長押しでキーボードを選択"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長揤揀齒盤"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tn̂g chhi̍h kíng khí-pôaⁿ"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tn̂g tshi̍h kíng khí-puânn"
+          }
+        }
+      }
+    },
     "i18n_keyboard_switchLayout": {
       "comment": "Smartbar toolbar layout-switch button a11y label (opens the keyboard-layout selector). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
       "extractionState": "manual",
@@ -5541,6 +5685,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "hû-hō bīn-pán"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_toggleToolbar": {
+      "comment": "Smartbar toolbar-toggle button a11y label (the +-icon expands/collapses the toolbar row); bidirectional wording. Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand or collapse the toolbar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールバーを展開または折りたたむ"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開抑是收合工具列"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tián-khui ah-sī siu-ha̍p kang-khū-lia̍t"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tián-khui ah-sī siu-ha̍p kang-khū-lia̍t"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_translateToggle": {
+      "comment": "Candidate-overlay translate-toggle control-button a11y label (swaps the romanization/Hanji primary line). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle translation"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳を切り替え"
+          }
+        },
+        "nan-Hant-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換翻譯"
+          }
+        },
+        "nan-Latn-TW-x-poj": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chhiat-ōaⁿ hoan-e̍k"
+          }
+        },
+        "nan-Latn-TW-x-tailo": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tshiat-uānn huan-i̍k"
           }
         }
       }
@@ -6410,7 +6626,7 @@
       }
     },
     "i18n_settings_englishMode": {
-      "comment": "Input-mode option: English keyboard.",
+      "comment": "Input-mode option: English keyboard. Also the iOS smartbar input-mode button a11y label (extension surface).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6770,7 +6986,7 @@
       }
     },
     "i18n_settings_pojMode": {
-      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization.",
+      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6986,7 +7202,7 @@
       }
     },
     "i18n_settings_tlMode": {
-      "comment": "Input-mode option: Tâi-lô (台羅) romanization.",
+      "comment": "Input-mode option: Tâi-lô (台羅) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7094,7 +7310,7 @@
       }
     },
     "i18n_settings_tpsMode": {
-      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號).",
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號). Also the iOS smartbar input-mode button a11y label (extension surface).",
       "extractionState": "manual",
       "localizations": {
         "en": {

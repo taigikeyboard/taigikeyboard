@@ -50,7 +50,7 @@ struct ToolShortcutsToolbar: View {
         }
         .buttonStyle(.plain)
         .offset(y: 7)
-        .accessibilityLabel(isExpanded ? "收合工具列" : "展開工具列")
+        .accessibilityLabel(lang.string(.keyboardToggleToolbar))
     }
 
     /// 9 個等寬快捷按鈕
@@ -64,14 +64,12 @@ struct ToolShortcutsToolbar: View {
             ToolShortcutButton(
                 systemName: "number",
                 accessibilityLabel: lang.string(.keyboardSymbolPanel),
-                accessibilityHint: "點擊以開啟符號選擇面板",
                 action: onSymbolTap,
             )
 
             ToolShortcutButton(
                 systemName: "photo",
                 accessibilityLabel: lang.string(.keyboardSwitchLayout),
-                accessibilityHint: "點擊以開啟佈局選擇面板",
                 action: onLayoutTap,
             )
 
@@ -80,14 +78,12 @@ struct ToolShortcutsToolbar: View {
             ToolShortcutButton(
                 systemName: "keyboard.chevron.compact.down",
                 accessibilityLabel: lang.string(.keyboardDismissKeyboard),
-                accessibilityHint: "點擊以收起鍵盤",
                 action: onDismissKeyboard,
             )
 
             ToolShortcutButton(
                 systemName: "gearshape",
                 accessibilityLabel: lang.string(.keyboardSettings),
-                accessibilityHint: "點擊以開啟鍵盤設定",
                 action: onSettingsTap,
             )
         }
@@ -114,8 +110,11 @@ struct ToolShortcutsToolbar: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .accessibilityLabel("\(label) 輸入模式")
-        .accessibilityHint(isSelected ? "目前選擇" : "點擊切換至 \(label) 模式")
+        // VoiceOver reads the full mode name (台羅/白話字/…) via the existing InputMode.displayNameKey
+        // while the visible chip stays the short code (TL/POJ/…). Selected state is conveyed by the
+        // .isSelected trait, not baked into the label, so VoiceOver announces "selected" itself.
+        .accessibilityLabel(lang.string(mode.displayNameKey))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// 切換鍵盤的 globe 按鈕（tap: 下一個鍵盤, long-press: 鍵盤選擇器）
@@ -125,7 +124,7 @@ struct ToolShortcutsToolbar: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityLabel(lang.string(.keyboardSwitchInputMethod))
-        .accessibilityHint("點擊切換下一個鍵盤，長按選取鍵盤")
+        .accessibilityHint(lang.string(.keyboardSwitchInputMethodHint))
     }
 }
 
@@ -135,7 +134,6 @@ struct ToolShortcutsToolbar: View {
 private struct ToolShortcutButton: View {
     let systemName: String
     let accessibilityLabel: String
-    let accessibilityHint: String
     let action: () -> Void
 
     var body: some View {
@@ -144,8 +142,9 @@ private struct ToolShortcutButton: View {
         }
         .buttonStyle(ToolShortcutButtonStyle())
         .frame(maxWidth: .infinity)
+        // No accessibilityHint: the label already names the action and VoiceOver appends
+        // "button, double tap to activate" — an explicit hint would just restate it.
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(accessibilityHint)
     }
 }
 

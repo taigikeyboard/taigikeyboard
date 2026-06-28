@@ -22,23 +22,23 @@
       "values": { "hanji": "自動", "tailo": "tsū-tōng", "poj": "chū-tōng", "en": "Automatic", "ja": "自動" }
     },
     "pojMode": {
-      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字", "tailo": "pe̍h-uē-jī", "poj": "pe̍h-ōe-jī", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "tlMode": {
-      "comment": "Input-mode option: Tâi-lô (台羅) romanization.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Input-mode option: Tâi-lô (台羅) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "台羅", "tailo": "tâi-lô", "poj": "tâi-lô", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
     "englishMode": {
-      "comment": "Input-mode option: English keyboard.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Input-mode option: English keyboard. Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "英文", "tailo": "ing-bûn", "poj": "eng-bûn", "en": "English", "ja": "英語" }
     },
     "tpsMode": {
-      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號). Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "方音符號", "tailo": "hong-im-hû-hō", "poj": "hong-im-hû-hō", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
     "typingSectionTitle": {

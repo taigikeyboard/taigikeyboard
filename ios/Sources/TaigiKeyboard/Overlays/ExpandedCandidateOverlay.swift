@@ -21,6 +21,9 @@ struct ExpandedCandidateOverlay: View {
 
     @Environment(\.candidateViewStyle) private var style
     @Environment(\.candidateTheme) private var theme
+    // Resolves the overlay control-button a11y labels under the display-language picker (live-switch
+    // on read). Injected by TaigiKeyboardView via .environment(displayLanguageStore).
+    @Environment(DisplayLanguageStore.self) private var lang
     @State private var currentPage: Int = 0
     @State private var isUpButtonPressed: Bool = false
     @State private var isDownButtonPressed: Bool = false
@@ -145,12 +148,14 @@ struct ExpandedCandidateOverlay: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(lang.string(.keyboardExpandCandidates))
 
             VStack(spacing: 3) {
                 ExpandedCandidateControlButton(
                     iconName: "arrowtriangle.up.fill",
                     yOffset: 2,
                     isPressed: $isUpButtonPressed,
+                    accessibilityLabel: lang.string(.keyboardPageUp),
                     action: {
                         scrollToPreviousPage { id in proxy.scrollTo(id, anchor: .top) }
                     },
@@ -160,6 +165,7 @@ struct ExpandedCandidateOverlay: View {
                     iconName: "arrowtriangle.down.fill",
                     yOffset: 16,
                     isPressed: $isDownButtonPressed,
+                    accessibilityLabel: lang.string(.keyboardPageDown),
                     action: {
                         scrollToNextPage { id in proxy.scrollTo(id, anchor: .top) }
                     },
@@ -171,6 +177,7 @@ struct ExpandedCandidateOverlay: View {
                         iconName: "translate",
                         yOffset: 25,
                         isPressed: $isTranslateButtonPressed,
+                        accessibilityLabel: lang.string(.keyboardTranslateToggle),
                         action: { onTranslateToggle() },
                     )
                 }

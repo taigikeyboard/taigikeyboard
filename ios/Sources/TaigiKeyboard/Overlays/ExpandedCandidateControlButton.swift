@@ -9,6 +9,8 @@ struct ExpandedCandidateControlButton: View {
     let iconName: String
     let yOffset: CGFloat
     @Binding var isPressed: Bool
+    /// VoiceOver label — the parent resolves it via DisplayLanguageStore so it follows the picker.
+    let accessibilityLabel: String
     let action: () -> Void
 
     @Environment(\.candidateTheme) private var theme
@@ -25,6 +27,7 @@ struct ExpandedCandidateControlButton: View {
                 .offset(y: yOffset)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.easeInOut(duration: 0.1)) {
                 isPressed = pressing
