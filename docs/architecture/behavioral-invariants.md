@@ -919,14 +919,16 @@ When the selected display language is `system` (Automatic), the **effective** la
 | Device language subtag | Effective display language |
 |---|---|
 | `ja*` | japanese |
-| `zh*` | hanji |
-| anything else / absent | english |
+| `en*` | english |
+| anything else / absent (incl. `zh*`) | hanji |
+
+Taiwanese Hanji is the neutral default: a Chinese-locale (or any non-`ja`/`en`) device reads the UI in 漢字, not English. (Changed 2026-06-28; was `zh*→hanji, else→english` — `zh*` now reaches hanji via the default branch, so its effective language is unchanged; only non-`ja`/`en`/`zh` locales flip from english to hanji.)
 
 `system` is a persisted *state* (the user can always return to it), never a one-time seed. Resolution is a boundary step: the effective language drives the string resolver AND the English-only plural branch, while the **selected** value (`system`) drives the picker checkmark + the host settings-row label. An explicit (non-`system`) selection is unaffected by the OS locale (and is NOT rebuilt when the OS locale changes — only `system` keys its resolver on the device locale). The OS-locale source is the **device** locale, immune to any app-level override: Android `LocaleManager.systemLocales[0]` (API 33+) / `Resources.getSystem().configuration.locales[0]` (API 28–32) — NOT `Locale.getDefault()`; iOS `Locale.preferredLanguages.first`. Live OS-language changes are picked up at the next refresh point, not in real time (matches platform norms): Android — the device-locale subtag is part of the resolver's memo key for `system`, so a recompose / configuration change rebuilds it; iOS — `syncFromSettings()` recomputes effective even when the selected value is unchanged, driven from the host root on `scenePhase == .active` (foreground) and from each keyboard-extension overlay's `.onAppear`. The refresh wiring (Compose memo key / SwiftUI scenePhase + onAppear) is dogfood-pinned; the pure mapping (`resolveAutomatic` / `effectiveLanguage`) is unit-tested.
 
 **Scope**: platform-side UI only. iOS `Strings/DisplayLanguage.swift` (`resolveAutomatic` / `effectiveLanguage`) + `DisplayLanguageStore.swift`; Android `i18n/DisplayLanguage.kt` (mirror) + `StringResolver.kt`.
 
-**Tests**: iOS `SettingsKeyTests.swift` + Android `DisplayLanguageTest.kt` (`INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_*` — `ja*→japanese`, `zh*→hanji`, `en/fr/absent→english`; explicit selection ignores locale). Cross-process effective-language agreement + live OS-language refresh are dogfood-pinned.
+**Tests**: iOS `SettingsKeyTests.swift` + Android `DisplayLanguageTest.kt` (`INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_*` — `ja*→japanese`, `en*→english`, `zh*/fr/absent→hanji`; explicit selection ignores locale). Cross-process effective-language agreement + live OS-language refresh are dogfood-pinned.
 
 ## §38 — Main-app tab titles follow the display-language picker
 
@@ -941,3 +943,18 @@ The five main-app bottom-nav tab titles (Home / Theme / Layout / Dictionary / Se
 **Scope**: platform-side host UI only — no shared Rust engine. Tab-title strings authored in `i18n/nav.json` (all five production languages); TL/POJ are romanization renderings, not new identities.
 
 **Tests**: the i18n completeness gate (`tools/i18n/test_i18n.py` + `validate_production_completeness`) pins that `nav.json` authors all five production languages; the enum→key mapping is compile-checked (exhaustive `switch` / `when`). The picker-driven live-switch of the tab strip + page titles is dogfood-pinned on both platforms (consistent with §37's picker-UI dogfood pinning).
+
+## §39 — Keyboard locale tag is the neutral `mul`, not a Chinese-bearing tag
+
+### `INVARIANT_KEYBOARD_LOCALE_NEUTRAL_TAG`
+
+The IME's OS-declared locale tag is the neutral **`mul`** (BCP-47 "Multiple languages") on both platforms — NOT `nan-*` or `zh-*`. CLDR renders any `nan` tag as "Min Nan **Chinese**" (English) / "閩南語" (Traditional Chinese); the English base name carries "Chinese" and is NOT overridable from app resources. `mul` renders "Multiple languages / 多種語言", so the OS keyboard list never labels the keyboard as a kind of Chinese. Taiwanese (台語) is positioned as its own language.
+
+- **iOS**: `KeyboardExtension/Info.plist` → `NSExtension.NSExtensionAttributes.PrimaryLanguage = "mul"`. (Supersedes commit `0cecc480`, which set `nan-TW` to drop "中文" from the Traditional-Chinese label but still rendered "Min Nan Chinese" on English-locale devices. Apple's Custom Keyboard docs confirm `PrimaryLanguage` is the static plist language-declaration field; the `mul` display name "Multiple languages" / "多種語言" is CLDR — verified via Foundation `Locale.localizedString(forLanguageCode: "mul")`.)
+- **Android**: `res/xml/method.xml` subtype → `android:languageTag="mul"` (the deprecated `android:imeSubtypeLocale` attribute is removed, not kept alongside — an OEM that prefers the legacy field could otherwise re-surface "Min Nan Chinese"). The subtype `android:label` stays `@string/app_name` (台語齒盤).
+
+**Scope**: OS-visible keyboard chrome only (Settings keyboard list, globe-key grouping). Distinct from `INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION` (the in-app UI language) — the two axes are independent.
+
+**Not yet covered (deferred, unverified)**: the iOS per-app language picker (Settings → App → Language) reads `CFBundleLocalizations` AND the compiled `.lproj` set AND pbxproj `knownRegions` (user-only file); trimming `CFBundleLocalizations` alone may not hide "Min Nan Chinese" there. That surface is deferred pending built-app verification — do NOT claim it is Chinese-free until checked on device.
+
+**Tests**: no unit test (OS chrome is not app-controlled output). Dogfood-pinned: on an English-locale device, Settings → keyboard list shows "台語齒盤" / "Multiple languages", never "Min Nan Chinese", on both platforms.

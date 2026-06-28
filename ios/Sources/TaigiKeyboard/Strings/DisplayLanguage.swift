@@ -95,12 +95,14 @@ enum DisplayLanguage: String, CaseIterable {
 
     /// Resolves the Automatic policy to a concrete authored language from the device OS language subtag
     /// (lowercased ISO 639). Pure + injectable for tests — never reads `Locale` itself; the store passes
-    /// the device subtag in. `ja*` → Japanese, `zh*` → Hanji, anything else (incl. absent) → English.
+    /// the device subtag in. `ja*` → Japanese, `en*` → English, anything else (incl. `zh*` / absent) →
+    /// Hanji. Taiwanese Hanji is the neutral default so a Chinese-locale (or any non-ja/en) device reads
+    /// the UI in 漢字, not English.
     /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `resolveAutomatic`.
     static func resolveAutomatic(_ deviceLanguageSubtag: String) -> DisplayLanguage {
         if deviceLanguageSubtag.hasPrefix("ja") { return .japanese }
-        if deviceLanguageSubtag.hasPrefix("zh") { return .hanji }
-        return .english
+        if deviceLanguageSubtag.hasPrefix("en") { return .english }
+        return .hanji
     }
 
     /// The concrete language this selection resolves to: `.system` defers to the device locale via

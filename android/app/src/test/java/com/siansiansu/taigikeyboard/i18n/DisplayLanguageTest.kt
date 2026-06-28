@@ -86,12 +86,12 @@ class DisplayLanguageTest {
 
     @Test
     fun INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_mapsDeviceSubtagToAuthoredLanguage() {
-        // Japanese device → Japanese; Chinese device → Hanji; everything else (incl. absent locale) → English.
+        // Japanese device → Japanese; English device → English; everything else (incl. Chinese / absent) → Hanji.
         assertEquals(DisplayLanguage.JAPANESE, DisplayLanguage.resolveAutomatic("ja"))
-        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.resolveAutomatic("zh"))
         assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.resolveAutomatic("en"))
-        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.resolveAutomatic("fr"))
-        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.resolveAutomatic(""))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.resolveAutomatic("zh"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.resolveAutomatic("fr"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.resolveAutomatic(""))
     }
 
     @Test
@@ -99,7 +99,8 @@ class DisplayLanguageTest {
         // An explicitly-picked language is itself regardless of the device locale; SYSTEM follows the device.
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.HANJI.effectiveLanguage("ja"))
         assertEquals(DisplayLanguage.JAPANESE, DisplayLanguage.SYSTEM.effectiveLanguage("ja"))
+        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.SYSTEM.effectiveLanguage("en"))
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.SYSTEM.effectiveLanguage("zh"))
-        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.SYSTEM.effectiveLanguage("de"))
+        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.SYSTEM.effectiveLanguage("de"))
     }
 }

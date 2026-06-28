@@ -5,9 +5,14 @@
     android:settingsActivity="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
     android:supportsSwitchingToNextInputMethod="true">
 
+    <!-- CROSS-PLATFORM INVARIANT (INVARIANT_KEYBOARD_LOCALE_NEUTRAL_TAG) — mirrors
+         ios/Sources/TaigiKeyboard/KeyboardExtension/Info.plist PrimaryLanguage. languageTag="mul"
+         (Multiple languages) keeps "Chinese" out of the OS keyboard list; do NOT use nan/zh.
+         imeSubtypeLocale is intentionally absent (deprecated; an OEM reading it could re-surface
+         "Min Nan Chinese"). -->
     <subtype
         android:label="@string/app_name"
-        android:imeSubtypeLocale="nan_TW"
+        android:languageTag="mul"
         android:imeSubtypeMode="keyboard" />
 
 </input-method>

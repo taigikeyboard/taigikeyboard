@@ -32,8 +32,9 @@
 			<false/>
 			<key>PrefersRightToLeft</key>
 			<false/>
+			<!-- CROSS-PLATFORM INVARIANT (INVARIANT_KEYBOARD_LOCALE_NEUTRAL_TAG) — mirrors android/app/src/main/res/xml/method.xml languageTag. "mul" (Multiple languages) keeps "Chinese" out of the OS keyboard list; do NOT use nan/zh. -->
 			<key>PrimaryLanguage</key>
-			<string>nan-TW</string>
+			<string>mul</string>
 			<key>RequestsOpenAccess</key>
 			<true/>
 		</dict>

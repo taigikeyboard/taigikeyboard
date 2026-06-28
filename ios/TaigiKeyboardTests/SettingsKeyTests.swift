@@ -335,12 +335,12 @@ final class SettingsKeyTests: XCTestCase {
 
     func test_INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_mapsDeviceSubtagToConcreteLanguage() {
         // resolveAutomatic maps the device OS language subtag to a concrete authored language:
-        // ja* → Japanese, zh* → Hanji, anything else (incl. empty) → English.
+        // ja* → Japanese, en* → English, anything else (incl. zh* / empty) → Hanji.
         XCTAssertEqual(DisplayLanguage.resolveAutomatic("ja"), .japanese)
-        XCTAssertEqual(DisplayLanguage.resolveAutomatic("zh"), .hanji)
         XCTAssertEqual(DisplayLanguage.resolveAutomatic("en"), .english)
-        XCTAssertEqual(DisplayLanguage.resolveAutomatic("fr"), .english)
-        XCTAssertEqual(DisplayLanguage.resolveAutomatic(""), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("zh"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("fr"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic(""), .hanji)
     }
 
     func test_INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_effectiveLanguageDefersOnlyForSystem() {
@@ -348,8 +348,9 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(DisplayLanguage.hanji.effectiveLanguage("ja"), .hanji)
         // .system defers to the device subtag via resolveAutomatic.
         XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("ja"), .japanese)
+        XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("en"), .english)
         XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("zh"), .hanji)
-        XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("de"), .english)
+        XCTAssertEqual(DisplayLanguage.system.effectiveLanguage("de"), .hanji)
     }
 
     // MARK: - Raw-key migration parity

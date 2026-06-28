@@ -118,15 +118,16 @@ enum class DisplayLanguage(
 
         /**
          * Resolves [SYSTEM]/Automatic to a concrete authored language from the device OS locale's
-         * language subtag (lowercased): Japanese device → [JAPANESE], Chinese device → [HANJI],
-         * everything else (incl. absent locale) → [ENGLISH]. Pure — the OS read happens at the call
-         * site, so this stays unit-testable.
+         * language subtag (lowercased): Japanese device → [JAPANESE], English device → [ENGLISH],
+         * everything else (incl. Chinese / absent locale) → [HANJI]. Taiwanese Hanji is the neutral
+         * default so a Chinese-locale (or any non-ja/en) device reads the UI in 漢字, not English.
+         * Pure — the OS read happens at the call site, so this stays unit-testable.
          */
         fun resolveAutomatic(deviceLanguageSubtag: String): DisplayLanguage =
             when {
                 deviceLanguageSubtag.startsWith("ja") -> JAPANESE
-                deviceLanguageSubtag.startsWith("zh") -> HANJI
-                else -> ENGLISH
+                deviceLanguageSubtag.startsWith("en") -> ENGLISH
+                else -> HANJI
             }
 
         /**
