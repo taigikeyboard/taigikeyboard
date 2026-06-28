@@ -4,7 +4,7 @@
 
   WHY THIS FILE EXISTS — DO NOT DELETE:
   Feature / FAQ icons and slideshow images are declared by *string name* in
-  content/tab1-features.json + content/tab1-faq.json and resolved at runtime
+  content/features.json + content/faq.json and resolved at runtime
   via Resources.getIdentifier() (see ui/components/DrawableResourceResolver.kt).
   These drawables have ZERO static R.drawable.* references, so the R8 resource
   shrinker cannot prove they are used and strips them from release AABs. The

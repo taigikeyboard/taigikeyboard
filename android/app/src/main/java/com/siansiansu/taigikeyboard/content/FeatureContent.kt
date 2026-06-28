@@ -2,7 +2,7 @@ package com.siansiansu.taigikeyboard.content
 
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 
-// Home tab content models (parsed from tab1-features.json / tab1-faq.json shared assets)
+// Home tab content models (parsed from features.json / faq.json shared assets)
 
 internal const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 2.0
 

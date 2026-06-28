@@ -6,8 +6,8 @@ import org.json.JSONObject
 
 // Loads Home tab content from bundled JSON assets.
 object FeatureContentLoader {
-    private const val FEATURES_ASSET = "tab1-features.json"
-    private const val FAQS_ASSET = "tab1-faq.json"
+    private const val FEATURES_ASSET = "features.json"
+    private const val FAQS_ASSET = "faq.json"
     private const val JSON_KEY_FEATURES = "features"
     private const val JSON_KEY_FAQS = "faqs"
     private const val JSON_KEY_HANJI = "hanji"

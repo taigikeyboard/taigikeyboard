@@ -88,18 +88,18 @@ Home tab content is **JSON-driven** — feature descriptions and FAQ are loaded 
 
 | File | Platform | Description |
 |------|----------|-------------|
-| `i18n/content/tab1-features.json` | Shared | Feature descriptions (input modes, autocomplete, etc.) |
-| `i18n/content/tab1-faq.json` | Shared | FAQ entries |
+| `i18n/content/features.json` | Shared | Feature descriptions (input modes, autocomplete, etc.) |
+| `i18n/content/faq.json` | Shared | FAQ entries |
 | `FeatureContent.swift` / `.kt` | Both | Data model |
 | `FeatureContentLoader.swift` / `.kt` | Both | JSON loader |
 
 These live under `i18n/` to keep all translatable JSON in one folder, but use their own nested-tree schema (NOT the flat i18n namespace schema). The codegen glob is non-recursive (`i18n/*.json`), so the `i18n/content/` subfolder is skipped by `make i18n` — the platforms decode these files directly.
 
 Content sync: both platform resource files are **symlinks** into `i18n/content/`:
-- `ios/Sources/TaigiKeyboard/App/Tabs/Home/tab1-{features,faq}.json` → `i18n/content/tab1-{features,faq}.json`
-- `android/app/src/main/assets/tab1-{features,faq}.json` → `i18n/content/tab1-{features,faq}.json`
+- `ios/Sources/TaigiKeyboard/App/Tabs/Home/{features,faq}.json` → `i18n/content/{features,faq}.json`
+- `android/app/src/main/assets/{features,faq}.json` → `i18n/content/{features,faq}.json`
 
-Editing `i18n/content/tab1-*.json` is immediately visible on both platforms — no sync step required.
+Editing `i18n/content/{features,faq}.json` is immediately visible on both platforms — no sync step required.
 
 ---
 

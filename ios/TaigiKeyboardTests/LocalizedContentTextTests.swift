@@ -2,7 +2,7 @@
 import XCTest
 
 /// Tests for `LocalizedContentText` — the per-language content string decoded from the shared
-/// `tab1-features.json` / `tab1-faq.json` assets (Round C1 infra). Coverage pillars:
+/// `features.json` / `faq.json` assets (Round C1 infra). Coverage pillars:
 /// - `resolve(for:)` returns the authored value for each effective language (proves resolution
 ///   beats the bare Hanji fallback once translations land in C2).
 /// - An unauthored language falls back to `hanji` — the C1 behavior-freeze guarantee: today every

@@ -4,16 +4,16 @@
 
 import Foundation
 
-// MARK: - HomeTab content models (parsed from tab1-features.json / tab1-faq.json)
+// MARK: - HomeTab content models (parsed from features.json / faq.json)
 
 /// Root container for the features JSON file.
-// 中文: tab1-features.json 的根容器。
+// 中文: features.json 的根容器。
 struct FeaturesFile: Codable {
     let features: [FeatureContent]
 }
 
 /// Root container for the FAQ JSON file.
-// 中文: tab1-faq.json 的根容器。
+// 中文: faq.json 的根容器。
 struct FAQsFile: Codable {
     let faqs: [FeatureContent]
 }
