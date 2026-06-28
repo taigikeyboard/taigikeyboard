@@ -22,6 +22,7 @@ from i18n_lib import (
     pseudo,
     res_name,
     string_key_const,
+    swift_escape,
     validate_namespace,
     validate_production_completeness,
     xml_escape,
@@ -60,8 +61,19 @@ class EscapingTest(unittest.TestCase):
         self.assertEqual(xml_escape("a & b < c"), "a &amp; b &lt; c")
         self.assertEqual(xml_escape("@home"), "\\@home")
 
+    def test_xml_escape_backslash(self):
+        # A literal backslash must reach the Android resource parser as `\\`, and must be escaped
+        # before the quote/newline rules so their introduced backslashes are not doubled.
+        self.assertEqual(xml_escape("a\\b"), "a\\\\b")
+        self.assertEqual(xml_escape('a\\"b'), 'a\\\\\\"b')
+
     def test_kotlin_escape(self):
         self.assertEqual(kotlin_escape('a"$b'), 'a\\"\\$b')
+
+    def test_swift_escape(self):
+        self.assertEqual(swift_escape('a"b'), 'a\\"b')
+        self.assertEqual(swift_escape("a\\(b)"), "a\\\\(b)")
+        self.assertEqual(swift_escape("a\nb"), "a\\nb")
 
 
 class PseudoTest(unittest.TestCase):

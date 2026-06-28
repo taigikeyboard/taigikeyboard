@@ -474,9 +474,13 @@ def pseudo(text: str) -> str:
 
 def xml_escape(value: str) -> str:
     # `>` is legal as raw text in XML element content (Android strings.xml never escapes it),
-    # so only `&` and `<` need entity-escaping; quotes/newline use Android's backslash form.
+    # so only `&` and `<` need entity-escaping; backslash/quotes/newline use Android's backslash form.
+    # Backslash is escaped FIRST (matching kotlin_escape/swift_escape) so a literal `\` in a source
+    # value reaches the Android resource parser as `\\`, and the backslashes introduced by the
+    # quote/newline escaping below are not doubled.
     out = (
-        value.replace("&", "&amp;")
+        value.replace("\\", "\\\\")
+        .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace('"', "\\\"")
         .replace("'", "\\'")
