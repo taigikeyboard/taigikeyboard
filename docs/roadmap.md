@@ -90,6 +90,12 @@ Detailed plan archives are added retroactively only when source material exists;
 
 Forward-looking candidates only, NOT items already shipped. (v3.5.8-era items that read like candidates but shipped — `整句 lattice + walker`, `continuous compound-hyphen`, `Phase 9 user-freq plumb` — live in [`docs/releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md).)
 
+### 變換後羅馬字 commit — segment + numeric-tone→diacritic on Enter (v3.6.5)
+
+**Status**: Design LOCKED, NOT implemented — pre-arranged 2026-06-29 at USER request to minimize impl-time effort (USER 「預先安排好v3.6.5的項目，減少之後實作的effort」; originally tagged v3.6.4 2026-06-20, moved because i18n took v3.6.4). Round still gated on USER UX confirm + Codex pre-impl. **Full design + code seams + Codex prompt**: memory `project_roman_convert_on_commit.md`.
+
+In TL/POJ, Enter should commit the **converted** romanization — multi-syllable segmentation + numeric tone → tone-diacritic (`suann2ting3` → `suán-tìng`), matching PhahTaigi. Today single (`suann2`→`suán`) and hyphenated (`tai5-gi2`→`tâi-gí`) convert; un-hyphenated multi-syllable stays verbatim per §10.2. Requester = Kisaragi Hiu (same person who drove the S22/§34 literal-roman candidate). **Locked design = Option A**: preedit stays verbatim while typing (§10.2 WYSIWYG), Enter commits converted, raw output stays free via tapping the existing verbatim strip-#0 literal candidate (no new UX element). Engine work = deterministic tone-digit pre-segmentation in `phonetics::canonical_tl_form` (digit ends a syllable → no FST inventory needed; fallback verbatim on ambiguous toneless/invalid input). Platform work = Enter commits the composition's `canonical_tl` instead of raw preedit (locate each platform's return-key composition handler at impl). Touches invariants §10.2 / §17 / §34 (S22) / Core Principle #7 — feature round updates them + adds a cross-platform `INVARIANT_*` test in the same PR. Engine-only fix covers iOS+Android; `make build` (no `make dict`).
+
 ### App UI i18n — multi-language (台語 TL / POJ / 漢字 + 日語 + 英語)
 
 **Status**: Design approved (2026-06-19); implementation in progress — P0–P1 infra + P2 (English) shipped, P3a (Japanese), P3b TL, and P3c POJ all promoted to the production picker (release roster = 漢字 / English / 日本語 / Tâi-lô / Pe̍h-ōe-jī + Automatic). TL/POJ prose stays review-pending (USER proofreads + re-authors on his own schedule — a data-only edit, not a code gate). **Full plan**: [`docs/architecture/i18n-multilang-plan.md`](architecture/i18n-multilang-plan.md); round-by-round status in memory.
