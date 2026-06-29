@@ -9,12 +9,12 @@
     "customThemesSection": {
       "comment": "Section header above the custom-theme shelf in the theme picker.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂主題", "tailo": "tsū tīng tsú-tê", "poj": "chū tēng chú-tê", "en": "Custom Themes", "ja": "カスタムテーマ" }
+      "values": { "hanji": "自訂主題", "tailo": "tsū-tīng tsú-tê", "poj": "chū-tēng chú-tê", "en": "Custom Themes", "ja": "カスタムテーマ" }
     },
     "createNewTheme": {
       "comment": "Label + content description for the create-new-theme card on the theme picker shelf.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "新主題…", "tailo": "sin tsú-tê…", "poj": "sin chú-tê…", "en": "New Theme…", "ja": "新しいテーマ…" }
+      "values": { "hanji": "新主題…", "tailo": "sin tsú-tê...", "poj": "sin chú-tê...", "en": "New Theme…", "ja": "新しいテーマ…" }
     },
     "familyClassic": {
       "comment": "Built-in theme key-style family header: filled keys. DRAFT TL/POJ (king-tián, full dict entry) + en/ja pending USER proofread.",
@@ -194,7 +194,7 @@
     "capReachedMessage": {
       "comment": "Body of the custom-theme cap-reached alert (cap is UserThemeStore.MAX_USER_THEMES = 5).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。", "tailo": "tsū tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah-ē-sái koh sin-tsing。", "poj": "chū tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah-ē-sái koh sin-cheng。", "en": "The custom-theme limit is 5. Delete one before adding another.", "ja": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。" }
+      "values": { "hanji": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。", "tailo": "tsū-tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah-ē-sái koh sin-tsing.", "poj": "chū-tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah-ē-sái koh sin-cheng.", "en": "The custom-theme limit is 5. Delete one before adding another.", "ja": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。" }
     },
     "cardMenu": {
       "comment": "Accessibility content description for the custom-theme card's action-menu button. Android-only (iOS has no equivalent a11y label).",

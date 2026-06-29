@@ -169,7 +169,6 @@ enum StringKey: String {
     case layoutTpsLayout = "i18n_layout_tpsLayout"
     case layoutMoe1Layout = "i18n_layout_moe1Layout"
     case layoutMoe2Layout = "i18n_layout_moe2Layout"
-    case layoutComingSoon = "i18n_layout_comingSoon"
     case navTabHome = "i18n_nav_tabHome"
     case navTabTheme = "i18n_nav_tabTheme"
     case navTabLayout = "i18n_nav_tabLayout"

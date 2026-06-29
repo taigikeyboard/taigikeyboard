@@ -18,8 +18,6 @@ struct LayoutSelectionOverlay: View {
     @Environment(\.candidateTheme) private var theme
     @Environment(DisplayLanguageStore.self) private var lang
 
-    private static let tpsDisabled = false
-
     init(isExpanded: Bool, onDismiss: @escaping () -> Void) {
         self.isExpanded = isExpanded
         self.onDismiss = onDismiss
@@ -39,10 +37,10 @@ struct LayoutSelectionOverlay: View {
                 layoutSection(
                     header: lang.string(.layoutRomanizationKeyboard),
                     layouts: [
-                        (.phahTaigi, lang.string(.layoutPhahTaigiLayout), "layout_phahtaigi_preview", false),
-                        (.qwerty, lang.string(.layoutStandardLayout), "layout_standard_preview", false),
-                        (.moe1, lang.string(.layoutMoe1Layout), "layout_moe1_preview", false),
-                        (.moe2, lang.string(.layoutMoe2Layout), "layout_moe2_preview", false),
+                        (.phahTaigi, lang.string(.layoutPhahTaigiLayout), "layout_phahtaigi_preview"),
+                        (.qwerty, lang.string(.layoutStandardLayout), "layout_standard_preview"),
+                        (.moe1, lang.string(.layoutMoe1Layout), "layout_moe1_preview"),
+                        (.moe2, lang.string(.layoutMoe2Layout), "layout_moe2_preview"),
                     ],
                 )
 
@@ -50,7 +48,7 @@ struct LayoutSelectionOverlay: View {
                 layoutSection(
                     header: lang.string(.layoutTaigiPhonetic),
                     layouts: [
-                        (.tps, lang.string(.layoutTpsLayout), "layout_tps_preview", Self.tpsDisabled),
+                        (.tps, lang.string(.layoutTpsLayout), "layout_tps_preview"),
                     ],
                 )
             }
@@ -69,7 +67,7 @@ struct LayoutSelectionOverlay: View {
 
     private func layoutSection(
         header: String,
-        layouts: [(KeyboardLayoutType, String, String?, Bool)],
+        layouts: [(KeyboardLayoutType, String, String?)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(header)
@@ -81,12 +79,11 @@ struct LayoutSelectionOverlay: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(layouts, id: \.0) { layoutType, name, imageName, isDisabled in
+                    ForEach(layouts, id: \.0) { layoutType, name, imageName in
                         LayoutCard(
                             name: name,
                             previewImageName: imageName,
                             isSelected: selectedLayout == layoutType,
-                            isDisabled: isDisabled,
                             action: { selectLayout(layoutType) },
                         )
                     }
@@ -118,14 +115,12 @@ private struct LayoutCard: View {
     let name: String
     let previewImageName: String?
     let isSelected: Bool
-    var isDisabled: Bool = false
     let action: () -> Void
 
     private let cardWidth: CGFloat = 120
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateTheme) private var theme
-    @Environment(DisplayLanguageStore.self) private var lang
 
     var body: some View {
         Button(action: action) {
@@ -135,18 +130,7 @@ private struct LayoutCard: View {
                     previewImage
                         .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                    if isDisabled {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.black.opacity(0.5))
-
-                        Text(lang.string(.layoutComingSoon))
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.black.opacity(0.7), in: Capsule())
-                    } else if isSelected {
+                    if isSelected {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.black.opacity(0.25))
 
@@ -162,7 +146,7 @@ private struct LayoutCard: View {
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected && !isDisabled ? Color.accentColor : Color.clear, lineWidth: 2),
+                        .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2),
                 )
                 .frame(width: cardWidth)
 
@@ -170,12 +154,11 @@ private struct LayoutCard: View {
                 Text(name)
                     .font(.caption2)
                     .fontWeight(.medium)
-                    .foregroundColor(isDisabled ? theme.secondaryTextColor : theme.primaryTextColor)
+                    .foregroundColor(theme.primaryTextColor)
                     .lineLimit(1)
             }
         }
         .buttonStyle(.plain)
-        .disabled(isDisabled)
         // Selected layout is shown only by a checkmark + accent border; announce it so VoiceOver
         // conveys which layout is active.
         .accessibilityAddTraits(isSelected ? .isSelected : [])

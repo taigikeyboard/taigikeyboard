@@ -4,8 +4,8 @@
       "id": "installIssue",
       "title": {
         "hanji": "齒盤裝好了後無出現",
-        "tailo": "khí-puânn tsong hâu-lio̍h āu bô tshut-hiān",
-        "poj": "khí-pôaⁿ chong hâu-lio̍h āu bô chhut-hiān",
+        "tailo": "khí-puânn tsong hó liáu-āu bô tshut-hiān",
+        "poj": "khí-pôaⁿ chong hó liáu-āu bô chhut-hiān",
         "en": "The keyboard doesn't appear after installing",
         "ja": "インストール後にキーボードが表示されない"
       },
@@ -17,8 +17,8 @@
         {
           "text": {
             "hanji": "1. 先檢查齒盤敢有照「啟用方法」設定好。",
-            "tailo": "1. sian kiám-tsa khí-puânn kám ū tsiàu「khé-iōng hong-huat」 siat-tīng hó。",
-            "poj": "1. sian kiám-cha khí-pôaⁿ kám ū chiàu「khé-iōng hong-hoat」 siat-tēng hó。",
+            "tailo": "1. sian kiám-tsa khí-puânn kám ū tsiàu\"khé-iōng hong-huat\" siat-tīng hó.",
+            "poj": "1. sian kiám-cha khí-pôaⁿ kám ū chiàu\"khé-iōng hong-hoat\" siat-tēng hó.",
             "en": "1. First check whether the keyboard has been set up according to the “How to enable” guide.",
             "ja": "1. まず、キーボードが「有効化の方法」に従って設定されているか確認してください。"
           },
@@ -26,8 +26,8 @@
             "type": "navigation",
             "text": {
               "hanji": "揤遮去看「啟用方法」",
-              "tailo": "tshi̍h jia khì khuànn「khé-iōng hong-huat」",
-              "poj": "chhi̍h jia khì khòaⁿ「khé-iōng hong-hoat」",
+              "tailo": "tshi̍h jia khì khuànn\"khé-iōng hong-huat\"",
+              "poj": "chhi̍h jia khì khòaⁿ\"khé-iōng hong-hoat\"",
               "en": "Tap here to see “How to enable”",
               "ja": "ここをタップして「有効化の方法」を見る"
             },
@@ -41,8 +41,8 @@
         {
           "text": {
             "hanji": "2. 重開你當咧使用 ê App，予 App 重新掠著齒盤。",
-            "tailo": "2. tîng-khui lí tng-teh sú-iōng ê App， hōo App tiông-sin lia̍h--tio̍h khí-puânn。",
-            "poj": "2. têng-khui lí tng-teh sú-iōng ê App， hō͘ App tiông-sin lia̍h--tio̍h khí-pôaⁿ。",
+            "tailo": "2. tîng-khui lí tng-teh sú-iōng ê App, hōo App tiông-sin lia̍h--tio̍h khí-puânn.",
+            "poj": "2. têng-khui lí tng-teh sú-iōng ê App, hō͘ App tiông-sin lia̍h--tio̍h khí-pôaⁿ.",
             "en": "2. Restart the app you are using so that it re-detects the keyboard.",
             "ja": "2. 使用中のアプリを再起動して、アプリにキーボードを再認識させてください。"
           }
@@ -50,8 +50,8 @@
         {
           "text": {
             "hanji": "3. 佇會當拍字 ê 所在，揤牢地球圖示就會使切去台語齒盤。",
-            "tailo": "3. tī ē-tàng phah-jī ê sóo-tsāi， tshi̍h tiâu tuē-kiû-tôo sī tsiu-ē-sái tshiat khì tâi-gí khí-puânn。",
-            "poj": "3. tī ē-tàng phah-jī ê só͘-chāi， chhi̍h tiâu tōe-kiû-tô͘ sī chiu-ē-sái chhiat khì tâi-gí khí-pôaⁿ。",
+            "tailo": "3. tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû-tôo sī tsiū ē-sái tshiat khì tâi-gí khí-puânn.",
+            "poj": "3. tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû-tô͘ sī chiū ē-sái chhiat khì tâi-gí khí-pôaⁿ.",
             "en": "3. Where you can type, press and hold the globe icon to switch to Taigi Keyboard.",
             "ja": "3. 入力できる場所で、地球儀アイコンを長押しすると台語キーボードに切り替えられます。"
           }
@@ -75,8 +75,8 @@
         {
           "text": {
             "hanji": "可能無小心落勾去，麻煩 koh 回報 1 遍，抑是直接聯絡我。",
-            "tailo": "khó-lîng bô-sió-sim làu-kau khì， mâ-huân koh huê-pò 1 piàn， ah-sī ti̍t-tsiap liân-lo̍k guá。",
-            "poj": "khó-lêng bô-sió-sim làu-kau khì， mâ-hoân koh hôe-pò 1 piàn， ah-sī ti̍t-chiap liân-lo̍k góa。",
+            "tailo": "khó-lîng bô-sió-sim làu-kau khì, mâ-huân koh huê-pò 1 piàn, ah-sī ti̍t-tsiap liân-lo̍k guá.",
+            "poj": "khó-lêng bô-sió-sim làu-kau khì, mâ-hoân koh hôe-pò 1 piàn, ah-sī ti̍t-chiap liân-lo̍k góa.",
             "en": "It may have slipped through by accident; please report it once more, or contact me directly.",
             "ja": "うっかり見落とされた可能性があります。お手数ですがもう一度報告するか、直接私にご連絡ください。"
           },
@@ -84,8 +84,8 @@
             "type": "navigation",
             "text": {
               "hanji": "揤遮看「關於」",
-              "tailo": "tshi̍h jia khuànn「kuan-î」",
-              "poj": "chhi̍h jia khòaⁿ「koan-î」",
+              "tailo": "tshi̍h jia khuànn\"kuan-î\"",
+              "poj": "chhi̍h jia khòaⁿ\"koan-î\"",
               "en": "Tap here to see “About”",
               "ja": "ここをタップして「概要」を見る"
             },
@@ -115,8 +115,8 @@
         {
           "text": {
             "hanji": "因為三星手機無「預設齒盤」、「副齒盤」ê 功能，下跤是切換齒盤較利便 ê 方法。",
-            "tailo": "in-uī sann-tshenn tshiú-ki bô「ī-siat khí-puânn」、「hù khí-puânn」ê kong-lîng， ē-kha sī tshiat-uānn khí-puânn khah lī-piān ê hong-huat。",
-            "poj": "in-ūi saⁿ-chheⁿ chhiú-ki bô「ī-siat khí-pôaⁿ」、「hù khí-pôaⁿ」ê kong-lêng， ē-kha sī chhiat-ōaⁿ khí-pôaⁿ khah lī-piān ê hong-hoat。",
+            "tailo": "in-uī sann-tshenn tshiú-ki bô\"ī-siat khí-puânn\",\"hù khí-puânn\"ê kong-lîng, ē-kha sī tshiat-uānn khí-puânn khah lī-piān ê hong-huat.",
+            "poj": "in-ūi saⁿ-chheⁿ chhiú-ki bô\"ī-siat khí-pôaⁿ\",\"hù khí-pôaⁿ\"ê kong-lêng, ē-kha sī chhiat-ōaⁿ khí-pôaⁿ khah lī-piān ê hong-hoat.",
             "en": "Because Samsung phones don't have “default keyboard” / “secondary keyboard” features, here is a more convenient way to switch keyboards.",
             "ja": "Samsung端末には「既定のキーボード」「サブキーボード」機能がないため、以下はキーボードを切り替えるより便利な方法です。"
           }
@@ -124,8 +124,8 @@
         {
           "text": {
             "hanji": "1. 揣著三星齒盤倒爿下跤 ê mài-kù 揤鈕，伊預設是語音輸入。",
-            "tailo": "1. tshuē-tio̍h sann-tshenn khí-puânn tò-pîn ē-kha ê mài-kù tshi̍h-liú， i ī-siat sī gí-im su-ji̍p。",
-            "poj": "1. chhōe-tio̍h saⁿ-chheⁿ khí-pôaⁿ tò-pîn ē-kha ê mài-kù chhi̍h-liú， i ī-siat sī gí-im su-ji̍p。",
+            "tailo": "1. tshuē-tio̍h sann-tshenn khí-puânn tò-pîn ē-kha ê mài-kù tshi̍h-liú, i ī-siat sī gí-im su-ji̍p.",
+            "poj": "1. chhōe-tio̍h saⁿ-chheⁿ khí-pôaⁿ tò-pîn ē-kha ê mài-kù chhi̍h-liú, i ī-siat sī gí-im su-ji̍p.",
             "en": "1. Find the mic button at the bottom-left of the Samsung keyboard; by default it is voice input.",
             "ja": "1. Samsungキーボードの左下にあるマイクボタンを探します。既定では音声入力になっています。"
           },
@@ -137,8 +137,8 @@
         {
           "text": {
             "hanji": "2. 揤牢 mài-kù 揤鈕，共伊改做「輸入法」。",
-            "tailo": "2. tshi̍h tiâu mài-kù tshi̍h-liú， kā-i kué-tsuè「su-ji̍p-hoat」。",
-            "poj": "2. chhi̍h tiâu mài-kù chhi̍h-liú， kā-i kóe-chòe「su-ji̍p-hoat」。",
+            "tailo": "2. tshi̍h tiâu mài-kù tshi̍h-liú, kā-i kué-tsuè\"su-ji̍p-hoat\".",
+            "poj": "2. chhi̍h tiâu mài-kù chhi̍h-liú, kā-i kóe-chòe\"su-ji̍p-hoat\".",
             "en": "2. Press and hold the mic button and change it to “input method.”",
             "ja": "2. マイクボタンを長押しして、「入力方式」に変更します。"
           },
@@ -150,8 +150,8 @@
         {
           "text": {
             "hanji": "3. 揤鈕會變做齒盤圖示，閣揤一下著會當切換齒盤矣。",
-            "tailo": "3. tshi̍h-liú huē piàn-tsò khí-puânn tôo-sī， koh tshi̍h tsi̍t-ē tio̍h ē-tàng tshiat-uānn khí-puânn ah。",
-            "poj": "3. chhi̍h-liú hōe piàn-chò khí-pôaⁿ tô͘-sī， koh chhi̍h chi̍t-ē tio̍h ē-tàng chhiat-ōaⁿ khí-pôaⁿ ah。",
+            "tailo": "3. tshi̍h-liú ē piàn-tsò khí-puânn tôo-sī, koh tshi̍h tsi̍t-ē tio̍h ē-tàng tshiat-uānn khí-puânn ah.",
+            "poj": "3. chhi̍h-liú ē piàn-chò khí-pôaⁿ tô͘-sī, koh chhi̍h chi̍t-ē tio̍h ē-tàng chhiat-ōaⁿ khí-pôaⁿ ah.",
             "en": "3. The button becomes a keyboard icon; press it again and you can switch keyboards.",
             "ja": "3. ボタンがキーボードのアイコンに変わります。もう一度押すとキーボードを切り替えられます。"
           },

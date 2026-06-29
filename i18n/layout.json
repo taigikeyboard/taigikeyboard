@@ -24,22 +24,17 @@
     "tpsLayout": {
       "comment": "Layout name: the Taiwanese Phonetic Symbols (方音符號) keyboard.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "方音符號齒佈", "tailo": "hong-im-hû-hō khí pòo", "poj": "hong-im-hû-hō khí pò͘", "en": "Phonetic Symbols", "ja": "方音符号" }
+      "values": { "hanji": "方音符號齒盤", "tailo": "hong-im-hû-hō khí-puânn", "poj": "hong-im-hû-hō khí-pôaⁿ", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
     "moe1Layout": {
       "comment": "Layout name: the MOE input-method keyboard, variant 1.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "教育部輸入法齒佈1", "tailo": "kàu-io̍k-pōo su-ji̍p-hoat khí pòo1", "poj": "kàu-io̍k-pō͘ su-ji̍p-hoat khí pòo1", "en": "MOE Input Method 1", "ja": "教育部入力方式1" }
+      "values": { "hanji": "教育部輸入法齒盤1", "tailo": "kàu-io̍k-pōo su-ji̍p-hoat khí-puânn 1", "poj": "kàu-io̍k-pō͘ su-ji̍p-hoat khí-pôaⁿ 1", "en": "MOE Input Method 1", "ja": "教育部入力方式1" }
     },
     "moe2Layout": {
       "comment": "Layout name: the MOE input-method keyboard, variant 2.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "教育部輸入法齒佈2", "tailo": "kàu-io̍k-pōo su-ji̍p-hoat khí pòo2", "poj": "kàu-io̍k-pō͘ su-ji̍p-hoat khí pòo2", "en": "MOE Input Method 2", "ja": "教育部入力方式2" }
-    },
-    "comingSoon": {
-      "comment": "Placeholder badge for a layout that is not yet available. iOS-only: shown in the iOS layout-selection overlay (LayoutSelectionOverlay.swift); Android has no such placeholder.",
-      "scope": { "platforms": ["ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "連鞭上市", "tailo": "liâm-mi tsiūnn-tshī", "poj": "liâm-mi chiūⁿ-chhī", "en": "Coming soon", "ja": "近日公開" }
+      "values": { "hanji": "教育部輸入法齒盤2", "tailo": "kàu-io̍k-pōo su-ji̍p-hoat khí-puânn 2", "poj": "kàu-io̍k-pō͘ su-ji̍p-hoat khí-pôaⁿ 2", "en": "MOE Input Method 2", "ja": "教育部入力方式2" }
     }
   }
 }

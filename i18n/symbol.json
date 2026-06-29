@@ -14,12 +14,12 @@
     "hiragana": {
       "comment": "Symbol overlay category tab: Japanese hiragana (extension-only).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "平仮名", "tailo": "pîng-ké-miâ", "poj": "pêng-ké-miâ", "en": "Hiragana", "ja": "ひらがな" }
+      "values": { "hanji": "平假名", "tailo": "pîng-ké-miâ", "poj": "pêng-ké-miâ", "en": "Hiragana", "ja": "ひらがな" }
     },
     "katakana": {
       "comment": "Symbol overlay category tab: Japanese katakana (extension-only).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "片仮名", "tailo": "phiàn-ké-miâ", "poj": "phiàn-ké-miâ", "en": "Katakana", "ja": "カタカナ" }
+      "values": { "hanji": "片假名", "tailo": "phiàn-ké-miâ", "poj": "phiàn-ké-miâ", "en": "Katakana", "ja": "カタカナ" }
     },
     "kaomoji": {
       "comment": "Symbol overlay category tab: kaomoji / emoticons (extension-only).",
