@@ -1063,8 +1063,8 @@
       },
       "values": {
         "hanji": "拍開了後，齒盤會記錄你揀過 ê 詞幾擺，予候選詞排序做參考，定定揀 ê 詞就會排較頭前，按呢候選詞就會愈來愈準。",
-        "tailo": "phah-khui liáu-āu, khí-puânn huē kì-lio̍k lí kíng kuè ê sû kuí-pái, hōo hāu-suán sû pâi-sī tsuè tsham-khó, tiānn-tiānn kíng ê sû tsiū huē pâi khah thâu-tsîng, án-ne hāu-suán sû tsiū huē jú-lâi-jú tsún.",
-        "poj": "phah-khui liáu-āu, khí-pôaⁿ hōe kì-lio̍k lí kéng kòe ê sû kúi-pái, hō͘ hāu-soán sû pâi-sī chòe chham-khó, tiāⁿ-tiāⁿ kéng ê sû chiū hōe pâi khah thâu-chêng, án-ne hāu-soán sû chiū hōe jú-lâi-jú chún.",
+        "tailo": "phah-khui liáu-āu, khí-puânn huē kì-lio̍k lí kíng kuè ê sû kuí-pái, hōo hāu-suán sû pâi-sī tsò tsham-khó, tiānn-tiānn kíng ê sû tsiū huē pâi khah thâu-tsîng, án-ne hāu-suán sû tsiū huē jú-lâi-jú tsún.",
+        "poj": "phah-khui liáu-āu, khí-pôaⁿ hōe kì-lio̍k lí kéng kòe ê sû kúi-pái, hō͘ hāu-soán sû pâi-sī chò chham-khó, tiāⁿ-tiāⁿ kéng ê sû chiū hōe pâi khah thâu-chêng, án-ne hāu-soán sû chiū hōe jú-lâi-jú chún.",
         "en": "When on, the keyboard records how often you pick each word and uses it to rank candidates. Words you choose often move toward the front, so the candidates get more accurate over time.",
         "ja": "オンにすると、各単語を選んだ回数をキーボードが記録し、候補の並び替えに利用します。よく選ぶ単語が前に移動し、候補が次第に正確になります。"
       }
@@ -1177,8 +1177,8 @@
       },
       "values": {
         "hanji": "詞關聯紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人做研究，請先刪除敏感 ê 內容。紀錄功能嘛會使關起來，毋過後一詞預測會較無準。",
-        "tailo": "sû kuan-liân kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu. nā-beh thê-kiong hōo-lâng tsuè gián-kiù, tshiánn sian san-tî bín-kám ê luē-iông. kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi, m̄-koh āu tsi̍t sû ī-tshik huē khah bô tsún.",
-        "poj": "sû koan-liân kì-lio̍k tùi tâi-gí gián-kiù lâi kóng sī chin ū-kè ta̍t ê chu-liāu. nā-beh thê-kiong hō͘-lâng chòe gián-kiù, chhiáⁿ sian san-tî bín-kám ê lōe-iông. kì-lio̍k kong-lêng mā ē-sái koaiⁿ--khí-lâi, m̄-koh āu chi̍t sû ī-chhek hōe khah bô chún.",
+        "tailo": "sû kuan-liân kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu. nā-beh thê-kiong hōo-lâng tsò gián-kiù, tshiánn sian san-tî bín-kám ê luē-iông. kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi, m̄-koh āu tsi̍t sû ī-tshik huē khah bô tsún.",
+        "poj": "sû koan-liân kì-lio̍k tùi tâi-gí gián-kiù lâi kóng sī chin ū-kè ta̍t ê chu-liāu. nā-beh thê-kiong hō͘-lâng chò gián-kiù, chhiáⁿ sian san-tî bín-kám ê lōe-iông. kì-lio̍k kong-lêng mā ē-sái koaiⁿ--khí-lâi, m̄-koh āu chi̍t sû ī-chhek hōe khah bô chún.",
         "en": "Association records are valuable data for Taiwanese-language research. If you share them for research, please delete sensitive content first. You can also turn recording off, though next-word prediction will then be less accurate.",
         "ja": "単語連携の記録は台湾語研究にとって貴重なデータです。研究のために提供する場合は、機密性の高い内容を先に削除してください。記録機能はオフにもできますが、その場合は次の単語の予測精度が下がります。"
       }

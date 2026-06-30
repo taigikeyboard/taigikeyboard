@@ -41,8 +41,8 @@
         {
           "text": {
             "hanji": "2. 重開你當咧使用 ê App，予 App 重新掠著齒盤。",
-            "tailo": "2. tîng-khui lí tng-teh sú-iōng ê App, hōo App tiông-sin lia̍h--tio̍h khí-puânn.",
-            "poj": "2. têng-khui lí tng-teh sú-iōng ê App, hō͘ App tiông-sin lia̍h--tio̍h khí-pôaⁿ.",
+            "tailo": "2. tîng-khui lí tng-teh sú-iōng ê App, hōo App tîng-sin lia̍h--tio̍h khí-puânn.",
+            "poj": "2. têng-khui lí tng-teh sú-iōng ê App, hō͘ App tîng-sin lia̍h--tio̍h khí-pôaⁿ.",
             "en": "2. Restart the app you are using so that it re-detects the keyboard.",
             "ja": "2. 使用中のアプリを再起動して、アプリにキーボードを再認識させてください。"
           }
@@ -137,8 +137,8 @@
         {
           "text": {
             "hanji": "2. 揤牢 mài-kù 揤鈕，共伊改做「輸入法」。",
-            "tailo": "2. tshi̍h tiâu mài-kù tshi̍h-liú, kā-i kué-tsuè\"su-ji̍p-hoat\".",
-            "poj": "2. chhi̍h tiâu mài-kù chhi̍h-liú, kā-i kóe-chòe\"su-ji̍p-hoat\".",
+            "tailo": "2. tshi̍h tiâu mài-kù tshi̍h-liú, kā-i kué-tsò\"su-ji̍p-hoat\".",
+            "poj": "2. chhi̍h tiâu mài-kù chhi̍h-liú, kā-i kóe-chò\"su-ji̍p-hoat\".",
             "en": "2. Press and hold the mic button and change it to “input method.”",
             "ja": "2. マイクボタンを長押しして、「入力方式」に変更します。"
           },
