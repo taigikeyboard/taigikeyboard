@@ -50,8 +50,8 @@
         {
           "text": {
             "hanji": "3. 佇會當拍字 ê 所在，揤牢地球圖示就會使切去台語齒盤。",
-            "tailo": "3. tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû-tôo sī tsiū ē-sái tshiat khì tâi-gí khí-puânn.",
-            "poj": "3. tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû-tô͘ sī chiū ē-sái chhiat khì tâi-gí khí-pôaⁿ.",
+            "tailo": "3. tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû tôo-sī tsiū ē-sái tshiat khì tâi-gí khí-puânn.",
+            "poj": "3. tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû tô͘-sī chiū ē-sái chhiat khì tâi-gí khí-pôaⁿ.",
             "en": "3. Where you can type, press and hold the globe icon to switch to Taigi Keyboard.",
             "ja": "3. 入力できる場所で、地球儀アイコンを長押しすると台語キーボードに切り替えられます。"
           }
@@ -62,8 +62,8 @@
       "id": "feedback",
       "title": {
         "hanji": "回報問題無消息",
-        "tailo": "huê-pò būn-tê bô-siau sit",
-        "poj": "hôe-pò būn-tê bô-siau sit",
+        "tailo": "huê-pò būn-tê bô siau-sik",
+        "poj": "hôe-pò būn-tê bô siau-sek",
         "en": "No response after reporting an issue",
         "ja": "問題を報告しても返事がない"
       },
