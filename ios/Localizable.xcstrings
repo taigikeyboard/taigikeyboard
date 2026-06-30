@@ -926,13 +926,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû koan-liân kì-lio̍k tùi tâi-gí gián-kiù lâi kóng sī chin ū-kè ta̍t ê chu-liāu. nā-beh thê-kiong hō͘-lâng chòe gián-kiù, chhiáⁿ sian san-tî bín-kám ê lōe-iông. kì-lio̍k kong-lêng mā ē-sái koaiⁿ--khí-lâi, m̄-koh āu chi̍t sû ī-chhek hōe khah bô chún."
+            "value": "sû koan-liân kì-lio̍k tùi tâi-gí gián-kiù lâi kóng sī chin ū-kè ta̍t ê chu-liāu. nā-beh thê-kiong hō͘-lâng chò gián-kiù, chhiáⁿ sian san-tî bín-kám ê lōe-iông. kì-lio̍k kong-lêng mā ē-sái koaiⁿ--khí-lâi, m̄-koh āu chi̍t sû ī-chhek hōe khah bô chún."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû kuan-liân kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu. nā-beh thê-kiong hōo-lâng tsuè gián-kiù, tshiánn sian san-tî bín-kám ê luē-iông. kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi, m̄-koh āu tsi̍t sû ī-tshik huē khah bô tsún."
+            "value": "sû kuan-liân kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu. nā-beh thê-kiong hōo-lâng tsò gián-kiù, tshiánn sian san-tî bín-kám ê luē-iông. kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi, m̄-koh āu tsi̍t sû ī-tshik huē khah bô tsún."
           }
         }
       }
@@ -2150,13 +2150,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, khí-pôaⁿ hōe kì-lio̍k lí kéng kòe ê sû kúi-pái, hō͘ hāu-soán sû pâi-sī chòe chham-khó, tiāⁿ-tiāⁿ kéng ê sû chiū hōe pâi khah thâu-chêng, án-ne hāu-soán sû chiū hōe jú-lâi-jú chún."
+            "value": "phah-khui liáu-āu, khí-pôaⁿ hōe kì-lio̍k lí kéng kòe ê sû kúi-pái, hō͘ hāu-soán sû pâi-sī chò chham-khó, tiāⁿ-tiāⁿ kéng ê sû chiū hōe pâi khah thâu-chêng, án-ne hāu-soán sû chiū hōe jú-lâi-jú chún."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, khí-puânn huē kì-lio̍k lí kíng kuè ê sû kuí-pái, hōo hāu-suán sû pâi-sī tsuè tsham-khó, tiānn-tiānn kíng ê sû tsiū huē pâi khah thâu-tsîng, án-ne hāu-suán sû tsiū huē jú-lâi-jú tsún."
+            "value": "phah-khui liáu-āu, khí-puânn huē kì-lio̍k lí kíng kuè ê sû kuí-pái, hōo hāu-suán sû pâi-sī tsò tsham-khó, tiānn-tiānn kíng ê sû tsiū huē pâi khah thâu-tsîng, án-ne hāu-suán sû tsiū huē jú-lâi-jú tsún."
           }
         }
       }
@@ -3080,19 +3080,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。"
+            "value": "收規一千兩百組重要 ê 台語工藝詞，包括陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝這 11 項工藝類別。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siu-lio̍k to-ta̍t it-chhian nn̄g-pah cho͘ koan-kiān tâi-gí kang-gē sû-lūi, hâm-kài tô-chû,bo̍k-gē,kim-kang,tek-tîn,siam-ûi,po-lê,chhat-gē,chio̍h-gē,phôe-kek,chóa-gē téng cha̍p-it hāng kang-gē lūi-pia̍t."
+            "value": "Siu kui it-chhian nn̄g-pah cho͘ tiōng-iàu ê tâi-gí kang-gē sû, pau-koat tô-chû, bo̍k-gē, kim-kang, tek-tîn, siam-ûi, po-lê, chhat-gē, chio̍h-gē, phôe-kek, chóa-gē chit 11 hāng kang-gē lūi-pia̍t."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siu-lio̍k to-ta̍t it-tshian nn̄g-pah tsoo kuan-kiān tâi-gí kang-gē sû-luī, hâm-kài tô-tsû,bo̍k-gē,kim-kang,tik-tîn,siam-uî,po-lê,tshat-gē,tsio̍h-gē,phuê-kik,tsuá-gē tíng tsa̍p-it hāng kang-gē luī-pia̍t."
+            "value": "Siu kui it-tshian nn̄g-pah tsoo tiōng-iàu ê tâi-gí kang-gē sû, pau-kuat tô-tsû, bo̍k-gē, kim-kang, tik-tîn, siam-uî, po-lê, tshat-gē, tsio̍h-gē, phuê-kik, tsuá-gē tsit 11 hāng kang-gē luī-pia̍t."
           }
         }
       }
@@ -3332,19 +3332,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。"
+            "value": "台語、華語攏會當揣，詞目佮例句有發音通聽，學習較利便。閣有分類、部首筆劃索引佮附錄。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thê-kiong Tâi-oân tâi-gí chhiau-chhōe ki̍p hôa-gí chhiau-chhōe, khó lêng-thèng sû-ba̍k hàn lē-kù hoat-im, hong-piān ha̍k-si̍p. Hù-ū hun-lūi sek-ín,pō͘-siú pit-ōe sek-ín ki̍p hù-lio̍k."
+            "value": "Tâi-gí, hôa-gí lóng ē-tàng chhōe, sû-ba̍k kah lē-kù ū hoat-im thang thiaⁿ, ha̍k-si̍p khah lī-piān. Koh ū hun-lūi, pō͘-siú pit-oe̍h sek-ín kah hù-lio̍k."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thê-kiong Tâi-uân tâi-gí tshiau-tshuē ki̍p huâ-gí tshiau-tshuē, khó lîng-thìng sû-ba̍k hàn lē-kù huat-im, hong-piān ha̍k-si̍p. Hù-ū hun-luī sik-ín,pōo-siú pit-uē sik-ín ki̍p hù-lio̍k."
+            "value": "Tâi-gí, huâ-gí lóng ē-tàng tshuē, sû-ba̍k kah lē-kù ū huat-im thang thiann, ha̍k-si̍p khah lī-piān. Koh ū hun-luī, pōo-siú pit-ue̍h sik-ín kah hù-lio̍k."
           }
         }
       }
@@ -3404,19 +3404,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。"
+            "value": "台語台招專家學者，定期開會，討論新詞愛按怎用台語講較好，建立詞庫予逐家查、予逐家用。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tâi-gí-tâi iau-chhiáⁿ choan-ka ha̍k-chiá, tēng-kî tiàu-khui hōe-gī, thó-lūn sin-heng sû-lūi ê si̍t-tong tâi-gí kóng-hoat, kiàn-li̍p sû-khò͘ hō͘ bîn-chiòng cha-sûn sú-iōng."
+            "value": "Tâi-gí-tâi chio choan-ka ha̍k-chiá, tēng-kî khui-hōe, thó-lūn sin-sû ài àn-chóaⁿ iōng tâi-gí kóng khah hó, kiàn-li̍p sû-khò͘ hō͘ ta̍k-ke cha, hō͘ ta̍k-ke iōng."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tâi-gí-tâi iau-tshiánn tsuan-ka ha̍k-tsiá, tīng-kî tiàu-khui huē-gī, thó-lūn sin-hing sû-luī ê si̍t-tong tâi-gí kóng-huat, kiàn-li̍p sû-khòo hōo bîn-tsiòng tsa-sûn sú-iōng."
+            "value": "Tâi-gí-tâi tsio tsuan-ka ha̍k-tsiá, tīng-kî khui-huē, thó-lūn sin-sû ài àn-tsuánn iōng tâi-gí kóng khah hó, kiàn-li̍p sû-khòo hōo ta̍k-ke tsa, hōo ta̍k-ke iōng."
           }
         }
       }
@@ -3728,19 +3728,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。"
+            "value": "對 106 年開始，共語文、數學、社會、自然科學、藝術、綜合活動、科技、健康佮體育這 8 大領域 ê 學科術語編做台語。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tī 106 nî khí chìn-hêng gí-bûn,sò͘-ha̍k,siā-hōe,chū-jiân kho-ha̍k,gē-su̍t,chong-ha̍p oa̍h-tōng,kho-ki,kiān-khong kap thé-io̍k téng 8 tāi léng-e̍k ha̍k-kho su̍t-gí chī tâi-gí pian-e̍k."
+            "value": "Tuì 106 nî khai-sí, kā gí-bûn, sò͘-ha̍k, siā-hōe, chū-jiân kho-ha̍k, gē-su̍t, chong-ha̍p oa̍h-tōng, kho-ki, kiān-khong kah thé-io̍k chit 8 tāi léng-e̍k ê ha̍k-kho su̍t-gí pian-chò tâi-gí."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tī 106 nî khí tsìn-hîng gí-bûn,sòo-ha̍k,siā-huē,tsū-jiân kho-ha̍k,gē-su̍t,tsong-ha̍p ua̍h-tōng,kho-ki,kiān-khong kap thé-io̍k tíng 8 tāi líng-i̍k ha̍k-kho su̍t-gí tsī tâi-gí pian-i̍k."
+            "value": "Tuì 106 nî khai-sí, kā gí-bûn, sòo-ha̍k, siā-huē, tsū-jiân kho-ha̍k, gē-su̍t, tsong-ha̍p ua̍h-tōng, kho-ki, kiān-khong kah thé-io̍k tsit 8 tāi líng-i̍k ê ha̍k-kho su̍t-gí pian-tsò tâi-gí."
           }
         }
       }
@@ -4418,13 +4418,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-gí khí-pôaⁿ pó-chèng éng-oán bián-hùi, mā bōe chòe hù-hùi kong-lêng. tâi-gí sī lán ê bó-gí, bô èng-kai in-ūi chîⁿ ê būn-tê iōng bōe tio̍h hó ke-si. góa ǹg-bāng ta̍k-ke siūⁿ-beh ha̍k tâi-gí, siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng, che-sī góa chòe chit ê khí-pôaⁿ siōng tiōng-iàu ê sim-goān."
+            "value": "tâi-gí khí-pôaⁿ pó-chèng éng-oán bián-hùi, mā bōe chò hù-hùi kong-lêng. tâi-gí sī lán ê bó-gí, bô èng-kai in-ūi chîⁿ ê būn-tê iōng bōe tio̍h hó ke-si. góa ǹg-bāng ta̍k-ke siūⁿ-beh ha̍k tâi-gí, siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng, che-sī góa chò chit ê khí-pôaⁿ siōng tiōng-iàu ê sim-goān."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-gí khí-puânn pó-tsìng íng-uán bián-huì, mā buē tsuè hù-huì kong-lîng. tâi-gí sī lán ê bó-gí, bô ìng-kai in-uī tsînn ê būn-tê iōng buē tio̍h hó ke-si. guá ǹg-bāng ta̍k-ke siūnn-beh ha̍k tâi-gí, siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng, tse-sī guá tsuè tsit ê khí-puânn siōng tiōng-iàu ê sim-guān."
+            "value": "tâi-gí khí-puânn pó-tsìng íng-uán bián-huì, mā buē tsò hù-huì kong-lîng. tâi-gí sī lán ê bó-gí, bô ìng-kai in-uī tsînn ê būn-tê iōng buē tio̍h hó ke-si. guá ǹg-bāng ta̍k-ke siūnn-beh ha̍k tâi-gí, siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng, tse-sī guá tsò tsit ê khí-puânn siōng tiōng-iàu ê sim-guān."
           }
         }
       }
@@ -4850,13 +4850,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "oân-sêng liáu-āu, têng-khui lí ba̍k-chêng sú-iōng ê App, hō͘ App tîng-sin chài-ji̍p sin ê khí-pôaⁿ chheng-toaⁿ. sòa--lo̍h-lâi, tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû-tô͘ sī chhiat khì tâi-gí khí-pôaⁿ"
+            "value": "oân-sêng liáu-āu, têng-khui lí ba̍k-chêng sú-iōng ê App, hō͘ App tîng-sin chài-ji̍p sin ê khí-pôaⁿ chheng-toaⁿ. sòa--lo̍h-lâi, tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû tô͘-sī chhiat khì tâi-gí khí-pôaⁿ"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "uân-sîng liáu-āu, tîng-khui lí ba̍k-tsîng sú-iōng ê App, hōo App tîng-sin tsài-ji̍p sin ê khí-puânn tshing-tuann. suà--lo̍h-lâi, tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû-tôo sī tshiat khì tâi-gí khí-puânn"
+            "value": "uân-sîng liáu-āu, tîng-khui lí ba̍k-tsîng sú-iōng ê App, hōo App tîng-sin tsài-ji̍p sin ê khí-puânn tshing-tuann. suà--lo̍h-lâi, tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû tôo-sī tshiat khì tâi-gí khí-puânn"
           }
         }
       }
@@ -5030,13 +5030,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"ún-chún oân-chéng chhú-iōng\" ì-sù sī hō͘ khí-pôaⁿ ē-tàng bat lí chhi̍h ê tōng-chok, chiâⁿ-chòe lí phah ê jī. chhiáⁿ hòng-sim,App bōe kì-lio̍k lí ê chu-liāu."
+            "value": "\"ún-chún oân-chéng chhú-iōng\" ì-sù sī hō͘ khí-pôaⁿ ē-tàng bat lí chhi̍h ê tōng-chok, chiâⁿ-chò lí phah ê jī. chhiáⁿ hòng-sim,App bōe kì-lio̍k lí ê chu-liāu."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"ún-tsún uân-tsíng tshú-iōng\" ì-sù sī hōo khí-puânn ē-tàng bat lí tshi̍h ê tōng-tsok, tsiânn-tsuè lí phah ê jī. tshiánn hòng-sim,App buē kì-lio̍k lí ê tsu-liāu."
+            "value": "\"ún-tsún uân-tsíng tshú-iōng\" ì-sù sī hōo khí-puânn ē-tàng bat lí tshi̍h ê tōng-tsok, tsiânn-tsò lí phah ê jī. tshiánn hòng-sim,App buē kì-lio̍k lí ê tsu-liāu."
           }
         }
       }
@@ -7370,13 +7370,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-lô or m̄-sī chèng-sek siá-hoat, hong-im-hû-hō ㄜ chèng-sek kan-na tùi-èng er. pún siat-tēng chí khòng-chè hāu-soán sû án-nóa hián-sī; jī-tián chhōe sû í-keng kā er kah or láng tùi-èng chòe kāng chi̍t-ê im-ūi, bô-lūn pún siat-tēng khui ah-bô khui láng chhōe hōe tio̍h. khai-khé(ī-siat):or hián-sī chòe ㄜ. koan pì:or hián-sī chòe ㄛ(hoe-ho̍k tâi-lô o)."
+            "value": "tâi-lô or m̄-sī chèng-sek siá-hoat, hong-im-hû-hō ㄜ chèng-sek kan-na tùi-èng er. pún siat-tēng chí khòng-chè hāu-soán sû án-nóa hián-sī; jī-tián chhōe sû í-keng kā er kah or láng tùi-èng chò kāng chi̍t-ê im-ūi, bô-lūn pún siat-tēng khui ah-bô khui láng chhōe hōe tio̍h. khai-khé(ī-siat):or hián-sī chò ㄜ. koan pì:or hián-sī chò ㄛ(hoe-ho̍k tâi-lô o)."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-lô or m̄-sī tsìng-sik siá-huat, hong-im-hû-hō ㄜ tsìng-sik kan-na tuì-ìng er. pún siat-tīng tsí khòng-tsè hāu-suán sû án-nuá hián-sī; jī-tián tshuē sû í-king kā er kah or láng tuì-ìng tsuè kāng tsi̍t-ê im-uī, bô-lūn pún siat-tīng khui ah-bô khui láng tshuē huē tio̍h. khai-khé(ī-siat):or hián-sī tsuè ㄜ. kuan pì:or hián-sī tsuè ㄛ(hue-ho̍k tâi-lô o)."
+            "value": "tâi-lô or m̄-sī tsìng-sik siá-huat, hong-im-hû-hō ㄜ tsìng-sik kan-na tuì-ìng er. pún siat-tīng tsí khòng-tsè hāu-suán sû án-nuá hián-sī; jī-tián tshuē sû í-king kā er kah or láng tuì-ìng tsò kāng tsi̍t-ê im-uī, bô-lūn pún siat-tīng khui ah-bô khui láng tshuē huē tio̍h. khai-khé(ī-siat):or hián-sī tsò ㄜ. kuan pì:or hián-sī tsò ㄛ(hue-ho̍k tâi-lô o)."
           }
         }
       }
