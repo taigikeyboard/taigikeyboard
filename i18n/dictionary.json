@@ -474,8 +474,8 @@
       },
       "values": {
         "hanji": "檔案傷大（上限 5 MB）",
-        "tailo": "tòng-àn siong tuā(siōng hān 5 MB)",
-        "poj": "tòng-àn siong tōa(siōng hān 5 MB)",
+        "tailo": "tòng-àn siong tuā (siōng hān 5 MB)",
+        "poj": "tòng-àn siong tōa (siōng hān 5 MB)",
         "en": "File too large (5 MB limit)",
         "ja": "ファイルが大きすぎます（上限 5 MB）"
       }
@@ -493,8 +493,8 @@
       },
       "values": {
         "hanji": "詞傷濟（上限 30,000 項）",
-        "tailo": "sû siunn-tse(siōng hān 30,000 hāng)",
-        "poj": "sû siuⁿ-che(siōng hān 30,000 hāng)",
+        "tailo": "sû siunn-tse (siōng hān 30,000 hāng)",
+        "poj": "sû siuⁿ-che (siōng hān 30,000 hāng)",
         "en": "Too many entries (30,000 limit)",
         "ja": "単語が多すぎます（上限 30,000 件）"
       }

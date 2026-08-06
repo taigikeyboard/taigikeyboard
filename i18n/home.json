@@ -64,12 +64,12 @@
     "setupGuideStep1Settings": {
       "comment": "Setup-guide step 1 title: tap 'Keyboards'.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "點揤「齒盤」", "tailo": "tiám-tshi̍h\"khí-puânn\"", "poj": "tiám-chhi̍h\"khí-pôaⁿ\"", "en": "Tap \"Keyboards\"", "ja": "「キーボード」をタップ" }
+      "values": { "hanji": "點揤「齒盤」", "tailo": "tiám-tshi̍h \"khí-puânn\"", "poj": "tiám-chhi̍h \"khí-pôaⁿ\"", "en": "Tap \"Keyboards\"", "ja": "「キーボード」をタップ" }
     },
     "setupGuideStep2AddKeyboard": {
       "comment": "Setup-guide step 2 title: tap 'Add keyboard' and 'Allow Full Access'.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "點揤「增加齒盤」、「允准完整取用」", "tailo": "tiám-tshi̍h\"tsing-ka khí-puânn\",\"ún-tsún uân-tsíng tshú-iōng\"", "poj": "tiám-chhi̍h\"cheng-ka khí-pôaⁿ\",\"ún-chún oân-chéng chhú-iōng\"", "en": "Tap \"Add keyboard\" and \"Allow Full Access\"", "ja": "「キーボードを追加」「フルアクセスを許可」をタップ" }
+      "values": { "hanji": "點揤「增加齒盤」、「允准完整取用」", "tailo": "tiám-tshi̍h \"tsing-ka khí-puânn\", \"ún-tsún uân-tsíng tshú-iōng\"", "poj": "tiám-chhi̍h \"cheng-ka khí-pôaⁿ\", \"ún-chún oân-chéng chhú-iōng\"", "en": "Tap \"Add keyboard\" and \"Allow Full Access\"", "ja": "「キーボードを追加」「フルアクセスを許可」をタップ" }
     },
     "userGuide": {
       "comment": "Home resource link: the project website introduction.",
