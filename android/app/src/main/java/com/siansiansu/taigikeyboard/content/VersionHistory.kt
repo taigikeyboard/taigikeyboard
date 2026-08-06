@@ -12,6 +12,18 @@ object VersionHistory {
     val entries: List<VersionEntry> =
         listOf(
             VersionEntry(
+                "3.6.4",
+                "2026/08/07",
+                listOf(
+                    "New: choose Automatic, 漢字, English, 日本語, Tâi-lô, or Pe̍h-ōe-jī as the app and keyboard display language; changes apply live and stay independent of the input mode.",
+                    "New: feature guides, FAQ content, dictionary-source descriptions, theme names, settings, overlays, alerts, and accessibility labels follow the selected display language.",
+                    "New: the app display name is localized for English and Japanese.",
+                    "Fixed: TalkBack now treats each settings switch row as one toggle target and announces its checked state without duplicate nodes.",
+                    "Changed: the keyboard is identified to Android as Multiple Languages instead of Chinese / Min Nan; Taigi input and candidates are unchanged.",
+                    "Changed: localized Hanji, Tâi-lô, and Pe̍h-ōe-jī wording and romanization have been reviewed and refined.",
+                ),
+            ),
+            VersionEntry(
                 "3.6.3",
                 "2026/06/20",
                 listOf(

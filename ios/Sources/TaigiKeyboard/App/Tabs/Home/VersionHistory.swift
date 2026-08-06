@@ -6,6 +6,14 @@
 // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
 enum VersionHistory {
     static let entries: [(version: String, date: String, changes: [String])] = [
+        ("3.6.4", "2026/08/07", [
+            "New: choose Automatic, 漢字, English, 日本語, Tâi-lô, or Pe̍h-ōe-jī as the app and keyboard display language; changes apply live and stay independent of the input mode.",
+            "New: feature guides, FAQ content, dictionary-source descriptions, theme names, settings, overlays, alerts, and accessibility labels follow the selected display language.",
+            "New: the app and keyboard display names are localized for English and Japanese.",
+            "Fixed: VoiceOver now announces the selected candidate and active keyboard layout.",
+            "Changed: the keyboard is identified to iOS as Multiple Languages instead of Chinese / Min Nan; Taigi input and candidates are unchanged.",
+            "Changed: localized Hanji, Tâi-lô, and Pe̍h-ōe-jī wording and romanization have been reviewed and refined.",
+        ]),
         ("3.6.3", "2026/06/20", [
             "New: typing a tone in TPS (注音) now shows only that tone's readings, matching TL / POJ; typing without a tone still shows all tones.",
             "New: TPS ninth tone (ˆ) can now be typed via the 9 digit key.",
