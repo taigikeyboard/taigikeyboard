@@ -48,29 +48,16 @@ IOS_XCSTRINGS = "ios/Localizable.xcstrings"
 IOS_STRINGS_DIR = "ios/Sources/TaigiKeyboard/Strings"
 IOS_GEN_DIR = f"{IOS_STRINGS_DIR}/Generated"
 
-# Hanji has no OS locale; pin a Taiwanese-Hanji BCP-47 that maps NO Android resource-qualifier dir
-# (so a Context built from it always yields the default values/ set) and is the iOS catalog's
-# source language (see XCSTRINGS_SOURCE_LANGUAGE). Mirrors the Kotlin BCP47_HANJI top-level const.
+# Hanji has no Android resource-qualifier dir. This BCP-47 tag deliberately maps to no authored
+# Android locale so a Context built from it falls back to the default values/ set. iOS does NOT use
+# this tag: App Store Connect rejects the resulting nan-Hant-TW.lproj, so Hanji is a generated map.
 BCP47_HANJI = "nan-Hant-TW"
 
-# Authored language -> BCP-47 tag for the iOS String Catalog. TL/POJ use private-use subtags
-# (RFC5646 §2.2.7); Xcode emits a loadable .lproj for them (R2b architecture probe).
-# MIRROR: each tag here MUST equal `DisplayLanguage.bcp47` in
-# ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift — the catalog emits each localization under
-# this tag and the runtime resolver loads `<tag>.lproj`; drift silently breaks resolution.
-LANG_TO_BCP47 = {
-    "hanji": BCP47_HANJI,
-    "tailo": "nan-Latn-TW-x-tailo",
-    "poj": "nan-Latn-TW-x-poj",
-    "ja": "ja",
-    "en": "en",
-}
-
-# The catalog's source language MUST be the canonical base (Hanji), NOT "en". With sourceLanguage
-# "en", Xcode emits every key into en.lproj as its own identifier value (`"i18n_x"="i18n_x"`) even
-# when only Hanji is authored, which defeats the runtime sentinel fallback so English would render
-# the raw synthetic key. Verified on Xcode 26.5 xcstringstool (Codex pre-impl Q1).
-XCSTRINGS_SOURCE_LANGUAGE = BCP47_HANJI
+# iOS packages only App-Store-recognized native localizations. Hanji/TL/POJ are product display
+# languages, not OS bundle locales, and resolve through GeneratedTaigiStrings.swift instead.
+IOS_NATIVE_LANGUAGES = {"en": "en", "ja": "ja"}
+IOS_GENERATED_MAP_LANGUAGES = ("hanji", "tailo", "poj")
+XCSTRINGS_SOURCE_LANGUAGE = "en"
 
 # DisplayLanguage enum case for English, per platform — the only count-inflecting display language, so
 # the plural-aware typed accessor branches on it alone (`displayLanguage == DisplayLanguage.ENGLISH` /
@@ -752,16 +739,19 @@ def _ios_format_arg(ptype: str, name: str) -> str:
 
 def _emit_xcstrings(entries) -> str:
     # iOS String Catalog. Keyed by the synthetic res_name (shared with the Android R.string name, so
-    # one naming function owns both platforms). Each authored language becomes a localization keyed by
-    # its BCP-47 tag; Xcode compiles each into a per-tag .lproj (incl. the private-use TL/POJ tags).
+    # one naming function owns both platforms). Only App-Store-recognized native languages land here;
+    # Hanji/TL/POJ are emitted into GeneratedTaigiStrings.swift and never create .lproj directories.
     # sort_keys makes the committed catalog byte-stable for the freshness check (check.py / Gradle) and aligns the key order
     # with Xcode's own alphabetical sort (comment < extractionState < localizations, state < value).
     strings = {}
     for namespace, key, entry in entries:
         localizations = {}
-        for lang, text in entry["values"].items():
+        for lang, bcp47 in IOS_NATIVE_LANGUAGES.items():
+            if lang not in entry["values"]:
+                continue
+            text = entry["values"][lang]
             value = _finalize_value(text, _json_identity, entry, "ios")
-            localizations[LANG_TO_BCP47[lang]] = {"stringUnit": {"state": "translated", "value": value}}
+            localizations[bcp47] = {"stringUnit": {"state": "translated", "value": value}}
         unit = {"extractionState": "manual", "localizations": localizations}
         comment = entry.get("comment")
         if comment:
@@ -769,6 +759,40 @@ def _emit_xcstrings(entries) -> str:
         strings[res_name(namespace, key)] = unit
     catalog = {"sourceLanguage": XCSTRINGS_SOURCE_LANGUAGE, "strings": strings, "version": "1.0"}
     return json.dumps(catalog, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+
+
+def _emit_ios_taigi_map(entries) -> str:
+    lines = [
+        f"// {GENERATED_HEADER}",
+        "",
+        "/// Hanji/TL/POJ display strings. These are product languages, not Apple bundle locales.",
+        "enum GeneratedTaigiStrings {",
+    ]
+    for lang in IOS_GENERATED_MAP_LANGUAGES:
+        pairs = [(namespace, key, entry) for namespace, key, entry in entries if lang in entry["values"]]
+        if pairs:
+            lines.append(f"    private static let {lang}: [StringKey: String] = [")
+            for namespace, key, entry in pairs:
+                value = _finalize_value(entry["values"][lang], swift_escape, entry, "ios")
+                lines.append(f'        .{l10n_accessor(namespace, key)}: "{value}",')
+            lines.append("    ]")
+        else:
+            lines.append(f"    private static let {lang}: [StringKey: String] = [:]")
+    lines.extend(
+        [
+            "",
+            "    static func lookup(_ language: DisplayLanguage, _ key: StringKey) -> String? {",
+            "        switch language {",
+            "        case .hanji: hanji[key]",
+            "        case .tailo: tailo[key]",
+            "        case .poj: poj[key]",
+            "        case .system, .japanese, .english: nil",
+            "        }",
+            "    }",
+            "}",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def _emit_ios_string_key(entries) -> str:
@@ -861,11 +885,11 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     outputs[f"{GEN_PKG_DIR}/L10n.kt"] = _emit_l10n(entries)
     outputs[f"{GEN_PKG_DIR}/StringResolverFormats.kt"] = _emit_string_resolver_formats(entries)
 
-    # iOS artifacts cover only ios-scoped keys. The String Catalog holds all 5 languages and is the
-    # single resolution path — the .lproj it compiles to works for every tag (no Native/GeneratedMap
-    # split; that is Android-only).
+    # iOS artifacts cover only ios-scoped keys. English/Japanese use native .lproj bundles;
+    # Hanji/TL/POJ use a generated Swift map because App Store Connect rejects their bundle tags.
     ios_entries = [item for item in all_entries if "ios" in item[2]["scope"]["platforms"]]
     outputs[IOS_XCSTRINGS] = _emit_xcstrings(ios_entries)
     outputs[f"{IOS_GEN_DIR}/StringKey.swift"] = _emit_ios_string_key(ios_entries)
+    outputs[f"{IOS_GEN_DIR}/GeneratedTaigiStrings.swift"] = _emit_ios_taigi_map(ios_entries)
     outputs[f"{IOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_ios_formats(ios_entries)
     return outputs

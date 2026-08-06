@@ -104,9 +104,9 @@ Rationale: JSON (ARB-shaped) is the i18n best-practice choice — machine-safe, 
 "Custom language *selection*" does NOT require a "custom string *runtime*." Original plan over-corrected. Revised:
 
 - `i18n/` JSON stays the canonical source.
-- Build **codegen emits native resources**: iOS String Catalog `.xcstrings` (per locale) + Android `values-<locale>/strings.xml`.
-- **`en` / `ja` / 漢字 (zh-Hant) map to real OS locales** → native resource resolution, native plural/format, accessibility, resource lint, tooling all work.
-- **TL / POJ have no OS locale** → resolved via an app-level `DisplayLanguage` enum selecting an explicit resource set: Android custom BCP-47 qualifier dir (`values-b+nan+Latn+TW+...`) forced via a Configuration context; iOS a declared non-standard `CFBundleLocalizations` `.lproj` (+ a Bundle-override if needed). This pair is the **implementation spike**, tied to the live-switch prototype (Decision 7).
+- Build **codegen emits platform resources and typed maps**: iOS String Catalog `.xcstrings` for `en` / `ja` plus Swift maps for Hanji / TL / POJ; Android native resources plus generated maps for unsupported product languages.
+- **`en` / `ja` map to App-Store-supported iOS locales** → native resource resolution, accessibility, resource lint, and tooling work without invalid archive locale directories.
+- **Hanji / TL / POJ product identities are not safe Apple localization-directory identifiers** → resolve them through an app-level `DisplayLanguage` enum and generated Swift maps. App Store Connect rejects the former `nan-Hant-TW` / private-use `.lproj` directories.
 - Android picker uses **`AppCompatDelegate.setApplicationLocales()`** (official in-app-language API) for the OS-locale-backed languages — triggers config change + Compose recomposition + native resolution + syncs the Android 13 system per-app language.
 
 Net: the app leans on native resource machinery for 3 of 5 languages; the only custom bit is selecting the TL/POJ orthography resource set.
@@ -114,7 +114,7 @@ Net: the app leans on native resource machinery for 3 of 5 languages; the only c
 ### 3. `DisplayLanguage` enum is the domain identity; BCP-47 is metadata only  *(Codex: CONFIRM syntax, REFUTE as identity)*
 
 - Persistence key, branch logic, resource selection → **`DisplayLanguage` enum** (`hanji`/`tailo`/`poj`/`japanese`/`english`/`system`).
-- BCP-47 (`nan-Hant-TW`, `nan-Latn-TW-x-tailo`, `nan-Latn-TW-x-poj`, `ja`, `en`) used ONLY as the formatting/metadata locale + resource-dir qualifier. Per RFC 5646 §2.2.7 private-use subtags are not understood by external systems — never the identity/persisted key.
+- BCP-47 is formatting/platform metadata only, never the identity or persisted key. iOS native bundle resolution uses only `ja` and `en`; Android may use `nan-Hant-TW` as a native qualifier where supported. Hanji / TL / POJ still persist as `hanji` / `tailo` / `poj`.
 - `system` (Automatic) is a first-class tri-state value with its own persistence.
 
 ### 4. POJ = default-derived from TL + explicit override  *(Codex: REFUTE whole-column auto-derive)*
@@ -142,7 +142,7 @@ Net: the app leans on native resource machinery for 3 of 5 languages; the only c
 
 A static `L10n.foo` getter does NOT tell SwiftUI/Compose to refresh → switching language could leave a screen mixing old/new text until a view rebuild / Activity restart / extension restart.
 
-- iOS: app-root **observable locale state** + a **per-bundle `.lproj` override** (`Text(key, bundle:)`). ⚠ `.environment(\.locale,…)` does NOT switch string tables (formatting only) — see *Verified platform mechanisms* below. Do NOT re-add per-view `@StateObject` wrappers (the Stage-7 boilerplate).
+- iOS: app-root **observable locale state** + a hybrid resolver: native bundles for English/Japanese and generated Swift maps for Hanji/TL/POJ. ⚠ `.environment(\.locale,…)` does NOT switch string tables (formatting only) — see *Verified platform mechanisms* below. Do NOT re-add per-view `@StateObject` wrappers (the Stage-7 boilerplate).
 - Android: ⚠ NOT `setApplicationLocales()` for TL/POJ (it strips `-x-` private-use subtags). Use the florisboard model — `DisplayLanguage` enum in DataStore → `createConfigurationContext` Context held as Compose state → `LocalResourcesContext` + custom `stringRes()`. See *Verified platform mechanisms* below.
 - Keyboard extension: iOS = **separate process** (App Group `UserDefaults` channel); Android IME = **same process** (reuse the existing `onCreateInputView()` rebuild). Each needs its own update contract.
 - **Gate**: a root-to-leaf reactive prototype proving live-switch for host + extension — pulled into its own **R1 spike, Android-first, BEFORE P1** (see *Execution rollout*).
@@ -155,7 +155,7 @@ A static `L10n.foo` getter does NOT tell SwiftUI/Compose to refresh → switchin
 |---|---|
 | Externalize strings; no hardcoded text | central `i18n/`; codegen keys only |
 | Semantic keys | `settings.inputMode.title`, namespaced + scoped |
-| Use native localization machinery where possible | codegen → `.xcstrings` / `values-*/strings.xml`; `setApplicationLocales()` |
+| Use native localization machinery where possible | iOS `.xcstrings` for `en` / `ja`; Android resources where supported; generated maps otherwise |
 | Domain identity ≠ locale string | `DisplayLanguage` enum; BCP-47 = metadata only |
 | Defined fallback; completeness fails build | production missing key → build fail; `→ 漢字` only as anti-crash last resort |
 | Native plural/format | String Catalog / Android plurals via codegen typed fns |
@@ -248,12 +248,12 @@ Verdicts folded in above: D1 CONFIRM / D2 REFUTE (→ hybrid native resources) /
 ### iOS (Swift / SwiftUI / KeyboardKit 9.9, iOS 26.1)
 
 - ⚠ **CRITICAL CORRECTION (D7)**: `.environment(\.locale, Locale(identifier:))` does **NOT** switch which string table `Text("key")` reads — it drives **formatting only** (number / date / measurement / collation). String-table selection is a separate path. Source: Apple `EnvironmentValues.locale` + `Bundle.localizedString(forKey:value:table:)` (takes no `Locale`). Relying on environment-locale for UI language is the #1 trap.
-- **String-table selection = per-bundle `.lproj` override**: resolve a per-language `Bundle(path: Bundle.main.path(forResource: <full-identifier>, ofType: "lproj"))` and read every string via `Text(key, bundle: chosenBundle)` / `NSLocalizedString(_, bundle:)`. Works for private-use tags (lookup is by raw identifier string, no OS-locale validation). This is the **same pattern KeyboardKit itself uses** (`references/keyboardkit9.9.0/.../Bundle+Locale.swift:23-27`). Preferred over the `AppleLanguages` UserDefaults + `Bundle` swizzle approach (no swizzling).
-- **`.xcstrings` String Catalog** is the source resource (compiles to per-locale `.lproj` at build; runtime lookup identical to legacy). Holds arbitrary locale keys incl. private-use. azooKey confirms it works in an iOS IME (`Localizable.xcstrings`, dual-target Resources membership).
-- **`CFBundleLocalizations`** (Info.plist) is **mandatory** to make `nan-Latn-TW-x-tailo` / `nan-Latn-TW-x-poj` resolvable; `knownRegions` must also be extended. **USER-only edit** (Core Principle #1).
-- Name each `.lproj` by the **full identifier** (`nan-Latn-TW-x-tailo.lproj`) — KeyboardKit/Foundation only does identifier→languageCode fallback, will not synthesize the private-use part.
-- **Live switch** = root `@Observable` language store → computed per-language `Bundle`; publishing a change re-renders the tree, no restart. Set `\.locale` additionally for number/date formatting.
-- **Extension** (separate process from host) follows the host via **App Group shared `UserDefaults(suiteName:)`**; mirrors the same bundle resolver; sets `KeyboardContext.locale` for KeyboardKit's own keycap labels. Add the `.xcstrings` to BOTH targets' Resources phases (each target compiles its own copy — azooKey pattern; no App Group needed for the strings themselves).
+- **String-table selection is hybrid**: English/Japanese resolve from compiled `.lproj` bundles; Hanji/TL/POJ resolve from `GeneratedTaigiStrings.swift`. This keeps all five product languages while preventing unsupported locale directory names from entering the archive.
+- **`.xcstrings` String Catalog** remains the canonical iOS resource for App-Store-supported locales only (`en`, `ja`) and is included in both targets.
+- **`CFBundleLocalizations`** declares only `en` and `ja`. Product-language identity stays in `DisplayLanguage`; it is not advertised as an OS locale.
+- **App Store correction (2026-08-07):** the previous private-use `.lproj` design compiled successfully but App Store Connect rejected the resulting `nan-Hant-TW`, `nan-Latn-TW-x-tailo`, and `nan-Latn-TW-x-poj` archive directories as unrecognized locales. Generated maps supersede that design.
+- **Live switch** = root `@Observable` language store → computed resolver; publishing a change re-renders the tree, no restart. Set `\.locale` additionally for number/date formatting.
+- **Extension** (separate process from host) follows the host via **App Group shared `UserDefaults(suiteName:)`** and mirrors the same hybrid resolver; it sets `KeyboardContext.locale` for KeyboardKit's own keycap labels. Add the `.xcstrings` to BOTH targets' Resources phases (each target compiles its own copy).
 
 ### Android (Kotlin / Compose / FlorisBoard base; minSdk 28, AppCompat 1.7.1, Compose BOM 2026.01.01)
 
@@ -266,19 +266,18 @@ Verdicts folded in above: D1 CONFIRM / D2 REFUTE (→ hybrid native resources) /
 
 ### Cross-platform conclusion
 
-D2 (hybrid) and D7 (reactive root state) **CONFIRMED + sharpened**: 3 real locales lean on native resources; TL/POJ resolve through a custom indirection on BOTH platforms (iOS per-bundle `.lproj`; Android `LocalResourcesContext`). **No reference IME implements a non-OS-locale display language** — florisboard/azooKey switch only real locales. So TL/POJ resolution + cross-process live-switch is the genuinely unprecedented part, validating the spike-first gate.
+D2 (hybrid) and D7 (reactive root state) **CONFIRMED + sharpened**: supported locales lean on native resources; other product languages resolve through generated maps. On iOS, only `en` / `ja` are emitted as localization bundles because App Store Connect rejects the former Taiwanese product-language directory identifiers. Android continues to use its platform-appropriate resource/map split.
 
 ### Codegen (Python, mirrors `dictionary/` convention)
 
 - Tool under `tools/i18n/`; new **`make i18n` target** (mirrors `make dict` — explicit committed output, NOT a per-compile Xcode/Gradle phase, so archive / non-symlink builds stay fresh). POJ is hand-authored alongside tailo (D4 — the early auto-derive design was later dropped), so the codegen has no Node dependency.
-- Emits: iOS `Localizable.xcstrings` + `L10n.swift` typed accessors (into a synced group → Swift auto-includes, no pbxproj edit); Android `values-*/strings.xml` + a Kotlin accessor object + the TL/POJ generated string maps. `content/*.json` grows `tailo`/`ja`/`en` keys (already symlinked + multilang-shaped — lowest-risk, highest-volume path).
+- Emits: iOS `Localizable.xcstrings` (`en` / `ja`) + `GeneratedTaigiStrings.swift` (Hanji / TL / POJ) + typed accessors (into a synced group → Swift auto-includes, no pbxproj edit); Android `values-*/strings.xml` + a Kotlin accessor object + generated string maps. `content/*.json` carries the same authored language roster.
 
-### USER project-config hand-offs (iOS only — Claude cannot edit pbxproj/Info.plist)
+### USER project-config hand-offs (iOS only — Claude cannot edit pbxproj)
 
 1. Add generated `Localizable.xcstrings` to **both** the host app and Keyboard extension Resources build phases (String Catalogs are resources, NOT covered by synced-group Swift auto-include).
-2. Add `CFBundleLocalizations` (the 5 identifiers incl. the two private-use tags) to both `Info.plist`.
-3. Extend `knownRegions`.
-4. Possibly add `.lproj` folder references for the TL/POJ custom-orthography sets.
+2. Keep `CFBundleLocalizations` limited to `en` and `ja` in both `Info.plist` files.
+3. Remove the obsolete `nan-*` entries from Xcode `knownRegions` manually; they do not drive runtime resolution after the generated-map migration.
 
 Android has **no** equivalent gate.
 

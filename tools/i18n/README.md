@@ -23,6 +23,15 @@ time to guarantee the committed xcstrings are fresh.
   (typed Compose accessors for plain keys), `StringResolverFormats` (typed non-Compose
   `StringResolver.<key>(args)` accessors for format keys). Excluded from spotless via `**/generated/**`.
 
+## Generated artifacts (iOS)
+
+- `ios/Localizable.xcstrings` — native English/Japanese String Catalog localizations only.
+- `ios/Sources/TaigiKeyboard/Strings/Generated/GeneratedTaigiStrings.swift` — Hanji, Tâi-lô,
+  and Pe̍h-ōe-jī maps. These are product display languages rather than Apple bundle locales, so they
+  must not produce `.lproj` directories in an App Store archive.
+- `StringKey.swift` and `StringResolverFormats.swift` — typed keys and format accessors shared by the
+  native-bundle and generated-map resolver paths.
+
 ## Source schema
 
 ```jsonc

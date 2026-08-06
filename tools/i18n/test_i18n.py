@@ -203,8 +203,8 @@ class BuildOutputsTest(unittest.TestCase):
             self.assertEqual(build_outputs(repo), build_outputs(repo))
 
     def test_generated_map_partial_fixture_emits_tailo_only(self):
-        # GeneratedMap path (tailo/poj have no OS locale): a fixture with tailo but no poj lands in the
-        # Kotlin tailo map + iOS private-use tailo localization, while poj stays an empty map / absent tag.
+        # GeneratedMap path (tailo/poj have no OS locale): a fixture with tailo but no poj lands in both
+        # platform maps, while poj stays empty. Neither value may leak into the iOS String Catalog.
         # This partial shape is exercised only by unit fixtures via the default (unenforced) build; the real
         # real source is held to tailo/poj completeness by validate_production_completeness (see below).
         with tempfile.TemporaryDirectory() as tmp:
@@ -214,13 +214,16 @@ class BuildOutputsTest(unittest.TestCase):
             taigi_map = outputs[f"{i18n_lib.GEN_PKG_DIR}/GeneratedTaigiStrings.kt"]
             self.assertIn('StringKey.PROBE_K to "jī"', taigi_map)
             self.assertIn("private val poj: Map<StringKey, String> = emptyMap()", taigi_map)
+            ios_map = outputs[f"{i18n_lib.IOS_GEN_DIR}/GeneratedTaigiStrings.swift"]
+            self.assertIn('.probeK: "jī"', ios_map)
+            self.assertIn("private static let poj: [StringKey: String] = [:]", ios_map)
             xcstrings = outputs[i18n_lib.IOS_XCSTRINGS]
-            self.assertIn("nan-Latn-TW-x-tailo", xcstrings)
+            self.assertNotIn("nan-Latn-TW-x-tailo", xcstrings)
             self.assertNotIn("nan-Latn-TW-x-poj", xcstrings)
 
     def test_generated_map_emits_both_tailo_and_poj(self):
-        # Authored as a lockstep pair (tailo + poj both hand-authored): both land in the Kotlin map AND the
-        # iOS catalog under their private-use tags. Mirrors the real source after P3c R6-1.
+        # Authored as a lockstep pair (tailo + poj both hand-authored): both land in Kotlin and Swift maps,
+        # while the iOS catalog stays native-language-only.
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             # Distinct tailo/poj so the map is proven to carry the poj value, not a copy of tailo.
@@ -230,9 +233,12 @@ class BuildOutputsTest(unittest.TestCase):
             self.assertIn('StringKey.PROBE_K to "tsuā"', taigi_map)  # under `private val tailo`
             self.assertIn('StringKey.PROBE_K to "chōa"', taigi_map)  # under `private val poj`
             self.assertNotIn("emptyMap()", taigi_map)
+            ios_map = outputs[f"{i18n_lib.IOS_GEN_DIR}/GeneratedTaigiStrings.swift"]
+            self.assertIn('.probeK: "tsuā"', ios_map)
+            self.assertIn('.probeK: "chōa"', ios_map)
             xcstrings = outputs[i18n_lib.IOS_XCSTRINGS]
-            self.assertIn("nan-Latn-TW-x-tailo", xcstrings)
-            self.assertIn("nan-Latn-TW-x-poj", xcstrings)
+            self.assertNotIn("nan-Latn-TW-x-tailo", xcstrings)
+            self.assertNotIn("nan-Latn-TW-x-poj", xcstrings)
 
 
 class GeneratedMapCompletenessTest(unittest.TestCase):
@@ -360,23 +366,35 @@ class IOSEmitTest(unittest.TestCase):
             _write_namespace(repo, namespace, keys)
             return build_outputs(repo)
 
-    def test_xcstrings_source_language_is_hanji_not_en(self):
-        # Codex Q1: sourceLanguage MUST be the Hanji base. "en" makes Xcode emit the synthetic key as
-        # its own en value, defeating the runtime sentinel fallback so English renders the raw key.
-        catalog = json.loads(self._outputs({"k": _ios_key({"hanji": "字"})})[i18n_lib.IOS_XCSTRINGS])
-        self.assertEqual(catalog["sourceLanguage"], i18n_lib.BCP47_HANJI)
+    def test_xcstrings_source_language_is_native_english(self):
+        catalog = json.loads(
+            self._outputs({"k": _ios_key({"hanji": "字", "en": "Character"})})[i18n_lib.IOS_XCSTRINGS]
+        )
+        self.assertEqual(catalog["sourceLanguage"], "en")
 
-    def test_xcstrings_keyed_by_res_name_with_only_authored_langs(self):
+    def test_xcstrings_keyed_by_res_name_with_only_native_authored_langs(self):
         catalog = json.loads(self._outputs({"k": _ios_key({"hanji": "字"}, comment="c")})[i18n_lib.IOS_XCSTRINGS])
         unit = catalog["strings"]["i18n_probe_k"]
         self.assertEqual(unit["comment"], "c")
-        # Only Hanji authored -> only the nan-Hant-TW localization exists; en/ja absent (no fake fill).
-        self.assertEqual(list(unit["localizations"]), ["nan-Hant-TW"])
-        self.assertEqual(unit["localizations"]["nan-Hant-TW"]["stringUnit"]["value"], "字")
+        self.assertEqual(unit["localizations"], {})
+        ios_map = self._outputs({"k": _ios_key({"hanji": "字"})})[
+            f"{i18n_lib.IOS_GEN_DIR}/GeneratedTaigiStrings.swift"
+        ]
+        self.assertIn('.probeK: "字"', ios_map)
 
     def test_xcstrings_authored_language_uses_bcp47_tag(self):
         catalog = json.loads(self._outputs({"k": _ios_key({"hanji": "字", "en": "Word"})})[i18n_lib.IOS_XCSTRINGS])
         self.assertIn("en", catalog["strings"]["i18n_probe_k"]["localizations"])
+
+    def test_xcstrings_never_emits_product_language_bundle_tags(self):
+        outputs = self._outputs(
+            {"k": _ios_key({"hanji": "字", "tailo": "jī", "poj": "jī", "en": "Word", "ja": "字"})}
+        )
+        xcstrings = outputs[i18n_lib.IOS_XCSTRINGS]
+        self.assertNotIn("nan-Hant-TW", xcstrings)
+        self.assertNotIn("nan-Latn-TW-x-tailo", xcstrings)
+        self.assertNotIn("nan-Latn-TW-x-poj", xcstrings)
+        self.assertEqual(set(json.loads(xcstrings)["strings"]["i18n_probe_k"]["localizations"]), {"en", "ja"})
 
     def test_ios_scope_filter_excludes_android_only(self):
         outputs = self._outputs(
@@ -394,8 +412,8 @@ class IOSEmitTest(unittest.TestCase):
         outputs = self._outputs(
             {"imp": _ios_key({"hanji": "{imported} ok {skipped}"}, placeholders={"imported": "int", "skipped": "int"})},
         )
-        catalog = json.loads(outputs[i18n_lib.IOS_XCSTRINGS])
-        self.assertEqual(catalog["strings"]["i18n_probe_imp"]["localizations"]["nan-Hant-TW"]["stringUnit"]["value"], "%1$lld ok %2$lld")
+        generated_map = outputs[f"{i18n_lib.IOS_GEN_DIR}/GeneratedTaigiStrings.swift"]
+        self.assertIn('.probeImp: "%1$lld ok %2$lld"', generated_map)
         formats = outputs[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]
         self.assertIn("func probeImp(imported: Int, skipped: Int) -> String", formats)
         self.assertIn("format(.probeImp, Int64(imported), Int64(skipped))", formats)

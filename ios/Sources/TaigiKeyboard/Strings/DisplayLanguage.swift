@@ -2,10 +2,12 @@
 
 import Foundation
 
-// Hanji has no OS locale; its strings are the String Catalog's source language. This Taiwanese-Hanji
-// BCP-47 names the `.lproj` bundle used for the explicit Hanji fallback. Mirrors the generated
-// tools/i18n BCP47_HANJI + the Kotlin BCP47_HANJI.
-let BCP47_HANJI = "nan-Hant-TW"
+/// How one display language resolves strings on iOS.
+enum StringResolution {
+    case native(bcp47: String)
+    case generatedMap
+    case automatic
+}
 
 /// App UI display language — orthogonal to the keyboard input mode.
 ///
@@ -45,21 +47,14 @@ enum DisplayLanguage: String, CaseIterable {
         }
     }
 
-    /// BCP-47 tag naming the compiled `.lproj` bundle that holds this language's strings. `nil` for
-    /// `.system`, which has no authored bundle: `nil` means "no authored lproj — system
-    /// must be resolved to an effective language before the resolver; it must never be passed to
-    /// `lprojBundle` directly".
-    ///
-    /// MIRROR: must equal `tools/i18n/i18n_lib.py` `LANG_TO_BCP47` — the codegen emits each catalog
-    /// localization under this exact tag; drift silently breaks `.lproj` resolution.
-    var bcp47: String? {
+    /// Native English/Japanese use String Catalog bundles. Hanji/TL/POJ use generated maps because
+    /// their product identities are not App-Store-supported bundle locale directory names.
+    var resolution: StringResolution {
         switch self {
-        case .hanji: BCP47_HANJI
-        case .tailo: "nan-Latn-TW-x-tailo"
-        case .poj: "nan-Latn-TW-x-poj"
-        case .japanese: "ja"
-        case .english: "en"
-        case .system: nil
+        case .hanji, .tailo, .poj: .generatedMap
+        case .japanese: .native(bcp47: "ja")
+        case .english: .native(bcp47: "en")
+        case .system: .automatic
         }
     }
 
