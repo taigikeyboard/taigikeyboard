@@ -180,7 +180,7 @@ Old P2 (show 5 picker options all falling back to 漢字) was a visible fake fea
 | Phase | Content | Behavior | Value |
 |---|---|---|---|
 | **P0** | Wording reconciliation (iOS↔Android diff → one canonical form, USER-authorized edits) + full string **inventory & scope classification** (host/extension, shared/platform-only, FAQ content) | behavior-preserving | kills drift; scopes the work |
-| **P1** | Canonical `i18n/` schema + **native-resource codegen** + typed accessors + scope-aware key/completeness checks + **pseudo-locale** + **live-switch reactive prototype** (host + extension) | behavior-preserving | single source of truth; mirror dies; proves the hard part |
+| **P1** | Canonical `i18n/` schema + **native-resource codegen** + typed accessors + scope-aware key/completeness checks + **live-switch reactive prototype** (host + extension) | behavior-preserving | single source of truth; mirror dies; proves the hard part |
 | **P2** | Locale **state + persistence + live-switch**, done as a complete vertical slice in **English** (incl. native plural, dynamic-type/long-string layout, a11y locale) | adds picker (English only) | first real switchable language, fully gated |
 | **P3a** | Japanese (font verified: global Open Huninn keeps full kana coverage — Hiragana/Katakana/halfwidth — only kanji render in Taiwan rounded-gothic forms; kept for a consistent app aesthetic, no per-`ja` font swap) | adds language | — |
 | **P3b** | TL authoring (Taigi prose; Core Principle #3 authoritative-source-only; never invent TL) | adds language | — |
@@ -190,20 +190,9 @@ Picker shows a language only after it passes completeness + layout + accessibili
 
 **Promotion status**: P3a (ja, R4-2), P3b (tailo, R5-2), and P3c (poj, R6-2) are all promoted into the production picker — release roster = `[hanji, english, japanese, tailo, poj]` (+ `system`). TL/POJ prose stays review-pending: USER proofreads + re-authors on his own schedule, a data-only edit (`i18n/*.json` tailo + poj in lockstep), not a code or roster gate. Round-by-round status lives in memory; the per-round table below stops at the early P1 rounds and is not the live tracker.
 
-### Delivery status (rounds)
+### Delivery status
 
-P0 and P1 are delivered as small per-PR rounds (Codex pre-impl 2026-06-20 refuted a single large P1 PR; namespace-atomic split avoids a JSON-vs-`*Texts` dual-source-of-truth drift window):
-
-| Round | Scope | Status |
-|---|---|---|
-| **R0** | Wording reconcile (`台語齒盤` / `建中整理、提供`) | Merged — PR #447 |
-| **R1** | Android live-switch architecture spike (throwaway) | Gate pass — PR #448 closed (D2 hybrid + D7 confirmed on device) |
-| **R2a-1** | Codegen pipeline (`tools/i18n/`, `make i18n`, Gradle freshness gate) + Android resolution infra (`DisplayLanguage` / `StringResolution` / `StringResolver` / `ProvideDisplayLanguage`) + debug probe fixture (`i18n/probe.json`, no real namespace data) | **PR #449 — Android gate pass, dogfood pending** |
-| **R2a-2** | `i18n/common.json` + migrate all `CommonTexts.*` call sites + delete `CommonTexts.kt` (same PR) | Not started |
-| **R2a-3** | `i18n/settings.json` + migrate all `SettingsTexts.*` call sites + delete `SettingsTexts.kt` (keep `confirmKeyLabel`) | Not started |
-| **R2b** | iOS infra (`.xcstrings` + per-`.lproj`) | Blocked — needs USER pbxproj edits (`CFBundleLocalizations`, `knownRegions`, Resources phase) |
-
-Deferred to P2 (recorded during R2a-1 review): emit the pseudo-locale map under a `src/debug/` source set (it is dead bytecode in release at full keyset); add a "superseded by `i18n/`" pointer on the legacy `*Texts` objects. P3c POJ-derive reuses `dictionary/common/taigi_bridge.py::convert_tl_to_poj` (do not reinvent).
+The canonical JSON sources, native-resource codegen, typed accessors, completeness checks, display-language persistence, live switching, and all five production languages are implemented on both platforms. Current production roster and fallback contracts live in `docs/architecture/behavioral-invariants.md` §37; this plan no longer tracks per-round delivery history.
 
 ---
 
@@ -304,7 +293,7 @@ Reorders the Phase table for de-risking: the D7 live-switch prototype (the #1 ri
 | **R0** (P0 finish) | 2 wording reconciles (`HomeTexts.kt:15` drop `Android ` → `台語齒盤`; iOS `HomeTexts.swift:288` drop `「」` → `建中整理、提供`); optionally commit the Tier-1 report | iOS + Android | branch + PR, <10 LOC | visual dogfood; no test; Codex sandwich skippable (trivial value swap) |
 | **R1** live-switch spike | Throwaway: root `DisplayLanguage` DataStore state → host (Compose) + IME (same-process) recompose via `LocalResourcesContext` / `createConfigurationContext`, incl. a TL/POJ enum-selected set. 2 strings × 2 langs, hardcoded | **Android first** | scratch / draft PR (not a feature) | **architecture go/no-go** — proves the unprecedented TL/POJ + live-switch part; pass → R2, fail → rethink D2/D7 before any infra |
 | **R1′** iOS spike | Same minimal prototype: `@Observable` store → per-bundle `.lproj` override + `Text(key, bundle:)`; extension reads App Group `UserDefaults` | iOS | scratch | ⛔ BLOCKED on USER pbxproj (`CFBundleLocalizations` + TL/POJ `.lproj`) |
-| **R2** (P1 infra) | `i18n/` JSON schema (1-2 namespaces first: `common` + `settings`) + Python codegen + `make i18n` + native resources + typed accessors + scope-aware key check + pseudo-locale + freshness check; hand-mirror dies incrementally | both (iOS resources USER-gated) | split R2a (codegen + schema + Android) / R2b (iOS); ~300-500 LOC each | spike passed |
+| **R2** (P1 infra) | `i18n/` JSON schema (1-2 namespaces first: `common` + `settings`) + Python codegen + `make i18n` + native resources + typed accessors + scope-aware key check + freshness check; hand-mirror dies incrementally | both (iOS resources USER-gated) | split R2a (codegen + schema + Android) / R2b (iOS); ~300-500 LOC each | spike passed |
 | **R3** (P2) | locale state + persistence + picker (English only) + live-switch wired for real + native plural + dynamic-type / long-string layout + a11y locale | both | vertical slice | completeness + layout + a11y |
 | **R4a/b/c** (P3) | ja (font verify) / TL authoring (Core Principle #3 — never invent TL) / POJ (derive-and-store from tailo + diff review — derive tooling later removed, POJ now hand-authored, see Decision 4). `content/*.json` per-language authoring rides here | both | one language per round | per-language gate before entering picker |
 

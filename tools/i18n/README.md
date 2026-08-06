@@ -19,7 +19,7 @@ time to guarantee the committed xcstrings are fresh.
 
 - `android/app/src/main/res/values/strings_i18n.xml` — Hanji default (the native-resource path).
 - `android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/generated/` — `StringKey`,
-  `GeneratedTaigiStrings` (TL/POJ map), `GeneratedPseudoStrings` (debug layout probe), `L10n`
+  `GeneratedTaigiStrings` (TL/POJ map), `L10n`
   (typed Compose accessors for plain keys), `StringResolverFormats` (typed non-Compose
   `StringResolver.<key>(args)` accessors for format keys). Excluded from spotless via `**/generated/**`.
 

@@ -17,19 +17,19 @@
       "values": { "hanji": "新主題…", "tailo": "sin tsú-tê...", "poj": "sin chú-tê...", "en": "New Theme…", "ja": "新しいテーマ…" }
     },
     "familyClassic": {
-      "comment": "Built-in theme key-style family header: filled keys. DRAFT TL/POJ (king-tián, full dict entry) + en/ja pending USER proofread.",
+      "comment": "Built-in theme key-style family header: filled keys.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "經典", "tailo": "king-tián", "poj": "keng-tián", "en": "Classic", "ja": "クラシック" }
+      "values": { "hanji": "填色揤鈕", "tailo": "thiām-sik tshi̍h-liú", "poj": "thiam-sek chhi̍h-liú", "en": "Filled", "ja": "塗りつぶし" }
     },
     "familyFramed": {
-      "comment": "Built-in theme key-style family header: transparent keys with an outline border. DRAFT TL/POJ (框 khing + 線 suànn, component-grounded) + en/ja pending USER proofread.",
+      "comment": "Built-in theme key-style family header: transparent keys with an outline border.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "框線", "tailo": "khing-suànn", "poj": "kheng-sòaⁿ", "en": "Outlined", "ja": "アウトライン" }
+      "values": { "hanji": "框線揤鈕", "tailo": "khing-suànn tshi̍h-liú", "poj": "kheng-sòaⁿ chhi̍h-liú", "en": "Outlined", "ja": "枠線" }
     },
     "familyClean": {
-      "comment": "Built-in theme key-style family header: transparent keys, no border. DRAFT TL/POJ (kán-kiat, full dict entry) + en/ja pending USER proofread.",
+      "comment": "Built-in theme key-style family header: transparent keys, no border.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "簡潔", "tailo": "kán-kiat", "poj": "kán-kiat", "en": "Minimal", "ja": "ミニマル" }
+      "values": { "hanji": "無框揤鈕", "tailo": "bô-khing tshi̍h-liú", "poj": "bô-kheng chhi̍h-liú", "en": "Borderless", "ja": "枠なし" }
     },
     "paletteDefault": {
       "comment": "Built-in theme color name: the adaptive default palette (value = 'Default'). DRAFT TL/POJ (ī-siat, full dict main reading) + en/ja pending USER proofread.",
@@ -194,7 +194,7 @@
     "capReachedMessage": {
       "comment": "Body of the custom-theme cap-reached alert (cap is UserThemeStore.MAX_USER_THEMES = 5).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。", "tailo": "tsū-tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah-ē-sái koh sin-tsing.", "poj": "chū-tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah-ē-sái koh sin-cheng.", "en": "The custom-theme limit is 5. Delete one before adding another.", "ja": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。" }
+      "values": { "hanji": "自訂主題上限是 5 个，請先刪除一个才會使閣新增。", "tailo": "tsū-tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah ē-sái koh sin-tsing.", "poj": "chū-tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah ē-sái koh sin-cheng.", "en": "You can save up to 5 custom themes. Delete one before adding another.", "ja": "カスタムテーマは 5 個まで保存できます。追加する前に 1 個削除してください。" }
     },
     "cardMenu": {
       "comment": "Accessibility content description for the custom-theme card's action-menu button. Android-only (iOS has no equivalent a11y label).",

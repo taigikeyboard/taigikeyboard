@@ -19,7 +19,6 @@ from i18n_lib import (
     kotlin_escape,
     l10n_accessor,
     load_namespace,
-    pseudo,
     res_name,
     string_key_const,
     swift_escape,
@@ -74,17 +73,6 @@ class EscapingTest(unittest.TestCase):
         self.assertEqual(swift_escape('a"b'), 'a\\"b')
         self.assertEqual(swift_escape("a\\(b)"), "a\\\\(b)")
         self.assertEqual(swift_escape("a\nb"), "a\\nb")
-
-
-class PseudoTest(unittest.TestCase):
-    def test_preserves_placeholders_and_wraps(self):
-        out = pseudo("Imported {count}")
-        self.assertTrue(out.startswith("⟦") and out.endswith("⟧"))
-        self.assertIn("{count}", out)  # placeholder verbatim, not accented
-
-    def test_inflates_hanji_only_string(self):
-        out = pseudo("台語齒盤")
-        self.assertGreater(len(out), len("台語齒盤"))  # length-inflated even with no ASCII
 
 
 class LoadNamespaceTest(unittest.TestCase):
@@ -332,11 +320,6 @@ class FormatEmitTest(unittest.TestCase):
             self.assertIn("formatString(StringKey.PROBE_IMP, imported, skipped)", formats)
             # A format key must NOT get a plain L10n getter (would leak the raw template).
             self.assertNotIn("probeImp", outputs[f"{i18n_lib.GEN_PKG_DIR}/L10n.kt"])
-            # Kotlin-map source must escape the inserted `$` (`%1\$d`); the unescaped `%1$d` would be a
-            # Kotlin string template (`$d` interpolation) and fail to compile.
-            pseudo_map = outputs[f"{i18n_lib.GEN_PKG_DIR}/GeneratedPseudoStrings.kt"]
-            self.assertIn("%1\\$d", pseudo_map)
-            self.assertNotIn("%1$d", pseudo_map)
 
     def test_literal_percent_escaped_in_format_key(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -418,24 +401,6 @@ class IOSEmitTest(unittest.TestCase):
         self.assertIn("format(.probeImp, Int64(imported), Int64(skipped))", formats)
         # Android side stays %d in the same build.
         self.assertIn("%1$d ok %2$d", outputs[f"{i18n_lib.ANDROID_RES_ROOT}/values/strings_i18n.xml"])
-
-    def test_ios_pseudo_map_is_debug_gated(self):
-        pseudo_swift = self._outputs({"k": _ios_key({"hanji": "字"})})[f"{i18n_lib.IOS_GEN_DIR}/GeneratedPseudoStrings.swift"]
-        self.assertIn("#if DEBUG", pseudo_swift)
-        self.assertIn("#endif", pseudo_swift)
-        self.assertIn(".probeK:", pseudo_swift)
-
-    def test_android_pseudo_map_is_debug_gated(self):
-        # Mirror the iOS #if DEBUG gate: the Android map literal is built only under BuildConfig.DEBUG, so
-        # R8 dead-strips it from the release APK (pseudo is never selected in release — fromTag clamps it
-        # to Hanji). Assert the else-branch too, so a future regression to a bare guard / different fallback
-        # is caught (Codex pre-impl flag).
-        pseudo_kt = self._outputs({"k": _android_key({"hanji": "字"})})[f"{i18n_lib.GEN_PKG_DIR}/GeneratedPseudoStrings.kt"]
-        self.assertIn("import com.siansiansu.taigikeyboard.BuildConfig", pseudo_kt)
-        self.assertIn("if (BuildConfig.DEBUG) {", pseudo_kt)
-        self.assertIn("} else {", pseudo_kt)
-        self.assertIn("emptyMap()", pseudo_kt)
-        self.assertIn("StringKey.PROBE_K to", pseudo_kt)  # the debug-branch map literal is still emitted
 
     def test_ios_no_format_keys_emits_comment(self):
         formats = self._outputs({"k": _ios_key({"hanji": "字"})})[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]

@@ -52,14 +52,14 @@
       "values": { "hanji": "括號標註", "tailo": "kuat-hō phiau-tsù", "poj": "koat-hō phiau-chù", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "literalRomanCandidate": {
-      "comment": "Toggle label: show the literal romanization candidate in the strip.",
+      "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "顯示羅馬字", "tailo": "hián-sī lô-má-jī", "poj": "hián-sī lô-má-jī", "en": "Show Romanization", "ja": "ローマ字を表示" }
+      "values": { "hanji": "顯示原本羅馬字候選", "tailo": "hián-sī guân-pún lô-má-jī hāu-suán", "poj": "hián-sī goân-pún lô-má-jī hāu-soán", "en": "Show Typed Romanization Candidate", "ja": "入力したローマ字候補を表示" }
     },
     "literalRomanCandidateInfo": {
       "comment": "Help text for the show-romanization toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。", "tailo": "hāu-suán sû lia̍t tē-it ê uī khǹg lô-má-jī, ē-tàng iōng tshiú tiám ah-sī tshi̍h Enter sàng-tshut, nā kuan, kan-tann-ē-tàng tshi̍h Enter sàng-tshut, buē-tàng iōng tshiú tiám, tān-sī hāu-suán sû lia̍t khang-king khah-tōa.", "poj": "hāu-soán sû lia̍t tē-it ê ūi khǹg lô-má-jī, ē-tàng iōng chhiú tiám ah-sī chhi̍h Enter sàng-chhut, nā koan, kan-taⁿ-ē-tàng chhi̍h Enter sàng-chhut, bōe-tàng iōng chhiú tiám, tān-sī hāu-soán sû lia̍t khang-keng khah-tōa.", "en": "Places the romanization in the first slot of the candidate bar; tap it or press Enter to commit. When off, you can only commit with Enter (tapping is disabled), but the candidate bar has more room.", "ja": "候補バーの先頭にローマ字を表示します。タップするか Enter で確定できます。オフにすると Enter でのみ確定でき（タップは無効）、その分候補バーが広くなります。" }
+      "values": { "hanji": "佇候選詞列第一格顯示你拍 ê 羅馬字，會當點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。", "tailo": "tī hāu-suán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, ē-tàng tiám-tshi̍h ah-sī tshi̍h Enter sàng-tshut. kuainn--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-tshut.", "poj": "tī hāu-soán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, ē-tàng tiám-chhi̍h ah-sī chhi̍h Enter sàng-chhut. koaiⁿ--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-chhut.", "en": "Shows what you typed in the first slot of the candidate bar. Tap it or press Enter to commit it. When off, only Enter can commit it.", "ja": "入力したローマ字を候補バーの先頭に表示します。タップするか Enter で確定できます。オフの場合は Enter でのみ確定できます。" }
     },
     "autoCapitalization": {
       "comment": "Toggle label: automatic capitalization in English mode.",
@@ -77,9 +77,9 @@
       "values": { "hanji": "齒盤設定", "tailo": "khí-puânn siat-tīng", "poj": "khí-pôaⁿ siat-tēng", "en": "Keyboard", "ja": "キーボード" }
     },
     "toolbarAutoCollapse": {
-      "comment": "Toggle label: auto-hide the candidate toolbar after selecting.",
+      "comment": "Toggle label: automatically collapse the candidate toolbar after selecting a word.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "自動隱藏工具列", "tailo": "tsū-tōng ún-tsông kang-khū-lia̍t", "poj": "chū-tōng ún-chông kang-khū-lia̍t", "en": "Auto-Hide Toolbar", "ja": "ツールバーを自動的に隠す" }
+      "values": { "hanji": "選字後自動收合工具列", "tailo": "suán jī liáu-āu tsū-tōng siu-ha̍p kang-khū-lia̍t", "poj": "soán jī liáu-āu chū-tōng siu-ha̍p kang-khū-lia̍t", "en": "Collapse Toolbar After Selection", "ja": "候補選択後にツールバーを折りたたむ" }
     },
     "toolbarAutoCollapseInfo": {
       "comment": "Help text for the auto-hide-toolbar toggle.",
@@ -139,17 +139,17 @@
     "tpsOrMapsToERInfo": {
       "comment": "Help text for the or→ㄜ toggle (multi-paragraph).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。本設定只控制候選詞按怎顯示;字典揣詞已經共 er 佮 or 攏對應做仝一个音位，無論本設定開抑無開攏揣會著。\n\n開啟（預設）：or 顯示做 ㄜ。\n關閉：or 顯示做 ㄛ（恢復台羅 o）。", "tailo": "tâi-lô or m̄-sī tsìng-sik siá-huat, hong-im-hû-hō ㄜ tsìng-sik kan-na tuì-ìng er. pún siat-tīng tsí khòng-tsè hāu-suán sû án-nuá hián-sī; jī-tián tshuē sû í-king kā er kah or láng tuì-ìng tsò kāng tsi̍t-ê im-uī, bô-lūn pún siat-tīng khui ah-bô khui láng tshuē huē tio̍h. khai-khé(ī-siat):or hián-sī tsò ㄜ. kuan pì:or hián-sī tsò ㄛ(hue-ho̍k tâi-lô o).", "poj": "tâi-lô or m̄-sī chèng-sek siá-hoat, hong-im-hû-hō ㄜ chèng-sek kan-na tùi-èng er. pún siat-tēng chí khòng-chè hāu-soán sû án-nóa hián-sī; jī-tián chhōe sû í-keng kā er kah or láng tùi-èng chò kāng chi̍t-ê im-ūi, bô-lūn pún siat-tēng khui ah-bô khui láng chhōe hōe tio̍h. khai-khé(ī-siat):or hián-sī chò ㄜ. koan pì:or hián-sī chò ㄛ(hoe-ho̍k tâi-lô o).", "en": "Tâi-lô 'or' is not a standard spelling; the phonetic symbol ㄜ officially corresponds only to 'er'. This setting only controls how candidates are displayed — dictionary search already maps 'er' and 'or' to the same phoneme, so words are found whether this is on or off.\n\nOn (default): 'or' shows as ㄜ.\nOff: 'or' shows as ㄛ (back to Tâi-lô o).", "ja": "Tâi-lô の「or」は正式な綴りではなく、方音符号 ㄜ は正式には「er」にのみ対応します。この設定は候補の表示方法を変えるだけです。辞書検索は「er」と「or」を同じ音素として扱うため、オン・オフどちらでも単語は見つかります。\n\nオン（既定）：「or」を ㄜ と表示します。\nオフ：「or」を ㄛ と表示します（Tâi-lô の o に戻ります）。" }
+      "values": { "hanji": "控制方音符號候選詞按怎顯示 or。開啟時顯示做 ㄜ，關閉時顯示做 ㄛ。這个設定袂影響揣詞結果。", "tailo": "khòng-tsè hong-im-hû-hō hāu-suán sû án-nuá hián-sī or. phah-khui sî hián-sī tsò ㄜ, kuainn--khí-lâi sî hián-sī tsò ㄛ. tsit ê siat-tīng buē íng-hióng tshuē sû kiat-kó.", "poj": "khòng-chè hong-im-hû-hō hāu-soán sû án-nóa hián-sī or. phah-khui sî hián-sī chò ㄜ, koaiⁿ--khí-lâi sî hián-sī chò ㄛ. chit ê siat-tēng bōe éng-hióng chhōe sû kiat-kó.", "en": "Controls how TPS candidates display 'or'. When on, 'or' appears as ㄜ; when off, it appears as ㄛ. This setting does not affect search results.", "ja": "方音符号の候補で「or」をどう表示するかを設定します。オンでは ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。" }
     },
     "resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings.",
+      "comment": "Destructive action row + dialog title: reset all settings and delete frequency/association records; custom words are preserved.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復設定", "tailo": "hue-ho̍k siat-tīng", "poj": "hoe-ho̍k siat-tēng", "en": "Reset Settings", "ja": "設定をリセット" }
+      "values": { "hanji": "恢復設定佮使用紀錄", "tailo": "hue-ho̍k siat-tīng kah sú-iōng kì-lio̍k", "poj": "hoe-ho̍k siat-tēng kah sú-iōng kì-lio̍k", "en": "Reset Settings and Usage Records", "ja": "設定と利用記録をリセット" }
     },
     "resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting all settings.",
+      "comment": "Confirmation-dialog body for resetting settings and deleting frequency/association records; explicitly states that custom words are preserved.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "這个動作會恢復所有設定，敢欲繼續？", "tailo": "tsit ê tōng-tsok huē hue-ho̍k sóo-iú siat-tīng, kám beh kè-sio̍k?", "poj": "chit ê tōng-chok hōe hoe-ho̍k só͘-iú siat-tēng, kám beh kè-sio̍k?", "en": "This will reset all settings. Continue?", "ja": "すべての設定がリセットされます。続けますか？" }
+      "values": { "hanji": "這會恢復所有設定，嘛會刪除詞頻佮詞關聯紀錄。自訂詞會保留。敢欲繼續？", "tailo": "tse ē hue-ho̍k sóo-iú siat-tīng, mā ē san-tû sû pîn kah sû kuan-liân kì-lio̍k. tsū-tīng-sû ē pó-liû. kám beh kè-sio̍k?", "poj": "che ē hoe-ho̍k só͘-iú siat-tēng, mā ē san-tû sû pîn kah sû koan-liân kì-lio̍k. chū-tēng-sû ē pó-liû. kám beh kè-sio̍k?", "en": "This resets all settings and deletes frequency and association records. Custom words are kept. Continue?", "ja": "すべての設定をリセットし、単語頻度と単語連携の記録を削除します。カスタム単語は保持されます。続けますか？" }
     },
     "resetSuccess": {
       "comment": "Toast shown after settings were reset successfully.",

@@ -44,7 +44,6 @@ struct LocalizedContentText: Codable {
         case .poj: return poj ?? hanji
         case .japanese: return ja ?? hanji
         case .english: return en ?? hanji
-        case .pseudo: return hanji
         case .system:
             assertionFailure("LocalizedContentText.resolve(for:) must receive an effective language, never .system")
             return hanji

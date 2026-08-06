@@ -39,16 +39,9 @@ class LocalizedContentTextTest {
                 DisplayLanguage.POJ,
                 DisplayLanguage.JAPANESE,
                 DisplayLanguage.ENGLISH,
-                DisplayLanguage.PSEUDO,
             )) {
             assertEquals("unauthored $language must fall back to hanji", "漢", hanjiOnly.resolve(language))
         }
-    }
-
-    @Test
-    fun resolve_pseudo_returnsHanji() {
-        // Content has no pseudo map; the layout-probe language renders Hanji (contract: pseudo → hanji).
-        assertEquals("漢", allLanguages.resolve(DisplayLanguage.PSEUDO))
     }
 
     @Test

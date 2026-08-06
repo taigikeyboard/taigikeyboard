@@ -5,7 +5,6 @@
 # the source of truth means the freshness gate cannot drift from the generator.
 
 import json
-import math
 import re
 from pathlib import Path
 
@@ -310,7 +309,7 @@ def _lower_nodes(nodes: list, order: list, declared: dict, target: str, category
 def _to_positional(text: str, order: list, declared: dict, target: str) -> str:
     # Convert authored placeholders to positional args (%1$d, %2$d, ...) for `target` (Android %d vs
     # iOS %lld). `order` (base-text appearance order) keeps a reordered translation mapping each name to
-    # the right argument. Run AFTER escaping/pseudo so the inserted specs are not accented/re-escaped.
+    # the right argument. Run BEFORE escaping so the inserted specs are escaped exactly once.
     # Native resources render the `other` arm — the fallback the plural-aware typed accessors override.
     if not order:
         return text  # plain key: leave literal % untouched (it is never String.format'd)
@@ -321,8 +320,7 @@ def _finalize_value(raw: str, escape, entry: dict, target: str) -> str:
     # Convert any placeholders to positional specs for `target`, THEN escape for the output (XML /
     # Kotlin / Swift / JSON-identity). Escaping last is load-bearing: `kotlin_escape` must turn the
     # inserted `%1$d`'s `$` into `\$` so the Kotlin source string is not read as a template; xml_escape
-    # and the JSON-identity escape leave it untouched. `raw` is already pseudo-transformed by the caller
-    # where applicable, so pseudo never accents `%N$d`. Order + declared types come from the base-language
+    # and the JSON-identity escape leave it untouched. Order + declared types come from the base-language
     # text, so every language shares one mapping.
     base_text = entry["values"][BASE_LANGUAGE]
     return escape(_to_positional(raw, _placeholder_names_in_order(base_text), entry.get("placeholders", {}), target))
@@ -383,9 +381,8 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
             base_nodes = parse_message(values[BASE_LANGUAGE])
         except ValueError as exc:
             raise ValueError(f"{path}:{key}: base '{BASE_LANGUAGE}': {exc}") from exc
-        # The base/source language defines the canonical argument order and feeds the pseudo-locale
-        # transform, both of which assume a flat message. Hanji (the base) does not inflect nouns by
-        # count, so plural belongs only in translations — reject it in the base to keep both invariants.
+        # The base/source language defines the canonical argument order. Hanji (the base) does not
+        # inflect nouns by count, so plural belongs only in translations — reject it in the base.
         if _has_plural(base_nodes):
             raise ValueError(f"{path}:{key}: base language '{BASE_LANGUAGE}' must not use plural (author plural only in translations)")
         base_placeholder_names = set(_names_in_order(base_nodes, []))
@@ -437,36 +434,6 @@ def string_key_const(namespace: str, key: str) -> str:
 
 def l10n_accessor(namespace: str, key: str) -> str:
     return f"{namespace}{key[0].upper()}{key[1:]}"
-
-
-# --- Pseudo-locale ----------------------------------------------------------
-
-_ACCENT = {
-    "a": "á", "b": "ḅ", "c": "ç", "d": "ḋ", "e": "é", "f": "ḟ", "g": "ǧ",
-    "h": "ḣ", "i": "í", "j": "ĵ", "k": "ḱ", "l": "ĺ", "m": "ṁ", "n": "ñ",
-    "o": "ó", "p": "ṗ", "q": "q̧", "r": "ŕ", "s": "š", "t": "ť", "u": "ú",
-    "v": "v̧", "w": "ẃ", "x": "x̌", "y": "ý", "z": "ž",
-    "A": "Á", "B": "Ḅ", "C": "Ç", "D": "Ḋ", "E": "É", "F": "Ḟ", "G": "Ǧ",
-    "H": "Ḣ", "I": "Í", "J": "Ĵ", "K": "Ḱ", "L": "Ĺ", "M": "Ṁ", "N": "Ñ",
-    "O": "Ó", "P": "Ṗ", "Q": "Q̧", "R": "Ŕ", "S": "Š", "T": "Ť", "U": "Ú",
-    "V": "V̧", "W": "Ẃ", "X": "X̌", "Y": "Ý", "Z": "Ž",
-}
-
-
-def pseudo(text: str) -> str:
-    # Accent ASCII, preserve {placeholders} verbatim, then bracket + length-inflate ~40%
-    # so Hanji-heavy strings (no ASCII to accent) still exercise clipping/layout limits.
-    parts = PLACEHOLDER_RE.split(text)
-    placeholders = PLACEHOLDER_RE.findall(text)
-    rebuilt = []
-    visible_len = 0
-    for index, chunk in enumerate(parts):
-        rebuilt.append("".join(_ACCENT.get(char, char) for char in chunk))
-        visible_len += len(chunk)
-        if index < len(placeholders):
-            rebuilt.append(placeholders[index])
-    pad = "·" * max(2, math.ceil(visible_len * 0.4))
-    return f"⟦{''.join(rebuilt)}{pad}⟧"
 
 
 # --- Escaping ---------------------------------------------------------------
@@ -637,44 +604,6 @@ def _emit_taigi_map(entries) -> str:
             "            DisplayLanguage.POJ -> poj[key]",
             "            else -> null",
             "        }",
-            "}",
-        ]
-    )
-    return "\n".join(lines) + "\n"
-
-
-def _emit_pseudo_map(entries) -> str:
-    lines = [
-        f"// {GENERATED_HEADER}",
-        "package com.siansiansu.taigikeyboard.i18n.generated",
-        "",
-        "import com.siansiansu.taigikeyboard.BuildConfig",
-        "",
-        "/**",
-        " * Debug-only pseudo-locale strings (length-inflated layout/clipping probe). Never shown in release:",
-        " * the picker offers pseudo only in DEBUG and release `DisplayLanguage.fromTag` clamps it to Hanji. The",
-        " * map literal is built only when BuildConfig.DEBUG — a release-time constant — so R8 dead-strips the",
-        " * whole branch (the ~hundreds of inflated string literals) from the release APK. Mirrors the iOS",
-        " * `#if DEBUG` gate on GeneratedPseudoStrings.swift.",
-        " */",
-        "object GeneratedPseudoStrings {",
-        "    private val map: Map<StringKey, String> =",
-        "        if (BuildConfig.DEBUG) {",
-        "            mapOf(",
-    ]
-    for namespace, key, entry in entries:
-        # Pseudo runs on the named text first (keeps {placeholders} verbatim); _finalize_value then
-        # converts to positional and kotlin-escapes — so `%N$d` is neither accented nor left unescaped.
-        value = _finalize_value(pseudo(entry["values"][BASE_LANGUAGE]), kotlin_escape, entry, "android")
-        lines.append(f'                StringKey.{string_key_const(namespace, key)} to "{value}",')
-    lines.extend(
-        [
-            "            )",
-            "        } else {",
-            "            emptyMap()",
-            "        }",
-            "",
-            "    fun lookup(key: StringKey): String? = map[key]",
             "}",
         ]
     )
@@ -855,36 +784,6 @@ def _emit_ios_string_key(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _emit_ios_pseudo(entries) -> str:
-    # Debug-only length-inflated layout probe. Wrapped in #if DEBUG so neither the strings nor the
-    # lookup exist in a release binary (the resolver's pseudo branch is likewise DEBUG-gated).
-    lines = [
-        f"// {GENERATED_HEADER}",
-        "",
-        "#if DEBUG",
-        "import Foundation",
-        "",
-        "/// Debug-only pseudo-locale strings (length-inflated layout/clipping probe). Never shipped.",
-        "enum GeneratedPseudoStrings {",
-        "    private static let map: [StringKey: String] = [",
-    ]
-    for namespace, key, entry in entries:
-        # Pseudo runs on the named text first (keeps {placeholders} verbatim); _finalize_value then
-        # converts to positional + swift-escapes, so `%N$lld` is neither accented nor mis-escaped.
-        value = _finalize_value(pseudo(entry["values"][BASE_LANGUAGE]), swift_escape, entry, "ios")
-        lines.append(f'        .{l10n_accessor(namespace, key)}: "{value}",')
-    lines.extend(
-        [
-            "    ]",
-            "",
-            "    static func lookup(_ key: StringKey) -> String? { map[key] }",
-            "}",
-            "#endif",
-        ]
-    )
-    return "\n".join(lines) + "\n"
-
-
 def _emit_ios_formats(entries) -> str:
     # Typed format accessors on StringResolver — one per placeholder-bearing key, args in canonical
     # (base-text first-appearance) order, each cast to match the %lld spec. The raw template never
@@ -959,16 +858,14 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
             outputs[f"{ANDROID_RES_ROOT}/{res_dir}/strings_i18n.xml"] = _emit_strings_xml(entries, lang)
     outputs[f"{GEN_PKG_DIR}/StringKey.kt"] = _emit_string_key(entries)
     outputs[f"{GEN_PKG_DIR}/GeneratedTaigiStrings.kt"] = _emit_taigi_map(entries)
-    outputs[f"{GEN_PKG_DIR}/GeneratedPseudoStrings.kt"] = _emit_pseudo_map(entries)
     outputs[f"{GEN_PKG_DIR}/L10n.kt"] = _emit_l10n(entries)
     outputs[f"{GEN_PKG_DIR}/StringResolverFormats.kt"] = _emit_string_resolver_formats(entries)
 
     # iOS artifacts cover only ios-scoped keys. The String Catalog holds all 5 languages and is the
     # single resolution path — the .lproj it compiles to works for every tag (no Native/GeneratedMap
-    # split; that is Android-only). Pseudo is a Swift map because it is not a CFBundleLocalization.
+    # split; that is Android-only).
     ios_entries = [item for item in all_entries if "ios" in item[2]["scope"]["platforms"]]
     outputs[IOS_XCSTRINGS] = _emit_xcstrings(ios_entries)
     outputs[f"{IOS_GEN_DIR}/StringKey.swift"] = _emit_ios_string_key(ios_entries)
-    outputs[f"{IOS_GEN_DIR}/GeneratedPseudoStrings.swift"] = _emit_ios_pseudo(ios_entries)
     outputs[f"{IOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_ios_formats(ios_entries)
     return outputs

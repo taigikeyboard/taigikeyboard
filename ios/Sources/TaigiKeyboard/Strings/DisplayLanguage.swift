@@ -10,8 +10,7 @@ let BCP47_HANJI = "nan-Hant-TW"
 /// App UI display language — orthogonal to the keyboard input mode.
 ///
 /// Hanji, English, Japanese, Tâi-lô, and Pe̍h-ōe-jī are all authored and user-selectable
-/// (`productionLanguages`); a language not in that roster falls back to Hanji. `.pseudo` is a DEBUG-only
-/// layout probe, offered only in debug builds.
+/// (`productionLanguages`); a language not in that roster falls back to Hanji.
 ///
 /// `system` (Automatic) is a selection policy, not a string set: it has NO authored strings and never
 /// reaches the resolver. The picker boundary maps it to a concrete language via `effectiveLanguage(_:)`
@@ -24,7 +23,6 @@ enum DisplayLanguage: String, CaseIterable {
     case poj
     case japanese = "ja"
     case english = "en"
-    case pseudo
 
     /// Persisted tag (`SharedSettings.displayLanguage`). Equals the raw value; mirrors Android's `.tag`.
     var tag: String { rawValue }
@@ -43,14 +41,12 @@ enum DisplayLanguage: String, CaseIterable {
         case .poj: "Pe̍h-ōe-jī"
         case .japanese: "日本語"
         case .english: "English"
-        case .pseudo: "PSEUDO · DEBUG"
         case .system: fatalError("system has no endonym; use settings.displayLanguageAutomatic")
         }
     }
 
     /// BCP-47 tag naming the compiled `.lproj` bundle that holds this language's strings. `nil` for
-    /// `.pseudo`, which is a generated Swift map (not a CFBundleLocalization, so it has no `.lproj`),
-    /// and `nil` for `.system`, which has no authored bundle: `nil` means "no authored lproj — system
+    /// `.system`, which has no authored bundle: `nil` means "no authored lproj — system
     /// must be resolved to an effective language before the resolver; it must never be passed to
     /// `lprojBundle` directly".
     ///
@@ -63,7 +59,6 @@ enum DisplayLanguage: String, CaseIterable {
         case .poj: "nan-Latn-TW-x-poj"
         case .japanese: "ja"
         case .english: "en"
-        case .pseudo: nil
         case .system: nil
         }
     }
@@ -82,16 +77,9 @@ enum DisplayLanguage: String, CaseIterable {
     /// SAME ORDER. Drift causes silent divergence.
     static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese, .tailo, .poj]
 
-    /// What the picker offers: `.system` (Automatic) first, then the production roster, plus the
-    /// `.pseudo` layout probe in DEBUG only. Release builds only ever offer `.system + productionLanguages`.
+    /// What the picker offers: `.system` (Automatic) first, then the production roster.
     /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `selectableLanguages`.
-    static var selectableLanguages: [DisplayLanguage] {
-        #if DEBUG
-        [.system] + productionLanguages + [.pseudo]
-        #else
-        [.system] + productionLanguages
-        #endif
-    }
+    static let selectableLanguages: [DisplayLanguage] = [.system] + productionLanguages
 
     /// Resolves the Automatic policy to a concrete authored language from the device OS language subtag
     /// (lowercased ISO 639). Pure + injectable for tests — never reads `Locale` itself; the store passes
@@ -113,21 +101,9 @@ enum DisplayLanguage: String, CaseIterable {
         self == .system ? DisplayLanguage.resolveAutomatic(deviceLanguageSubtag) : self
     }
 
-    /// Maps a persisted tag to a language, clamped to the currently-selectable set: an unknown tag or one
-    /// whose language is not user-selectable in this build (a `.pseudo` preview in a release build)
-    /// resolves to `.hanji`, so the effective language always matches a picker option. `"system"` is
-    /// selectable, so it round-trips to `.system`. The persisted tag itself is left untouched, so it
-    /// restores once a clamped language ships.
+    /// Maps a persisted tag to a selectable language. Unknown or removed tags resolve to `.hanji`;
+    /// `"system"` is selectable, so it round-trips to `.system`.
     static func fromTag(_ tag: String) -> DisplayLanguage {
-        clampToSelectable(DisplayLanguage(rawValue: tag) ?? .hanji, selectableLanguages)
-    }
-
-    /// Clamps a language to a selectable roster: a known case the roster does not offer (a debug-only
-    /// preview when given a release roster) falls back to `.hanji`, so the effective language always
-    /// matches a picker option. Pure + roster-injectable so the release clamp — unreachable from a DEBUG
-    /// test build, where every case is selectable — stays testable.
-    /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `clampToSelectable`.
-    static func clampToSelectable(_ language: DisplayLanguage, _ selectable: [DisplayLanguage]) -> DisplayLanguage {
-        selectable.contains(language) ? language : .hanji
+        DisplayLanguage(rawValue: tag) ?? .hanji
     }
 }
