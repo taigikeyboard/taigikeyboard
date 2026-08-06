@@ -15,7 +15,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.siansiansu.taigikeyboard.i18n.generated.GeneratedPseudoStrings
 import com.siansiansu.taigikeyboard.i18n.generated.GeneratedTaigiStrings
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -42,7 +41,6 @@ class StringResolver(
         when (language.resolution) {
             is StringResolution.Native -> activeContext.getString(key.resId)
             StringResolution.GeneratedMap -> GeneratedTaigiStrings.lookup(language, key) ?: hanjiContext.getString(key.resId)
-            StringResolution.Pseudo -> GeneratedPseudoStrings.lookup(key) ?: hanjiContext.getString(key.resId)
             // SYSTEM/Automatic is resolved to an effective language in buildStringResolver before the
             // resolver is constructed, so this branch is unreachable — fail fast if it ever isn't.
             StringResolution.Automatic -> error("Automatic must be resolved to an effective language before the resolver")
@@ -50,8 +48,8 @@ class StringResolver(
 
     /**
      * Locale used by [formatString] when interpolating numeric format args. Native languages use
-     * their own locale; the no-OS-locale paths (TL/POJ) and the debug Pseudo probe fall back to the
-     * Hanji locale. `%d` carries no grouping, so this is locale-stable for current counts, but it keeps
+     * their own locale; the no-OS-locale paths (TL/POJ) fall back to the Hanji locale. `%d` carries no
+     * grouping, so this is locale-stable for current counts, but it keeps
      * the formatter honest if a grouped/`%,d` spec is ever authored.
      */
     val formattingLocale: Locale =

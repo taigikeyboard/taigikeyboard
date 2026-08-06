@@ -35,11 +35,6 @@ struct StringResolver {
     }
 
     func resolve(_ key: StringKey) -> String {
-        #if DEBUG
-        if language == .pseudo {
-            return GeneratedPseudoStrings.lookup(key) ?? hanjiDefault(key)
-        }
-        #endif
         let value = activeBundle?.localizedString(forKey: key.rawValue, value: Self.missSentinel, table: nil)
             ?? Self.missSentinel
         return value == Self.missSentinel ? hanjiDefault(key) : value

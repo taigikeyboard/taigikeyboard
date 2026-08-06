@@ -34,7 +34,6 @@ data class LocalizedContentText(
             DisplayLanguage.POJ -> poj ?: hanji
             DisplayLanguage.JAPANESE -> ja ?: hanji
             DisplayLanguage.ENGLISH -> en ?: hanji
-            DisplayLanguage.PSEUDO -> hanji
             DisplayLanguage.SYSTEM ->
                 error("LocalizedContentText.resolve must receive an effective language, never SYSTEM")
         }

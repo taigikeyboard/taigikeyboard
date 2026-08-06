@@ -25,26 +25,9 @@ class DisplayLanguageTest {
     }
 
     @Test
-    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_releaseClampsDebugPreviews() {
-        // The release roster ([system] + productionLanguages) excludes the debug-only preview. clampToSelectable
-        // pins the release clamp directly: the only known-but-not-offered case (PSEUDO) falls back to Hanji,
-        // while production languages (incl. tailo/poj) + system survive. This is the only executable proof of
-        // the release path — a DEBUG unit-test build offers every case, so fromTag cannot reach the clamp branch.
-        val release = listOf(DisplayLanguage.SYSTEM) + DisplayLanguage.productionLanguages
-        assertEquals(DisplayLanguage.HANJI, DisplayLanguage.clampToSelectable(DisplayLanguage.PSEUDO, release))
-        assertEquals(DisplayLanguage.TAILO, DisplayLanguage.clampToSelectable(DisplayLanguage.TAILO, release))
-        assertEquals(DisplayLanguage.POJ, DisplayLanguage.clampToSelectable(DisplayLanguage.POJ, release))
-        assertEquals(DisplayLanguage.ENGLISH, DisplayLanguage.clampToSelectable(DisplayLanguage.ENGLISH, release))
-        assertEquals(DisplayLanguage.SYSTEM, DisplayLanguage.clampToSelectable(DisplayLanguage.SYSTEM, release))
-    }
-
-    @Test
-    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_debugSelectableRoster() {
-        // Pin the exact DEBUG picker order: Automatic first, the production roster (now incl. tailo + poj),
-        // then the debug-only pseudo probe. Release drops only pseudo (asserted by the source #if; not
-        // reachable from a DEBUG unit-test build). Guards against reorders / accidental promotion.
+    fun INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER_selectableRoster() {
         assertEquals(
-            listOf("system", "hanji", "en", "ja", "tailo", "poj", "pseudo"),
+            listOf("system", "hanji", "en", "ja", "tailo", "poj"),
             DisplayLanguage.selectableLanguages.map { it.tag },
         )
     }
@@ -53,12 +36,6 @@ class DisplayLanguageTest {
     fun fromTag_unknownTag_fallsBackToHanji() {
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag("xx"))
         assertEquals(DisplayLanguage.HANJI, DisplayLanguage.fromTag(""))
-    }
-
-    @Test
-    fun fromTag_pseudoInDebugBuild_resolvesPseudo() {
-        // testDebugUnitTest runs with BuildConfig.DEBUG == true, so the debug-only probe tag survives.
-        assertEquals(DisplayLanguage.PSEUDO, DisplayLanguage.fromTag("pseudo"))
     }
 
     @Test

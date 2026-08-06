@@ -908,31 +908,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Association records are valuable data for Taiwanese-language research. If you share them for research, please delete sensitive content first. You can also turn recording off, though next-word prediction will then be less accurate."
+            "value": "Association records may reflect phrases you have typed. Check for sensitive content before exporting or sharing them. When recording is off, the keyboard stops learning your next-word habits."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単語連携の記録は台湾語研究にとって貴重なデータです。研究のために提供する場合は、機密性の高い内容を先に削除してください。記録機能はオフにもできますが、その場合は次の単語の予測精度が下がります。"
+            "value": "単語連携の記録には、入力した語句が反映される場合があります。エクスポートや共有の前に、機密情報が含まれていないか確認してください。記録をオフにすると、次の単語の使い方を学習しなくなります。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "詞關聯紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人做研究，請先刪除敏感 ê 內容。紀錄功能嘛會使關起來，毋過後一詞預測會較無準。"
+            "value": "詞關聯紀錄可能會反映你拍過 ê 詞組。匯出抑是分享進前，請先檢查敏感內容。關閉紀錄了後，齒盤袂閣學習你的下一詞使用習慣。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû koan-liân kì-lio̍k tùi tâi-gí gián-kiù lâi kóng sī chin ū-kè ta̍t ê chu-liāu. nā-beh thê-kiong hō͘-lâng chòe gián-kiù, chhiáⁿ sian san-tî bín-kám ê lōe-iông. kì-lio̍k kong-lêng mā ē-sái koaiⁿ--khí-lâi, m̄-koh āu chi̍t sû ī-chhek hōe khah bô chún."
+            "value": "sû koan-liân kì-lio̍k khó-lêng ē hoán-èng lí phah kòe ê sû-cho͘. hōe-chhut ah-sī hun-hióng chìn-chêng, chhiáⁿ sian kiám-cha bín-kám lōe-iông. koaiⁿ--khí-lâi liáu-āu, khí-pôaⁿ bōe koh ha̍k-si̍p lí ê ē chi̍t ê sû sú-iōng si̍p-koàn."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû kuan-liân kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu. nā-beh thê-kiong hōo-lâng tsuè gián-kiù, tshiánn sian san-tî bín-kám ê luē-iông. kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi, m̄-koh āu tsi̍t sû ī-tshik huē khah bô tsún."
+            "value": "sû kuan-liân kì-lio̍k khó-lîng ē huán-ìng lí phah kuè ê sû-tsoo. huē-tshut ah-sī hun-hióng tsìn-tsîng, tshiánn sian kiám-tsa bín-kám luē-iông. kuainn--khí-lâi liáu-āu, khí-puânn buē koh ha̍k-si̍p lí ê ē tsi̍t ê sû sú-iōng si̍p-kuàn."
           }
         }
       }
@@ -980,31 +980,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When on, the keyboard records which words follow which, making continuous suggestions more accurate over time."
+            "value": "When on, the keyboard records which words follow each other to improve next-word suggestions."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オンにすると、どの単語の後にどの単語が続くかをキーボードが記録し、連続入力の予測が次第に正確になります。"
+            "value": "オンにすると、単語の前後関係を記録し、次の単語の候補に利用します。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "拍開了後，齒盤會記錄頭前、後壁 ê 關聯詞，予連紲建議愈來愈準。"
+            "value": "拍開了後，齒盤會記錄詞佮詞 ê 前後關係，用來改善下一詞建議。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, khí-pôaⁿ hōe kì-lio̍k thâu-chêng, āu-piah ê koan-liân sû, hō͘ liân-sòa kiàn-gī jú-lâi-jú chún."
+            "value": "phah-khui liáu-āu, khí-pôaⁿ ē kì-lio̍k sû kah sû ê chiân-āu koan-hē, iōng lâi kái-siān ē chi̍t ê sû kiàn-gī."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, khí-puânn huē kì-lio̍k thâu-tsîng, āu-piah ê kuan-liân sû, hōo liân-suà kiàn-gī jú-lâi-jú tsún."
+            "value": "phah-khui liáu-āu, khí-puânn ē kì-lio̍k sû kah sû ê tsiân-āu kuan-hē, iōng lâi kái-siān ē tsi̍t ê sû kiàn-gī."
           }
         }
       }
@@ -1016,31 +1016,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup files contain all your usage records and work on both iOS and Android, so you need not worry when switching phones."
+            "value": "A backup contains your custom words, frequency records, and association records. You can import it on iOS or Android. Store the file securely because it may contain private content."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バックアップファイルにはすべての利用記録が含まれ、iOS と Android の両方で使用できます。機種変更の際もご安心ください。"
+            "value": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれます。iOS と Android のどちらでもインポートできます。個人的な内容が含まれる場合があるため、安全に保管してください。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "備份檔案內底包含你所有 ê 使用紀錄，佇 iOS 佮 Android 攏通用，準講換機仔嘛毋免煩惱。"
+            "value": "備份檔案包含自訂詞、詞頻佮詞關聯紀錄，會當佇 iOS 佮 Android 匯入。檔案可能包含私人內容，請妥當保管。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "pī-hūn tòng-àn lāi-té pau-hâm lí só͘-iú ê sú-iōng kì-lio̍k, tī iOS kah Android láng thong-iōng, chún-kóng ōaⁿ ki-á mā m̄-bián hoân-ló."
+            "value": "pī-hūn tòng-àn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, ē-tàng tī iOS kah Android hōe-ji̍p. tòng-àn khó-lêng pau-hâm su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "pī-hūn tòng-àn lāi-té pau-hâm lí sóo-iú ê sú-iōng kì-lio̍k, tī iOS kah Android láng thong-iōng, tsún-kóng uānn ki-á mā m̄-bián huân-ló."
+            "value": "pī-hūn tòng-àn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, ē-tàng tī iOS kah Android huē-ji̍p. tòng-àn khó-lîng pau-hâm su-jîn luē-iông, tshiánn thò-tòng pó-kuán."
           }
         }
       }
@@ -1142,13 +1142,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "san-tî só͘-iú sû koan-liân kì-lio̍k"
+            "value": "san-tû só͘-iú sû koan-liân kì-lio̍k"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "san-tî sóo-iú sû kuan-liân kì-lio̍k"
+            "value": "san-tû sóo-iú sû kuan-liân kì-lio̍k"
           }
         }
       }
@@ -1178,13 +1178,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "san-tî só͘-iú sû pîn kì-lio̍k"
+            "value": "san-tû só͘-iú sû pîn kì-lio̍k"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "san-tî sóo-iú sû pîn kì-lio̍k"
+            "value": "san-tû sóo-iú sû pîn kì-lio̍k"
           }
         }
       }
@@ -1214,13 +1214,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "khak-tēng beh san-tî só͘-iú sû koan-liân kì-lio̍k?"
+            "value": "khak-tēng beh san-tû só͘-iú sû koan-liân kì-lio̍k?"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "khak-tīng beh san-tî sóo-iú sû kuan-liân kì-lio̍k?"
+            "value": "khak-tīng beh san-tû sóo-iú sû kuan-liân kì-lio̍k?"
           }
         }
       }
@@ -1250,13 +1250,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "khak-tēng beh san-tî só͘-iú sû pîn kì-lio̍k?"
+            "value": "khak-tēng beh san-tû só͘-iú sû pîn kì-lio̍k?"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "khak-tīng beh san-tî sóo-iú sû pîn kì-lio̍k?"
+            "value": "khak-tīng beh san-tû sóo-iú sû pîn kì-lio̍k?"
           }
         }
       }
@@ -1286,13 +1286,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "chū-tēng-sû khò͘ sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 nôa khǹg beh phah ê lô-má-jī, tē 2 nôa khǹg hàn-jī, m̄-bián khǹg piau-tôe."
+            "value": "chū-tēng-sû-khò͘ sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 lân khǹg beh phah ê lô-má-jī, tē 2 lân khǹg hàn-jī, m̄-bián khǹg piau-tê."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tsū-tīng-sû khòo sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 nuâ khǹg beh phah ê lô-má-jī, tē 2 nuâ khǹg hàn-jī, m̄-bián khǹg piau-tuê."
+            "value": "tsū-tīng-sû-khòo sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 lân khǹg beh phah ê lô-má-jī, tē 2 lân khǹg hàn-jī, m̄-bián khǹg piau-tê."
           }
         }
       }
@@ -1394,13 +1394,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, chū-tēng-sû hōe chhut-hiān tī hāu-soán sû lāi-té; koaiⁿ--khí-lâi liáu-āu, chiū bōe koh chhut-hiān."
+            "value": "phah-khui liáu-āu, chū-tēng-sû ē chhut-hiān tī hāu-soán sû lāi-té; koaiⁿ--khí-lâi liáu-āu, chiū bōe koh chhut-hiān."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, tsū-tīng-sû huē tshut-hiān tī hāu-suán sû lāi-té; kuainn--khí-lâi liáu-āu, tsiū buē koh tshut-hiān."
+            "value": "phah-khui liáu-āu, tsū-tīng-sû ē tshut-hiān tī hāu-suán sû lāi-té; kuainn--khí-lâi liáu-āu, tsiū buē koh tshut-hiān."
           }
         }
       }
@@ -1412,31 +1412,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please do not store sensitive personal data in the custom dictionary, such as ID numbers, account passwords, or credit-card numbers. Mind your information security."
+            "value": "Do not store ID numbers, passwords, credit-card numbers, or other sensitive data in the custom dictionary."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "個人情報保護のため、カスタム辞書には機密性の高い個人データ（身分証番号、口座のパスワード、クレジットカード番号など）を保存しないでください。情報セキュリティにご注意ください。"
+            "value": "カスタム辞書には、身分証番号、パスワード、クレジットカード番号などの機密情報を保存しないでください。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "請毋通佇自訂詞庫囥敏感 ê 個人資料，親像身分證字號、口座密碼、信用卡號碼，請注意家己 ê 資訊安全。"
+            "value": "自訂詞庫毋通囥身分證字號、密碼、信用卡號碼抑是其他敏感資料。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "chhiáⁿ m̄-thang tī chū-tēng-sû khò͘ khǹg bín-kám ê kò-jîn-chu-liāu, chhin-chhiūⁿ sin-hūn-chèng jī-hō, kháu-chō bi̍t-bé, sìn-iōng-khah hō-bé, chhiáⁿ chù-ì ka-kī ê chu-sìn an-choân."
+            "value": "chū-tēng-sû-khò͘ m̄-thang khǹg sin-hūn-chèng jī-hō, bi̍t-bé, sìn-iōng-khah hō-bé ah-sī kî-thaⁿ bín-kám chu-liāu."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tshiánn m̄-thang tī tsū-tīng-sû khòo khǹg bín-kám ê kò-jîn-tsu-liāu, tshin-tshiūnn sin-hūn-tsìng jī-hō, kháu-tsō bi̍t-bé, sìn-iōng-khah hō-bé, tshiánn tsù-ì ka-kī ê tsu-sìn an-tsuân."
+            "value": "tsū-tīng-sû-khòo m̄-thang khǹg sin-hūn-tsìng jī-hō, bi̍t-bé, sìn-iōng-khah hō-bé ah-sī kî-thann bín-kám tsu-liāu."
           }
         }
       }
@@ -1478,37 +1478,37 @@
       }
     },
     "i18n_dictionary_dataManagement": {
-      "comment": "Section title for personal-data management (backup/import/export of user data).",
+      "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Personal Data"
+            "value": "Keyboard Data"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "個人データ"
+            "value": "キーボードデータ"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "個人資料"
+            "value": "使用資料"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kò-jîn-chu-liāu"
+            "value": "sú-iōng chu-liāu"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "kò-jîn-tsu-liāu"
+            "value": "sú-iōng tsu-liāu"
           }
         }
       }
@@ -1538,13 +1538,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "san-tî choân-pō͘ chū-tēng-sû"
+            "value": "san-tû choân-pō͘ chū-tēng-sû"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "san-tî tsuân-pōo tsū-tīng-sû"
+            "value": "san-tû tsuân-pōo tsū-tīng-sû"
           }
         }
       }
@@ -1574,13 +1574,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kám khak-tēng beh san-tî só͘-iú chū-tēng-sû?"
+            "value": "kám khak-tēng beh san-tû só͘-iú chū-tēng-sû?"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "kám khak-tīng beh san-tî sóo-iú tsū-tīng-sû?"
+            "value": "kám khak-tīng beh san-tû sóo-iú tsū-tīng-sû?"
           }
         }
       }
@@ -1592,31 +1592,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Government branches, common given names, 台/臺 variants, dictionary trivia, numbers/times/dates, and administrative districts."
+            "value": "Adds government agencies, common names, administrative divisions, dates, times, numbers, and other words with limited coverage in the MOE Dictionary."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "一府五院、よくある名前、台/臺、辞典の豆知識、数字・時間・日付、行政区。"
+            "value": "政府機関、一般的な人名、行政区、日付、時刻、数字など、教育部辞典で収録の少ない語を補います。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "一府五院、菜市仔名、台/臺、教典僻智識、數字時間日期、行政區。"
+            "value": "補充政府機關、常見人名、行政區、數字、時間、日期佮其他教典較少收錄 ê 詞。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "It-hú gō͘-īⁿ,chhài-chhī-á-miâ,Tâi/Tâi,kàu-tián phiah-tì-sek,sò͘-jī sî-kan ji̍t-kî,hêng-chèng-khu."
+            "value": "pó͘-chhiong chèng-hú ki-koan, siông-kiàn jîn-miâ, hêng-chèng-khu, sò͘-jī, sî-kan, ji̍t-kî kah kî-thaⁿ kàu-tián khah chió siu-lio̍k ê sû."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "It-hú gōo-īnn,tshài-tshī-á-miâ,Tâi/Tâi,kàu-tián phiah-tì-sik,sòo-jī sî-kan ji̍t-kî,hîng-tsìng-khu."
+            "value": "póo-tshiong tsìng-hú ki-kuan, siông-kiàn jîn-miâ, hîng-tsìng-khu, sòo-jī, sî-kan, ji̍t-kî kah kî-thann kàu-tián khah tsió siu-lio̍k ê sû."
           }
         }
       }
@@ -1772,31 +1772,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Export Dictionary"
+            "value": "Export Custom Words"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "辞書をエクスポート"
+            "value": "カスタム単語をエクスポート"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯出詞庫"
+            "value": "匯出自訂詞"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hōe-chhut sû khò͘"
+            "value": "hōe-chhut chū-tēng-sû"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "huē-tshut sû khòo"
+            "value": "huē-tshut tsū-tīng-sû"
           }
         }
       }
@@ -1862,13 +1862,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tòng-àn siong tōa(siōng hān 5 MB)"
+            "value": "tòng-àn siong tōa (siōng hān 5 MB)"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tòng-àn siong tuā(siōng hān 5 MB)"
+            "value": "tòng-àn siong tuā (siōng hān 5 MB)"
           }
         }
       }
@@ -1880,31 +1880,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "At most 100 words are shown above. If you cannot find a word, use the \"Type to search\" field below."
+            "value": "The list shows the first 100 records. Use the \"Type to search\" field below to find other records."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "上部には最大 100 件の単語が表示されます。見つからない場合は、下の「入力して検索」をご利用ください。"
+            "value": "一覧には先頭の 100 件だけを表示します。ほかの記録は、下の「入力して検索」で検索してください。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "頂面上濟顯示 100 个詞，若揣無詞，請用下跤 ê「拍字揣詞」功能搜揣。"
+            "value": "清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「拍字揣詞」。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "téng-bīn siāng chōe hián-sī 100 ê sû, nā chhōe-bô sû, chhiáⁿ iōng ē-kha ê\"phah-jī chhōe sû\" kong-lêng chhiau-chhōe."
+            "value": "chheng-toaⁿ kan-ta hián-sī thâu 100 hāng. beh chhōe kî-thaⁿ kì-lio̍k, chhiáⁿ iōng ē-kha ê \"phah-jī chhōe sû\"."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tíng-bīn siāng tsuē hián-sī 100 ê sû, nā tshuē-bô sû, tshiánn iōng ē-kha ê\"phah-jī tshuē sû\" kong-lîng tshiau-tshuē."
+            "value": "tshing-tuann kan-ta hián-sī thâu 100 hāng. beh tshuē kî-thann kì-lio̍k, tshiánn iōng ē-kha ê \"phah-jī tshuē sû\"."
           }
         }
       }
@@ -1916,31 +1916,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Frequency records use a plain-text CSV file: column 1 holds the word, column 2 holds the count. No header row."
+            "value": "Frequency records use a CSV text file with 3 columns: Hanji, Tâi-lô, and count. No header row. The legacy 2-column format, Hanji and count, is also accepted."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単語頻度の記録はプレーンテキストの CSV ファイルを使用します。1 列目に単語、2 列目に回数を記入します。ヘッダー行は不要です。"
+            "value": "単語頻度の記録は、漢字・台羅・回数の 3 列からなる CSV テキストファイルを使用します。ヘッダー行は不要です。旧形式の「漢字・回数」の 2 列もインポートできます。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "詞頻紀錄使用 CSV 純文字檔案，第 1 欄囥詞，第 2 欄囥次數，毋免囥標題。"
+            "value": "詞頻紀錄使用 CSV 純文字檔案，共 3 欄：漢字、台羅、次數，毋免囥標題。舊版的「漢字、次數」2 欄格式嘛會當匯入。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû pîn kì-lio̍k sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 nôa khǹg sû, tē 2 nôa khǹg chhù siàu, m̄-bián khǹg piau-tôe."
+            "value": "sû pîn kì-lio̍k sú-iōng CSV sûn bûn-jī tòng-àn, kā 3 lân: hàn-jī, tâi-lô, chhù-siàu, m̄-bián khǹg piau-tê. kū-pán ê \"hàn-jī, chhù-siàu\" 2 lân keh-sek mā ē-tàng hōe-ji̍p."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû pîn kì-lio̍k sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 nuâ khǹg sû, tē 2 nuâ khǹg tshù siàu, m̄-bián khǹg piau-tuê."
+            "value": "sû pîn kì-lio̍k sú-iōng CSV sûn bûn-jī tòng-àn, kā 3 lân: hàn-jī, tâi-lô, tshù-siàu, m̄-bián khǹg piau-tê. kū-pán ê \"hàn-jī, tshù-siàu\" 2 lân keh-sik mā ē-tàng huē-ji̍p."
           }
         }
       }
@@ -2060,31 +2060,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Frequency records are valuable data for Taiwanese-language research. If you share them for research or model training, please delete sensitive private data first. You can also turn recording off, though candidate ranking will then be less accurate."
+            "value": "Frequency records may reflect words you have selected. Check for sensitive content before exporting or sharing them. When recording is off, the keyboard stops learning your candidate ranking."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単語頻度の記録は台湾語研究にとって貴重なデータです。研究やモデル学習のために提供する場合は、機密性の高い個人データを先に削除してください。記録機能はオフにもできますが、その場合は候補の並び替えの精度が下がります。"
+            "value": "単語頻度の記録には、選んだ単語が反映される場合があります。エクスポートや共有の前に、機密情報が含まれていないか確認してください。記録をオフにすると、候補の並び順を学習しなくなります。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "詞頻紀錄對台語研究來講是真有價值 ê 資料。若欲提供予人研究訓練模型，請先刪除敏感 ê 私人資料。紀錄功能嘛會使關起來，毋過按呢候選詞 ê 排序就會較無準。"
+            "value": "詞頻紀錄可能會反映你揀過 ê 詞。匯出抑是分享進前，請先檢查敏感內容。關閉紀錄了後，齒盤袂閣學習你的候選詞排序。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû pîn kì-lio̍k tùi tâi-gí gián-kiù lâi kóng sī chin ū-kè ta̍t ê chu-liāu. nā-beh thê-kiong hō͘-lâng gián-kiù hùn-liān bô͘-hêng, chhiáⁿ sian san-tî bín-kám ê su-jîn chu-liāu. kì-lio̍k kong-lêng mā ē-sái koaiⁿ--khí-lâi, m̄-koh án-ne hāu-soán sû ê pâi-sī chiū hōe khah bô chún."
+            "value": "sû pîn kì-lio̍k khó-lêng ē hoán-èng lí kéng kòe ê sû. hōe-chhut ah-sī hun-hióng chìn-chêng, chhiáⁿ sian kiám-cha bín-kám lōe-iông. koaiⁿ--khí-lâi liáu-āu, khí-pôaⁿ bōe koh ha̍k-si̍p lí ê hāu-soán sû pâi-sī."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû pîn kì-lio̍k tuì tâi-gí gián-kiù lâi kóng sī tsin ū-kè ta̍t ê tsu-liāu. nā-beh thê-kiong hōo-lâng gián-kiù hùn-liān bôo-hîng, tshiánn sian san-tî bín-kám ê su-jîn tsu-liāu. kì-lio̍k kong-lîng mā ē-sái kuainn--khí-lâi, m̄-koh án-ne hāu-suán sû ê pâi-sī tsiū huē khah bô tsún."
+            "value": "sû pîn kì-lio̍k khó-lîng ē huán-ìng lí kíng kuè ê sû. huē-tshut ah-sī hun-hióng tsìn-tsîng, tshiánn sian kiám-tsa bín-kám luē-iông. kuainn--khí-lâi liáu-āu, khí-puânn buē koh ha̍k-si̍p lí ê hāu-suán sû pâi-sī."
           }
         }
       }
@@ -2132,31 +2132,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When on, the keyboard records how often you pick each word and uses it to rank candidates. Words you choose often move toward the front, so the candidates get more accurate over time."
+            "value": "When on, the keyboard records how often you select each word. Frequently selected words move toward the front of the candidate list."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オンにすると、各単語を選んだ回数をキーボードが記録し、候補の並び替えに利用します。よく選ぶ単語が前に移動し、候補が次第に正確になります。"
+            "value": "オンにすると、各単語を選んだ回数を記録します。よく選ぶ単語は候補リストの前方に移動します。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "拍開了後，齒盤會記錄你揀過 ê 詞幾擺，予候選詞排序做參考，定定揀 ê 詞就會排較頭前，按呢候選詞就會愈來愈準。"
+            "value": "拍開了後，齒盤會記錄各詞揀過幾擺，定定揀 ê 詞會排較頭前。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, khí-pôaⁿ hōe kì-lio̍k lí kéng kòe ê sû kúi-pái, hō͘ hāu-soán sû pâi-sī chòe chham-khó, tiāⁿ-tiāⁿ kéng ê sû chiū hōe pâi khah thâu-chêng, án-ne hāu-soán sû chiū hōe jú-lâi-jú chún."
+            "value": "phah-khui liáu-āu, khí-pôaⁿ ē kì-lio̍k kok ê sû kéng kòe kúi-pái, tiāⁿ-tiāⁿ kéng ê sû ē pâi khah thâu-chêng."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "phah-khui liáu-āu, khí-puânn huē kì-lio̍k lí kíng kuè ê sû kuí-pái, hōo hāu-suán sû pâi-sī tsuè tsham-khó, tiānn-tiānn kíng ê sû tsiū huē pâi khah thâu-tsîng, án-ne hāu-suán sû tsiū huē jú-lâi-jú tsún."
+            "value": "phah-khui liáu-āu, khí-puânn ē kì-lio̍k kok ê sû kíng kuè kuí-pái, tiānn-tiānn kíng ê sû ē pâi khah thâu-tsîng."
           }
         }
       }
@@ -2204,7 +2204,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example: 𠢙早"
+            "value": "Example: gâu-tsá"
           }
         },
         "ja": {
@@ -2384,31 +2384,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Import Dictionary"
+            "value": "Import Custom Words"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "辞書をインポート"
+            "value": "カスタム単語をインポート"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯入詞庫"
+            "value": "匯入自訂詞"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hōe-ji̍p sû khò͘"
+            "value": "hōe-ji̍p chū-tēng-sû"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "huē-ji̍p sû khòo"
+            "value": "huē-ji̍p tsū-tīng-sû"
           }
         }
       }
@@ -2432,19 +2432,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯出匯入"
+            "value": "匯入佮匯出"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hōe-chhut hōe-ji̍p"
+            "value": "hōe-ji̍p kah hōe-chhut"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "huē-tshut huē-ji̍p"
+            "value": "huē-ji̍p kah huē-tshut"
           }
         }
       }
@@ -2468,19 +2468,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯入 %1$lld 項成功，%2$lld 項重複"
+            "value": "成功匯入 %1$lld 項，跳過 %2$lld 項"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hōe-ji̍p %1$lld hāng sêng-kong,%2$lld hāng tiông-ho̍k"
+            "value": "sêng-kong hōe-ji̍p %1$lld hāng, thiàu-kòe %2$lld hāng"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "huē-ji̍p %1$lld hāng sîng-kong,%2$lld hāng tiông-ho̍k"
+            "value": "sîng-kong huē-ji̍p %1$lld hāng, thiàu-kuè %2$lld hāng"
           }
         }
       }
@@ -2960,7 +2960,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Native Characters"
+            "value": "Conventional Characters"
           }
         },
         "ja": {
@@ -2996,31 +2996,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Characters used by 'Tsuí Tâi-bûn' and 'Tâi-jī-tshân'."
+            "value": "Adds conventional characters used by Tsuí Tâi-bûn and Tâi-jī-tshân to candidate suggestions."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「水台文」「台字田」の用字。"
+            "value": "「水台文」と「台字田」で使われる在来字を候補に追加します。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "「水台文」、「台字田」用字"
+            "value": "補充「水台文」佮「台字田」使用 ê 在來字，拍開了後會加入候選詞。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"Chúi-tâi-bûn\",\"Tâi-jī-chhân\"iōng-jī"
+            "value": "pó͘-chhiong \"Chúi-tâi-bûn\" kah \"Tâi-jī-chhân\" sú-iōng ê chāi-lâi jī, phah-khui liáu-āu ē ka-ji̍p hāu-soán sû."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"Tsuí-tâi-bûn\",\"Tâi-jī-tshân\"iōng-jī"
+            "value": "póo-tshiong \"Tsuí-tâi-bûn\" kah \"Tâi-jī-tshân\" sú-iōng ê tsāi-lâi jī, phah-khui liáu-āu ē ka-ji̍p hāu-suán sû."
           }
         }
       }
@@ -3080,19 +3080,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。"
+            "value": "收規一千兩百組重要 ê 台語工藝詞，包括陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝這 11 項工藝類別。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siu-lio̍k to-ta̍t it-chhian nn̄g-pah cho͘ koan-kiān tâi-gí kang-gē sû-lūi, hâm-kài tô-chû,bo̍k-gē,kim-kang,tek-tîn,siam-ûi,po-lê,chhat-gē,chio̍h-gē,phôe-kek,chóa-gē téng cha̍p-it hāng kang-gē lūi-pia̍t."
+            "value": "Siu kui it-chhian nn̄g-pah cho͘ tiōng-iàu ê tâi-gí kang-gē sû, pau-koat tô-chû, bo̍k-gē, kim-kang, tek-tîn, siam-ûi, po-lê, chhat-gē, chio̍h-gē, phôe-kek, chóa-gē chit 11 hāng kang-gē lūi-pia̍t."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siu-lio̍k to-ta̍t it-tshian nn̄g-pah tsoo kuan-kiān tâi-gí kang-gē sû-luī, hâm-kài tô-tsû,bo̍k-gē,kim-kang,tik-tîn,siam-uî,po-lê,tshat-gē,tsio̍h-gē,phuê-kik,tsuá-gē tíng tsa̍p-it hāng kang-gē luī-pia̍t."
+            "value": "Siu kui it-tshian nn̄g-pah tsoo tiōng-iàu ê tâi-gí kang-gē sû, pau-kuat tô-tsû, bo̍k-gē, kim-kang, tik-tîn, siam-uî, po-lê, tshat-gē, tsio̍h-gē, phuê-kik, tsuá-gē tsit 11 hāng kang-gē luī-pia̍t."
           }
         }
       }
@@ -3332,19 +3332,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。"
+            "value": "台語、華語攏會當揣，詞目佮例句有發音通聽，學習較利便。閣有分類、部首筆劃索引佮附錄。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thê-kiong Tâi-oân tâi-gí chhiau-chhōe ki̍p hôa-gí chhiau-chhōe, khó lêng-thèng sû-ba̍k hàn lē-kù hoat-im, hong-piān ha̍k-si̍p. Hù-ū hun-lūi sek-ín,pō͘-siú pit-ōe sek-ín ki̍p hù-lio̍k."
+            "value": "Tâi-gí, hôa-gí lóng ē-tàng chhōe, sû-ba̍k kah lē-kù ū hoat-im thang thiaⁿ, ha̍k-si̍p khah lī-piān. Koh ū hun-lūi, pō͘-siú pit-oe̍h sek-ín kah hù-lio̍k."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thê-kiong Tâi-uân tâi-gí tshiau-tshuē ki̍p huâ-gí tshiau-tshuē, khó lîng-thìng sû-ba̍k hàn lē-kù huat-im, hong-piān ha̍k-si̍p. Hù-ū hun-luī sik-ín,pōo-siú pit-uē sik-ín ki̍p hù-lio̍k."
+            "value": "Tâi-gí, huâ-gí lóng ē-tàng tshuē, sû-ba̍k kah lē-kù ū huat-im thang thiann, ha̍k-si̍p khah lī-piān. Koh ū hun-luī, pōo-siú pit-ue̍h sik-ín kah hù-lio̍k."
           }
         }
       }
@@ -3404,19 +3404,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。"
+            "value": "台語台招專家學者，定期開會，討論新詞愛按怎用台語講較好，建立詞庫予逐家查、予逐家用。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tâi-gí-tâi iau-chhiáⁿ choan-ka ha̍k-chiá, tēng-kî tiàu-khui hōe-gī, thó-lūn sin-heng sû-lūi ê si̍t-tong tâi-gí kóng-hoat, kiàn-li̍p sû-khò͘ hō͘ bîn-chiòng cha-sûn sú-iōng."
+            "value": "Tâi-gí-tâi chio choan-ka ha̍k-chiá, tēng-kî khui-hōe, thó-lūn sin-sû ài àn-chóaⁿ iōng tâi-gí kóng khah hó, kiàn-li̍p sû-khò͘ hō͘ ta̍k-ke cha, hō͘ ta̍k-ke iōng."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tâi-gí-tâi iau-tshiánn tsuan-ka ha̍k-tsiá, tīng-kî tiàu-khui huē-gī, thó-lūn sin-hing sû-luī ê si̍t-tong tâi-gí kóng-huat, kiàn-li̍p sû-khòo hōo bîn-tsiòng tsa-sûn sú-iōng."
+            "value": "Tâi-gí-tâi tsio tsuan-ka ha̍k-tsiá, tīng-kî khui-huē, thó-lūn sin-sû ài àn-tsuánn iōng tâi-gí kóng khah hó, kiàn-li̍p sû-khòo hōo ta̍k-ke tsa, hōo ta̍k-ke iōng."
           }
         }
       }
@@ -3572,7 +3572,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example: gâu-tsá"
+            "value": "Example: 𠢕早"
           }
         },
         "ja": {
@@ -3590,13 +3590,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kiàn-pún:gâu-chá"
+            "value": "kiàn-pún: gâu-chá"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "kiàn-pún:gâu-tsá"
+            "value": "kiàn-pún: gâu-tsá"
           }
         }
       }
@@ -3716,31 +3716,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Since 2017, academic terminology across eight fields — language arts, mathematics, social studies, natural science, arts, integrative activities, technology, and health & physical education — translated into Taigi."
+            "value": "Since 2017, the project has translated academic terminology from eight fields into Taigi: language arts, mathematics, social studies, natural science, arts, integrative activities, technology, and health and physical education."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "2017年から、国語・数学・社会・自然科学・芸術・総合的活動・科学技術・保健体育の8領域の学科用語を台湾語に翻訳。"
+            "value": "2017年から、国語・数学・社会・自然科学・芸術・総合的活動・科学技術・保健体育の8領域の学科用語を台湾語に翻訳しています。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。"
+            "value": "對 106 年開始，共語文、數學、社會、自然科學、藝術、綜合活動、科技、健康佮體育這 8 大領域 ê 學科術語編做台語。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tī 106 nî khí chìn-hêng gí-bûn,sò͘-ha̍k,siā-hōe,chū-jiân kho-ha̍k,gē-su̍t,chong-ha̍p oa̍h-tōng,kho-ki,kiān-khong kap thé-io̍k téng 8 tāi léng-e̍k ha̍k-kho su̍t-gí chī tâi-gí pian-e̍k."
+            "value": "Tuì 106 nî khai-sí, kā gí-bûn, sò͘-ha̍k, siā-hōe, chū-jiân kho-ha̍k, gē-su̍t, chong-ha̍p oa̍h-tōng, kho-ki, kiān-khong kah thé-io̍k chit 8 tāi léng-e̍k ê ha̍k-kho su̍t-gí pian-chò tâi-gí."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tī 106 nî khí tsìn-hîng gí-bûn,sòo-ha̍k,siā-huē,tsū-jiân kho-ha̍k,gē-su̍t,tsong-ha̍p ua̍h-tōng,kho-ki,kiān-khong kap thé-io̍k tíng 8 tāi líng-i̍k ha̍k-kho su̍t-gí tsī tâi-gí pian-i̍k."
+            "value": "Tuì 106 nî khai-sí, kā gí-bûn, sòo-ha̍k, siā-huē, tsū-jiân kho-ha̍k, gē-su̍t, tsong-ha̍p ua̍h-tōng, kho-ki, kiān-khong kah thé-io̍k tsit 8 tāi líng-i̍k ê ha̍k-kho su̍t-gí pian-tsò tâi-gí."
           }
         }
       }
@@ -3836,19 +3836,19 @@
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修"
+            "value": "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"Tâi-hôa sòaⁿ-téng sû-tián\"sī Tēng Liông-úi kàu-siū thê-kiong chu-liāu,Iûⁿ Ín-giân kàu-siū pian-siu"
+            "value": "\"Tâi-hôa sòaⁿ-téng sû-tián\" sī Tēng Liông-úi kàu-siū thê-kiong chu-liāu, Iûⁿ Ín-giân kàu-siū pian-siu."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"Tâi-huâ suànn-tíng sû-tián\"sī Tīng Liông-uí kàu-siū thê-kiong tsu-liāu,Iûnn Ín-giân kàu-siū pian-siu"
+            "value": "\"Tâi-huâ suànn-tíng sû-tián\" sī Tīng Liông-uí kàu-siū thê-kiong tsu-liāu, Iûnn Ín-giân kàu-siū pian-siu."
           }
         }
       }
@@ -4058,13 +4058,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû siuⁿ-che(siōng hān 30,000 hāng)"
+            "value": "sû siuⁿ-che (siōng hān 30,000 hāng)"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "sû siunn-tse(siōng hān 30,000 hāng)"
+            "value": "sû siunn-tse (siōng hān 30,000 hāng)"
           }
         }
       }
@@ -4400,31 +4400,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Taigi Keyboard will always be free, with no paid features. Taiwanese is our mother tongue, and no one should be unable to use a good tool over money. My hope is that everyone who wants to learn and write Taiwanese can use it without any burden — that is the most important wish behind this keyboard."
+            "value": "Taigi Keyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "台湾語キーボードは永久に無料で、有料機能を設けることはありません。台湾語は私たちの母語であり、お金のせいで良い道具が使えないことがあってはなりません。台湾語を学びたい、書きたいと願うすべての人が負担なく使えること——それがこのキーボードを作る上で最も大切な願いです。"
+            "value": "台語キーボードは今後も無料で、有料機能を設けません。台湾語を学びたい、書きたい人が費用を気にせず使えることを願っています。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
+            "value": "台語齒盤會一直免費，嘛袂設付費功能。我向望想欲學台語、寫台語 ê 人攏會當無負擔使用。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-gí khí-pôaⁿ pó-chèng éng-oán bián-hùi, mā bōe chòe hù-hùi kong-lêng. tâi-gí sī lán ê bó-gí, bô èng-kai in-ūi chîⁿ ê būn-tê iōng bōe tio̍h hó ke-si. góa ǹg-bāng ta̍k-ke siūⁿ-beh ha̍k tâi-gí, siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng, che-sī góa chòe chit ê khí-pôaⁿ siōng tiōng-iàu ê sim-goān."
+            "value": "tâi-gí khí-pôaⁿ ē it-ti̍t bián-hùi, mā bōe siat hù-hùi kong-lêng. góa ǹg-bāng siūⁿ-beh ha̍k tâi-gí, siá tâi-gí ê lâng lóng ē-tàng bô hū-tam sú-iōng."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-gí khí-puânn pó-tsìng íng-uán bián-huì, mā buē tsuè hù-huì kong-lîng. tâi-gí sī lán ê bó-gí, bô ìng-kai in-uī tsînn ê būn-tê iōng buē tio̍h hó ke-si. guá ǹg-bāng ta̍k-ke siūnn-beh ha̍k tâi-gí, siá tâi-gí ê jîn láng ē-tàng bô hū-tam lâi sú-iōng, tse-sī guá tsuè tsit ê khí-puânn siōng tiōng-iàu ê sim-guān."
+            "value": "tâi-gí khí-puânn ē it-ti̍t bián-huì, mā buē siat hù-huì kong-lîng. guá ǹg-bāng siūnn-beh ha̍k tâi-gí, siá tâi-gí ê lâng lóng ē-tàng bô hū-tam sú-iōng."
           }
         }
       }
@@ -4850,13 +4850,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "oân-sêng liáu-āu, têng-khui lí ba̍k-chêng sú-iōng ê App, hō͘ App tîng-sin chài-ji̍p sin ê khí-pôaⁿ chheng-toaⁿ. sòa--lo̍h-lâi, tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû-tô͘ sī chhiat khì tâi-gí khí-pôaⁿ"
+            "value": "oân-sêng liáu-āu, têng-khui lí ba̍k-chêng sú-iōng ê App, hō͘ App tîng-sin chài-ji̍p sin ê khí-pôaⁿ chheng-toaⁿ. sòa--lo̍h-lâi, tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû tô͘-sī chhiat khì tâi-gí khí-pôaⁿ"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "uân-sîng liáu-āu, tîng-khui lí ba̍k-tsîng sú-iōng ê App, hōo App tîng-sin tsài-ji̍p sin ê khí-puânn tshing-tuann. suà--lo̍h-lâi, tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû-tôo sī tshiat khì tâi-gí khí-puânn"
+            "value": "uân-sîng liáu-āu, tîng-khui lí ba̍k-tsîng sú-iōng ê App, hōo App tîng-sin tsài-ji̍p sin ê khí-puânn tshing-tuann. suà--lo̍h-lâi, tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû tôo-sī tshiat khì tâi-gí khí-puânn"
           }
         }
       }
@@ -4958,13 +4958,13 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tiám-chhi̍h\"khí-pôaⁿ\""
+            "value": "tiám-chhi̍h \"khí-pôaⁿ\""
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tiám-tshi̍h\"khí-puânn\""
+            "value": "tiám-tshi̍h \"khí-puânn\""
           }
         }
       }
@@ -4994,49 +4994,49 @@
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tiám-chhi̍h\"cheng-ka khí-pôaⁿ\",\"ún-chún oân-chéng chhú-iōng\""
+            "value": "tiám-chhi̍h \"cheng-ka khí-pôaⁿ\", \"ún-chún oân-chéng chhú-iōng\""
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tiám-tshi̍h\"tsing-ka khí-puânn\",\"ún-tsún uân-tsíng tshú-iōng\""
+            "value": "tiám-tshi̍h \"tsing-ka khí-puânn\", \"ún-tsún uân-tsíng tshú-iōng\""
           }
         }
       }
     },
     "i18n_home_setupInfoMessage": {
-      "comment": "Setup-guide note explaining what 'Allow Full Access' means and the privacy stance.",
+      "comment": "Setup-guide note explaining that 'Allow Full Access' permits app/keyboard data sharing and stating the network privacy policy.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"Allow Full Access\" lets the keyboard recognize your key presses and turn them into the text you type. Rest assured, the app does not record your data."
+            "value": "\"Allow Full Access\" lets the keyboard share settings and usage data with the app. Taigi Keyboard does not send what you type over the network."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「フルアクセスを許可」とは、キーボードがあなたのキー操作を認識し、入力した文字に変換できるようにすることです。ご安心ください。本アプリがあなたのデータを記録することはありません。"
+            "value": "「フルアクセスを許可」すると、キーボードとアプリで設定や利用データを共有できます。台語キーボードは入力内容をネットワークへ送信しません。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。"
+            "value": "「允准完整取用」予齒盤會當佮 App 共用設定佮使用資料。台語齒盤袂共你拍 ê 內容送去網路。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"ún-chún oân-chéng chhú-iōng\" ì-sù sī hō͘ khí-pôaⁿ ē-tàng bat lí chhi̍h ê tōng-chok, chiâⁿ-chòe lí phah ê jī. chhiáⁿ hòng-sim,App bōe kì-lio̍k lí ê chu-liāu."
+            "value": "\"ún-chún oân-chéng chhú-iōng\" hō͘ khí-pôaⁿ ē-tàng kah App kiōng-iōng siat-tēng kah sú-iōng chu-liāu. tâi-gí khí-pôaⁿ bōe kā lí phah ê lōe-iông sàng khì bāng-lō͘."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"ún-tsún uân-tsíng tshú-iōng\" ì-sù sī hōo khí-puânn ē-tàng bat lí tshi̍h ê tōng-tsok, tsiânn-tsuè lí phah ê jī. tshiánn hòng-sim,App buē kì-lio̍k lí ê tsu-liāu."
+            "value": "\"ún-tsún uân-tsíng tshú-iōng\" hōo khí-puânn ē-tàng kah App kiōng-iōng siat-tīng kah sú-iōng tsu-liāu. tâi-gí khí-puânn buē kā lí phah ê luē-iông sàng khì bāng-lōo."
           }
         }
       }
@@ -5726,109 +5726,109 @@
       }
     },
     "i18n_keyboard_translateToggle": {
-      "comment": "Candidate-overlay translate-toggle control-button a11y label (swaps the romanization/Hanji primary line). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
+      "comment": "Candidate-overlay display-swap control-button a11y label (swaps the romanization/Hanji primary line). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toggle translation"
+            "value": "Swap Hanji and romanization"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "翻訳を切り替え"
+            "value": "漢字とローマ字を入れ替える"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "切換翻譯"
+            "value": "交換漢字佮羅馬字"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "chhiat-ōaⁿ hoan-e̍k"
+            "value": "kau-ōaⁿ hàn-jī kah lô-má-jī"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tshiat-uānn huan-i̍k"
+            "value": "kau-uānn hàn-jī kah lô-má-jī"
           }
         }
       }
     },
     "i18n_layout_moe1Layout": {
-      "comment": "Layout name: the MOE input-method keyboard, variant 1.",
+      "comment": "Layout name: MOE Taiwanese phonetic-symbol key arrangement, variant 1.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "MOE Input Method 1"
+            "value": "MOE Layout 1"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "教育部入力方式1"
+            "value": "教育部配列 1"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "教育部輸入法齒盤1"
+            "value": "教育部排列 1"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kàu-io̍k-pō͘ su-ji̍p-hoat khí-pôaⁿ 1"
+            "value": "kàu-io̍k-pō͘ pâi-lia̍t 1"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "kàu-io̍k-pōo su-ji̍p-hoat khí-puânn 1"
+            "value": "kàu-io̍k-pōo pâi-lia̍t 1"
           }
         }
       }
     },
     "i18n_layout_moe2Layout": {
-      "comment": "Layout name: the MOE input-method keyboard, variant 2.",
+      "comment": "Layout name: MOE Taiwanese phonetic-symbol key arrangement, variant 2.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "MOE Input Method 2"
+            "value": "MOE Layout 2"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "教育部入力方式2"
+            "value": "教育部配列 2"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "教育部輸入法齒盤2"
+            "value": "教育部排列 2"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kàu-io̍k-pō͘ su-ji̍p-hoat khí-pôaⁿ 2"
+            "value": "kàu-io̍k-pō͘ pâi-lia̍t 2"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "kàu-io̍k-pōo su-ji̍p-hoat khí-puânn 2"
+            "value": "kàu-io̍k-pōo pâi-lia̍t 2"
           }
         }
       }
@@ -6806,37 +6806,37 @@
       }
     },
     "i18n_settings_literalRomanCandidate": {
-      "comment": "Toggle label: show the literal romanization candidate in the strip.",
+      "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show Romanization"
+            "value": "Show Typed Romanization Candidate"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ローマ字を表示"
+            "value": "入力したローマ字候補を表示"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "顯示羅馬字"
+            "value": "顯示原本羅馬字候選"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hián-sī lô-má-jī"
+            "value": "hián-sī goân-pún lô-má-jī hāu-soán"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "hián-sī lô-má-jī"
+            "value": "hián-sī guân-pún lô-má-jī hāu-suán"
           }
         }
       }
@@ -6848,31 +6848,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Places the romanization in the first slot of the candidate bar; tap it or press Enter to commit. When off, you can only commit with Enter (tapping is disabled), but the candidate bar has more room."
+            "value": "Shows what you typed in the first slot of the candidate bar. Tap it or press Enter to commit it. When off, only Enter can commit it."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "候補バーの先頭にローマ字を表示します。タップするか Enter で確定できます。オフにすると Enter でのみ確定でき（タップは無効）、その分候補バーが広くなります。"
+            "value": "入力したローマ字を候補バーの先頭に表示します。タップするか Enter で確定できます。オフの場合は Enter でのみ確定できます。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "候選詞列第一个位囥羅馬字，會當用手點抑是揤 Enter 送出，若關，干焦會當揤 Enter 送出，袂當用手點，但是候選詞列空間較大。"
+            "value": "佇候選詞列第一格顯示你拍 ê 羅馬字，會當點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hāu-soán sû lia̍t tē-it ê ūi khǹg lô-má-jī, ē-tàng iōng chhiú tiám ah-sī chhi̍h Enter sàng-chhut, nā koan, kan-taⁿ-ē-tàng chhi̍h Enter sàng-chhut, bōe-tàng iōng chhiú tiám, tān-sī hāu-soán sû lia̍t khang-keng khah-tōa."
+            "value": "tī hāu-soán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, ē-tàng tiám-chhi̍h ah-sī chhi̍h Enter sàng-chhut. koaiⁿ--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-chhut."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "hāu-suán sû lia̍t tē-it ê uī khǹg lô-má-jī, ē-tàng iōng tshiú tiám ah-sī tshi̍h Enter sàng-tshut, nā kuan, kan-tann-ē-tàng tshi̍h Enter sàng-tshut, buē-tàng iōng tshiú tiám, tān-sī hāu-suán sû lia̍t khang-king khah-tōa."
+            "value": "tī hāu-suán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, ē-tàng tiám-tshi̍h ah-sī tshi̍h Enter sàng-tshut. kuainn--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-tshut."
           }
         }
       }
@@ -7058,73 +7058,73 @@
       }
     },
     "i18n_settings_resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings.",
+      "comment": "Destructive action row + dialog title: reset all settings and delete frequency/association records; custom words are preserved.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset Settings"
+            "value": "Reset Settings and Usage Records"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定をリセット"
+            "value": "設定と利用記録をリセット"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "恢復設定"
+            "value": "恢復設定佮使用紀錄"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "hoe-ho̍k siat-tēng"
+            "value": "hoe-ho̍k siat-tēng kah sú-iōng kì-lio̍k"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "hue-ho̍k siat-tīng"
+            "value": "hue-ho̍k siat-tīng kah sú-iōng kì-lio̍k"
           }
         }
       }
     },
     "i18n_settings_resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting all settings.",
+      "comment": "Confirmation-dialog body for resetting settings and deleting frequency/association records; explicitly states that custom words are preserved.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This will reset all settings. Continue?"
+            "value": "This resets all settings and deletes frequency and association records. Custom words are kept. Continue?"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべての設定がリセットされます。続けますか？"
+            "value": "すべての設定をリセットし、単語頻度と単語連携の記録を削除します。カスタム単語は保持されます。続けますか？"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "這个動作會恢復所有設定，敢欲繼續？"
+            "value": "這會恢復所有設定，嘛會刪除詞頻佮詞關聯紀錄。自訂詞會保留。敢欲繼續？"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "chit ê tōng-chok hōe hoe-ho̍k só͘-iú siat-tēng, kám beh kè-sio̍k?"
+            "value": "che ē hoe-ho̍k só͘-iú siat-tēng, mā ē san-tû sû pîn kah sû koan-liân kì-lio̍k. chū-tēng-sû ē pó-liû. kám beh kè-sio̍k?"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tsit ê tōng-tsok huē hue-ho̍k sóo-iú siat-tīng, kám beh kè-sio̍k?"
+            "value": "tse ē hue-ho̍k sóo-iú siat-tīng, mā ē san-tû sû pîn kah sû kuan-liân kì-lio̍k. tsū-tīng-sû ē pó-liû. kám beh kè-sio̍k?"
           }
         }
       }
@@ -7202,37 +7202,37 @@
       }
     },
     "i18n_settings_toolbarAutoCollapse": {
-      "comment": "Toggle label: auto-hide the candidate toolbar after selecting.",
+      "comment": "Toggle label: automatically collapse the candidate toolbar after selecting a word.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auto-Hide Toolbar"
+            "value": "Collapse Toolbar After Selection"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ツールバーを自動的に隠す"
+            "value": "候補選択後にツールバーを折りたたむ"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動隱藏工具列"
+            "value": "選字後自動收合工具列"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "chū-tōng ún-chông kang-khū-lia̍t"
+            "value": "soán jī liáu-āu chū-tōng siu-ha̍p kang-khū-lia̍t"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tsū-tōng ún-tsông kang-khū-lia̍t"
+            "value": "suán jī liáu-āu tsū-tōng siu-ha̍p kang-khū-lia̍t"
           }
         }
       }
@@ -7352,31 +7352,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tâi-lô 'or' is not a standard spelling; the phonetic symbol ㄜ officially corresponds only to 'er'. This setting only controls how candidates are displayed — dictionary search already maps 'er' and 'or' to the same phoneme, so words are found whether this is on or off.\n\nOn (default): 'or' shows as ㄜ.\nOff: 'or' shows as ㄛ (back to Tâi-lô o)."
+            "value": "Controls how TPS candidates display 'or'. When on, 'or' appears as ㄜ; when off, it appears as ㄛ. This setting does not affect search results."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tâi-lô の「or」は正式な綴りではなく、方音符号 ㄜ は正式には「er」にのみ対応します。この設定は候補の表示方法を変えるだけです。辞書検索は「er」と「or」を同じ音素として扱うため、オン・オフどちらでも単語は見つかります。\n\nオン（既定）：「or」を ㄜ と表示します。\nオフ：「or」を ㄛ と表示します（Tâi-lô の o に戻ります）。"
+            "value": "方音符号の候補で「or」をどう表示するかを設定します。オンでは ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。本設定只控制候選詞按怎顯示;字典揣詞已經共 er 佮 or 攏對應做仝一个音位，無論本設定開抑無開攏揣會著。\n\n開啟（預設）：or 顯示做 ㄜ。\n關閉：or 顯示做 ㄛ（恢復台羅 o）。"
+            "value": "控制方音符號候選詞按怎顯示 or。開啟時顯示做 ㄜ，關閉時顯示做 ㄛ。這个設定袂影響揣詞結果。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-lô or m̄-sī chèng-sek siá-hoat, hong-im-hû-hō ㄜ chèng-sek kan-na tùi-èng er. pún siat-tēng chí khòng-chè hāu-soán sû án-nóa hián-sī; jī-tián chhōe sû í-keng kā er kah or láng tùi-èng chòe kāng chi̍t-ê im-ūi, bô-lūn pún siat-tēng khui ah-bô khui láng chhōe hōe tio̍h. khai-khé(ī-siat):or hián-sī chòe ㄜ. koan pì:or hián-sī chòe ㄛ(hoe-ho̍k tâi-lô o)."
+            "value": "khòng-chè hong-im-hû-hō hāu-soán sû án-nóa hián-sī or. phah-khui sî hián-sī chò ㄜ, koaiⁿ--khí-lâi sî hián-sī chò ㄛ. chit ê siat-tēng bōe éng-hióng chhōe sû kiat-kó."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tâi-lô or m̄-sī tsìng-sik siá-huat, hong-im-hû-hō ㄜ tsìng-sik kan-na tuì-ìng er. pún siat-tīng tsí khòng-tsè hāu-suán sû án-nuá hián-sī; jī-tián tshuē sû í-king kā er kah or láng tuì-ìng tsuè kāng tsi̍t-ê im-uī, bô-lūn pún siat-tīng khui ah-bô khui láng tshuē huē tio̍h. khai-khé(ī-siat):or hián-sī tsuè ㄜ. kuan pì:or hián-sī tsuè ㄛ(hue-ho̍k tâi-lô o)."
+            "value": "khòng-tsè hong-im-hû-hō hāu-suán sû án-nuá hián-sī or. phah-khui sî hián-sī tsò ㄜ, kuainn--khí-lâi sî hián-sī tsò ㄛ. tsit ê siat-tīng buē íng-hióng tshuē sû kiat-kó."
           }
         }
       }
@@ -7748,31 +7748,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The custom-theme limit is 5. Delete one before adding another."
+            "value": "You can save up to 5 custom themes. Delete one before adding another."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カスタムテーマは最大 5 個です。追加するには 1 個削除してください。"
+            "value": "カスタムテーマは 5 個まで保存できます。追加する前に 1 個削除してください。"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "自訂主題上限是 5 个,請先刪除一个才會使閣新增。"
+            "value": "自訂主題上限是 5 个，請先刪除一个才會使閣新增。"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "chū-tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah-ē-sái koh sin-cheng."
+            "value": "chū-tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah ē-sái koh sin-cheng."
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "tsū-tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah-ē-sái koh sin-tsing."
+            "value": "tsū-tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah ē-sái koh sin-tsing."
           }
         }
       }
@@ -8426,79 +8426,79 @@
       }
     },
     "i18n_theme_familyClassic": {
-      "comment": "Built-in theme key-style family header: filled keys. DRAFT TL/POJ (king-tián, full dict entry) + en/ja pending USER proofread.",
+      "comment": "Built-in theme key-style family header: filled keys.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Classic"
+            "value": "Filled"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クラシック"
+            "value": "塗りつぶし"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "經典"
+            "value": "填色揤鈕"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "keng-tián"
+            "value": "thiam-sek chhi̍h-liú"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "king-tián"
+            "value": "thiām-sik tshi̍h-liú"
           }
         }
       }
     },
     "i18n_theme_familyClean": {
-      "comment": "Built-in theme key-style family header: transparent keys, no border. DRAFT TL/POJ (kán-kiat, full dict entry) + en/ja pending USER proofread.",
+      "comment": "Built-in theme key-style family header: transparent keys, no border.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Minimal"
+            "value": "Borderless"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ミニマル"
+            "value": "枠なし"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "簡潔"
+            "value": "無框揤鈕"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kán-kiat"
+            "value": "bô-kheng chhi̍h-liú"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "kán-kiat"
+            "value": "bô-khing tshi̍h-liú"
           }
         }
       }
     },
     "i18n_theme_familyFramed": {
-      "comment": "Built-in theme key-style family header: transparent keys with an outline border. DRAFT TL/POJ (框 khing + 線 suànn, component-grounded) + en/ja pending USER proofread.",
+      "comment": "Built-in theme key-style family header: transparent keys with an outline border.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8510,25 +8510,25 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アウトライン"
+            "value": "枠線"
           }
         },
         "nan-Hant-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "框線"
+            "value": "框線揤鈕"
           }
         },
         "nan-Latn-TW-x-poj": {
           "stringUnit": {
             "state": "translated",
-            "value": "kheng-sòaⁿ"
+            "value": "kheng-sòaⁿ chhi̍h-liú"
           }
         },
         "nan-Latn-TW-x-tailo": {
           "stringUnit": {
             "state": "translated",
-            "value": "khing-suànn"
+            "value": "khing-suànn tshi̍h-liú"
           }
         }
       }

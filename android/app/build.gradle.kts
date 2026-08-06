@@ -34,7 +34,7 @@ android {
     defaultConfig {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         // versionCode = Unix epoch minutes — auto-monotonic, never collides
         // across test uploads (only collision risk = same-minute rebuild,
         // not realistic since one release AAB build takes >1 min).

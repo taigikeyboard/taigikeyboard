@@ -37,17 +37,12 @@ final class LocalizedContentTextTests: XCTestCase {
     }
 
     func test_INVARIANT_resolve_unauthoredLanguage_fallsBackToHanji() {
-        for language in [DisplayLanguage.hanji, .tailo, .poj, .japanese, .english, .pseudo] {
+        for language in [DisplayLanguage.hanji, .tailo, .poj, .japanese, .english] {
             XCTAssertEqual(
                 hanjiOnly.resolve(for: language), "漢",
                 "unauthored \(language) must fall back to hanji (C1 behavior-freeze)",
             )
         }
-    }
-
-    func test_resolve_pseudo_returnsHanji() {
-        // Content has no pseudo map; the layout-probe language renders Hanji (contract: pseudo → hanji).
-        XCTAssertEqual(allLanguages.resolve(for: .pseudo), "漢")
     }
 
     // MARK: - Decoding

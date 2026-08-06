@@ -120,7 +120,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 ## Localization Architecture
 
-**Mid-migration — per-file correspondence is in flux.** App-UI strings are moving to a generated-resource pipeline (`i18n/*.json` → `tools/i18n/generate.py` → `i18n/generated/{L10n,StringKey,GeneratedPseudoStrings,GeneratedTaigiStrings}.kt`). Android migrated namespaces use the generated accessors; not-yet-migrated namespaces keep hand-written `localization/*Texts.kt`. iOS still uses `Strings/*Texts.swift`. Authoritative status: [`../architecture/i18n-multilang-plan.md`](../architecture/i18n-multilang-plan.md).
+**Mid-migration — per-file correspondence is in flux.** App-UI strings are moving to a generated-resource pipeline (`i18n/*.json` → `tools/i18n/generate.py` → `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings}.kt`). Android migrated namespaces use the generated accessors; not-yet-migrated namespaces keep hand-written `localization/*Texts.kt`. iOS still uses `Strings/*Texts.swift`. Authoritative status: [`../architecture/i18n-multilang-plan.md`](../architecture/i18n-multilang-plan.md).
 
 ---
 

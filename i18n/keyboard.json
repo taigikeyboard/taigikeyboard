@@ -17,9 +17,9 @@
       "values": { "hanji": "後一頁", "tailo": "āu tsi̍t ia̍h", "poj": "āu chi̍t ia̍h", "en": "Next page", "ja": "次のページ" }
     },
     "translateToggle": {
-      "comment": "Candidate-overlay translate-toggle control-button a11y label (swaps the romanization/Hanji primary line). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
+      "comment": "Candidate-overlay display-swap control-button a11y label (swaps the romanization/Hanji primary line). Android via stringRes; iOS via DisplayLanguageStore in ExpandedCandidateOverlay.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "切換翻譯", "tailo": "tshiat-uānn huan-i̍k", "poj": "chhiat-ōaⁿ hoan-e̍k", "en": "Toggle translation", "ja": "翻訳を切り替え" }
+      "values": { "hanji": "交換漢字佮羅馬字", "tailo": "kau-uānn hàn-jī kah lô-má-jī", "poj": "kau-ōaⁿ hàn-jī kah lô-má-jī", "en": "Swap Hanji and romanization", "ja": "漢字とローマ字を入れ替える" }
     },
     "morePopupHint": {
       "comment": "Key-preview popup three-dots-indicator a11y contentDescription (long-press reveals more glyphs). Android extension popup only.",

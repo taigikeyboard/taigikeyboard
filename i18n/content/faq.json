@@ -41,8 +41,8 @@
         {
           "text": {
             "hanji": "2. 重開你當咧使用 ê App，予 App 重新掠著齒盤。",
-            "tailo": "2. tîng-khui lí tng-teh sú-iōng ê App, hōo App tiông-sin lia̍h--tio̍h khí-puânn.",
-            "poj": "2. têng-khui lí tng-teh sú-iōng ê App, hō͘ App tiông-sin lia̍h--tio̍h khí-pôaⁿ.",
+            "tailo": "2. tîng-khui lí tng-teh sú-iōng ê App, hōo App tîng-sin lia̍h--tio̍h khí-puânn.",
+            "poj": "2. têng-khui lí tng-teh sú-iōng ê App, hō͘ App tîng-sin lia̍h--tio̍h khí-pôaⁿ.",
             "en": "2. Restart the app you are using so that it re-detects the keyboard.",
             "ja": "2. 使用中のアプリを再起動して、アプリにキーボードを再認識させてください。"
           }
@@ -50,8 +50,8 @@
         {
           "text": {
             "hanji": "3. 佇會當拍字 ê 所在，揤牢地球圖示就會使切去台語齒盤。",
-            "tailo": "3. tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû-tôo sī tsiū ē-sái tshiat khì tâi-gí khí-puânn.",
-            "poj": "3. tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû-tô͘ sī chiū ē-sái chhiat khì tâi-gí khí-pôaⁿ.",
+            "tailo": "3. tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h tiâu tuē-kiû tôo-sī tsiū ē-sái tshiat khì tâi-gí khí-puânn.",
+            "poj": "3. tī ē-tàng phah-jī ê só͘-chāi, chhi̍h tiâu tōe-kiû tô͘-sī chiū ē-sái chhiat khì tâi-gí khí-pôaⁿ.",
             "en": "3. Where you can type, press and hold the globe icon to switch to Taigi Keyboard.",
             "ja": "3. 入力できる場所で、地球儀アイコンを長押しすると台語キーボードに切り替えられます。"
           }
@@ -62,8 +62,8 @@
       "id": "feedback",
       "title": {
         "hanji": "回報問題無消息",
-        "tailo": "huê-pò būn-tê bô-siau sit",
-        "poj": "hôe-pò būn-tê bô-siau sit",
+        "tailo": "huê-pò būn-tê bô siau-sik",
+        "poj": "hôe-pò būn-tê bô siau-sek",
         "en": "No response after reporting an issue",
         "ja": "問題を報告しても返事がない"
       },
@@ -74,11 +74,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "可能無小心落勾去，麻煩 koh 回報 1 遍，抑是直接聯絡我。",
-            "tailo": "khó-lîng bô-sió-sim làu-kau khì, mâ-huân koh huê-pò 1 piàn, ah-sī ti̍t-tsiap liân-lo̍k guá.",
-            "poj": "khó-lêng bô-sió-sim làu-kau khì, mâ-hoân koh hôe-pò 1 piàn, ah-sī ti̍t-chiap liân-lo̍k góa.",
-            "en": "It may have slipped through by accident; please report it once more, or contact me directly.",
-            "ja": "うっかり見落とされた可能性があります。お手数ですがもう一度報告するか、直接私にご連絡ください。"
+            "hanji": "若回報了後猶未收到回覆，請閣送 1 擺，抑是直接聯絡我。",
+            "tailo": "nā huê-pò liáu-āu iáu-buē siu-tio̍h huê-hok, tshiánn koh sàng 1 pái, ah-sī ti̍t-tsiap liân-lo̍k guá.",
+            "poj": "nā hôe-pò liáu-āu iáu-bōe siu-tio̍h hôe-hok, chhiáⁿ koh sàng 1 pái, ah-sī ti̍t-chiap liân-lo̍k góa.",
+            "en": "If you have not received a reply, send the report again or contact me directly.",
+            "ja": "返信が届いていない場合は、もう一度報告を送るか、直接ご連絡ください。"
           },
           "attachment": {
             "type": "navigation",
@@ -114,11 +114,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "因為三星手機無「預設齒盤」、「副齒盤」ê 功能，下跤是切換齒盤較利便 ê 方法。",
-            "tailo": "in-uī sann-tshenn tshiú-ki bô\"ī-siat khí-puânn\",\"hù khí-puânn\"ê kong-lîng, ē-kha sī tshiat-uānn khí-puânn khah lī-piān ê hong-huat.",
-            "poj": "in-ūi saⁿ-chheⁿ chhiú-ki bô\"ī-siat khí-pôaⁿ\",\"hù khí-pôaⁿ\"ê kong-lêng, ē-kha sī chhiat-ōaⁿ khí-pôaⁿ khah lī-piān ê hong-hoat.",
-            "en": "Because Samsung phones don't have “default keyboard” / “secondary keyboard” features, here is a more convenient way to switch keyboards.",
-            "ja": "Samsung端末には「既定のキーボード」「サブキーボード」機能がないため、以下はキーボードを切り替えるより便利な方法です。"
+            "hanji": "若三星齒盤倒爿下跤無地球揤鈕，會當共 mài-kù 揤鈕改做齒盤切換揤鈕。",
+            "tailo": "nā sann-tshenn khí-puânn tò-pîng ē-kha bô tuē-kiû tshi̍h-liú, ē-tàng kā mài-kù tshi̍h-liú kái tsò khí-puânn tshiat-uānn tshi̍h-liú.",
+            "poj": "nā saⁿ-chheⁿ khí-pôaⁿ tò-pêng ē-kha bô tōe-kiû chhi̍h-liú, ē-tàng kā mài-kù chhi̍h-liú kái chò khí-pôaⁿ chhiat-ōaⁿ chhi̍h-liú.",
+            "en": "If the Samsung keyboard has no globe key at the bottom-left, you can change the microphone button into a keyboard-switch button.",
+            "ja": "Samsung キーボードの左下に地球儀キーがない場合は、マイクボタンをキーボード切替ボタンに変更できます。"
           }
         },
         {
@@ -137,8 +137,8 @@
         {
           "text": {
             "hanji": "2. 揤牢 mài-kù 揤鈕，共伊改做「輸入法」。",
-            "tailo": "2. tshi̍h tiâu mài-kù tshi̍h-liú, kā-i kué-tsuè\"su-ji̍p-hoat\".",
-            "poj": "2. chhi̍h tiâu mài-kù chhi̍h-liú, kā-i kóe-chòe\"su-ji̍p-hoat\".",
+            "tailo": "2. tshi̍h tiâu mài-kù tshi̍h-liú, kā-i kué-tsò\"su-ji̍p-hoat\".",
+            "poj": "2. chhi̍h tiâu mài-kù chhi̍h-liú, kā-i kóe-chò\"su-ji̍p-hoat\".",
             "en": "2. Press and hold the mic button and change it to “input method.”",
             "ja": "2. マイクボタンを長押しして、「入力方式」に変更します。"
           },
