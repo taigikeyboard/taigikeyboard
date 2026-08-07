@@ -46,8 +46,7 @@ fun SwitchRow(
                     value = checked,
                     onValueChange = onCheckedChange,
                     role = Role.Switch,
-                )
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                ).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -59,17 +58,23 @@ fun SwitchRow(
             )
             Spacer(Modifier.width(12.dp))
         }
-        Text(
-            text = label,
-            color = labelColor,
-            fontFamily = fontFamily,
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        if (infoText != null) {
-            Spacer(Modifier.width(6.dp))
-            SettingInfoButton(description = infoText)
+        // Measure the trailing switch first; localized labels wrap within the remaining width.
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f, fill = false),
+                color = labelColor,
+                fontFamily = fontFamily,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (infoText != null) {
+                Spacer(Modifier.width(6.dp))
+                SettingInfoButton(description = infoText)
+            }
         }
-        Spacer(modifier = Modifier.weight(1f))
         // onCheckedChange = null: the row's toggleable owns the toggle, so the Switch is
         // display-only (no duplicate toggle semantics / role conflict with the row).
         Switch(
