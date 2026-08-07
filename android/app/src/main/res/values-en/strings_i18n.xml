@@ -119,7 +119,7 @@
     <string name="i18n_dictionary_kunggeTag">Craft Glossary</string>
     <string name="i18n_dictionary_sttiTag">Academic Terms</string>
     <string name="i18n_dictionary_lkkTag">Han-Roman</string>
-    <string name="i18n_home_appHeaderTitle">Taigi Keyboard</string>
+    <string name="i18n_home_appHeaderTitle">TaigiKeyboard</string>
     <string name="i18n_home_setupKeyboard">Enable the keyboard to start using it</string>
     <string name="i18n_home_typingGuide">Typing Guide</string>
     <string name="i18n_home_newFeatures">Feature Settings</string>
