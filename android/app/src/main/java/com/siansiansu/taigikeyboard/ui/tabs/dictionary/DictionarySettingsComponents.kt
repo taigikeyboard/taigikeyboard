@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -210,14 +211,20 @@ internal fun DictionaryInfoSwitch(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        SettingInfoButton(description = stringRes(info.descriptionKey))
-        Spacer(modifier = Modifier.weight(1f))
+        // Measure the trailing switch first; localized labels wrap within the remaining width.
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f, fill = false),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            SettingInfoButton(description = stringRes(info.descriptionKey))
+        }
         Switch(
             checked = checked,
             enabled = enabled,
@@ -248,12 +255,13 @@ internal fun DictionarySubToggleRow(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Weight the label instead of a trailing spacer so it cannot displace the switch.
         Text(
             text = label,
+            modifier = Modifier.weight(1f),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             style = MaterialTheme.typography.bodyLarge,
         )
-        Spacer(modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             enabled = enabled,
@@ -282,31 +290,33 @@ internal fun DictionaryRowWithDescription(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier.clickable {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-                        } catch (_: Exception) {
-                        }
-                    },
-            ) {
-                val linkColor = MaterialTheme.colorScheme.primary
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_open_in_new),
-                    contentDescription = null,
-                    modifier = Modifier.size(AppStyle.smallIconSize),
-                    tint = linkColor,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = label,
-                    color = linkColor,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+            // Bound the link content without expanding its clickable area into the empty space.
+            Box(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier.clickable {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                            } catch (_: Exception) {
+                            }
+                        },
+                ) {
+                    val linkColor = MaterialTheme.colorScheme.primary
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_open_in_new),
+                        contentDescription = null,
+                        modifier = Modifier.size(AppStyle.smallIconSize),
+                        tint = linkColor,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = label,
+                        color = linkColor,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
             }
-            Spacer(modifier = Modifier.weight(1f))
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,

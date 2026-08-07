@@ -61,6 +61,16 @@ android {
         compose = true
     }
 
+    // The in-app display-language picker is independent of the device locale. Keep every native
+    // language resource in the base APK so English/Japanese remain available offline instead of
+    // falling back to the default Hanji resources when Google Play omits their language splits.
+    // ABI and density splitting retain their App Bundle defaults.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     // Bundle the shared emoji set straight from the taigi-emojis submodule (pinned v0.1.0).
     // $rootDir = android/ ; the submodule lives at the repo root → ../taigi-emojis/dist/emoji.json
     // lands at the assets root. Single source of truth, no copied file to drift.
