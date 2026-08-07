@@ -107,17 +107,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2A1FCDD22EAFCADE009F2800 /* Exceptions for "App" folder in "TaigiKeyboard" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"/Localized: InfoPlist.strings",
-			);
-			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
-		};
 		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "KeyboardExtension" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"/Localized: InfoPlist.strings",
 				Info.plist,
 			);
 			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
@@ -215,9 +207,6 @@
 		};
 		2A4FAF492EAF137B006E37A8 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				2A1FCDD22EAFCADE009F2800 /* Exceptions for "App" folder in "TaigiKeyboard" target */,
-			);
 			name = App;
 			path = Sources/TaigiKeyboard/App;
 			sourceTree = "<group>";
@@ -798,7 +787,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = "Sources/TaigiKeyboard-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "台語齒盤";
+				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboard;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -832,7 +821,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = "Sources/TaigiKeyboard-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "台語齒盤";
+				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboard;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -863,7 +852,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = Sources/TaigiKeyboard/KeyboardExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboardExtension;
+				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboard;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -891,7 +880,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = Sources/TaigiKeyboard/KeyboardExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboardExtension;
+				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboard;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
