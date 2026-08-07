@@ -4,7 +4,7 @@
     "appHeaderTitle": {
       "comment": "Home tab large title — the app name.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "台語齒盤", "tailo": "Tâi-gí Khí-puânn", "poj": "Tâi-gí Khí-pôaⁿ", "en": "Taigi Keyboard", "ja": "台湾語キーボード" }
+      "values": { "hanji": "台語齒盤", "tailo": "Tâi-gí Khí-puânn", "poj": "Tâi-gí Khí-pôaⁿ", "en": "TaigiKeyboard", "ja": "台湾語キーボード" }
     },
     "setupKeyboard": {
       "comment": "Home section header above the keyboard-activation guide row.",
