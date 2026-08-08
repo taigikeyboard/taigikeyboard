@@ -133,10 +133,12 @@ kotlin {
     }
 }
 
-// 設定輸出檔名：TaigiKeyboard-{versionName}-{yyyyMMdd}
-// 例如：TaigiKeyboard-3.3.9-20251231-release.aab
+// Output name: TaigiKeyboard-{versionName}-{versionCode}-{yyyyMMdd}
+// Example: TaigiKeyboard-3.6.4-29637600-20260808-release.aab
 base {
-    archivesName.set("TaigiKeyboard-${android.defaultConfig.versionName}-$buildDate")
+    archivesName.set(
+        "TaigiKeyboard-${android.defaultConfig.versionName}-${android.defaultConfig.versionCode}-$buildDate",
+    )
 }
 
 // Fail the build if committed i18n generated output (res/values/strings_i18n.xml + the
