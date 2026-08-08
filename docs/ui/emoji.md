@@ -8,7 +8,7 @@
 
 ## Summary
 
-- Full emoji palette on both platforms, backed by the `taigi-emojis` data submodule (`dist/emoji.json`, Unicode Emoji 17.0 / CLDR 48, 1889 emoji, 9 categories).
+- Full emoji palette on both platforms, backed by the in-repo `taigi-emojis` data pipeline (`dist/emoji.json`, Unicode Emoji 17.0 / CLDR 48, 1889 emoji, 9 categories).
 - **Intentional UI divergence**: iOS uses the vendored third-party `ISEmojiView` (UIKit); Android uses a custom Jetpack Compose palette. This is recorded per `.claude/rules/cross-platform-alignment.md` §3, not a parity bug.
 - Both insert emoji through the engine's atomic preedit-commit path (`ComposingManager.commitPreeditThenInsertExternal`) — the one strict parity point.
 
@@ -66,7 +66,7 @@ The atomic-insert routing is `INVARIANT_composing_external_insert_commits_preedi
 
 ## Data — `taigi-emojis/dist/emoji.json`
 
-Data-only submodule (no shared Swift/Kotlin module); each platform reads `dist/emoji.json` into its own native model and glyph-filters the whole grapheme cluster at load. Schema is frozen by the submodule's `output-contract.md` + a drift-guard test; version-pin bumps are user-gated.
+In-repo data pipeline (no shared Swift/Kotlin module); each platform reads `dist/emoji.json` into its own native model and glyph-filters the whole grapheme cluster at load. Schema is frozen by `taigi-emojis/.claude/rules/output-contract.md` + a drift-guard test; version-pin bumps are user-gated.
 
 - Top level: `{ meta, categories[] }`. `meta` = `{ emojiVersion: "E17.0", cldrVersion: "48", count: 1889, generator }`.
 - 9 categories in order: `smileys_emotion, people_body, animals_nature, food_drink, travel_places, activities, objects, symbols, flags`.
@@ -75,21 +75,17 @@ Data-only submodule (no shared Swift/Kotlin module); each platform reads `dist/e
 
 **Skin tones (Android `EmojiSkinTone`)**: DEFAULT (0x0), LIGHT (1F3FB), MEDIUM_LIGHT (1F3FC), MEDIUM (1F3FD), MEDIUM_DARK (1F3FE), DARK (1F3FF) — Fitzpatrick modifiers.
 
-> Note: the Gradle/README comment says the submodule is "pinned v0.1.0"; the actual recorded commit is a few commits past the `v0.1.0` tag. The pin is the recorded gitlink SHA, not the tag string — check `git submodule status` for the real pin.
-
----
-
 ## Constants
 
 - iOS recents count: 30 (`EmojiService.swift`); ISEmojiView cap `MaxCountOfRecentsEmojis = 50`.
 - Android grid: 7 columns, 240.dp grid height, 35.sp emoji font, variations popup 6/row.
 - Android emoji-toggle keycode: `SWITCH_TO_MEDIA_CONTEXT = -213`.
-- Submodule: `taigi-emojis` (branch `main`), consumed as `dist/emoji.json`.
+- Data pipeline: `taigi-emojis/`, consumed as `dist/emoji.json`.
 
 ---
 
 ## See also
 
-- `taigi-emojis/README.md` + `taigi-emojis/CLAUDE.md` + `.claude/rules/output-contract.md` (submodule-owned consumption contract + JSON schema).
+- `taigi-emojis/README.md` + `taigi-emojis/CLAUDE.md` + `taigi-emojis/.claude/rules/output-contract.md` (data-pipeline ownership + JSON schema).
 - `behavioral-invariants.md` §13 (atomic external insert), popup-hide invariants.
 - `ui/callouts.md` (the long-press popup mechanism the emoji skin-tone variations reuse on Android).

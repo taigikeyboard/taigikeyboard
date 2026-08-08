@@ -87,13 +87,13 @@ lint:
 	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
 	cd android && ./gradlew spotlessCheck
 
-# Pull the latest tracked-branch commit for every submodule (taigi-emojis -> main,
-# taigi-converter -> its remote default branch) into the working tree. Submodules
-# always record a pinned SHA, so review + commit the gitlink bumps afterwards.
+# Pull the latest remote-default-branch commit for the taigi-converter submodule
+# into the working tree. Submodules always record a pinned SHA, so review + commit
+# the gitlink bump afterwards.
 update-submodules:
 	git submodule update --init --remote --recursive
 	@echo ""
-	@echo "✓ submodules pulled to latest. Gitlink bumps to review + commit:"
+	@echo "✓ submodule pulled to latest. Gitlink bump to review + commit:"
 	@git submodule status
 
 help:

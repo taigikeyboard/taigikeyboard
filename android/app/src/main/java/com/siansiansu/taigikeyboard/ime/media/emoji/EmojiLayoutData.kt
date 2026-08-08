@@ -14,7 +14,7 @@ import java.util.Locale
 
 private const val TAG = "EmojiLayoutData"
 
-// Bundled by Gradle: android/app sourceSets mounts the taigi-emojis/dist submodule dir as an
+// Bundled by Gradle: android/app sourceSets mounts the in-repo taigi-emojis/dist dir as an
 // assets source, so dist/emoji.json lands at the assets root. Single source of truth.
 private const val EMOJI_JSON_ASSET = "emoji.json"
 

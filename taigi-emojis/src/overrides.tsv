@@ -1,0 +1,27 @@
+# Hand overlay for emoji data. This is the ONLY file you normally edit.
+# Tab-separated. Columns (trailing columns optional):
+#
+#   emoji  action  category  order  taigi_keywords  zh_Hant_keywords  en_keywords  name  notes
+#
+# Keywords are pipe-separated ( | ) because terms may contain commas.
+# action:
+#   patch    add keywords to an emoji that already exists upstream. Only emoji + keyword
+#            columns are read. Fails the build if the emoji is not in emoji-test.txt.
+#   add      add a brand-new emoji not in upstream. Needs category + name; order optional
+#            (defaults to end of list). version is recorded as "custom".
+#   exclude  drop an upstream emoji from output. Only emoji (+ optional notes) read.
+#
+# category (for `add`): one of
+#   smileys_emotion people_body animals_nature food_drink travel_places
+#   activities objects symbols flags
+#
+# taigi_keywords: canonical TL romanization (lowercase, keep tone diacritics) AND/OR 漢字.
+# Do NOT invent romanization — read knowledge/taigi phonetics sources or leave 羅馬字 out
+# and use 漢字 only. The seeds below use 漢字 only on purpose; add 羅馬字 as you verify it.
+#
+# Columns:    emoji <tab> action <tab> category <tab> order <tab> taigi <tab> zh_Hant <tab> en <tab> name <tab> notes
+😀	patch			笑	微笑			seed
+❤️	patch			心|愛	愛心			seed
+👍	patch			讚|好	讚			seed
+😭	patch			哭			seed
+🙏	patch			感謝|拜託	感謝			seed

@@ -71,8 +71,8 @@ android {
         }
     }
 
-    // Bundle the shared emoji set straight from the taigi-emojis submodule (pinned v0.1.0).
-    // $rootDir = android/ ; the submodule lives at the repo root → ../taigi-emojis/dist/emoji.json
+    // Bundle the shared emoji set straight from the in-repo taigi-emojis data pipeline.
+    // $rootDir = android/ ; the data lives at the repo root → ../taigi-emojis/dist/emoji.json
     // lands at the assets root. Single source of truth, no copied file to drift.
     sourceSets["main"].assets.srcDir(file("$rootDir/../taigi-emojis/dist"))
 

@@ -165,7 +165,7 @@ A static `L10n.foo` getter does NOT tell SwiftUI/Compose to refresh → switchin
 ### Deliberately NOT adopted (with reasoning)
 
 - **Custom JSON string runtime** (the original plan's mistake) — replaced by codegen → native resources. Custom selection ≠ custom runtime; native machinery keeps plural/format/a11y/lint.
-- **Separate i18n repo** (taigi-emojis model) — solo maintainer, external-translator isolation is speculative (YAGNI); UI keys are screen-coupled → renames need same-commit atomicity a submodule can't give; emojis are a reusable dataset, UI strings are not. **Flip trigger**: external translation workflow (Crowdin/Weblate) / cross-product reuse → `git filter-repo` extract. Stay extraction-ready; no submodule tax now.
+- **Separate i18n repo** (the former taigi-emojis model) — solo maintainer, external-translator isolation is speculative (YAGNI); UI keys are screen-coupled → renames need same-commit atomicity a submodule can't give; emojis are a reusable dataset, UI strings are not. **Flip trigger**: external translation workflow (Crowdin/Weblate) / cross-product reuse → `git filter-repo` extract. Stay extraction-ready; no submodule tax now.
 - **ICU MessageFormat runtime lib** — use native plural instead (above).
 - **Singleton `LocalizedText`/`LanguageManager`** — use reactive root state (Decision 7).
 - **TSV / CSV source format** — considered for spreadsheet manageability; rejected as canonical (USER 2026-06-19 chose JSON on best-practice grounds). Not a standard i18n format (no TMS ingests it), structure-poor (placeholders/plurals need ad-hoc conventions), round-trip-unsafe through spreadsheets. If spreadsheet editing is later wanted, generate a TSV/Sheet *view* from the JSON and import back — JSON stays the committed source.
@@ -234,7 +234,7 @@ Verdicts folded in above: D1 CONFIRM / D2 REFUTE (→ hybrid native resources) /
 - Current strings: `ios/Sources/TaigiKeyboard/Strings/*Texts.swift`, `android/.../localization/*Texts.kt`
 - Extension reuse: `SettingsSelectionOverlay.swift:76`, `SettingsOverlayContent.kt:96`, `SymbolData.swift:14`
 - In-repo shared-data precedent: `content/tab1-features.json`
-- Separate-repo data precedent: `taigi-emojis` submodule
+- In-repo generated-data precedent: `taigi-emojis/`
 - TL→POJ converter: `taigi-converter/` (`src/converter.js:9`, `:39`)
 - Android in-app language: `AppCompatDelegate.setApplicationLocales()` (developer.android.com app-languages)
 - Process: `~/.claude/rules/planning.md`, `.claude/rules/cross-platform-alignment.md`

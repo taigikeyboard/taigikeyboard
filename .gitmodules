@@ -1,7 +1,3 @@
 [submodule "taigi-converter"]
 	path = taigi-converter
 	url = git@github.com:taigikeyboard/taigi-converter.git
-[submodule "taigi-emojis"]
-	path = taigi-emojis
-	url = https://github.com/taigikeyboard/taigi-emojis.git
-	branch = main

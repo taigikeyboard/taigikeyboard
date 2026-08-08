@@ -1,0 +1,22 @@
+[project]
+name = "taigi-emojis"
+version = "0.1.0"
+description = "Single emoji source of truth for the Taigi keyboard (iOS + Android)"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest==8.3.4",
+    "ruff==0.9.2",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

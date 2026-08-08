@@ -1,0 +1,12 @@
+references
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Claude Code (local config — not shared)
+.claude/settings.json
+.claude/settings.local.json
