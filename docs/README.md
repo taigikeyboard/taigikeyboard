@@ -48,6 +48,7 @@
 | `architecture/keyboard-body-invariants-android.md` | Android Compose keyboard-body geometry / touch-target invariants (refactor-freeze contract) | Active |
 | `architecture/data-artifacts-portability.md` | Binary artifacts + SQLite portability contract | Active |
 | `architecture/i18n-multilang-plan.md` | App-UI multi-language plan — `i18n/` JSON → codegen resources, multi-PR (in-flight) | Active |
+| `architecture/manual-release-notes.md` | Canonical English What's New, in-app history sync, validation, and manual store paste workflow | Active |
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
 | `architecture/codex-review-2026-04-19.md` | Strategic Codex review of shared-core roadmap | Historical |
