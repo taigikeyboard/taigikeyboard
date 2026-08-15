@@ -13,18 +13,25 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
-# + Android jniLibs. Build ONLY — does NOT run tests (use `make test`).
-# The only build entry point.
+# + Android jniLibs + macOS xcframework. Build ONLY — does NOT run tests
+# (use `make test`). The only build entry point: it refreshes EVERY committed
+# generated artefact, so no platform can go stale behind an engine change.
+# macOS ships no release yet; it is built here anyway to keep that invariant
+# (USER 2026-08-15: 「我覺得可以併入到 make build,只是現階段不 release」).
 # Requires `brew install protobuf swift-protobuf` for the proto step.
 build:
-	@echo "==> [1/4] Regenerating platform proto (Swift + Java)"
+	@echo "==> [1/6] Regenerating platform proto (Swift + Java)"
 	bash $(ENGINE)/scripts/gen-platform-protos.sh
-	@echo "==> [2/4] Cleaning protos build cache"
+	@echo "==> [2/6] Regenerating macOS proto (Swift)"
+	bash $(ENGINE)/scripts/gen-macos-protos.sh
+	@echo "==> [3/6] Cleaning protos build cache"
 	cd $(ENGINE) && cargo clean -p protos
-	@echo "==> [3/4] Building iOS xcframework"
+	@echo "==> [4/6] Building iOS xcframework"
 	cd $(ENGINE) && bash scripts/build-xcframework.sh
-	@echo "==> [4/4] Building Android jniLibs"
+	@echo "==> [5/6] Building Android jniLibs"
 	cd $(ENGINE) && bash scripts/build-android-libs.sh
+	@echo "==> [6/6] Building macOS xcframework"
+	cd $(ENGINE) && bash scripts/build-macos-xcframework.sh
 	@echo ""
 	@echo "✓ build complete — Xcode: Clean Build Folder ⇧⌘K → Build"
 
@@ -72,10 +79,9 @@ dogfood:
 	python3 $(DICT)/tools/gen_dogfood.py
 
 # ---------------------------------------------------------------------------
-# macOS IME engine surface (docs/architecture/macos-roadmap.md D1/D9). Kept out
-# of `build` on purpose: `make build` must keep working on a tree with no macos/
-# scaffold. Both targets are therefore manual — engine changes must refresh the
-# macOS artefacts too (.claude/rules/rust-migration-policy.md §4).
+# macOS-only shortcuts (docs/architecture/macos-roadmap.md D1). `make build`
+# already runs both; these exist to iterate on macOS without paying the full
+# 3-5 min iOS + Android rebuild.
 # No `cargo clean -p protos` here: engine/protos/build.rs declares
 # `rerun-if-changed=proto`, so a .proto edit already rebuilds protos (verified);
 # `build`'s clean is belt-and-braces from D9.4.
@@ -114,7 +120,7 @@ update-submodules:
 	@git submodule status
 
 help:
-	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android (no tests)"
+	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android + macOS (no tests)"
 	@echo "  make test               cargo test --workspace (canonical, includes doctests)"
 	@echo "  make test-crate         cargo test -p \$$CRATE (touched-target round workflow)"
 	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"
@@ -122,8 +128,8 @@ help:
 	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
-	@echo "  make macos-engine       Rebuild macos/RustEngine xcframework (after engine/swift-ffi changes)"
-	@echo "  make macos-protos       Regenerate macOS .pb.swift (after any engine/protos/proto change)"
+	@echo "  make macos-engine       macOS-only shortcut: rebuild macos/RustEngine xcframework"
+	@echo "  make macos-protos       macOS-only shortcut: regenerate macOS .pb.swift"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"

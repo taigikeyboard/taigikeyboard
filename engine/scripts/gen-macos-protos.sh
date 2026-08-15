@@ -4,14 +4,12 @@
 # Output:
 #   macos/Sources/TaigiInputMethod/Engine/Generated/*.pb.swift  (SwiftProtobuf)
 #
-# Standalone by design (roadmap D9): the macOS IME owns its own generated-proto
-# directory and this target is NOT wired into root `make build`, so a macOS
-# regen never runs the sibling script's Java block + per-file post-process pass.
-#
-# ANY change under `engine/protos/proto/` requires re-running this script and
-# committing the result — `make build` does not refresh the macOS tree. See
-# `.claude/rules/rust-migration-policy.md` §4. The proto set is globbed, so
-# adding a `.proto` needs no edit here.
+# Separate from `gen-platform-protos.sh` because the macOS IME owns its own
+# generated-proto directory and does not need that script's Java block +
+# per-file post-process pass. Both run from `make build`, so the macOS tree
+# cannot go stale behind an `engine/protos/proto/` change; only its regenerated
+# output has to be committed (`.claude/rules/rust-migration-policy.md` §4).
+# The proto set is globbed, so adding a `.proto` needs no edit here.
 #
 # Prerequisites (install once, locally):
 #   brew install protobuf swift-protobuf

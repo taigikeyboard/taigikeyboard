@@ -106,16 +106,14 @@ flowchart TD
     subgraph buildpipe["make build — engine/scripts/*.sh"]
         direction TB
         proto["gen-platform-protos.sh<br/>(Swift + Java proto)"]
+        mproto["gen-macos-protos.sh<br/>(macOS Swift proto)"]
         clean["cargo clean -p protos"]
         xcf["build-xcframework.sh<br/>→ RustTaigi.xcframework"]
         jnib["build-android-libs.sh<br/>→ jniLibs/librust_taigi.so"]
-        proto --> clean --> xcf
-        clean --> jnib
-    end
-    subgraph macospipe["make macos-engine / macos-protos — manual, not in make build"]
-        direction TB
-        mproto["gen-macos-protos.sh<br/>(macOS Swift proto)"]
         mxcf["build-macos-xcframework.sh<br/>→ macos/RustEngine"]
+        proto --> mproto --> clean --> xcf
+        clean --> jnib
+        clean --> mxcf
     end
 
     dep -->|data assets| iosBundle["ios/Resources/Dictionaries/"]

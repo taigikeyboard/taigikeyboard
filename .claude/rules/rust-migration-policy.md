@@ -51,15 +51,15 @@ Procedure for each swap:
 
 Incident: D9.4 PR #186 had 4 post-merge regressions, all the same root cause — focus on "route X through bridge" lost track of "what wraps X". Symbol grep found 0 hits but dropped preprocessing wasn't a symbol reference.
 
-## 4. Proto generation: triple-touch on new .proto, macOS regen on ANY .proto change
+## 4. Proto generation: triple-touch on new .proto
 
 When adding a new `.proto` file under `engine/protos/proto/`, update ALL THREE:
 
 1. `engine/protos/build.rs` (Rust side via `prost`).
 2. `engine/scripts/gen-platform-protos.sh` — both `--swift_out` and `--java_out=lite` blocks.
-3. Run the script and commit the regenerated `.pb.swift` (iOS) + `.java` (Android) files in the same commit or the immediate next commit. Platform bindings are **checked into git, NOT build-time generated**.
+3. Run `make build` and commit the regenerated `.pb.swift` (iOS + macOS) + `.java` (Android) files in the same commit or the immediate next commit. Platform bindings are **checked into git, NOT build-time generated**.
 
-`engine/scripts/gen-macos-protos.sh` globs `proto/*.proto`, so a new file needs no edit there — but it is NOT run by `make build`. **Any** change under `engine/protos/proto/` (new file, new field, renamed enum) therefore additionally requires `make macos-protos` + committing `macos/Sources/TaigiInputMethod/Engine/Generated/`. Skipping it leaves the macOS bindings stale in git with nothing to detect it — the macOS analogue of the stale-binary gate.
+`engine/scripts/gen-macos-protos.sh` globs `proto/*.proto` and runs as part of `make build`, so the macOS tree needs neither an edit nor a separate command — only the commit of its regenerated output.
 
 Without this, bridge code references generated types that don't exist; the build silently breaks until next ad-hoc regen. Incident: PR #205 case-transform slice — Codex post-impl caught it as a BLOCK; the fix added `case.proto` and re-emitted ~140 `.java` files (most no-op trailing whitespace; semantic diff was envelope + new case files only).
 

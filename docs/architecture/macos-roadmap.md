@@ -16,10 +16,12 @@ engine reuses cleanly behind a thin native shell. Native InputMethodKit app
 modern SwiftUI settings (macOS 14+), custom-dictionary support, macOS-conventional
 shortcuts.
 
-**Hard constraints** (active while the concurrent iOS/Android session runs):
-no modification of `ios/`, `android/`, `i18n/`, `content/`; `engine/` changes
-purely additive and flagged in the coordination register below; release actions
-user-gated.
+**Hard constraints**: release actions stay user-gated. The
+"no modification of `ios/`, `android/`, `i18n/`, `content/`; `engine/` changes
+purely additive" rule came from a concurrent iOS/Android session — **lifted
+2026-08-15 (USER: 「目前沒有並行 session」)**. Shared-surface changes are now
+allowed on their merits; the coordination register below stays as the record of
+what each PR touches, and PR8a's proto regen is still user-timed.
 
 ## Architecture (approved)
 
@@ -67,15 +69,15 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `aarch64-apple-darwin` → `macos/RustEngine/RustTaigi.xcframework` + macOS-owned
   copies of generated `RustTaigi.swift` / `SwiftBridgeCore.swift`. iOS artifacts
   untouched. arm64-only; x86_64 is a later user-gated additive step.
-  ⚠ **Drift rule: after any `engine/swift-ffi` change, regenerate BOTH
-  `ios/RustEngine/` (iOS session) and `macos/RustEngine/`.** Unification of the
-  two outputs is deferred until the concurrent session closes. The macOS build
-  script is likewise standalone — it repeats ~50 lines of swift-bridge
-  post-processing (OUT_DIR discovery, modulemap, `import` injection,
-  `@retroactive` patch) that `build-xcframework.sh` also has, because touching
-  the live iOS artifact pipeline mid-session is the larger risk. Extracting a
-  shared `engine/scripts/lib/` helper is an open follow-up for after that session
-  closes (Codex pre-impl 2026-08-15 Q1).
+  `make build` runs the iOS and macOS xcframework scripts together, so the two
+  outputs cannot drift behind a `swift-ffi` change. The macOS script still
+  repeats ~50 lines of swift-bridge post-processing (OUT_DIR discovery,
+  modulemap, `import` injection, `@retroactive` patch) that
+  `build-xcframework.sh` also has — written standalone while the concurrent
+  session owned the iOS pipeline. **Open follow-up (now unblocked)**: extract
+  `engine/scripts/lib/`, and replace the mtime-based swift-bridge OUT_DIR
+  heuristic with deterministic selection (Codex pre-impl 2026-08-15 Q1/Q7).
+  Both outputs are byte-identical today, which makes that refactor verifiable.
 - **D2 Project format** — SwiftPM executable + `macos/scripts/bundle-app.sh`
   script-assembled `.app` (khiin-rs osx pattern); NOT an Xcode project (pbxproj
   is user-only, hook-enforced). Info.plist committed with concrete values
@@ -117,9 +119,13 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 - **D8 Dictionary artifacts** — read from `ios/Resources/Dictionaries/`
   (read-only) at bundle time with fail-fast existence/non-empty validation;
   `deploy.sh` macos destination = later coordination.
-- **D9 Proto codegen** — standalone `gen-macos-protos` target with independent
-  output dir `macos/Sources/TaigiInputMethod/Engine/Generated/` (committed);
-  NOT wired into root `make build`.
+- **D9 Proto codegen** — `gen-macos-protos` writes to an independent output dir
+  `macos/Sources/TaigiInputMethod/Engine/Generated/` (committed). **Revised
+  2026-08-15 (USER: 「我覺得可以併入到 make build,只是現階段不 release」)**: both
+  macOS steps now run inside root `make build`, so no committed artefact can go
+  stale behind an engine change and no separate drift rule is needed.
+  `make macos-protos` / `make macos-engine` remain as macOS-only shortcuts.
+  Building macOS ≠ releasing it — release stays user-gated.
 - **D10 Dev loop** — `macos/Makefile`: build → bundle (+ plutil lint,
   codesign --verify, arch check) → install (delete-before-kill, kill by
   bundle-ID/PID, `lsregister -f -R -trusted`, re-login hint only on

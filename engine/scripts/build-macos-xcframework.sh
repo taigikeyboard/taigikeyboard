@@ -7,12 +7,11 @@
 # consumes the xcframework as a `binaryTarget` named `RustTaigi`; the two Swift
 # wrappers are compiled as sources of the executable target.
 #
-# DRIFT RULE: `engine/swift-ffi` is shared with iOS. After any change to that
-# crate, regenerate BOTH `ios/RustEngine/` (engine/scripts/build-xcframework.sh)
-# and `macos/RustEngine/` (this script).
+# `engine/swift-ffi` is shared with iOS; `make build` runs this script and
+# `build-xcframework.sh` together so both platforms' artefacts stay in step.
 #
-# Standalone rather than sharing a helper with build-xcframework.sh; rationale +
-# de-dup follow-up live in docs/architecture/macos-roadmap.md D1.
+# Repeats swift-bridge post-processing that build-xcframework.sh also has;
+# extracting a shared helper is a tracked follow-up (macos-roadmap.md D1).
 
 set -euo pipefail
 
