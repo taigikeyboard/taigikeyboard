@@ -37,13 +37,14 @@ Read this file alongside any global rule whose abstract version you want grounde
 
 ## Maps to `~/.claude/rules/round-workflow.md`
 
-### Dual gate (Codex sandwich + PR-bot)
+### Dual gate (Codex sandwich + PR-bot) — RETIRED 2026-08-16
+
+The `/codex-pr-review` skill and the round-workflow step that invoked it were removed at USER
+request (「移除 codex-pr-review,這個已不需要」). The incident below is kept as evidence, not as a
+live rule: it is why a second pass over the OPENED diff was once mandatory, and what a future
+round loses by not running one. `/code-review` covers the same ground on demand.
 
 - **PR #227** (`KeyboardLayoutSolver` extraction, 2026-05-07). Codex sandwich said "math fidelity PASS"; PR-bot caught a 1px refactor-freeze divergence within minutes. Original `(resources.getDimension(R.dimen.key_height) * keyHeightFactor).toInt()` truncates once; my refactor truncated twice via an intermediate `baseKeyHeight: Int`. Drift was ±1px on non-integer-density devices. Sandwich passes "the function does what its plan says"; PR-bot catches "the diff preserves every observable property of HEAD~1".
-
-### Project-specific PR-bot skill
-
-- The `/codex-pr-review` skill referenced in `~/.claude/rules/round-workflow.md` lives at `.claude/skills/codex-pr-review/` in this repo (project-scoped). Other repos invoke their own equivalent or skip the step.
 
 ## Maps to `~/.claude/rules/code-review-rules.md`
 
