@@ -131,7 +131,7 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 | PR | Phase | Scope | Status |
 |---|---|---|---|
 | PR0 | Admin | this roadmap + memory topic | this commit |
-| PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | this PR |
+| PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | **Merged** #514 `6329f152` |
 | PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | Pending |
 | PR3 | Composing core | bridge port (from iOS shape), coordinator + ComposingManager port, effect executor, lexiconInstall, attributed preedit, minimal settings provider | Pending |
 | PR4 | Candidate model + window | headless nav model + tests; NSPanel + SwiftUI bar; caret anchor; selection keys; stale-owner guard | Pending |
