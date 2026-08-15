@@ -172,7 +172,8 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 | PR0 | Admin | this roadmap + memory topic | this commit |
 | PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | **Merged** #514 `6329f152` |
 | PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | PR open #520 |
-| PR3 | Composing core | bridge port (from iOS shape), coordinator + ComposingManager port, effect executor, lexiconInstall, attributed preedit, minimal settings provider | Pending |
+| PR3a | Composing engine seam | bridge composing ops + full 10-effect decode, `lexiconInstall`, dictionary artefacts copied into the bundle, minimal settings provider | Pending |
+| PR3b | Composing IMK integration | ComposingSessionCoordinator, ComposingManager port, effect executor (attributed preedit), controller rewrite | Pending |
 | PR4 | Candidate model + window | headless nav model + tests; NSPanel + SwiftUI bar; caret anchor; selection keys; stale-owner guard | Pending |
 | PR5 | Settings + menubar | WindowManager, SwiftUI form, menu items, Ctrl+Shift+, chord, live-read provider, TL↔POJ toggle, OSLog bootstrap | Pending |
 | PR6 | Custom dict persistence | store: schema v2 + side table + migrator + capacity + derivation; custom_entries injection | Pending |
@@ -218,7 +219,17 @@ Methods` sudo install.
 
 ## User-gated open items
 
+- **D4 candidate-selection keys vs numeric tone digits.** D4 above assigns 1-9 to candidate
+  selection, but 1-9 are the numeric tone digits of TL/POJ (`tai5`) — the input contract behind
+  dogfood items S4/S5. The two cannot share the keys. Codex pre-impl (2026-08-15) recommends:
+  bare 0-9 always stay text/tone (and a bare digit never *starts* a composition — it is a tone
+  digit only while composing, as iOS does at `ActionHandler+KeyActions.swift:61`); candidates
+  move on ←/→; Space commits the highlighted candidate; Enter commits the literal raw;
+  `Ctrl+1…9` is an optional direct-select chord rendered as `⌃1`, never bare `1`. Not applied —
+  this is a product decision and only binds at PR4.
 - PR8a timing (proto regen window vs concurrent iOS/Android session).
 - Intel/x86_64 support (distribution decision).
 - Custom-dict Time-Machine/backup-exclusion policy (PR7).
-- macOS dogfood acceptance checklist contents (proposed at PR9).
+- macOS dogfood acceptance checklist contents (proposed at PR9). **Dogfood cadence decided
+  2026-08-15 (USER: 「我想等 desktop 實作完成再 dogfood」)** — device dogfood is not a per-PR
+  gate; it runs once as a batch after the desktop IME is implemented.
