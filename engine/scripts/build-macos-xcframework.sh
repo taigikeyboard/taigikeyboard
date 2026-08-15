@@ -36,15 +36,18 @@ cd "$ENGINE_DIR"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-cargo build --release -p swift-ffi --target "$TARGET_TRIPLE"
+CARGO_FLAGS=(build --release -p swift-ffi --target "$TARGET_TRIPLE")
+cargo "${CARGO_FLAGS[@]}"
 
 DEVICE_LIB="$ENGINE_DIR/target/$TARGET_TRIPLE/release/$LIB_NAME"
 
-BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR/target/$TARGET_TRIPLE/release/build")"
+# Same argv as the build above, so cargo resolves the OUT_DIR of the exact
+# fingerprint that produced $DEVICE_LIB.
+BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR" "${CARGO_FLAGS[@]}")"
 
 # `set -e` already aborts on a missing file at `cp` time; this loop exists for
-# the cases `cp` accepts — an empty file, or an OUT_DIR the mtime heuristic
-# picked that never finished writing — before anything is staged.
+# the cases `cp` accepts — an empty or never-finished swift-bridge output —
+# before anything is staged.
 for required in \
     "$BRIDGE_OUT_DIR/SwiftBridgeCore.h" \
     "$BRIDGE_OUT_DIR/SwiftBridgeCore.swift" \

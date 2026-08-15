@@ -19,29 +19,57 @@
 # interpolated into a `grep` pattern and an `awk` variable, so the contract is
 # the repo's fixed `RustTaigi` module name, not an arbitrary string.
 
-# Locate swift-bridge's OUT_DIR for the build that just ran. Cargo keeps several
-# `swift-ffi-<fingerprint>/out` directories per target (one per feature set /
-# config), so pick the newest by mtime. Scoped to one target's build tree, so a
-# sibling platform's output can never be selected.
+# Ask cargo which OUT_DIR belongs to the swift-ffi build script for a given
+# configuration, by replaying the caller's exact cargo argv with
+# `--message-format=json` and reading the `build-script-executed` record.
+#
+# Pass the SAME argv the build used — cargo keeps one `swift-ffi-<fingerprint>/
+# out` per feature set / config, and a differing flag would select (and build) a
+# different fingerprint. Replaying identical flags is a cache hit, so the extra
+# invocation costs a fraction of a second and compiles nothing.
+#
+# This replaces a "newest `out` directory by mtime" heuristic, which is wrong
+# whenever the current configuration's build script did not re-run: after a
+# `--dev` build, a subsequent cached release build leaves the panic-injector
+# fingerprint newest, and the heuristic staged ITS headers/wrappers against the
+# release archive. Observed on 2026-08-15 — mtime picked
+# `swift-ffi-0db2fb3c…` while cargo reported `swift-ffi-887d0482…`. Harmless
+# only because both fingerprints happened to emit an identical bridge surface.
+#
+# Usage: swift_bridge_find_out_dir <engine_dir> <cargo_arg>...
 swift_bridge_find_out_dir() {
-    local target_build_dir="$1"
+    local engine_dir="$1"
+    shift
     local out_dir
     # `|| return` is load-bearing: the caller assigns this function's output via
-    # command substitution, which clears `errexit` inside the subshell. Without
-    # it a failing `find`/`stat` (permissions, filesystem race) that still
-    # printed a path would be masked by the trailing `printf`'s exit 0.
+    # command substitution, which clears `errexit` inside the subshell, so a
+    # cargo or parser failure would otherwise be swallowed.
     out_dir="$(
-        find "$target_build_dir" \
-            -type d -name 'out' -path '*/swift-ffi-*' \
-            -exec stat -f '%m %N' {} + \
-        | sort -rn | head -n 1 | cut -d' ' -f2-
+        cd "$engine_dir" \
+        && cargo "$@" --message-format=json --quiet \
+        | python3 -c '
+import json, sys
+
+out_dirs = []
+for line in sys.stdin:
+    try:
+        message = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    # Cargo package-id format for a path dependency: `path+file:///…/swift-ffi#0.1.0`.
+    # The leading slash keeps a hypothetical sibling `my-swift-ffi` from matching.
+    # If a future cargo changes this format, no record matches and the run fails
+    # loudly below — it never falls back to guessing.
+    if message.get("reason") == "build-script-executed" and "/swift-ffi#" in message.get("package_id", ""):
+        out_dirs.append(message["out_dir"])
+unique = sorted(set(out_dirs))
+if len(unique) != 1:
+    sys.exit(f"expected exactly 1 swift-ffi build-script-executed record, got {len(unique)}")
+print(unique[0])
+'
     )" || return $?
     if [[ -z "$out_dir" ]]; then
-        # Parity correction (cross-platform-alignment.md §1b): iOS previously
-        # printed no search path, macOS printed a repo-relative one. Unified on
-        # the absolute path — the more diagnosable of the two. Exit status is
-        # unchanged on both platforms.
-        echo "error: swift-bridge OUT_DIR not found under $target_build_dir" >&2
+        echo "error: cargo reported no swift-ffi OUT_DIR for: cargo $*" >&2
         return 1
     fi
     printf '%s\n' "$out_dir"

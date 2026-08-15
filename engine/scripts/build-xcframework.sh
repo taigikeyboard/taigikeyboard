@@ -54,7 +54,9 @@ lipo -create \
 
 DEVICE_LIB="$ENGINE_DIR/target/aarch64-apple-ios/release/$LIB_NAME"
 
-BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR/target/aarch64-apple-ios/release/build")"
+# Same argv as the device build above, so cargo resolves the OUT_DIR of the
+# exact fingerprint that produced $DEVICE_LIB (release vs panic-injector).
+BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR" "${CARGO_FLAGS[@]}" --target aarch64-apple-ios)"
 
 HEADERS_DIR="$OUT_DIR/Headers"
 swift_bridge_stage_headers "$BRIDGE_OUT_DIR" "$HEADERS_DIR" "$FRAMEWORK_NAME"
