@@ -69,7 +69,13 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   untouched. arm64-only; x86_64 is a later user-gated additive step.
   ⚠ **Drift rule: after any `engine/swift-ffi` change, regenerate BOTH
   `ios/RustEngine/` (iOS session) and `macos/RustEngine/`.** Unification of the
-  two outputs is deferred until the concurrent session closes.
+  two outputs is deferred until the concurrent session closes. The macOS build
+  script is likewise standalone — it repeats ~50 lines of swift-bridge
+  post-processing (OUT_DIR discovery, modulemap, `import` injection,
+  `@retroactive` patch) that `build-xcframework.sh` also has, because touching
+  the live iOS artifact pipeline mid-session is the larger risk. Extracting a
+  shared `engine/scripts/lib/` helper is an open follow-up for after that session
+  closes (Codex pre-impl 2026-08-15 Q1).
 - **D2 Project format** — SwiftPM executable + `macos/scripts/bundle-app.sh`
   script-assembled `.app` (khiin-rs osx pattern); NOT an Xcode project (pbxproj
   is user-only, hook-enforced). Info.plist committed with concrete values
@@ -125,14 +131,14 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 | PR | Phase | Scope | Status |
 |---|---|---|---|
 | PR0 | Admin | this roadmap + memory topic | this commit |
-| PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | Pending |
+| PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | this PR |
 | PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | Pending |
 | PR3 | Composing core | bridge port (from iOS shape), coordinator + ComposingManager port, effect executor, lexiconInstall, attributed preedit, minimal settings provider | Pending |
 | PR4 | Candidate model + window | headless nav model + tests; NSPanel + SwiftUI bar; caret anchor; selection keys; stale-owner guard | Pending |
 | PR5 | Settings + menubar | WindowManager, SwiftUI form, menu items, Ctrl+Shift+, chord, live-read provider, TL↔POJ toggle, OSLog bootstrap | Pending |
 | PR6 | Custom dict persistence | store: schema v2 + side table + migrator + capacity + derivation; custom_entries injection | Pending |
 | PR7 | Custom dict UI | CRUD UI, CSV import/export, backup-exclusion decision (user-gated) | Pending |
-| PR8a | Proto coordination ⚠ | `PLATFORM_MACOS` + macOS nextword decide contract + triple-touch regen (touches ios/android GENERATED files only; timing user-coordinated) | Pending |
+| PR8a | Proto coordination ⚠ | `PLATFORM_MACOS` + macOS nextword decide contract + triple-touch regen incl. `make macos-protos` (`rust-migration-policy.md` §4; touches ios/android GENERATED files only; timing user-coordinated) | Pending |
 | PR9 | Freq/nextword + polish | phase-2 boosted fetch, user_frequency.db, association learning, edge cases, docs, dogfood fixes | Pending |
 
 Every PR: Codex sandwich + `/simplify`; PR1/PR8a additionally FFI-adjacent
@@ -147,6 +153,7 @@ review per `.claude/rules/rust-ffi-safety.md` §5. Engine-touched PRs run
 | `engine/scripts/build-macos-xcframework.sh` (new) | PR1 | yes | no |
 | `gen-macos-protos` isolated target | PR1 | yes | no (proto unchanged → no regen diff) |
 | Root Makefile `macos-*` targets | PR1 | yes | no |
+| `rust-migration-policy.md` §4 + `CLAUDE.md` stale-binary gate: macOS regen rows | PR1 | yes | no (docs / rules only) |
 | `PLATFORM_MACOS` + regen | PR8a | yes | **yes — generated `.pb.swift`/`.java` only, semantically inert; user-coordinated timing** |
 | `engine/swift-ffi` crate | — | **no change needed** | — |
 

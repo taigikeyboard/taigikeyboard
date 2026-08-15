@@ -9,6 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint \
         i18n i18n-test \
+        macos-engine macos-protos \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -71,6 +72,22 @@ dogfood:
 	python3 $(DICT)/tools/gen_dogfood.py
 
 # ---------------------------------------------------------------------------
+# macOS IME engine surface (docs/architecture/macos-roadmap.md D1/D9). Kept out
+# of `build` on purpose: `make build` must keep working on a tree with no macos/
+# scaffold. Both targets are therefore manual — engine changes must refresh the
+# macOS artefacts too (.claude/rules/rust-migration-policy.md §4).
+# No `cargo clean -p protos` here: engine/protos/build.rs declares
+# `rerun-if-changed=proto`, so a .proto edit already rebuilds protos (verified);
+# `build`'s clean is belt-and-braces from D9.4.
+# ---------------------------------------------------------------------------
+
+macos-engine:
+	bash $(ENGINE)/scripts/build-macos-xcframework.sh
+
+macos-protos:
+	bash $(ENGINE)/scripts/gen-macos-protos.sh
+
+# ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
 #   Rust    rustfmt (fmt) + clippy -D warnings (lint)
@@ -105,6 +122,8 @@ help:
 	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
+	@echo "  make macos-engine       Rebuild macos/RustEngine xcframework (after engine/swift-ffi changes)"
+	@echo "  make macos-protos       Regenerate macOS .pb.swift (after any engine/protos/proto change)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"

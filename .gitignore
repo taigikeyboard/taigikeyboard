@@ -87,7 +87,9 @@ Cargo.lock.bak
 # are BOTH committed so a release tag carries a complete, buildable engine on
 # both platforms. The global *.so rule above would ignore the Android libs, so
 # they are explicitly re-included here. iOS xcframework + bridge .swift live
-# under ios/RustEngine/ for stable Xcode source references (R3-H3 fix).
+# under ios/RustEngine/ for stable Xcode source references (R3-H3 fix); the
+# macOS counterpart lives under macos/RustEngine/ for a stable SwiftPM
+# binaryTarget path (no ignore rule matches it, so no re-include needed).
 !android/app/src/main/jniLibs/**/*.so
 
 # === Xcode build cache ===

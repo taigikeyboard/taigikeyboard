@@ -112,7 +112,7 @@ Apply per batch:
 - Apply fixes.
 - Tier B & C: run Codex post-impl review on the resulting diff. Tier A skips post-impl too.
 - Commit per `feedback_auto_commit_push.md` (commit + push without asking, no risky ops). Commit message must reference the discussion comment ID, e.g. `(Codex PR #197 r3169707395)`. Tier A/B commits should briefly state why the lighter tier was chosen ("artifact regen, no source change" / "single-line doc fix, post-impl only") so the audit trail reflects the judgment.
-- If a fix touches Rust under `engine/`, rebuild the xcframework via `engine/scripts/build-xcframework.sh` and include the regenerated artifacts in the commit. The project has no GitHub Actions CI for Rust — the local Makefile gate is canonical — so never push without rebuilding. The rebuild itself is Tier A even when the source change is Tier C — bundle if same batch, otherwise separate commit.
+- If a fix touches Rust under `engine/`, rebuild the xcframework via `engine/scripts/build-xcframework.sh` and include the regenerated artifacts in the commit. A fix under `engine/swift-ffi/` or `engine/protos/proto/` additionally needs `make macos-engine` / `make macos-protos` — neither runs from `make build` (`.claude/rules/rust-migration-policy.md` §4). The project has no GitHub Actions CI for Rust — the local Makefile gate is canonical — so never push without rebuilding. The rebuild itself is Tier A even when the source change is Tier C — bundle if same batch, otherwise separate commit.
 - If a fix touches `engine/composing/src/transition.rs` or `api.rs`, also run `cargo test -p composing` (per `feedback_manual_build_test.md` the user runs platform builds, but Rust workspace tests are scripted-safe).
 
 ### 5. Reply + resolve on GitHub

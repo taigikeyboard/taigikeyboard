@@ -112,6 +112,11 @@ flowchart TD
         proto --> clean --> xcf
         clean --> jnib
     end
+    subgraph macospipe["make macos-engine / macos-protos — manual, not in make build"]
+        direction TB
+        mproto["gen-macos-protos.sh<br/>(macOS Swift proto)"]
+        mxcf["build-macos-xcframework.sh<br/>→ macos/RustEngine"]
+    end
 
     dep -->|data assets| iosBundle["ios/Resources/Dictionaries/"]
     dep -->|data assets| andAssets["android/.../assets/"]

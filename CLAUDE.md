@@ -84,6 +84,8 @@ Before any iOS or Android build/test/dogfood when the diff touches **upstream** 
 |---|---|---|
 | `engine/` (any Rust source, `.proto`, `Cargo.toml`) | `make build` | Platform protos + iOS xcframework + Android jniLibs |
 | `dictionary/` (CSV sources, build scripts, syllabifier rules) | `make dict` then `make build` | `dictionary.bin` + `syllables.fst` (then xcframework/jniLibs that bundle them) |
+| `engine/swift-ffi/` | `make build` **and** `make macos-engine` | `macos/RustEngine/` — `make build` refreshes iOS only, so the macOS xcframework goes stale silently |
+| `engine/protos/proto/` (any change, not only a new file) | `make build` **and** `make macos-protos` | `macos/Sources/TaigiInputMethod/Engine/Generated/` (`.claude/rules/rust-migration-policy.md` §4) |
 | iOS-only Swift / Android-only Kotlin / docs only | — | No regen needed |
 
 Skipping this gate is the #1 source of "tests pass locally but Continuous-input behaves wrong on device" bugs. Always check `git diff --stat` against the table above before any iOS/Android invocation.
