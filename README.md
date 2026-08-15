@@ -32,8 +32,8 @@ Both platforms share a Rust core. Algorithms (phonetics, composing, lexicon, ran
 
 - `docs/README.md`: engine, UI, architecture index
 - `knowledge/taigi-phonetics-reference.md`: TL/POJ/TPS cross-reference
-- `rules/`: per-platform style guides, security rules, AI workflow
-- `CHANGELOG.md`: release history (latest: v3.5.6)
+- `.claude/rules/`: per-platform style guides, security rules, AI workflow
+- `CHANGELOG.md`: release history
 
 ## License
 

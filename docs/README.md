@@ -101,6 +101,11 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | `reports/2026-05-20-v359-b-plan.md` | v3.5.9-B dual-index (POJ first-class lattice) plan (Codex-converged v3) | Historical |
 | `reports/2026-06-03-user-data-cross-mode-audit.md` | User-data cross-input-mode + single→triple-index compatibility audit (v3.6.1 fix candidates) | Historical |
 | `reports/2026-06-19-i18n-string-inventory.md` | i18n Tier-1 string inventory + scope classification + divergence audit (frozen) | Historical |
+| `reports/2026-06-22-i18n-content-draft-review.md` | i18n content.json 5-lang draft proofread sheet | Historical |
+| `reports/2026-06-22-i18n-poj-draft-review.md` | i18n POJ draft proofread sheet | Historical |
+| `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
+| `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
+| `reports/2026-06-24-i18n-migration-audit.md` | i18n remaining-migration coverage audit (G1-G6 scope) | Historical |
 | `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
 | `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
 
