@@ -10,13 +10,18 @@
 # `engine/swift-ffi` is shared with iOS; `make build` runs this script and
 # `build-xcframework.sh` together so both platforms' artefacts stay in step.
 #
-# Repeats swift-bridge post-processing that build-xcframework.sh also has;
-# extracting a shared helper is a tracked follow-up (macos-roadmap.md D1).
+# The swift-bridge post-processing itself lives in
+# scripts/lib/swift-bridge-artifacts.sh, shared with the iOS build.
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENGINE_DIR="$REPO_ROOT/engine"
+
+# Header/modulemap layout + Swift wrapper patching are shared with the iOS
+# build; both platforms link the same swift-ffi crate.
+source "$SCRIPT_DIR/lib/swift-bridge-artifacts.sh"
 # Staging dir is macOS-specific so a concurrent iOS build (target/d9.2-out)
 # cannot race this script's `rm -rf`.
 OUT_DIR="$ENGINE_DIR/target/macos-out"
@@ -35,20 +40,7 @@ cargo build --release -p swift-ffi --target "$TARGET_TRIPLE"
 
 DEVICE_LIB="$ENGINE_DIR/target/$TARGET_TRIPLE/release/$LIB_NAME"
 
-# Locate swift-bridge's OUT_DIR for the build we just produced. Cargo keeps
-# multiple `swift-ffi-<fingerprint>/out` directories across rebuilds, so pick
-# the newest by mtime. The search is scoped to the darwin target tree, so an
-# iOS build's output can never be selected.
-BRIDGE_OUT_DIR="$(
-    find "$ENGINE_DIR/target/$TARGET_TRIPLE/release/build" \
-        -type d -name 'out' -path '*/swift-ffi-*' \
-        -exec stat -f '%m %N' {} + \
-    | sort -rn | head -n 1 | cut -d' ' -f2-
-)"
-if [[ -z "$BRIDGE_OUT_DIR" ]]; then
-    echo "error: swift-bridge OUT_DIR not found under target/$TARGET_TRIPLE" >&2
-    exit 1
-fi
+BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR/target/$TARGET_TRIPLE/release/build")"
 
 # `set -e` already aborts on a missing file at `cp` time; this loop exists for
 # the cases `cp` accepts — an empty file, or an OUT_DIR the mtime heuristic
@@ -66,55 +58,13 @@ do
 done
 
 HEADERS_DIR="$OUT_DIR/Headers"
-mkdir -p "$HEADERS_DIR"
-# swift-bridge nests per-bridge artefacts under `<OUT>/<FRAMEWORK_NAME>/`:
-#   <OUT>/SwiftBridgeCore.{h,swift}
-#   <OUT>/<FRAMEWORK_NAME>/<FRAMEWORK_NAME>.{h,swift}
-cp "$BRIDGE_OUT_DIR/SwiftBridgeCore.h" "$HEADERS_DIR/"
-cp "$BRIDGE_OUT_DIR/$FRAMEWORK_NAME/$FRAMEWORK_NAME.h" "$HEADERS_DIR/"
-
-cat > "$HEADERS_DIR/module.modulemap" <<EOF
-module $FRAMEWORK_NAME {
-    header "SwiftBridgeCore.h"
-    header "$FRAMEWORK_NAME.h"
-    export *
-}
-EOF
+swift_bridge_stage_headers "$BRIDGE_OUT_DIR" "$HEADERS_DIR" "$FRAMEWORK_NAME"
 
 xcodebuild -create-xcframework \
     -library "$DEVICE_LIB" -headers "$HEADERS_DIR" \
     -output "$OUT_DIR/$FRAMEWORK_NAME.xcframework"
 
-cp "$BRIDGE_OUT_DIR/SwiftBridgeCore.swift" "$OUT_DIR/"
-cp "$BRIDGE_OUT_DIR/$FRAMEWORK_NAME/$FRAMEWORK_NAME.swift" "$OUT_DIR/"
-
-# swift-bridge does not emit `import` statements; both wrappers reference C
-# symbols defined in the xcframework's modulemap-exposed `RustTaigi` module.
-# Inject the import so the SwiftPM executable target compiles them without a
-# bridging header.
-inject_import() {
-    local file="$1"
-    if ! grep -q '^import RustTaigi' "$file"; then
-        local tmp
-        tmp=$(mktemp)
-        if grep -q '^import Foundation' "$file"; then
-            awk '{ print } /^import Foundation/ && !injected { print "import RustTaigi"; injected=1 }' "$file" > "$tmp"
-        else
-            { echo "import RustTaigi"; echo ""; cat "$file"; } > "$tmp"
-        fi
-        mv "$tmp" "$file"
-    fi
-}
-inject_import "$OUT_DIR/$FRAMEWORK_NAME.swift"
-inject_import "$OUT_DIR/SwiftBridgeCore.swift"
-
-# Swift 5.9+ warns when a module declares conformance of an imported type to an
-# imported protocol unless the conformance is annotated `@retroactive`.
-# swift-bridge does not yet emit the annotation; patch it in.
-sed -i '' \
-    -e 's/^extension RustStr: Identifiable {$/extension RustStr: @retroactive Identifiable {/' \
-    -e 's/^extension RustStr: Equatable {$/extension RustStr: @retroactive Equatable {/' \
-    "$OUT_DIR/SwiftBridgeCore.swift"
+swift_bridge_stage_wrappers "$BRIDGE_OUT_DIR" "$OUT_DIR" "$FRAMEWORK_NAME"
 
 # Verify the xcframework really carries a macOS arm64 slice before staging it.
 # `-create-xcframework` infers platform from the archive's Mach-O metadata, so a
