@@ -124,10 +124,30 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 - **D4 Candidate window** — borderless non-activating NSPanel + NSHostingView
   (SwiftUI), horizontal single-row; window level = client window level + 1;
   headless navigation model unit-tested, panel is renderer only; positioning =
-  pure functions ported from azooKey-Desktop `WindowPositioning` incl.
-  multi-display stale-screen fix. Keys: 1-9 select · Space commit highlighted ·
-  ←/→ highlight · ↑↓/PgUp/PgDn page · Enter commit raw literal · Esc cancel.
-  NOT `IMKCandidates`.
+  pure functions derived from azooKey-Desktop `WindowPositioning` incl.
+  multi-display stale-screen fix. NOT `IMKCandidates`.
+  **Key bindings decided 2026-08-15 (USER answered the gate below)**: bare 0-9
+  always stay text / tone digits and never start a composition · ←/→ move the
+  highlight · ↑↓ / PgUp / PgDn page · Space commits the highlighted candidate ·
+  Enter commits the literal the marked region shows · Esc cancels · `Ctrl+1…9`
+  direct-selects, labelled `⌃1`, never bare `1`. The earlier "1-9 select" line
+  is superseded — 1-9 are the numeric tones of TL/POJ (`tai5`).
+  **Semantics pinned by the PR4 Codex pre-impl (2026-08-15)**: candidates come
+  from `FetchAtPos` only (`dispatch.rs:97` is the sole arm that fills the
+  continuous carrier); a candidate commit is `CommitContinuous` only, with
+  `consumed_bytes == candidate.consumed_span_end` (`composing.proto:228`);
+  Enter keeps the existing `CommitRaw` (`transition.rs:443`) — feeding the
+  marked-region text to `SelectSuggestion` instead would double-count the
+  nailed prefix, since `select_suggestion_under_continuous` computes
+  `nailed_prefix` and then `push_str`s the argument (`transition.rs:724`):
+  `台北` nailed + `台北大學` marked → `台北台北大學`. macOS never sends
+  `SetSelectedCandidateIndex`: no engine code reads
+  `state.selected_candidate_index` (it is stored, echoed, reset — `:576`,
+  `:585`), and candidate navigation is a permanent platform-side non-goal
+  (`cross-platform-alignment.md §5.1`). Highlight CLAMPs at both ends
+  (McBopomofo `HorizontalCandidateController.swift:509`; azooKey wraps — not
+  adopted); paging moves the highlight to the first item of the new page, so
+  page start / highlight / `⌃1` label always agree.
 - **D5 Settings** — in-process SwiftUI window (WindowManager pattern +
   activate-before-show + programmatic Edit menu); opened from IMK `menu()` AND
   `Ctrl+Shift+,` chord (Cmd+, belongs to the host app). `UserDefaults.standard`;
@@ -177,7 +197,8 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 | PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | PR open #520 |
 | PR3a | Composing engine seam | bridge composing ops + full 10-effect decode, `lexiconInstall`, dictionary artefacts copied into the bundle, minimal settings provider | Pending |
 | PR3b | Composing IMK integration | ComposingSessionCoordinator, ComposingManager port, effect executor (attributed preedit), controller rewrite | Pending |
-| PR4 | Candidate model + window | headless nav model + tests; NSPanel + SwiftUI bar; caret anchor; selection keys; stale-owner guard | Pending |
+| PR4a | Candidate engine seam | `CommitContinuous` bridge op; manager `fetchCandidates` + effect-backed `commitCandidate`; document-string formatter; pure `CandidateListModel`; tests. No key-table change, no window, no user-visible behaviour | Pending |
+| PR4b | Candidate IMK integration | `KeyEventSnapshot` named-key discriminator; Space / arrows / paging / `Ctrl+1…9` intents; controller routing; `CandidatePanel` + SwiftUI bar; caret anchor + screen selection; panel owner token; `hidePalettes` | Pending |
 | PR5 | Settings + menubar | WindowManager, SwiftUI form, menu items, Ctrl+Shift+, chord, live-read provider, TL↔POJ toggle, OSLog bootstrap | Pending |
 | PR6 | Custom dict persistence | store: schema v2 + side table + migrator + capacity + derivation; custom_entries injection | Pending |
 | PR7 | Custom dict UI | CRUD UI, CSV import/export, backup-exclusion decision (user-gated) | Pending |
@@ -222,14 +243,11 @@ Methods` sudo install.
 
 ## User-gated open items
 
-- **D4 candidate-selection keys vs numeric tone digits.** D4 above assigns 1-9 to candidate
-  selection, but 1-9 are the numeric tone digits of TL/POJ (`tai5`) — the input contract behind
-  dogfood items S4/S5. The two cannot share the keys. Codex pre-impl (2026-08-15) recommends:
-  bare 0-9 always stay text/tone (and a bare digit never *starts* a composition — it is a tone
-  digit only while composing, as iOS does at `ActionHandler+KeyActions.swift:61`); candidates
-  move on ←/→; Space commits the highlighted candidate; Enter commits the literal raw;
-  `Ctrl+1…9` is an optional direct-select chord rendered as `⌃1`, never bare `1`. Not applied —
-  this is a product decision and only binds at PR4.
+- ~~D4 candidate-selection keys vs numeric tone digits~~ — **CLOSED 2026-08-15**: USER took
+  the Codex recommendation whole (bare 0-9 stay text/tone and never start a composition ·
+  ←/→ highlight · ↑↓/PgUp/PgDn page · Space commits the highlighted candidate · Enter commits
+  the literal · Esc cancels · `Ctrl+1…9` direct-select as `⌃1`). Bindings now live in D4 above
+  and bind at PR4b.
 - PR8a timing (proto regen window vs concurrent iOS/Android session).
 - Intel/x86_64 support (distribution decision).
 - Custom-dict Time-Machine/backup-exclusion policy (PR7).
