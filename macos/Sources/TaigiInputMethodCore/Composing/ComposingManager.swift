@@ -19,10 +19,20 @@ final class ComposingManager {
     // MARK: - Engine mirror
 
     private(set) var isComposing = false
-    /// What the user typed, with numeric tones. This is the engine's search key,
-    /// and the rendered form the user reads reaches the host as an
-    /// `updatePreedit` effect rather than being read from here.
+    /// What the user typed, with numeric tones. This is the engine's search key.
+    ///
+    /// Not the length of the composition on screen: once a candidate has been
+    /// nailed this is only the pending tail, while the marked region holds the
+    /// nailed prefix as well (`engine/composing/src/transition.rs:585`). Anything
+    /// measuring the rendered composition must read `displayText`.
     private(set) var rawInput = ""
+
+    /// The composition as the marked region renders it — the whole thing,
+    /// nailed prefix included. Mirrored rather than derived because the engine
+    /// is the only thing that knows how segments join (the word-boundary
+    /// spacing rules differ per output mode), and because the candidate window
+    /// has to anchor itself to the end of what is actually on screen.
+    private(set) var displayText = ""
 
     private let settingsProvider: EngineSettingsProvider
     private static let logger = DebugLogger(category: "ComposingManager")
@@ -133,6 +143,50 @@ final class ComposingManager {
         )
     }
 
+    // MARK: - Candidates
+
+    /// Reads the candidates for the composition as it currently stands.
+    ///
+    /// Sent under the composition's existing generation because the query is
+    /// read-only: bumping the generation would reset the engine before the
+    /// query ran (`engine/composing/src/handle.rs:61-66`).
+    func fetchCandidates() -> CandidateFetchOutcome {
+        guard let result = RustEngineBridge.composingFetchAtPos(
+            settings: settingsProvider.current,
+            generation: currentGeneration,
+        ) else { return .unavailable }
+
+        guard let candidates = result.candidates else { return .notComposing }
+        return .found(candidates)
+    }
+
+    /// Commits `candidate`, which must come from the `fetchCandidates()` call
+    /// that produced the list the user is looking at.
+    ///
+    /// The document rendering is derived here rather than taken from the
+    /// caller: it depends on the same settings snapshot the engine call does,
+    /// and letting a view layer supply it is how the two drift apart.
+    func commitCandidate(
+        _ candidate: ContinuousCandidate,
+        executing executor: ComposingEffectExecutor,
+    ) -> CandidateCommitOutcome {
+        let settings = settingsProvider.current
+        Self.logger.debug("commitCandidate consumedBytes=\(candidate.consumedSpanEnd)")
+        guard let transition = RustEngineBridge.composingCommitContinuous(
+            documentText: CandidateDocumentText.text(for: candidate, settings: settings),
+            canonicalText: candidate.displayText,
+            associationTl: candidate.canonicalTl,
+            consumedBytes: candidate.consumedSpanEnd,
+            syllableCount: candidate.syllableCount,
+            settings: settings,
+            generation: currentGeneration,
+        ) else { return .unavailable }
+
+        let outcome = CandidateCommitOutcome(transition)
+        apply(transition, executing: executor)
+        return outcome
+    }
+
     /// Promotes the composition into the continuous phase, where the engine
     /// segments the whole buffer instead of one syllable.
     ///
@@ -172,6 +226,7 @@ final class ComposingManager {
 
         isComposing = transition.isComposing
         rawInput = transition.rawInput
+        displayText = transition.displayText
 
         for effect in transition.effects {
             executor.execute(effect)
@@ -181,5 +236,6 @@ final class ComposingManager {
     private func clearMirror() {
         isComposing = false
         rawInput = ""
+        displayText = ""
     }
 }

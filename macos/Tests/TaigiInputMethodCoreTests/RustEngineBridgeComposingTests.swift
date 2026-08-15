@@ -17,12 +17,26 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         InstalledLexicon.installOnce()
     }
 
+    /// Types `text` one character at a time, which is the only way a
+    /// composition ever starts in production: `Append` enters `Phase::Composing`
+    /// from Idle by itself, and there is no bridge op that seeds a whole buffer.
+    @discardableResult
+    private func compose(_ text: String) throws -> ComposingTransition {
+        var last: ComposingTransition?
+        for character in text {
+            last = RustEngineBridge.composingAppend(
+                String(character),
+                settings: settings,
+                generation: generation,
+            )
+        }
+        return try XCTUnwrap(last, "composing '\(text)' produced no transition")
+    }
+
     // MARK: - Composing
 
     func testAppend_rendersPreeditAndAsksHostToUpdateIt() throws {
-        let transition = try XCTUnwrap(
-            RustEngineBridge.composingStart("t", settings: settings, generation: generation),
-        )
+        let transition = try compose("t")
 
         XCTAssertTrue(transition.isComposing, "starting a composition must report composing")
         XCTAssertEqual(transition.rawInput, "t")
@@ -34,7 +48,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     }
 
     func testAppend_numericTone_rendersDiacriticInDisplayButKeepsRawDigits() throws {
-        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
+        _ = try compose("tai")
         let transition = try XCTUnwrap(
             RustEngineBridge.composingAppend("5", settings: settings, generation: generation),
         )
@@ -52,7 +66,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         // when a composition was never promoted to the continuous phase, and the
         // executor deliberately does not act on it. Decoding it wrongly would
         // hide that the case exists at all.
-        _ = RustEngineBridge.composingStart("a", settings: settings, generation: generation)
+        _ = try compose("a")
         let transition = try XCTUnwrap(
             RustEngineBridge.composingDeleteBackward(settings: settings, generation: generation),
         )
@@ -66,7 +80,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     }
 
     func testReset_endsCompositionWithoutWritingToTheDocument() throws {
-        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
+        _ = try compose("tai")
         let transition = try XCTUnwrap(RustEngineBridge.composingReset(generation: generation))
 
         XCTAssertFalse(transition.isComposing)
@@ -80,24 +94,65 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
-    func testSelectSuggestion_commitsTheTextVerbatim() throws {
-        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
+    func testCommitRaw_commitsTheCompositionAsRendered() throws {
+        let composed = try compose("tai")
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
-        let transition = try XCTUnwrap(RustEngineBridge.composingSelectSuggestion(
-            "tai",
-            settings: settings,
-            generation: generation,
-        ))
 
-        XCTAssertTrue(
-            transition.effects.contains(.commitTextReplacingPreedit("tai")),
-            "Enter must be able to commit exactly what was typed",
+        let transition = try XCTUnwrap(
+            RustEngineBridge.composingCommitRaw(settings: settings, generation: generation),
+        )
+
+        XCTAssertEqual(
+            transition.effects.committedTexts,
+            [composed.displayText],
+            "Return must commit exactly what the marked region was showing",
         )
         XCTAssertFalse(transition.isComposing)
     }
 
+    /// Guards the mistake this bridge used to document: committing the literal
+    /// by handing the marked-region text to `SelectSuggestion` re-prepends the
+    /// nailed prefix (`engine/composing/src/transition.rs:724`), so a
+    /// composition reading `台北大學` with `台北` nailed would commit
+    /// `台北台北大學`. `CommitRaw` is the op that does not, which is why
+    /// `SelectSuggestion` has no macOS wrapper at all.
+    func testCommitRaw_afterANailedSegment_writesTheCompositionOnceNotTwice() throws {
+        _ = try compose("taigi")
+        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
+        let pendingBytes = UInt32("taigi".utf8.count)
+        let candidates = try XCTUnwrap(
+            XCTUnwrap(
+                RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),
+            ).candidates,
+        )
+        let partial = try XCTUnwrap(
+            candidates.first { $0.consumedSpanEnd > 0 && $0.consumedSpanEnd < pendingBytes },
+            "taigi must offer a candidate shorter than the whole buffer to nail",
+        )
+        let nailed = try XCTUnwrap(RustEngineBridge.composingCommitContinuous(
+            documentText: partial.roman,
+            canonicalText: partial.displayText,
+            associationTl: partial.canonicalTl,
+            consumedBytes: partial.consumedSpanEnd,
+            syllableCount: partial.syllableCount,
+            settings: settings,
+            generation: generation,
+        ))
+        XCTAssertTrue(nailed.isComposing, "a partial candidate nails a segment and keeps composing")
+
+        let transition = try XCTUnwrap(
+            RustEngineBridge.composingCommitRaw(settings: settings, generation: generation),
+        )
+
+        XCTAssertEqual(
+            transition.effects.committedTexts,
+            [nailed.displayText],
+            "the nailed prefix belongs to the document once, not twice",
+        )
+    }
+
     func testCommitPreeditThenInsertExternal_commitsCompositionAndTrailingTextTogether() throws {
-        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
+        _ = try compose("tai")
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
         let transition = try XCTUnwrap(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             " ",
@@ -118,7 +173,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     // MARK: - Continuous input
 
     func testFetchAtPos_afterEnteringContinuous_returnsCandidates() throws {
-        _ = RustEngineBridge.composingStart("taigi", settings: settings, generation: generation)
+        _ = try compose("taigi")
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
         let result = try XCTUnwrap(
@@ -147,7 +202,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     }
 
     func testFetchAtPos_literalRomanCandidateToggle_gatesTheIndexZeroLiteral() throws {
-        _ = RustEngineBridge.composingStart("taigi", settings: settings, generation: generation)
+        _ = try compose("taigi")
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
         // Off by default, matching iOS and Android: a dictionary candidate leads.

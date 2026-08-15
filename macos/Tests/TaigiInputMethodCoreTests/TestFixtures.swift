@@ -51,6 +51,44 @@ enum TestFixtures {
         )
     }
 
+    /// The shipped defaults with the two output flags overridden — the only
+    /// settings any case here varies, and the pair PR5 will put behind UI.
+    static func settings(swapped: Bool = false, bothScripts: Bool = false) -> EngineSettings {
+        EngineSettings(
+            inputMode: .tl,
+            isDoubleTapOOEnabled: true,
+            isDoubleTapNNEnabled: true,
+            isTranslateSwapped: swapped,
+            isOutputBothScripts: bothScripts,
+            isLiteralRomanCandidateEnabled: false,
+        )
+    }
+
+    /// A candidate carrying only the fields a case is asserting on. The engine
+    /// fills ten, and a suite about navigation or rendering should not have to
+    /// name the eight it does not care about.
+    static func candidate(
+        roman: String = "tai",
+        hanji: String? = nil,
+        displayText: String = "",
+        canonicalTl: String = "",
+        consumedSpanEnd: UInt32 = 0,
+        syllableCount: UInt32 = 1,
+    ) -> ContinuousCandidate {
+        ContinuousCandidate(
+            consumedSpanStart: 0,
+            consumedSpanEnd: consumedSpanEnd,
+            syllableCount: syllableCount,
+            displayText: displayText,
+            score: 0,
+            form: 0,
+            mode: .unspecified,
+            roman: roman,
+            hanji: hanji,
+            canonicalTl: canonicalTl,
+        )
+    }
+
     /// From `<repo>/macos/Tests/TaigiInputMethodCoreTests/TestFixtures.swift`.
     private static let repositoryRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent() // TaigiInputMethodCoreTests
@@ -90,6 +128,26 @@ extension [ComposingTransition.Effect] {
             if case let .commitTextReplacingPreedit(text) = effect { return text }
             return nil
         }
+    }
+
+    /// The compositions the engine asked to be shown, in order — the marked
+    /// region's contents over time.
+    var preeditTexts: [String] {
+        compactMap { effect in
+            if case let .updatePreedit(text) = effect { return text }
+            return nil
+        }
+    }
+}
+
+/// Serves fixed settings, so a case can drive the manager under an output mode
+/// the shipped defaults do not use. The `UserDefaults`-backed provider is PR5's;
+/// until it exists this is the only way to reach the other three renderings.
+final class StubEngineSettingsProvider: EngineSettingsProvider {
+    let current: EngineSettings
+
+    init(swapped: Bool = false, bothScripts: Bool = false) {
+        current = TestFixtures.settings(swapped: swapped, bothScripts: bothScripts)
     }
 }
 

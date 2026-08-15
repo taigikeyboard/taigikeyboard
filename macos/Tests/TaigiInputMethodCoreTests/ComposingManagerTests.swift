@@ -36,6 +36,11 @@ final class ComposingManagerTests: XCTestCase {
         }
 
         XCTAssertEqual(manager.rawInput, "tai5", "the raw buffer stays the engine's search key")
+        XCTAssertEqual(
+            manager.displayText,
+            "t\u{00E2}i",
+            "the mirror carries what the marked region renders, which is not what was typed",
+        )
         XCTAssertTrue(
             executor.effects.contains(.updatePreedit("t\u{00E2}i")),
             "tone 5 must reach the user as the circumflex they read, not as the digit they typed",
@@ -120,6 +125,10 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
+        XCTAssertTrue(
+            manager.displayText.isEmpty,
+            "a dropped composition leaves nothing to render, so the third mirror field clears too",
+        )
         XCTAssertEqual(
             executor.effects,
             [],

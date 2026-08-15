@@ -13,8 +13,26 @@ import Foundation
 /// - `CommitDerived`, `QueryState` and `ResetContinuous` have no caller here:
 ///   `Reset` already covers aborting a continuous composition
 ///   (`transition.rs:554`).
-/// - `SetSelectedCandidateIndex` and `CommitContinuous` arrive with the
-///   candidate window, which is a later slice.
+/// - `Start` is absent because `Append` enters `Phase::Composing` from Idle by
+///   itself (`transition.rs:54`), so a separate "begin" op would be a second way
+///   to do the same thing — and one that skips the per-character preprocessing.
+/// - `SelectSuggestion` is absent because it is not what it looks like. Under
+///   `Phase::Continuous` it REPLACES the pending tail and re-prepends the nailed
+///   prefix (`transition.rs:724`), so handing it the composition as rendered
+///   double-counts that prefix: `台北` nailed plus a marked `台北大學` commits
+///   `台北台北大學`. Selecting a candidate is `CommitContinuous` (span-local),
+///   and Return is `CommitRaw` (the whole marked region) — between them nothing
+///   is left for it to do.
+/// - `SetSelectedCandidateIndex` is deliberately absent for good. Nothing in
+///   the engine reads `state.selected_candidate_index` — it is stored, echoed
+///   back in snapshots and reset, and no branch in `dispatch.rs` consults it
+///   (`transition.rs:576-582`). The highlight therefore lives entirely in the
+///   platform's own candidate model, which is where candidate navigation
+///   belongs permanently (`.claude/rules/cross-platform-alignment.md` §5.1).
+///   NAMED CROSS-PLATFORM DIVERGENCE (§3, intentional): iOS does send it,
+///   because its SwiftUI candidate strip renders from the mirrored index
+///   (`ios/…/Views/CandidateSuggestionsRow.swift:80`). Same observable
+///   behaviour, one less round-trip per arrow key.
 ///
 /// Every op answers `nil` when the round-trip itself failed, which is a
 /// different thing from the engine answering that it is idle. A failed call
@@ -23,22 +41,6 @@ import Foundation
 /// from mirroring "not composing" over a composition that is still running.
 extension RustEngineBridge {
     // MARK: - Composing
-
-    /// Begins a fresh composition from `text`.
-    static func composingStart(
-        _ text: String,
-        settings: EngineSettings,
-        generation: UInt64
-    ) -> ComposingTransition? {
-        var start = Taigi_Engine_Start()
-        start.text = text
-        return dispatchComposing(
-            .start(start),
-            op: "composingStart",
-            generation: generation,
-            config: appConfig(settings)
-        )
-    }
 
     /// Appends one typed character to the raw buffer.
     static func composingAppend(
@@ -69,10 +71,16 @@ extension RustEngineBridge {
         )
     }
 
-    /// Commits the whole composition as the engine renders it. Under the
-    /// continuous phase that is `Σ nailed.display_text + derived(pending)`, not
-    /// the literal keystrokes (`transition.rs:443`) — use
-    /// `composingSelectSuggestion` when the literal is what the user asked for.
+    /// Commits the whole composition exactly as the marked region renders it —
+    /// `Σ nailed.display_text + derived(pending)` under the continuous phase
+    /// (`transition.rs:443`), which is what the snapshot reports as
+    /// `display_text` (`transition.rs:585`). This is the Return key.
+    ///
+    /// Not `composingSelectSuggestion`, despite what an earlier note in this
+    /// file claimed: under `Phase::Continuous` that op prepends the nailed
+    /// prefix to whatever text it is handed (`transition.rs:724`), so passing
+    /// it the marked-region string double-counts — a composition reading
+    /// `台北大學` with `台北` already nailed would commit `台北台北大學`.
     static func composingCommitRaw(
         settings: EngineSettings,
         generation: UInt64
@@ -80,22 +88,6 @@ extension RustEngineBridge {
         dispatchComposing(
             .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
-            generation: generation,
-            config: continuousAppConfig(settings)
-        )
-    }
-
-    /// Commits `text` verbatim, keeping any nailed prefix in front of it.
-    static func composingSelectSuggestion(
-        _ text: String,
-        settings: EngineSettings,
-        generation: UInt64
-    ) -> ComposingTransition? {
-        var select = Taigi_Engine_SelectSuggestion()
-        select.text = text
-        return dispatchComposing(
-            .selectSuggestion(select),
-            op: "composingSelectSuggestion",
             generation: generation,
             config: continuousAppConfig(settings)
         )
@@ -180,6 +172,48 @@ extension RustEngineBridge {
         return ContinuousFetchResult(
             transition: decodeTransition(response),
             candidates: candidates
+        )
+    }
+
+    /// Commits one candidate returned by `composingFetchAtPos`.
+    ///
+    /// Every argument except `documentText` must be round-tripped verbatim from
+    /// the `ContinuousCandidate` the user picked — in particular `consumedBytes`
+    /// is the candidate's `consumedSpanEnd`, an absolute offset into the pending
+    /// raw buffer, NOT the span's length (`engine/protos/proto/composing.proto:228`).
+    /// The engine collapses to a noop on a mismatched or unaligned offset
+    /// (`transition.rs:812-817`), so there is nothing for the caller to validate.
+    ///
+    /// `documentText` is the platform's rendering of the candidate for the
+    /// document; `canonicalText` and `associationTl` are the identity keys the
+    /// engine learns from, which is why they are separate arguments rather than
+    /// derived from the rendering (Core Principle #7 keys a word on the
+    /// `(漢字, canonical TL)` pair).
+    ///
+    /// Consuming the whole pending buffer makes this a final commit — the
+    /// engine writes the composition to the document and exits to Idle. Anything
+    /// less nails the segment and stays continuous, writing nothing
+    /// (`transition.rs:842-889`, Model B).
+    static func composingCommitContinuous(
+        documentText: String,
+        canonicalText: String,
+        associationTl: String,
+        consumedBytes: UInt32,
+        syllableCount: UInt32,
+        settings: EngineSettings,
+        generation: UInt64
+    ) -> ComposingTransition? {
+        var commit = Taigi_Engine_CommitContinuous()
+        commit.displayText = documentText
+        commit.canonicalText = canonicalText
+        commit.associationTl = associationTl
+        commit.consumedBytes = consumedBytes
+        commit.syllableCount = syllableCount
+        return dispatchComposing(
+            .commitContinuous(commit),
+            op: "composingCommitContinuous",
+            generation: generation,
+            config: continuousAppConfig(settings)
         )
     }
 
