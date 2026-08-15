@@ -61,6 +61,8 @@ When adding a new `.proto` file under `engine/protos/proto/`, update ALL THREE:
 
 `engine/scripts/gen-macos-protos.sh` globs `proto/*.proto` and runs as part of `make build`, so the macOS tree needs neither an edit nor a separate command — only the commit of its regenerated output.
 
+**`protoc` upgrades are a coupled change.** The committed Java gencode carries the compiler version in its header, and the Android runtime pin must match it (`libprotoc 35.1` ↔ `com.google.protobuf:protobuf-javalite:4.35.1` in `android/app/build.gradle.kts`). A local `protoc` upgrade therefore silently rewrites all ~269 `.java` files on the next `make build`, and that output will not compile against an older pinned runtime. Bump the runtime + commit the full regeneration in the same PR, and re-run the Android debug / unit-test / release-R8 gates. The compiler itself is NOT pinned by the repo (it comes from `brew install protobuf`) — check `protoc --version` against a generated file's `Protobuf Java Version:` header before assuming a dirty `android/` tree is someone else's change.
+
 Without this, bridge code references generated types that don't exist; the build silently breaks until next ad-hoc regen. Incident: PR #205 case-transform slice — Codex post-impl caught it as a BLOCK; the fix added `case.proto` and re-emitted ~140 `.java` files (most no-op trailing whitespace; semantic diff was envelope + new case files only).
 
 ## 5. Path G — delete platform mirrors when slice migrates

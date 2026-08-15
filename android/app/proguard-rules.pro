@@ -116,9 +116,9 @@
 }
 
 # ---- Engine protobuf wire-format generated classes ----
-# Generated builders + parsers depend on field-name reflection
-# (Message.Builder, GeneratedMessageV3 internals). Strip-safe stripping
-# is impractical; keep all proto-generated classes wholesale.
+# Lite gencode is not reflection-driven, but R8 cannot see through the
+# generated schema/parser indirection well enough to prove which members are
+# live; keep all proto-generated classes wholesale.
 -keep class com.siansiansu.taigikeyboard.engine.proto.** { *; }
 -keepclassmembers class com.siansiansu.taigikeyboard.engine.proto.** { *; }
 

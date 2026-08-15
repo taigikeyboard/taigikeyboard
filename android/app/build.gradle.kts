@@ -228,8 +228,13 @@ dependencies {
     // round-trip tests need the actual implementation on the test classpath.
     testImplementation("org.json:json:20240303")
 
-    // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge
-    implementation("com.google.protobuf:protobuf-javalite:3.25.5")
+    // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge.
+    // Pinned to the Java artifact that pairs with the `protoc` emitting the
+    // committed gencode (`libprotoc 35.1` ↔ Java `4.35.1`). Lite gencode does not
+    // self-validate the runtime version, so a mismatch surfaces as a compile error
+    // on symbols the older runtime lacks — keep regeneration and this bump in the
+    // same commit.
+    implementation("com.google.protobuf:protobuf-javalite:4.35.1")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
