@@ -70,14 +70,17 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   copies of generated `RustTaigi.swift` / `SwiftBridgeCore.swift`. iOS artifacts
   untouched. arm64-only; x86_64 is a later user-gated additive step.
   `make build` runs the iOS and macOS xcframework scripts together, so the two
-  outputs cannot drift behind a `swift-ffi` change. The macOS script still
-  repeats ~50 lines of swift-bridge post-processing (OUT_DIR discovery,
-  modulemap, `import` injection, `@retroactive` patch) that
-  `build-xcframework.sh` also has — written standalone while the concurrent
-  session owned the iOS pipeline. **Open follow-up (now unblocked)**: extract
-  `engine/scripts/lib/`, and replace the mtime-based swift-bridge OUT_DIR
-  heuristic with deterministic selection (Codex pre-impl 2026-08-15 Q1/Q7).
-  Both outputs are byte-identical today, which makes that refactor verifiable.
+  outputs cannot drift behind a `swift-ffi` change. The shared swift-bridge
+  post-processing (OUT_DIR discovery, modulemap, `import` injection,
+  `@retroactive` patch) lives in `engine/scripts/lib/swift-bridge-artifacts.sh`
+  — extracted in #518 `9bb849cb`, verified by a 22-artifact byte-identity
+  manifest. **Remaining follow-up**: the OUT_DIR discovery still picks the
+  newest `swift-ffi-*/out` by mtime; replacing it with deterministic selection
+  from `cargo build --message-format=json` is now a one-place change (Codex
+  pre-impl 2026-08-15 Q7). Also noted there: `xcodebuild -create-xcframework`
+  orders `AvailableLibraries` nondeterministically, so the committed iOS
+  `Info.plist` can churn between otherwise identical builds — compare it
+  semantically, do not treat a slice-order flip as a real diff.
 - **D2 Project format** — SwiftPM executable + `macos/scripts/bundle-app.sh`
   script-assembled `.app` (khiin-rs osx pattern); NOT an Xcode project (pbxproj
   is user-only, hook-enforced). Info.plist committed with concrete values
