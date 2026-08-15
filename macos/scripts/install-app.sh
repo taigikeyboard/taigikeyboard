@@ -64,7 +64,15 @@ install_app() {
     # The staging copy carries the same bundle ID, so LaunchServices could
     # resolve to it and start the wrong process; AppDelegate's installed-copy
     # guard is the backstop, this keeps it from having to fire.
-    "$LSREGISTER" -u "$BUILT_APP"
+    #
+    # Best effort on purpose: when the staging copy was never registered — the
+    # normal case, since nothing launches it — `lsregister -u` exits 1 with
+    # `-10814` (kLSApplicationNotFoundErr). That is the desired end state, not a
+    # failure, and under `set -e` it would abort an install that already
+    # succeeded. The registration above stays strict; it is the load-bearing one.
+    # stderr goes with it: the exit status is already ignored, so the only thing
+    # `failed to scan …: -10814` adds is a scary line on every successful install.
+    "$LSREGISTER" -u "$BUILT_APP" 2>/dev/null || true
 
     echo "✓ Installed $INSTALLED_APP"
     if [[ "$is_first_install" == true ]]; then
