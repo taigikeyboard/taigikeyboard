@@ -89,6 +89,19 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   (mandatory `.inputmethod.` third segment). Mach-register temporary exception
   entitlement required if sandboxed. Ad-hoc codesign for local dev; Developer-ID /
   notarization user-gated (azooKey-Desktop `pkgbuild.sh` is the pipeline reference).
+  **Refined at PR2 #520**: the package is a library (`TaigiInputMethodCore`) plus
+  a thin executable, not a single executable target, because `swift test` needs
+  an importable module and PR3–PR9 are unit-test-heavy. Generated `.pb.swift`
+  therefore live under `Sources/TaigiInputMethodCore/Engine/Generated/`. The
+  swift-bridge wrappers compile as their own `RustTaigiSwift` target pinned to
+  Swift 5 language mode (generated sources cannot be annotated for Swift 6
+  strict concurrency); everything above it is Swift 6 mode.
+  `macos/scripts/lib/bundle-identity.sh` is the only reader of Info.plist and
+  the only place the assembled bundle's path is named. Info.plist omits
+  `ComponentInputModeDict` (TL/POJ are an app setting per D5) and sets
+  `LSUIElement` — not khiin's `LSBackgroundOnly`, because D5's settings window
+  must be able to take key focus — plus `TISIntendedLanguage = mul`, matching
+  the neutral OS language tag iOS adopted in #494.
 - **D3 Controller + composing state** — thin per-session `IMKInputController`;
   process-wide `ComposingSessionCoordinator` owns the single ComposingManager +
   monotonic generation allocator (engine composing state is a process singleton,
@@ -98,7 +111,13 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `commitComposition` without `super`; `recognizedEvents = [.keyDown, .flagsChanged]`;
   logger sink installed once at bootstrap. **Chromium deadlock rule**: never
   query the client synchronously inside `activateServer` (azooKey-Desktop
-  regression-test model).
+  regression-test model). **Pinned at PR2 #520** by
+  `macos/Tests/.../ActivateServerClientQueryTests.swift`, which drives the real
+  `activateServer` with an `IMKTextInput` double that records every read;
+  mutation-checked (adding a `selectedRange()` call fails it).
+  Note two distinct log scales cross the FFI seam — `set_log_level`'s filter
+  (`0=Off … 5=Trace`) and the sink callback's record byte (`0=Error … 4=Trace`).
+  A shared "log level" constant is a bug; `RustEngineBridge` names them apart.
 - **D4 Candidate window** — borderless non-activating NSPanel + NSHostingView
   (SwiftUI), horizontal single-row; window level = client window level + 1;
   headless navigation model unit-tested, panel is renderer only; positioning =
@@ -124,7 +143,7 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   (read-only) at bundle time with fail-fast existence/non-empty validation;
   `deploy.sh` macos destination = later coordination.
 - **D9 Proto codegen** — `gen-macos-protos` writes to an independent output dir
-  `macos/Sources/TaigiInputMethod/Engine/Generated/` (committed). **Revised
+  `macos/Sources/TaigiInputMethodCore/Engine/Generated/` (committed). **Revised
   2026-08-15 (USER: 「我覺得可以併入到 make build,只是現階段不 release」)**: both
   macOS steps now run inside root `make build`, so no committed artefact can go
   stale behind an engine change and no separate drift rule is needed.
@@ -134,7 +153,17 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   codesign --verify, arch check) → install (delete-before-kill, kill by
   bundle-ID/PID, `lsregister -f -R -trusted`, re-login hint only on
   input-mode-set change). Installed-copy guard in AppDelegate; IMKServer held
-  in a strong property.
+  in a strong property. **Refined at PR2 #520**: the Makefile targets are
+  one-liners over `macos/scripts/{bundle-app,install-app}.sh` — multi-step shell
+  does not belong in a recipe. Delete-before-kill became move-aside-before-kill
+  so a failed copy can roll back. Processes are stopped by exact executable path
+  read from `ps -axo pid=,comm=`; `pkill -f <path>` is an unanchored substring
+  match that can hit the shell running the recipe. Bundle validation also checks
+  that the Objective-C class names in Info.plist and the swift-bridge FFI entry
+  point are actually present in the linked executable, and that nothing pulled
+  in an `@rpath` dependency the bundle cannot satisfy. Beware `nm … | grep -q`
+  under `set -o pipefail`: `grep -q` closes the pipe, `nm` takes SIGPIPE, and the
+  check fails spuriously — read the symbol table into a variable first.
 
 ## Phase / PR table
 
@@ -142,7 +171,7 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 |---|---|---|---|
 | PR0 | Admin | this roadmap + memory topic | this commit |
 | PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | **Merged** #514 `6329f152` |
-| PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | Pending |
+| PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | PR open #520 |
 | PR3 | Composing core | bridge port (from iOS shape), coordinator + ComposingManager port, effect executor, lexiconInstall, attributed preedit, minimal settings provider | Pending |
 | PR4 | Candidate model + window | headless nav model + tests; NSPanel + SwiftUI bar; caret anchor; selection keys; stale-owner guard | Pending |
 | PR5 | Settings + menubar | WindowManager, SwiftUI form, menu items, Ctrl+Shift+, chord, live-read provider, TL↔POJ toggle, OSLog bootstrap | Pending |

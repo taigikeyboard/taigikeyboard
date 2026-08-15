@@ -3,7 +3,11 @@
 # Excludes
 #   ios/Sources/TaigiKeyboard/Engine/Generated  protobuf-generated *.pb.swift
 #   ios/RustEngine                              swift-bridge FFI shim + xcframework
+#   macos/… same two shapes for the macOS input method
 --exclude ios/Sources/TaigiKeyboard/Engine/Generated
 --exclude ios/RustEngine
+--exclude macos/Sources/TaigiInputMethodCore/Engine/Generated
+--exclude macos/RustEngine
+--exclude macos/.build
 --exclude ios/build
 --exclude references

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    Bundle metadata for the macOS input method. Values are CONCRETE: there is no
+    Xcode project to expand `$(…)` build settings, so a placeholder would ship
+    verbatim into the installed bundle.
+
+    `InputMethodServerControllerClass` / `NSPrincipalClass` are resolved by
+    InputMethodKit through NSClassFromString. Both types carry an explicit
+    `@objc(…)` runtime name so these bare strings stay valid no matter which
+    Swift module they end up in.
+
+    `ComponentInputModeDict` is deliberately absent: TL and POJ are an in-app
+    setting, not OS-level input modes (docs/architecture/macos-roadmap.md D5).
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>TaigiInputMethod</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.siansiansu.inputmethod.TaigiKeyboard</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>TaigiKeyboard</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>InputMethodConnectionName</key>
+	<string>com.siansiansu.inputmethod.TaigiKeyboard_Connection</string>
+	<key>InputMethodServerControllerClass</key>
+	<string>TaigiInputController</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>TaigiInputMethodApplication</string>
+	<key>TISIconIsTemplate</key>
+	<true/>
+	<key>TISInputSourceID</key>
+	<string>com.siansiansu.inputmethod.TaigiKeyboard</string>
+	<key>TISIntendedLanguage</key>
+	<string>mul</string>
+	<key>tsInputMethodCharacterRepertoireKey</key>
+	<array>
+		<string>Latn</string>
+		<string>Hant</string>
+	</array>
+</dict>
+</plist>

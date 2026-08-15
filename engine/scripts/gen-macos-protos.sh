@@ -2,7 +2,7 @@
 # Generate the macOS-side protobuf bindings for the IME.
 #
 # Output:
-#   macos/Sources/TaigiInputMethod/Engine/Generated/*.pb.swift  (SwiftProtobuf)
+#   macos/Sources/TaigiInputMethodCore/Engine/Generated/*.pb.swift  (SwiftProtobuf)
 #
 # Separate from `gen-platform-protos.sh` because the macOS IME owns its own
 # generated-proto directory and does not need that script's Java block +
@@ -18,7 +18,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROTO_DIR="$REPO_ROOT/engine/protos/proto"
-SWIFT_OUT="$REPO_ROOT/macos/Sources/TaigiInputMethod/Engine/Generated"
+SWIFT_OUT="$REPO_ROOT/macos/Sources/TaigiInputMethodCore/Engine/Generated"
 
 if ! command -v protoc >/dev/null 2>&1; then
     echo "error: protoc not found. Install via: brew install protobuf" >&2

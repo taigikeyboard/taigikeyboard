@@ -92,6 +92,12 @@ Cargo.lock.bak
 # binaryTarget path (no ignore rule matches it, so no re-include needed).
 !android/app/src/main/jniLibs/**/*.so
 
+# === SwiftPM build cache (macOS input method) ===
+# `.build/` holds compiled products plus the assembled `.app` from
+# macos/scripts/bundle-app.sh; `Package.resolved` is committed.
+macos/.build/
+macos/.swiftpm/
+
 # === Xcode build cache ===
 # DerivedData lives outside the repo by default, but xcodebuild with
 # `-derivedDataPath build/` (or a script that does) drops XCBuildData here.
