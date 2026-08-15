@@ -2,6 +2,7 @@
 
 import Foundation
 import RustTaigiSwift
+import SwiftProtobuf
 
 /// Thin wrapper around the single bytes-in / bytes-out FFI function the Rust
 /// shared core exports. Named after the iOS `RustEngineBridge` because it plays
@@ -70,5 +71,106 @@ enum RustEngineBridge {
         requestBytes.withUnsafeBufferPointer { buffer in
             process_request_bytes(buffer).toArray()
         }
+    }
+
+    // MARK: - Envelope round-trip
+
+    private static let requestIDLock = NSLock()
+    private static nonisolated(unsafe) var lastRequestID: UInt32 = 0
+
+    private static func nextRequestID() -> UInt32 {
+        requestIDLock.lock()
+        defer { requestIDLock.unlock() }
+        lastRequestID &+= 1
+        return lastRequestID
+    }
+
+    /// Encodes one request, sends it, and returns the response payload when the
+    /// engine reported success. `nil` means the round-trip failed rather than
+    /// "the engine had nothing to say" — callers must keep the two apart,
+    /// because a failed round-trip leaves the engine's state untouched and any
+    /// snapshot synthesized here would contradict it.
+    ///
+    /// Shared by every slice (composing, lexicon, …): the envelope, the id
+    /// sequence, the error checks, and the failure log are identical for all of
+    /// them, and only the payload case differs.
+    static func roundtrip(
+        payload: Taigi_Engine_Request.OneOf_Payload,
+        op: String,
+        generation: UInt64 = 0,
+        config: Taigi_Engine_AppConfig? = nil
+    ) -> Taigi_Engine_Response.OneOf_Payload? {
+        var request = Taigi_Engine_Request()
+        request.id = nextRequestID()
+        request.generation = generation
+        request.payload = payload
+        if let config { request.configSnapshot = config }
+
+        let requestBytes: [UInt8]
+        do {
+            requestBytes = try Array(request.serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return nil
+        }
+
+        logger.debug("[FFI->] op=\(op) id=\(request.id) generation=\(generation)")
+        guard let response = try? Taigi_Engine_Response(
+            serializedBytes: Data(processRequest(requestBytes))
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            return nil
+        }
+        // The seam is synchronous and single-threaded per call, so a mismatched
+        // id means the response belongs to some other request — reading its
+        // payload would apply another operation's state to this one.
+        guard response.id == request.id else {
+            recordFailure(op: op, message: "response id \(response.id) does not match request \(request.id)")
+            return nil
+        }
+        guard response.error == .ok else {
+            recordFailure(op: op, message: "engine returned \(response.error)")
+            return nil
+        }
+        guard let responsePayload = response.payload else {
+            recordFailure(op: op, message: "response carried no payload")
+            return nil
+        }
+        return responsePayload
+    }
+
+    private static let logger = DebugLogger(category: "RustEngineBridge")
+
+    /// One place for every bridge failure, so a degraded engine is visible in
+    /// `make log` instead of surfacing only as candidates that never appear.
+    /// Deliberately no `assertionFailure`: the malformed-input tests drive these
+    /// paths on purpose, and a debug-only trap would fail the suite that proves
+    /// the failure handling works.
+    static func recordFailure(op: String, message: String) {
+        logger.error("[\(op)] \(message)")
+    }
+
+    // MARK: - AppConfig
+
+    /// The engine holds no settings of its own; every request carries the
+    /// snapshot it should be rendered under.
+    static func appConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
+        var config = Taigi_Engine_AppConfig()
+        config.inputMode = settings.inputMode.rawValue
+        config.ooDoubletapEnabled = settings.isDoubleTapOOEnabled
+        config.nnDoubletapEnabled = settings.isDoubleTapNNEnabled
+        return config
+    }
+
+    /// `appConfig` plus the two word-boundary-spacing flags the engine consults
+    /// while rendering a continuous composition's nailed prefix
+    /// (`docs/engine/continuous-input-ranking.md` §10.2). Applied only at the
+    /// entry points that render that prefix, matching iOS, so a mis-set flag
+    /// cannot leak spacing changes into the ordinary composing path.
+    static func continuousAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
+        var config = appConfig(settings)
+        config.isTranslateSwapped = settings.isTranslateSwapped
+        config.outputBothScripts = settings.isOutputBothScripts
+        return config
     }
 }

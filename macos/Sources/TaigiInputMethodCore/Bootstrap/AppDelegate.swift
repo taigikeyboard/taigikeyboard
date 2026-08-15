@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         RustEngineBridge.installLoggerSink()
+        installLexiconEngine()
 
         server = IMKServer(
             name: Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String,
@@ -31,6 +32,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         if server == nil {
             logger.error("IMKServer creation failed — this process receives no key events")
+        }
+    }
+
+    /// Loads the dictionary data the bundle ships with. Failures are logged and
+    /// left alone: an uninstalled engine returns no candidates, which is a
+    /// keyboard that types romanization but suggests nothing — far better than
+    /// refusing to launch and leaving the user with no input method at all.
+    private func installLexiconEngine() {
+        guard let resourceURL = Bundle.main.resourceURL else {
+            logger.error("bundle has no resource directory — lexicon not installed")
+            return
+        }
+        do {
+            let artifacts = try DictionaryArtifacts(baseURL: resourceURL)
+            // The bundle version doubles as the dictionary stamp: the data is
+            // rebuilt and re-bundled by the same release that bumps it.
+            let version = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String)
+                .flatMap(UInt32.init) ?? 1
+            guard let stats = RustEngineBridge.lexiconInstall(
+                artifacts: artifacts,
+                dictionaryVersion: version
+            ) else {
+                logger.error("lexicon install returned no stats — engine not installed")
+                return
+            }
+            logger.info(
+                "lexicon installed: records=\(stats.dictionaryRecordCount) prefixEntries=\(stats.prefixIndexEntryCount) version=\(version)",
+            )
+        } catch {
+            logger.error("lexicon not installed: \(error)")
         }
     }
 

@@ -39,6 +39,22 @@ cp "$BUILT_EXECUTABLE" "$CONTENTS_DIR/MacOS/$EXECUTABLE_NAME"
 cp "$SOURCE_PLIST" "$CONTENTS_DIR/Info.plist"
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
+echo "==> Copying dictionary data"
+# Read from the iOS resource directory rather than keeping a third committed
+# copy of ~24MB of generated data. `make dict` regenerates these in place, so
+# both platforms bundle the same build of the dictionary by construction.
+DICTIONARY_SOURCE_DIR="$(cd "$PACKAGE_DIR/.." && pwd)/ios/Resources/Dictionaries"
+for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
+    source_file="$DICTIONARY_SOURCE_DIR/$artifact"
+    # Fail here rather than ship a bundle whose input method launches, receives
+    # keys, and produces no candidates at all.
+    if [[ ! -s "$source_file" ]]; then
+        echo "error: missing or empty dictionary artifact $source_file (run 'make dict')" >&2
+        exit 1
+    fi
+    cp "$source_file" "$CONTENTS_DIR/Resources/$artifact"
+done
+
 echo "==> Linting Info.plist"
 plutil -lint "$CONTENTS_DIR/Info.plist"
 
