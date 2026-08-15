@@ -74,10 +74,11 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   post-processing (OUT_DIR discovery, modulemap, `import` injection,
   `@retroactive` patch) lives in `engine/scripts/lib/swift-bridge-artifacts.sh`
   — extracted in #518 `9bb849cb`, verified by a 22-artifact byte-identity
-  manifest. **Remaining follow-up**: the OUT_DIR discovery still picks the
-  newest `swift-ffi-*/out` by mtime; replacing it with deterministic selection
-  from `cargo build --message-format=json` is now a one-place change (Codex
-  pre-impl 2026-08-15 Q7). Also noted there: `xcodebuild -create-xcframework`
+  manifest. OUT_DIR discovery asks cargo (`--message-format=json`,
+  `build-script-executed`) replaying the caller's exact argv, fail-closed on
+  anything but one unique match (#519 `4809b5c3`); the previous newest-by-mtime
+  heuristic was measurably selecting the `panic-injector` fingerprint for a
+  cached release build. Also noted: `xcodebuild -create-xcframework`
   orders `AvailableLibraries` nondeterministically, so the committed iOS
   `Info.plist` can churn between otherwise identical builds — compare it
   semantically, do not treat a slice-order flip as a real diff.
