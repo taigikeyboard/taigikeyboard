@@ -108,7 +108,10 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `engine/composing/src/handle.rs:21-56`; per-controller counters would collide
   across clients — Codex must-fix). Effect vocabulary = existing cross-platform
   proto effects; attributed marked text (underline + markedClauseSegment);
-  `commitComposition` without `super`; `recognizedEvents = [.keyDown, .flagsChanged]`;
+  `commitComposition` without `super`; **`recognizedEvents = .keyDown` ONLY**
+  (revised at PR3b: IMK sends `commitComposition:` on a click outside the marked
+  region only for the exact default keydown mask, `IMKInputController.h:154-157`,
+  so a later chord slice must find another route rather than widen this);
   logger sink installed once at bootstrap. **Chromium deadlock rule**: never
   query the client synchronously inside `activateServer` (azooKey-Desktop
   regression-test model). **Pinned at PR2 #520** by

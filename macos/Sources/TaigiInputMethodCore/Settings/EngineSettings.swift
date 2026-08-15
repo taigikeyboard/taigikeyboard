@@ -1,4 +1,5 @@
-// The settings one composing operation reads, plus the live-read provider seam.
+// The settings one composing operation reads. The provider that serves them
+// lives in EngineSettingsProvider.swift.
 
 import Foundation
 
@@ -48,11 +49,6 @@ struct EngineSettings: Equatable, Sendable {
     /// What a fresh install types with. Every value matches the iOS and Android
     /// default for the same setting, so someone using two of the three platforms
     /// gets the same composition and the same candidate order out of the box.
-    ///
-    /// The only source of settings until the composing session lands and gives
-    /// a provider something to serve; the `UserDefaults` backing arrives with
-    /// the settings window, since defining the keys before there is a UI to
-    /// shape them would pre-commit that schema.
     static let defaults = EngineSettings(
         inputMode: .tl,
         isDoubleTapOOEnabled: true,

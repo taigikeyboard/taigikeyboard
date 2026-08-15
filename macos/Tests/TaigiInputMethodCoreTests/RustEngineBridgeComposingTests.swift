@@ -9,21 +9,20 @@ import XCTest
 final class RustEngineBridgeComposingTests: XCTestCase {
     private let settings = EngineSettings.defaults
 
-    /// Allocated per case. Starts high enough that it cannot collide with the
-    /// generations any other suite uses.
-    private static let generationCounter = GenerationCounter(startingAt: 1000)
     private var generation: UInt64 = 0
 
     override func setUp() {
         super.setUp()
-        generation = Self.generationCounter.next()
+        generation = TestFixtures.generationCounter.next()
         InstalledLexicon.installOnce()
     }
 
     // MARK: - Composing
 
-    func testAppend_rendersPreeditAndAsksHostToUpdateIt() {
-        let transition = RustEngineBridge.composingStart("t", settings: settings, generation: generation)
+    func testAppend_rendersPreeditAndAsksHostToUpdateIt() throws {
+        let transition = try XCTUnwrap(
+            RustEngineBridge.composingStart("t", settings: settings, generation: generation),
+        )
 
         XCTAssertTrue(transition.isComposing, "starting a composition must report composing")
         XCTAssertEqual(transition.rawInput, "t")
@@ -34,9 +33,11 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
-    func testAppend_numericTone_rendersDiacriticInDisplayButKeepsRawDigits() {
+    func testAppend_numericTone_rendersDiacriticInDisplayButKeepsRawDigits() throws {
         _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
-        let transition = RustEngineBridge.composingAppend("5", settings: settings, generation: generation)
+        let transition = try XCTUnwrap(
+            RustEngineBridge.composingAppend("5", settings: settings, generation: generation),
+        )
 
         XCTAssertEqual(transition.rawInput, "tai5", "raw input stays the typed search key")
         XCTAssertEqual(
@@ -46,13 +47,15 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
-    func testDeleteBackwardToEmpty_underBareComposing_emitsTheDocumentDeleteMacOSIgnores() {
+    func testDeleteBackwardToEmpty_underBareComposing_emitsTheDocumentDeleteMacOSIgnores() throws {
         // Pinning the decode, not the behaviour: this effect only reaches macOS
         // when a composition was never promoted to the continuous phase, and the
         // executor deliberately does not act on it. Decoding it wrongly would
         // hide that the case exists at all.
         _ = RustEngineBridge.composingStart("a", settings: settings, generation: generation)
-        let transition = RustEngineBridge.composingDeleteBackward(settings: settings, generation: generation)
+        let transition = try XCTUnwrap(
+            RustEngineBridge.composingDeleteBackward(settings: settings, generation: generation),
+        )
 
         XCTAssertFalse(transition.isComposing)
         XCTAssertEqual(
@@ -62,32 +65,29 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
-    func testReset_endsCompositionWithoutWritingToTheDocument() {
+    func testReset_endsCompositionWithoutWritingToTheDocument() throws {
         _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
-        let transition = RustEngineBridge.composingReset(generation: generation)
+        let transition = try XCTUnwrap(RustEngineBridge.composingReset(generation: generation))
 
         XCTAssertFalse(transition.isComposing)
         XCTAssertTrue(
             transition.effects.contains(.clearPreeditWithoutCommit),
             "an abort must clear the preedit",
         )
-        XCTAssertFalse(
-            transition.effects.contains { effect in
-                if case .commitTextReplacingPreedit = effect { return true }
-                return false
-            },
+        XCTAssertTrue(
+            transition.effects.committedTexts.isEmpty,
             "an abort must not commit anything",
         )
     }
 
-    func testSelectSuggestion_commitsTheTextVerbatim() {
+    func testSelectSuggestion_commitsTheTextVerbatim() throws {
         _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
-        let transition = RustEngineBridge.composingSelectSuggestion(
+        let transition = try XCTUnwrap(RustEngineBridge.composingSelectSuggestion(
             "tai",
             settings: settings,
             generation: generation,
-        )
+        ))
 
         XCTAssertTrue(
             transition.effects.contains(.commitTextReplacingPreedit("tai")),
@@ -96,19 +96,16 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertFalse(transition.isComposing)
     }
 
-    func testCommitPreeditThenInsertExternal_commitsCompositionAndTrailingTextTogether() {
+    func testCommitPreeditThenInsertExternal_commitsCompositionAndTrailingTextTogether() throws {
         _ = RustEngineBridge.composingStart("tai", settings: settings, generation: generation)
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
-        let transition = RustEngineBridge.composingCommitPreeditThenInsertExternal(
+        let transition = try XCTUnwrap(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             " ",
             settings: settings,
             generation: generation,
-        )
+        ))
 
-        let committed = transition.effects.compactMap { effect -> String? in
-            if case let .commitTextReplacingPreedit(text) = effect { return text }
-            return nil
-        }
+        let committed = transition.effects.committedTexts
         XCTAssertEqual(
             committed.count,
             1,
@@ -124,9 +121,9 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         _ = RustEngineBridge.composingStart("taigi", settings: settings, generation: generation)
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
-        let result = RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation)
-
-        XCTAssertFalse(result.isBridgeFailure)
+        let result = try XCTUnwrap(
+            RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),
+        )
         let candidates = try XCTUnwrap(result.candidates)
         let first = try XCTUnwrap(
             candidates.first,
@@ -140,13 +137,12 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
-    func testFetchAtPos_whenNotComposing_reportsNoContinuousPhaseRatherThanFailure() {
-        let result = RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation)
-
-        XCTAssertFalse(
-            result.isBridgeFailure,
+    func testFetchAtPos_whenNotComposing_reportsNoContinuousPhaseRatherThanFailure() throws {
+        let result = try XCTUnwrap(
+            RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),
             "an idle engine answered the query; that is not a bridge failure",
         )
+
         XCTAssertNil(result.candidates, "no continuous phase must read as nil, not as an empty list")
     }
 
@@ -155,20 +151,20 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
         // Off by default, matching iOS and Android: a dictionary candidate leads.
-        let hidden = RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation)
+        let hidden = try XCTUnwrap(
+            RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),
+        )
         let hiddenFirst = try XCTUnwrap(XCTUnwrap(hidden.candidates).first)
-        XCTAssertFalse(hidden.isBridgeFailure)
         XCTAssertNotEqual(
             hiddenFirst.displayText,
             "taigi",
             "with the setting off, the typed literal must not be forced to the front",
         )
 
-        let shown = RustEngineBridge.composingFetchAtPos(
+        let shown = try XCTUnwrap(RustEngineBridge.composingFetchAtPos(
             settings: settings.withLiteralRomanCandidate(enabled: true),
             generation: generation,
-        )
-        XCTAssertFalse(shown.isBridgeFailure)
+        ))
         XCTAssertEqual(
             shown.candidates?.first?.displayText,
             "taigi",

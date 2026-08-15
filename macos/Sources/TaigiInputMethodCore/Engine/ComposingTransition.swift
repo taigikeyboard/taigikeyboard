@@ -40,16 +40,6 @@ struct ComposingTransition: Equatable, Sendable {
     let effects: [Effect]
     let selectedCandidateIndex: Int
     let isComposing: Bool
-
-    /// Stand-in for "the round-trip never reached the engine". Callers must not
-    /// apply it as if it were a real snapshot — see `ContinuousFetchResult`.
-    static let noop = ComposingTransition(
-        rawInput: "",
-        displayText: "",
-        effects: [],
-        selectedCandidateIndex: -1,
-        isComposing: false
-    )
 }
 
 /// MOE-aligned candidate-type discriminator, derived in Rust
@@ -102,24 +92,17 @@ struct ContinuousCandidate: Equatable, Sendable {
 
 /// Result of the read-only candidate query.
 ///
-/// `isBridgeFailure` separates two outcomes that a plain empty result would
-/// merge, and merging them corrupts state: when the engine answers and reports
-/// it is idle, `transition` is a true snapshot the caller should apply; when the
-/// round-trip itself fails, the engine's state is whatever it already was, and
-/// applying the synthesized `.noop` would tell the UI a composition ended that
-/// is in fact still running.
+/// The query returns this optionally, and the two "nothing here" answers are
+/// deliberately different types of nothing: a `nil` result means the round-trip
+/// never reached the engine, whose state is therefore whatever it already was,
+/// while `candidates == nil` means the engine answered and reported that it is
+/// not in the continuous phase. Merging them corrupts state — applying a
+/// synthesized snapshot for a call that never happened would tell the UI a
+/// composition ended that is in fact still running.
 ///
-/// `candidates` is meaningful only while `isBridgeFailure` is `false`:
-/// `nil` means the engine was not in the continuous phase, `[]` means it was but
-/// found nothing.
+/// `candidates == []` means the engine was in the continuous phase and found
+/// nothing.
 struct ContinuousFetchResult: Equatable, Sendable {
     let transition: ComposingTransition
     let candidates: [ContinuousCandidate]?
-    let isBridgeFailure: Bool
-
-    static let noop = ContinuousFetchResult(
-        transition: .noop,
-        candidates: nil,
-        isBridgeFailure: true
-    )
 }

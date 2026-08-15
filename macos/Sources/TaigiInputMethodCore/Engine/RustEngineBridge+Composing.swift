@@ -15,6 +15,12 @@ import Foundation
 ///   (`transition.rs:554`).
 /// - `SetSelectedCandidateIndex` and `CommitContinuous` arrive with the
 ///   candidate window, which is a later slice.
+///
+/// Every op answers `nil` when the round-trip itself failed, which is a
+/// different thing from the engine answering that it is idle. A failed call
+/// leaves the engine exactly as it was, so there is no snapshot to mirror — and
+/// making that an optional rather than a stand-in value is what stops a caller
+/// from mirroring "not composing" over a composition that is still running.
 extension RustEngineBridge {
     // MARK: - Composing
 
@@ -23,7 +29,7 @@ extension RustEngineBridge {
         _ text: String,
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         var start = Taigi_Engine_Start()
         start.text = text
         return dispatchComposing(
@@ -39,7 +45,7 @@ extension RustEngineBridge {
         _ character: String,
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         var append = Taigi_Engine_Append()
         append.char = character
         return dispatchComposing(
@@ -54,7 +60,7 @@ extension RustEngineBridge {
     static func composingDeleteBackward(
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         dispatchComposing(
             .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
@@ -70,7 +76,7 @@ extension RustEngineBridge {
     static func composingCommitRaw(
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         dispatchComposing(
             .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
@@ -84,7 +90,7 @@ extension RustEngineBridge {
         _ text: String,
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         var select = Taigi_Engine_SelectSuggestion()
         select.text = text
         return dispatchComposing(
@@ -102,7 +108,7 @@ extension RustEngineBridge {
         _ text: String,
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         var insert = Taigi_Engine_CommitPreeditThenInsertExternal()
         insert.text = text
         return dispatchComposing(
@@ -114,7 +120,7 @@ extension RustEngineBridge {
     }
 
     /// Abandons the composition without writing anything to the document.
-    static func composingReset(generation: UInt64) -> ComposingTransition {
+    static func composingReset(generation: UInt64) -> ComposingTransition? {
         dispatchComposing(
             .reset(Taigi_Engine_Reset()),
             op: "composingReset",
@@ -133,7 +139,7 @@ extension RustEngineBridge {
     static func composingEnterContinuous(
         settings: EngineSettings,
         generation: UInt64
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         dispatchComposing(
             .enterContinuous(Taigi_Engine_EnterContinuous()),
             op: "composingEnterContinuous",
@@ -155,7 +161,7 @@ extension RustEngineBridge {
     static func composingFetchAtPos(
         settings: EngineSettings,
         generation: UInt64
-    ) -> ContinuousFetchResult {
+    ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         fetch.position = 0
         fetch.literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
@@ -166,15 +172,14 @@ extension RustEngineBridge {
             generation: generation,
             config: continuousAppConfig(settings)
         ) else {
-            return .noop
+            return nil
         }
         let candidates: [ContinuousCandidate]? = response.hasContinuous
             ? response.continuous.candidates.map(decodeCandidate)
             : nil
         return ContinuousFetchResult(
             transition: decodeTransition(response),
-            candidates: candidates,
-            isBridgeFailure: false
+            candidates: candidates
         )
     }
 
@@ -185,14 +190,14 @@ extension RustEngineBridge {
         op: String,
         generation: UInt64,
         config: Taigi_Engine_AppConfig?
-    ) -> ComposingTransition {
+    ) -> ComposingTransition? {
         guard let response = composingResponse(
             method,
             op: op,
             generation: generation,
             config: config
         ) else {
-            return .noop
+            return nil
         }
         return decodeTransition(response)
     }
