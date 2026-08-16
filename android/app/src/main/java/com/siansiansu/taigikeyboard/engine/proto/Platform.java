@@ -7,10 +7,18 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Platform identifier for engine branches that need to honor existing
- * platform divergences (NextWord splitCompound separator + noise punct
- * set per nextword-engine-boundary.md §5 #1, #2). PLATFORM_UNSPECIFIED
- * returns FAIL_INVARIANT — bridges MUST populate this field.
+ * Caller identity. Legacy: no engine behavior branches on it any more.
+ * It existed to select the NextWord compound-split separator and noise-punct
+ * set per platform; those converged to one platform-neutral contract
+ * (behavioral-invariants.md §40 INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT)
+ * and nothing else in the engine reads the field.
+ *
+ * `nextword` still rejects PLATFORM_UNSPECIFIED with FAIL_INVARIANT, so its
+ * bridges MUST populate it — but that check predates the convergence and is
+ * kept only so the convergence changed nothing a platform can observe. Every
+ * other slice (composing / lexicon / ranking / phonetics) accepts an unset
+ * field. Removing the check, or reserving the field number, is separate
+ * cleanup with its own regeneration cost.
  * </pre>
  *
  * Protobuf enum {@code taigi.engine.Platform}

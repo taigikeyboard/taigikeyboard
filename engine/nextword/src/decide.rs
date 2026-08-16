@@ -1,20 +1,17 @@
-//! Pure decide table — port of iOS `NextWordEngine.decide` + Android
-//! `NextWordEngine.decide`. Branches on `AppConfig.platform_id` for two
-//! known divergences (audit §5 #1 compound-split separator, #2 noise-punct
-//! superset). All other behavior identical across platforms.
-//!
-//! macOS is the third platform and its two arms are DESIGNED here rather than
-//! copied from either of the others: what reaches this crate from macOS is only
-//! ever engine-rendered commit text, never a raw keystroke, which makes a
-//! hyphen part of a word rather than a boundary and makes "is this punctuation"
-//! answerable as a property instead of as a table. See `split_compound` and
-//! `is_noise_text`.
+//! Pure decide table. Every rule here is platform-neutral: what a commit
+//! teaches NextWord depends on the writing system it is written in, never on
+//! which OS produced it, so iOS, Android, and macOS learn the same thing from
+//! the same commit. `AppConfig.platform_id` is still validated as caller
+//! metadata but no longer selects behavior — see
+//! `docs/architecture/behavioral-invariants.md`
+//! §40 `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, which also records why
+//! the three rules it used to branch on were drift rather than design.
 //!
 //! Generation bump rule: every state-mutating intent EXCEPT
 //! `UpdateLastSelectedWord` bumps `current_generation`. Wrapping add —
 //! `u64::MAX + 1 = 0` is a fresh value.
 
-// 中文: 純決策表;移植自兩平台 NextWordEngine.decide,以 platform_id 處理兩處已知差異(複合詞拆字、噪音標點)。
+// 中文: 純決策表;規則一律平台中立,只依書寫系統(TL/POJ/TPS)決定,不依 OS。
 // 中文: 世代規則:除 UpdateLastSelectedWord 外的狀態變更 intent 都會 +1 current_generation(wrapping_add)。
 
 use crate::api::{Intent, NextWordError, PersistedState};
@@ -38,27 +35,13 @@ const CONTEXT_TIMEOUT_MS: u64 = 30_000;
 // 中文: 句尾標點集合,iOS / Android 共用。
 const SENTENCE_END_PUNCTUATION: &[char] = &['。', '！', '？', '.', '!', '?'];
 
-/// iOS noise-punctuation set (`NextWordEngine.swift:38`). Used by
-/// iOS-only branch of `is_noise_text`.
-// 中文: iOS 雜訊標點集合,用於 iOS 特有的文字過濾分支。
-const IOS_NOISE_PUNCTUATION: &[char] = &[
-    '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', '「', '」', '『', '』',
-    '"', '“', '”', '\u{2018}', '\u{2019}', '（', '）', '(', ')', '【', '】', '[', ']', '{', '}',
-    '—', '–', '-', '～', '~', '…', '·',
-];
-
-/// Android noise-punctuation superset (`NextWordEngine.kt:53-93`). Adds
-/// ASCII space + full-width space (audit §5 #2).
-// 中文: Android 雜訊標點超集,額外納入 ASCII 空白與全形空白。
-const ANDROID_NOISE_PUNCTUATION: &[char] = &[
-    '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', '「', '」', '『', '』',
-    '"', '“', '”', '\'', '（', '）', '(', ')', '【', '】', '[', ']', '{', '}', '—', '–', '-', '～',
-    '~', '…', '·', ' ', '\u{3000}',
-];
-
-/// Apply `intent` against `state`, returning the platform-neutral
-/// `DecideResult`. Validates `Platform::Unspecified` upfront.
-// 中文: 決策表入口;先擋掉未指定平台,再依 intent 分派到對應的 decide_* 子函式。
+/// Apply `intent` against `state`, returning the `DecideResult`.
+///
+/// `platform_id` is a legacy field kept for wire compatibility and possible
+/// future routing; no rule below reads it (§40). The `Unspecified` rejection
+/// is likewise legacy — it predates the convergence and is retained only so
+/// this round changes nothing a platform can observe.
+// 中文: 決策表入口;platform_id 為相容保留欄位,不影響任何決策,僅沿用既有的未指定平台拒絕。
 pub(crate) fn apply(
     state: &mut PersistedState,
     intent: Intent,
@@ -82,7 +65,7 @@ pub(crate) fn apply(
             require_roman_mode,
             trigger_prediction,
             now_ms,
-            DecideContext { config, platform },
+            config,
         ),
         Intent::Backspace { last_char, now_ms } => decide_backspace(state, last_char, now_ms),
         Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state),
@@ -92,14 +75,9 @@ pub(crate) fn apply(
             text,
             roman,
             now_ms,
-        } => decide_update_last_selected_word(state, text, roman, now_ms, config, platform),
+        } => decide_update_last_selected_word(state, text, roman, now_ms, config),
         Intent::SetIsShowing { is_showing } => decide_set_is_showing(state, is_showing),
     })
-}
-
-struct DecideContext<'a> {
-    config: &'a AppConfig,
-    platform: Platform,
 }
 
 fn decide_word_selected(
@@ -109,9 +87,8 @@ fn decide_word_selected(
     require_roman_mode: bool,
     trigger_prediction: bool,
     now_ms: i64,
-    ctx: DecideContext<'_>,
+    config: &AppConfig,
 ) -> DecideResult {
-    let DecideContext { config, platform } = ctx;
     // Enter commits raw romanization only; skip entirely in Hanji mode.
     if require_roman_mode && config.is_translate_swapped {
         return result_unchanged(state);
@@ -119,7 +96,7 @@ fn decide_word_selected(
 
     // Noise text never records or predicts. Sentence-end is a subset of
     // noise: branch on it first so the reset path fires instead of no-op.
-    if text.is_empty() || is_noise_text(&text, platform) {
+    if is_noise_text(&text) {
         if is_sentence_end_punctuation(&text) {
             return reset_and_clear_predictions(state);
         }
@@ -151,7 +128,7 @@ fn decide_word_selected(
                 });
             }
         }
-        let compound = compound_association_pairs(&text, &text_tl, platform);
+        let compound = compound_association_pairs(&text, &text_tl);
         if !compound.is_empty() {
             effects.push(NextWordEffect {
                 kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
@@ -264,9 +241,16 @@ fn decide_update_last_selected_word(
     roman: String,
     now_ms: i64,
     config: &AppConfig,
-    platform: Platform,
 ) -> DecideResult {
     if text.is_empty() {
+        return result_unchanged(state);
+    }
+
+    // Noise neither records nor becomes context (§40) — same early return as
+    // `decide_word_selected`, except this arm still stamps the clock so the
+    // association window keeps advancing across a committed punctuation mark.
+    if is_noise_text(&text) {
+        state.last_selection_time_ms = now_ms;
         return result_unchanged(state);
     }
 
@@ -275,7 +259,7 @@ fn decide_update_last_selected_word(
 
     let mut effects: Vec<NextWordEffect> = Vec::new();
     if config.is_association_recording_enabled {
-        let compound = compound_association_pairs(&text, &roman_tl, platform);
+        let compound = compound_association_pairs(&text, &roman_tl);
         if !compound.is_empty() {
             effects.push(NextWordEffect {
                 kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
@@ -285,13 +269,9 @@ fn decide_update_last_selected_word(
         }
     }
 
-    if is_noise_text(&text, platform) {
-        state.last_selection_time_ms = now_ms;
-    } else {
-        state.last_selected_word = Some(text);
-        state.last_selected_roman = Some(roman_tl);
-        state.last_selection_time_ms = now_ms;
-    }
+    state.last_selected_word = Some(text);
+    state.last_selected_roman = Some(roman_tl);
+    state.last_selection_time_ms = now_ms;
     // NO generation bump — distinguishes from WordSelected/Backspace etc.
 
     snapshot_into_decide_result(state, effects)
@@ -319,117 +299,88 @@ pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> 
     (0..ASSOCIATION_TIMEOUT_MS).contains(&delta)
 }
 
-/// Split a compound word. iOS: `-` only. Android: `-` and whitespace.
-/// macOS: whitespace only — see the arm's comment for why the hyphen is
-/// deliberately not a separator there.
-// 中文: 拆解複合詞;iOS 只切連字符,Android 連字符與空白都切,macOS 只切空白。
-pub(crate) fn split_compound(word: &str, platform: Platform) -> Vec<String> {
-    if word.is_empty() {
-        return Vec::new();
-    }
-    let split: Vec<&str> = match platform {
-        Platform::Ios => word.split('-').collect(),
-        Platform::Android => word
-            .split(|c: char| c == '-' || c.is_whitespace())
-            .collect(),
-        // Whitespace only. macOS never receives raw typed text — every string
-        // reaching this crate is engine-rendered commit output — and in that
-        // output a hyphen is *inside* a word rather than between two: `tâi-gí`
-        // is the single morpheme 台語 (連字), and `hōo--guá` is one word plus a
-        // 輕聲 marker. Splitting on `-` would record a bigram between the two
-        // halves of one word. A space, by contrast, is only ever emitted
-        // between segments the walker decided are separate words
-        // (`docs/architecture/behavioral-invariants.md` §22 — `iasi` → `iā sī`),
-        // which is exactly the boundary a compound association wants.
-        Platform::Macos => word.split(char::is_whitespace).collect(),
-        Platform::Unspecified => return Vec::new(), // unreachable — apply() validates
-    };
-    split
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .collect()
+/// Split a commit into the words a bigram may be learned between. Whitespace
+/// is the only word boundary — `-` is a 連字 / 輕聲 joiner *inside* a word, in
+/// engine-rendered output and in raw typed text alike
+/// (`engine/composing/src/transition.rs:481-483` passes the pending tail's
+/// literal keystroke buffer). See `behavioral-invariants.md` §40.
+// 中文: 拆成可學 bigram 的詞單位;空白是唯一詞界,`-` 一律是詞內連字/輕聲。
+pub(crate) fn split_compound(word: &str) -> Vec<&str> {
+    word.split_whitespace().collect()
 }
 
 /// Build sequential bigram pairs from a compound word; order preserved so
 /// the platform executor records sequentially (parallel writes race on
 /// the SQLite UNIQUE constraint).
 // 中文: 把複合詞拆成前後連續 bigram;保留順序避免平台側並行寫入撞 SQLite UNIQUE。
-pub(crate) fn compound_association_pairs(
-    display_text: &str,
-    roman: &str,
-    platform: Platform,
-) -> Vec<AssociationPair> {
-    let parts = split_compound(display_text, platform);
-    let roman_parts = split_compound(roman, platform);
-    if parts.len() <= 1 {
+pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec<AssociationPair> {
+    // No boundary, nothing to pair — and the cheapest question to ask, which
+    // matters because a single-word commit is the common case.
+    if !display_text.contains(char::is_whitespace) {
         return Vec::new();
     }
-    // macOS records nothing rather than record a pair whose romanization it had
-    // to guess. The two strings are split by the same rule and zipped by
-    // position, so they only line up when both sides segmented identically —
-    // 漢字 `也是` carries no space while its romanization `iā sī` does, and the
-    // `unwrap_or_default()` below would then attach an empty `next_tl` to a real
-    // word. An empty TL is not a neutral value here: word identity is the
-    // `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7), so a blank
-    // one writes a row no correctly-keyed lookup will ever match again.
-    // NAMED CROSS-PLATFORM DIVERGENCE (`cross-platform-alignment.md` §3,
-    // intentional): iOS and Android pad instead. Changing their behaviour is a
-    // separate, user-gated decision about existing learned data.
-    if platform == Platform::Macos && roman_parts.len() != parts.len() {
+    // In TPS an ASCII space is the tone-1 syllable marker, not a word break
+    // (§31 `INVARIANT_TPS_SPACE_SOFT_SEPARATOR` — `ㄍㄠ` ␣ `ㄉㄞ` is 交代, one
+    // word), so a TPS payload has no boundary to learn across. Detected from
+    // Bopomofo content because `AppConfig.input_mode` never says `"tps"` here:
+    // every platform folds TPS into `"tl"` / `"poj"` when it builds the
+    // NextWord config (`ios/…/RustEngineBridge+NextWord.swift:401`,
+    // `android/…/NextWordBridge.kt:300-305`). Content upgrading the mode is the
+    // established shape (`composing/src/dispatch.rs:187-212`), not a workaround.
+    if phonetics::contains_tps(display_text) || phonetics::contains_tps(roman) {
         return Vec::new();
     }
-    let mut pairs = Vec::with_capacity(parts.len() - 1);
-    for i in 0..(parts.len() - 1) {
-        pairs.push(AssociationPair {
-            prev: parts[i].clone(),
-            prev_tl: roman_parts.get(i).cloned().unwrap_or_default(),
-            next: parts[i + 1].clone(),
-            next_tl: roman_parts.get(i + 1).cloned().unwrap_or_default(),
-        });
+    let parts = split_compound(display_text);
+    let roman_parts = split_compound(roman);
+    // Record nothing rather than a pair whose romanization had to be guessed.
+    // The two strings are split by the same rule and zipped by position, so
+    // they line up only when both sides segmented identically — 漢字 `也是`
+    // carries no space while its romanization `iā sī` does, and padding the
+    // short side would attach an empty `next_tl` to a real word. An empty TL is
+    // not a neutral value here: word identity is the `(漢字, canonical TL)`
+    // pair (`CLAUDE.md` Core Principle #7), so a blank one writes a row no
+    // correctly-keyed lookup will ever match again.
+    if parts.len() <= 1 || roman_parts.len() != parts.len() {
+        return Vec::new();
     }
-    pairs
+    // Same reason one step down: the whole-string noise gate passes `台語 ˆ`
+    // because 台語 IS a lexical base, but the split then hands `ˆ` to a pair as
+    // if it were a word. A part that could not be a word disqualifies the
+    // commit rather than being dropped — dropping it would splice its
+    // neighbours into an adjacency the user never typed.
+    if !parts.iter().chain(&roman_parts).all(is_word) {
+        return Vec::new();
+    }
+    parts
+        .windows(2)
+        .zip(roman_parts.windows(2))
+        .map(|(words, romans)| AssociationPair {
+            prev: words[0].to_owned(),
+            prev_tl: romans[0].to_owned(),
+            next: words[1].to_owned(),
+            next_tl: romans[1].to_owned(),
+        })
+        .collect()
 }
 
-/// iOS: punctuation / whitespace / pure-ASCII-digit text never triggers.
-/// Android: ALL chars are noise-punct or ASCII digit.
-/// macOS: nothing in the string is a letter — see the arm for why that is
-/// expressed as a Unicode property rather than as a third punctuation table.
-// 中文: 噪音文字判斷;iOS 看首字 + 純 ASCII 數字,Android 整串比對標點表,macOS 看有無字母。
-pub(crate) fn is_noise_text(text: &str, platform: Platform) -> bool {
-    if text.is_empty() {
-        return true;
-    }
-    match platform {
-        Platform::Ios => {
-            let first = match text.chars().next() {
-                Some(c) => c,
-                None => return true,
-            };
-            if IOS_NOISE_PUNCTUATION.contains(&first) {
-                return true;
-            }
-            if first.is_whitespace() {
-                return true;
-            }
-            text.chars().all(|c| c.is_ascii() && c.is_ascii_digit())
-        }
-        Platform::Android => text
-            .chars()
-            .all(|c| ANDROID_NOISE_PUNCTUATION.contains(&c) || c.is_ascii_digit()),
-        // Whole-string, like Android: the iOS first-character test would throw
-        // away a legitimate commit that merely begins with a bracket or a space,
-        // and macOS emits both (`hit (彼)` under both-scripts, a leading space
-        // under auto-spacing). Written as "contains no letter" rather than as a
-        // third punctuation table because a table is a list of everything the
-        // engine has been *told* is punctuation: the day macOS commits a mark
-        // nobody added to it, the string reads as a word and gets learned. The
-        // property is the invariant the two tables are approximating — 漢字 and
-        // romanized syllables are alphabetic, marks and digits are not — and it
-        // needs no maintenance to stay true.
-        Platform::Macos => !text.chars().any(char::is_alphabetic),
-        Platform::Unspecified => false, // unreachable — apply() validates
-    }
+/// A commit is noise — it neither records nor becomes context — unless some
+/// character in it could be part of a word.
+///
+/// A Unicode property rather than a punctuation table on purpose: a table
+/// lists what the engine has been *told* is punctuation, so the day a commit
+/// carries a mark nobody added to it, the string reads as a word and gets
+/// learned. The property is the invariant such a table only approximates, and
+/// needs no maintenance to stay true.
+// 中文: 噪音判斷 — 整串找不到任何「可構成詞的字」才算噪音。用 Unicode 屬性而非標點表,
+// 中文: 因為表只涵蓋引擎「被告知過」的標點,漏一個就會把符號當詞學進去。
+pub(crate) fn is_noise_text(text: &str) -> bool {
+    !text.chars().any(phonetics::is_word_material)
+}
+
+/// Whether a split part is a word rather than a run of marks the user
+/// committed alongside one.
+fn is_word(part: &&str) -> bool {
+    part.chars().any(phonetics::is_word_material)
 }
 
 // 中文: 判斷首字是否為句尾標點(。!?.!?),用來觸發共用重置路徑。
@@ -460,51 +411,54 @@ fn result_unchanged(state: &PersistedState) -> DecideResult {
 mod tests {
     use super::*;
 
+    fn config(platform: Platform, association_enabled: bool, translate_swapped: bool) -> AppConfig {
+        AppConfig {
+            tone_mode: String::new(),
+            input_mode: "tl".to_owned(),
+            oo_doubletap_enabled: false,
+            nn_doubletap_enabled: false,
+            is_translate_swapped: translate_swapped,
+            is_association_recording_enabled: association_enabled,
+            platform_id: platform as i32,
+            output_both_scripts: false,
+        }
+    }
+
     fn ios_config(association_enabled: bool, translate_swapped: bool) -> AppConfig {
-        AppConfig {
-            tone_mode: String::new(),
-            input_mode: "tl".to_owned(),
-            oo_doubletap_enabled: false,
-            nn_doubletap_enabled: false,
-            is_translate_swapped: translate_swapped,
-            is_association_recording_enabled: association_enabled,
-            platform_id: Platform::Ios as i32,
-            output_both_scripts: false,
-        }
+        config(Platform::Ios, association_enabled, translate_swapped)
     }
 
-    fn macos_config(association_enabled: bool, translate_swapped: bool) -> AppConfig {
-        AppConfig {
-            platform_id: Platform::Macos as i32,
-            ..ios_config(association_enabled, translate_swapped)
-        }
+    /// Every recorded compound pair in `result`, or `None` when it recorded no
+    /// compound association at all.
+    fn compound_pairs(result: &DecideResult) -> Option<&[AssociationPair]> {
+        result.effects.iter().find_map(|e| match &e.kind {
+            Some(next_word_effect::Kind::RecordCompoundAssociations(c)) => Some(&c.pairs[..]),
+            _ => None,
+        })
     }
 
-    fn android_config(association_enabled: bool, translate_swapped: bool) -> AppConfig {
-        AppConfig {
-            tone_mode: String::new(),
-            input_mode: "tl".to_owned(),
-            oo_doubletap_enabled: false,
-            nn_doubletap_enabled: false,
-            is_translate_swapped: translate_swapped,
-            is_association_recording_enabled: association_enabled,
-            platform_id: Platform::Android as i32,
-            output_both_scripts: false,
-        }
+    /// The two intents that can record a compound association: the terminal
+    /// commit and the mid-commit handshake.
+    fn both_entry_points(text: &str) -> [Intent; 2] {
+        [
+            Intent::WordSelected {
+                text: text.to_owned(),
+                roman: text.to_owned(),
+                require_roman_mode: false,
+                trigger_prediction: false,
+                now_ms: 1_000,
+            },
+            Intent::UpdateLastSelectedWord {
+                text: text.to_owned(),
+                roman: text.to_owned(),
+                now_ms: 1_000,
+            },
+        ]
     }
 
     #[test]
     fn unspecified_platform_returns_invalid_platform() {
-        let config = AppConfig {
-            tone_mode: String::new(),
-            input_mode: "tl".to_owned(),
-            oo_doubletap_enabled: false,
-            nn_doubletap_enabled: false,
-            is_translate_swapped: false,
-            is_association_recording_enabled: true,
-            platform_id: Platform::Unspecified as i32,
-            output_both_scripts: false,
-        };
+        let config = config(Platform::Unspecified, true, false);
         let mut state = PersistedState::default();
         let err = apply(&mut state, Intent::ResetFull { now_ms: 0 }, &config).unwrap_err();
         assert!(matches!(err, NextWordError::InvalidPlatform));
@@ -595,7 +549,7 @@ mod tests {
 
     #[test]
     fn compound_pairs_are_sequential() {
-        let pairs = compound_association_pairs("a-b-c", "x-y-z", Platform::Ios);
+        let pairs = compound_association_pairs("a b c", "x y z");
         assert_eq!(pairs.len(), 2);
         assert_eq!(pairs[0].prev, "a");
         assert_eq!(pairs[0].next, "b");
@@ -604,95 +558,176 @@ mod tests {
     }
 
     #[test]
-    fn compound_split_ios_dash_only_android_includes_whitespace() {
-        let ios = split_compound("a b-c", Platform::Ios);
-        assert_eq!(ios, vec!["a b", "c"]);
-        let android = split_compound("a b-c", Platform::Android);
-        assert_eq!(android, vec!["a", "b", "c"]);
-    }
-
-    #[test]
-    fn ios_noise_first_char_only_android_all_chars() {
-        // "a." starts with 'a' (not noise) on iOS, so iOS says NOT noise.
-        // Android scans every char — 'a' is not in punct set, so NOT noise either.
-        // So that case isn't a divergence example. Use "  ab" instead.
-        // iOS: first char ' ' (whitespace) → NOISE.
-        // Android: ' ' is in punct set, but 'a'+'b' are not digit/punct → NOT noise.
-        assert!(is_noise_text("  ab", Platform::Ios));
-        assert!(!is_noise_text("  ab", Platform::Android));
-    }
-
-    #[test]
-    fn macos_compound_split_breaks_on_whitespace_but_never_on_hyphen() {
-        // trace: 詞組 spacing is the only word boundary macOS commit text has.
+    fn split_compound_breaks_on_whitespace_but_never_on_hyphen() {
+        // trace: 詞組 spacing is the only word boundary a commit carries.
         assert_eq!(
-            split_compound("iā sī", Platform::Macos),
+            split_compound("iā sī"),
             vec!["iā", "sī"],
             "the walker's space-join is a real word boundary",
         );
-        // 連字 and 輕聲 hyphens live INSIDE one word.
-        assert_eq!(split_compound("tâi-gí", Platform::Macos), vec!["tâi-gí"]);
+        // 連字 and 輕聲 hyphens live INSIDE one word — and so does a hyphen the
+        // user typed, so a raw pending tail is one unit as well.
+        assert_eq!(split_compound("tâi-gí"), vec!["tâi-gí"]);
+        assert_eq!(split_compound("hōo--guá"), vec!["hōo--guá"]);
+        assert_eq!(split_compound("tai-bak"), vec!["tai-bak"]);
+        // The whole point of dropping the old iOS arm: splitting on `-` made a
+        // "part" that still contained a space.
         assert_eq!(
-            split_compound("hōo--guá", Platform::Macos),
-            vec!["hōo--guá"]
+            split_compound("tâi-gí khí-puânn"),
+            vec!["tâi-gí", "khí-puânn"],
+            "台語齒盤 is two words, each internally hyphenated",
         );
-        // Runs of whitespace and leading/trailing whitespace produce no empty
-        // parts (the shared `filter` below the match drops them).
         assert_eq!(
-            split_compound("  tâi\u{3000}gí ", Platform::Macos),
+            split_compound("  tâi\u{3000}gí "),
             vec!["tâi", "gí"],
             "U+3000 is whitespace and repeated separators collapse",
         );
     }
 
     #[test]
-    fn macos_compound_pairs_require_both_sides_to_segment_alike() {
-        // trace: 漢字 side has no space, romanization does → 1 vs 2 parts.
-        assert!(
-            compound_association_pairs("也是", "iā sī", Platform::Macos).is_empty(),
-            "an unsegmentable 漢字 side must not be paired with a guessed TL",
-        );
-        // Same shape on both sides → the pair is trustworthy.
-        let pairs = compound_association_pairs("iā sī", "iā sī", Platform::Macos);
+    fn compound_pairs_record_only_a_trustworthy_boundary() {
+        // The one shape that earns a pair: both sides segment identically and
+        // every part is a word.
+        let pairs = compound_association_pairs("iā sī", "iā sī");
         assert_eq!(pairs.len(), 1);
         assert_eq!(pairs[0].prev, "iā");
         assert_eq!(pairs[0].prev_tl, "iā");
         assert_eq!(pairs[0].next, "sī");
         assert_eq!(pairs[0].next_tl, "sī");
-        // Single-word commits produce nothing on either axis.
-        assert!(compound_association_pairs("tâi-gí", "tâi-gí", Platform::Macos).is_empty());
-        assert!(compound_association_pairs("hōo--guá", "hōo--guá", Platform::Macos).is_empty());
-        // The guard is macOS-only: iOS still pads a missing romanization.
-        let ios = compound_association_pairs("a-b", "x", Platform::Ios);
-        assert_eq!(ios.len(), 1);
-        assert_eq!(ios[0].next_tl, "");
+
+        for (display, roman, why) in [
+            // TPS: the space is the tone-1 syllable marker, so `ㄍㄠ ㄉㄞ` is
+            // 交代, ONE word (§31). Bopomofo on EITHER side marks the payload —
+            // the part-count guard cannot catch it, since both sides do
+            // segment alike.
+            ("ㄍㄠ ㄉㄞ", "ㄍㄠ ㄉㄞ", "TPS on both sides"),
+            ("ㄍㄠ ㄉㄞ", "kau tài", "Bopomofo in display_text alone"),
+            ("交 代", "ㄍㄠ ㄉㄞ", "Bopomofo in roman alone"),
+            // Segmentation disagreement: 漢字 `也是` has no space, `iā sī` does.
+            ("也是", "iā sī", "1 vs 2 parts — never pair a guessed TL"),
+            ("a b", "x", "a missing romanization is never padded"),
+            // No boundary at all.
+            ("tâi-gí", "tâi-gí", "連字 compound is one word"),
+            ("hōo--guá", "hōo--guá", "輕聲 compound is one word"),
+            // A part that is not a word. The whole-string noise gate passes
+            // this because 台語 IS word material.
+            (
+                "台語 \u{02c6}",
+                "tâi-gí \u{02c6}",
+                "a bare tone mark is not a word",
+            ),
+            ("台語 ,", "tâi-gí ,", "a bare comma is not a word"),
+        ] {
+            assert!(
+                compound_association_pairs(display, roman).is_empty(),
+                "{why}: {display:?} / {roman:?}",
+            );
+        }
     }
 
     #[test]
-    fn macos_noise_is_the_absence_of_a_letter() {
-        assert!(is_noise_text("。", Platform::Macos));
-        assert!(is_noise_text("!?", Platform::Macos));
-        assert!(is_noise_text("123", Platform::Macos));
-        assert!(is_noise_text("  ", Platform::Macos));
-        assert!(!is_noise_text("iā sī", Platform::Macos));
-        assert!(!is_noise_text("台語", Platform::Macos));
-        // Both cases the iOS first-character rule would wrongly discard.
-        assert!(
-            !is_noise_text("  ab", Platform::Macos),
-            "a leading space does not make the rest of the commit noise",
-        );
-        assert!(
-            !is_noise_text("(彼)", Platform::Macos),
-            "both-scripts output opens with a bracket and is still a word",
-        );
+    fn noise_is_the_absence_of_word_material() {
+        for text in ["", "。", "!?", "123", "  ", "😀"] {
+            assert!(is_noise_text(text), "{text:?} carries no word material");
+        }
+        // Marks Unicode calls alphabetic that still cannot be a word alone —
+        // the four `Lm` TPS tone marks and the POJ nasal in both cases. The
+        // remaining three TPS tone marks are `Sk` and never qualified.
+        for mark in [
+            '\u{02c6}', '\u{02c7}', '\u{02ca}', '\u{02cb}', '\u{02d9}', '\u{02ea}', '\u{02eb}',
+            '\u{207f}', '\u{1d3a}',
+        ] {
+            assert!(
+                is_noise_text(&mark.to_string()),
+                "standalone {mark:?} is a diacritic, not a word",
+            );
+        }
+        for text in [
+            "iā sī",
+            "台語",
+            "ㄍㄠㄉㄞ",    // Bopomofo is word material
+            "😀台語",      // one real word is enough
+            "ji\u{030d}t", // decomposed forms keep a Latin base
+            "m\u{0304}",
+            "o\u{0358}",
+            "ho\u{207f}", // a nasal ON a syllable is fine
+            "  ab",       // the old iOS first-char rule discarded
+            "(彼)",       // both-scripts output, likewise
+        ] {
+            assert!(!is_noise_text(text), "{text:?} is a word");
+        }
+    }
+
+    #[test]
+    fn learning_decisions_do_not_depend_on_the_platform() {
+        // trace: §40 — the same commit must teach the same thing everywhere.
+        // `tâi-gí khí-puânn` is the case the three platforms used to answer
+        // three different ways: iOS split on `-` into `tâi` / `gí khí` /
+        // `puânn` (a "part" with a space in it), Android into four syllables,
+        // macOS into the two words. Now all three give the two words.
+        for platform in [Platform::Ios, Platform::Android, Platform::Macos] {
+            let mut state = PersistedState::default();
+            let result = apply(
+                &mut state,
+                Intent::WordSelected {
+                    text: "tâi-gí khí-puânn".to_owned(),
+                    roman: "tâi-gí khí-puânn".to_owned(),
+                    require_roman_mode: false,
+                    trigger_prediction: false,
+                    now_ms: 1_000,
+                },
+                &config(platform, true, false),
+            )
+            .unwrap();
+            let pairs = compound_pairs(&result).unwrap_or_default();
+            assert_eq!(pairs.len(), 1, "{platform:?}");
+            assert_eq!(pairs[0].prev, "tâi-gí", "{platform:?}");
+            assert_eq!(pairs[0].next, "khí-puânn", "{platform:?}");
+        }
+    }
+
+    #[test]
+    fn hyphenated_single_word_teaches_no_compound_on_either_entry_point() {
+        // trace: 台語 is one word; neither the terminal WordSelected nor the
+        // mid-commit UpdateLastSelectedWord may split it into tâi → gí.
+        for intent in both_entry_points("tâi-gí") {
+            let mut state = PersistedState::default();
+            let result = apply(&mut state, intent, &ios_config(true, false)).unwrap();
+            assert!(
+                compound_pairs(&result).is_none(),
+                "a 連字 compound is one word",
+            );
+        }
+    }
+
+    #[test]
+    fn noise_records_nothing_and_becomes_no_context_on_either_entry_point() {
+        // trace: §40 — noise neither records nor becomes context. `ˆ ˇ` carries
+        // no Bopomofo, so it is not a TPS payload, and the whitespace splitter
+        // turns it into two "words" that segment alike on both sides — the
+        // part-count guard cannot catch it. Only the noise gate can.
+        for text in ["\u{02c6} \u{02c7}", ", ;"] {
+            for intent in both_entry_points(text) {
+                let mut state = PersistedState::default();
+                let result = apply(&mut state, intent, &ios_config(true, false)).unwrap();
+                assert!(
+                    compound_pairs(&result).is_none(),
+                    "{text:?} is marks only — nothing to learn",
+                );
+                assert_eq!(
+                    state.last_selected_word, None,
+                    "{text:?} must not become context either",
+                );
+            }
+        }
     }
 
     #[test]
     fn macos_sentence_end_punctuation_resets_context() {
-        // trace: `。` is noise on macOS, and the sentence-end check runs first
-        // (`:115`), so the reset path fires rather than the no-op path — which
-        // is what stops the last word of one sentence being learned as the
-        // predecessor of the first word of the next.
+        // trace: `。` is noise, and the sentence-end check runs first, so the
+        // reset path fires rather than the no-op path — which is what stops the
+        // last word of one sentence being learned as the predecessor of the
+        // first word of the next.
         let mut state = PersistedState {
             last_selected_word: Some("台語".to_owned()),
             current_generation: 3,
@@ -707,7 +742,7 @@ mod tests {
                 trigger_prediction: false,
                 now_ms: 1_000,
             },
-            &macos_config(true, false),
+            &config(Platform::Macos, true, false),
         )
         .unwrap();
         assert_eq!(state.last_selected_word, None);
@@ -725,7 +760,7 @@ mod tests {
             apply(
                 &mut state,
                 Intent::SetIsShowing { is_showing: false },
-                &macos_config(true, false),
+                &config(Platform::Macos, true, false),
             )
             .is_ok(),
             "PLATFORM_MACOS must not read as PLATFORM_UNSPECIFIED",
@@ -745,7 +780,7 @@ mod tests {
                 roman: "tsá-an".to_owned(),
                 now_ms: 1_000,
             },
-            &android_config(true, false),
+            &config(Platform::Android, true, false),
         )
         .unwrap();
         assert_eq!(

@@ -116,10 +116,18 @@ public nonisolated enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIt
 
 }
 
-/// Platform identifier for engine branches that need to honor existing
-/// platform divergences (NextWord splitCompound separator + noise punct
-/// set per nextword-engine-boundary.md §5 #1, #2). PLATFORM_UNSPECIFIED
-/// returns FAIL_INVARIANT — bridges MUST populate this field.
+/// Caller identity. Legacy: no engine behavior branches on it any more.
+/// It existed to select the NextWord compound-split separator and noise-punct
+/// set per platform; those converged to one platform-neutral contract
+/// (behavioral-invariants.md §40 INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT)
+/// and nothing else in the engine reads the field.
+///
+/// `nextword` still rejects PLATFORM_UNSPECIFIED with FAIL_INVARIANT, so its
+/// bridges MUST populate it — but that check predates the convergence and is
+/// kept only so the convergence changed nothing a platform can observe. Every
+/// other slice (composing / lexicon / ranking / phonetics) accepts an unset
+/// field. Removing the check, or reserving the field number, is separate
+/// cleanup with its own regeneration cost.
 public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
@@ -172,8 +180,10 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
 ///
 /// v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
-/// + `platform_id` for NextWord engine — platform_id branches divergences
-/// §5 #1 (compound split separator) and §5 #2 (noise punct set).
+/// + `platform_id` for the NextWord engine. `platform_id` originally branched
+/// the compound-split separator and the noise-punct set; those converged to one
+/// platform-neutral contract (behavioral-invariants.md §40) and it is now
+/// validated caller identity only.
 ///
 /// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
 /// composing-buffer join (`composing::api::nailed_prefix` /

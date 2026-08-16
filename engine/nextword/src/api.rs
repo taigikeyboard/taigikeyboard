@@ -124,8 +124,9 @@ impl Engine {
     /// Apply `intent` against the current state, mutate, and return the
     /// resulting decide response (effects + new state echo). Delegates to
     /// the pure decide table in `decide.rs`. May fail when the request
-    /// envelope's `Platform` is `Unspecified` — the platform divergence
-    /// branches require an explicit platform.
+    /// envelope's `Platform` is `Unspecified` — a legacy check, kept because
+    /// no decision reads the value any more (`behavioral-invariants.md` §40)
+    /// and dropping it would be an observable change of its own.
     // 中文: 套用 intent 變更狀態,回傳 effects 與最新狀態快照;Platform 未指定時回傳錯誤。
     pub(crate) fn apply(
         &mut self,

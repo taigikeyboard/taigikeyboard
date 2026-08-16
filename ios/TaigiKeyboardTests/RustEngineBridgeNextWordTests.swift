@@ -107,19 +107,50 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     }
 
     func testWordSelected_compoundText_emitsSequentialPairs() {
-        // iOS splits on `-` only — "tshit-niû" → ["tshit", "niû"].
-        let result = wordSelected(text: "tshit-niû", roman: "tshit-niû", nowMs: 0)
-        var pairs: [RustEngineBridge.NextWordAssociationPair] = []
-        for effect in result.effects {
-            if case let .recordCompoundAssociations(p) = effect {
-                pairs = p
-            }
-        }
-        XCTAssertEqual(pairs, [
+        // INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT (behavioral-invariants
+        // §40): whitespace is the only word boundary, so 台語齒盤 teaches one
+        // pair between its two words — not four pairs across every syllable.
+        let result = wordSelected(
+            text: "tâi-gí khí-puânn", roman: "tâi-gí khí-puânn", nowMs: 0,
+        )
+        XCTAssertEqual(compoundPairs(in: result), [
             RustEngineBridge.NextWordAssociationPair(
-                prev: "tshit", prevTl: "tshit", next: "niû", nextTl: "niû",
+                prev: "tâi-gí", prevTl: "tâi-gí", next: "khí-puânn", nextTl: "khí-puânn",
             ),
         ])
+    }
+
+    func testWordSelected_untrustworthyBoundary_emitsNoCompoundPairs() {
+        // §40, the shapes that must NOT produce a pair:
+        //  - `-` is a 連字 joining the syllables of ONE word; pre-§40 iOS split
+        //    here and taught tshit → niû.
+        //  - 漢字 `也是` carries no space while `iā sī` does, and padding the
+        //    short side attaches a blank TL that Core Principle #7 makes
+        //    unmatchable — so record nothing instead.
+        //  - `台語 ˆ` passes the whole-string noise gate (台語 IS word material)
+        //    but `ˆ` alone is not a word.
+        for (text, roman, why) in [
+            ("tshit-niû", "tshit-niû", "連字 compound is one word"),
+            ("tâi-gí", "tâi-gí", "連字 compound is one word"),
+            ("hōo--guá", "hōo--guá", "輕聲 compound is one word"),
+            ("也是", "iā sī", "segmentation disagreement fails closed"),
+            ("台語 \u{02c6}", "tâi-gí \u{02c6}", "a bare tone mark is not a word"),
+        ] {
+            let result = wordSelected(text: text, roman: roman, nowMs: 0)
+            XCTAssertNil(compoundPairs(in: result), "\(why): \(text) / \(roman)")
+        }
+    }
+
+    func testWordSelected_leadingBracketOrSpace_isStillLearned() {
+        // §40: noise is "no lexical base anywhere", not "first character is
+        // punctuation" — the old iOS rule discarded both of these whole.
+        for text in ["(彼)", " 彼"] {
+            let result = wordSelected(text: text, roman: "hit", nowMs: 0)
+            XCTAssertEqual(
+                result.lastSelectedWord, text,
+                "a commit that merely starts with punctuation is still a word",
+            )
+        }
     }
 
     func testWordSelected_sentenceEndPunctuation_resetsAndCancelsTimer() {
@@ -479,6 +510,19 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Every recorded compound pair in `result`, or nil when it recorded no
+    /// compound association at all.
+    private func compoundPairs(
+        in result: RustEngineBridge.NextWordDecideResult,
+    ) -> [RustEngineBridge.NextWordAssociationPair]? {
+        for effect in result.effects {
+            if case let .recordCompoundAssociations(pairs) = effect {
+                return pairs
+            }
+        }
+        return nil
+    }
 
     private func wordSelected(
         text: String,

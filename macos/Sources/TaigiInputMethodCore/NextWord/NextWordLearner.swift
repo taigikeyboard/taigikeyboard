@@ -8,8 +8,10 @@ import Foundation
 /// still open, how a compound word splits, whether the text is noise at all
 /// (`engine/nextword/src/decide.rs`) — and this type only carries the answer to
 /// the store. Splitting or filtering here would be a second copy of a decision
-/// that has to match iOS and Android, which is exactly what
-/// `PLATFORM_MACOS` exists to express on the engine side instead.
+/// that has to match iOS and Android, and that decision is deliberately one
+/// rule rather than three: `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`
+/// (`docs/architecture/behavioral-invariants.md` §40) makes the learning rules
+/// depend on the writing system, never on the platform.
 @MainActor
 final class NextWordLearner {
     private let store: UserAssociationStore

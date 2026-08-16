@@ -257,7 +257,37 @@ pub fn to_tone_number(text: &str) -> String {
 }
 
 fn is_letter_like(c: char) -> bool {
-    c.is_alphabetic() || c == '\u{0358}' || c == '\u{207f}' || c == '\u{1d3a}'
+    c.is_alphabetic() || c == '\u{0358}' || is_nasal_marker(c)
+}
+
+/// True when `c` is the POJ nasal marker in either case (`ⁿ` / `ᴺ`).
+// 中文: 判斷字元是否為 POJ 鼻化符號 (大小寫兩式)。
+pub fn is_nasal_marker(c: char) -> bool {
+    c == crate::case_transform::NASAL_LOWER || c == crate::case_transform::NASAL_UPPER
+}
+
+/// True when `c` could be part of a Taiwanese word, as opposed to a mark the
+/// user happened to commit alongside one.
+///
+/// `is_alphabetic` covers everything this IME writes: Latin for TL / POJ —
+/// including the decomposed forms, since `ji̍t` / `m̄` / `o͘` all keep a Latin
+/// base under their combining marks — 漢字 (`Lo`), and both Bopomofo blocks for
+/// TPS (`Lo`). Digits, punctuation, symbols, emoji, and bare combining marks
+/// are not.
+///
+/// The two exclusions are characters Unicode calls alphabetic that cannot be a
+/// word by themselves: four of the seven TPS tone marks are modifier letters
+/// (`Lm` — `ˆ ˇ ˊ ˋ`; the other three are `Sk` and never qualified), and so is
+/// the POJ nasal. Attached to a syllable they are harmless — the syllable
+/// already brought its own base letter — but alone they are a diacritic.
+///
+/// Distinct from [`is_letter_like`], which asks whether a character *carries*
+/// case or a diacritic and so counts a bare nasal in; this asks whether a
+/// character could stand in a word, and a bare nasal cannot.
+// 中文: 判斷字元是否可構成台語詞。alphabetic 涵蓋 TL/POJ 拉丁字母、漢字、TPS 注音;
+// 中文: 排除單獨出現不成詞的 TPS 聲調符號 (Lm 類) 與 POJ 鼻化符號。
+pub fn is_word_material(c: char) -> bool {
+    c.is_alphabetic() && !crate::tps::is_tps_tone_mark(c) && !is_nasal_marker(c)
 }
 
 fn is_combining(c: char) -> bool {

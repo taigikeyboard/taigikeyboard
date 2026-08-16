@@ -263,11 +263,9 @@ The third case is a new assertion — today's implementation returns `true` for 
 
 ## 6. Compound-word splitting preserved
 
-```swift
-static func splitCompound(_ word: String) -> [String] {
-    word.isEmpty ? [] : word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
-}
+The split rule itself is superseded — see `behavioral-invariants.md` §40 `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`. The effect shape below still holds:
 
+```swift
 static func compoundAssociationPairs(displayText: String, roman: String)
     -> [(prev: String, prevTl: String, next: String, nextTl: String)]
 ```

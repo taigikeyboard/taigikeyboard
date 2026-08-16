@@ -17,8 +17,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
  *
  * v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
- * + `platform_id` for NextWord engine — platform_id branches divergences
- * §5 #1 (compound split separator) and §5 #2 (noise punct set).
+ * + `platform_id` for the NextWord engine. `platform_id` originally branched
+ * the compound-split separator and the noise-punct set; those converged to one
+ * platform-neutral contract (behavioral-invariants.md §40) and it is now
+ * validated caller identity only.
  *
  * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
  * composing-buffer join (`composing::api::nailed_prefix` /
@@ -406,8 +408,10 @@ public  final class AppConfig extends
    * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
    *
    * v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
-   * + `platform_id` for NextWord engine — platform_id branches divergences
-   * §5 #1 (compound split separator) and §5 #2 (noise punct set).
+   * + `platform_id` for the NextWord engine. `platform_id` originally branched
+   * the compound-split separator and the noise-punct set; those converged to one
+   * platform-neutral contract (behavioral-invariants.md §40) and it is now
+   * validated caller identity only.
    *
    * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
    * composing-buffer join (`composing::api::nailed_prefix` /

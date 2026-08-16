@@ -32,8 +32,8 @@ pub enum LetterCase {
     CapsLocked,
 }
 
-const NASAL_LOWER: char = '\u{207F}'; // ⁿ
-const NASAL_UPPER: char = '\u{1D3A}'; // ᴺ
+pub(crate) const NASAL_LOWER: char = '\u{207F}'; // ⁿ
+pub(crate) const NASAL_UPPER: char = '\u{1D3A}'; // ᴺ
 
 // =========================================================================
 // Per-char (single grapheme cluster) helpers
