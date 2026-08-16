@@ -186,10 +186,14 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `EngineSettings.defaults` kept as the single source of every default with the
   persistence descriptors referencing it.
 - **D6 Custom dict** — `~/Library/Application Support/<bundle-id>/custom_dictionary.db`;
-  FULL iOS contract port (schema v2 + `custom_search_key` side table + migrator +
+  FULL iOS contract port (schema v2 + `custom_search_key` side table +
   repository + same-transaction 30000-cap guard + derivation via existing engine
-  FFI). Entries ride `FetchAtPos.custom_entries` — zero new FFI. CSV via
-  NSOpen/SavePanel. Backup-exclusion policy = user decision at PR7.
+  FFI). **No migrator** — macOS never shipped a v1 schema (revised 2026-08-17;
+  same dead-code rationale as `UserFrequencyStore`). Entries ride
+  `FetchAtPos.custom_entries` — zero new FFI. CSV via NSOpen/SavePanel.
+  Backup-exclusion policy = user decision at PR12. Seed parity with iOS: two
+  default entries (`gâu-tsá/𠢕早`, `tsia̍h-pá--buē/食飽未`). Re-activated
+  2026-08-17 as PR11 (store) + PR12 (UI).
 - **D7 User freq / nextword** — **CLOSED at PR8a+PR9 (#528)**. PR3–PR7 ran the
   FetchAtPos carrier's neutral phase only, with `platform_id = 0`, which was
   safe because the only validator is nextword
@@ -253,11 +257,35 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 | PR3b | Composing IMK integration | ComposingSessionCoordinator, ComposingManager port, effect executor (attributed preedit), controller rewrite | **Merged** #523 `5a7b487c` |
 | PR4a | Candidate engine seam | `CommitContinuous` bridge op; manager `fetchCandidates` + effect-backed `commitCandidate`; document-string formatter; pure `CandidateListModel`; tests. No key-table change, no window, no user-visible behaviour | **Merged** #524 `4b155238` |
 | PR4b | Candidate IMK integration | `KeyEventSnapshot` named-key discriminator; Space / arrows / paging / `Ctrl+1…9` intents; controller routing; `CandidatePanel` + SwiftUI bar; caret anchor + screen selection; panel owner token; `hidePalettes` | **Merged** #525 `a93fa507` |
-| PR5 | Settings + menubar | `SettingsStore` + live-read provider replacing `DefaultEngineSettingsProvider`; SwiftUI form; `SettingsWindowController`; programmatic main menu; IMK `menu()` with `showPreferences:` + TL/POJ items; `Ctrl+Shift+,` as the settings item's key equivalent | PR open #527 |
-| PR6 | Custom dict persistence | store: schema v2 + side table + migrator + capacity + derivation; custom_entries injection | Pending |
-| PR7 | Custom dict UI | CRUD UI, CSV import/export, backup-exclusion decision (user-gated) | Pending |
-| PR5 | Settings + menubar | see row above | **Merged** #527 `62ff7d40` |
-| PR8a+PR9 | Proto coordination + freq/nextword ⚠ | **merged into ONE PR at USER instruction.** `PLATFORM_MACOS` + triple-touch regen (`rust-migration-policy.md` §4; ios/android GENERATED files only) · macOS nextword decide contract · `user_frequency.db` + `user_association.db` · phase-2 boosted fetch · learning settings | PR open #528 |
+| PR5 | Settings + menubar | `SettingsStore` + live-read provider replacing `DefaultEngineSettingsProvider`; SwiftUI form; `SettingsWindowController`; programmatic main menu; IMK `menu()` with `showPreferences:` + TL/POJ items; `Ctrl+Shift+,` as the settings item's key equivalent | **Merged** #527 `62ff7d40` |
+| PR6 | Custom dict persistence | **re-activated 2026-08-17 (USER), folded into PR11 below** (supersedes 2026-08-16「先不實作」). No migrator — macOS never shipped a v1 schema | folded → PR11 |
+| PR7 | Custom dict UI | **re-activated 2026-08-17 (USER), folded into PR12 below.** Backup-exclusion decision stays user-gated at PR12 | folded → PR12 |
+| PR8a+PR9 | Proto coordination + freq/nextword ⚠ | **merged into ONE PR at USER instruction.** `PLATFORM_MACOS` + triple-touch regen (`rust-migration-policy.md` §4; ios/android GENERATED files only) · macOS nextword decide contract · `user_frequency.db` + `user_association.db` · phase-2 boosted fetch · learning settings | **Merged** #528 `652eb28d` |
+
+### Settings v2 + 詞庫 page track (2026-08-17, USER-approved plan)
+
+Goals: (a) 詞庫 settings page with FULL iOS/Android Tab3 parity — 資料管理 4 sub-pages
+(自訂詞庫/詞頻/詞關聯/備份還原) + 24 dictionary source toggles + live dictionary search
+with external lookup; (b) native macOS preferences style — NSTabViewController toolbar
+tabs ([⚙ 一般] [📖 詞庫]), resizable window; (c) Magnet-style configurable shortcuts
+(sindresorhus/KeyboardShortcuts lib — first non-Apple dependency, USER-approved) for
+開啟設定視窗 (default `Ctrl+Shift+,`) / TL↔POJ 切換 / 候選開關 (漢羅對調·漢羅並列·顯示羅馬字候選).
+Strings stay Traditional-Chinese literals (PR5 convention). Zero new FFI — all ops already
+in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger PRs
+2026-08-17 over the 200-500 default; session-per-PR overhead).
+
+| PR | Phase | Scope | Status |
+|---|---|---|---|
+| PR10 | Window restyle + shortcuts | NSTabViewController `.toolbar` tabs + resizable window; `GeneralSettingsView` + `DictionarySettingsPane` shell; KeyboardShortcuts dep + `ShortcutActions` registry + recorder UI; IMK menu keyEquivalent driven from stored chord | Pending |
+| PR11 | 詞庫 data layer (no UI) | 24 source-toggle keys (iOS `SharedSettings.swift:53-84` spellings) + `DictionarySourceToggles` in `EngineSettings`; `lexiconDictionaryFilters` bridge + `FetchAtPos.enabled_sources_bitmask` + `custom_entries` wiring; `CustomDictionaryStore` (schema v2 + side table, cap 30000, no migrator) + phonetics derive bridge; `LearningDatabase.performSync` + freq/assoc list/delete/clear/batchImportMerge APIs; CSV codecs third mirror. ⚠ intended behavior change: defaults exclude iTaigi/台日/台華/植物/異體/khiin from continuous candidates (was sentinel all-on) | Pending |
+| PR12 | 詞庫 tab UI | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; 詞頻/詞關聯 viewers (limit 100, pair-key delete, clear, CSV); 備份還原 `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy = USER decision here (default: stays inside TM, matching 2026-08-16 learning-DB decision) | Pending |
+| PR13 | 辭典搜尋 | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of 詞庫 tab — mac idiom) + 萌典教典/ChhoeTaigi external links via NSWorkspace.open | Pending |
+
+Dependencies: PR10 ⊥ PR11 (parallelizable); PR12 needs PR10+PR11; PR13 needs PR11.
+Per-PR gate: `swift test` only (no engine change). Codex sandwich each PR (pre-impl
+mandatory). doc-lookup gates: KeyboardShortcuts · NSTabViewController.TabStyle.toolbar ·
+NSWindow.toolbarStyle · NSOpen/NSSavePanel in LSUIElement · UTType for `.taigi` ·
+NSWorkspace.open.
 
 Every PR: Codex sandwich + `/simplify`; PR1/PR8a additionally FFI-adjacent
 review per `.claude/rules/rust-ffi-safety.md` §5. Engine-touched PRs run
@@ -304,7 +332,8 @@ Methods` sudo install.
   and bind at PR4b.
 - PR8a timing (proto regen window vs concurrent iOS/Android session).
 - Intel/x86_64 support (distribution decision).
-- Custom-dict Time-Machine/backup-exclusion policy (PR7).
+- Custom-dict Time-Machine/backup-exclusion policy (decided at PR12; plan default =
+  stays inside TM scope, matching the 2026-08-16 learning-DB decision).
 - macOS dogfood acceptance checklist contents (proposed at PR9). **Dogfood cadence decided
   2026-08-15 (USER: 「我想等 desktop 實作完成再 dogfood」)** — device dogfood is not a per-PR
   gate; it runs once as a batch after the desktop IME is implemented.
