@@ -163,8 +163,13 @@ enum RustEngineBridge {
     static func appConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
         var config = Taigi_Engine_AppConfig()
         config.inputMode = settings.inputMode.rawValue
-        config.ooDoubletapEnabled = settings.isDoubleTapOOEnabled
-        config.nnDoubletapEnabled = settings.isDoubleTapNNEnabled
+        // Unconditional here, unlike iOS and Android where both are user
+        // settings: their on-screen keyboards have dedicated `o͘` and `ⁿ` keys,
+        // so folding a double-tapped `oo` / `nn` is a preference. A hardware
+        // keyboard has no such key, so switching the fold off would leave both
+        // graphemes untypable in POJ — not a choice worth offering.
+        config.ooDoubletapEnabled = true
+        config.nnDoubletapEnabled = true
         config.platformID = .macos
         return config
     }

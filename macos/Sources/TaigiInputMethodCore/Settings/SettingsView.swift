@@ -18,12 +18,6 @@ struct SettingsView: View {
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
-    @AppStorage(SettingsStore.Keys.isDoubleTapOOEnabled.name)
-    private var isDoubleTapOOEnabled = SettingsStore.Keys.isDoubleTapOOEnabled.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isDoubleTapNNEnabled.name)
-    private var isDoubleTapNNEnabled = SettingsStore.Keys.isDoubleTapNNEnabled.defaultValue
-
     @AppStorage(SettingsStore.Keys.isTranslateSwapped.name)
     private var isTranslateSwapped = SettingsStore.Keys.isTranslateSwapped.defaultValue
 
@@ -47,13 +41,6 @@ struct SettingsView: View {
                     Text("白話字 (POJ)").tag(InputMode.poj)
                 }
                 .pickerStyle(.radioGroup)
-            }
-
-            Section {
-                Toggle("連打 oo 轉 o͘", isOn: $isDoubleTapOOEnabled)
-                Toggle("連打 nn 轉 ⁿ", isOn: $isDoubleTapNNEnabled)
-            } header: {
-                Text("輸入")
             }
 
             Section {

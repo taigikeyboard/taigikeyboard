@@ -21,12 +21,6 @@ enum InputMode: String, CaseIterable, Sendable {
 struct EngineSettings: Equatable, Sendable {
     let inputMode: InputMode
 
-    /// POJ preprocessing: double-tapped `oo` / `nn` fold to their diacritic
-    /// forms. Sent to the engine as `AppConfig.oo_doubletap_enabled` /
-    /// `nn_doubletap_enabled`.
-    let isDoubleTapOOEnabled: Bool
-    let isDoubleTapNNEnabled: Bool
-
     /// Word-boundary spacing inputs for the engine's `continuous_word_space`
     /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Both are
     /// `false` until PR5 ships the settings UI, but they are carried in the
@@ -72,8 +66,6 @@ struct EngineSettings: Equatable, Sendable {
     /// gets the same composition and the same candidate order out of the box.
     static let defaults = EngineSettings(
         inputMode: .tl,
-        isDoubleTapOOEnabled: true,
-        isDoubleTapNNEnabled: true,
         isTranslateSwapped: false,
         isOutputBothScripts: false,
         isLiteralRomanCandidateEnabled: false,

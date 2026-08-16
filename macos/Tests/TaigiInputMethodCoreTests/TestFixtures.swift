@@ -66,8 +66,6 @@ enum TestFixtures {
     ) -> EngineSettings {
         EngineSettings(
             inputMode: .tl,
-            isDoubleTapOOEnabled: true,
-            isDoubleTapNNEnabled: true,
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
             isLiteralRomanCandidateEnabled: false,

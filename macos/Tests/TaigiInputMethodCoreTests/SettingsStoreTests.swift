@@ -27,23 +27,17 @@ final class SettingsStoreTests: XCTestCase {
     /// install types with is what `EngineSettings.defaults` says, which is
     /// itself kept aligned with iOS and Android. A store that answered its own
     /// defaults would let a macOS install drift away from the other two.
+    ///
+    /// Also the regression test for reading a `Bool` through
+    /// `UserDefaults.bool(forKey:)`, which answers `false` for an absent key:
+    /// the settings that ship ON — the two learning switches — would be off for
+    /// every new user, and only this case would notice.
     func testCurrent_withNothingStored_matchesTheShippedDefaults() {
         XCTAssertEqual(makeStore().current, EngineSettings.defaults)
     }
 
-    /// `UserDefaults.bool(forKey:)` answers `false` for an absent key, which
-    /// would turn both double-tap settings — the two that ship ON — off for
-    /// every new user. This is that defect's regression test.
-    func testCurrent_withNothingStored_keepsTheDefaultOnSettingsOn() {
-        let settings = makeStore().current
-        XCTAssertTrue(settings.isDoubleTapOOEnabled)
-        XCTAssertTrue(settings.isDoubleTapNNEnabled)
-    }
-
     func testCurrent_readsEveryStoredValue() {
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isDoubleTapOOEnabled.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isDoubleTapNNEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
@@ -54,8 +48,6 @@ final class SettingsStoreTests: XCTestCase {
             makeStore().current,
             EngineSettings(
                 inputMode: .poj,
-                isDoubleTapOOEnabled: false,
-                isDoubleTapNNEnabled: false,
                 isTranslateSwapped: true,
                 isOutputBothScripts: true,
                 isLiteralRomanCandidateEnabled: true,
@@ -119,8 +111,6 @@ final class SettingsStoreTests: XCTestCase {
     /// alignment is invisible from this file alone.
     func testKeys_matchTheIOSSpellings() {
         XCTAssertEqual(SettingsStore.Keys.inputMode.name, "inputMode")
-        XCTAssertEqual(SettingsStore.Keys.isDoubleTapOOEnabled.name, "enableDoubleTapOO")
-        XCTAssertEqual(SettingsStore.Keys.isDoubleTapNNEnabled.name, "enableDoubleTapNN")
         XCTAssertEqual(SettingsStore.Keys.isTranslateSwapped.name, "isTranslateSwapped")
         XCTAssertEqual(SettingsStore.Keys.isOutputBothScripts.name, "outputBothScripts")
         XCTAssertEqual(

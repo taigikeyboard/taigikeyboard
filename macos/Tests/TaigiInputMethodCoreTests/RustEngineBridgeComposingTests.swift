@@ -231,8 +231,6 @@ private extension EngineSettings {
     func withLiteralRomanCandidate(enabled: Bool) -> EngineSettings {
         EngineSettings(
             inputMode: inputMode,
-            isDoubleTapOOEnabled: isDoubleTapOOEnabled,
-            isDoubleTapNNEnabled: isDoubleTapNNEnabled,
             isTranslateSwapped: isTranslateSwapped,
             isOutputBothScripts: isOutputBothScripts,
             isLiteralRomanCandidateEnabled: enabled,

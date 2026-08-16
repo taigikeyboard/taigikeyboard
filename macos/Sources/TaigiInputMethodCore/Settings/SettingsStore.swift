@@ -1,4 +1,4 @@
-// Where the six user settings are persisted, and where every reader of them —
+// Where the user settings are persisted, and where every reader of them —
 // the engine, the settings form, the input-source menu — agrees on the keys.
 
 import Foundation
@@ -43,14 +43,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "inputMode",
             defaultValue: EngineSettings.defaults.inputMode,
         )
-        static let isDoubleTapOOEnabled = SettingsKey(
-            name: "enableDoubleTapOO",
-            defaultValue: EngineSettings.defaults.isDoubleTapOOEnabled,
-        )
-        static let isDoubleTapNNEnabled = SettingsKey(
-            name: "enableDoubleTapNN",
-            defaultValue: EngineSettings.defaults.isDoubleTapNNEnabled,
-        )
         static let isTranslateSwapped = SettingsKey(
             name: "isTranslateSwapped",
             defaultValue: EngineSettings.defaults.isTranslateSwapped,
@@ -84,8 +76,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var current: EngineSettings {
         EngineSettings(
             inputMode: inputMode,
-            isDoubleTapOOEnabled: bool(Keys.isDoubleTapOOEnabled),
-            isDoubleTapNNEnabled: bool(Keys.isDoubleTapNNEnabled),
             isTranslateSwapped: bool(Keys.isTranslateSwapped),
             isOutputBothScripts: bool(Keys.isOutputBothScripts),
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
