@@ -255,7 +255,7 @@ Verdicts folded in above: D1 CONFIRM / D2 REFUTE (→ hybrid native resources) /
 - **Live switch** = root `@Observable` language store → computed resolver; publishing a change re-renders the tree, no restart. Set `\.locale` additionally for number/date formatting.
 - **Extension** (separate process from host) follows the host via **App Group shared `UserDefaults(suiteName:)`** and mirrors the same hybrid resolver; it sets `KeyboardContext.locale` for KeyboardKit's own keycap labels. Add the `.xcstrings` to BOTH targets' Resources phases (each target compiles its own copy).
 
-### Android (Kotlin / Compose / FlorisBoard base; minSdk 28, AppCompat 1.7.1, Compose BOM 2026.01.01)
+### Android (Kotlin / Compose / FlorisBoard base; minSdk 30, AppCompat 1.7.1, Compose BOM 2026.01.01)
 
 - ⚠ **`AppCompatDelegate.setApplicationLocales()` is the WRONG tool for TL/POJ**: `LocaleList` normalization strips `-x-` private-use subtags, and the system per-app-language picker only surfaces real OS locales. Verified limitation.
 - **Resource qualifier dirs cannot encode `-x-` private-use** → cannot split TL vs POJ as two `values-b+nan+Latn+TW+x+…` dirs.

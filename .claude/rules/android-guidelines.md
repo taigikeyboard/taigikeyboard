@@ -125,6 +125,23 @@ When a receiver class already exposes a member function `fun X(...)`, a top-leve
 
 Incident: A1 follow-up on PR #145 — extension `fun LoggerBackend.d(tag, msg: () -> String)` shadowed member `fun d(tag, msg: String)`; build failed across 33 call-sites with `Function0<String> but String was expected`. Renaming to `debug` fixed it.
 
+## 8a. SQLite capability baseline = the version `minSdk` bundles `[A]`
+
+Android's SQLite ships **with the OS**, not with the app (`android.database.sqlite.*` — the project uses no bundled driver). So the usable SQL dialect is fixed by `minSdk`, and **nothing in the build catches a violation**: unsupported syntax fails at `prepare` time as a runtime `SQLiteException`, on a device the CI never runs on, and every user-data write site catches-and-logs so it fails silently in release.
+
+| `minSdk` | Android | Bundled SQLite |
+|---|---|---|
+| 28 / 29 | 9 / 10 | 3.22 |
+| **30** (current) | **11** | **3.28** |
+
+**Currently available** (≤ 3.28): `ON CONFLICT … DO UPDATE` (UPSERT, 3.24) · window functions — `ROW_NUMBER`, `OVER()`, `PARTITION BY` (3.25) · table-valued pragmas — `pragma_table_info(…)` (3.16) · CTEs (3.8.3).
+
+**Still unavailable** at 3.28: `RETURNING` (3.35) · generated columns (3.31) · `STRICT` tables (3.37) · `IIF()` (3.32) · `MATERIALIZED` CTE hints (3.35) · multiple `ON CONFLICT` clauses / target-less `DO UPDATE` (3.35).
+
+Before using SQL syntax you are not certain of, check its version against [SQLite's release history](https://www.sqlite.org/changes.html) and the table above. Raising `minSdk` raises the ceiling — update this section in the same PR.
+
+**Incident** (2026-08-17): `minSdk` was 28 while all three user-data DBs (`user_association`, `user_frequency`, `custom_dictionary`) used UPSERT at every write. On Android 9/10 those statements were a syntax error, so learning silently never worked there — no crash, no release log, no bug report. Surfaced only while auditing R2's own SQL for 3.22 compatibility. Resolved by raising `minSdk` to 30 (Play Console: Android 9 = 3 installs, Android 10 in the same band, against ~869 total), not by rewriting the SQL.
+
 ## 9. Gradle files editable by Claude `[B]`
 
 `android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** (lifted 2026-05-09 — CLAUDE.md rule 4 previously grouped gradle with pbxproj, but gradle edits are routine: plugin wiring, dep bumps, lint config).
