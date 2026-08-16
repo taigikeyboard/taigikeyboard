@@ -10,7 +10,10 @@ import XCTest
 final class ComposingSessionCoordinatorTests: XCTestCase {
     private func makeCoordinator() -> ComposingSessionCoordinator {
         ComposingSessionCoordinator(
-            composingManager: ComposingManager(startingGeneration: TestFixtures.generationCounter.next()),
+            composingManager: ComposingManager(
+                settingsProvider: StubEngineSettingsProvider(),
+                startingGeneration: TestFixtures.generationCounter.next(),
+            ),
         )
     }
 

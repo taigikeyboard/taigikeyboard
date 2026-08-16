@@ -40,9 +40,9 @@ Host app — IMKTextInput client
 │   full carrier — neutral phase only until PR8b)               │
 ├──────────────┬─────────────────────┬──────────────────────────┤
 │ CandidatePanel│ Settings window     │ CustomDictionaryStore   │
-│ NSPanel non-  │ WindowManager +     │ SQLite schema v2 + side │
-│ activating +  │ NSHostingController │ table + 30k cap         │
-│ NSHostingView │ (SwiftUI)           │ (iOS-invariant port)    │
+│ NSPanel non-  │ SettingsWindow-     │ SQLite schema v2 + side │
+│ activating +  │ Controller +        │ table + 30k cap         │
+│ NSHostingView │ NSHostingController │ (iOS-invariant port)    │
 ├──────────────┴─────────────────────┴──────────────────────────┤
 │ RustEngineBridge port — protobuf envelope over the existing   │
 │ 4-fn swift-ffi surface; live-read settings → AppConfig per    │
@@ -111,7 +111,8 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `commitComposition` without `super`; **`recognizedEvents = .keyDown` ONLY**
   (revised at PR3b: IMK sends `commitComposition:` on a click outside the marked
   region only for the exact default keydown mask, `IMKInputController.h:154-157`,
-  so a later chord slice must find another route rather than widen this);
+  so a later chord slice must find another route rather than widen this — PR5
+  took that route, binding `Ctrl+Shift+,` as a menu key equivalent, see D5);
   logger sink installed once at bootstrap. **Chromium deadlock rule**: never
   query the client synchronously inside `activateServer` (azooKey-Desktop
   regression-test model). **Pinned at PR2 #520** by
@@ -148,11 +149,42 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   (McBopomofo `HorizontalCandidateController.swift:509`; azooKey wraps — not
   adopted); paging moves the highlight to the first item of the new page, so
   page start / highlight / `⌃1` label always agree.
-- **D5 Settings** — in-process SwiftUI window (WindowManager pattern +
-  activate-before-show + programmatic Edit menu); opened from IMK `menu()` AND
-  `Ctrl+Shift+,` chord (Cmd+, belongs to the host app). `UserDefaults.standard`;
-  live-read `EngineSettingsProvider` port; `@ConfigState`-style wrapper for
-  SwiftUI re-render on external changes. Minimal defaults provider ships in PR3.
+- **D5 Settings** — in-process SwiftUI window (activate-before-show +
+  programmatic Edit menu); opened from IMK `menu()` AND `Ctrl+Shift+,`
+  (Cmd+, belongs to the host app). `UserDefaults.standard`; live-read
+  `EngineSettingsProvider` port. Minimal defaults provider ships in PR3.
+  **Revised at the PR5 Codex pre-impl (2026-08-16)**, four points:
+  (1) **`Ctrl+Shift+,` is a `keyEquivalent` on the IMK menu item, not a branch
+  in `handle(_:client:)`** — every reference input method binds its shortcuts
+  that way (MacishType `InputController.swift:60-67`, McBopomofo
+  `InputMethodController.swift:73-84`, azooKey
+  `azooKeyMacInputControllerHelper.swift:8-20`) and none classifies a settings
+  chord in its key handler. This leaves `ComposingKeyIntent` and the
+  keydown-only `recognizedEvents` mask untouched, and avoids classifying a
+  chord out of `characters`, which Control rewrites. It also has to be verified
+  on an installed copy: the SDK does not document whether a Text Input Menu key
+  equivalent fires while the menu is closed and the host is frontmost.
+  (2) **No `@ConfigState` port** — SwiftUI `@AppStorage` already re-renders on
+  external `UserDefaults` writes, which is the whole requirement for six
+  settings in one process; azooKey's notification-backed wrapper
+  (`Windows/ConfigState.swift:10-77`) exists for a far larger config surface,
+  and MacishType uses plain `@AppStorage` (`GeneralSettingsView.swift:10-13`).
+  (3) **No general `WindowManager`** — one window, so one
+  `SettingsWindowController`. (4) **`NSApp.activate()` only**: MacishType's
+  comment that `activate(ignoringOtherApps:)` is required for an LSUIElement
+  input method (`WindowManager.swift:24-38`) does not override the
+  deployment-target contract — the SDK marks that variant `API_DEPRECATED`
+  ("Use NSApp.activate instead") and `activate()` is macOS 14+. Activation is a
+  request, so `orderFrontRegardless()` still follows `makeKeyAndOrderFront`.
+  Also settled there: menu built fresh per call (`IMKInputController.h:307-310`),
+  the settings item uses the reserved `showPreferences:` selector without
+  `super` (the inherited implementation looks for a `preferences.nib` this
+  SwiftPM package has none of, `:165-170`), one selector per romanization rather
+  than one reading the sender (IMK delivers menu commands through
+  `doCommandBySelector:commandDictionary:` with an info dictionary as sender,
+  `:283-296`), main menu installed at launch with **no Quit item**, and
+  `EngineSettings.defaults` kept as the single source of every default with the
+  persistence descriptors referencing it.
 - **D6 Custom dict** — `~/Library/Application Support/<bundle-id>/custom_dictionary.db`;
   FULL iOS contract port (schema v2 + `custom_search_key` side table + migrator +
   repository + same-transaction 30000-cap guard + derivation via existing engine
@@ -194,12 +226,12 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 |---|---|---|---|
 | PR0 | Admin | this roadmap + memory topic | this commit |
 | PR1 | Engine build surface | darwin toolchain target; `build-macos-xcframework.sh`; `gen-macos-protos`; root Makefile `macos-*` targets. Zero ios/android changes. | **Merged** #514 `6329f152` |
-| PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | PR open #520 |
-| PR3a | Composing engine seam | bridge composing ops + full 10-effect decode, `lexiconInstall`, dictionary artefacts copied into the bundle, minimal settings provider | Pending |
-| PR3b | Composing IMK integration | ComposingSessionCoordinator, ComposingManager port, effect executor (attributed preedit), controller rewrite | Pending |
-| PR4a | Candidate engine seam | `CommitContinuous` bridge op; manager `fetchCandidates` + effect-backed `commitCandidate`; document-string formatter; pure `CandidateListModel`; tests. No key-table change, no window, no user-visible behaviour | Pending |
-| PR4b | Candidate IMK integration | `KeyEventSnapshot` named-key discriminator; Space / arrows / paging / `Ctrl+1…9` intents; controller routing; `CandidatePanel` + SwiftUI bar; caret anchor + screen selection; panel owner token; `hidePalettes` | Pending |
-| PR5 | Settings + menubar | WindowManager, SwiftUI form, menu items, Ctrl+Shift+, chord, live-read provider, TL↔POJ toggle, OSLog bootstrap | Pending |
+| PR2 | Scaffold + IMK spike | Package.swift; AppDelegate + strong-ref IMKServer + installed-copy guard; echo controller; concrete Info.plist; bundle script + validation; install loop; darwin FFI smoke test | **Merged** #520 `e0938bbd` |
+| PR3a | Composing engine seam | bridge composing ops + full 10-effect decode, `lexiconInstall`, dictionary artefacts copied into the bundle, minimal settings provider | **Merged** #522 `433a1f3b` |
+| PR3b | Composing IMK integration | ComposingSessionCoordinator, ComposingManager port, effect executor (attributed preedit), controller rewrite | **Merged** #523 `5a7b487c` |
+| PR4a | Candidate engine seam | `CommitContinuous` bridge op; manager `fetchCandidates` + effect-backed `commitCandidate`; document-string formatter; pure `CandidateListModel`; tests. No key-table change, no window, no user-visible behaviour | **Merged** #524 `4b155238` |
+| PR4b | Candidate IMK integration | `KeyEventSnapshot` named-key discriminator; Space / arrows / paging / `Ctrl+1…9` intents; controller routing; `CandidatePanel` + SwiftUI bar; caret anchor + screen selection; panel owner token; `hidePalettes` | **Merged** #525 `a93fa507` |
+| PR5 | Settings + menubar | `SettingsStore` + live-read provider replacing `DefaultEngineSettingsProvider`; SwiftUI form; `SettingsWindowController`; programmatic main menu; IMK `menu()` with `showPreferences:` + TL/POJ items; `Ctrl+Shift+,` as the settings item's key equivalent | PR open #527 |
 | PR6 | Custom dict persistence | store: schema v2 + side table + migrator + capacity + derivation; custom_entries injection | Pending |
 | PR7 | Custom dict UI | CRUD UI, CSV import/export, backup-exclusion decision (user-gated) | Pending |
 | PR8a | Proto coordination ⚠ | `PLATFORM_MACOS` + macOS nextword decide contract + triple-touch regen incl. `make macos-protos` (`rust-migration-policy.md` §4; touches ios/android GENERATED files only; timing user-coordinated) | Pending |

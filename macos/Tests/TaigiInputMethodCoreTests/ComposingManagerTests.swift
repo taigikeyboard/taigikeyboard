@@ -8,7 +8,10 @@ import XCTest
 @MainActor
 final class ComposingManagerTests: XCTestCase {
     private func makeManager() -> ComposingManager {
-        ComposingManager(startingGeneration: TestFixtures.generationCounter.next())
+        ComposingManager(
+            settingsProvider: StubEngineSettingsProvider(),
+            startingGeneration: TestFixtures.generationCounter.next(),
+        )
     }
 
     func testAppend_showsThePreeditAndMirrorsTheEngine() {

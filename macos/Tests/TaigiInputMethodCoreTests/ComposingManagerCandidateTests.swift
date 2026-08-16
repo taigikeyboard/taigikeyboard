@@ -14,7 +14,10 @@ final class ComposingManagerCandidateTests: XCTestCase {
     }
 
     private func makeManager() -> ComposingManager {
-        ComposingManager(startingGeneration: TestFixtures.generationCounter.next())
+        ComposingManager(
+            settingsProvider: StubEngineSettingsProvider(),
+            startingGeneration: TestFixtures.generationCounter.next(),
+        )
     }
 
     /// `taigi` segments into two syllables, so its candidates include both a

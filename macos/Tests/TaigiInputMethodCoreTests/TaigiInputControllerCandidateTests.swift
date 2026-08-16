@@ -355,6 +355,33 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(session.client.writes.last, .setMarkedText("taigia", selectionLocation: 6))
     }
 
+    /// Switching romanization from the input-source menu has to take the bar
+    /// with it. The candidates on screen were fetched under the old
+    /// romanization, and Space commits whichever one is highlighted — a bar left
+    /// standing would write a candidate the new mode would never have offered.
+    ///
+    /// Driven through `doCommandBySelector:`, which is how IMK delivers a menu
+    /// command (`IMKInputController.h:283-296`), against a real composition —
+    /// asserting only that a hide was requested would pass against a bar that
+    /// stayed up because the hide named the wrong session.
+    func testSwitchingRomanizationFromTheMenu_takesTheBarDown() throws {
+        let session = try composedSession()
+        let suiteName = "TaigiInputControllerCandidateTests.\(UUID().uuidString)"
+        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { userDefaults.removePersistentDomain(forName: suiteName) }
+        session.controller.settings = SettingsStore(userDefaults: userDefaults)
+        XCTAssertTrue(session.presenter.isShowing, "the composition put a bar up to take down")
+
+        let poj = try XCTUnwrap(
+            XCTUnwrap(session.controller.menu()).items
+                .first { $0.title == "白話字 (POJ)" }?.action,
+        )
+        session.controller.doCommand(by: poj, command: [:])
+
+        XCTAssertFalse(session.presenter.isShowing)
+        XCTAssertEqual(session.controller.settings.inputMode, .poj)
+    }
+
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {
         let session = try composedSession()
 

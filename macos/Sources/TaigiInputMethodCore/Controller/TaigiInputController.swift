@@ -52,6 +52,16 @@ public final class TaigiInputController: IMKInputController {
         set { injectedPresenter = newValue }
     }
 
+    /// Reads and writes the user's settings for the input-source menu. Its own
+    /// instance rather than a shared one: the store holds no state, and the
+    /// engine's copy is constructed at the composition root
+    /// (`ComposingSessionCoordinator.shared`) — both read the same defaults
+    /// domain, so a mode written here is what the next keystroke composes with.
+    ///
+    /// Settable so a test can point it at its own suite; the shipped one writes
+    /// the settings of whoever is running the tests.
+    var settings = SettingsStore()
+
     /// The client this session belongs to, learned at activation — which always
     /// precedes any key event, because a session that never activated never
     /// claimed the engine. `inputControllerWillClose()` gets no sender, and this
@@ -150,6 +160,109 @@ public final class TaigiInputController: IMKInputController {
         // cross an isolation boundary.
         let key = KeyEventSnapshot(event)
         return onMainActor(sender) { controller, client in controller.handle(key, client: client) }
+    }
+
+    // MARK: - Input-source menu
+
+    /// The menu under the input-source icon in the menu bar.
+    ///
+    /// Built fresh on every call, which is what the contract asks for: the
+    /// system calls this "whenever the menu needs to be drawn so that input
+    /// methods can update the menu to reflect their current state"
+    /// (`IMKInputController.h:307-310`). That is what keeps the checkmark on
+    /// the romanization the user is actually typing.
+    ///
+    /// Nothing here reads session state, so unlike the other entry points this
+    /// one asserts no isolation: the mode comes from `UserDefaults`, which is
+    /// thread-safe, and the rest is titles and selectors. It does build AppKit
+    /// objects, and so still rests on the process-wide assumption that IMK
+    /// calls its controllers on the main run loop — the assumption
+    /// `onMainActor` exists to turn into a crash rather than a data race
+    /// everywhere it can be checked.
+    override public func menu() -> NSMenu! {
+        let menu = NSMenu()
+        // The items below set their own state, and automatic validation would
+        // second-guess it (`references/MacishType/macos/MacishType/InputController.swift:27-29`).
+        menu.autoenablesItems = false
+
+        // `Ctrl+Shift+,` rather than the ⌘, a Mac app would use: ⌘, belongs to
+        // the app being typed into, and a key equivalent claimed here is taken
+        // from the host for as long as this input source is selected.
+        //
+        // A key equivalent rather than a branch in `handle(_:client:)` — which
+        // is what every reference input method does
+        // (MacishType `InputController.swift:60-67`, McBopomofo
+        // `InputMethodController.swift:73-84`, azooKey
+        // `azooKeyMacInputControllerHelper.swift:8-20`). Routing it through the
+        // key handler would mean classifying a chord out of `characters`, which
+        // Control rewrites, and would put a command that has nothing to do with
+        // composing into the key contract.
+        let settingsItem = NSMenuItem(
+            title: String(localized: "設定…"),
+            action: #selector(showPreferences(_:)),
+            keyEquivalent: ",",
+        )
+        settingsItem.keyEquivalentModifierMask = [.control, .shift]
+        menu.addItem(settingsItem)
+
+        menu.addItem(.separator())
+
+        // The romanization switch is here as well as in the settings window
+        // because it is the one setting a user changes mid-sentence.
+        let currentMode = settings.inputMode
+        menu.addItem(inputModeItem(
+            title: String(localized: "台羅 (TL)"),
+            action: #selector(selectInputModeTL(_:)),
+            isCurrent: currentMode == .tl,
+        ))
+        menu.addItem(inputModeItem(
+            title: String(localized: "白話字 (POJ)"),
+            action: #selector(selectInputModePOJ(_:)),
+            isCurrent: currentMode == .poj,
+        ))
+
+        return menu
+    }
+
+    /// One romanization choice, checkmarked when it is the one in use.
+    private func inputModeItem(title: String, action: Selector, isCurrent: Bool) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.state = isCurrent ? .on : .off
+        return item
+    }
+
+    /// Deliberately does not call `super`. The inherited implementation looks
+    /// for a `preferences.nib` (`IMKInputController.h:165-170`); this package is
+    /// built by SwiftPM and has no nib to find. The selector is kept because it
+    /// is the one the system reserves for this command.
+    override public func showPreferences(_: Any!) {
+        Self.logger.debug("showPreferences")
+        onMainActor(nil) { _, _ in SettingsWindowController.shared.show() }
+    }
+
+    @objc
+    private func selectInputModeTL(_: Any!) {
+        switchInputMode(to: .tl)
+    }
+
+    @objc
+    private func selectInputModePOJ(_: Any!) {
+        switchInputMode(to: .poj)
+    }
+
+    /// One selector per mode rather than one selector reading the sender: IMK
+    /// delivers menu commands through `doCommandBySelector:commandDictionary:`,
+    /// where the sender is an info dictionary carrying the `NSMenuItem` under
+    /// `kIMKCommandMenuItemName` rather than the item itself
+    /// (`IMKInputController.h:283-296`). Naming the mode in the selector means
+    /// nothing has to be recovered from that dictionary's shape.
+    private func switchInputMode(to mode: InputMode) {
+        Self.logger.debug("switch input mode to \(mode.rawValue)")
+        settings.inputMode = mode
+        // The candidates on screen were fetched under the old romanization, and
+        // the key contract lets Space commit whichever one is highlighted. They
+        // go with the mode that produced them.
+        onMainActor(nil) { controller, _ in controller.dismissCandidates() }
     }
 
     // MARK: - Main-actor work

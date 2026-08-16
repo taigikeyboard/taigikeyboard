@@ -47,8 +47,12 @@ final class ComposingManager {
     /// The default starts at 1 because 0 is the generation an unset proto field
     /// carries; keeping them apart means a request that forgot to set one
     /// cannot be mistaken for a request from the first session.
+    /// `settingsProvider` has no default on purpose: the shipped one reads the
+    /// user's real `UserDefaults`, and a defaulted parameter is how a test — or
+    /// a second production path added later — would silently end up driving the
+    /// engine from settings it never meant to read.
     init(
-        settingsProvider: EngineSettingsProvider = DefaultEngineSettingsProvider(),
+        settingsProvider: EngineSettingsProvider,
         startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider

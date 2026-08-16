@@ -27,14 +27,18 @@ struct ComposingSessionToken: Hashable, Sendable {
 /// client must not be asked anything during activation.
 @MainActor
 final class ComposingSessionCoordinator {
-    /// Process-wide, because the engine state it guards is.
-    static let shared = ComposingSessionCoordinator()
+    /// Process-wide, because the engine state it guards is — and the one place
+    /// the shipped composition is assembled, which is why the settings store is
+    /// named here rather than defaulted into `ComposingManager`.
+    static let shared = ComposingSessionCoordinator(
+        composingManager: ComposingManager(settingsProvider: SettingsStore()),
+    )
 
     private let composingManager: ComposingManager
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
 
-    init(composingManager: ComposingManager = ComposingManager()) {
+    init(composingManager: ComposingManager) {
         self.composingManager = composingManager
     }
 

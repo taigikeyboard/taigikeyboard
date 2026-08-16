@@ -26,6 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         RustEngineBridge.installLoggerSink()
         installLexiconEngine()
 
+        // At launch rather than with the settings window: this is process-wide
+        // AppKit configuration, and the menu has to exist before any window of
+        // ours becomes key for its shortcuts to reach the first responder.
+        NSApp.mainMenu = MainMenu.make()
+
         server = IMKServer(
             name: Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String,
             bundleIdentifier: Bundle.main.bundleIdentifier,
