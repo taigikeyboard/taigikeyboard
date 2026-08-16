@@ -12,6 +12,11 @@
 
     `ComponentInputModeDict` is deliberately absent: TL and POJ are an in-app
     setting, not OS-level input modes (docs/architecture/macos-roadmap.md D5).
+
+    `AppIcon.icns` is the App Store icon, built from the iOS asset catalogue
+    (`ios/…/AppIcon.appiconset`). `TISIconIsTemplate` is false because that art
+    is fully opaque: rendered as a template mask it would show as a solid blob
+    in the menu bar instead of the icon.
 -->
 <plist version="1.0">
 <dict>
@@ -19,6 +24,8 @@
 	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>TaigiInputMethod</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.siansiansu.inputmethod.TaigiKeyboard</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -42,11 +49,13 @@
 	<key>NSPrincipalClass</key>
 	<string>TaigiInputMethodApplication</string>
 	<key>TISIconIsTemplate</key>
-	<true/>
+	<false/>
 	<key>TISInputSourceID</key>
 	<string>com.siansiansu.inputmethod.TaigiKeyboard</string>
 	<key>TISIntendedLanguage</key>
 	<string>mul</string>
+	<key>tsInputMethodIconFileKey</key>
+	<string>AppIcon.icns</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Latn</string>

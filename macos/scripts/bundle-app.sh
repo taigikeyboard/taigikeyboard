@@ -39,6 +39,17 @@ cp "$BUILT_EXECUTABLE" "$CONTENTS_DIR/MacOS/$EXECUTABLE_NAME"
 cp "$SOURCE_PLIST" "$CONTENTS_DIR/Info.plist"
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
+echo "==> Copying app icon"
+# Named by Info.plist twice: CFBundleIconFile (Finder, System Settings) and
+# tsInputMethodIconFileKey (the menu-bar input-source item). A missing icon
+# leaves the input method with a generic placeholder in both places.
+ICON_FILE="$PACKAGE_DIR/App/AppIcon.icns"
+if [[ ! -s "$ICON_FILE" ]]; then
+    echo "error: missing or empty app icon $ICON_FILE" >&2
+    exit 1
+fi
+cp "$ICON_FILE" "$CONTENTS_DIR/Resources/AppIcon.icns"
+
 echo "==> Copying dictionary data"
 # Read from the iOS resource directory rather than keeping a third committed
 # copy of ~24MB of generated data. `make dict` regenerates these in place, so
