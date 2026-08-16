@@ -23,6 +23,9 @@ struct MergedRow {
     hanzi: String,
     tl: String,
     score: f64,
+    /// Whether a `Source::User` row has already contributed to `score` — see
+    /// the merge loop for why a second one must not.
+    has_user_score: bool,
 }
 
 // 中文: 主後處理入口;依世代決定 stale,接著評分、合併、整形、排序、截斷。
@@ -65,16 +68,41 @@ pub(crate) fn filter(
             Source::User => scorer::calculate_user_score(row.count, row.last_used_ms, now_ms),
             Source::Unspecified => return Err(NextWordError::InvalidSource),
         };
+        let is_user = source == Source::User;
         let key = (row.hanzi.clone(), row.tl.clone());
         merged
             .entry(key)
             .and_modify(|existing| {
+                // At most ONE user contribution per exact `(hanzi, tl)` in a
+                // request. Summing is right for dict + user — that IS the
+                // design, a learned word outranking the same word from the
+                // dictionary — and wrong for user + user: under the v6 storage
+                // key (`behavioral-invariants.md` §24) one predicted word can be
+                // backed by several rows differing in the PREVIOUS word's
+                // reading (重/tîng → 複 and 重/tāng → 複, both recalled by the
+                // Hanji-only lookup), and adding them would give it several
+                // `LEARNING_BONUS` terms for being 一字多音 rather than for
+                // being well-learned.
+                //
+                // The engine does not — and cannot — verify that two colliding
+                // user rows differ only in `prev_tl`; `RawNextWordPrediction`
+                // does not carry it. The rule it enforces is the broader one
+                // stated above, which is why `raw` is a PRIORITY-ORDERED list
+                // rather than a set: the first user row wins, and the platform
+                // SQL is what puts the best evidence first. See the
+                // `CROSS-PLATFORM INVARIANT` note on iOS `fetchUserRows` /
+                // Android `predict`, and `nextword.proto::FilterPredictions`.
+                if is_user && existing.has_user_score {
+                    return;
+                }
                 existing.score += score;
+                existing.has_user_score |= is_user;
             })
             .or_insert(MergedRow {
                 hanzi: row.hanzi,
                 tl: row.tl,
                 score,
+                has_user_score: is_user,
             });
     }
 
@@ -285,6 +313,232 @@ mod tests {
             last_used_ms,
             source: Source::User as i32,
         }
+    }
+
+    /// §24 prediction identity — under the v6 storage key the two readings of
+    /// a 一字多音 previous word are two rows, and the Hanji-only lookup returns
+    /// BOTH. Their scores must not stack: one predicted word, one learning
+    /// bonus. Two count-5 user rows would otherwise score ~2× a single one.
+    #[test]
+    fn second_user_row_for_one_prediction_does_not_stack_its_bonus() {
+        let state = PersistedState::default();
+        let config = config_tl_mode_translate_swapped(false);
+        let one = filter(
+            &state,
+            vec![user_row("複", "ho̍k", 5, 1_000)],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+        let two = filter(
+            &state,
+            vec![
+                user_row("複", "ho̍k", 5, 1_000),
+                user_row("複", "ho̍k", 9, 1_000),
+            ],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(two.predictions.len(), 1, "still one prediction");
+        assert_eq!(
+            two.predictions[0].score, one.predictions[0].score,
+            "the second reading's row adds nothing — not its count, not a bonus",
+        );
+    }
+
+    /// The row kept is the FIRST, because the platform SQL orders user rows by
+    /// how well `prev_tl` matches the reading being typed. Here the first row
+    /// has the LOWER count, so keeping it proves order beats magnitude.
+    #[test]
+    fn first_user_row_wins_regardless_of_the_later_row_count() {
+        let state = PersistedState::default();
+        let config = config_tl_mode_translate_swapped(false);
+        let expected = filter(
+            &state,
+            vec![user_row("複", "ho̍k", 2, 1_000)],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+        let result = filter(
+            &state,
+            vec![
+                user_row("複", "ho̍k", 2, 1_000),
+                user_row("複", "ho̍k", 99, 1_000),
+            ],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(result.predictions[0].score, expected.predictions[0].score);
+    }
+
+    /// A dict row between the two user rows must still be added, and must not
+    /// let the second user row through. Pins that the cap tracks "has a user
+    /// contribution", not "the previous row was a user row".
+    #[test]
+    fn a_dict_row_between_two_user_rows_changes_nothing_about_the_cap() {
+        let state = PersistedState::default();
+        let config = config_tl_mode_translate_swapped(false);
+        let expected = filter(
+            &state,
+            vec![user_row("好", "hó", 2, 1_000), dict_row("好", "hó", 7)],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+        let result = filter(
+            &state,
+            vec![
+                user_row("好", "hó", 2, 1_000),
+                dict_row("好", "hó", 7),
+                user_row("好", "hó", 99, 1_000),
+            ],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(result.predictions[0].score, expected.predictions[0].score);
+    }
+
+    /// A row that already has a user contribution must not short-circuit source
+    /// validation: an invalid source is still an error, never a silent skip.
+    #[test]
+    fn invalid_source_after_a_user_collision_still_errors() {
+        let state = PersistedState::default();
+        let bad = RawNextWordPrediction {
+            hanzi: "好".to_owned(),
+            tl: "hó".to_owned(),
+            count: 1,
+            last_used_ms: 0,
+            source: Source::Unspecified as i32,
+        };
+        let err = filter(
+            &state,
+            vec![
+                user_row("好", "hó", 2, 1_000),
+                user_row("好", "hó", 3, 1_000),
+                bad,
+            ],
+            0,
+            1_000,
+            10,
+            &config_tl_mode_translate_swapped(false),
+        )
+        .unwrap_err();
+        assert!(matches!(err, NextWordError::InvalidSource));
+    }
+
+    /// Documents a KNOWN LIMIT, unchanged by the per-key cap: two user rows
+    /// that are separator/tone-only variants of one word (`tâi-gí` vs the raw
+    /// `taigi` a pre-v3.6.1 continuous commit stored) are two exact keys, so
+    /// each keeps its own user contribution, and `collapse_reading_variants`
+    /// then folds both scores into the surviving row. The cap is per exact
+    /// `(hanzi, tl)`, not per final displayed prediction. The old SQL subquery
+    /// did not prevent this either — it deduped the same `(next_word, next_tl)`
+    /// — so this is not a regression, and #383's canonical-TL write fix stops
+    /// NEW fragmentation from appearing.
+    #[test]
+    fn collapse_still_folds_two_user_variants_of_one_word() {
+        let state = PersistedState::default();
+        let config = config_tl_mode_translate_swapped(false);
+        let single = filter(
+            &state,
+            vec![user_row("台語", "tâi-gí", 3, 1_000)],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+        let variants = filter(
+            &state,
+            vec![
+                user_row("台語", "tâi-gí", 3, 1_000),
+                user_row("台語", "taigi", 3, 1_000),
+            ],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(variants.predictions.len(), 1, "still one displayed word");
+        assert!(
+            variants.predictions[0].score > single.predictions[0].score,
+            "the folded variant's score is still added — known limit, see doc",
+        );
+    }
+
+    /// The cap is user+user only. A dict row and a user row for the same word
+    /// still sum — that IS the design, a learned word outranking the same word
+    /// from the dictionary.
+    #[test]
+    fn dict_and_user_scores_still_sum_for_one_prediction() {
+        let state = PersistedState::default();
+        let config = config_tl_mode_translate_swapped(false);
+        let user_only = filter(
+            &state,
+            vec![user_row("好", "hó", 5, 1_000)],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+        let both = filter(
+            &state,
+            vec![dict_row("好", "hó", 7), user_row("好", "hó", 5, 1_000)],
+            0,
+            1_000,
+            10,
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(both.predictions.len(), 1);
+        assert!(
+            both.predictions[0].score > user_only.predictions[0].score,
+            "the dict row still contributes on top of the user row",
+        );
+    }
+
+    /// Two readings of the NEXT word are different predictions, not duplicates
+    /// — the cap keys on `(hanzi, tl)` and must not collapse them.
+    #[test]
+    fn different_next_tl_stays_two_predictions() {
+        let state = PersistedState::default();
+        let result = filter(
+            &state,
+            vec![
+                user_row("重", "tāng", 4, 1_000),
+                user_row("重", "tîng", 3, 1_000),
+            ],
+            0,
+            1_000,
+            10,
+            &config_tl_mode_translate_swapped(false),
+        )
+        .unwrap();
+
+        assert_eq!(result.predictions.len(), 2);
     }
 
     #[test]

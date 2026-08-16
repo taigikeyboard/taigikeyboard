@@ -32,7 +32,7 @@ enum NextWordRepository {
 
     // MARK: - Writes
 
-    /// Insert or increment count on UNIQUE(prev_word, next_word, next_tl) conflict.
+    /// Insert or increment count on UNIQUE(prev_word, prev_tl, next_word, next_tl) conflict.
     // 中文: 插入或在 UNIQUE 衝突時把 count + 1、更新 last_used。
     static func insertOrUpdate(
         db: OpaquePointer,
@@ -44,8 +44,7 @@ enum NextWordRepository {
         let sql = """
             INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
             VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-            ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
-                prev_tl = excluded.prev_tl,
+            ON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET
                 count = count + 1,
                 last_used = CURRENT_TIMESTAMP
         """
@@ -73,8 +72,7 @@ enum NextWordRepository {
         let sql = """
             INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
-                prev_tl = excluded.prev_tl,
+            ON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET
                 count = MAX(count, excluded.count),
                 last_used = CURRENT_TIMESTAMP;
         """
@@ -153,24 +151,38 @@ enum NextWordRepository {
     // MARK: - Reads
 
     /// Query next-word candidates by previous word, ranking `prev_tl`
-    /// matches ahead of mismatches instead of hard-filtering on them.
+    /// matches ahead of mismatches instead of hard-filtering on them, and
+    /// returning at most one row per predicted `(next_word, next_tl)`.
     ///
     /// `prev_word` (Hanji) is the only lookup key — matching the bundled
-    /// `association.bin` (Hanji-only prev key) and Core Principle #7, which
-    /// binds the `(hanzi, tl)` pair on the bigram *next* side, NOT the
-    /// *prev* (context) side. A non-empty `prev_tl` that differs from the
-    /// query `roman` (e.g. continuous-input raw `taigi` vs normal-commit
-    /// canonical `tâi-gí` for the same word) is still recalled — it ranks
-    /// after exact and empty matches but is no longer dropped.
+    /// `association.bin` (Hanji-only prev key). A non-empty `prev_tl` that
+    /// differs from the query `roman` (e.g. a bigram learned under the other
+    /// reading of a 一字多音 Hanji, or a pre-v3.6.1 raw `taigi` where a
+    /// normal commit stored canonical `tâi-gí`) is still recalled — it ranks
+    /// after exact and empty matches but is never dropped.
     ///
-    /// `ORDER BY` ranks before the SQL `LIMIT` truncates, so exact-`prev_tl`
-    /// rows survive the over-fetch window even when a hot `prev_word` has
-    /// many rows. Callers over-fetch `limit * 2`; the Rust filter applies
-    /// the final score sort + real limit.
-    // 中文: 用 prev_word(漢字)查預測候選;prev_tl 不再硬過濾,改排序訊號
-    // 中文:   (exact > empty > mismatch)。對齊 association.bin(prev 漢字-only)與
-    // 中文:   Core Principle #7(pair-key 綁 next 端,非 prev 端)。形式不符的非空
-    // 中文:   prev_tl(連續 raw taigi vs 一般 canonical tâi-gí)仍會召回,只排在後面。
+    /// **Row order is load-bearing.** v6 stores 重/tîng → 複 and 重/tāng → 複
+    /// separately (Core Principle #7 on the previous side), so a Hanji-only
+    /// lookup can return several rows predicting the SAME word. The engine
+    /// keeps only the FIRST user row per predicted `(hanzi, tl)`
+    /// (`engine/nextword/src/filter.rs`) rather than summing their scores and
+    /// handing one predicted word several learning bonuses — which makes the
+    /// tier ordering below the thing that decides WHICH reading's evidence is
+    /// used. Nothing between this cursor and the engine may reorder these rows.
+    ///
+    /// `ORDER BY` also ranks before the SQL `LIMIT` truncates, so exact-`prev_tl`
+    /// rows survive the over-fetch window even when a hot `prev_word` has many
+    /// rows. Callers over-fetch `limit * 2`; the Rust filter applies the final
+    /// score sort + real limit.
+    ///
+    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// android/…/ime/dictionary/NextWordService.kt `predict`. Drift causes
+    /// silent divergence. Pins `behavioral-invariants.md` §24.
+    // 中文: 用 prev_word(漢字)查預測候選;prev_tl 不硬過濾,只當排序訊號
+    // 中文:   (exact > empty > mismatch),形式不符的仍會召回。
+    // 中文: **列的順序是契約的一部分** — v6 之後同漢字兩讀音是兩列,引擎只取每個
+    // 中文:   (hanzi, tl) 的第一列使用者證據(不相加分數),所以這裡的排序決定用哪個讀音。
+    // 中文:   從這個 cursor 到引擎之間不得重新排序。
     static func fetchUserRows(
         db: OpaquePointer,
         word: String,
@@ -184,7 +196,7 @@ enum NextWordRepository {
             WHERE prev_word = ?
             ORDER BY
                 CASE WHEN prev_tl = ? THEN 0 WHEN prev_tl = '' THEN 1 ELSE 2 END,
-                count DESC
+                count DESC, last_used DESC, id ASC
             LIMIT ?
         """
         var stmt: OpaquePointer?

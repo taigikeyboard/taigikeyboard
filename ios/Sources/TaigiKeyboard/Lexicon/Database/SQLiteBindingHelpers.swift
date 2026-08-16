@@ -28,6 +28,41 @@ func sqliteExecSimple(db: OpaquePointer, _ sql: String) {
     }
 }
 
+/// Prepare/step/finalize for a statement that takes no bindings, throwing on
+/// failure. The counterpart to `sqliteExecSimple` for callers — migrations
+/// above all — where a silently-ignored error would leave the database in a
+/// state the version stamp then lies about.
+// 中文: 與 sqliteExecSimple 相對的「會丟錯」版本;migration 必須用這個,
+// 中文: 否則失敗被吞掉後版本號照蓋,DB 狀態與版本號說法不符。
+func sqliteExecChecked(db: OpaquePointer, _ sql: String) throws {
+    var stmt: OpaquePointer?
+    defer { sqlite3_finalize(stmt) }
+    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
+    }
+    guard sqlite3_step(stmt) == SQLITE_DONE else {
+        throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
+    }
+}
+
+/// Run a single-value query, throwing on failure. The counterpart to the
+/// introspection helpers below for callers — migrations again — where a
+/// question answered `0` / `false` because the query itself failed would
+/// silently drive the wrong branch.
+// 中文: 會丟錯的單值查詢。migration 的判斷要用這個:查詢失敗回 0/false 會讓分支走錯,
+// 中文: 且錯誤會被吞掉看不出來。
+func sqliteQueryScalarInt(db: OpaquePointer, _ sql: String) throws -> Int {
+    var stmt: OpaquePointer?
+    defer { sqlite3_finalize(stmt) }
+    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
+    }
+    guard sqlite3_step(stmt) == SQLITE_ROW else {
+        throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
+    }
+    return Int(sqlite3_column_int(stmt, 0))
+}
+
 // MARK: - Schema introspection (shared across schema / migrator files)
 
 /// Read `PRAGMA user_version` (the integer schema-version gate). Returns `0`

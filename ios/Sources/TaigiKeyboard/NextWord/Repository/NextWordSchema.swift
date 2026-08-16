@@ -11,95 +11,178 @@ import SQLite3
 /// Callers must serialize access (typically via `SQLiteConnectionManager.execute`).
 // 中文: NextWord 使用者資料庫的建表與遷移工具。透過 PRAGMA user_version 控管版本。
 enum NextWordSchema {
-    /// Schema version for `user_association.db` (mirrors Android's DATABASE_VERSION).
-    // 中文: schema 版本號,需與 Android DATABASE_VERSION 對齊。
-    static let schemaVersion = 5
+    /// Schema version for `user_association.db`. CROSS-PLATFORM INVARIANT —
+    /// mirrors Android `NextWordService.DATABASE_VERSION` and macOS
+    /// `UserAssociationStore.schemaVersion`. Drift causes silent divergence.
+    // 中文: schema 版本號,需與 Android DATABASE_VERSION、macOS schemaVersion 對齊。
+    static let schemaVersion = 6
 
-    /// Migrate forward then create tables + indexes.
-    /// Safe to call repeatedly; CREATE and ALTER are guarded by version check + IF NOT EXISTS.
-    // 中文: 先做向前遷移,再 CREATE TABLE / INDEX。可重複呼叫,內部以版本與 IF NOT EXISTS 防衛。
+    private static let tableName = "user_association"
+
+    /// Bring the database to `schemaVersion`, then guarantee the terminal
+    /// table + indexes exist.
+    ///
+    /// An upgrade runs as ONE transaction covering the rebuild, the terminal
+    /// DDL, and the version stamp together: a database that says v6 must
+    /// actually have the v6 table and both v6 indexes, so a failure anywhere
+    /// has to take the version stamp down with it.
+    ///
+    /// Safe to call repeatedly. At `schemaVersion` it only re-asserts the
+    /// `IF NOT EXISTS` DDL, which is a no-op.
+    // 中文: 把 DB 帶到目前版本,再確保終態 table/index 存在。升級全程單一交易 —
+    // 中文: rebuild、終態 DDL、版本號一起成敗,避免「標了 v6 但 schema 不完整」。
     static func ensureTables(db: OpaquePointer, logger: DebugLogger) throws {
-        let didMigrate = try migrate(db: db, logger: logger)
-        try createTables(db: db)
-        createIndexes(db: db)
-        if didMigrate {
-            // R6: refresh the query planner's stats once, AFTER all DDL
-            // (CREATE INDEX included). Gated on an actual migration so it never
-            // runs on a steady-state open. Cheap no-op when nothing changed.
-            sqliteExecSimple(db: db, "PRAGMA optimize")
+        let currentVersion = try sqliteQueryScalarInt(db: db, "PRAGMA user_version")
+        guard currentVersion < schemaVersion else {
+            try createTables(db: db)
+            try createIndexes(db: db)
+            return
         }
+
+        logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(schemaVersion)")
+        try sqliteExecChecked(db: db, "BEGIN IMMEDIATE;")
+        do {
+            try migrate(db: db, from: currentVersion)
+            try createTables(db: db)
+            try createIndexes(db: db)
+            try sqliteExecChecked(db: db, "PRAGMA user_version = \(schemaVersion);")
+            try sqliteExecChecked(db: db, "COMMIT;")
+        } catch {
+            // Harmless when no transaction is active; the alternative is asking
+            // SQLite whether one is, which answers the same question twice.
+            try? sqliteExecChecked(db: db, "ROLLBACK;")
+            throw error
+        }
+
+        // Outside the transaction: refresh the query planner's stats once,
+        // AFTER all DDL. Gated on an actual migration so it never runs on a
+        // steady-state open, and best-effort because failing to optimize is
+        // not a reason to fail the open.
+        sqliteExecSimple(db: db, "PRAGMA optimize")
     }
 
     // MARK: - Private
 
-    // 中文: 建立 user_association 主表 — 含 UNIQUE(prev_word, next_word, next_tl) 防止重複關聯。
+    /// The v6 table. The UNIQUE key carries `prev_tl` because a Taiwanese word
+    /// is the `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
+    /// bigram's PREVIOUS side as well as its next: 重/tîng → 複 and 重/tāng → 複
+    /// are two observations, not one. See `behavioral-invariants.md` §24.
+    // 中文: v6 主表 — UNIQUE 四欄含 prev_tl,因為前詞的身分同樣是 (漢字, canonical TL) 對。
     private static func createTables(db: OpaquePointer) throws {
-        let sql = """
-            CREATE TABLE IF NOT EXISTS user_association (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                prev_word TEXT NOT NULL,
-                prev_tl TEXT DEFAULT '',
-                next_word TEXT NOT NULL,
-                next_tl TEXT DEFAULT '',
-                count INTEGER DEFAULT 1,
-                last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(prev_word, next_word, next_tl)
-            );
-        """
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
-        }
-        defer { sqlite3_finalize(stmt) }
-        guard sqlite3_step(stmt) == SQLITE_DONE else {
-            throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
-        }
+        try sqliteExecChecked(db: db, tableDDL(named: tableName))
     }
 
-    // 中文: 建立查詢用 index — 僅 (prev_word, prev_tl) 複合索引。
-    // 中文: 單欄 idx_user_prev_word 是它的左前綴子集,SQLite 可用複合索引服務
-    // 中文: `WHERE prev_word = ?` 查詢,故 R6 移除,改由 v4→v5 migration 清舊 DB。
-    private static func createIndexes(db: OpaquePointer) {
-        sqliteExecSimple(
+    private static func tableDDL(named name: String) -> String {
+        """
+        CREATE TABLE IF NOT EXISTS \(name) (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prev_word TEXT NOT NULL,
+            prev_tl TEXT DEFAULT '',
+            next_word TEXT NOT NULL,
+            next_tl TEXT DEFAULT '',
+            count INTEGER DEFAULT 1,
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(prev_word, prev_tl, next_word, next_tl)
+        );
+        """
+    }
+
+    /// One read index: `(prev_word, prev_tl)` serves the recall query's
+    /// `WHERE prev_word = ?` from its left prefix, and its `prev_tl` tier
+    /// ordering from the second column. The single-column `idx_user_prev_word`
+    /// is a strict subset and was dropped in v5.
+    // 中文: 單一讀取索引 (prev_word, prev_tl) — 左前綴服務 WHERE,第二欄服務 prev_tl 分層排序。
+    private static func createIndexes(db: OpaquePointer) throws {
+        try sqliteExecChecked(
             db: db,
-            "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl);",
+            "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON \(tableName)(prev_word, prev_tl);",
         )
     }
 
-    /// Migrate forward using `PRAGMA user_version`.
-    /// - v<3 → v3: DROP + CREATE (old schema incompatible).
-    /// - v3 → v4: ALTER TABLE adds `prev_tl` (data preserved).
-    /// - v4 → v5: DROP redundant `idx_user_prev_word` (left-prefix of the
-    ///   `idx_user_prev_word_tl` composite). Data preserved.
-    // 中文: 用 PRAGMA user_version 做向前遷移。v<3 直接重建,v3→v4 ALTER 加欄位,v4→v5 刪冗餘單欄索引。
-    // 中文: 回傳是否實際執行了遷移(供呼叫端決定要不要跑 PRAGMA optimize)。
-    private static func migrate(db: OpaquePointer, logger: DebugLogger) throws -> Bool {
-        var versionStmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &versionStmt, nil) == SQLITE_OK else { return false }
-        let currentVersion = sqlite3_step(versionStmt) == SQLITE_ROW
-            ? Int(sqlite3_column_int(versionStmt, 0))
-            : 0
-        sqlite3_finalize(versionStmt)
-
-        guard currentVersion < schemaVersion else { return false }
-        logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(schemaVersion)")
-
+    /// Bring a pre-v6 database to the v6 shape. Runs inside the caller's
+    /// transaction.
+    ///
+    /// - v<3 → drop, unchanged. iOS has always dropped rather than migrated
+    ///   these, and this round keeps that: the pre-v3 iOS shape is not
+    ///   documented anywhere, so a rebuild that guessed at it could fail the
+    ///   open outright — strictly worse than the drop those installs already
+    ///   got. `createTables` then builds v6 fresh.
+    ///
+    ///   NAMED CROSS-PLATFORM DIVERGENCE (`cross-platform-alignment.md` §3,
+    ///   pre-existing, legacy-only): Android drops at exactly v2 and rebuilds
+    ///   v0/v1, because ITS v0/v1 shape is known — `migrateV0ToV2` copied the
+    ///   rows and dropped only the unused `next_poj` / `delimiter` columns.
+    ///   The divergence is confined to databases last written before v3.4.x;
+    ///   every version a user can still be on converges.
+    /// - v3…v5 → ONE convergent rebuild, not a step ladder. SQLite cannot ALTER
+    ///   a table-level UNIQUE, so widening the key means rebuilding the table
+    ///   anyway, and a rebuild that reads the columns it finds subsumes every
+    ///   intermediate step (v3's missing `prev_tl` included).
+    // 中文: 把 pre-v6 帶到 v6 形狀(在呼叫端的交易內)。v<3 沿用既有的直接重建;
+    // 中文: v3~v5 走單一收斂 rebuild(SQLite 無法 ALTER 表級 UNIQUE,本來就得重建)。
+    private static func migrate(db: OpaquePointer, from currentVersion: Int) throws {
         if currentVersion < 3 {
-            sqliteExecSimple(db: db, "DROP TABLE IF EXISTS user_association")
-            sqliteExecSimple(db: db, "DROP INDEX IF EXISTS idx_user_prev_word")
+            try sqliteExecChecked(db: db, "DROP TABLE IF EXISTS \(tableName);")
+        } else if try tableExists(db: db, tableName) {
+            try rebuildToV6(db: db)
         }
-        if currentVersion >= 3, currentVersion < 4 {
-            sqliteExecSimple(db: db, "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''")
-            sqliteExecSimple(db: db, "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)")
-        }
-        // v4 → v5 (R6): drop the redundant single-column idx_user_prev_word —
-        // it is the left-prefix subset of the (prev_word, prev_tl) composite.
-        // Unconditional inside the `currentVersion < schemaVersion` guard so it
-        // reaches every pre-v5 DB (a v3 DB jumping straight to v5 would skip a
-        // `>= 4` step), not just DBs that were exactly at v4. Idempotent.
-        sqliteExecSimple(db: db, "DROP INDEX IF EXISTS idx_user_prev_word")
+        // The v4 single-column index: dropped with its table on either branch
+        // above, so this only catches a DB whose table was already absent.
+        try sqliteExecChecked(db: db, "DROP INDEX IF EXISTS idx_user_prev_word;")
+    }
 
-        sqliteExecSimple(db: db, "PRAGMA user_version = \(schemaVersion)")
-        return true
+    /// Rebuild the table under the v6 key, preserving every row.
+    ///
+    /// Widening a UNIQUE key can never conflict — the old key
+    /// `(prev_word, next_word, next_tl)` is a strict subset of the new one, so
+    /// rows already unique under the old key stay unique under the new. The
+    /// copy therefore needs no dedupe or merge step.
+    ///
+    /// `id` is copied rather than reassigned: it is the final tiebreak of the
+    /// read query's per-prediction pick, so renumbering could silently change
+    /// which row wins for rows that tie on everything else.
+    ///
+    /// Order is SQLite's documented one — create new, copy, drop old, rename —
+    /// rather than rename-first, which can rewrite references inside triggers
+    /// and views.
+    ///
+    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// android/…/ime/dictionary/NextWordService.kt `rebuildToV6`.
+    /// Drift causes silent divergence.
+    // 中文: 以 v6 key 重建表並保留所有列。加寬 UNIQUE 不可能衝突(舊 key 是新 key 子集),
+    // 中文: 故不需去重。id 一併複製(它是讀取端挑列的最終 tiebreak,重編號會改變贏家)。
+    // 中文: 順序採 SQLite 官方寫法:建新→複製→丟舊→改名。
+    private static func rebuildToV6(db: OpaquePointer) throws {
+        // A v3 table predates the `prev_tl` column, and an Android DB that came
+        // up the v0/v1 ladder can be stamped v5 without it. Read what is there
+        // rather than assuming — and let an introspection FAILURE throw, since
+        // mistaking it for "the column is absent" would blank every stored
+        // romanization.
+        let prevTl = try columnExists(db: db, "prev_tl") ? "COALESCE(prev_tl, '')" : "''"
+        let nextTl = try columnExists(db: db, "next_tl") ? "COALESCE(next_tl, '')" : "''"
+
+        try sqliteExecChecked(db: db, tableDDL(named: "\(tableName)_new"))
+        try sqliteExecChecked(db: db, """
+            INSERT INTO \(tableName)_new
+                (id, prev_word, prev_tl, next_word, next_tl, count, last_used)
+            SELECT id, prev_word, \(prevTl), next_word, \(nextTl), count, last_used
+            FROM \(tableName);
+        """)
+        try sqliteExecChecked(db: db, "DROP TABLE \(tableName);")
+        try sqliteExecChecked(db: db, "ALTER TABLE \(tableName)_new RENAME TO \(tableName);")
+    }
+
+    private static func tableExists(db: OpaquePointer, _ name: String) throws -> Bool {
+        try sqliteQueryScalarInt(
+            db: db,
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='\(name)'",
+        ) > 0
+    }
+
+    private static func columnExists(db: OpaquePointer, _ column: String) throws -> Bool {
+        try sqliteQueryScalarInt(
+            db: db,
+            "SELECT COUNT(*) FROM pragma_table_info('\(tableName)') WHERE name = '\(column)'",
+        ) > 0
     }
 }

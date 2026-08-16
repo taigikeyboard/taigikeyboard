@@ -33,7 +33,7 @@
 - Fields: bitmask (u16), count (u32), next_word, next_tl
 - Bitmask filter replaces SQL WHERE for dictionary source filtering
 
-**User learning** — `user_association.db` (SQLite, writable, schema v4)
+**User learning** — `user_association.db` (SQLite, writable, schema v6)
 
 ```sql
 CREATE TABLE user_association (
@@ -43,7 +43,7 @@ CREATE TABLE user_association (
     next_tl TEXT,              -- Next word TL
     count INTEGER DEFAULT 1,
     last_used TIMESTAMP,
-    UNIQUE(prev_word, next_word, next_tl)
+    UNIQUE(prev_word, prev_tl, next_word, next_tl)
 );
 CREATE INDEX idx_user_prev_word_tl ON user_association(prev_word, prev_tl);
 ```
@@ -51,6 +51,8 @@ CREATE INDEX idx_user_prev_word_tl ON user_association(prev_word, prev_tl);
 **Migration history**:
 - v0 → v3: `UNIQUE(prev_word, next_word)` → `UNIQUE(prev_word, next_word, next_tl)` (drop + recreate)
 - v3 → v4: `ALTER TABLE ... ADD COLUMN prev_tl TEXT DEFAULT ''` + new index
+- v4 → v5: dropped the redundant single-column `idx_user_prev_word`
+- **→ v6**: `prev_tl` joins the UNIQUE key, so the two readings of a 一字多音 previous word stay separate observations (`behavioral-invariants.md` §24). One convergent rebuild replaces the per-version ladder on both platforms: create-new / copy preserving `id` / drop / rename, reading `pragma_table_info` for the columns actually present rather than inferring them from the version stamp.
 
 ---
 

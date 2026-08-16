@@ -181,9 +181,8 @@ CREATE TABLE user_association (
     next_tl TEXT DEFAULT '',
     count INTEGER DEFAULT 1,
     last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(prev_word, next_word, next_tl)
+    UNIQUE(prev_word, prev_tl, next_word, next_tl)
 );
-CREATE INDEX idx_user_prev_word ON user_association(prev_word);
 CREATE INDEX idx_user_prev_word_tl ON user_association(prev_word, prev_tl);
 ```
 
@@ -326,7 +325,7 @@ Android runs three distinct SQLite-init patterns across the three runtime DBs. T
 | DB | Mechanism | Version stamp | Migration shape |
 |---|---|---|---|
 | `user_frequency.db` | `SQLiteOpenHelper` | `DATABASE_VERSION = 1` (Helper-managed) plus `metadata.schema_version = "1"` text row | `onUpgrade` is a no-op (no migrations have ever shipped on this DB) |
-| `user_association.db` | `SQLiteDatabase.openOrCreateDatabase` — no Helper | `PRAGMA user_version` (hand-rolled) — currently `4` | `migrateUserDb` (`NextWordService.kt:552`) dispatches `migrateV0ToV2` / `migrateV2ToV3` / `migrateV3ToV4`, then stamps `PRAGMA user_version = DATABASE_VERSION` |
+| `user_association.db` | `SQLiteDatabase.openOrCreateDatabase` — no Helper | `PRAGMA user_version` (hand-rolled) — currently `6` | `ensureUserAssocSchema` runs ONE convergent `rebuildToV6` (create-new / copy preserving `id` / drop / rename) for every pre-v6 DB that has a table, then the terminal DDL and the version stamp — all in one transaction. A v2 stamp is dropped rather than rebuilt (its key shape is ambiguous). The old v0→v2→v3→v4→v5 ladder is deleted. |
 | `custom_dictionary.db` | `SQLiteOpenHelper` | `DATABASE_VERSION = 5` (Helper-managed) | `onUpgrade` (`CustomDictionaryService.kt:421`) chains `migrateV1ToV2` → `migrateV2ToV3` → `migrateV3ToV4` → `migrateV4ToV5` |
 
 Two of the four `custom_dictionary.db` steps (`v2→v3`, `v3→v4`) are pure derivation-logic regenerations with no DDL; see iOS §6 Migration-mechanism table for the divergence on version-namespace semantics (D5).

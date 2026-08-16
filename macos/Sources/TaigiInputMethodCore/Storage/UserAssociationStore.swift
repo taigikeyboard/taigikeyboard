@@ -33,8 +33,9 @@ struct AssociationRow: Equatable, Sendable {
 /// (`.claude/rules/rust-migration-policy.md` §6).
 final class UserAssociationStore: @unchecked Sendable {
     private static let tableName = "user_association"
-    /// One past the iOS / Android number, because the shape is one column wider
-    /// in its key — see `applySchema`.
+    /// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordSchema.schemaVersion`
+    /// and Android `NextWordService.DATABASE_VERSION`. Drift causes silent
+    /// divergence.
     private static let schemaVersion: Int32 = 6
 
     private let database: LearningDatabase
@@ -138,24 +139,23 @@ final class UserAssociationStore: @unchecked Sendable {
 
     // MARK: - Schema
 
-    /// NAMED CROSS-PLATFORM DIVERGENCE (`cross-platform-alignment.md` §3,
-    /// intentional): the unique key carries `prev_tl`, which the iOS and
-    /// Android v5 tables leave out
-    /// (`ios/…/NextWord/Repository/NextWordSchema.swift:37-50`).
-    ///
-    /// Without it, 重/tîng → 複 and 重/tāng → 複 collapse into one row whose
-    /// `prev_tl` is whichever was written last, which contradicts the rule that
-    /// a Taiwanese word is the `(漢字, canonical TL)` pair (`CLAUDE.md` Core
-    /// Principle #7) — and the read side ranks on `prev_tl`, so the merged row
+    /// The unique key carries `prev_tl` because a Taiwanese word is the
+    /// `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
+    /// bigram's PREVIOUS side as well as its next: without it, 重/tîng → 複 and
+    /// 重/tāng → 複 collapse into one row whose `prev_tl` is whichever was
+    /// written last, and the read side ranks on `prev_tl`, so the merged row
     /// answers for a reading it was not learned under.
     ///
-    /// macOS is a fresh install with no rows to migrate, and the only reason
-    /// this table is being written at all is to hand a future prediction
-    /// surface real history; recording that history under a key that conflates
-    /// two morphemes would spend the cost and lose the benefit. The same gap on
-    /// iOS and Android is real and is NOT fixed here: correcting it there means
-    /// a schema migration over data users already have, which is a decision of
-    /// its own.
+    /// This was a NAMED CROSS-PLATFORM DIVERGENCE while iOS and Android sat at
+    /// v5; both now ship the same v6 key, so the three schemas agree. See
+    /// `docs/architecture/behavioral-invariants.md` §24 and
+    /// `ios/…/NextWord/Repository/NextWordSchema.swift`.
+    ///
+    /// The `DROP INDEX` is the one migration this store does: builds before
+    /// that convergence named the same `(prev_word, prev_tl)` index
+    /// `idx_user_prev`, so a database written by one carries the old name until
+    /// its next open. Nothing else here needs migrating — the table shape has
+    /// never changed on macOS.
     private static let applySchema: @Sendable (SQLiteConnection) throws -> Void = { connection in
         try connection.execute(
             """
@@ -169,7 +169,8 @@ final class UserAssociationStore: @unchecked Sendable {
                 last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(prev_word, prev_tl, next_word, next_tl)
             );
-            CREATE INDEX IF NOT EXISTS idx_user_prev
+            DROP INDEX IF EXISTS idx_user_prev;
+            CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl
                 ON \(tableName)(prev_word, prev_tl);
             """,
         )

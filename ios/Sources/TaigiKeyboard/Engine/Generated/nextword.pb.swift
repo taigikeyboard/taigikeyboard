@@ -401,10 +401,23 @@ public nonisolated struct Taigi_Engine_SetIsShowing: Sendable {
 
 /// Engine-side filter+merge+sort+limit step. Platform calls this after
 /// SQLite returns raw rows — engine groups by (hanzi, tl), scores dict
-/// rows via DICT_WEIGHT and user rows via decay+learning math, sums
-/// scores on (hanzi, tl) collision, sorts desc by score, applies limit,
-/// then shapes via display-rule filter. On generation mismatch returns
-/// predictions=[] + was_stale=true.
+/// rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
+/// by score, applies limit, then shapes via display-rule filter. On
+/// generation mismatch returns predictions=[] + was_stale=true.
+///
+/// COLLISION RULE on (hanzi, tl): dict contributions SUM (a learned word
+/// outranking the same word from the dictionary is the design), but at most
+/// ONE user contribution is accepted — the FIRST. Under the v6
+/// user_association key, one predicted word can be backed by several stored
+/// rows differing in the previous word's reading, and summing them would give
+/// it several LEARNING_BONUS terms for being 一字多音 rather than for being
+/// well-learned (behavioral-invariants.md §24).
+///
+/// THEREFORE `raw` IS PRIORITY-ORDERED, NOT A SET. Callers MUST deliver user
+/// rows best-evidence-first — the platform SQL orders them
+/// `CASE prev_tl = query THEN 0 WHEN '' THEN 1 ELSE 2 END, count DESC,
+/// last_used DESC, id ASC` — and nothing between the SQLite cursor and this
+/// request may reorder them.
 public nonisolated struct Taigi_Engine_FilterPredictions: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
