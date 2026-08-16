@@ -23,9 +23,15 @@ enum TestFixtures {
     /// A key-down event carrying `characters`. The ten-argument AppKit
     /// initializer lives here once; every suite that needs a key event is
     /// otherwise a copy of it.
+    ///
+    /// `charactersIgnoringModifiers` defaults to `characters` because the two
+    /// only differ for a chord — which is exactly what a case passing it
+    /// separately is testing: Control rewrites the digits it is held with, so
+    /// `⌃3` really does arrive as an Escape in `characters`.
     static func keyDownEvent(
         characters: String,
         modifiers: NSEvent.ModifierFlags = [],
+        charactersIgnoringModifiers: String? = nil,
     ) throws -> NSEvent {
         try XCTUnwrap(NSEvent.keyEvent(
             with: .keyDown,
@@ -35,7 +41,7 @@ enum TestFixtures {
             windowNumber: 0,
             context: nil,
             characters: characters,
-            charactersIgnoringModifiers: characters,
+            charactersIgnoringModifiers: charactersIgnoringModifiers ?? characters,
             isARepeat: false,
             keyCode: 0,
         ))
@@ -165,6 +171,57 @@ final class RecordingEffectExecutor: ComposingEffectExecutor {
 
     func clearEffects() {
         effects.removeAll()
+    }
+}
+
+/// Records what the controller asked of the candidate bar instead of opening a
+/// window, so the routing between keys, the list model and the panel's ownership
+/// rules can be asserted without a screen.
+@MainActor
+final class RecordingCandidatePresenter: CandidatePresenter {
+    enum Call: Equatable {
+        case show(CandidateBarContent, caretRect: CGRect)
+        case hide(isOwner: Bool)
+        case hideForHandover
+    }
+
+    private(set) var calls: [Call] = []
+    /// Nil once nothing is showing, mirroring the real panel's ownership so a
+    /// case can pin the handover rule end to end.
+    private(set) var owner: ComposingSessionToken?
+
+    /// What is on screen right now, and nil once the bar has been hidden —
+    /// returning the last content shown regardless would let a case assert on
+    /// candidates the user can no longer see.
+    var shownContent: CandidateBarContent? {
+        guard isShowing else { return nil }
+        return calls.reversed().compactMap { call in
+            if case let .show(content, _) = call { return content }
+            return nil
+        }.first
+    }
+
+    var isShowing: Bool { owner != nil }
+
+    func show(
+        _ content: CandidateBarContent,
+        anchoredTo caretRect: CGRect,
+        hostWindowLevel _: CGWindowLevel,
+        ownedBy owner: ComposingSessionToken,
+    ) {
+        self.owner = owner
+        calls.append(.show(content, caretRect: caretRect))
+    }
+
+    func hide(ownedBy owner: ComposingSessionToken) {
+        let isOwner = self.owner == owner
+        calls.append(.hide(isOwner: isOwner))
+        if isOwner { self.owner = nil }
+    }
+
+    func hideForHandover() {
+        calls.append(.hideForHandover)
+        owner = nil
     }
 }
 

@@ -28,6 +28,30 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var isMarkedTextVisible = false
 
+    /// This session's view of the candidate list: which candidates the last
+    /// fetch returned, which one is highlighted, and which page of them is up.
+    ///
+    /// Per controller rather than process-wide, even though the composition it
+    /// describes is not: a session that is not focused cannot reach the engine
+    /// (`ComposingSessionCoordinator.manager(ownedBy:)` answers nil), so its copy
+    /// is never read again, and a shared one would need the same ownership guard
+    /// the coordinator already provides.
+    @MainActor
+    private var candidates = CandidateListModel()
+
+    /// Where the candidate bar is shown. Backed by an optional so a test can
+    /// substitute a double before the first key event: the shipped bar is an
+    /// `NSPanel`, and the default cannot be written as a stored property's
+    /// initial value because that expression is evaluated outside the main actor.
+    @MainActor
+    private var injectedPresenter: (any CandidatePresenter)?
+
+    @MainActor
+    var candidatePresenter: any CandidatePresenter {
+        get { injectedPresenter ?? CandidatePanel.shared }
+        set { injectedPresenter = newValue }
+    }
+
     /// The client this session belongs to, learned at activation — which always
     /// precedes any key event, because a session that never activated never
     /// claimed the engine. `inputControllerWillClose()` gets no sender, and this
@@ -59,6 +83,14 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(sender) { controller, client -> Void in
             controller.lastClient = client
             ComposingSessionCoordinator.shared.claim(controller.sessionToken)
+            // Takes the bar down before this session starts typing, and takes
+            // it away from the session that was showing it. IMK activates the
+            // incoming session before it deactivates the outgoing one, so
+            // without this the outgoing session's teardown is what would decide
+            // whether this session's bar survives. Hiding our own window is not
+            // a client query, so the activation rule above still holds.
+            controller.candidatePresenter.hideForHandover()
+            controller.candidates.reset()
         }
     }
 
@@ -97,6 +129,21 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(nil) { controller, _ in controller.endSession(controller.lastClient) }
     }
 
+    /// Take down every window this input method is showing, and nothing else.
+    ///
+    /// Apple's contract is UI-only: the system sends this when its own interface
+    /// needs the screen, not when the composition is over, so releasing the
+    /// engine or committing here would throw away work the user is in the middle
+    /// of. The candidate model is cleared with the window because the two are one
+    /// state as far as the key contract is concerned — the arrows and `⌃n` belong
+    /// to a bar the user can see, and with the bar gone they go back to the host
+    /// until the next keystroke fetches candidates again.
+    override public func hidePalettes() {
+        Self.logger.debug("hidePalettes")
+        onMainActor(nil) { controller, _ -> Void in controller.dismissCandidates() }
+        super.hidePalettes()
+    }
+
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event, event.type == .keyDown else { return false }
         // Snapshotted before the hop: `NSEvent` is a reference type that cannot
@@ -113,28 +160,179 @@ public final class TaigiInputController: IMKInputController {
               let client
         else { return false }
 
-        let intent = ComposingKeyIntent.intent(for: key, isComposing: manager.isComposing)
+        let intent = ComposingKeyIntent.intent(
+            for: key,
+            isComposing: manager.isComposing,
+            isShowingCandidates: !candidates.isEmpty,
+        )
         Self.logger.debug("key intent \(String(describing: intent))")
         let executor = ClientEffectExecutor(client: client)
         defer { isMarkedTextVisible = manager.isComposing }
         switch intent {
         case let .input(text):
             manager.append(text, executing: executor)
+            refreshCandidates(from: manager, client: client)
         case .deleteBackward:
             manager.deleteBackward(executing: executor)
+            refreshCandidates(from: manager, client: client)
         case .commit:
             manager.commitComposition(executing: executor)
+            dismissCandidates()
         case .cancel:
             manager.cancelComposition(executing: executor)
+            dismissCandidates()
         case let .commitThenInsert(text):
             manager.commitComposition(thenInsert: text, executing: executor)
+            dismissCandidates()
         case .commitThenPassThrough:
             manager.commitComposition(executing: executor)
+            dismissCandidates()
             return false
         case .passThrough:
             return false
+
+        case .commitHighlightedCandidate:
+            // Unreachable by construction — the intent is only produced when the
+            // list is non-empty, and a non-empty list always has a highlight.
+            // Consuming the key anyway is the safe half of the impossible case:
+            // letting a Space through would drop a stray space into a document
+            // whose composition is still running.
+            guard let highlighted = candidates.highlighted else { return true }
+            commit(highlighted, from: manager, client: client, executing: executor)
+        case let .selectCandidateSlot(slot):
+            // A chord aimed at one of the empty slots the last page ends with.
+            // Consumed rather than passed on: `⌃7` is a candidate chord while the
+            // bar is up, and handing it to the host only when the page happens to
+            // be short would make it fire a host shortcut at random.
+            guard let selected = candidates.selectSlotInPage(slot) else { return true }
+            commit(selected, from: manager, client: client, executing: executor)
+        case let .moveHighlight(direction):
+            candidates.moveHighlight(direction)
+            presentCandidates(from: manager, client: client)
+        case let .pageCandidates(direction):
+            candidates.page(direction)
+            presentCandidates(from: manager, client: client)
         }
         return true
+    }
+
+    // MARK: - Candidates
+
+    /// Commits one candidate and shows whatever the composition became.
+    @MainActor
+    private func commit(
+        _ candidate: ContinuousCandidate,
+        from manager: ComposingManager,
+        client: IMKTextInput,
+        executing executor: ComposingEffectExecutor,
+    ) {
+        let outcome = manager.commitCandidate(candidate, executing: executor)
+        Self.logger.debug("candidate commit \(String(describing: outcome))")
+        switch outcome {
+        case .finalized:
+            dismissCandidates()
+        case .nailed, .ignored, .unavailable:
+            // Anything short of a finished composition is answered by asking the
+            // engine what it is holding NOW rather than by reading the outcome:
+            // a commit the engine ignored may have been ignored because a
+            // generation change had already reset it to Idle
+            // (`CandidateOutcomes.swift`), and treating that as "nothing
+            // changed" would leave a bar describing a composition that is gone.
+            refreshCandidates(from: manager, client: client)
+        }
+    }
+
+    /// Re-reads the candidates for the composition as it now stands, and shows
+    /// them.
+    @MainActor
+    private func refreshCandidates(from manager: ComposingManager, client: IMKTextInput) {
+        switch manager.fetchCandidates() {
+        case .unavailable:
+            // The QUERY left the engine as it was, but the keystroke before it
+            // did not: the character is already in the buffer and already in the
+            // marked region. Candidates fetched for the previous buffer would
+            // offer spans measured against text that has since changed, and
+            // `CommitContinuous` only checks that a span is consumable — not
+            // that it came from the composition on screen.
+            Self.logger.debug("candidate fetch unavailable — taking the bar down")
+            dismissCandidates()
+        case .notComposing:
+            dismissCandidates()
+        case let .found(fetched):
+            candidates.replace(with: fetched)
+            if fetched.isEmpty {
+                dismissCandidates()
+            } else {
+                presentCandidates(from: manager, client: client)
+            }
+        }
+    }
+
+    /// Puts the current page on screen, anchored to the caret.
+    @MainActor
+    private func presentCandidates(from manager: ComposingManager, client: IMKTextInput) {
+        guard let caretRect = caretRect(in: client, markedTextLength: manager.displayText.utf16.count)
+        else {
+            // A client that cannot say where its caret is cannot host a bar that
+            // points at it, and one parked in the corner of the screen is worse
+            // than none: it would claim to describe text somewhere else entirely.
+            //
+            // The list is dropped with the window, not merely hidden. The key
+            // contract turns on `isShowingCandidates`, so a model kept alive
+            // behind a hidden bar would swallow the arrows and let Space commit a
+            // candidate the user cannot see.
+            Self.logger.debug("no caret rectangle from the client — candidates stay hidden")
+            dismissCandidates()
+            return
+        }
+
+        candidatePresenter.show(
+            CandidateBarContent(
+                labels: candidates.visiblePage.map(manager.documentText(for:)),
+                highlightedSlot: candidates.highlightedSlotInPage,
+            ),
+            anchoredTo: caretRect,
+            hostWindowLevel: client.windowLevel(),
+            ownedBy: sessionToken,
+        )
+    }
+
+    @MainActor
+    private func dismissCandidates() {
+        candidates.reset()
+        candidatePresenter.hide(ownedBy: sessionToken)
+    }
+
+    /// Where the composition's last character is drawn, in screen coordinates.
+    ///
+    /// Walks back from the end of the marked region until the client answers
+    /// with a real rectangle, matching McBopomofo
+    /// (`references/McBopomofo/Source/InputMethodController.swift:886-891`).
+    /// Index 0 would be wrong twice over: it is the START of the marked region
+    /// rather than the caret, so the bar would drift further from the insertion
+    /// point the longer the composition got, and some clients answer for that
+    /// index with a zero rectangle they will happily give a later one for.
+    ///
+    /// "The client did not answer" is read as a rectangle left entirely at zero,
+    /// not merely one at the screen origin: a caret really drawn at `(0, 0)` —
+    /// the bottom-left corner of the leftmost display — still reports its line
+    /// height, and rejecting it would hide the bar for a client that answered
+    /// perfectly well. McBopomofo tests the origin alone
+    /// (`InputMethodController.swift:886`); this is the same walk with the
+    /// narrower rejection.
+    ///
+    /// Safe to ask here and only here: the deadlock this call causes in Chromium
+    /// hosts is specific to activation (see `activateServer`).
+    @MainActor
+    private func caretRect(in client: IMKTextInput, markedTextLength: Int) -> CGRect? {
+        var index = max(markedTextLength - 1, 0)
+        while index >= 0 {
+            var lineHeightRect = CGRect.zero
+            _ = client.attributes(forCharacterIndex: index, lineHeightRectangle: &lineHeightRect)
+            if lineHeightRect != .zero { return lineHeightRect }
+            index -= 1
+        }
+        return nil
     }
 
     /// Finishes the composition into `client` and gives up the engine, for a
@@ -158,6 +356,10 @@ public final class TaigiInputController: IMKInputController {
     /// `references/McBopomofo/Source/InputMethodController.swift:485-489`).
     @MainActor
     private func finishComposition(into client: IMKTextInput?) {
+        // Before the client check: the bar belongs to this session whether or not
+        // it still has a client to write into, and a session on its way out that
+        // leaves one on screen leaves it there for good.
+        dismissCandidates()
         guard let client else { return }
         defer { isMarkedTextVisible = false }
 

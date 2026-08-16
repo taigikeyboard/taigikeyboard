@@ -1,0 +1,456 @@
+// The candidate slice end to end: keys in, bar content and document text out.
+
+import InputMethodKit
+import XCTest
+
+@testable import TaigiInputMethodCore
+
+/// Drives the real controller, the real engine and the real dictionary against a
+/// recording bar. What is asserted is the routing — which key changes which part
+/// of the list, when the bar goes up and comes down, and who is allowed to take
+/// it down — not the ranking the dictionary happens to produce.
+@MainActor
+final class TaigiInputControllerCandidateTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        InstalledLexicon.installOnce()
+    }
+
+    // MARK: - Showing
+
+    func testTypingRomanization_putsCandidatesOnTheBar() throws {
+        let session = try composedSession()
+
+        let content = try XCTUnwrap(session.presenter.shownContent)
+        XCTAssertFalse(content.labels.isEmpty, "the dictionary has entries for taigi")
+        XCTAssertEqual(content.highlightedSlot, 0, "a fresh list starts on its first candidate")
+        XCTAssertLessThanOrEqual(
+            content.labels.count,
+            CandidateListModel.pageSize,
+            "the bar shows one page at a time — the ⌃n chords can only address nine",
+        )
+    }
+
+    /// The label and the committed text are one rendering under one settings
+    /// snapshot. A bar showing the romanization while the document gets the
+    /// hanji is a visible defect, and the only thing keeping them together is
+    /// that both go through `ComposingManager.documentText(for:)`.
+    func testBarLabels_areWhatCommittingWouldWrite() throws {
+        let session = try composedSession()
+        let firstLabel = try XCTUnwrap(session.presenter.shownContent).labels[0]
+        session.client.clearWrites()
+
+        _ = session.controller.handle(try TestFixtures.keyDownEvent(characters: " "), client: session.client)
+
+        XCTAssertEqual(session.client.insertedTexts.last, firstLabel)
+    }
+
+    func testCandidatesAreAnchoredToTheCaret_notToTheStartOfTheMarkedRegion() throws {
+        let session = try composedSession()
+
+        guard case let .show(_, caretRect) = try XCTUnwrap(session.presenter.calls.last) else {
+            return XCTFail("the bar must have been shown")
+        }
+        XCTAssertEqual(caretRect, Self.caretRectAtEndOfComposition)
+        XCTAssertEqual(
+            session.client.caretRectQueries.last,
+            Self.caretIndex,
+            "the anchor is the last character of the marked region; index 0 is its start, "
+                + "so the bar would drift further from the caret the longer the composition ran",
+        )
+    }
+
+    /// Clients that cannot place an index answer with a zero rectangle, and the
+    /// walk goes back until one of them is real — McBopomofo's loop
+    /// (`InputMethodController.swift:886-891`).
+    func testCaretAnchor_walksBackUntilTheClientAnswers() throws {
+        let session = try composedSession(caretRects: [0: Self.caretRectAtEndOfComposition])
+
+        XCTAssertNotNil(session.presenter.shownContent, "an earlier index answered, so the bar can be placed")
+        XCTAssertEqual(
+            session.client.caretRectQueries.suffix(2),
+            [1, 0],
+            "the walk steps back one index at a time rather than giving up at the end",
+        )
+    }
+
+    func testCaretAnchorUnavailable_keepsTheBarHidden() throws {
+        let session = try composedSession(caretRects: [:])
+
+        XCTAssertFalse(
+            session.presenter.isShowing,
+            "a bar parked at the screen's corner would point at text that is not there",
+        )
+    }
+
+    /// The list has to be dropped with the window, not merely hidden behind it.
+    /// The key contract turns on whether candidates are on screen, so a model
+    /// left alive behind a hidden bar swallows the arrows and lets Space commit a
+    /// candidate nobody can see.
+    func testCaretAnchorUnavailable_returnsTheArrowsToTheHost() throws {
+        let session = try composedSession(caretRects: [:])
+
+        let handled = session.controller.handle(
+            try Self.arrowEvent(.rightArrow),
+            client: session.client,
+        )
+
+        XCTAssertFalse(handled, "there is no visible list for an arrow to walk")
+    }
+
+    func testCaretAnchorUnavailable_leavesSpaceAsTheDocumentsSpace() throws {
+        let session = try composedSession(caretRects: [:])
+        session.client.clearWrites()
+
+        _ = session.controller.handle(
+            try TestFixtures.keyDownEvent(characters: " "),
+            client: session.client,
+        )
+
+        XCTAssertEqual(
+            session.client.insertedTexts.joined(),
+            "taigi ",
+            "committing an unseen candidate would put a word in the document the user never saw offered",
+        )
+    }
+
+    /// A client whose caret really is at the screen origin still reports a line
+    /// height, and rejecting it would hide the bar for a client that answered.
+    func testCaretAtTheScreenOrigin_isARealAnchor() throws {
+        let atOrigin = CGRect(x: 0, y: 0, width: 1, height: 18)
+        let session = try composedSession(caretRects: [Self.caretIndex: atOrigin])
+
+        guard case let .show(_, caretRect) = try XCTUnwrap(session.presenter.calls.last) else {
+            return XCTFail("the bar must have been shown")
+        }
+        XCTAssertEqual(caretRect, atOrigin)
+    }
+
+    // MARK: - Navigating
+
+    func testArrowKeys_moveTheHighlightAndClampAtTheStart() throws {
+        let session = try composedSession()
+
+        session.press(.rightArrow)
+        XCTAssertEqual(session.presenter.shownContent?.highlightedSlot, 1)
+
+        session.press(.leftArrow)
+        session.press(.leftArrow)
+        XCTAssertEqual(
+            session.presenter.shownContent?.highlightedSlot,
+            0,
+            "the highlight stops at the first candidate rather than wrapping to the last",
+        )
+    }
+
+    func testPagingKeys_moveAWholePageAndLandOnItsFirstCandidate() throws {
+        let session = try composedSession()
+        let firstPage = try XCTUnwrap(session.presenter.shownContent)
+
+        session.press(.pageDown)
+
+        let secondPage = try XCTUnwrap(session.presenter.shownContent)
+        XCTAssertNotEqual(secondPage.labels, firstPage.labels, "a different page holds different candidates")
+        XCTAssertEqual(
+            secondPage.highlightedSlot,
+            0,
+            "landing on the first slot keeps the page start, the highlight and the ⌃1 label in agreement",
+        )
+    }
+
+    func testPagingPastTheLastPage_doesNothing() throws {
+        let session = try composedSession()
+        let firstPage = try XCTUnwrap(session.presenter.shownContent)
+
+        session.press(.pageUp)
+
+        XCTAssertEqual(
+            session.presenter.shownContent?.labels,
+            firstPage.labels,
+            "there is no page before the first, and moving to one that does not exist would empty the bar",
+        )
+    }
+
+    func testArrowKeys_reachTheHostWhenNoBarIsUp() throws {
+        let session = try makeSession()
+
+        let handled = session.controller.handle(
+            try Self.arrowEvent(.rightArrow),
+            client: session.client,
+        )
+
+        XCTAssertFalse(handled, "with nothing to navigate, the arrow moves the host's caret")
+    }
+
+    // MARK: - Committing
+
+    func testSpace_commitsTheHighlightedCandidate() throws {
+        let session = try composedSession()
+        session.press(.rightArrow)
+        let highlighted = try XCTUnwrap(session.presenter.shownContent).labels[1]
+        session.client.clearWrites()
+
+        let handled = session.controller.handle(
+            try TestFixtures.keyDownEvent(characters: " "),
+            client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(
+            session.client.insertedTexts.last,
+            highlighted,
+            "Space takes the candidate the user moved to, not the one the list opened on",
+        )
+    }
+
+    func testControlDigit_commitsThatSlotOfTheVisiblePage() throws {
+        let session = try composedSession()
+        let secondLabel = try XCTUnwrap(session.presenter.shownContent).labels[1]
+        session.client.clearWrites()
+
+        let handled = session.controller.handle(
+            try Self.controlDigitEvent(slot: 1),
+            client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.client.insertedTexts.last, secondLabel)
+    }
+
+    /// A candidate that consumes only part of the buffer is nailed rather than
+    /// finalized: nothing reaches the document, the rest of the composition
+    /// carries on, and the bar has to come back holding candidates for the tail
+    /// that is left. Without the refresh it would keep offering spans measured
+    /// against bytes the nail has already consumed.
+    func testCommittingAPartialCandidate_keepsTheBarUpWithFreshCandidates() throws {
+        // Which slot holds a shorter-than-the-buffer candidate is the
+        // dictionary's business, so it is searched for rather than hardcoded —
+        // one fresh session per slot, since choosing one changes the state.
+        var nailed: (session: Session, firstPage: CandidateBarContent)?
+        for slot in 0 ..< CandidateListModel.pageSize where nailed == nil {
+            let session = try composedSession()
+            let firstPage = try XCTUnwrap(session.presenter.shownContent)
+            guard slot < firstPage.labels.count else { break }
+            session.client.clearWrites()
+
+            _ = session.controller.handle(
+                try Self.controlDigitEvent(slot: slot),
+                client: session.client,
+            )
+
+            if session.client.insertedTexts.isEmpty, session.presenter.isShowing {
+                nailed = (session, firstPage)
+            }
+        }
+
+        let (session, firstPage) = try XCTUnwrap(
+            nailed,
+            "taigi must offer a candidate shorter than the whole buffer for a nail to be reachable",
+        )
+        let tailPage = try XCTUnwrap(
+            session.presenter.shownContent,
+            "the composition is still running, so the user still needs candidates for its tail",
+        )
+        XCTAssertNotEqual(tailPage.labels, firstPage.labels, "the tail is a different buffer to segment")
+        XCTAssertEqual(tailPage.highlightedSlot, 0, "a fresh list starts on its first candidate")
+    }
+
+    /// Choosing candidates until there is no tail left must end — with the
+    /// document written and the bar down — rather than loop.
+    func testCommittingCandidatesUntilTheBufferRunsOut_endsWithTheBarDown() throws {
+        let session = try composedSession()
+        let space = try TestFixtures.keyDownEvent(characters: " ")
+
+        // One press per syllable is the most that can be needed; the extra
+        // iterations exist so a failure reads as "never ended" rather than
+        // "ended one press later than the fixture guessed".
+        for _ in 0 ..< (Self.composition.count + 1) where session.presenter.isShowing {
+            _ = session.controller.handle(space, client: session.client)
+        }
+
+        XCTAssertFalse(
+            session.presenter.isShowing,
+            "an ended composition has nothing left to choose between",
+        )
+        XCTAssertFalse(
+            session.client.insertedTexts.isEmpty,
+            "the chosen candidates must reach the document",
+        )
+    }
+
+    func testReturn_commitsTheLiteralAndTakesTheBarDown() throws {
+        let session = try composedSession()
+        session.client.clearWrites()
+
+        _ = session.controller.handle(
+            try TestFixtures.keyDownEvent(characters: "\r"),
+            client: session.client,
+        )
+
+        XCTAssertEqual(
+            session.client.insertedTexts.last,
+            "taigi",
+            "Enter keeps the letters that were typed, not the candidate the bar suggested",
+        )
+        XCTAssertFalse(session.presenter.isShowing)
+    }
+
+    func testEscape_takesTheBarDownWithTheComposition() throws {
+        let session = try composedSession()
+
+        _ = session.controller.handle(
+            try TestFixtures.keyDownEvent(characters: "\u{1B}"),
+            client: session.client,
+        )
+
+        XCTAssertFalse(session.presenter.isShowing)
+    }
+
+    // MARK: - Ownership
+
+    func testDeactivate_afterAnotherSessionTookOver_leavesTheNewBarAlone() throws {
+        let presenter = RecordingCandidatePresenter()
+        let leaving = try composedSession(presenter: presenter)
+        // IMK activates the incoming session before it deactivates the outgoing
+        // one, and the arriving session is what takes the bar over.
+        _ = try composedSession(presenter: presenter)
+        XCTAssertTrue(presenter.isShowing, "the arriving session put its own bar up")
+
+        leaving.controller.deactivateServer(leaving.client)
+
+        XCTAssertTrue(
+            presenter.isShowing,
+            """
+            the outgoing session no longer owns the bar, so its late teardown must not take down \
+            the incoming session's candidates
+            """,
+        )
+    }
+
+    func testActivate_takesDownABarLeftByAnEarlierSession() throws {
+        let presenter = RecordingCandidatePresenter()
+        _ = try composedSession(presenter: presenter)
+        XCTAssertTrue(presenter.isShowing)
+
+        _ = try makeSession(presenter: presenter)
+
+        XCTAssertFalse(
+            presenter.isShowing,
+            "a session that starts typing must not inherit the candidates of the one before it",
+        )
+    }
+
+    func testHidePalettes_takesTheBarDownWithoutEndingTheComposition() throws {
+        let session = try composedSession()
+        session.client.clearWrites()
+
+        session.controller.hidePalettes()
+
+        XCTAssertFalse(session.presenter.isShowing)
+        XCTAssertTrue(
+            session.client.insertedTexts.isEmpty,
+            "the system asked for the screen back, not for the user's composition to be finished",
+        )
+        // The composition is still the engine's, so the next character extends it.
+        _ = session.controller.handle(try TestFixtures.keyDownEvent(characters: "a"), client: session.client)
+        XCTAssertEqual(session.client.writes.last, .setMarkedText("taigia", selectionLocation: 6))
+    }
+
+    func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {
+        let session = try composedSession()
+
+        session.controller.hidePalettes()
+        let handled = session.controller.handle(try Self.arrowEvent(.rightArrow), client: session.client)
+
+        XCTAssertFalse(
+            handled,
+            "with no bar on screen the arrows are the host's again — navigating an invisible list "
+                + "would take a key away for nothing",
+        )
+    }
+
+    // MARK: - Fixtures
+
+    /// `taigi`, the composition every case here types: it segments into two
+    /// syllables, so the dictionary offers both whole-buffer and shorter
+    /// candidates.
+    private static let composition = "taigi"
+
+    /// The index of the last character of `taigi`'s marked region, which is where
+    /// the caret is and therefore the first index the anchor walk asks about.
+    private static let caretIndex = composition.utf16.count - 1
+
+    private static let caretRectAtEndOfComposition = CGRect(x: 120, y: 400, width: 1, height: 18)
+
+    /// A `⌃n` chord for a slot, counting from zero. `characters` carries the
+    /// control character the chord really arrives as, so the event is the one
+    /// AppKit would deliver rather than a convenient fiction.
+    private static func controlDigitEvent(slot: Int) throws -> NSEvent {
+        let digit = String(slot + 1)
+        // ⌃2 through ⌃8 are rewritten by Control; ⌃1 and ⌃9 are not.
+        let controlCharacters = [
+            "2": "\u{0}", "3": "\u{1B}", "4": "\u{1C}", "5": "\u{1D}",
+            "6": "\u{1E}", "7": "\u{1F}", "8": "\u{7F}",
+        ]
+        return try TestFixtures.keyDownEvent(
+            characters: controlCharacters[digit] ?? digit,
+            modifiers: .control,
+            charactersIgnoringModifiers: digit,
+        )
+    }
+
+    private static func arrowEvent(_ key: NavigationKey) throws -> NSEvent {
+        let functionKey: Int = switch key {
+        case .leftArrow: NSLeftArrowFunctionKey
+        case .rightArrow: NSRightArrowFunctionKey
+        case .upArrow: NSUpArrowFunctionKey
+        case .downArrow: NSDownArrowFunctionKey
+        case .pageUp: NSPageUpFunctionKey
+        case .pageDown: NSPageDownFunctionKey
+        }
+        return try TestFixtures.keyDownEvent(
+            characters: String(UnicodeScalar(functionKey)!),
+            modifiers: .function,
+        )
+    }
+
+    private struct Session {
+        let controller: TaigiInputController
+        let client: RecordingTextInputClient
+        let presenter: RecordingCandidatePresenter
+
+        @MainActor
+        func press(_ key: NavigationKey) {
+            guard let event = try? arrowEvent(key) else { return XCTFail("could not build \(key)") }
+            _ = controller.handle(event, client: client)
+        }
+    }
+
+    /// An activated session that has typed nothing yet.
+    private func makeSession(
+        presenter: RecordingCandidatePresenter = RecordingCandidatePresenter(),
+        caretRects: [Int: CGRect]? = nil,
+    ) throws -> Session {
+        let client = RecordingTextInputClient()
+        client.caretRects = caretRects ?? [Self.caretIndex: Self.caretRectAtEndOfComposition]
+        let controller = try TestFixtures.makeInputController()
+        controller.candidatePresenter = presenter
+        controller.activateServer(client)
+        return Session(controller: controller, client: client, presenter: presenter)
+    }
+
+    /// An activated session that has typed `taigi`, so a bar is up.
+    private func composedSession(
+        presenter: RecordingCandidatePresenter = RecordingCandidatePresenter(),
+        caretRects: [Int: CGRect]? = nil,
+    ) throws -> Session {
+        let session = try makeSession(presenter: presenter, caretRects: caretRects)
+        for character in Self.composition.map(String.init) {
+            _ = session.controller.handle(
+                try TestFixtures.keyDownEvent(characters: character),
+                client: session.client,
+            )
+        }
+        return session
+    }
+}

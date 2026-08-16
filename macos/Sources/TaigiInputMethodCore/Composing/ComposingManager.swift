@@ -160,6 +160,17 @@ final class ComposingManager {
         return .found(candidates)
     }
 
+    /// What committing `candidate` would write into the document, under the
+    /// settings in force right now.
+    ///
+    /// Exposed so the candidate bar can label a cell with the string that cell
+    /// produces. Rendering it in the view instead would be a second copy of the
+    /// output-mode rules, and the two would disagree the moment one of them
+    /// read a different settings snapshot than the commit did.
+    func documentText(for candidate: ContinuousCandidate) -> String {
+        CandidateDocumentText.text(for: candidate, settings: settingsProvider.current)
+    }
+
     /// Commits `candidate`, which must come from the `fetchCandidates()` call
     /// that produced the list the user is looking at.
     ///

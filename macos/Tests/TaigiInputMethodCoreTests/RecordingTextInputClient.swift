@@ -19,6 +19,15 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     private(set) var writes: [Write] = []
     private(set) var readCalls: [String] = []
 
+    /// The line rectangle this client reports for a character index of the
+    /// marked region. Indices absent from the map answer with a zero rectangle,
+    /// which is what a real client does for a position it cannot place — and
+    /// what makes the caret walk-back observable.
+    var caretRects: [Int: CGRect] = [:]
+
+    /// Every index the caret walk asked about, in order.
+    private(set) var caretRectQueries: [Int] = []
+
     /// The attributes of the most recent marked-text write, which is where the
     /// composition's underline lives.
     private(set) var lastMarkedTextAttributes: [NSAttributedString.Key: Any] = [:]
@@ -99,6 +108,8 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         lineHeightRectangle lineRect: UnsafeMutablePointer<NSRect>!,
     ) -> [AnyHashable: Any]! {
         readCalls.append(#function)
+        caretRectQueries.append(index)
+        lineRect?.pointee = caretRects[index] ?? .zero
         return [:]
     }
 

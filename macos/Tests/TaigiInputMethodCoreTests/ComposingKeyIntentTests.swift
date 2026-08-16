@@ -126,4 +126,237 @@ final class ComposingKeyIntentTests: XCTestCase {
             "the engine's tone markers are ASCII digits — a full-width numeral is document text",
         )
     }
+
+    // MARK: - Candidate keys
+
+    /// The six keys the bar binds, and what each of them does to it. `↑`/`↓` page
+    /// rather than move because the bar is one horizontal row.
+    func testNavigationKeys_driveTheBarWhileItIsUp() {
+        let cases: [(NavigationKey, ComposingKeyIntent)] = [
+            (.leftArrow, .moveHighlight(.backward)),
+            (.rightArrow, .moveHighlight(.forward)),
+            (.upArrow, .pageCandidates(.backward)),
+            (.downArrow, .pageCandidates(.forward)),
+            (.pageUp, .pageCandidates(.backward)),
+            (.pageDown, .pageCandidates(.forward)),
+        ]
+
+        for (key, expected) in cases {
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: navigationSnapshot(key),
+                    isComposing: true,
+                    isShowingCandidates: true,
+                ),
+                expected,
+                "\(key) must drive the candidate bar while it is on screen",
+            )
+        }
+    }
+
+    func testNavigationKeys_belongToTheHostWhenNoBarIsUp() {
+        for key in [NavigationKey.leftArrow, .downArrow, .pageUp] {
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: navigationSnapshot(key),
+                    isComposing: true,
+                    isShowingCandidates: false,
+                ),
+                .commitThenPassThrough,
+                "an arrow with no candidates on screen moves the host's caret, after the "
+                    + "composition has been written where the user typed it",
+            )
+        }
+    }
+
+    func testShiftedArrow_staysTheHostSelectionKey_evenWithTheBarUp() {
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: navigationSnapshot(.leftArrow, modifiers: .shift),
+                isComposing: true,
+                isShowingCandidates: true,
+            ),
+            .commitThenPassThrough,
+            "⇧← extends a selection; binding it to the bar would take that away for no gain",
+        )
+    }
+
+    /// Control rewrites the characters of the digits it is chorded with, so this
+    /// is the case the whole `charactersIgnoringModifiers` field exists for:
+    /// classified from `characters`, `⌃3` arrives as `\u{1B}` and cancels the
+    /// composition instead of picking the third candidate.
+    func testControlDigits_selectCandidates_despiteArrivingAsControlCharacters() throws {
+        let controlThree = try TestFixtures.keyDownEvent(
+            characters: "\u{1B}",
+            modifiers: .control,
+            charactersIgnoringModifiers: "3",
+        )
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(controlThree),
+                isComposing: true,
+                isShowingCandidates: true,
+            ),
+            .selectCandidateSlot(2),
+            "⌃3 selects the third candidate of the visible page, counting slots from zero",
+        )
+    }
+
+    func testControlDigits_belongToTheHostWhenNoBarIsUp() throws {
+        let controlThree = try TestFixtures.keyDownEvent(
+            characters: "\u{1B}",
+            modifiers: .control,
+            charactersIgnoringModifiers: "3",
+        )
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(controlThree),
+                isComposing: true,
+                isShowingCandidates: false,
+            ),
+            .commitThenPassThrough,
+            "with nothing to select, a Control chord is the host's shortcut again",
+        )
+    }
+
+    /// Caps Lock does not change what a digit key means, and the number pad sets
+    /// `.numericPad` (plus `.function` on some keyboards). Testing for an exact
+    /// modifier set would make `⌃3` select on the top row and quietly commit the
+    /// composition on the keypad.
+    func testControlDigits_selectCandidates_whateverElseAppKitReports() throws {
+        for extraModifiers in [NSEvent.ModifierFlags.capsLock, .numericPad, [.numericPad, .function]] {
+            let event = try TestFixtures.keyDownEvent(
+                characters: "\u{1B}",
+                modifiers: extraModifiers.union(.control),
+                charactersIgnoringModifiers: "3",
+            )
+
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: KeyEventSnapshot(event),
+                    isComposing: true,
+                    isShowingCandidates: true,
+                ),
+                .selectCandidateSlot(2),
+                "⌃3 with \(extraModifiers) also held is still ⌃3",
+            )
+        }
+    }
+
+    func testControlDigits_withAnotherChordingModifier_belongToTheHost() throws {
+        for extraModifiers in [NSEvent.ModifierFlags.command, .option, .shift] {
+            let event = try TestFixtures.keyDownEvent(
+                characters: "\u{1B}",
+                modifiers: extraModifiers.union(.control),
+                charactersIgnoringModifiers: "3",
+            )
+
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: KeyEventSnapshot(event),
+                    isComposing: true,
+                    isShowingCandidates: true,
+                ),
+                .commitThenPassThrough,
+                "⌃⌘3 and friends are the host's — the bar binds ⌃1…⌃9 and nothing built on top of them",
+            )
+        }
+    }
+
+    func testControlZero_isNotACandidateChord() throws {
+        let controlZero = try TestFixtures.keyDownEvent(
+            characters: "\u{0}",
+            modifiers: .control,
+            charactersIgnoringModifiers: "0",
+        )
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(controlZero),
+                isComposing: true,
+                isShowingCandidates: true,
+            ),
+            .commitThenPassThrough,
+            "the bar holds nine candidates, labelled ⌃1 to ⌃9 — ⌃0 addresses nothing",
+        )
+    }
+
+    func testSpace_picksTheHighlightedCandidateOnlyWhileTheBarIsUp() throws {
+        let event = try TestFixtures.keyDownEvent(characters: " ")
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(event),
+                isComposing: true,
+                isShowingCandidates: true,
+            ),
+            .commitHighlightedCandidate,
+        )
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(event),
+                isComposing: true,
+                isShowingCandidates: false,
+            ),
+            .commitThenInsert(" "),
+            "with no candidates to pick from, Space is the document's space again",
+        )
+    }
+
+    func testReturn_commitsTheLiteral_evenWithACandidateHighlighted() throws {
+        let event = try TestFixtures.keyDownEvent(characters: "\r")
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(event),
+                isComposing: true,
+                isShowingCandidates: true,
+            ),
+            .commit,
+            "Enter is the only way to keep what was typed rather than what was suggested",
+        )
+    }
+
+    /// The mapping from AppKit's own key names, which the snapshot is what
+    /// isolates: everything above is asserted against `NavigationKey` directly,
+    /// so without this the six keys could all be extracted as nil.
+    func testArrowEvents_areRecognizedAsNavigationKeys() throws {
+        let cases: [(String, NavigationKey)] = [
+            (String(UnicodeScalar(NSLeftArrowFunctionKey)!), .leftArrow),
+            (String(UnicodeScalar(NSRightArrowFunctionKey)!), .rightArrow),
+            (String(UnicodeScalar(NSUpArrowFunctionKey)!), .upArrow),
+            (String(UnicodeScalar(NSDownArrowFunctionKey)!), .downArrow),
+            (String(UnicodeScalar(NSPageUpFunctionKey)!), .pageUp),
+            (String(UnicodeScalar(NSPageDownFunctionKey)!), .pageDown),
+        ]
+
+        for (characters, expected) in cases {
+            let event = try TestFixtures.keyDownEvent(characters: characters)
+            XCTAssertEqual(KeyEventSnapshot(event).navigationKey, expected)
+        }
+    }
+
+    /// AppKit encodes the arrows in the same private-use range as the function
+    /// keys, and only the ones bound above are navigation.
+    func testFunctionKeyEvents_areNotNavigationKeys() throws {
+        let event = try TestFixtures.keyDownEvent(
+            characters: String(UnicodeScalar(NSF5FunctionKey)!),
+        )
+
+        XCTAssertNil(KeyEventSnapshot(event).navigationKey)
+    }
+
+    private func navigationSnapshot(
+        _ key: NavigationKey,
+        modifiers: NSEvent.ModifierFlags = [],
+    ) -> KeyEventSnapshot {
+        KeyEventSnapshot(
+            characters: nil,
+            modifiers: modifiers,
+            isNamedSpecialKey: true,
+            navigationKey: key,
+        )
+    }
 }
