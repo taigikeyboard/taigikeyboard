@@ -47,6 +47,8 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
 
         XCTAssertEqual(
             makeStore().current,
@@ -57,6 +59,8 @@ final class SettingsStoreTests: XCTestCase {
                 isTranslateSwapped: true,
                 isOutputBothScripts: true,
                 isLiteralRomanCandidateEnabled: true,
+                isFrequencyRecordingEnabled: false,
+                isAssociationRecordingEnabled: false,
             ),
         )
     }

@@ -13,9 +13,8 @@ final class ComposingManagerCandidateTests: XCTestCase {
         InstalledLexicon.installOnce()
     }
 
-    private func makeManager() -> ComposingManager {
-        ComposingManager(
-            settingsProvider: StubEngineSettingsProvider(),
+    private func makeManager() throws -> ComposingManager {
+        try TestFixtures.makeComposingManager(
             startingGeneration: TestFixtures.generationCounter.next(),
         )
     }
@@ -35,8 +34,8 @@ final class ComposingManagerCandidateTests: XCTestCase {
 
     // MARK: - Fetching
 
-    func testFetchCandidates_whileComposing_findsCandidates() {
-        let manager = makeManager()
+    func testFetchCandidates_whileComposing_findsCandidates() throws {
+        let manager = try makeManager()
         composeTaigi(manager, executing: RecordingEffectExecutor())
 
         guard case let .found(candidates) = manager.fetchCandidates() else {
@@ -50,8 +49,8 @@ final class ComposingManagerCandidateTests: XCTestCase {
         )
     }
 
-    func testFetchCandidates_whileIdle_reportsNotComposing() {
-        let manager = makeManager()
+    func testFetchCandidates_whileIdle_reportsNotComposing() throws {
+        let manager = try makeManager()
 
         XCTAssertEqual(
             manager.fetchCandidates(),
@@ -64,8 +63,8 @@ final class ComposingManagerCandidateTests: XCTestCase {
     /// the engine does NEXT: a query that reset the composition — by bumping the
     /// generation, say — would leave the following keystroke starting a brand
     /// new one, and the mirror alone would not show it.
-    func testFetchCandidates_leavesTheCompositionIntactForTheNextKeystroke() {
-        let manager = makeManager()
+    func testFetchCandidates_leavesTheCompositionIntactForTheNextKeystroke() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let rawBefore = manager.rawInput
@@ -89,7 +88,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
     // MARK: - Committing
 
     func testCommitCandidate_consumingTheWholeBuffer_writesTheDocumentAndEnds() throws {
-        let manager = makeManager()
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let candidate = try XCTUnwrap(
@@ -114,7 +113,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
     /// manager passes the rendering to the bridge and the canonical key
     /// separately, rather than sending one string for both.
     func testCommitCandidate_swappedOutput_writesTheHanjiRatherThanTheRomanization() throws {
-        let manager = ComposingManager(
+        let manager = try TestFixtures.makeComposingManager(
             settingsProvider: StubEngineSettingsProvider(swapped: true),
             startingGeneration: TestFixtures.generationCounter.next(),
         )
@@ -132,7 +131,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
     }
 
     func testCommitCandidate_consumingPartOfTheBuffer_nailsItAndKeepsComposing() throws {
-        let manager = makeManager()
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let candidate = try XCTUnwrap(
@@ -151,7 +150,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
     }
 
     func testCommitCandidate_nailed_leavesRawInputAsTheTailAndDisplayTextWhole() throws {
-        let manager = makeManager()
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let candidate = try XCTUnwrap(partialCandidate(from: manager))
@@ -179,7 +178,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
     }
 
     func testCommitCandidate_afterTheCompositionEnded_isIgnored() throws {
-        let manager = makeManager()
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let candidate = try XCTUnwrap(wholeBufferCandidate(from: manager))

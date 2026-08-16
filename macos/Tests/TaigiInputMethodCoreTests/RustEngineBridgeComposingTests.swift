@@ -236,6 +236,8 @@ private extension EngineSettings {
             isTranslateSwapped: isTranslateSwapped,
             isOutputBothScripts: isOutputBothScripts,
             isLiteralRomanCandidateEnabled: enabled,
+            isFrequencyRecordingEnabled: isFrequencyRecordingEnabled,
+            isAssociationRecordingEnabled: isAssociationRecordingEnabled,
         )
     }
 }

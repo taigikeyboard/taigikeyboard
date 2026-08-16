@@ -7,15 +7,14 @@ import XCTest
 /// nobody else uses — see `GenerationCounter`.
 @MainActor
 final class ComposingManagerTests: XCTestCase {
-    private func makeManager() -> ComposingManager {
-        ComposingManager(
-            settingsProvider: StubEngineSettingsProvider(),
+    private func makeManager() throws -> ComposingManager {
+        try TestFixtures.makeComposingManager(
             startingGeneration: TestFixtures.generationCounter.next(),
         )
     }
 
-    func testAppend_showsThePreeditAndMirrorsTheEngine() {
-        let manager = makeManager()
+    func testAppend_showsThePreeditAndMirrorsTheEngine() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
         manager.append("t", executing: executor)
@@ -29,8 +28,8 @@ final class ComposingManagerTests: XCTestCase {
         )
     }
 
-    func testAppend_numericTone_showsTheDiacriticButKeepsTheTypedDigits() {
-        let manager = makeManager()
+    func testAppend_numericTone_showsTheDiacriticButKeepsTheTypedDigits() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
         for character in ["t", "a", "i", "5"] {
@@ -49,8 +48,8 @@ final class ComposingManagerTests: XCTestCase {
         )
     }
 
-    func testCommitComposition_writesTheCompositionAndEndsIt() {
-        let manager = makeManager()
+    func testCommitComposition_writesTheCompositionAndEndsIt() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         for character in ["t", "a", "i"] {
             manager.append(character, executing: executor)
@@ -66,8 +65,8 @@ final class ComposingManagerTests: XCTestCase {
         )
     }
 
-    func testCommitCompositionThenInsert_reachesTheHostAsOneWrite() {
-        let manager = makeManager()
+    func testCommitCompositionThenInsert_reachesTheHostAsOneWrite() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         for character in ["t", "a", "i"] {
             manager.append(character, executing: executor)
@@ -86,8 +85,8 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
     }
 
-    func testCancelComposition_clearsWithoutWritingToTheDocument() {
-        let manager = makeManager()
+    func testCancelComposition_clearsWithoutWritingToTheDocument() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         for character in ["t", "a", "i"] {
             manager.append(character, executing: executor)
@@ -104,8 +103,8 @@ final class ComposingManagerTests: XCTestCase {
         )
     }
 
-    func testDeleteBackward_toEmpty_endsTheComposition() {
-        let manager = makeManager()
+    func testDeleteBackward_toEmpty_endsTheComposition() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         manager.append("t", executing: executor)
 
@@ -115,8 +114,8 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "")
     }
 
-    func testStartNewSession_dropsTheCompositionWithoutTouchingTheOldClient() {
-        let manager = makeManager()
+    func testStartNewSession_dropsTheCompositionWithoutTouchingTheOldClient() throws {
+        let manager = try makeManager()
         let executor = RecordingEffectExecutor()
         for character in ["t", "a", "i"] {
             manager.append(character, executing: executor)

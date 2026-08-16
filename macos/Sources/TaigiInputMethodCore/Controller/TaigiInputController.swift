@@ -302,6 +302,13 @@ public final class TaigiInputController: IMKInputController {
             dismissCandidates()
             return false
         case .passThrough:
+            // The host gets the key either way. Text going into the document
+            // without passing through a composition is still context, though:
+            // a full stop typed here is what ends the sentence the next-word
+            // learning would otherwise carry across.
+            if ComposingKeyIntent.isDocumentText(key), let characters = key.characters {
+                manager.noteCharacterTypedOutsideComposition(characters)
+            }
             return false
         case .commitHighlightedCandidate:
             // Unreachable by construction — the intent is only produced when the

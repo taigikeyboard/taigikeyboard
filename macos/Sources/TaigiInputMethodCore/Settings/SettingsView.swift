@@ -33,6 +33,12 @@ struct SettingsView: View {
     @AppStorage(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
     private var isLiteralRomanCandidateEnabled = SettingsStore.Keys.isLiteralRomanCandidateEnabled.defaultValue
 
+    @AppStorage(SettingsStore.Keys.isFrequencyRecordingEnabled.name)
+    private var isFrequencyRecordingEnabled = SettingsStore.Keys.isFrequencyRecordingEnabled.defaultValue
+
+    @AppStorage(SettingsStore.Keys.isAssociationRecordingEnabled.name)
+    private var isAssociationRecordingEnabled = SettingsStore.Keys.isAssociationRecordingEnabled.defaultValue
+
     var body: some View {
         Form {
             Section {
@@ -56,6 +62,15 @@ struct SettingsView: View {
                 Toggle("顯示羅馬字候選", isOn: $isLiteralRomanCandidateEnabled)
             } header: {
                 Text("候選")
+            }
+
+            Section {
+                Toggle("記錄選字詞頻", isOn: $isFrequencyRecordingEnabled)
+                Toggle("記錄詞語關聯", isOn: $isAssociationRecordingEnabled)
+            } header: {
+                Text("學習")
+            } footer: {
+                Text("學習資料只存在本機,袂上傳。")
             }
         }
         .formStyle(.grouped)

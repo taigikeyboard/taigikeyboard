@@ -63,6 +63,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "literalRomanCandidateEnabled",
             defaultValue: EngineSettings.defaults.isLiteralRomanCandidateEnabled,
         )
+        static let isFrequencyRecordingEnabled = SettingsKey(
+            name: "frequencyRecordingEnabled",
+            defaultValue: EngineSettings.defaults.isFrequencyRecordingEnabled,
+        )
+        static let isAssociationRecordingEnabled = SettingsKey(
+            name: "associationRecordingEnabled",
+            defaultValue: EngineSettings.defaults.isAssociationRecordingEnabled,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -81,6 +89,8 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             isTranslateSwapped: bool(Keys.isTranslateSwapped),
             isOutputBothScripts: bool(Keys.isOutputBothScripts),
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
+            isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
+            isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
         )
     }
 

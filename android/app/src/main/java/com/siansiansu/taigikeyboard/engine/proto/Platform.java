@@ -30,6 +30,10 @@ public enum Platform
    * <code>PLATFORM_ANDROID = 2;</code>
    */
   PLATFORM_ANDROID(2),
+  /**
+   * <code>PLATFORM_MACOS = 3;</code>
+   */
+  PLATFORM_MACOS(3),
   UNRECOGNIZED(-1),
   ;
 
@@ -45,6 +49,10 @@ public enum Platform
    * <code>PLATFORM_ANDROID = 2;</code>
    */
   public static final int PLATFORM_ANDROID_VALUE = 2;
+  /**
+   * <code>PLATFORM_MACOS = 3;</code>
+   */
+  public static final int PLATFORM_MACOS_VALUE = 3;
 
 
   @java.lang.Override
@@ -70,6 +78,7 @@ public enum Platform
       case 0: return PLATFORM_UNSPECIFIED;
       case 1: return PLATFORM_IOS;
       case 2: return PLATFORM_ANDROID;
+      case 3: return PLATFORM_MACOS;
       default: return null;
     }
   }

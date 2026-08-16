@@ -190,10 +190,32 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   repository + same-transaction 30000-cap guard + derivation via existing engine
   FFI). Entries ride `FetchAtPos.custom_entries` — zero new FFI. CSV via
   NSOpen/SavePanel. Backup-exclusion policy = user decision at PR7.
-- **D7 User freq / nextword** — deferred. PR3–PR7 implement the full FetchAtPos
-  carrier but execute the neutral phase only; `platform_id = 0` is safe —
-  the only validator is nextword (`engine/nextword/src/decide.rs:53-61`) and
-  macOS sends no nextword requests until PR8b.
+- **D7 User freq / nextword** — **CLOSED at PR8a+PR9 (#528)**. PR3–PR7 ran the
+  FetchAtPos carrier's neutral phase only, with `platform_id = 0`, which was
+  safe because the only validator is nextword
+  (`engine/nextword/src/decide.rs:55-63`) and macOS sent no nextword requests.
+  Now settled:
+  - macOS's decide arms are **designed, not copied** (as this entry always
+    required). `split_compound` splits on whitespace only — a hyphen is inside
+    a macOS word (`tâi-gí`, `hōo--guá`), a space is only emitted between
+    segments the walker calls separate words. `compound_association_pairs`
+    emits nothing when the 漢字 and romanization sides split into different
+    counts, rather than padding an empty TL onto a real word (Core Principle
+    #7). `is_noise_text` is "contains no letter" rather than a third
+    punctuation table.
+  - Learning is **write-and-rank for frequency, write-only for associations**:
+    macOS has no idle candidate surface, and putting one on screen means
+    intercepting keys in a state where this input method forwards everything
+    to the host. Recording now means a future prediction surface starts with
+    real history. No context timer — the engine's strict 10 s association
+    window already fences recording, and `is_showing` is never true here.
+  - `user_association.db` ships schema v6, one column wider in its unique key
+    than the iOS/Android v5 shape, so 一字多音 stay separate on the PREVIOUS
+    word too. The same gap on iOS and Android is real and unfixed — correcting
+    it there is a migration over existing user data.
+  - Learning databases are NOT excluded from Time Machine, unlike the iOS
+    backup exclusion (`behavioral-invariants.md` §29): that decision was about
+    user data leaving the device through iCloud.
 - **D8 Dictionary artifacts** — read from `ios/Resources/Dictionaries/`
   (read-only) at bundle time with fail-fast existence/non-empty validation;
   `deploy.sh` macos destination = later coordination.
@@ -234,8 +256,8 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 | PR5 | Settings + menubar | `SettingsStore` + live-read provider replacing `DefaultEngineSettingsProvider`; SwiftUI form; `SettingsWindowController`; programmatic main menu; IMK `menu()` with `showPreferences:` + TL/POJ items; `Ctrl+Shift+,` as the settings item's key equivalent | PR open #527 |
 | PR6 | Custom dict persistence | store: schema v2 + side table + migrator + capacity + derivation; custom_entries injection | Pending |
 | PR7 | Custom dict UI | CRUD UI, CSV import/export, backup-exclusion decision (user-gated) | Pending |
-| PR8a | Proto coordination ⚠ | `PLATFORM_MACOS` + macOS nextword decide contract + triple-touch regen incl. `make macos-protos` (`rust-migration-policy.md` §4; touches ios/android GENERATED files only; timing user-coordinated) | Pending |
-| PR9 | Freq/nextword + polish | phase-2 boosted fetch, user_frequency.db, association learning, edge cases, docs, dogfood fixes | Pending |
+| PR5 | Settings + menubar | see row above | **Merged** #527 `62ff7d40` |
+| PR8a+PR9 | Proto coordination + freq/nextword ⚠ | **merged into ONE PR at USER instruction.** `PLATFORM_MACOS` + triple-touch regen (`rust-migration-policy.md` §4; ios/android GENERATED files only) · macOS nextword decide contract · `user_frequency.db` + `user_association.db` · phase-2 boosted fetch · learning settings | PR open #528 |
 
 Every PR: Codex sandwich + `/simplify`; PR1/PR8a additionally FFI-adjacent
 review per `.claude/rules/rust-ffi-safety.md` §5. Engine-touched PRs run

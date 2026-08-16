@@ -69,9 +69,12 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
             break
 
         case .nextWordUpdateLastSelectedWord, .nextWordWordSelected, .nextWordClearForNewComposing:
-            // Next-word learning is a later slice (roadmap D7): macOS sends no
-            // nextword requests yet, so there is no store for these handshakes
-            // to update.
+            // Never delivered: `ComposingManager` routes the learning
+            // handshakes to `NextWordLearner` instead, because they write to a
+            // database rather than to this client's document. Kept in the
+            // switch so the enum stays exhaustive here too — that is what makes
+            // a newly added engine effect a compile error rather than a
+            // silently ignored instruction.
             break
         }
     }

@@ -28,18 +28,37 @@ struct ComposingSessionToken: Hashable, Sendable {
 @MainActor
 final class ComposingSessionCoordinator {
     /// Process-wide, because the engine state it guards is — and the one place
-    /// the shipped composition is assembled, which is why the settings store is
-    /// named here rather than defaulted into `ComposingManager`.
+    /// the shipped composition is assembled, which is why the settings store and
+    /// the two learning stores are named here rather than defaulted into
+    /// `ComposingManager`.
     static let shared = ComposingSessionCoordinator(
-        composingManager: ComposingManager(settingsProvider: SettingsStore()),
+        composingManager: ComposingManager(
+            settingsProvider: SettingsStore(),
+            frequencyStore: shippedStores.frequency,
+            nextWordLearner: NextWordLearner(store: shippedStores.association),
+        ),
+        learningStores: shippedStores,
     )
 
+    /// The stores the shipped composition writes to. Named once so `shared` can
+    /// both hand them to the manager and expose them for `AppDelegate` to open.
+    private static let shippedStores = LearningStores(directory: UserDataDirectory.standard)
+
     private let composingManager: ComposingManager
+    private let learningStores: LearningStores
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
 
-    init(composingManager: ComposingManager) {
+    init(composingManager: ComposingManager, learningStores: LearningStores) {
         self.composingManager = composingManager
+        self.learningStores = learningStores
+    }
+
+    /// Opens the learning databases. Called once at launch: the first
+    /// composition of a session would otherwise rank without the user's
+    /// history while the files were still being opened.
+    func openLearningStores() {
+        learningStores.open()
     }
 
     /// Makes `owner` the session that drives the engine, and returns the

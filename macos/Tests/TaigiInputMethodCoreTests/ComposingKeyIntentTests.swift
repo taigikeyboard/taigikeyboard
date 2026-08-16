@@ -347,6 +347,72 @@ final class ComposingKeyIntentTests: XCTestCase {
         XCTAssertNil(KeyEventSnapshot(event).navigationKey)
     }
 
+    // MARK: - Document text
+
+    /// The pass-through path reports document text to the engine so a full stop
+    /// can end a learning context. What it must NOT report is a key the host
+    /// acts on — Escape and Return are pass-through too, and neither is a
+    /// character anyone typed into a document.
+    func testIsDocumentText_acceptsPrintableCharactersAndRejectsKeysTheHostActsOn() {
+        for text in ["。", "、", "!", "?", " ", "台", "x"] {
+            XCTAssertTrue(
+                ComposingKeyIntent.isDocumentText(textSnapshot(text)),
+                "'\(text)' is text the host puts into its document",
+            )
+        }
+        for text in ["\u{1B}", "\r", "\u{8}", "\u{7F}"] {
+            XCTAssertFalse(
+                ComposingKeyIntent.isDocumentText(textSnapshot(text)),
+                "a control character is a command, not document text",
+            )
+        }
+    }
+
+    /// `⌘.` and a typed `.` carry the same character. One of them inserts
+    /// nothing, and reporting it as document text would end a learning context
+    /// on a keystroke that never reached the document.
+    func testIsDocumentText_rejectsAHostChordCarryingAPrintableCharacter() {
+        for modifier in [NSEvent.ModifierFlags.command, .control, .option] {
+            XCTAssertFalse(
+                ComposingKeyIntent.isDocumentText(textSnapshot(".", modifiers: modifier)),
+                "a chord is a host command however printable its character is",
+            )
+        }
+        XCTAssertTrue(
+            ComposingKeyIntent.isDocumentText(textSnapshot(".", modifiers: .shift)),
+            "Shift is how the character was typed, not a command",
+        )
+    }
+
+    func testIsDocumentText_rejectsArrowsAndFunctionKeys() throws {
+        let leftArrow = try String(XCTUnwrap(UnicodeScalar(NSLeftArrowFunctionKey)))
+        let functionKey = try String(XCTUnwrap(UnicodeScalar(NSF5FunctionKey)))
+
+        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(leftArrow)))
+        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(functionKey)))
+        XCTAssertFalse(
+            ComposingKeyIntent.isDocumentText(textSnapshot("\u{2028}", isNamedSpecialKey: true)),
+            "a line separator is a named key AppKit gives us, not typed text",
+        )
+    }
+
+    func testIsDocumentText_rejectsNothingAtAll() {
+        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(nil)))
+        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot("")))
+    }
+
+    private func textSnapshot(
+        _ characters: String?,
+        modifiers: NSEvent.ModifierFlags = [],
+        isNamedSpecialKey: Bool = false,
+    ) -> KeyEventSnapshot {
+        KeyEventSnapshot(
+            characters: characters,
+            modifiers: modifiers,
+            isNamedSpecialKey: isNamedSpecialKey,
+        )
+    }
+
     private func navigationSnapshot(
         _ key: NavigationKey,
         modifiers: NSEvent.ModifierFlags = [],

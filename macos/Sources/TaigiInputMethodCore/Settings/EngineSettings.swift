@@ -46,6 +46,27 @@ struct EngineSettings: Equatable, Sendable {
     /// Drift changes which candidate leads the list on a fresh install.
     let isLiteralRomanCandidateEnabled: Bool
 
+    /// Whether committing a candidate counts towards its ranking next time.
+    /// Read on the write path only — the boost itself is always applied to
+    /// whatever counts have been learned, so turning this off freezes the
+    /// learned ranking rather than discarding it.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:48,
+    /// which defaults it ON. Drift changes whether a fresh install learns.
+    let isFrequencyRecordingEnabled: Bool
+
+    /// Whether a commit records which word followed which. Sent to the engine as
+    /// `AppConfig.is_association_recording_enabled`, which is what gates the
+    /// `RecordAssociation` effects in `engine/nextword/src/decide.rs:130`.
+    ///
+    /// The gate is on emitting the effect, not on tracking the context: the
+    /// engine still remembers the last committed word while this is off, so a
+    /// word committed with it off can become the predecessor of one committed
+    /// within ten seconds of switching it back on. That is the engine's
+    /// behaviour on all three platforms, not something macOS introduces here.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:49,
+    /// which defaults it ON.
+    let isAssociationRecordingEnabled: Bool
+
     /// What a fresh install types with. Every value matches the iOS and Android
     /// default for the same setting, so someone using two of the three platforms
     /// gets the same composition and the same candidate order out of the box.
@@ -56,5 +77,7 @@ struct EngineSettings: Equatable, Sendable {
         isTranslateSwapped: false,
         isOutputBothScripts: false,
         isLiteralRomanCandidateEnabled: false,
+        isFrequencyRecordingEnabled: true,
+        isAssociationRecordingEnabled: true,
     )
 }

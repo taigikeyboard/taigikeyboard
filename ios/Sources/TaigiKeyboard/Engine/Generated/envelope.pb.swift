@@ -125,6 +125,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
   case unspecified // = 0
   case ios // = 1
   case android // = 2
+  case macos // = 3
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -136,6 +137,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
     case 0: self = .unspecified
     case 1: self = .ios
     case 2: self = .android
+    case 3: self = .macos
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -145,6 +147,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
     case .unspecified: return 0
     case .ios: return 1
     case .android: return 2
+    case .macos: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -154,6 +157,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
     .unspecified,
     .ios,
     .android,
+    .macos,
   ]
 
 }
@@ -406,7 +410,7 @@ nonisolated extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding 
 }
 
 nonisolated extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLATFORM_UNSPECIFIED\0\u{1}PLATFORM_IOS\0\u{1}PLATFORM_ANDROID\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLATFORM_UNSPECIFIED\0\u{1}PLATFORM_IOS\0\u{1}PLATFORM_ANDROID\0\u{1}PLATFORM_MACOS\0")
 }
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

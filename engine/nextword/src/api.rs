@@ -34,8 +34,9 @@ pub(crate) struct PersistedState {
 }
 
 /// Decoded intent set. Mirrors iOS `NextWordIntent` / Android
-/// `NextWordIntent` 1:1, plus Android-only `UpdateLastSelectedWord`
-/// (audit §5 #5 / Codex v1 P1). Decoded from
+/// `NextWordIntent` 1:1, plus `UpdateLastSelectedWord` — Android-only when it
+/// was added (audit §5 #5 / Codex v1 P1), now also emitted by iOS's
+/// continuous-input mid-commit handshake and by macOS. Decoded from
 /// `protos::engine::NextWordRequest::method` inside `dispatch::handle`.
 // 中文: 解碼後的 intent enum,對齊 iOS / Android 平台 intent,另含 Android-only 的 Space 路徑。
 #[derive(Clone, Debug, PartialEq, Eq)]

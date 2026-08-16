@@ -230,6 +230,29 @@ enum ComposingKeyIntent: Equatable {
         return isComposing ? .commitThenInsert(characters) : .passThrough
     }
 
+    /// True when `key` is text the host will put into its document, rather than
+    /// a key it will act on.
+    ///
+    /// Lives here because it is the same question the classification above
+    /// already answers for itself, and answering it twice in two files is how
+    /// the two drift. The pass-through path asks it so that punctuation typed
+    /// outside a composition can be reported to the engine as the end of a
+    /// context, while Escape, Return and the arrows — which are pass-through
+    /// too — are not.
+    ///
+    /// Takes the whole event rather than its characters: `⌘.` and a typed `.`
+    /// carry the same character, and one of them is a host command that inserts
+    /// nothing. The chording modifiers are what tells them apart.
+    static func isDocumentText(_ key: KeyEventSnapshot) -> Bool {
+        guard key.modifiers
+            .intersection(.deviceIndependentFlagsMask)
+            .isDisjoint(with: [.command, .control, .option])
+        else { return false }
+        guard !key.isNamedSpecialKey else { return false }
+        guard let characters = key.characters, !characters.isEmpty else { return false }
+        return characters.unicodeScalars.allSatisfy(isTextScalar)
+    }
+
     /// A key the host owns. It still ends any composition first, so the host
     /// never acts on a document that has an unfinished one in it.
     private static func hostKey(isComposing: Bool) -> ComposingKeyIntent {

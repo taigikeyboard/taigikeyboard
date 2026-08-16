@@ -56,9 +56,14 @@ enum TestFixtures {
         )
     }
 
-    /// The shipped defaults with the two output flags overridden — the only
-    /// settings any case here varies, and the pair PR5 will put behind UI.
-    static func settings(swapped: Bool = false, bothScripts: Bool = false) -> EngineSettings {
+    /// The shipped defaults with the output and learning flags overridable —
+    /// the only settings any case here varies.
+    static func settings(
+        swapped: Bool = false,
+        bothScripts: Bool = false,
+        frequencyRecording: Bool = true,
+        associationRecording: Bool = true,
+    ) -> EngineSettings {
         EngineSettings(
             inputMode: .tl,
             isDoubleTapOOEnabled: true,
@@ -66,6 +71,85 @@ enum TestFixtures {
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
             isLiteralRomanCandidateEnabled: false,
+            isFrequencyRecordingEnabled: frequencyRecording,
+            isAssociationRecordingEnabled: associationRecording,
+        )
+    }
+
+    /// An empty directory nothing else in the process is using. Each call gets
+    /// its own, so a case that learns something cannot change what the next case
+    /// starts from.
+    static func scratchDirectory() throws -> URL {
+        try UserDataDirectory.created(
+            URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("TaigiLearning-\(UUID().uuidString)"),
+        )
+    }
+
+    /// A pair of learning stores over a scratch directory, open and ready.
+    ///
+    /// Real SQLite rather than a double: the whole of what these types do is
+    /// SQL, and a double would only prove that the fake behaves like the fake.
+    static func makeLearningStores() throws -> LearningStores {
+        let directory = try scratchDirectory()
+        let stores = LearningStores(directory: { directory })
+        stores.open()
+        waitUntilReady(stores)
+        return stores
+    }
+
+    /// Spins the run loop until both stores have opened. Opening is
+    /// asynchronous by design — a keystroke must never wait on it — so a case
+    /// that asserts on stored rows has to wait here instead.
+    static func waitUntilReady(
+        _ stores: LearningStores,
+        timeout: TimeInterval = 5,
+        file: StaticString = #filePath,
+        line: UInt = #line,
+    ) {
+        let opened = spinRunLoop(until: { stores.frequency.isReady && stores.association.isReady },
+                                 timeout: timeout)
+        if !opened {
+            XCTFail("the learning stores did not open within \(timeout)s", file: file, line: line)
+        }
+    }
+
+    /// Runs the current run loop until `condition` holds, and answers whether
+    /// it did before `timeout`.
+    ///
+    /// The learning stores do their work on their own queue and answer through
+    /// state a test can only poll, so every case that asserts on what they
+    /// stored needs this shape — once, here, rather than once per suite.
+    static func spinRunLoop(
+        until condition: () -> Bool,
+        timeout: TimeInterval = 5,
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() {
+            guard Date() < deadline else { return false }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
+        return true
+    }
+
+    /// A manager wired to scratch stores unless a case supplies its own.
+    ///
+    /// The production initializer takes no defaults on purpose — the shipped
+    /// stores write to the user's home directory. Defaulting HERE is the
+    /// opposite hazard and the safe one: a case that forgets to say where its
+    /// learning goes gets a directory that is thrown away, never the user's.
+    @MainActor
+    static func makeComposingManager(
+        settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
+        stores: LearningStores? = nil,
+        startingGeneration: UInt64,
+    ) throws -> ComposingManager {
+        let stores = try stores ?? makeLearningStores()
+        return ComposingManager(
+            settingsProvider: settingsProvider,
+            frequencyStore: stores.frequency,
+            nextWordLearner: NextWordLearner(store: stores.association),
+            startingGeneration: startingGeneration,
         )
     }
 
@@ -155,8 +239,18 @@ extension [ComposingTransition.Effect] {
 final class StubEngineSettingsProvider: EngineSettingsProvider {
     let current: EngineSettings
 
-    init(swapped: Bool = false, bothScripts: Bool = false) {
-        current = TestFixtures.settings(swapped: swapped, bothScripts: bothScripts)
+    init(
+        swapped: Bool = false,
+        bothScripts: Bool = false,
+        frequencyRecording: Bool = true,
+        associationRecording: Bool = true,
+    ) {
+        current = TestFixtures.settings(
+            swapped: swapped,
+            bothScripts: bothScripts,
+            frequencyRecording: frequencyRecording,
+            associationRecording: associationRecording,
+        )
     }
 }
 

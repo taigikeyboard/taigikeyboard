@@ -146,17 +146,31 @@ extension RustEngineBridge {
     /// generation: a bumped generation resets the engine before the query runs
     /// (`engine/composing/src/handle.rs:61-66`).
     ///
-    /// The user-frequency, custom-dictionary and source-toggle carriers are
-    /// deliberately left at their neutral defaults — the stores that fill them
-    /// are later slices, and the engine reads the proto3 zero values as "rank
-    /// without them" rather than as an error.
+    /// `frequencyRows` is what the user has committed before, which the engine
+    /// turns into a per-candidate boost. Leaving it empty is not an error and
+    /// not a degraded mode: the engine reads the proto3 zero values as "rank
+    /// these without any usage history", which is the correct answer for a
+    /// fresh install and for the first fetch of any composition, before the
+    /// candidate keys to look up are even known.
+    ///
+    /// The custom-dictionary and source-toggle carriers stay empty because
+    /// macOS ships neither — `custom_entries` in particular runs its neutral
+    /// phase by design (roadmap D7).
+    ///
+    /// `nowMs` is the clock the engine's recency ranking reads. It belongs with
+    /// the rows rather than being read inside the engine, so that both fetches
+    /// of one keystroke rank against a single instant.
     static func composingFetchAtPos(
         settings: EngineSettings,
         generation: UInt64,
+        frequencyRows: [FrequencyRow] = [],
+        nowMs: Int64 = 0,
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         fetch.position = 0
         fetch.literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
+        fetch.frequencyEntries = frequencyRows.map(frequencyEntry)
+        fetch.nowMs = nowMs
 
         guard let response = composingResponse(
             .fetchAtPos(fetch),
@@ -311,6 +325,19 @@ extension RustEngineBridge {
         case .nextWordClearForNewComposing:
             return .nextWordClearForNewComposing
         }
+    }
+
+    /// One learned row on the wire. `count` is clamped rather than trusted to
+    /// fit: the column is a 64-bit SQLite integer and the field is 32-bit, and
+    /// a saturating conversion is a wrong boost where a trapping one is a
+    /// crash in the middle of a keystroke.
+    private static func frequencyEntry(_ row: FrequencyRow) -> Taigi_Engine_FrequencyEntry {
+        var entry = Taigi_Engine_FrequencyEntry()
+        entry.displayTextKey = row.word
+        entry.canonicalTl = row.tl
+        entry.count = UInt32(clamping: row.count)
+        entry.lastUsedMs = row.lastUsedMillis
+        return entry
     }
 
     private static func decodeCandidate(

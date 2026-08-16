@@ -35,6 +35,8 @@ final class ComposingManager {
     private(set) var displayText = ""
 
     private let settingsProvider: EngineSettingsProvider
+    private let frequencyStore: UserFrequencyStore
+    private let nextWordLearner: NextWordLearner
     private static let logger = DebugLogger(category: "ComposingManager")
 
     /// Generations must be unique across everything that talks to the engine,
@@ -47,15 +49,21 @@ final class ComposingManager {
     /// The default starts at 1 because 0 is the generation an unset proto field
     /// carries; keeping them apart means a request that forgot to set one
     /// cannot be mistaken for a request from the first session.
-    /// `settingsProvider` has no default on purpose: the shipped one reads the
-    /// user's real `UserDefaults`, and a defaulted parameter is how a test — or
-    /// a second production path added later — would silently end up driving the
-    /// engine from settings it never meant to read.
+    /// `settingsProvider`, `frequencyStore` and `nextWordLearner` have no
+    /// defaults on purpose: the shipped ones read the user's real
+    /// `UserDefaults` and write to the databases under their home directory,
+    /// and a defaulted parameter is how a test — or a second production path
+    /// added later — would silently end up driving the engine from settings it
+    /// never meant to read, or teaching the user's own store from a fixture.
     init(
         settingsProvider: EngineSettingsProvider,
+        frequencyStore: UserFrequencyStore,
+        nextWordLearner: NextWordLearner,
         startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider
+        self.frequencyStore = frequencyStore
+        self.nextWordLearner = nextWordLearner
         currentGeneration = startingGeneration
     }
 
@@ -75,6 +83,43 @@ final class ComposingManager {
     func startNewSession() {
         currentGeneration &+= 1
         clearMirror()
+        // The next-word context is dropped along with the composition, and for
+        // a sharper reason: a session change is usually a change of
+        // application, and carrying the context across one would learn the last
+        // word typed in a chat window as the predecessor of the first word
+        // typed in a terminal. The engine's own state resets on the new
+        // generation, but only when it next receives a request under it — this
+        // is what makes that happen now rather than at the next commit.
+        nextWordLearner.forgetContext(
+            settings: settingsProvider.current,
+            generation: currentGeneration,
+        )
+    }
+
+    /// A character reached the host without going through a composition.
+    ///
+    /// Forwarded so the engine can end the current context on sentence-end
+    /// punctuation, which is what stops the last word of one sentence being
+    /// learned as the predecessor of the first word of the next. Whether a
+    /// given character does that — and whether it is noise that should change
+    /// nothing at all — is the engine's call
+    /// (`engine/nextword/src/decide.rs:115`), not this method's.
+    ///
+    /// Letters are excluded because a letter starts a composition rather than
+    /// reaching the host on its own, so one arriving here is not a word and
+    /// must not become the context. Whitespace is excluded because it can never
+    /// be sentence-end punctuation, and forwarding it would put an engine
+    /// round-trip on every space bar press outside a composition.
+    func noteCharacterTypedOutsideComposition(_ character: String) {
+        guard !character.isEmpty,
+              !character.contains(where: { $0.isLetter || $0.isWhitespace })
+        else { return }
+        nextWordLearner.wordSelected(
+            text: character,
+            roman: "",
+            settings: settingsProvider.current,
+            generation: currentGeneration,
+        )
     }
 
     /// Appends one typed character. The engine starts a composition when it is
@@ -127,14 +172,30 @@ final class ComposingManager {
     /// step, so one keystroke reaches the host as one document mutation.
     func commitComposition(thenInsert text: String, executing executor: ComposingEffectExecutor) {
         Self.logger.debug("commitCompositionThenInsert '\(text)'")
+        let settings = settingsProvider.current
         apply(
             RustEngineBridge.composingCommitPreeditThenInsertExternal(
                 text,
-                settings: settingsProvider.current,
+                settings: settings,
                 generation: currentGeneration,
             ),
             executing: executor,
         )
+        // This is the one commit path the engine does not describe to the
+        // learner: it emits `NextWordClearForNewComposing` and no
+        // `NextWordWordSelected` (`engine/composing/src/transition.rs:769-780`),
+        // unlike Return, which does (`:483`). The word that just went into the
+        // document therefore never becomes the context — and if the context
+        // were left alone, the NEXT commit would pair itself with whatever was
+        // committed BEFORE this one, learning a bigram that skips a word.
+        //
+        // Dropping the context is the safe half of that: it under-learns one
+        // pair rather than learning a wrong one. Synthesizing the missing
+        // handshake here is the alternative, and it is worse — the platform
+        // would have to supply a canonical reading for the committed
+        // composition, which only the engine knows, and a guessed one is
+        // written into `prev_tl` for everything that follows.
+        nextWordLearner.forgetContext(settings: settings, generation: currentGeneration)
     }
 
     /// Abandons the composition. Nothing reaches the document: under the
@@ -149,19 +210,76 @@ final class ComposingManager {
 
     // MARK: - Candidates
 
-    /// Reads the candidates for the composition as it currently stands.
+    /// Reads the candidates for the composition as it currently stands, ranked
+    /// against what the user has committed before.
+    ///
+    /// Two fetches, because the boost has to be looked up by candidate and the
+    /// candidates are not known until the engine has answered once. The first
+    /// fetch is neutral and discovers the keys; the second re-ranks with the
+    /// counts those keys carry. Both go out under the same generation and the
+    /// same settings snapshot, so the two answers describe one composition
+    /// under one set of rules.
     ///
     /// Sent under the composition's existing generation because the query is
     /// read-only: bumping the generation would reset the engine before the
     /// query ran (`engine/composing/src/handle.rs:61-66`).
+    ///
+    /// Every way this can fall short degrades to the neutral ranking rather
+    /// than to no candidates: a store that is not open yet, a store that
+    /// answers nothing, a second round-trip that fails. The one case that does
+    /// NOT degrade that way is the second fetch succeeding but reporting the
+    /// engine idle — that answer is newer than the first one, so returning the
+    /// first fetch's candidates would put a list on screen for a composition
+    /// the engine has already dropped.
     func fetchCandidates() -> CandidateFetchOutcome {
-        guard let result = RustEngineBridge.composingFetchAtPos(
-            settings: settingsProvider.current,
-            generation: currentGeneration,
+        let settings = settingsProvider.current
+        let generation = currentGeneration
+
+        guard let neutral = RustEngineBridge.composingFetchAtPos(
+            settings: settings,
+            generation: generation,
         ) else { return .unavailable }
 
-        guard let candidates = result.candidates else { return .notComposing }
-        return .found(candidates)
+        guard let neutralCandidates = neutral.candidates else {
+            mirror(neutral.transition)
+            return .notComposing
+        }
+        guard !neutralCandidates.isEmpty,
+              let rows = frequencyRows(for: neutralCandidates),
+              !rows.isEmpty
+        else {
+            mirror(neutral.transition)
+            return .found(neutralCandidates)
+        }
+
+        guard let boosted = RustEngineBridge.composingFetchAtPos(
+            settings: settings,
+            generation: generation,
+            frequencyRows: rows,
+            nowMs: Self.nowMs(),
+        ) else {
+            mirror(neutral.transition)
+            return .found(neutralCandidates)
+        }
+
+        mirror(boosted.transition)
+        guard let boostedCandidates = boosted.candidates else { return .notComposing }
+        return .found(boostedCandidates)
+    }
+
+    /// The learned rows for the candidates on offer, or `nil` when there is
+    /// nothing to look them up with. Deduped by the key the engine ranks on, so
+    /// a list holding one 漢字 under two readings asks about it once.
+    private func frequencyRows(
+        for candidates: [ContinuousCandidate],
+    ) -> [FrequencyRow]? {
+        var seen = Set<String>()
+        let keys = candidates.map(\.displayText).filter { seen.insert($0).inserted }
+        return frequencyStore.rows(forWords: keys)
+    }
+
+    private static func nowMs() -> Int64 {
+        Int64(Date().timeIntervalSince1970 * 1000)
     }
 
     /// What committing `candidate` would write into the document, under the
@@ -199,7 +317,31 @@ final class ComposingManager {
 
         let outcome = CandidateCommitOutcome(transition)
         apply(transition, executing: executor)
+        recordUsage(of: candidate, after: outcome, settings: settings)
         return outcome
+    }
+
+    /// Counts a candidate the engine confirmed it took.
+    ///
+    /// Gated on the effect-backed outcome rather than on the mirror: `.ignored`
+    /// can follow a composition the engine reset out from under the commit, and
+    /// counting there would promote a word the user never got. The identity
+    /// written is the `(display text, canonical TL)` pair the ranker looks the
+    /// candidate up by (`CLAUDE.md` Core Principle #7) — recording under the
+    /// document rendering instead would key the row on a string that changes
+    /// with the 漢羅 settings.
+    private func recordUsage(
+        of candidate: ContinuousCandidate,
+        after outcome: CandidateCommitOutcome,
+        settings: EngineSettings,
+    ) {
+        guard settings.isFrequencyRecordingEnabled else { return }
+        switch outcome {
+        case .nailed, .finalized:
+            frequencyStore.record(word: candidate.displayText, tl: candidate.canonicalTl)
+        case .ignored, .unavailable:
+            break
+        }
     }
 
     /// Promotes the composition into the continuous phase, where the engine
@@ -238,14 +380,59 @@ final class ComposingManager {
         executing executor: ComposingEffectExecutor,
     ) {
         guard let transition else { return }
+        mirror(transition)
 
+        let settings = settingsProvider.current
+        for effect in transition.effects {
+            switch effect {
+            // The learning handshakes are not document effects, and the
+            // executor writes into a client's document. Routing them here keeps
+            // the executor's one job intact and keeps the generation — which
+            // only this type knows — out of the effect path.
+            case let .nextWordWordSelected(text, roman, _):
+                nextWordLearner.wordSelected(
+                    text: text,
+                    roman: roman,
+                    settings: settings,
+                    generation: currentGeneration,
+                )
+            case let .nextWordUpdateLastSelectedWord(text, roman):
+                nextWordLearner.segmentNailed(
+                    text: text,
+                    roman: roman,
+                    settings: settings,
+                    generation: currentGeneration,
+                )
+            case .nextWordClearForNewComposing:
+                // Hides predictions while keeping the context. macOS shows no
+                // predictions, so there is nothing to hide and the context is
+                // exactly what must survive: forwarding it would spend a
+                // round-trip to bump a generation nothing reads.
+                break
+            // Listed rather than defaulted: an effect added to the engine later
+            // has to be classified here, and a `default` would quietly file it
+            // under "write it into the user's document".
+            case .updatePreedit,
+                 .clearPreeditWithoutCommit,
+                 .commitTextReplacingPreedit,
+                 .deleteBackwardFromDocument,
+                 .resetAutocomplete,
+                 .performAutocomplete,
+                 .resetAutocompleteContext:
+                executor.execute(effect)
+            }
+        }
+    }
+
+    /// Updates the mirror from an engine answer, without performing anything.
+    ///
+    /// The read paths use this directly: a fetch is a query, and its response
+    /// still carries the authoritative composition state, so ignoring it is how
+    /// the mirror ends up claiming a composition the engine has already reset.
+    private func mirror(_ transition: ComposingTransition) {
         isComposing = transition.isComposing
         rawInput = transition.rawInput
         displayText = transition.displayText
-
-        for effect in transition.effects {
-            executor.execute(effect)
-        }
     }
 
     private func clearMirror() {

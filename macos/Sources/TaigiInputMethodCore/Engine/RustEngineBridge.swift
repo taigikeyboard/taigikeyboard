@@ -156,11 +156,16 @@ enum RustEngineBridge {
 
     /// The engine holds no settings of its own; every request carries the
     /// snapshot it should be rendered under.
+    /// Set on every request, not only the ones that read it. The composing
+    /// engine ignores it; the next-word engine rejects the unset value outright
+    /// (`engine/nextword/src/decide.rs:61`), and a field that is populated only
+    /// on the paths that currently need it is one a later slice forgets to set.
     static func appConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
         var config = Taigi_Engine_AppConfig()
         config.inputMode = settings.inputMode.rawValue
         config.ooDoubletapEnabled = settings.isDoubleTapOOEnabled
         config.nnDoubletapEnabled = settings.isDoubleTapNNEnabled
+        config.platformID = .macos
         return config
     }
 
