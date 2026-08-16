@@ -62,7 +62,9 @@ enum CandidatePanelPositioning {
         within bounds: ClosedRange<CGFloat>,
     ) -> CGFloat {
         var start = start
-        if start + length > bounds.upperBound { start = bounds.upperBound - length }
+        if start + length > bounds.upperBound {
+            start = bounds.upperBound - length
+        }
         return max(start, bounds.lowerBound)
     }
 }

@@ -1,8 +1,7 @@
 // Locating the dictionary data, and refusing to pretend a partial set is fine.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 final class DictionaryArtifactsTests: XCTestCase {
     func testInit_repositoryDictionaries_resolvesAllFourPaths() throws {

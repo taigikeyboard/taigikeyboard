@@ -52,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .flatMap(UInt32.init) ?? 1
             guard let stats = RustEngineBridge.lexiconInstall(
                 artifacts: artifacts,
-                dictionaryVersion: version
+                dictionaryVersion: version,
             ) else {
                 logger.error("lexicon install returned no stats — engine not installed")
                 return

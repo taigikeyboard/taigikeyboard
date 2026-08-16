@@ -1,9 +1,8 @@
 // What each engine effect does to the client document.
 
 import InputMethodKit
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 @MainActor
 final class ClientEffectExecutorTests: XCTestCase {

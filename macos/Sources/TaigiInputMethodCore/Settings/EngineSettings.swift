@@ -41,9 +41,9 @@ struct EngineSettings: Equatable, Sendable {
     /// §34/S22 — when on, TL/POJ composing surfaces the preedit literal as the
     /// index-0 candidate so 漢羅 commits the romanization in one keystroke. The
     /// bridge inverts it into `FetchAtPos.literal_roman_candidate_disabled`.
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:50
-    // and android/…/ime/core/PrefHelper.kt:326, both of which default it OFF.
-    // Drift changes which candidate leads the list on a fresh install.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:50
+    /// and android/…/ime/core/PrefHelper.kt:326, both of which default it OFF.
+    /// Drift changes which candidate leads the list on a fresh install.
     let isLiteralRomanCandidateEnabled: Bool
 
     /// What a fresh install types with. Every value matches the iOS and Android
@@ -55,6 +55,6 @@ struct EngineSettings: Equatable, Sendable {
         isDoubleTapNNEnabled: true,
         isTranslateSwapped: false,
         isOutputBothScripts: false,
-        isLiteralRomanCandidateEnabled: false
+        isLiteralRomanCandidateEnabled: false,
     )
 }

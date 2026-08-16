@@ -1,9 +1,8 @@
 // Pins the Chromium activation-deadlock rule.
 
 import InputMethodKit
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// Chromium hosts deadlock when an input method makes a synchronous
 /// client round-trip inside `activateServer` (Chromium issue 503787240 —

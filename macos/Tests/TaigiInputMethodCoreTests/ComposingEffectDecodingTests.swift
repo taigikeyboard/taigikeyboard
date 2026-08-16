@@ -1,9 +1,8 @@
 // Pins the wire-to-Swift mapping of every effect the engine can emit.
 
 import SwiftProtobuf
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// The composing ops macOS ships today emit six of the ten effects; the other
 /// four arrive with the candidate window and the next-word learner. Driving the

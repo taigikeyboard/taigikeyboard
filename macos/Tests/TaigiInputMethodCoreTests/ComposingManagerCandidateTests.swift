@@ -1,9 +1,8 @@
 // Drives the candidate query and commit against the real engine and the real
 // dictionary, which is the only place the byte-span contract can be checked.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// The Rust composing state is one per process, so each case gets a generation
 /// nobody else uses — see `GenerationCounter`.
@@ -33,7 +32,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
 
     // MARK: - Fetching
 
-    func testFetchCandidates_whileComposing_findsCandidates() throws {
+    func testFetchCandidates_whileComposing_findsCandidates() {
         let manager = makeManager()
         composeTaigi(manager, executing: RecordingEffectExecutor())
 
@@ -62,7 +61,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
     /// the engine does NEXT: a query that reset the composition — by bumping the
     /// generation, say — would leave the following keystroke starting a brand
     /// new one, and the mirror alone would not show it.
-    func testFetchCandidates_leavesTheCompositionIntactForTheNextKeystroke() throws {
+    func testFetchCandidates_leavesTheCompositionIntactForTheNextKeystroke() {
         let manager = makeManager()
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)

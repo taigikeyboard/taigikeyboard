@@ -68,7 +68,7 @@ public final class TaigiInputController: IMKInputController {
     /// (`IMKInputController.h:154-157`). Widening the mask — for the modifier
     /// chords a later slice may want — silently trades that behaviour away, and
     /// a composition left stranded by a click is a visible bug.
-    override public func recognizedEvents(_ sender: Any!) -> Int {
+    override public func recognizedEvents(_: Any!) -> Int {
         Int(NSEvent.EventTypeMask.keyDown.rawValue)
     }
 
@@ -80,7 +80,7 @@ public final class TaigiInputController: IMKInputController {
     /// `ActivateServerClientQueryTests`.
     override public func activateServer(_ sender: Any!) {
         Self.logger.debug("activateServer")
-        onMainActor(sender) { controller, client -> Void in
+        onMainActor(sender) { controller, client in
             controller.lastClient = client
             ComposingSessionCoordinator.shared.claim(controller.sessionToken)
             // Takes the bar down before this session starts typing, and takes
@@ -140,7 +140,7 @@ public final class TaigiInputController: IMKInputController {
     /// until the next keystroke fetches candidates again.
     override public func hidePalettes() {
         Self.logger.debug("hidePalettes")
-        onMainActor(nil) { controller, _ -> Void in controller.dismissCandidates() }
+        onMainActor(nil) { controller, _ in controller.dismissCandidates() }
         super.hidePalettes()
     }
 
@@ -190,7 +190,6 @@ public final class TaigiInputController: IMKInputController {
             return false
         case .passThrough:
             return false
-
         case .commitHighlightedCandidate:
             // Unreachable by construction — the intent is only produced when the
             // list is non-empty, and a non-empty list always has a highlight.
@@ -329,7 +328,9 @@ public final class TaigiInputController: IMKInputController {
         while index >= 0 {
             var lineHeightRect = CGRect.zero
             _ = client.attributes(forCharacterIndex: index, lineHeightRectangle: &lineHeightRect)
-            if lineHeightRect != .zero { return lineHeightRect }
+            if lineHeightRect != .zero {
+                return lineHeightRect
+            }
             index -= 1
         }
         return nil

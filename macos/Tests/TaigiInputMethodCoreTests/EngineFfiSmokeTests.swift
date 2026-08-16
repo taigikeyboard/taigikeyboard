@@ -1,9 +1,8 @@
 // Proves the committed macOS Rust artefacts actually link and round-trip.
 
 import SwiftProtobuf
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// The first real gate on `macos/RustEngine/RustTaigi.xcframework`: PR1 only
 /// validated the artefact's *shape* (one macos-arm64 slice). These cases push
@@ -30,15 +29,15 @@ final class EngineFfiSmokeTests: XCTestCase {
         request.configSnapshot = config
         request.phonetics = phonetics
 
-        let responseBytes = RustEngineBridge.processRequest([UInt8](try request.serializedData()))
+        let responseBytes = try RustEngineBridge.processRequest([UInt8](request.serializedData()))
         let response = try Taigi_Engine_Response(serializedBytes: Data(responseBytes))
 
         XCTAssertEqual(response.error, .ok, "engine reported \(response.error) for a valid request")
         XCTAssertEqual(response.id, request.id, "response must echo the request id")
-        guard case .phonetics(let phoneticsResponse)? = response.payload else {
+        guard case let .phonetics(phoneticsResponse)? = response.payload else {
             return XCTFail("expected a phonetics payload, got \(String(describing: response.payload))")
         }
-        guard case .stringResult(let stringResult)? = phoneticsResponse.result else {
+        guard case let .stringResult(stringResult)? = phoneticsResponse.result else {
             return XCTFail("expected a stringResult, got \(String(describing: phoneticsResponse.result))")
         }
         XCTAssertEqual(stringResult.output, "g\u{00F3}a", "TL guá must convert to POJ góa in NFC")

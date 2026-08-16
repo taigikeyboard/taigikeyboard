@@ -1,8 +1,7 @@
 // Proves the engine actually loads the dictionary the bundle ships.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 final class RustEngineBridgeLexiconTests: XCTestCase {
     func testLexiconInstall_repositoryDictionaries_loadsRecords() throws {

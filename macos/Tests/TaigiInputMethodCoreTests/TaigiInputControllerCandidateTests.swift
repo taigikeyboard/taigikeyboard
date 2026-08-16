@@ -1,9 +1,8 @@
 // The candidate slice end to end: keys in, bar content and document text out.
 
 import InputMethodKit
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// Drives the real controller, the real engine and the real dictionary against a
 /// recording bar. What is asserted is the routing — which key changes which part
@@ -40,7 +39,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let firstLabel = try XCTUnwrap(session.presenter.shownContent).labels[0]
         session.client.clearWrites()
 
-        _ = session.controller.handle(try TestFixtures.keyDownEvent(characters: " "), client: session.client)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: " "), client: session.client)
 
         XCTAssertEqual(session.client.insertedTexts.last, firstLabel)
     }
@@ -90,8 +89,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testCaretAnchorUnavailable_returnsTheArrowsToTheHost() throws {
         let session = try composedSession(caretRects: [:])
 
-        let handled = session.controller.handle(
-            try Self.arrowEvent(.rightArrow),
+        let handled = try session.controller.handle(
+            Self.arrowEvent(.rightArrow),
             client: session.client,
         )
 
@@ -102,8 +101,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession(caretRects: [:])
         session.client.clearWrites()
 
-        _ = session.controller.handle(
-            try TestFixtures.keyDownEvent(characters: " "),
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "),
             client: session.client,
         )
 
@@ -174,8 +173,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testArrowKeys_reachTheHostWhenNoBarIsUp() throws {
         let session = try makeSession()
 
-        let handled = session.controller.handle(
-            try Self.arrowEvent(.rightArrow),
+        let handled = try session.controller.handle(
+            Self.arrowEvent(.rightArrow),
             client: session.client,
         )
 
@@ -190,8 +189,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let highlighted = try XCTUnwrap(session.presenter.shownContent).labels[1]
         session.client.clearWrites()
 
-        let handled = session.controller.handle(
-            try TestFixtures.keyDownEvent(characters: " "),
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "),
             client: session.client,
         )
 
@@ -208,8 +207,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let secondLabel = try XCTUnwrap(session.presenter.shownContent).labels[1]
         session.client.clearWrites()
 
-        let handled = session.controller.handle(
-            try Self.controlDigitEvent(slot: 1),
+        let handled = try session.controller.handle(
+            Self.controlDigitEvent(slot: 1),
             client: session.client,
         )
 
@@ -233,8 +232,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             guard slot < firstPage.labels.count else { break }
             session.client.clearWrites()
 
-            _ = session.controller.handle(
-                try Self.controlDigitEvent(slot: slot),
+            _ = try session.controller.handle(
+                Self.controlDigitEvent(slot: slot),
                 client: session.client,
             )
 
@@ -282,8 +281,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
         session.client.clearWrites()
 
-        _ = session.controller.handle(
-            try TestFixtures.keyDownEvent(characters: "\r"),
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\r"),
             client: session.client,
         )
 
@@ -298,8 +297,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testEscape_takesTheBarDownWithTheComposition() throws {
         let session = try composedSession()
 
-        _ = session.controller.handle(
-            try TestFixtures.keyDownEvent(characters: "\u{1B}"),
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\u{1B}"),
             client: session.client,
         )
 
@@ -352,7 +351,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "the system asked for the screen back, not for the user's composition to be finished",
         )
         // The composition is still the engine's, so the next character extends it.
-        _ = session.controller.handle(try TestFixtures.keyDownEvent(characters: "a"), client: session.client)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "a"), client: session.client)
         XCTAssertEqual(session.client.writes.last, .setMarkedText("taigia", selectionLocation: 6))
     }
 
@@ -360,7 +359,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
 
         session.controller.hidePalettes()
-        let handled = session.controller.handle(try Self.arrowEvent(.rightArrow), client: session.client)
+        let handled = try session.controller.handle(Self.arrowEvent(.rightArrow), client: session.client)
 
         XCTAssertFalse(
             handled,
@@ -446,8 +445,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     ) throws -> Session {
         let session = try makeSession(presenter: presenter, caretRects: caretRects)
         for character in Self.composition.map(String.init) {
-            _ = session.controller.handle(
-                try TestFixtures.keyDownEvent(characters: character),
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: character),
                 client: session.client,
             )
         }

@@ -24,7 +24,9 @@ struct CandidateListModel: Equatable {
     /// where it is 0 and `highlighted` is nil.
     private(set) var highlightedIndex = 0
 
-    var isEmpty: Bool { candidates.isEmpty }
+    var isEmpty: Bool {
+        candidates.isEmpty
+    }
 
     var highlighted: ContinuousCandidate? {
         candidates.indices.contains(highlightedIndex) ? candidates[highlightedIndex] : nil

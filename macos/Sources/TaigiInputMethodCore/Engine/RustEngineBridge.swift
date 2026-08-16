@@ -28,7 +28,7 @@ enum RustEngineBridge {
     }
 
     private static let installLock = NSLock()
-    private static nonisolated(unsafe) var isLoggerSinkInstalled = false
+    private nonisolated(unsafe) static var isLoggerSinkInstalled = false
 
     /// Idempotent. Routes Rust `log::*` records into `DebugLogger`, so they
     /// obey the same release-builds-log-nothing rule as native call sites.
@@ -76,7 +76,7 @@ enum RustEngineBridge {
     // MARK: - Envelope round-trip
 
     private static let requestIDLock = NSLock()
-    private static nonisolated(unsafe) var lastRequestID: UInt32 = 0
+    private nonisolated(unsafe) static var lastRequestID: UInt32 = 0
 
     private static func nextRequestID() -> UInt32 {
         requestIDLock.lock()
@@ -98,13 +98,15 @@ enum RustEngineBridge {
         payload: Taigi_Engine_Request.OneOf_Payload,
         op: String,
         generation: UInt64 = 0,
-        config: Taigi_Engine_AppConfig? = nil
+        config: Taigi_Engine_AppConfig? = nil,
     ) -> Taigi_Engine_Response.OneOf_Payload? {
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
         request.generation = generation
         request.payload = payload
-        if let config { request.configSnapshot = config }
+        if let config {
+            request.configSnapshot = config
+        }
 
         let requestBytes: [UInt8]
         do {
@@ -116,7 +118,7 @@ enum RustEngineBridge {
 
         logger.debug("[FFI->] op=\(op) id=\(request.id) generation=\(generation)")
         guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(processRequest(requestBytes))
+            serializedBytes: Data(processRequest(requestBytes)),
         ) else {
             recordFailure(op: op, message: "response decode failed")
             return nil

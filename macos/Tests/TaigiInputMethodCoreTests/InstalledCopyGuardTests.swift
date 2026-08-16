@@ -1,8 +1,7 @@
 // Executable spec for the guard that keeps a stray copy from stealing IMK events.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// If this guard wrongly accepts a build product, two processes with the same
 /// bundle ID race for one IMKServer connection name and the loser silently

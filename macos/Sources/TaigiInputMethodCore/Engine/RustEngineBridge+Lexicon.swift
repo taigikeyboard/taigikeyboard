@@ -23,7 +23,7 @@ extension RustEngineBridge {
     /// which is the same graceful degradation any other empty result produces.
     static func lexiconInstall(
         artifacts: DictionaryArtifacts,
-        dictionaryVersion: UInt32
+        dictionaryVersion: UInt32,
     ) -> LexiconInstallStats? {
         var install = Taigi_Engine_InstallRequest()
         install.triePath = artifacts.triePath
@@ -47,7 +47,7 @@ extension RustEngineBridge {
         }
         return LexiconInstallStats(
             dictionaryRecordCount: result.dictionaryRecordCount,
-            prefixIndexEntryCount: result.prefixIndexEntryCount
+            prefixIndexEntryCount: result.prefixIndexEntryCount,
         )
     }
 }

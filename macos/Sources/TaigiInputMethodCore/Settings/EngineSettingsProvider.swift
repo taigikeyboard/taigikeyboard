@@ -19,5 +19,7 @@ protocol EngineSettingsProvider: AnyObject, Sendable {
 /// arrives with the settings window, which is what will define the key names;
 /// defining them here first would pre-commit that schema to no UI.
 final class DefaultEngineSettingsProvider: EngineSettingsProvider {
-    var current: EngineSettings { .defaults }
+    var current: EngineSettings {
+        .defaults
+    }
 }

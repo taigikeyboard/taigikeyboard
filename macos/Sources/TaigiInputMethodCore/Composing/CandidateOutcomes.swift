@@ -47,11 +47,15 @@ enum CandidateCommitOutcome: Equatable {
     /// the per-segment learning effect. A noop emits neither.
     init(_ transition: ComposingTransition) {
         let didWriteDocument = transition.effects.contains { effect in
-            if case .commitTextReplacingPreedit = effect { return true }
+            if case .commitTextReplacingPreedit = effect {
+                return true
+            }
             return false
         }
         let didNail = transition.effects.contains { effect in
-            if case .nextWordUpdateLastSelectedWord = effect { return true }
+            if case .nextWordUpdateLastSelectedWord = effect {
+                return true
+            }
             return false
         }
         switch (didWriteDocument, didNail) {

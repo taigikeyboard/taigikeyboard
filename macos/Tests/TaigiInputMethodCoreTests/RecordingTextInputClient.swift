@@ -32,12 +32,16 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     /// composition's underline lives.
     private(set) var lastMarkedTextAttributes: [NSAttributedString.Key: Any] = [:]
 
-    var readCallCount: Int { readCalls.count }
+    var readCallCount: Int {
+        readCalls.count
+    }
 
     /// The texts committed to the document, in order — what the user keeps.
     var insertedTexts: [String] {
         writes.compactMap { write in
-            if case let .insertText(text) = write { return text }
+            if case let .insertText(text) = write {
+                return text
+            }
             return nil
         }
     }
@@ -50,11 +54,11 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
 
     // MARK: Writes
 
-    func insertText(_ string: Any!, replacementRange: NSRange) {
+    func insertText(_ string: Any!, replacementRange _: NSRange) {
         writes.append(.insertText(Self.plainText(string)))
     }
 
-    func setMarkedText(_ string: Any!, selectionRange: NSRange, replacementRange: NSRange) {
+    func setMarkedText(_ string: Any!, selectionRange: NSRange, replacementRange _: NSRange) {
         writes.append(
             .setMarkedText(Self.plainText(string), selectionLocation: selectionRange.location),
         )
@@ -62,9 +66,9 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
             .flatMap { $0.length > 0 ? $0.attributes(at: 0, effectiveRange: nil) : [:] } ?? [:]
     }
 
-    func overrideKeyboard(withKeyboardNamed keyboardUniqueName: String!) {}
+    func overrideKeyboard(withKeyboardNamed _: String!) {}
 
-    func selectMode(_ modeIdentifier: String!) {}
+    func selectMode(_: String!) {}
 
     /// IMK hands text as either an `NSString` or an `NSAttributedString`; the
     /// distinction is styling, and the assertions are about content.
@@ -84,7 +88,7 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         return NSRange(location: NSNotFound, length: NSNotFound)
     }
 
-    func attributedSubstring(from range: NSRange) -> NSAttributedString! {
+    func attributedSubstring(from _: NSRange) -> NSAttributedString! {
         readCalls.append(#function)
         return NSAttributedString()
     }
@@ -95,9 +99,9 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     }
 
     func characterIndex(
-        for point: NSPoint,
-        tracking mappingMode: IMKLocationToOffsetMappingMode,
-        inMarkedRange: UnsafeMutablePointer<ObjCBool>!,
+        for _: NSPoint,
+        tracking _: IMKLocationToOffsetMappingMode,
+        inMarkedRange _: UnsafeMutablePointer<ObjCBool>!,
     ) -> Int {
         readCalls.append(#function)
         return NSNotFound
@@ -133,7 +137,7 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         return 0
     }
 
-    func supportsProperty(_ property: TSMDocumentPropertyTag) -> Bool {
+    func supportsProperty(_: TSMDocumentPropertyTag) -> Bool {
         readCalls.append(#function)
         return false
     }
@@ -143,12 +147,12 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         return "recording-client"
     }
 
-    func string(from range: NSRange, actualRange: NSRangePointer!) -> String! {
+    func string(from _: NSRange, actualRange _: NSRangePointer!) -> String! {
         readCalls.append(#function)
         return ""
     }
 
-    func firstRect(forCharacterRange aRange: NSRange, actualRange: NSRangePointer!) -> NSRect {
+    func firstRect(forCharacterRange _: NSRange, actualRange _: NSRangePointer!) -> NSRect {
         readCalls.append(#function)
         return .zero
     }

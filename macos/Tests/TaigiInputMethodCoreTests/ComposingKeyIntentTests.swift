@@ -1,9 +1,8 @@
 // Executable spec for the input method's key contract.
 
 import AppKit
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// Every key classified as anything but `.passThrough` is a key the host never
 /// receives, so this table is also the list of things the user can no longer do
@@ -111,7 +110,7 @@ final class ComposingKeyIntentTests: XCTestCase {
 
     func testEmptyCharacters_fallThrough() throws {
         XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(try TestFixtures.keyDownEvent(characters: "")), isComposing: false),
+            try ComposingKeyIntent.intent(for: KeyEventSnapshot(TestFixtures.keyDownEvent(characters: "")), isComposing: false),
             .passThrough,
             "an event carrying no characters has nothing to compose",
         )
@@ -323,13 +322,13 @@ final class ComposingKeyIntentTests: XCTestCase {
     /// isolates: everything above is asserted against `NavigationKey` directly,
     /// so without this the six keys could all be extracted as nil.
     func testArrowEvents_areRecognizedAsNavigationKeys() throws {
-        let cases: [(String, NavigationKey)] = [
-            (String(UnicodeScalar(NSLeftArrowFunctionKey)!), .leftArrow),
-            (String(UnicodeScalar(NSRightArrowFunctionKey)!), .rightArrow),
-            (String(UnicodeScalar(NSUpArrowFunctionKey)!), .upArrow),
-            (String(UnicodeScalar(NSDownArrowFunctionKey)!), .downArrow),
-            (String(UnicodeScalar(NSPageUpFunctionKey)!), .pageUp),
-            (String(UnicodeScalar(NSPageDownFunctionKey)!), .pageDown),
+        let cases: [(String, NavigationKey)] = try [
+            (String(XCTUnwrap(UnicodeScalar(NSLeftArrowFunctionKey))), .leftArrow),
+            (String(XCTUnwrap(UnicodeScalar(NSRightArrowFunctionKey))), .rightArrow),
+            (String(XCTUnwrap(UnicodeScalar(NSUpArrowFunctionKey))), .upArrow),
+            (String(XCTUnwrap(UnicodeScalar(NSDownArrowFunctionKey))), .downArrow),
+            (String(XCTUnwrap(UnicodeScalar(NSPageUpFunctionKey))), .pageUp),
+            (String(XCTUnwrap(UnicodeScalar(NSPageDownFunctionKey))), .pageDown),
         ]
 
         for (characters, expected) in cases {
@@ -342,7 +341,7 @@ final class ComposingKeyIntentTests: XCTestCase {
     /// keys, and only the ones bound above are navigation.
     func testFunctionKeyEvents_areNotNavigationKeys() throws {
         let event = try TestFixtures.keyDownEvent(
-            characters: String(UnicodeScalar(NSF5FunctionKey)!),
+            characters: String(XCTUnwrap(UnicodeScalar(NSF5FunctionKey))),
         )
 
         XCTAssertNil(KeyEventSnapshot(event).navigationKey)

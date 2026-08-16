@@ -1,8 +1,7 @@
 // Drives the composing slice against the real engine and the real dictionary.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// The Rust composing state is one per process, so these cases isolate
 /// themselves by generation — see `GenerationCounter`.

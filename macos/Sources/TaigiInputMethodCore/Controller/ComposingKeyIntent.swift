@@ -162,7 +162,8 @@ enum ComposingKeyIntent: Equatable {
         if isShowingCandidates,
            modifiers.contains(.control),
            modifiers.isDisjoint(with: [.command, .option, .shift]),
-           let slot = directSelectionSlot(key.charactersIgnoringModifiers) {
+           let slot = directSelectionSlot(key.charactersIgnoringModifiers)
+        {
             return .selectCandidateSlot(slot)
         }
 
@@ -178,7 +179,8 @@ enum ComposingKeyIntent: Equatable {
         // has finished choosing a candidate should get that back rather than
         // walk the bar a second time.
         if isShowingCandidates, !modifiers.contains(.shift),
-           let navigation = key.navigationKey {
+           let navigation = key.navigationKey
+        {
             return intent(for: navigation)
         }
 
@@ -201,7 +203,9 @@ enum ComposingKeyIntent: Equatable {
             // bar it is ordinary document text that ends the composition it
             // follows, which is what the `commitThenInsert` arm below does for
             // every other printable character.
-            if isShowingCandidates { return .commitHighlightedCandidate }
+            if isShowingCandidates {
+                return .commitHighlightedCandidate
+            }
         default:
             break
         }

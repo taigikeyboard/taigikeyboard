@@ -1,9 +1,8 @@
 // End-to-end through IMK's entry points: key event in, client document out.
 
 import InputMethodKit
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// Drives the real controller against a recording client, so the wiring between
 /// IMK's callbacks, the session coordinator and the engine is exercised the way
@@ -14,7 +13,7 @@ final class TaigiInputControllerTests: XCTestCase {
         let client = RecordingTextInputClient()
         let controller = try makeActivatedController(client: client)
 
-        let handled = controller.handle(try TestFixtures.keyDownEvent(characters: "t"), client: client)
+        let handled = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
 
         XCTAssertTrue(handled, "a romanization character is the input method's to consume")
         XCTAssertEqual(client.writes, [.setMarkedText("t", selectionLocation: 1)])
@@ -23,9 +22,9 @@ final class TaigiInputControllerTests: XCTestCase {
     func testEscape_clearsTheCompositionWithoutWritingText() throws {
         let client = RecordingTextInputClient()
         let controller = try makeActivatedController(client: client)
-        _ = controller.handle(try TestFixtures.keyDownEvent(characters: "t"), client: client)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
 
-        let handled = controller.handle(try TestFixtures.keyDownEvent(characters: "\u{1B}"), client: client)
+        let handled = try controller.handle(TestFixtures.keyDownEvent(characters: "\u{1B}"), client: client)
 
         XCTAssertTrue(handled)
         XCTAssertEqual(client.writes.last, .setMarkedText("", selectionLocation: 0))
@@ -38,10 +37,10 @@ final class TaigiInputControllerTests: XCTestCase {
     func testHostShortcut_isNotConsumed_butFinishesTheCompositionFirst() throws {
         let client = RecordingTextInputClient()
         let controller = try makeActivatedController(client: client)
-        _ = controller.handle(try TestFixtures.keyDownEvent(characters: "t"), client: client)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
 
-        let handled = controller.handle(
-            try TestFixtures.keyDownEvent(characters: "s", modifiers: .command),
+        let handled = try controller.handle(
+            TestFixtures.keyDownEvent(characters: "s", modifiers: .command),
             client: client,
         )
 
@@ -58,7 +57,7 @@ final class TaigiInputControllerTests: XCTestCase {
     func testCloseWithoutDeactivate_stillFinishesTheCompositionIntoTheClient() throws {
         let client = RecordingTextInputClient()
         let controller = try makeActivatedController(client: client)
-        _ = controller.handle(try TestFixtures.keyDownEvent(characters: "t"), client: client)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
 
         controller.inputControllerWillClose()
 
@@ -71,7 +70,7 @@ final class TaigiInputControllerTests: XCTestCase {
     func testASupersededSession_clearsItsOwnMarkedRegionInsteadOfCommitting() throws {
         let leavingClient = RecordingTextInputClient()
         let leaving = try makeActivatedController(client: leavingClient)
-        _ = leaving.handle(try TestFixtures.keyDownEvent(characters: "t"), client: leavingClient)
+        _ = try leaving.handle(TestFixtures.keyDownEvent(characters: "t"), client: leavingClient)
         // The arriving session takes the engine before the leaving one is told
         // it lost focus; IMK does not order these callbacks across sessions.
         _ = try makeActivatedController(client: RecordingTextInputClient())
@@ -92,7 +91,7 @@ final class TaigiInputControllerTests: XCTestCase {
     func testDeactivate_finishesTheCompositionIntoTheClientLosingFocus() throws {
         let client = RecordingTextInputClient()
         let controller = try makeActivatedController(client: client)
-        _ = controller.handle(try TestFixtures.keyDownEvent(characters: "t"), client: client)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
 
         controller.deactivateServer(client)
 
@@ -110,7 +109,7 @@ final class TaigiInputControllerTests: XCTestCase {
         let controller = try makeActivatedController(client: client)
 
         controller.inputControllerWillClose()
-        let handled = controller.handle(try TestFixtures.keyDownEvent(characters: "t"), client: client)
+        let handled = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
 
         XCTAssertFalse(
             handled,

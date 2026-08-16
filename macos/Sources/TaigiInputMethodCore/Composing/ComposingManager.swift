@@ -49,7 +49,7 @@ final class ComposingManager {
     /// cannot be mistaken for a request from the first session.
     init(
         settingsProvider: EngineSettingsProvider = DefaultEngineSettingsProvider(),
-        startingGeneration: UInt64 = 1
+        startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider
         currentGeneration = startingGeneration

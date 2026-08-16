@@ -1,8 +1,7 @@
 // Drives the manager against the real engine, recording what the host is told.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// The Rust composing state is one per process, so each case gets a generation
 /// nobody else uses — see `GenerationCounter`.

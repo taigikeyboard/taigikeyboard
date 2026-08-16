@@ -1,8 +1,7 @@
 // Where the candidate bar lands, in AppKit's y-up screen coordinates.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// A 1000x800 display whose usable area starts 50pt above the bottom, so the
 /// clamps have room to be wrong in a way an assertion can see.

@@ -46,7 +46,7 @@ extension RustEngineBridge {
     static func composingAppend(
         _ character: String,
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition? {
         var append = Taigi_Engine_Append()
         append.char = character
@@ -54,20 +54,20 @@ extension RustEngineBridge {
             .append(append),
             op: "composingAppend",
             generation: generation,
-            config: appConfig(settings)
+            config: appConfig(settings),
         )
     }
 
     /// Drops the last character of the raw buffer.
     static func composingDeleteBackward(
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition? {
         dispatchComposing(
             .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
-            config: appConfig(settings)
+            config: appConfig(settings),
         )
     }
 
@@ -83,13 +83,13 @@ extension RustEngineBridge {
     /// `台北大學` with `台北` already nailed would commit `台北台北大學`.
     static func composingCommitRaw(
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition? {
         dispatchComposing(
             .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
-            config: continuousAppConfig(settings)
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -99,7 +99,7 @@ extension RustEngineBridge {
     static func composingCommitPreeditThenInsertExternal(
         _ text: String,
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition? {
         var insert = Taigi_Engine_CommitPreeditThenInsertExternal()
         insert.text = text
@@ -107,7 +107,7 @@ extension RustEngineBridge {
             .commitPreeditThenInsertExternal(insert),
             op: "composingCommitPreeditThenInsertExternal",
             generation: generation,
-            config: continuousAppConfig(settings)
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -117,7 +117,7 @@ extension RustEngineBridge {
             .reset(Taigi_Engine_Reset()),
             op: "composingReset",
             generation: generation,
-            config: nil
+            config: nil,
         )
     }
 
@@ -130,13 +130,13 @@ extension RustEngineBridge {
     /// platform needs no eligibility rule of its own.
     static func composingEnterContinuous(
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition? {
         dispatchComposing(
             .enterContinuous(Taigi_Engine_EnterContinuous()),
             op: "composingEnterContinuous",
             generation: generation,
-            config: appConfig(settings)
+            config: appConfig(settings),
         )
     }
 
@@ -152,7 +152,7 @@ extension RustEngineBridge {
     /// without them" rather than as an error.
     static func composingFetchAtPos(
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         fetch.position = 0
@@ -162,7 +162,7 @@ extension RustEngineBridge {
             .fetchAtPos(fetch),
             op: "composingFetchAtPos",
             generation: generation,
-            config: continuousAppConfig(settings)
+            config: continuousAppConfig(settings),
         ) else {
             return nil
         }
@@ -171,7 +171,7 @@ extension RustEngineBridge {
             : nil
         return ContinuousFetchResult(
             transition: decodeTransition(response),
-            candidates: candidates
+            candidates: candidates,
         )
     }
 
@@ -201,7 +201,7 @@ extension RustEngineBridge {
         consumedBytes: UInt32,
         syllableCount: UInt32,
         settings: EngineSettings,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition? {
         var commit = Taigi_Engine_CommitContinuous()
         commit.displayText = documentText
@@ -213,7 +213,7 @@ extension RustEngineBridge {
             .commitContinuous(commit),
             op: "composingCommitContinuous",
             generation: generation,
-            config: continuousAppConfig(settings)
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -223,13 +223,13 @@ extension RustEngineBridge {
         _ method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
         generation: UInt64,
-        config: Taigi_Engine_AppConfig?
+        config: Taigi_Engine_AppConfig?,
     ) -> ComposingTransition? {
         guard let response = composingResponse(
             method,
             op: op,
             generation: generation,
-            config: config
+            config: config,
         ) else {
             return nil
         }
@@ -240,7 +240,7 @@ extension RustEngineBridge {
         _ method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
         generation: UInt64,
-        config: Taigi_Engine_AppConfig?
+        config: Taigi_Engine_AppConfig?,
     ) -> Taigi_Engine_ComposingResponse? {
         var composing = Taigi_Engine_ComposingRequest()
         composing.method = method
@@ -248,7 +248,7 @@ extension RustEngineBridge {
             payload: .composing(composing),
             op: op,
             generation: generation,
-            config: config
+            config: config,
         ) else {
             return nil
         }
@@ -266,14 +266,14 @@ extension RustEngineBridge {
     /// candidate window owns, and their field mapping would otherwise go
     /// unchecked until that slice lands and mislearns the user's associations.
     static func decodeTransition(
-        _ response: Taigi_Engine_ComposingResponse
+        _ response: Taigi_Engine_ComposingResponse,
     ) -> ComposingTransition {
         ComposingTransition(
             rawInput: response.preedit.rawInput,
             displayText: response.preedit.displayText,
             effects: response.effect.compactMap(decodeEffect),
             selectedCandidateIndex: Int(response.selectedCandidateIndex),
-            isComposing: response.isComposing
+            isComposing: response.isComposing,
         )
     }
 
@@ -282,7 +282,7 @@ extension RustEngineBridge {
     /// the exhaustive `switch` is what makes a newly added engine effect a
     /// compile error rather than a silently dropped instruction.
     static func decodeEffect(
-        _ effect: Taigi_Engine_Effect
+        _ effect: Taigi_Engine_Effect,
     ) -> ComposingTransition.Effect? {
         guard let kind = effect.kind else { return nil }
         switch kind {
@@ -306,7 +306,7 @@ extension RustEngineBridge {
             return .nextWordWordSelected(
                 text: payload.text,
                 roman: payload.roman,
-                triggerPrediction: payload.triggerPrediction
+                triggerPrediction: payload.triggerPrediction,
             )
         case .nextWordClearForNewComposing:
             return .nextWordClearForNewComposing
@@ -314,7 +314,7 @@ extension RustEngineBridge {
     }
 
     private static func decodeCandidate(
-        _ message: Taigi_Engine_CandidateMessage
+        _ message: Taigi_Engine_CandidateMessage,
     ) -> ContinuousCandidate {
         ContinuousCandidate(
             consumedSpanStart: message.consumedSpanStart,
@@ -328,7 +328,7 @@ extension RustEngineBridge {
             // Absent means "romanization-only candidate", which an empty string
             // would not distinguish from a present-but-blank hanji.
             hanji: message.hasHanji ? message.hanji : nil,
-            canonicalTl: message.canonicalTl
+            canonicalTl: message.canonicalTl,
         )
     }
 }

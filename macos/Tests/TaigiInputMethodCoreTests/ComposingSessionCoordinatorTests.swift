@@ -1,8 +1,7 @@
 // Who is allowed to drive the one composing engine, and what a handover costs.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// Each case builds its own coordinator: `shared` is process-wide because the
 /// engine state it guards is, and a test that mutated it would decide what the

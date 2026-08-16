@@ -1,9 +1,8 @@
 // Pins what each output setting writes into the document. PR5 is what lets a
 // user reach the non-default combinations; the rendering is decided here.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 final class CandidateDocumentTextTests: XCTestCase {
     private let word = TestFixtures.candidate(roman: "tâi-gí", hanji: "台語")

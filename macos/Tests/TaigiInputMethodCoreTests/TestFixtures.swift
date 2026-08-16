@@ -2,9 +2,8 @@
 // install, and the doubles and factories every composing suite needs.
 
 import AppKit
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 /// `#filePath` is confined to this file. Production code resolves its data
 /// relative to the running bundle; only the tests, which run outside any bundle,
@@ -131,7 +130,9 @@ extension [ComposingTransition.Effect] {
     /// call site buries what each case is actually checking.
     var committedTexts: [String] {
         compactMap { effect in
-            if case let .commitTextReplacingPreedit(text) = effect { return text }
+            if case let .commitTextReplacingPreedit(text) = effect {
+                return text
+            }
             return nil
         }
     }
@@ -140,7 +141,9 @@ extension [ComposingTransition.Effect] {
     /// region's contents over time.
     var preeditTexts: [String] {
         compactMap { effect in
-            if case let .updatePreedit(text) = effect { return text }
+            if case let .updatePreedit(text) = effect {
+                return text
+            }
             return nil
         }
     }
@@ -163,7 +166,9 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
 final class RecordingEffectExecutor: ComposingEffectExecutor {
     private(set) var effects: [ComposingTransition.Effect] = []
 
-    var committedTexts: [String] { effects.committedTexts }
+    var committedTexts: [String] {
+        effects.committedTexts
+    }
 
     func execute(_ effect: ComposingTransition.Effect) {
         effects.append(effect)
@@ -196,12 +201,16 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     var shownContent: CandidateBarContent? {
         guard isShowing else { return nil }
         return calls.reversed().compactMap { call in
-            if case let .show(content, _) = call { return content }
+            if case let .show(content, _) = call {
+                return content
+            }
             return nil
         }.first
     }
 
-    var isShowing: Bool { owner != nil }
+    var isShowing: Bool {
+        owner != nil
+    }
 
     func show(
         _ content: CandidateBarContent,
@@ -216,7 +225,9 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     func hide(ownedBy owner: ComposingSessionToken) {
         let isOwner = self.owner == owner
         calls.append(.hide(isOwner: isOwner))
-        if isOwner { self.owner = nil }
+        if isOwner {
+            self.owner = nil
+        }
     }
 
     func hideForHandover() {
@@ -230,13 +241,15 @@ final class RecordingCandidatePresenter: CandidatePresenter {
 /// for no gain.
 enum InstalledLexicon {
     private static let lock = NSLock()
-    private static nonisolated(unsafe) var stats: LexiconInstallStats?
+    private nonisolated(unsafe) static var stats: LexiconInstallStats?
 
     @discardableResult
     static func installOnce() -> LexiconInstallStats? {
         lock.lock()
         defer { lock.unlock() }
-        if let stats { return stats }
+        if let stats {
+            return stats
+        }
         guard let artifacts = try? DictionaryArtifacts(baseURL: TestFixtures.dictionaryDirectory) else {
             return nil
         }

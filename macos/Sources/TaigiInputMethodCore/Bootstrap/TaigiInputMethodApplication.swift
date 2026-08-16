@@ -18,7 +18,7 @@ public final class TaigiInputMethodApplication: NSApplication {
     }
 
     @available(*, unavailable)
-    public required init?(coder: NSCoder) {
+    public required init?(coder _: NSCoder) {
         fatalError("TaigiInputMethodApplication is not created from a nib")
     }
 }

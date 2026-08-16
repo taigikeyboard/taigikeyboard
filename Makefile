@@ -103,7 +103,7 @@ macos-protos:
 
 fmt:
 	cd $(ENGINE) && cargo fmt --all
-	swiftformat ios
+	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
 lint:

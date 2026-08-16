@@ -1,9 +1,8 @@
 // Pins the candidate list's navigation contract: clamped ends, page-first
 // paging, and page-relative direct selection.
 
-import XCTest
-
 @testable import TaigiInputMethodCore
+import XCTest
 
 final class CandidateListModelTests: XCTestCase {
     /// Distinguishable by `roman`, which is what the assertions read.
@@ -52,7 +51,9 @@ final class CandidateListModelTests: XCTestCase {
         model.moveHighlight(.backward)
         XCTAssertEqual(model.highlighted?.roman, "c0", "backward from the top must not wrap to the end")
 
-        for _ in 0 ..< 5 { model.moveHighlight(.forward) }
+        for _ in 0 ..< 5 {
+            model.moveHighlight(.forward)
+        }
         XCTAssertEqual(
             model.highlighted?.roman,
             "c2",
