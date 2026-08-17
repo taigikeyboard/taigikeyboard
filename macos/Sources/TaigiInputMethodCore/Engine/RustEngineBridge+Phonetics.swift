@@ -51,6 +51,34 @@ extension RustEngineBridge {
         return customSearchKeys(phonetics, op: "deriveCustomQueryKey")?.first
     }
 
+    /// The TL spelling of a POJ reading, for the identity keys a restore
+    /// writes.
+    ///
+    /// A reading stored under its POJ spelling would be a row no lookup
+    /// matches: identity is canonical TL. `nil` means the round-trip failed,
+    /// and the caller keeps what it had rather than storing a guess.
+    static func pojToTl(_ input: String) -> String? {
+        var payload = Taigi_Engine_PojToTl()
+        payload.input = input
+
+        var phonetics = Taigi_Engine_PhoneticsRequest()
+        phonetics.method = .pojToTl(payload)
+
+        let op = "pojToTl"
+        guard let responsePayload = roundtrip(payload: .phonetics(phonetics), op: op) else {
+            return nil
+        }
+        guard case let .phonetics(response) = responsePayload else {
+            recordFailure(op: op, message: "expected a phonetics payload, got \(responsePayload)")
+            return nil
+        }
+        guard case let .stringResult(result)? = response.result else {
+            recordFailure(op: op, message: "response carried no string result")
+            return nil
+        }
+        return result.output
+    }
+
     /// `nil` for a failed round-trip, an empty array for a successful one that
     /// produced no keys — the two mean different things to the store.
     private static func customSearchKeys(

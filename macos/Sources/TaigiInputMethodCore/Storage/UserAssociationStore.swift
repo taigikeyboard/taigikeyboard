@@ -5,7 +5,7 @@ import Foundation
 /// A learned bigram. Both halves carry their canonical TL because a Taiwanese
 /// word is the `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) —
 /// 重/tîng followed by 複 is not the same observation as 重/tāng followed by 複.
-struct AssociationPair: Equatable, Sendable {
+struct AssociationPair: Hashable, Sendable {
     let previous: String
     let previousTl: String
     let next: String
@@ -122,6 +122,41 @@ final class UserAssociationStore: @unchecked Sendable {
         }
     }
 
+    /// A page of learned bigrams for the viewer, most-used first.
+    func rows(filter: String, limit: Int) async throws -> [AssociationRow] {
+        let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try await database.perform { connection in
+            guard !trimmed.isEmpty else {
+                return try connection.query(
+                    """
+                    SELECT \(Self.rowColumns) FROM \(Self.tableName)
+                    ORDER BY \(Self.listOrder)
+                    LIMIT ?;
+                    """,
+                    [.integer(limit)],
+                    decoding: Self.decodeRow,
+                )
+            }
+            // All four identity columns: the user may remember either word or
+            // either reading.
+            let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
+            return try connection.query(
+                """
+                SELECT \(Self.rowColumns) FROM \(Self.tableName)
+                WHERE prev_word LIKE ? ESCAPE '\\' OR prev_tl LIKE ? ESCAPE '\\'
+                   OR next_word LIKE ? ESCAPE '\\' OR next_tl LIKE ? ESCAPE '\\'
+                ORDER BY \(Self.listOrder)
+                LIMIT ?;
+                """,
+                [
+                    .text(pattern), .text(pattern), .text(pattern), .text(pattern),
+                    .integer(limit),
+                ],
+                decoding: Self.decodeRow,
+            )
+        }
+    }
+
     /// Forgets one bigram. All four identity columns are matched: a bigram is
     /// keyed on both words AND both readings, so deleting by the two 漢字 alone
     /// would take out readings the user never asked about.
@@ -199,20 +234,31 @@ final class UserAssociationStore: @unchecked Sendable {
     private static func selectAllRows(_ connection: SQLiteConnection) throws -> [AssociationRow] {
         try connection.query(
             """
-            SELECT prev_word, prev_tl, next_word, next_tl, count FROM \(tableName)
-            ORDER BY count DESC, last_used DESC, prev_word ASC, next_word ASC;
+            SELECT \(rowColumns) FROM \(tableName)
+            ORDER BY \(listOrder);
             """,
-        ) { row in
-            AssociationRow(
-                pair: AssociationPair(
-                    previous: row.text(0),
-                    previousTl: row.text(1),
-                    next: row.text(2),
-                    nextTl: row.text(3),
-                ),
-                count: row.integer(4),
-            )
-        }
+            decoding: decodeRow,
+        )
+    }
+
+    /// The columns every `AssociationRow` read selects, next to the decoder
+    /// that reads them: the two agree by position, and only stay agreed while
+    /// they are edited together.
+    private static let rowColumns = "prev_word, prev_tl, next_word, next_tl, count"
+
+    /// One order for the viewer and the export.
+    private static let listOrder = "count DESC, last_used DESC, prev_word ASC, next_word ASC"
+
+    private static func decodeRow(_ row: SQLiteRowReader) -> AssociationRow {
+        AssociationRow(
+            pair: AssociationPair(
+                previous: row.text(0),
+                previousTl: row.text(1),
+                next: row.text(2),
+                nextTl: row.text(3),
+            ),
+            count: row.integer(4),
+        )
     }
 
     // MARK: - Schema

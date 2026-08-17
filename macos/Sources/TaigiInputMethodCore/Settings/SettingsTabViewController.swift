@@ -47,7 +47,11 @@ final class SettingsTabViewController: NSTabViewController {
         func makePane() -> NSViewController {
             switch self {
             case .general: NSHostingController(rootView: GeneralSettingsView())
-            case .dictionary: NSHostingController(rootView: DictionarySettingsPane())
+            case .dictionary: NSHostingController(
+                    rootView: DictionarySettingsPane(
+                        stores: ComposingSessionCoordinator.shared.userDataStores,
+                    ),
+                )
             }
         }
     }

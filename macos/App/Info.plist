@@ -61,5 +61,32 @@
 		<string>Latn</string>
 		<string>Hant</string>
 	</array>
+	<!-- The `.taigi` backup document. Declared so the open and save panels in
+	     詞庫 → 備份還原 can filter for it; an undeclared extension resolves only
+	     to a dynamic type nothing recognises. Same identifier iOS exports
+	     (ios/Sources/TaigiKeyboard-Info.plist), because it is the same format.
+	     Deliberately NOT paired with CFBundleDocumentTypes: declaring the type
+	     says this suite defines the format, while registering a document type
+	     would offer an input method to Finder as a way to open files. -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>tw.taigikeyboard.backup</string>
+			<key>UTTypeDescription</key>
+			<string>台語鍵盤備份</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>taigi</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

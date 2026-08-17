@@ -102,6 +102,10 @@ final class UserFrequencyStore: @unchecked Sendable {
     private static let rowColumns =
         "word, tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000"
 
+    /// One order for the viewer and the export, with `(word, tl)` as the final
+    /// tie-break so equal counts keep a stable order between two exports.
+    private static let listOrder = "count DESC, last_used DESC, word ASC, tl ASC"
+
     private static func decodeRow(_ row: SQLiteRowReader) -> FrequencyRow {
         FrequencyRow(
             word: row.text(0),
@@ -123,8 +127,41 @@ final class UserFrequencyStore: @unchecked Sendable {
             try connection.query(
                 """
                 SELECT \(Self.rowColumns) FROM \(Self.tableName)
-                ORDER BY count DESC, last_used DESC, word ASC, tl ASC;
+                ORDER BY \(Self.listOrder);
                 """,
+                decoding: Self.decodeRow,
+            )
+        }
+    }
+
+    /// A page of learned rows for the viewer, most-used first.
+    ///
+    /// Filter and limit are both SQL: the viewer shows a screenful, and a
+    /// 20000-row store read whole to display a hundred rows is a cost paid on
+    /// every keystroke in the filter box.
+    func rows(filter: String, limit: Int) async throws -> [FrequencyRow] {
+        let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try await database.perform { connection in
+            guard !trimmed.isEmpty else {
+                return try connection.query(
+                    """
+                    SELECT \(Self.rowColumns) FROM \(Self.tableName)
+                    ORDER BY \(Self.listOrder)
+                    LIMIT ?;
+                    """,
+                    [.integer(limit)],
+                    decoding: Self.decodeRow,
+                )
+            }
+            let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
+            return try connection.query(
+                """
+                SELECT \(Self.rowColumns) FROM \(Self.tableName)
+                WHERE word LIKE ? ESCAPE '\\' OR tl LIKE ? ESCAPE '\\'
+                ORDER BY \(Self.listOrder)
+                LIMIT ?;
+                """,
+                [.text(pattern), .text(pattern), .integer(limit)],
                 decoding: Self.decodeRow,
             )
         }

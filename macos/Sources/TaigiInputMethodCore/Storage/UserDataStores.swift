@@ -25,6 +25,19 @@ final class UserDataStores: Sendable {
         customDictionary = CustomDictionaryStore(directory: directory)
     }
 
+    /// Assembles a set from stores that already exist. For tests that need one
+    /// of the three to behave differently — a store that was never opened, so
+    /// its half of a restore fails while the others succeed.
+    init(
+        frequency: UserFrequencyStore,
+        association: UserAssociationStore,
+        customDictionary: CustomDictionaryStore,
+    ) {
+        self.frequency = frequency
+        self.association = association
+        self.customDictionary = customDictionary
+    }
+
     /// Opens all of them, off the calling thread. Safe to call more than once —
     /// each store opens its file exactly once.
     func open() {

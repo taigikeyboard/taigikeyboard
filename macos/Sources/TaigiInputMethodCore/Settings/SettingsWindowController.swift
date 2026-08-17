@@ -22,6 +22,13 @@ final class SettingsWindowController {
     /// where they left it instead of a fresh one in the middle of the screen.
     private var window: NSWindow?
 
+    /// The window the settings pages are being shown in, for the file panels
+    /// they open as sheets on it. `nil` before the window has ever been shown,
+    /// which is a state no page can be visible in.
+    var presentedWindow: NSWindow? {
+        window
+    }
+
     private init() {}
 
     /// Brings the settings window up, creating it the first time.

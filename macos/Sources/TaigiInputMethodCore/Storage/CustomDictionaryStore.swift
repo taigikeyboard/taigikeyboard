@@ -148,7 +148,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
     // MARK: - User-driven writes
 
     /// Every entry, newest edit first — the order the settings list shows them
-    /// in.
+    /// in. Unbounded, for the export that has to write all of them.
     func allRows() async throws -> [CustomDictionaryRow] {
         try await database.perform { connection in
             try connection.query(
@@ -157,6 +157,44 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 FROM \(Self.tableName)
                 ORDER BY updated_at DESC;
                 """,
+                decoding: Self.decodeRow,
+            )
+        }
+    }
+
+    /// A page of entries for the settings list, newest edit first.
+    ///
+    /// The filter and the limit are both SQL: a list that read every row and
+    /// then dropped all but a hundred would carry a 30000-row dictionary
+    /// through memory to show a screenful.
+    func rows(filter: String, limit: Int) async throws -> [CustomDictionaryRow] {
+        let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try await database.perform { connection in
+            guard !trimmed.isEmpty else {
+                return try connection.query(
+                    """
+                    SELECT id, roman, hanzi, created_at, updated_at
+                    FROM \(Self.tableName)
+                    ORDER BY updated_at DESC
+                    LIMIT ?;
+                    """,
+                    [.integer(limit)],
+                    decoding: Self.decodeRow,
+                )
+            }
+            // Both columns, because the user filters by whichever half of the
+            // entry they remember. `LIKE` is case-insensitive for ASCII in
+            // SQLite, which is the romanization; 漢字 have no case to fold.
+            let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
+            return try connection.query(
+                """
+                SELECT id, roman, hanzi, created_at, updated_at
+                FROM \(Self.tableName)
+                WHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'
+                ORDER BY updated_at DESC
+                LIMIT ?;
+                """,
+                [.text(pattern), .text(pattern), .integer(limit)],
                 decoding: Self.decodeRow,
             )
         }

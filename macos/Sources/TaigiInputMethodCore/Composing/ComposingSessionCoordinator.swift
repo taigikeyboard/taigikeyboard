@@ -58,7 +58,12 @@ final class ComposingSessionCoordinator {
     private static let shippedStores = UserDataStores(directory: UserDataDirectory.standard)
 
     private let composingManager: ComposingManager
-    private let learningStores: UserDataStores
+
+    /// The user's three databases. Exposed because the 詞庫 settings pages
+    /// read and write the same files the composition does, and a second set of
+    /// store objects over the same paths would mean two serial queues racing
+    /// for one connection each.
+    let userDataStores: UserDataStores
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
 
@@ -81,18 +86,18 @@ final class ComposingSessionCoordinator {
 
     init(composingManager: ComposingManager, learningStores: UserDataStores) {
         self.composingManager = composingManager
-        self.learningStores = learningStores
+        userDataStores = learningStores
     }
 
     /// Opens the learning databases. Called once at launch: the first
     /// composition of a session would otherwise rank without the user's
     /// history while the files were still being opened.
     func openUserDataStores() {
-        learningStores.open()
+        userDataStores.open()
         // After the open, and deliberately not awaited: the seed is what a
         // brand-new install finds in 詞庫 管理, and a first keystroke typed
         // before it lands simply does not match the two seeded words yet.
-        let customDictionary = learningStores.customDictionary
+        let customDictionary = userDataStores.customDictionary
         Task {
             do {
                 try await customDictionary.seedIfEmpty()

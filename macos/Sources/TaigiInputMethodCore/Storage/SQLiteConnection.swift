@@ -50,6 +50,19 @@ final class SQLiteConnection: @unchecked Sendable {
         }
     }
 
+    /// Neutralises the wildcards a user can type into a filter, so a `%` in
+    /// the box matches a literal `%` rather than everything.
+    ///
+    /// The backslash it escapes with only means "escape" to SQLite when the
+    /// pattern is used with `ESCAPE '\'`, so every `LIKE` fed from here has to
+    /// say so.
+    static func escapedForLike(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
+    }
+
     /// Tells SQLite to copy the bound bytes rather than borrow them. Swift's
     /// `String` interop hands `sqlite3_bind_text` a buffer that is only valid
     /// for the duration of the call, so borrowing would read freed memory the

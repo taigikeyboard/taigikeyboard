@@ -1,35 +1,52 @@
-// The 詞庫 tab shell: navigation home for the dictionary-management pages.
+// The 詞庫 tab: which dictionaries are searched, and the user's own data.
 
 import SwiftUI
 
 /// The dictionary half of the settings window.
 ///
-/// A `NavigationStack` so the management pages (自訂詞庫 / 詞頻 / 詞關聯 /
-/// 備份還原, landing in PR11–PR13) push in place, mirroring the iOS Tab3
-/// structure (`ios/.../App/Tabs/Dictionary/DictionaryTab.swift`). Until they
-/// land, the rows name what is coming and stay disabled — the tab exists now
-/// so the window chrome, sizing and toolbar identity are settled once.
+/// A `NavigationStack` so the four management pages push in place, mirroring
+/// the iOS Tab3 structure (`ios/.../App/Tabs/Dictionary/DictionaryTab.swift`).
+/// Their filter fields and actions live in the content area rather than the
+/// window toolbar, which belongs to the `[一般] [詞庫]` tabs — a page putting
+/// controls there would be competing with them for the same strip.
 struct DictionarySettingsPane: View {
-    /// The four management destinations, in the iOS Tab3 order.
-    private static let dataManagementRows = ["自訂詞庫", "詞頻管理", "詞關聯管理", "備份還原"]
+    /// The stores the pages read and write. Named here rather than reached for
+    /// inside each page so the whole tab is driven by one composition root,
+    /// and a test could hand it its own.
+    let stores: UserDataStores
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    ForEach(Self.dataManagementRows, id: \.self) { title in
-                        LabeledContent(title) {
-                            Text("即將推出")
-                                .foregroundStyle(.secondary)
-                        }
+                    NavigationLink("自訂詞庫") {
+                        CustomDictionaryPage(store: stores.customDictionary)
+                    }
+                    NavigationLink("詞頻") {
+                        FrequencyDataPage(store: stores.frequency)
+                    }
+                    NavigationLink("詞關聯") {
+                        AssociationDataPage(store: stores.association)
+                    }
+                    NavigationLink("備份還原") {
+                        DataManagementPage(stores: stores)
                     }
                 } header: {
                     Text("資料管理")
+                }
+
+                Section {
+                    NavigationLink("選辭典") {
+                        DictionaryTogglesView()
+                    }
+                } header: {
+                    Text("辭典來源")
                 } footer: {
-                    Text("詞庫管理功能會在後續更新提供。")
+                    Text("揀欲用佗幾本辭典來出候選。")
                 }
             }
             .formStyle(.grouped)
+            .navigationTitle("詞庫")
         }
     }
 }
