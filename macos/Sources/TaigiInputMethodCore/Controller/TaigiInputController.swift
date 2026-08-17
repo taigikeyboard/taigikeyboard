@@ -1,6 +1,7 @@
 // Per-session IMKInputController: routes key events into the composing engine.
 
 import InputMethodKit
+import KeyboardShortcuts
 
 /// One instance per client text session. Owns no composition of its own — it
 /// claims the process-wide engine while its session is focused, translates key
@@ -93,6 +94,12 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(sender) { controller, client in
             controller.lastClient = client
             ComposingSessionCoordinator.shared.claim(controller.sessionToken)
+            // After the claim, which just cleared the previous session's
+            // endpoint: this session is the one the shortcut hotkeys should
+            // now act through, and registering is what turns them on.
+            ComposingSessionCoordinator.shared.registerShortcutTarget(
+                controller, for: controller.sessionToken,
+            )
             // Takes the bar down before this session starts typing, and takes
             // it away from the session that was showing it. IMK activates the
             // incoming session before it deactivates the outgoing one, so
@@ -185,24 +192,42 @@ public final class TaigiInputController: IMKInputController {
         // second-guess it (`references/MacishType/macos/MacishType/InputController.swift:27-29`).
         menu.autoenablesItems = false
 
-        // `Ctrl+Shift+,` rather than the ⌘, a Mac app would use: ⌘, belongs to
-        // the app being typed into, and a key equivalent claimed here is taken
-        // from the host for as long as this input source is selected.
+        // The chord is whatever the user recorded for 開啟設定 — initially
+        // `Ctrl+Shift+,`, the chord PR5 shipped hardcoded (⌘, still belongs to
+        // the app being typed into). Read and applied by hand rather than
+        // through the library's `NSMenuItem.setShortcut(for:)`: that helper
+        // registers a `NotificationCenter` observer per item so a long-lived
+        // item can update itself, and this menu is rebuilt from scratch every
+        // time the system draws it (`IMKInputController.h:307-310`) — one
+        // observer would be added per draw and never removed, since removal
+        // only happens by re-binding the same item. Rebuilding IS the update
+        // mechanism the observer exists to provide.
         //
-        // A key equivalent rather than a branch in `handle(_:client:)` — which
-        // is what every reference input method does
-        // (MacishType `InputController.swift:60-67`, McBopomofo
-        // `InputMethodController.swift:73-84`, azooKey
-        // `azooKeyMacInputControllerHelper.swift:8-20`). Routing it through the
-        // key handler would mean classifying a chord out of `characters`, which
-        // Control rewrites, and would put a command that has nothing to do with
-        // composing into the key contract.
+        // The chord also fires through the Carbon hotkey `ShortcutHotkeys`
+        // registers, active only while a session holds the engine — the same
+        // scope the old key equivalent had. Both paths land on
+        // `SettingsWindowController.show()`, which is idempotent, so a double
+        // fire while the input-source menu is open costs nothing. (The library
+        // swaps its hotkeys for a raw event monitor while an `NSMenu` is
+        // tracking, but that depends on `NSMenu.didBeginTracking`, which IMK
+        // does not document for the system-drawn input-source menu — hence the
+        // idempotent target rather than a promise.)
+        // `assumeIsolated` for the same reason the rest of this class hops
+        // through `onMainActor`: IMK calls its controllers on the main run
+        // loop, and the shortcut store is main-actor-isolated. Asserting turns
+        // a broken assumption into a crash rather than a data race.
+        let settingsChord = MainActor.assumeIsolated { () -> (key: String, modifiers: NSEvent.ModifierFlags) in
+            guard let shortcut = KeyboardShortcuts.getShortcut(for: .openSettings) else {
+                return ("", [])
+            }
+            return (shortcut.nsMenuItemKeyEquivalent ?? "", shortcut.modifiers)
+        }
         let settingsItem = NSMenuItem(
             title: String(localized: "設定…"),
             action: #selector(showPreferences(_:)),
-            keyEquivalent: ",",
+            keyEquivalent: settingsChord.key,
         )
-        settingsItem.keyEquivalentModifierMask = [.control, .shift]
+        settingsItem.keyEquivalentModifierMask = settingsChord.modifiers
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
@@ -263,6 +288,38 @@ public final class TaigiInputController: IMKInputController {
         // the key contract lets Space commit whichever one is highlighted. They
         // go with the mode that produced them.
         onMainActor(nil) { controller, _ in controller.dismissCandidates() }
+    }
+
+    // MARK: - Shortcut actions
+
+    /// What a recorded chord does while this session owns the engine. Reuses
+    /// the menu handlers' paths so a setting has one behaviour regardless of
+    /// which surface changed it; every case ends with the candidate bar down,
+    /// because the candidates on screen were produced under the setting that
+    /// just changed (same rule as `switchInputMode(to:)`).
+    ///
+    @MainActor
+    func performShortcutAction(_ action: ShortcutAction) {
+        switch action {
+        case .openSettings:
+            // Handled process-wide by `ShortcutHotkeys.perform` before any
+            // session is consulted: opening a window needs no client, and a
+            // user with no focused Taigi session still expects the chord to
+            // work. Named rather than defaulted so a new action cannot fall
+            // silently into "do nothing".
+            break
+        case .toggleRomanization:
+            switchInputMode(to: settings.inputMode == .tl ? .poj : .tl)
+        case .toggleTranslateSwapped:
+            settings.isTranslateSwapped.toggle()
+            dismissCandidates()
+        case .toggleBothScripts:
+            settings.isOutputBothScripts.toggle()
+            dismissCandidates()
+        case .toggleLiteralRomanCandidate:
+            settings.isLiteralRomanCandidateEnabled.toggle()
+            dismissCandidates()
+        }
     }
 
     // MARK: - Main-actor work
@@ -528,3 +585,7 @@ public final class TaigiInputController: IMKInputController {
         let client: IMKTextInput?
     }
 }
+
+/// The method lives in the class body (it needs the private candidate state);
+/// the conformance is stated here where it reads as the contract it is.
+extension TaigiInputController: ShortcutActionTarget {}

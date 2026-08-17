@@ -40,7 +40,7 @@ final class SettingsWindowController {
         // `orderFrontRegardless()` below covers.
         NSApp.activate()
 
-        let window = window ?? makeWindow()
+        let window = window ?? Self.makeWindow()
         self.window = window
 
         window.makeKeyAndOrderFront(nil)
@@ -52,21 +52,39 @@ final class SettingsWindowController {
         window.orderFrontRegardless()
     }
 
-    private func makeWindow() -> NSWindow {
+    /// Builds the window without showing it. `static` and internal so a test
+    /// can inspect the chrome — style mask, toolbar style, tab identity —
+    /// without ordering a window in front of whoever is running the tests.
+    static func makeWindow() -> NSWindow {
         let window = NSWindow(
             contentRect: .zero,
-            // No `.resizable`: the form is a fixed-width list of controls, and a
-            // resizable window would only offer the user empty space.
-            styleMask: [.titled, .closable, .miniaturizable],
+            // `.resizable` since the 詞庫 tab carries lists; the floor per tab
+            // is enforced by `SettingsTabViewController`, which only ever
+            // grows the window and never touches this mask.
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false,
         )
         window.title = String(localized: "台語鍵盤設定")
-        window.contentViewController = NSHostingController(rootView: SettingsView())
+        // The tab controller before the toolbar style: `.preference` acts on
+        // the toolbar the tab controller attaches, and the SDK marks it "For
+        // Settings windows only" (`NSWindow.h:239`).
+        let tabController = SettingsTabViewController()
+        window.contentViewController = tabController
+        window.toolbarStyle = .preference
         // The default is to release the window when it closes, which would turn
         // the second open into a message to a freed object.
         window.isReleasedWhenClosed = false
         window.center()
+        // After `center()`: restoring a saved frame should win over centering,
+        // and saving at all is what returns the user to the size they chose
+        // now that the window is resizable.
+        window.setFrameAutosaveName("TaigiSettingsWindow")
+        // Last, so it sees the restored frame: the first tab was selected
+        // while the controller had no window, so nothing has put a floor under
+        // the tab the window opens on yet — and an autosaved frame from a
+        // narrower build could be below it.
+        tabController.applyMinimumSizeForSelectedTab()
         return window
     }
 }

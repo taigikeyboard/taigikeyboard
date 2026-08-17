@@ -8,19 +8,8 @@ import XCTest
 /// next test starts from.
 @MainActor
 final class ComposingSessionCoordinatorTests: XCTestCase {
-    private func makeCoordinator() throws -> ComposingSessionCoordinator {
-        let stores = try TestFixtures.makeLearningStores()
-        return try ComposingSessionCoordinator(
-            composingManager: TestFixtures.makeComposingManager(
-                stores: stores,
-                startingGeneration: TestFixtures.generationCounter.next(),
-            ),
-            learningStores: stores,
-        )
-    }
-
     func testOnlyTheClaimingSessionCanDriveTheEngine() throws {
-        let coordinator = try makeCoordinator()
+        let coordinator = try TestFixtures.makeCoordinator()
         let focused = ComposingSessionToken()
         let background = ComposingSessionToken()
 
@@ -37,7 +26,7 @@ final class ComposingSessionCoordinatorTests: XCTestCase {
     }
 
     func testHandover_startsTheNextSessionFromAnIdleEngine() throws {
-        let coordinator = try makeCoordinator()
+        let coordinator = try TestFixtures.makeCoordinator()
         let first = ComposingSessionToken()
         let second = ComposingSessionToken()
         let executor = RecordingEffectExecutor()
@@ -53,7 +42,7 @@ final class ComposingSessionCoordinatorTests: XCTestCase {
     }
 
     func testReclaimingAnOwnedSession_leavesTheCompositionRunning() throws {
-        let coordinator = try makeCoordinator()
+        let coordinator = try TestFixtures.makeCoordinator()
         let owner = ComposingSessionToken()
         let executor = RecordingEffectExecutor()
         coordinator.claim(owner).append("t", executing: executor)
@@ -68,7 +57,7 @@ final class ComposingSessionCoordinatorTests: XCTestCase {
     }
 
     func testRelease_freesTheEngineForTheNextSession() throws {
-        let coordinator = try makeCoordinator()
+        let coordinator = try TestFixtures.makeCoordinator()
         let closing = ComposingSessionToken()
         let next = ComposingSessionToken()
         coordinator.claim(closing)
@@ -87,7 +76,7 @@ final class ComposingSessionCoordinatorTests: XCTestCase {
     }
 
     func testReleasingASupersededSession_leavesTheLiveOneAlone() throws {
-        let coordinator = try makeCoordinator()
+        let coordinator = try TestFixtures.makeCoordinator()
         let superseded = ComposingSessionToken()
         let live = ComposingSessionToken()
         let executor = RecordingEffectExecutor()

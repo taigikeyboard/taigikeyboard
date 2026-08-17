@@ -1,20 +1,28 @@
-// The settings form: every setting the composing engine reads, and nothing else.
+// The 一般 tab: every setting the composing engine reads, plus the shortcut
+// recorders.
 
+import KeyboardShortcuts
 import SwiftUI
 
-/// The whole user-facing settings surface of the macOS input method.
+/// The general half of the settings window.
 ///
 /// Bound with `@AppStorage` rather than through `SettingsStore`, so the form
 /// re-renders when a value is changed from outside it — the input-source menu's
-/// TL/POJ items write straight to `UserDefaults`, and so does anyone running
-/// `defaults write`. The keys and the fallbacks come from the store's
-/// descriptors, so the form and the engine cannot disagree about either.
+/// TL/POJ items and the shortcut hotkeys write straight to `UserDefaults`, and
+/// so does anyone running `defaults write`. The keys and the fallbacks come
+/// from the store's descriptors, so the form and the engine cannot disagree
+/// about either.
 ///
 /// The labels are Traditional-Chinese string literals, which SwiftUI reads as
 /// localization keys: this package has no string catalog, so they render as
 /// written, and adding one later needs no change here. macOS is not part of the
 /// `i18n/` pipeline the iOS and Android apps are built from.
-struct SettingsView: View {
+struct GeneralSettingsView: View {
+    /// The form is a fixed-width column of controls — widening it would only
+    /// add empty space. Read by `SettingsTabViewController` as this tab's
+    /// window floor, so the window never opens narrower than its own content.
+    static let formWidth: CGFloat = 380
+
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
@@ -59,13 +67,23 @@ struct SettingsView: View {
             } footer: {
                 Text("學習資料只存在本機,袂上傳。")
             }
+
+            Section {
+                // One row per action, off the same list the hotkey registration
+                // uses, so a new action cannot appear in one and not the other.
+                ForEach(ShortcutAction.allCases, id: \.self) { action in
+                    KeyboardShortcuts.Recorder(action.label, name: action.name) { _ in
+                        ShortcutConflicts.resolve(after: action)
+                    }
+                }
+            } header: {
+                Text("快捷鍵")
+            } footer: {
+                Text("快捷鍵只在台語鍵盤使用中有效。")
+            }
         }
         .formStyle(.grouped)
-        .frame(width: Metrics.formWidth)
+        .frame(width: Self.formWidth)
         .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private enum Metrics {
-        static let formWidth: CGFloat = 380
     }
 }

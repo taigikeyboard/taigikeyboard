@@ -96,6 +96,24 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue.rawValue, forKey: Keys.inputMode.name) }
     }
 
+    /// The candidate settings a shortcut can flip. Typed properties rather than
+    /// a raw key write at the call site, so a toggle always goes through the
+    /// same never-written-reads-as-default rule its readers use.
+    var isTranslateSwapped: Bool {
+        get { bool(Keys.isTranslateSwapped) }
+        set { userDefaults.set(newValue, forKey: Keys.isTranslateSwapped.name) }
+    }
+
+    var isOutputBothScripts: Bool {
+        get { bool(Keys.isOutputBothScripts) }
+        set { userDefaults.set(newValue, forKey: Keys.isOutputBothScripts.name) }
+    }
+
+    var isLiteralRomanCandidateEnabled: Bool {
+        get { bool(Keys.isLiteralRomanCandidateEnabled) }
+        set { userDefaults.set(newValue, forKey: Keys.isLiteralRomanCandidateEnabled.name) }
+    }
+
     /// `object(forKey:)` rather than `bool(forKey:)`: the latter answers `false`
     /// for a key that was never written, which would silently turn every
     /// default-on setting off on a fresh install.

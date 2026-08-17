@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 @testable import TaigiInputMethodCore
 import XCTest
 
@@ -10,15 +11,23 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     private var userDefaults = UserDefaults.standard
     private var controller: TaigiInputController!
 
+    /// `KeyboardShortcuts` stores in `UserDefaults.standard` and offers no
+    /// suite injection, so a case that records a chord is writing into the
+    /// settings of whoever is running the tests. Saved here and put back in
+    /// `tearDown`.
+    private var savedOpenSettingsShortcut: KeyboardShortcuts.Shortcut?
+
     override func setUpWithError() throws {
         try super.setUpWithError()
         suiteName = "TaigiInputControllerMenuTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         controller = try TestFixtures.makeInputController()
         controller.settings = SettingsStore(userDefaults: userDefaults)
+        savedOpenSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
     }
 
     override func tearDown() {
+        KeyboardShortcuts.setShortcut(savedOpenSettingsShortcut, for: .openSettings)
         userDefaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
     }
@@ -40,14 +49,38 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertEqual(titles, ["設定…", "台羅 (TL)", "白話字 (POJ)"])
     }
 
-    /// The chord is a menu key equivalent rather than anything in the key
-    /// handler, which is what keeps `ComposingKeyIntent` and the keydown-only
-    /// `recognizedEvents` mask out of this feature entirely.
-    func testMenu_bindsSettingsToControlShiftComma() throws {
+    /// The chord lives in the shortcut registry now, not in this file: a user
+    /// who never opens the recorder still sees `Ctrl+Shift+,` because that is
+    /// 開啟設定's initial value.
+    func testMenu_showsTheInitialSettingsChord() throws {
+        KeyboardShortcuts.reset(.openSettings)
+
         let settingsItem = try item(titled: "設定…", in: menu())
 
         XCTAssertEqual(settingsItem.keyEquivalent, ",")
         XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [.control, .shift])
+    }
+
+    /// The menu is rebuilt on every draw, which is what lets it show a chord
+    /// the user recorded after the process started.
+    func testMenu_showsARecordedSettingsChord() throws {
+        KeyboardShortcuts.setShortcut(.init(.k, modifiers: [.control, .option]), for: .openSettings)
+
+        let settingsItem = try item(titled: "設定…", in: menu())
+
+        XCTAssertEqual(settingsItem.keyEquivalent, "k")
+        XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [.control, .option])
+    }
+
+    /// A cleared shortcut claims no key equivalent at all — the menu item
+    /// stays, the chord does not, and no host key is taken for a command the
+    /// user unbound.
+    func testMenu_claimsNoChordWhenTheShortcutIsCleared() throws {
+        KeyboardShortcuts.setShortcut(nil, for: .openSettings)
+
+        let settingsItem = try item(titled: "設定…", in: menu())
+
+        XCTAssertEqual(settingsItem.keyEquivalent, "")
     }
 
     /// ⌘, belongs to the application being typed into. A key equivalent claimed
@@ -55,6 +88,8 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// is selected, so claiming that one would cost the user their app's own
     /// settings shortcut.
     func testMenu_doesNotClaimCommandComma() throws {
+        KeyboardShortcuts.reset(.openSettings)
+
         for item in try menu().items {
             XCTAssertFalse(
                 item.keyEquivalent == "," && item.keyEquivalentModifierMask.contains(.command),

@@ -4,6 +4,7 @@ import AppKit
 import InputMethodKit
 
 /// Starts the IMKServer that feeds `TaigiInputController`.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Strong reference. `IMKServer` owns the Mach connection that delivers key
     /// events; letting it deallocate leaves a live-looking process that never
@@ -35,6 +36,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // AppKit configuration, and the menu has to exist before any window of
         // ours becomes key for its shortcuts to reach the first responder.
         NSApp.mainMenu = MainMenu.make()
+
+        // The hotkey handlers exist for the process's life; whether they FIRE
+        // is the coordinator's call, made as sessions register and release
+        // their shortcut endpoint. Assigned here rather than defaulted inside
+        // the coordinator so tests exercising it never touch Carbon.
+        ShortcutHotkeys.registerHandlers()
+        ComposingSessionCoordinator.shared.shortcutAvailabilityDidChange = ShortcutHotkeys.setEnabled
 
         server = IMKServer(
             name: Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String,
@@ -80,7 +88,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// are resolved first so a symlinked install location still matches, and
     /// the check is on the parent directory so both `~/Library` and `/Library`
     /// qualify without hardcoding a home path (which the sandbox rewrites).
-    static func isInputMethodsCopy(_ bundleURL: URL) -> Bool {
+    /// `nonisolated`: a pure path test with no AppKit state, called from the
+    /// launch guard and from tests that have no main actor to hop to.
+    nonisolated static func isInputMethodsCopy(_ bundleURL: URL) -> Bool {
         bundleURL
             .resolvingSymlinksInPath()
             .standardizedFileURL

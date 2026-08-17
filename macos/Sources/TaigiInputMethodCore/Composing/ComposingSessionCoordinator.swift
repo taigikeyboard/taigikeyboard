@@ -15,6 +15,18 @@ struct ComposingSessionToken: Hashable, Sendable {
     private let value = UUID()
 }
 
+/// A session-side endpoint for the user-configurable shortcuts.
+///
+/// The hotkey handlers land in the app delegate with no controller or client in
+/// hand; the controller that owns the focused session is the only object that
+/// can apply a setting change AND take down the candidate bar that change just
+/// invalidated. Weakly held by the coordinator — the controller's lifetime
+/// belongs to IMK.
+@MainActor
+protocol ShortcutActionTarget: AnyObject {
+    func performShortcutAction(_ action: ShortcutAction)
+}
+
 /// Hands the single `ComposingManager` to whichever input session is focused.
 ///
 /// IMK creates one controller per client text session, but the Rust composing
@@ -49,6 +61,23 @@ final class ComposingSessionCoordinator {
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
 
+    /// The controller the shortcut hotkeys act through, valid only while its
+    /// session owns the engine. Weak: IMK owns controller lifetime, and a
+    /// coordinator keeping one alive would keep its client alive with it.
+    private weak var shortcutTarget: (any ShortcutActionTarget)?
+
+    /// Whether `shortcutAvailabilityDidChange` was last told `true`. Tracked
+    /// separately from `shortcutTarget` because that reference is weak: a
+    /// controller deallocated before its session is released would otherwise
+    /// read as "never armed" and swallow the disarming call.
+    private var areShortcutsArmed = false
+
+    /// Told `true` while a target is registered, `false` when none is. The
+    /// shipped closure is `ShortcutHotkeys.setEnabled` (assigned at launch by
+    /// `AppDelegate`); left nil in tests so exercising the coordinator never
+    /// registers Carbon hotkeys in the test runner.
+    var shortcutAvailabilityDidChange: ((Bool) -> Void)?
+
     init(composingManager: ComposingManager, learningStores: LearningStores) {
         self.composingManager = composingManager
         self.learningStores = learningStores
@@ -75,7 +104,47 @@ final class ComposingSessionCoordinator {
         Self.logger.debug("session ownership changed")
         composingManager.startNewSession()
         currentOwner = owner
+        // The outgoing session's endpoint must not receive shortcuts meant for
+        // the incoming one. Cleared here rather than left to the new session's
+        // registration, because IMK activates the incoming session before it
+        // deactivates the outgoing one — same ordering hazard the candidate
+        // panel's owner token exists for.
+        clearShortcutTarget()
         return composingManager
+    }
+
+    /// Makes `target` the endpoint the shortcut hotkeys act through, and turns
+    /// the hotkeys on. Only the session that owns the engine may register —
+    /// a stale controller registering late would route shortcuts into a
+    /// session the user has left.
+    func registerShortcutTarget(_ target: any ShortcutActionTarget, for owner: ComposingSessionToken) {
+        guard currentOwner == owner else { return }
+        shortcutTarget = target
+        areShortcutsArmed = true
+        shortcutAvailabilityDidChange?(true)
+    }
+
+    /// Routes one shortcut action to the focused session's endpoint.
+    ///
+    /// A target that has been deallocated without its session being released
+    /// disarms the hotkeys here: the reference is weak, so it can go while
+    /// `areShortcutsArmed` still says otherwise, and armed-with-nowhere-to-go
+    /// means the chord is taken from the host for nothing.
+    func performShortcutAction(_ action: ShortcutAction) {
+        guard let shortcutTarget else {
+            clearShortcutTarget()
+            return
+        }
+        shortcutTarget.performShortcutAction(action)
+    }
+
+    /// Silent when nothing is armed: every release would otherwise disarm what
+    /// a newly activated session had just armed.
+    private func clearShortcutTarget() {
+        guard areShortcutsArmed else { return }
+        shortcutTarget = nil
+        areShortcutsArmed = false
+        shortcutAvailabilityDidChange?(false)
     }
 
     /// The manager, or `nil` when `owner` is not the focused session.
@@ -102,5 +171,6 @@ final class ComposingSessionCoordinator {
         Self.logger.debug("session ownership released")
         composingManager.startNewSession()
         currentOwner = nil
+        clearShortcutTarget()
     }
 }

@@ -151,6 +151,23 @@ enum TestFixtures {
         )
     }
 
+    /// A coordinator of its own, over scratch stores and an unused generation.
+    ///
+    /// Never `ComposingSessionCoordinator.shared`: that one is process-wide,
+    /// guards process-wide engine state, and in the shipped app arms the real
+    /// Carbon hotkeys through `AppDelegate`'s availability callback.
+    @MainActor
+    static func makeCoordinator() throws -> ComposingSessionCoordinator {
+        let stores = try makeLearningStores()
+        return try ComposingSessionCoordinator(
+            composingManager: makeComposingManager(
+                stores: stores,
+                startingGeneration: generationCounter.next(),
+            ),
+            learningStores: stores,
+        )
+    }
+
     /// A candidate carrying only the fields a case is asserting on. The engine
     /// fills ten, and a suite about navigation or rendering should not have to
     /// name the eight it does not care about.
