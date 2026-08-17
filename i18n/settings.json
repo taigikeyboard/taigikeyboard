@@ -13,12 +13,12 @@
     },
     "displayLanguage": {
       "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Most option labels are endonyms (own-script, not i18n keys); the Automatic option uses displayLanguageAutomatic.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
       "values": { "hanji": "顯示語言", "tailo": "hián-sī gí-giân", "poj": "hián-sī gí-giân", "en": "Display Language", "ja": "表示言語" }
     },
     "displayLanguageAutomatic": {
       "comment": "Display-language picker option that follows the OS/device language (ja->日本語, zh->漢字, else->English). Unlike the other rows this is a translated label, not an endonym.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
       "values": { "hanji": "自動", "tailo": "tsū-tōng", "poj": "chū-tōng", "en": "Automatic", "ja": "自動" }
     },
     "pojMode": {

@@ -119,5 +119,21 @@ final class SettingsStoreTests: XCTestCase {
             SettingsStore.Keys.isLiteralRomanCandidateEnabled.name,
             "literalRomanCandidateEnabled",
         )
+        XCTAssertEqual(SettingsStore.Keys.displayLanguage.name, "displayLanguage")
+    }
+
+    /// The app UI language is the one setting whose default comes from the
+    /// display-language roster rather than `EngineSettings.defaults` — the
+    /// engine never reads it. A fresh install is Automatic.
+    func testDisplayLanguage_withNothingStored_isTheAutomaticTag() {
+        XCTAssertEqual(makeStore().displayLanguage, "system")
+    }
+
+    func testDisplayLanguage_roundTripsThroughTheSuite() {
+        let store = makeStore()
+        store.displayLanguage = DisplayLanguage.poj.tag
+
+        XCTAssertEqual(store.displayLanguage, "poj")
+        XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.displayLanguage.name), "poj")
     }
 }

@@ -6,7 +6,7 @@
 # scripts/ — a Makefile recipe is a poor place for multi-step shell, and
 # scripts/lib/bundle-identity.sh is the one reader of App/Info.plist.
 
-.PHONY: help build test bundle install uninstall reload log clean
+.PHONY: help i18n-check build test bundle install uninstall reload log clean
 
 CONFIGURATION ?= debug
 
@@ -19,6 +19,7 @@ help:
 	@echo "  make build      - Build the SwiftPM executable"
 	@echo "  make test       - Run swift test"
 	@echo "  make bundle     - Assemble and validate the .app"
+	@echo "  make i18n-check - Fail if the generated i18n Swift is stale"
 	@echo "  make install    - Bundle, then deploy to ~/Library/Input Methods"
 	@echo "  make uninstall  - Remove the installed input method"
 	@echo "  make reload     - Restart the running input method process"
@@ -27,10 +28,20 @@ help:
 	@echo ""
 	@echo "  CONFIGURATION=release make install   (default: $(CONFIGURATION))"
 
-build:
+# The Swift under Strings/Generated is generated from i18n/*.json by the repo-root `make i18n`, so a
+# build can otherwise link strings that no longer match their source. This is the macOS counterpart of
+# the Gradle `checkI18nGenerated` task Android runs on preBuild.
+#
+# `build` and `test` are the only entry points to their own `swift build` / `swift test`, so the
+# prerequisite covers them. `bundle` needs nothing here: scripts/bundle-app.sh runs the same check
+# itself, right where it runs its own `swift build`, so calling that script directly is gated too.
+i18n-check:
+	python3 ../tools/i18n/check.py
+
+build: i18n-check
 	swift build --configuration $(CONFIGURATION)
 
-test:
+test: i18n-check
 	swift test
 
 bundle:

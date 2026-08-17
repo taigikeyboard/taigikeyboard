@@ -24,6 +24,13 @@ CONTENTS_DIR="$APP_DIR/Contents"
 
 cd "$PACKAGE_DIR"
 
+echo "==> Checking generated i18n strings"
+# The Swift under Sources/TaigiInputMethodCore/Strings/Generated comes from i18n/*.json via the
+# repo-root `make i18n`. Checked here rather than only as a Makefile prerequisite because this script
+# runs its own `swift build` below: a bundle assembled by calling the script directly would otherwise
+# ship strings that no longer match their source. Same role as Android's Gradle checkI18nGenerated.
+python3 "$(cd .. && pwd)/tools/i18n/check.py"
+
 echo "==> Building ($CONFIGURATION)"
 swift build --configuration "$CONFIGURATION" --product "$EXECUTABLE_NAME"
 BUILT_EXECUTABLE="$(swift build --configuration "$CONFIGURATION" --show-bin-path)/$EXECUTABLE_NAME"

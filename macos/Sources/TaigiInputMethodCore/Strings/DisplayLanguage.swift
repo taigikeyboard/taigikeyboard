@@ -1,0 +1,97 @@
+// App UI display-language identity: what the picker offers and how Automatic resolves.
+
+import Foundation
+
+/// App UI display language — orthogonal to the keyboard input mode.
+///
+/// Hanji, English, Japanese, Tâi-lô, and Pe̍h-ōe-jī are all authored and user-selectable
+/// (`productionLanguages`); a language not in that roster falls back to Hanji.
+///
+/// `system` (Automatic) is a selection policy, not a string set: it has NO authored strings and never
+/// reaches the resolver. The picker boundary maps it to a concrete language via `effectiveLanguage(_:)`
+/// (driven by the device OS locale) before any string lookup. It IS a persisted selection — the user can
+/// return to it, and the raw value `"system"` is the persisted tag.
+///
+/// Unlike iOS this enum carries no per-language resolution strategy: the package ships no string
+/// catalog, so every production language resolves through `GeneratedStrings`. That is an
+/// implementation divergence only — the roster, the Automatic mapping, and the Hanji fallback are
+/// the same contract on all three platforms.
+enum DisplayLanguage: String, CaseIterable {
+    case system
+    case hanji
+    case tailo
+    case poj
+    case japanese = "ja"
+    case english = "en"
+
+    /// Persisted tag (`SettingsStore.displayLanguage`). Equals the raw value; mirrors iOS `.tag`.
+    var tag: String {
+        rawValue
+    }
+
+    /// The language's own name in its own script (endonym), shown in the picker regardless of the
+    /// current UI language — the W3C-recommended convention, so a user can always find their language.
+    /// Language-invariant, so it is NOT an i18n key. The endonym strings MUST match across platforms.
+    /// `.system` has no endonym — it is a policy, not a language, so the picker special-cases it and
+    /// labels it with the localized `settingsDisplayLanguageAutomatic` string instead.
+    /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
+    /// ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift `endonym` and
+    /// android .../i18n/DisplayLanguage.kt `endonym`. Drift causes silent divergence.
+    var endonym: String {
+        switch self {
+        case .hanji: "漢字"
+        case .tailo: "Tâi-lô"
+        case .poj: "Pe̍h-ōe-jī"
+        case .japanese: "日本語"
+        case .english: "English"
+        case .system: fatalError("system has no endonym; use settingsDisplayLanguageAutomatic")
+        }
+    }
+
+    /// Default selection before the user ever picks a language: `system` (Automatic), so a fresh install
+    /// follows the device OS locale (platform convention) instead of pinning Hanji.
+    static let defaultTag = "system"
+
+    /// Authored, user-selectable production languages — the catalog roster, SEPARATE from
+    /// `selectableLanguages` (which leads with `.system`). `.system` is a resolution policy with no
+    /// authored strings, so it never appears here.
+    /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) — mirrors
+    /// ios/.../Strings/DisplayLanguage.swift + android/.../i18n/DisplayLanguage.kt
+    /// `productionLanguages` and tools/i18n `PRODUCTION_LANGUAGES`, SAME ORDER.
+    static let productionLanguages: [DisplayLanguage] = [.hanji, .english, .japanese, .tailo, .poj]
+
+    /// What the picker offers: `.system` (Automatic) first, then the production roster.
+    /// CROSS-PLATFORM INVARIANT — mirrors iOS + android `selectableLanguages`.
+    static let selectableLanguages: [DisplayLanguage] = [.system] + productionLanguages
+
+    /// Resolves the Automatic policy to a concrete authored language from the device OS language subtag
+    /// (lowercased ISO 639). Pure + injectable for tests — never reads `Locale` itself; the store passes
+    /// the device subtag in. `ja*` → Japanese, `en*` → English, anything else (incl. `zh*` / absent) →
+    /// Hanji. Taiwanese Hanji is the neutral default so a Chinese-locale (or any non-ja/en) device reads
+    /// the UI in 漢字, not English.
+    /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION) — mirrors iOS +
+    /// android `resolveAutomatic`.
+    static func resolveAutomatic(_ deviceLanguageSubtag: String) -> DisplayLanguage {
+        if deviceLanguageSubtag.hasPrefix("ja") {
+            return .japanese
+        }
+        if deviceLanguageSubtag.hasPrefix("en") {
+            return .english
+        }
+        return .hanji
+    }
+
+    /// The concrete language this selection resolves to: `.system` defers to the device locale via
+    /// `resolveAutomatic`; every explicit language resolves to itself. The resolver always runs against
+    /// this effective language, never against `.system`.
+    /// CROSS-PLATFORM INVARIANT — mirrors iOS + android `effectiveLanguage`.
+    func effectiveLanguage(_ deviceLanguageSubtag: String) -> DisplayLanguage {
+        self == .system ? DisplayLanguage.resolveAutomatic(deviceLanguageSubtag) : self
+    }
+
+    /// Maps a persisted tag to a selectable language. Unknown or removed tags resolve to `.hanji`;
+    /// `"system"` is selectable, so it round-trips to `.system`.
+    static func fromTag(_ tag: String) -> DisplayLanguage {
+        DisplayLanguage(rawValue: tag) ?? .hanji
+    }
+}

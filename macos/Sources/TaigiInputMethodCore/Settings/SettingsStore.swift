@@ -171,6 +171,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "kautianNameAppendixEnabled",
             defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.nameAppendix,
         )
+
+        /// The app UI display language, as a `DisplayLanguage` tag. The only key here whose default
+        /// does not come from `EngineSettings.defaults`: which language the UI is written in is not
+        /// something the composing engine reads, so the roster owns the default instead.
+        static let displayLanguage = SettingsKey(
+            name: "displayLanguage",
+            defaultValue: DisplayLanguage.defaultTag,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -258,10 +266,75 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue, forKey: Keys.isLiteralRomanCandidateEnabled.name) }
     }
 
+    /// The app UI display language tag. Read as a raw tag rather than a `DisplayLanguage` so a value
+    /// naming no language — a hand-edited `defaults write`, or a language a future version removes —
+    /// stays readable here and is clamped once, by `DisplayLanguage.fromTag`, at the display boundary.
+    var displayLanguage: String {
+        get { userDefaults.string(forKey: Keys.displayLanguage.name) ?? Keys.displayLanguage.defaultValue }
+        set { userDefaults.set(newValue, forKey: Keys.displayLanguage.name) }
+    }
+
+    /// Calls `onChange` whenever `key` changes in this store's domain, and answers the observation —
+    /// which stays live only as long as the caller holds it.
+    ///
+    /// Key-value observing rather than `UserDefaults.didChangeNotification`, which only fires for
+    /// writes made in this process: the point is to catch the ones made outside it, `defaults write`
+    /// included. Live here rather than at the reader so the key and the domain — the two halves that
+    /// have to agree — stay in the one type that knows both.
+    ///
+    /// `onChange` carries no value: it fires on whatever thread performed the write, so a reader has
+    /// to hop to its own isolation and re-read anyway, and reading current state beats applying a
+    /// value that may already be stale.
+    func observeChanges(of key: SettingsKey<some Any>, onChange: @escaping @Sendable () -> Void) -> AnyObject {
+        DefaultsKeyObserver(userDefaults: userDefaults, key: key.name, onChange: onChange)
+    }
+
     /// `object(forKey:)` rather than `bool(forKey:)`: the latter answers `false`
     /// for a key that was never written, which would silently turn every
     /// default-on setting off on a fresh install.
     private func bool(_ key: SettingsKey<Bool>) -> Bool {
         userDefaults.object(forKey: key.name) as? Bool ?? key.defaultValue
+    }
+}
+
+/// One `UserDefaults` key observation, ended by letting go of the object.
+///
+/// KVO on `UserDefaults` predates typed observation, so this is a classic `NSObject` observer rather
+/// than something `SettingsStore` can do itself.
+private final class DefaultsKeyObserver: NSObject {
+    /// This observer's own address, used as the KVO context: a callback for an observation registered
+    /// by anyone else — a superclass, or another observer of the same key — is forwarded on rather than
+    /// mistaken for ours. Per instance rather than one shared token, so the filter is exact.
+    private var observationContext: UnsafeMutableRawPointer {
+        Unmanaged.passUnretained(self).toOpaque()
+    }
+
+    private let userDefaults: UserDefaults
+    private let key: String
+    private let onChange: @Sendable () -> Void
+
+    init(userDefaults: UserDefaults, key: String, onChange: @escaping @Sendable () -> Void) {
+        self.userDefaults = userDefaults
+        self.key = key
+        self.onChange = onChange
+        super.init()
+        userDefaults.addObserver(self, forKeyPath: key, options: [], context: observationContext)
+    }
+
+    deinit {
+        userDefaults.removeObserver(self, forKeyPath: key, context: observationContext)
+    }
+
+    override func observeValue(
+        forKeyPath keyPath: String?,
+        of object: Any?,
+        change: [NSKeyValueChangeKey: Any]?,
+        context: UnsafeMutableRawPointer?,
+    ) {
+        guard context == observationContext, keyPath == key else {
+            super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
+            return
+        }
+        onChange()
     }
 }

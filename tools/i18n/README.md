@@ -10,10 +10,15 @@ tool generates the platform artifacts; **do not hand-edit the generated files.**
 | `make i18n` | Regenerate all artifacts from `i18n/*.json` (commit the result). |
 | `make i18n-test` | Run the codegen unit tests (`test_i18n.py`). |
 
-Staleness is guarded automatically, not by a manual make target: the Android Gradle `checkI18nGenerated`
-task runs `tools/i18n/check.py` on `preBuild`, so Android Studio / archive / `assemble` builds cannot
-link stale output. iOS has no equivalent preBuild guard, so `release-helper` runs `make i18n` at release
-time to guarantee the committed xcstrings are fresh.
+Staleness is guarded automatically, not by a manual make target:
+
+- **Android** — the Gradle `checkI18nGenerated` task runs `tools/i18n/check.py` on `preBuild`, so
+  Android Studio / archive / `assemble` builds cannot link stale output.
+- **macOS** — `macos/Makefile`'s `i18n-check` is a prerequisite of `build` and `test`, and
+  `macos/scripts/bundle-app.sh` runs the same check itself (it invokes its own `swift build`, so
+  `make bundle` / `make install` / calling the script directly are all gated).
+- **iOS** — no equivalent preBuild guard, so `release-helper` runs `make i18n` at release time to
+  guarantee the committed xcstrings are fresh.
 
 ## Generated artifacts (Android, R2a-1)
 
@@ -32,6 +37,18 @@ time to guarantee the committed xcstrings are fresh.
 - `StringKey.swift` and `StringResolverFormats.swift` — typed keys and format accessors shared by the
   native-bundle and generated-map resolver paths.
 
+## Generated artifacts (macOS)
+
+- `macos/Sources/TaigiInputMethodCore/Strings/Generated/` — `StringKey.swift`, `GeneratedStrings.swift`
+  (**all five** production languages), `StringResolverFormats.swift`.
+- macOS maps every language rather than splitting catalog + map like iOS: the input method is a
+  hand-assembled SwiftPM bundle installed to `~/Library/Input Methods`, so the App Store constraint
+  that forbids `.lproj` directories for product display languages does not apply, and the package
+  declares no resources at all. Storage differs; resolution behavior does not (see
+  `docs/architecture/behavioral-invariants.md` §37).
+- A Swift platform scoped to zero keys is rejected by `make i18n` / `check.py`: `enum StringKey: String {}`
+  is not legal Swift, so an empty scope would emit a package that cannot compile.
+
 ## Source schema
 
 ```jsonc
@@ -40,7 +57,7 @@ time to guarantee the committed xcstrings are fresh.
   "keys": {
     "inputMode": {
       "comment": "translator context",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
       "placeholders": { "count": "int" },   // optional; named {count}, never %d
       "values": {
         "hanji": "輸入模式",                 // required base language
@@ -59,7 +76,9 @@ Rules enforced by the generator (the lint config disables `MissingTranslation`, 
 the generator's job):
 
 - Duplicate JSON keys are rejected (not silently last-wins).
-- `scope.platforms` ⊆ {ios, android}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
+- `scope.platforms` ⊆ {ios, android, macos}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
+  A key reaches only the platforms it is scoped to; adding a platform to an existing key's scope is
+  byte-neutral for the artifacts of the other platforms.
 - Every key must define the base language (`hanji`).
 - **Production completeness**: every key must author all user-selectable production languages
   (`hanji`, `en`, `ja`, `tailo`, `poj` — mirrors the platform `DisplayLanguage.productionLanguages`

@@ -424,7 +424,8 @@
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -1359,7 +1360,8 @@
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "macos"
         ],
         "surfaces": [
           "host"

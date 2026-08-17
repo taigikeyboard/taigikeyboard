@@ -1,12 +1,19 @@
 --swiftversion 6.1.2
 
 # Excludes
-#   ios/Sources/TaigiKeyboard/Engine/Generated  protobuf-generated *.pb.swift
-#   ios/RustEngine                              swift-bridge FFI shim + xcframework
-#   macos/… same two shapes for the macOS input method
+#   ios/Sources/TaigiKeyboard/Engine/Generated   protobuf-generated *.pb.swift
+#   ios/Sources/TaigiKeyboard/Strings/Generated  tools/i18n codegen output
+#   ios/RustEngine                               swift-bridge FFI shim + xcframework
+#   macos/… same three shapes for the macOS input method
+#
+# The Strings/Generated pair is not cosmetic: tools/i18n/check.py compares those files byte-for-byte
+# against what the generator produces, so formatting them makes the tree permanently stale until the
+# next `make i18n`. Codegen owns their layout; the formatter must not.
 --exclude ios/Sources/TaigiKeyboard/Engine/Generated
+--exclude ios/Sources/TaigiKeyboard/Strings/Generated
 --exclude ios/RustEngine
 --exclude macos/Sources/TaigiInputMethodCore/Engine/Generated
+--exclude macos/Sources/TaigiInputMethodCore/Strings/Generated
 --exclude macos/RustEngine
 --exclude macos/.build
 --exclude ios/build

@@ -32,7 +32,7 @@ GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 # or let a shipped one render incomplete.
 PRODUCTION_LANGUAGES = ("hanji", "en", "ja", "tailo", "poj")
 
-VALID_PLATFORMS = {"ios", "android"}
+VALID_PLATFORMS = {"ios", "android", "macos"}
 VALID_SURFACES = {"host", "extension"}
 VALID_VALUE_LANGUAGES = {"hanji", "tailo", "poj", "ja", "en"}
 
@@ -56,15 +56,40 @@ BCP47_HANJI = "nan-Hant-TW"
 # iOS packages only App-Store-recognized native localizations. Hanji/TL/POJ are product display
 # languages, not OS bundle locales, and resolve through GeneratedTaigiStrings.swift instead.
 IOS_NATIVE_LANGUAGES = {"en": "en", "ja": "ja"}
-IOS_GENERATED_MAP_LANGUAGES = ("hanji", "tailo", "poj")
 XCSTRINGS_SOURCE_LANGUAGE = "en"
 
-# DisplayLanguage enum case for English, per platform — the only count-inflecting display language, so
+# macOS output locations. The input method is a SwiftPM package assembled by scripts/bundle-app.sh
+# and installed to ~/Library/Input Methods, so the App Store constraint that splits iOS into
+# catalog + map does not apply: ALL FIVE production languages are generated maps and the package
+# needs no resource bundle. Behavior (Hanji fallback, `.system` never resolving) stays identical
+# across the three platforms — only the storage mechanism differs (intentional divergence).
+MACOS_STRINGS_DIR = "macos/Sources/TaigiInputMethodCore/Strings"
+MACOS_GEN_DIR = f"{MACOS_STRINGS_DIR}/Generated"
+
+# Value-language key -> Swift `DisplayLanguage` case. The generated maps index by enum case, not by
+# tag, and two names differ from their tag (`ja`/`en`) — so this is the ONE place that mapping lives.
+# MIRROR: must equal the cases in ios/.../Strings/DisplayLanguage.swift and
+# macos/.../Strings/DisplayLanguage.swift.
+SWIFT_LANGUAGE_CASES = {"hanji": "hanji", "tailo": "tailo", "poj": "poj", "ja": "japanese", "en": "english"}
+
+# `.system` is a selection policy with no authored strings, so it is never a map key — but every
+# generated `lookup` must still answer for it (with nil), which is why it is named separately here.
+SWIFT_SYSTEM_CASE = "system"
+
+# Which languages each Swift target keeps in a generated map, as (value-language, enum case) pairs.
+# iOS maps only the three with no OS locale; macOS maps the whole production roster (no catalog).
+# Derived from PRODUCTION_LANGUAGES so promoting a sixth language cannot silently skip the macOS map —
+# it would otherwise resolve to the Hanji fallback at runtime with every gate still green.
+IOS_MAP_LANGUAGES = tuple((lang, SWIFT_LANGUAGE_CASES[lang]) for lang in ("hanji", "tailo", "poj"))
+MACOS_MAP_LANGUAGES = tuple((lang, SWIFT_LANGUAGE_CASES[lang]) for lang in PRODUCTION_LANGUAGES)
+
+# DisplayLanguage enum case for English, per language — the only count-inflecting display language, so
 # the plural-aware typed accessor branches on it alone (`displayLanguage == DisplayLanguage.ENGLISH` /
-# `language == .english`). MIRROR: must equal the enum case in the matching DisplayLanguage source —
-# android/.../i18n/DisplayLanguage.kt and ios/.../Strings/DisplayLanguage.swift; drift breaks the branch.
+# `language == .english`). MIRROR: must equal the enum case in every matching DisplayLanguage source —
+# android/.../i18n/DisplayLanguage.kt, ios/.../Strings/DisplayLanguage.swift, and
+# macos/.../Strings/DisplayLanguage.swift; drift breaks the branch.
 ANDROID_ENGLISH_ENUM = "ENGLISH"
-IOS_ENGLISH_ENUM = "english"
+SWIFT_ENGLISH_ENUM = SWIFT_LANGUAGE_CASES["en"]
 
 # Languages resolved via native Android resource dirs (plan D2). hanji -> default values/ (always
 # emitted); en/ja -> language-qualified dirs, emitted only once a key actually carries that value.
@@ -86,15 +111,17 @@ IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 # extension point — adding a type propagates to both the typed accessor signature and the emitted
 # format spec on every platform. Facets per target:
 #   param — accessor signature type (Kotlin / Swift).
-#   conv  — printf conversion char. Android `%d` (Java int); iOS `%lld` because Swift Int is 64-bit
+#   conv  — printf conversion char. Kotlin `%d` (Java int); Swift `%lld` because Swift Int is 64-bit
 #           and Apple's `%d` is 32-bit, so the unsuffixed spec would truncate large counts (Codex Q8.1).
-#   cast  — (iOS only) expression wrapping the arg before String(format:) to match its conv char.
-#           Android needs no cast (`%d` takes Int directly).
+#   cast  — (Swift only) expression wrapping the arg before String(format:) to match its conv char.
+#           Kotlin needs no cast (`%d` takes Int directly).
+# Keyed by LANGUAGE, not by platform: `%lld` + an `Int64` cast is a property of Foundation's
+# `String(format:)`, so iOS and macOS share the `swift` facet rather than declaring one each.
 # Only `int` is needed today (every format arg is a count).
 PLACEHOLDER_TYPES = {
     "int": {
-        "android": {"param": "Int", "conv": "d"},
-        "ios": {"param": "Int", "conv": "lld", "cast": "Int64"},
+        "kotlin": {"param": "Int", "conv": "d"},
+        "swift": {"param": "Int", "conv": "lld", "cast": "Int64"},
     },
 }
 
@@ -511,6 +538,20 @@ def validate_production_completeness(entries) -> None:
             )
 
 
+def validate_swift_platform_has_keys(entries, platform: str) -> None:
+    # A raw-value enum with no cases is not legal Swift ("an enum with no cases cannot declare a raw
+    # type"), so a Swift platform scoped to zero keys would emit a StringKey.swift that does not
+    # compile — and the hand-written StringResolver, which reads `key.rawValue`, would fail with it.
+    # Fail here with the cause instead, naming the fix. Like validate_production_completeness this is a
+    # property of the FULL real source set, enforced at the CLI boundary only: unit fixtures scope keys
+    # to one platform at a time on purpose, and nothing compiles their output.
+    if not entries:
+        raise ValueError(
+            f"no key is scoped to {platform!r} — the generated Swift StringKey enum would have no "
+            f"cases, which cannot declare a raw type; scope at least one key to {platform!r}"
+        )
+
+
 def _collect_entries(repo_root: Path):
     # Returns an ordered list of (namespace, key, entry) across all i18n/*.json sources.
     src_dir = repo_root / "i18n"
@@ -530,7 +571,7 @@ def _emit_strings_xml(entries, lang: str) -> str:
     for namespace, key, entry in entries:
         if lang not in entry["values"]:
             continue
-        value = _finalize_value(entry["values"][lang], xml_escape, entry, "android")
+        value = _finalize_value(entry["values"][lang], xml_escape, entry, "kotlin")
         lines.append(f'    <string name="{res_name(namespace, key)}">{value}</string>')
     lines.append("</resources>")
     return "\n".join(lines) + "\n"
@@ -574,7 +615,7 @@ def _emit_taigi_map(entries) -> str:
             lines.append(f"    private val {lang}: Map<StringKey, String> =")
             lines.append("        mapOf(")
             for namespace, key, entry in pairs:
-                value = _finalize_value(entry["values"][lang], kotlin_escape, entry, "android")
+                value = _finalize_value(entry["values"][lang], kotlin_escape, entry, "kotlin")
                 lines.append(f'            StringKey.{string_key_const(namespace, key)} to "{value}",')
             lines.append("        )")
         else:
@@ -696,7 +737,7 @@ def _emit_string_resolver_formats(entries) -> str:
     for namespace, key, entry, plural_langs in fmt_entries:
         order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
         declared = entry["placeholders"]
-        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['android']['param']}" for name in order)
+        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['kotlin']['param']}" for name in order)
         args = ", ".join(order)
         accessor = l10n_accessor(namespace, key)
         const = string_key_const(namespace, key)
@@ -709,7 +750,7 @@ def _emit_string_resolver_formats(entries) -> str:
         # other language renders the native-resource `other` fallback via formatString.
         _lang, nodes = plural_langs[0]
         parts = _plural_template_parts(
-            nodes, order, declared, "android", kotlin_escape, lambda n, o, t: f"(if ({n} == 1) {o} else {t})"
+            nodes, order, declared, "kotlin", kotlin_escape, lambda n, o, t: f"(if ({n} == 1) {o} else {t})"
         )
         template_expr = " +\n                ".join(parts)
         lines.extend(
@@ -729,11 +770,11 @@ def _emit_string_resolver_formats(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
-# --- iOS emitters -----------------------------------------------------------
+# --- Swift emitters (iOS + macOS) -------------------------------------------
 
 
-def _ios_format_arg(ptype: str, name: str) -> str:
-    cast = PLACEHOLDER_TYPES[ptype]["ios"]["cast"]
+def _swift_format_arg(ptype: str, name: str) -> str:
+    cast = PLACEHOLDER_TYPES[ptype]["swift"]["cast"]
     return f"{cast}({name})" if cast else name
 
 
@@ -750,7 +791,7 @@ def _emit_xcstrings(entries) -> str:
             if lang not in entry["values"]:
                 continue
             text = entry["values"][lang]
-            value = _finalize_value(text, _json_identity, entry, "ios")
+            value = _finalize_value(text, _json_identity, entry, "swift")
             localizations[bcp47] = {"stringUnit": {"state": "translated", "value": value}}
         unit = {"extractionState": "manual", "localizations": localizations}
         comment = entry.get("comment")
@@ -761,32 +802,35 @@ def _emit_xcstrings(entries) -> str:
     return json.dumps(catalog, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 
 
-def _emit_ios_taigi_map(entries) -> str:
-    lines = [
-        f"// {GENERATED_HEADER}",
-        "",
-        "/// Hanji/TL/POJ display strings. These are product languages, not Apple bundle locales.",
-        "enum GeneratedTaigiStrings {",
+def _emit_swift_strings_map(entries, *, enum_name: str, doc: tuple, map_languages: tuple) -> str:
+    # One map per mapped language plus a `lookup` covering EVERY DisplayLanguage case. The cases this
+    # target does not map answer nil: on iOS that is `.system` + the two the String Catalog owns; on
+    # macOS only `.system`, which has no authored strings anywhere and is the second guard behind
+    # StringResolver's assertion that it never reaches a resolver.
+    mapped_cases = [case for _lang, case in map_languages]
+    unmapped_cases = [SWIFT_SYSTEM_CASE] + [
+        case for case in SWIFT_LANGUAGE_CASES.values() if case not in mapped_cases
     ]
-    for lang in IOS_GENERATED_MAP_LANGUAGES:
+    lines = [f"// {GENERATED_HEADER}", "", *doc, f"enum {enum_name} {{"]
+    for lang, case in map_languages:
         pairs = [(namespace, key, entry) for namespace, key, entry in entries if lang in entry["values"]]
         if pairs:
-            lines.append(f"    private static let {lang}: [StringKey: String] = [")
+            lines.append(f"    private static let {case}: [StringKey: String] = [")
             for namespace, key, entry in pairs:
-                value = _finalize_value(entry["values"][lang], swift_escape, entry, "ios")
+                value = _finalize_value(entry["values"][lang], swift_escape, entry, "swift")
                 lines.append(f'        .{l10n_accessor(namespace, key)}: "{value}",')
             lines.append("    ]")
         else:
-            lines.append(f"    private static let {lang}: [StringKey: String] = [:]")
+            lines.append(f"    private static let {case}: [StringKey: String] = [:]")
     lines.extend(
         [
             "",
             "    static func lookup(_ language: DisplayLanguage, _ key: StringKey) -> String? {",
             "        switch language {",
-            "        case .hanji: hanji[key]",
-            "        case .tailo: tailo[key]",
-            "        case .poj: poj[key]",
-            "        case .system, .japanese, .english: nil",
+        ]
+        + [f"        case .{case}: {case}[key]" for case in mapped_cases]
+        + [
+            "        case " + ", ".join(f".{case}" for case in unmapped_cases) + ": nil",
             "        }",
             "    }",
             "}",
@@ -795,11 +839,11 @@ def _emit_ios_taigi_map(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _emit_ios_string_key(entries) -> str:
+def _emit_swift_string_key(entries, *, doc: tuple) -> str:
     lines = [
         f"// {GENERATED_HEADER}",
         "",
-        "/// Typed key for every iOS i18n string. The raw value is the String Catalog key.",
+        *doc,
         "enum StringKey: String {",
     ]
     for namespace, key, _entry in entries:
@@ -808,10 +852,12 @@ def _emit_ios_string_key(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _emit_ios_formats(entries) -> str:
+def _emit_swift_formats(entries, *, plural_fallback_source: str) -> str:
     # Typed format accessors on StringResolver — one per placeholder-bearing key, args in canonical
     # (base-text first-appearance) order, each cast to match the %lld spec. The raw template never
     # reaches a call site; `format(_:_:)` is the hand-written variadic helper in StringResolver.swift.
+    # Shared by both Swift targets: `plural_fallback_source` names where each platform's non-English
+    # `other` arm is stored (iOS: the String Catalog; macOS: the generated map).
     fmt_entries = [
         (namespace, key, entry, _plural_languages(entry))
         for namespace, key, entry in entries
@@ -825,8 +871,10 @@ def _emit_ios_formats(entries) -> str:
     for index, (namespace, key, entry, plural_langs) in enumerate(fmt_entries):
         order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
         declared = entry["placeholders"]
-        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['ios']['param']}" for name in order)
-        args = ", ".join(_ios_format_arg(declared[name], name) for name in order)
+        params = ", ".join(
+            f"{name}: {PLACEHOLDER_TYPES[declared[name]]['swift']['param']}" for name in order
+        )
+        args = ", ".join(_swift_format_arg(declared[name], name) for name in order)
         accessor = l10n_accessor(namespace, key)
         if index:
             lines.append("")
@@ -836,17 +884,22 @@ def _emit_ios_formats(entries) -> str:
             lines.append("    }")
             continue
         # Only English is plural-bearing (enforced above); its arms are selected at runtime, every
-        # other language renders the catalog `other` fallback via format(_:_:).
+        # other language renders the stored `other` fallback via format(_:_:).
         _lang, nodes = plural_langs[0]
         parts = _plural_template_parts(
-            nodes, order, declared, "ios", swift_escape, lambda n, o, t: f"({n} == 1 ? {o} : {t})"
+            nodes,
+            order,
+            declared,
+            "swift",
+            swift_escape,
+            lambda n, o, t: f"({n} == 1 ? {o} : {t})",
         )
         template_expr = "\n                + ".join(parts)
         lines.extend(
             [
                 f"    func {accessor}({params}) -> String {{",
-                f"        if language == .{IOS_ENGLISH_ENUM} {{",
-                "            // CLDR en plural: category 'one' iff n == 1; the catalog holds the 'other' fallback.",
+                f"        if language == .{SWIFT_ENGLISH_ENUM} {{",
+                f"            // CLDR en plural: category 'one' iff n == 1; {plural_fallback_source} holds the 'other' fallback.",
                 "            return formatTemplate(",
                 f"                {template_expr},",
                 f"                {args}",
@@ -888,8 +941,42 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     # iOS artifacts cover only ios-scoped keys. English/Japanese use native .lproj bundles;
     # Hanji/TL/POJ use a generated Swift map because App Store Connect rejects their bundle tags.
     ios_entries = [item for item in all_entries if "ios" in item[2]["scope"]["platforms"]]
+    if enforce_production_completeness:
+        validate_swift_platform_has_keys(ios_entries, "ios")
     outputs[IOS_XCSTRINGS] = _emit_xcstrings(ios_entries)
-    outputs[f"{IOS_GEN_DIR}/StringKey.swift"] = _emit_ios_string_key(ios_entries)
-    outputs[f"{IOS_GEN_DIR}/GeneratedTaigiStrings.swift"] = _emit_ios_taigi_map(ios_entries)
-    outputs[f"{IOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_ios_formats(ios_entries)
+    outputs[f"{IOS_GEN_DIR}/StringKey.swift"] = _emit_swift_string_key(
+        ios_entries,
+        doc=("/// Typed key for every iOS i18n string. The raw value is the String Catalog key.",),
+    )
+    outputs[f"{IOS_GEN_DIR}/GeneratedTaigiStrings.swift"] = _emit_swift_strings_map(
+        ios_entries,
+        enum_name="GeneratedTaigiStrings",
+        doc=("/// Hanji/TL/POJ display strings. These are product languages, not Apple bundle locales.",),
+        map_languages=IOS_MAP_LANGUAGES,
+    )
+    outputs[f"{IOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_swift_formats(
+        ios_entries, plural_fallback_source="the catalog"
+    )
+
+    # macOS artifacts cover only macos-scoped keys. Every production language is a generated map —
+    # the package has no resource bundle at all — so there is no catalog counterpart to emit.
+    macos_entries = [item for item in all_entries if "macos" in item[2]["scope"]["platforms"]]
+    if enforce_production_completeness:
+        validate_swift_platform_has_keys(macos_entries, "macos")
+    outputs[f"{MACOS_GEN_DIR}/StringKey.swift"] = _emit_swift_string_key(
+        macos_entries,
+        doc=("/// Typed key for every macOS i18n string. The raw value is the shared cross-platform key name.",),
+    )
+    outputs[f"{MACOS_GEN_DIR}/GeneratedStrings.swift"] = _emit_swift_strings_map(
+        macos_entries,
+        enum_name="GeneratedStrings",
+        doc=(
+            "/// Display strings for every production language. macOS ships no string catalog, so English",
+            "/// and Japanese live here alongside Hanji/TL/POJ instead of in `.lproj` bundles.",
+        ),
+        map_languages=MACOS_MAP_LANGUAGES,
+    )
+    outputs[f"{MACOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_swift_formats(
+        macos_entries, plural_fallback_source="the generated map"
+    )
     return outputs

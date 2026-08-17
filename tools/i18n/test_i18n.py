@@ -243,9 +243,12 @@ class BuildOutputsTest(unittest.TestCase):
 
 class GeneratedMapCompletenessTest(unittest.TestCase):
     def _build(self, values: dict) -> None:
+        # Scoped to every platform because the production flag models the REAL source set, which each
+        # platform draws from — a Swift platform scoped to nothing fails its own gate first and would
+        # mask the language-completeness error these cases are about.
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            _write_namespace(repo, "probe", {"k": _ios_key(values)})
+            _write_namespace(repo, "probe", {"k": _all_platform_key(values)})
             build_outputs(repo, enforce_production_completeness=True)
 
     def test_tailo_without_poj_rejected(self):
@@ -359,12 +362,16 @@ def _ios_key(values: dict, placeholders: dict | None = None, comment: str | None
     return entry
 
 
+def _build_probe_outputs(keys, namespace="probe") -> dict:
+    """Generate every artifact from one throwaway namespace — the shape every emitter test needs."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        _write_namespace(repo, namespace, keys)
+        return build_outputs(repo)
+
+
 class IOSEmitTest(unittest.TestCase):
-    def _outputs(self, keys, namespace="probe"):
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            _write_namespace(repo, namespace, keys)
-            return build_outputs(repo)
+    _outputs = staticmethod(_build_probe_outputs)
 
     def test_xcstrings_source_language_is_native_english(self):
         catalog = json.loads(
@@ -424,6 +431,150 @@ class IOSEmitTest(unittest.TestCase):
         formats = self._outputs({"k": _ios_key({"hanji": "字"})})[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"]
         self.assertIn("No format-arg keys", formats)
         self.assertNotIn("extension StringResolver", formats)
+
+
+def _all_platform_key(values: dict, placeholders: dict | None = None) -> dict:
+    entry = {"scope": {"platforms": ["android", "ios", "macos"], "surfaces": ["host"]}, "values": values}
+    if placeholders is not None:
+        entry["placeholders"] = placeholders
+    return entry
+
+
+class MacOSEmitTest(unittest.TestCase):
+    _outputs = staticmethod(_build_probe_outputs)
+
+    def test_valid_platforms_roster(self):
+        # The scope vocabulary is the platform roster; a fourth platform must be added here first.
+        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos"})
+
+    def test_map_carries_every_production_language(self):
+        # The whole point of the macOS shape: en/ja resolve from the generated map too, because the
+        # package ships no string catalog and no .lproj bundles. Every language gets a DISTINCT
+        # sentinel so a map wired to the wrong language cannot pass.
+        outputs = self._outputs(
+            {
+                "k": _all_platform_key(
+                    {"hanji": "字", "tailo": "jī-tailo", "poj": "jī-poj", "en": "Word", "ja": "文字"},
+                )
+            },
+        )
+        macos_map = outputs[f"{i18n_lib.MACOS_GEN_DIR}/GeneratedStrings.swift"]
+        for case, value in (
+            ("hanji", "字"),
+            ("tailo", "jī-tailo"),
+            ("poj", "jī-poj"),
+            ("japanese", "文字"),
+            ("english", "Word"),
+        ):
+            # Assert the value sits under ITS OWN map, not merely somewhere in the file.
+            declaration = f"    private static let {case}: [StringKey: String] = [\n"
+            self.assertIn(declaration, macos_map)
+            body = macos_map.split(declaration, 1)[1].split("    ]", 1)[0]
+            self.assertIn(f'.probeK: "{value}",', body)
+            self.assertIn(f"        case .{case}: {case}[key]", macos_map)
+        # `.system` is a selection policy with no strings — the lookup must not answer for it.
+        self.assertIn("case .system: nil", macos_map)
+
+    def test_map_language_roster_is_derived_from_the_production_roster(self):
+        # Promoting a sixth production language must reach the macOS map automatically: a hand-kept
+        # second roster would leave that language resolving to the Hanji fallback with every gate green.
+        self.assertEqual([lang for lang, _case in i18n_lib.MACOS_MAP_LANGUAGES], list(PRODUCTION_LANGUAGES))
+
+    def test_map_emits_empty_dictionary_for_an_unauthored_language(self):
+        macos_map = self._outputs({"k": _all_platform_key({"hanji": "字"})})[
+            f"{i18n_lib.MACOS_GEN_DIR}/GeneratedStrings.swift"
+        ]
+        self.assertIn("private static let english: [StringKey: String] = [:]", macos_map)
+
+    def test_scope_filtering_is_three_way(self):
+        outputs = self._outputs(
+            {
+                "shared": _all_platform_key({"hanji": "共用"}),
+                "macosOnly": {"scope": {"platforms": ["macos"], "surfaces": ["host"]}, "values": {"hanji": "M"}},
+                "iosOnly": {"scope": {"platforms": ["ios"], "surfaces": ["host"]}, "values": {"hanji": "I"}},
+                "androidOnly": {"scope": {"platforms": ["android"], "surfaces": ["host"]}, "values": {"hanji": "A"}},
+            },
+        )
+        macos_keys = outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringKey.swift"]
+        ios_keys = outputs[f"{i18n_lib.IOS_GEN_DIR}/StringKey.swift"]
+        android_xml = outputs[f"{i18n_lib.ANDROID_RES_ROOT}/values/strings_i18n.xml"]
+
+        self.assertIn("probeShared", macos_keys)
+        self.assertIn("probeMacosOnly", macos_keys)
+        self.assertNotIn("probeIosOnly", macos_keys)
+        self.assertNotIn("probeAndroidOnly", macos_keys)
+
+        self.assertIn("probeIosOnly", ios_keys)
+        self.assertNotIn("probeMacosOnly", ios_keys)
+
+        self.assertIn("i18n_probe_shared", android_xml)
+        self.assertNotIn("i18n_probe_macosOnly", android_xml)
+
+    def test_adding_macos_scope_leaves_ios_and_android_artifacts_byte_identical(self):
+        # Scoping an existing key to macOS must be additive: the guarantee that lets PR-by-PR macOS
+        # adoption never touch a shipped iOS or Android string.
+        keys = {"k": _ios_key({"hanji": "字", "en": "Word"})}
+        before = self._outputs(keys)
+        after = self._outputs({"k": _all_platform_key({"hanji": "字", "en": "Word"})})
+        for path, content in before.items():
+            if path.startswith(i18n_lib.MACOS_GEN_DIR):
+                continue  # the macOS artifacts are exactly what the added scope is supposed to change
+            self.assertEqual(after[path], content, path)
+
+    def test_format_accessor_reuses_the_swift_facet(self):
+        # IOSEmitTest already pins the %lld + Int64 lowering itself; the macOS delta is that the SAME
+        # facet reaches the macOS artifacts rather than Android's %d.
+        outputs = self._outputs(
+            {
+                "imp": _all_platform_key(
+                    {"hanji": "{imported} ok {skipped}"},
+                    placeholders={"imported": "int", "skipped": "int"},
+                )
+            },
+        )
+        self.assertIn('.probeImp: "%1$lld ok %2$lld"', outputs[f"{i18n_lib.MACOS_GEN_DIR}/GeneratedStrings.swift"])
+        self.assertIn(
+            "format(.probeImp, Int64(imported), Int64(skipped))",
+            outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringResolverFormats.swift"],
+        )
+
+    def test_plural_accessor_names_the_generated_map_as_the_fallback_source(self):
+        # Same runtime arm-selection as iOS, but the comment must not claim a catalog macOS has not got.
+        entry = {
+            "scope": {"platforms": ["ios", "macos"], "surfaces": ["host"]},
+            "values": _PLURAL_VALUES,
+            "placeholders": _PLURAL_PLACEHOLDERS,
+        }
+        outputs = self._outputs({"imp": entry})
+        macos_formats = outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringResolverFormats.swift"]
+        self.assertIn("customDict == 1 ?", macos_formats)
+        self.assertIn("the generated map holds the 'other' fallback", macos_formats)
+        self.assertIn("the catalog holds the 'other' fallback", outputs[f"{i18n_lib.IOS_GEN_DIR}/StringResolverFormats.swift"])
+
+    def test_no_macos_keys_still_emits_the_same_file_set(self):
+        # The artifact LIST must not depend on how keys are scoped — check.py compares a fixed set of
+        # paths, so a platform dropping out of the map would silently stop being gated. What those
+        # files contain when the scope is empty is a separate contract; see the production gate below.
+        scoped = set(self._outputs({"k": _all_platform_key({"hanji": "字"})}))
+        unscoped = set(self._outputs({"k": _ios_key({"hanji": "字"})}))
+        self.assertEqual(scoped, unscoped)
+        self.assertIn(f"{i18n_lib.MACOS_GEN_DIR}/StringKey.swift", unscoped)
+
+    def test_production_build_rejects_a_swift_platform_with_no_keys(self):
+        # `enum StringKey: String {}` is not legal Swift ("an enum with no cases cannot declare a raw
+        # type"), so an empty Swift scope would emit a package that cannot compile. Fail at generate
+        # time, naming the cause. Unit fixtures scope keys to one platform at a time on purpose, so
+        # this fires only under the production flag the real CLI passes.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "probe",
+                {"k": _android_key({lang: "x" for lang in PRODUCTION_LANGUAGES})},
+            )
+            with self.assertRaises(ValueError) as ctx:
+                build_outputs(repo, enforce_production_completeness=True)
+            self.assertIn("no key is scoped to 'ios'", str(ctx.exception))
 
 
 class GlobalValidationTest(unittest.TestCase):

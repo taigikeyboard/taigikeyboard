@@ -13,10 +13,12 @@ import SwiftUI
 /// from the store's descriptors, so the form and the engine cannot disagree
 /// about either.
 ///
-/// The labels are Traditional-Chinese string literals, which SwiftUI reads as
-/// localization keys: this package has no string catalog, so they render as
-/// written, and adding one later needs no change here. macOS is not part of the
-/// `i18n/` pipeline the iOS and Android apps are built from.
+/// The labels here are still Traditional-Chinese string literals, which SwiftUI
+/// reads as localization keys: this package has no string catalog, so they
+/// render as written. macOS now generates its strings from the shared `i18n/`
+/// sources (`Strings/Generated`), but this view has not been migrated onto the
+/// resolver yet — until it is, its text does not follow the display-language
+/// picker.
 struct GeneralSettingsView: View {
     /// The form is a fixed-width column of controls — widening it would only
     /// add empty space. Read by `SettingsTabViewController` as this tab's
