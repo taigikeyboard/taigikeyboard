@@ -137,6 +137,33 @@ final class SQLiteConnection: @unchecked Sendable {
         try query(sql, bindings) { $0.integer(0) }.first
     }
 
+    /// Runs `body` inside `BEGIN IMMEDIATE`, rolling back anything it started
+    /// if it throws.
+    ///
+    /// `IMMEDIATE` rather than a deferred `BEGIN`: the write lock is taken up
+    /// front, so a check inside the transaction cannot be read while another
+    /// writer is between its own check and its insert.
+    ///
+    /// The `COMMIT` is inside the `do`: a failing COMMIT leaves the transaction
+    /// open, and every later `BEGIN IMMEDIATE` would then fail against it — one
+    /// bad commit would take the store out for the rest of the process's life.
+    @discardableResult
+    func withImmediateTransaction<Result>(_ body: () throws -> Result) throws -> Result {
+        try execute("BEGIN IMMEDIATE;")
+        do {
+            let result = try body()
+            try execute("COMMIT;")
+            return result
+        } catch {
+            // Best-effort, and harmless when no transaction is active: the
+            // alternative is asking SQLite whether one is, which answers the
+            // same question twice, and a rollback that itself fails leaves the
+            // error that caused it as the one worth reporting.
+            try? execute("ROLLBACK;")
+            throw error
+        }
+    }
+
     /// `PRAGMA user_version`, which is how each store records the shape it
     /// created. Not parameterizable — SQLite takes the value as a literal — so
     /// the setter is deliberately `Int32` rather than a string.

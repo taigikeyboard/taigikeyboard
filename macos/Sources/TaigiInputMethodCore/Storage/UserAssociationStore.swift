@@ -38,14 +38,14 @@ final class UserAssociationStore: @unchecked Sendable {
     /// divergence.
     private static let schemaVersion: Int32 = 6
 
-    private let database: LearningDatabase
+    private let database: UserDataDatabase
 
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// ios/Sources/TaigiKeyboard/NextWord/Services/NextWordService.swift:31-33.
     private let capacity = LearningCapacity(table: tableName, maxRows: 50000, deleteBatch: 5000)
 
     init(directory: @escaping @Sendable () throws -> URL) {
-        database = LearningDatabase(
+        database = UserDataDatabase(
             fileName: "user_association.db",
             name: "UserAssociationStore",
             directory: directory,
@@ -75,8 +75,7 @@ final class UserAssociationStore: @unchecked Sendable {
         let shouldCheckCapacity = capacity.shouldEnforce(after: recordable.count)
 
         database.write { connection in
-            try connection.execute("BEGIN IMMEDIATE;")
-            do {
+            try connection.withImmediateTransaction {
                 for pair in recordable {
                     try connection.run(
                         """
@@ -98,42 +97,121 @@ final class UserAssociationStore: @unchecked Sendable {
                 if shouldCheckCapacity {
                     try self.capacity.enforce(connection)
                 }
-                // Inside the `do`: a failing COMMIT leaves the transaction open,
-                // and every later `BEGIN IMMEDIATE` would then fail against it —
-                // one bad commit would take the store out for the rest of the
-                // process's life.
-                try connection.execute("COMMIT;")
-            } catch {
-                // Harmless when no transaction is active; the alternative is
-                // asking SQLite whether one is, which answers the same question
-                // twice.
-                try? connection.execute("ROLLBACK;")
-                throw error
             }
         }
     }
 
-    /// Every learned row with its count, most-used first. Nothing in the
-    /// shipped input method calls this — it exists so the store's writes are
-    /// provable by test rather than only by inspecting the file by hand.
+    /// Every learned row with its count, most-used first. Synchronous, and the
+    /// answer is `nil` rather than `[]` when the store could not be read.
+    ///
+    /// Kept alongside the async `rows()` because the tests that prove this
+    /// store's writes run without an `await`, and because a caller inside the
+    /// queue would deadlock on the async one.
     func allRows() -> [AssociationRow]? {
         database.read { connection in
-            try connection.query(
+            try Self.selectAllRows(connection)
+        }
+    }
+
+    // MARK: - User-driven administration
+
+    /// Every learned row, for the viewer and the export.
+    func rows() async throws -> [AssociationRow] {
+        try await database.perform { connection in
+            try Self.selectAllRows(connection)
+        }
+    }
+
+    /// Forgets one bigram. All four identity columns are matched: a bigram is
+    /// keyed on both words AND both readings, so deleting by the two 漢字 alone
+    /// would take out readings the user never asked about.
+    @discardableResult
+    func delete(_ pair: AssociationPair) async throws -> Bool {
+        try await database.perform { connection in
+            let bindings: [SQLiteBinding] = [
+                .text(pair.previous),
+                .text(pair.previousTl),
+                .text(pair.next),
+                .text(pair.nextTl),
+            ]
+            let existed = try connection.scalar(
                 """
-                SELECT prev_word, prev_tl, next_word, next_tl, count FROM \(Self.tableName)
-                ORDER BY count DESC, last_used DESC, prev_word ASC, next_word ASC;
+                SELECT 1 FROM \(Self.tableName)
+                WHERE prev_word = ? AND prev_tl = ? AND next_word = ? AND next_tl = ?
+                LIMIT 1;
                 """,
-            ) { row in
-                AssociationRow(
-                    pair: AssociationPair(
-                        previous: row.text(0),
-                        previousTl: row.text(1),
-                        next: row.text(2),
-                        nextTl: row.text(3),
-                    ),
-                    count: row.integer(4),
-                )
+                bindings,
+            ) != nil
+            try connection.run(
+                """
+                DELETE FROM \(Self.tableName)
+                WHERE prev_word = ? AND prev_tl = ? AND next_word = ? AND next_tl = ?;
+                """,
+                bindings,
+            )
+            return existed
+        }
+    }
+
+    /// Forgets every bigram, and reports how many went.
+    @discardableResult
+    func deleteAll() async throws -> Int {
+        try await database.perform { connection in
+            let existing = try connection.scalar("SELECT COUNT(*) FROM \(Self.tableName);") ?? 0
+            try connection.execute("DELETE FROM \(Self.tableName);")
+            try? connection.execute("VACUUM;")
+            return existing
+        }
+    }
+
+    /// Merges imported counts in, keeping whichever is higher — the same
+    /// merge-by-max rule the frequency store uses, and for the same reason:
+    /// restoring a backup must not walk a learned count backwards.
+    @discardableResult
+    func batchImportMerge(_ rows: [AssociationRow]) async throws -> Int {
+        guard !rows.isEmpty else { return 0 }
+        return try await database.perform { connection in
+            try connection.withImmediateTransaction {
+                for row in rows {
+                    try connection.run(
+                        """
+                        INSERT INTO \(Self.tableName)
+                            (prev_word, prev_tl, next_word, next_tl, count, last_used)
+                        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET
+                            count = MAX(count, excluded.count),
+                            last_used = CURRENT_TIMESTAMP;
+                        """,
+                        [
+                            .text(row.pair.previous),
+                            .text(row.pair.previousTl),
+                            .text(row.pair.next),
+                            .text(row.pair.nextTl),
+                            .integer(row.count),
+                        ],
+                    )
+                }
+                return rows.count
             }
+        }
+    }
+
+    private static func selectAllRows(_ connection: SQLiteConnection) throws -> [AssociationRow] {
+        try connection.query(
+            """
+            SELECT prev_word, prev_tl, next_word, next_tl, count FROM \(tableName)
+            ORDER BY count DESC, last_used DESC, prev_word ASC, next_word ASC;
+            """,
+        ) { row in
+            AssociationRow(
+                pair: AssociationPair(
+                    previous: row.text(0),
+                    previousTl: row.text(1),
+                    next: row.text(2),
+                    nextTl: row.text(3),
+                ),
+                count: row.integer(4),
+            )
         }
     }
 

@@ -7,11 +7,11 @@ import XCTest
 /// case. Real files rather than doubles: everything these types do is SQL, and
 /// the identity rule they exist to enforce lives in a UNIQUE constraint.
 final class LearningStoreTests: XCTestCase {
-    private var stores: LearningStores!
+    private var stores: UserDataStores!
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        stores = try TestFixtures.makeLearningStores()
+        stores = try TestFixtures.makeUserDataStores()
     }
 
     override func tearDown() {

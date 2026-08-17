@@ -61,6 +61,18 @@ struct EngineSettings: Equatable, Sendable {
     /// which defaults it ON.
     let isAssociationRecordingEnabled: Bool
 
+    /// Whether the user's own dictionary contributes candidates. Gates the
+    /// lookup itself, not just the display: with it off nothing is read from
+    /// `custom_dictionary.db` and `FetchAtPos.custom_entries` goes out empty.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:51,
+    /// which defaults it ON.
+    let isCustomDictEnabled: Bool
+
+    /// Which bundled dictionaries the engine may draw candidates from. Reaches
+    /// the engine as `FetchAtPos.enabled_sources_bitmask` after the
+    /// `compute_filters` op resolves it (`RustEngineBridge+Lexicon.swift`).
+    let dictionarySources: DictionarySourceToggles
+
     /// What a fresh install types with. Every value matches the iOS and Android
     /// default for the same setting, so someone using two of the three platforms
     /// gets the same composition and the same candidate order out of the box.
@@ -71,5 +83,7 @@ struct EngineSettings: Equatable, Sendable {
         isLiteralRomanCandidateEnabled: false,
         isFrequencyRecordingEnabled: true,
         isAssociationRecordingEnabled: true,
+        isCustomDictEnabled: true,
+        dictionarySources: .defaults,
     )
 }

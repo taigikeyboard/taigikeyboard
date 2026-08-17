@@ -36,6 +36,7 @@ final class ComposingManager {
 
     private let settingsProvider: EngineSettingsProvider
     private let frequencyStore: UserFrequencyStore
+    private let customDictionaryStore: CustomDictionaryStore
     private let nextWordLearner: NextWordLearner
     private static let logger = DebugLogger(category: "ComposingManager")
 
@@ -58,11 +59,13 @@ final class ComposingManager {
     init(
         settingsProvider: EngineSettingsProvider,
         frequencyStore: UserFrequencyStore,
+        customDictionaryStore: CustomDictionaryStore,
         nextWordLearner: NextWordLearner,
         startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider
         self.frequencyStore = frequencyStore
+        self.customDictionaryStore = customDictionaryStore
         self.nextWordLearner = nextWordLearner
         currentGeneration = startingGeneration
     }
@@ -234,10 +237,20 @@ final class ComposingManager {
     func fetchCandidates() -> CandidateFetchOutcome {
         let settings = settingsProvider.current
         let generation = currentGeneration
+        // Resolved once from this one snapshot and handed to both phases. The
+        // source toggles and the custom-dictionary matches both change what
+        // the engine may return, so letting the two phases resolve them
+        // separately would let a settings change land between them and rank
+        // half a composition under each set of rules.
+        let enabledSourcesBitmask = RustEngineBridge
+            .enabledSourcesBitmask(for: settings.dictionarySources)
+        let customEntries = customDictionaryMatches(settings: settings)
 
         guard let neutral = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: generation,
+            enabledSourcesBitmask: enabledSourcesBitmask,
+            customEntries: customEntries,
         ) else { return .unavailable }
 
         guard let neutralCandidates = neutral.candidates else {
@@ -257,6 +270,8 @@ final class ComposingManager {
             generation: generation,
             frequencyRows: rows,
             nowMs: Self.nowMs(),
+            enabledSourcesBitmask: enabledSourcesBitmask,
+            customEntries: customEntries,
         ) else {
             mirror(neutral.transition)
             return .found(neutralCandidates)
@@ -280,6 +295,20 @@ final class ComposingManager {
 
     private static func nowMs() -> Int64 {
         Int64(Date().timeIntervalSince1970 * 1000)
+    }
+
+    /// The user's own dictionary's matches for what is being typed.
+    ///
+    /// With the setting off nothing is read at all — the gate is on the lookup,
+    /// not on the display, so a disabled custom dictionary costs neither an FFI
+    /// round-trip nor a SQLite read per keystroke.
+    private func customDictionaryMatches(settings: EngineSettings) -> [CustomDictionaryRow] {
+        guard settings.isCustomDictEnabled, !rawInput.isEmpty else { return [] }
+        guard let queryKey = RustEngineBridge.deriveCustomQueryKey(
+            input: rawInput,
+            mode: settings.inputMode,
+        ) else { return [] }
+        return customDictionaryStore.rows(matching: queryKey)
     }
 
     /// What committing `candidate` would write into the document, under the

@@ -2,8 +2,8 @@
 
 import Foundation
 
-/// The queue, the connection and the "is it usable yet" answer that both
-/// learning stores need, in one place.
+/// The queue, the connection and the "is it usable yet" answer that every
+/// user-data store needs, in one place.
 ///
 /// Writes are asynchronous and best-effort. A frequency or association write is
 /// a side effect of a keystroke that has already been rendered — making the
@@ -11,14 +11,14 @@ import Foundation
 /// visible input stall, and losing the last write to a crash costs one
 /// increment of a counter.
 ///
-/// Reads are synchronous, because the one read there is has to answer inside
+/// Reads are synchronous, because the reads there are have to answer inside
 /// the keystroke that asked: the candidate ranking for the composition on
 /// screen cannot be filled in a frame later.
 ///
 /// `@unchecked Sendable` covers `connection` and `isOpen`: the connection is
 /// only ever touched from `queue`, and `isOpen` is guarded by its own lock
 /// because callers on the main actor read it without waiting for the queue.
-final class LearningDatabase: @unchecked Sendable {
+final class UserDataDatabase: @unchecked Sendable {
     private let connection = SQLiteConnection()
     private let queue: DispatchQueue
     private let fileName: String
@@ -102,6 +102,10 @@ final class LearningDatabase: @unchecked Sendable {
     /// Runs a read on the queue and waits for it. `nil` means the store was not
     /// ready or the read threw — never an empty result, so a caller can tell
     /// "nothing learned yet" from "could not look".
+    ///
+    /// Synchronous because its callers are on the keystroke path: the candidate
+    /// ranking for the composition on screen cannot be filled in a frame later.
+    /// Everything the user asks for explicitly goes through `perform` instead.
     func read<Result>(_ body: (SQLiteConnection) throws -> Result) -> Result? {
         guard isReady else { return nil }
         return queue.sync {
@@ -111,6 +115,53 @@ final class LearningDatabase: @unchecked Sendable {
                 logger.error("read failed: \(error)")
                 return nil
             }
+        }
+    }
+
+    /// Runs work on the queue and awaits its result, throwing what it throws.
+    ///
+    /// This is the entry point for anything the user asked for by name — an
+    /// import, a delete, a clear. `write` is the wrong shape for those twice
+    /// over: it silently does nothing when the store is not open yet, and it
+    /// swallows the error, both of which are the right trade for a frequency
+    /// count nobody asked to be written and the wrong one for a button the
+    /// user pressed.
+    ///
+    /// `async` rather than a synchronous variant of `read`: an import derives
+    /// search keys for up to 30000 rows and commits them in batches, and
+    /// blocking the main actor on that would freeze the settings window — and
+    /// a synchronous call that ever re-entered this queue would deadlock it
+    /// outright.
+    func perform<Result: Sendable>(
+        _ body: @escaping @Sendable (SQLiteConnection) throws -> Result,
+    ) async throws -> Result {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async { [self] in
+                guard stateLock.withLock({ isOpen }) else {
+                    continuation.resume(throwing: UserDataDatabaseError.notOpen(fileName))
+                    return
+                }
+                do {
+                    try continuation.resume(returning: body(connection))
+                } catch {
+                    logger.error("perform failed: \(error)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+}
+
+/// Why work the user asked for could not run.
+enum UserDataDatabaseError: Error, CustomStringConvertible {
+    /// The file is not open — either still opening at launch, or it failed to
+    /// open at all. Surfaced rather than swallowed so the UI can say the
+    /// action did not happen instead of reporting a silent success.
+    case notOpen(String)
+
+    var description: String {
+        switch self {
+        case let .notOpen(fileName): "\(fileName) is not open"
         }
     }
 }

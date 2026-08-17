@@ -47,6 +47,7 @@ final class ComposingSessionCoordinator {
         composingManager: ComposingManager(
             settingsProvider: SettingsStore(),
             frequencyStore: shippedStores.frequency,
+            customDictionaryStore: shippedStores.customDictionary,
             nextWordLearner: NextWordLearner(store: shippedStores.association),
         ),
         learningStores: shippedStores,
@@ -54,10 +55,10 @@ final class ComposingSessionCoordinator {
 
     /// The stores the shipped composition writes to. Named once so `shared` can
     /// both hand them to the manager and expose them for `AppDelegate` to open.
-    private static let shippedStores = LearningStores(directory: UserDataDirectory.standard)
+    private static let shippedStores = UserDataStores(directory: UserDataDirectory.standard)
 
     private let composingManager: ComposingManager
-    private let learningStores: LearningStores
+    private let learningStores: UserDataStores
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
 
@@ -78,7 +79,7 @@ final class ComposingSessionCoordinator {
     /// registers Carbon hotkeys in the test runner.
     var shortcutAvailabilityDidChange: ((Bool) -> Void)?
 
-    init(composingManager: ComposingManager, learningStores: LearningStores) {
+    init(composingManager: ComposingManager, learningStores: UserDataStores) {
         self.composingManager = composingManager
         self.learningStores = learningStores
     }
@@ -86,8 +87,19 @@ final class ComposingSessionCoordinator {
     /// Opens the learning databases. Called once at launch: the first
     /// composition of a session would otherwise rank without the user's
     /// history while the files were still being opened.
-    func openLearningStores() {
+    func openUserDataStores() {
         learningStores.open()
+        // After the open, and deliberately not awaited: the seed is what a
+        // brand-new install finds in 詞庫 管理, and a first keystroke typed
+        // before it lands simply does not match the two seeded words yet.
+        let customDictionary = learningStores.customDictionary
+        Task {
+            do {
+                try await customDictionary.seedIfEmpty()
+            } catch {
+                Self.logger.error("custom dictionary seed failed: \(error)")
+            }
+        }
     }
 
     /// Makes `owner` the session that drives the engine, and returns the

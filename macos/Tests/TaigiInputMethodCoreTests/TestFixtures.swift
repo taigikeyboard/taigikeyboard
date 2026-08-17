@@ -63,6 +63,8 @@ enum TestFixtures {
         bothScripts: Bool = false,
         frequencyRecording: Bool = true,
         associationRecording: Bool = true,
+        customDict: Bool = true,
+        dictionarySources: DictionarySourceToggles = .defaults,
     ) -> EngineSettings {
         EngineSettings(
             inputMode: .tl,
@@ -71,6 +73,8 @@ enum TestFixtures {
             isLiteralRomanCandidateEnabled: false,
             isFrequencyRecordingEnabled: frequencyRecording,
             isAssociationRecordingEnabled: associationRecording,
+            isCustomDictEnabled: customDict,
+            dictionarySources: dictionarySources,
         )
     }
 
@@ -84,29 +88,34 @@ enum TestFixtures {
         )
     }
 
-    /// A pair of learning stores over a scratch directory, open and ready.
+    /// The user-data stores over a scratch directory, open and ready.
     ///
     /// Real SQLite rather than a double: the whole of what these types do is
     /// SQL, and a double would only prove that the fake behaves like the fake.
-    static func makeLearningStores() throws -> LearningStores {
+    static func makeUserDataStores() throws -> UserDataStores {
         let directory = try scratchDirectory()
-        let stores = LearningStores(directory: { directory })
+        let stores = UserDataStores(directory: { directory })
         stores.open()
         waitUntilReady(stores)
         return stores
     }
 
-    /// Spins the run loop until both stores have opened. Opening is
+    /// Spins the run loop until every store has opened. Opening is
     /// asynchronous by design — a keystroke must never wait on it — so a case
     /// that asserts on stored rows has to wait here instead.
     static func waitUntilReady(
-        _ stores: LearningStores,
+        _ stores: UserDataStores,
         timeout: TimeInterval = 5,
         file: StaticString = #filePath,
         line: UInt = #line,
     ) {
-        let opened = spinRunLoop(until: { stores.frequency.isReady && stores.association.isReady },
-                                 timeout: timeout)
+        let opened = spinRunLoop(
+            until: {
+                stores.frequency.isReady && stores.association.isReady
+                    && stores.customDictionary.isReady
+            },
+            timeout: timeout,
+        )
         if !opened {
             XCTFail("the learning stores did not open within \(timeout)s", file: file, line: line)
         }
@@ -139,13 +148,14 @@ enum TestFixtures {
     @MainActor
     static func makeComposingManager(
         settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
-        stores: LearningStores? = nil,
+        stores: UserDataStores? = nil,
         startingGeneration: UInt64,
     ) throws -> ComposingManager {
-        let stores = try stores ?? makeLearningStores()
+        let stores = try stores ?? makeUserDataStores()
         return ComposingManager(
             settingsProvider: settingsProvider,
             frequencyStore: stores.frequency,
+            customDictionaryStore: stores.customDictionary,
             nextWordLearner: NextWordLearner(store: stores.association),
             startingGeneration: startingGeneration,
         )
@@ -158,7 +168,7 @@ enum TestFixtures {
     /// Carbon hotkeys through `AppDelegate`'s availability callback.
     @MainActor
     static func makeCoordinator() throws -> ComposingSessionCoordinator {
-        let stores = try makeLearningStores()
+        let stores = try makeUserDataStores()
         return try ComposingSessionCoordinator(
             composingManager: makeComposingManager(
                 stores: stores,

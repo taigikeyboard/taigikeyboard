@@ -9,12 +9,12 @@ import XCTest
 /// before `PLATFORM_MACOS` existed.
 @MainActor
 final class ComposingManagerLearningTests: XCTestCase {
-    private var stores: LearningStores!
+    private var stores: UserDataStores!
 
     override func setUpWithError() throws {
         try super.setUpWithError()
         InstalledLexicon.installOnce()
-        stores = try TestFixtures.makeLearningStores()
+        stores = try TestFixtures.makeUserDataStores()
     }
 
     override func tearDown() {
@@ -76,8 +76,19 @@ final class ComposingManagerLearningTests: XCTestCase {
 
         let before = try compose("taigi", manager, executing: executor)
         let ranked = Array(before.dropFirst())
-        let rival = try XCTUnwrap(ranked.first, "the fixture needs at least two ranked candidates")
-        let promoted = try XCTUnwrap(ranked.dropFirst().first)
+        // The last two rather than the first two: candidates covering more of
+        // the buffer outrank shorter ones by a margin no usage count is meant
+        // to close, so a pair straddling that boundary would be asking the
+        // boost to do something it must not. Two neighbours in the tail cover
+        // the same span, which is where usage is the deciding term.
+        XCTAssertGreaterThanOrEqual(ranked.count, 2, "the fixture needs at least two ranked candidates")
+        let rival = try XCTUnwrap(ranked.dropLast().last)
+        let promoted = try XCTUnwrap(ranked.last)
+        XCTAssertEqual(
+            rival.consumedSpanEnd,
+            promoted.consumedSpanEnd,
+            "the pair has to cover the same span, or the comparison is about coverage not usage",
+        )
 
         for _ in 0 ..< 20 {
             stores.frequency.record(word: promoted.displayText, tl: promoted.canonicalTl)

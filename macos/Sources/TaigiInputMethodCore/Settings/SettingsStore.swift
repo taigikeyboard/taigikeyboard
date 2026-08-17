@@ -63,6 +63,114 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "associationRecordingEnabled",
             defaultValue: EngineSettings.defaults.isAssociationRecordingEnabled,
         )
+        static let isCustomDictEnabled = SettingsKey(
+            name: "customDictEnabled",
+            defaultValue: EngineSettings.defaults.isCustomDictEnabled,
+        )
+
+        // The dictionary sources. Key spellings are the iOS ones verbatim
+        // (`SharedSettings.swift:53-66`) — including `khiin`, which is the one
+        // key with no `Enabled` suffix. The name on the left is the engine's
+        // vocabulary, the string on the right is the settings vocabulary; they
+        // differ (`moeDictEnabled` ↔ `kautian`) and that is the iOS mapping.
+        static let isKautianEnabled = SettingsKey(
+            name: "moeDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautian,
+        )
+        static let isTaigitvEnabled = SettingsKey(
+            name: "newwordDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.taigitv,
+        )
+        static let isItaigiEnabled = SettingsKey(
+            name: "iTaigiDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.itaigi,
+        )
+        static let isSitbutEnabled = SettingsKey(
+            name: "taiwanPlantDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.sitbut,
+        )
+        static let isTaihoaEnabled = SettingsKey(
+            name: "taiHuaDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.taihoa,
+        )
+        static let isTaijitEnabled = SettingsKey(
+            name: "taiwanJapanDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.taijit,
+        )
+        static let isKunggeEnabled = SettingsKey(
+            name: "kunggeDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kungge,
+        )
+        static let isSttiEnabled = SettingsKey(
+            name: "sttiDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.stti,
+        )
+        static let isKhpooEnabled = SettingsKey(
+            name: "khpooDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.khpoo,
+        )
+        static let isVariantEnabled = SettingsKey(
+            name: "variantEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.variant,
+        )
+        static let isKhiinEnabled = SettingsKey(
+            name: "khiin",
+            defaultValue: EngineSettings.defaults.dictionarySources.khiin,
+        )
+        static let isLkkEnabled = SettingsKey(
+            name: "lkkDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.lkk,
+        )
+        static let isDevEnabled = SettingsKey(
+            name: "devDictEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.dev,
+        )
+
+        /// Kautian subcollections (`SharedSettings.swift:74-84`), all default on.
+        static let isKautianAccentLukangEnabled = SettingsKey(
+            name: "kautianAccentLukangEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentLukang,
+        )
+        static let isKautianAccentSansiaEnabled = SettingsKey(
+            name: "kautianAccentSansiaEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentSansia,
+        )
+        static let isKautianAccentTaipakEnabled = SettingsKey(
+            name: "kautianAccentTaipakEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentTaipak,
+        )
+        static let isKautianAccentGilanEnabled = SettingsKey(
+            name: "kautianAccentGilanEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentGilan,
+        )
+        static let isKautianAccentTainanEnabled = SettingsKey(
+            name: "kautianAccentTainanEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentTainan,
+        )
+        static let isKautianAccentKaohsiungEnabled = SettingsKey(
+            name: "kautianAccentKaohsiungEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentKaohsiung,
+        )
+        static let isKautianAccentKinmenEnabled = SettingsKey(
+            name: "kautianAccentKinmenEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentKinmen,
+        )
+        static let isKautianAccentMakungEnabled = SettingsKey(
+            name: "kautianAccentMakungEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentMakung,
+        )
+        static let isKautianAccentSintikEnabled = SettingsKey(
+            name: "kautianAccentSintikEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentSintik,
+        )
+        static let isKautianAccentTaichungEnabled = SettingsKey(
+            name: "kautianAccentTaichungEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.accentTaichung,
+        )
+        static let isKautianNameAppendixEnabled = SettingsKey(
+            name: "kautianNameAppendixEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.nameAppendix,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -81,6 +189,42 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
+            isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
+            dictionarySources: dictionarySources,
+        )
+    }
+
+    /// Read as part of `current` rather than on its own, so the toggles the
+    /// engine filters candidates by and the settings it composes under always
+    /// come from the same instant.
+    private var dictionarySources: DictionarySourceToggles {
+        DictionarySourceToggles(
+            kautian: bool(Keys.isKautianEnabled),
+            taigitv: bool(Keys.isTaigitvEnabled),
+            itaigi: bool(Keys.isItaigiEnabled),
+            sitbut: bool(Keys.isSitbutEnabled),
+            taihoa: bool(Keys.isTaihoaEnabled),
+            taijit: bool(Keys.isTaijitEnabled),
+            kungge: bool(Keys.isKunggeEnabled),
+            stti: bool(Keys.isSttiEnabled),
+            khpoo: bool(Keys.isKhpooEnabled),
+            variant: bool(Keys.isVariantEnabled),
+            khiin: bool(Keys.isKhiinEnabled),
+            lkk: bool(Keys.isLkkEnabled),
+            dev: bool(Keys.isDevEnabled),
+            kautianSubcollections: DictionarySourceToggles.KautianSubcollections(
+                accentLukang: bool(Keys.isKautianAccentLukangEnabled),
+                accentSansia: bool(Keys.isKautianAccentSansiaEnabled),
+                accentTaipak: bool(Keys.isKautianAccentTaipakEnabled),
+                accentGilan: bool(Keys.isKautianAccentGilanEnabled),
+                accentTainan: bool(Keys.isKautianAccentTainanEnabled),
+                accentKaohsiung: bool(Keys.isKautianAccentKaohsiungEnabled),
+                accentKinmen: bool(Keys.isKautianAccentKinmenEnabled),
+                accentMakung: bool(Keys.isKautianAccentMakungEnabled),
+                accentSintik: bool(Keys.isKautianAccentSintikEnabled),
+                accentTaichung: bool(Keys.isKautianAccentTaichungEnabled),
+                nameAppendix: bool(Keys.isKautianNameAppendixEnabled),
+            ),
         )
     }
 

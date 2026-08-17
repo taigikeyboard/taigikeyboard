@@ -236,6 +236,8 @@ private extension EngineSettings {
             isLiteralRomanCandidateEnabled: enabled,
             isFrequencyRecordingEnabled: isFrequencyRecordingEnabled,
             isAssociationRecordingEnabled: isAssociationRecordingEnabled,
+            isCustomDictEnabled: isCustomDictEnabled,
+            dictionarySources: dictionarySources,
         )
     }
 }

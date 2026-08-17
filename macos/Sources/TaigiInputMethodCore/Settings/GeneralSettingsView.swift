@@ -21,7 +21,11 @@ struct GeneralSettingsView: View {
     /// The form is a fixed-width column of controls — widening it would only
     /// add empty space. Read by `SettingsTabViewController` as this tab's
     /// window floor, so the window never opens narrower than its own content.
-    static let formWidth: CGFloat = 380
+    ///
+    /// `nonisolated` because that reader is the tab controller's plain
+    /// `ContentTab` enum: a `View`'s statics are main-actor-isolated by
+    /// default, and a constant needs no isolation to be safe.
+    nonisolated static let formWidth: CGFloat = 380
 
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue

@@ -53,6 +53,8 @@ final class SettingsStoreTests: XCTestCase {
                 isLiteralRomanCandidateEnabled: true,
                 isFrequencyRecordingEnabled: false,
                 isAssociationRecordingEnabled: false,
+                isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,
+                dictionarySources: EngineSettings.defaults.dictionarySources,
             ),
         )
     }
