@@ -99,9 +99,8 @@ final class SettingsWindowController {
             ),
         )
         // Explicit rather than defaulted, pinning the contract: `.all` is what
-        // carries the detail's `navigationTitle` into the titlebar AND the
-        // split view's own toolbar content (the sidebar toggle) into the
-        // window toolbar.
+        // carries the detail's `navigationTitle` into the titlebar, and any
+        // toolbar content the split view declares into the window toolbar.
         hostingController.sceneBridgingOptions = .all
         window.contentViewController = hostingController
         // The default is to release the window when it closes, which would turn

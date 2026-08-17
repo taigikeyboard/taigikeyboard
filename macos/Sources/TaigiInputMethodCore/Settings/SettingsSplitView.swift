@@ -83,7 +83,10 @@ struct SettingsSplitView: View {
     private var selectedPane = SettingsStore.Keys.selectedSettingsPane.defaultValue
 
     var body: some View {
-        NavigationSplitView {
+        // Visibility pinned to `.all`, matching System Settings: the sidebar
+        // IS the navigation, so collapsing it strands the user — and with no
+        // way to collapse, the toggle below is removed rather than orphaned.
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             List(selection: $selectedPane) {
                 sidebarRow(.general)
                 Section(language.string(.navTabDictionary)) {
@@ -92,8 +95,9 @@ struct SettingsSplitView: View {
                     }
                 }
             }
-            // A range rather than a fixed width: macOS 14 puts the sidebar
-            // toggle above this column, and a too-narrow sidebar squeezes it.
+            // System Settings shows no sidebar toggle; without this, the
+            // split view puts one above the sidebar column.
+            .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
         } detail: {
             detailView
