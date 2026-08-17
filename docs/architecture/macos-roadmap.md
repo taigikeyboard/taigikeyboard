@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `macos`, `InputMethodKit`, `IMKit`, `third platform`, `engine reuse`
-> **Status**: Active — Phase 0 (this doc) approved 2026-08-15; implementation PRs pending
+> **Status**: Implementation complete 2026-08-17 (PR0–PR13 all merged); remaining work is the single batched device dogfood
 > **Session memory**: `memory/project_macos_ime.md` (phase status + active pointer)
 > **Plan provenance**: Phase-0 research + Codex pre-impl design review (ANALYSIS-ONLY, 2026-08-15) — FFI-reuse / SwiftPM-bundle / platform_id-deferral all confirmed; generation-ownership, proto-gen isolation, PR sizing, bundle-metadata cautions incorporated.
 
@@ -276,10 +276,17 @@ in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger P
 
 | PR | Phase | Scope | Status |
 |---|---|---|---|
-| PR10 | Window restyle + shortcuts | NSTabViewController `.toolbar` tabs + resizable window; `GeneralSettingsView` + `DictionarySettingsPane` shell; KeyboardShortcuts dep + `ShortcutActions` registry + recorder UI; IMK menu keyEquivalent driven from stored chord | Pending |
-| PR11 | 詞庫 data layer (no UI) | 24 source-toggle keys (iOS `SharedSettings.swift:53-84` spellings) + `DictionarySourceToggles` in `EngineSettings`; `lexiconDictionaryFilters` bridge + `FetchAtPos.enabled_sources_bitmask` + `custom_entries` wiring; `CustomDictionaryStore` (schema v2 + side table, cap 30000, no migrator) + phonetics derive bridge; `LearningDatabase.performSync` + freq/assoc list/delete/clear/batchImportMerge APIs; CSV codecs third mirror. ⚠ intended behavior change: defaults exclude iTaigi/台日/台華/植物/異體/khiin from continuous candidates (was sentinel all-on) | Pending |
-| PR12 | 詞庫 tab UI | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; 詞頻/詞關聯 viewers (limit 100, pair-key delete, clear, CSV); 備份還原 `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy = USER decision here (default: stays inside TM, matching 2026-08-16 learning-DB decision) | Pending |
-| PR13 | 辭典搜尋 | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of 詞庫 tab — mac idiom) + 萌典教典/ChhoeTaigi external links via NSWorkspace.open | Pending |
+| PR10 | Window restyle + shortcuts | NSTabViewController `.toolbar` tabs + resizable window; `GeneralSettingsView` + `DictionarySettingsPane` shell; KeyboardShortcuts dep + `ShortcutActions` registry + recorder UI; IMK menu key equivalent read from the stored chord | **Merged** #534 `43cd8d6a` |
+| PR11 | 詞庫 data layer (no UI) — **Merged** #537 `83bfa549` | 24 source-toggle keys (iOS `SharedSettings.swift:53-84` spellings) + `DictionarySourceToggles` in `EngineSettings`; `lexiconDictionaryFilters` bridge + `FetchAtPos.enabled_sources_bitmask` + `custom_entries` wiring; `CustomDictionaryStore` (schema v2 + side table, cap 30000, no migrator) + phonetics derive bridge; `UserDataDatabase.perform` + freq/assoc list/delete/clear/batchImportMerge APIs; CSV codecs third mirror. ⚠ intended behavior change: defaults exclude iTaigi/台日/台華/植物/異體/khiin from continuous candidates (was sentinel all-on) | done |
+| PR12 | 詞庫 tab UI — **Merged** #538 `29bc5ada` | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; 詞頻/詞關聯 viewers (limit 100, pair-key delete, clear, CSV); 備份還原 `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy = USER decision here (default: stays inside TM, matching 2026-08-16 learning-DB decision) | Pending |
+| PR13 | 辭典搜尋 — **Merged** #539 `88e0b223` | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of 詞庫 tab — mac idiom) + 萌典教典/ChhoeTaigi external links via NSWorkspace.open | Pending |
+
+**TRACK COMPLETE 2026-08-17** — all four merged, `swift test` 329/329 on main (was 170 before PR10). Nothing from this track is outstanding except the batched device dogfood and the two open items below.
+
+Open items this track produced:
+- `lexicon.proto` documents `DEV` as always-on in three places (`:231`, `:239`, `:500`); the toggle shipped and made that false. The comment lands in the committed generated trees, so correcting it is a regen round touching iOS + Android.
+- **iOS/Android carry two behaviours macOS now corrects**, both classified deferred: the all-off toggle state re-enables every dictionary there (macOS sends a no-sources mask), and a v2 `.taigi` restore folds POJ→TL over readings already declared canonical TL (macOS folds only v1).
+- Custom-dictionary Time Machine policy stayed the plan's default — inside Time Machine's scope, like the other two user databases — and is the USER's to change.
 
 Dependencies: PR10 ⊥ PR11 (parallelizable); PR12 needs PR10+PR11; PR13 needs PR11.
 Per-PR gate: `swift test` only (no engine change). Codex sandwich each PR (pre-impl
