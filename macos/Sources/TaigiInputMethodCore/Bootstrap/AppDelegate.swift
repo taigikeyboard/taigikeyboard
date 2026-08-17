@@ -64,13 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ///
     /// The main menu is rebuilt rather than relabelled — its items carry a selector, a key
     /// equivalent and a title, and none of that is state a rebuild can lose. The settings window
-    /// relabels itself in place, because it has a frame, a selected tab and a scroll position that
-    /// rebuilding would throw away.
+    /// needs nothing: its content is SwiftUI observing the store, and its titlebar follows the
+    /// selected pane's `navigationTitle` through the hosting controller's scene bridging.
     @MainActor
     private static func refreshLocalizedChrome() {
-        let language = DisplayLanguageStore.shared
-        NSApp.mainMenu = MainMenu.make(language)
-        SettingsWindowController.shared.refreshLocalizedChrome()
+        NSApp.mainMenu = MainMenu.make(DisplayLanguageStore.shared)
     }
 
     /// Loads the dictionary data the bundle ships with. Failures are logged and

@@ -189,7 +189,6 @@ struct CustomDictionaryPage: View {
             )
         }
         .formStyle(.grouped)
-        .navigationTitle(language.string(.dictionaryCustomDictionary))
         .reloadWhenFilterSettles(model.filter) { await model.load() }
         .sheet(item: $editing) { row in
             CustomDictionaryEntrySheet(row: row) { edited in

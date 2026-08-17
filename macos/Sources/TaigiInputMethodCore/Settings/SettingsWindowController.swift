@@ -18,13 +18,19 @@ final class SettingsWindowController {
 
     private static let logger = DebugLogger(category: "SettingsWindow")
 
+    /// The floor under the window: the sidebar's minimum plus the widest
+    /// pane's list content. One floor for the whole window — the sidebar
+    /// shows every pane, so there is no per-tab size to switch between.
+    static let minimumContentSize = NSSize(width: 760, height: 470)
+
+    /// What a first launch opens at. Explicit rather than derived: a `.zero`
+    /// window under a flexible `NavigationSplitView` is not guaranteed to
+    /// settle on a sensible size on its own.
+    static let initialContentSize = NSSize(width: 860, height: 560)
+
     /// Held rather than recreated, so reopening returns the user to the window
     /// where they left it instead of a fresh one in the middle of the screen.
     private var window: NSWindow?
-
-    /// The store the window was built with, so a later relabel reads the same one its tab
-    /// controller does rather than whichever store the caller happens to hold.
-    private var windowLanguage: DisplayLanguageStore?
 
     /// The window the settings pages are being shown in, for the file panels
     /// they open as sheets on it. `nil` before the window has ever been shown,
@@ -34,14 +40,6 @@ final class SettingsWindowController {
     }
 
     private init() {}
-
-    /// Re-reads the chrome AppKit copied rather than bound — the window title and the tab labels.
-    /// A window that was never shown has nothing to update.
-    func refreshLocalizedChrome() {
-        guard let window, let language = windowLanguage else { return }
-        window.title = language.string(.macosWindowTitle)
-        (window.contentViewController as? SettingsTabViewController)?.applyLocalizedLabels()
-    }
 
     /// Brings the settings window up, creating it the first time.
     func show() {
@@ -66,7 +64,6 @@ final class SettingsWindowController {
 
         let window = window ?? Self.makeWindow(language: DisplayLanguageStore.shared)
         self.window = window
-        windowLanguage = DisplayLanguageStore.shared
 
         window.makeKeyAndOrderFront(nil)
         // If activation was deferred or refused, `makeKeyAndOrderFront` orders
@@ -78,38 +75,63 @@ final class SettingsWindowController {
     }
 
     /// Builds the window without showing it. `static` and internal so a test
-    /// can inspect the chrome — style mask, toolbar style, tab identity —
+    /// can inspect the chrome — style mask, content size, hosting root —
     /// without ordering a window in front of whoever is running the tests.
+    ///
+    /// No `window.title` is written here or anywhere: the hosting controller
+    /// bridges the detail pane's `navigationTitle` into the titlebar, and a
+    /// manual write would compete with it. That also covers language changes —
+    /// the pane titles re-render from the store SwiftUI observes.
     static func makeWindow(language: DisplayLanguageStore) -> NSWindow {
         let window = NSWindow(
             contentRect: .zero,
-            // `.resizable` since the 詞庫 tab carries lists; the floor per tab
-            // is enforced by `SettingsTabViewController`, which only ever
-            // grows the window and never touches this mask.
+            // `.resizable` since the dictionary panes carry lists; the floor
+            // is `minimumContentSize`, applied below.
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false,
         )
-        window.title = language.string(.macosWindowTitle)
-        // The tab controller before the toolbar style: `.preference` acts on
-        // the toolbar the tab controller attaches, and the SDK marks it "For
-        // Settings windows only" (`NSWindow.h:239`).
-        let tabController = SettingsTabViewController(language: language)
-        window.contentViewController = tabController
-        window.toolbarStyle = .preference
+        let hostingController = NSHostingController(
+            rootView: SettingsRootView(
+                stores: ComposingSessionCoordinator.shared.userDataStores,
+                settingsProvider: SettingsStore(),
+                language: language,
+            ),
+        )
+        // Explicit rather than defaulted, pinning the contract: `.all` is what
+        // carries the detail's `navigationTitle` into the titlebar AND the
+        // split view's own toolbar content (the sidebar toggle) into the
+        // window toolbar.
+        hostingController.sceneBridgingOptions = .all
+        window.contentViewController = hostingController
         // The default is to release the window when it closes, which would turn
         // the second open into a message to a freed object.
         window.isReleasedWhenClosed = false
+        window.contentMinSize = minimumContentSize
+        window.setContentSize(initialContentSize)
         window.center()
         // After `center()`: restoring a saved frame should win over centering,
-        // and saving at all is what returns the user to the size they chose
-        // now that the window is resizable.
+        // and saving at all is what returns the user to the size they chose.
         window.setFrameAutosaveName("TaigiSettingsWindow")
-        // Last, so it sees the restored frame: the first tab was selected
-        // while the controller had no window, so nothing has put a floor under
-        // the tab the window opens on yet — and an autosaved frame from a
-        // narrower build could be below it.
-        tabController.applyMinimumSizeForSelectedTab()
+        // Last, so it sees the restored frame: `contentMinSize` stops future
+        // shrinking but does not grow a frame autosaved by a build with a
+        // smaller floor — the tabbed window this layout replaced had one.
+        growToMinimum(window)
         return window
+    }
+
+    /// Grows the window to the content floor if a restored frame sits below
+    /// it, in either dimension. Never shrinks a size the user chose.
+    /// Internal so a test can drive it with a deliberately small frame
+    /// without staging an autosaved one in `UserDefaults`.
+    static func growToMinimum(_ window: NSWindow) {
+        let current = window.contentLayoutRect.size
+        let grown = NSSize(
+            width: max(current.width, minimumContentSize.width),
+            height: max(current.height, minimumContentSize.height),
+        )
+        if grown != current {
+            window.setContentSize(grown)
+        }
     }
 }

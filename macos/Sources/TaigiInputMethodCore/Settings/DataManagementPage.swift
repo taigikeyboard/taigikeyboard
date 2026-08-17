@@ -83,7 +83,6 @@ struct DataManagementPage: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(language.string(.dictionaryBackupRestore))
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }
 }

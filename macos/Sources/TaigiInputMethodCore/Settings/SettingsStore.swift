@@ -179,6 +179,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "displayLanguage",
             defaultValue: DisplayLanguage.defaultTag,
         )
+
+        /// The settings-window pane the sidebar reopens on. UI-only like
+        /// `displayLanguage` — the engine never reads it — but registered here
+        /// so every defaults key this app writes is named in one place.
+        static let selectedSettingsPane = SettingsKey(
+            name: "selectedSettingsPane",
+            defaultValue: SettingsPane.general,
+        )
     }
 
     private let userDefaults: UserDefaults

@@ -1,23 +1,37 @@
-// The settings window's chrome and the per-tab sizing rules.
+// The settings window's chrome and the sidebar pane roster.
 
 import AppKit
+import SwiftUI
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The settings window's chrome: the preferences-style tabs, and the sizing
-/// rules that let one window hold both a fixed-width form and a list page.
+/// The settings window's chrome — the System Settings-style split view — and
+/// the pane roster its sidebar is built from.
 @MainActor
 final class SettingsWindowTests: XCTestCase {
+    /// Where AppKit persists the frame for `setFrameAutosaveName` — in the
+    /// STANDARD defaults, not a test suite, so every window-building test
+    /// stashes whatever the developer's machine had saved and puts it back.
+    private static let frameAutosaveDefaultsKey = "NSWindow Frame TaigiSettingsWindow"
+
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
+    private var stashedFrameValue: String?
 
     override func setUpWithError() throws {
         try super.setUpWithError()
         suiteName = "SettingsWindowTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        stashedFrameValue = UserDefaults.standard.string(forKey: Self.frameAutosaveDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: Self.frameAutosaveDefaultsKey)
     }
 
     override func tearDown() {
+        if let stashedFrameValue {
+            UserDefaults.standard.set(stashedFrameValue, forKey: Self.frameAutosaveDefaultsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.frameAutosaveDefaultsKey)
+        }
         userDefaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
     }
@@ -26,73 +40,38 @@ final class SettingsWindowTests: XCTestCase {
         TestFixtures.makeDisplayLanguageStore(language, userDefaults: userDefaults)
     }
 
-    private func loadedTabController(_ language: DisplayLanguage = .hanji) -> SettingsTabViewController {
-        loadedTabController(store: makeStore(language))
+    /// A bare resizable window with no floor of its own, for driving
+    /// `growToMinimum` through both of its branches — `makeWindow` puts
+    /// `contentMinSize` on before sizing, which would clamp the shrink this
+    /// setup needs and leave the grow branch untested.
+    private func makeUnflooredWindow(contentSize: NSSize) -> NSWindow {
+        let window = NSWindow(
+            contentRect: NSRect(origin: .zero, size: contentSize),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false,
+        )
+        window.isReleasedWhenClosed = false
+        return window
     }
 
-    private func loadedTabController(store: DisplayLanguageStore) -> SettingsTabViewController {
-        let controller = SettingsTabViewController(language: store)
-        // Tabs are built in `viewDidLoad`; touching `view` is what runs it.
-        _ = controller.view
-        return controller
-    }
+    // MARK: - Window chrome
 
-    /// The window title is read once at build time, so a language change has to come back through
-    /// `refreshLocalizedChrome()` — the callback `AppDelegate` installs is what calls it.
-    func testWindow_titleFollowsTheDisplayLanguage() {
-        let store = makeStore(.hanji)
-        let window = SettingsWindowController.makeWindow(language: store)
-        XCTAssertEqual(window.title, "台語鍵盤設定")
-
-        let english = SettingsWindowController.makeWindow(language: makeStore(.english))
-        XCTAssertEqual(english.title, "TaigiKeyboard Settings")
-    }
-
-    func testTabController_showsGeneralAndDictionaryAsToolbarTabs() {
-        let controller = loadedTabController()
-
-        XCTAssertEqual(controller.tabStyle, .toolbar)
-        XCTAssertEqual(controller.tabViewItems.map(\.label), ["一般", "詞庫"])
-        XCTAssertEqual(loadedTabController(.english).tabViewItems.map(\.label), ["General", "Dictionary"])
-    }
-
-    /// VoiceOver reads the toolbar image's description, not the tab's label, so a tab whose label
-    /// followed the language while its image did not would go on announcing the old one.
-    func testTabController_keepsTheToolbarImageDescriptionInStepWithTheLabel() {
-        for item in loadedTabController(.english).tabViewItems {
-            XCTAssertEqual(item.image?.accessibilityDescription, item.label)
-        }
-    }
-
-    /// The labels are copied into AppKit rather than bound, so a language change has to come back
-    /// through the controller — this is the case that fails if that call is ever dropped.
-    func testTabController_relabelsItselfWhenTheLanguageChanges() {
-        let store = makeStore(.hanji)
-        let controller = loadedTabController(store: store)
-        XCTAssertEqual(controller.tabViewItems.map(\.label), ["一般", "詞庫"])
-
-        store.setLanguage(.japanese)
-        controller.applyLocalizedLabels()
-
-        XCTAssertEqual(controller.tabViewItems.map(\.label), ["一般", "辞書"])
-        XCTAssertEqual(controller.tabViewItems.first?.image?.accessibilityDescription, "一般")
-    }
-
-    /// Toolbar tabs are icon-first: a label with no image renders as a bare
-    /// word in the toolbar, and reaching for an emoji instead would bake a
-    /// glyph into a string meant to be localizable text.
-    func testTabController_givesEveryTabAnImage() {
-        for item in loadedTabController().tabViewItems {
-            XCTAssertNotNil(item.image, "tab \(item.label) has no toolbar image")
-        }
-    }
-
-    func testWindow_isResizableWithPreferenceToolbarStyle() {
+    func testWindow_hostsTheSplitViewRoot() {
         let window = SettingsWindowController.makeWindow(language: makeStore())
 
         XCTAssertTrue(window.styleMask.contains(.resizable))
-        XCTAssertEqual(window.toolbarStyle, .preference)
-        XCTAssertTrue(window.contentViewController is SettingsTabViewController)
+        XCTAssertNotNil(window.contentViewController as? NSHostingController<SettingsRootView>)
+    }
+
+    /// The titlebar shows the selected pane's name only if the SwiftUI
+    /// `navigationTitle` is bridged out of the hosting controller — nothing
+    /// else writes `window.title` any more.
+    func testWindow_bridgesTheSwiftUITitleIntoTheTitlebar() throws {
+        let window = SettingsWindowController.makeWindow(language: makeStore())
+
+        let hosting = try XCTUnwrap(window.contentViewController as? NSHostingController<SettingsRootView>)
+        XCTAssertEqual(hosting.sceneBridgingOptions, .all)
     }
 
     /// The window must survive being closed: it is cached so reopening returns
@@ -102,50 +81,113 @@ final class SettingsWindowTests: XCTestCase {
         XCTAssertFalse(SettingsWindowController.makeWindow(language: makeStore()).isReleasedWhenClosed)
     }
 
-    private func tabController(of window: NSWindow) throws -> SettingsTabViewController {
-        try XCTUnwrap(window.contentViewController as? SettingsTabViewController)
-    }
-
-    /// The tab the window OPENS on gets its floor too. Nothing selects it —
-    /// it is current from the moment the tabs are built, which happens before
-    /// the controller has a window to put a floor on.
-    func testFreshWindow_alreadyCarriesTheGeneralTabsFloor() {
+    /// With no autosaved frame (setUp clears it), a fresh window opens at no
+    /// less than the explicit initial size — not whatever `.zero` settles
+    /// into — with the one window-wide floor applied. `>=` rather than `==`:
+    /// bridging the split view's toolbar in re-lays-out the window, and the
+    /// exact resulting height belongs to SwiftUI, not to `makeWindow`.
+    func testFreshWindow_opensAtTheInitialSizeWithTheFloorApplied() {
         let window = SettingsWindowController.makeWindow(language: makeStore())
 
-        let expected = SettingsTabViewController.ContentTab.general.minimumContentSize
-        XCTAssertEqual(window.contentMinSize, expected)
-        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.width, expected.width)
-        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.height, expected.height)
+        XCTAssertEqual(window.contentMinSize, SettingsWindowController.minimumContentSize)
+        XCTAssertGreaterThanOrEqual(
+            window.contentLayoutRect.size.width,
+            SettingsWindowController.initialContentSize.width - 1,
+        )
+        XCTAssertGreaterThanOrEqual(
+            window.contentLayoutRect.size.height,
+            SettingsWindowController.initialContentSize.height - 1,
+        )
     }
 
-    /// Selecting a tab raises the floor to that tab's minimum, and grows a
-    /// window that sits below it — in both dimensions. The 詞庫 tab's floor is
-    /// the larger one.
-    func testSelectingDictionaryTab_growsTheWindowToItsMinimum() throws {
+    /// The real restore path: `contentMinSize` does not grow a frame autosaved
+    /// by a build with a smaller floor — the tabbed window this layout
+    /// replaced had one — so `makeWindow` has to grow it by hand after
+    /// `setFrameAutosaveName` restores it.
+    func testWindow_growsANarrowAutosavedFrameToTheFloor() throws {
+        let screen = try XCTUnwrap(NSScreen.main).frame
+        UserDefaults.standard.set(
+            "100 100 380 300 0 0 \(Int(screen.width)) \(Int(screen.height))",
+            forKey: Self.frameAutosaveDefaultsKey,
+        )
+
         let window = SettingsWindowController.makeWindow(language: makeStore())
-        let controller = try tabController(of: window)
-        window.setContentSize(NSSize(width: 200, height: 200))
 
-        controller.selectedTabViewItemIndex = SettingsTabViewController.ContentTab.dictionary.rawValue
-
-        let expected = SettingsTabViewController.ContentTab.dictionary.minimumContentSize
-        XCTAssertEqual(window.contentMinSize, expected)
-        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.width, expected.width)
-        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.height, expected.height)
+        let floor = SettingsWindowController.minimumContentSize
+        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.width, floor.width)
+        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.height, floor.height)
     }
 
-    /// Switching back must not shrink a window the user has sized: the floor
-    /// drops to the 一般 tab's, the frame stays where the user left it.
-    func testSelectingGeneralTab_dropsTheFloorAndLeavesALargerWindowAlone() throws {
-        let window = SettingsWindowController.makeWindow(language: makeStore())
-        let controller = try tabController(of: window)
-        controller.selectedTabViewItemIndex = SettingsTabViewController.ContentTab.dictionary.rawValue
-        window.setContentSize(NSSize(width: 900, height: 700))
+    /// Both branches of the grow helper, on a window with no floor of its own
+    /// so the shrink actually lands (see `makeUnflooredWindow`).
+    func testGrowToMinimum_growsASmallWindowAndLeavesALargerOneAlone() {
+        let small = makeUnflooredWindow(contentSize: NSSize(width: 200, height: 200))
+        SettingsWindowController.growToMinimum(small)
+        let floor = SettingsWindowController.minimumContentSize
+        XCTAssertGreaterThanOrEqual(small.contentLayoutRect.size.width, floor.width)
+        XCTAssertGreaterThanOrEqual(small.contentLayoutRect.size.height, floor.height)
 
-        controller.selectedTabViewItemIndex = SettingsTabViewController.ContentTab.general.rawValue
+        let large = makeUnflooredWindow(contentSize: NSSize(width: 900, height: 700))
+        SettingsWindowController.growToMinimum(large)
+        XCTAssertEqual(large.contentLayoutRect.size.width, 900, accuracy: 1)
+        XCTAssertEqual(large.contentLayoutRect.size.height, 700, accuracy: 1)
+    }
 
-        XCTAssertEqual(window.contentMinSize, SettingsTabViewController.ContentTab.general.minimumContentSize)
-        XCTAssertEqual(window.contentLayoutRect.size.width, 900, accuracy: 1)
-        XCTAssertEqual(window.contentLayoutRect.size.height, 700, accuracy: 1)
+    // MARK: - Pane roster
+
+    /// The sidebar is 一般 plus the 詞庫 section — together they must cover
+    /// every pane exactly once, or a pane exists that no sidebar row reaches.
+    func testPaneRoster_coversEveryPaneExactlyOnce() {
+        XCTAssertEqual([.general] + SettingsPane.dictionaryPanes, SettingsPane.allCases)
+    }
+
+    /// Raw values are the persistence contract: `@AppStorage` writes them, so
+    /// renaming a case silently resets every user to 一般.
+    func testPaneRawValues_stayStable() {
+        XCTAssertEqual(
+            SettingsPane.allCases.map(\.rawValue),
+            [
+                "general", "dictionarySearch", "customDictionary", "frequencyData",
+                "associationData", "backupRestore", "dictionarySources",
+            ],
+        )
+    }
+
+    /// The other half of the persistence contract: the defaults key the raw
+    /// values are written under, and the pane an unknown or never-written
+    /// value must land on — `@AppStorage` resolves an unknown raw value to
+    /// its default, which is why `init(rawValue:)` returning `nil` is safe.
+    func testSelectedPaneKey_namesTheDefaultsKeyAndFallsBackToGeneral() {
+        XCTAssertEqual(SettingsStore.Keys.selectedSettingsPane.name, "selectedSettingsPane")
+        XCTAssertEqual(SettingsStore.Keys.selectedSettingsPane.defaultValue, .general)
+        XCTAssertNil(SettingsPane(rawValue: "bogus"))
+    }
+
+    func testPaneLabels_followTheDisplayLanguage() {
+        let hanji = makeStore(.hanji)
+        XCTAssertEqual(
+            SettingsPane.allCases.map { hanji.string($0.labelKey) },
+            ["一般", "揣辭典", "自訂詞庫", "詞頻紀錄", "詞關聯紀錄", "備份復原", "選辭典"],
+        )
+
+        let english = makeStore(.english)
+        XCTAssertEqual(
+            SettingsPane.allCases.map { english.string($0.labelKey) },
+            [
+                "General", "Look Up", "Custom Dictionary", "Frequency Records",
+                "Association Records", "Backup and Restore", "Choose Dictionaries",
+            ],
+        )
+    }
+
+    /// Sidebar rows are icon-first; a symbol name that stops resolving would
+    /// render a blank slot next to the label.
+    func testPaneSymbols_allResolve() {
+        for pane in SettingsPane.allCases {
+            XCTAssertNotNil(
+                NSImage(systemSymbolName: pane.symbolName, accessibilityDescription: nil),
+                "pane \(pane.rawValue) has no resolvable symbol \(pane.symbolName)",
+            )
+        }
     }
 }

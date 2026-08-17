@@ -29,7 +29,8 @@ final class DisplayLanguageStore {
     static let shared = DisplayLanguageStore(settings: SettingsStore())
 
     /// Called after the effective language changes, for UI that AppKit built once and will not
-    /// re-read on its own — the menu bar, the window title, the tab labels.
+    /// re-read on its own — the menu bar. (The settings window needs nothing: its content is
+    /// SwiftUI observing this store, and its titlebar follows the selected pane's title.)
     ///
     /// A plain callback rather than a subscriber list: there is exactly one renderer of that chrome,
     /// and running it from `apply` means it always sees the language the store has already committed
