@@ -1,0 +1,115 @@
+{
+  "namespace": "macos",
+  "keys": {
+    "windowTitle": {
+      "comment": "Settings window title.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "台語鍵盤設定", "tailo": "Tâi-gí kiān-puânn siat-tīng", "poj": "Tâi-gí kiān-pôaⁿ siat-tēng", "en": "TaigiKeyboard Settings", "ja": "台湾語キーボード設定" }
+    },
+    "generalTab": {
+      "comment": "Settings window toolbar tab: the general settings pane.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "一般", "tailo": "it-puann", "poj": "it-poaⁿ", "en": "General", "ja": "一般" }
+    },
+    "romanizationSystem": {
+      "comment": "Picker label for which romanization is typed. The macOS picker offers TL and POJ only.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "羅馬字系統", "tailo": "lô-má-jī hē-thóng", "poj": "lô-má-jī hē-thóng", "en": "Romanization", "ja": "ローマ字体系" }
+    },
+    "candidateSection": {
+      "comment": "Settings section header over the candidate-behaviour toggles.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "候選", "tailo": "hāu-suán", "poj": "hāu-soán", "en": "Candidates", "ja": "候補" }
+    },
+    "translateSwapped": {
+      "comment": "Settings toggle: commit the romanization instead of the Hanji.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "漢羅對調", "tailo": "hàn-lô tuì-tiāu", "poj": "hàn-lô tùi-tiāu", "en": "Swap Hanji and Romanization", "ja": "漢字とローマ字を入れ替え" }
+    },
+    "learningSection": {
+      "comment": "Settings section header over the two learning toggles.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "學習", "tailo": "ha̍k-si̍p", "poj": "ha̍k-si̍p", "en": "Learning", "ja": "学習" }
+    },
+    "shortcutsSection": {
+      "comment": "Settings section header over the keyboard-shortcut recorders.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "快捷鍵", "tailo": "khuài-tsia̍t kiān", "poj": "khoài-chia̍t kiān", "en": "Shortcuts", "ja": "ショートカット" }
+    },
+    "shortcutOpenSettings": {
+      "comment": "Shortcut-recorder row: the hotkey that opens this settings window.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "開啟設定", "tailo": "khai-khé siat-tīng", "poj": "khai-khé siat-tēng", "en": "Open Settings", "ja": "設定を開く" }
+    },
+    "shortcutToggleRomanization": {
+      "comment": "Shortcut-recorder row: the hotkey that switches between the two romanizations. Each row is authored whole rather than composed from the setting's own label, whose wording is a verb phrase in several languages.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "切換 台羅/白話字", "tailo": "tshiat-uānn tâi-lô / pe̍h-uē-jī", "poj": "chhiat-ōaⁿ tâi-lô / pe̍h-ōe-jī", "en": "Switch Romanization", "ja": "ローマ字体系を切り替える" }
+    },
+    "shortcutToggleTranslateSwapped": {
+      "comment": "Shortcut-recorder row: the hotkey that flips which script is committed.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "切換 漢羅對調", "tailo": "tshiat-uānn hàn-lô tuì-tiāu", "poj": "chhiat-ōaⁿ hàn-lô tùi-tiāu", "en": "Toggle Swapping Hanji and Romanization", "ja": "漢字とローマ字の入れ替えを切り替える" }
+    },
+    "shortcutToggleBothScripts": {
+      "comment": "Shortcut-recorder row: the hotkey that turns bracket annotation on and off. Names the setting by the shared label its settings row uses.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "切換 括號標註", "tailo": "tshiat-uānn kuat-hō phiau-tsù", "poj": "chhiat-ōaⁿ koat-hō phiau-chù", "en": "Toggle Bracket Annotation", "ja": "括弧での併記を切り替える" }
+    },
+    "shortcutToggleLiteralRomanCandidate": {
+      "comment": "Shortcut-recorder row: the hotkey that shows or hides the typed-romanization candidate. Names the setting by the shared label its settings row uses.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "切換 顯示原本羅馬字候選", "tailo": "tshiat-uānn hián-sī guân-pún lô-má-jī hāu-suán", "poj": "chhiat-ōaⁿ hián-sī goân-pún lô-má-jī hāu-soán", "en": "Toggle the Typed Romanization Candidate", "ja": "入力したローマ字候補の表示を切り替える" }
+    },
+    "menuSettings": {
+      "comment": "Input-source menu command that opens the settings window. The trailing ellipsis is HIG-required for a command that opens a window, and is authored per language rather than appended at the call site.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "設定…", "tailo": "siat-tīng…", "poj": "siat-tēng…", "en": "Settings…", "ja": "設定…" }
+    },
+    "menuFile": {
+      "comment": "Menu-bar File menu title. An LSUIElement process builds its own menu bar so the settings window keeps the standard editing shortcuts.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "檔案", "tailo": "tóng-àn", "poj": "tóng-àn", "en": "File", "ja": "ファイル" }
+    },
+    "menuClose": {
+      "comment": "File menu item: close the front window (⌘W).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "關閉", "tailo": "kuan-pì", "poj": "koan-pì", "en": "Close", "ja": "閉じる" }
+    },
+    "menuEdit": {
+      "comment": "Menu-bar Edit menu title.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "編輯", "tailo": "pian-tsi̍p", "poj": "pian-chi̍p", "en": "Edit", "ja": "編集" }
+    },
+    "menuUndo": {
+      "comment": "Edit menu item (⌘Z).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "還原", "tailo": "huân-guân", "poj": "hoân-goân", "en": "Undo", "ja": "取り消す" }
+    },
+    "menuRedo": {
+      "comment": "Edit menu item (⇧⌘Z).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "重做", "tailo": "tîng tsò", "poj": "têng chò", "en": "Redo", "ja": "やり直す" }
+    },
+    "menuCut": {
+      "comment": "Edit menu item (⌘X).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "剪下", "tailo": "tsián--lo̍h-lâi", "poj": "chián--lo̍h-lâi", "en": "Cut", "ja": "カット" }
+    },
+    "menuCopy": {
+      "comment": "Edit menu item (⌘C).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "拷貝", "tailo": "khó-puè", "poj": "khó-pòe", "en": "Copy", "ja": "コピー" }
+    },
+    "menuPaste": {
+      "comment": "Edit menu item (⌘V).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "貼上", "tailo": "tah--siōng-khì", "poj": "tah--siōng-khì", "en": "Paste", "ja": "ペースト" }
+    },
+    "menuSelectAll": {
+      "comment": "Edit menu item (⌘A).",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "全選", "tailo": "tsuân-suán", "poj": "choân-soán", "en": "Select All", "ja": "すべてを選択" }
+    }
+  }
+}

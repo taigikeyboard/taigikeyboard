@@ -63,6 +63,14 @@ public final class TaigiInputController: IMKInputController {
     /// the settings of whoever is running the tests.
     var settings = SettingsStore()
 
+    /// The display language the input-source menu renders in. Injectable for the same reason
+    /// `settings` is: a test drives it from its own defaults suite rather than the machine's.
+    ///
+    /// `nil` means the process-wide store, which is what production runs with; only a test sets
+    /// this. Optional rather than defaulted because the shared instance is main-actor-isolated and a
+    /// stored default would have to be evaluated where this class is not.
+    var displayLanguageOverride: DisplayLanguageStore?
+
     /// The client this session belongs to, learned at activation — which always
     /// precedes any key event, because a session that never activated never
     /// claimed the engine. `inputControllerWillClose()` gets no sender, and this
@@ -216,18 +224,34 @@ public final class TaigiInputController: IMKInputController {
         // through `onMainActor`: IMK calls its controllers on the main run
         // loop, and the shortcut store is main-actor-isolated. Asserting turns
         // a broken assumption into a crash rather than a data race.
-        let settingsChord = MainActor.assumeIsolated { () -> (key: String, modifiers: NSEvent.ModifierFlags) in
-            guard let shortcut = KeyboardShortcuts.getShortcut(for: .openSettings) else {
-                return ("", [])
-            }
-            return (shortcut.nsMenuItemKeyEquivalent ?? "", shortcut.modifiers)
+        //
+        // The titles are resolved in the same hop, and the store is synced first: under Automatic
+        // the OS language can change while the persisted tag stays `"system"`, so nothing writes the
+        // key and no observation fires — a menu rebuilt per draw is exactly the right place to
+        // notice. Resolved to plain strings here because `menu()` itself is nonisolated.
+        // Read before the hop so the closure captures a value, not `self`: the store is a
+        // main-actor type, which makes it Sendable, while this controller is not.
+        let injectedLanguage = displayLanguageOverride
+        let chrome = MainActor.assumeIsolated { () -> MenuChrome in
+            let language = injectedLanguage ?? DisplayLanguageStore.shared
+            // Can rebuild the menu bar and relabel the settings window as a side effect: the sync
+            // commits a language change, and committing one runs the chrome renderer.
+            language.syncFromSettings()
+            let shortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
+            return MenuChrome(
+                settingsTitle: language.string(.macosMenuSettings),
+                tlTitle: language.string(.settingsTlMode),
+                pojTitle: language.string(.settingsPojMode),
+                settingsKey: shortcut?.nsMenuItemKeyEquivalent ?? "",
+                settingsModifiers: shortcut?.modifiers ?? [],
+            )
         }
         let settingsItem = NSMenuItem(
-            title: String(localized: "設定…"),
+            title: chrome.settingsTitle,
             action: #selector(showPreferences(_:)),
-            keyEquivalent: settingsChord.key,
+            keyEquivalent: chrome.settingsKey,
         )
-        settingsItem.keyEquivalentModifierMask = settingsChord.modifiers
+        settingsItem.keyEquivalentModifierMask = chrome.settingsModifiers
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
@@ -236,17 +260,26 @@ public final class TaigiInputController: IMKInputController {
         // because it is the one setting a user changes mid-sentence.
         let currentMode = settings.inputMode
         menu.addItem(inputModeItem(
-            title: String(localized: "台羅 (TL)"),
+            title: chrome.tlTitle,
             action: #selector(selectInputModeTL(_:)),
             isCurrent: currentMode == .tl,
         ))
         menu.addItem(inputModeItem(
-            title: String(localized: "白話字 (POJ)"),
+            title: chrome.pojTitle,
             action: #selector(selectInputModePOJ(_:)),
             isCurrent: currentMode == .poj,
         ))
 
         return menu
+    }
+
+    /// Everything the input-source menu needs from main-actor state, read in one hop.
+    private struct MenuChrome {
+        let settingsTitle: String
+        let tlTitle: String
+        let pojTitle: String
+        let settingsKey: String
+        let settingsModifiers: NSEvent.ModifierFlags
     }
 
     /// One romanization choice, checkmarked when it is the one in use.

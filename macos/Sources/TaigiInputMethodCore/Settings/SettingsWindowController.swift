@@ -22,6 +22,10 @@ final class SettingsWindowController {
     /// where they left it instead of a fresh one in the middle of the screen.
     private var window: NSWindow?
 
+    /// The store the window was built with, so a later relabel reads the same one its tab
+    /// controller does rather than whichever store the caller happens to hold.
+    private var windowLanguage: DisplayLanguageStore?
+
     /// The window the settings pages are being shown in, for the file panels
     /// they open as sheets on it. `nil` before the window has ever been shown,
     /// which is a state no page can be visible in.
@@ -31,9 +35,22 @@ final class SettingsWindowController {
 
     private init() {}
 
+    /// Re-reads the chrome AppKit copied rather than bound — the window title and the tab labels.
+    /// A window that was never shown has nothing to update.
+    func refreshLocalizedChrome() {
+        guard let window, let language = windowLanguage else { return }
+        window.title = language.string(.macosWindowTitle)
+        (window.contentViewController as? SettingsTabViewController)?.applyLocalizedLabels()
+    }
+
     /// Brings the settings window up, creating it the first time.
     func show() {
         Self.logger.debug("show settings window")
+
+        // Before the window is built or shown: under Automatic the persisted tag stays "system"
+        // while the OS language can have changed underneath it, and nothing writes the key in that
+        // case — so this is the refresh point that catches it.
+        DisplayLanguageStore.shared.syncFromSettings()
 
         // Before anything is ordered in. This process is an `LSUIElement`
         // accessory that is never the active application, and a window ordered
@@ -47,8 +64,9 @@ final class SettingsWindowController {
         // `orderFrontRegardless()` below covers.
         NSApp.activate()
 
-        let window = window ?? Self.makeWindow()
+        let window = window ?? Self.makeWindow(language: DisplayLanguageStore.shared)
         self.window = window
+        windowLanguage = DisplayLanguageStore.shared
 
         window.makeKeyAndOrderFront(nil)
         // If activation was deferred or refused, `makeKeyAndOrderFront` orders
@@ -62,7 +80,7 @@ final class SettingsWindowController {
     /// Builds the window without showing it. `static` and internal so a test
     /// can inspect the chrome — style mask, toolbar style, tab identity —
     /// without ordering a window in front of whoever is running the tests.
-    static func makeWindow() -> NSWindow {
+    static func makeWindow(language: DisplayLanguageStore) -> NSWindow {
         let window = NSWindow(
             contentRect: .zero,
             // `.resizable` since the 詞庫 tab carries lists; the floor per tab
@@ -72,11 +90,11 @@ final class SettingsWindowController {
             backing: .buffered,
             defer: false,
         )
-        window.title = String(localized: "台語鍵盤設定")
+        window.title = language.string(.macosWindowTitle)
         // The tab controller before the toolbar style: `.preference` acts on
         // the toolbar the tab controller attaches, and the SDK marks it "For
         // Settings windows only" (`NSWindow.h:239`).
-        let tabController = SettingsTabViewController()
+        let tabController = SettingsTabViewController(language: language)
         window.contentViewController = tabController
         window.toolbarStyle = .preference
         // The default is to release the window when it closes, which would turn

@@ -372,9 +372,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         session.controller.settings = SettingsStore(userDefaults: userDefaults)
         XCTAssertTrue(session.presenter.isShowing, "the composition put a bar up to take down")
 
+        // Found by the command it sends: the menu's titles follow the display language, so a
+        // lookup by text would only hold in the language this case was written in.
         let poj = try XCTUnwrap(
             XCTUnwrap(session.controller.menu()).items
-                .first { $0.title == "白話字 (POJ)" }?.action,
+                .first { $0.action == Selector(("selectInputModePOJ:")) }?.action,
         )
         session.controller.doCommand(by: poj, command: [:])
 

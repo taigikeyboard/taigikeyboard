@@ -16,46 +16,55 @@ import AppKit
 ///
 /// The items carry no target: they act on the first responder, which is the
 /// text field or window the user is actually in.
+///
+/// Titles come from the display-language resolver, so the menu follows the app's own language
+/// picker. There is no `.lproj` for AppKit to consult — this package ships none by design — so the
+/// alternative is not "follows the system language" but "frozen in one language forever".
+@MainActor
 enum MainMenu {
     /// The menu the application runs with, ready to assign to `NSApp.mainMenu`.
     ///
     /// Deliberately has no Quit item. Quitting an input method mid-composition
     /// takes the user's keyboard away from them, and a ⌘Q aimed at the app they
     /// were typing in would land here whenever the settings window is key.
-    static func make() -> NSMenu {
+    ///
+    /// Rebuilt rather than relabelled when the language changes: the items carry no state — a
+    /// selector, a key equivalent and a title each — so there is nothing a rebuild loses.
+    static func make(_ language: DisplayLanguageStore) -> NSMenu {
         let mainMenu = NSMenu()
         // The first submenu is the application menu by convention, whether or
         // not it has items; without it AppKit reads the File menu as one.
         mainMenu.addItem(submenu(NSMenu(title: appMenuTitle)))
-        mainMenu.addItem(submenu(fileMenu()))
-        mainMenu.addItem(submenu(editMenu()))
+        mainMenu.addItem(submenu(fileMenu(language)))
+        mainMenu.addItem(submenu(editMenu(language)))
         return mainMenu
     }
 
+    /// The process name, not a localized string: it names the product in every language.
     private static let appMenuTitle = "TaigiKeyboard"
 
-    private static func fileMenu() -> NSMenu {
-        let menu = NSMenu(title: String(localized: "檔案"))
+    private static func fileMenu(_ language: DisplayLanguageStore) -> NSMenu {
+        let menu = NSMenu(title: language.string(.macosMenuFile))
         menu.addItem(
-            withTitle: String(localized: "關閉"),
+            withTitle: language.string(.macosMenuClose),
             action: #selector(NSWindow.performClose(_:)),
             keyEquivalent: "w",
         )
         return menu
     }
 
-    private static func editMenu() -> NSMenu {
-        let menu = NSMenu(title: String(localized: "編輯"))
+    private static func editMenu(_ language: DisplayLanguageStore) -> NSMenu {
+        let menu = NSMenu(title: language.string(.macosMenuEdit))
         // Undo and redo are declared by `NSUndoManager`'s responder chain and
         // have no Swift-visible selector to name, unlike the four below.
-        menu.addItem(withTitle: String(localized: "還原"), action: Selector(("undo:")), keyEquivalent: "z")
-        menu.addItem(withTitle: String(localized: "重做"), action: Selector(("redo:")), keyEquivalent: "Z")
+        menu.addItem(withTitle: language.string(.macosMenuUndo), action: Selector(("undo:")), keyEquivalent: "z")
+        menu.addItem(withTitle: language.string(.macosMenuRedo), action: Selector(("redo:")), keyEquivalent: "Z")
         menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "剪下"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        menu.addItem(withTitle: String(localized: "拷貝"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        menu.addItem(withTitle: String(localized: "貼上"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        menu.addItem(withTitle: language.string(.macosMenuCut), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        menu.addItem(withTitle: language.string(.macosMenuCopy), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        menu.addItem(withTitle: language.string(.macosMenuPaste), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         menu.addItem(
-            withTitle: String(localized: "全選"),
+            withTitle: language.string(.macosMenuSelectAll),
             action: #selector(NSText.selectAll(_:)),
             keyEquivalent: "a",
         )

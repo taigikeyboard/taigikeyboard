@@ -91,6 +91,31 @@ final class DisplayLanguageStoreTests: XCTestCase {
         XCTAssertEqual(store.language, .tailo)
     }
 
+    /// The renderer of the chrome AppKit copied rather than bound runs from here, and must see the
+    /// language the store has ALREADY committed to — a callback fired before the swap would render
+    /// the language being left.
+    func testLanguageDidChange_firesOnceAfterTheResolverIsCommitted() {
+        let store = makeStore(deviceSubtag: "zh")
+        var languagesSeen: [DisplayLanguage] = []
+        store.languageDidChange = { languagesSeen.append(store.language) }
+
+        store.setLanguage(.english)
+
+        XCTAssertEqual(languagesSeen, [.english])
+    }
+
+    /// Selecting the language already in effect changes nothing to re-render.
+    func testLanguageDidChange_staysSilentWhenTheEffectiveLanguageIsUnchanged() {
+        let store = makeStore(deviceSubtag: "ja")
+        var callbackCount = 0
+        store.languageDidChange = { callbackCount += 1 }
+
+        store.setLanguage(.japanese)
+
+        XCTAssertEqual(store.selected, .japanese, "the picker still moves")
+        XCTAssertEqual(callbackCount, 0, "but nothing needs re-rendering")
+    }
+
     func testSelectionLabel_usesEndonymsExceptForAutomatic() {
         let store = makeStore()
         store.setLanguage(.english)

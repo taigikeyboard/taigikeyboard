@@ -8,10 +8,8 @@ import Observation
 /// on the stored `resolver`: changing the language recomposes only the views that read a localized
 /// string, with no window rebuild.
 ///
-/// The input method is a single process, so one store per process is the intended ownership: the
-/// settings form, the menu, and the candidate UI all read the same instance. It observes the persisted
-/// key directly, so a language written from anywhere — the picker's `@AppStorage` binding, a shortcut,
-/// or `defaults write` from a terminal — lands here without a notification path of its own.
+/// It observes the persisted key directly, so a language written from anywhere — a shortcut, or
+/// `defaults write` from a terminal — lands here without a notification path of its own.
 @MainActor
 @Observable
 final class DisplayLanguageStore {
@@ -21,6 +19,23 @@ final class DisplayLanguageStore {
     /// settings row's trailing label. The resolver is NOT built from this directly; it is built from the
     /// EFFECTIVE language (`selected.effectiveLanguage(deviceSubtag)`), so `.system` never reaches it.
     private(set) var selected: DisplayLanguage
+
+    /// Process-wide instance. One store per process is the ownership contract: the settings form, the
+    /// menus and the window chrome all read the same language state, and a second store would observe
+    /// the same key while holding its own copy of it.
+    ///
+    /// Creation points still TAKE a store (production passes this one) so a test can hand them one
+    /// pointed at its own defaults suite instead of the machine's.
+    static let shared = DisplayLanguageStore(settings: SettingsStore())
+
+    /// Called after the effective language changes, for UI that AppKit built once and will not
+    /// re-read on its own — the menu bar, the window title, the tab labels.
+    ///
+    /// A plain callback rather than a subscriber list: there is exactly one renderer of that chrome,
+    /// and running it from `apply` means it always sees the language the store has already committed
+    /// to. Deliberately untyped-to-AppKit — this file resolves strings; it does not know what a menu
+    /// is. `AppDelegate` supplies it at launch.
+    var languageDidChange: (@MainActor () -> Void)?
 
     private let settings: SettingsStore
     private let deviceLanguageSubtag: @Sendable () -> String
@@ -93,9 +108,11 @@ final class DisplayLanguageStore {
         if selected != newSelected {
             selected = newSelected
         }
-        if resolver.language != newEffective {
-            resolver = StringResolver(newEffective)
-        }
+        guard resolver.language != newEffective else { return }
+        resolver = StringResolver(newEffective)
+        // After the assignment, never before: a renderer must read the language the store has
+        // already committed to, not the one it is leaving.
+        languageDidChange?()
     }
 
     /// The device's preferred-language subtag (lowercased ISO 639), or `""` when unavailable. Reads

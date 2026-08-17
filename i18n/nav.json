@@ -18,7 +18,7 @@
     },
     "tabDictionary": {
       "comment": "Main app bottom-nav tab title + the tab's top-level page title (Dictionary management). Follows the in-app display-language picker.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
       "values": { "hanji": "詞庫", "tailo": "sû-khòo", "poj": "sû-khò͘", "en": "Dictionary", "ja": "辞書" }
     },
     "tabSettings": {

@@ -35,7 +35,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // At launch rather than with the settings window: this is process-wide
         // AppKit configuration, and the menu has to exist before any window of
         // ours becomes key for its shortcuts to reach the first responder.
-        NSApp.mainMenu = MainMenu.make()
+        //
+        // The chrome AppKit copies rather than binds is re-rendered from HERE and nowhere else when
+        // the display language changes (see behavioral-invariants.md §37, Rendering split). SwiftUI
+        // needs nothing: it observes the store directly. Asserted single-assigner, because a second
+        // one would silently replace this and freeze whichever surface it owned.
+        assert(DisplayLanguageStore.shared.languageDidChange == nil)
+        DisplayLanguageStore.shared.languageDidChange = Self.refreshLocalizedChrome
+        Self.refreshLocalizedChrome()
 
         // The hotkey handlers exist for the process's life; whether they FIRE
         // is the coordinator's call, made as sessions register and release
@@ -51,6 +58,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if server == nil {
             logger.error("IMKServer creation failed — this process receives no key events")
         }
+    }
+
+    /// Rebuilds the AppKit UI that reads its text once and keeps a copy.
+    ///
+    /// The main menu is rebuilt rather than relabelled — its items carry a selector, a key
+    /// equivalent and a title, and none of that is state a rebuild can lose. The settings window
+    /// relabels itself in place, because it has a frame, a selected tab and a scroll position that
+    /// rebuilding would throw away.
+    @MainActor
+    private static func refreshLocalizedChrome() {
+        let language = DisplayLanguageStore.shared
+        NSApp.mainMenu = MainMenu.make(language)
+        SettingsWindowController.shared.refreshLocalizedChrome()
     }
 
     /// Loads the dictionary data the bundle ships with. Failures are logged and

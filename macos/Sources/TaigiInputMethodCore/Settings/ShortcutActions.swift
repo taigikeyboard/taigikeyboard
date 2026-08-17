@@ -36,13 +36,19 @@ enum ShortcutAction: CaseIterable, Sendable {
         }
     }
 
-    var label: String {
+    /// The recorder row's label, under the active display language.
+    ///
+    /// Each row is authored whole rather than composed from the settings row's label it flips.
+    /// Those labels are verb phrases (`括號標註`, `Annotate in Brackets`), and wrapping one in a
+    /// "toggle X" frame reads wrong in every language — `括弧で併記を切り替える` doubles the verb.
+    @MainActor
+    func label(_ language: DisplayLanguageStore) -> String {
         switch self {
-        case .openSettings: "開啟設定"
-        case .toggleRomanization: "切換 台羅/白話字"
-        case .toggleTranslateSwapped: "切換 漢羅對調"
-        case .toggleBothScripts: "切換 漢羅並列"
-        case .toggleLiteralRomanCandidate: "切換 顯示羅馬字候選"
+        case .openSettings: language.string(.macosShortcutOpenSettings)
+        case .toggleRomanization: language.string(.macosShortcutToggleRomanization)
+        case .toggleTranslateSwapped: language.string(.macosShortcutToggleTranslateSwapped)
+        case .toggleBothScripts: language.string(.macosShortcutToggleBothScripts)
+        case .toggleLiteralRomanCandidate: language.string(.macosShortcutToggleLiteralRomanCandidate)
         }
     }
 }

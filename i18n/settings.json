@@ -23,12 +23,12 @@
     },
     "pojMode": {
       "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字", "tailo": "pe̍h-uē-jī", "poj": "pe̍h-ōe-jī", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "tlMode": {
       "comment": "Input-mode option: Tâi-lô (台羅) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "台羅", "tailo": "tâi-lô", "poj": "tâi-lô", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
     "englishMode": {
@@ -48,12 +48,12 @@
     },
     "outputBothScripts": {
       "comment": "Toggle label: annotate committed text with the other script in brackets.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "括號標註", "tailo": "kuat-hō phiau-tsù", "poj": "koat-hō phiau-chù", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "literalRomanCandidate": {
       "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "顯示原本羅馬字候選", "tailo": "hián-sī guân-pún lô-má-jī hāu-suán", "poj": "hián-sī goân-pún lô-má-jī hāu-soán", "en": "Show Typed Romanization Candidate", "ja": "入力したローマ字候補を表示" }
     },
     "literalRomanCandidateInfo": {

@@ -13,12 +13,8 @@ import SwiftUI
 /// from the store's descriptors, so the form and the engine cannot disagree
 /// about either.
 ///
-/// The labels here are still Traditional-Chinese string literals, which SwiftUI
-/// reads as localization keys: this package has no string catalog, so they
-/// render as written. macOS now generates its strings from the shared `i18n/`
-/// sources (`Strings/Generated`), but this view has not been migrated onto the
-/// resolver yet — until it is, its text does not follow the display-language
-/// picker.
+/// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
+/// form re-render when the display language changes, with no window rebuild.
 struct GeneralSettingsView: View {
     /// The form is a fixed-width column of controls — widening it would only
     /// add empty space. Read by `SettingsTabViewController` as this tab's
@@ -28,6 +24,8 @@ struct GeneralSettingsView: View {
     /// `ContentTab` enum: a `View`'s statics are main-actor-isolated by
     /// default, and a constant needs no isolation to be safe.
     nonisolated static let formWidth: CGFloat = 380
+
+    @Environment(DisplayLanguageStore.self) private var language
 
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
@@ -50,46 +48,61 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("羅馬字系統", selection: $inputMode) {
-                    Text("台羅 (TL)").tag(InputMode.tl)
-                    Text("白話字 (POJ)").tag(InputMode.poj)
+                Picker(language.string(.macosRomanizationSystem), selection: $inputMode) {
+                    Text(language.string(.settingsTlMode)).tag(InputMode.tl)
+                    Text(language.string(.settingsPojMode)).tag(InputMode.poj)
                 }
                 .pickerStyle(.radioGroup)
+
+                Picker(language.string(.settingsDisplayLanguage), selection: displayLanguageSelection) {
+                    ForEach(DisplayLanguage.selectableLanguages, id: \.self) { option in
+                        // Endonyms for the authored languages, so a user can find their own language
+                        // whatever the UI currently reads in; `.system` is the one translated row.
+                        Text(language.selectionLabel(for: option)).tag(option)
+                    }
+                }
             }
 
             Section {
-                Toggle("漢羅對調", isOn: $isTranslateSwapped)
-                Toggle("漢羅並列", isOn: $isOutputBothScripts)
-                Toggle("顯示羅馬字候選", isOn: $isLiteralRomanCandidateEnabled)
+                Toggle(language.string(.macosTranslateSwapped), isOn: $isTranslateSwapped)
+                Toggle(language.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts)
+                Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
             } header: {
-                Text("候選")
+                Text(language.string(.macosCandidateSection))
             }
 
             Section {
-                Toggle("記錄選字詞頻", isOn: $isFrequencyRecordingEnabled)
-                Toggle("記錄詞語關聯", isOn: $isAssociationRecordingEnabled)
+                Toggle(language.string(.dictionaryFrequencyRecordingEnabled), isOn: $isFrequencyRecordingEnabled)
+                Toggle(language.string(.dictionaryAssociationRecordingEnabled), isOn: $isAssociationRecordingEnabled)
             } header: {
-                Text("學習")
-            } footer: {
-                Text("學習資料只存在本機,袂上傳。")
+                Text(language.string(.macosLearningSection))
             }
 
             Section {
                 // One row per action, off the same list the hotkey registration
                 // uses, so a new action cannot appear in one and not the other.
                 ForEach(ShortcutAction.allCases, id: \.self) { action in
-                    KeyboardShortcuts.Recorder(action.label, name: action.name) { _ in
+                    KeyboardShortcuts.Recorder(action.label(language), name: action.name) { _ in
                         ShortcutConflicts.resolve(after: action)
                     }
                 }
             } header: {
-                Text("快捷鍵")
-            } footer: {
-                Text("快捷鍵只在台語鍵盤使用中有效。")
+                Text(language.string(.macosShortcutsSection))
             }
         }
         .formStyle(.grouped)
         .frame(width: Self.formWidth)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The picker's selection, read and written through the store rather than through `@AppStorage`
+    /// like the settings around it. The store is what the rest of this view resolves its text from,
+    /// so binding past it would let an injected store and the picker disagree — and `setLanguage`
+    /// updates the live state synchronously, where a defaults write would arrive an actor hop later.
+    private var displayLanguageSelection: Binding<DisplayLanguage> {
+        Binding(
+            get: { language.selected },
+            set: { language.setLanguage($0) },
+        )
     }
 }

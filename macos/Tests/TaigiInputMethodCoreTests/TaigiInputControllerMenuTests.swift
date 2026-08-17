@@ -23,6 +23,9 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         controller = try TestFixtures.makeInputController()
         controller.settings = SettingsStore(userDefaults: userDefaults)
+        // Pinned, so the menu's titles are the language this case asked for rather than the
+        // language of whatever machine is running it.
+        controller.displayLanguageOverride = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
         savedOpenSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
     }
 
@@ -36,18 +39,36 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         try XCTUnwrap(controller.menu(), "the controller must offer an input-source menu")
     }
 
-    private func item(titled title: String, in menu: NSMenu) throws -> NSMenuItem {
+    /// Found by the command it sends, not by its title: the titles follow the display language, and
+    /// a lookup by text would only pass in the language the case happened to be authored in.
+    private func item(action: Selector, in menu: NSMenu) throws -> NSMenuItem {
         try XCTUnwrap(
-            menu.items.first { $0.title == title },
-            "no menu item titled \(title) — the menu was \(menu.items.map(\.title))",
+            menu.items.first { $0.action == action },
+            "no menu item sending \(action) — the menu was \(menu.items.map(\.title))",
         )
     }
 
     func testMenu_offersSettingsAndBothRomanizations() throws {
         let titles = try menu().items.filter { !$0.isSeparatorItem }.map(\.title)
 
-        XCTAssertEqual(titles, ["設定…", "台羅 (TL)", "白話字 (POJ)"])
+        // The literal oracle for this surface: the copy is the authored Hanji, and the two
+        // romanizations read the same here as they do in the settings form.
+        XCTAssertEqual(titles, ["設定…", "台羅", "白話字"])
     }
+
+    /// The menu is rebuilt on every draw, which is what lets it follow a language change with no
+    /// refresh wiring of its own.
+    func testMenu_redrawnAfterALanguageChange_readsInTheNewLanguage() throws {
+        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "設定…")
+
+        try XCTUnwrap(controller.displayLanguageOverride).setLanguage(.english)
+
+        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "Settings…")
+    }
+
+    private static let showPreferences = Selector(("showPreferences:"))
+    private static let selectTL = Selector(("selectInputModeTL:"))
+    private static let selectPOJ = Selector(("selectInputModePOJ:"))
 
     /// The chord lives in the shortcut registry now, not in this file: a user
     /// who never opens the recorder still sees `Ctrl+Shift+,` because that is
@@ -55,7 +76,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     func testMenu_showsTheInitialSettingsChord() throws {
         KeyboardShortcuts.reset(.openSettings)
 
-        let settingsItem = try item(titled: "設定…", in: menu())
+        let settingsItem = try item(action: Self.showPreferences, in: menu())
 
         XCTAssertEqual(settingsItem.keyEquivalent, ",")
         XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [.control, .shift])
@@ -66,7 +87,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     func testMenu_showsARecordedSettingsChord() throws {
         KeyboardShortcuts.setShortcut(.init(.k, modifiers: [.control, .option]), for: .openSettings)
 
-        let settingsItem = try item(titled: "設定…", in: menu())
+        let settingsItem = try item(action: Self.showPreferences, in: menu())
 
         XCTAssertEqual(settingsItem.keyEquivalent, "k")
         XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [.control, .option])
@@ -78,7 +99,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     func testMenu_claimsNoChordWhenTheShortcutIsCleared() throws {
         KeyboardShortcuts.setShortcut(nil, for: .openSettings)
 
-        let settingsItem = try item(titled: "設定…", in: menu())
+        let settingsItem = try item(action: Self.showPreferences, in: menu())
 
         XCTAssertEqual(settingsItem.keyEquivalent, "")
     }
@@ -103,8 +124,8 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
         let menu = try menu()
 
-        XCTAssertEqual(try item(titled: "白話字 (POJ)", in: menu).state, .on)
-        XCTAssertEqual(try item(titled: "台羅 (TL)", in: menu).state, .off)
+        XCTAssertEqual(try item(action: Self.selectPOJ, in: menu).state, .on)
+        XCTAssertEqual(try item(action: Self.selectTL, in: menu).state, .off)
     }
 
     /// The system calls `menu()` every time the menu is drawn so the input
@@ -112,12 +133,12 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// A menu built once and cached would show the mode that was in use when
     /// the process started.
     func testMenu_reflectsAModeChangedSinceTheLastTimeItWasDrawn() throws {
-        XCTAssertEqual(try item(titled: "台羅 (TL)", in: menu()).state, .on)
+        XCTAssertEqual(try item(action: Self.selectTL, in: menu()).state, .on)
 
         controller.settings.inputMode = .poj
 
-        XCTAssertEqual(try item(titled: "台羅 (TL)", in: menu()).state, .off)
-        XCTAssertEqual(try item(titled: "白話字 (POJ)", in: menu()).state, .on)
+        XCTAssertEqual(try item(action: Self.selectTL, in: menu()).state, .off)
+        XCTAssertEqual(try item(action: Self.selectPOJ, in: menu()).state, .on)
     }
 
     /// Automatic validation disables items whose action no responder claims,
@@ -137,17 +158,17 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// read nothing from the sender, which is the property being pinned — and
     /// because the real keys (`kIMKCommandMenuItemName`) are declared
     /// `extern const NSString*` and do not import into Swift.
-    private func select(_ title: String) throws {
-        let action = try XCTUnwrap(item(titled: title, in: menu()).action)
-        controller.doCommand(by: action, command: [:])
+    private func select(_ action: Selector) throws {
+        let sent = try XCTUnwrap(item(action: action, in: menu()).action)
+        controller.doCommand(by: sent, command: [:])
     }
 
     func testSelectingARomanization_storesIt() throws {
-        try select("白話字 (POJ)")
+        try select(Self.selectPOJ)
 
         XCTAssertEqual(controller.settings.inputMode, .poj)
 
-        try select("台羅 (TL)")
+        try select(Self.selectTL)
 
         XCTAssertEqual(controller.settings.inputMode, .tl)
     }

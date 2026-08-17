@@ -122,6 +122,24 @@ enum TestFixtures {
         }
     }
 
+    /// A display-language store pinned to `language`, over the caller's own defaults suite.
+    ///
+    /// Every case that asserts on localized chrome needs one: the shared store reads the machine's
+    /// real settings, and the device subtag is pinned too so a `.system` case cannot inherit the
+    /// language of whoever is running the tests.
+    @MainActor
+    static func makeDisplayLanguageStore(
+        _ language: DisplayLanguage,
+        userDefaults: UserDefaults,
+        deviceSubtag: String = "zh",
+    ) -> DisplayLanguageStore {
+        userDefaults.set(language.tag, forKey: SettingsStore.Keys.displayLanguage.name)
+        return DisplayLanguageStore(
+            settings: SettingsStore(userDefaults: userDefaults),
+            deviceLanguageSubtag: { deviceSubtag },
+        )
+    }
+
     /// Runs the current run loop until `condition` holds, and answers whether
     /// it did before `timeout`.
     ///

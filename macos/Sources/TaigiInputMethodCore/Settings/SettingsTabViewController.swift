@@ -10,6 +10,20 @@ import SwiftUI
 /// it with `toolbarStyle = .preference`, which the SDK marks "For Settings
 /// windows only" (`NSWindow.h:239`).
 final class SettingsTabViewController: NSTabViewController {
+    private let language: DisplayLanguageStore
+
+    /// Takes the store rather than reaching for the shared one, so a test can drive the tabs from
+    /// its own defaults suite.
+    init(language: DisplayLanguageStore) {
+        self.language = language
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     /// One tab, and everything that differs between them. The tabs are added in
     /// `allCases` order, so the raw value stays the tab-view index the selection
     /// callback maps back through — a new case cannot land in the toolbar
@@ -18,10 +32,11 @@ final class SettingsTabViewController: NSTabViewController {
         case general = 0
         case dictionary = 1
 
-        var label: String {
+        @MainActor
+        func label(_ language: DisplayLanguageStore) -> String {
             switch self {
-            case .general: String(localized: "一般")
-            case .dictionary: String(localized: "詞庫")
+            case .general: language.string(.macosGeneralTab)
+            case .dictionary: language.string(.navTabDictionary)
             }
         }
 
@@ -38,20 +53,26 @@ final class SettingsTabViewController: NSTabViewController {
         /// width its form is pinned to; 詞庫 carries lists and needs the room.
         var minimumContentSize: NSSize {
             switch self {
-            case .general: NSSize(width: GeneralSettingsView.formWidth, height: 360)
+            // Raised from 360 when the display-language picker joined the first section: an
+            // autosaved frame from a build before it would otherwise open under the form's own
+            // height and clip the last shortcut row.
+            case .general: NSSize(width: GeneralSettingsView.formWidth, height: 420)
             case .dictionary: NSSize(width: 560, height: 420)
             }
         }
 
+        /// Both panes get the store in their environment — the 詞庫 pane's own text is still
+        /// literal, but its subviews inherit the injection the moment they are migrated.
         @MainActor
-        func makePane() -> NSViewController {
+        func makePane(_ language: DisplayLanguageStore) -> NSViewController {
             switch self {
-            case .general: NSHostingController(rootView: GeneralSettingsView())
+            case .general: NSHostingController(rootView: GeneralSettingsView().environment(language))
             case .dictionary: NSHostingController(
                     rootView: DictionarySettingsPane(
                         stores: ComposingSessionCoordinator.shared.userDataStores,
                         settingsProvider: SettingsStore(),
-                    ),
+                    )
+                    .environment(language),
                 )
             }
         }
@@ -62,10 +83,20 @@ final class SettingsTabViewController: NSTabViewController {
         tabStyle = .toolbar
 
         for tab in ContentTab.allCases {
-            let item = NSTabViewItem(viewController: tab.makePane())
-            item.label = tab.label
-            item.image = NSImage(systemSymbolName: tab.symbolName, accessibilityDescription: tab.label)
+            let item = NSTabViewItem(viewController: tab.makePane(language))
+            item.image = NSImage(systemSymbolName: tab.symbolName, accessibilityDescription: nil)
             addTabViewItem(item)
+        }
+        applyLocalizedLabels()
+    }
+
+    /// Re-reads every tab title under the current display language. The labels are copied into
+    /// AppKit rather than bound, so a language change has to come back through here — including the
+    /// image's accessibility description, which VoiceOver reads instead of the label.
+    func applyLocalizedLabels() {
+        for (item, tab) in zip(tabViewItems, ContentTab.allCases) {
+            item.label = tab.label(language)
+            item.image?.accessibilityDescription = item.label
         }
     }
 

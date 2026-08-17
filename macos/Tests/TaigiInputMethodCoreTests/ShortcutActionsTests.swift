@@ -7,7 +7,27 @@ import XCTest
 
 /// The shortcut registry: which actions exist, what a fresh install has bound,
 /// and the rule that keeps one chord meaning one thing.
+@MainActor
 final class ShortcutActionsTests: XCTestCase {
+    private var suiteName = ""
+    private var userDefaults = UserDefaults.standard
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        suiteName = "ShortcutActionsTests.\(UUID().uuidString)"
+        userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    }
+
+    override func tearDown() {
+        userDefaults.removePersistentDomain(forName: suiteName)
+        super.tearDown()
+    }
+
+    private func labels(_ language: DisplayLanguage = .hanji) -> [String] {
+        let store = TestFixtures.makeDisplayLanguageStore(language, userDefaults: userDefaults)
+        return ShortcutAction.allCases.map { $0.label(store) }
+    }
+
     func testEveryAction_hasItsOwnStorageName() {
         let names = ShortcutAction.allCases.map(\.name.rawValue)
 
@@ -15,9 +35,32 @@ final class ShortcutActionsTests: XCTestCase {
     }
 
     func testEveryAction_hasItsOwnLabel() {
-        let labels = ShortcutAction.allCases.map(\.label)
+        let rows = labels()
 
-        XCTAssertEqual(Set(labels).count, labels.count, "two recorder rows read the same: \(labels)")
+        XCTAssertEqual(Set(rows).count, rows.count, "two recorder rows read the same: \(rows)")
+    }
+
+    /// Every row is authored whole rather than composed from the settings label it flips: those
+    /// labels are verb phrases, and a "toggle X" frame around one doubles the verb in ja and en.
+    func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
+        XCTAssertEqual(
+            labels(),
+            ["開啟設定", "切換 台羅/白話字", "切換 漢羅對調", "切換 括號標註", "切換 顯示原本羅馬字候選"],
+        )
+        XCTAssertEqual(
+            labels(.japanese),
+            [
+                "設定を開く",
+                "ローマ字体系を切り替える",
+                "漢字とローマ字の入れ替えを切り替える",
+                "括弧での併記を切り替える",
+                "入力したローマ字候補の表示を切り替える",
+            ],
+        )
+        XCTAssertEqual(labels(.english).first, "Open Settings")
+        // The trap this replaced: composing a row from the setting's own label produced a doubled
+        // verb — "括弧で併記を切り替える", "Toggle Annotate in Brackets".
+        XCTAssertFalse(labels(.japanese).contains { $0.contains("併記を切り替えるを") })
     }
 
     /// A user who never opens the recorder keeps the chord PR5 shipped
@@ -37,7 +80,7 @@ final class ShortcutActionsTests: XCTestCase {
         for action in ShortcutAction.allCases where action != .openSettings {
             XCTAssertNil(
                 action.name.defaultShortcut,
-                "\(action.label) claims a chord nobody asked for",
+                "\(action.name.rawValue) claims a chord nobody asked for",
             )
         }
     }
