@@ -178,7 +178,6 @@ struct FrequencyDataPage: View {
             )
         }
         .formStyle(.grouped)
-        .navigationTitle(language.string(.dictionaryFrequencyManagement))
         .reloadWhenFilterSettles(model.filter) { await model.load() }
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }

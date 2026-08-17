@@ -184,7 +184,6 @@ struct AssociationDataPage: View {
             )
         }
         .formStyle(.grouped)
-        .navigationTitle(language.string(.dictionaryAssociationManagement))
         .reloadWhenFilterSettles(model.filter) { await model.load() }
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }

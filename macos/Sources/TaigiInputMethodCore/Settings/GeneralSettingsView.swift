@@ -1,10 +1,10 @@
-// The 一般 tab: every setting the composing engine reads, plus the shortcut
+// The 一般 pane: every setting the composing engine reads, plus the shortcut
 // recorders.
 
 import KeyboardShortcuts
 import SwiftUI
 
-/// The general half of the settings window.
+/// The 一般 pane of the settings window.
 ///
 /// Bound with `@AppStorage` rather than through `SettingsStore`, so the form
 /// re-renders when a value is changed from outside it — the input-source menu's
@@ -16,14 +16,10 @@ import SwiftUI
 /// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
 /// form re-render when the display language changes, with no window rebuild.
 struct GeneralSettingsView: View {
-    /// The form is a fixed-width column of controls — widening it would only
-    /// add empty space. Read by `SettingsTabViewController` as this tab's
-    /// window floor, so the window never opens narrower than its own content.
-    ///
-    /// `nonisolated` because that reader is the tab controller's plain
-    /// `ContentTab` enum: a `View`'s statics are main-actor-isolated by
-    /// default, and a constant needs no isolation to be safe.
-    nonisolated static let formWidth: CGFloat = 380
+    /// The form is a column of controls that reads best bounded — stretched
+    /// across a wide detail pane, every row becomes a label staring at a
+    /// far-away control. Centered within whatever width the pane has.
+    private static let maximumFormWidth: CGFloat = 640
 
     @Environment(DisplayLanguageStore.self) private var language
 
@@ -91,8 +87,7 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: Self.formWidth)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: Self.maximumFormWidth)
     }
 
     /// The picker's selection, read and written through the store rather than through `@AppStorage`

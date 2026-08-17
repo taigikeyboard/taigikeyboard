@@ -1,4 +1,4 @@
-// Looking a word up, at the top of the 詞庫 tab.
+// The 揣辭典 pane: looking a word up across the enabled dictionaries.
 
 import AppKit
 import SwiftUI
@@ -62,12 +62,10 @@ final class DictionarySearchModel {
     }
 }
 
-/// The search field and its results, at the top of the 詞庫 tab's root.
-///
-/// In the content area rather than the window toolbar, which belongs to the
-/// `[一般] [詞庫]` tabs; and on the root rather than behind a navigation push,
-/// because looking a word up is the thing this tab is most often opened for.
-struct DictionarySearchSection: View {
+/// The search field and its results. Its pane title comes from the sidebar
+/// router (`SettingsSplitView`), like every other page's — the section
+/// carries no header of its own, which would repeat the title just below it.
+struct DictionarySearchPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     @State private var model: DictionarySearchModel
@@ -77,27 +75,28 @@ struct DictionarySearchSection: View {
     }
 
     var body: some View {
-        Section {
-            UserDataFilterField(text: $model.query)
+        Form {
+            Section {
+                UserDataFilterField(text: $model.query)
 
-            if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                if model.results.isEmpty {
-                    // Nothing while the query is still settling: "揣無" is an
-                    // answer, and showing it before anything has been asked
-                    // would be the wrong one.
-                    if !model.isSearching {
-                        Text(language.string(.dictionaryNoResults))
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    ForEach(model.results.prefix(DictionarySearchModel.visibleResultLimit)) { result in
-                        DictionarySearchResultRow(result: result)
+                if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if model.results.isEmpty {
+                        // Nothing while the query is still settling: "揣無" is an
+                        // answer, and showing it before anything has been asked
+                        // would be the wrong one.
+                        if !model.isSearching {
+                            Text(language.string(.dictionaryNoResults))
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(model.results.prefix(DictionarySearchModel.visibleResultLimit)) { result in
+                            DictionarySearchResultRow(result: result)
+                        }
                     }
                 }
             }
-        } header: {
-            Text(language.string(.macosDictionarySearchSection))
         }
+        .formStyle(.grouped)
         .task(id: model.query) {
             await model.searchAfterTyping()
         }
