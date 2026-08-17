@@ -27,10 +27,6 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     public let composingManager = ComposingManager()
     let nextWordController = NextWordController()
 
-    /// Distinguishes space-drag (cursor move) from space-tap (insert space)
-    // 中文: 區分 space-drag(游標移動)與 space-tap(插入空白) — 由手勢序列判定。
-    private var isSpaceDragInProgress = false
-
     // MARK: - Action Dispatch
 
     /// - Returns: true if handled (skip KeyboardKit default)
@@ -64,26 +60,26 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     // MARK: - KeyboardKit Override
 
-    // 中文: KeyboardKit 手勢覆寫入口。先處理 space drag → 過濾 release / repeatPress → 派送給 Taigi handler,
+    // 中文: KeyboardKit 手勢覆寫入口。先處理 spacebar 拖曳手勢結束 → 過濾 release / repeatPress → 派送給 Taigi handler,
     // 中文: 未處理者最後落到 super 的預設行為。
     override public func handle(_ gesture: Keyboard.Gesture, on action: KeyboardAction) {
-        // Space drag state tracking
-        if action == .space {
-            switch gesture {
-            case .longPress:
-                isSpaceDragInProgress = true
-            case .release:
-                if isSpaceDragInProgress {
-                    isSpaceDragInProgress = false
-                    super.handle(gesture, on: action) // Let KeyboardKit handle drag end
-                    return
-                }
-                isSpaceDragInProgress = false
-            case .end:
-                isSpaceDragInProgress = false
-            default:
-                break
-            }
+        if action == .space, isSpacebarDragGestureEnding(gesture) {
+            // A spacebar long-press moves the cursor instead of typing, so this gesture
+            // must not emit a space — hand the teardown to KeyboardKit.
+            super.handle(gesture, on: action)
+
+            // FIXME: Workaround for KeyboardKit 10 leaking its spacebar drag offset.
+            // KeyboardKit resets `currentDragTextPositionOffset` only when a *new* drag
+            // starts, never at drag end, and exposes no reset API. A surviving non-zero
+            // offset keeps its internal `isSpaceCursorDrag` classification permanently
+            // true, which killed every later spacebar tap and suppresses
+            // autocorrect-before-space. Must run AFTER `super.handle`, which still reads
+            // the offset while handling the drag end.
+            // Remove when KeyboardKit resets the offset itself or offers a reset API.
+            // 中文: KeyboardKit 只在「新 drag 開始」時歸零 offset,結束時不歸零 — 殘留值會讓它永久
+            // 中文: 誤判成「還在拖曳」,空白鍵從此失效。必須在 super.handle 之後清。
+            spacebarDragGestureHandler.currentDragTextPositionOffset = 0
+            return
         }
 
         guard gesture == .release else {
@@ -114,6 +110,24 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             return
         }
         super.handle(gesture, on: action)
+    }
+
+    /// Whether `gesture` ends an active spacebar drag gesture — the long-press sequence
+    /// that moves the input cursor, whether or not the finger actually moved.
+    ///
+    /// `keyboardContext.isSpacebarDragGestureActive` is KeyboardKit's own drag state:
+    /// `.longPress` sets it, and `.release` / `.end` clear it *inside* `super.handle`, so
+    /// it must be read before dispatching to `super`. `.end` is checked as well because a
+    /// cancelled gesture delivers `.end` without a preceding `.release`.
+    // 中文: 判定此手勢是否結束一個進行中的 spacebar 拖曳手勢(長按移游標,不論手指有無真的移動)。
+    // 中文: 用 KeyboardKit 自己的 drag 狀態當唯一來源,必須在 super.handle 之前讀(super 會把它清掉)。
+    private func isSpacebarDragGestureEnding(_ gesture: Keyboard.Gesture) -> Bool {
+        switch gesture {
+        case .release, .end:
+            return keyboardContext.isSpacebarDragGestureActive
+        default:
+            return false
+        }
     }
 
     /// Align with Android: skip autocomplete to preserve NextWord suggestions

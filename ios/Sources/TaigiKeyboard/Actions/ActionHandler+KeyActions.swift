@@ -157,18 +157,10 @@ extension ActionHandler {
 
     // MARK: - Space
 
-    // 中文: 空白鍵 — drag 中略過;English 直接插入;TPS 模式視為音節邊界 / 調 1 標記;
+    // 中文: 空白鍵 — English 直接插入;TPS 模式視為音節邊界 / 調 1 標記;
     // 中文: Taigi 模式組字中時送出當前 derived,並交給 NextWord 記錄關聯。
+    // 中文: 勿在此加拖曳判斷 — spacebar 拖曳手勢由 ActionHandler.handle 攔掉,不會走到這裡。
     func handleSpaceAction() -> Bool {
-        // Ignore during cursor-drag
-        if let keyboardController {
-            let dragOffset = keyboardController.services.spacebarDragGestureHandler.currentDragTextPositionOffset
-
-            if dragOffset != 0 {
-                return true
-            }
-        }
-
         // English mode: insert space directly
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.insertText(" ")
