@@ -7,6 +7,10 @@ import XCTest
 /// pin the mapping is to ask the engine and assert on what comes back.
 final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
     private func mask(_ toggles: DictionarySourceToggles) throws -> UInt32 {
+        try filters(toggles).dictionaryFilterBitmask
+    }
+
+    private func filters(_ toggles: DictionarySourceToggles) throws -> DictionaryFilters {
         try XCTUnwrap(
             RustEngineBridge.lexiconDictionaryFilters(toggles: toggles),
             "the engine answered nothing for a well-formed toggle set",
@@ -91,6 +95,24 @@ final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
         XCTAssertEqual(Set(masks).count, masks.count, "two 腔口 are wired to one bit")
     }
 
+    /// The same resolve also says WHICH sources are on, which is what the
+    /// search labels its results with. Both halves come from one round-trip,
+    /// so a test that only read the mask would not notice the other going
+    /// missing.
+    func testTheResolveAlsoNamesTheEnabledSources() throws {
+        let enabled = try filters(.defaults).enabledSources
+
+        XCTAssertTrue(enabled.contains(.kautian))
+        XCTAssertTrue(enabled.contains(.custom), "the user's own dictionary is always a source")
+        XCTAssertFalse(enabled.contains(.itaigi), "an off-by-default source was named enabled")
+    }
+
+    func testTurningASourceOn_namesItEnabled() throws {
+        let enabled = try filters(toggles { $0.itaigi = true }).enabledSources
+
+        XCTAssertTrue(enabled.contains(.itaigi))
+    }
+
     // MARK: - The all-off state
 
     /// Switching every dictionary off is a state the settings window allows,
@@ -99,11 +121,11 @@ final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
     /// that verbatim would hand the user every dictionary the moment they
     /// turned the last one off.
     func testEveryDictionaryOff_resolvesToZeroFromTheEngine() throws {
-        XCTAssertEqual(try mask(allSourcesOff), 0)
+        XCTAssertEqual(try mask(.allSourcesOff), 0)
     }
 
-    func testEveryDictionaryOff_goesOnTheWireAsAMaskWithNoSources() {
-        let sent = RustEngineBridge.enabledSourcesBitmask(for: allSourcesOff)
+    func testEveryDictionaryOff_goesOnTheWireAsAMaskWithNoSources() throws {
+        let sent = try filters(.allSourcesOff).wireMask
 
         XCTAssertNotEqual(sent, 0, "a zero would be read as 'not wired' and re-enable everything")
         XCTAssertEqual(sent, RustEngineBridge.noSourcesEnabledBitmask)
@@ -114,25 +136,6 @@ final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
         XCTAssertEqual(
             RustEngineBridge.enabledSourcesBitmask(for: .defaults),
             try mask(.defaults),
-        )
-    }
-
-    private var allSourcesOff: DictionarySourceToggles {
-        DictionarySourceToggles(
-            kautian: false,
-            taigitv: false,
-            itaigi: false,
-            sitbut: false,
-            taihoa: false,
-            taijit: false,
-            kungge: false,
-            stti: false,
-            khpoo: false,
-            variant: false,
-            khiin: false,
-            lkk: false,
-            dev: false,
-            kautianSubcollections: .defaults,
         )
     }
 

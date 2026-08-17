@@ -15,9 +15,19 @@ struct DictionarySettingsPane: View {
     /// and a test could hand it its own.
     let stores: UserDataStores
 
+    /// Read for the search's input mode and custom-dictionary switch. Named
+    /// here rather than defaulted inside the service so the whole tab is
+    /// driven by one composition root.
+    let settingsProvider: any EngineSettingsProvider
+
     var body: some View {
         NavigationStack {
             Form {
+                DictionarySearchSection(service: DictionarySearchService(
+                    customDictionaryStore: stores.customDictionary,
+                    settingsProvider: settingsProvider,
+                ))
+
                 Section {
                     NavigationLink("自訂詞庫") {
                         CustomDictionaryPage(store: stores.customDictionary)

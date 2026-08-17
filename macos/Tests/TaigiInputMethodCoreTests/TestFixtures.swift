@@ -59,6 +59,7 @@ enum TestFixtures {
     /// The shipped defaults with the output and learning flags overridable —
     /// the only settings any case here varies.
     static func settings(
+        inputMode: InputMode = .tl,
         swapped: Bool = false,
         bothScripts: Bool = false,
         frequencyRecording: Bool = true,
@@ -67,7 +68,7 @@ enum TestFixtures {
         dictionarySources: DictionarySourceToggles = .defaults,
     ) -> EngineSettings {
         EngineSettings(
-            inputMode: .tl,
+            inputMode: inputMode,
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
             isLiteralRomanCandidateEnabled: false,
@@ -211,6 +212,32 @@ enum TestFixtures {
         .deletingLastPathComponent() // <repo>
 }
 
+extension DictionarySourceToggles {
+    /// Every dictionary switched off — the state the wire cannot say with a
+    /// `0`, and so the one both the filter suite and the search suite are
+    /// about.
+    ///
+    /// Spelled out rather than derived from `.defaults`, because a source added
+    /// to the struct must fail to compile here until someone has said which
+    /// side of "off" it belongs on.
+    static let allSourcesOff = DictionarySourceToggles(
+        kautian: false,
+        taigitv: false,
+        itaigi: false,
+        sitbut: false,
+        taihoa: false,
+        taijit: false,
+        kungge: false,
+        stti: false,
+        khpoo: false,
+        variant: false,
+        khiin: false,
+        lkk: false,
+        dev: false,
+        kautianSubcollections: .defaults,
+    )
+}
+
 /// Hands out a generation nobody else is using.
 ///
 /// The Rust composing state is one per process, and the engine drops that state
@@ -265,16 +292,22 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
     let current: EngineSettings
 
     init(
+        inputMode: InputMode = .tl,
         swapped: Bool = false,
         bothScripts: Bool = false,
         frequencyRecording: Bool = true,
         associationRecording: Bool = true,
+        customDict: Bool = true,
+        dictionarySources: DictionarySourceToggles = .defaults,
     ) {
         current = TestFixtures.settings(
+            inputMode: inputMode,
             swapped: swapped,
             bothScripts: bothScripts,
             frequencyRecording: frequencyRecording,
             associationRecording: associationRecording,
+            customDict: customDict,
+            dictionarySources: dictionarySources,
         )
     }
 }

@@ -50,6 +50,7 @@ final class SettingsTabViewController: NSTabViewController {
             case .dictionary: NSHostingController(
                     rootView: DictionarySettingsPane(
                         stores: ComposingSessionCoordinator.shared.userDataStores,
+                        settingsProvider: SettingsStore(),
                     ),
                 )
             }
