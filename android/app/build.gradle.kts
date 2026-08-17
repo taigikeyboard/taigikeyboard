@@ -21,7 +21,7 @@ spotless {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = "0.8.15"
 }
 
 // 產生日期字串 (yyyyMMdd)
@@ -183,19 +183,27 @@ tasks.register("printVersionCode") {
 
 dependencies {
     // AndroidX 核心
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("androidx.core:core-ktx:1.17.0")
+    // core-ktx capped at 1.18.0: 1.19.0 declares minCompileSdk=37 (Android 17) in its
+    // aar-metadata, which fails the build against this module's compileSdk 36. Raise the
+    // cap only together with compileSdk.
+    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("com.google.android.material:material:1.13.0")
-    implementation("androidx.activity:activity-ktx:1.12.4")
+    implementation("com.google.android.material:material:1.14.0")
+    implementation("androidx.activity:activity-ktx:1.13.0")
 
     // Lifecycle（Compose 需要）
+    // Held at 2.10.0: lifecycle-runtime-compose 2.11.0 declares minCompileSdk=37, and the
+    // lifecycle group publishes constraints that force every artifact in it to the same
+    // version — so the whole group is capped by its strictest member.
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 
     // Compose BOM（統一版本管理）
-    val composeBom = platform("androidx.compose:compose-bom:2026.01.01")
+    // Capped at 2026.06.01 (compose-ui 1.11.4) for the same reason as core-ktx: the
+    // 2026.08.00 BOM ships compose-ui 1.12.0 with minCompileSdk=37.
+    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     implementation(composeBom)
 
     // Compose 核心元件
@@ -203,7 +211,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.activity:activity-compose:1.12.4")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.material:material-icons-core")
 
     // Compose 偵錯工具
@@ -216,24 +224,24 @@ dependencies {
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.2.0")
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
 
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     // Pure-JVM SQLite for SQL-structure tests (the custom-dict cross-mode JOIN
     // query). Android's SQLiteDatabase is unavailable in JVM unit tests
     // (testOptions.unitTests.isReturnDefaultValues = true), so exercise the
     // exact production SQL string against an in-memory JDBC DB instead.
-    testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
+    testImplementation("org.xerial:sqlite-jdbc:3.53.2.1")
     // Real org.json for JVM unit tests — Android's bundled org.json is stubbed
     // (testOptions.unitTests.isReturnDefaultValues = true), so theme/color JSON
     // round-trip tests need the actual implementation on the test classpath.
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
 
     // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge.
     // Pinned to the Java artifact that pairs with the `protoc` emitting the
