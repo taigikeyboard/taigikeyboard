@@ -20,6 +20,8 @@ struct DictionarySettingsPane: View {
     /// driven by one composition root.
     let settingsProvider: any EngineSettingsProvider
 
+    @Environment(DisplayLanguageStore.self) private var language
+
     var body: some View {
         NavigationStack {
             Form {
@@ -29,34 +31,34 @@ struct DictionarySettingsPane: View {
                 ))
 
                 Section {
-                    NavigationLink("自訂詞庫") {
+                    NavigationLink(language.string(.dictionaryCustomDictionary)) {
                         CustomDictionaryPage(store: stores.customDictionary)
                     }
-                    NavigationLink("詞頻") {
+                    NavigationLink(language.string(.dictionaryFrequencyManagement)) {
                         FrequencyDataPage(store: stores.frequency)
                     }
-                    NavigationLink("詞關聯") {
+                    NavigationLink(language.string(.dictionaryAssociationManagement)) {
                         AssociationDataPage(store: stores.association)
                     }
-                    NavigationLink("備份還原") {
+                    NavigationLink(language.string(.dictionaryBackupRestore)) {
                         DataManagementPage(stores: stores)
                     }
                 } header: {
-                    Text("資料管理")
+                    Text(language.string(.dictionaryDataManagement))
                 }
 
                 Section {
-                    NavigationLink("選辭典") {
+                    NavigationLink(language.string(.macosDictionarySourcesLink)) {
                         DictionaryTogglesView()
                     }
                 } header: {
-                    Text("辭典來源")
+                    Text(language.string(.macosDictionarySourcesSection))
                 } footer: {
-                    Text("揀欲用佗幾本辭典來出候選。")
+                    Text(language.string(.macosDictionarySourcesFooter))
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("詞庫")
+            .navigationTitle(language.string(.navTabDictionary))
         }
     }
 }

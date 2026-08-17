@@ -433,6 +433,47 @@ class IOSEmitTest(unittest.TestCase):
         self.assertNotIn("extension StringResolver", formats)
 
 
+class PlaceholderTypeTest(unittest.TestCase):
+    _outputs = staticmethod(_build_probe_outputs)
+
+    def test_placeholder_type_vocabulary(self):
+        # Adding a type here changes every platform's accessor signature and format spec, so the
+        # roster is pinned rather than left to whatever a caller happens to declare.
+        self.assertEqual(set(i18n_lib.PLACEHOLDER_TYPES), {"int", "string"})
+
+    def test_string_placeholder_emits_a_string_arg_with_no_cast(self):
+        # `string` exists for text the product does not author — a store's own error description —
+        # so the punctuation around it is authored per language instead of concatenated in code.
+        # Kotlin takes `%s`; Swift takes `%@` and, unlike `int`, needs no widening cast.
+        outputs = self._outputs(
+            {
+                "why": {
+                    "scope": {"platforms": ["android", "ios", "macos"], "surfaces": ["host"]},
+                    "placeholders": {"reason": "string"},
+                    "values": {
+                        "hanji": "失敗({reason})",
+                        "tailo": "sit-pāi({reason})",
+                        "poj": "sit-pāi({reason})",
+                        "en": "failed ({reason})",
+                        "ja": "失敗（{reason}）",
+                    },
+                }
+            },
+        )
+        for gen_dir in (i18n_lib.IOS_GEN_DIR, i18n_lib.MACOS_GEN_DIR):
+            formats = outputs[f"{gen_dir}/StringResolverFormats.swift"]
+            self.assertIn("func probeWhy(reason: String) -> String", formats)
+            self.assertIn("format(.probeWhy, reason)", formats)
+        kotlin = outputs[f"{i18n_lib.GEN_PKG_DIR}/StringResolverFormats.kt"]
+        self.assertIn("reason: String", kotlin)
+        # Each language keeps its own punctuation around the spec — the whole reason the reason is
+        # a placeholder rather than something the call site concatenates.
+        macos_map = outputs[f"{i18n_lib.MACOS_GEN_DIR}/GeneratedStrings.swift"]
+        self.assertIn('.probeWhy: "失敗(%1$@)"', macos_map)
+        self.assertIn('.probeWhy: "failed (%1$@)"', macos_map)
+        self.assertIn('.probeWhy: "失敗（%1$@）"', macos_map)
+
+
 def _all_platform_key(values: dict, placeholders: dict | None = None) -> dict:
     entry = {"scope": {"platforms": ["android", "ios", "macos"], "surfaces": ["host"]}, "values": values}
     if placeholders is not None:

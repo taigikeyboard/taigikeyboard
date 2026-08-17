@@ -68,6 +68,8 @@ final class DictionarySearchModel {
 /// `[一般] [詞庫]` tabs; and on the root rather than behind a navigation push,
 /// because looking a word up is the thing this tab is most often opened for.
 struct DictionarySearchSection: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     @State private var model: DictionarySearchModel
 
     init(service: DictionarySearchService) {
@@ -76,8 +78,7 @@ struct DictionarySearchSection: View {
 
     var body: some View {
         Section {
-            TextField("揣台語詞", text: $model.query)
-                .textFieldStyle(.roundedBorder)
+            UserDataFilterField(text: $model.query)
 
             if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 if model.results.isEmpty {
@@ -85,7 +86,7 @@ struct DictionarySearchSection: View {
                     // answer, and showing it before anything has been asked
                     // would be the wrong one.
                     if !model.isSearching {
-                        Text("揣無這个詞。")
+                        Text(language.string(.dictionaryNoResults))
                             .foregroundStyle(.secondary)
                     }
                 } else {
@@ -95,7 +96,7 @@ struct DictionarySearchSection: View {
                 }
             }
         } header: {
-            Text("揣辭典")
+            Text(language.string(.macosDictionarySearchSection))
         }
         .task(id: model.query) {
             await model.searchAfterTyping()
@@ -105,6 +106,8 @@ struct DictionarySearchSection: View {
 
 /// One result: what it says, where it came from, and where to read more.
 struct DictionarySearchResultRow: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     let result: DictionarySearchResult
 
     @State private var didFailToOpen = false
@@ -116,8 +119,8 @@ struct DictionarySearchResultRow: View {
             if let hanzi = result.hanzi {
                 Text(hanzi)
             }
-            ForEach(badgeLabels, id: \.self) { label in
-                Text(label)
+            ForEach(badgeKeys, id: \.self) { key in
+                Text(language.string(key))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
@@ -131,10 +134,10 @@ struct DictionarySearchResultRow: View {
             if result.moeURL != nil || result.chhoeURL != nil {
                 Menu {
                     if let url = result.moeURL {
-                        Button("教育部辭典") { open(url) }
+                        Button(language.string(.dictionaryLookupMoe)) { open(url) }
                     }
                     if let url = result.chhoeURL {
-                        Button("ChhoeTaigi 辭典") { open(url) }
+                        Button(language.string(.dictionaryLookupChhoe)) { open(url) }
                     }
                 } label: {
                     Image(systemName: "arrow.up.forward.square")
@@ -143,35 +146,35 @@ struct DictionarySearchResultRow: View {
                 .fixedSize()
             }
         }
-        .alert("拍袂開網頁", isPresented: $didFailToOpen) {
-            Button("好") {}
+        .alert(language.string(.macosOpenURLFailed), isPresented: $didFailToOpen) {
+            Button(language.string(.commonOk)) {}
         }
     }
 
     /// The badge for each source the row belongs to, in bit order, with the
     /// supplementary sources collapsed into one — they are one idea to the
     /// user, and four badges saying it would crowd out the word.
-    private var badgeLabels: [String] {
-        var seen = Set<String>()
+    private var badgeKeys: [StringKey] {
+        var seen = Set<StringKey>()
         return result.sources.compactMap { source in
-            let label = Self.badgeLabel(for: source)
-            return seen.insert(label).inserted ? label : nil
+            let key = Self.badgeKey(for: source)
+            return seen.insert(key).inserted ? key : nil
         }
     }
 
-    private static func badgeLabel(for source: DictionarySource) -> String {
+    private static func badgeKey(for source: DictionarySource) -> StringKey {
         switch source {
-        case .kautian: "教典"
-        case .taigitv: "台語新詞"
-        case .itaigi: "iTaigi"
-        case .sitbut: "植物名彙"
-        case .taihoa: "台華對照"
-        case .taijit: "臺日"
-        case .kungge: "工藝辭典"
-        case .stti: "學科術語"
-        case .lkk: "漢羅合用"
-        case .khpoo, .khiin, .dev: "補充資料"
-        case .custom: "自訂詞庫"
+        case .kautian: .dictionaryKautianTag
+        case .taigitv: .dictionaryTaigitvTag
+        case .itaigi: .dictionaryITaigiTag
+        case .sitbut: .dictionarySitbutTag
+        case .taihoa: .dictionaryTaihoaTag
+        case .taijit: .dictionaryTaijitTag
+        case .kungge: .dictionaryKunggeTag
+        case .stti: .dictionarySttiTag
+        case .lkk: .dictionaryLkkTag
+        case .khpoo, .khiin, .dev: .dictionarySupplementSectionTitle
+        case .custom: .dictionaryCustomDictionary
         }
     }
 

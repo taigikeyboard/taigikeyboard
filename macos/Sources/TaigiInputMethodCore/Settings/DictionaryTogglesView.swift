@@ -11,6 +11,8 @@ import SwiftUI
 /// what makes a `defaults write` — or a future settings import — show up in the
 /// form without anything having to be told.
 struct DictionaryTogglesView: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     @AppStorage(SettingsStore.Keys.isKautianEnabled.name)
     private var isKautianEnabled = SettingsStore.Keys.isKautianEnabled.defaultValue
     @AppStorage(SettingsStore.Keys.isTaigitvEnabled.name)
@@ -66,19 +68,19 @@ struct DictionaryTogglesView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("教育部臺灣台語常用詞辭典", isOn: $isKautianEnabled)
+                Toggle(language.string(.commonMoeDict), isOn: $isKautianEnabled)
                 Group {
-                    Toggle("鹿港偏泉腔", isOn: $isLukangEnabled)
-                    Toggle("三峽偏泉腔", isOn: $isSansiaEnabled)
-                    Toggle("臺北偏泉腔", isOn: $isTaipakEnabled)
-                    Toggle("宜蘭偏漳腔", isOn: $isGilanEnabled)
-                    Toggle("臺南混合腔", isOn: $isTainanEnabled)
-                    Toggle("高雄混合腔", isOn: $isKaohsiungEnabled)
-                    Toggle("金門偏泉腔", isOn: $isKinmenEnabled)
-                    Toggle("馬公偏泉腔", isOn: $isMakungEnabled)
-                    Toggle("新竹偏泉腔", isOn: $isSintikEnabled)
-                    Toggle("臺中偏漳腔", isOn: $isTaichungEnabled)
-                    Toggle("姓名附錄", isOn: $isNameAppendixEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentLukang), isOn: $isLukangEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentSansia), isOn: $isSansiaEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentTaipak), isOn: $isTaipakEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentGilan), isOn: $isGilanEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentTainan), isOn: $isTainanEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentKaohsiung), isOn: $isKaohsiungEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentKinmen), isOn: $isKinmenEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentMakung), isOn: $isMakungEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentSintik), isOn: $isSintikEnabled)
+                    Toggle(language.string(.dictionaryKautianAccentTaichung), isOn: $isTaichungEnabled)
+                    Toggle(language.string(.dictionaryKautianNameAppendix), isOn: $isNameAppendixEnabled)
                 }
                 .padding(.leading, Metrics.subcollectionIndent)
                 // Disabled, not cleared: the master switch says whether this
@@ -86,34 +88,34 @@ struct DictionaryTogglesView: View {
                 // return the 腔口 the user had chosen rather than all of them.
                 .disabled(!isKautianEnabled)
 
-                Toggle("台語新詞辭庫", isOn: $isTaigitvEnabled)
-                Toggle("台語工藝詞庫", isOn: $isKunggeEnabled)
-                Toggle("學科術語辭典", isOn: $isSttiEnabled)
+                Toggle(language.string(.commonNewwordDict), isOn: $isTaigitvEnabled)
+                Toggle(language.string(.commonKunggeDict), isOn: $isKunggeEnabled)
+                Toggle(language.string(.commonSttiDict), isOn: $isSttiEnabled)
             } header: {
-                Text("教育部")
+                Text(language.string(.dictionaryMoeSectionTitle))
             } footer: {
-                ExternalLinkButton(title: "教典網站", url: Self.kautianURL)
+                ExternalLinkButton(titleKey: .commonViewWebsite, url: Self.kautianURL)
             }
 
             Section {
-                Toggle("iTaigi 華台對照典", isOn: $isItaigiEnabled)
-                Toggle("台日大辭典", isOn: $isTaijitEnabled)
-                Toggle("台華線頂對照典", isOn: $isTaihoaEnabled)
-                Toggle("台灣植物名彙", isOn: $isSitbutEnabled)
+                Toggle(language.string(.commonITaigiDict), isOn: $isItaigiEnabled)
+                Toggle(language.string(.commonTaiwanJapanDict), isOn: $isTaijitEnabled)
+                Toggle(language.string(.commonTaiHuaDict), isOn: $isTaihoaEnabled)
+                Toggle(language.string(.commonTaiwanPlantDict), isOn: $isSitbutEnabled)
             } header: {
-                Text("其他辭典")
+                Text(language.string(.dictionaryOtherSectionTitle))
             }
 
             Section {
-                Toggle("異用字", isOn: $isVariantEnabled)
-                Toggle("在來字", isOn: $isKhiinEnabled)
-                Toggle("腔口補充資料", isOn: $isKhpooEnabled)
-                Toggle("LKK 漢羅合用建議用字", isOn: $isLkkEnabled)
-                Toggle("詞庫增補檔案", isOn: $isDevEnabled)
+                Toggle(language.string(.dictionaryVariantDictionary), isOn: $isVariantEnabled)
+                Toggle(language.string(.dictionaryKhiin), isOn: $isKhiinEnabled)
+                Toggle(language.string(.commonAccentDict), isOn: $isKhpooEnabled)
+                Toggle(language.string(.dictionaryLkkDict), isOn: $isLkkEnabled)
+                Toggle(language.string(.dictionaryDevSupplementDict), isOn: $isDevEnabled)
             } header: {
-                Text("補充資料")
+                Text(language.string(.dictionarySupplementSectionTitle))
             } footer: {
-                Text("關掉全部辭典,拍字就袂有詞庫候選。")
+                Text(language.string(.macosAllSourcesOffFooter))
             }
         }
         .formStyle(.grouped)
@@ -131,7 +133,9 @@ struct DictionaryTogglesView: View {
 /// `NSWorkspace.open` answers `false` when nothing could handle the URL, and a
 /// button that silently does nothing is indistinguishable from a broken one.
 struct ExternalLinkButton: View {
-    let title: String
+    @Environment(DisplayLanguageStore.self) private var language
+
+    let titleKey: StringKey
     let url: URL?
 
     @State private var didFail = false
@@ -143,11 +147,11 @@ struct ExternalLinkButton: View {
                 return
             }
         } label: {
-            Label(title, systemImage: "arrow.up.forward.square")
+            Label(language.string(titleKey), systemImage: "arrow.up.forward.square")
         }
         .buttonStyle(.link)
-        .alert("拍袂開網頁", isPresented: $didFail) {
-            Button("好") {}
+        .alert(language.string(.macosOpenURLFailed), isPresented: $didFail) {
+            Button(language.string(.commonOk)) {}
         } message: {
             Text(url?.absoluteString ?? "")
         }

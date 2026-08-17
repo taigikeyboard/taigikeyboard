@@ -110,6 +110,227 @@
       "comment": "Edit menu item (⌘A).",
       "scope": { "platforms": ["macos"], "surfaces": ["host"] },
       "values": { "hanji": "全選", "tailo": "tsuân-suán", "poj": "choân-soán", "en": "Select All", "ja": "すべてを選択" }
+    },
+    "dictionarySearchSection": {
+      "comment": "Section header over the 詞庫 pane's dictionary-search field.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "揣辭典", "tailo": "tshuē sû-tián", "poj": "chhōe sû-tián", "en": "Look Up", "ja": "辞書を引く" }
+    },
+    "dictionarySourcesLink": {
+      "comment": "Navigation row that opens the dictionary-source toggles. macOS pushes them onto their own page; iOS lists the toggles inline.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "選辭典", "tailo": "suán sû-tián", "poj": "soán sû-tián", "en": "Choose Dictionaries", "ja": "辞書を選ぶ" }
+    },
+    "dictionarySourcesSection": {
+      "comment": "Section header over the dictionary-source navigation row.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "辭典來源", "tailo": "sû-tián lâi-guân", "poj": "sû-tián lâi-goân", "en": "Dictionary Sources", "ja": "辞書ソース" }
+    },
+    "dictionarySourcesFooter": {
+      "comment": "Footer under the dictionary-source navigation row.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "揀欲用佗幾本辭典來出候選。", "tailo": "kíng beh iōng tó kuí pún sû-tián lâi tshut hāu-suán.", "poj": "kéng beh iōng tó kúi pún sû-tián lâi chhut hāu-soán.", "en": "Choose which dictionaries supply candidates.", "ja": "候補を出す辞書を選びます。" }
+    },
+    "allSourcesOffFooter": {
+      "comment": "Footer under the supplementary-source toggles: what turning every dictionary off does.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "關掉全部辭典,拍字就袂有詞庫候選。", "tailo": "kuainn-tiāu tsuân-pōo sû-tián, phah-jī tō bē ū sû-khòo hāu-suán.", "poj": "koaiⁿ-tiāu choân-pō͘ sû-tián, phah-jī tō bē ū sû-khò͘ hāu-soán.", "en": "With every dictionary off, typing produces no dictionary candidates.", "ja": "すべての辞書をオフにすると、入力しても辞書候補は出ません。" }
+    },
+    "openURLFailed": {
+      "comment": "Alert title when NSWorkspace could not open a dictionary's web page. macOS-only: the iOS opener is fire-and-forget.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "拍袂開網頁", "tailo": "phah bē khui bāng-ia̍h", "poj": "phah bē khui bāng-ia̍h", "en": "Could Not Open the Page", "ja": "ページを開けませんでした" }
+    },
+    "customDictReadFailed": {
+      "comment": "Alert title when the custom-dictionary store could not be read.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "讀袂著自訂詞庫", "tailo": "tha̍k bē tio̍h tsū-tīng-sû-khòo", "poj": "tha̍k bē tio̍h chū-tēng-sû-khò͘", "en": "Could Not Read the Custom Dictionary", "ja": "カスタム辞書を読み込めませんでした" }
+    },
+    "customDictWriteFailed": {
+      "comment": "Alert title when a custom-dictionary write failed.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "寫袂入自訂詞庫", "tailo": "siá bē ji̍p tsū-tīng-sû-khòo", "poj": "siá bē ji̍p chū-tēng-sû-khò͘", "en": "Could Not Save to the Custom Dictionary", "ja": "カスタム辞書に保存できませんでした" }
+    },
+    "frequencyReadFailed": {
+      "comment": "Alert title when the word-frequency store could not be read.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "讀袂著詞頻", "tailo": "tha̍k bē tio̍h sû pîn", "poj": "tha̍k bē tio̍h sû pîn", "en": "Could Not Read the Frequency Records", "ja": "単語頻度を読み込めませんでした" }
+    },
+    "frequencyWriteFailed": {
+      "comment": "Alert title when a word-frequency write failed.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "寫袂入詞頻", "tailo": "siá bē ji̍p sû pîn", "poj": "siá bē ji̍p sû pîn", "en": "Could Not Save the Frequency Records", "ja": "単語頻度を保存できませんでした" }
+    },
+    "associationReadFailed": {
+      "comment": "Alert title when the word-association store could not be read.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "讀袂著詞關聯", "tailo": "tha̍k bē tio̍h sû kuan-liân", "poj": "tha̍k bē tio̍h sû koan-liân", "en": "Could Not Read the Association Records", "ja": "単語連携を読み込めませんでした" }
+    },
+    "associationWriteFailed": {
+      "comment": "Alert title when a word-association write failed.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "寫袂入詞關聯", "tailo": "siá bē ji̍p sû kuan-liân", "poj": "siá bē ji̍p sû koan-liân", "en": "Could Not Save the Association Records", "ja": "単語連携を保存できませんでした" }
+    },
+    "progressSaving": {
+      "comment": "Label under the spinner while a 詞庫 page saves. macOS-only: the mobile apps have no blocking overlay.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "咧存…", "tailo": "teh tsûn…", "poj": "teh chûn…", "en": "Saving…", "ja": "保存中…" }
+    },
+    "progressDeleting": {
+      "comment": "Label under the spinner while a 詞庫 page deletes.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "咧刪…", "tailo": "teh san…", "poj": "teh san…", "en": "Deleting…", "ja": "削除中…" }
+    },
+    "progressExporting": {
+      "comment": "Label under the spinner while a 詞庫 page writes a CSV.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "咧匯出…", "tailo": "teh huē-tshut…", "poj": "teh hōe-chhut…", "en": "Exporting…", "ja": "書き出し中…" }
+    },
+    "progressImporting": {
+      "comment": "Label under the spinner while a 詞庫 page reads a CSV.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "咧匯入…", "tailo": "teh huē-ji̍p…", "poj": "teh hōe-ji̍p…", "en": "Importing…", "ja": "読み込み中…" }
+    },
+    "progressBackingUp": {
+      "comment": "Label under the spinner while the backup file is written.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "咧備份…", "tailo": "teh pī-hūn…", "poj": "teh pī-hūn…", "en": "Backing Up…", "ja": "バックアップ中…" }
+    },
+    "progressRestoring": {
+      "comment": "Label under the spinner while a backup file is restored.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "咧還原…", "tailo": "teh huân-guân…", "poj": "teh hoân-goân…", "en": "Restoring…", "ja": "復元中…" }
+    },
+    "importComplete": {
+      "comment": "Alert title after a CSV import finished. iOS titles the alert with the action's own name instead.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "匯入完成", "tailo": "huē-ji̍p uân-sîng", "poj": "hōe-ji̍p oân-sêng", "en": "Import Complete", "ja": "読み込みが完了しました" }
+    },
+    "notUTF8Detail": {
+      "comment": "Alert body when an imported file is not UTF-8 — a different cause from a malformed CSV, which has its own message.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "這个檔案毋是 UTF-8 文字。", "tailo": "tsit ê tóng-àn m̄-sī UTF-8 bûn-jī.", "poj": "chit ê tóng-àn m̄-sī UTF-8 bûn-jī.", "en": "This file is not UTF-8 text.", "ja": "このファイルは UTF-8 テキストではありません。" }
+    },
+    "irreversible": {
+      "comment": "Body of every 詞庫 clear-everything confirmation; the question itself is the dialog's title.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "這改袂轉來。", "tailo": "tse kái bē tńg--lâi.", "poj": "che kái bē tńg--lâi.", "en": "This cannot be undone.", "ja": "この操作は取り消せません。" }
+    },
+    "userDataPrivacyFooter": {
+      "comment": "One footer under the CSV actions on all three 詞庫 list pages. The mobile apps carry a different warning per page.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "這份資料干焦囥佇你的電腦,袂上傳。匯出的檔案內底有你拍過的字,請家己保管好。", "tailo": "tsit hūn tsu-liāu kan-na khǹg tī lí ê tiān-náu, bē siōng-thuân. huē-tshut ê tóng-àn lāi-té ū lí phah--kuè ê jī, tshiánn ka-kī pó-kuán hó.", "poj": "chit hūn chu-liāu kan-na khǹg tī lí ê tiān-náu, bē siōng-thoân. hōe-chhut ê tóng-àn lāi-té ū lí phah--kòe ê jī, chhiáⁿ ka-kī pó-koán hó.", "en": "This data stays on your Mac and is never uploaded. An exported file contains words you have typed, so keep it safe.", "ja": "このデータはこの Mac にのみ保存され、アップロードされません。書き出したファイルには入力した単語が含まれるため、大切に保管してください。" }
+    },
+    "customDictEmpty": {
+      "comment": "Empty state on the custom-dictionary page. Not the shared key, whose copy names a `+` affordance macOS does not have.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "猶未加半个詞。", "tailo": "iáu-buē ke puànn-ê sû.", "poj": "iáu-bōe ke pòaⁿ-ê sû.", "en": "No custom words yet.", "ja": "まだカスタム単語がありません。" }
+    },
+    "entriesSection": {
+      "comment": "Section header over the custom-dictionary rows. The shared key is already the page title one line above.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "詞條", "tailo": "sû-tiâu", "poj": "sû-tiâu", "en": "Entries", "ja": "項目" }
+    },
+    "forgetWord": {
+      "comment": "Row action on the frequency page. Deliberately not the shared delete label: it undoes what the keyboard learned rather than removing a record the user wrote.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "袂記得這字", "tailo": "bē kì-tit tsit jī", "poj": "bē kì-tit chit jī", "en": "Forget This Word", "ja": "この単語を忘れる" }
+    },
+    "learnedWordsSection": {
+      "comment": "Section header over the frequency rows. The shared key is already the page title one line above.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "學著的字", "tailo": "ha̍k-tio̍h ê jī", "poj": "ha̍k-tio̍h ê jī", "en": "Learned Words", "ja": "学習した単語" }
+    },
+    "forgetPair": {
+      "comment": "Row action on the association page. See macos.forgetWord for why this is not the shared delete label.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "袂記得這組", "tailo": "bē kì-tit tsit tsoo", "poj": "bē kì-tit chit cho͘", "en": "Forget This Pair", "ja": "この組を忘れる" }
+    },
+    "learnedPairsSection": {
+      "comment": "Section header over the association rows. The shared key is already the page title one line above.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "學著的詞組", "tailo": "ha̍k-tio̍h ê sû-tsoo", "poj": "ha̍k-tio̍h ê sû-cho͘", "en": "Learned Pairs", "ja": "学習した単語の組" }
+    },
+    "associationNotUsedFooter": {
+      "comment": "Footer under the association-recording toggle. Not the shared explainer, which promises next-word suggestions macOS does not make yet.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "台語鍵盤佇 macOS 猶未用關聯來推薦後一个詞,毋過學著的資料會先留咧。", "tailo": "Tâi-gí kiān-puânn tī macOS iáu-buē iōng kuan-liân lâi tshui-tsiàn āu tsi̍t ê sû, m̄-koh ha̍k-tio̍h ê tsu-liāu ē sing lâu--leh.", "poj": "Tâi-gí kiān-pôaⁿ tī macOS iáu-bōe iōng koan-liân lâi chhui-chiàn āu chi̍t ê sû, m̄-koh ha̍k-tio̍h ê chu-liāu ē seng lâu--leh.", "en": "TaigiKeyboard does not use associations to suggest the next word on macOS yet, but what it has learned is kept.", "ja": "macOS では単語連携を次の単語の提案にまだ使っていませんが、学習した記録は保持されます。" }
+    },
+    "backupFileSection": {
+      "comment": "Section header over the backup export/import buttons.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "備份檔案", "tailo": "pī-hūn tóng-àn", "poj": "pī-hūn tóng-àn", "en": "Backup File", "ja": "バックアップファイル" }
+    },
+    "backupFooter": {
+      "comment": "Footer under the backup buttons. Not the shared warning, which describes iOS/Android interop rather than this Mac's Time Machine coverage.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "備份內底有自訂詞庫、詞頻佮詞關聯,攏是你拍字的紀錄,請家己保管好。這台電腦的資料會綴 Time Machine 做備份;欲徙去別台電腦,愛用這个檔案。", "tailo": "pī-hūn lāi-té ū tsū-tīng-sû-khòo, sû pîn kah sû kuan-liân, lóng sī lí phah-jī ê kì-lio̍k, tshiánn ka-kī pó-kuán hó. tsit tâi tiān-náu ê tsu-liāu ē tuè Time Machine tsò pī-hūn; beh suá khì pa̍t tâi tiān-náu, ài iōng tsit ê tóng-àn.", "poj": "pī-hūn lāi-té ū chū-tēng-sû-khò͘, sû pîn kah sû koan-liân, lóng sī lí phah-jī ê kì-lio̍k, chhiáⁿ ka-kī pó-koán hó. chit tâi tiān-náu ê chu-liāu ē tòe Time Machine chò pī-hūn; beh sóa khì pa̍t tâi tiān-náu, ài iōng chit ê tóng-àn.", "en": "A backup holds your custom dictionary, frequency records, and association records — everything the keyboard learned from your typing. Keep the file safe. This Mac's data is covered by Time Machine; moving it to another Mac needs this file.", "ja": "バックアップには、カスタム辞書・単語頻度・単語連携という、入力から学習した記録が含まれます。ファイルは大切に保管してください。この Mac のデータは Time Machine でバックアップされます。別の Mac へ移すにはこのファイルが必要です。" }
+    },
+    "importRulesSection": {
+      "comment": "Section header over the explanation of how a restore merges.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "匯入按怎算", "tailo": "huē-ji̍p án-tsuánn sǹg", "poj": "hōe-ji̍p án-chóaⁿ sǹg", "en": "How Importing Merges", "ja": "読み込み時の扱い" }
+    },
+    "importRulesBody": {
+      "comment": "How a restore merges into what is already stored.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "匯入的時,已經有的資料袂消失:自訂詞庫加新的,詞頻佮詞關聯取較大的次數。", "tailo": "huē-ji̍p ê sî, í-king ū ê tsu-liāu bē siau-sit: tsū-tīng-sû-khòo ke sin ê, sû pîn kah sû kuan-liân tshú khah tuā ê tshù-sòo.", "poj": "hōe-ji̍p ê sî, í-keng ū ê chu-liāu bē siau-sit: chū-tēng-sû-khò͘ ke sin ê, sû pîn kah sû koan-liân chhú khah tōa ê chhù-sò͘.", "en": "Importing keeps what is already there: custom words are added, and frequency and association records keep whichever count is higher.", "ja": "読み込みでは既存のデータは失われません。カスタム単語は追加され、単語頻度と単語連携は大きい方の回数が残ります。" }
+    },
+    "backupFailed": {
+      "comment": "Alert title when writing the backup file failed. Distinct from the shared export-failure title, which the three CSV pages use.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "備份失敗", "tailo": "pī-hūn sit-pāi", "poj": "pī-hūn sit-pāi", "en": "Backup Failed", "ja": "バックアップに失敗しました" }
+    },
+    "restoreFailed": {
+      "comment": "Alert title when the backup file could not be read at all.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "還原失敗", "tailo": "huân-guân sit-pāi", "poj": "hoân-goân sit-pāi", "en": "Restore Failed", "ja": "復元に失敗しました" }
+    },
+    "restoreComplete": {
+      "comment": "Alert title when every category of a backup restored.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "還原完成", "tailo": "huân-guân uân-sîng", "poj": "hoân-goân oân-sêng", "en": "Restore Complete", "ja": "復元が完了しました" }
+    },
+    "restorePartial": {
+      "comment": "Alert title when a backup restored some categories and not others. The three databases cannot be restored in one transaction.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "還原一部份", "tailo": "huân-guân tsi̍t pōo-hūn", "poj": "hoân-goân chi̍t pō͘-hūn", "en": "Partially Restored", "ja": "一部のみ復元しました" }
+    },
+    "restoreLineCustomDictionary": {
+      "comment": "One line of the restore report. Authored whole per category and outcome rather than composed from a verb, which does not inflect across languages.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "placeholders": { "count": "int" },
+      "values": { "hanji": "自訂詞庫:新增 {count} 筆", "tailo": "tsū-tīng-sû-khòo: sin-tsing {count} pit", "poj": "chū-tēng-sû-khò͘: sin-cheng {count} pit", "en": "Custom dictionary: {count} added", "ja": "カスタム辞書：{count} 件を追加" }
+    },
+    "restoreLineFrequency": {
+      "comment": "One line of the restore report. 處理 rather than 新增: the merge keeps whichever count is higher, so a row that changed nothing was still read and considered.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "placeholders": { "count": "int" },
+      "values": { "hanji": "詞頻:處理 {count} 筆", "tailo": "sû pîn: tshú-lí {count} pit", "poj": "sû pîn: chhú-lí {count} pit", "en": "Frequency records: {count} processed", "ja": "単語頻度：{count} 件を処理" }
+    },
+    "restoreLineAssociation": {
+      "comment": "One line of the restore report. See macos.restoreLineFrequency for why this says 處理.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "placeholders": { "count": "int" },
+      "values": { "hanji": "詞關聯:處理 {count} 筆", "tailo": "sû kuan-liân: tshú-lí {count} pit", "poj": "sû koan-liân: chhú-lí {count} pit", "en": "Association records: {count} processed", "ja": "単語連携：{count} 件を処理" }
+    },
+    "restoreLineCustomDictionaryFailed": {
+      "comment": "One line of the restore report when this category failed. The store's own reason is untranslated, so each language punctuates around it.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "placeholders": { "reason": "string" },
+      "values": { "hanji": "自訂詞庫:失敗({reason})", "tailo": "tsū-tīng-sû-khòo: sit-pāi({reason})", "poj": "chū-tēng-sû-khò͘: sit-pāi({reason})", "en": "Custom dictionary: failed ({reason})", "ja": "カスタム辞書：失敗（{reason}）" }
+    },
+    "restoreLineFrequencyFailed": {
+      "comment": "One line of the restore report when this category failed.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "placeholders": { "reason": "string" },
+      "values": { "hanji": "詞頻:失敗({reason})", "tailo": "sû pîn: sit-pāi({reason})", "poj": "sû pîn: sit-pāi({reason})", "en": "Frequency records: failed ({reason})", "ja": "単語頻度：失敗（{reason}）" }
+    },
+    "restoreLineAssociationFailed": {
+      "comment": "One line of the restore report when this category failed.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "placeholders": { "reason": "string" },
+      "values": { "hanji": "詞關聯:失敗({reason})", "tailo": "sû kuan-liân: sit-pāi({reason})", "poj": "sû koan-liân: sit-pāi({reason})", "en": "Association records: failed ({reason})", "ja": "単語連携：失敗（{reason}）" }
     }
   }
 }

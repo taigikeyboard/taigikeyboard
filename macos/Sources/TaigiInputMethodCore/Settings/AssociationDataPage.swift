@@ -34,20 +34,20 @@ final class AssociationDataPageModel {
             guard generation == loadGeneration else { return }
             rows = loaded
         } catch {
-            message = .failure("讀袂著詞關聯", error)
+            message = .failure(.macosAssociationReadFailed, error)
         }
     }
 
     func delete(_ row: AssociationRow) async {
-        await perform("咧刪…") { _ = try await self.store.delete(row.pair) }
+        await perform(.macosProgressDeleting) { _ = try await self.store.delete(row.pair) }
     }
 
     func deleteAll() async {
-        await perform("咧刪…") { _ = try await self.store.deleteAll() }
+        await perform(.macosProgressDeleting) { _ = try await self.store.deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
-        activity = .working("咧匯出…")
+        activity = .working(.macosProgressExporting)
         defer { activity = .idle }
         do {
             let csv = try await UserDataCSV.encodeAssociation(store.rows().map {
@@ -69,7 +69,7 @@ final class AssociationDataPageModel {
                 in: window,
             )
         } catch {
-            message = .failure("匯出失敗", error)
+            message = .failure(.commonExportFailed, error)
         }
     }
 
@@ -79,7 +79,7 @@ final class AssociationDataPageModel {
             in: window,
         ) else { return }
 
-        activity = .working("咧匯入…")
+        activity = .working(.macosProgressImporting)
         defer { activity = .idle }
         do {
             // Off the main actor: the read and the parse are both
@@ -92,7 +92,7 @@ final class AssociationDataPageModel {
                 return UserDataCSV.decodeAssociation(text)
             }.value
             guard let parsed = decoded else {
-                message = .notUTF8()
+                message = .notUTF8
                 return
             }
             let processed = try await store.batchImportMerge(parsed.map {
@@ -106,29 +106,28 @@ final class AssociationDataPageModel {
                     count: $0.count,
                 )
             })
-            message = UserDataPageMessage(
-                title: "匯入完成",
-                detail: "處理 \(processed) 筆,略過 \(parsed.count - processed) 筆。",
-            )
+            message = .imported(processed, skipped: parsed.count - processed)
             await load()
         } catch {
-            message = .failure("匯入失敗", error)
+            message = .failure(.commonImportFailed, error)
         }
     }
 
-    private func perform(_ label: String, _ body: () async throws -> Void) async {
+    private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
         activity = .working(label)
         defer { activity = .idle }
         do {
             try await body()
             await load()
         } catch {
-            message = .failure("寫袂入詞關聯", error)
+            message = .failure(.macosAssociationWriteFailed, error)
         }
     }
 }
 
 struct AssociationDataPage: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     @State private var model: AssociationDataPageModel
     @AppStorage(SettingsStore.Keys.isAssociationRecordingEnabled.name)
     private var isRecordingEnabled = SettingsStore.Keys.isAssociationRecordingEnabled.defaultValue
@@ -140,15 +139,15 @@ struct AssociationDataPage: View {
     var body: some View {
         Form {
             Section {
-                Toggle("記錄詞語關聯", isOn: $isRecordingEnabled)
+                Toggle(language.string(.dictionaryAssociationRecordingEnabled), isOn: $isRecordingEnabled)
             } footer: {
-                Text("台語鍵盤佇 macOS 猶未用關聯來推薦後一个詞,毋過學著的資料會先留咧。")
+                Text(language.string(.macosAssociationNotUsedFooter))
             }
 
             Section {
-                UserDataFilterField(prompt: "揣漢字抑是羅馬字", text: $model.filter)
+                UserDataFilterField(text: $model.filter)
                 if model.rows.isEmpty {
-                    Text(model.filter.isEmpty ? "猶未學著半組。" : "無合的組。")
+                    Text(language.string(model.filter.isEmpty ? .dictionaryNoData : .dictionaryNoResults))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(model.rows, id: \.pair) { row in
@@ -165,27 +164,27 @@ struct AssociationDataPage: View {
                             .monospacedDigit()
                     }
                     .contextMenu {
-                        Button("袂記得這組", role: .destructive) {
+                        Button(language.string(.macosForgetPair), role: .destructive) {
                             Task { await model.delete(row) }
                         }
                     }
                 }
             } header: {
-                Text("學著的詞組")
+                Text(language.string(.macosLearnedPairsSection))
             }
 
             UserDataActionsSection(
-                exportTitle: "匯出 CSV",
-                importTitle: "匯入 CSV",
-                clearTitle: "清掉全部關聯",
-                clearConfirmation: "beh 清掉全部詞關聯?",
+                exportTitle: .dictionaryAssociationExportCSV,
+                importTitle: .dictionaryAssociationImportCSV,
+                clearTitle: .dictionaryClearAllAssociation,
+                clearConfirmation: .dictionaryClearAssociationMessage,
                 onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportCSV) } },
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
                 onClear: { Task { await model.deleteAll() } },
             )
         }
         .formStyle(.grouped)
-        .navigationTitle("詞關聯")
+        .navigationTitle(language.string(.dictionaryAssociationManagement))
         .reloadWhenFilterSettles(model.filter) { await model.load() }
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }

@@ -25,7 +25,7 @@ enum BackupError: Error, CustomStringConvertible {
 /// frequency import throws after the custom dictionary succeeded, the user has
 /// to be told which half landed. iOS reports a plain count and treats a failure
 /// as zero rows, which reads as "there was nothing to restore".
-enum BackupCategoryOutcome: Equatable, Sendable {
+enum BackupCategoryOutcome: Hashable, Sendable {
     case restored(Int)
     case failed(String)
 
@@ -38,7 +38,7 @@ enum BackupCategoryOutcome: Equatable, Sendable {
     }
 }
 
-struct BackupImportResult: Equatable, Sendable {
+struct BackupImportResult: Hashable, Sendable {
     let customDictionary: BackupCategoryOutcome
     let frequency: BackupCategoryOutcome
     let association: BackupCategoryOutcome

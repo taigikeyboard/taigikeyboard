@@ -17,7 +17,7 @@ final class DataManagementPageModel {
     }
 
     func export(in window: NSWindow) async {
-        activity = .working("咧備份…")
+        activity = .working(.macosProgressBackingUp)
         defer { activity = .idle }
         do {
             _ = try await UserDataFilePanels.write(
@@ -30,7 +30,7 @@ final class DataManagementPageModel {
                 in: window,
             )
         } catch {
-            message = .failure("備份失敗", error)
+            message = .failure(.macosBackupFailed, error)
         }
     }
 
@@ -40,45 +40,20 @@ final class DataManagementPageModel {
             in: window,
         ) else { return }
 
-        activity = .working("咧還原…")
+        activity = .working(.macosProgressRestoring)
         defer { activity = .idle }
         do {
             let result = try await backupService.restore(from: Data(contentsOf: url))
-            message = UserDataPageMessage(
-                title: result.hasFailure ? "還原一部份" : "還原完成",
-                detail: Self.detail(for: result),
-            )
+            message = .restored(result)
         } catch {
-            message = .failure("還原失敗", error)
-        }
-    }
-
-    /// One line per category, and a failed one says so.
-    ///
-    /// The three databases cannot be restored in one transaction, so a single
-    /// number would have to stand for "nothing to restore", "everything was
-    /// already there" and "it did not work" at once.
-    private static func detail(for result: BackupImportResult) -> String {
-        [
-            line("自訂詞庫", result.customDictionary, verb: "新增"),
-            line("詞頻", result.frequency, verb: "處理"),
-            line("詞關聯", result.association, verb: "處理"),
-        ].joined(separator: "\n")
-    }
-
-    private static func line(
-        _ name: String,
-        _ outcome: BackupCategoryOutcome,
-        verb: String,
-    ) -> String {
-        switch outcome {
-        case let .restored(count): "\(name):\(verb) \(count) 筆"
-        case let .failed(reason): "\(name):失敗(\(reason))"
+            message = .failure(.macosRestoreFailed, error)
         }
     }
 }
 
 struct DataManagementPage: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     @State private var model: DataManagementPageModel
 
     init(stores: UserDataStores) {
@@ -88,30 +63,27 @@ struct DataManagementPage: View {
     var body: some View {
         Form {
             Section {
-                Button("匯出備份…") {
+                Button(language.string(.dictionaryExportBackup)) {
                     Task { await UserDataFilePanels.withSettingsWindow(model.export) }
                 }
-                Button("匯入備份…") {
+                Button(language.string(.dictionaryImportBackup)) {
                     Task { await UserDataFilePanels.withSettingsWindow(model.restore) }
                 }
             } header: {
-                Text("備份檔案")
+                Text(language.string(.macosBackupFileSection))
             } footer: {
-                Text(
-                    "備份內底有自訂詞庫、詞頻佮詞關聯,攏是你拍字的紀錄,請家己保管好。"
-                        + "這台電腦的資料會綴 Time Machine 做備份;欲徙去別台電腦,愛用這个檔案。",
-                )
+                Text(language.string(.macosBackupFooter))
             }
 
             Section {
-                Text("匯入的時,已經有的資料袂消失:自訂詞庫加新的,詞頻佮詞關聯取較大的次數。")
+                Text(language.string(.macosImportRulesBody))
                     .foregroundStyle(.secondary)
             } header: {
-                Text("匯入按怎算")
+                Text(language.string(.macosImportRulesSection))
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("備份還原")
+        .navigationTitle(language.string(.dictionaryBackupRestore))
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }
 }

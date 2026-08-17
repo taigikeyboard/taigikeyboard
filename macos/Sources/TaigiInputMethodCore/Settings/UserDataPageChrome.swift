@@ -10,39 +10,108 @@ import SwiftUI
 /// others while it runs. That is deliberate: the stores serialise anyway, and
 /// a second import queued behind the first would report its counts against a
 /// database the user has already changed.
+///
+/// The label is a key rather than a resolved string: a long import can outlive
+/// a display-language change, and the overlay has to follow it.
 enum UserDataPageActivity: Equatable, Sendable {
     case idle
-    case working(String)
+    case working(StringKey)
 
     var isWorking: Bool {
         self != .idle
     }
 
-    var label: String? {
-        if case let .working(label) = self {
-            label
+    var labelKey: StringKey? {
+        if case let .working(key) = self {
+            key
         } else {
             nil
         }
     }
 }
 
-/// Something the page has to tell the user about, as its own type so a page
-/// can carry exactly one at a time and SwiftUI can drive an alert from it.
-struct UserDataPageMessage: Identifiable, Equatable {
-    let id = UUID()
-    let title: String
-    let detail: String
+/// Something the page has to tell the user about — what happened, never how to
+/// say it, so nothing a page holds can be left in a language the user has since
+/// changed away from. The wording is resolved when the alert draws; whether
+/// AppKit re-renders an alert already on screen is its own decision, and not
+/// one this side makes.
+///
+/// One case per valid title-and-body pairing rather than a free title beside a
+/// free body, which would admit a success title over a failure explanation.
+enum UserDataPageMessage: Identifiable, Hashable {
+    /// `diagnostic` is the store's own error text, which is English and stays
+    /// that way: it names a SQLite or file-system condition, not something the
+    /// product has wording for.
+    case failure(StringKey, diagnostic: String)
+    /// The one refusal a CSV page makes before it has a parser error to report,
+    /// its own case so the same wrong file does not get two different
+    /// explanations on two pages.
+    case notUTF8
+    case imported(Int, skipped: Int)
+    case restored(BackupImportResult)
 
-    static func failure(_ title: String, _ error: some Error) -> UserDataPageMessage {
-        UserDataPageMessage(title: title, detail: String(describing: error))
+    var id: Self {
+        self
     }
 
-    /// The one refusal a CSV page makes before it has a parser error to report,
-    /// shared so the same wrong file does not get two different explanations on
-    /// two pages.
-    static func notUTF8() -> UserDataPageMessage {
-        UserDataPageMessage(title: "匯入失敗", detail: "這个檔案毋是 UTF-8 文字。")
+    static func failure(_ title: StringKey, _ error: some Error) -> UserDataPageMessage {
+        .failure(title, diagnostic: String(describing: error))
+    }
+
+    func title(_ language: StringResolver) -> String {
+        switch self {
+        case let .failure(key, _): language.resolve(key)
+        case .notUTF8: language.resolve(.commonImportFailed)
+        case .imported: language.resolve(.macosImportComplete)
+        case let .restored(result):
+            language.resolve(result.hasFailure ? .macosRestorePartial : .macosRestoreComplete)
+        }
+    }
+
+    func detail(_ language: StringResolver) -> String {
+        switch self {
+        case let .failure(_, diagnostic): diagnostic
+        case .notUTF8: language.resolve(.macosNotUTF8Detail)
+        case let .imported(imported, skipped):
+            language.dictionaryImportResult(imported: imported, skipped: skipped)
+        case let .restored(result): Self.restoreReport(result, language)
+        }
+    }
+
+    /// One line per category, and a failed one says so.
+    ///
+    /// The three databases cannot be restored in one transaction, so a single
+    /// number would have to stand for "nothing to restore", "everything was
+    /// already there" and "it did not work" at once.
+    private static func restoreReport(_ result: BackupImportResult, _ language: StringResolver) -> String {
+        func line(
+            _ outcome: BackupCategoryOutcome,
+            _ restored: (Int) -> String,
+            _ failed: (String) -> String,
+        ) -> String {
+            switch outcome {
+            case let .restored(count): restored(count)
+            case let .failed(reason): failed(reason)
+            }
+        }
+
+        return [
+            line(
+                result.customDictionary,
+                { language.macosRestoreLineCustomDictionary(count: $0) },
+                { language.macosRestoreLineCustomDictionaryFailed(reason: $0) },
+            ),
+            line(
+                result.frequency,
+                { language.macosRestoreLineFrequency(count: $0) },
+                { language.macosRestoreLineFrequencyFailed(reason: $0) },
+            ),
+            line(
+                result.association,
+                { language.macosRestoreLineAssociation(count: $0) },
+                { language.macosRestoreLineAssociationFailed(reason: $0) },
+            ),
+        ].joined(separator: "\n")
     }
 }
 
@@ -53,27 +122,41 @@ extension View {
         activity: UserDataPageActivity,
         message: Binding<UserDataPageMessage?>,
     ) -> some View {
-        disabled(activity.isWorking)
+        modifier(UserDataPageChrome(activity: activity, message: message))
+    }
+}
+
+/// A modifier rather than a plain `View` extension so it can read the display
+/// language and resolve the overlay and the alert as it draws them.
+private struct UserDataPageChrome: ViewModifier {
+    @Environment(DisplayLanguageStore.self) private var language
+
+    let activity: UserDataPageActivity
+    @Binding var message: UserDataPageMessage?
+
+    func body(content: Content) -> some View {
+        content
+            .disabled(activity.isWorking)
             .overlay {
-                if let label = activity.label {
+                if let labelKey = activity.labelKey {
                     // Indeterminate on purpose: the stores report what they
                     // did when they are done, not how far along they are, and
                     // a percentage this side invented would be a number the
                     // work does not know.
                     VStack(spacing: 8) {
                         ProgressView()
-                        Text(label)
+                        Text(language.string(labelKey))
                             .font(.callout)
                     }
                     .padding(24)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
-            .alert(item: message) { message in
+            .alert(item: $message) { message in
                 Alert(
-                    title: Text(message.title),
-                    message: Text(message.detail),
-                    dismissButton: .default(Text("好")),
+                    title: Text(message.title(language.resolver)),
+                    message: Text(message.detail(language.resolver)),
+                    dismissButton: .default(Text(language.string(.commonOk))),
                 )
             }
     }
@@ -96,27 +179,32 @@ extension View {
     }
 }
 
-/// The filter box the list pages put above their rows.
+/// The box the 詞庫 pane types into — above the rows on the three list pages,
+/// and above the results in the dictionary search. All four ask the same
+/// question of the user, so all four ask it in the same words.
 ///
 /// In the content area rather than the window toolbar: the toolbar belongs to
 /// the settings window's `[一般] [詞庫]` tabs, and a search field placed there
 /// would be competing with them for the same strip.
 struct UserDataFilterField: View {
-    let prompt: String
+    @Environment(DisplayLanguageStore.self) private var language
+
     @Binding var text: String
 
     var body: some View {
-        TextField(prompt, text: $text)
+        TextField(language.string(.dictionarySearchPlaceholder), text: $text)
             .textFieldStyle(.roundedBorder)
     }
 }
 
 /// The CSV pair every list page offers, and the clear-everything button.
 struct UserDataActionsSection: View {
-    let exportTitle: String
-    let importTitle: String
-    let clearTitle: String
-    let clearConfirmation: String
+    @Environment(DisplayLanguageStore.self) private var language
+
+    let exportTitle: StringKey
+    let importTitle: StringKey
+    let clearTitle: StringKey
+    let clearConfirmation: StringKey
     let onExport: () -> Void
     let onImport: () -> Void
     let onClear: () -> Void
@@ -125,20 +213,20 @@ struct UserDataActionsSection: View {
 
     var body: some View {
         Section {
-            Button(exportTitle, action: onExport)
-            Button(importTitle, action: onImport)
-            Button(clearTitle, role: .destructive) { isConfirmingClear = true }
+            Button(language.string(exportTitle), action: onExport)
+            Button(language.string(importTitle), action: onImport)
+            Button(language.string(clearTitle), role: .destructive) { isConfirmingClear = true }
                 .confirmationDialog(
-                    clearConfirmation,
+                    language.string(clearConfirmation),
                     isPresented: $isConfirmingClear,
                 ) {
-                    Button(clearTitle, role: .destructive, action: onClear)
-                    Button("取消", role: .cancel) {}
+                    Button(language.string(clearTitle), role: .destructive, action: onClear)
+                    Button(language.string(.commonCancel), role: .cancel) {}
                 } message: {
-                    Text("這改袂轉來。")
+                    Text(language.string(.macosIrreversible))
                 }
         } footer: {
-            Text("這份資料干焦囥佇你的電腦,袂上傳。匯出的檔案內底有你拍過的字,請家己保管好。")
+            Text(language.string(.macosUserDataPrivacyFooter))
         }
     }
 }

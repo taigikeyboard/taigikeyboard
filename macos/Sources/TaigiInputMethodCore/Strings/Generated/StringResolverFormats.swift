@@ -7,19 +7,27 @@ extension StringResolver {
         format(.dictionaryImportResult, Int64(imported), Int64(skipped))
     }
 
-    func dictionaryImportBackupResult(customDict: Int, frequency: Int, association: Int) -> String {
-        if language == .english {
-            // CLDR en plural: category 'one' iff n == 1; the generated map holds the 'other' fallback.
-            return formatTemplate(
-                "Imported "
-                + (customDict == 1 ? "%1$lld custom entry" : "%1$lld custom entries")
-                + ", "
-                + (frequency == 1 ? "%2$lld frequency record" : "%2$lld frequency records")
-                + ", "
-                + (association == 1 ? "%3$lld association record" : "%3$lld association records"),
-                Int64(customDict), Int64(frequency), Int64(association)
-            )
-        }
-        return format(.dictionaryImportBackupResult, Int64(customDict), Int64(frequency), Int64(association))
+    func macosRestoreLineCustomDictionary(count: Int) -> String {
+        format(.macosRestoreLineCustomDictionary, Int64(count))
+    }
+
+    func macosRestoreLineFrequency(count: Int) -> String {
+        format(.macosRestoreLineFrequency, Int64(count))
+    }
+
+    func macosRestoreLineAssociation(count: Int) -> String {
+        format(.macosRestoreLineAssociation, Int64(count))
+    }
+
+    func macosRestoreLineCustomDictionaryFailed(reason: String) -> String {
+        format(.macosRestoreLineCustomDictionaryFailed, reason)
+    }
+
+    func macosRestoreLineFrequencyFailed(reason: String) -> String {
+        format(.macosRestoreLineFrequencyFailed, reason)
+    }
+
+    func macosRestoreLineAssociationFailed(reason: String) -> String {
+        format(.macosRestoreLineAssociationFailed, reason)
     }
 }

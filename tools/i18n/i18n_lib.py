@@ -117,11 +117,16 @@ IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 #           Kotlin needs no cast (`%d` takes Int directly).
 # Keyed by LANGUAGE, not by platform: `%lld` + an `Int64` cast is a property of Foundation's
 # `String(format:)`, so iOS and macOS share the `swift` facet rather than declaring one each.
-# Only `int` is needed today (every format arg is a count).
 PLACEHOLDER_TYPES = {
     "int": {
         "kotlin": {"param": "Int", "conv": "d"},
         "swift": {"param": "Int", "conv": "lld", "cast": "Int64"},
+    },
+    # For text the product does not author — a store's own error description — so the
+    # punctuation around it can be written per language instead of concatenated in code.
+    "string": {
+        "kotlin": {"param": "String", "conv": "s"},
+        "swift": {"param": "String", "conv": "@", "cast": None},
     },
 }
 

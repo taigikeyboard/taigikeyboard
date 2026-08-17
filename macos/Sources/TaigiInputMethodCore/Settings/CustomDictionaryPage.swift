@@ -48,24 +48,24 @@ final class CustomDictionaryPageModel {
             // Not an empty list: "the dictionary is empty" and "the dictionary
             // could not be read" look identical on screen, and only one of them
             // is worth the user doing something about.
-            message = .failure("讀袂著自訂詞庫", error)
+            message = .failure(.macosCustomDictReadFailed, error)
         }
     }
 
     func save(_ row: CustomDictionaryRow) async {
-        await perform("咧存…") { try await self.store.upsert(row) }
+        await perform(.macosProgressSaving) { try await self.store.upsert(row) }
     }
 
     func delete(_ row: CustomDictionaryRow) async {
-        await perform("咧刪…") { _ = try await self.store.delete(id: row.id) }
+        await perform(.macosProgressDeleting) { _ = try await self.store.delete(id: row.id) }
     }
 
     func deleteAll() async {
-        await perform("咧刪…") { _ = try await self.store.deleteAll() }
+        await perform(.macosProgressDeleting) { _ = try await self.store.deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
-        activity = .working("咧匯出…")
+        activity = .working(.macosProgressExporting)
         defer { activity = .idle }
         do {
             let csv = try await CustomDictionaryCSV.encode(store.allRows())
@@ -79,7 +79,7 @@ final class CustomDictionaryPageModel {
                 in: window,
             )
         } catch {
-            message = .failure("匯出失敗", error)
+            message = .failure(.commonExportFailed, error)
         }
     }
 
@@ -89,7 +89,7 @@ final class CustomDictionaryPageModel {
             in: window,
         ) else { return }
 
-        activity = .working("咧匯入…")
+        activity = .working(.macosProgressImporting)
         defer { activity = .idle }
         do {
             // Off the main actor: reading and parsing up to 5 MB of CSV
@@ -102,29 +102,28 @@ final class CustomDictionaryPageModel {
                 )
             }.value
             let result = try await store.batchImport(rows)
-            message = UserDataPageMessage(
-                title: "匯入完成",
-                detail: "新增 \(result.imported) 筆,略過 \(result.skipped) 筆。",
-            )
+            message = .imported(result.imported, skipped: result.skipped)
             await load()
         } catch {
-            message = .failure("匯入失敗", error)
+            message = .failure(.commonImportFailed, error)
         }
     }
 
-    private func perform(_ label: String, _ body: () async throws -> Void) async {
+    private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
         activity = .working(label)
         defer { activity = .idle }
         do {
             try await body()
             await load()
         } catch {
-            message = .failure("寫袂入自訂詞庫", error)
+            message = .failure(.macosCustomDictWriteFailed, error)
         }
     }
 }
 
 struct CustomDictionaryPage: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     @State private var model: CustomDictionaryPageModel
     @State private var editing: CustomDictionaryRow?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
@@ -137,15 +136,15 @@ struct CustomDictionaryPage: View {
     var body: some View {
         Form {
             Section {
-                Toggle("用自訂詞庫", isOn: $isCustomDictEnabled)
+                Toggle(language.string(.dictionaryCustomDictEnabled), isOn: $isCustomDictEnabled)
             } footer: {
-                Text("關掉了後,家己加的詞就袂出現佇候選。")
+                Text(language.string(.dictionaryCustomDictEnabledInfo))
             }
 
             Section {
-                UserDataFilterField(prompt: "揣羅馬字抑是漢字", text: $model.filter)
+                UserDataFilterField(text: $model.filter)
                 if model.rows.isEmpty {
-                    Text(model.filter.isEmpty ? "猶未加半个詞。" : "無合的詞。")
+                    Text(language.string(model.filter.isEmpty ? .macosCustomDictEmpty : .dictionaryNoResults))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(model.rows) { row in
@@ -162,33 +161,35 @@ struct CustomDictionaryPage: View {
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
-                        Button("刪掉", role: .destructive) {
+                        Button(language.string(.commonDelete), role: .destructive) {
                             Task { await model.delete(row) }
                         }
                     }
                 }
             } header: {
                 HStack {
-                    Text("詞條")
+                    Text(language.string(.macosEntriesSection))
                     Spacer()
                     Text(countLabel)
                         .foregroundStyle(.secondary)
-                    Button("加詞") { editing = CustomDictionaryRow(roman: "", hanzi: "") }
+                    Button(language.string(.dictionaryAddEntry)) {
+                        editing = CustomDictionaryRow(roman: "", hanzi: "")
+                    }
                 }
             }
 
             UserDataActionsSection(
-                exportTitle: "匯出 CSV",
-                importTitle: "匯入 CSV",
-                clearTitle: "刪掉全部",
-                clearConfirmation: "beh 刪掉全部自訂詞?",
+                exportTitle: .dictionaryExportCSV,
+                importTitle: .dictionaryImportCSV,
+                clearTitle: .dictionaryDeleteAll,
+                clearConfirmation: .dictionaryDeleteAllMessage,
                 onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportCSV) } },
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
                 onClear: { Task { await model.deleteAll() } },
             )
         }
         .formStyle(.grouped)
-        .navigationTitle("自訂詞庫")
+        .navigationTitle(language.string(.dictionaryCustomDictionary))
         .reloadWhenFilterSettles(model.filter) { await model.load() }
         .sheet(item: $editing) { row in
             CustomDictionaryEntrySheet(row: row) { edited in
@@ -212,6 +213,7 @@ struct CustomDictionaryPage: View {
 /// Cancel belongs.
 struct CustomDictionaryEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(DisplayLanguageStore.self) private var language
 
     @State private var roman: String
     @State private var hanzi: String
@@ -227,17 +229,17 @@ struct CustomDictionaryEntrySheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(original.roman.isEmpty ? "加詞" : "改詞")
+            Text(language.string(original.roman.isEmpty ? .dictionaryAddEntry : .dictionaryEditEntry))
                 .font(.headline)
             Form {
-                TextField("羅馬字", text: $roman)
-                TextField("漢字", text: $hanzi)
+                TextField(language.string(.dictionaryRomanLabel), text: $roman)
+                TextField(language.string(.dictionaryHanziLabel), text: $hanzi)
             }
             .formStyle(.grouped)
             HStack {
                 Spacer()
-                Button("取消", role: .cancel) { dismiss() }
-                Button("存起來") {
+                Button(language.string(.commonCancel), role: .cancel) { dismiss() }
+                Button(language.string(.dictionarySave)) {
                     var edited = original
                     edited.roman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
                     edited.hanzi = hanzi.trimmingCharacters(in: .whitespacesAndNewlines)

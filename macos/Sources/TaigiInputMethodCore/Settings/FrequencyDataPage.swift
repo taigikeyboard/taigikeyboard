@@ -34,22 +34,22 @@ final class FrequencyDataPageModel {
             guard generation == loadGeneration else { return }
             rows = loaded
         } catch {
-            message = .failure("讀袂著詞頻", error)
+            message = .failure(.macosFrequencyReadFailed, error)
         }
     }
 
     /// Forgets one READING of one word — the pair is the identity, so 重/tāng
     /// goes without taking 重/tîng with it.
     func delete(_ row: FrequencyRow) async {
-        await perform("咧刪…") { _ = try await self.store.delete(word: row.word, tl: row.tl) }
+        await perform(.macosProgressDeleting) { _ = try await self.store.delete(word: row.word, tl: row.tl) }
     }
 
     func deleteAll() async {
-        await perform("咧刪…") { _ = try await self.store.deleteAll() }
+        await perform(.macosProgressDeleting) { _ = try await self.store.deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
-        activity = .working("咧匯出…")
+        activity = .working(.macosProgressExporting)
         defer { activity = .idle }
         do {
             let csv = try await UserDataCSV.encodeFrequency(store.allRows().map {
@@ -65,7 +65,7 @@ final class FrequencyDataPageModel {
                 in: window,
             )
         } catch {
-            message = .failure("匯出失敗", error)
+            message = .failure(.commonExportFailed, error)
         }
     }
 
@@ -75,7 +75,7 @@ final class FrequencyDataPageModel {
             in: window,
         ) else { return }
 
-        activity = .working("咧匯入…")
+        activity = .working(.macosProgressImporting)
         defer { activity = .idle }
         do {
             // Off the main actor: the read and the parse are both
@@ -88,38 +88,38 @@ final class FrequencyDataPageModel {
                 return UserDataCSV.decodeFrequency(text)
             }.value
             guard let parsed = decoded else {
-                message = .notUTF8()
+                message = .notUTF8
                 return
             }
             let processed = try await store.batchImportMerge(parsed.map {
                 FrequencyRow(word: $0.word, tl: $0.tl, count: $0.count, lastUsedMillis: 0)
             })
-            // "處理" rather than "新增": the merge keeps whichever count is
-            // higher, so a row that changed nothing is still a row that was
-            // read and considered.
-            message = UserDataPageMessage(
-                title: "匯入完成",
-                detail: "處理 \(processed) 筆,略過 \(parsed.count - processed) 筆。",
-            )
+            // The merge keeps whichever count is higher, so this is every row
+            // that was read and considered, not every row that changed. The
+            // shared result wording covers all three pages on all three
+            // platforms and does not draw that distinction.
+            message = .imported(processed, skipped: parsed.count - processed)
             await load()
         } catch {
-            message = .failure("匯入失敗", error)
+            message = .failure(.commonImportFailed, error)
         }
     }
 
-    private func perform(_ label: String, _ body: () async throws -> Void) async {
+    private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
         activity = .working(label)
         defer { activity = .idle }
         do {
             try await body()
             await load()
         } catch {
-            message = .failure("寫袂入詞頻", error)
+            message = .failure(.macosFrequencyWriteFailed, error)
         }
     }
 }
 
 struct FrequencyDataPage: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
     @State private var model: FrequencyDataPageModel
     @AppStorage(SettingsStore.Keys.isFrequencyRecordingEnabled.name)
     private var isRecordingEnabled = SettingsStore.Keys.isFrequencyRecordingEnabled.defaultValue
@@ -131,15 +131,15 @@ struct FrequencyDataPage: View {
     var body: some View {
         Form {
             Section {
-                Toggle("記錄選字詞頻", isOn: $isRecordingEnabled)
+                Toggle(language.string(.dictionaryFrequencyRecordingEnabled), isOn: $isRecordingEnabled)
             } footer: {
-                Text("關掉了後袂閣學新的,已經學著的猶原會影響排序。")
+                Text(language.string(.dictionaryFrequencyRecordingEnabledInfo))
             }
 
             Section {
-                UserDataFilterField(prompt: "揣漢字抑是羅馬字", text: $model.filter)
+                UserDataFilterField(text: $model.filter)
                 if model.rows.isEmpty {
-                    Text(model.filter.isEmpty ? "猶未學著半字。" : "無合的字。")
+                    Text(language.string(model.filter.isEmpty ? .dictionaryNoData : .dictionaryNoResults))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(model.rows, id: \.identity) { row in
@@ -158,27 +158,27 @@ struct FrequencyDataPage: View {
                             .monospacedDigit()
                     }
                     .contextMenu {
-                        Button("袂記得這字", role: .destructive) {
+                        Button(language.string(.macosForgetWord), role: .destructive) {
                             Task { await model.delete(row) }
                         }
                     }
                 }
             } header: {
-                Text("學著的字")
+                Text(language.string(.macosLearnedWordsSection))
             }
 
             UserDataActionsSection(
-                exportTitle: "匯出 CSV",
-                importTitle: "匯入 CSV",
-                clearTitle: "清掉全部詞頻",
-                clearConfirmation: "beh 清掉全部詞頻?",
+                exportTitle: .dictionaryFrequencyExportCSV,
+                importTitle: .dictionaryFrequencyImportCSV,
+                clearTitle: .dictionaryClearAllFrequency,
+                clearConfirmation: .dictionaryClearFrequencyMessage,
                 onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportCSV) } },
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
                 onClear: { Task { await model.deleteAll() } },
             )
         }
         .formStyle(.grouped)
-        .navigationTitle("詞頻")
+        .navigationTitle(language.string(.dictionaryFrequencyManagement))
         .reloadWhenFilterSettles(model.filter) { await model.load() }
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }

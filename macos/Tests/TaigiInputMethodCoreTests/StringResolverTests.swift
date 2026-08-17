@@ -37,24 +37,25 @@ final class StringResolverTests: XCTestCase {
         )
     }
 
-    /// English is the only plural-bearing language, and its arms are selected at runtime rather than
-    /// by an OS plural locale — the generated map has no plural machinery at all.
-    func testGeneratedFormatAccessor_selectsEnglishPluralArmsByCount() {
+    /// No key macOS displays carries plural arms, so there is no runtime arm-selection to pin here.
+    /// That the emitter produces the macOS-shaped selector at all is covered hermetically, against a
+    /// synthetic key, by `tools/i18n/test_i18n.py`
+    /// (`test_plural_accessor_names_the_generated_map_as_the_fallback_source`) — where it belongs,
+    /// since tying it to a shipping string would make product copy answerable to a codegen test.
+    func testGeneratedFormatAccessor_interpolatesTextTheProductDidNotAuthor() {
+        // The store's own failure reason: a placeholder rather than something the call site
+        // concatenates, so each language punctuates around it.
         XCTAssertEqual(
-            StringResolver(.english).dictionaryImportBackupResult(customDict: 1, frequency: 1, association: 1),
-            "Imported 1 custom entry, 1 frequency record, 1 association record",
+            StringResolver(.hanji).macosRestoreLineFrequencyFailed(reason: "disk I/O error"),
+            "詞頻:失敗(disk I/O error)",
         )
         XCTAssertEqual(
-            StringResolver(.english).dictionaryImportBackupResult(customDict: 2, frequency: 0, association: 5),
-            "Imported 2 custom entries, 0 frequency records, 5 association records",
+            StringResolver(.english).macosRestoreLineFrequencyFailed(reason: "disk I/O error"),
+            "Frequency records: failed (disk I/O error)",
         )
-    }
-
-    func testGeneratedFormatAccessor_nonEnglishRendersTheAuthoredTemplate() {
-        // No plural selector runs for these languages; the stored template is used as authored.
         XCTAssertEqual(
-            StringResolver(.japanese).dictionaryImportBackupResult(customDict: 1, frequency: 2, association: 3),
-            "1 件のカスタム単語、2 件の単語頻度、3 件の単語連携をインポートしました",
+            StringResolver(.japanese).macosRestoreLineFrequencyFailed(reason: "disk I/O error"),
+            "単語頻度：失敗（disk I/O error）",
         )
     }
 }
