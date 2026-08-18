@@ -54,6 +54,8 @@ final class CandidatePanel: CandidatePresenter {
             anchoredTo: caretRect,
             hostWindowLevel: hostWindowLevel,
             hostBundleIdentifier: hostBundleIdentifier,
+            accentOverride: settings.candidateAccentColor.overrideColor,
+            forcedAppearance: settings.candidateAppearanceMode.forcedAppearance,
         )
         guard presented else {
             // No display to place it on. The panel still holds the fresh list,
@@ -102,23 +104,31 @@ final class CandidatePanel: CandidatePresenter {
     }
 
     /// The panel for `layout`, taking down whichever other layout's panel was
-    /// up: the setting is live-read per show, so a switch mid-composition swaps
-    /// windows on the next keystroke rather than leaving two on screen.
+    /// up: the settings are live-read per show, so a switch mid-composition
+    /// swaps windows on the next keystroke rather than leaving two on screen.
+    /// A cached panel built under a style the setting no longer names is
+    /// rebuilt — style is baked into a panel's backdrop at construction.
     private func panel(for layout: CandidateLayout) -> CandidateBasePanel {
-        let target = panels[layout] ?? makePanel(for: layout)
-        panels[layout] = target
-        if let previous = panel, previous !== target {
+        let style = settings.candidateWindowStyle.resolved
+        var target = panels[layout]
+        if let cached = target, cached.style != style {
+            cached.clear()
+            target = nil
+        }
+        let resolved = target ?? makePanel(for: layout, style: style)
+        panels[layout] = resolved
+        if let previous = panel, previous !== resolved {
             previous.clear()
         }
-        panel = target
-        return target
+        panel = resolved
+        return resolved
     }
 
-    private func makePanel(for layout: CandidateLayout) -> CandidateBasePanel {
-        let style = CandidateWindowStyle.systemResolved
-        return switch layout {
+    private func makePanel(for layout: CandidateLayout, style: CandidateWindowStyle) -> CandidateBasePanel {
+        switch layout {
         case .horizontal: HorizontalCandidatePanel(style: style)
         case .vertical: VerticalCandidatePanel(style: style)
+        case .expandable: ExpandableCandidatePanel(style: style)
         }
     }
 }

@@ -59,14 +59,27 @@ final class CandidateAccentColor {
     /// The colour the selection highlight paints with, for a window rendered
     /// in `style` over the app identified by `hostBundleIdentifier`.
     ///
-    /// `appearance` is the panel's effective appearance: the Tahoe luminance
-    /// clamp resolves dynamic colours under it, so a light-mode yellow and a
-    /// dark-mode yellow darken to different pills, as the system's do.
+    /// `override` — a colour the user pinned in the 外觀 pane's swatch row —
+    /// wins over everything, and passes through the same per-style corrections
+    /// a host accent gets. It stays FIXED across light and dark, unlike the
+    /// dynamic colour the 自動 branch answers with — that is what "pinned"
+    /// buys (see `CandidateAccentChoice.overrideColor`).
+    /// `appearance` is the panel's effective appearance: the Tahoe
+    /// luminance clamp resolves dynamic colours under it, so a light-mode
+    /// yellow and a dark-mode yellow darken to different pills, as the
+    /// system's do.
     func highlightColor(
         style: CandidateWindowStyle,
         hostBundleIdentifier: String?,
         appearance: NSAppearance,
+        override overrideColor: NSColor? = nil,
     ) -> NSColor {
+        if let overrideColor {
+            return switch style {
+            case .sequoia: Self.sequoiaAdjusted(overrideColor)
+            case .tahoe: Self.tahoeAdjusted(overrideColor, under: appearance)
+            }
+        }
         if isMulticolor,
            let bundleIdentifier = hostBundleIdentifier,
            let hostAccent = bundleAccentColor(bundleIdentifier: bundleIdentifier)

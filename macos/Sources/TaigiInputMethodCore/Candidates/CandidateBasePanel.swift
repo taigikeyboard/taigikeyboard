@@ -30,6 +30,10 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     private(set) var highlightColor: NSColor = .selectedContentBackgroundColor
     /// The Multicolour accent follows the HOST app; recorded at show time.
     private var hostBundleIdentifier: String?
+    /// A colour the user pinned in the 外觀 pane, or nil to follow the system.
+    /// Recorded at show time like the host, so a swatch picked in settings
+    /// applies from the next keystroke's window.
+    private var accentOverride: NSColor?
 
     /// Where the window was last anchored — pages that change the window's
     /// size mid-navigation re-place it against the same caret.
@@ -104,6 +108,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
             style: style,
             hostBundleIdentifier: hostBundleIdentifier,
             appearance: effectiveAppearance,
+            override: accentOverride,
         )
         applyHighlightColor(highlightColor)
     }
@@ -118,12 +123,19 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         anchoredTo caretRect: CGRect,
         hostWindowLevel: CGWindowLevel,
         hostBundleIdentifier: String?,
+        accentOverride: NSColor?,
+        forcedAppearance: NSAppearance?,
     ) -> Bool {
         guard let screen = ScreenLookup.screen(containing: caretRect.origin) else {
             return false
         }
         lastCaretRect = caretRect
         self.hostBundleIdentifier = hostBundleIdentifier
+        self.accentOverride = accentOverride
+        // Nil resolves against the system — the 自動 behaviour. Set before
+        // `syncTheme` below, whose Tahoe correction reads the effective
+        // appearance this assignment decides.
+        appearance = forcedAppearance
         setFrame(
             CandidatePanelPositioning.frame(
                 anchoredTo: caretRect,
@@ -150,18 +162,23 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// away.
     func replace(panelSize: CGSize) {
         guard panelSize != frame.size else { return }
-        guard isVisible, lastCaretRect != .zero,
-              let screen = ScreenLookup.screen(containing: lastCaretRect.origin)
-        else { return }
-        setFrame(
-            CandidatePanelPositioning.frame(
-                anchoredTo: lastCaretRect,
-                panelSize: panelSize,
-                within: screen.visibleFrame,
-            ),
-            display: true,
-        )
+        guard isVisible, let newFrame = anchoredFrame(for: panelSize) else { return }
+        setFrame(newFrame, display: true)
         updateCorners()
+    }
+
+    /// The frame a window sized `panelSize` would take against the caret it
+    /// was last shown for, or nil when there is no anchor to place it by. The
+    /// expandable layout computes its animation target through this.
+    func anchoredFrame(for panelSize: CGSize) -> NSRect? {
+        guard lastCaretRect != .zero,
+              let screen = ScreenLookup.screen(containing: lastCaretRect.origin)
+        else { return nil }
+        return CandidatePanelPositioning.frame(
+            anchoredTo: lastCaretRect,
+            panelSize: panelSize,
+            within: screen.visibleFrame,
+        )
     }
 
     func hide() {

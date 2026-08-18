@@ -12,6 +12,7 @@ import SwiftUI
 /// case reads back as the `@AppStorage` default, 一般.
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
+    case appearance
     case dictionarySearch
     case customDictionary
     case frequencyData
@@ -23,19 +24,12 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         rawValue
     }
 
-    /// The 詞庫 section of the sidebar. Spelled out rather than derived from
-    /// `allCases` because the order is a statement of its own: it mirrors the
-    /// iOS Tab3 listing (`ios/.../App/Tabs/Dictionary/DictionaryTab.swift`).
-    static let dictionaryPanes: [SettingsPane] = [
-        .dictionarySearch, .customDictionary, .frequencyData,
-        .associationData, .backupRestore, .dictionarySources,
-    ]
-
     /// A key rather than a resolved string, so the sidebar re-renders under
     /// the current display language instead of the one it was built in.
     var labelKey: StringKey {
         switch self {
         case .general: .macosGeneralTab
+        case .appearance: .macosAppearanceTab
         case .dictionarySearch: .macosDictionarySearchSection
         case .customDictionary: .dictionaryCustomDictionary
         case .frequencyData: .dictionaryFrequencyManagement
@@ -48,6 +42,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var symbolName: String {
         switch self {
         case .general: "gearshape"
+        case .appearance: "paintpalette"
         case .dictionarySearch: "magnifyingglass"
         case .customDictionary: "character.book.closed"
         case .frequencyData: "chart.bar"
@@ -87,12 +82,14 @@ struct SettingsSplitView: View {
         // IS the navigation, so collapsing it strands the user — and with no
         // way to collapse, the toggle below is removed rather than orphaned.
         NavigationSplitView(columnVisibility: .constant(.all)) {
+            // One flat list, no section headers — the sidebar is short enough
+            // to read at a glance, and a group label above the dictionary rows
+            // was a heading with nothing to disambiguate (USER 2026-08-18).
+            // `allCases` IS the sidebar order, which mirrors the iOS Tab3
+            // listing for the dictionary rows.
             List(selection: $selectedPane) {
-                sidebarRow(.general)
-                Section(language.string(.navTabDictionary)) {
-                    ForEach(SettingsPane.dictionaryPanes) { pane in
-                        sidebarRow(pane)
-                    }
+                ForEach(SettingsPane.allCases) { pane in
+                    sidebarRow(pane)
                 }
             }
             // System Settings shows no sidebar toggle; without this, the
@@ -117,6 +114,8 @@ struct SettingsSplitView: View {
         switch selectedPane {
         case .general:
             GeneralSettingsView()
+        case .appearance:
+            AppearanceSettingsView()
         case .dictionarySearch:
             DictionarySearchPage(service: DictionarySearchService(
                 customDictionaryStore: stores.customDictionary,

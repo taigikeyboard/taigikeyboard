@@ -135,20 +135,17 @@ final class SettingsWindowTests: XCTestCase {
 
     // MARK: - Pane roster
 
-    /// The sidebar is 一般 plus the 詞庫 section — together they must cover
-    /// every pane exactly once, or a pane exists that no sidebar row reaches.
-    func testPaneRoster_coversEveryPaneExactlyOnce() {
-        XCTAssertEqual([.general] + SettingsPane.dictionaryPanes, SettingsPane.allCases)
-    }
-
     /// Raw values are the persistence contract: `@AppStorage` writes them, so
-    /// renaming a case silently resets every user to 一般.
+    /// renaming a case silently resets every user to 一般. The order is also
+    /// the sidebar order — the flat list renders `allCases` directly — so
+    /// this doubles as the roster: 一般, 外觀, then the dictionary rows in
+    /// the iOS Tab3 order.
     func testPaneRawValues_stayStable() {
         XCTAssertEqual(
             SettingsPane.allCases.map(\.rawValue),
             [
-                "general", "dictionarySearch", "customDictionary", "frequencyData",
-                "associationData", "backupRestore", "dictionarySources",
+                "general", "appearance", "dictionarySearch", "customDictionary",
+                "frequencyData", "associationData", "backupRestore", "dictionarySources",
             ],
         )
     }
@@ -167,14 +164,14 @@ final class SettingsWindowTests: XCTestCase {
         let hanji = makeStore(.hanji)
         XCTAssertEqual(
             SettingsPane.allCases.map { hanji.string($0.labelKey) },
-            ["一般", "揣辭典", "自訂詞庫", "詞頻紀錄", "詞關聯紀錄", "備份復原", "選辭典"],
+            ["一般", "外觀", "揣辭典", "自訂詞庫", "詞頻紀錄", "詞關聯紀錄", "備份復原", "選辭典"],
         )
 
         let english = makeStore(.english)
         XCTAssertEqual(
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
-                "General", "Look Up", "Custom Dictionary", "Frequency Records",
+                "General", "Appearance", "Look Up", "Custom Dictionary", "Frequency Records",
                 "Association Records", "Backup and Restore", "Choose Dictionaries",
             ],
         )
