@@ -147,7 +147,7 @@ struct FrequencyDataPage: View {
                         VStack(alignment: .leading, spacing: 2) {
                             if !row.tl.isEmpty {
                                 Text(row.tl)
-                                    .font(.caption)
+                                    .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
                             Text(row.word)

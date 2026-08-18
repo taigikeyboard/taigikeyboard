@@ -111,7 +111,7 @@ private struct AppearanceModeRow: View {
                             .opacity(selection == mode ? 1 : 0),
                     )
                 Text(name)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(selection == mode ? .primary : .secondary)
             }
         }

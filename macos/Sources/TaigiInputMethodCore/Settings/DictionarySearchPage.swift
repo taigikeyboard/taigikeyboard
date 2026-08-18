@@ -120,7 +120,7 @@ struct DictionarySearchResultRow: View {
             }
             ForEach(badgeKeys, id: \.self) { key in
                 Text(language.string(key))
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)

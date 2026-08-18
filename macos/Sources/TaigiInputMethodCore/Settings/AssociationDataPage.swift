@@ -154,7 +154,7 @@ struct AssociationDataPage: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(row.pair.previousTl) → \(row.pair.nextTl)")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Text("\(row.pair.previous) → \(row.pair.next)")
                         }
