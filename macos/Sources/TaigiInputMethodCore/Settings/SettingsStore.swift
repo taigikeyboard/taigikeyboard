@@ -203,6 +203,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "candidateWindowStyle",
             defaultValue: CandidateWindowStyleChoice.auto,
         )
+
+        /// The candidate highlight's accent colour — `auto` follows the
+        /// system (and the host app under Multicolour). Presentation-only
+        /// like `candidateLayout`.
+        static let candidateAccentColor = SettingsKey(
+            name: "candidateAccentColor",
+            defaultValue: CandidateAccentChoice.auto,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -274,6 +282,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         userDefaults.string(forKey: Keys.candidateWindowStyle.name)
             .flatMap(CandidateWindowStyleChoice.init(rawValue:))
             ?? Keys.candidateWindowStyle.defaultValue
+    }
+
+    /// The candidate highlight's accent choice, live-read like the two above.
+    var candidateAccentColor: CandidateAccentChoice {
+        userDefaults.string(forKey: Keys.candidateAccentColor.name)
+            .flatMap(CandidateAccentChoice.init(rawValue:))
+            ?? Keys.candidateAccentColor.defaultValue
     }
 
     /// The romanization being typed. A stored value that names no mode — a

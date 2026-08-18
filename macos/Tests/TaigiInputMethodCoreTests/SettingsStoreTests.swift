@@ -163,6 +163,28 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateWindowStyle, .auto)
     }
 
+    /// The swatch row's contract: 自動 follows the system (no override), and
+    /// every one of the eight circles pins a real colour — a swatch whose
+    /// override resolved to nil would silently behave as 自動.
+    func testCandidateAccentColor_withNothingStored_followsTheSystem() {
+        XCTAssertEqual(makeStore().candidateAccentColor, .auto)
+        XCTAssertNil(CandidateAccentChoice.auto.overrideColor)
+        for choice in CandidateAccentChoice.allCases where choice != .auto {
+            XCTAssertNotNil(choice.overrideColor, "\(choice) must pin a colour")
+        }
+    }
+
+    func testCandidateAccentColor_readsWhatTheSwatchRowWrites() {
+        userDefaults.set(
+            CandidateAccentChoice.graphite.rawValue,
+            forKey: SettingsStore.Keys.candidateAccentColor.name,
+        )
+        XCTAssertEqual(makeStore().candidateAccentColor, .graphite)
+
+        userDefaults.set("chartreuse", forKey: SettingsStore.Keys.candidateAccentColor.name)
+        XCTAssertEqual(makeStore().candidateAccentColor, .auto, "unknown values fall back to 自動")
+    }
+
     /// A forced Tahoe must never reach a panel on an OS that cannot draw it —
     /// `NSGlassEffectView` is macOS 26+ — and the clamp lives in `resolved` so
     /// backdrop, cells and corners can never disagree about the style.

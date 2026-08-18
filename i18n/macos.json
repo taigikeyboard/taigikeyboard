@@ -1260,6 +1260,186 @@
         "en": "Tahoe",
         "ja": "Tahoe"
       }
+    },
+    "appearanceTab": {
+      "comment": "Settings sidebar row + pane title: the candidate-window appearance pane (layout, chrome, accent colour).",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "外觀",
+        "tailo": "guā-kuan",
+        "poj": "gōa-koan",
+        "en": "Appearance",
+        "ja": "外観"
+      }
+    },
+    "candidateAccentColor": {
+      "comment": "Label above the accent-colour swatch row in the 外觀 pane. The candidate window's highlight colour.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "強調色",
+        "tailo": "kiông-tiāu-sik",
+        "poj": "kiông-tiāu-sek",
+        "en": "Accent Color",
+        "ja": "アクセントカラー"
+      }
+    },
+    "candidateAccentBlue": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "藍色",
+        "tailo": "nâ-sik",
+        "poj": "nâ-sek",
+        "en": "Blue",
+        "ja": "青"
+      }
+    },
+    "candidateAccentPurple": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "紫色",
+        "tailo": "tsí-sik",
+        "poj": "chí-sek",
+        "en": "Purple",
+        "ja": "紫"
+      }
+    },
+    "candidateAccentPink": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "粉紅色",
+        "tailo": "hún-âng-sik",
+        "poj": "hún-âng-sek",
+        "en": "Pink",
+        "ja": "ピンク"
+      }
+    },
+    "candidateAccentRed": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "紅色",
+        "tailo": "âng-sik",
+        "poj": "âng-sek",
+        "en": "Red",
+        "ja": "赤"
+      }
+    },
+    "candidateAccentOrange": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "橙色",
+        "tailo": "kam-á-sik",
+        "poj": "kam-á-sek",
+        "en": "Orange",
+        "ja": "オレンジ"
+      }
+    },
+    "candidateAccentYellow": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "黃色",
+        "tailo": "n̂g-sik",
+        "poj": "n̂g-sek",
+        "en": "Yellow",
+        "ja": "黄"
+      }
+    },
+    "candidateAccentGreen": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "綠色",
+        "tailo": "li̍k-sik",
+        "poj": "le̍k-sek",
+        "en": "Green",
+        "ja": "緑"
+      }
+    },
+    "candidateAccentGraphite": {
+      "comment": "Accessibility label + tooltip for one accent swatch circle in the 外觀 pane. Colour name matches the macOS accent of the same hue.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "石墨色",
+        "tailo": "tsio̍h-bi̍k-sik",
+        "poj": "chio̍h-be̍k-sek",
+        "en": "Graphite",
+        "ja": "グラファイト"
+      }
     }
   }
 }

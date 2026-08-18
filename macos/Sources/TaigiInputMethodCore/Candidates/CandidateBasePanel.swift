@@ -30,6 +30,10 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     private(set) var highlightColor: NSColor = .selectedContentBackgroundColor
     /// The Multicolour accent follows the HOST app; recorded at show time.
     private var hostBundleIdentifier: String?
+    /// A colour the user pinned in the 外觀 pane, or nil to follow the system.
+    /// Recorded at show time like the host, so a swatch picked in settings
+    /// applies from the next keystroke's window.
+    private var accentOverride: NSColor?
 
     /// Where the window was last anchored — pages that change the window's
     /// size mid-navigation re-place it against the same caret.
@@ -104,6 +108,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
             style: style,
             hostBundleIdentifier: hostBundleIdentifier,
             appearance: effectiveAppearance,
+            override: accentOverride,
         )
         applyHighlightColor(highlightColor)
     }
@@ -118,12 +123,14 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         anchoredTo caretRect: CGRect,
         hostWindowLevel: CGWindowLevel,
         hostBundleIdentifier: String?,
+        accentOverride: NSColor?,
     ) -> Bool {
         guard let screen = ScreenLookup.screen(containing: caretRect.origin) else {
             return false
         }
         lastCaretRect = caretRect
         self.hostBundleIdentifier = hostBundleIdentifier
+        self.accentOverride = accentOverride
         setFrame(
             CandidatePanelPositioning.frame(
                 anchoredTo: caretRect,
