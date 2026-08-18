@@ -136,4 +136,26 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.displayLanguage, "poj")
         XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.displayLanguage.name), "poj")
     }
+
+    /// Presentation-only like `displayLanguage`: a fresh install shows the
+    /// horizontal window, and a stored value from a build that removed a case
+    /// — or a hand-edited `defaults write` — reads as that default rather than
+    /// as a layout the router cannot build.
+    func testCandidateLayout_withNothingStored_isHorizontal() {
+        XCTAssertEqual(makeStore().candidateLayout, .horizontal)
+    }
+
+    func testCandidateLayout_readsWhatTheSettingsFormWrites() {
+        // The form writes through `@AppStorage`, which stores the raw string.
+        userDefaults.set(
+            CandidateLayout.vertical.rawValue,
+            forKey: SettingsStore.Keys.candidateLayout.name,
+        )
+        XCTAssertEqual(makeStore().candidateLayout, .vertical)
+    }
+
+    func testCandidateLayout_withAnUnknownStoredValue_fallsBackToTheDefault() {
+        userDefaults.set("diagonal", forKey: SettingsStore.Keys.candidateLayout.name)
+        XCTAssertEqual(makeStore().candidateLayout, .horizontal)
+    }
 }

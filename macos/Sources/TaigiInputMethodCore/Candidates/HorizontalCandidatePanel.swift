@@ -12,10 +12,9 @@ import AppKit
 final class HorizontalCandidatePanel: CandidateBasePanel {
     private var labels: [String] = []
     private var pageLayout = HorizontalPageLayout(pages: [])
-    /// Always a valid index into `labels` while the list is non-empty — this
-    /// input method selects the first candidate of every fresh list, so the
-    /// upstream `-1` suspended-selection state is unreachable here.
-    private(set) var selectedIndex = 0
+    // `selectedIndex` (base): always a valid index into `labels` while the
+    // list is non-empty — this input method selects the first candidate of
+    // every fresh list, so the upstream `-1` suspended state is unreachable.
     private var currentPage = 0
 
     private var itemViews: [CandidateItemView] = []
@@ -27,7 +26,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         return view
     }()
 
-    var isEmpty: Bool { labels.isEmpty }
+    override var isEmpty: Bool { labels.isEmpty }
 
     // MARK: - Content
 
@@ -37,7 +36,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     /// The selection resets rather than being preserved by index: a fresh
     /// keystroke re-ranks the whole list, so holding position would leave the
     /// highlight on an unrelated word that happens to have landed there.
-    func updateCandidates(_ newLabels: [String]) -> CGSize {
+    override func updateCandidates(_ newLabels: [String]) -> CGSize {
         labels = Array(newLabels.prefix(Self.maxDisplayCandidates))
         pageLayout = HorizontalPageLayout.pack(
             widths: labels.map(CandidateItemView.measureWidth),
@@ -50,7 +49,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
 
     /// Empties the window so nothing can be selected or committed from it —
     /// hiding must drop the state, not just the pixels.
-    func clear() {
+    override func clear() {
         labels = []
         pageLayout = HorizontalPageLayout(pages: [])
         selectedIndex = 0
@@ -63,11 +62,11 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     // MARK: - Selection
 
     /// The absolute index the `⌃(slot+1)` chord addresses on the visible page.
-    func candidateIndex(forSlot slot: Int) -> Int? {
+    override func candidateIndex(forSlot slot: Int) -> Int? {
         pageLayout.candidateIndex(forSlot: slot, onPage: currentPage)
     }
 
-    func navigate(_ direction: CandidateNavigation) {
+    override func navigate(_ direction: CandidateNavigation) {
         guard !labels.isEmpty else { return }
         guard let target = pageLayout.target(for: direction, from: selectedIndex) else { return }
         select(target)

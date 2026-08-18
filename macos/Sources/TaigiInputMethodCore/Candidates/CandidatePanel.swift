@@ -24,13 +24,19 @@ final class CandidatePanel: CandidatePresenter {
     /// showing.
     private var owner: ComposingSessionToken?
 
-    /// Built the first time a candidate is actually shown.
+    /// One panel per layout the user has actually used, built the first time a
+    /// candidate is shown under that layout.
     ///
-    /// Optional rather than `lazy` because every path that only HIDES has to
-    /// leave it alone: a session that never offers a candidate — an English
-    /// document, a password field — must not cause an input method to open a
-    /// window, and `activateServer` hides on every focus change.
-    private var panel: HorizontalCandidatePanel?
+    /// A dictionary rather than a `lazy` panel because every path that only
+    /// HIDES has to leave it alone: a session that never offers a candidate —
+    /// an English document, a password field — must not cause an input method
+    /// to open a window, and `activateServer` hides on every focus change.
+    private var panels: [CandidateLayout: CandidateBasePanel] = [:]
+    private var panel: CandidateBasePanel?
+
+    /// Live-read on every show, so a layout switched in the settings window
+    /// applies to the very next keystroke — the store caches nothing.
+    var settings = SettingsStore()
 
     private init() {}
 
@@ -41,9 +47,7 @@ final class CandidatePanel: CandidatePresenter {
         hostBundleIdentifier: String?,
         ownedBy owner: ComposingSessionToken,
     ) {
-        let panel = panel ?? HorizontalCandidatePanel(style: CandidateWindowStyle.systemResolved)
-        self.panel = panel
-
+        let panel = self.panel(for: settings.candidateLayout)
         let panelSize = panel.updateCandidates(content.labels)
         let presented = panel.present(
             panelSize: panelSize,
@@ -95,5 +99,26 @@ final class CandidatePanel: CandidatePresenter {
         // window would let the selection queries answer for candidates nobody
         // can see.
         panel?.clear()
+    }
+
+    /// The panel for `layout`, taking down whichever other layout's panel was
+    /// up: the setting is live-read per show, so a switch mid-composition swaps
+    /// windows on the next keystroke rather than leaving two on screen.
+    private func panel(for layout: CandidateLayout) -> CandidateBasePanel {
+        let target = panels[layout] ?? makePanel(for: layout)
+        panels[layout] = target
+        if let previous = panel, previous !== target {
+            previous.clear()
+        }
+        panel = target
+        return target
+    }
+
+    private func makePanel(for layout: CandidateLayout) -> CandidateBasePanel {
+        let style = CandidateWindowStyle.systemResolved
+        return switch layout {
+        case .horizontal: HorizontalCandidatePanel(style: style)
+        case .vertical: VerticalCandidatePanel(style: style)
+        }
     }
 }

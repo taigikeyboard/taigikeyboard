@@ -35,6 +35,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
     private var isLiteralRomanCandidateEnabled = SettingsStore.Keys.isLiteralRomanCandidateEnabled.defaultValue
 
+    @AppStorage(SettingsStore.Keys.candidateLayout.name)
+    private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
+
     @AppStorage(SettingsStore.Keys.isFrequencyRecordingEnabled.name)
     private var isFrequencyRecordingEnabled = SettingsStore.Keys.isFrequencyRecordingEnabled.defaultValue
 
@@ -63,6 +66,12 @@ struct GeneralSettingsView: View {
                 Toggle(language.string(.macosTranslateSwapped), isOn: $isTranslateSwapped)
                 Toggle(language.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts)
                 Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
+                // Applies from the next keystroke's window: the panel router
+                // live-reads this key per show (`CandidatePanel.settings`).
+                Picker(language.string(.macosCandidateWindowLayout), selection: $candidateLayout) {
+                    Text(language.string(.macosCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
+                    Text(language.string(.macosCandidateLayoutVertical)).tag(CandidateLayout.vertical)
+                }
             } header: {
                 Text(language.string(.macosCandidateSection))
             }
