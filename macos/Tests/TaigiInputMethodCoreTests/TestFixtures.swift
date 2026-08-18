@@ -349,13 +349,19 @@ final class RecordingEffectExecutor: ComposingEffectExecutor {
     }
 }
 
-/// Records what the controller asked of the candidate bar instead of opening a
-/// window, so the routing between keys, the list model and the panel's ownership
-/// rules can be asserted without a screen.
+/// Records what the controller asked of the candidate window instead of opening
+/// one, so the routing between keys, the retained candidate array and the
+/// window's ownership rules can be asserted without a screen.
+///
+/// The window is authoritative for the selection, so the double carries a
+/// reference selection of its own: a flat fixed-nine page structure — the
+/// measured packing the real window adds on top is pinned separately by
+/// `HorizontalPageLayoutTests`, against the same clamp and page-start rules.
 @MainActor
 final class RecordingCandidatePresenter: CandidatePresenter {
     enum Call: Equatable {
-        case show(CandidateBarContent, caretRect: CGRect)
+        case show(CandidateWindowContent, caretRect: CGRect)
+        case navigate(CandidateNavigation)
         case hide(isOwner: Bool)
         case hideForHandover
     }
@@ -365,17 +371,15 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// case can pin the handover rule end to end.
     private(set) var owner: ComposingSessionToken?
 
-    /// What is on screen right now, and nil once the bar has been hidden —
+    private(set) var labels: [String] = []
+    private(set) var selectedIndex = 0
+
+    /// What is on screen right now, and nil once the window has been hidden —
     /// returning the last content shown regardless would let a case assert on
     /// candidates the user can no longer see.
-    var shownContent: CandidateBarContent? {
+    var shownContent: CandidateWindowContent? {
         guard isShowing else { return nil }
-        return calls.reversed().compactMap { call in
-            if case let .show(content, _) = call {
-                return content
-            }
-            return nil
-        }.first
+        return CandidateWindowContent(labels: labels)
     }
 
     var isShowing: Bool {
@@ -383,13 +387,48 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     }
 
     func show(
-        _ content: CandidateBarContent,
+        _ content: CandidateWindowContent,
         anchoredTo caretRect: CGRect,
         hostWindowLevel _: CGWindowLevel,
+        hostBundleIdentifier _: String?,
         ownedBy owner: ComposingSessionToken,
     ) {
         self.owner = owner
+        labels = content.labels
+        selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
+    }
+
+    func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {
+        calls.append(.navigate(direction))
+        guard self.owner == owner, !labels.isEmpty else { return }
+        // Only the walk is modelled, because only the walk means the same
+        // thing in every real layout: one candidate along, clamped at both
+        // ends. Where a PAGE direction lands depends on measured widths
+        // (`HorizontalPageLayout`), so faking it here would let a controller
+        // test pass against an algorithm production does not run — paging
+        // cases assert the routing, and the geometry is pinned by
+        // `HorizontalPageLayoutTests`.
+        switch direction {
+        case .left:
+            selectedIndex = max(selectedIndex - 1, 0)
+        case .right:
+            selectedIndex = min(selectedIndex + 1, labels.count - 1)
+        case .up, .down, .pageUp, .pageDown:
+            break
+        }
+    }
+
+    func selectedCandidateIndex(ownedBy owner: ComposingSessionToken) -> Int? {
+        guard self.owner == owner, !labels.isEmpty else { return nil }
+        return selectedIndex
+    }
+
+    /// Slots address the first page, which is where the selection stays in
+    /// every controller case — the double never pages (see `navigate`).
+    func candidateIndex(forSlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int? {
+        guard self.owner == owner, (0 ..< HorizontalPageLayout.pageSize).contains(slot) else { return nil }
+        return labels.indices.contains(slot) ? slot : nil
     }
 
     func hide(ownedBy owner: ComposingSessionToken) {
@@ -397,12 +436,16 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         calls.append(.hide(isOwner: isOwner))
         if isOwner {
             self.owner = nil
+            labels = []
+            selectedIndex = 0
         }
     }
 
     func hideForHandover() {
         calls.append(.hideForHandover)
         owner = nil
+        labels = []
+        selectedIndex = 0
     }
 }
 

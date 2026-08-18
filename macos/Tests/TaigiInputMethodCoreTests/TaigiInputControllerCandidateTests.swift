@@ -22,11 +22,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         let content = try XCTUnwrap(session.presenter.shownContent)
         XCTAssertFalse(content.labels.isEmpty, "the dictionary has entries for taigi")
-        XCTAssertEqual(content.highlightedSlot, 0, "a fresh list starts on its first candidate")
-        XCTAssertLessThanOrEqual(
-            content.labels.count,
-            CandidateListModel.pageSize,
-            "the bar shows one page at a time — the ⌃n chords can only address nine",
+        XCTAssertEqual(
+            session.presenter.selectedIndex,
+            0,
+            "a fresh list starts on its first candidate",
         )
     }
 
@@ -131,43 +130,28 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
 
         session.press(.rightArrow)
-        XCTAssertEqual(session.presenter.shownContent?.highlightedSlot, 1)
+        XCTAssertEqual(session.presenter.selectedIndex, 1)
 
         session.press(.leftArrow)
         session.press(.leftArrow)
         XCTAssertEqual(
-            session.presenter.shownContent?.highlightedSlot,
+            session.presenter.selectedIndex,
             0,
             "the highlight stops at the first candidate rather than wrapping to the last",
         )
     }
 
-    func testPagingKeys_moveAWholePageAndLandOnItsFirstCandidate() throws {
+    /// Where a page turn LANDS depends on measured widths, so the geometry is
+    /// pinned by `HorizontalPageLayoutTests` — what this seam owes is that the
+    /// key reaches the window as the right direction and is consumed.
+    func testPagingKeys_reachTheWindowAsDirections() throws {
         let session = try composedSession()
-        let firstPage = try XCTUnwrap(session.presenter.shownContent)
 
         session.press(.pageDown)
-
-        let secondPage = try XCTUnwrap(session.presenter.shownContent)
-        XCTAssertNotEqual(secondPage.labels, firstPage.labels, "a different page holds different candidates")
-        XCTAssertEqual(
-            secondPage.highlightedSlot,
-            0,
-            "landing on the first slot keeps the page start, the highlight and the ⌃1 label in agreement",
-        )
-    }
-
-    func testPagingPastTheLastPage_doesNothing() throws {
-        let session = try composedSession()
-        let firstPage = try XCTUnwrap(session.presenter.shownContent)
-
         session.press(.pageUp)
 
-        XCTAssertEqual(
-            session.presenter.shownContent?.labels,
-            firstPage.labels,
-            "there is no page before the first, and moving to one that does not exist would empty the bar",
-        )
+        XCTAssertTrue(session.presenter.calls.contains(.navigate(.pageDown)))
+        XCTAssertTrue(session.presenter.calls.contains(.navigate(.pageUp)))
     }
 
     func testArrowKeys_reachTheHostWhenNoBarIsUp() throws {
@@ -225,8 +209,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // Which slot holds a shorter-than-the-buffer candidate is the
         // dictionary's business, so it is searched for rather than hardcoded —
         // one fresh session per slot, since choosing one changes the state.
-        var nailed: (session: Session, firstPage: CandidateBarContent)?
-        for slot in 0 ..< CandidateListModel.pageSize where nailed == nil {
+        var nailed: (session: Session, firstPage: CandidateWindowContent)?
+        for slot in 0 ..< HorizontalPageLayout.pageSize where nailed == nil {
             let session = try composedSession()
             let firstPage = try XCTUnwrap(session.presenter.shownContent)
             guard slot < firstPage.labels.count else { break }
@@ -251,7 +235,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "the composition is still running, so the user still needs candidates for its tail",
         )
         XCTAssertNotEqual(tailPage.labels, firstPage.labels, "the tail is a different buffer to segment")
-        XCTAssertEqual(tailPage.highlightedSlot, 0, "a fresh list starts on its first candidate")
+        XCTAssertEqual(session.presenter.selectedIndex, 0, "a fresh list starts on its first candidate")
     }
 
     /// Choosing candidates until there is no tail left must end — with the

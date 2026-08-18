@@ -106,10 +106,11 @@ enum ComposingKeyIntent: Equatable {
     /// Not ours — the host must receive this event, and there is no composition
     /// to finish first.
     case passThrough
-    /// Move the highlight one candidate along the bar.
-    case moveHighlight(NavigationDirection)
-    /// Show the next or previous page of candidates.
-    case pageCandidates(NavigationDirection)
+    /// Move the candidate window's selection. The raw direction rather than a
+    /// digested "highlight vs page" pair: what `↓` means depends on whether the
+    /// window is laid out as a row, a list or a grid, and the window is where
+    /// the layout lives (`CandidatePresenter.navigate`).
+    case navigate(CandidateNavigation)
     /// Commit whichever candidate the bar has highlighted.
     case commitHighlightedCandidate
     /// Commit the candidate in this slot of the visible page, counting from
@@ -259,16 +260,18 @@ enum ComposingKeyIntent: Equatable {
         isComposing ? .commitThenPassThrough : .passThrough
     }
 
-    /// What the six navigation keys do to the bar. `←`/`→` walk one candidate;
-    /// `↑`/`↓` and the page keys move a whole page, which is why the vertical
-    /// arrows page rather than move: the bar is a single horizontal row, so
-    /// there is no line above or below for them to reach.
+    /// The six navigation keys, handed through as directions. The mapping is
+    /// one-to-one on purpose: what a direction DOES — walk, page, scroll,
+    /// expand — belongs to the candidate window's layout, not to this table,
+    /// which only decides that the key is the window's while it is up.
     private static func intent(for navigation: NavigationKey) -> ComposingKeyIntent {
         switch navigation {
-        case .leftArrow: .moveHighlight(.backward)
-        case .rightArrow: .moveHighlight(.forward)
-        case .upArrow, .pageUp: .pageCandidates(.backward)
-        case .downArrow, .pageDown: .pageCandidates(.forward)
+        case .leftArrow: .navigate(.left)
+        case .rightArrow: .navigate(.right)
+        case .upArrow: .navigate(.up)
+        case .downArrow: .navigate(.down)
+        case .pageUp: .navigate(.pageUp)
+        case .pageDown: .navigate(.pageDown)
         }
     }
 
