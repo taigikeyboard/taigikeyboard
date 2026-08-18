@@ -171,11 +171,12 @@ private struct AccentSwatchRow: View {
 
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// Sized to sit inside a labelled form row, System Settings' own accent
-    /// row scale; the ring floats just outside the disc.
-    private static let swatchDiameter: CGFloat = 16
-    private static let swatchSpacing: CGFloat = 7
-    private static let selectionRingPadding: CGFloat = 2
+    /// Larger than System Settings' accent row (USER 2026-08-18 「可以大一點」),
+    /// between it and the 28pt discs MacishType's site demos; the ring floats
+    /// just outside the disc.
+    private static let swatchDiameter: CGFloat = 22
+    private static let swatchSpacing: CGFloat = 10
+    private static let selectionRingPadding: CGFloat = 2.5
 
     var body: some View {
         HStack(spacing: Self.swatchSpacing) {
@@ -198,7 +199,7 @@ private struct AccentSwatchRow: View {
                     // The ring floats a little outside the disc, so the colour
                     // stays a full circle rather than gaining a border.
                     Circle()
-                        .strokeBorder(.secondary, lineWidth: 1.5)
+                        .strokeBorder(.secondary, lineWidth: 2)
                         .padding(-Self.selectionRingPadding)
                         .opacity(selection == choice ? 1 : 0),
                 )
