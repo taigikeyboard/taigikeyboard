@@ -150,18 +150,23 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// away.
     func replace(panelSize: CGSize) {
         guard panelSize != frame.size else { return }
-        guard isVisible, lastCaretRect != .zero,
-              let screen = ScreenLookup.screen(containing: lastCaretRect.origin)
-        else { return }
-        setFrame(
-            CandidatePanelPositioning.frame(
-                anchoredTo: lastCaretRect,
-                panelSize: panelSize,
-                within: screen.visibleFrame,
-            ),
-            display: true,
-        )
+        guard isVisible, let newFrame = anchoredFrame(for: panelSize) else { return }
+        setFrame(newFrame, display: true)
         updateCorners()
+    }
+
+    /// The frame a window sized `panelSize` would take against the caret it
+    /// was last shown for, or nil when there is no anchor to place it by. The
+    /// expandable layout computes its animation target through this.
+    func anchoredFrame(for panelSize: CGSize) -> NSRect? {
+        guard lastCaretRect != .zero,
+              let screen = ScreenLookup.screen(containing: lastCaretRect.origin)
+        else { return nil }
+        return CandidatePanelPositioning.frame(
+            anchoredTo: lastCaretRect,
+            panelSize: panelSize,
+            within: screen.visibleFrame,
+        )
     }
 
     func hide() {

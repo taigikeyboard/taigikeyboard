@@ -38,6 +38,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
 
+    @AppStorage(SettingsStore.Keys.candidateWindowStyle.name)
+    private var candidateWindowStyle = SettingsStore.Keys.candidateWindowStyle.defaultValue
+
     @AppStorage(SettingsStore.Keys.isFrequencyRecordingEnabled.name)
     private var isFrequencyRecordingEnabled = SettingsStore.Keys.isFrequencyRecordingEnabled.defaultValue
 
@@ -66,11 +69,19 @@ struct GeneralSettingsView: View {
                 Toggle(language.string(.macosTranslateSwapped), isOn: $isTranslateSwapped)
                 Toggle(language.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts)
                 Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
-                // Applies from the next keystroke's window: the panel router
-                // live-reads this key per show (`CandidatePanel.settings`).
+                // Both apply from the next keystroke's window: the panel
+                // router live-reads these keys per show (`CandidatePanel.settings`).
                 Picker(language.string(.macosCandidateWindowLayout), selection: $candidateLayout) {
+                    Text(language.string(.macosCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
                     Text(language.string(.macosCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.macosCandidateLayoutVertical)).tag(CandidateLayout.vertical)
+                }
+                Picker(language.string(.macosCandidateWindowAppearance), selection: $candidateWindowStyle) {
+                    // The shared Automatic label — same word, same picker role
+                    // as the display-language row's.
+                    Text(language.string(.settingsDisplayLanguageAutomatic)).tag(CandidateWindowStyleChoice.auto)
+                    Text(language.string(.macosCandidateStyleSequoia)).tag(CandidateWindowStyleChoice.sequoia)
+                    Text(language.string(.macosCandidateStyleTahoe)).tag(CandidateWindowStyleChoice.tahoe)
                 }
             } header: {
                 Text(language.string(.macosCandidateSection))

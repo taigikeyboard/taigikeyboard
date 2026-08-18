@@ -191,9 +191,17 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         /// The candidate window's layout. Presentation-only — the engine never
         /// reads it — and macOS-only, so like `displayLanguage` its default is
         /// owned by its own type rather than `EngineSettings.defaults`.
+        /// Expandable is MacishType's own default, and the port keeps it.
         static let candidateLayout = SettingsKey(
             name: "candidateLayout",
-            defaultValue: CandidateLayout.horizontal,
+            defaultValue: CandidateLayout.expandable,
+        )
+
+        /// Which chrome generation the candidate window draws — `auto` follows
+        /// the OS. Presentation-only like `candidateLayout`.
+        static let candidateWindowStyle = SettingsKey(
+            name: "candidateWindowStyle",
+            defaultValue: CandidateWindowStyleChoice.auto,
         )
     }
 
@@ -259,6 +267,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         userDefaults.string(forKey: Keys.candidateLayout.name)
             .flatMap(CandidateLayout.init(rawValue:))
             ?? Keys.candidateLayout.defaultValue
+    }
+
+    /// The candidate window's chrome choice, live-read like `candidateLayout`.
+    var candidateWindowStyle: CandidateWindowStyleChoice {
+        userDefaults.string(forKey: Keys.candidateWindowStyle.name)
+            .flatMap(CandidateWindowStyleChoice.init(rawValue:))
+            ?? Keys.candidateWindowStyle.defaultValue
     }
 
     /// The romanization being typed. A stored value that names no mode — a

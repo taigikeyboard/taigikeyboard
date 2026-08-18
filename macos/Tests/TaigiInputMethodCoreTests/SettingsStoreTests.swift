@@ -138,11 +138,11 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     /// Presentation-only like `displayLanguage`: a fresh install shows the
-    /// horizontal window, and a stored value from a build that removed a case
-    /// — or a hand-edited `defaults write` — reads as that default rather than
-    /// as a layout the router cannot build.
-    func testCandidateLayout_withNothingStored_isHorizontal() {
-        XCTAssertEqual(makeStore().candidateLayout, .horizontal)
+    /// expandable window — MacishType's own default — and a stored value from
+    /// a build that removed a case, or a hand-edited `defaults write`, reads
+    /// as that default rather than as a layout the router cannot build.
+    func testCandidateLayout_withNothingStored_isExpandable() {
+        XCTAssertEqual(makeStore().candidateLayout, .expandable)
     }
 
     func testCandidateLayout_readsWhatTheSettingsFormWrites() {
@@ -156,6 +156,23 @@ final class SettingsStoreTests: XCTestCase {
 
     func testCandidateLayout_withAnUnknownStoredValue_fallsBackToTheDefault() {
         userDefaults.set("diagonal", forKey: SettingsStore.Keys.candidateLayout.name)
-        XCTAssertEqual(makeStore().candidateLayout, .horizontal)
+        XCTAssertEqual(makeStore().candidateLayout, .expandable)
+    }
+
+    func testCandidateWindowStyle_withNothingStored_followsTheOS() {
+        XCTAssertEqual(makeStore().candidateWindowStyle, .auto)
+    }
+
+    /// A forced Tahoe must never reach a panel on an OS that cannot draw it —
+    /// `NSGlassEffectView` is macOS 26+ — and the clamp lives in `resolved` so
+    /// backdrop, cells and corners can never disagree about the style.
+    func testCandidateWindowStyleChoice_resolvesWithinWhatTheOSCanDraw() {
+        XCTAssertEqual(CandidateWindowStyleChoice.auto.resolved, CandidateWindowStyle.systemResolved)
+        XCTAssertEqual(CandidateWindowStyleChoice.sequoia.resolved, .sequoia)
+        if CandidateWindowStyle.systemResolved == .tahoe {
+            XCTAssertEqual(CandidateWindowStyleChoice.tahoe.resolved, .tahoe)
+        } else {
+            XCTAssertEqual(CandidateWindowStyleChoice.tahoe.resolved, .sequoia)
+        }
     }
 }

@@ -1136,7 +1136,7 @@
       }
     },
     "candidateWindowLayout": {
-      "comment": "Picker label in the 一般 pane: which shape the candidate window takes (horizontal row / vertical list; expandable grid arrives with PR3 of the MacishType port).",
+      "comment": "Picker label in the 一般 pane: which shape the candidate window takes (horizontal row / vertical list / expandable grid).",
       "scope": {
         "platforms": [
           "macos"
@@ -1187,6 +1187,78 @@
         "poj": "sûi-ti̍t",
         "en": "Vertical",
         "ja": "垂直"
+      }
+    },
+    "candidateLayoutExpandable": {
+      "comment": "Picker value: the expandable candidate window — one row that unfolds into a grid via its chevron.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "展開式",
+        "tailo": "tián-khui-sik",
+        "poj": "tián-khui-sek",
+        "en": "Expandable",
+        "ja": "展開式"
+      }
+    },
+    "candidateWindowAppearance": {
+      "comment": "Picker label in the 一般 pane: which chrome generation the candidate window draws. Values: the shared Automatic key, plus Sequoia / Tahoe below.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "候選窗外觀",
+        "tailo": "hāu-suán thang guā-kuan",
+        "poj": "hāu-soán thang gōa-koan",
+        "en": "Candidate Window Appearance",
+        "ja": "候補ウィンドウの外観"
+      }
+    },
+    "candidateStyleSequoia": {
+      "comment": "Picker value: the macOS 15 Sequoia look (vibrancy). Proper noun — identical in every language.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Sequoia",
+        "tailo": "Sequoia",
+        "poj": "Sequoia",
+        "en": "Sequoia",
+        "ja": "Sequoia"
+      }
+    },
+    "candidateStyleTahoe": {
+      "comment": "Picker value: the macOS 26 Tahoe look (glass). Proper noun — identical in every language.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Tahoe",
+        "tailo": "Tahoe",
+        "poj": "Tahoe",
+        "en": "Tahoe",
+        "ja": "Tahoe"
       }
     }
   }
