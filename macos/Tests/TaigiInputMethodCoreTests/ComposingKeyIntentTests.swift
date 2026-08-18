@@ -128,16 +128,16 @@ final class ComposingKeyIntentTests: XCTestCase {
 
     // MARK: - Candidate keys
 
-    /// The six keys the bar binds, and what each of them does to it. `↑`/`↓` page
-    /// rather than move because the bar is one horizontal row.
+    /// The six keys the window binds, handed through as raw directions — what
+    /// each one DOES belongs to the window's layout, not to this table.
     func testNavigationKeys_driveTheBarWhileItIsUp() {
         let cases: [(NavigationKey, ComposingKeyIntent)] = [
-            (.leftArrow, .moveHighlight(.backward)),
-            (.rightArrow, .moveHighlight(.forward)),
-            (.upArrow, .pageCandidates(.backward)),
-            (.downArrow, .pageCandidates(.forward)),
-            (.pageUp, .pageCandidates(.backward)),
-            (.pageDown, .pageCandidates(.forward)),
+            (.leftArrow, .navigate(.left)),
+            (.rightArrow, .navigate(.right)),
+            (.upArrow, .navigate(.up)),
+            (.downArrow, .navigate(.down)),
+            (.pageUp, .navigate(.pageUp)),
+            (.pageDown, .navigate(.pageDown)),
         ]
 
         for (key, expected) in cases {

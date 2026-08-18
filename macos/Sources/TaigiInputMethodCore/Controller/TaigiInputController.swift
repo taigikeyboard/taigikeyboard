@@ -29,8 +29,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var isMarkedTextVisible = false
 
-    /// This session's view of the candidate list: which candidates the last
-    /// fetch returned, which one is highlighted, and which page of them is up.
+    /// The candidates the last fetch returned, in the display order the window
+    /// shows them — the absolute indices the `CandidatePresenter` seam answers
+    /// with are positions in this array. The selection itself lives in the
+    /// window, which owns the measured page geometry the selection moves
+    /// through; this array is what maps an answered index back to the
+    /// `ContinuousCandidate` a commit needs.
     ///
     /// Per controller rather than process-wide, even though the composition it
     /// describes is not: a session that is not focused cannot reach the engine
@@ -38,7 +42,7 @@ public final class TaigiInputController: IMKInputController {
     /// is never read again, and a shared one would need the same ownership guard
     /// the coordinator already provides.
     @MainActor
-    private var candidates = CandidateListModel()
+    private var fetchedCandidates: [ContinuousCandidate] = []
 
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
@@ -115,7 +119,7 @@ public final class TaigiInputController: IMKInputController {
             // whether this session's bar survives. Hiding our own window is not
             // a client query, so the activation rule above still holds.
             controller.candidatePresenter.hideForHandover()
-            controller.candidates.reset()
+            controller.fetchedCandidates = []
         }
     }
 
@@ -366,7 +370,7 @@ public final class TaigiInputController: IMKInputController {
         let intent = ComposingKeyIntent.intent(
             for: key,
             isComposing: manager.isComposing,
-            isShowingCandidates: !candidates.isEmpty,
+            isShowingCandidates: !fetchedCandidates.isEmpty,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
         let executor = ClientEffectExecutor(client: client)
@@ -401,26 +405,30 @@ public final class TaigiInputController: IMKInputController {
             }
             return false
         case .commitHighlightedCandidate:
-            // Unreachable by construction — the intent is only produced when the
-            // list is non-empty, and a non-empty list always has a highlight.
-            // Consuming the key anyway is the safe half of the impossible case:
-            // letting a Space through would drop a stray space into a document
-            // whose composition is still running.
-            guard let highlighted = candidates.highlighted else { return true }
-            commit(highlighted, from: manager, client: client, executing: executor)
+            // The window answers which absolute index its selection is on. Nil
+            // — a window that failed to reach a screen, or state torn down
+            // between the fetch and the key — consumes the key without
+            // committing: letting a Space through would drop a stray space into
+            // a document whose composition is still running, and committing
+            // would write a candidate the user cannot see.
+            guard let selectedIndex = candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
+                  fetchedCandidates.indices.contains(selectedIndex)
+            else { return true }
+            commit(fetchedCandidates[selectedIndex], from: manager, client: client, executing: executor)
         case let .selectCandidateSlot(slot):
             // A chord aimed at one of the empty slots the last page ends with.
             // Consumed rather than passed on: `⌃7` is a candidate chord while the
             // bar is up, and handing it to the host only when the page happens to
             // be short would make it fire a host shortcut at random.
-            guard let selected = candidates.selectSlotInPage(slot) else { return true }
-            commit(selected, from: manager, client: client, executing: executor)
-        case let .moveHighlight(direction):
-            candidates.moveHighlight(direction)
-            presentCandidates(from: manager, client: client)
-        case let .pageCandidates(direction):
-            candidates.page(direction)
-            presentCandidates(from: manager, client: client)
+            guard let selectedIndex = candidatePresenter.candidateIndex(forSlot: slot, ownedBy: sessionToken),
+                  fetchedCandidates.indices.contains(selectedIndex)
+            else { return true }
+            commit(fetchedCandidates[selectedIndex], from: manager, client: client, executing: executor)
+        case let .navigate(direction):
+            // The window interprets the direction for its layout and repaints
+            // itself — nothing comes back, because the window is authoritative
+            // for the selection and the commit paths above ask it.
+            candidatePresenter.navigate(direction, ownedBy: sessionToken)
         }
         return true
     }
@@ -468,7 +476,7 @@ public final class TaigiInputController: IMKInputController {
         case .notComposing:
             dismissCandidates()
         case let .found(fetched):
-            candidates.replace(with: fetched)
+            fetchedCandidates = fetched
             if fetched.isEmpty {
                 dismissCandidates()
             } else {
@@ -477,7 +485,9 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    /// Puts the current page on screen, anchored to the caret.
+    /// Puts the list on screen, anchored to the caret. The window selects its
+    /// first candidate — a fresh keystroke re-ranks the whole list, so a held
+    /// position would sit on an unrelated word.
     @MainActor
     private func presentCandidates(from manager: ComposingManager, client: IMKTextInput) {
         guard let caretRect = caretRect(in: client, markedTextLength: manager.displayText.utf16.count)
@@ -496,19 +506,22 @@ public final class TaigiInputController: IMKInputController {
         }
 
         candidatePresenter.show(
-            CandidateBarContent(
-                labels: candidates.visiblePage.map(manager.documentText(for:)),
-                highlightedSlot: candidates.highlightedSlotInPage,
+            CandidateWindowContent(
+                labels: fetchedCandidates.map(manager.documentText(for:)),
             ),
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),
+            // Feeds the Multicolour accent resolution: when the system has no
+            // fixed accent, the highlight takes the host app's own. Safe to ask
+            // here — this runs inside a key event, like every client query.
+            hostBundleIdentifier: client.bundleIdentifier(),
             ownedBy: sessionToken,
         )
     }
 
     @MainActor
     private func dismissCandidates() {
-        candidates.reset()
+        fetchedCandidates = []
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 
