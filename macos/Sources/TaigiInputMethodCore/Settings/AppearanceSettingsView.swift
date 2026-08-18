@@ -1,11 +1,12 @@
-// The 外觀 pane: how the candidate window looks — layout, chrome, accent.
+// The 外觀 pane: how the candidate window looks — mode, accent, layout, chrome.
 
 import SwiftUI
 
-/// The 外觀 pane of the settings window: everything about how the candidate
-/// window presents itself, in one place — its layout, its chrome generation,
-/// and its accent colour, the last presented as the same row of colour circles
-/// MacishType's site demos (https://luke-chang.github.io/MacishType/).
+/// The 外觀 pane of the settings window, shaped like System Settings'
+/// Appearance pane: an 外觀 row of light/dark/auto thumbnails, a 強調色 row
+/// of colour circles (the same eight MacishType's site demos,
+/// https://luke-chang.github.io/MacishType/), then the candidate window's own
+/// two pickers — layout and chrome generation.
 ///
 /// `@AppStorage`-bound like `GeneralSettingsView`, and for the same reason:
 /// the values are read live by the candidate-window router on every show, so
@@ -16,17 +17,31 @@ struct AppearanceSettingsView: View {
 
     @Environment(DisplayLanguageStore.self) private var language
 
+    @AppStorage(SettingsStore.Keys.candidateAppearanceMode.name)
+    private var candidateAppearanceMode = SettingsStore.Keys.candidateAppearanceMode.defaultValue
+
+    @AppStorage(SettingsStore.Keys.candidateAccentColor.name)
+    private var candidateAccentColor = SettingsStore.Keys.candidateAccentColor.defaultValue
+
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateWindowStyle.name)
     private var candidateWindowStyle = SettingsStore.Keys.candidateWindowStyle.defaultValue
 
-    @AppStorage(SettingsStore.Keys.candidateAccentColor.name)
-    private var candidateAccentColor = SettingsStore.Keys.candidateAccentColor.defaultValue
-
     var body: some View {
         Form {
+            // The System Settings shape: the mode selector and the accent row
+            // share the first group, labels leading like every other row.
+            Section {
+                LabeledContent(language.string(.macosAppearanceTab)) {
+                    AppearanceModeRow(selection: $candidateAppearanceMode)
+                }
+                LabeledContent(language.string(.macosCandidateAccentColor)) {
+                    AccentSwatchRow(selection: $candidateAccentColor)
+                }
+            }
+
             Section {
                 Picker(language.string(.macosCandidateWindowLayout), selection: $candidateLayout) {
                     Text(language.string(.macosCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
@@ -41,15 +56,110 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.macosCandidateStyleTahoe)).tag(CandidateWindowStyleChoice.tahoe)
                 }
             }
-
-            Section {
-                AccentSwatchRow(selection: $candidateAccentColor)
-            } header: {
-                Text(language.string(.macosCandidateAccentColor))
-            }
         }
         .formStyle(.grouped)
         .frame(maxWidth: Self.maximumFormWidth)
+    }
+}
+
+/// The 淺色 / 深色 / 自動 selector, drawn the way System Settings draws its
+/// Appearance row: a thumbnail per mode with a caption under it, the selected
+/// one ringed in the accent colour. The thumbnails are miniature candidate
+/// windows rather than Apple's desktop artwork — they depict the thing this
+/// setting changes.
+private struct AppearanceModeRow: View {
+    @Binding var selection: CandidateAppearanceMode
+
+    @Environment(DisplayLanguageStore.self) private var language
+
+    /// System Settings' order: light, dark, then auto.
+    private static let modes: [CandidateAppearanceMode] = [.light, .dark, .auto]
+
+    private static let thumbnailSize = CGSize(width: 62, height: 40)
+    private static let thumbnailCornerRadius: CGFloat = 8
+    private static let thumbnailSpacing: CGFloat = 14
+    private static let selectionRingPadding: CGFloat = 2
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Self.thumbnailSpacing) {
+            ForEach(Self.modes, id: \.self) { mode in
+                thumbnailButton(for: mode)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func thumbnailButton(for mode: CandidateAppearanceMode) -> some View {
+        let name = language.string(mode.labelKey)
+        return Button {
+            selection = mode
+        } label: {
+            VStack(spacing: 5) {
+                thumbnail(for: mode)
+                    .frame(width: Self.thumbnailSize.width, height: Self.thumbnailSize.height)
+                    .clipShape(RoundedRectangle(cornerRadius: Self.thumbnailCornerRadius))
+                    .overlay(
+                        // A hairline so the light thumbnail keeps an edge on a
+                        // light form background.
+                        RoundedRectangle(cornerRadius: Self.thumbnailCornerRadius)
+                            .strokeBorder(.separator, lineWidth: 1),
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Self.thumbnailCornerRadius + Self.selectionRingPadding)
+                            .strokeBorder(Color.accentColor, lineWidth: 2)
+                            .padding(-Self.selectionRingPadding)
+                            .opacity(selection == mode ? 1 : 0),
+                    )
+                Text(name)
+                    .font(.caption)
+                    .foregroundStyle(selection == mode ? .primary : .secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .help(name)
+        .accessibilityLabel(name)
+        .accessibilityAddTraits(selection == mode ? .isSelected : [])
+    }
+
+    /// 自動 is the two fixed thumbnails split down the middle — light on the
+    /// left, dark on the right — which is how System Settings depicts it.
+    @ViewBuilder
+    private func thumbnail(for mode: CandidateAppearanceMode) -> some View {
+        switch mode {
+        case .light:
+            miniCandidateWindow(dark: false)
+        case .dark:
+            miniCandidateWindow(dark: true)
+        case .auto:
+            ZStack {
+                miniCandidateWindow(dark: false)
+                miniCandidateWindow(dark: true)
+                    .mask(alignment: .trailing) {
+                        Rectangle().frame(width: Self.thumbnailSize.width / 2)
+                    }
+            }
+        }
+    }
+
+    /// A miniature of what the setting controls: a candidate bar — three
+    /// cells, the first highlighted — on the mode's background. Fixed colours
+    /// on purpose: each thumbnail depicts ONE mode, so it must not follow the
+    /// appearance the form happens to render in.
+    private func miniCandidateWindow(dark: Bool) -> some View {
+        ZStack {
+            (dark ? Color(white: 0.16) : Color(white: 0.94))
+            HStack(spacing: 2.5) {
+                Capsule()
+                    .fill(Color(nsColor: CandidateAccentChoice.blue.overrideColor ?? .controlAccentColor))
+                    .frame(width: 12, height: 7)
+                Capsule()
+                    .fill(dark ? Color(white: 0.38) : Color(white: 0.74))
+                    .frame(width: 9, height: 7)
+                Capsule()
+                    .fill(dark ? Color(white: 0.38) : Color(white: 0.74))
+                    .frame(width: 9, height: 7)
+            }
+        }
     }
 }
 
@@ -61,17 +171,17 @@ private struct AccentSwatchRow: View {
 
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// MacishType's site metrics: 28pt discs, 12pt apart, ring offset ~3pt.
-    private static let swatchDiameter: CGFloat = 28
-    private static let swatchSpacing: CGFloat = 12
-    private static let selectionRingPadding: CGFloat = 3
+    /// Sized to sit inside a labelled form row, System Settings' own accent
+    /// row scale; the ring floats just outside the disc.
+    private static let swatchDiameter: CGFloat = 16
+    private static let swatchSpacing: CGFloat = 7
+    private static let selectionRingPadding: CGFloat = 2
 
     var body: some View {
         HStack(spacing: Self.swatchSpacing) {
             ForEach(CandidateAccentChoice.allCases, id: \.self) { choice in
                 swatch(for: choice)
             }
-            Spacer(minLength: 0)
         }
         .padding(.vertical, 4)
     }
@@ -88,7 +198,7 @@ private struct AccentSwatchRow: View {
                     // The ring floats a little outside the disc, so the colour
                     // stays a full circle rather than gaining a border.
                     Circle()
-                        .strokeBorder(.secondary, lineWidth: 2)
+                        .strokeBorder(.secondary, lineWidth: 1.5)
                         .padding(-Self.selectionRingPadding)
                         .opacity(selection == choice ? 1 : 0),
                 )

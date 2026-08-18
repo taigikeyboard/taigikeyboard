@@ -174,6 +174,27 @@ final class SettingsStoreTests: XCTestCase {
         }
     }
 
+    /// The 外觀 row's contract: 自動 forces nothing (the panel resolves
+    /// against the system), and the two explicit modes force the matching
+    /// appearance — a mode that resolved to nil would silently behave as 自動.
+    func testCandidateAppearanceMode_withNothingStored_followsTheSystem() {
+        XCTAssertEqual(makeStore().candidateAppearanceMode, .auto)
+        XCTAssertNil(CandidateAppearanceMode.auto.forcedAppearance)
+        XCTAssertEqual(CandidateAppearanceMode.light.forcedAppearance?.name, .aqua)
+        XCTAssertEqual(CandidateAppearanceMode.dark.forcedAppearance?.name, .darkAqua)
+    }
+
+    func testCandidateAppearanceMode_readsWhatTheThumbnailsWrite() {
+        userDefaults.set(
+            CandidateAppearanceMode.dark.rawValue,
+            forKey: SettingsStore.Keys.candidateAppearanceMode.name,
+        )
+        XCTAssertEqual(makeStore().candidateAppearanceMode, .dark)
+
+        userDefaults.set("sepia", forKey: SettingsStore.Keys.candidateAppearanceMode.name)
+        XCTAssertEqual(makeStore().candidateAppearanceMode, .auto, "unknown values fall back to 自動")
+    }
+
     func testCandidateAccentColor_readsWhatTheSwatchRowWrites() {
         userDefaults.set(
             CandidateAccentChoice.graphite.rawValue,

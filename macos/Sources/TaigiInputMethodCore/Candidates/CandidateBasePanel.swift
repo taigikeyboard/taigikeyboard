@@ -124,6 +124,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         hostWindowLevel: CGWindowLevel,
         hostBundleIdentifier: String?,
         accentOverride: NSColor?,
+        forcedAppearance: NSAppearance?,
     ) -> Bool {
         guard let screen = ScreenLookup.screen(containing: caretRect.origin) else {
             return false
@@ -131,6 +132,10 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         lastCaretRect = caretRect
         self.hostBundleIdentifier = hostBundleIdentifier
         self.accentOverride = accentOverride
+        // Nil resolves against the system — the 自動 behaviour. Set before
+        // `syncTheme` below, whose Tahoe correction reads the effective
+        // appearance this assignment decides.
+        appearance = forcedAppearance
         setFrame(
             CandidatePanelPositioning.frame(
                 anchoredTo: caretRect,

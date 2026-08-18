@@ -97,9 +97,13 @@ final class CandidateItemView: NSView {
         }
     }
 
+    /// No equality guard on purpose: `NSColor` compares dynamic colours equal
+    /// across light and dark even though they RESOLVE differently, and the
+    /// pill/backdrop snapshot a resolved `CGColor` — so every assignment
+    /// repaints, which is what lets `syncTheme` refresh a cell after the
+    /// panel's appearance changed under the same colour value.
     var highlightColor: NSColor = .selectedContentBackgroundColor {
         didSet {
-            guard highlightColor != oldValue else { return }
             updateAppearance()
         }
     }
@@ -198,15 +202,21 @@ final class CandidateItemView: NSView {
         if isHighlighted {
             indexLabel.textColor = .white
             candidateLabel.textColor = .white
-            if let pill = highlightView {
-                layer?.backgroundColor = nil
-                let inset = bounds.insetBy(dx: contentInset, dy: contentInset)
-                pill.frame = inset
-                pill.layer?.cornerRadius = inset.height / 2
-                pill.layer?.backgroundColor = highlightColor.cgColor
-                pill.isHidden = false
-            } else {
-                layer?.backgroundColor = highlightColor.cgColor
+            // Resolved under the panel's own appearance: `cgColor` snapshots a
+            // dynamic colour against the CURRENT drawing appearance, which is
+            // not this window's unless said so — a forced-dark panel would
+            // otherwise pin its highlight at the light resolution.
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                if let pill = highlightView {
+                    layer?.backgroundColor = nil
+                    let inset = bounds.insetBy(dx: contentInset, dy: contentInset)
+                    pill.frame = inset
+                    pill.layer?.cornerRadius = inset.height / 2
+                    pill.layer?.backgroundColor = highlightColor.cgColor
+                    pill.isHidden = false
+                } else {
+                    layer?.backgroundColor = highlightColor.cgColor
+                }
             }
         } else {
             indexLabel.textColor = .secondaryLabelColor

@@ -158,6 +158,8 @@ enum StringKey: String {
     case macosCandidateAccentYellow = "i18n_macos_candidateAccentYellow"
     case macosCandidateAccentGreen = "i18n_macos_candidateAccentGreen"
     case macosCandidateAccentGraphite = "i18n_macos_candidateAccentGraphite"
+    case macosCandidateAppearanceLight = "i18n_macos_candidateAppearanceLight"
+    case macosCandidateAppearanceDark = "i18n_macos_candidateAppearanceDark"
     case navTabDictionary = "i18n_nav_tabDictionary"
     case settingsDisplayLanguage = "i18n_settings_displayLanguage"
     case settingsDisplayLanguageAutomatic = "i18n_settings_displayLanguageAutomatic"

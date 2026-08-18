@@ -211,6 +211,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "candidateAccentColor",
             defaultValue: CandidateAccentChoice.auto,
         )
+
+        /// The candidate window's light/dark choice — `auto` follows the
+        /// system. Presentation-only like `candidateLayout`.
+        static let candidateAppearanceMode = SettingsKey(
+            name: "candidateAppearanceMode",
+            defaultValue: CandidateAppearanceMode.auto,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -289,6 +296,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         userDefaults.string(forKey: Keys.candidateAccentColor.name)
             .flatMap(CandidateAccentChoice.init(rawValue:))
             ?? Keys.candidateAccentColor.defaultValue
+    }
+
+    /// The candidate window's light/dark choice, live-read like the rest.
+    var candidateAppearanceMode: CandidateAppearanceMode {
+        userDefaults.string(forKey: Keys.candidateAppearanceMode.name)
+            .flatMap(CandidateAppearanceMode.init(rawValue:))
+            ?? Keys.candidateAppearanceMode.defaultValue
     }
 
     /// The romanization being typed. A stored value that names no mode — a

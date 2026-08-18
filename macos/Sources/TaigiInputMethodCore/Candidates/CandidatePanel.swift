@@ -55,6 +55,7 @@ final class CandidatePanel: CandidatePresenter {
             hostWindowLevel: hostWindowLevel,
             hostBundleIdentifier: hostBundleIdentifier,
             accentOverride: settings.candidateAccentColor.overrideColor,
+            forcedAppearance: settings.candidateAppearanceMode.forcedAppearance,
         )
         guard presented else {
             // No display to place it on. The panel still holds the fresh list,

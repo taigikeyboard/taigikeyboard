@@ -1440,6 +1440,42 @@
         "en": "Graphite",
         "ja": "グラファイト"
       }
+    },
+    "candidateAppearanceLight": {
+      "comment": "Caption under the light-mode thumbnail in the 外觀 pane's appearance selector, mirroring System Settings' Appearance row.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "淺色",
+        "tailo": "tshián-sik",
+        "poj": "chhián-sek",
+        "en": "Light",
+        "ja": "ライト"
+      }
+    },
+    "candidateAppearanceDark": {
+      "comment": "Caption under the dark-mode thumbnail in the 外觀 pane's appearance selector, mirroring System Settings' Appearance row.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "深色",
+        "tailo": "tshim-sik",
+        "poj": "chhim-sek",
+        "en": "Dark",
+        "ja": "ダーク"
+      }
     }
   }
 }
