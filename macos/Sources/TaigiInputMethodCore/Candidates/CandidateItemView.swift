@@ -104,6 +104,28 @@ final class CandidateItemView: NSView {
         }
     }
 
+    /// Whether the chord label is visible. The vertical layout scrolls, so the
+    /// `⌃n` chords address the nine rows around the viewport — rows outside
+    /// that window keep the slot's width (labels stay column-aligned) but show
+    /// nothing, because showing a chord that would not select them is a lie.
+    var showsSlotLabel = true {
+        didSet {
+            guard showsSlotLabel != oldValue else { return }
+            indexLabel.alphaValue = showsSlotLabel ? 1 : 0
+        }
+    }
+
+    /// Extra room the row leaves at its right edge — the vertical layout widens
+    /// it so text stays clear of an overlay scroller.
+    var trailingInset: CGFloat = Metrics.trailingPadding {
+        didSet {
+            guard trailingInset != oldValue else { return }
+            trailingConstraint.constant = -trailingInset
+        }
+    }
+
+    private var trailingConstraint: NSLayoutConstraint!
+
     init(style: CandidateWindowStyle) {
         self.style = style
         super.init(frame: .zero)
@@ -129,6 +151,9 @@ final class CandidateItemView: NSView {
         addSubview(indexLabel)
         addSubview(candidateLabel)
 
+        trailingConstraint = candidateLabel.trailingAnchor.constraint(
+            lessThanOrEqualTo: trailingAnchor, constant: -Metrics.trailingPadding,
+        )
         NSLayoutConstraint.activate([
             indexLabel.leadingAnchor.constraint(
                 equalTo: leadingAnchor, constant: Metrics.leadingPadding,
@@ -138,9 +163,7 @@ final class CandidateItemView: NSView {
             candidateLabel.leadingAnchor.constraint(
                 equalTo: indexLabel.trailingAnchor, constant: Metrics.indexCandidateGap,
             ),
-            candidateLabel.trailingAnchor.constraint(
-                lessThanOrEqualTo: trailingAnchor, constant: -Metrics.trailingPadding,
-            ),
+            trailingConstraint,
             candidateLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
         updateAppearance()

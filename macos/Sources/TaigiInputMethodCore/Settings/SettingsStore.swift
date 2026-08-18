@@ -187,6 +187,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "selectedSettingsPane",
             defaultValue: SettingsPane.general,
         )
+
+        /// The candidate window's layout. Presentation-only — the engine never
+        /// reads it — and macOS-only, so like `displayLanguage` its default is
+        /// owned by its own type rather than `EngineSettings.defaults`.
+        static let candidateLayout = SettingsKey(
+            name: "candidateLayout",
+            defaultValue: CandidateLayout.horizontal,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -242,6 +250,15 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
                 nameAppendix: bool(Keys.isKautianNameAppendixEnabled),
             ),
         )
+    }
+
+    /// The candidate window's layout, read fresh on every access like the rest
+    /// of the store so a change in the settings window applies to the very
+    /// next keystroke's window. Unknown stored values read as the default.
+    var candidateLayout: CandidateLayout {
+        userDefaults.string(forKey: Keys.candidateLayout.name)
+            .flatMap(CandidateLayout.init(rawValue:))
+            ?? Keys.candidateLayout.defaultValue
     }
 
     /// The romanization being typed. A stored value that names no mode — a

@@ -199,6 +199,44 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
 
     // MARK: - Subclass override points
 
+    /// The layout interface `CandidatePanel` routes through, so the router can
+    /// hold whichever layout the setting names without knowing which subclass
+    /// it is. Every layout is authoritative for its own selection.
+
+    var isEmpty: Bool { true }
+
+    /// The absolute index of the selected candidate. Stored here because every
+    /// layout speaks the same absolute-index identity; meaningful only while
+    /// `isEmpty` is false — every fresh list selects index 0. Written by the
+    /// subclass that owns the navigation.
+    var selectedIndex = 0
+
+    /// Replaces the list, selecting its first candidate, and answers with the
+    /// size the window wants. The caller places and shows it.
+    ///
+    /// The layout methods trap rather than default to a no-op: a layout that
+    /// forgot one would otherwise fail silently — a window that shows but
+    /// never navigates — and the trap turns that into the first keystroke of
+    /// development.
+    func updateCandidates(_: [String]) -> CGSize {
+        preconditionFailure("layout subclasses must override updateCandidates")
+    }
+
+    /// Empties the window so nothing can be selected or committed from it —
+    /// hiding must drop the state, not just the pixels.
+    func clear() { hide() }
+
+    /// Moves the selection the way this layout reads `direction`.
+    func navigate(_: CandidateNavigation) {
+        preconditionFailure("layout subclasses must override navigate")
+    }
+
+    /// The absolute index the `⌃(slot+1)` chord addresses in the rows or page
+    /// the user can currently see.
+    func candidateIndex(forSlot _: Int) -> Int? {
+        preconditionFailure("layout subclasses must override candidateIndex(forSlot:)")
+    }
+
     /// Repaints every cell with the freshly resolved highlight colour.
     func applyHighlightColor(_: NSColor) {}
 

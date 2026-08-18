@@ -1134,6 +1134,60 @@
         "en": "Association records: failed ({reason})",
         "ja": "単語連携：失敗（{reason}）"
       }
+    },
+    "candidateWindowLayout": {
+      "comment": "Picker label in the 一般 pane: which shape the candidate window takes (horizontal row / vertical list; expandable grid arrives with PR3 of the MacishType port).",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "候選窗排列",
+        "tailo": "hāu-suán thang pâi-lia̍t",
+        "poj": "hāu-soán thang pâi-lia̍t",
+        "en": "Candidate Window Layout",
+        "ja": "候補ウィンドウの配置"
+      }
+    },
+    "candidateLayoutHorizontal": {
+      "comment": "Picker value: the horizontal single-row candidate window, paged left to right.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "水平",
+        "tailo": "tsuí-pîng",
+        "poj": "chúi-pêng",
+        "en": "Horizontal",
+        "ja": "水平"
+      }
+    },
+    "candidateLayoutVertical": {
+      "comment": "Picker value: the vertical scrolling-list candidate window.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "垂直",
+        "tailo": "suî-ti̍t",
+        "poj": "sûi-ti̍t",
+        "en": "Vertical",
+        "ja": "垂直"
+      }
     }
   }
 }
