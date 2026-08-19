@@ -19,9 +19,10 @@ Read + label Taigi Keyboard user bug reports in Gmail. Backed by `gmail_cli.py` 
 Label taxonomy is all-CJK type names, hierarchical `parent/child[/leaf]` (matches the whole Gmail account — e.g. `銀行/中國信託/登入通知`). English is reserved for proper-noun brands only. The dev subtree was CJK-aligned 2026-06-29:
 
 - Unfixed user reports: `label:"開發/問題回報"` — quoted + hierarchical. An unquoted `label:開發-問題回報` **fails** (Gmail reads `-`/spaces oddly); always quote.
-- Fixed reports: `label:"開發/問題回報/已修復"`.
+- Fixed reports: `label:"開發/問題回報/已修復"` — ONLY when a merged fix exists.
+- Not reproducible: `label:"開發/問題回報/無法重現"` — the symptom could not be reproduced on the current build (no fix was made). USER rule 2026-08-20: NOT-repro is never 已修復.
 - Feature requests: `label:"開發/功能建議"`.
-- List query = `label:"開發/問題回報" -label:"開發/問題回報/已修復" -label:"開發/功能建議"` (open bug queue = reported, not fixed, not yet categorized as a feature).
+- List query = `label:"開發/問題回報" -label:"開發/問題回報/已修復" -label:"開發/功能建議" -label:"開發/問題回報/無法重現"` (open bug queue = reported, not fixed, not a feature, not closed as unreproducible).
 - This label also auto-catches ECPay / 藍新 payment mail — the helper skips those (keyword filter) and reports the skipped count.
 
 ## Commands
@@ -33,6 +34,7 @@ python3 .claude/skills/bug-triage/gmail_cli.py list [n]       # list unfixed rep
 python3 .claude/skills/bug-triage/gmail_cli.py body <id>      # full headers + plaintext body
 python3 .claude/skills/bug-triage/gmail_cli.py fixed <id>..   # add "開發/問題回報/已修復"
 python3 .claude/skills/bug-triage/gmail_cli.py feature <id>.. # add "開發/功能建議" (feature request)
+python3 .claude/skills/bug-triage/gmail_cli.py unresolved <id>.. # add "開發/問題回報/無法重現" (NOT-repro; also clears a mis-applied 已修復)
 python3 .claude/skills/bug-triage/gmail_cli.py auth           # verify/refresh token
 python3 .claude/skills/bug-triage/gmail_cli.py labels         # debug: list all labels + ids
 ```
@@ -67,7 +69,7 @@ already had it and the item is live, not a dogfood leftover. (2026-08-19: this r
 
 1. `list` → show unfixed reports (date / sender / subject / snippet). End-user reports have subject `台語齒盤 …回報 (vX.Y.Z)`.
 2. `body <id>` → read the full report for any that need detail.
-3. Classify each: a real bug whose fix is merged → `fixed <id>`; a feature request → `feature <id>`; a still-open real bug → leave as-is (`開發/問題回報` is the open-queue state).
+3. Classify each: a real bug whose fix is merged → `fixed <id>`; a feature request → `feature <id>`; symptom not reproducible on the current build → `unresolved <id>`; a still-open real bug → leave as-is (`開發/問題回報` is the open-queue state).
 
 ## Notes
 

@@ -28,6 +28,7 @@ API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 BUG_LABEL = "開發/問題回報"
 FIXED_LABEL = "開發/問題回報/已修復"
+UNRESOLVED_LABEL = "開發/問題回報/無法重現"
 FEATURE_LABEL = "開發/功能建議"
 # This label also auto-catches payment mail — skip those when listing.
 PAYMENT_NOISE = ("ecpay", "藍新", "newebpay", "發票", "invoice", "付款通知")
@@ -217,7 +218,10 @@ def _is_noise(frm, subj):
 
 def cmd_list(tok, n):
     # Open bug queue = reported, not yet fixed, not yet categorized as a feature.
-    query = f'label:"{BUG_LABEL}" -label:"{FIXED_LABEL}" -label:"{FEATURE_LABEL}"'
+    query = (
+        f'label:"{BUG_LABEL}" -label:"{FIXED_LABEL}" -label:"{FEATURE_LABEL}"'
+        f' -label:"{UNRESOLVED_LABEL}"'
+    )
     res = _api("/messages", tok, params={"q": query, "maxResults": n})
     msgs = res.get("messages", [])
     if not msgs:
@@ -273,17 +277,23 @@ def cmd_body(tok, msg_id):
     print("\n".join(out).strip() if out else full.get("snippet", ""))
 
 
-def _apply_label(tok, label_name, ids, verb):
+def _apply_label(tok, label_name, ids, verb, remove_label_names=()):
     labels = _label_map(tok)
     label_id = labels.get(label_name)
     if not label_id:
-        sys.exit(f'Label "{label_name}" does not exist — create it in Gmail first.')
+        # Auto-create: hierarchy comes from the name ("parent/child").
+        created = _api("/labels", tok, method="POST", payload={"name": label_name})
+        label_id = created.get("id")
+        if not label_id:
+            sys.exit(f'Label "{label_name}" does not exist and could not be created.')
+        print(f'created label "{label_name}"')
+    remove_ids = [labels[n] for n in remove_label_names if n in labels]
     for msg_id in ids:
         _api(
             f"/messages/{msg_id}/modify",
             tok,
             method="POST",
-            payload={"addLabelIds": [label_id]},
+            payload={"addLabelIds": [label_id], "removeLabelIds": remove_ids},
         )
         print(f"{verb}: {msg_id}")
 
@@ -296,6 +306,13 @@ def cmd_feature(tok, ids):
     _apply_label(tok, FEATURE_LABEL, ids, "marked feature")
 
 
+def cmd_unresolved(tok, ids):
+    # NOT-repro / cannot-verify: the report stays acknowledged but leaves the
+    # open queue; distinct from 已修復 (a merged fix exists). Clears a
+    # previously (mis)applied 已修復 on the same message.
+    _apply_label(tok, UNRESOLVED_LABEL, ids, "marked unresolved", remove_label_names=(FIXED_LABEL,))
+
+
 def cmd_labels(tok):
     for name, lid in sorted(_label_map(tok).items()):
         print(f"{lid}\t{name}")
@@ -303,7 +320,7 @@ def cmd_labels(tok):
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("usage: gmail_cli.py {auth|list [n]|body <id>|fixed <id..>|feature <id..>|labels}")
+        sys.exit("usage: gmail_cli.py {auth|list [n]|body <id>|fixed <id..>|feature <id..>|unresolved <id..>|labels}")
     cmd = sys.argv[1]
     tok = ensure_token()
     if cmd == "auth":
@@ -320,6 +337,10 @@ def main():
         if len(sys.argv) < 3:
             sys.exit("usage: gmail_cli.py feature <id> [<id>..]")
         cmd_feature(tok, sys.argv[2:])
+    elif cmd == "unresolved":
+        if len(sys.argv) < 3:
+            sys.exit("usage: gmail_cli.py unresolved <id> [<id>..]")
+        cmd_unresolved(tok, sys.argv[2:])
     elif cmd == "labels":
         cmd_labels(tok)
     else:
