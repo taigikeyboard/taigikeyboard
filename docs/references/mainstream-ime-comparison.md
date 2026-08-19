@@ -2,7 +2,7 @@
 
 > **Type**: Reference index
 > **Purpose**: Centralised cross-reference of every mainstream IME / keyboard repo cloned under `references/`, plus a few external projects worth knowing. Read this **before** writing a `最佳實踐對齊` section in a plan, before designing a new engine slice, or before asserting "Project X already does Y".
-> **Status**: Authoritative as of 2026-06-14. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
+> **Status**: Authoritative as of 2026-08-20. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
 > **Related deep-dives**:
 > - [`azookey-reference.md`](./azookey-reference.md) — azooKey iOS UI / CustardKit / action model
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
@@ -50,6 +50,10 @@
 | 21 | `PhahTaigi_iOS/` | Swift (Realm + RxSwift) | iOS (KeyboardExt) | Full IME (Taigi) | Prefix lookup over Realm dict; no lattice | Realm dict frequency | None on-device | POJ/TL (tone-optional) | GPL-3.0 | **Closest iOS Taigi-IME prior art** — keyboard-extension structure, Realm dict store, Han-lo mixed candidates. The "漢羅 commits romanization in one tap" UX our §34/S22 literal-roman candidate mirrors ("PhahTaigi parity"). Stale (`bd91e46`, 2022-03-03) |
 | 22 | `rime-phah-taibun/` | YAML + Lua + Python | Cross (RIME schema) | Schema data | DAG inherits from librime | Frequency from 7 public corpora (~220K entries) | Auto user-phrase via librime | POJ/TL (tone-optional) + Mandarin reverse lookup | MIT | **Second mainstream RIME Taigi schema** (sibling of #10 `rime-moetaigi`) — larger corpus, 16 Lua modules, Han/Roman mixed output, tone-optional typing. Reference for POJ/TL-unified schema + corpus merge + Mandarin reverse-lookup. Active (`d569c0e`, 2026-06-10) |
 
+| 23 | `vChewing-macOS/` | Swift 6 (SPM multi-package) | macOS (IMK) | Full IME (Mandarin) | **Homa** — DAG dynamic programming assembler (documented in `algorithm.md`) | LangModelAssembly convergence + VanguardLexicon | User phrase editor (`vChewing_PhraseEditorUI`) | **Tekkon** phonabet composer (ㄅㄆㄇ, multi-layout) | MIT-NTL | Actively-maintained macOS IMK IME with a **Chinese-language `algorithm.md`** covering FSM + DAG assembler + LM convergence. Sibling reading to #11 McBopomofo. `a4cccea6` (2026-08-16) |
+| 24 | `vChewing-LibVanguard/` | Swift 6.2 (SPM) | Cross (iOS/macOS/Catalyst/visionOS) | Engine only (no UI) | **Homa** sentence assembler | **CandidateKit** | **LexiconKit** + TrieKit | **Tekkon** (vendored copy) | **LGPL-3.0-or-later** | vChewing's engine being **decoupled from macOS frameworks** into a cross-platform Swift package — the same "platform-agnostic engine core" move our Rust engine made. Early stage. `68b63f2` (2026-05-23) |
+| 25 | `Tekkon/` | Swift | Cross (SPM) | Phonabet composer | n/a | n/a | n/a | 🔑 **Incremental keystroke → syllable state machine** (ㄅㄆㄇ + multiple keyboard layouts + pinyin trie) | LGPL-3.0-or-later + custom Section-7 exception | Upstream of the Tekkon vendored in #23/#24. **The closest structural analogue to our TPS composing** — same "is this key the previous syllable's coda or the next syllable's onset" ambiguity we hit in #392/#394/#553. `13c4e7a` (2026-08-09) |
+
 ---
 
 ## Topic index
@@ -62,7 +66,8 @@ If you are working on… → read these in order.
 2. **`khiin-rs/khiin/src/data/segmenter.rs`** — word-level DP cost function. Already mirrored in our roadmap Phase 9 user_freq_boost work.
 3. **`librime/src/rime/algo/syllabifier.cc`** — DAG construction with prism (double-array trie). Industry baseline.
 4. **`mozc/src/converter/immutable_converter.cc` + `lattice.cc` + `nbest_generator.cc`** — full connection-cost **Viterbi** + N-best. The "do it properly" end of the spectrum; read when justifying whether a Taigi slice needs a real connection matrix or the cheaper topological-sort relaxation (McBopomofo) / our walker suffices.
-5. **`moe-taigi-reference.md`** — segment-by-segment "Nail" UX (we explicitly rejected this in 2026-03; keep for context).
+5. **`vChewing-macOS/algorithm.md`** (#23) — Chinese-language write-up of the **Homa** DAG dynamic-programming assembler + input FSM + language-model convergence. Sibling to McBopomofo's `algorithm.md`; useful as a second opinion on the same problem class. Source in `vChewing-LibVanguard/Sources/_Modules/Homa/` (#24).
+6. **`moe-taigi-reference.md`** — segment-by-segment "Nail" UX (we explicitly rejected this in 2026-03; keep for context).
 
 ### Candidate ranking (user_freq, recency, bigram)
 
@@ -83,6 +88,7 @@ If you are working on… → read these in order.
 2. **`khiin-rs/ji/src/lomaji.rs` + `tone.rs`** — closest match for what our Rust syllabifier does.
 3. **`rime-moetaigi/moetaigi.schema.yaml`** — TPS (Bopomofo-style) tone-mark placement. Reference for `keyboard/tps/*`.
 4. **`McBopomofo/Source/Engine/Mandarin/`** — Bopomofo input validation. Useful as a structural mirror; phonetic rules don't transfer.
+5. 🔑 **`Tekkon/Sources/Tekkon/Tekkon_SyllableComposer.swift`** (#25) — incremental keystroke → syllable state machine. **Read before touching TPS composing**: it solves the same "this key could be the previous syllable's coda or the next syllable's onset" ambiguity as our §32/§33/S23 work (`engine/composing` `adjust_initial_key` / `dual_final_form`). `Tekkon_Constants.swift` holds the layout→phonabet tables; `Tekkon_PinyinTrie.swift` is the romanization→phonabet path. Read-only reference — LGPL, do **not** vendor code.
 
 ### Predictive / next-word
 
@@ -414,6 +420,42 @@ If you are working on… → read these in order.
 - **Inspiration takeaways**: POJ/TL-unified spelling (no mode switch) + tone-optional input — directly comparable to our TL/POJ handling; public-corpus merge pipeline as a reference for dictionary sourcing; Mandarin reverse-lookup design.
 - **Caveat**: RIME/librime engine semantics, not our Rust engine — mine the **schema/UX decisions + corpus pipeline**, not the engine code (that lives in #8 `librime`).
 
+### 23. vChewing (macOS) — `references/vChewing-macOS/`
+
+- **What**: 唯音 vChewing — actively-maintained macOS IMK Mandarin IME by Shiki Suen. Swift 6, split into ~25 SPM packages under `Packages/`. MIT-NTL (MIT + one extra requirement, see `COPYING`). `a4cccea6` (2026-08-16).
+- **Why we care**: Ships a **Chinese-language `algorithm.md`** documenting the whole pipeline — phonabet composition, input FSM, DAG dynamic-programming assembler, language-model convergence. That is the same document class as McBopomofo's `algorithm.md` (#11), written by a different author about a different implementation of the same problem. Good second opinion when justifying a lattice/ranking decision.
+- **Where to look**:
+  - `algorithm.md` — start here; it has its own table of contents
+  - `Packages/vChewing_Homa/` — DAG assembler (the sentence walker)
+  - `Packages/vChewing_Tekkon/` — vendored phonabet composer (upstream = #25)
+  - `Packages/vChewing_LangModelAssembly/` — LM convergence / multiple dictionary sources
+  - `Packages/vChewing_CandidateWindow/` — IMK candidate window (compare #20 MacishType)
+- **Caveat**: macOS IMK, Mandarin. Phonetic rules do **not** transfer to Taigi (CLAUDE.md Core Principle #3). Mine the **architecture + algorithm doc**, not the tables.
+
+### 24. LibVanguard — `references/vChewing-LibVanguard/`
+
+- **What**: vChewing's engine being extracted into a **cross-platform, UI-free Swift package** (iOS 18 / macOS 15 / Catalyst / visionOS). Modules: `Homa` (sentence assembler), `Tekkon` (phonabet composer), `TrieKit`, `LexiconKit`, `CandidateKit`, `SharedCore`, `BrailleSputnik`. Early stage, `68b63f2` (2026-05-23, "Phase 144").
+- **Why we care**: The README states the motivation explicitly — the original IME was "overcoupled with macOS-specific frameworks and APIs", so the engine is being lifted out into a portable core. That is **the same architectural move our Rust engine represents**, done in Swift. Useful as a comparison point for engine/platform seam decisions (what belongs in the engine vs. the platform shell).
+- **Where to look**:
+  - `Sources/_Modules/Homa/` — sentence assembler (our `engine/composing` walker)
+  - `Sources/_Modules/Tekkon/` — vendored copy of #25; prefer reading the upstream
+  - `Sources/_Modules/LexiconKit/` + `TrieKit/` — dictionary + trie (we use FST instead)
+  - `Sources/_Modules/CandidateKit/` — candidate management
+  - `EVOLUTION_MEMO.md` / `DevPlans/` — design intent (Traditional Chinese)
+- ⚠ **License — read-only**: **LGPL-3.0-or-later**, and the README states the author may license it commercially and is not accepting outside contributions. **Do not vendor or copy code.** Read the algorithms only.
+
+### 25. Tekkon — `references/Tekkon/`
+
+- **What**: Standalone Swift package — a **phonabet (注音) syllable composer**: feed it keystrokes one at a time, it maintains a partially-composed syllable and tells you when it is complete. 5 source files, ~2,700 LOC. Upstream of the copies vendored in #23 and #24. `13c4e7a` (2026-08-09).
+- 🔑 **Why we care**: The **closest structural analogue anywhere in `references/` to our TPS composing layer**. Bopomofo and TPS share the shape of the hard problem: a single keystroke can be either the current syllable's coda or the next syllable's onset, and the composer must decide incrementally without lookahead. That is exactly §32 (stop coda, PR #392), §33 (nasal coda, PR #394) and S23 (one-key-many-glyphs ambiguity, PR #553). Read this before opening another TPS composing round.
+- **Where to look**:
+  - `Sources/Tekkon/Tekkon_SyllableComposer.swift` — the incremental state machine (the main event)
+  - `Sources/Tekkon/Tekkon_Phonabets.swift` — phonabet model + validity
+  - `Sources/Tekkon/Tekkon_Constants.swift` — keyboard-layout → phonabet tables (multiple layouts)
+  - `Sources/Tekkon/Tekkon_PinyinTrie.swift` — romanization → phonabet path
+  - `Tests/` — the composer's own edge cases, worth reading as a spec
+- ⚠ **License — read-only**: LGPL-3.0-or-later. `CUSTOM_LGPLv3_EXCEPTION.md` grants a Section-7 additional permission covering **Apple code-signing only** (no paid Developer ID needed to sign the resulting dylib) — it does **not** relax the LGPL's other terms, and in particular does not bless static linking into our app. **Algorithm reference only; do not copy code.** Phonetic tables are Mandarin and do not transfer (Core Principle #3).
+
 ### Cloned but out-of-engine-scope (not IME engines)
 
 Three repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
@@ -481,5 +523,7 @@ For Phase II+ (cross-platform alignment), read:
 - **2026-05-17** — Added repo #16 `trime/` (osfans/trime, RIME IME for Android, GPL-3.0, nightly `277b8ea2`). Matrix row + per-repo card + new "Native-engine embedding / FFI threading" topic section + Custom-UI / Schema-deploy / Phase II+ pointers. Index-only (no deep-dive): Trime's engine internals are already covered by `librime` (#8) + `rime-reference.md`; its value is the Android integration layer. Deep-dive deferred until an Android FFI/daemon slice needs it.
 - **2026-05-30** — Indexed 4 newly-cloned IMEs as cards/rows #17–20: **mozc** (`afbf1d089`, BSD-3, promoted from external pointer → cloned; Mozc external entry now a redirect), **rakukan** (`ea8e151`, MIT, Rust + LLM Windows IME, out-of-process engine-host + live conversion), **PIME** (`571759f`, LGPL-2.1, Windows TSF multi-backend host), **MacishType** (`8a6cb3a`, MIT, macOS IMK, JS-pluggable engine + native candidate window). Topic-index additions: lattice (mozc Viterbi), predictive (mozc predictor + rakukan live-conv), native-engine FFI (rakukan/PIME out-of-process), candidate UI (MacishType), config-driven (PIME `backends.json` + MacishType `manifest.json`). Added a "Cloned but out-of-engine-scope" note for `ISEmojiView/` (iOS emoji UI lib, not an IME) + `KeSi/` (Tâi-bûn NLP toolkit, not an IME) so they aren't re-explored as engine refs. Index-only (no deep-dives): create `docs/references/<repo>-reference.md` if a slice ever needs >500 LOC read-through of mozc's Viterbi or rakukan's RPC/live-conv.
 - **2026-06-14** — Indexed 2 previously-uncatalogued Taigi IMEs as cards/rows #21–22: **PhahTaigi_iOS** (`bd91e46`, GPL-3.0, iOS Taigi keyboard, Realm dict, stale 2022 checkout — the iOS Taigi prior art behind the §34/S22 "PhahTaigi parity" cite) + **rime-phah-taibun** (`d569c0e`, MIT, second RIME Taigi schema, ~220K-entry corpus merge, sibling of #10). Softened #10 `rime-moetaigi` "only mainstream RIME Taigi schema" → cross-ref #22. Topic-index "Taigi-specific UX / data" additions for both. Added a third "Cloned but out-of-engine-scope" bullet for `Taigi-Input-method-dictionary-supplement/` (`ada348a`, MOE-IME CSV supplement = dev-supplement source behind PR #368/#369; dictionary data, not an engine). Index-only (no deep-dives). All 25 repos under `references/` now catalogued.
+
+- **2026-08-20** — Indexed 3 vChewing-family repos as cards/rows #23–25: **vChewing-macOS** (`a4cccea6`, MIT-NTL, macOS IMK Mandarin IME, ships a Chinese-language `algorithm.md`), **vChewing-LibVanguard** (`68b63f2`, LGPL-3.0, vChewing's engine being extracted into a UI-free cross-platform Swift package — same engine/platform-seam move as our Rust engine), **Tekkon** (`13c4e7a`, LGPL-3.0 + Section-7 code-signing exception, standalone phonabet syllable composer, ~2,700 LOC; cloned at USER request 2026-08-20). Topic-index additions: segmentation (vChewing `algorithm.md` Homa DAG) + syllabifier (🔑 `Tekkon_SyllableComposer.swift` as the closest structural analogue to our TPS composing — same coda-vs-onset ambiguity as §32/§33/S23). Index-only (no deep-dives). ⚠ Both LGPL repos are flagged **read-only** in their cards: algorithm reference only, no vendoring.
 
 When adding a new repo under `references/`, append a card here and a row in the TL;DR matrix; if the repo is deep enough to warrant its own deep-dive (>500 LOC of read-through), create `docs/references/<repo>-reference.md` and link both ways.
