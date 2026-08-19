@@ -116,8 +116,12 @@ fn req(method: Method) -> ComposingRequest {
 fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
     let cfg = config(mode);
     let mut engine = Engine::new();
-    dispatch::handle(&req(Method::Start(Start { text: input.into() })), &mut engine, &cfg)
-        .expect("Start");
+    dispatch::handle(
+        &req(Method::Start(Start { text: input.into() })),
+        &mut engine,
+        &cfg,
+    )
+    .expect("Start");
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
@@ -189,10 +193,12 @@ fn sampled_cases() -> Vec<Case> {
         col("tps_num"),
         col("tps_notone_var"),
     );
-    let max_idx = [i_hanzi, i_tl, i_freq, i_tl_num, i_poj_num, i_tps_num, i_tps_var]
-        .into_iter()
-        .max()
-        .unwrap();
+    let max_idx = [
+        i_hanzi, i_tl, i_freq, i_tl_num, i_poj_num, i_tps_num, i_tps_var,
+    ]
+    .into_iter()
+    .max()
+    .unwrap();
 
     let mut filtered: Vec<Case> = Vec::new();
     for line in lines {
@@ -321,13 +327,19 @@ fn dump_cross_mode_parity() {
     let cases = sampled_cases();
     for want in words.split(',').map(str::trim).filter(|s| !s.is_empty()) {
         let Some(case) = cases.iter().find(|c| c.hanzi == want) else {
-            println!("\n==== {want} — not in sampled set (multi-syllable / tone-1 / variant?) ====");
+            println!(
+                "\n==== {want} — not in sampled set (multi-syllable / tone-1 / variant?) ===="
+            );
             continue;
         };
         let tl = complete_syllable_hanji_set(&case.tl_num, "tl");
         let poj = complete_syllable_hanji_set(&case.poj_num, "poj");
         let tps = complete_syllable_hanji_set(&case.tps_num, "tps");
-        let verdict = if tl == poj && poj == tps { "MATCH" } else { "MISMATCH" };
+        let verdict = if tl == poj && poj == tps {
+            "MATCH"
+        } else {
+            "MISMATCH"
+        };
         println!(
             "\n==== {want}  TL={} POJ={} TPS={}  [{verdict}] ====",
             case.tl_num, case.poj_num, case.tps_num

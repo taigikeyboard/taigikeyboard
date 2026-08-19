@@ -51,7 +51,7 @@ mod builder;
 mod cost;
 mod walker;
 
-pub(crate) use builder::build_lattice;
+pub(crate) use builder::build_lattice_with_barriers;
 pub(crate) use cost::CUSTOM_EFFECTIVE_FREQ;
 pub(crate) use walker::{walk_best, EdgeChoice};
 

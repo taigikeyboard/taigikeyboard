@@ -67,7 +67,10 @@ fn build_index(name: &str, ns: &str, keys: &[FstKey]) -> PrefixIndex {
 fn unique_temp(name: &str) -> PathBuf {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("lex-tps-abbrev-{name}-{}-{n}.fst", std::process::id()))
+    std::env::temp_dir().join(format!(
+        "lex-tps-abbrev-{name}-{}-{n}.fst",
+        std::process::id()
+    ))
 }
 
 fn tps_ctx<'a>(
@@ -101,9 +104,18 @@ fn lookup_prefix_shortest_first_drops_abbrev_and_orders_short_first() {
         "mech",
         "tps:",
         &[
-            FstKey { body: "ㄍㄅ", rowid: 1 },     // abbrev surface (dropped)
-            FstKey { body: "ㄍㄚ", rowid: 2 },     // short full reading 家/ka
-            FstKey { body: "ㄍㄚㄅㄧ", rowid: 3 }, // long full reading ka-pi
+            FstKey {
+                body: "ㄍㄅ",
+                rowid: 1,
+            }, // abbrev surface (dropped)
+            FstKey {
+                body: "ㄍㄚ",
+                rowid: 2,
+            }, // short full reading 家/ka
+            FstKey {
+                body: "ㄍㄚㄅㄧ",
+                rowid: 3,
+            }, // long full reading ka-pi
         ],
     );
     // Plain byte order: abbrev first, then the LONG key, then the short
@@ -135,8 +147,14 @@ fn lookup_prefix_shortest_first_orders_short_before_long_no_skip_tl() {
         "tl-allmode",
         "tl:",
         &[
-            FstKey { body: "kapi", rowid: 1 }, // long extension (ka-pi)
-            FstKey { body: "ka", rowid: 2 },   // short exact reading
+            FstKey {
+                body: "kapi",
+                rowid: 1,
+            }, // long extension (ka-pi)
+            FstKey {
+                body: "ka",
+                rowid: 2,
+            }, // short exact reading
         ],
     );
     assert_eq!(
@@ -156,7 +174,14 @@ fn lookup_prefix_shortest_first_orders_short_before_long_no_skip_tl() {
 /// `0xFF` (255 → `FF 00 00 00`) must not corrupt key parsing.
 #[test]
 fn lookup_prefix_shortest_first_parses_key_with_0xff_in_rowid() {
-    let idx = build_index("rowid-ff", "tps:", &[FstKey { body: "ㄍㄚ", rowid: 255 }]);
+    let idx = build_index(
+        "rowid-ff",
+        "tps:",
+        &[FstKey {
+            body: "ㄍㄚ",
+            rowid: 255,
+        }],
+    );
     assert_eq!(
         idx.lookup_prefix_shortest_first("tps:ㄍ", 100, |_| false),
         vec![255],
@@ -209,8 +234,14 @@ fn tps_partial_prefix_surfaces_single_chars_past_abbrev_flood() {
     let mut keys: Vec<FstKey> = Vec::with_capacity(FLOOD * 2 + 3);
     for i in 0..FLOOD {
         let rowid = (i + 1) as u32;
-        keys.push(FstKey { body: "ㄍㄅ", rowid }); // abbrev surface (dropped)
-        keys.push(FstKey { body: "ㄍㄚㄅㄧ", rowid }); // legit ka-pi prefix hit
+        keys.push(FstKey {
+            body: "ㄍㄅ",
+            rowid,
+        }); // abbrev surface (dropped)
+        keys.push(FstKey {
+            body: "ㄍㄚㄅㄧ",
+            rowid,
+        }); // legit ka-pi prefix hit
     }
     for off in 0..3 {
         keys.push(FstKey {

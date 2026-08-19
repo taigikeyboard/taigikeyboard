@@ -120,7 +120,12 @@ pub(crate) fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<C
 // ---- WRITE helpers ------------------------------------------------------
 
 fn push_latin_family(keys: &mut Vec<CustomSearchKey>, family: &'static str, display: &str) {
-    push_key(keys, family, FORM_NUM, fuse_latin_numeric(&to_tone_number(display)));
+    push_key(
+        keys,
+        family,
+        FORM_NUM,
+        fuse_latin_numeric(&to_tone_number(display)),
+    );
     push_key(keys, family, FORM_NOTONE, derive_notone(display));
     push_key(keys, family, FORM_ABBREV, derive_abbrev(display));
 }
@@ -137,11 +142,26 @@ fn push_tps_family(keys: &mut Vec<CustomSearchKey>, tl: &str) {
     // query producing whichever glyph the user typed still matches. Empty when
     // the form carries no ㄜ.
     push_key(keys, FAMILY_TPS, FORM_NUM, tps_notone_or_variant(&num));
-    push_key(keys, FAMILY_TPS, FORM_NOTONE, tps_notone_or_variant(&notone));
-    push_key(keys, FAMILY_TPS, FORM_ABBREV, tps_notone_or_variant(&abbrev));
+    push_key(
+        keys,
+        FAMILY_TPS,
+        FORM_NOTONE,
+        tps_notone_or_variant(&notone),
+    );
+    push_key(
+        keys,
+        FAMILY_TPS,
+        FORM_ABBREV,
+        tps_notone_or_variant(&abbrev),
+    );
 }
 
-fn push_key(keys: &mut Vec<CustomSearchKey>, family: &'static str, form: &'static str, key: String) {
+fn push_key(
+    keys: &mut Vec<CustomSearchKey>,
+    family: &'static str,
+    form: &'static str,
+    key: String,
+) {
     if !key.is_empty() {
         keys.push(CustomSearchKey { family, form, key });
     }
@@ -219,9 +239,15 @@ mod tests {
         assert!(has(&stored, FAMILY_POJ, FORM_NOTONE, "chiah"));
 
         let q_tl = derive_custom_query_key("tsiah", "tl").unwrap();
-        assert!(query_hits_stored(&stored, &q_tl), "TL query must find POJ-stored entry");
+        assert!(
+            query_hits_stored(&stored, &q_tl),
+            "TL query must find POJ-stored entry"
+        );
         let q_poj = derive_custom_query_key("chiah", "poj").unwrap();
-        assert!(query_hits_stored(&stored, &q_poj), "POJ query must find POJ-stored entry");
+        assert!(
+            query_hits_stored(&stored, &q_poj),
+            "POJ query must find POJ-stored entry"
+        );
     }
 
     // trace: roman="tsiah" (TL). canonical TL = "tsiah"; poj = "chiah".
@@ -229,7 +255,10 @@ mod tests {
     fn tl_stored_is_findable_via_poj() {
         let stored = derive_custom_search_keys("tsiah");
         let q_poj = derive_custom_query_key("chiah", "poj").unwrap();
-        assert!(query_hits_stored(&stored, &q_poj), "POJ query must find TL-stored entry");
+        assert!(
+            query_hits_stored(&stored, &q_poj),
+            "POJ query must find TL-stored entry"
+        );
     }
 
     // The Bopomofo a TPS user types for 食 IS tps_notone_from_tl("tsiah").
@@ -245,7 +274,10 @@ mod tests {
         let q = derive_custom_query_key(&bopomofo, "tl").unwrap();
         assert_eq!(q.family, FAMILY_TPS);
         assert_eq!(q.form, FORM_NOTONE);
-        assert!(query_hits_stored(&stored, &q), "TPS query must find latin-stored entry");
+        assert!(
+            query_hits_stored(&stored, &q),
+            "TPS query must find latin-stored entry"
+        );
     }
 
     // trace: roman="chia̍h" (POJ display, tone 8). tl num = to_tone_number(
@@ -267,7 +299,10 @@ mod tests {
         let stored = derive_custom_search_keys("guá-sī");
         assert!(has(&stored, FAMILY_TL, FORM_ABBREV, "gs"));
         let q = derive_custom_query_key("gs", "tl").unwrap();
-        assert!(query_hits_stored(&stored, &q), "abbrev row must satisfy a notone-form query");
+        assert!(
+            query_hits_stored(&stored, &q),
+            "abbrev row must satisfy a notone-form query"
+        );
     }
 
     // 食 (chia̍h / tsia̍h, tone 8): the stored tps:num key uses the combining

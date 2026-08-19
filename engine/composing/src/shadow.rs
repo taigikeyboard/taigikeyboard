@@ -7,7 +7,7 @@ use lexicon::{ConsumedSpan, SyllableInventory};
 use phonetics::InputMode;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::lattice::{build_lattice, Lattice};
+use crate::lattice::{build_lattice_with_barriers, Lattice};
 use crate::syllabifier::valid_span_endings_lowered;
 
 /// v3.5.9 B-2 — map `mode` to its FST key family prefix. The tagged-single-FST
@@ -248,25 +248,42 @@ pub(crate) fn build_shadow_lattice(
     inv: &SyllableInventory,
     mode: InputMode,
 ) -> (String, Vec<usize>, Lattice) {
-    let lower = raw.to_ascii_lowercase();
-    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    lattice_from_canonical(&canonical, &canonical_to_raw_end, inv, mode)
+    let (shadow, shadow_to_raw_end, lattice, _) =
+        build_shadow_lattice_with_barriers(raw, inv, mode);
+    (shadow, shadow_to_raw_end, lattice)
 }
 
-/// Shared tail of [`build_shadow_lattice`] / [`build_continuous_keys`]:
-/// from a `(canonical, canonical_to_raw_end)` pair, run hyphen-shadow +
-/// (TPS-only) separator-shadow + lattice and compose the shadow→raw offset
-/// map. Factored out so the base and alternate readings build their lattices
-/// through ONE code path (no drift).
-// 中文: build_shadow_lattice / build_continuous_keys 共用尾段;base 與替代讀法
-// 中文:   經同一路徑建 lattice(避免漂移)。
-fn lattice_from_canonical(
+/// [`build_shadow_lattice`] plus the stripped-separator / 連字 barrier
+/// set in shadow coordinates (§35). Production callers use this so the
+/// barrier metadata survives to the lookup layer; the 3-tuple wrapper
+/// keeps the historical test seams byte-compatible.
+// 中文: build_shadow_lattice + barrier 集(shadow 座標,§35);production 走此,3-tuple 版留給測試接縫。
+pub(crate) fn build_shadow_lattice_with_barriers(
+    raw: &str,
+    inv: &SyllableInventory,
+    mode: InputMode,
+) -> (String, Vec<usize>, Lattice, Vec<usize>) {
+    let lower = raw.to_ascii_lowercase();
+    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
+    lattice_from_canonical_with_barriers(&canonical, &canonical_to_raw_end, inv, mode)
+}
+
+/// [`lattice_from_canonical`] plus the merged barrier set: every shadow
+/// byte offset where a user separator (TPS space) or 連字 hyphen was
+/// stripped. Barriers gate the §35 ambiguity expansion — a single
+/// syllable may not cross one, and the glyph before one is Final-only —
+/// and the TPS syllabifier receives them so an expanded probe cannot
+/// fuse across the user's explicit boundary.
+// 中文: lattice_from_canonical + 合併 barrier 集(空白/連字剝除點的 shadow 座標)。
+// 中文:   §35 展開受其約束:單音節不可跨越、其前一格只許 Final 形;TPS 切分器同樣收到。
+fn lattice_from_canonical_with_barriers(
     canonical: &str,
     canonical_to_raw_end: &[usize],
     inv: &SyllableInventory,
     mode: InputMode,
-) -> (String, Vec<usize>, Lattice) {
-    let (hyphenless, hyphenless_to_canonical) = build_hyphen_shadow(canonical);
+) -> (String, Vec<usize>, Lattice, Vec<usize>) {
+    let (hyphenless, hyphenless_to_canonical, hyphen_barriers) =
+        strip_char_shadow_with_barriers(canonical, '-');
     // TPS-only — the ASCII space is the keyboard's tone-1 / syllable
     // separator (appended on `space` while composing so the next
     // dual-form consonant stays an initial), NOT a literal space. Strip
@@ -277,12 +294,43 @@ fn lattice_from_canonical(
     // word boundary). See `build_separator_shadow`.
     // 中文: TPS-only — space 是鍵盤的第一調/音節分隔符,非字面空白;切分前剝除,
     // 中文:   讓第一調詞 `ㄍㄠ ㄉㄞ` 產生跨 space 整詞 edge(交代);offset map 保 commit。
-    let (shadow, shadow_to_hyphenless) = build_separator_shadow(&hyphenless, mode);
+    let (shadow, shadow_to_hyphenless, space_barriers) =
+        build_separator_shadow_with_barriers(&hyphenless, mode);
     // Compose the three offset maps: shadow → hyphenless → canonical → raw.
     let shadow_to_raw_end: Vec<usize> = shadow_to_hyphenless
         .iter()
         .map(|&hyphenless_idx| canonical_to_raw_end[hyphenless_to_canonical[hyphenless_idx]])
         .collect();
+    // Merge the two barrier layers into final-shadow coordinates. Hyphen
+    // barriers are hyphenless offsets; project them through the separator
+    // strip (count the shadow bytes whose hyphenless source is below the
+    // barrier — equivalently, find the shadow offset whose map value first
+    // reaches the barrier).
+    // 中文: 兩層 barrier 合併到最終 shadow 座標;hyphen barrier(hyphenless 座標)經
+    // 中文:   separator strip 投影(找 map 值首次達到該 barrier 的 shadow 偏移)。
+    let mut barriers: Vec<usize> = space_barriers;
+    for hyphen_barrier in hyphen_barriers {
+        // The projected shadow offset is the LAST map index whose consumed
+        // hyphenless prefix still fits under the barrier — i.e. how many
+        // hyphenless bytes BEFORE the barrier survived the space strip. A
+        // first-index-≥ search is off by one when a stripped space sits
+        // immediately before the hyphen (`A␠-B`): the space consumes a
+        // hyphenless byte without producing a shadow byte, and ≥ would land
+        // the barrier after B's first glyph — a phantom barrier inside the
+        // next syllable (Codex post-impl 2026-08-19 BLOCK 3).
+        // 中文: 投影 = 最後一個「已消耗 hyphenless 前綴 ≤ barrier」的 map index
+        // 中文:   (= barrier 前存活到 shadow 的 byte 數)。用「第一個 ≥」在 `A␠-B`
+        // 中文:   會差一格 — 被剝的空白消耗 hyphenless byte 卻不產 shadow byte,
+        // 中文:   barrier 會落到 B 首 glyph 之後(假 barrier)。
+        let projected = shadow_to_hyphenless
+            .iter()
+            .rposition(|&hyphenless_idx| hyphenless_idx <= hyphen_barrier)
+            .unwrap_or(0);
+        if !barriers.contains(&projected) {
+            barriers.push(projected);
+        }
+    }
+    barriers.sort_unstable();
     // v3.5.9 B-2 — thread `mode` into the lattice builder; the inventory is
     // mode-aware (`SyllableInventory::contains_in(mode, …)`), so a POJ-mode
     // shadow now resolves against the `poj:` family of `syllables.fst` and
@@ -290,251 +338,68 @@ fn lattice_from_canonical(
     // collapsing onto the TL forms.
     // 中文: B-2 — mode 透傳至 lattice builder;inventory 為 mode-aware,
     // 中文:   POJ 模式下走 `poj:` 家族,辨識 POJ 拼寫的音節邊界而非塌成 TL 形。
-    let lattice = build_lattice(&shadow, inv, mode, MAX_SYLLABLES);
-    (shadow, shadow_to_raw_end, lattice)
+    let lattice = build_lattice_with_barriers(&shadow, inv, mode, MAX_SYLLABLES, &barriers);
+    (shadow, shadow_to_raw_end, lattice, barriers)
 }
 
-/// The continuous-input lookup keys for `raw`: the base reading's
-/// left-anchored keys followed by every alternate reading's
-/// ([`alternate_canonicals`]). Returns the keys plus the BASE
-/// `(shadow, shadow_to_raw_end, lattice)` triple, which the whole-sentence
-/// walker reuses — the walker runs on the base reading only, so an alternate
-/// never participates in whole-sentence synthesis. It can still SORT to the
-/// visible top when the base reading yields no walker candidate at all (考卷
-/// does exactly that); what it cannot do is displace one.
+/// The continuous-input lookup keys for `raw`, plus the per-key
+/// barrier metadata the §35 ambiguity-aware lookup needs.
 ///
-/// Alternates are APPENDED so a true `(roman, hanji, span)` collision keeps
-/// the natural reading (`dedupe_by_roman_hanji_span` keeps the earlier index
-/// on a source-rank tie). The canonicalize prologue runs ONCE and its
-/// `canonical_to_raw_end` map serves every reading — sound because each
-/// alternate is a byte-length-preserving glyph swap of the canonical.
+/// Returns `(keys, per-key final-only offsets, base (shadow, map,
+/// lattice), barriers)`:
+/// - `keys[i]` is the literal left-anchored span key exactly as before
+///   this round — ambiguity resolution happens at LOOKUP time
+///   (`lexicon::PrefixIndex::lookup_exact_tps_readings`), so the key
+///   text stays the user's letters and the substitution-count ordering
+///   has a stable baseline.
+/// - `final_only[i]` = byte offsets into `keys[i]` (family prefix
+///   included) of glyphs immediately before a stripped separator / 連字
+///   barrier: those pattern slots keep only Final-role readings (§31 —
+///   the user's explicit boundary is never re-read as an onset).
+/// - the base triple feeds the whole-sentence walker, which resolves
+///   its edge keys through the same expanded lookup.
+/// - `barriers` (shadow coordinates) let the walker compute the same
+///   per-edge restriction for interior edges.
 ///
-/// Single source for both `continuous::assemble_candidates` and the
-/// `dispatch::build_continuous_keys_with_inventory` test seam, so the two
-/// cannot drift.
-// 中文: 連續輸入的查詢鍵 = base 讀法左錨鍵 + 各替代讀法的鍵(append 在後);另回傳 base 三元組供 walker 重用。
-// 中文:   walker 只跑 base → 替代不參與整句合成;base 無 walker 候選時替代仍可能排到視覺首位(考卷即是),但無法擠掉既有的。
-// 中文:   canonicalize 前段只跑一次,其 canonical_to_raw_end 供所有讀法共用(替代皆為等 byte glyph 對換)。
-// 中文:   此為 assemble_candidates 與 dispatch 測試接縫的單一來源。
+/// Single source for `continuous::assemble_candidates` and the
+/// `dispatch::build_continuous_keys_with_inventory` test seam, so the
+/// two cannot drift. Empty `final_only` / `barriers` for TL / POJ /
+/// English — their pipeline strips nothing.
+// 中文: 連續輸入查詢鍵 + §35 歧義查詢所需的 barrier 資訊。key 維持使用者字面(解歧在查詢層),
+// 中文:   final_only[i] = keys[i] 中 barrier 前一格的偏移(含家族前綴);base 三元組供 walker,
+// 中文:   barriers 供 walker 對內部 edge 計算相同限制。TL/POJ/English 恆為空。
+pub(crate) struct ContinuousKeys {
+    pub keys: Vec<(ConsumedSpan, String)>,
+    pub final_only: Vec<Vec<usize>>,
+    pub shadow: String,
+    pub shadow_to_raw_end: Vec<usize>,
+    pub lattice: Lattice,
+    pub barriers: Vec<usize>,
+}
+
 pub(crate) fn build_continuous_keys(
     raw: &str,
     inv: &SyllableInventory,
     mode: InputMode,
-) -> (Vec<(ConsumedSpan, String)>, (String, Vec<usize>, Lattice)) {
-    let lower = raw.to_ascii_lowercase();
-    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    let (shadow, shadow_to_raw_end, lattice) =
-        lattice_from_canonical(&canonical, &canonical_to_raw_end, inv, mode);
-    let mut keys =
-        left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, inv, mode);
-    for alternate in alternate_canonicals(&canonical, mode) {
-        let (alternate_shadow, alternate_shadow_to_raw_end, alternate_lattice) =
-            lattice_from_canonical(&alternate, &canonical_to_raw_end, inv, mode);
-        keys.extend(left_anchored_keys_from_lattice(
-            &alternate_shadow,
-            &alternate_shadow_to_raw_end,
-            &alternate_lattice,
-            inv,
-            mode,
-        ));
+) -> ContinuousKeys {
+    let (shadow, shadow_to_raw_end, lattice, barriers) =
+        build_shadow_lattice_with_barriers(raw, inv, mode);
+    let (keys, final_only) = left_anchored_keys_and_restrictions(
+        &shadow,
+        &shadow_to_raw_end,
+        &lattice,
+        inv,
+        mode,
+        &barriers,
+    );
+    ContinuousKeys {
+        keys,
+        final_only,
+        shadow,
+        shadow_to_raw_end,
+        lattice,
+        barriers,
     }
-    (keys, (shadow, shadow_to_raw_end, lattice))
-}
-
-/// The alternate canonical shadows for `canonical` — the readings the
-/// per-keystroke auto-correct (§32/§33) cannot resolve from local context.
-/// The base reading is never replaced; these are extra paths, the librime
-/// Spelling-Algebra model.
-///
-/// Three generators, each yielding at most one alternate (so the result holds
-/// at most three and needs no explosion guard), in this order:
-/// - **A — coda→onset de-fold** ([`defold_single_coda`]): a folded coda glyph
-///   that is really the NEXT syllable's onset (`ㄍㆤㆷㄧㄥ` → `ㄍㆤㄏㄧㄥ`,
-///   ke|hing 雞胸). Unchanged since the invariant's first round.
-/// - **B — stranded-nasal terminalization** ([`terminalize_stranded_nasals`]):
-///   an onset-form nasal that cannot open a syllable here reads as its
-///   terminal glyph (`ㄇㄒㄧ` → `ㆬㄒㄧ`, m̄|sī 毋是).
-/// - **C — B plus the coda before it** ([`defold_codas_before`]): the glyph
-///   preceding a terminalized nasal is a folded coda that is really that
-///   syllable's onset (`ㄎㄛㆻㄫ` → B `ㄎㄛㆻㆭ` → C `ㄎㄛㄍㆭ`, khó|kǹg 考卷).
-///
-/// Every substitution is a 3-byte Bopomofo → 3-byte Bopomofo glyph swap, so
-/// byte offsets are preserved and the caller's single `canonical_to_raw_end`
-/// map is valid for every alternate.
-///
-/// Empty for non-TPS — TL / POJ / English reach no generator, so their
-/// candidate output is byte-identical to not calling this.
-/// `INVARIANT_TPS_DEFOLD_ENUMERATE` (§35).
-// 中文: canonical 的替代讀法 — per-keystroke auto-correct(§32/§33)無法由局部判定的讀法;base 永不取代。
-// 中文:   三個產生器各最多一條(故最多三條,無需爆炸防護):A 韻尾反摺(雞胸)、B 孤立鼻音終形化(毋是)、
-// 中文:   C = B + 其前韻尾反摺(考卷)。全為 3-byte 注音 glyph 對換 → byte offset 不變,共用 caller 的 offset map。
-// 中文:   非 TPS 回空(TL/POJ/English 完全不可達)。
-fn alternate_canonicals(canonical: &str, mode: InputMode) -> Vec<String> {
-    if mode != InputMode::Tps {
-        return Vec::new();
-    }
-    let mut alternates: Vec<String> = Vec::new();
-    if let Some(defolded) = defold_single_coda(canonical) {
-        push_unique_alternate(&mut alternates, canonical, defolded);
-    }
-    if let Some((terminalized, sites)) = terminalize_stranded_nasals(canonical) {
-        let defolded = defold_codas_before(&terminalized, &sites);
-        push_unique_alternate(&mut alternates, canonical, terminalized);
-        if let Some(defolded) = defolded {
-            push_unique_alternate(&mut alternates, canonical, defolded);
-        }
-    }
-    alternates
-}
-
-fn push_unique_alternate(alternates: &mut Vec<String>, base: &str, alternate: String) {
-    if alternate != base && !alternates.iter().any(|existing| existing == &alternate) {
-        alternates.push(alternate);
-    }
-}
-
-/// Swap the single eligible folded coda glyph in `canonical` for its onset
-/// glyph (byte-preserving — every coda↔onset pair is 3-byte Bopomofo, so the
-/// byte offsets are unchanged and `canonical_to_raw_end` still applies).
-/// Eligible = `phonetics::defold_coda_to_initial(c).is_some()` AND the NEXT
-/// char is `phonetics::is_tps_vowel_material` (so the de-folded onset can
-/// begin a syllable). The next-char check runs on `canonical` — BEFORE the
-/// separator / hyphen strip — so a coda before a TPS space (`ㆦ`␣`…`) or a
-/// `-` 連字 has a non-vowel next char and is NOT de-folded: the user's
-/// explicit boundary is respected. Returns `None` if zero or more than one
-/// eligible site (scope: exactly one this round).
-// 中文: 把 canonical 內單一合格的被摺韻尾 glyph 換成聲母 glyph(等 byte → offset 不變)。
-// 中文:   合格 = defold_coda_to_initial Some 且下一字為 is_tps_vowel_material;檢查在 canonical
-// 中文:   (分隔/連字剝除前)→ 韻尾後接空白/連字者不反摺(尊重使用者邊界)。0 或 >1 點回 None。
-fn defold_single_coda(canonical: &str) -> Option<String> {
-    let chars: Vec<char> = canonical.chars().collect();
-    let mut site: Option<(usize, char)> = None; // (index, de-folded onset glyph)
-    for i in 0..chars.len() {
-        let Some(onset) = phonetics::defold_coda_to_initial(chars[i]) else {
-            continue;
-        };
-        let next_is_vowel = chars
-            .get(i + 1)
-            .copied()
-            .is_some_and(phonetics::is_tps_vowel_material);
-        if next_is_vowel {
-            if site.is_some() {
-                return None; // >1 eligible site — out of scope this round
-            }
-            site = Some((i, onset));
-        }
-    }
-    let (i, onset) = site?;
-    let defolded: String = chars
-        .iter()
-        .enumerate()
-        .map(|(j, &c)| if j == i { onset } else { c })
-        .collect();
-    Some(defolded)
-}
-
-/// Generator B — rewrite every ONSET-form nasal (`ㄇ` / `ㄋ` / `ㄫ`) that
-/// cannot open a syllable at its position to its terminal glyph
-/// (`phonetics::nasal_final_form`), returning the rewritten canonical and
-/// the CHAR indices that changed. `None` when nothing is eligible.
-///
-/// Why it is needed: the per-keystroke `syllabic_nasal_replacement` folds
-/// `ㄇ`/`ㄫ` to their terminal form only when the NEXT keystroke is a tone
-/// mark. Toneless continuous input never supplies that trigger, and for a
-/// buffer-final nasal (考卷's `ㄫ`) no later keystroke can, so the reading
-/// has to be recovered here at lookup time instead.
-///
-/// Eligibility is phonotactic, not positional: a nasal can still be an
-/// onset when `<nasal><next glyph>` is a valid syllable, which keeps
-/// 門 `ㄇㆭ` (mng), 兩 `ㄋㆭ` (nng), 龜毛's `ㄇㆦ` (moo) and 博雅's `ㄫㄚ`
-/// (nga) untouched — the earlier "next glyph is vowel material" reading of
-/// this test wrongly rewrote the two syllabic-`ng` nuclei, which carry
-/// ~1.4k production rows between them.
-///
-/// A canonical that is nothing BUT the nasal is skipped: a bare `ㄇ` / `ㄫ`
-/// must keep reaching the partial-prefix branch in `continuous.rs` (which
-/// lists every m- / ng- initial word), and an alternate full-span key would
-/// make `keys.is_empty()` false and drop that branch entirely.
-// 中文: 產生器 B — 把在該位置不可能當聲母的聲母形鼻音 (ㄇ/ㄋ/ㄫ) 改成終形 glyph,回傳改寫後
-// 中文:   canonical 與變更的 char index;無合格點回 None。
-// 中文:   per-keystroke syllabic_nasal_replacement 只在「下一鍵是調號」時觸發,無調連續輸入永遠
-// 中文:   供不出該觸發,且 buffer 尾端鼻音(考卷的 ㄫ)之後再無按鍵 → 只能在查詢時補回。
-// 中文:   合格判準為音韻而非位置:<鼻音><下一 glyph> 若為合法音節則仍可當聲母 → 門 ㄇㆭ(mng)、
-// 中文:   兩 ㄋㆭ(nng)、龜毛 ㄇㆦ(moo)、博雅 ㄫㄚ(nga) 皆不動(前者兩詞共約 1.4k 列)。
-// 中文:   canonical 只有該鼻音一字時跳過:裸 ㄇ/ㄫ 必須繼續走 partial-prefix 分支。
-fn terminalize_stranded_nasals(canonical: &str) -> Option<(String, Vec<usize>)> {
-    let chars: Vec<char> = canonical.chars().collect();
-    if chars.len() < 2 {
-        return None;
-    }
-    let mut terminalized = chars.clone();
-    let mut sites: Vec<usize> = Vec::new();
-    for index in 0..chars.len() {
-        let previous = if index == 0 { '\0' } else { chars[index - 1] };
-        let Some(terminal) = phonetics::nasal_final_form(chars[index], previous) else {
-            continue;
-        };
-        if nasal_can_open_syllable(&chars, index) {
-            continue;
-        }
-        terminalized[index] = terminal;
-        sites.push(index);
-    }
-    if sites.is_empty() {
-        return None;
-    }
-    Some((terminalized.into_iter().collect(), sites))
-}
-
-/// True when the onset-form nasal at `index` can still be a syllable ONSET,
-/// i.e. `<nasal><next glyph>` is a valid syllable.
-///
-/// A two-glyph window is enough even though TPS finals are not all one glyph
-/// (`ia` is `ㄧㄚ`, `ua` is `ㄨㄚ`, `iau` is `ㄧㄠ`): a multi-glyph final
-/// BEGINS with a glyph that is itself a valid minimal final (`i` / `u`), so
-/// `<nasal><first body glyph>` already proves the nasal can open a syllable —
-/// `ㄇㄧ` (mi) answers for `ㄇㄧㄚ` (miâ 名) without reading the whole final.
-/// A buffer-final nasal has no next glyph and therefore cannot be an onset.
-// 中文: 判斷 index 處的聲母形鼻音是否仍可當聲母 = <鼻音><下一 glyph> 是否為合法音節。
-// 中文:   TPS 韻母並非都是單一 glyph(ia=ㄧㄚ、ua=ㄨㄚ、iau=ㄧㄠ),但兩 glyph 視窗仍足夠:
-// 中文:   多 glyph 韻母的第一格本身即為合法最小韻母(i/u),故 <鼻音><韻母首格> 已足以證明可開音節
-// 中文:   (ㄇㄧ(mi) 即可代答 ㄇㄧㄚ(miâ 名),不必讀完整韻母)。位於 buffer 尾端者無下一 glyph,故不可能是聲母。
-fn nasal_can_open_syllable(chars: &[char], index: usize) -> bool {
-    let Some(&next) = chars.get(index + 1) else {
-        return false;
-    };
-    let pair: String = [chars[index], next].iter().collect();
-    phonetics::is_valid_syllable(&phonetics::tps_to_tl(&pair))
-}
-
-/// Generator C — in a generator-B result, swap the glyph IMMEDIATELY before
-/// each terminalized nasal back to its onset form when it is a folded coda
-/// (`phonetics::defold_coda_to_initial`). `None` when no site has a foldable
-/// coda in front of it.
-///
-/// This is the 考卷 case: `ㄎㄛ`+`ㄍ` folds to `ㄎㄛㆻ` because `khok` is a
-/// real syllable, so the `ㄍ` that actually opens `kǹg` is hidden behind a
-/// coda glyph. Only the IMMEDIATELY preceding glyph is considered, which is
-/// also what keeps generator C from crossing a user separator: a TPS space
-/// or a `-` 連字 between the coda and the nasal means they are not adjacent,
-/// so the explicit boundary is respected (§31).
-// 中文: 產生器 C — 在 B 的結果上,把每個終形化鼻音「緊鄰前一格」的被摺韻尾換回聲母形;無者回 None。
-// 中文:   即考卷:ㄎㄛ+ㄍ 因 khok 合法而摺成 ㄎㄛㆻ,真正開啟 kǹg 的 ㄍ 被藏在韻尾 glyph 後。
-// 中文:   只看緊鄰前一格,故不會跨越使用者分隔符(空白/連字介於其間即非相鄰,尊重明確邊界,§31)。
-fn defold_codas_before(canonical: &str, sites: &[usize]) -> Option<String> {
-    let mut chars: Vec<char> = canonical.chars().collect();
-    let mut defolded_any = false;
-    for &site in sites {
-        let Some(previous_index) = site.checked_sub(1) else {
-            continue;
-        };
-        let Some(onset) = phonetics::defold_coda_to_initial(chars[previous_index]) else {
-            continue;
-        };
-        chars[previous_index] = onset;
-        defolded_any = true;
-    }
-    defolded_any.then(|| chars.into_iter().collect())
 }
 
 /// v3.5.9 A1 — extracted from the pre-A1 `build_keys_tl_with_inventory`
@@ -568,6 +433,23 @@ pub(crate) fn left_anchored_keys_from_lattice(
     inv: &SyllableInventory,
     mode: InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
+    left_anchored_keys_and_restrictions(shadow, shadow_to_raw_end, lattice, inv, mode, &[]).0
+}
+
+/// [`left_anchored_keys_from_lattice`] plus each key's §35 barrier
+/// restriction — byte offsets (into the emitted key string, family
+/// prefix included) of glyphs immediately before a stripped separator /
+/// 連字 barrier. `barriers` are shadow coordinates from
+/// [`build_shadow_lattice_with_barriers`]; empty for TL/POJ/English.
+// 中文: left_anchored_keys + 每 key 的 §35 barrier 限制(key 字串偏移,含家族前綴)。
+pub(crate) fn left_anchored_keys_and_restrictions(
+    shadow: &str,
+    shadow_to_raw_end: &[usize],
+    lattice: &Lattice,
+    inv: &SyllableInventory,
+    mode: InputMode,
+    barriers: &[usize],
+) -> (Vec<(ConsumedSpan, String)>, Vec<Vec<usize>>) {
     // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
     // namespaced into. The lattice itself was already built against the
     // matching `SyllableInventory` family ([`build_shadow_lattice`] →
@@ -611,11 +493,22 @@ pub(crate) fn left_anchored_keys_from_lattice(
     // 中文:   保證絕不誤刪 phrase。lattice.edges() 攤平深度,故以 max_syllables=1 重走辨識單音節端。
     // 中文: 純顯示層 — lattice edge 不動,walker / span_min_syllable_count 仍見全部切法 (不退化 #290)。
     let lowered = shadow.to_ascii_lowercase();
-    let single_ends = valid_span_endings_lowered(&lowered, 0, inv, mode, 1);
+    // §18 recompute is barrier-aware (Codex post-impl 2026-08-19 BLOCK 2):
+    // the lattice above was built with barriers, so re-deriving the
+    // single-syllable ends WITHOUT them can manufacture a longer
+    // "single syllable" that fuses across the user's separator (`ㄍㄚ`␣`ㄉ`
+    // mid-typing: a barrier-blind recompute reads ㄍㄚㆵ as the longest
+    // single and wrongly suppresses the legitimate ㄍㄚ).
+    // 中文: §18 重算必須帶 barrier — lattice 是 barrier-aware 建的,重算不帶會
+    // 中文:   捏造跨分隔符的更長「單音節」(ㄍㄚ␣ㄉ 中間態壓掉合法 ㄍㄚ)。
+    let single_ends = crate::syllabifier::valid_span_endings_lowered_with_barriers(
+        &lowered, 0, inv, mode, 1, barriers,
+    );
     let max_single_end = single_ends.iter().copied().max();
     let has_phrase_reading = |end: usize| lattice.edges().iter().any(|&(s, e)| e == end && s > 0);
 
     let mut out = Vec::with_capacity(lattice.edges().len());
+    let mut restrictions: Vec<Vec<usize>> = Vec::with_capacity(lattice.edges().len());
     for &(start, end) in lattice.edges() {
         if start != 0 {
             continue;
@@ -647,7 +540,57 @@ pub(crate) fn left_anchored_keys_from_lattice(
             continue;
         }
         let raw_end = shadow_to_raw_end[end];
+        restrictions.push(key_final_only_offsets(
+            &shadow[..end],
+            &body,
+            mode,
+            barriers,
+            prefix.len() + 1,
+        ));
         out.push(((0u32, raw_end as u32), format!("{prefix}:{body}")));
+    }
+    (out, restrictions)
+}
+
+/// §35 barrier contract part (b) for one emitted key: for every barrier
+/// inside (or at the end of) the span, the KEY byte offset of the glyph
+/// just before it — the pattern slot that keeps only Final-role
+/// readings. `body` is the already-computed lookup body for the span
+/// (verbatim when fully toned, tone-stripped otherwise), so the offsets
+/// account for stripped tone marks; `prefix_len` shifts them past the
+/// `"tps:"` family prefix. A trailing barrier (separator at shadow end)
+/// counts — the user closed that syllable, unlike a plain buffer end
+/// which stays unrestricted.
+// 中文: §35 契約 (b) — 每個 span 內(或 span 尾)的 barrier,回其前一格在 key 字串中的偏移
+// 中文:   (body 已剝調號者按剝後座標;prefix_len 平移過家族前綴)。尾端 barrier 也算(使用者已收音節);
+// 中文:   普通 buffer 尾端不設限。
+pub(crate) fn key_final_only_offsets(
+    span_shadow: &str,
+    body: &str,
+    mode: InputMode,
+    barriers: &[usize],
+    prefix_len: usize,
+) -> Vec<usize> {
+    let mut out: Vec<usize> = Vec::new();
+    for &barrier in barriers {
+        if barrier == 0 || barrier > span_shadow.len() {
+            continue;
+        }
+        let body_prefix_len = if body.len() == span_shadow.len() {
+            barrier
+        } else {
+            strip_tones_for_mode(&span_shadow[..barrier], mode).len()
+        };
+        let Some((last_start, _)) = body[..body_prefix_len.min(body.len())]
+            .char_indices()
+            .last()
+        else {
+            continue;
+        };
+        let offset = prefix_len + last_start;
+        if !out.contains(&offset) {
+            out.push(offset);
+        }
     }
     out
 }
@@ -824,11 +767,29 @@ pub(crate) fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
 // 中文: build_hyphen_shadow 與 build_separator_shadow 共用的剝除 + offset-map 機制;
 // 中文:   兩者只差剝除的字元(`-` vs ` `)與 mode gating,迴圈本體相同故抽出。
 fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
+    let (shadow, map, _) = strip_char_shadow_with_barriers(input, skip);
+    (shadow, map)
+}
+
+/// [`strip_char_shadow`] plus the OUTPUT byte offsets where a stripped
+/// char sat — the "barrier" positions the §35 ambiguity expansion needs:
+/// a stripped separator / 連字 is the user's explicit syllable close, so
+/// (a) no single-syllable probe may cross it and (b) the glyph just
+/// before it may only read as a Final form. Offsets are in shadow
+/// coordinates (`0 ≤ b ≤ shadow.len()`); consecutive stripped chars
+/// dedupe to one barrier.
+// 中文: strip_char_shadow + 被剝除字元的 shadow 座標(= barrier):單音節探測不可跨越、
+// 中文:   其前一格只許 Final 形。連續剝除去重為一個 barrier。
+fn strip_char_shadow_with_barriers(input: &str, skip: char) -> (String, Vec<usize>, Vec<usize>) {
     let mut shadow = String::with_capacity(input.len());
     let mut map: Vec<usize> = Vec::with_capacity(input.len() + 1);
+    let mut barriers: Vec<usize> = Vec::new();
     map.push(0);
     for (idx, ch) in input.char_indices() {
         if ch == skip {
+            if barriers.last() != Some(&shadow.len()) {
+                barriers.push(shadow.len());
+            }
             continue;
         }
         let end_after = idx + ch.len_utf8();
@@ -837,7 +798,7 @@ fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
         }
         shadow.push(ch);
     }
-    (shadow, map)
+    (shadow, map, barriers)
 }
 
 /// Mode-aware syllable-separator strip, paired with a shadow→input
@@ -872,10 +833,22 @@ fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
 // 中文:   (ㄍㄠ ㄉㄞ → 交代);offset map 保 raw 對映故 commit 仍吃掉 space byte。
 // 中文: TL/POJ/English 維持 identity(space 為真詞界/字面空白,不可動)。
 fn build_separator_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) {
+    let (shadow, map, _) = build_separator_shadow_with_barriers(input, mode);
+    (shadow, map)
+}
+
+/// [`build_separator_shadow`] plus the stripped-space barrier offsets
+/// (shadow coordinates). Non-TPS returns the identity shadow and no
+/// barriers.
+// 中文: build_separator_shadow + 剝除空白的 barrier 座標;非 TPS 為 identity + 無 barrier。
+fn build_separator_shadow_with_barriers(
+    input: &str,
+    mode: InputMode,
+) -> (String, Vec<usize>, Vec<usize>) {
     if !matches!(mode, InputMode::Tps) {
-        return (input.to_owned(), (0..=input.len()).collect());
+        return (input.to_owned(), (0..=input.len()).collect(), Vec::new());
     }
-    strip_char_shadow(input, ' ')
+    strip_char_shadow_with_barriers(input, ' ')
 }
 
 /// Drop every ASCII digit from `s`. Equivalent to the digit half of
@@ -1345,164 +1318,84 @@ mod tests {
 
     use super::*;
 
-    // INVARIANT_TPS_DEFOLD_ENUMERATE (§35) part A — de-fold a single folded coda
-    // glyph back to its onset so a hidden alternate reading surfaces.
+    // Barrier metadata — the §35 contract's raw material. The pipeline
+    // strips the TPS space / 連字 but records where they sat, and the
+    // ambiguity-aware lookup uses those offsets for the Final-only
+    // restriction (direction tests live in lexicon/tests/tps_readings.rs).
     #[test]
-    fn defold_single_coda_swaps_one_coda_before_vowel() {
-        // ㄍㆤㆷㄧㄥ (folded ke-hing 雞胸) → ㄍㆤㄏㄧㄥ (ke|hing): ㆷ→ㄏ, ㄧ is vowel.
+    fn barriers_are_recorded_where_separators_were_stripped() {
+        let (shadow, _, _, barriers) = {
+            // No inventory needed for the strip half — build a tiny one.
+            let inv = test_inventory(&["tps:ㄎㄛ"]);
+            build_shadow_lattice_with_barriers("ㄎㄛㆻ ㄫ", &inv, InputMode::Tps)
+        };
+        assert_eq!(shadow, "ㄎㄛㆻㄫ");
+        assert_eq!(barriers, vec![9], "barrier at the stripped-space offset");
+    }
+
+    #[test]
+    fn key_final_only_offsets_marks_the_glyph_before_a_barrier() {
+        // Span ㄎㄛㆻㄫ with a barrier after ㆻ (byte 9): the ㆻ slot (key
+        // offset 4 + 6) is Final-only; nothing else is restricted.
+        let body = "ㄎㄛㆻㄫ"; // toneless span: body == span
         assert_eq!(
-            defold_single_coda("ㄍㆤㆷㄧㄥ").as_deref(),
-            Some("ㄍㆤㄏㄧㄥ"),
+            key_final_only_offsets("ㄎㄛㆻㄫ", body, InputMode::Tps, &[9], 4),
+            vec![4 + 6],
         );
-        // ㆦㆴㆤㆷ (folded oo-pe̍h 烏白) → ㆦㄅㆤㆷ (oo|peh): the FIRST ㆴ→ㄅ
-        // (ㆤ is vowel); the trailing ㆷ has no following char → not de-folded.
-        assert_eq!(defold_single_coda("ㆦㆴㆤㆷ").as_deref(), Some("ㆦㄅㆤㆷ"));
+        // No barriers → no restriction; barrier at 0 → nothing before it.
+        assert!(key_final_only_offsets("ㄎㄛㆻㄫ", body, InputMode::Tps, &[], 4).is_empty());
+        assert!(key_final_only_offsets("ㄎㄛㆻㄫ", body, InputMode::Tps, &[0], 4).is_empty());
     }
 
     #[test]
-    fn defold_single_coda_byte_length_preserved() {
-        // coda↔onset are both 3-byte Bopomofo → de-folded shadow keeps the
-        // exact byte length, so `canonical_to_raw_end` stays valid.
-        let input = "ㄍㆤㆷㄧㄥ";
-        let out = defold_single_coda(input).unwrap();
-        assert_eq!(out.len(), input.len());
-    }
-
-    #[test]
-    fn defold_single_coda_respects_separator_boundary() {
-        // A coda before a TPS space (the user's explicit tone-1 boundary) has
-        // a non-vowel next char → NOT de-folded. `ㄍㆤㆷ ㄧㄥ` (keh | ing,
-        // user-separated) must stay folded. Predicate runs on canonical
-        // (pre-separator-strip), so the space blocks the de-fold.
-        assert_eq!(defold_single_coda("ㄍㆤㆷ ㄧㄥ"), None);
-    }
-
-    #[test]
-    fn defold_single_coda_skips_zero_and_multi_site() {
-        // No coda glyph → None.
-        assert_eq!(defold_single_coda("ㄍㄠ"), None);
-        // A coda NOT followed by a vowel (end of buffer) → None.
-        assert_eq!(defold_single_coda("ㄍㄠㆷ"), None);
-        // >1 eligible site → None (mixed multi-coda out of scope this round).
-        // ㄍㆤㆷㄧ + ㆷㄚ : two `ㆷ`-before-vowel sites.
-        assert_eq!(defold_single_coda("ㄍㆤㆷㄧㆷㄚ"), None);
-    }
-
-    // ----- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) part B — stranded nasal -----
-
-    #[test]
-    fn terminalize_stranded_nasals_rewrites_a_nasal_that_cannot_open_a_syllable() {
-        // 毋是 m̄-sī typed toneless as ㄇ ㄒ ㄧ: `ㄇㄒ` is not a syllable, so the
-        // ㄇ cannot be an onset and reads as the syllabic ㆬ.
-        let (terminalized, sites) = terminalize_stranded_nasals("ㄇㄒㄧ").expect("eligible");
-        assert_eq!(terminalized, "ㆬㄒㄧ");
-        assert_eq!(sites, vec![0]);
-
-        // 考卷 khó-kǹg typed toneless as ㄎ ㄛ ㄍ ㄫ: the auto-correct folded ㄍ
-        // to ㆻ (khok is real), and the buffer-final ㄫ has no next glyph.
-        let (terminalized, sites) = terminalize_stranded_nasals("ㄎㄛㆻㄫ").expect("eligible");
-        assert_eq!(terminalized, "ㄎㄛㆻㆭ");
-        assert_eq!(sites, vec![3]);
-    }
-
-    #[test]
-    fn terminalize_stranded_nasals_keeps_a_nasal_that_can_open_a_syllable() {
-        // 門 mn̂g `ㄇㆭ` and 兩 nn̄g `ㄋㆭ` — onset + syllabic-ng nucleus IS a
-        // valid syllable, so these must NOT be rewritten. `ㆭ` is not vowel
-        // material, so a positional (rather than phonotactic) eligibility test
-        // would corrupt both; between them they carry ~1.4k production rows.
-        assert_eq!(terminalize_stranded_nasals("ㄇㆭ"), None);
-        assert_eq!(terminalize_stranded_nasals("ㄋㆭ"), None);
-        // 龜毛 ku-môo `ㄍㄨㄇㆦ` (§33 control) — ㄇ opens `moo`.
-        assert_eq!(terminalize_stranded_nasals("ㄍㄨㄇㆦ"), None);
-        // 博雅 phok-ngá `ㄆㆦㆻㄫㄚ` — ㄫ opens `nga` after a real stop coda.
-        assert_eq!(terminalize_stranded_nasals("ㄆㆦㆻㄫㄚ"), None);
-    }
-
-    #[test]
-    fn terminalize_stranded_nasals_keeps_a_nasal_before_a_multi_glyph_final() {
-        // TPS finals are not all one glyph (`ia` is ㄧㄚ, `ua` is ㄨㄚ). The
-        // two-glyph eligibility window still answers correctly because the
-        // final's FIRST glyph is itself a valid minimal final: ㄇㄧ (mi)
-        // answers for 名 miâ `ㄇㄧㄚ`, ㄫㄧ (ngi) for 迎 ngiâ `ㄫㄧㄚ`.
-        assert_eq!(terminalize_stranded_nasals("ㄇㄧㄚ"), None);
-        assert_eq!(terminalize_stranded_nasals("ㄫㄧㄚ"), None);
-        assert_eq!(terminalize_stranded_nasals("ㄋㄨㄚ"), None);
-    }
-
-    #[test]
-    fn terminalize_stranded_nasals_skips_a_bare_nasal_buffer() {
-        // A buffer that is nothing but the nasal must keep reaching the
-        // partial-prefix branch (every m- / ng- initial word); an alternate
-        // full-span key would make `keys.is_empty()` false and drop it.
-        assert_eq!(terminalize_stranded_nasals("ㄇ"), None);
-        assert_eq!(terminalize_stranded_nasals("ㄫ"), None);
-    }
-
-    // ----- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) part C — coda before nasal ---
-
-    #[test]
-    fn defold_codas_before_swaps_the_glyph_in_front_of_a_terminalized_nasal() {
-        // 考卷: part B produced ㄎㄛㆻㆭ; the ㆻ in front of the nasal is really
-        // the ㄍ that opens kǹg.
-        assert_eq!(
-            defold_codas_before("ㄎㄛㆻㆭ", &[3]).as_deref(),
-            Some("ㄎㄛㄍㆭ")
-        );
-        // 毋是: the nasal is at index 0, nothing in front → None.
-        assert_eq!(defold_codas_before("ㆬㄒㄧ", &[0]), None);
-        // A non-coda glyph in front is left alone.
-        assert_eq!(defold_codas_before("ㄍㄨㆬ", &[2]), None);
-    }
-
-    // ----- Composition + separator / TL-POJ scope -----
-
-    #[test]
-    fn alternate_canonicals_enumerates_base_excluded_alternates_in_generator_order() {
-        // 考卷 — part B then part C, both offered.
-        assert_eq!(
-            alternate_canonicals("ㄎㄛㆻㄫ", InputMode::Tps),
-            vec!["ㄎㄛㆻㆭ".to_string(), "ㄎㄛㄍㆭ".to_string()]
-        );
-        // 毋是 — part B only (part C has nothing in front of index 0).
-        assert_eq!(
-            alternate_canonicals("ㄇㄒㄧ", InputMode::Tps),
-            vec!["ㆬㄒㄧ".to_string()]
-        );
-        // 雞胸 — part A only, byte-identical to the pre-round behaviour.
-        assert_eq!(
-            alternate_canonicals("ㄍㆤㆷㄧㄥ", InputMode::Tps),
-            vec!["ㄍㆤㄏㄧㄥ".to_string()]
-        );
-        // 交代 (§32 control) — no generator fires.
-        assert!(alternate_canonicals("ㄍㄠㄉㄞ", InputMode::Tps).is_empty());
-    }
-
-    #[test]
-    fn alternate_canonicals_is_empty_for_every_non_tps_mode() {
-        // USER constraint: TL / POJ / English must reach no generator. The
-        // inputs are the TPS ones that DO produce alternates, so an empty
-        // result here is the mode gate doing the work, not the input.
-        for mode in [InputMode::Tl, InputMode::Poj, InputMode::English] {
-            for canonical in ["ㄎㄛㆻㄫ", "ㄇㄒㄧ", "ㄍㆤㆷㄧㄥ"] {
-                assert!(
-                    alternate_canonicals(canonical, mode).is_empty(),
-                    "{mode:?} must reach no alternate-reading generator",
-                );
-            }
+    fn mixed_separator_orders_project_to_the_same_barrier() {
+        // `A␠-B` and `A-␠B` must both yield ONE barrier right after A —
+        // a first-index-≥ projection put the `A␠-B` hyphen barrier after
+        // B's first glyph (a phantom barrier inside the next syllable).
+        let inv = test_inventory(&["tps:ㄎㄛ"]);
+        for raw in ["ㄎㄛ -ㄫ", "ㄎㄛ- ㄫ"] {
+            let (shadow, _, _, barriers) =
+                build_shadow_lattice_with_barriers(raw, &inv, InputMode::Tps);
+            assert_eq!(shadow, "ㄎㄛㄫ", "{raw}");
+            assert_eq!(barriers, vec![6], "{raw}: one barrier after ㄎㄛ");
         }
     }
 
     #[test]
-    fn alternate_canonicals_does_not_defold_across_a_user_separator() {
-        // `ㄎㄛㆻ`␣`ㄫ` — the user's explicit boundary says the ㆻ closes the
-        // FIRST syllable, so part C must not reach across the space and
-        // reconstruct 考卷. Part B still terminalizes the nasal (the space
-        // proves the preceding syllable is closed, so the ㄫ cannot be an
-        // onset waiting for a vowel) — that is the §31-compatible half.
-        let alternates = alternate_canonicals("ㄎㄛㆻ ㄫ", InputMode::Tps);
-        assert_eq!(alternates, vec!["ㄎㄛㆻ ㆭ".to_string()]);
-        assert!(!alternates.iter().any(|a| a.contains('ㄍ')));
+    fn key_final_only_offsets_accounts_for_stripped_tone_marks() {
+        // Mixed-tone span ㄎㄛˋㆻㄫ with a barrier after ㆻ (shadow byte 11):
+        // the toneless body drops the 2-byte ˋ, so the ㆻ slot lands at
+        // body offset 6 (prefix 4 → key offset 10), not at the shadow-based
+        // 8. The barrier also counts when TRAILING (span ends at it).
+        let span = "ㄎㄛˋㆻㄫ"; // 3+3+2+3+3 bytes
+        let body = "ㄎㄛㆻㄫ"; // tone-stripped
+        assert_eq!(
+            key_final_only_offsets(span, body, InputMode::Tps, &[11], 4),
+            vec![4 + 6],
+        );
+        // Trailing barrier: span exactly ends at the barrier.
+        assert_eq!(
+            key_final_only_offsets("ㄎㄛㆻ", "ㄎㄛㆻ", InputMode::Tps, &[9], 4),
+            vec![4 + 6],
+        );
+    }
+
+    fn test_inventory(keys: &[&str]) -> SyllableInventory {
+        use fst::SetBuilder;
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("taigi_shadow_inv_{}_{n}.fst", std::process::id()));
+        let file = std::fs::File::create(&path).expect("create fst");
+        let mut sorted: Vec<&str> = keys.to_vec();
+        sorted.sort_unstable();
+        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
+        for key in sorted {
+            builder.insert(key.as_bytes()).expect("insert");
+        }
+        builder.finish().expect("finish");
+        SyllableInventory::open(&path).expect("open inventory")
     }
 
     #[test]

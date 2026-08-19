@@ -95,6 +95,48 @@ impl SyllableInventory {
         self.contains_prefixed(prefix, syllable)
     }
 
+    /// TPS ambiguity-aware membership probe: true when ANY reading of
+    /// `syllable` under the TPS ambiguity families is in the `tps:`
+    /// inventory (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35). The literal
+    /// probe (`contains_in(Tps, …)`) is a strict subset, so every edge
+    /// the segmenter produced before this round still exists.
+    ///
+    /// `final_only_offsets` = byte offsets into `syllable` of glyphs
+    /// immediately before a hard close (span end at a stripped separator
+    /// barrier); tone-mark restriction is derived inside the pattern.
+    // 中文: TPS 歧義感知 inventory 探測 — syllable 任一讀法在 tps: 家族即 true;
+    // 中文:   字面探測為嚴格子集 → 既有 edge 全數保留。final_only_offsets = barrier 前一格偏移。
+    pub fn contains_in_tps_readings(&self, syllable: &str, final_only_offsets: &[usize]) -> bool {
+        use fst::{IntoStreamer, Streamer};
+        if syllable.is_empty() {
+            return false;
+        }
+        // Fast path: the literal reading needs no automaton — and when the
+        // span holds no ambiguity-family glyph at all, the pattern could
+        // only ever match the literal, so a literal miss is a miss. This
+        // keeps the per-keystroke BFS (O(n × 24) probes, most of which
+        // miss) from building an automaton per probe.
+        // 中文: 字面命中免 automaton;span 無歧義 glyph 時 pattern 等同字面,
+        // 中文:   字面 miss 即 miss — BFS 熱路徑(多數 probe 為 miss)不必逐 probe 建自動機。
+        if self.contains_prefixed("tps:", syllable) {
+            return true;
+        }
+        if !crate::tps_pattern::has_ambiguous_glyph(syllable) {
+            return false;
+        }
+        let mut key = String::with_capacity(4 + syllable.len());
+        key.push_str("tps:");
+        key.push_str(syllable);
+        // Pattern offsets are relative to the full key (prefix included).
+        let shifted: Vec<usize> = final_only_offsets.iter().map(|o| o + 4).collect();
+        let pattern = crate::tps_pattern::TpsKeyPattern::new(
+            &key,
+            crate::tps_pattern::WireMode::Exact,
+            &shifted,
+        );
+        self.set.search(&pattern).into_stream().next().is_some()
+    }
+
     /// Deprecated single-family membership test, kept as an alias of
     /// `contains_in(InputMode::Tl, …)` for the v3.5.9 B-1 grace period.
     /// All in-tree callers should migrate to `contains_in`; once those

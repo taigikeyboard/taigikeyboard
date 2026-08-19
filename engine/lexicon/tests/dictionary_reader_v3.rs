@@ -46,7 +46,7 @@ fn invariant_lex_v3_round_trip_kautian_subtag() {
         (0x0001, 100, 1, 0b0000_0000_0001, "詞", "su"), // main only
         (0x0001, 90, 1, 0b1000_0000_0000, "姓", "senn"), // name only
         (0x0001, 80, 1, 0b0000_0000_0110, "八", "pueh"), // accent bits 0,1
-        (0x0001, 70, 1, 0b1000_0000_0001, "王", "ong"),  // main + name
+        (0x0001, 70, 1, 0b1000_0000_0001, "王", "ong"), // main + name
     ];
     let bytes = build_tkdb_v3_subtag(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v3-subtag.bin", &bytes);
@@ -62,8 +62,7 @@ fn invariant_lex_v3_round_trip_kautian_subtag() {
 fn invariant_lex_v3_masks_reserved_subtag_bits_on_read() {
     // Reserved bits 12-15 must be masked off on read so a future writer
     // setting them can never corrupt the subcollection filter AND.
-    let rows: &[(u16, u32, u8, u16, &str, &str)] =
-        &[(0x0001, 100, 1, 0xF001, "詞", "su")]; // reserved bits + main
+    let rows: &[(u16, u32, u8, u16, &str, &str)] = &[(0x0001, 100, 1, 0xF001, "詞", "su")]; // reserved bits + main
     let bytes = build_tkdb_v3_subtag(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v3-reserved.bin", &bytes);
     let reader = DictionaryReader::open(&path).expect("v3 binary opens");

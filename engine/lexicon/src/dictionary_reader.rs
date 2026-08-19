@@ -436,13 +436,21 @@ mod tests {
         // Legacy mask: accent-only kautian row passes (no gating) — zero
         // behaviour change until the platform sends the active sentinel.
         let f = Filter::from_enabled_bitmask(SRC_KAUTIAN_DEV);
-        assert!(DictionaryReader::passes_filter(KAUTIAN_BIT, sub_accent(0), &f));
+        assert!(DictionaryReader::passes_filter(
+            KAUTIAN_BIT,
+            sub_accent(0),
+            &f
+        ));
     }
 
     #[test]
     fn passes_filter_main_only_drops_accent_keeps_headword() {
         let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_MAIN));
-        assert!(!DictionaryReader::passes_filter(KAUTIAN_BIT, sub_accent(0), &f));
+        assert!(!DictionaryReader::passes_filter(
+            KAUTIAN_BIT,
+            sub_accent(0),
+            &f
+        ));
         assert!(DictionaryReader::passes_filter(KAUTIAN_BIT, SUB_MAIN, &f));
         // DD6: word that is BOTH headword AND accent stays visible via main.
         assert!(DictionaryReader::passes_filter(
@@ -455,8 +463,16 @@ mod tests {
     #[test]
     fn passes_filter_accent_enabled_matches_accent_row() {
         let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, sub_accent(3)));
-        assert!(DictionaryReader::passes_filter(KAUTIAN_BIT, sub_accent(3), &f));
-        assert!(!DictionaryReader::passes_filter(KAUTIAN_BIT, sub_accent(0), &f));
+        assert!(DictionaryReader::passes_filter(
+            KAUTIAN_BIT,
+            sub_accent(3),
+            &f
+        ));
+        assert!(!DictionaryReader::passes_filter(
+            KAUTIAN_BIT,
+            sub_accent(0),
+            &f
+        ));
     }
 
     #[test]
@@ -482,6 +498,10 @@ mod tests {
     #[test]
     fn passes_filter_all_enabled_short_circuits() {
         let f = Filter::from_enabled_bitmask(u32::MAX);
-        assert!(DictionaryReader::passes_filter(KAUTIAN_BIT, sub_accent(0), &f));
+        assert!(DictionaryReader::passes_filter(
+            KAUTIAN_BIT,
+            sub_accent(0),
+            &f
+        ));
     }
 }

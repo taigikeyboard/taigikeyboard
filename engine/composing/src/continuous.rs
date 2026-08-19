@@ -90,7 +90,7 @@ use crate::shadow::{
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
-    best_candidate_for_key, derive_mode, fetch_candidates_for_keys,
+    best_candidate_for_key_with_barriers, derive_mode, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
     ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
@@ -396,10 +396,11 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 // 中文: PR-9.6 — bitmask 為平台 source-toggle 值(dispatch 端正規化),在 seam 建入 ctx,非此處。
 fn fetch_via_lexicon_inner(
     keys: &[(ConsumedSpan, String)],
+    keys_final_only: &[Vec<usize>],
     raw_len: u32,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
-    fetch_candidates_for_keys(keys, raw_len, ctx)
+    fetch_candidates_for_keys_with_barriers(keys, keys_final_only, raw_len, ctx)
 }
 
 /// v3.5.9 A2 — partial-prefix fetch inner. Pre-A2 `fetch_via_lexicon_partial`'s
@@ -522,6 +523,7 @@ fn fetch_walker_slot0_inner(
     shadow: &str,
     shadow_to_raw_end: &[usize],
     lattice: &crate::lattice::Lattice,
+    barriers: &[usize],
     inv: &SyllableInventory,
     prefix: &PrefixIndex,
     dict: &DictionaryReader,
@@ -600,10 +602,25 @@ fn fetch_walker_slot0_inner(
         // wrong-tone word reappear at slot 0). See [`crate::shadow::fst_body_for_span`].
         // 中文: 明確聲調修正 — dict 查詢 tone-aware:全含調 edge(tai5)查 verbatim `tl:tai5`,
         // 中文:   slot 0 只會從使用者輸入的聲調合成,與 span-local 列一致(否則錯調字會在 slot 0 復活)。
-        let dict_key = format!(
-            "{key_prefix}:{}",
-            crate::shadow::fst_body_for_span(&shadow[start..end], mode)
+        let edge_body = crate::shadow::fst_body_for_span(&shadow[start..end], mode);
+        // §35 — this edge may span a stripped separator (multi-syllable
+        // chain); compute the same Final-only restriction the span-local
+        // keys carry. Barrier offsets are whole-shadow; shift into edge
+        // coordinates.
+        // 中文: §35 — edge 可能跨 stripped 分隔符;以 edge 座標算與 span-local 相同的 Final-only 限制。
+        let edge_barriers: Vec<usize> = barriers
+            .iter()
+            .filter(|&&b| b > start && b <= end)
+            .map(|&b| b - start)
+            .collect();
+        let edge_final_only = crate::shadow::key_final_only_offsets(
+            &shadow[start..end],
+            &edge_body,
+            mode,
+            &edge_barriers,
+            key_prefix.len() + 1,
         );
+        let dict_key = format!("{key_prefix}:{edge_body}");
         // Custom override stays tone-INSENSITIVE: `custom_map` is keyed by
         // `custom_toneless_key` (toneless), so it is queried with the
         // toneless key. The tone-filter fix is a dict-path change only;
@@ -686,8 +703,9 @@ fn fetch_walker_slot0_inner(
         // a toggleable source); dict edges honour `enabled_sources_bitmask`.
         // 中文: PR-9.6 — walker edge dict 查詢套用與 span-local 相同的來源過濾,
         // 中文:   避免全句切分在 slot 0 重新帶回被關閉來源的字(custom edge 不受限,dict edge 受 bitmask 限制)。
-        match best_candidate_for_key(
+        match best_candidate_for_key_with_barriers(
             &dict_key,
+            &edge_final_only,
             raw_span,
             freq_map,
             now_ms,
@@ -1047,22 +1065,33 @@ pub(crate) fn assemble_candidates(
         // degradation; matches pre-A2 / pre-C-3b behavior).
         // 中文: D / C-3b — 所有模式共用 shadow-pipeline 單路徑;舊 build_keys_tps 短路退役。
         // 中文:   inv 缺席時退化為空鍵 + walker 跳過(優雅退化,與 A2 前同)。
-        let (keys, shadow_lattice) = match inv {
+        let (keys, keys_final_only, barriers, shadow_lattice) = match inv {
             Some(inv) => {
-                // Base reading's keys + every alternate reading's
-                // (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35, TPS-only) — a word can
-                // be hidden because the per-keystroke auto-correct picked the
-                // wrong one of two locally-indistinguishable glyph readings: a
-                // coda that is really the next syllable's onset (雞胸 ke-hing),
-                // an onset-form nasal that is really a terminal nasal (毋是
-                // m̄-sī), or both at once (考卷 khó-kǹg). Append order and walker
-                // scope live on `build_continuous_keys`.
-                // 中文: base 讀法 + 各替代讀法的鍵(§35,TPS-only);append 順序與 walker 範圍見 build_continuous_keys。
-                let (keys, (shadow, shadow_to_raw_end, lattice)) =
-                    build_continuous_keys(raw, inv, mode);
-                (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
+                // Literal left-anchored keys + §35 barrier metadata. A word
+                // can be hidden because the per-keystroke auto-correct picked
+                // the wrong one of two locally-indistinguishable glyph
+                // readings (考卷 / 毋是 / 雞胸); the recovery is the
+                // ambiguity-aware LOOKUP (`lookup_exact_tps_readings`) fed by
+                // this metadata — the key text stays the user's letters.
+                // 中文: 字面左錨鍵 + §35 barrier 資訊;解歧在查詢層(lookup_exact_tps_readings),
+                // 中文:   key 維持使用者字面。
+                let continuous_keys = build_continuous_keys(raw, inv, mode);
+                let crate::shadow::ContinuousKeys {
+                    keys,
+                    final_only,
+                    shadow,
+                    shadow_to_raw_end,
+                    lattice,
+                    barriers,
+                } = continuous_keys;
+                (
+                    keys,
+                    final_only,
+                    barriers,
+                    Some((shadow, shadow_to_raw_end, lattice, inv)),
+                )
             }
-            None => (Vec::new(), None),
+            None => (Vec::new(), Vec::new(), Vec::new(), None),
         };
 
         // ---- Step 2: empty-keys partial-prefix vs span-local fetch.
@@ -1095,10 +1124,32 @@ pub(crate) fn assemble_candidates(
         } else {
             // ---- Step 2b: span-local fetch.
             let mut c = if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_via_lexicon_inner(&keys, raw_len, ctx)
+                fetch_via_lexicon_inner(&keys, &keys_final_only, raw_len, ctx)
             } else {
                 Vec::new()
             };
+            // §35 bare-nasal merge (Codex pre-impl Q3): a single-glyph TPS
+            // buffer whose ONLY span keys come from ambiguity expansion
+            // (bare `ㄇ` → the syllabic `ㆬ` span) must not silently drop
+            // the partial-prefix continuation list the literal glyph used
+            // to reach — the user is mid-word at least as often as done.
+            // Run BOTH and let the (roman, hanji, span) dedupe collapse
+            // overlaps; span results stay first.
+            // 中文: §35 裸鼻音合併 — 單 glyph buffer 的 span 鍵若全來自展開(裸 ㄇ → ㆬ),
+            // 中文:   不可關掉字面原本會走的 partial-prefix 分支;兩者都跑,dedupe 收斂,span 在前。
+            if let Some(ctx) = lex_ctx.as_ref() {
+                let literal_glyph_in_inventory =
+                    shadow_lattice.as_ref().is_some_and(|(_, _, _, inv)| {
+                        inv.contains_in(phonetics::InputMode::Tps, &raw.to_lowercase())
+                    });
+                let bare_expanded_only = mode == phonetics::InputMode::Tps
+                    && raw.chars().count() == 1
+                    && raw.chars().next().is_some_and(phonetics::is_tps_char)
+                    && !literal_glyph_in_inventory;
+                if bare_expanded_only {
+                    c.extend(fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx));
+                }
+            }
             // ---- Step 3: per-candidate recase loop.
             // v3.5.8 (Codex pre-impl 2A locus = candidate
             // construction): case each span-local candidate's roman
@@ -1168,6 +1219,7 @@ pub(crate) fn assemble_candidates(
                         shadow,
                         shadow_to_raw_end,
                         lattice,
+                        &barriers,
                         inv,
                         prefix,
                         dict,

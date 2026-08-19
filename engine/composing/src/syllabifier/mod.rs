@@ -70,8 +70,30 @@ pub(crate) fn valid_span_endings_lowered(
     mode: InputMode,
     max_syllables: usize,
 ) -> Vec<usize> {
+    valid_span_endings_lowered_with_barriers(lowered, pos, inv, mode, max_syllables, &[])
+}
+
+/// [`valid_span_endings_lowered`] plus the stripped-separator barriers
+/// (§35): the TPS scanner refuses any single-syllable link that crosses
+/// a barrier and expands ambiguity families otherwise. The TL scanner
+/// ignores barriers entirely — TL / POJ / English never strip a
+/// separator, callers always pass an empty slice, and the TL primitive
+/// is untouched (§18 fix-location: the shared TL path stays
+/// byte-identical).
+// 中文: valid_span_endings_lowered + barrier(§35)。TPS 掃描器拒絕跨 barrier 的單音節
+// 中文:   並展開歧義家族;TL 端完全忽略(呼叫端恆傳空)且原函式一字不動(§18 教訓)。
+pub(crate) fn valid_span_endings_lowered_with_barriers(
+    lowered: &str,
+    pos: usize,
+    inv: &SyllableInventory,
+    mode: InputMode,
+    max_syllables: usize,
+    barriers: &[usize],
+) -> Vec<usize> {
     match mode {
-        InputMode::Tps => tps::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables),
+        InputMode::Tps => {
+            tps::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables, barriers)
+        }
         InputMode::Tl | InputMode::Poj | InputMode::English => {
             tl::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables)
         }

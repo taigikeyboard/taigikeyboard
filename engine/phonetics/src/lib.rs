@@ -22,6 +22,7 @@ mod tl;
 mod tone_variations;
 mod tps;
 mod tps_adjust;
+mod tps_ambiguity;
 
 // Top-level re-exports — stable native-helper surface used by the dev
 // `cli` crate and integration tests. The cross-platform FFI envelope
@@ -42,7 +43,8 @@ pub use tl::to_tl;
 pub use tps::{
     canonicalize_tps_syllable, from_zhuyin as tps_to_tl, is_tps_char, is_tps_initial,
     is_tps_initial_only, is_tps_tone_mark, is_tps_vowel_material, normalize_tps_tone8_scalar,
-    to_zhuyin as tl_numeric_token_to_tps, tps_notone_from_tl, tps_notone_or_variant,
-    tps_num_from_tl,
+    to_zhuyin as tl_numeric_token_to_tps, tps_abbrev_from_tl, tps_notone_from_tl,
+    tps_notone_or_variant, tps_num_from_tl,
 };
-pub use tps_adjust::{defold_coda_to_initial, nasal_final_form};
+pub use tps_adjust::defold_coda_to_initial;
+pub use tps_ambiguity::{tps_ambiguity_family, TpsFamilyMember, TpsGlyphRole};

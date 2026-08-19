@@ -826,12 +826,17 @@ mod tests {
     fn is_tps_vowel_material_accepts_nuclei_rejects_coda_nasals() {
         // Base vowels / medials / nasalized vowels / precomposed nasal-coda
         // finals are nucleus material (can follow a de-folded onset).
-        for c in ['ㄚ', 'ㄧ', 'ㄨ', 'ㄛ', 'ㆦ', 'ㆤ', 'ㄞ', 'ㄠ', 'ㆩ', 'ㄢ', 'ㄤ'] {
+        for c in [
+            'ㄚ', 'ㄧ', 'ㄨ', 'ㄛ', 'ㆦ', 'ㆤ', 'ㄞ', 'ㄠ', 'ㆩ', 'ㄢ', 'ㄤ',
+        ] {
             assert!(is_tps_vowel_material(c), "{c} should be vowel material");
         }
         // The syllabic / coda nasal forms are codas, NOT nuclei.
         for c in ['ㆬ', 'ㄣ', 'ㆭ'] {
-            assert!(!is_tps_vowel_material(c), "{c} (coda nasal) must be rejected");
+            assert!(
+                !is_tps_vowel_material(c),
+                "{c} (coda nasal) must be rejected"
+            );
         }
         // Onsets / stop codas / tone marks / space are not vowel material.
         for c in ['ㄍ', 'ㆷ', 'ㆵ', '\u{02cb}', ' '] {

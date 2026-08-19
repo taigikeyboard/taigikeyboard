@@ -200,40 +200,42 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     );
 }
 
-// ---- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) alternate readings ---------
+// ---- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) ambiguity-aware segmentation ----
 //
-// The per-keystroke auto-correct (§32/§33) picks one of two locally
-// indistinguishable glyph readings; when it picks the wrong one the word is
-// structurally hidden from the segmenter. These pin the recovery paths and,
-// just as importantly, the readings that must NOT be rewritten.
+// Since the lattice-time ambiguity-resolution round, the KEY layer emits
+// only the user's LITERAL span text — reading resolution happens inside
+// `lexicon::PrefixIndex::lookup_exact_tps_readings` (tested hermetically in
+// `lexicon/tests/tps_readings.rs`). What this layer must guarantee is that
+// the SEGMENTER admits the spans those readings live on: an ending that
+// only exists under an alternate reading (bare `ㄇ` → the syllabic `ㆬ`,
+// `ㄎㄛㆻㄫ` → kho|kng) must produce its literal key.
 //
 // Fixture rule (`.claude/rules/taigi-incidents.md` § Trace before assert):
-// every inventory below carries the BASE reading's syllables as well as the
-// alternate's, so the alternate is proven to be an ADDITION rather than a
-// silent replacement.
+// every inventory carries the BASE reading's syllables as well as the
+// alternate's, so an expanded ending is proven an ADDITION, not a
+// replacement.
 
-// 中文: §35 替代讀法 — auto-correct 選錯局部無法分辨的 glyph 讀法時,詞會被結構性藏起來。
-// 中文:   以下測試釘住復原路徑,以及「絕對不可改寫」的讀法;每個 inventory 都同時含 base 音節。
+// 中文: §35 — key 層只發使用者字面;讀法解析在 lexicon 查詢層(其 hermetic 測試在
+// 中文:   lexicon/tests/tps_readings.rs)。本層守的是:替代讀法所在的 span,切分器必須放行
+// 中文:   並發出字面 key。每個 inventory 同時含 base 音節 → 展開 ending 是新增非取代。
 
 fn key_texts(keys: &[((u32, u32), String)]) -> Vec<String> {
     keys.iter().map(|(_, k)| k.clone()).collect()
 }
 
 #[test]
-fn alternate_reading_surfaces_khokng_as_kho_kng() {
-    // 考卷 khó-kǹg typed toneless: ㄎ ㄛ ㄍ ㄫ. The ㄍ folds to the coda ㆻ
-    // (khok is a real syllable so the §32 gate correctly keeps the fold) and
-    // the ㄫ stays an onset form, giving `ㄎㄛㆻㄫ` — a reading the inventory
-    // cannot segment. Part B terminalizes the nasal (`ㄎㄛㆻㆭ`) and part C
-    // de-folds the coda in front of it (`ㄎㄛㄍㆭ`), which segments as kho|kng.
-    // `ㄎㄛㆻ` (khok) is in the inventory so the base reading keeps its own
-    // single-syllable key — the alternate does not displace it.
+fn expanded_probe_admits_the_khokng_full_span_and_keeps_the_base() {
+    // 考卷 khó-kǹg typed toneless: ㄎ ㄛ ㄍ ㄫ → buffer ㄎㄛㆻㄫ. The literal
+    // segmentation dead-ends (ㆻㄫ is no syllable), but under the ambiguity
+    // families the tail reads ㄍㆭ (kng), so the full-span ending exists and
+    // the LITERAL key is emitted for it; the lookup layer then resolves it
+    // to the stored ㄎㄛㄍㆭ. The base single-syllable khok key survives.
     let inv = build_tps_inventory(&["ㄎㄛ", "ㄎㄛㆻ", "ㄍㆭ"]);
     let keys = build_continuous_keys_with_inventory("ㄎㄛㆻㄫ", &inv, phonetics::InputMode::Tps);
     let texts = key_texts(&keys);
     assert!(
-        texts.contains(&"tps:ㄎㄛㄍㆭ".to_string()),
-        "expected the kho|kng alternate span key, got {texts:?}",
+        texts.contains(&"tps:ㄎㄛㆻㄫ".to_string()),
+        "full-span literal key must exist via the expanded probe, got {texts:?}",
     );
     assert!(
         texts.contains(&"tps:ㄎㄛㆻ".to_string()),
@@ -242,44 +244,23 @@ fn alternate_reading_surfaces_khokng_as_kho_kng() {
 }
 
 #[test]
-fn alternate_reading_keys_come_after_the_base_reading_keys() {
-    // Append order is load-bearing: `dedupe_by_roman_hanji_span` keeps the
-    // EARLIER index on a source-rank tie, so a genuine collision must resolve
-    // to the natural reading. Pinning the order, not just presence.
-    let inv = build_tps_inventory(&["ㄎㄛ", "ㄎㄛㆻ", "ㄍㆭ"]);
-    let keys = build_continuous_keys_with_inventory("ㄎㄛㆻㄫ", &inv, phonetics::InputMode::Tps);
-    let texts = key_texts(&keys);
-    let base = texts
-        .iter()
-        .position(|k| k == "tps:ㄎㄛㆻ")
-        .expect("base khok key");
-    let alternate = texts
-        .iter()
-        .position(|k| k == "tps:ㄎㄛㄍㆭ")
-        .expect("alternate kho|kng key");
-    assert!(
-        base < alternate,
-        "base keys must precede alternate keys, got {texts:?}",
-    );
-}
-
-#[test]
-fn alternate_reading_surfaces_msi_as_m_si() {
-    // 毋是 m̄-sī typed toneless: ㄇ ㄒ ㄧ. `ㄇㄒ` is not a syllable, so the ㄇ
-    // cannot be an onset; part B reads it as the syllabic ㆬ.
-    let inv = build_tps_inventory(&["ㆬ", "ㄒㄧ"]);
+fn expanded_probe_admits_the_msi_full_span() {
+    // 毋是 m̄-sī typed toneless: ㄇ ㄒ ㄧ. `ㄇㄒ` is no syllable, but ㄇ reads
+    // as the syllabic ㆬ, so both the bare-nasal span and the full span
+    // segment — emitted as LITERAL keys.
+    let inv = build_tps_inventory(&["ㆬ", "ㄒㄧ", "ㆬㄒㄧ"]);
     let keys = build_continuous_keys_with_inventory("ㄇㄒㄧ", &inv, phonetics::InputMode::Tps);
     let texts = key_texts(&keys);
     assert!(
-        texts.contains(&"tps:ㆬㄒㄧ".to_string()),
-        "expected the m|si alternate span key, got {texts:?}",
+        texts.contains(&"tps:ㄇㄒㄧ".to_string()),
+        "full-span literal key must exist, got {texts:?}",
     );
 }
 
 #[test]
-fn alternate_reading_leaves_a_nasal_that_opens_a_syllable_alone() {
-    // 博雅 phok-ngá `ㄆㆦㆻㄫㄚ` — here the ㆻ really IS a coda and the ㄫ really
-    // IS an onset (nga). Rewriting either would destroy the word.
+fn expanded_probe_leaves_unambiguous_segmentations_alone() {
+    // 博雅 phok-ngá `ㄆㆦㆻㄫㄚ` — the literal segmentation is already the
+    // right one; expansion must not remove it.
     let inv = build_tps_inventory(&["ㄆㆦㆻ", "ㄫㄚ"]);
     let keys = build_continuous_keys_with_inventory("ㄆㆦㆻㄫㄚ", &inv, phonetics::InputMode::Tps);
     assert!(
@@ -287,8 +268,7 @@ fn alternate_reading_leaves_a_nasal_that_opens_a_syllable_alone() {
         "phok|nga must still segment, got {keys:?}",
     );
 
-    // 門 mn̂g `ㄇㆭ` — onset + syllabic-ng nucleus. `ㆭ` is not vowel material,
-    // so a positional eligibility test would rewrite the ㄇ and lose the word.
+    // 門 mn̂g `ㄇㆭ` — a valid onset+syllabic-ng syllable; stays one span.
     let inv = build_tps_inventory(&["ㄇㆭ"]);
     let keys = build_continuous_keys_with_inventory("ㄇㆭ", &inv, phonetics::InputMode::Tps);
     assert!(
@@ -298,34 +278,63 @@ fn alternate_reading_leaves_a_nasal_that_opens_a_syllable_alone() {
 }
 
 #[test]
-fn alternate_reading_does_not_cross_a_user_separator() {
-    // `ㄎㄛㆻ`␣`ㄫ` — the space is the user's explicit syllable boundary (§31),
-    // so the ㆻ closes the FIRST syllable and part C must not reach across it
-    // to reconstruct 考卷. Same inventory as the no-space case, which is what
-    // makes the absence meaningful.
-    let inv = build_tps_inventory(&["ㄎㄛ", "ㄎㄛㆻ", "ㄍㆭ"]);
-    let keys = build_continuous_keys_with_inventory("ㄎㄛㆻ ㄫ", &inv, phonetics::InputMode::Tps);
-    let texts = key_texts(&keys);
+fn expanded_probe_does_not_cross_a_user_separator() {
+    // `ㄎㄛㆻ`␣`ㄫ` — the stripped space is a mandatory syllable cut (§35
+    // barrier contract part (a)): no single syllable may cross it, so the
+    // ㆻㄫ tail can NOT fuse into a kng reading across the boundary. The
+    // full span is only reachable when the post-barrier remainder segments
+    // on its own — bare ㄫ reads as syllabic ㆭ, so the chain ㄎㄛㆻ|ㆭ DOES
+    // meet at the barrier; what must be absent is any single-syllable edge
+    // crossing byte 9.
+    let inv = build_tps_inventory(&["ㄎㄛ", "ㄎㄛㆻ", "ㄍㆭ", "ㆭ"]);
+    let with_sep =
+        build_continuous_keys_with_inventory("ㄎㄛㆻ ㄫ", &inv, phonetics::InputMode::Tps);
+    let without_sep =
+        build_continuous_keys_with_inventory("ㄎㄛㆻㄫ", &inv, phonetics::InputMode::Tps);
+    // Same inventory: without the separator the ㆻㄫ tail may fuse (via ㄍㆭ);
+    // with it, the only path to the full span is the barrier-respecting
+    // chain. Both emit the full-span LITERAL key here — the DIRECTION
+    // restriction (ㆻ must stay Final before the barrier) is a lookup-layer
+    // contract, pinned in lexicon/tests/tps_readings.rs.
     assert!(
-        !texts.contains(&"tps:ㄎㄛㄍㆭ".to_string()),
-        "must not de-fold across the user's separator, got {texts:?}",
+        key_texts(&without_sep).contains(&"tps:ㄎㄛㆻㄫ".to_string()),
+        "no-separator fusion must exist, got {without_sep:?}",
+    );
+    assert!(
+        key_texts(&with_sep).contains(&"tps:ㄎㄛㆻㄫ".to_string()),
+        "barrier-meeting chain must exist, got {with_sep:?}",
     );
 }
 
 #[test]
-fn alternate_reading_skips_a_bare_nasal_so_partial_prefix_still_runs() {
-    // A buffer that is nothing but ㄇ / ㄫ must produce NO span key, so
-    // `continuous.rs` keeps falling through to the partial-prefix branch that
-    // lists every m- / ng- initial word. Terminalizing it would emit a
-    // full-span key, make `keys.is_empty()` false, and drop that branch.
+fn longest_match_recompute_respects_the_barrier() {
+    // `ㄍㄚ`␣`ㄉ` mid-typing (the user closed ka with the separator and has
+    // typed the next syllable's onset): a barrier-BLIND §18 recompute reads
+    // the expanded ㄍㄚㆵ (kat) as the longest single syllable and wrongly
+    // suppresses the legitimate ㄍㄚ span. With the barrier threaded in, the
+    // ka key survives (Codex post-impl 2026-08-19 BLOCK 2).
+    let inv = build_tps_inventory(&["ㄍㄚ", "ㄍㄚㆵ"]);
+    let keys = build_continuous_keys_with_inventory("ㄍㄚ ㄉ", &inv, phonetics::InputMode::Tps);
+    assert!(
+        key_texts(&keys).contains(&"tps:ㄍㄚ".to_string()),
+        "separator-closed first syllable must survive suppression, got {keys:?}",
+    );
+}
+
+#[test]
+fn bare_nasal_glyph_emits_its_expanded_span_key() {
+    // Bare `ㄇ` — the syllabic ㆬ reading makes a span; the key stays the
+    // LITERAL `tps:ㄇ`. The partial-prefix merge for this shape (span keys
+    // exist but the literal glyph is not itself in the inventory) is an
+    // assemble_candidates behavior, exercised end-to-end via
+    // candidate_dump against production artifacts.
     let inv = build_tps_inventory(&["ㆬ", "ㆭ", "ㄇㆭ"]);
-    for bare in ["ㄇ", "ㄫ"] {
-        let keys = build_continuous_keys_with_inventory(bare, &inv, phonetics::InputMode::Tps);
-        assert!(
-            keys.is_empty(),
-            "bare {bare} must emit no span key so partial-prefix runs, got {keys:?}",
-        );
-    }
+    let keys = build_continuous_keys_with_inventory("ㄇ", &inv, phonetics::InputMode::Tps);
+    assert_eq!(
+        key_texts(&keys),
+        vec!["tps:ㄇ".to_string()],
+        "bare nasal must emit exactly its literal expanded span key",
+    );
 }
 
 // ---- Hermetic TPS SyllableInventory builder -------------------------

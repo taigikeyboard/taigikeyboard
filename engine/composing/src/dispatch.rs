@@ -416,7 +416,7 @@ pub fn build_continuous_keys_with_inventory(
     inv: &SyllableInventory,
     mode: phonetics::InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
-    crate::shadow::build_continuous_keys(raw, inv, mode).0
+    crate::shadow::build_continuous_keys(raw, inv, mode).keys
 }
 
 #[doc(hidden)]
