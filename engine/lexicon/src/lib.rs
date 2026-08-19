@@ -27,6 +27,7 @@ pub mod paths;
 pub mod prefix_index;
 pub mod search;
 pub mod syllable_inventory;
+pub mod tps_pattern;
 
 const _: fn() = || {
     fn assert_send<T: Send>() {}

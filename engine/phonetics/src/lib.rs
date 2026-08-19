@@ -22,6 +22,7 @@ mod tl;
 mod tone_variations;
 mod tps;
 mod tps_adjust;
+mod tps_ambiguity;
 
 // Top-level re-exports — stable native-helper surface used by the dev
 // `cli` crate and integration tests. The cross-platform FFI envelope
@@ -46,3 +47,4 @@ pub use tps::{
     tps_num_from_tl,
 };
 pub use tps_adjust::{defold_coda_to_initial, nasal_final_form};
+pub use tps_ambiguity::{tps_ambiguity_family, TpsFamilyMember, TpsGlyphRole};
