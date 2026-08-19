@@ -253,12 +253,12 @@ pub(crate) fn build_shadow_lattice(
     lattice_from_canonical(&canonical, &canonical_to_raw_end, inv, mode)
 }
 
-/// Shared tail of [`build_shadow_lattice`] / [`build_defolded_shadow_lattice`]:
+/// Shared tail of [`build_shadow_lattice`] / [`build_continuous_keys`]:
 /// from a `(canonical, canonical_to_raw_end)` pair, run hyphen-shadow +
 /// (TPS-only) separator-shadow + lattice and compose the shadow→raw offset
-/// map. Factored out so the base and de-folded readings build their lattices
+/// map. Factored out so the base and alternate readings build their lattices
 /// through ONE code path (no drift).
-// 中文: build_shadow_lattice / build_defolded_shadow_lattice 共用尾段;base 與 de-fold 讀法
+// 中文: build_shadow_lattice / build_continuous_keys 共用尾段;base 與替代讀法
 // 中文:   經同一路徑建 lattice(避免漂移)。
 fn lattice_from_canonical(
     canonical: &str,
@@ -294,39 +294,103 @@ fn lattice_from_canonical(
     (shadow, shadow_to_raw_end, lattice)
 }
 
-/// TPS de-fold reading: build the lattice for the ALTERNATE segmentation
-/// where a single folded coda glyph is read as the NEXT syllable's onset
-/// (`ㄍㆤㆷㄧㄥ` → `ㄍㆤㄏㄧㄥ`, ke|hing 雞胸). The per-keystroke auto-correct
-/// folds a dual-form consonant into a coda glyph (`ㄏ`→`ㆷ`); a coda glyph
-/// cannot START a syllable in the `tps:` inventory, so the onset reading is
-/// structurally hidden from the segmenter. De-folding it back (byte-preserving
-/// glyph swap, so `canonical_to_raw_end` and the downstream offset maps stay
-/// valid) lets `left_anchored_keys_from_lattice` emit the hidden word's key.
-/// Returns `None` for non-TPS, or when the canonical has zero or more than
-/// one eligible de-fold site (this round handles exactly one — mixed
-/// multi-coda readings are a documented follow-up). librime Spelling-Algebra
-/// alignment: this is the "alternate spelling as an extra path" model.
-/// `INVARIANT_TPS_DEFOLD_ENUMERATE` (§34).
-// 中文: TPS de-fold 讀法 — 把單一被摺韻尾 glyph 當下字聲母的替代切分(ㄍㆤㆷㄧㄥ→ㄍㆤㄏㄧㄥ,雞胸)。
-// 中文:   韻尾 glyph 無法起音節故隱藏;反摺(等 byte glyph 替換,offset map 不變)讓隱藏詞 key 出現。
-// 中文:   非 TPS 或 0/>1 反摺點回 None(本輪只做單點;多韻尾混合讀法為後續)。對齊 librime Spelling Algebra。
-pub(crate) fn build_defolded_shadow_lattice(
+/// The continuous-input lookup keys for `raw`: the base reading's
+/// left-anchored keys followed by every alternate reading's
+/// ([`alternate_canonicals`]). Returns the keys plus the BASE
+/// `(shadow, shadow_to_raw_end, lattice)` triple, which the whole-sentence
+/// walker reuses — the walker runs on the base reading only, so an alternate
+/// never participates in whole-sentence synthesis. It can still SORT to the
+/// visible top when the base reading yields no walker candidate at all (考卷
+/// does exactly that); what it cannot do is displace one.
+///
+/// Alternates are APPENDED so a true `(roman, hanji, span)` collision keeps
+/// the natural reading (`dedupe_by_roman_hanji_span` keeps the earlier index
+/// on a source-rank tie). The canonicalize prologue runs ONCE and its
+/// `canonical_to_raw_end` map serves every reading — sound because each
+/// alternate is a byte-length-preserving glyph swap of the canonical.
+///
+/// Single source for both `continuous::assemble_candidates` and the
+/// `dispatch::build_continuous_keys_with_inventory` test seam, so the two
+/// cannot drift.
+// 中文: 連續輸入的查詢鍵 = base 讀法左錨鍵 + 各替代讀法的鍵(append 在後);另回傳 base 三元組供 walker 重用。
+// 中文:   walker 只跑 base → 替代不參與整句合成;base 無 walker 候選時替代仍可能排到視覺首位(考卷即是),但無法擠掉既有的。
+// 中文:   canonicalize 前段只跑一次,其 canonical_to_raw_end 供所有讀法共用(替代皆為等 byte glyph 對換)。
+// 中文:   此為 assemble_candidates 與 dispatch 測試接縫的單一來源。
+pub(crate) fn build_continuous_keys(
     raw: &str,
     inv: &SyllableInventory,
     mode: InputMode,
-) -> Option<(String, Vec<usize>, Lattice)> {
-    if mode != InputMode::Tps {
-        return None;
-    }
+) -> (Vec<(ConsumedSpan, String)>, (String, Vec<usize>, Lattice)) {
     let lower = raw.to_ascii_lowercase();
     let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    let defolded = defold_single_coda(&canonical)?;
-    Some(lattice_from_canonical(
-        &defolded,
-        &canonical_to_raw_end,
-        inv,
-        mode,
-    ))
+    let (shadow, shadow_to_raw_end, lattice) =
+        lattice_from_canonical(&canonical, &canonical_to_raw_end, inv, mode);
+    let mut keys =
+        left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, inv, mode);
+    for alternate in alternate_canonicals(&canonical, mode) {
+        let (alternate_shadow, alternate_shadow_to_raw_end, alternate_lattice) =
+            lattice_from_canonical(&alternate, &canonical_to_raw_end, inv, mode);
+        keys.extend(left_anchored_keys_from_lattice(
+            &alternate_shadow,
+            &alternate_shadow_to_raw_end,
+            &alternate_lattice,
+            inv,
+            mode,
+        ));
+    }
+    (keys, (shadow, shadow_to_raw_end, lattice))
+}
+
+/// The alternate canonical shadows for `canonical` — the readings the
+/// per-keystroke auto-correct (§32/§33) cannot resolve from local context.
+/// The base reading is never replaced; these are extra paths, the librime
+/// Spelling-Algebra model.
+///
+/// Three generators, each yielding at most one alternate (so the result holds
+/// at most three and needs no explosion guard), in this order:
+/// - **A — coda→onset de-fold** ([`defold_single_coda`]): a folded coda glyph
+///   that is really the NEXT syllable's onset (`ㄍㆤㆷㄧㄥ` → `ㄍㆤㄏㄧㄥ`,
+///   ke|hing 雞胸). Unchanged since the invariant's first round.
+/// - **B — stranded-nasal terminalization** ([`terminalize_stranded_nasals`]):
+///   an onset-form nasal that cannot open a syllable here reads as its
+///   terminal glyph (`ㄇㄒㄧ` → `ㆬㄒㄧ`, m̄|sī 毋是).
+/// - **C — B plus the coda before it** ([`defold_codas_before`]): the glyph
+///   preceding a terminalized nasal is a folded coda that is really that
+///   syllable's onset (`ㄎㄛㆻㄫ` → B `ㄎㄛㆻㆭ` → C `ㄎㄛㄍㆭ`, khó|kǹg 考卷).
+///
+/// Every substitution is a 3-byte Bopomofo → 3-byte Bopomofo glyph swap, so
+/// byte offsets are preserved and the caller's single `canonical_to_raw_end`
+/// map is valid for every alternate.
+///
+/// Empty for non-TPS — TL / POJ / English reach no generator, so their
+/// candidate output is byte-identical to not calling this.
+/// `INVARIANT_TPS_DEFOLD_ENUMERATE` (§35).
+// 中文: canonical 的替代讀法 — per-keystroke auto-correct(§32/§33)無法由局部判定的讀法;base 永不取代。
+// 中文:   三個產生器各最多一條(故最多三條,無需爆炸防護):A 韻尾反摺(雞胸)、B 孤立鼻音終形化(毋是)、
+// 中文:   C = B + 其前韻尾反摺(考卷)。全為 3-byte 注音 glyph 對換 → byte offset 不變,共用 caller 的 offset map。
+// 中文:   非 TPS 回空(TL/POJ/English 完全不可達)。
+fn alternate_canonicals(canonical: &str, mode: InputMode) -> Vec<String> {
+    if mode != InputMode::Tps {
+        return Vec::new();
+    }
+    let mut alternates: Vec<String> = Vec::new();
+    if let Some(defolded) = defold_single_coda(canonical) {
+        push_unique_alternate(&mut alternates, canonical, defolded);
+    }
+    if let Some((terminalized, sites)) = terminalize_stranded_nasals(canonical) {
+        let defolded = defold_codas_before(&terminalized, &sites);
+        push_unique_alternate(&mut alternates, canonical, terminalized);
+        if let Some(defolded) = defolded {
+            push_unique_alternate(&mut alternates, canonical, defolded);
+        }
+    }
+    alternates
+}
+
+fn push_unique_alternate(alternates: &mut Vec<String>, base: &str, alternate: String) {
+    if alternate != base && !alternates.iter().any(|existing| existing == &alternate) {
+        alternates.push(alternate);
+    }
 }
 
 /// Swap the single eligible folded coda glyph in `canonical` for its onset
@@ -367,6 +431,110 @@ fn defold_single_coda(canonical: &str) -> Option<String> {
         .map(|(j, &c)| if j == i { onset } else { c })
         .collect();
     Some(defolded)
+}
+
+/// Generator B — rewrite every ONSET-form nasal (`ㄇ` / `ㄋ` / `ㄫ`) that
+/// cannot open a syllable at its position to its terminal glyph
+/// (`phonetics::nasal_final_form`), returning the rewritten canonical and
+/// the CHAR indices that changed. `None` when nothing is eligible.
+///
+/// Why it is needed: the per-keystroke `syllabic_nasal_replacement` folds
+/// `ㄇ`/`ㄫ` to their terminal form only when the NEXT keystroke is a tone
+/// mark. Toneless continuous input never supplies that trigger, and for a
+/// buffer-final nasal (考卷's `ㄫ`) no later keystroke can, so the reading
+/// has to be recovered here at lookup time instead.
+///
+/// Eligibility is phonotactic, not positional: a nasal can still be an
+/// onset when `<nasal><next glyph>` is a valid syllable, which keeps
+/// 門 `ㄇㆭ` (mng), 兩 `ㄋㆭ` (nng), 龜毛's `ㄇㆦ` (moo) and 博雅's `ㄫㄚ`
+/// (nga) untouched — the earlier "next glyph is vowel material" reading of
+/// this test wrongly rewrote the two syllabic-`ng` nuclei, which carry
+/// ~1.4k production rows between them.
+///
+/// A canonical that is nothing BUT the nasal is skipped: a bare `ㄇ` / `ㄫ`
+/// must keep reaching the partial-prefix branch in `continuous.rs` (which
+/// lists every m- / ng- initial word), and an alternate full-span key would
+/// make `keys.is_empty()` false and drop that branch entirely.
+// 中文: 產生器 B — 把在該位置不可能當聲母的聲母形鼻音 (ㄇ/ㄋ/ㄫ) 改成終形 glyph,回傳改寫後
+// 中文:   canonical 與變更的 char index;無合格點回 None。
+// 中文:   per-keystroke syllabic_nasal_replacement 只在「下一鍵是調號」時觸發,無調連續輸入永遠
+// 中文:   供不出該觸發,且 buffer 尾端鼻音(考卷的 ㄫ)之後再無按鍵 → 只能在查詢時補回。
+// 中文:   合格判準為音韻而非位置:<鼻音><下一 glyph> 若為合法音節則仍可當聲母 → 門 ㄇㆭ(mng)、
+// 中文:   兩 ㄋㆭ(nng)、龜毛 ㄇㆦ(moo)、博雅 ㄫㄚ(nga) 皆不動(前者兩詞共約 1.4k 列)。
+// 中文:   canonical 只有該鼻音一字時跳過:裸 ㄇ/ㄫ 必須繼續走 partial-prefix 分支。
+fn terminalize_stranded_nasals(canonical: &str) -> Option<(String, Vec<usize>)> {
+    let chars: Vec<char> = canonical.chars().collect();
+    if chars.len() < 2 {
+        return None;
+    }
+    let mut terminalized = chars.clone();
+    let mut sites: Vec<usize> = Vec::new();
+    for index in 0..chars.len() {
+        let previous = if index == 0 { '\0' } else { chars[index - 1] };
+        let Some(terminal) = phonetics::nasal_final_form(chars[index], previous) else {
+            continue;
+        };
+        if nasal_can_open_syllable(&chars, index) {
+            continue;
+        }
+        terminalized[index] = terminal;
+        sites.push(index);
+    }
+    if sites.is_empty() {
+        return None;
+    }
+    Some((terminalized.into_iter().collect(), sites))
+}
+
+/// True when the onset-form nasal at `index` can still be a syllable ONSET,
+/// i.e. `<nasal><next glyph>` is a valid syllable.
+///
+/// A two-glyph window is enough even though TPS finals are not all one glyph
+/// (`ia` is `ㄧㄚ`, `ua` is `ㄨㄚ`, `iau` is `ㄧㄠ`): a multi-glyph final
+/// BEGINS with a glyph that is itself a valid minimal final (`i` / `u`), so
+/// `<nasal><first body glyph>` already proves the nasal can open a syllable —
+/// `ㄇㄧ` (mi) answers for `ㄇㄧㄚ` (miâ 名) without reading the whole final.
+/// A buffer-final nasal has no next glyph and therefore cannot be an onset.
+// 中文: 判斷 index 處的聲母形鼻音是否仍可當聲母 = <鼻音><下一 glyph> 是否為合法音節。
+// 中文:   TPS 韻母並非都是單一 glyph(ia=ㄧㄚ、ua=ㄨㄚ、iau=ㄧㄠ),但兩 glyph 視窗仍足夠:
+// 中文:   多 glyph 韻母的第一格本身即為合法最小韻母(i/u),故 <鼻音><韻母首格> 已足以證明可開音節
+// 中文:   (ㄇㄧ(mi) 即可代答 ㄇㄧㄚ(miâ 名),不必讀完整韻母)。位於 buffer 尾端者無下一 glyph,故不可能是聲母。
+fn nasal_can_open_syllable(chars: &[char], index: usize) -> bool {
+    let Some(&next) = chars.get(index + 1) else {
+        return false;
+    };
+    let pair: String = [chars[index], next].iter().collect();
+    phonetics::is_valid_syllable(&phonetics::tps_to_tl(&pair))
+}
+
+/// Generator C — in a generator-B result, swap the glyph IMMEDIATELY before
+/// each terminalized nasal back to its onset form when it is a folded coda
+/// (`phonetics::defold_coda_to_initial`). `None` when no site has a foldable
+/// coda in front of it.
+///
+/// This is the 考卷 case: `ㄎㄛ`+`ㄍ` folds to `ㄎㄛㆻ` because `khok` is a
+/// real syllable, so the `ㄍ` that actually opens `kǹg` is hidden behind a
+/// coda glyph. Only the IMMEDIATELY preceding glyph is considered, which is
+/// also what keeps generator C from crossing a user separator: a TPS space
+/// or a `-` 連字 between the coda and the nasal means they are not adjacent,
+/// so the explicit boundary is respected (§31).
+// 中文: 產生器 C — 在 B 的結果上,把每個終形化鼻音「緊鄰前一格」的被摺韻尾換回聲母形;無者回 None。
+// 中文:   即考卷:ㄎㄛ+ㄍ 因 khok 合法而摺成 ㄎㄛㆻ,真正開啟 kǹg 的 ㄍ 被藏在韻尾 glyph 後。
+// 中文:   只看緊鄰前一格,故不會跨越使用者分隔符(空白/連字介於其間即非相鄰,尊重明確邊界,§31)。
+fn defold_codas_before(canonical: &str, sites: &[usize]) -> Option<String> {
+    let mut chars: Vec<char> = canonical.chars().collect();
+    let mut defolded_any = false;
+    for &site in sites {
+        let Some(previous_index) = site.checked_sub(1) else {
+            continue;
+        };
+        let Some(onset) = phonetics::defold_coda_to_initial(chars[previous_index]) else {
+            continue;
+        };
+        chars[previous_index] = onset;
+        defolded_any = true;
+    }
+    defolded_any.then(|| chars.into_iter().collect())
 }
 
 /// v3.5.9 A1 — extracted from the pre-A1 `build_keys_tl_with_inventory`
@@ -1177,7 +1345,7 @@ mod tests {
 
     use super::*;
 
-    // INVARIANT_TPS_DEFOLD_ENUMERATE (§34) — de-fold a single folded coda
+    // INVARIANT_TPS_DEFOLD_ENUMERATE (§35) part A — de-fold a single folded coda
     // glyph back to its onset so a hidden alternate reading surfaces.
     #[test]
     fn defold_single_coda_swaps_one_coda_before_vowel() {
@@ -1218,6 +1386,123 @@ mod tests {
         // >1 eligible site → None (mixed multi-coda out of scope this round).
         // ㄍㆤㆷㄧ + ㆷㄚ : two `ㆷ`-before-vowel sites.
         assert_eq!(defold_single_coda("ㄍㆤㆷㄧㆷㄚ"), None);
+    }
+
+    // ----- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) part B — stranded nasal -----
+
+    #[test]
+    fn terminalize_stranded_nasals_rewrites_a_nasal_that_cannot_open_a_syllable() {
+        // 毋是 m̄-sī typed toneless as ㄇ ㄒ ㄧ: `ㄇㄒ` is not a syllable, so the
+        // ㄇ cannot be an onset and reads as the syllabic ㆬ.
+        let (terminalized, sites) = terminalize_stranded_nasals("ㄇㄒㄧ").expect("eligible");
+        assert_eq!(terminalized, "ㆬㄒㄧ");
+        assert_eq!(sites, vec![0]);
+
+        // 考卷 khó-kǹg typed toneless as ㄎ ㄛ ㄍ ㄫ: the auto-correct folded ㄍ
+        // to ㆻ (khok is real), and the buffer-final ㄫ has no next glyph.
+        let (terminalized, sites) = terminalize_stranded_nasals("ㄎㄛㆻㄫ").expect("eligible");
+        assert_eq!(terminalized, "ㄎㄛㆻㆭ");
+        assert_eq!(sites, vec![3]);
+    }
+
+    #[test]
+    fn terminalize_stranded_nasals_keeps_a_nasal_that_can_open_a_syllable() {
+        // 門 mn̂g `ㄇㆭ` and 兩 nn̄g `ㄋㆭ` — onset + syllabic-ng nucleus IS a
+        // valid syllable, so these must NOT be rewritten. `ㆭ` is not vowel
+        // material, so a positional (rather than phonotactic) eligibility test
+        // would corrupt both; between them they carry ~1.4k production rows.
+        assert_eq!(terminalize_stranded_nasals("ㄇㆭ"), None);
+        assert_eq!(terminalize_stranded_nasals("ㄋㆭ"), None);
+        // 龜毛 ku-môo `ㄍㄨㄇㆦ` (§33 control) — ㄇ opens `moo`.
+        assert_eq!(terminalize_stranded_nasals("ㄍㄨㄇㆦ"), None);
+        // 博雅 phok-ngá `ㄆㆦㆻㄫㄚ` — ㄫ opens `nga` after a real stop coda.
+        assert_eq!(terminalize_stranded_nasals("ㄆㆦㆻㄫㄚ"), None);
+    }
+
+    #[test]
+    fn terminalize_stranded_nasals_keeps_a_nasal_before_a_multi_glyph_final() {
+        // TPS finals are not all one glyph (`ia` is ㄧㄚ, `ua` is ㄨㄚ). The
+        // two-glyph eligibility window still answers correctly because the
+        // final's FIRST glyph is itself a valid minimal final: ㄇㄧ (mi)
+        // answers for 名 miâ `ㄇㄧㄚ`, ㄫㄧ (ngi) for 迎 ngiâ `ㄫㄧㄚ`.
+        assert_eq!(terminalize_stranded_nasals("ㄇㄧㄚ"), None);
+        assert_eq!(terminalize_stranded_nasals("ㄫㄧㄚ"), None);
+        assert_eq!(terminalize_stranded_nasals("ㄋㄨㄚ"), None);
+    }
+
+    #[test]
+    fn terminalize_stranded_nasals_skips_a_bare_nasal_buffer() {
+        // A buffer that is nothing but the nasal must keep reaching the
+        // partial-prefix branch (every m- / ng- initial word); an alternate
+        // full-span key would make `keys.is_empty()` false and drop it.
+        assert_eq!(terminalize_stranded_nasals("ㄇ"), None);
+        assert_eq!(terminalize_stranded_nasals("ㄫ"), None);
+    }
+
+    // ----- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) part C — coda before nasal ---
+
+    #[test]
+    fn defold_codas_before_swaps_the_glyph_in_front_of_a_terminalized_nasal() {
+        // 考卷: part B produced ㄎㄛㆻㆭ; the ㆻ in front of the nasal is really
+        // the ㄍ that opens kǹg.
+        assert_eq!(
+            defold_codas_before("ㄎㄛㆻㆭ", &[3]).as_deref(),
+            Some("ㄎㄛㄍㆭ")
+        );
+        // 毋是: the nasal is at index 0, nothing in front → None.
+        assert_eq!(defold_codas_before("ㆬㄒㄧ", &[0]), None);
+        // A non-coda glyph in front is left alone.
+        assert_eq!(defold_codas_before("ㄍㄨㆬ", &[2]), None);
+    }
+
+    // ----- Composition + separator / TL-POJ scope -----
+
+    #[test]
+    fn alternate_canonicals_enumerates_base_excluded_alternates_in_generator_order() {
+        // 考卷 — part B then part C, both offered.
+        assert_eq!(
+            alternate_canonicals("ㄎㄛㆻㄫ", InputMode::Tps),
+            vec!["ㄎㄛㆻㆭ".to_string(), "ㄎㄛㄍㆭ".to_string()]
+        );
+        // 毋是 — part B only (part C has nothing in front of index 0).
+        assert_eq!(
+            alternate_canonicals("ㄇㄒㄧ", InputMode::Tps),
+            vec!["ㆬㄒㄧ".to_string()]
+        );
+        // 雞胸 — part A only, byte-identical to the pre-round behaviour.
+        assert_eq!(
+            alternate_canonicals("ㄍㆤㆷㄧㄥ", InputMode::Tps),
+            vec!["ㄍㆤㄏㄧㄥ".to_string()]
+        );
+        // 交代 (§32 control) — no generator fires.
+        assert!(alternate_canonicals("ㄍㄠㄉㄞ", InputMode::Tps).is_empty());
+    }
+
+    #[test]
+    fn alternate_canonicals_is_empty_for_every_non_tps_mode() {
+        // USER constraint: TL / POJ / English must reach no generator. The
+        // inputs are the TPS ones that DO produce alternates, so an empty
+        // result here is the mode gate doing the work, not the input.
+        for mode in [InputMode::Tl, InputMode::Poj, InputMode::English] {
+            for canonical in ["ㄎㄛㆻㄫ", "ㄇㄒㄧ", "ㄍㆤㆷㄧㄥ"] {
+                assert!(
+                    alternate_canonicals(canonical, mode).is_empty(),
+                    "{mode:?} must reach no alternate-reading generator",
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn alternate_canonicals_does_not_defold_across_a_user_separator() {
+        // `ㄎㄛㆻ`␣`ㄫ` — the user's explicit boundary says the ㆻ closes the
+        // FIRST syllable, so part C must not reach across the space and
+        // reconstruct 考卷. Part B still terminalizes the nasal (the space
+        // proves the preceding syllable is closed, so the ㄫ cannot be an
+        // onset waiting for a vowel) — that is the §31-compatible half.
+        let alternates = alternate_canonicals("ㄎㄛㆻ ㄫ", InputMode::Tps);
+        assert_eq!(alternates, vec!["ㄎㄛㆻ ㆭ".to_string()]);
+        assert!(!alternates.iter().any(|a| a.contains('ㄍ')));
     }
 
     #[test]

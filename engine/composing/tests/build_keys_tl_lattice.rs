@@ -25,7 +25,7 @@
 
 use std::path::PathBuf;
 
-use composing::dispatch::build_keys_tl_with_inventory;
+use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
 use fst::SetBuilder;
 use lexicon::SyllableInventory;
 use phonetics::canonicalize_syllable;
@@ -147,6 +147,33 @@ fn tl_space_stays_hard_boundary_not_collapsed() {
 // Pattern mirrors `engine/composing/tests/build_keys_tl_hyphen.rs`;
 // inline duplication preferred over a shared test-utils crate for the
 // same reason documented there.
+
+// INVARIANT_TPS_DEFOLD_ENUMERATE (§35) — the alternate-reading generators are
+// TPS-only, so for TL / POJ / English the full-key seam must return EXACTLY the
+// base seam's output. Exact equality, not `contains`: an alternate leaking into
+// a non-TPS mode would show up as an extra key, and USER constraint for the
+// round was that TL / POJ must not change at all.
+
+// 中文: §35 替代讀法產生器僅限 TPS,故 TL/POJ/English 的完整鍵接縫必須與 base 接縫「完全相等」。
+// 中文:   用 exact equality 而非 contains:替代讀法若洩漏到非 TPS 模式會多出鍵。
+
+#[test]
+fn full_key_seam_equals_base_key_seam_for_non_tps_modes() {
+    let inv = build_inventory(&["tai", "gi", "goa", "ai", "li", "hoo", "gua"]);
+    for raw in ["taigi", "tai5gi2", "goa2ai3li2", "hoogua", "tai-gi"] {
+        for mode in [
+            phonetics::InputMode::Tl,
+            phonetics::InputMode::Poj,
+            phonetics::InputMode::English,
+        ] {
+            assert_eq!(
+                build_continuous_keys_with_inventory(raw, &inv, mode),
+                build_keys_tl_with_inventory(raw, &inv, mode),
+                "{mode:?} {raw:?} must reach no alternate-reading generator",
+            );
+        }
+    }
+}
 
 fn build_inventory(samples: &[&str]) -> SyllableInventory {
     let pairs: Vec<(String, String)> = samples

@@ -218,6 +218,31 @@ fn dual_final_form(initial: char, last: char) -> Option<char> {
     }
 }
 
+/// The terminal (final / coda / syllabic) glyph for an onset-form NASAL
+/// (`ㄇ→ㆬ`, `ㄋ→ㄣ`, `ㄫ→ㄥ` after `ㄧ` else `ㆭ`), or `None` for any other
+/// char — including the dual-form STOPS, which have no terminal reading a
+/// continuous-input alternate would ever need.
+///
+/// Narrow public window onto [`dual_final_form`], which stays private
+/// because it carries the FULL per-keystroke policy (stops included) that
+/// only [`adjust_initial_key`] may apply. Routing through it keeps ONE
+/// glyph table behind both the keystroke path and the alternate-reading
+/// generator, so the two cannot drift.
+///
+/// Not a promise that the produced glyph is a standalone syllable: `ㄥ` is
+/// the `-ing` coda and `ㄣ` the `-n` coda, neither of which stands alone.
+/// The caller decides positionally whether the terminal reading applies —
+/// see `composing::shadow` `INVARIANT_TPS_DEFOLD_ENUMERATE` part B.
+// 中文: 聲母形鼻音 (ㄇ/ㄋ/ㄫ) 的終形 glyph;ㄫ 依前字給 ㄥ(ing)/ㆭ。
+// 中文:   dual_final_form 的窄公開窗口(該函式含塞音完整政策故維持 private),
+// 中文:   兩條路徑共用同一份 glyph 表避免漂移。不保證產生的 glyph 可獨立成音節。
+pub fn nasal_final_form(onset: char, previous: char) -> Option<char> {
+    if !matches!(onset, 'ㄇ' | 'ㄋ' | 'ㄫ') {
+        return None;
+    }
+    dual_final_form(onset, previous)
+}
+
 /// Inverse of [`dual_final_form`]: the syllable-ONSET glyph for a TPS
 /// final/coda glyph (`ㆴ→ㄅ`, `ㆵ→ㄉ`, `ㆻ→ㄍ`, `ㆷ→ㄏ`, `ㆬ→ㄇ`, `ㄣ→ㄋ`,
 /// `ㆭ→ㄫ`, `ㄥ→ㄫ`), or `None` for any non-coda char. Both `ㆭ` and the
@@ -489,6 +514,32 @@ mod tests {
     }
 
     #[test]
+    fn nasal_final_form_covers_nasals_only_and_matches_dual_final_form() {
+        use super::{dual_final_form, nasal_final_form};
+        // Nasals resolve to the SAME glyph the keystroke path would produce —
+        // one table behind both, so the two cannot drift.
+        for (onset, previous) in [('ㄇ', 'ㄚ'), ('ㄋ', 'ㄚ'), ('ㄫ', 'ㄚ'), ('ㄫ', 'ㄧ')] {
+            assert_eq!(
+                nasal_final_form(onset, previous),
+                dual_final_form(onset, previous),
+                "{onset} after {previous} must match the keystroke path's glyph",
+            );
+        }
+        // ㄫ is context-dependent: ㄥ (the -ing coda) after ㄧ, ㆭ otherwise.
+        assert_eq!(nasal_final_form('ㄫ', 'ㄧ'), Some('ㄥ'));
+        assert_eq!(nasal_final_form('ㄫ', 'ㄚ'), Some('ㆭ'));
+        // The dual-form STOPS are NOT nasals — the alternate-reading generator
+        // must never terminalize them (that direction is the de-fold's job).
+        for stop in ['ㄅ', 'ㄉ', 'ㄍ', 'ㄏ'] {
+            assert_eq!(nasal_final_form(stop, 'ㄚ'), None, "{stop} is not a nasal");
+        }
+        // Non dual-form chars and already-terminal glyphs return None.
+        for other in ['ㄚ', 'ㆬ', 'ㆭ', 'ㄥ', ' '] {
+            assert_eq!(nasal_final_form(other, 'ㄚ'), None);
+        }
+    }
+
+    #[test]
     fn defold_is_inverse_of_dual_final_form() {
         use super::{defold_coda_to_initial, dual_final_form};
         // Every dual-form initial → its coda → back to the initial.
@@ -544,12 +595,12 @@ mod tests {
         // No pending syllable, already toned, entering-tone stop coda, space,
         // or non-Bopomofo context → keep the literal `9`.
         for raw in [
-            "",               // standalone digit (committed verbatim upstream)
-            "ㄗㄤ\u{02c6}",   // already tone-9 — no double-toning
-            "ㄍㄚ\u{02cb}",   // already tone-2
-            "ㄍㄚㆵ",         // kat — entering-tone stop coda (tone 4/8 only)
-            "ㄗㄤ ",          // after a space boundary
-            "abc",            // non-Bopomofo
+            "",             // standalone digit (committed verbatim upstream)
+            "ㄗㄤ\u{02c6}", // already tone-9 — no double-toning
+            "ㄍㄚ\u{02cb}", // already tone-2
+            "ㄍㄚㆵ",       // kat — entering-tone stop coda (tone 4/8 only)
+            "ㄗㄤ ",        // after a space boundary
+            "abc",          // non-Bopomofo
         ] {
             assert_eq!(
                 adjust_tone_nine_digit("9", raw),
