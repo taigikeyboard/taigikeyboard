@@ -509,7 +509,10 @@ mod tests {
         assert_eq!(toneless_reading_key("taigi"), "taigi");
         assert_eq!(toneless_reading_key("tai5gi2"), "taigi");
         // canonical (diacritic + hyphen) and continuous raw (fused) agree.
-        assert_eq!(toneless_reading_key("tâi-gí"), toneless_reading_key("taigi"));
+        assert_eq!(
+            toneless_reading_key("tâi-gí"),
+            toneless_reading_key("taigi")
+        );
     }
 
     // trace: all-tone-1 multi-syllable canonical "khong-an" vs continuous
@@ -519,7 +522,10 @@ mod tests {
     #[test]
     fn toneless_reading_key_collapses_separator_only_difference() {
         assert_eq!(toneless_reading_key("khong-an"), "khongan");
-        assert_eq!(toneless_reading_key("khong-an"), toneless_reading_key("khongan"));
+        assert_eq!(
+            toneless_reading_key("khong-an"),
+            toneless_reading_key("khongan")
+        );
     }
 
     // trace: 重/tāng (重量) and 重/tàng are genuinely distinct readings

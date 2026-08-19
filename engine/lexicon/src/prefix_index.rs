@@ -171,6 +171,163 @@ impl PrefixIndex {
         out
     }
 
+    /// TPS ambiguity-aware exact lookup — one automaton walk returning
+    /// every stored key that is a READING of `key` under the TPS
+    /// ambiguity families (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35), plus
+    /// the rowids under each. Results are ordered substitution-count
+    /// ascending (the user's literal text first), byte order within a
+    /// count — the ordering contract the continuous fetch relies on for
+    /// natural-reading-first dedupe.
+    ///
+    /// `final_only_offsets` = byte offsets (into `key`) of glyphs
+    /// immediately before a stripped separator / 連字 barrier; those
+    /// slots keep only Final-role readings (§31 — the user's explicit
+    /// boundary must not be re-read as a syllable onset). Tone-mark
+    /// restriction is derived inside the pattern builder.
+    ///
+    /// Scan range: the whole `tps:` sibling range of the literal key's
+    /// family prefix — NOT the literal key's own narrow range, because an
+    /// alternate glyph may byte-sort far from the literal (Codex
+    /// pre-impl Q5: a literal-key range would exclude it).
+    // 中文: TPS 歧義感知 exact 查詢 — 單次 automaton 走訪回傳 key 的所有讀法與其 rowids;
+    // 中文:   排序 = 替換數升冪(使用者字面優先)、同數依 byte 序。final_only_offsets = barrier
+    // 中文:   前一格的 byte 偏移(只許 Final 形);調號限制由 pattern builder 內部推導。
+    // 中文: 掃描範圍 = 整個 tps: 家族 range,不能用字面 key 的窄 range(替代 glyph byte 序可能落在外)。
+    pub fn lookup_exact_tps_readings(
+        &self,
+        key: &str,
+        final_only_offsets: &[usize],
+    ) -> Vec<(String, u32, u32)> {
+        use fst::{IntoStreamer, Streamer};
+        // Unambiguous key (no family glyph): the pattern could only match
+        // the literal — use the narrow-range exact lookup, zero automaton.
+        // 中文: 無歧義 glyph 的 key 只可能命中字面 → 走窄 range exact,免自動機。
+        if !crate::tps_pattern::has_ambiguous_glyph(key) {
+            return self
+                .lookup_exact(key)
+                .into_iter()
+                .map(|rowid| (key.to_string(), rowid, 0))
+                .collect();
+        }
+        let pattern = crate::tps_pattern::TpsKeyPattern::new(
+            key,
+            crate::tps_pattern::WireMode::ExactWire,
+            final_only_offsets,
+        );
+        // Constrain the automaton scan to the family prefix's range so it
+        // never touches `tl:` / `poj:` / `hanzi:` regions.
+        let prefix = key
+            .split(':')
+            .next()
+            .map(|p| format!("{p}:"))
+            .unwrap_or_default();
+        let mut builder = self.set.search(&pattern);
+        if let Some(hi) = next_lex_sibling(prefix.as_bytes()) {
+            builder = builder.ge(prefix.as_bytes()).lt(&hi);
+        }
+        let mut stream = builder.into_stream();
+        let mut out: Vec<(String, u32, u32)> = Vec::new();
+        while let Some(entry) = stream.next() {
+            if entry.len() < 5 {
+                continue;
+            }
+            // Wire = key || 0xFF || rowid_le_4: the separator sits at the
+            // fixed offset len-5 (rowid bytes may themselves be 0xFF).
+            let key_end = entry.len() - 5;
+            let Ok(matched_key) = std::str::from_utf8(&entry[..key_end]) else {
+                continue;
+            };
+            let mut buf = [0u8; 4];
+            buf.copy_from_slice(&entry[entry.len() - 4..]);
+            let rowid = u32::from_le_bytes(buf);
+            let subst = crate::tps_pattern::substitution_count(key, matched_key);
+            out.push((matched_key.to_string(), rowid, subst));
+        }
+        // Substitution-count ascending; the automaton stream is already in
+        // byte order, and the sort is stable, so ties keep byte order.
+        out.sort_by_key(|(_, _, subst)| *subst);
+        out
+    }
+
+    /// TPS ambiguity-aware variant of [`Self::lookup_prefix_shortest_first`]
+    /// — the partial-prefix hydration for an incomplete TPS tail also
+    /// considers every reading of the typed prefix (`ㄇ` surfaces both
+    /// `ㄇ…` and `ㆬ…` words). Budget policy extends the existing
+    /// contract: matched-key length ascending, then substitution count
+    /// ascending, then byte order.
+    // 中文: lookup_prefix_shortest_first 的 TPS 歧義感知版 — 部分前綴也考慮所有讀法
+    // 中文:   (ㄇ 同時撈 ㄇ… 與 ㆬ… 詞)。預算排序:matched key 長度升冪 → 替換數升冪 → byte 序。
+    pub fn lookup_prefix_shortest_first_tps_readings(
+        &self,
+        prefix_key: &str,
+        cap: usize,
+        mut skip: impl FnMut(&str) -> bool,
+    ) -> Vec<(String, u32)> {
+        use fst::{IntoStreamer, Streamer};
+        if prefix_key.is_empty() || cap == 0 {
+            return Vec::new();
+        }
+        // No unambiguous fast path here: the matched-key contract requires
+        // the STORED key per hit (record guards + abbrev-face checks run on
+        // it), and the pattern walk over an unambiguous prefix is already
+        // pruned to the literal branch by `can_match` — same traversal cost
+        // as the narrow range (Codex confirm 2026-08-19 finding 2).
+        // 中文: 不設無歧義捷徑 — matched-key 契約需要每筆命中的「儲存 key」;
+        // 中文:   無歧義 pattern 經 can_match 剪枝後本就只走字面分支,成本等同窄 range。
+        let pattern = crate::tps_pattern::TpsKeyPattern::new(
+            prefix_key,
+            crate::tps_pattern::WireMode::StartsWith,
+            &[],
+        );
+        let family = prefix_key
+            .split(':')
+            .next()
+            .map(|p| format!("{p}:"))
+            .unwrap_or_default();
+        let mut builder = self.set.search(&pattern);
+        if let Some(hi) = next_lex_sibling(family.as_bytes()) {
+            builder = builder.ge(family.as_bytes()).lt(&hi);
+        }
+        let mut stream = builder.into_stream();
+        // (matched_key_len, subst_on_typed_prefix, byte-order index) buckets;
+        // the matched key travels with the rowid so record guards validate
+        // against what the pattern actually hit (Codex post-impl BLOCK 1).
+        let mut survivors: Vec<(usize, u32, usize, u32, String)> = Vec::new();
+        let mut order = 0usize;
+        while let Some(entry) = stream.next() {
+            if entry.len() < 5 {
+                continue;
+            }
+            let key_end = entry.len() - 5;
+            let Ok(matched_key) = std::str::from_utf8(&entry[..key_end]) else {
+                continue;
+            };
+            if skip(matched_key) {
+                continue;
+            }
+            // Substitutions can only occur inside the typed prefix; the
+            // charwise zip stops at the shorter side, so the shared helper
+            // applies as-is.
+            let subst = crate::tps_pattern::substitution_count(prefix_key, matched_key);
+            let mut buf = [0u8; 4];
+            buf.copy_from_slice(&entry[entry.len() - 4..]);
+            survivors.push((
+                key_end,
+                subst,
+                order,
+                u32::from_le_bytes(buf),
+                matched_key.to_string(),
+            ));
+            order += 1;
+        }
+        survivors.sort_by_key(|&(len, subst, ord, _, _)| (len, subst, ord));
+        survivors
+            .into_iter()
+            .take(cap)
+            .map(|(_, _, _, rowid, matched_key)| (matched_key, rowid))
+            .collect()
+    }
+
     fn scan_from(&self, lo: &[u8]) -> Vec<u32> {
         let mut stream = self.set.range().ge(lo).into_stream();
         decode_rowids(&mut stream, lo.len())

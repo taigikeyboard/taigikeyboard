@@ -35,7 +35,8 @@ const _: fn() = || {
 };
 
 pub use continuous::{
-    best_candidate_for_key, compound_hanji_exists, derive_mode, fetch_candidates_for_keys,
+    best_candidate_for_key, best_candidate_for_key_with_barriers, compound_hanji_exists,
+    derive_mode, fetch_candidates_for_keys, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
     ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
     COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,

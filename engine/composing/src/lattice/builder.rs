@@ -24,7 +24,7 @@ use super::Lattice;
 // while TL/POJ/English keep the FST BFS path. One dispatcher, one mode.
 // 中文: D / C-3b — 改走 mode-aware dispatcher;TPS 走自家 lowered 變體,
 // 中文:   TL/POJ/English 維持原 FST BFS,單一 mode 路由。
-use crate::syllabifier::valid_span_endings_lowered;
+use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 
 /// Build the segmentation lattice for `shadow` (the hyphen-stripped,
 /// mode-canonicalized buffer).
@@ -54,11 +54,17 @@ use crate::syllabifier::valid_span_endings_lowered;
 /// the edges are well-formed by construction.
 // 中文: B-2 — `LATTICE_INVENTORY_FAMILY` constant 移除,改收 `mode: InputMode` 參數;
 // 中文:   呼叫端必須與 build_shadow_lattice 及下游 key emitter 使用同一 mode。
-pub(crate) fn build_lattice(
+/// Build the segmentation lattice. `barriers` (§35) = stripped-separator
+/// offsets forwarded to the TPS scanner (mandatory syllable cut +
+/// Final-only last glyph at a barrier); the TL scanner never sees them
+/// and callers without separator context pass `&[]`.
+// 中文: 建切分 lattice;barriers(§35)透傳給 TPS 掃描器(強制切點 + barrier 前 Final-only),TL 端不經手。
+pub(crate) fn build_lattice_with_barriers(
     shadow: &str,
     inv: &SyllableInventory,
     mode: InputMode,
     max_syllables: usize,
+    barriers: &[usize],
 ) -> Lattice {
     // Lowercase the whole shadow ONCE here, then drive the BFS with
     // `valid_span_endings_lowered`. The public `valid_span_endings`
@@ -76,7 +82,14 @@ pub(crate) fn build_lattice(
     queue.push_back(0);
 
     while let Some(start) = queue.pop_front() {
-        for end in valid_span_endings_lowered(&lowered, start, inv, mode, max_syllables) {
+        for end in valid_span_endings_lowered_with_barriers(
+            &lowered,
+            start,
+            inv,
+            mode,
+            max_syllables,
+            barriers,
+        ) {
             edges.push((start, end));
             if visited.insert(end) {
                 queue.push_back(end);
@@ -104,7 +117,7 @@ mod tests {
     use lexicon::SyllableInventory;
     use phonetics::{canonicalize_syllable, InputMode};
 
-    use super::{build_lattice, Lattice};
+    use super::{build_lattice_with_barriers, Lattice};
 
     const MAX_SYLLABLES: usize = 8;
 
@@ -152,7 +165,8 @@ mod tests {
         // and is the part S1 deliberately withholds from the
         // user-facing key list.
         let inv = build_inventory(&["tai5", "bak4"]);
-        let lattice = build_lattice("taibak", &inv, InputMode::Tl, MAX_SYLLABLES);
+        let lattice =
+            build_lattice_with_barriers("taibak", &inv, InputMode::Tl, MAX_SYLLABLES, &[]);
         let edges = lattice.edges();
         assert!(edges.contains(&(0, 3)), "atomic (0,3) missing: {edges:?}");
         assert!(
@@ -175,7 +189,8 @@ mod tests {
         // is reachable as edge `(6,11)` — the lattice structure that
         // lets S2 surface Finding 3 once commit is start-aware.
         let inv = build_inventory(&["tai1", "uan1", "gi1"]);
-        let lattice = build_lattice("taiuantaigi", &inv, InputMode::Tl, MAX_SYLLABLES);
+        let lattice =
+            build_lattice_with_barriers("taiuantaigi", &inv, InputMode::Tl, MAX_SYLLABLES, &[]);
         assert!(
             lattice.edges().contains(&(6, 11)),
             "Finding 3 sub-word edge (6,11) missing: {:?}",
@@ -194,7 +209,7 @@ mod tests {
     #[test]
     fn build_lattice_empty_shadow_yields_no_edges() {
         let inv = build_inventory(&["tai5"]);
-        let lattice = build_lattice("", &inv, InputMode::Tl, MAX_SYLLABLES);
+        let lattice = build_lattice_with_barriers("", &inv, InputMode::Tl, MAX_SYLLABLES, &[]);
         assert!(lattice.edges().is_empty());
         assert_eq!(lattice.topological_offsets(), Vec::<usize>::new());
     }

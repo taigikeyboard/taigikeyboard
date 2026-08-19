@@ -631,8 +631,68 @@ pub type ConsumedSpan = (u32, u32);
 // 中文: Phase 9.3a 改:把 user_freq_boost f32 換成 (FrequencyMap + now_ms),record_to_candidate 內查表算 boost 與 recency。
 // 中文: Phase 9 Item 12 改:接 custom 命中,合成 full-buffer 候選併入 out 後做 (roman,hanji) 去重 (排序前)。
 // 中文: D7 改:其餘 6 個共用 arg (filter/freq_map/clock/custom/readers) 收進 ContinuousFetchCtx。
+/// Resolve a continuous lookup key to its stored readings.
+///
+/// TPS keys go through the ambiguity-aware automaton
+/// (`PrefixIndex::lookup_exact_tps_readings`, §35): one index walk
+/// returns every reading of the pressed keys, substitution-count
+/// ascending so the user's literal text always resolves first. TL /
+/// POJ / hanzi keys keep the plain exact lookup — byte-identical
+/// behavior, zero automaton cost (`matched_key` = the query key,
+/// `subst` = 0).
+///
+/// Every consumer MUST validate records against the returned
+/// `matched_key`, never the query key: a substituted reading's
+/// `tps_notone` reconstruction equals the MATCHED key, and the
+/// literal-key guard would reject every recovered word (Codex
+/// pre-impl 2026-08-19 BLOCK 3).
+// 中文: 連續查詢 key → 逐讀法回呼。TPS 走歧義感知 automaton(替換數升冪,字面優先);
+// 中文:   TL/POJ/hanzi 維持 exact(行為 byte-identical)。record 驗證必須用 matched_key,
+// 中文:   用字面 key 會把所有替代讀法命中全數誤殺(Codex BLOCK 3)。
+fn for_each_exact_reading(
+    prefix_index: &PrefixIndex,
+    key: &str,
+    final_only_offsets: &[usize],
+    mut visit: impl FnMut(&str, u32),
+) {
+    if key.starts_with("tps:") {
+        for (matched_key, rowid, _subst) in
+            prefix_index.lookup_exact_tps_readings(key, final_only_offsets)
+        {
+            visit(&matched_key, rowid);
+        }
+    } else {
+        // TL / POJ / hanzi: byte-identical to the pre-§35 exact lookup —
+        // the matched key IS the query key, no per-rowid allocation.
+        // 中文: 非 TPS 走原 exact,matched key 即查詢 key,零逐列配置。
+        for rowid in prefix_index.lookup_exact(key) {
+            visit(key, rowid);
+        }
+    }
+}
+
 pub fn fetch_candidates_for_keys(
     keys: &[(ConsumedSpan, String)],
+    raw_len: u32,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Vec<RawCandidate> {
+    fetch_candidates_for_keys_with_barriers(keys, &[], raw_len, ctx)
+}
+
+/// [`fetch_candidates_for_keys`] plus per-key barrier metadata.
+///
+/// `tps_final_only[i]` = byte offsets into `keys[i].1` of glyphs
+/// immediately before a stripped separator / 連字 barrier — those pattern
+/// slots keep only Final-role readings (§31 boundary respect; §35).
+/// Parallel-indexed rather than widening the key tuple so the many
+/// existing `(span, key)` call sites and fixtures stay untouched; an
+/// empty slice (or a short one) means "no barriers", which is also the
+/// TL / POJ / English shape.
+// 中文: fetch_candidates_for_keys + 每 key 的 barrier 資訊(平行索引,避免拓寬 tuple 動到既有呼叫端);
+// 中文:   tps_final_only[i] = keys[i] body 中 barrier 前一格的 byte 偏移;空 = 無 barrier(TL/POJ 形)。
+pub fn fetch_candidates_for_keys_with_barriers(
+    keys: &[(ConsumedSpan, String)],
+    tps_final_only: &[Vec<usize>],
     raw_len: u32,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
@@ -650,21 +710,27 @@ pub fn fetch_candidates_for_keys(
     let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
     let mut out: Vec<RawCandidate> = Vec::new();
 
-    for (span, key) in keys {
-        for rowid in ctx.prefix_index.lookup_exact(key) {
+    for (key_index, (span, key)) in keys.iter().enumerate() {
+        let final_only: &[usize] = tps_final_only
+            .get(key_index)
+            .map(|offsets| offsets.as_slice())
+            .unwrap_or(&[]);
+        for_each_exact_reading(ctx.prefix_index, key, final_only, |matched_key, rowid| {
             let Some(record) = ctx.dict.record(rowid) else {
-                continue;
+                return;
             };
             if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
-                continue;
+                return;
             }
             // v3.5.8 — drop `tl_abbrev` acronym collisions: continuous
             // input is phonetic-syllable, not acronym (normal-mode
             // `lexicon::search` keeps acronym matching). v3.5.9 B-2 —
             // routes through `matches_continuous_toneless_key` so the
             // matching `poj_abbrev` filter fires on `poj:` keys.
-            if !matches_continuous_toneless_key(key, &record.tl) {
-                continue;
+            // §35 — validated against the MATCHED key: a substituted
+            // reading reconstructs to the matched key, not the query key.
+            if !matches_continuous_toneless_key(matched_key, &record.tl) {
+                return;
             }
             // Full-syllable path always emits `COVERAGE_KIND_FULL` — by
             // definition `valid_span_endings` produced an ending that
@@ -685,7 +751,7 @@ pub fn fetch_candidates_for_keys(
                 ctx.now_ms,
                 COVERAGE_KIND_FULL,
             ));
-        }
+        });
     }
 
     // v3.5.8 Phase 9 Item 12 — merge `custom_dictionary.db` hits.
@@ -921,22 +987,41 @@ pub fn fetch_partial_prefix_candidates_unbounded(
         // 中文:   key 交錯 (TPS 注音子音排母音前;TL/POJ 雙音節縮寫 tl:sb 與完整 tl:si 同長度、
         // 中文:   排在 tl:sa 與 tl:si 之間),否則會搶 budget 把單字讀音擠出 cap
         // 中文:   (回報:拍 s 只剩 沙 + 雙字詞,撈不到 是/sī)。record 層 guard 仍逐一驗證存活 rowid。
-        let rowids = ctx.prefix_index.lookup_prefix_shortest_first(
-            fst_key,
-            PARTIAL_PREFIX_HYDRATE_CAP,
-            |key| match ctx.mode {
-                phonetics::InputMode::Tps => {
-                    phonetics::is_tps_initial_only(key.strip_prefix("tps:").unwrap_or(key))
-                }
-                phonetics::InputMode::Tl | phonetics::InputMode::Poj => phonetics::is_roman_acronym_key(
+        // §35 — the TPS partial hydration resolves through the same
+        // ambiguity pattern as the exact paths (single lookup authority):
+        // bare `ㄇ` lists ㆬ… words alongside ㄇ… words. The matched key
+        // travels with each rowid so the record guard below validates what
+        // the pattern actually hit, not the literal prefix (Codex
+        // post-impl 2026-08-19 BLOCK 1). TL/POJ keep the plain lookup.
+        // 中文: §35 — TPS partial 與 exact 走同一 pattern(單一查詢裁決);matched key
+        // 中文:   隨 rowid 傳遞,record guard 驗 pattern 實際命中而非字面前綴。
+        let skip_abbrev = |key: &str| match ctx.mode {
+            phonetics::InputMode::Tps => {
+                phonetics::is_tps_initial_only(key.strip_prefix("tps:").unwrap_or(key))
+            }
+            phonetics::InputMode::Tl | phonetics::InputMode::Poj => {
+                phonetics::is_roman_acronym_key(
                     key.strip_prefix("tl:")
                         .or_else(|| key.strip_prefix("poj:"))
                         .unwrap_or(key),
-                ),
-                _ => false,
-            },
-        );
-        for rowid in rowids {
+                )
+            }
+            _ => false,
+        };
+        let hits: Vec<(String, u32)> = if fst_key.starts_with("tps:") {
+            ctx.prefix_index.lookup_prefix_shortest_first_tps_readings(
+                fst_key,
+                PARTIAL_PREFIX_HYDRATE_CAP,
+                skip_abbrev,
+            )
+        } else {
+            ctx.prefix_index
+                .lookup_prefix_shortest_first(fst_key, PARTIAL_PREFIX_HYDRATE_CAP, skip_abbrev)
+                .into_iter()
+                .map(|rowid| (fst_key.to_string(), rowid))
+                .collect()
+        };
+        for (matched_key, rowid) in hits {
             let Some(record) = ctx.dict.record(rowid) else {
                 continue;
             };
@@ -955,8 +1040,35 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // 中文:   `tl_abbrev`/`poj_abbrev`/`tps_abbrev` 命中,對齊 span-local
             // 中文:   + walker 守門;此處 key body 為 toneless 嚴格前綴 → 用
             // 中文:   matches_continuous_toneless_prefix_key 而非等值版。
-            if !matches_continuous_toneless_prefix_key(fst_key, &record.tl) {
+            // §35 — prefix guard runs on the MATCHED key: a substituted
+            // hit (`tps:ㆬㄒㄧ` under typed `tps:ㄇ`) reconstructs to the
+            // matched form; the literal prefix would reject it.
+            if !matches_continuous_toneless_prefix_key(&matched_key, &record.tl) {
                 continue;
+            }
+            // §35 abbrev-face guard, TPS pattern hits only: expanding the
+            // typed prefix can pull in a `tps_abbrev` KEY the literal range
+            // never reached (`tps:ㆬㄒ` under typed `tps:ㄇ`), and when the
+            // first syllable is a single glyph the acronym happens to be a
+            // byte-prefix of the toneless, so the prefix guard above passes
+            // it. Reject a hit whose matched body IS the record's acronym
+            // face — unless acronym == toneless (single-syllable words like
+            // 毋 `ㆬ`, where the "acronym" is the real reading).
+            // 中文: §35 縮寫面 guard — 展開可撈到字面 range 掃不到的 tps_abbrev 鍵
+            // 中文:   (ㄇ → ㆬㄒ);首音節單 glyph 時縮寫恰為 toneless 前綴,上面的 guard
+            // 中文:   擋不住。matched body == 縮寫面即拒絕,但縮寫==toneless(單音節詞 毋)除外。
+            if let Some(matched_body) = matched_key.strip_prefix("tps:") {
+                // Both acronym faces: the primary and the C-3a or→er dialect
+                // variant (`tps_abbrev_var` is also in the FST — Codex
+                // confirm 2026-08-19: the variant face slipped the guard).
+                // 中文: 兩個縮寫面都要驗 — primary + C-3a er↔or 方言變體(FST 亦收錄)。
+                let abbrev_face = phonetics::tps_abbrev_from_tl(&record.tl);
+                let abbrev_variant = phonetics::tps_notone_or_variant(&abbrev_face);
+                let is_abbrev_face = matched_body == abbrev_face
+                    || (!abbrev_variant.is_empty() && matched_body == abbrev_variant);
+                if is_abbrev_face && phonetics::tps_notone_from_tl(&record.tl) != matched_body {
+                    continue;
+                }
             }
             let effective = DictionaryReader::effective_source_bitmask(
                 record.bitmask,
@@ -1047,22 +1159,63 @@ pub fn best_candidate_for_key(
     dict: &DictionaryReader,
     enabled_sources_bitmask: u32,
 ) -> Option<RawCandidate> {
+    best_candidate_for_key_with_barriers(
+        key,
+        &[],
+        consumed_span,
+        freq_map,
+        now_ms,
+        prefix_index,
+        dict,
+        enabled_sources_bitmask,
+    )
+}
+
+/// [`best_candidate_for_key`] plus the §35 barrier restriction for this
+/// edge's key (byte offsets of Final-only pattern slots, family prefix
+/// included). The walker resolves multi-syllable edges that may span a
+/// stripped separator, so it needs the same restriction the span-local
+/// fetch gets — without it a walker edge could re-read a
+/// separator-closed coda as the next syllable's onset.
+// 中文: best_candidate_for_key + §35 barrier 限制(walker 的多音節 edge 可能跨 stripped 分隔符,
+// 中文:   須與 span-local fetch 同等限制,否則 walker 可能把已收音節的韻尾讀回聲母)。
+#[allow(clippy::too_many_arguments)]
+pub fn best_candidate_for_key_with_barriers(
+    key: &str,
+    tps_final_only: &[usize],
+    consumed_span: ConsumedSpan,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    prefix_index: &PrefixIndex,
+    dict: &DictionaryReader,
+    enabled_sources_bitmask: u32,
+) -> Option<RawCandidate> {
     let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
     let mut best: Option<RawCandidate> = None;
-    for rowid in prefix_index.lookup_exact(key) {
+    // §35 — the walker hydrates through the SAME reading resolution as
+    // the span-local fetch (Codex pre-impl BLOCK 3): an edge the expanded
+    // segmenter admitted must find its dictionary payload, or the two
+    // layers split authority. Walker edges are syllable-local and never
+    // cross a separator (the segmenter enforces that), so no barrier
+    // offsets apply here.
+    // 中文: walker 與 span-local fetch 走同一讀法解析(Codex BLOCK 3)— 展開後的
+    // 中文:   segmenter edge 必須撈得到字典 payload。walker edge 為音節局部、
+    // 中文:   不跨分隔符(segmenter 已擋),故無 barrier 偏移。
+    for_each_exact_reading(prefix_index, key, tps_final_only, |matched_key, rowid| {
         let Some(record) = dict.record(rowid) else {
-            continue;
+            return;
         };
         if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
-            continue;
+            return;
         }
         // v3.5.8 — same `tl_abbrev` collision guard as the span-local
         // path so the whole-sentence walker never picks an acronym
         // record as an edge representative. v3.5.9 B-2 — routes through
         // `matches_continuous_toneless_key` so the matching `poj_abbrev`
-        // filter fires on `poj:` keys.
-        if !matches_continuous_toneless_key(key, &record.tl) {
-            continue;
+        // filter fires on `poj:` keys. §35 — validated against the
+        // MATCHED key (see `for_each_exact_reading`).
+        if !matches_continuous_toneless_key(matched_key, &record.tl) {
+            return;
         }
         let effective = DictionaryReader::effective_source_bitmask(
             record.bitmask,
@@ -1084,7 +1237,7 @@ pub fn best_candidate_for_key(
         if better {
             best = Some(cand);
         }
-    }
+    });
     best
 }
 

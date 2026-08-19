@@ -148,7 +148,9 @@ mod tests {
     #[test]
     fn unambiguous_glyphs_have_no_family() {
         // Vowels, palatalized initials, tone marks, ASCII: fixed bytes.
-        for c in ['ㄚ', 'ㆤ', 'ㄝ', 'ㄐ', 'ㄗ', 'ㄒ', 'ㆪ', '\u{02cb}', ' ', 't'] {
+        for c in [
+            'ㄚ', 'ㆤ', 'ㄝ', 'ㄐ', 'ㄗ', 'ㄒ', 'ㆪ', '\u{02cb}', ' ', 't',
+        ] {
             assert_eq!(tps_ambiguity_family(c), None, "{c:?} must be unambiguous");
         }
     }

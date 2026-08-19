@@ -74,9 +74,15 @@ pub struct TpsKeyPattern {
 // 中文: 自動機狀態 — slot/offset 走 pattern;viable 為當前 slot 仍一致的替代 bitmask。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PatternState {
-    Pattern { slot: u16, offset: u8, viable: u8 },
+    Pattern {
+        slot: u16,
+        offset: u8,
+        viable: u8,
+    },
     /// Saw the 0xFF wire separator; consuming the fixed 4 rowid bytes.
-    RowId { consumed: u8 },
+    RowId {
+        consumed: u8,
+    },
     /// Pattern fully matched and the wire mode accepts anything further.
     Done,
     Dead,
@@ -176,7 +182,11 @@ impl TpsKeyPattern {
                     PatternState::Dead
                 }
             }
-            PatternState::Pattern { slot, offset, viable } => {
+            PatternState::Pattern {
+                slot,
+                offset,
+                viable,
+            } => {
                 let slot_idx = slot as usize;
                 if slot_idx >= self.slots.len() {
                     // Pattern exhausted; only the wire tail may continue.
@@ -189,7 +199,6 @@ impl TpsKeyPattern {
                 let alternatives = &self.slots[slot_idx].alternatives;
                 let mut next_viable: u8 = 0;
                 let mut advanced_done = false;
-                let mut done_alt_len = 0usize;
                 for (alt_index, alt) in alternatives.iter().enumerate() {
                     if viable & (1 << alt_index) == 0 {
                         continue;
@@ -198,7 +207,6 @@ impl TpsKeyPattern {
                     if alt.get(position) == Some(&byte) {
                         if position + 1 == alt.len() {
                             advanced_done = true;
-                            done_alt_len = alt.len();
                         } else {
                             next_viable |= 1 << alt_index;
                         }
@@ -212,7 +220,6 @@ impl TpsKeyPattern {
                     !(advanced_done && next_viable != 0),
                     "slot alternatives must share byte length"
                 );
-                let _ = done_alt_len;
                 if advanced_done {
                     PatternState::Pattern {
                         slot: slot + 1,
@@ -256,6 +263,15 @@ impl Automaton for &TpsKeyPattern {
     fn accept(&self, state: &PatternState, byte: u8) -> PatternState {
         self.step(state, byte)
     }
+}
+
+/// True when `text` contains at least one ambiguity-family glyph — i.e.
+/// a pattern over it could match anything beyond the literal bytes.
+/// Cheap pre-check that lets the hot paths (syllabifier probes, exact
+/// lookups) skip building an automaton for unambiguous keys entirely.
+// 中文: text 是否含任何歧義家族 glyph;無 → pattern 等同字面,熱路徑可直接跳過 automaton。
+pub fn has_ambiguous_glyph(text: &str) -> bool {
+    text.chars().any(|c| tps_ambiguity_family(c).is_some())
 }
 
 /// Charwise substitution count between a matched key and the literal key
@@ -332,7 +348,10 @@ mod tests {
         let pattern = TpsKeyPattern::new("tps:ㄇ˫", WireMode::Exact, &[]);
         let got = matches(&set, &pattern);
         assert!(got.contains(&"tps:ㆬ˫".to_string()), "{got:?}");
-        assert!(got.contains(&"tps:ㄇ˫".to_string()), "literal kept: {got:?}");
+        assert!(
+            got.contains(&"tps:ㄇ˫".to_string()),
+            "literal kept: {got:?}"
+        );
     }
 
     #[test]

@@ -69,7 +69,10 @@ fn build_index(name: &str, ns: &str, keys: &[FstKey]) -> PrefixIndex {
 fn unique_temp(name: &str) -> PathBuf {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("lex-tlpoj-abbrev-{name}-{}-{n}.fst", std::process::id()))
+    std::env::temp_dir().join(format!(
+        "lex-tlpoj-abbrev-{name}-{}-{n}.fst",
+        std::process::id()
+    ))
 }
 
 fn roman_ctx<'a>(
@@ -104,9 +107,18 @@ fn lookup_prefix_shortest_first_drops_tl_acronym_and_orders_short_first() {
         "mech",
         "tl:",
         &[
-            FstKey { body: "sb", rowid: 1 },   // 2-syllable acronym surface (dropped)
-            FstKey { body: "si", rowid: 2 },   // short full reading 是/sī
-            FstKey { body: "sigi", rowid: 3 }, // long full reading (si-gi)
+            FstKey {
+                body: "sb",
+                rowid: 1,
+            }, // 2-syllable acronym surface (dropped)
+            FstKey {
+                body: "si",
+                rowid: 2,
+            }, // short full reading 是/sī
+            FstKey {
+                body: "sigi",
+                rowid: 3,
+            }, // long full reading (si-gi)
         ],
     );
     // Plain byte order: acronym `sb` first, then the LONG key, then the
@@ -156,7 +168,10 @@ fn tlpoj_partial_prefix_surfaces_single_chars_past_acronym_flood() {
         for i in 0..FLOOD {
             let rowid = (i + 1) as u32;
             keys.push(FstKey { body: "sb", rowid }); // acronym surface (dropped)
-            keys.push(FstKey { body: "sabu", rowid }); // legit `sa-bu` prefix hit
+            keys.push(FstKey {
+                body: "sabu",
+                rowid,
+            }); // legit `sa-bu` prefix hit
         }
         for off in 0..3 {
             keys.push(FstKey {
