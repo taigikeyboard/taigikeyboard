@@ -1058,15 +1058,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // 中文:   (ㄇ → ㆬㄒ);首音節單 glyph 時縮寫恰為 toneless 前綴,上面的 guard
             // 中文:   擋不住。matched body == 縮寫面即拒絕,但縮寫==toneless(單音節詞 毋)除外。
             if let Some(matched_body) = matched_key.strip_prefix("tps:") {
-                // Both acronym faces: the primary and the C-3a or→er dialect
-                // variant (`tps_abbrev_var` is also in the FST — Codex
-                // confirm 2026-08-19: the variant face slipped the guard).
-                // 中文: 兩個縮寫面都要驗 — primary + C-3a er↔or 方言變體(FST 亦收錄)。
-                let abbrev_face = phonetics::tps_abbrev_from_tl(&record.tl);
-                let abbrev_variant = phonetics::tps_notone_or_variant(&abbrev_face);
-                let is_abbrev_face = matched_body == abbrev_face
-                    || (!abbrev_variant.is_empty() && matched_body == abbrev_variant);
-                if is_abbrev_face && phonetics::tps_notone_from_tl(&record.tl) != matched_body {
+                if is_tps_acronym_face_hit(matched_body, &record.tl) {
                     continue;
                 }
             }
@@ -1522,6 +1514,35 @@ fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
 // 中文: B-2 — 依 key 前綴選擇 toneless guard;`tl:` / `poj:` 各走自家 guard,
 // 中文:   `hanzi:` / 未知前綴經 TL guard 的 strip_prefix 失敗早返 true 而透過。
 // 中文: D / C-3b — 加 tps: 分支,TPS 連續輸入走自家 guard。
+/// §35 abbrev-face guard for the TPS partial-prefix path: true when
+/// `matched_body` is one of the record's ACRONYM faces (primary
+/// `tps_abbrev`, or its C-3a or→er dialect variant — both are in the
+/// FST) and is NOT also one of its toneless faces. Pattern expansion can
+/// reach acronym keys the literal prefix range never scanned
+/// (`tps:ㆬㄒ` under typed `tps:ㄇ`), and a single-glyph first syllable
+/// makes the acronym a byte-prefix of the toneless, so the prefix guard
+/// alone passes it. The toneless exemption checks BOTH faces too: a
+/// variant-notone word (or-á — notone `ㄜㄚ` / variant `ㄛㄚ`, whose
+/// acronym faces coincide with them) must keep its legitimate variant
+/// hit (Codex confirms 2026-08-19).
+// 中文: §35 縮寫面 guard(TPS partial 專用)— matched body 等於任一縮寫面(primary
+// 中文:   或 er↔or 變體)且不等於任一 toneless 面時拒絕。變體 notone 單音節詞(or-á)
+// 中文:   的變體命中必須豁免。
+fn is_tps_acronym_face_hit(matched_body: &str, record_tl: &str) -> bool {
+    let abbrev_face = phonetics::tps_abbrev_from_tl(record_tl);
+    let abbrev_variant = phonetics::tps_notone_or_variant(&abbrev_face);
+    let is_abbrev_face = matched_body == abbrev_face
+        || (!abbrev_variant.is_empty() && matched_body == abbrev_variant);
+    if !is_abbrev_face {
+        return false;
+    }
+    let notone = phonetics::tps_notone_from_tl(record_tl);
+    let notone_variant = phonetics::tps_notone_or_variant(&notone);
+    let matched_is_a_toneless_face =
+        matched_body == notone || (!notone_variant.is_empty() && matched_body == notone_variant);
+    !matched_is_a_toneless_face
+}
+
 fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
     if key.starts_with("poj:") {
         matches_continuous_poj_toneless_key(key, record_tl)
@@ -2993,5 +3014,39 @@ mod dispatcher_tests {
         // (`normalize_input(tsia̍h) → tsiah` ≠ "chiah").
         assert!(dispatch("poj:chiah", "tsia̍h"));
         assert!(!dispatch("tl:chiah", "tsia̍h"));
+    }
+}
+
+#[cfg(test)]
+mod abbrev_face_guard_tests {
+    use super::is_tps_acronym_face_hit;
+
+    // trace: 毋是 m̄-sī — abbrev face ㆬㄒ (per-syllable initials), toneless
+    // ㆬㄒㄧ; a matched ㆬㄒ is an acronym-only face → rejected.
+    #[test]
+    fn rejects_a_pure_acronym_face() {
+        assert!(is_tps_acronym_face_hit("ㆬㄒ", "m̄-sī"));
+    }
+
+    // trace: 毋 m̄ — single syllable, acronym == toneless == ㆬ → exempt.
+    #[test]
+    fn exempts_a_single_syllable_word_whose_acronym_is_its_reading() {
+        assert!(!is_tps_acronym_face_hit("ㆬ", "m̄"));
+    }
+
+    // trace: or-á — notone ㄜㄚ, or→er variant ㄛㄚ; acronym faces coincide
+    // with both toneless faces, so BOTH hits are legitimate readings and
+    // neither may be rejected (Codex confirm 2026-08-19: a primary-only
+    // exemption killed the variant hit; 5 production rows have this shape).
+    #[test]
+    fn exempts_both_toneless_faces_of_a_variant_notone_word() {
+        assert!(!is_tps_acronym_face_hit("ㄜㄚ", "or-á"));
+        assert!(!is_tps_acronym_face_hit("ㄛㄚ", "or-á"));
+    }
+
+    // trace: a full toneless body that is not an acronym face at all.
+    #[test]
+    fn ignores_non_acronym_bodies() {
+        assert!(!is_tps_acronym_face_hit("ㆬㄒㄧ", "m̄-sī"));
     }
 }
