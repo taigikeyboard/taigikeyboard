@@ -398,6 +398,27 @@ fn literal_roman_candidate(
 // 中文:   供 consumed_span_end 使用。
 // 中文: v3.5.9 A2 後 production 走 composing::continuous::assemble_candidates(D1 fold:
 // 中文:   build_shadow_lattice 單建);此 wrapper 只剩 integration test 用。
+/// Injectable test seam for the FULL continuous-input key set — the base
+/// reading's keys PLUS every alternate reading's
+/// (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35, TPS-only). Same shared
+/// [`crate::shadow::build_continuous_keys`] production runs, so an
+/// integration test can pin an alternate reading against a hermetic
+/// inventory instead of only against production artifacts.
+///
+/// [`build_keys_tl_with_inventory`] stays the BASE-only seam: the pre-§35
+/// tests that pin exact base key sets must keep seeing exactly those.
+// 中文: 完整連續輸入鍵集的可注入測試接縫 = base 讀法 + 各替代讀法(§35,TPS-only),
+// 中文:   與 production 共用 build_continuous_keys,故 integration test 可用 hermetic inventory 釘替代讀法。
+// 中文: build_keys_tl_with_inventory 維持「只有 base」的接縫,§35 之前釘死鍵集的測試不受影響。
+#[doc(hidden)]
+pub fn build_continuous_keys_with_inventory(
+    raw: &str,
+    inv: &SyllableInventory,
+    mode: phonetics::InputMode,
+) -> Vec<(ConsumedSpan, String)> {
+    crate::shadow::build_continuous_keys(raw, inv, mode).0
+}
+
 #[doc(hidden)]
 pub fn build_keys_tl_with_inventory(
     raw: &str,

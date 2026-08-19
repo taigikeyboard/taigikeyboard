@@ -84,9 +84,8 @@
 // 中文: spec docs/reports/2026-05-18-v358-refactor-design-spec.md §2 + ⭐ B1/B2/S7。
 
 use crate::shadow::{
-    build_defolded_shadow_lattice, build_partial_prefix_key, build_shadow_lattice,
-    custom_toneless_key, greedy_longest_syllabification, left_anchored_keys_from_lattice,
-    span_min_syllable_count, strip_tones_for_mode,
+    build_continuous_keys, build_partial_prefix_key, custom_toneless_key,
+    greedy_longest_syllabification, span_min_syllable_count, strip_tones_for_mode,
 };
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
@@ -1050,36 +1049,17 @@ pub(crate) fn assemble_candidates(
         // 中文:   inv 缺席時退化為空鍵 + walker 跳過(優雅退化,與 A2 前同)。
         let (keys, shadow_lattice) = match inv {
             Some(inv) => {
-                let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-                let mut keys = left_anchored_keys_from_lattice(
-                    &shadow,
-                    &shadow_to_raw_end,
-                    &lattice,
-                    inv,
-                    mode,
-                );
-                // De-fold enumerate (TPS-only; `INVARIANT_TPS_DEFOLD_ENUMERATE`
-                // §34) — surface a word hidden when the auto-correct folded a
-                // coda that is really the next syllable's onset (雞胸 ke-hing).
-                // Rationale + scope live on `build_defolded_shadow_lattice`.
-                // APPENDED after the base keys so a true `(roman, hanji, span)`
-                // collision keeps the natural reading (`dedupe_by_roman_hanji_span`
-                // keeps the earlier index on a source-rank tie). The walker
-                // slot-0 below uses the BASE lattice only — de-fold is span-local,
-                // not slot-0, this round.
-                // 中文: de-fold enumerate(TPS-only §34;rationale 見 build_defolded_shadow_lattice)。
-                // 中文:   append 在 base 後 → 真碰撞時自然讀法勝(dedupe 保留較早 index);walker slot-0 仍用 base lattice。
-                if let Some((d_shadow, d_shadow_to_raw_end, d_lattice)) =
-                    build_defolded_shadow_lattice(raw, inv, mode)
-                {
-                    keys.extend(left_anchored_keys_from_lattice(
-                        &d_shadow,
-                        &d_shadow_to_raw_end,
-                        &d_lattice,
-                        inv,
-                        mode,
-                    ));
-                }
+                // Base reading's keys + every alternate reading's
+                // (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35, TPS-only) — a word can
+                // be hidden because the per-keystroke auto-correct picked the
+                // wrong one of two locally-indistinguishable glyph readings: a
+                // coda that is really the next syllable's onset (雞胸 ke-hing),
+                // an onset-form nasal that is really a terminal nasal (毋是
+                // m̄-sī), or both at once (考卷 khó-kǹg). Append order and walker
+                // scope live on `build_continuous_keys`.
+                // 中文: base 讀法 + 各替代讀法的鍵(§35,TPS-only);append 順序與 walker 範圍見 build_continuous_keys。
+                let (keys, (shadow, shadow_to_raw_end, lattice)) =
+                    build_continuous_keys(raw, inv, mode);
                 (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
             }
             None => (Vec::new(), None),
