@@ -205,6 +205,11 @@ def _header(headers, name):
     return ""
 
 
+# Deep-link to a single message in the Gmail web UI. `#all/<messageId>` opens the
+# message regardless of which label the user is currently browsing.
+GMAIL_MESSAGE_URL = "https://mail.google.com/mail/u/0/#all/{msg_id}"
+
+
 def _is_noise(frm, subj):
     blob = (frm + " " + subj).lower()
     return any(k.lower() in blob for k in PAYMENT_NOISE)
@@ -240,6 +245,7 @@ def cmd_list(tok, n):
         print(f"    date: {date}")
         print(f"    from: {frm}")
         print(f"    subj: {subj}")
+        print(f"    link: {GMAIL_MESSAGE_URL.format(msg_id=m['id'])}")
         print(f"    snip: {full.get('snippet', '')[:200]}")
     print(f"\n({shown} unfixed report(s); {skipped} payment-noise skipped)")
 
@@ -259,6 +265,8 @@ def cmd_body(tok, msg_id):
     print("From:   ", _header(headers, "From"))
     print("Subject:", _header(headers, "Subject"))
     print("Date:   ", _header(headers, "Date"))
+    print("Id:     ", msg_id)
+    print("Link:   ", GMAIL_MESSAGE_URL.format(msg_id=msg_id))
     print("-" * 60)
     out = []
     _walk_plaintext(full.get("payload", {}), out)

@@ -37,6 +37,32 @@ python3 .claude/skills/bug-triage/gmail_cli.py auth           # verify/refresh t
 python3 .claude/skills/bug-triage/gmail_cli.py labels         # debug: list all labels + ids
 ```
 
+## Mail traceability (mandatory in any written output)
+
+USER reads the reports in Gmail, so every bug item written to a doc, memory file, PR body, or
+chat summary MUST carry enough to find the mail without re-running the CLI. Record all five:
+
+| Field | Where it comes from |
+|---|---|
+| Sender name + address | `from:` line of `list` / `body` |
+| Subject (verbatim, incl. the `(vX.Y.Z)` suffix) | `subj:` |
+| Date | `date:` |
+| Gmail message id | `id=` |
+| Gmail deep link | `link:` — `https://mail.google.com/mail/u/0/#all/<id>` |
+
+`list` and `body` both print the deep link. A Gmail search string
+(`from:<address> subject:"<subject>"`) is a useful sixth field for backlog tables — it survives
+a message id changing hands better than the link does.
+
+Reference shape: the mail-index table at the top of `docs/reports/user-bug-backlog-2026-08-18.md`.
+Never write a bug item as "zw, 2026-04-21" alone — the sender address and message id are what
+make it findable.
+
+**Also cross-check the reported version against the changelog** before calling an item "already
+fixed": if the fix PR shipped in a release **older than** the reported version, the reporter
+already had it and the item is live, not a dogfood leftover. (2026-08-19: this refuted the
+"already fixed" premise on two backlog items.)
+
 ## Triage flow
 
 1. `list` → show unfixed reports (date / sender / subject / snippet). End-user reports have subject `台語齒盤 …回報 (vX.Y.Z)`.
