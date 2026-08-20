@@ -21,7 +21,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
 
         let content = try XCTUnwrap(session.presenter.shownContent)
-        XCTAssertFalse(content.labels.isEmpty, "the dictionary has entries for taigi")
+        XCTAssertFalse(content.cells.isEmpty, "the dictionary has entries for taigi")
         XCTAssertEqual(
             session.presenter.selectedIndex,
             0,
@@ -29,18 +29,38 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
-    /// The label and the committed text are one rendering under one settings
+    /// A cell leads with the script the commit leads with, under one settings
     /// snapshot. A bar showing the romanization while the document gets the
-    /// hanji is a visible defect, and the only thing keeping them together is
-    /// that both go through `ComposingManager.documentText(for:)`.
-    func testBarLabels_areWhatCommittingWouldWrite() throws {
+    /// hanji is a visible defect, and what keeps them together is that the cell
+    /// and the commit resolve the swap setting from the same snapshot
+    /// (`ComposingManager.cellContent(for:)` / `documentText(for:)`).
+    ///
+    /// Under the shipped defaults the two are the same string; the general
+    /// rule — the cell leads with the script the commit leads with, whatever
+    /// the output settings — is pinned at the mapping level by
+    /// `CandidateCellContentTests`.
+    func testBarCellPrimary_isWhatCommittingWrites() throws {
         let session = try composedSession()
-        let firstLabel = try XCTUnwrap(session.presenter.shownContent).labels[0]
+        let firstCell = try XCTUnwrap(session.presenter.shownContent).cells[0]
         session.client.clearWrites()
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: " "), client: session.client)
 
-        XCTAssertEqual(session.client.insertedTexts.last, firstLabel)
+        XCTAssertEqual(session.client.insertedTexts.last, firstCell.text)
+    }
+
+    /// The window shows BOTH scripts by default, matching iOS and Android: a
+    /// Taigi word is the `(漢字, 羅馬字)` pair, and a bar showing one of them
+    /// makes different words read identically.
+    func testBarCells_carryBothScriptsByDefault() throws {
+        let session = try composedSession()
+
+        let cells = try XCTUnwrap(session.presenter.shownContent).cells
+
+        XCTAssertTrue(
+            cells.contains { $0.annotation?.isEmpty == false },
+            "taigi has hanji candidates, so some cell must show its other script",
+        )
     }
 
     func testCandidatesAreAnchoredToTheCaret_notToTheStartOfTheMarkedRegion() throws {
@@ -170,7 +190,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testSpace_commitsTheHighlightedCandidate() throws {
         let session = try composedSession()
         session.press(.rightArrow)
-        let highlighted = try XCTUnwrap(session.presenter.shownContent).labels[1]
+        let highlighted = try XCTUnwrap(session.presenter.shownContent).cells[1].text
         session.client.clearWrites()
 
         let handled = try session.controller.handle(
@@ -188,7 +208,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     func testControlDigit_commitsThatSlotOfTheVisiblePage() throws {
         let session = try composedSession()
-        let secondLabel = try XCTUnwrap(session.presenter.shownContent).labels[1]
+        let secondCell = try XCTUnwrap(session.presenter.shownContent).cells[1].text
         session.client.clearWrites()
 
         let handled = try session.controller.handle(
@@ -197,7 +217,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
 
         XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts.last, secondLabel)
+        XCTAssertEqual(session.client.insertedTexts.last, secondCell)
     }
 
     /// A candidate that consumes only part of the buffer is nailed rather than
@@ -213,7 +233,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         for slot in 0 ..< HorizontalPageLayout.pageSize where nailed == nil {
             let session = try composedSession()
             let firstPage = try XCTUnwrap(session.presenter.shownContent)
-            guard slot < firstPage.labels.count else { break }
+            guard slot < firstPage.cells.count else { break }
             session.client.clearWrites()
 
             _ = try session.controller.handle(
@@ -234,7 +254,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             session.presenter.shownContent,
             "the composition is still running, so the user still needs candidates for its tail",
         )
-        XCTAssertNotEqual(tailPage.labels, firstPage.labels, "the tail is a different buffer to segment")
+        XCTAssertNotEqual(tailPage.cells, firstPage.cells, "the tail is a different buffer to segment")
         XCTAssertEqual(session.presenter.selectedIndex, 0, "a fresh list starts on its first candidate")
     }
 

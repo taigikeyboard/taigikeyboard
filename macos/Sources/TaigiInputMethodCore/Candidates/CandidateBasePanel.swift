@@ -235,7 +235,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// forgot one would otherwise fail silently — a window that shows but
     /// never navigates — and the trap turns that into the first keystroke of
     /// development.
-    func updateCandidates(_: [String]) -> CGSize {
+    func updateCandidates(_: [CandidateCellContent]) -> CGSize {
         preconditionFailure("layout subclasses must override updateCandidates")
     }
 

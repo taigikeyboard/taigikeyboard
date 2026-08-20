@@ -48,7 +48,7 @@ final class CandidatePanel: CandidatePresenter {
         ownedBy owner: ComposingSessionToken,
     ) {
         let panel = self.panel(for: settings.candidateLayout)
-        let panelSize = panel.updateCandidates(content.labels)
+        let panelSize = panel.updateCandidates(content.cells)
         let presented = panel.present(
             panelSize: panelSize,
             anchoredTo: caretRect,

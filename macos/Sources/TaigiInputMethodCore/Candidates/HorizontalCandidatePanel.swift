@@ -10,9 +10,9 @@ import AppKit
 /// at most nine cells, so rebuilding the visible page on every change is
 /// cheaper to reason about than keeping every page's views alive and hidden.
 final class HorizontalCandidatePanel: CandidateBasePanel {
-    private var labels: [String] = []
+    private var cells: [CandidateCellContent] = []
     private var pageLayout = HorizontalPageLayout(pages: [])
-    // `selectedIndex` (base): always a valid index into `labels` while the
+    // `selectedIndex` (base): always a valid index into `cells` while the
     // list is non-empty — this input method selects the first candidate of
     // every fresh list, so the upstream `-1` suspended state is unreachable.
     private var currentPage = 0
@@ -26,7 +26,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         return view
     }()
 
-    override var isEmpty: Bool { labels.isEmpty }
+    override var isEmpty: Bool { cells.isEmpty }
 
     // MARK: - Content
 
@@ -36,10 +36,10 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     /// The selection resets rather than being preserved by index: a fresh
     /// keystroke re-ranks the whole list, so holding position would leave the
     /// highlight on an unrelated word that happens to have landed there.
-    override func updateCandidates(_ newLabels: [String]) -> CGSize {
-        labels = Array(newLabels.prefix(Self.maxDisplayCandidates))
+    override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
+        cells = Array(newCells.prefix(Self.maxDisplayCandidates))
         pageLayout = HorizontalPageLayout.pack(
-            widths: labels.map(CandidateItemView.measureWidth),
+            widths: cells.map(CandidateItemView.measureWidth),
             slotWidth: CandidateItemView.baseWidth,
         )
         selectedIndex = 0
@@ -50,7 +50,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     /// Empties the window so nothing can be selected or committed from it —
     /// hiding must drop the state, not just the pixels.
     override func clear() {
-        labels = []
+        cells = []
         pageLayout = HorizontalPageLayout(pages: [])
         selectedIndex = 0
         currentPage = 0
@@ -67,7 +67,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     }
 
     override func navigate(_ direction: CandidateNavigation) {
-        guard !labels.isEmpty else { return }
+        guard !cells.isEmpty else { return }
         guard let target = pageLayout.target(for: direction, from: selectedIndex) else { return }
         select(target)
     }
@@ -75,7 +75,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     /// Selects `index`, turning to its page when it lives on another one — a
     /// page turn changes the window's width, so the frame is re-anchored.
     func select(_ index: Int) {
-        guard labels.indices.contains(index),
+        guard cells.indices.contains(index),
               let targetPage = pageLayout.pageIndex(containing: index) else { return }
         selectedIndex = index
         if targetPage != currentPage {
@@ -105,7 +105,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
             item.highlightColor = highlightColor
             item.configure(
                 slotLabel: CandidateItemView.slotLabels[position],
-                candidate: labels[slot.candidateIndex],
+                cell: cells[slot.candidateIndex],
             )
             item.frame = NSRect(x: x, y: 0, width: slot.width, height: itemHeight)
             item.onClick = { [weak self, weak item] in

@@ -322,6 +322,16 @@ final class ComposingManager {
         CandidateDocumentText.text(for: candidate, settings: settingsProvider.current)
     }
 
+    /// How the candidate bar renders `candidate` — both scripts, under the
+    /// settings in force right now.
+    ///
+    /// Alongside `documentText` rather than derived from it: the cell splits
+    /// the two scripts into columns while the document string may bracket them
+    /// into one, so they share the settings snapshot, not the formatting.
+    func cellContent(for candidate: ContinuousCandidate) -> CandidateCellContent {
+        CandidateCellContent.cell(for: candidate, settings: settingsProvider.current)
+    }
+
     /// Commits `candidate`, which must come from the `fetchCandidates()` call
     /// that produced the list the user is looking at.
     ///
