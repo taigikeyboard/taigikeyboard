@@ -1,4 +1,5 @@
 @testable import TaigiKeyboard
+import KeyboardKit
 import XCTest
 
 /// Pins `Callouts.TPSCallouts.calloutChars` — the TPS long-press callout
