@@ -355,6 +355,12 @@ class PrefHelper(
         get() = cached(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "phahTaigi")
         set(value) = applyKeyboardLayoutType(value)
 
+    // Single definition of "TPS is active" — [TpsCascade] keeps the two prefs
+    // in sync, but any transient divergence should read as TPS everywhere
+    // (popup, candidate strip) instead of per-site copies of this OR.
+    val isTpsLayout: Boolean
+        get() = inputMode == "tps" || keyboardLayoutType == "tps"
+
     // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS.
     //
     // Intentionally NOT a `var by preference(...)` delegate: writes route through the unified

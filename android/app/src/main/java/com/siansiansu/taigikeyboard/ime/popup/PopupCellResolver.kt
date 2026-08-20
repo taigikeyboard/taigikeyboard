@@ -4,6 +4,7 @@ import android.content.res.Resources
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
+import com.siansiansu.taigikeyboard.ime.text.key.isTpsGlyphWithPopup
 import com.siansiansu.taigikeyboard.ime.text.keyboard.computeKeyLetter
 
 /**
@@ -48,4 +49,28 @@ internal fun buildPopupCells(
                 useCustomTypeface = true,
             )
         }
+    }
+
+/**
+ * Prepends the key's own glyph to a TPS glyph key's popup list so long-press
+ * still offers the base letter ({ㄗ, ㄐ} instead of {ㄐ}). Gate: effective TPS
+ * layout + character key + code 0 (label-driven TPS glyphs — excludes the
+ * `，` punctuation key, code 65292) + existing popup variants. The base cell
+ * is the key itself minus its popups, so per-key fields (type, variation)
+ * carry over. Returns a copy; the layout's [KeyData.popup] is a shared
+ * MutableList and must not be mutated.
+ */
+internal fun tpsPopupWithBaseGlyph(
+    data: KeyData,
+    isTpsLayout: Boolean,
+): KeyData =
+    if (isTpsLayout && data.isTpsGlyphWithPopup()) {
+        data.copy(
+            popup = ArrayList<KeyData>(data.popup.size + 1).apply {
+                add(data.copy(popup = mutableListOf()))
+                addAll(data.popup)
+            },
+        )
+    } else {
+        data
     }

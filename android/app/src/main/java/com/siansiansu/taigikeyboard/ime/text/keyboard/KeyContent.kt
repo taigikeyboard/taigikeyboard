@@ -37,6 +37,7 @@ import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
+import com.siansiansu.taigikeyboard.ime.text.key.isTpsGlyphWithPopup
 import com.siansiansu.taigikeyboard.ime.text.key.KeyLabelCaseCache
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
@@ -264,10 +265,7 @@ private fun LabelContent(
         val centerX = w / 2.0f
         val centerY = h / 2.0f + (perKeyTextSize - labelPaint.descent()) / 2.0f
 
-        val isTpsWithPopup = keyboardLayoutType == "tps" &&
-            data.type == KeyType.CHARACTER &&
-            data.code == 0 &&
-            data.popup.isNotEmpty()
+        val isTpsWithPopup = keyboardLayoutType == "tps" && data.isTpsGlyphWithPopup()
 
         drawIntoCanvas { compose ->
             val nativeCanvas = compose.nativeCanvas
