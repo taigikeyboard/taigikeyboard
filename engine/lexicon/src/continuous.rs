@@ -447,6 +447,23 @@ pub struct ContinuousFetchCtx<'a> {
     // 中文:   (user_frequency.db commit key 跨 mode 合一)。FST key 前綴上游已決,此欄位
     // 中文:   不影響字典 lookup。
     pub mode: phonetics::InputMode,
+    /// A3 (§41) — the typed buffer's fused TPS notone body when its TAIL
+    /// syllable was closed by the keyboard's space (so the user pinned
+    /// that syllable's unmarked tone: 1 for an open rime, 4 for a stop
+    /// coda), else `None`.
+    ///
+    /// Only whole-buffer candidate sources need it: `custom_dictionary.db`
+    /// entries are synthesized at `(0, raw_len)` with no per-key body of
+    /// their own, so the tone check has nothing else to align against.
+    /// Dictionary hits align against their own matched FST key instead.
+    /// `None` for every non-TPS mode and for a TPS buffer that does not
+    /// end on a space-closed unmarked syllable — the legacy all-tones
+    /// behavior.
+    // 中文: A3 (§41) — 當輸入尾端音節由鍵盤空白關閉(使用者釘住該音節的無調號調:
+    // 中文:   開音節 1 / 入聲尾 4)時,帶入整個 buffer 的 fused TPS 去調 body,否則 None。
+    // 中文:   只有 whole-buffer 來源(custom 詞條在 (0, raw_len) 合成、無自身 key body)需要它;
+    // 中文:   字典命中以自己的 matched FST key 對齊。非 TPS / 尾端非空白關閉 → None(舊全聲調行為)。
+    pub tps_space_pinned_body: Option<&'a str>,
 }
 
 /// v3.5.9 D8 — test-only entry: fetch every dictionary candidate
@@ -563,6 +580,11 @@ pub fn fetch_candidates_for_endings(
         // but the field is non-`Option` and must be set.
         // 中文: B-4 — mode 沿用上游;此 entry 無 custom 故下游 canonicalize 不會觸發,但欄位必填。
         mode: ctx.mode,
+        // A3 (§41) — carried through for symmetry. This legacy entry
+        // takes pre-computed `endings` rather than a shadow pipeline, so
+        // it has no space-pin signal of its own to derive.
+        // 中文: A3 (§41) — 沿用上游以保持對稱;此 legacy 入口吃現成 endings,自身無空白釘定訊號可推。
+        tps_space_pinned_body: ctx.tps_space_pinned_body,
     };
     fetch_candidates_for_keys(&keys, input.len() as u32, &inner)
 }
@@ -671,12 +693,66 @@ fn for_each_exact_reading(
     }
 }
 
+/// A3 (§41) — the two tones TPS writes with no mark: 1 on an open rime,
+/// 4 on a stop coda (ㆴ/ㆵ/ㆻ/ㆷ). Pressing the keyboard's space closes a
+/// syllable, and an unmarked closed syllable can only be one of these
+/// two, so they are exactly the tones a space-pinned candidate may carry.
+/// Tone 8 shares tone 4's coda but writes a dot, so it is excluded here —
+/// that is the 一 (`tsit8`) vs 這 (`tsit4`) split the bug report hit.
+// 中文: A3 (§41) — TPS 不寫調號的兩個調:開音節 1、入聲尾 (ㆴㆵㆻㆷ) 4。空白關閉音節,
+// 中文:   無調號的已收音節只能是這兩個。第 8 調共用入聲尾但帶點,故排除 — 即 一(tsit8)
+// 中文:   與 這(tsit4) 的分野。
+fn is_unmarked_tps_tone(tone: char) -> bool {
+    matches!(tone, '1' | '4')
+}
+
+/// A3 (§41) — does `reading` satisfy the space pin implied by `tps_body`?
+/// True when the reading has a syllable boundary exactly at the end of
+/// `tps_body` AND the syllable ending there carries an unmarked tone
+/// ([`is_unmarked_tps_tone`]).
+///
+/// `tps_body` is either a full `tps:`-family FST key — the MATCHED key on
+/// the exact / walker dictionary paths, since §35 substitutions
+/// reconstruct to the matched form and the literal query key would reject
+/// legitimate ambiguity-family hits — or a bare body, which is the shape
+/// the whole-buffer sources (custom entries, the walker's custom override)
+/// carry. A key in any other family passes through: TL/POJ tones are
+/// ASCII digits, already pinned by the verbatim toned key (§17).
+///
+/// A missing boundary is a REJECT, not a pass: the user closed a syllable
+/// there, so a reading that runs through that point mid-syllable is not
+/// the word they typed.
+///
+/// `reading` is a canonical TL reading — `DictionaryRecord.tl` for a
+/// dictionary hit, `CustomEntry.roman` for a custom entry.
+// 中文: A3 (§41) — reading 是否符合 tps_body 所釘的空白調:讀法必須在 tps_body 結尾
+// 中文:   剛好有音節邊界,且該音節為無調號調。tps_body 可為完整 tps: 鍵(dict 路徑用 MATCHED key
+// 中文:   — §35 替換讀法會重建成 matched 形,用字面查詢 key 會誤殺),或裸 body(whole-buffer
+// 中文:   來源:custom 詞條、walker custom override)。其他家族前綴直接通過(TL/POJ 走數字調,§17)。
+// 中文:   邊界不存在即拒絕 — 使用者在該處收了音節。reading 為 canonical TL(dict 用 record.tl,
+// 中文:   custom 用 entry.roman)。
+pub fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
+    let body = match tps_body.strip_prefix("tps:") {
+        Some(body) => body,
+        // Bare body — the whole-buffer form, TPS by construction.
+        None if !tps_body.contains(':') => tps_body,
+        // Another FST family (`tl:` / `poj:` / `hanzi:`) — never pinned.
+        None => return true,
+    };
+    if body.chars().any(phonetics::is_tps_tone_mark) {
+        // Marked body — the verbatim toned key already filtered by tone.
+        // 中文: 已含調號 — verbatim toned key 已按聲調過濾。
+        return true;
+    }
+    phonetics::tps_notone_prefix_boundary_tone(reading, body).is_some_and(is_unmarked_tps_tone)
+}
+
 pub fn fetch_candidates_for_keys(
     keys: &[(ConsumedSpan, String)],
     raw_len: u32,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
-    fetch_candidates_for_keys_with_barriers(keys, &[], raw_len, ctx)
+    fetch_candidates_for_keys_with_barriers(keys, &[], &[], raw_len, ctx)
 }
 
 /// [`fetch_candidates_for_keys`] plus per-key barrier metadata.
@@ -693,6 +769,7 @@ pub fn fetch_candidates_for_keys(
 pub fn fetch_candidates_for_keys_with_barriers(
     keys: &[(ConsumedSpan, String)],
     tps_final_only: &[Vec<usize>],
+    tps_tone_pinned: &[bool],
     raw_len: u32,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
@@ -715,6 +792,12 @@ pub fn fetch_candidates_for_keys_with_barriers(
             .get(key_index)
             .map(|offsets| offsets.as_slice())
             .unwrap_or(&[]);
+        // A3 (§41) — this span ends on the keyboard space the shadow
+        // stripped, so only its unmarked tone may surface. A short or
+        // empty slice means "no pin", the legacy all-tones shape.
+        // 中文: A3 (§41) — 此 span 結尾為被剝除的鍵盤空白,只許其無調號調;
+        // 中文:   slice 空/短 = 無釘定(舊全聲調形)。
+        let tone_pinned = tps_tone_pinned.get(key_index).copied().unwrap_or(false);
         for_each_exact_reading(ctx.prefix_index, key, final_only, |matched_key, rowid| {
             let Some(record) = ctx.dict.record(rowid) else {
                 return;
@@ -730,6 +813,17 @@ pub fn fetch_candidates_for_keys_with_barriers(
             // §35 — validated against the MATCHED key: a substituted
             // reading reconstructs to the matched key, not the query key.
             if !matches_continuous_toneless_key(matched_key, &record.tl) {
+                return;
+            }
+            // A3 (§41) — space-pinned span: drop a reading whose syllable
+            // at the pinned boundary is not the space's unmarked tone
+            // (`ㄒㄧ`␣ keeps si1, drops si2/5/7; `ㄐㄧㆵ`␣ keeps tsit4,
+            // drops tsit8). Validated against the MATCHED key so §35
+            // substitution hits reconstruct correctly.
+            // 中文: A3 (§41) — 空白釘定的 span:丟掉釘定邊界上非無調號調的讀法
+            // 中文:   (ㄒㄧ␣ 留 si1 丟 si2/5/7;ㄐㄧㆵ␣ 留 tsit4 丟 tsit8)。
+            // 中文:   以 MATCHED key 驗證,§35 替換命中才對得起來。
+            if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
                 return;
             }
             // Full-syllable path always emits `COVERAGE_KIND_FULL` — by
@@ -768,6 +862,20 @@ pub fn fetch_candidates_for_keys_with_barriers(
     // 中文: Item 12 — custom 命中合成 full-buffer 候選 (is_custom→rank 0),append 在 dict.bin 之後;
     // 中文:   (roman,hanji) 碰撞時 custom rank 0 必勝 (見下方 dedupe)。
     for entry in ctx.custom {
+        // A3 (§41) — a custom entry is synthesized whole-buffer, so the
+        // space pin applies to it exactly as to a dictionary hit: with the
+        // tail syllable space-closed, an entry whose reading carries a
+        // marked tone there is not what the user asked for. Skipping this
+        // would let the "only tone 1/4" promise leak through the custom
+        // source, which is appended AFTER dictionary filtering.
+        // 中文: A3 (§41) — custom 詞條以整個 buffer 合成,空白釘定同樣適用;
+        // 中文:   尾端音節被空白收掉時,讀法在該處帶調號的詞條不是使用者要的。
+        // 中文:   不做這層,「只剩 1/4 調」的承諾會從 custom 來源漏掉(它接在字典過濾之後)。
+        if let Some(pinned_body) = ctx.tps_space_pinned_body {
+            if !reading_passes_space_pin(pinned_body, &entry.roman) {
+                continue;
+            }
+        }
         out.push(custom_entry_to_candidate(
             entry,
             raw_len,
@@ -1062,6 +1170,18 @@ pub fn fetch_partial_prefix_candidates_unbounded(
                     continue;
                 }
             }
+            // A3 (§41) — space-pinned tail: a strict-prefix extension is
+            // only eligible when the syllable the space closed carries the
+            // unmarked tone. Checked against the TYPED body (the pin
+            // point), not the matched key — the matched key runs past the
+            // pin into the extension's later syllables.
+            // 中文: A3 (§41) — 尾端被空白釘定時,嚴格前綴延伸候選必須在該音節為無調號調。
+            // 中文:   以「輸入 body」(釘定點)檢查,不用 matched key — 後者已延伸到後續音節。
+            if let Some(pinned_body) = ctx.tps_space_pinned_body {
+                if !reading_passes_space_pin(pinned_body, &record.tl) {
+                    continue;
+                }
+            }
             let effective = DictionaryReader::effective_source_bitmask(
                 record.bitmask,
                 record.kautian_subtag,
@@ -1088,6 +1208,17 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // before the sort, identical to `fetch_candidates_for_keys`.
     // 中文: Item 12 — custom 命中併入 partial-prefix,標 PARTIAL_PREFIX 不標 FULL,保 §15.5 排序不變式。
     for entry in ctx.custom {
+        // A3 (§41) — same pin as the full-syllable path (see there). The
+        // typed body is a strict prefix of a partial-prefix entry's
+        // reading, so the check lands on the syllable the space closed,
+        // not on the entry's own tail.
+        // 中文: A3 (§41) — 與完整音節路徑同一釘定;partial-prefix 詞條的讀法以輸入 body 為
+        // 中文:   嚴格前綴,故檢查落在空白收掉的那個音節,而非詞條自身尾音節。
+        if let Some(pinned_body) = ctx.tps_space_pinned_body {
+            if !reading_passes_space_pin(pinned_body, &entry.roman) {
+                continue;
+            }
+        }
         out.push(custom_entry_to_candidate(
             entry,
             raw_len,
@@ -1154,6 +1285,7 @@ pub fn best_candidate_for_key(
     best_candidate_for_key_with_barriers(
         key,
         &[],
+        false,
         consumed_span,
         freq_map,
         now_ms,
@@ -1175,6 +1307,7 @@ pub fn best_candidate_for_key(
 pub fn best_candidate_for_key_with_barriers(
     key: &str,
     tps_final_only: &[usize],
+    tone_pinned: bool,
     consumed_span: ConsumedSpan,
     freq_map: &FrequencyMap,
     now_ms: i64,
@@ -1187,12 +1320,15 @@ pub fn best_candidate_for_key_with_barriers(
     // §35 — the walker hydrates through the SAME reading resolution as
     // the span-local fetch (Codex pre-impl BLOCK 3): an edge the expanded
     // segmenter admitted must find its dictionary payload, or the two
-    // layers split authority. Walker edges are syllable-local and never
-    // cross a separator (the segmenter enforces that), so no barrier
-    // offsets apply here.
+    // layers split authority. A multi-syllable edge MAY span a stripped
+    // separator (§31 cross-space phrase edges), which is why the caller
+    // computes and passes `tps_final_only` in edge coordinates rather than
+    // this fn assuming there are no barriers (stale claim corrected by
+    // Codex post-impl 2026-08-20).
     // 中文: walker 與 span-local fetch 走同一讀法解析(Codex BLOCK 3)— 展開後的
-    // 中文:   segmenter edge 必須撈得到字典 payload。walker edge 為音節局部、
-    // 中文:   不跨分隔符(segmenter 已擋),故無 barrier 偏移。
+    // 中文:   segmenter edge 必須撈得到字典 payload。多音節 edge **可以**跨被剝除的分隔符
+    // 中文:   (§31 跨空白整詞 edge),故 tps_final_only 由呼叫端以 edge 座標算好傳入,
+    // 中文:   而非在此假設「無 barrier」(舊敘述由 Codex post-impl 2026-08-20 更正)。
     for_each_exact_reading(prefix_index, key, tps_final_only, |matched_key, rowid| {
         let Some(record) = dict.record(rowid) else {
             return;
@@ -1207,6 +1343,18 @@ pub fn best_candidate_for_key_with_barriers(
         // filter fires on `poj:` keys. §35 — validated against the
         // MATCHED key (see `for_each_exact_reading`).
         if !matches_continuous_toneless_key(matched_key, &record.tl) {
+            return;
+        }
+        // A3 (§41) — this walker edge ends on the keyboard space the shadow
+        // stripped, so slot 0 must be synthesized from the pinned unmarked
+        // tone only. Without it the span-local list and the walker's
+        // whole-sentence slot 0 would disagree and a wrong-tone word would
+        // reappear at index 0 — the same split the explicit-tone fix (§17)
+        // closed for TL/POJ digits.
+        // 中文: A3 (§41) — 此 walker edge 結尾為被剝除的鍵盤空白,slot 0 只能由釘定的
+        // 中文:   無調號調合成;否則 span-local 列與 walker slot 0 分歧,錯調字會在 index 0
+        // 中文:   復活(同 §17 為 TL/POJ 數字調關掉的分歧)。
+        if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
             return;
         }
         let effective = DictionaryReader::effective_source_bitmask(

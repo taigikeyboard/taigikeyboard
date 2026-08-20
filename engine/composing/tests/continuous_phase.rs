@@ -840,9 +840,10 @@ fn commit_raw_under_continuous_with_translate_swapped_unchanged() {
 
 #[test]
 fn commit_raw_under_continuous_tps_passes_through_verbatim() {
-    // TPS pre-edit is rendered as-is (derived_display short-circuits TPS to
-    // the raw bopomofo string). Enter commits the same string.
-    // 中文: TPS 直接以原樣作為 derived display;Enter 提交一致字串。
+    // TPS glyphs are rendered as-is (derived_display short-circuits TPS to
+    // the raw bopomofo string, minus separator markers). Enter commits the
+    // same string.
+    // 中文: TPS glyph 原樣作為 derived display(分隔記號除外);Enter 提交一致字串。
     let mut e = Engine::new();
     e.apply(
         Intent::Start {
@@ -861,6 +862,119 @@ fn commit_raw_under_continuous_tps_passes_through_verbatim() {
     };
     assert_eq!(nw.roman, "ㄍㄨㄚˋ");
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
+}
+
+// §41 — consuming the trailing separator marker along with the glyphs makes
+// the commit FINAL: no phantom one-space buffer survives. This pins the
+// transition half of the contract (given full consumption, the engine leaves
+// Continuous); that the emitted candidate's span actually REACHES raw len is
+// pinned end-to-end in `tps_space_pinned_tone.rs` and at the offset-map level
+// in `shadow.rs`.
+// 中文: §41 — 尾端分隔記號連同 glyph 一起被吃掉 → commit 為 final,不留幽靈單空白 buffer。
+// 中文:   此測試釘的是 transition 那一半(整段消耗後引擎離開 Continuous);候選 span 真的
+// 中文:   到達 raw 長度,由 tps_space_pinned_tone.rs(端對端)與 shadow.rs(offset map)釘。
+#[test]
+fn full_span_commit_consumes_the_trailing_separator_marker() {
+    let raw = "ㄒㄧ ";
+    let mut e = engine_in_continuous(raw);
+    let resp = e.apply(
+        Intent::CommitContinuous {
+            display_text: "詩".to_string(),
+            canonical_text: String::new(),
+            association_tl: String::new(),
+            consumed_bytes: raw.len(),
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    // Final commit → the engine leaves Continuous entirely.
+    assert_eq!(e.snapshot_state().phase, Phase::Idle);
+    assert!(
+        resp.effect.iter().any(|ef| matches!(
+            ef.kind.as_ref().unwrap(),
+            Kind::CommitTextReplacingPreedit(_)
+        )),
+        "final commit must replace the preedit, got {:?}",
+        resp.effect
+    );
+}
+
+// §41 — the marker must not reach the document from the BARE-`Composing`
+// commit path either. Platforms promote to Continuous after every mutation,
+// so this arm is off the normal UX path, but the engine's contract cannot
+// rest on the phase a caller happens to be in (Codex post-impl BLOCK
+// 2026-08-21 — this arm used to commit `raw` verbatim).
+// 中文: §41 — 裸 Composing 的 commit 路徑同樣不可把記號送進文件。平台每次變動後都升
+// 中文:   Continuous,此 arm 不在正常 UX 路徑上,但引擎契約不能靠「呼叫端剛好在哪個 phase」。
+#[test]
+fn commit_raw_under_bare_composing_tps_hides_the_separator_marker() {
+    let mut e = Engine::new();
+    e.apply(
+        Intent::Start {
+            text: "ㄍㄠ ㄉㄞ ".to_string(),
+        },
+        &config_tl(),
+    );
+    // NO EnterContinuous — commit straight out of `Phase::Composing`.
+    let resp = e.apply(Intent::CommitRaw, &config_tl());
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(commit.text, "ㄍㄠㄉㄞ");
+}
+
+// §41 — the terminal NextWord effect keys the association on the committed
+// word, so its romanization must be marker-free too: a row keyed `ㄍㄠ␣ㄉㄞ`
+// would never be reconstructed by a later lookup of `ㄍㄠㄉㄞ`.
+// 中文: §41 — terminal NextWord 以送出的詞建立關聯,羅馬字欄同樣不可帶記號;
+// 中文:   鍵成 ㄍㄠ␣ㄉㄞ 的列,之後查 ㄍㄠㄉㄞ 永遠重建不出來。
+#[test]
+fn terminal_nextword_roman_drops_the_separator_marker() {
+    let mut e = Engine::new();
+    e.apply(
+        Intent::Start {
+            text: "ㄍㄠ ㄉㄞ ".to_string(),
+        },
+        &config_tl(),
+    );
+    e.apply(Intent::EnterContinuous, &config_tl());
+    let resp = e.apply(Intent::CommitRaw, &config_tl());
+    let nw = resp
+        .effect
+        .iter()
+        .find_map(|ef| match ef.kind.as_ref().unwrap() {
+            Kind::NextWordWordSelected(nw) => Some(nw),
+            _ => None,
+        })
+        .expect("terminal NextWordWordSelected");
+    assert_eq!(nw.text, "ㄍㄠㄉㄞ");
+    assert_eq!(nw.roman, "ㄍㄠㄉㄞ");
+}
+
+// §41 — the keyboard's tone-1 / boundary space is a marker, not text: it
+// stays in the raw buffer (the lattice barrier and the §41 tone pin both
+// read it) but must never reach the user — not in the pre-edit, not in what
+// Enter commits.
+// 中文: §41 — 鍵盤的第一調/邊界空白是記號不是字:留在 raw(lattice barrier 與 §41 釘調都讀它),
+// 中文:   但不可到達使用者 — preedit 不顯示,Enter 也不送出。
+#[test]
+fn commit_raw_under_continuous_tps_hides_the_separator_marker() {
+    let mut e = Engine::new();
+    e.apply(
+        Intent::Start {
+            text: "ㄍㄠ ㄉㄞ ".to_string(),
+        },
+        &config_tl(),
+    );
+    e.apply(Intent::EnterContinuous, &config_tl());
+    let resp = e.apply(Intent::CommitRaw, &config_tl());
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(
+        commit.text, "ㄍㄠㄉㄞ",
+        "interior + trailing separator markers must not be committed"
+    );
 }
 
 #[test]

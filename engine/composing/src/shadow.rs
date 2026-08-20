@@ -129,8 +129,12 @@ fn span_is_fully_toned_ascii(span: &str) -> bool {
 /// keyboard space separator is stripped upstream by [`build_separator_shadow`])
 /// and tone-4 is a bare stop-coda glyph (ㆴㆵㆻㆷ, part of the body, NOT in
 /// `is_tps_tone_mark`); neither has a distinguishing `tps:<tps_num>` key
-/// (`tps_num == tps_notone`), so surfacing all tones is the only correct
-/// behavior for them.
+/// (`tps_num == tps_notone`), so the toneless key is the only key they can
+/// take. A3 (§41) narrows what that means at the CANDIDATE layer: when the
+/// span ends on the stripped keyboard space, the same toneless lookup runs
+/// but the results are filtered to the unmarked tone
+/// ([`span_end_pins_unmarked_tone`]). Surfacing all tones stays correct only
+/// for a tone-1/4 span the user has NOT closed with a space.
 ///
 /// **Same text-only limitation as [`span_is_fully_toned_ascii`]**: with no
 /// inventory it cannot split a fused multi-syllable body, so a tone-1/4
@@ -331,6 +335,43 @@ fn lattice_from_canonical_with_barriers(
         }
     }
     barriers.sort_unstable();
+    // §41 — consume a TRAILING separator marker into the full-span end.
+    //
+    // `strip_char_shadow_with_barriers` only records map entries for the
+    // characters it KEEPS, so an interior space is swept up by the next
+    // glyph's entry (`build_separator_shadow_tps_strips_space_and_maps_to_raw`
+    // pins that) but a TRAILING one falls past the last entry: `ㄒㄧ␣` maps
+    // its full span to raw 6 of 7 bytes. `commit_continuous` then keeps
+    // `pending[consumed_bytes..]` — a lone `" "` the user never sees (the
+    // display seam hides it) but that leaves the engine composing a phantom
+    // buffer: the next backspace deletes the invisible marker, the
+    // final-commit test misreads, and the NextWord terminal segment can get
+    // an empty display.
+    //
+    // Fixed HERE, after the barrier merge, rather than inside the shared
+    // strip primitive: that primitive also serves the 連字 layer, where a
+    // trailing hyphen MUST stay pending
+    // (`build_hyphen_shadow_trailing_hyphen_is_not_consumed`), and moving the
+    // endpoint earlier would shift the hyphen-barrier `rposition` projection
+    // above. Barrier offsets, lattice edges and `key_final_only_offsets` are
+    // all untouched — only the full-span shadow→raw endpoint moves.
+    // 中文: §41 — 把尾端的分隔記號併進整段 span 的終點。strip 原語只為保留字元記 map,
+    // 中文:   中間空白由下一個 glyph 的 entry 帶過(既有測試釘住),尾端空白卻落在最後一個
+    // 中文:   entry 之外(ㄒㄧ␣ 整段只對到 7 bytes 中的 6)。commit 於是留下一個 " " —
+    // 中文:   顯示層看不到,卻讓引擎停在幽靈組字(下次退格刪隱形記號、final-commit 判斷失準、
+    // 中文:   NextWord 末段可能拿到空 display)。
+    // 中文:   修在 barrier 合併之後而非共用 strip 原語內:該原語也服務連字層,尾端連字
+    // 中文:   必須留 pending,且提前改終點會位移上面 hyphen barrier 的 rposition 投影。
+    // 中文:   barrier 座標、lattice edge、key_final_only_offsets 全不變,只動整段終點。
+    let mut shadow_to_raw_end = shadow_to_raw_end;
+    if matches!(mode, InputMode::Tps) {
+        let kept_end = hyphenless_to_canonical[shadow_to_hyphenless[shadow.len()]];
+        if kept_end < canonical.len() && canonical[kept_end..].chars().all(|c| c == ' ') {
+            if let Some(full_span_end) = shadow_to_raw_end.last_mut() {
+                *full_span_end = canonical_to_raw_end[canonical.len()];
+            }
+        }
+    }
     // v3.5.9 B-2 — thread `mode` into the lattice builder; the inventory is
     // mode-aware (`SyllableInventory::contains_in(mode, …)`), so a POJ-mode
     // shadow now resolves against the `poj:` family of `syllables.fst` and
@@ -371,10 +412,28 @@ fn lattice_from_canonical_with_barriers(
 pub(crate) struct ContinuousKeys {
     pub keys: Vec<(ConsumedSpan, String)>,
     pub final_only: Vec<Vec<usize>>,
+    /// A3 (§41) — `tone_pinned[i]` marks a key whose span ENDS on a
+    /// stripped TPS keyboard space: the user closed that syllable with
+    /// the space, which in TPS means its unmarked tone (1 for an open
+    /// rime, 4 for a stop coda). The lookup layer keeps only candidates
+    /// whose reading carries that tone at the same syllable boundary.
+    // 中文: A3 (§41) — span 結尾落在被剝除的 TPS 空白上,即使用者以空白關閉該音節
+    // 中文:   (TPS 語意 = 無調號調:開音節 1、入聲尾 4);查詢層據此只留同聲調候選。
+    pub tone_pinned: Vec<bool>,
     pub shadow: String,
     pub shadow_to_raw_end: Vec<usize>,
     pub lattice: Lattice,
     pub barriers: Vec<usize>,
+}
+
+/// The three parallel per-key vectors [`left_anchored_keys_and_restrictions`]
+/// emits, kept together so the indices cannot drift apart at a call site.
+/// [`ContinuousKeys`] carries the same three plus the shadow/lattice base.
+// 中文: 鍵建構器的三組平行向量(索引必須一致,故打包回傳);ContinuousKeys 另含 shadow/lattice 基底。
+pub(crate) struct LeftAnchoredKeys {
+    pub keys: Vec<(ConsumedSpan, String)>,
+    pub final_only: Vec<Vec<usize>>,
+    pub tone_pinned: Vec<bool>,
 }
 
 pub(crate) fn build_continuous_keys(
@@ -384,7 +443,11 @@ pub(crate) fn build_continuous_keys(
 ) -> ContinuousKeys {
     let (shadow, shadow_to_raw_end, lattice, barriers) =
         build_shadow_lattice_with_barriers(raw, inv, mode);
-    let (keys, final_only) = left_anchored_keys_and_restrictions(
+    let LeftAnchoredKeys {
+        keys,
+        final_only,
+        tone_pinned,
+    } = left_anchored_keys_and_restrictions(
         &shadow,
         &shadow_to_raw_end,
         &lattice,
@@ -395,6 +458,7 @@ pub(crate) fn build_continuous_keys(
     ContinuousKeys {
         keys,
         final_only,
+        tone_pinned,
         shadow,
         shadow_to_raw_end,
         lattice,
@@ -433,7 +497,7 @@ pub(crate) fn left_anchored_keys_from_lattice(
     inv: &SyllableInventory,
     mode: InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
-    left_anchored_keys_and_restrictions(shadow, shadow_to_raw_end, lattice, inv, mode, &[]).0
+    left_anchored_keys_and_restrictions(shadow, shadow_to_raw_end, lattice, inv, mode, &[]).keys
 }
 
 /// [`left_anchored_keys_from_lattice`] plus each key's §35 barrier
@@ -449,7 +513,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     inv: &SyllableInventory,
     mode: InputMode,
     barriers: &[usize],
-) -> (Vec<(ConsumedSpan, String)>, Vec<Vec<usize>>) {
+) -> LeftAnchoredKeys {
     // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
     // namespaced into. The lattice itself was already built against the
     // matching `SyllableInventory` family ([`build_shadow_lattice`] →
@@ -509,6 +573,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
 
     let mut out = Vec::with_capacity(lattice.edges().len());
     let mut restrictions: Vec<Vec<usize>> = Vec::with_capacity(lattice.edges().len());
+    let mut tone_pinned: Vec<bool> = Vec::with_capacity(lattice.edges().len());
     for &(start, end) in lattice.edges() {
         if start != 0 {
             continue;
@@ -547,9 +612,98 @@ pub(crate) fn left_anchored_keys_and_restrictions(
             barriers,
             prefix.len() + 1,
         ));
+        tone_pinned.push(span_end_pins_unmarked_tone(
+            &shadow[..end],
+            end,
+            mode,
+            barriers,
+        ));
         out.push(((0u32, raw_end as u32), format!("{prefix}:{body}")));
     }
-    (out, restrictions)
+    LeftAnchoredKeys {
+        keys: out,
+        final_only: restrictions,
+        tone_pinned,
+    }
+}
+
+/// A3 (§41) — the typed buffer's fused TPS notone body when its TAIL
+/// syllable was closed by the keyboard's space, else `None`. This is the
+/// whole-buffer counterpart of [`span_end_pins_unmarked_tone`]: sources
+/// synthesized at `(0, raw_len)` (custom-dictionary entries) and the
+/// partial-prefix extensions carry no span key of their own, so the
+/// lookup layer aligns their readings against this body instead.
+///
+/// Trailing spaces are the pin signal, so they are trimmed off first; a
+/// tail that already carries a tone mark is NOT pinned (it took the
+/// verbatim toned key). The body itself is the buffer with every space
+/// and tone mark removed — byte-identical in shape to the `tps:<notone>`
+/// FST family the readings reconstruct into.
+// 中文: A3 (§41) — 尾端音節被鍵盤空白關閉時,回傳整個 buffer 的 fused TPS 去調 body,否則 None。
+// 中文:   為 span_end_pins_unmarked_tone 的 whole-buffer 對應:custom 詞條 / partial-prefix 延伸
+// 中文:   沒有自己的 span key,查詢層以此 body 對齊其讀法。尾端已帶調號則不釘(走 verbatim toned key)。
+pub(crate) fn tps_space_pinned_body(raw: &str, mode: InputMode) -> Option<String> {
+    if !matches!(mode, InputMode::Tps) {
+        return None;
+    }
+    let trimmed = raw.trim_end_matches(' ');
+    if trimmed.len() == raw.len() {
+        return None;
+    }
+    if trimmed
+        .chars()
+        .next_back()
+        .is_some_and(phonetics::is_tps_tone_mark)
+    {
+        return None;
+    }
+    // Same two shadow passes the span keys are built from — separator strip
+    // then mode-aware tone strip — so this body is byte-identical to the
+    // `tps:<notone>` form a span-local key would carry for the same buffer.
+    // Rolling a bespoke char filter here would be a second, drifting
+    // definition of "fused toneless surface".
+    // 中文: 與 span key 相同的兩道 shadow 處理(先剝分隔符、再依 mode 剝調號),
+    // 中文:   故此 body 與同一 buffer 的 tps:<notone> 逐 byte 相同;自己寫 char filter
+    // 中文:   等於多一份會漂移的「fused 去調面」定義。
+    let (separatorless, _) = build_separator_shadow(trimmed, mode);
+    let body = strip_tones_for_mode(&separatorless, mode);
+    (!body.is_empty()).then_some(body)
+}
+
+/// A3 (§41) — true when the span ending at `span_end` (shadow
+/// coordinates) closes on a barrier the TPS separator strip left behind
+/// and carries no tone mark of its own. That is exactly the shape the
+/// reported bug needs: the user pressed the keyboard's space to close an
+/// unmarked syllable, so the candidate list must narrow to that
+/// syllable's no-mark tone (1 open rime / 4 stop coda) instead of every
+/// tone of the toneless key.
+///
+/// **Span-end only.** A barrier strictly INSIDE the span is a plain
+/// syllable boundary and must stay one: S18's `ㄉㄞ`␣`ㄍㄧ` → 台機 opens
+/// on `tai5` and S23's `ㄇ`␣`ㄒㄧ` → 毋是 opens on `m7`, so reading every
+/// interior space as a tone-1 instruction would delete both phrases.
+///
+/// TPS-only. In TL/POJ a space is a literal word boundary (the strip is a
+/// no-op there, so `barriers` carries no space offsets anyway) and their
+/// tones are ASCII digits, which the fully-toned path already pins. A
+/// span whose last char IS a tone mark needs no pinning either — it took
+/// the verbatim toned key in [`fst_body_for_span`].
+// 中文: A3 (§41) — span 結尾落在 TPS 分隔符剝除留下的 barrier,且自身無調號 → 釘無調號調
+// 中文:   (開音節 1 / 入聲尾 4)。**只認 span 結尾**:span 內部的 barrier 仍是單純音節邊界,
+// 中文:   否則 S18 台機 (tai5) 與 S23 毋是 (m7) 會被當第一調指令刪掉。
+// 中文:   TPS-only;TL/POJ 空白是字面詞界(無 space barrier)、聲調為 ASCII 數字已由全含調路徑釘。
+pub(crate) fn span_end_pins_unmarked_tone(
+    span: &str,
+    span_end: usize,
+    mode: InputMode,
+    barriers: &[usize],
+) -> bool {
+    matches!(mode, InputMode::Tps)
+        && barriers.contains(&span_end)
+        && !span
+            .chars()
+            .next_back()
+            .is_some_and(phonetics::is_tps_tone_mark)
 }
 
 /// §35 barrier contract part (b) for one emitted key: for every barrier
@@ -1316,6 +1470,109 @@ mod tests {
     //! `engine/composing/tests/dispatch_continuous.rs`; the byte-exact
     //! cross-slice golden lives in `engine/composing/tests/golden_fetch_at_pos.rs`.
 
+    // A3 (§41) — space-pin predicates. `ㄒㄧ` is two 3-byte Bopomofo
+    // scalars, so its shadow end is `"ㄒㄧ".len()`; the barrier the TPS
+    // separator strip leaves for a trailing space sits at exactly that
+    // offset.
+    // 中文: A3 (§41) — 空白釘定判斷。ㄒㄧ 為兩個 3-byte 注音字元,shadow 結尾即其 len();
+    // 中文:   尾端空白被剝除後留下的 barrier 正落在該偏移。
+    #[test]
+    fn span_end_pins_when_barrier_lands_on_an_unmarked_tail() {
+        let span = "ㄒㄧ";
+        assert!(span_end_pins_unmarked_tone(
+            span,
+            span.len(),
+            InputMode::Tps,
+            &[span.len()],
+        ));
+    }
+
+    #[test]
+    fn span_end_does_not_pin_without_a_barrier_at_its_end() {
+        let span = "ㄒㄧ";
+        // No barrier at all, and a barrier strictly INSIDE the span: an
+        // interior boundary is a plain syllable split (§31 台機 / §35 毋是),
+        // never a tone instruction.
+        assert!(!span_end_pins_unmarked_tone(
+            span,
+            span.len(),
+            InputMode::Tps,
+            &[]
+        ));
+        assert!(!span_end_pins_unmarked_tone(
+            span,
+            span.len(),
+            InputMode::Tps,
+            &["ㄒ".len()],
+        ));
+    }
+
+    #[test]
+    fn span_end_does_not_pin_a_tone_marked_tail() {
+        // A marked tail took the verbatim toned key, which already filters
+        // by tone — pinning it as unmarked would empty the strip.
+        let span = "ㄒㄧˋ";
+        assert!(!span_end_pins_unmarked_tone(
+            span,
+            span.len(),
+            InputMode::Tps,
+            &[span.len()],
+        ));
+    }
+
+    #[test]
+    fn span_end_pin_is_tps_only() {
+        let span = "tai";
+        for mode in [InputMode::Tl, InputMode::Poj, InputMode::English] {
+            assert!(!span_end_pins_unmarked_tone(
+                span,
+                span.len(),
+                mode,
+                &[span.len()]
+            ));
+        }
+    }
+
+    #[test]
+    fn buffer_pin_body_strips_the_trailing_space() {
+        assert_eq!(
+            tps_space_pinned_body("ㄒㄧ ", InputMode::Tps).as_deref(),
+            Some("ㄒㄧ"),
+        );
+        // Repeated trailing spaces are one pin, not several.
+        assert_eq!(
+            tps_space_pinned_body("ㄒㄧ  ", InputMode::Tps).as_deref(),
+            Some("ㄒㄧ"),
+        );
+        // Interior spaces are boundaries; the body is the fused surface.
+        assert_eq!(
+            tps_space_pinned_body("ㄍㄠ ㄉㄞ ", InputMode::Tps).as_deref(),
+            Some("ㄍㄠㄉㄞ"),
+        );
+    }
+
+    #[test]
+    fn buffer_pin_body_is_none_without_a_trailing_space() {
+        assert_eq!(tps_space_pinned_body("ㄒㄧ", InputMode::Tps), None);
+    }
+
+    #[test]
+    fn buffer_pin_body_is_none_for_a_marked_tail() {
+        assert_eq!(tps_space_pinned_body("ㄒㄧˋ ", InputMode::Tps), None);
+    }
+
+    #[test]
+    fn buffer_pin_body_is_none_outside_tps() {
+        for mode in [InputMode::Tl, InputMode::Poj, InputMode::English] {
+            assert_eq!(tps_space_pinned_body("tai ", mode), None);
+        }
+    }
+
+    #[test]
+    fn buffer_pin_body_is_none_for_a_space_only_buffer() {
+        assert_eq!(tps_space_pinned_body(" ", InputMode::Tps), None);
+    }
+
     use super::*;
 
     // Barrier metadata — the §35 contract's raw material. The pipeline
@@ -1345,6 +1602,110 @@ mod tests {
         // No barriers → no restriction; barrier at 0 → nothing before it.
         assert!(key_final_only_offsets("ㄎㄛㆻㄫ", body, InputMode::Tps, &[], 4).is_empty());
         assert!(key_final_only_offsets("ㄎㄛㆻㄫ", body, InputMode::Tps, &[0], 4).is_empty());
+    }
+
+    // §41 — a trailing separator marker is consumed by the full span, so a
+    // whole-buffer commit leaves nothing pending. Interior separators were
+    // already consumed via the next glyph's map entry; this pins the tail
+    // case the reported bug exposed.
+    // 中文: §41 — 尾端分隔記號被整段 span 吃掉,整段 commit 不留 pending;
+    // 中文:   中間分隔符本來就由下一個 glyph 的 entry 帶過,這裡釘的是尾端案例。
+    #[test]
+    fn trailing_separator_is_consumed_by_the_full_span() {
+        let inv = test_inventory(&["tps:ㄒㄧ"]);
+        let raw = "ㄒㄧ "; // 3 + 3 + 1 bytes
+        assert_eq!(raw.len(), 7, "raw byte length precondition");
+        let (shadow, shadow_to_raw_end, _, barriers) =
+            build_shadow_lattice_with_barriers(raw, &inv, InputMode::Tps);
+        assert_eq!(shadow, "ㄒㄧ");
+        assert_eq!(barriers, vec![6], "barrier where the space was stripped");
+        assert_eq!(
+            shadow_to_raw_end[shadow.len()],
+            raw.len(),
+            "full-span end must reach raw len so the commit eats the marker"
+        );
+    }
+
+    #[test]
+    fn repeated_trailing_separators_are_all_consumed() {
+        let inv = test_inventory(&["tps:ㄒㄧ"]);
+        let raw = "ㄒㄧ  ";
+        let (shadow, shadow_to_raw_end, _, _) =
+            build_shadow_lattice_with_barriers(raw, &inv, InputMode::Tps);
+        assert_eq!(shadow, "ㄒㄧ");
+        assert_eq!(shadow_to_raw_end[shadow.len()], raw.len());
+    }
+
+    #[test]
+    fn interior_separator_keeps_its_shorter_span_end_unchanged() {
+        // The tail fix must not move a span that ends BEFORE the separator:
+        // `ㄍㄠ` in `ㄍㄠ␣ㄉㄞ` still ends at raw 6, leaving the space pending
+        // for the rest of the phrase (existing S18 contract).
+        let inv = test_inventory(&["tps:ㄍㄠ", "tps:ㄉㄞ"]);
+        let raw = "ㄍㄠ ㄉㄞ";
+        let (shadow, shadow_to_raw_end, _, _) =
+            build_shadow_lattice_with_barriers(raw, &inv, InputMode::Tps);
+        assert_eq!(shadow, "ㄍㄠㄉㄞ");
+        assert_eq!(shadow_to_raw_end[6], 6, "first-syllable end is unmoved");
+        assert_eq!(shadow_to_raw_end[shadow.len()], raw.len());
+    }
+
+    // Mixed tails the endpoint rule must NOT consume: the moment a 連字
+    // appears in the tail the hyphen contract wins, whichever order the two
+    // separators came in. Codex post-impl 2026-08-21 asked for these
+    // explicitly — the comment claimed the `␠-` / `-␠` shapes were covered
+    // when only the bare trailing hyphen was.
+    // 中文: 端點規則不可吃掉的混合尾巴:尾端只要出現連字,連字契約優先(不論兩個分隔符的先後)。
+    // 中文:   Codex post-impl 2026-08-21 指名要補 — 註解說涵蓋 ␠- / -␠,實際只測了單獨尾端連字。
+    #[test]
+    fn mixed_separator_tails_keep_the_hyphen_contract() {
+        let inv = test_inventory(&["tps:ㄒㄧ"]);
+        for raw in ["ㄒㄧ -", "ㄒㄧ- ", "ㄒㄧ - "] {
+            let (shadow, shadow_to_raw_end, _, _) =
+                build_shadow_lattice_with_barriers(raw, &inv, InputMode::Tps);
+            assert_eq!(shadow, "ㄒㄧ", "{raw}");
+            assert_eq!(
+                shadow_to_raw_end[shadow.len()],
+                6,
+                "{raw}: a hyphen in the tail keeps the span short"
+            );
+        }
+    }
+
+    #[test]
+    fn separator_only_and_empty_buffers_are_safe() {
+        // Degenerate shapes must not panic or invent coverage: an empty
+        // buffer keeps the baseline map, an all-separator buffer produces an
+        // empty shadow (no lattice edge, so no candidate can claim the span).
+        // 中文: 退化形狀不可 panic 也不可憑空製造覆蓋:空 buffer 保 baseline map,
+        // 中文:   全分隔符 buffer 產生空 shadow(無 lattice edge,不會有候選宣稱該 span)。
+        let inv = test_inventory(&["tps:ㄒㄧ"]);
+        let (shadow, shadow_to_raw_end, _, _) =
+            build_shadow_lattice_with_barriers("", &inv, InputMode::Tps);
+        assert_eq!(shadow, "");
+        assert_eq!(shadow_to_raw_end, vec![0]);
+
+        let (shadow, shadow_to_raw_end, _, barriers) =
+            build_shadow_lattice_with_barriers("  ", &inv, InputMode::Tps);
+        assert_eq!(shadow, "");
+        assert_eq!(barriers, vec![0], "one barrier at the collapsed offset");
+        assert_eq!(shadow_to_raw_end[0], 2, "the whole buffer is consumable");
+    }
+
+    #[test]
+    fn trailing_hyphen_is_still_not_consumed() {
+        // The 連字 contract is untouched: a trailing hyphen stays pending
+        // (the tail rule accepts ASCII spaces only).
+        let inv = test_inventory(&["tps:ㄒㄧ"]);
+        let raw = "ㄒㄧ-";
+        let (shadow, shadow_to_raw_end, _, _) =
+            build_shadow_lattice_with_barriers(raw, &inv, InputMode::Tps);
+        assert_eq!(shadow, "ㄒㄧ");
+        assert_eq!(
+            shadow_to_raw_end[shadow.len()],
+            6,
+            "trailing hyphen must stay pending"
+        );
     }
 
     #[test]

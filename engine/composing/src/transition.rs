@@ -24,7 +24,7 @@
 // 中文: 直到 hard finalize 才一次把整段寫入文件。preedit 欄位反映整段組字。
 
 use crate::api::{combined_display, nailed_prefix, EngineState, Intent, NailedSegment, Phase};
-use crate::derived::derived_display;
+use crate::derived::{derived_display, strip_tps_separator_markers};
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
 use protos::engine::AppConfig;
@@ -430,10 +430,22 @@ fn commit_raw_composing(
     if raw.is_empty() {
         return noop(state, config);
     }
+    // §41 — commit the marker-free literal, not the raw buffer. A TPS
+    // buffer's ASCII space is the tone-1 / boundary marker (§31); it lives in
+    // `raw` so the barrier machinery and the tone pin can read it, and must
+    // not reach the document. The Continuous arm below already commits
+    // `combined_display`; this arm has to agree, or the engine's contract
+    // would hold only for the phase the platforms happen to be in (both
+    // promote to Continuous after every mutation, but the engine cannot
+    // depend on that — Codex post-impl BLOCK 2026-08-21).
+    // 中文: §41 — 提交去掉記號的字面而非 raw buffer。TPS 的 ASCII 空白是第一調/邊界記號(§31),
+    // 中文:   留在 raw 供 barrier 與釘調讀取,不可進到文件。下面 Continuous arm 已提交
+    // 中文:   combined_display,此 arm 必須一致 — 否則契約只在平台「剛好所處的 phase」成立
+    // 中文:   (兩平台每次變動後都會升 Continuous,但引擎不能倚賴這點)。
     exit_to_idle(
         state,
         vec![
-            commit_text_replacing_preedit(raw),
+            commit_text_replacing_preedit(strip_tps_separator_markers(&raw)),
             reset_autocomplete(),
             reset_autocomplete_context(),
         ],
@@ -479,8 +491,18 @@ fn commit_raw_continuous(
     // nailed segments already fired UpdateLastSelectedWord at nail time;
     // they are NOT replayed here (Codex risk (i) — no double-count).
     let terminal_nextword = if !raw.is_empty() {
+        // §41 — both fields drop the separator marker. `text` goes through
+        // `derived_display`; `roman` is the raw tail, which for TPS still
+        // carries the marker, and that string becomes the association's
+        // romanization key on both platforms. Learning `ㄍㄠ␣ㄉㄞ` where the
+        // committed word is `ㄍㄠㄉㄞ` would key the row on a form no later
+        // lookup reconstructs (Codex post-impl BLOCK 2026-08-21).
+        // 中文: §41 — 兩個欄位都要去掉分隔記號。text 走 derived_display;roman 是 raw 尾段,
+        // 中文:   TPS 下仍帶記號,而該字串會成為兩平台的關聯羅馬字鍵。committed 是 ㄍㄠㄉㄞ
+        // 中文:   卻學成 ㄍㄠ␣ㄉㄞ,等於把列鍵在沒有查詢會重建出來的形上。
         let tail_display = derived_display(&raw, config);
-        next_word_word_selected(tail_display, raw, true)
+        let tail_roman = strip_tps_separator_markers(&raw);
+        next_word_word_selected(tail_display, tail_roman, true)
     } else {
         // raw empty → all input is nailed; the last nailed segment is the
         // final word. `nailed` is non-empty here (combined non-empty with

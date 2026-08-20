@@ -86,6 +86,7 @@ fn tps_ctx<'a>(
         prefix_index,
         dict,
         mode: InputMode::Tps,
+        tps_space_pinned_body: None,
     }
 }
 

@@ -410,10 +410,7 @@ pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
 // 中文:   建置端不 gate,runtime gate 會誤殺合法 dict 行。
 pub fn tps_notone_from_tl(record_tl: &str) -> String {
     let mut out = String::with_capacity(record_tl.len() * 3);
-    for token in record_tl.split(['-', ' ', '\t']) {
-        if token.is_empty() {
-            continue;
-        }
+    for token in tl_syllable_tokens(record_tl) {
         let numeric = crate::api::to_tone_number(token);
         // `or_maps_to_er = true` matches the build pipeline default. The
         // build chain calls `convert_tl_to_tps_strict` (Node bridge with
@@ -427,25 +424,77 @@ pub fn tps_notone_from_tl(record_tl: &str) -> String {
         // 中文: or_maps_to_er=true 對齊 build pipeline 預設 — Node bridge 預設將 TL er/or 都映射為 ㄜ;
         // 中文:   `tps_notone` 欄一律 ㄜ-glyph,ㄛ 變體在 `tps_notone_var` (C-3a),
         // 中文:   此 runtime helper 只需產出主欄即可比對 guard。
-        let tps = to_zhuyin(&numeric, false, true);
-        for ch in tps.chars() {
-            // `_TPS_TONE_AND_SEP_RE` in `dictionary/common/notone.py:43`
-            // strips not only the 8 tone marks but ALSO ASCII hyphen +
-            // any whitespace. `to_zhuyin` for tone-1 inputs emits a
-            // trailing space marker; without the whitespace strip the
-            // runtime derivation gains a stray ` ` (U+0020) that the
-            // build pipeline's `tps_notone` column does not have.
-            // Match the regex exactly to keep runtime ↔ build pipeline
-            // byte-identical.
-            // 中文: notone.py 的 _TPS_TONE_AND_SEP_RE 同時剝聲調符號 + ASCII 連字號 + 空白;
-            // 中文:   to_zhuyin 對第 1 聲輸入會帶尾空白,須一併剝除,否則 runtime 與 build pipeline 不一致。
-            if is_tps_tone_mark(ch) || ch == '-' || ch.is_whitespace() {
-                continue;
-            }
-            out.push(ch);
-        }
+        out.push_str(&tps_notone_from_numeric_token(&numeric));
     }
     out
+}
+
+/// The TL syllable tokens of a record reading. Splits on the three
+/// separators the build pipeline treats as syllable boundaries (ASCII
+/// hyphen, space, tab) and drops the empty runs a 輕聲 `--` produces.
+/// Single source for every per-token TPS derivation below.
+// 中文: record reading 的 TL 音節 token — 依 build pipeline 的三種分隔符 (連字號/空白/tab) 切,
+// 中文:   丟掉輕聲 `--` 產生的空 token。以下逐音節 TPS 衍生皆共用此來源。
+fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> {
+    record_tl.split(['-', ' ', '\t']).filter(|t| !t.is_empty())
+}
+
+/// One numeric-tone TL token → its fused TPS notone surface.
+///
+/// `_TPS_TONE_AND_SEP_RE` in `dictionary/common/notone.py:43` strips not
+/// only the 8 tone marks but ALSO ASCII hyphen + any whitespace.
+/// [`to_zhuyin`] for tone-1 inputs emits a trailing space marker; without
+/// the whitespace strip the runtime derivation gains a stray ` `
+/// (U+0020) that the build pipeline's `tps_notone` column does not have.
+/// Match the regex exactly to keep runtime ↔ build pipeline byte-identical.
+// 中文: 單一 numeric TL token → fused TPS 去調面。notone.py 的 _TPS_TONE_AND_SEP_RE 同時剝
+// 中文:   聲調符號 + ASCII 連字號 + 空白;to_zhuyin 對第 1 聲會帶尾空白,須一併剝除。
+fn tps_notone_from_numeric_token(numeric_token: &str) -> String {
+    to_zhuyin(numeric_token, false, true)
+        .chars()
+        .filter(|&ch| !is_tps_tone_mark(ch) && ch != '-' && !ch.is_whitespace())
+        .collect()
+}
+
+/// A3 (§41) — the numeric tone of the TL syllable whose fused TPS notone
+/// prefix ends EXACTLY at `notone_prefix`, or `None` when no syllable
+/// boundary lands there.
+///
+/// This is the alignment primitive the space-pinned tone filter needs: a
+/// TPS keyboard space closes the syllable the user just typed, so the
+/// candidate is only eligible when its reading has a boundary at that
+/// same point AND the syllable ending there carries the tone the space
+/// means (1 for an open rime, 4 for a stop coda — the two tones TPS
+/// writes with no mark). Callers own the tone predicate; this fn only
+/// answers "which syllable does the typed prefix end on, and what is its
+/// tone".
+///
+/// Accepts the C-3a or→er dialect variant of the accumulated prefix for
+/// the same reason [`matches_continuous_tps_toneless_key`] does: a user
+/// typing the ㄛ form reaches the row through `tps_notone_var`, so a
+/// primary-only comparison would reject a legitimate hit.
+// 中文: A3 (§41) — 回傳「fused TPS 去調前綴剛好在 notone_prefix 收尾」的那個 TL 音節的數字聲調;
+// 中文:   無音節邊界落在該處回 None。TPS 空白關閉剛打完的音節,故候選必須在同一點有音節邊界,
+// 中文:   且該音節的聲調等於空白所代表的無調號調(開音節 1、入聲尾 4)。聲調判斷留給呼叫端。
+// 中文:   同 matches_continuous_tps_toneless_key,接受 C-3a or→er 變體形(使用者打 ㄛ 形經 var 鍵命中)。
+pub fn tps_notone_prefix_boundary_tone(record_tl: &str, notone_prefix: &str) -> Option<char> {
+    if notone_prefix.is_empty() {
+        return None;
+    }
+    let mut accumulated = String::with_capacity(notone_prefix.len());
+    for token in tl_syllable_tokens(record_tl) {
+        let numeric = crate::api::to_tone_number(token);
+        let tone = numeric.chars().next_back().filter(char::is_ascii_digit)?;
+        accumulated.push_str(&tps_notone_from_numeric_token(&numeric));
+        if accumulated.len() > notone_prefix.len() {
+            return None;
+        }
+        let variant = tps_notone_or_variant(&accumulated);
+        if accumulated == notone_prefix || (!variant.is_empty() && variant == notone_prefix) {
+            return Some(tone);
+        }
+    }
+    None
 }
 
 /// v3.5.9 D / C-3b — runtime mirror of
@@ -481,10 +530,7 @@ pub fn tps_notone_or_variant(notone: &str) -> String {
 // 中文:   逐音節 TL → numeric → to_zhuyin,只剝連字號 / 空白,聲調符號保留。
 pub fn tps_num_from_tl(record_tl: &str) -> String {
     let mut out = String::with_capacity(record_tl.len() * 3);
-    for token in record_tl.split(['-', ' ', '\t']) {
-        if token.is_empty() {
-            continue;
-        }
+    for token in tl_syllable_tokens(record_tl) {
         let numeric = crate::api::to_tone_number(token);
         let tps = to_zhuyin(&numeric, false, true);
         for ch in tps.chars() {
@@ -791,6 +837,76 @@ fn is_pt_or_k_stop(tl: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    // A3 (§41) — `tps_notone_prefix_boundary_tone` unit pins. Traces:
+    //   "si"    → to_tone_number "si1"    → notone ㄒㄧ,   tone 1 (open rime, unmarked)
+    //   "sī"    → to_tone_number "si7"    → notone ㄒㄧ,   tone 7 (marked)
+    //   "tsit"  → to_tone_number "tsit4"  → notone ㄐㄧㆵ, tone 4 (stop coda, unmarked)
+    //   "tsi̍t"  → to_tone_number "tsit8"  → notone ㄐㄧㆵ, tone 8 (same coda + dot)
+    // 中文: A3 (§41) — tps_notone_prefix_boundary_tone 單元釘定(上方為逐步推導)。
+    #[test]
+    fn boundary_tone_reports_unmarked_open_rime_as_tone_one() {
+        assert_eq!(tps_notone_prefix_boundary_tone("si", "ㄒㄧ"), Some('1'));
+    }
+
+    #[test]
+    fn boundary_tone_reports_marked_syllable_tone() {
+        assert_eq!(tps_notone_prefix_boundary_tone("sī", "ㄒㄧ"), Some('7'));
+        assert_eq!(tps_notone_prefix_boundary_tone("sí", "ㄒㄧ"), Some('2'));
+    }
+
+    #[test]
+    fn boundary_tone_separates_stop_coda_tone_four_from_tone_eight() {
+        // The 這 (tsit4) vs 一 (tsit8) split the bug report hit: identical
+        // notone surface, different tone.
+        assert_eq!(tps_notone_prefix_boundary_tone("tsit", "ㄐㄧㆵ"), Some('4'));
+        assert_eq!(tps_notone_prefix_boundary_tone("tsi̍t", "ㄐㄧㆵ"), Some('8'));
+    }
+
+    #[test]
+    fn boundary_tone_walks_to_the_syllable_the_prefix_ends_on() {
+        // 交代 kau1-tài: a prefix ending on the FIRST syllable reports that
+        // syllable's tone (1), the full body reports the last one (3).
+        let first = tps_notone_from_tl("kau");
+        let full = tps_notone_from_tl("kau-tài");
+        assert_eq!(
+            tps_notone_prefix_boundary_tone("kau-tài", &first),
+            Some('1')
+        );
+        assert_eq!(tps_notone_prefix_boundary_tone("kau-tài", &full), Some('3'));
+    }
+
+    #[test]
+    fn boundary_tone_rejects_a_prefix_that_ends_mid_syllable() {
+        // ㄍ alone is half of ㄍㄠ — no syllable boundary lands there, so the
+        // reading is not eligible for a pin at that point.
+        assert_eq!(tps_notone_prefix_boundary_tone("kau-tài", "ㄍ"), None);
+    }
+
+    #[test]
+    fn boundary_tone_rejects_a_prefix_longer_than_the_reading() {
+        let longer = format!("{}{}", tps_notone_from_tl("kau-tài"), "ㄒㄧ");
+        assert_eq!(tps_notone_prefix_boundary_tone("kau-tài", &longer), None);
+    }
+
+    #[test]
+    fn boundary_tone_rejects_an_empty_prefix() {
+        assert_eq!(tps_notone_prefix_boundary_tone("si", ""), None);
+    }
+
+    #[test]
+    fn boundary_tone_accepts_the_or_dialect_variant_surface() {
+        // C-3a: a row whose primary notone carries ㄜ is reachable through
+        // the ㄛ variant key, so the boundary walk must accept both.
+        let primary = tps_notone_from_tl("ter");
+        let variant = tps_notone_or_variant(&primary);
+        if !variant.is_empty() {
+            assert_eq!(
+                tps_notone_prefix_boundary_tone("ter", &variant),
+                tps_notone_prefix_boundary_tone("ter", &primary),
+            );
+        }
+    }
+
     use super::*;
 
     /// Exact-output pin for the `phonetics::tps_to_tl` re-export consumed by

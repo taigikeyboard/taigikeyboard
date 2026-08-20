@@ -397,10 +397,11 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 fn fetch_via_lexicon_inner(
     keys: &[(ConsumedSpan, String)],
     keys_final_only: &[Vec<usize>],
+    keys_tone_pinned: &[bool],
     raw_len: u32,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
-    fetch_candidates_for_keys_with_barriers(keys, keys_final_only, raw_len, ctx)
+    fetch_candidates_for_keys_with_barriers(keys, keys_final_only, keys_tone_pinned, raw_len, ctx)
 }
 
 /// v3.5.9 A2 — partial-prefix fetch inner. Pre-A2 `fetch_via_lexicon_partial`'s
@@ -621,14 +622,48 @@ fn fetch_walker_slot0_inner(
             key_prefix.len() + 1,
         );
         let dict_key = format!("{key_prefix}:{edge_body}");
-        // Custom override stays tone-INSENSITIVE: `custom_map` is keyed by
-        // `custom_toneless_key` (toneless), so it is queried with the
-        // toneless key. The tone-filter fix is a dict-path change only;
-        // custom-dictionary matching behavior is deliberately unchanged
-        // (a custom word is a specific user entry, matched per the legacy
-        // toneless rule).
-        // 中文: custom override 維持 tone-insensitive:custom_map 以 custom_toneless_key(去調)為鍵,
-        // 中文:   故以去調鍵查詢。聲調過濾僅改 dict 路徑,custom 比對行為刻意不變。
+        // A3 (§41) — this edge's own end is what matters: an edge that stops
+        // on a stripped TPS space is tone-pinned to its unmarked tone, one
+        // that runs THROUGH a barrier is not (§31 台機 opens on tai5, §35
+        // 毋是 on m7). Computed BEFORE the custom override below so both
+        // edge sources answer to the same pin — a custom entry synthesized
+        // past the guard would land at slot 0, where no downstream lexicon
+        // filter can reach it (Codex post-impl BLOCK, 2026-08-20).
+        // 中文: A3 (§41) — 看的是 edge 自己的結尾:停在被剝空白上才釘定;跨過 barrier 的不釘
+        // 中文:   (§31 台機首音 tai5、§35 毋是首音 m7)。在下方 custom override 之前算,
+        // 中文:   讓兩種 edge 來源套同一個釘定 — 漏過去的 custom 會直接成為 slot 0,
+        // 中文:   下游 lexicon 過濾撈不到 (Codex post-impl BLOCK 2026-08-20)。
+        let edge_tone_pinned =
+            crate::shadow::span_end_pins_unmarked_tone(&shadow[start..end], end, mode, barriers);
+        // Custom override matching stays tone-INSENSITIVE: `custom_map` is
+        // keyed by `custom_toneless_key` (toneless), so it is queried with
+        // the toneless key — a custom word is a specific user entry, matched
+        // per the legacy toneless rule. What A3 (§41) adds is not a
+        // different match key but an eligibility gate on the ENTRY's own
+        // reading: with the edge closed by the keyboard's space, an entry
+        // whose syllable at that boundary carries a marked tone is not the
+        // word the user asked for.
+        //
+        // **Unreachable in TPS today, kept for architectural symmetry.**
+        // `custom_toneless_key` (`shadow.rs`) rejects a TPS body that is not
+        // all-Bopomofo, and `custom_dictionary.db` stores TL / POJ romans —
+        // so no custom entry currently lands in `custom_map` under
+        // `InputMode::Tps`, and the tests below bite the lexicon merge, not
+        // this branch. The gate is here so BOTH edge sources answer the same
+        // pin the day custom keys gain a TPS form (§35 follow-up 4, the
+        // platform pre-query architecture): a custom entry synthesized past
+        // the pin becomes slot 0, where no downstream lexicon filter can
+        // reach it. Raised by Codex post-impl 2026-08-20; the "already
+        // fires today" part of that finding did not survive verification.
+        // 中文: custom override 的比對維持 tone-insensitive(以 custom_toneless_key 去調鍵查詢);
+        // 中文:   A3 (§41) 加的不是另一組比對鍵,而是對「詞條自身讀法」的資格判斷 —
+        // 中文:   edge 已被空白關閉時,該邊界音節帶調號的詞條不是使用者要的。
+        // 中文: **TPS 目前走不到這裡,保留是為架構一致**:custom_toneless_key 對 TPS 要求純注音 body,
+        // 中文:   而 custom_dictionary.db 存的是 TL/POJ 羅馬字 → TPS 模式下 custom_map 為空,
+        // 中文:   下方測試咬到的是 lexicon 合併而非此分支。留下 gate 是為了等 custom 鍵有 TPS 形時
+        // 中文:   (§35 follow-up 4 平台預查架構)兩種 edge 來源仍套同一釘定 —
+        // 中文:   漏過去的 custom 會直接成為 slot 0,下游 lexicon 過濾撈不到。
+        // 中文:   由 Codex post-impl 2026-08-20 提出;其「今天就會發生」的部分經驗證不成立。
         let custom_key = format!("{key_prefix}:{toneless}");
         // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
         // `custom_dictionary.db` entry whose normalized toneless
@@ -643,7 +678,9 @@ fn fetch_walker_slot0_inner(
         // 中文: S6 — custom 命中該 edge key → 覆寫 dict.bin 最佳候選(在 best_candidate_for_key 之前查);
         // 中文:   = span-local source-rank-0 同語意,無條件 override 非 cost 競爭
         // 中文:   (切分安全靠 CUSTOM_EFFECTIVE_FREQ proxy + 既有單音節阻尼,不靠在此贏分)。
-        if let Some(entry) = custom_map.get(custom_key.as_str()) {
+        if let Some(entry) = custom_map.get(custom_key.as_str()).filter(|entry| {
+            !edge_tone_pinned || lexicon::reading_passes_space_pin(&toneless, &entry.roman)
+        }) {
             // `display_text` = the exact key the platform writes to
             // `user_frequency.db` on commit, mirroring
             // `lexicon::custom_entry_to_candidate` (hanji else
@@ -706,6 +743,7 @@ fn fetch_walker_slot0_inner(
         match best_candidate_for_key_with_barriers(
             &dict_key,
             &edge_final_only,
+            edge_tone_pinned,
             raw_span,
             freq_map,
             now_ms,
@@ -1012,6 +1050,13 @@ pub(crate) fn assemble_candidates(
     enabled_sources_bitmask: u32,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
+    // A3 (§41) — whole-buffer space pin, computed once per seam invocation
+    // (owned here so `ContinuousFetchCtx` can borrow it for the whole
+    // fetch). `None` for every non-TPS mode and for a TPS buffer whose
+    // tail is not a space-closed unmarked syllable.
+    // 中文: A3 (§41) — 整段空白釘定,每次 seam 只算一次(擁有權放這層,ctx 借用整段 fetch)。
+    // 中文:   非 TPS、或尾端不是被空白關閉的無調號音節 → None。
+    let tps_space_pinned_body = crate::shadow::tps_space_pinned_body(raw, mode);
     LexiconHandle::with_state(|state| {
         let inv = state.syllable_inventory.as_ref();
         let prefix = state.prefix_index.as_ref();
@@ -1049,6 +1094,13 @@ pub(crate) fn assemble_candidates(
                 // 中文: B-4 — mode 透到 lexicon 端 canonicalize hanji-absent display_text。
                 // 中文: D / C-3b — TPS 改走 InputMode::Tps,canonical_tl_form 對 Tps 走 identity。
                 mode,
+                // A3 (§41) — whole-buffer space pin for the sources that
+                // carry no span key of their own (custom entries,
+                // partial-prefix extensions). Computed from `raw` by the
+                // same rule the per-key flags use.
+                // 中文: A3 (§41) — 給沒有自身 span key 的來源(custom 詞條、partial-prefix 延伸)
+                // 中文:   的整段空白釘定,規則與逐 key 旗標相同,由 raw 直接算。
+                tps_space_pinned_body: tps_space_pinned_body.as_deref(),
             });
 
         // ---- Step 1: build keys + shadow/lattice (D1 fold).
@@ -1065,7 +1117,7 @@ pub(crate) fn assemble_candidates(
         // degradation; matches pre-A2 / pre-C-3b behavior).
         // 中文: D / C-3b — 所有模式共用 shadow-pipeline 單路徑;舊 build_keys_tps 短路退役。
         // 中文:   inv 缺席時退化為空鍵 + walker 跳過(優雅退化,與 A2 前同)。
-        let (keys, keys_final_only, barriers, shadow_lattice) = match inv {
+        let (keys, keys_final_only, keys_tone_pinned, barriers, shadow_lattice) = match inv {
             Some(inv) => {
                 // Literal left-anchored keys + §35 barrier metadata. A word
                 // can be hidden because the per-keystroke auto-correct picked
@@ -1079,6 +1131,7 @@ pub(crate) fn assemble_candidates(
                 let crate::shadow::ContinuousKeys {
                     keys,
                     final_only,
+                    tone_pinned,
                     shadow,
                     shadow_to_raw_end,
                     lattice,
@@ -1087,11 +1140,12 @@ pub(crate) fn assemble_candidates(
                 (
                     keys,
                     final_only,
+                    tone_pinned,
                     barriers,
                     Some((shadow, shadow_to_raw_end, lattice, inv)),
                 )
             }
-            None => (Vec::new(), Vec::new(), Vec::new(), None),
+            None => (Vec::new(), Vec::new(), Vec::new(), Vec::new(), None),
         };
 
         // ---- Step 2: empty-keys partial-prefix vs span-local fetch.
@@ -1124,7 +1178,7 @@ pub(crate) fn assemble_candidates(
         } else {
             // ---- Step 2b: span-local fetch.
             let mut c = if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_via_lexicon_inner(&keys, &keys_final_only, raw_len, ctx)
+                fetch_via_lexicon_inner(&keys, &keys_final_only, &keys_tone_pinned, raw_len, ctx)
             } else {
                 Vec::new()
             };

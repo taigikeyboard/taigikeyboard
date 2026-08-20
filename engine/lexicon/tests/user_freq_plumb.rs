@@ -61,6 +61,7 @@ fn ctx<'a>(
         prefix_index,
         dict,
         mode: phonetics::InputMode::Tl,
+        tps_space_pinned_body: None,
     }
 }
 
