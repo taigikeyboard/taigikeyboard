@@ -350,12 +350,6 @@ public final class TaigiInputController: IMKInputController {
         case .toggleTranslateSwapped:
             settings.isTranslateSwapped.toggle()
             dismissCandidates()
-        case .toggleBothScripts:
-            settings.isOutputBothScripts.toggle()
-            dismissCandidates()
-        case .toggleLiteralRomanCandidate:
-            settings.isLiteralRomanCandidateEnabled.toggle()
-            dismissCandidates()
         }
     }
 

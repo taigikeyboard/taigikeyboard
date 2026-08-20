@@ -44,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DisplayLanguageStore.shared.languageDidChange = Self.refreshLocalizedChrome
         Self.refreshLocalizedChrome()
 
+        // Before the handlers register, so nothing re-persists what it clears.
+        RetiredSettingsCleanup.run()
+
         // The hotkey handlers exist for the process's life; whether they FIRE
         // is the coordinator's call, made as sessions register and release
         // their shortcut endpoint. Assigned here rather than defaulted inside

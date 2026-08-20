@@ -41,7 +41,7 @@ final class ShortcutRoutingTests: XCTestCase {
         coordinator.claim(ComposingSessionToken())
 
         coordinator.registerShortcutTarget(target, for: stale)
-        coordinator.performShortcutAction(.toggleBothScripts)
+        coordinator.performShortcutAction(.toggleTranslateSwapped)
 
         XCTAssertTrue(target.performed.isEmpty)
     }
@@ -141,10 +141,10 @@ final class ShortcutRoutingTests: XCTestCase {
         coordinator.shortcutAvailabilityDidChange = { availability.append($0) }
 
         coordinator.claim(owner)
-        coordinator.performShortcutAction(.toggleBothScripts)
+        coordinator.performShortcutAction(.toggleTranslateSwapped)
 
         XCTAssertTrue(availability.isEmpty)
-        XCTAssertEqual(target.performed, [.toggleBothScripts])
+        XCTAssertEqual(target.performed, [.toggleTranslateSwapped])
     }
 
     /// A controller can be deallocated without its session being released.

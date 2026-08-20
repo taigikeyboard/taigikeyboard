@@ -1,5 +1,5 @@
-// The 一般 pane: every setting the composing engine reads, plus the shortcut
-// recorders.
+// The 一般 pane: romanization system, display language, learning toggles, and
+// the shortcut recorders.
 
 import KeyboardShortcuts
 import SwiftUI
@@ -26,15 +26,6 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
-    @AppStorage(SettingsStore.Keys.isTranslateSwapped.name)
-    private var isTranslateSwapped = SettingsStore.Keys.isTranslateSwapped.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isOutputBothScripts.name)
-    private var isOutputBothScripts = SettingsStore.Keys.isOutputBothScripts.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
-    private var isLiteralRomanCandidateEnabled = SettingsStore.Keys.isLiteralRomanCandidateEnabled.defaultValue
-
     @AppStorage(SettingsStore.Keys.isFrequencyRecordingEnabled.name)
     private var isFrequencyRecordingEnabled = SettingsStore.Keys.isFrequencyRecordingEnabled.defaultValue
 
@@ -57,14 +48,6 @@ struct GeneralSettingsView: View {
                         Text(language.selectionLabel(for: option)).tag(option)
                     }
                 }
-            }
-
-            Section {
-                Toggle(language.string(.macosTranslateSwapped), isOn: $isTranslateSwapped)
-                Toggle(language.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts)
-                Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
-            } header: {
-                Text(language.string(.macosCandidateSection))
             }
 
             Section {

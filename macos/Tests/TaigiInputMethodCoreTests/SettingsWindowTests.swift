@@ -144,7 +144,7 @@ final class SettingsWindowTests: XCTestCase {
         XCTAssertEqual(
             SettingsPane.allCases.map(\.rawValue),
             [
-                "general", "appearance", "dictionarySearch", "customDictionary",
+                "general", "appearance", "customDictionary",
                 "frequencyData", "associationData", "backupRestore", "dictionarySources",
             ],
         )

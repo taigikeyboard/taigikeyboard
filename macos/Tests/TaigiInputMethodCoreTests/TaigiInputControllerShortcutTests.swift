@@ -37,22 +37,15 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertEqual(controller.settings.inputMode, .tl)
     }
 
-    /// Default-on settings must read as on before they are flipped:
+    /// A default-on setting must read as on before it is flipped:
     /// `UserDefaults.bool(forKey:)` would answer `false` for a key nobody has
     /// written and turn the first press into a no-op.
-    func testCandidateShortcuts_flipTheirSettingFromItsDefault() {
+    func testTranslateSwappedShortcut_flipsTheSettingFromItsDefault() {
         let defaults = EngineSettings.defaults
 
         controller.performShortcutAction(.toggleTranslateSwapped)
-        controller.performShortcutAction(.toggleBothScripts)
-        controller.performShortcutAction(.toggleLiteralRomanCandidate)
 
         XCTAssertEqual(controller.settings.isTranslateSwapped, !defaults.isTranslateSwapped)
-        XCTAssertEqual(controller.settings.isOutputBothScripts, !defaults.isOutputBothScripts)
-        XCTAssertEqual(
-            controller.settings.isLiteralRomanCandidateEnabled,
-            !defaults.isLiteralRomanCandidateEnabled,
-        )
     }
 
     /// The candidates on screen were produced under the setting that just

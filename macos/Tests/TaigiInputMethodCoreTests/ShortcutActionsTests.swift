@@ -45,7 +45,7 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["開啟設定", "切換 台羅/白話字", "切換 漢羅對調", "切換 括號標註", "切換 顯示原本羅馬字候選"],
+            ["開啟設定", "切換 台羅/白話字", "切換 漢羅對調"],
         )
         XCTAssertEqual(
             labels(.japanese),
@@ -53,8 +53,6 @@ final class ShortcutActionsTests: XCTestCase {
                 "設定を開く",
                 "ローマ字体系を切り替える",
                 "漢字とローマ字の入れ替えを切り替える",
-                "括弧での併記を切り替える",
-                "入力したローマ字候補の表示を切り替える",
             ],
         )
         XCTAssertEqual(labels(.english).first, "Open Settings")
@@ -92,18 +90,18 @@ final class ShortcutActionsTests: XCTestCase {
     func testRecordingAChordAnotherActionHolds_reportsThatAction() {
         let held: [ShortcutAction: KeyboardShortcuts.Shortcut] = [
             .toggleRomanization: chord,
-            .toggleBothScripts: chord,
+            .toggleTranslateSwapped: chord,
         ]
 
         let losers = ShortcutConflicts.conflictingActions(with: .toggleRomanization) { held[$0] }
 
-        XCTAssertEqual(losers, [.toggleBothScripts])
+        XCTAssertEqual(losers, [.toggleTranslateSwapped])
     }
 
     func testRecordingAUniqueChord_reportsNoConflict() {
         let held: [ShortcutAction: KeyboardShortcuts.Shortcut] = [
             .toggleRomanization: chord,
-            .toggleBothScripts: .init(.j, modifiers: [.control, .option]),
+            .toggleTranslateSwapped: .init(.j, modifiers: [.control, .option]),
         ]
 
         let losers = ShortcutConflicts.conflictingActions(with: .toggleRomanization) { held[$0] }
@@ -130,14 +128,14 @@ final class ShortcutActionsTests: XCTestCase {
                 KeyboardShortcuts.setShortcut(shortcut, for: action.name)
             }
         }
-        KeyboardShortcuts.setShortcut(chord, for: ShortcutAction.toggleBothScripts.name)
+        KeyboardShortcuts.setShortcut(chord, for: ShortcutAction.toggleTranslateSwapped.name)
         KeyboardShortcuts.setShortcut(chord, for: ShortcutAction.toggleRomanization.name)
 
         ShortcutConflicts.resolve(after: .toggleRomanization)
 
         XCTAssertEqual(KeyboardShortcuts.getShortcut(for: .toggleRomanization), chord)
         XCTAssertNil(
-            KeyboardShortcuts.getShortcut(for: .toggleBothScripts),
+            KeyboardShortcuts.getShortcut(for: .toggleTranslateSwapped),
             "both actions still hold the same chord — one press would run both",
         )
     }

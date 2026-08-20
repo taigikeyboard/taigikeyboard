@@ -12,8 +12,6 @@ extension KeyboardShortcuts.Name {
     )
     static let toggleRomanization = Self("toggleRomanization")
     static let toggleTranslateSwapped = Self("toggleTranslateSwapped")
-    static let toggleBothScripts = Self("toggleBothScripts")
-    static let toggleLiteralRomanCandidate = Self("toggleLiteralRomanCandidate")
 }
 
 /// One user-assignable action. The list is the single source for the recorder
@@ -23,32 +21,26 @@ enum ShortcutAction: CaseIterable, Sendable {
     case openSettings
     case toggleRomanization
     case toggleTranslateSwapped
-    case toggleBothScripts
-    case toggleLiteralRomanCandidate
 
     var name: KeyboardShortcuts.Name {
         switch self {
         case .openSettings: .openSettings
         case .toggleRomanization: .toggleRomanization
         case .toggleTranslateSwapped: .toggleTranslateSwapped
-        case .toggleBothScripts: .toggleBothScripts
-        case .toggleLiteralRomanCandidate: .toggleLiteralRomanCandidate
         }
     }
 
     /// The recorder row's label, under the active display language.
     ///
-    /// Each row is authored whole rather than composed from the settings row's label it flips.
-    /// Those labels are verb phrases (`括號標註`, `Annotate in Brackets`), and wrapping one in a
-    /// "toggle X" frame reads wrong in every language — `括弧で併記を切り替える` doubles the verb.
+    /// Each row is authored whole rather than composed from the label of the setting it flips:
+    /// those labels are verb phrases, and wrapping one in a "toggle X" frame reads wrong in
+    /// every language — `漢羅対調を切り替える` doubles the verb.
     @MainActor
     func label(_ language: DisplayLanguageStore) -> String {
         switch self {
         case .openSettings: language.string(.macosShortcutOpenSettings)
         case .toggleRomanization: language.string(.macosShortcutToggleRomanization)
         case .toggleTranslateSwapped: language.string(.macosShortcutToggleTranslateSwapped)
-        case .toggleBothScripts: language.string(.macosShortcutToggleBothScripts)
-        case .toggleLiteralRomanCandidate: language.string(.macosShortcutToggleLiteralRomanCandidate)
         }
     }
 }
@@ -93,8 +85,7 @@ enum ShortcutHotkeys {
         switch action {
         case .openSettings:
             SettingsWindowController.shared.show()
-        case .toggleRomanization, .toggleTranslateSwapped, .toggleBothScripts,
-             .toggleLiteralRomanCandidate:
+        case .toggleRomanization, .toggleTranslateSwapped:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
         }
     }
