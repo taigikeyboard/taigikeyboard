@@ -131,8 +131,9 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   always stay text / tone digits and never start a composition · ←/→ move the
   highlight · ↑↓ / PgUp / PgDn page · Space commits the highlighted candidate ·
   Enter commits the literal the marked region shows · Esc cancels · `Ctrl+1…9`
-  direct-selects, labelled `⌃1`, never bare `1`. The earlier "1-9 select" line
-  is superseded — 1-9 are the numeric tones of TL/POJ (`tai5`).
+  direct-selects, never bare `1`. The earlier "1-9 select" line is superseded —
+  1-9 are the numeric tones of TL/POJ (`tai5`). The chord is not drawn beside
+  the candidate (§42, USER 2026-08-21); it addresses the visible slots.
   **Semantics pinned by the PR4 Codex pre-impl (2026-08-15)**: candidates come
   from `FetchAtPos` only (`dispatch.rs:97` is the sole arm that fills the
   continuous carrier); a candidate commit is `CommitContinuous` only, with
@@ -148,7 +149,7 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   (`cross-platform-alignment.md §5.1`). Highlight CLAMPs at both ends
   (McBopomofo `HorizontalCandidateController.swift:509`; azooKey wraps — not
   adopted); paging moves the highlight to the first item of the new page, so
-  page start / highlight / `⌃1` label always agree.
+  page start / highlight / slot 1 always agree.
 - **D5 Settings** — in-process SwiftUI window (activate-before-show +
   programmatic Edit menu); opened from IMK `menu()` AND `Ctrl+Shift+,`
   (Cmd+, belongs to the host app). `UserDefaults.standard`; live-read

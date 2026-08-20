@@ -11,9 +11,10 @@ import AppKit
 /// layout panels underneath never learn which session they are showing for.
 ///
 /// Not `IMKCandidates`: it renders a fixed table of Apple's own design, with no
-/// way to label cells with the `⌃n` chords this input method binds. This window
-/// is instead a port of MacishType's, which replicates the native look — accent
-/// colour, vibrancy/glass chrome — while leaving the labelling to us.
+/// control over cell content — this window shows both scripts of every
+/// candidate (§42), which that table cannot express. It is instead a port of
+/// MacishType's, which replicates the native look (accent colour,
+/// vibrancy/glass chrome) while leaving what a cell says to us.
 @MainActor
 final class CandidatePanel: CandidatePresenter {
     static let shared = CandidatePanel()

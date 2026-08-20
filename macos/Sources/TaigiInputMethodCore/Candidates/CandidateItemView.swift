@@ -1,48 +1,34 @@
-// One candidate cell: the ⌃n chord label, the candidate, and its other script.
+// One candidate cell: the candidate, and its other script beside it.
 
 import AppKit
 
 /// One cell of the candidate window, ported from MacishType's
 /// `MacishCandidateItemView` (`references/MacishType/macos/MacishType/
 /// MacishCandidateWindow/MacishCandidateItemView.swift`; MIT, © 2026 Luke
-/// Chang) with one deliberate departure: the index column is sized by measuring
-/// the widest chord label, where upstream pins it to `indexFontSize + 2`, which
-/// fits one bare digit. This input method's chords are two glyphs (`⌃1`…`⌃9`),
-/// because bare digits are the numeric tone markers of TL and POJ.
+/// Chang) with one deliberate departure: no index column. Upstream numbers
+/// every cell with the key that picks it; the `⌃1`…`⌃9` chords still work here
+/// — bare digits could not be used, being the numeric tone markers of TL and
+/// POJ — but they are not drawn, because a modifier badge beside every
+/// candidate is noise the reader has to look past (USER 2026-08-21).
 ///
 /// The annotation column is upstream's, and carries the candidate's other
 /// script — see `CandidateCellContent`.
 final class CandidateItemView: NSView {
-    /// The chord that selects the candidate in each page slot. Rendered in the
-    /// cell rather than derived elsewhere so the label under a candidate is
-    /// always the chord that actually picks it.
-    static let slotLabels = (1 ... HorizontalPageLayout.pageSize).map { "⌃\($0)" }
-
     /// Fixed metrics at the one font size this window renders. Upstream scales
     /// them off a configurable font size; this input method has no font-size
     /// setting, so the scaling machinery would be dead weight.
     enum Metrics {
         static let candidateFontSize: CGFloat = 16
         static let annotationFontSize: CGFloat = 12
-        static let indexFontSize: CGFloat = 8
-        static let leadingPadding: CGFloat = 4
-        static let indexCandidateGap: CGFloat = 2
         static let candidateAnnotationGap: CGFloat = 11
-        static let trailingPadding: CGFloat = 9
+        /// Equal on both sides, so the candidate sits centred in its own cell —
+        /// the same 9 points upstream lands on with its index column switched
+        /// off (`MacishCandidateItemView.effectiveGap`).
+        static let horizontalPadding: CGFloat = 9
         static let verticalPadding: CGFloat = 12
 
         static var itemHeight: CGFloat { candidateFontSize + verticalPadding }
     }
-
-    /// The index column's width: the widest chord label, measured once. A
-    /// hard-coded constant would clip quietly the day the label font changes.
-    @MainActor
-    static let indexColumnWidth: CGFloat = {
-        let font = NSFont.systemFont(ofSize: Metrics.indexFontSize)
-        return slotLabels
-            .map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
-            .max() ?? Metrics.indexFontSize + 2
-    }()
 
     /// The narrowest a cell renders: enough for one full-width glyph and no
     /// annotation. Measured rather than assumed equal to the font size, because
@@ -51,14 +37,8 @@ final class CandidateItemView: NSView {
     /// `measureWidth` about minimums or a page drops a column.
     @MainActor
     static let baseWidth: CGFloat = {
-        chromeWidth + primaryColumnFloor + Metrics.trailingPadding
+        2 * Metrics.horizontalPadding + primaryColumnFloor
     }()
-
-    /// Everything left of the candidate itself.
-    @MainActor
-    private static var chromeWidth: CGFloat {
-        Metrics.leadingPadding + indexColumnWidth + Metrics.indexCandidateGap
-    }
 
     /// The candidate column never renders narrower than one full-width glyph,
     /// which is what keeps single-character cells from collapsing.
@@ -73,10 +53,10 @@ final class CandidateItemView: NSView {
     /// state into every measurement.
     @MainActor
     static func measureWidth(_ cell: CandidateCellContent) -> CGFloat {
-        chromeWidth
+        Metrics.horizontalPadding
             + max(primaryColumnFloor, measurePrimaryWidth(cell.text))
             + annotationWidth(cell.annotation)
-            + Metrics.trailingPadding
+            + Metrics.horizontalPadding
     }
 
     /// The candidate column's width for `text` alone — what the vertical layout
@@ -89,13 +69,13 @@ final class CandidateItemView: NSView {
     }
 
     /// The widest the candidate column can be in a cell `cellWidth` points
-    /// across, leaving the chrome and `trailingInset` their room. A layout that
+    /// across, leaving the leading padding and `trailingInset` their room. A layout that
     /// aligns a column across rows clamps to this: a column wider than the cell
     /// cannot be honoured, and asking for it anyway would push the text past
     /// the cell's edge.
     @MainActor
     static func maximumPrimaryColumnWidth(inCellWidth cellWidth: CGFloat, trailingInset: CGFloat) -> CGFloat {
-        max(Metrics.candidateFontSize, cellWidth - chromeWidth - trailingInset)
+        max(Metrics.candidateFontSize, cellWidth - Metrics.horizontalPadding - trailingInset)
     }
 
     /// The gap plus the annotation itself, or nothing at all when there is no
@@ -117,7 +97,6 @@ final class CandidateItemView: NSView {
     /// can stay untouched. Nil on Sequoia.
     private var highlightView: NSView?
 
-    private let indexLabel = NSTextField(labelWithString: "")
     private let candidateLabel = NSTextField(labelWithString: "")
     private let annotationLabel = NSTextField(labelWithString: "")
 
@@ -149,20 +128,9 @@ final class CandidateItemView: NSView {
         }
     }
 
-    /// Whether the chord label is visible. The vertical layout scrolls, so the
-    /// `⌃n` chords address the nine rows around the viewport — rows outside
-    /// that window keep the slot's width (labels stay column-aligned) but show
-    /// nothing, because showing a chord that would not select them is a lie.
-    var showsSlotLabel = true {
-        didSet {
-            guard showsSlotLabel != oldValue else { return }
-            indexLabel.alphaValue = showsSlotLabel ? 1 : 0
-        }
-    }
-
     /// Extra room the row leaves at its right edge — the vertical layout widens
     /// it so text stays clear of an overlay scroller.
-    var trailingInset: CGFloat = Metrics.trailingPadding {
+    var trailingInset: CGFloat = Metrics.horizontalPadding {
         didSet {
             guard trailingInset != oldValue else { return }
             trailingConstraint.constant = -trailingInset
@@ -193,10 +161,6 @@ final class CandidateItemView: NSView {
             highlightView = pill
         }
 
-        indexLabel.font = .systemFont(ofSize: Metrics.indexFontSize)
-        indexLabel.alignment = .center
-        indexLabel.translatesAutoresizingMaskIntoConstraints = false
-
         candidateLabel.font = .systemFont(ofSize: Metrics.candidateFontSize)
         candidateLabel.lineBreakMode = .byTruncatingTail
         candidateLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -213,12 +177,11 @@ final class CandidateItemView: NSView {
         // instead of breaking the cell's own geometry.
         annotationLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        addSubview(indexLabel)
         addSubview(candidateLabel)
         addSubview(annotationLabel)
 
         trailingConstraint = annotationLabel.trailingAnchor.constraint(
-            lessThanOrEqualTo: trailingAnchor, constant: -Metrics.trailingPadding,
+            lessThanOrEqualTo: trailingAnchor, constant: -Metrics.horizontalPadding,
         )
         annotationGapConstraint = annotationLabel.leadingAnchor.constraint(
             equalTo: candidateLabel.trailingAnchor, constant: 0,
@@ -236,13 +199,8 @@ final class CandidateItemView: NSView {
         primaryColumnWidthConstraint.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
-            indexLabel.leadingAnchor.constraint(
-                equalTo: leadingAnchor, constant: Metrics.leadingPadding,
-            ),
-            indexLabel.widthAnchor.constraint(equalToConstant: Self.indexColumnWidth),
-            indexLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             candidateLabel.leadingAnchor.constraint(
-                equalTo: indexLabel.trailingAnchor, constant: Metrics.indexCandidateGap,
+                equalTo: leadingAnchor, constant: Metrics.horizontalPadding,
             ),
             candidateLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             primaryColumnWidthConstraint,
@@ -256,8 +214,7 @@ final class CandidateItemView: NSView {
     @available(*, unavailable)
     required init?(coder _: NSCoder) { fatalError() }
 
-    func configure(slotLabel: String, cell: CandidateCellContent) {
-        indexLabel.stringValue = slotLabel
+    func configure(_ cell: CandidateCellContent) {
         candidateLabel.stringValue = cell.text
         annotationLabel.stringValue = cell.annotation ?? ""
 
@@ -301,7 +258,6 @@ final class CandidateItemView: NSView {
 
     private func updateAppearance() {
         if isHighlighted {
-            indexLabel.textColor = .white
             candidateLabel.textColor = .white
             annotationLabel.textColor = .white
             // Resolved under the panel's own appearance: `cgColor` snapshots a
@@ -321,7 +277,6 @@ final class CandidateItemView: NSView {
                 }
             }
         } else {
-            indexLabel.textColor = .secondaryLabelColor
             candidateLabel.textColor = .labelColor
             annotationLabel.textColor = .secondaryLabelColor
             if let pill = highlightView {

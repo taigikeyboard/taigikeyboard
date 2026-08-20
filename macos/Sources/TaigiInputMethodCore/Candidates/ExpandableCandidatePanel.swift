@@ -170,8 +170,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             / CGFloat(expandedColumnCount)
 
         var x: CGFloat = 0
-        for (position, slot) in collapsedRow.enumerated() {
-            let item = makeItem(candidateIndex: slot.candidateIndex, slotPosition: position)
+        for slot in collapsedRow {
+            let item = makeItem(candidateIndex: slot.candidateIndex)
             item.frame = NSRect(x: x, y: 0, width: slot.width, height: itemHeight)
             row0ItemViews.append(item)
             x += slot.width
@@ -195,15 +195,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         return CGSize(width: windowWidth, height: itemHeight)
     }
 
-    private func makeItem(candidateIndex: Int, slotPosition: Int) -> CandidateItemView {
+    private func makeItem(candidateIndex: Int) -> CandidateItemView {
         let item = CandidateItemView(style: style)
         item.absoluteIndex = candidateIndex
         item.highlightColor = highlightColor
-        item.configure(
-            slotLabel: slotPosition < CandidateItemView.slotLabels.count
-                ? CandidateItemView.slotLabels[slotPosition] : "",
-            cell: cells[candidateIndex],
-        )
+        item.configure(cells[candidateIndex])
         item.onClick = { [weak self, weak item] in
             guard let self, let item, !isAnimating else { return }
             select(item.absoluteIndex)
@@ -215,8 +211,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     // MARK: - Selection
 
     /// The `⌃(slot+1)` chords address the row the selection is on — the
-    /// collapsed row, or the selected grid row, whose cells are the only ones
-    /// showing their labels.
+    /// collapsed row, or the selected grid row. One row at a time, so a chord
+    /// always names exactly one candidate.
     override func candidateIndex(forSlot slot: Int) -> Int? {
         switch displayMode {
         case .collapsed:
@@ -342,8 +338,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         // right while its duplicate slides in from the left).
         for row in grid.rows.dropFirst() {
             for cell in row {
-                let item = makeItem(candidateIndex: cell.candidateIndex, slotPosition: 0)
-                item.showsSlotLabel = false
+                let item = makeItem(candidateIndex: cell.candidateIndex)
                 item.isHidden = true
                 expandedItemViews.append(item)
             }
@@ -479,7 +474,6 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         displayMode = .expanded
         // The grid renumbers row 0: its columns rarely match the collapsed
         // row's slots, so the surviving cells take their grid positions.
-        renumberSelectedRow()
 
         let contentSize = layoutForMode()
         scrollView.contentView.scroll(to: .zero)
@@ -574,7 +568,6 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         if selectedIndex >= collapsedRow.count {
             selectedIndex = max(collapsedRow.count - 1, 0)
         }
-        renumberSelectedRow()
 
         scrollView.hasVerticalScroller = false
         scrollView.contentView.scroll(to: .zero)
@@ -700,63 +693,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
     }
 
-    /// Only the selection's row shows its `⌃n` labels: the chords address that
-    /// row, and a grid full of identical `⌃1`s would claim otherwise.
-    private func renumberSelectedRow() {
-        switch displayMode {
-        case .collapsed:
-            for (position, item) in row0ItemViews.enumerated() {
-                item.showsSlotLabel = true
-                if let slot = collapsedRow.indices.contains(position) ? collapsedRow[position] : nil {
-                    item.configure(
-                        slotLabel: position < CandidateItemView.slotLabels.count
-                            ? CandidateItemView.slotLabels[position] : "",
-                        cell: cells[slot.candidateIndex],
-                    )
-                }
-            }
-        case .expanded:
-            let selectedRowIndex = grid.position(of: selectedIndex)?.rowIndex
-            var rowByCandidate: [Int: (row: Int, position: Int)] = [:]
-            for (rowIndex, row) in grid.rows.enumerated() {
-                for (position, cell) in row.enumerated() {
-                    rowByCandidate[cell.candidateIndex] = (rowIndex, position)
-                }
-            }
-            // Overflow originals are skipped on purpose: an original that no
-            // longer fits the grid's first row keeps its collapsed label while
-            // it slides out, and its duplicate on a later row carries the grid
-            // position — renumbering both would have two cells claim the same
-            // chord mid-animation (upstream `updateIndexVisibility`,
-            // `MacishHorizontalExpandablePanel.swift:889-920`).
-            let gridRow0Indices = Set(grid.rows.first?.map(\.candidateIndex) ?? [])
-            for item in row0ItemViews where gridRow0Indices.contains(item.absoluteIndex) {
-                guard let place = rowByCandidate[item.absoluteIndex] else { continue }
-                let isOnSelectedRow = place.row == selectedRowIndex
-                item.showsSlotLabel = isOnSelectedRow
-                item.configure(
-                    slotLabel: isOnSelectedRow && place.position < CandidateItemView.slotLabels.count
-                        ? CandidateItemView.slotLabels[place.position] : "",
-                    cell: cells[item.absoluteIndex],
-                )
-            }
-            // (Overflow originals are left exactly as they were — label and
-            // all — so the fade-out carries the row the user was reading.)
-            for item in expandedItemViews {
-                guard let place = rowByCandidate[item.absoluteIndex] else { continue }
-                let isOnSelectedRow = place.row == selectedRowIndex
-                item.showsSlotLabel = isOnSelectedRow
-                item.configure(
-                    slotLabel: isOnSelectedRow && place.position < CandidateItemView.slotLabels.count
-                        ? CandidateItemView.slotLabels[place.position] : "",
-                    cell: cells[item.absoluteIndex],
-                )
-            }
-        }
-    }
-
     private func updateHighlights() {
-        renumberSelectedRow()
         for item in row0ItemViews + expandedItemViews {
             item.isHighlighted = item.absoluteIndex == selectedIndex && !item.isHidden
         }

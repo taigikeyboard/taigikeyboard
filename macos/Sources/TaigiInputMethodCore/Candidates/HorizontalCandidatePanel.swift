@@ -99,14 +99,11 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         let itemHeight = CandidateItemView.Metrics.itemHeight
 
         var x: CGFloat = 0
-        for (position, slot) in page.enumerated() {
+        for slot in page {
             let item = CandidateItemView(style: style)
             item.absoluteIndex = slot.candidateIndex
             item.highlightColor = highlightColor
-            item.configure(
-                slotLabel: CandidateItemView.slotLabels[position],
-                cell: cells[slot.candidateIndex],
-            )
+            item.configure(cells[slot.candidateIndex])
             item.frame = NSRect(x: x, y: 0, width: slot.width, height: itemHeight)
             item.onClick = { [weak self, weak item] in
                 guard let self, let item else { return }
