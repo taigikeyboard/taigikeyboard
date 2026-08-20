@@ -278,7 +278,7 @@ final class ComposingKeyIntentTests: XCTestCase {
                 isShowingCandidates: true,
             ),
             .commitThenPassThrough,
-            "the bar holds nine candidates, labelled ⌃1 to ⌃9 — ⌃0 addresses nothing",
+            "the bar holds nine candidates, addressed by ⌃1 to ⌃9 — ⌃0 addresses nothing",
         )
     }
 

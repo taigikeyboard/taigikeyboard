@@ -18,9 +18,10 @@ import AppKit
 /// same x — because this window shows two scripts per row.
 ///
 /// What is kept, because it is the layout's behaviour: the scroll-anchored
-/// numbering (the `⌃n` chords address the nine rows around the viewport, and
-/// move with it), the half-row bottom peek that shows there is more to scroll
-/// to, the scroller-style-aware geometry, and Tahoe's separator treatment.
+/// slot numbering (the `⌃n` chords address the nine rows around the viewport
+/// and move with it — undrawn here, see `CandidateItemView`), the half-row
+/// bottom peek that shows there is more to scroll to, the scroller-style-aware
+/// geometry, and Tahoe's separator treatment.
 final class VerticalCandidatePanel: CandidateBasePanel {
     /// How many rows the window shows and the chords address — the same nine
     /// the horizontal page holds.
@@ -36,7 +37,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     private var cells: [CandidateCellContent] = []
     /// The first row of the nine the `⌃n` chords currently address, derived
-    /// from the scroll position — labels renumber as the user scrolls.
+    /// from the scroll position — the slots renumber as the user scrolls.
     private var anchorRow = 0
     /// The content height all rows want; scrolling shrinks back toward it
     /// after a page jump temporarily grows the container.
@@ -124,9 +125,9 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     // MARK: - Selection
 
-    /// The `⌃(slot+1)` chord addresses the rows as currently numbered — the
-    /// nine starting at the viewport's anchor, which is what the visible
-    /// labels say.
+    /// The `⌃(slot+1)` chord addresses the nine rows starting at the
+    /// viewport's anchor, so the chords follow what the user can see even
+    /// though the slot numbers themselves are not drawn.
     override func candidateIndex(forSlot slot: Int) -> Int? {
         guard (0 ..< Self.visibleRows).contains(slot) else { return nil }
         let index = anchorRow + slot
@@ -235,7 +236,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
             item.highlightColor = highlightColor
             item.trailingInset = geometry.itemTrailing
             item.setPrimaryColumnWidth(primaryColumnWidth)
-            item.configure(slotLabel: "", cell: cell)
+            item.configure(cell)
             item.frame = NSRect(x: 0, y: yForRow(index), width: geometry.itemWidth, height: itemHeight)
             item.onClick = { [weak self, weak item] in
                 guard let self, let item else { return }
@@ -275,7 +276,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         contentWidth: CGFloat,
         hasOverflow: Bool,
     ) -> (windowWidth: CGFloat, itemWidth: CGFloat, itemTrailing: CGFloat) {
-        let naturalPadding = CandidateItemView.Metrics.trailingPadding
+        let naturalPadding = CandidateItemView.Metrics.horizontalPadding
         guard hasOverflow else { return (contentWidth, contentWidth, naturalPadding) }
         if NSScroller.preferredScrollerStyle == .legacy {
             let scrollerWidth = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
@@ -347,18 +348,6 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         guard newAnchor != anchorRow else { return }
         anchorRow = newAnchor
 
-        let numberedRows = anchorRow ..< min(anchorRow + Self.visibleRows, cells.count)
-        for item in itemViews {
-            if numberedRows.contains(item.absoluteIndex) {
-                item.showsSlotLabel = true
-                item.configure(
-                    slotLabel: CandidateItemView.slotLabels[item.absoluteIndex - anchorRow],
-                    cell: cells[item.absoluteIndex],
-                )
-            } else {
-                item.showsSlotLabel = false
-            }
-        }
     }
 
     private func updateHighlights() {

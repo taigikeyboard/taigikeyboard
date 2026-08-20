@@ -155,20 +155,18 @@ final class CandidateCellContentTests: XCTestCase {
         XCTAssertNotEqual(measured, ceil(width(of: text, size: CandidateItemView.Metrics.candidateFontSize)))
     }
 
-    /// The gap and the trailing padding are each charged once — a cell that
-    /// double-counted either would push a column off every page.
+    /// The gap and each padding are charged once — a cell that double-counted
+    /// any of them would push a column off every page.
     @MainActor
-    func testMeasuredWidth_isTheChromePlusBothColumnsExactlyOnce() throws {
+    func testMeasuredWidth_isThePaddingsPlusBothColumnsExactlyOnce() throws {
         let cell = CandidateCellContent(text: "tâi-gí khí-puânn", annotation: "台語齒盤")
         let annotation = try XCTUnwrap(cell.annotation)
 
-        let expected = CandidateItemView.Metrics.leadingPadding
-            + CandidateItemView.indexColumnWidth
-            + CandidateItemView.Metrics.indexCandidateGap
+        let expected = CandidateItemView.Metrics.horizontalPadding
             + CandidateItemView.measurePrimaryWidth(cell.text)
             + CandidateItemView.Metrics.candidateAnnotationGap
             + ceil(width(of: annotation, size: CandidateItemView.Metrics.annotationFontSize))
-            + CandidateItemView.Metrics.trailingPadding
+            + CandidateItemView.Metrics.horizontalPadding
 
         XCTAssertEqual(CandidateItemView.measureWidth(cell), expected, accuracy: 0.01)
     }
@@ -195,11 +193,11 @@ final class CandidateCellContentTests: XCTestCase {
         let annotated = CandidateCellContent(text: "tâi-gí", annotation: "台語")
         let bare = CandidateCellContent(text: "guá", annotation: nil)
 
-        item.configure(slotLabel: "⌃1", cell: annotated)
+        item.configure(annotated)
         let withAnnotation = item.fittingSize.width
-        item.configure(slotLabel: "⌃1", cell: bare)
+        item.configure(bare)
         let withoutAnnotation = item.fittingSize.width
-        item.configure(slotLabel: "⌃1", cell: annotated)
+        item.configure(annotated)
         let withAnnotationAgain = item.fittingSize.width
 
         XCTAssertLessThan(withoutAnnotation, withAnnotation)
@@ -211,7 +209,7 @@ final class CandidateCellContentTests: XCTestCase {
     @MainActor
     func testPrimaryColumnWidth_widensTheCellAndFloorsAtOneGlyph() {
         let item = CandidateItemView(style: .sequoia)
-        item.configure(slotLabel: "", cell: CandidateCellContent(text: "guá", annotation: "我"))
+        item.configure(CandidateCellContent(text: "guá", annotation: "我"))
         let natural = item.fittingSize.width
 
         item.setPrimaryColumnWidth(natural + 40)
@@ -235,7 +233,7 @@ final class CandidateCellContentTests: XCTestCase {
         let cell = CandidateCellContent(
             text: "tâi-gí khí-puânn tsin hó-sè", annotation: "台語齒盤真好勢",
         )
-        item.configure(slotLabel: "⌃1", cell: cell)
+        item.configure(cell)
         // Deliberately narrower than `measureWidth` wants — the clamp the
         // packer applies to an oversized candidate. Hosted in a container the
         // way the panels host their cells, because a detached view never runs
@@ -249,7 +247,7 @@ final class CandidateCellContentTests: XCTestCase {
         container.layoutSubtreeIfNeeded()
 
         let labels = item.subviews.compactMap { $0 as? NSTextField }
-        XCTAssertEqual(labels.count, 3, "the cell lays out an index, a candidate and an annotation")
+        XCTAssertEqual(labels.count, 2, "the cell lays out a candidate and an annotation")
         for label in labels {
             // Non-zero first, so a layout pass that never ran cannot pass this
             // case by leaving every frame at the origin.
@@ -266,15 +264,15 @@ final class CandidateCellContentTests: XCTestCase {
     @MainActor
     func testMaximumPrimaryColumnWidth_leavesTheChromeAndTrailingTheirRoom() {
         let cellWidth = CandidateItemView.baseWidth * 3
-        let trailing = CandidateItemView.Metrics.trailingPadding
+        let trailing = CandidateItemView.Metrics.horizontalPadding
 
         let cap = CandidateItemView.maximumPrimaryColumnWidth(
             inCellWidth: cellWidth, trailingInset: trailing,
         )
 
-        // trace: baseWidth = chrome + one-glyph floor + trailingPadding, so
-        // everything outside the candidate column is `baseWidth - floor`, and
-        // the cap is what a cell has left after paying it.
+        // trace: baseWidth = horizontalPadding + one-glyph floor +
+        // horizontalPadding, so everything outside the candidate column is
+        // `baseWidth - floor`, and the cap is what a cell has left after it.
         let oneGlyphFloor = max(
             CandidateItemView.Metrics.candidateFontSize,
             CandidateItemView.measurePrimaryWidth("永"),
