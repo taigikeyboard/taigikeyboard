@@ -371,7 +371,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// case can pin the handover rule end to end.
     private(set) var owner: ComposingSessionToken?
 
-    private(set) var labels: [String] = []
+    private(set) var cells: [CandidateCellContent] = []
     private(set) var selectedIndex = 0
 
     /// What is on screen right now, and nil once the window has been hidden —
@@ -379,7 +379,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// candidates the user can no longer see.
     var shownContent: CandidateWindowContent? {
         guard isShowing else { return nil }
-        return CandidateWindowContent(labels: labels)
+        return CandidateWindowContent(cells: cells)
     }
 
     var isShowing: Bool {
@@ -394,14 +394,14 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         ownedBy owner: ComposingSessionToken,
     ) {
         self.owner = owner
-        labels = content.labels
+        cells = content.cells
         selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
     }
 
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {
         calls.append(.navigate(direction))
-        guard self.owner == owner, !labels.isEmpty else { return }
+        guard self.owner == owner, !cells.isEmpty else { return }
         // Only the walk is modelled, because only the walk means the same
         // thing in every real layout: one candidate along, clamped at both
         // ends. Where a PAGE direction lands depends on measured widths
@@ -413,14 +413,14 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         case .left:
             selectedIndex = max(selectedIndex - 1, 0)
         case .right:
-            selectedIndex = min(selectedIndex + 1, labels.count - 1)
+            selectedIndex = min(selectedIndex + 1, cells.count - 1)
         case .up, .down, .pageUp, .pageDown:
             break
         }
     }
 
     func selectedCandidateIndex(ownedBy owner: ComposingSessionToken) -> Int? {
-        guard self.owner == owner, !labels.isEmpty else { return nil }
+        guard self.owner == owner, !cells.isEmpty else { return nil }
         return selectedIndex
     }
 
@@ -428,7 +428,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// every controller case — the double never pages (see `navigate`).
     func candidateIndex(forSlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int? {
         guard self.owner == owner, (0 ..< HorizontalPageLayout.pageSize).contains(slot) else { return nil }
-        return labels.indices.contains(slot) ? slot : nil
+        return cells.indices.contains(slot) ? slot : nil
     }
 
     func hide(ownedBy owner: ComposingSessionToken) {
@@ -436,7 +436,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         calls.append(.hide(isOwner: isOwner))
         if isOwner {
             self.owner = nil
-            labels = []
+            cells = []
             selectedIndex = 0
         }
     }
@@ -444,7 +444,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     func hideForHandover() {
         calls.append(.hideForHandover)
         owner = nil
-        labels = []
+        cells = []
         selectedIndex = 0
     }
 }

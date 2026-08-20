@@ -4,17 +4,18 @@ import AppKit
 
 /// The scrolling vertical candidate window — MacishType's `MacishVerticalPanel`
 /// (`references/MacishType/macos/MacishType/MacishCandidateWindow/
-/// MacishVerticalPanel.swift`; MIT, © 2026 Luke Chang) with two simplifications
+/// MacishVerticalPanel.swift`; MIT, © 2026 Luke Chang) with one simplification
 /// the Codex pre-impl confirmed:
 ///
-/// - No annotation column, so its column-alignment, annotation-visibility and
-///   top-3 width heuristic all collapse: the width is the widest of the
-///   displayed labels, measured eagerly — with the 200-candidate display cap
-///   that is bounded work, and it removes the mid-scroll window-widening
-///   animation upstream needs to correct a heuristic miss.
-/// - Rows are built up front rather than lazily for the same reason: the cap
-///   bounds them, and the lazy build exists to hide measurement work this port
-///   no longer defers.
+/// - Widths are measured eagerly over the whole displayed list rather than
+///   estimated from the top three rows and corrected later. With the
+///   200-candidate display cap that is bounded work, and it removes the
+///   mid-scroll window-widening animation upstream needs when its heuristic
+///   misses. Rows are built up front for the same reason: the lazy build
+///   exists to hide measurement work this port no longer defers.
+///
+/// Upstream's column alignment IS kept — every row's annotation starts at the
+/// same x — because this window shows two scripts per row.
 ///
 /// What is kept, because it is the layout's behaviour: the scroll-anchored
 /// numbering (the `⌃n` chords address the nine rows around the viewport, and
@@ -33,7 +34,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     private static let separatorHeight: CGFloat = 1
 
-    private var labels: [String] = []
+    private var cells: [CandidateCellContent] = []
     /// The first row of the nine the `⌃n` chords currently address, derived
     /// from the scroll position — labels renumber as the user scrolls.
     private var anchorRow = 0
@@ -51,7 +52,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private var boundsObserver: (any NSObjectProtocol)?
     private var scrollerStyleObserver: (any NSObjectProtocol)?
 
-    override var isEmpty: Bool { labels.isEmpty }
+    override var isEmpty: Bool { cells.isEmpty }
 
     override init(style: CandidateWindowStyle) {
         super.init(style: style)
@@ -107,14 +108,14 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     private var rowHeight: CGFloat { CandidateItemView.Metrics.itemHeight + Self.separatorHeight }
 
-    override func updateCandidates(_ newLabels: [String]) -> CGSize {
-        labels = Array(newLabels.prefix(Self.maxDisplayCandidates))
+    override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
+        cells = Array(newCells.prefix(Self.maxDisplayCandidates))
         selectedIndex = 0
         return rebuildRows()
     }
 
     override func clear() {
-        labels = []
+        cells = []
         selectedIndex = 0
         anchorRow = 0
         removeRowViews()
@@ -129,16 +130,16 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     override func candidateIndex(forSlot slot: Int) -> Int? {
         guard (0 ..< Self.visibleRows).contains(slot) else { return nil }
         let index = anchorRow + slot
-        return labels.indices.contains(index) ? index : nil
+        return cells.indices.contains(index) ? index : nil
     }
 
     override func navigate(_ direction: CandidateNavigation) {
-        guard !labels.isEmpty else { return }
+        guard !cells.isEmpty else { return }
         switch direction {
         case .up:
             select(max(selectedIndex - 1, 0))
         case .down:
-            select(min(selectedIndex + 1, labels.count - 1))
+            select(min(selectedIndex + 1, cells.count - 1))
         // A column has no candidate to the left or right, so the horizontal
         // keys page — backward and forward respectively, as upstream binds
         // them (`MacishVerticalPanel.swift:333-372`).
@@ -155,8 +156,8 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private func jumpPage(by pages: Int) {
         let visualOffset = max(selectedIndex - anchorRow, 0)
         let targetAnchor = anchorRow + pages * Self.visibleRows
-        if targetAnchor >= 0, targetAnchor < labels.count {
-            let target = min(targetAnchor + visualOffset, labels.count - 1)
+        if targetAnchor >= 0, targetAnchor < cells.count {
+            let target = min(targetAnchor + visualOffset, cells.count - 1)
             scrollRowToTop(targetAnchor)
             select(target)
         } else if pages < 0, anchorRow > 0 {
@@ -164,15 +165,15 @@ final class VerticalCandidatePanel: CandidateBasePanel {
             // visual row, as upstream does (`MacishVerticalPanel.swift:355-359`)
             // — jumping the highlight to 0 would move it on screen.
             scrollRowToTop(0)
-            select(min(visualOffset, labels.count - 1))
+            select(min(visualOffset, cells.count - 1))
         } else {
             // No page left in that direction at all: land on that end.
-            select(pages > 0 ? labels.count - 1 : 0)
+            select(pages > 0 ? cells.count - 1 : 0)
         }
     }
 
     private func select(_ index: Int) {
-        guard labels.indices.contains(index) else { return }
+        guard cells.indices.contains(index) else { return }
         selectedIndex = index
         ensureSelectionVisible()
         updateHighlights()
@@ -186,38 +187,55 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
         anchorRow = 0
         removeRowViews()
-        guard !labels.isEmpty else { return .zero }
+        guard !cells.isEmpty else { return .zero }
 
         let itemHeight = CandidateItemView.Metrics.itemHeight
-        let hasOverflow = labels.count > Self.visibleRows
+        let hasOverflow = cells.count > Self.visibleRows
 
-        // Width: the widest displayed label, floored at one slot and capped so
+        // Width: the widest displayed cell, floored at one slot and capped so
         // one long phrase cannot stretch the window across the screen.
-        let widest = labels.map(CandidateItemView.measureWidth).max() ?? 0
+        let widest = cells.map(CandidateItemView.measureWidth).max() ?? 0
         let contentWidth = min(
             max(widest, CandidateItemView.baseWidth),
             CandidateItemView.baseWidth * Self.maxContentColumns,
         )
         let geometry = scrollerGeometry(contentWidth: contentWidth, hasOverflow: hasOverflow)
 
+        // Every row's annotation starts at the same x, which is what makes a
+        // column of two-script rows readable rather than a ragged edge
+        // (`MacishVerticalPanel.swift:119-131`). The widest candidate sets the
+        // column — clamped to what the capped window can actually hold, since
+        // a column wider than the cell would push text past its edge.
+        let widestPrimary = cells
+            .map { CandidateItemView.measurePrimaryWidth($0.text) }
+            .max() ?? 0
+        let primaryColumnWidth = min(
+            widestPrimary,
+            CandidateItemView.maximumPrimaryColumnWidth(
+                inCellWidth: geometry.itemWidth,
+                trailingInset: geometry.itemTrailing,
+            ),
+        )
+
         // Height: nine rows, plus half a row peeking when there is more — the
         // cut-off row is what says "scroll me".
-        let visibleCount = min(labels.count, Self.visibleRows)
+        let visibleCount = min(cells.count, Self.visibleRows)
         let bottomPeek: CGFloat = hasOverflow ? itemHeight / 2 : 0
         let windowHeight = CGFloat(visibleCount) * itemHeight
             + CGFloat(max(visibleCount - 1, 0)) * Self.separatorHeight
             + bottomPeek
-        naturalContentHeight = CGFloat(labels.count) * itemHeight
-            + CGFloat(max(labels.count - 1, 0)) * Self.separatorHeight
+        naturalContentHeight = CGFloat(cells.count) * itemHeight
+            + CGFloat(max(cells.count - 1, 0)) * Self.separatorHeight
             + bottomPeek
         rowsContainer.frame.size = NSSize(width: geometry.itemWidth, height: naturalContentHeight)
 
-        for (index, label) in labels.enumerated() {
+        for (index, cell) in cells.enumerated() {
             let item = CandidateItemView(style: style)
             item.absoluteIndex = index
             item.highlightColor = highlightColor
             item.trailingInset = geometry.itemTrailing
-            item.configure(slotLabel: "", candidate: label)
+            item.setPrimaryColumnWidth(primaryColumnWidth)
+            item.configure(slotLabel: "", cell: cell)
             item.frame = NSRect(x: 0, y: yForRow(index), width: geometry.itemWidth, height: itemHeight)
             item.onClick = { [weak self, weak item] in
                 guard let self, let item else { return }
@@ -226,7 +244,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
             rowsContainer.addSubview(item)
             itemViews.append(item)
         }
-        for index in 0 ..< max(labels.count - 1, 0) {
+        for index in 0 ..< max(cells.count - 1, 0) {
             let separator = CandidateSeparatorView()
             separator.horizontalInset = style == .tahoe ? 8 : 0
             separator.frame = NSRect(
@@ -329,13 +347,13 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         guard newAnchor != anchorRow else { return }
         anchorRow = newAnchor
 
-        let numberedRows = anchorRow ..< min(anchorRow + Self.visibleRows, labels.count)
+        let numberedRows = anchorRow ..< min(anchorRow + Self.visibleRows, cells.count)
         for item in itemViews {
             if numberedRows.contains(item.absoluteIndex) {
                 item.showsSlotLabel = true
                 item.configure(
                     slotLabel: CandidateItemView.slotLabels[item.absoluteIndex - anchorRow],
-                    candidate: labels[item.absoluteIndex],
+                    cell: cells[item.absoluteIndex],
                 )
             } else {
                 item.showsSlotLabel = false
@@ -366,7 +384,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     private func handleScrollerStyleChange() {
         scrollView.scrollerStyle = NSScroller.preferredScrollerStyle
-        guard isVisible, !labels.isEmpty else { return }
+        guard isVisible, !cells.isEmpty else { return }
         replace(panelSize: rebuildRows())
         // The rebuild scrolled back to the top; the selection survives it, so
         // bring its row back on screen — a Space against an off-screen

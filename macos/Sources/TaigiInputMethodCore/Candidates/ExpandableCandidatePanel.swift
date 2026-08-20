@@ -27,7 +27,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         case expanded
     }
 
-    private var labels: [String] = []
+    private var cells: [CandidateCellContent] = []
     private var measuredWidths: [CGFloat] = []
     private var displayMode: DisplayMode = .collapsed
     /// The collapsed row: first page of the horizontal packing.
@@ -57,7 +57,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var isAnimating = false
     private var scrollerStyleObserver: (any NSObjectProtocol)?
 
-    override var isEmpty: Bool { labels.isEmpty }
+    override var isEmpty: Bool { cells.isEmpty }
 
     override init(style: CandidateWindowStyle) {
         super.init(style: style)
@@ -112,7 +112,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     private func handleScrollerStyleChange() {
         scrollView.scrollerStyle = NSScroller.preferredScrollerStyle
-        guard isVisible, displayMode == .expanded, !labels.isEmpty, !isAnimating else { return }
+        guard isVisible, displayMode == .expanded, !cells.isEmpty, !isAnimating else { return }
         replace(panelSize: layoutForMode())
         ensureSelectedRowVisible()
     }
@@ -123,12 +123,12 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var rowHeight: CGFloat { itemHeight + Self.separatorHeight }
     /// Whether the list holds more than the collapsed row shows — what the
     /// chevron, the pill corner and the expand paths all key on.
-    private var hasOverflow: Bool { labels.count > collapsedRow.count }
+    private var hasOverflow: Bool { cells.count > collapsedRow.count }
     private var gridWidth: CGFloat { expandedColumnWidth * CGFloat(expandedColumnCount) }
 
-    override func updateCandidates(_ newLabels: [String]) -> CGSize {
-        labels = Array(newLabels.prefix(Self.maxDisplayCandidates))
-        measuredWidths = labels.map(CandidateItemView.measureWidth)
+    override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
+        cells = Array(newCells.prefix(Self.maxDisplayCandidates))
+        measuredWidths = cells.map(CandidateItemView.measureWidth)
         selectedIndex = 0
         return rebuildCollapsed()
     }
@@ -137,7 +137,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         stopFrameAnimation()
         transition = nil
         isAnimating = false
-        labels = []
+        cells = []
         measuredWidths = []
         selectedIndex = 0
         displayMode = .collapsed
@@ -159,7 +159,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         isGridBuilt = false
         removeAllItemViews()
         rowHighlightView?.alphaValue = 0
-        guard !labels.isEmpty else { return .zero }
+        guard !cells.isEmpty else { return .zero }
 
         collapsedRow = HorizontalPageLayout.pack(
             widths: measuredWidths,
@@ -202,7 +202,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         item.configure(
             slotLabel: slotPosition < CandidateItemView.slotLabels.count
                 ? CandidateItemView.slotLabels[slotPosition] : "",
-            candidate: labels[candidateIndex],
+            cell: cells[candidateIndex],
         )
         item.onClick = { [weak self, weak item] in
             guard let self, let item, !isAnimating else { return }
@@ -230,7 +230,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     override func navigate(_ direction: CandidateNavigation) {
-        guard !labels.isEmpty, !isAnimating else { return }
+        guard !cells.isEmpty, !isAnimating else { return }
         switch displayMode {
         case .collapsed:
             navigateCollapsed(direction)
@@ -243,7 +243,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         switch direction {
         case .right:
             let target = selectedIndex + 1
-            guard target < labels.count else { return }
+            guard target < cells.count else { return }
             // Walking off the row's end both expands AND lands on the next
             // candidate — upstream's `shouldMoveOnExpand` is always true for
             // `→` (`MacishHorizontalExpandablePanel.swift:627-692`); an expand
@@ -263,7 +263,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func navigateExpanded(_ direction: CandidateNavigation) {
         switch direction {
         case .right:
-            if selectedIndex + 1 < labels.count {
+            if selectedIndex + 1 < cells.count {
                 select(selectedIndex + 1)
             }
         case .left:
@@ -315,7 +315,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func select(_ index: Int) {
-        guard labels.indices.contains(index) else { return }
+        guard cells.indices.contains(index) else { return }
         selectedIndex = index
         if displayMode == .collapsed, index >= collapsedRow.count {
             // A click or walk reached a candidate the row does not show.
@@ -711,7 +711,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                     item.configure(
                         slotLabel: position < CandidateItemView.slotLabels.count
                             ? CandidateItemView.slotLabels[position] : "",
-                        candidate: labels[slot.candidateIndex],
+                        cell: cells[slot.candidateIndex],
                     )
                 }
             }
@@ -737,7 +737,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 item.configure(
                     slotLabel: isOnSelectedRow && place.position < CandidateItemView.slotLabels.count
                         ? CandidateItemView.slotLabels[place.position] : "",
-                    candidate: labels[item.absoluteIndex],
+                    cell: cells[item.absoluteIndex],
                 )
             }
             // (Overflow originals are left exactly as they were — label and
@@ -749,7 +749,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 item.configure(
                     slotLabel: isOnSelectedRow && place.position < CandidateItemView.slotLabels.count
                         ? CandidateItemView.slotLabels[place.position] : "",
-                    candidate: labels[item.absoluteIndex],
+                    cell: cells[item.absoluteIndex],
                 )
             }
         }

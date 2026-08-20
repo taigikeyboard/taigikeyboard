@@ -501,7 +501,7 @@ public final class TaigiInputController: IMKInputController {
 
         candidatePresenter.show(
             CandidateWindowContent(
-                labels: fetchedCandidates.map(manager.documentText(for:)),
+                cells: fetchedCandidates.map(manager.cellContent(for:)),
             ),
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),

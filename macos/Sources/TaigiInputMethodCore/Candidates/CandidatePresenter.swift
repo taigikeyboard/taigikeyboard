@@ -3,21 +3,21 @@
 import AppKit
 
 /// The full candidate list as the window renders it, in display order — a
-/// label's position IS the candidate's absolute index, which is the identity
+/// cell's position IS the candidate's absolute index, which is the identity
 /// every other call on the seam speaks in.
 ///
-/// Plain strings rather than candidates: the window shows exactly what
-/// committing writes into the document, and that rendering depends on the
-/// output settings the engine call uses (`CandidateDocumentText`). Handing the
-/// window the strings keeps the settings on one side of the seam and makes the
-/// window impossible to render out of step with what the user will get.
+/// Rendered cells rather than candidates: which script a cell leads with
+/// depends on the output settings the engine call uses
+/// (`CandidateCellContent.cell(for:settings:)`), so resolving it on this side
+/// of the seam keeps the settings in one place and makes the window impossible
+/// to render out of step with the snapshot the fetch used.
 ///
 /// The whole list rather than one page, unlike the SwiftUI bar this window
 /// replaced: page boundaries are now a function of measured glyph widths
 /// (`HorizontalPageLayout`), so only the window — which owns the measuring —
 /// can know where a page ends.
 struct CandidateWindowContent: Equatable, Sendable {
-    let labels: [String]
+    let cells: [CandidateCellContent]
 }
 
 /// Which way a navigation key asks the candidate window to move. The raw six
