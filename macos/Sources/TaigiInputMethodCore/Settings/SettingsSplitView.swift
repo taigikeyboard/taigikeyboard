@@ -8,12 +8,11 @@ import SwiftUI
 ///
 /// `String` raw values so the selected pane can persist through
 /// `@AppStorage` — Apple's Settings guidance is to reopen on the pane the
-/// user last used. A persisted value from a build that has since removed the
-/// case reads back as the `@AppStorage` default, 一般.
+/// user last used. A value persisted by a build whose case is since removed is
+/// cleared at launch (`RetiredSettingsCleanup`), landing on the default, 一般.
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance
-    case dictionarySearch
     case customDictionary
     case frequencyData
     case associationData
@@ -30,7 +29,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .macosGeneralTab
         case .appearance: .macosAppearanceTab
-        case .dictionarySearch: .macosDictionarySearchSection
         case .customDictionary: .dictionaryCustomDictionary
         case .frequencyData: .dictionaryFrequencyManagement
         case .associationData: .dictionaryAssociationManagement
@@ -43,7 +41,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .appearance: "paintpalette"
-        case .dictionarySearch: "magnifyingglass"
         case .customDictionary: "character.book.closed"
         case .frequencyData: "chart.bar"
         case .associationData: "link"
@@ -65,7 +62,9 @@ struct SettingsSplitView: View {
     /// composition root, and a test could hand it its own.
     let stores: UserDataStores
 
-    /// Read for the search's input mode and custom-dictionary switch.
+    /// Was read by the 揣辭典 pane's search service; the pane is unlisted for
+    /// now (not released yet, USER 2026-08-21) and the injection point stays so
+    /// relisting it is one `detailView` case again.
     let settingsProvider: any EngineSettingsProvider
 
     @Environment(DisplayLanguageStore.self) private var language
@@ -116,11 +115,6 @@ struct SettingsSplitView: View {
             GeneralSettingsView()
         case .appearance:
             AppearanceSettingsView()
-        case .dictionarySearch:
-            DictionarySearchPage(service: DictionarySearchService(
-                customDictionaryStore: stores.customDictionary,
-                settingsProvider: settingsProvider,
-            ))
         case .customDictionary:
             CustomDictionaryPage(store: stores.customDictionary)
         case .frequencyData:

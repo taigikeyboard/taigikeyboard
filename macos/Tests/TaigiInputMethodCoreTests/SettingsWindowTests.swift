@@ -144,7 +144,7 @@ final class SettingsWindowTests: XCTestCase {
         XCTAssertEqual(
             SettingsPane.allCases.map(\.rawValue),
             [
-                "general", "appearance", "dictionarySearch", "customDictionary",
+                "general", "appearance", "customDictionary",
                 "frequencyData", "associationData", "backupRestore", "dictionarySources",
             ],
         )
@@ -164,14 +164,14 @@ final class SettingsWindowTests: XCTestCase {
         let hanji = makeStore(.hanji)
         XCTAssertEqual(
             SettingsPane.allCases.map { hanji.string($0.labelKey) },
-            ["一般", "外觀", "揣辭典", "自訂詞庫", "詞頻紀錄", "詞關聯紀錄", "備份復原", "選辭典"],
+            ["一般", "外觀", "自訂詞庫", "詞頻紀錄", "詞關聯紀錄", "備份復原", "選辭典"],
         )
 
         let english = makeStore(.english)
         XCTAssertEqual(
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
-                "General", "Appearance", "Look Up", "Custom Dictionary", "Frequency Records",
+                "General", "Appearance", "Custom Dictionary", "Frequency Records",
                 "Association Records", "Backup and Restore", "Choose Dictionaries",
             ],
         )
