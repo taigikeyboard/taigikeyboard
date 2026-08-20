@@ -35,7 +35,10 @@ public extension Callouts {
     /// TPS layout callouts (方音符號 long-press variants)
     // 中文: TPS 方音符號佈局的長按 callout 表 — 包含數字捷徑、入聲韻尾、鼻化母音等。
     enum TPSCallouts {
-        static let actions: [String: [String]] = [
+        /// Glyph keys — long-press prepends the key's own glyph before these
+        /// variants (see `calloutChars`). USER scope 2026-08-21: letter-variant
+        /// + number-shortcut keys include their own glyph.
+        static let glyphActions: [String: [String]] = [
             // Row 1: number shortcuts (digits accessible via long-press)
             "ㆠ": ["1"], "ˋ": ["2"], "˪": ["3"], "ㆣ": ["4"], "ˊ": ["5"],
             "ˇ": ["6"], "˫": ["7"], "˙": ["8"], "ㆩ": ["0"],
@@ -61,10 +64,28 @@ public extension Callouts {
             "ㆮ": ["ㆯ"],
             // Other consonants
             "ㄙ": ["ㄒ"],
-            // Punctuation
+        ]
+
+        /// Punctuation keys — long-press stays variant-only (no base glyph).
+        static let punctuationActions: [String: [String]] = [
             ",": ["。"],
             "，": ["。"],
         ]
+
+        /// Combined table — keycap hints (`ButtonTextProvider`) read this to
+        /// show variants only, so the base glyph never duplicates on its own
+        /// keycap. Long-press callouts go through `calloutChars` instead.
+        static let actions: [String: [String]] =
+            glyphActions.merging(punctuationActions) { glyph, _ in glyph }
+
+        /// Callout characters for a TPS key: the key's own glyph first, then
+        /// its variants — so long-press still offers the base letter
+        /// (base-first, matching KeyboardKit's English callouts). Punctuation
+        /// keeps variant-only callouts. Returns nil for keys without callouts.
+        static func calloutChars(for char: String) -> [String]? {
+            if let variants = glyphActions[char] { return [char] + variants }
+            return punctuationActions[char]
+        }
     }
 
     /// MOE1 layout punctuation callouts (full-width variants)

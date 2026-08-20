@@ -22,8 +22,8 @@ public extension Callouts {
         let layoutType = SharedSettings.shared.keyboardLayoutType
         switch layoutType {
         case .tps:
-            if let actions = TPSCallouts.actions[char] {
-                return actions.map { .character($0) }
+            if let chars = TPSCallouts.calloutChars(for: char) {
+                return chars.map { .character($0) }
             }
         case .moe1:
             if let actions = MOE1Callouts.actions[char] {

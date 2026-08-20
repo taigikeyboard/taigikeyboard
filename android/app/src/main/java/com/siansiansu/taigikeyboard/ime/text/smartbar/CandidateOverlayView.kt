@@ -99,7 +99,7 @@ class CandidateOverlayView : FrameLayout {
                 val isTranslateSwapped = translateSwappedState.value
                 // Read live each recomposition; recompose is driven by the states above (show/update),
                 // matching the legacy re-measure cadence on submitRows().
-                val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+                val isTPSLayout = prefs.isTpsLayout
                 val fontType = prefs.fontType
                 val typeface = remember(fontType) { TypefaceLoader.getTypefaceByType(fontType, context) }
                 // i18n live-switch: the IME (same process) follows the SAME DataStore tag the host

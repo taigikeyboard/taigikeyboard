@@ -85,7 +85,7 @@ class CandidateClickHandler(
 
             val cachedIsTranslateSwapped = getIsTranslateSwapped()
             val cachedOutputBothScripts = getOutputBothScripts()
-            val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+            val isTPSLayout = prefs.isTpsLayout
             val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
             // Convert roman to TPS for bracket annotation when in TPS mode
@@ -224,7 +224,7 @@ class CandidateClickHandler(
         val isNextWordPred = word.id < 0
         val cachedIsTranslateSwapped = getIsTranslateSwapped()
         val cachedOutputBothScripts = getOutputBothScripts()
-        val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+        val isTPSLayout = prefs.isTpsLayout
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
         // Convert roman to TPS for bracket annotation when in TPS mode
@@ -341,7 +341,7 @@ class CandidateClickHandler(
         // user_frequency.db + NextWord keys stay mode-independent (decision b).
         val cachedIsTranslateSwapped = getIsTranslateSwapped()
         val cachedOutputBothScripts = getOutputBothScripts()
-        val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+        val isTPSLayout = prefs.isTpsLayout
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
         val bracketRoman =
             if (isTPSLayout) {
