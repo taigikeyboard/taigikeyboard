@@ -34,17 +34,6 @@ enum ShortcutAction: CaseIterable, Sendable {
     case toggleRomanization
     case toggleTranslateSwapped
 
-    /// The roster split into the groups the input-source menu draws: opening
-    /// the settings window, and the two switches a user flips mid-sentence.
-    ///
-    /// Written out rather than derived from `allCases` order so that adding a
-    /// case has to say which group it belongs to — `ShortcutActionsTests` pins
-    /// that every case appears exactly once.
-    static let groups: [[ShortcutAction]] = [
-        [.openSettings],
-        [.toggleRomanization, .toggleTranslateSwapped],
-    ]
-
     var name: KeyboardShortcuts.Name {
         switch self {
         case .openSettings: .openSettings

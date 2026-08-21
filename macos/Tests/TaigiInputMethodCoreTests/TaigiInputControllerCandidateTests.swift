@@ -460,16 +460,17 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(session.client.writes.last, .setMarkedText("taigia", selectionLocation: 6))
     }
 
-    /// Switching romanization from the input-source menu has to take the bar
-    /// with it. The candidates on screen were fetched under the old
-    /// romanization, and Space commits whichever one is highlighted — a bar left
-    /// standing would write a candidate the new mode would never have offered.
+    /// Switching romanization has to take the bar with it. The candidates on
+    /// screen were fetched under the old romanization, and Space commits
+    /// whichever one is highlighted — a bar left standing would write a
+    /// candidate the new mode would never have offered.
     ///
-    /// Driven through `doCommandBySelector:`, which is how IMK delivers a menu
-    /// command (`IMKInputController.h:283-296`), against a real composition —
-    /// asserting only that a hide was requested would pass against a bar that
-    /// stayed up because the hide named the wrong session.
-    func testSwitchingRomanizationFromTheMenu_takesTheBarDown() throws {
+    /// Driven through `performShortcutAction`, the path the ⌃⌘R hotkey takes —
+    /// the input-source menu no longer carries the switch (USER 2026-08-21) —
+    /// against a real composition: asserting only that a hide was requested
+    /// would pass against a bar that stayed up because the hide named the
+    /// wrong session.
+    func testSwitchingRomanization_takesTheBarDown() throws {
         let session = try composedSession()
         let suiteName = "TaigiInputControllerCandidateTests.\(UUID().uuidString)"
         let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -477,13 +478,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         session.controller.settings = SettingsStore(userDefaults: userDefaults)
         XCTAssertTrue(session.presenter.isShowing, "the composition put a bar up to take down")
 
-        // Found by the command it sends: the menu's titles follow the display language, so a
-        // lookup by text would only hold in the language this case was written in.
-        let toggle = try XCTUnwrap(
-            XCTUnwrap(session.controller.menu()).items
-                .first { $0.action == Selector(("toggleRomanizationFromMenu:")) }?.action,
-        )
-        session.controller.doCommand(by: toggle, command: [:])
+        session.controller.performShortcutAction(.toggleRomanization)
 
         XCTAssertFalse(session.presenter.isShowing)
         XCTAssertEqual(session.controller.settings.inputMode, .poj)

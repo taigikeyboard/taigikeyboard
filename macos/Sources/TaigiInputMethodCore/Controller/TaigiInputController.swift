@@ -233,61 +233,30 @@ public final class TaigiInputController: IMKInputController {
             // commits a language change, and committing one runs the chrome renderer.
             language.syncFromSettings()
 
-            let global = ShortcutAction.groups.map { group in
-                group.map { action in
-                    let shortcut = KeyboardShortcuts.getShortcut(for: action.name)
-                    return InputSourceMenuRow(
-                        label: action.label(language),
-                        keyEquivalent: shortcut?.nsMenuItemKeyEquivalent ?? "",
-                        modifiers: shortcut?.modifiers ?? [],
-                        action: Self.selector(for: action),
-                    )
-                }
-            }
-            // Label only, no key display, NEVER a key equivalent — the row
-            // leads to the shortcut pane, where the keys are. The agent
-            // canonicalizes ANY key equivalent string back to a functional key
-            // for both display and matching (probes 2026-08-21: ↩ U+21A9,
-            // ␠ U+2420 and char+word-joiner all dispatched on the real key,
-            // menu closed), so whatever the key column can draw, typing can
-            // trigger — a bare Return here sent every mid-composition Enter to
-            // the settings window instead of committing. Key text in the title
-            // was rejected by the USER (left-aligned, reads badly), and every
-            // display-only channel is dropped by the agent (attributedTitle,
-            // custom view, image, badge, subtitle). The global rows above keep
-            // real key equivalents because firing with the menu closed IS
-            // their job.
-            var composing = ComposingAction.groups.map { group in
-                group.map { action in
-                    InputSourceMenuRow(
-                        label: action.label(language),
-                        action: #selector(openShortcutSettings(_:)),
-                    )
-                }
-            }
-            // Ends the group that moves through the candidates, because that is
-            // what it does — the slot chords are the fastest way to pick one.
-            composing[0].append(InputSourceMenuRow(
-                label: language.string(.macosBindingSlotModifier),
-                action: #selector(openShortcutSettings(_:)),
-            ))
-            return global + composing
+            // Two rows and nothing else (USER 2026-08-21): the doorway into
+            // the settings window, and the doorway into its shortcut pane.
+            // Every action and every key lives behind those doors — the menu
+            // stopped being the shortcut roster when the agent proved unable
+            // to DISPLAY a composing key without also DISPATCHING it
+            // (`InputSourceMenuRow`). The 開啟設定 chord stays: opening
+            // settings is a real shortcut, and the agent's key column is its
+            // display. The shortcut row has no chord — the pane is a place,
+            // not an action.
+            let openSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
+            return [[
+                InputSourceMenuRow(
+                    label: ShortcutAction.openSettings.label(language),
+                    keyEquivalent: openSettingsShortcut?.nsMenuItemKeyEquivalent ?? "",
+                    modifiers: openSettingsShortcut?.modifiers ?? [],
+                    action: #selector(showPreferences(_:)),
+                ),
+                InputSourceMenuRow(
+                    label: language.string(.macosShortcutsTab),
+                    action: #selector(openShortcutSettings(_:)),
+                ),
+            ]]
         }
         return InputSourceMenuRenderer.menu(groups)
-    }
-
-    /// One selector per action rather than one selector reading the sender: IMK
-    /// delivers menu commands through `doCommandBySelector:commandDictionary:`,
-    /// where the sender is an info dictionary carrying the `NSMenuItem` under
-    /// `kIMKCommandMenuItemName` rather than the item itself
-    /// (`IMKInputController.h:283-296`). Naming the action in the selector means
-    /// nothing has to be recovered from that dictionary's shape.
-    private static func selector(for action: ShortcutAction) -> Selector {
-        switch action {
-        case .openSettings: #selector(showPreferences(_:))
-        case .toggleRomanization: #selector(toggleRomanizationFromMenu(_:))
-        case .toggleTranslateSwapped: #selector(toggleTranslateSwappedFromMenu(_:))
-        }
     }
 
     /// Deliberately does not call `super`. The inherited implementation looks
@@ -299,12 +268,9 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(nil) { _, _ in SettingsWindowController.shared.show() }
     }
 
-    /// Opens the settings window ON the shortcut pane.
-    ///
-    /// What the composing rows do instead of running: their keys need a
-    /// composition, and there is none while a menu is open — so the row leads
-    /// to where the key is set. The pane is written before the window is asked
-    /// to show, so an already-open window moves to it too.
+    /// Opens the settings window ON the shortcut pane. The pane is written
+    /// before the window is asked to show, so an already-open window moves to
+    /// it too.
     @objc
     private func openShortcutSettings(_: Any!) {
         onMainActor(nil) { controller, _ in
@@ -313,19 +279,6 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    /// The menu rows for the two session-scoped actions run the same path their
-    /// chords do, so a setting behaves the same whichever surface changed it.
-    @objc
-    private func toggleRomanizationFromMenu(_: Any!) {
-        onMainActor(nil) { controller, _ in controller.performShortcutAction(.toggleRomanization) }
-    }
-
-    @objc
-    private func toggleTranslateSwappedFromMenu(_: Any!) {
-        onMainActor(nil) { controller, _ in
-            controller.performShortcutAction(.toggleTranslateSwapped)
-        }
-    }
     private func switchInputMode(to mode: InputMode) {
         Self.logger.debug("switch input mode to \(mode.rawValue)")
         settings.inputMode = mode
