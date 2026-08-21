@@ -4,24 +4,27 @@ import AppKit
 
 /// One row of the input-source menu, before it is drawn.
 ///
-/// The key is an `NSMenuItem.keyEquivalent` wherever the row has one, because
-/// that is the only thing the input-source menu draws right-aligned and dimmed:
-/// the menu is vended to the system's text-input menu agent rather than drawn in
-/// this process, and an `attributedTitle` does not survive the trip — the agent
-/// falls back to the plain title, which lays out as-is (dogfood 2026-08-21).
-/// So the layout has to be AppKit's, not one measured here.
+/// A key equivalent here is not a display device: the menu is vended to the
+/// system's text-input menu agent, which dispatches key equivalents even while
+/// the menu is CLOSED. Only a row that IS a shortcut may claim one — the global
+/// actions, whose modifier-laden chords are meant to fire anywhere. A composing
+/// key must not: its keys are mostly bare (Return, Space, `[`), and a bare
+/// Return claimed here sent every mid-composition Enter to the settings window
+/// instead of committing (real device, 2026-08-21).
 ///
-/// The cost is that a key equivalent is LIVE while the menu is tracking, so
-/// Space or Return with the menu open selects the row that claims it. Accepted:
-/// those rows open the shortcut pane, and one style for the whole menu is what
-/// was asked for (USER 2026-08-21).
+/// The rows that cannot claim one print their key inside the plain title
+/// (`keyTextInTitle`) instead. Right-aligned-and-dimmed layout is thereby lost
+/// for them: an `attributedTitle` does not survive the trip to the agent — it
+/// falls back to the plain title, which lays out as-is (dogfood 2026-08-21) —
+/// so hand-spacing in the title is all that is left.
 struct InputSourceMenuRow: Sendable {
     let label: String
     /// The key AppKit lays out for this row, empty when the row has no chord.
     let keyEquivalent: String
     let modifiers: NSEvent.ModifierFlags
-    /// The key printed after the label instead, for the one row whose key is a
-    /// range of nine chords rather than a key AppKit could lay out.
+    /// The key printed after the label instead, for the rows that must not
+    /// claim a key equivalent — and for the slot row, whose key is a range of
+    /// nine chords rather than a key AppKit could lay out.
     let keyTextInTitle: String
     let action: Selector
 
@@ -73,7 +76,7 @@ enum InputSourceMenuRenderer {
     }
 
     /// Two spaces rather than a tab: a plain menu title is laid out as-is, so
-    /// the one row that cannot use a key equivalent is spaced by hand.
+    /// the rows that cannot use a key equivalent are spaced by hand.
     private static func title(_ row: InputSourceMenuRow) -> String {
         row.keyTextInTitle.isEmpty ? row.label : "\(row.label)  \(row.keyTextInTitle)"
     }

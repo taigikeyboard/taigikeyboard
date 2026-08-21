@@ -206,8 +206,8 @@ public final class TaigiInputController: IMKInputController {
         // draws it (`IMKInputController.h:307-310`) — one observer would be
         // added per draw and never removed, since removal only happens by
         // re-binding the same item. Rebuilding IS the update mechanism the
-        // observer exists to provide. Why every row claims a key equivalent is
-        // `InputSourceMenuRow`'s to say.
+        // observer exists to provide. Why only the global rows claim a key
+        // equivalent is `InputSourceMenuRow`'s to say.
         //
         // The global chords fire through the Carbon hotkeys `ShortcutHotkeys`
         // registers, active only while a session holds the engine.
@@ -246,13 +246,19 @@ public final class TaigiInputController: IMKInputController {
                     )
                 }
             }
+            // Key text in the title, NEVER a key equivalent: the menu is vended
+            // to the system's text-input menu agent, which dispatches key
+            // equivalents even while the menu is CLOSED — a bare Return here
+            // sent every mid-composition Enter to the settings window instead
+            // of committing (real device, 2026-08-21). The global rows above
+            // keep theirs because firing closed IS their job; a composing key's
+            // job is the composition, so its row may only print.
             var composing = ComposingAction.groups.map { group in
                 group.map { action in
                     let chord = bindings.chord(for: action)
                     return InputSourceMenuRow(
                         label: action.label(language),
-                        keyEquivalent: chord?.key ?? "",
-                        modifiers: chord?.modifiers ?? [],
+                        keyTextInTitle: chord.map(ComposingKeyDisplay.text(for:)) ?? "",
                         action: #selector(openShortcutSettings(_:)),
                     )
                 }
