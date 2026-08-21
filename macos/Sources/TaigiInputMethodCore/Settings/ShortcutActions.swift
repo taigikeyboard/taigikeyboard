@@ -15,14 +15,26 @@ extension KeyboardShortcuts.Name {
     /// (`references/vChewing-macOS/Packages/vChewing_MainAssembly4Darwin/Sources/MainAssembly4Darwin/SessionController/IMEMenuSputnik.swift:108-293`),
     /// and McBopomofo's 簡繁轉換 is ⌃⌘G with 半形標點 on ⌃⌘H
     /// (`references/McBopomofo/Source/InputMethodController.swift:74-81`). R for
-    /// the romanization, H for the Hanji the 漢羅 switch swaps in.
+    /// the romanization.
     static let toggleRomanization = Self(
         "toggleRomanization",
         initial: .init(.r, modifiers: [.control, .command]),
     )
+    /// Bare backtick, the classic Taiwanese-IME function key (USER 2026-08-21):
+    /// no TL or POJ syllable is spelled with it, and the hotkey is armed only
+    /// while a Taigi session holds the engine, so it takes nothing from other
+    /// input sources. `.backtick` is `kVK_ANSI_Grave` — a physical POSITION, so
+    /// an ISO keyboard fires this from the key its layout puts there, whatever
+    /// that key prints. The recorder cannot re-record a modifierless key
+    /// (library validation), so a user who moves off this default has no UI
+    /// path back to it — known gap, accepted 2026-08-21.
+    ///
+    /// `ShortcutDefaultMigration` moves installs still on the previous ⌃⌘H
+    /// default onto this one; `initial:` alone only reaches installs that have
+    /// never persisted the action.
     static let toggleTranslateSwapped = Self(
         "toggleTranslateSwapped",
-        initial: .init(.h, modifiers: [.control, .command]),
+        initial: .init(.backtick),
     )
 }
 
