@@ -22,14 +22,17 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private static let animationDuration: TimeInterval = 0.183
     private static let separatorHeight: CGFloat = 1
 
-    private enum DisplayMode {
+    enum DisplayMode {
         case collapsed
         case expanded
     }
 
     private var cells: [CandidateCellContent] = []
     private var measuredWidths: [CGFloat] = []
-    private var displayMode: DisplayMode = .collapsed
+    /// Readable from outside because it is the observable half of what a
+    /// navigation key did: one keystroke can both move the selection and open
+    /// the grid.
+    private(set) var displayMode: DisplayMode = .collapsed
     /// The collapsed row: first page of the horizontal packing.
     private var collapsedRow: [HorizontalPageLayout.Slot] = []
     private var grid = ExpandedGridLayout(rows: [], columnCount: 1)
@@ -237,7 +240,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     private func navigateCollapsed(_ direction: CandidateNavigation) {
         switch direction {
-        case .right:
+        case .right, .nextCandidate:
             let target = selectedIndex + 1
             guard target < cells.count else { return }
             // Walking off the row's end both expands AND lands on the next
@@ -245,7 +248,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             // `→` (`MacishHorizontalExpandablePanel.swift:627-692`); an expand
             // that kept the old selection would eat one keypress.
             select(target)
-        case .left:
+        case .left, .previousCandidate:
             select(max(selectedIndex - 1, 0))
         case .down, .pageDown:
             if hasOverflow {
@@ -258,7 +261,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     private func navigateExpanded(_ direction: CandidateNavigation) {
         switch direction {
-        case .right:
+        case .right, .nextCandidate:
             if selectedIndex + 1 < cells.count {
                 select(selectedIndex + 1)
             }
@@ -267,6 +270,13 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 select(selectedIndex - 1)
             } else {
                 collapse(animated: true)
+            }
+        // Unlike `←`, this one never folds the window: it is bound to a key
+        // whose label says "previous candidate", and a key that collapses the
+        // grid at index 0 would be doing something its label does not say.
+        case .previousCandidate:
+            if selectedIndex > 0 {
+                select(selectedIndex - 1)
             }
         case .down:
             if let target = grid.verticalTarget(from: selectedIndex, rowStep: 1) {

@@ -365,6 +365,7 @@ public final class TaigiInputController: IMKInputController {
             for: key,
             isComposing: manager.isComposing,
             isShowingCandidates: !fetchedCandidates.isEmpty,
+            bindings: settings.composingKeyBindings,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
         let executor = ClientEffectExecutor(client: client)

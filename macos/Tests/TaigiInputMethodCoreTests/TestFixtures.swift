@@ -425,9 +425,9 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         // cases assert the routing, and the geometry is pinned by
         // `HorizontalPageLayoutTests`.
         switch direction {
-        case .left:
+        case .left, .previousCandidate:
             selectedIndex = max(selectedIndex - 1, 0)
-        case .right:
+        case .right, .nextCandidate:
             selectedIndex = min(selectedIndex + 1, cells.count - 1)
         case .up, .down, .pageUp, .pageDown:
             break

@@ -126,6 +126,16 @@ enum ComposingKeyIntent: Equatable {
     /// `CharacterSet.controlCharacters` materializes a bridged set each access.
     private static let controlCharacters = CharacterSet.controlCharacters
 
+    /// The chords the host owns. Named once because three rules are written
+    /// against it — the host-chord guard, the candidate-slot chord's
+    /// exclusivity, and `isDocumentText` — and a list spelled out at each of
+    /// them is a list that can drift apart.
+    private static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
+
+    /// Every modifier that turns a key into a chord. The candidate-slot chord
+    /// takes one of them and must see none of the rest.
+    private static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
+
     /// Classifies `key` for a session whose composition is or is not active,
     /// and whose candidate bar is or is not on screen.
     ///
@@ -143,26 +153,42 @@ enum ComposingKeyIntent: Equatable {
     /// all belong to the bar while it is up and to the host or the document the
     /// rest of the time. It defaults to "no bar" because that is the state every
     /// key outside the candidate slice is decided in.
+    ///
+    /// The two are separate parameters rather than one state because a
+    /// composition can run with no bar up, but not the other way round: the
+    /// controller only ever shows the bar for candidates a composition fetched,
+    /// and takes it down when the composition ends.
+    ///
+    /// `bindings` carries the parts of the contract the user chooses; why they
+    /// arrive as an argument is in `ComposingKeyBindings`. It defaults so that
+    /// every call site with no opinion still reads as the shipped contract.
     static func intent(
         for key: KeyEventSnapshot,
         isComposing: Bool,
         isShowingCandidates: Bool = false,
+        bindings: ComposingKeyBindings = .default,
     ) -> ComposingKeyIntent {
         let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)
 
         // Read before the host-chord guard below, which would otherwise hand
         // every Control chord straight to the host. Classified from the
-        // unmodified characters: Control rewrites the digits it is chorded with.
+        // unmodified characters: both modifiers this chord can use rewrite the
+        // digits they are chorded with — Control into control characters,
+        // Option into `¡™£` and friends.
         //
-        // Control must be held and the other three chording modifiers must not
-        // be; everything else AppKit reports is ignored on purpose. Caps Lock
-        // does not change what a digit key means, and the number pad sets
+        // The bound modifier must be held and the other three must not be;
+        // everything else AppKit reports is ignored on purpose. Caps Lock does
+        // not change what a digit key means, and the number pad sets
         // `.numericPad` (and `.function` on some keyboards) — testing for an
         // exact flag set would make `⌃3` select on the top row and quietly
         // commit the composition on the keypad.
+        //
+        // The modifier the user did NOT choose keeps falling through to the
+        // host guard below, so `⌥3` stays the host's while Control is bound.
+        let slotModifier = bindings.slotModifier.flag
         if isShowingCandidates,
-           modifiers.contains(.control),
-           modifiers.isDisjoint(with: [.command, .option, .shift]),
+           modifiers.contains(slotModifier),
+           modifiers.isDisjoint(with: Self.chordingModifiers.subtracting(slotModifier)),
            let slot = directSelectionSlot(key.charactersIgnoringModifiers)
         {
             return .selectCandidateSlot(slot)
@@ -171,8 +197,7 @@ enum ComposingKeyIntent: Equatable {
         // Command, control and option chords are the host's shortcuts. This
         // holds mid-composition too: swallowing ⌘S to keep a composition tidy
         // would cost the user their save.
-        let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
-        guard modifiers.isDisjoint(with: hostChords) else {
+        guard modifiers.isDisjoint(with: Self.hostChords) else {
             return hostKey(isComposing: isComposing)
         }
 
@@ -191,21 +216,51 @@ enum ComposingKeyIntent: Equatable {
 
         switch first {
         case "\r", "\u{3}": // Return, Enter
-            // Commits the literal the marked region shows, never the highlighted
-            // candidate: with the bar up the two are different strings, and Enter
-            // is the only way to keep what was actually typed.
-            return isComposing ? .commit : .passThrough
+            guard isComposing else { return .passThrough }
+            // Return commits the literal the marked region shows, never the
+            // highlighted candidate: with the bar up the two are different
+            // strings, and this is the only key that keeps what was typed.
+            //
+            // A user who binds Return to the candidate instead keeps that
+            // escape hatch on ⇧Return — Shift is not a host chord, so it
+            // reaches this arm — because a composition nobody can commit
+            // verbatim would make 漢羅 input unreachable.
+            guard isShowingCandidates,
+                  bindings.returnKey == .confirmHighlighted,
+                  !modifiers.contains(.shift)
+            else { return .commit }
+            return .commitHighlightedCandidate
         case "\u{1B}": // Escape
             return isComposing ? .cancel : .passThrough
         case "\u{8}", "\u{7F}": // Backspace — Control-H and Delete both reach us
             return isComposing ? .deleteBackward : .passThrough
         case " ":
-            // Space picks the highlighted candidate while the bar is up. With no
-            // bar it is ordinary document text that ends the composition it
-            // follows, which is what the `commitThenInsert` arm below does for
-            // every other printable character.
+            // Space picks the highlighted candidate while the bar is up, or
+            // walks it forward for a user who binds it that way. With no bar it
+            // is ordinary document text that ends the composition it follows,
+            // which is what the `commitThenInsert` arm below does for every
+            // other printable character.
             if isShowingCandidates {
-                return .commitHighlightedCandidate
+                return switch bindings.spaceKey {
+                case .confirmHighlighted: .commitHighlightedCandidate
+                case .nextCandidate: .navigate(.nextCandidate)
+                }
+            }
+        case "\t", "\u{19}": // Tab, ⇧Tab — AppKit sends back tab as U+0019
+            // Read here rather than through the named-special-key guard below,
+            // which is what Tab reaches when the binding is off: with the bar up
+            // Tab is only ours when the user has said so, and it is the host's
+            // focus key every other time.
+            if isShowingCandidates, bindings.tabCycle == .enabled {
+                return .navigate(first == "\t" ? .nextCandidate : .previousCandidate)
+            }
+        case "[", "]":
+            // Compared as characters rather than key codes, so a layout that
+            // puts the brackets elsewhere binds the keys that actually type
+            // them — and `{`/`}` arrive as their own characters, which stay
+            // document text.
+            if isShowingCandidates, bindings.bracketPaging == .enabled {
+                return .navigate(first == "[" ? .pageUp : .pageDown)
             }
         default:
             break
@@ -247,7 +302,7 @@ enum ComposingKeyIntent: Equatable {
     static func isDocumentText(_ key: KeyEventSnapshot) -> Bool {
         guard key.modifiers
             .intersection(.deviceIndependentFlagsMask)
-            .isDisjoint(with: [.command, .control, .option])
+            .isDisjoint(with: hostChords)
         else { return false }
         guard !key.isNamedSpecialKey else { return false }
         guard let characters = key.characters, !characters.isEmpty else { return false }

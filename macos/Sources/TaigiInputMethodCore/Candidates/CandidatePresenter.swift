@@ -20,11 +20,19 @@ struct CandidateWindowContent: Equatable, Sendable {
     let cells: [CandidateCellContent]
 }
 
-/// Which way a navigation key asks the candidate window to move. The raw six
-/// keys rather than a digested "highlight vs page" pair, because what each key
-/// means depends on the layout: `↓` pages a horizontal window and walks a
-/// vertical list. The window is where the layout lives, so the window is where
-/// the key is interpreted.
+/// Which way a navigation key asks the candidate window to move.
+///
+/// The six physical keys are handed through raw rather than as a digested
+/// "highlight vs page" pair, because what each key means depends on the layout:
+/// `↓` pages a horizontal window and walks a vertical list. The window is where
+/// the layout lives, so the window is where the key is interpreted.
+///
+/// `nextCandidate` and `previousCandidate` are the exception, and they are the
+/// reason the two kinds share one type: they name an OUTCOME, not a key. Every
+/// layout must read them as one step along the list and nothing else, so that a
+/// binding whose label says "next candidate" cannot turn into a page jump on a
+/// vertical window — which is exactly what `.right` does there
+/// (`VerticalCandidatePanel.navigate`).
 enum CandidateNavigation: Sendable, Equatable {
     case left
     case right
@@ -32,6 +40,10 @@ enum CandidateNavigation: Sendable, Equatable {
     case down
     case pageUp
     case pageDown
+    /// One candidate forward in the list, clamped at the end.
+    case nextCandidate
+    /// One candidate back in the list, clamped at the start.
+    case previousCandidate
 }
 
 /// The candidate window, as the controller sees it.

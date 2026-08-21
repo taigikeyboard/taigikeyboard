@@ -94,9 +94,9 @@ struct HorizontalPageLayout: Equatable {
     /// (`MacishHorizontalSimplePanel.swift:178-227`).
     func target(for direction: CandidateNavigation, from selection: Int) -> Int? {
         switch direction {
-        case .right:
+        case .right, .nextCandidate:
             return selection + 1 < candidateCount ? selection + 1 : nil
-        case .left:
+        case .left, .previousCandidate:
             return selection > 0 ? selection - 1 : nil
         case .down, .pageDown:
             return pagedTarget(from: selection, step: 1)
