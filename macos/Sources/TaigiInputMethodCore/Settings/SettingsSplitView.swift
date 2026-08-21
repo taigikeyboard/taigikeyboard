@@ -13,6 +13,7 @@ import SwiftUI
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance
+    case shortcuts
     case customDictionary
     case frequencyData
     case associationData
@@ -29,6 +30,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .macosGeneralTab
         case .appearance: .macosAppearanceTab
+        case .shortcuts: .macosShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
         case .frequencyData: .dictionaryFrequencyManagement
         case .associationData: .dictionaryAssociationManagement
@@ -41,6 +43,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .appearance: "paintpalette"
+        case .shortcuts: "keyboard"
         case .customDictionary: "character.book.closed"
         case .frequencyData: "chart.bar"
         case .associationData: "link"
@@ -48,6 +51,16 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .dictionarySources: "books.vertical"
         }
     }
+}
+
+/// Layout the pane forms agree on.
+enum SettingsPaneLayout {
+    /// The 一般 / 外觀 / 快捷鍵 panes are columns of labelled controls, which
+    /// read best bounded — stretched across a wide detail pane, every row
+    /// becomes a label staring at a far-away control. The 詞庫 pages beside
+    /// them are deliberately unbounded: their rows are content, and content
+    /// takes whatever width the window has.
+    static let maximumFormWidth: CGFloat = 640
 }
 
 /// The settings window's content: a `NavigationSplitView` with every pane in
@@ -115,6 +128,8 @@ struct SettingsSplitView: View {
             GeneralSettingsView()
         case .appearance:
             AppearanceSettingsView()
+        case .shortcuts:
+            ShortcutSettingsView()
         case .customDictionary:
             CustomDictionaryPage(store: stores.customDictionary)
         case .frequencyData:

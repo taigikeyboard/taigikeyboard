@@ -91,8 +91,8 @@
         "ja": "学習"
       }
     },
-    "shortcutsSection": {
-      "comment": "Settings section header over the keyboard-shortcut recorders.",
+    "shortcutsTab": {
+      "comment": "Sidebar label for the settings pane holding the shortcut and key bindings.",
       "scope": {
         "platforms": [
           "macos"
@@ -1565,6 +1565,312 @@
         "poj": "te̍k-tōa",
         "en": "Extra Large",
         "ja": "特大"
+      }
+    },
+    "shortcutsGlobalSection": {
+      "comment": "Settings section header over the freely recorded global shortcut chords.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "全域快捷鍵",
+        "tailo": "tsuân-i̍k khuài-tsia̍t kiān",
+        "poj": "choân-e̍k khoài-chia̍t kiān",
+        "en": "Global Shortcuts",
+        "ja": "グローバルショートカット"
+      }
+    },
+    "shortcutsComposingSection": {
+      "comment": "Settings section header over the pickers that bind keys used while composing.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "組字中的按鍵",
+        "tailo": "tsoo-jī tiong ê àn-kiān",
+        "poj": "cho͘-jī tiong ê àn-kiān",
+        "en": "Keys While Composing",
+        "ja": "入力中のキー"
+      }
+    },
+    "shortcutsFixedKeysNote": {
+      "comment": "Footer under the composing-key pickers, listing the keys that are never bindable.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "方向鍵揀候選字,Page Up／Page Down 翻頁,Esc 取消,Delete 刪字 —— 這幾个袂當改。",
+        "tailo": "Hong-hiòng kiān kíng hāu-suán-jī, Page Up／Page Down huan-ia̍h, Esc tshú-siau, Delete thâi-jī — tsit kuí ê bē-tàng kái.",
+        "poj": "Hong-hiòng kiān kéng hāu-soán-jī, Page Up／Page Down hoan-ia̍h, Esc chhú-siau, Delete thâi-jī — chit kúi ê bē-tàng kái.",
+        "en": "Arrow keys move through candidates, Page Up/Page Down turn pages, Esc cancels, and Delete removes a character. These cannot be changed.",
+        "ja": "矢印キーで候補を移動、Page Up／Page Down でページを送り、Esc で取り消し、Delete で 1 文字削除します。これらは変更できません。"
+      }
+    },
+    "bindingReturnKey": {
+      "comment": "Picker label: what the Return key does while composing.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Return 鍵",
+        "tailo": "Return kiān",
+        "poj": "Return kiān",
+        "en": "Return Key",
+        "ja": "Return キー"
+      }
+    },
+    "bindingSpaceKey": {
+      "comment": "Picker label: what the space bar does while the candidate window is up.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "空白鍵",
+        "tailo": "khong-pi̍k kiān",
+        "poj": "khong-pe̍k kiān",
+        "en": "Space Bar",
+        "ja": "スペースキー"
+      }
+    },
+    "bindingBracketPaging": {
+      "comment": "Picker label: what the [ and ] keys do while the candidate window is up.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "[ ] 鍵",
+        "tailo": "[ ] kiān",
+        "poj": "[ ] kiān",
+        "en": "[ and ] Keys",
+        "ja": "[ ] キー"
+      }
+    },
+    "bindingTabCycle": {
+      "comment": "Picker label: what Tab and Shift-Tab do while the candidate window is up.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Tab 鍵",
+        "tailo": "Tab kiān",
+        "poj": "Tab kiān",
+        "en": "Tab Key",
+        "ja": "Tab キー"
+      }
+    },
+    "bindingSlotModifier": {
+      "comment": "Picker label: which modifier is chorded with 1-9 to pick a candidate by position.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "選字鍵",
+        "tailo": "suán-jī kiān",
+        "poj": "soán-jī kiān",
+        "en": "Candidate Number Keys",
+        "ja": "候補選択キー"
+      }
+    },
+    "bindingCommitLiteral": {
+      "comment": "Picker option: send the romanization exactly as typed, not the highlighted candidate.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "送出原本拍的字",
+        "tailo": "sàng-tshut guân-pún phah ê jī",
+        "poj": "sàng-chhut goân-pún phah ê jī",
+        "en": "Send What I Typed",
+        "ja": "入力したまま確定"
+      }
+    },
+    "bindingConfirmHighlighted": {
+      "comment": "Picker option: send the candidate the window has highlighted.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "送出選著的候選字",
+        "tailo": "sàng-tshut suán-tio̍h ê hāu-suán-jī",
+        "poj": "sàng-chhut soán-tio̍h ê hāu-soán-jī",
+        "en": "Send Highlighted Candidate",
+        "ja": "選択中の候補を確定"
+      }
+    },
+    "bindingNextCandidate": {
+      "comment": "Picker option: move the highlight to the next candidate instead of committing.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "換下一个候選字",
+        "tailo": "uānn ē-tsi̍t ê hāu-suán-jī",
+        "poj": "oāⁿ ē-chi̍t ê hāu-soán-jī",
+        "en": "Move to Next Candidate",
+        "ja": "次の候補へ移動"
+      }
+    },
+    "bindingTurnPage": {
+      "comment": "Picker option: page the candidate window backward and forward.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "翻候選字的頁",
+        "tailo": "huan hāu-suán-jī ê ia̍h",
+        "poj": "hoan hāu-soán-jī ê ia̍h",
+        "en": "Turn Candidate Pages",
+        "ja": "候補ページを送る"
+      }
+    },
+    "bindingTypeTheCharacter": {
+      "comment": "Picker option: the key types its own character instead of driving the candidate window.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "照常拍出符號",
+        "tailo": "tsiàu-siông phah-tshut hû-hō",
+        "poj": "chiàu-siông phah-chhut hû-hō",
+        "en": "Type the Character",
+        "ja": "文字として入力"
+      }
+    },
+    "bindingWalkCandidates": {
+      "comment": "Picker option: Tab moves to the next candidate, Shift-Tab to the previous one.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揀候選字（Tab 下一个、⇧Tab 頂一个）",
+        "tailo": "kíng hāu-suán-jī（Tab ē-tsi̍t ê、⇧Tab tíng-tsi̍t ê）",
+        "poj": "kéng hāu-soán-jī（Tab ē-chi̍t ê、⇧Tab téng-chi̍t ê）",
+        "en": "Move Through Candidates (Tab next, ⇧Tab previous)",
+        "ja": "候補を移動（Tab で次、⇧Tab で前）"
+      }
+    },
+    "bindingLeaveToApp": {
+      "comment": "Picker option: the key is left to the app, which is what it does today.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "留予應用程式",
+        "tailo": "lâu hōo ìng-iōng tîng-sik",
+        "poj": "lâu hō͘ èng-iōng têng-sek",
+        "en": "Leave It to the App",
+        "ja": "アプリに渡す"
+      }
+    },
+    "bindingReturnFooter": {
+      "comment": "Footer under the Return picker: explains the Shift-Return escape hatch.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揀「送出選著的候選字」的時,⇧Return 猶原送出原本拍的字。",
+        "tailo": "Kíng “sàng-tshut suán-tio̍h ê hāu-suán-jī” ê sî, ⇧Return iu-guân sàng-tshut guân-pún phah ê jī.",
+        "poj": "Kéng “sàng-chhut soán-tio̍h ê hāu-soán-jī” ê sî, ⇧Return iû-goân sàng-chhut goân-pún phah ê jī.",
+        "en": "When Return sends the highlighted candidate, ⇧Return still sends what you typed.",
+        "ja": "Return が候補を確定する設定でも、⇧Return は入力したままを確定します。"
+      }
+    },
+    "bindingSpaceFooter": {
+      "comment": "Footer under the space picker: names the keys left to commit with when space walks the list.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揀「換下一个候選字」的時,用選字鍵送出;Return 若設做送出選著的候選字,嘛會使用 Return。",
+        "tailo": "Kíng “uānn ē-tsi̍t ê hāu-suán-jī” ê sî, iōng suán-jī kiān sàng-tshut; Return nā siat-tsò sàng-tshut suán-tio̍h ê hāu-suán-jī, mā ē-sái iōng Return.",
+        "poj": "Kéng “oāⁿ ē-chi̍t ê hāu-soán-jī” ê sî, ēng soán-jī kiān sàng-chhut; Return nā siat-chò sàng-chhut soán-tio̍h ê hāu-soán-jī, mā ē-sái ēng Return.",
+        "en": "When the space bar moves through candidates, commit with the candidate number keys — or with Return, if you set Return to send the highlighted candidate.",
+        "ja": "スペースキーで候補を移動する設定では、候補選択キーで確定します。Return を「選択中の候補を確定」にしていれば Return でも確定できます。"
       }
     }
   }

@@ -12,9 +12,6 @@ import SwiftUI
 /// the values are read live by the candidate-window router on every show, so
 /// a change here applies from the next keystroke with nothing told about it.
 struct AppearanceSettingsView: View {
-    /// Same bound as the 一般 form — see `GeneralSettingsView.maximumFormWidth`.
-    private static let maximumFormWidth: CGFloat = 640
-
     @Environment(DisplayLanguageStore.self) private var language
 
     @AppStorage(SettingsStore.Keys.candidateAppearanceMode.name)
@@ -79,7 +76,7 @@ struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(maxWidth: Self.maximumFormWidth)
+        .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
     }
 }
 
