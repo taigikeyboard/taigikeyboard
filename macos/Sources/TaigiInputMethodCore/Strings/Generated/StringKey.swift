@@ -158,7 +158,6 @@ enum StringKey: String {
     case macosSizeSmall = "i18n_macos_sizeSmall"
     case macosSizeMedium = "i18n_macos_sizeMedium"
     case macosSizeLarge = "i18n_macos_sizeLarge"
-    case macosSizeExtraLarge = "i18n_macos_sizeExtraLarge"
     case macosShortcutsTab = "i18n_macos_shortcutsTab"
     case macosBindingSlotModifier = "i18n_macos_bindingSlotModifier"
     case macosActionNextCandidate = "i18n_macos_actionNextCandidate"

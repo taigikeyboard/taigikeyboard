@@ -1442,7 +1442,7 @@
       }
     },
     "sizeMedium": {
-      "comment": "Picker value shared by the candidate window-size and text-size rows: the default step.",
+      "comment": "Picker value shared by the candidate window-size and text-size rows: the default step, named Standard (USER 2026-08-21).",
       "scope": {
         "platforms": [
           "macos"
@@ -1452,11 +1452,11 @@
         ]
       },
       "values": {
-        "hanji": "中",
-        "tailo": "tiong",
-        "poj": "tiong",
-        "en": "Medium",
-        "ja": "中"
+        "hanji": "標準",
+        "tailo": "piau-tsún",
+        "poj": "piau-chún",
+        "en": "Standard",
+        "ja": "標準"
       }
     },
     "sizeLarge": {
@@ -1475,24 +1475,6 @@
         "poj": "tōa",
         "en": "Large",
         "ja": "大"
-      }
-    },
-    "sizeExtraLarge": {
-      "comment": "Picker value for the candidate text-size row: the largest step.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "特大",
-        "tailo": "ti̍k-tuā",
-        "poj": "te̍k-tōa",
-        "en": "Extra Large",
-        "ja": "特大"
       }
     },
     "shortcutsTab": {
