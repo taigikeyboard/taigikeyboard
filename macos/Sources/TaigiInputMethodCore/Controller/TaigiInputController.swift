@@ -222,13 +222,11 @@ public final class TaigiInputController: IMKInputController {
         // key and no observation fires — a menu rebuilt per draw is exactly the right place to
         // notice.
         //
-        // Read BEFORE the hop, so the closure captures values rather than this
+        // Read BEFORE the hop, so the closure captures a value rather than this
         // controller: `menu()` is nonisolated and the controller is not
         // Sendable, so sending `self` into a main-actor closure does not
-        // compile. Both are Sendable in their own right — the store is
-        // `@unchecked Sendable`, the bindings are a value.
+        // compile. The store itself is `@unchecked Sendable`.
         let injectedLanguage = displayLanguageOverride
-        let bindings = settings.composingKeyBindings
         let groups = MainActor.assumeIsolated { () -> [[InputSourceMenuRow]] in
             let language = injectedLanguage ?? DisplayLanguageStore.shared
             // Can rebuild the menu bar and relabel the settings window as a side effect: the sync
@@ -246,30 +244,31 @@ public final class TaigiInputController: IMKInputController {
                     )
                 }
             }
-            // Key text in the title, NEVER a key equivalent: the menu is vended
-            // to the system's text-input menu agent, which dispatches key
-            // equivalents even while the menu is CLOSED — a bare Return here
-            // sent every mid-composition Enter to the settings window instead
-            // of committing (real device, 2026-08-21). The global rows above
-            // keep theirs because firing closed IS their job; a composing key's
-            // job is the composition, so its row may only print.
+            // Label only, no key display, NEVER a key equivalent — the row
+            // leads to the shortcut pane, where the keys are. The agent
+            // canonicalizes ANY key equivalent string back to a functional key
+            // for both display and matching (probes 2026-08-21: ↩ U+21A9,
+            // ␠ U+2420 and char+word-joiner all dispatched on the real key,
+            // menu closed), so whatever the key column can draw, typing can
+            // trigger — a bare Return here sent every mid-composition Enter to
+            // the settings window instead of committing. Key text in the title
+            // was rejected by the USER (left-aligned, reads badly), and every
+            // display-only channel is dropped by the agent (attributedTitle,
+            // custom view, image, badge, subtitle). The global rows above keep
+            // real key equivalents because firing with the menu closed IS
+            // their job.
             var composing = ComposingAction.groups.map { group in
                 group.map { action in
-                    let chord = bindings.chord(for: action)
-                    return InputSourceMenuRow(
+                    InputSourceMenuRow(
                         label: action.label(language),
-                        keyTextInTitle: chord.map(ComposingKeyDisplay.text(for:)) ?? "",
                         action: #selector(openShortcutSettings(_:)),
                     )
                 }
             }
             // Ends the group that moves through the candidates, because that is
             // what it does — the slot chords are the fastest way to pick one.
-            // The nine of them stand behind a single setting, so this row's key
-            // is a range rather than a chord.
             composing[0].append(InputSourceMenuRow(
                 label: language.string(.macosBindingSlotModifier),
-                keyTextInTitle: bindings.slotModifier.menuRange,
                 action: #selector(openShortcutSettings(_:)),
             ))
             return global + composing
