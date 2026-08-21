@@ -332,9 +332,8 @@ enum ComposingKeyIntent: Equatable {
     /// digits. A full-width `５` or another script's numeral is a character the
     /// engine cannot parse, so it is document text rather than a tone.
     ///
-    /// Visible, with `isRomanizationCharacter`, to `ComposingKeyChord`: between
-    /// them they are the keys a composition is typed with, and a chord may not
-    /// take one away.
+    /// Visible to `ComposingKeyChord`, which refuses to bind a bare digit:
+    /// the digits carry tone, so a chord may not take one away.
     static func isToneDigit(_ character: Character) -> Bool {
         character.isASCII && character.isNumber
     }
@@ -344,6 +343,12 @@ enum ComposingKeyIntent: Equatable {
     /// that separates syllables, so a letter from another script is document
     /// text, not input the engine could parse. Tone digits are handled by the
     /// caller, which knows whether a composition is running.
+    ///
+    /// All ASCII letters on purpose, even the eight no syllable uses: a
+    /// custom-dictionary romanization is free text, so any letter must still
+    /// reach the composition. The recorder defends a narrower set
+    /// (`ComposingKeyChord.syllableLetters`) — a bound non-syllable letter
+    /// wins mid-composition because bindings are classified before input.
     static func isRomanizationCharacter(_ character: Character) -> Bool {
         (character.isLetter && character.isASCII) || character == "-"
     }
