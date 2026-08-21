@@ -68,14 +68,16 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         let titles = try menu().items.filter { !$0.isSeparatorItem }.map(\.title)
 
         // The literal oracle for this surface: the copy is the authored Hanji,
-        // and it reads the same here as it does in the shortcut pane. The keys
-        // are absent from the titles because AppKit lays them out from each
-        // row's `keyEquivalent` — except the slot row, whose key is a range.
+        // and it reads the same here as it does in the shortcut pane. The
+        // global rows' keys are absent from the titles because AppKit lays
+        // them out from each row's `keyEquivalent`; the composing rows carry
+        // theirs in the title, because a key equivalent is dispatched even
+        // with the menu closed and a composing key must stay a composing key.
         XCTAssertEqual(titles, [
             "開啟設定", "切換 台羅/白話字", "切換 漢羅對調",
-            "換下一个候選字", "換頂一个候選字", "後一頁候選字", "頭前一頁候選字",
+            "換下一个候選字  Space", "換頂一个候選字  ⇧⇥", "後一頁候選字  ]", "頭前一頁候選字  [",
             "選字鍵  ⌃1 – ⌃9",
-            "送出選著的候選字", "送出原本拍的字", "直接送出漢字", "直接送出羅馬字",
+            "送出選著的候選字  ↩", "送出原本拍的字  ⇧↩", "直接送出漢字  ⌃↩", "直接送出羅馬字  ⌥↩",
         ])
         XCTAssertEqual(
             titles.count,
@@ -98,59 +100,75 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         )
     }
 
-    /// The composing rows carry their key as a real `keyEquivalent`, and lead to
-    /// where it is set: those keys need a composition, and a menu is open when
-    /// there is none.
-    func testTheComposingRows_carryTheirKeyAndOpenTheShortcutPane() throws {
+    /// The composing rows print their key in the title and lead to where it is
+    /// set: those keys need a composition, and a menu is open when there is
+    /// none.
+    func testTheComposingRows_printTheirKeyAndOpenTheShortcutPane() throws {
         let items = try menu().items.filter { !$0.isSeparatorItem }
-        let confirm = try XCTUnwrap(items.first { $0.title == "送出選著的候選字" })
+        let confirm = try XCTUnwrap(items.first { $0.title.hasPrefix("送出選著的候選字") })
 
-        XCTAssertEqual(confirm.keyEquivalent, "\r", "Return is what a fresh install commits with")
-        XCTAssertEqual(confirm.keyEquivalentModifierMask, [])
+        XCTAssertEqual(confirm.title, "送出選著的候選字  ↩", "Return is what a fresh install commits with")
+        XCTAssertEqual(confirm.keyEquivalent, "")
         XCTAssertEqual(confirm.action, Self.openShortcutSettings)
     }
 
-    /// The key is right-aligned and dimmed by AppKit, which is the ONLY way to
-    /// get that layout here: this menu is vended to the system's text-input menu
-    /// agent, and an `attributedTitle` does not survive the trip — the agent
-    /// draws the plain title, which lays out as-is (dogfood 2026-08-21). So
-    /// every row that has a chord claims it as a `keyEquivalent`.
-    func testEveryRowWithAChord_claimsItAsAKeyEquivalent() throws {
-        let expected: [String: (String, NSEvent.ModifierFlags)] = [
-            "開啟設定": (",", [.control, .shift]),
-            "切換 台羅/白話字": ("r", [.control, .command]),
-            "切換 漢羅對調": ("h", [.control, .command]),
-            "換下一个候選字": (" ", []),
-            "換頂一个候選字": ("\t", .shift),
-            "後一頁候選字": ("]", []),
-            "頭前一頁候選字": ("[", []),
-            "送出選著的候選字": ("\r", []),
-            "送出原本拍的字": ("\r", .shift),
-            "直接送出漢字": ("\r", .control),
-            "直接送出羅馬字": ("\r", .option),
+    /// The global rows keep claiming their chords as real key equivalents —
+    /// firing with the menu closed is what those actions are FOR.
+    func testTheGlobalRows_keepTheirKeyEquivalents() throws {
+        let expected: [(Selector, String, NSEvent.ModifierFlags)] = [
+            (Self.showPreferences, ",", [.control, .shift]),
+            (Self.toggleRomanization, "r", [.control, .command]),
+            (Self.toggleTranslateSwapped, "h", [.control, .command]),
         ]
 
-        for item in try menu().items where !item.isSeparatorItem {
-            guard let (key, modifiers) = expected[item.title] else {
-                XCTAssertTrue(
-                    item.title.hasPrefix("選字鍵"),
-                    "\(item.title) is not a row this case knows",
-                )
-                continue
-            }
-            XCTAssertEqual(item.keyEquivalent, key, item.title)
-            XCTAssertEqual(item.keyEquivalentModifierMask, modifiers, item.title)
+        for (selector, key, modifiers) in expected {
+            let row = try item(action: selector, in: menu())
+            XCTAssertEqual(row.keyEquivalent, key, row.title)
+            XCTAssertEqual(row.keyEquivalentModifierMask, modifiers, row.title)
         }
     }
 
-    /// An unset `keyEquivalentModifierMask` is ⌘, so a bare Space would draw —
-    /// and answer to — ⌘Space.
-    func testABareChord_claimsNoModifier() throws {
-        let space = try XCTUnwrap(
-            menu().items.first { $0.title == "換下一个候選字" },
-        )
+    /// The regression this menu shipped: a composing row claiming its key as a
+    /// real `keyEquivalent` hands it to the text-input menu agent, which
+    /// dispatches key equivalents even while the menu is CLOSED — a bare
+    /// Return here sent every mid-composition Enter to the settings window
+    /// instead of committing (real device, 2026-08-21). Rows are told apart by
+    /// the command they send, not by title: every composing row leads to the
+    /// shortcut pane, and "no bare key equivalent anywhere" would be the wrong
+    /// invariant — a global chord may legally be a bare function key.
+    func testNoComposingRow_claimsAKeyEquivalent() throws {
+        let composingRows = try menu().items.filter { $0.action == Self.openShortcutSettings }
 
-        XCTAssertEqual(space.keyEquivalentModifierMask, [])
+        XCTAssertEqual(composingRows.count, ComposingAction.allCases.count + 1)
+        for row in composingRows {
+            XCTAssertEqual(row.keyEquivalent, "", row.title)
+        }
+    }
+
+    /// A modifier-laden composing chord stays in the title too: the bar is on
+    /// the row being a composing action, not on the chord being bare.
+    func testARecordedComposingChord_printsInTheTitle_andClaimsNoKeyEquivalent() throws {
+        guard case let .success(chord) = ComposingKeyChord.make(key: "p", modifiers: .control) else {
+            return XCTFail("⌃P must be recordable")
+        }
+        controller.settings.setComposingChord(chord, for: .pageForward)
+
+        let row = try XCTUnwrap(menu().items.first { $0.title.hasPrefix("後一頁候選字") })
+
+        XCTAssertEqual(row.title, "後一頁候選字  ⌃P")
+        XCTAssertEqual(row.keyEquivalent, "")
+    }
+
+    /// A bare function key IS a legal global chord (`KeyboardShortcuts` records
+    /// F12 with no modifier), and it keeps its key equivalent — which is why
+    /// the guard above is scoped to composing rows.
+    func testABareFunctionKeyGlobalChord_keepsItsKeyEquivalent() throws {
+        KeyboardShortcuts.setShortcut(.init(.f12), for: .openSettings)
+
+        let settingsItem = try item(action: Self.showPreferences, in: menu())
+
+        XCTAssertFalse(settingsItem.keyEquivalent.isEmpty)
+        XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [])
     }
 
     /// The slot row is the one key AppKit cannot lay out: nine chords behind a
