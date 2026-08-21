@@ -19,10 +19,8 @@ enum CandidateSlotModifier: String, CaseIterable, Sendable {
         }
     }
 
-    /// The nine chords this modifier stands for, as one string.
-    ///
-    /// Written into a menu row's title rather than set as its `keyEquivalent`:
-    /// a menu item prints one key, and this setting is nine of them.
+    /// The nine chords this modifier stands for, as one string — what the
+    /// shortcut pane's picker offers to choose between.
     var menuRange: String {
         switch self {
         case .control: "⌃1 – ⌃9"

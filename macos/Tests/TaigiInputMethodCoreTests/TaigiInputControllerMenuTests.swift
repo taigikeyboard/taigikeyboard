@@ -69,15 +69,15 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
         // The literal oracle for this surface: the copy is the authored Hanji,
         // and it reads the same here as it does in the shortcut pane. The
-        // global rows' keys are absent from the titles because AppKit lays
-        // them out from each row's `keyEquivalent`; the composing rows carry
-        // theirs in the title, because a key equivalent is dispatched even
-        // with the menu closed and a composing key must stay a composing key.
+        // global rows' keys come from each row's `keyEquivalent`; the composing
+        // rows show no key at all (USER decision 2026-08-21) — the agent
+        // dispatches anything its key column can draw, and appended key text
+        // in the title was rejected as reading badly.
         XCTAssertEqual(titles, [
             "開啟設定", "切換 台羅/白話字", "切換 漢羅對調",
-            "換下一个候選字  Space", "換頂一个候選字  ⇧⇥", "後一頁候選字  ]", "頭前一頁候選字  [",
-            "選字鍵  ⌃1 – ⌃9",
-            "送出選著的候選字  ↩", "送出原本拍的字  ⇧↩", "直接送出漢字  ⌃↩", "直接送出羅馬字  ⌥↩",
+            "換下一个候選字", "換頂一个候選字", "後一頁候選字", "頭前一頁候選字",
+            "選字鍵",
+            "送出選著的候選字", "送出原本拍的字", "直接送出漢字", "直接送出羅馬字",
         ])
         XCTAssertEqual(
             titles.count,
@@ -100,14 +100,12 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         )
     }
 
-    /// The composing rows print their key in the title and lead to where it is
-    /// set: those keys need a composition, and a menu is open when there is
-    /// none.
-    func testTheComposingRows_printTheirKeyAndOpenTheShortcutPane() throws {
+    /// The composing rows show no key and lead to where the keys are set:
+    /// the shortcut pane.
+    func testTheComposingRows_showLabelOnlyAndOpenTheShortcutPane() throws {
         let items = try menu().items.filter { !$0.isSeparatorItem }
-        let confirm = try XCTUnwrap(items.first { $0.title.hasPrefix("送出選著的候選字") })
+        let confirm = try XCTUnwrap(items.first { $0.title == "送出選著的候選字" })
 
-        XCTAssertEqual(confirm.title, "送出選著的候選字  ↩", "Return is what a fresh install commits with")
         XCTAssertEqual(confirm.keyEquivalent, "")
         XCTAssertEqual(confirm.action, Self.openShortcutSettings)
     }
@@ -145,17 +143,17 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         }
     }
 
-    /// A modifier-laden composing chord stays in the title too: the bar is on
-    /// the row being a composing action, not on the chord being bare.
-    func testARecordedComposingChord_printsInTheTitle_andClaimsNoKeyEquivalent() throws {
+    /// A recorded composing chord changes nothing in the menu — modifier-laden
+    /// or not, no chord may leak into a title or a key equivalent: the bar is
+    /// on the row being a composing action, not on the chord being bare.
+    func testARecordedComposingChord_neverReachesTheMenu() throws {
         guard case let .success(chord) = ComposingKeyChord.make(key: "p", modifiers: .control) else {
             return XCTFail("⌃P must be recordable")
         }
         controller.settings.setComposingChord(chord, for: .pageForward)
 
-        let row = try XCTUnwrap(menu().items.first { $0.title.hasPrefix("後一頁候選字") })
+        let row = try XCTUnwrap(menu().items.first { $0.title == "後一頁候選字" })
 
-        XCTAssertEqual(row.title, "後一頁候選字  ⌃P")
         XCTAssertEqual(row.keyEquivalent, "")
     }
 
@@ -171,14 +169,14 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [])
     }
 
-    /// The slot row is the one key AppKit cannot lay out: nine chords behind a
-    /// single setting. It prints its range in the title instead.
-    func testTheSlotRow_printsItsRangeInTheTitle() throws {
+    /// The slot row is a composing row like the rest: label only, its range
+    /// readable in the shortcut pane's picker.
+    func testTheSlotRow_showsLabelOnly() throws {
         let slots = try XCTUnwrap(
             menu().items.first { $0.title.hasPrefix("選字鍵") },
         )
 
-        XCTAssertEqual(slots.title, "選字鍵  ⌃1 – ⌃9")
+        XCTAssertEqual(slots.title, "選字鍵")
         XCTAssertEqual(slots.keyEquivalent, "")
     }
 
