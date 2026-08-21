@@ -4,8 +4,8 @@ import AppKit
 
 /// The candidate text size a user can choose — resolved to the candidate
 /// font's point size. `small` is the 16pt the window originally rendered at;
-/// `medium` is the default, deliberately one step larger (USER 2026-08-21:
-/// enlarge the default).
+/// the ladder above it was raised a step (USER 2026-08-21: bigger text, less
+/// whitespace — the window should spend its points on the glyphs).
 ///
 /// `String` raw values so the choice persists through `UserDefaults` and
 /// `@AppStorage`; an unknown stored value reads back as the default.
@@ -20,17 +20,20 @@ enum CandidateTextSizeChoice: String, CaseIterable, Sendable {
     var candidateFontSize: CGFloat {
         switch self {
         case .small: 16
-        case .medium: 18
-        case .large: 21
-        case .extraLarge: 24
+        case .medium: 20
+        case .large: 23
+        case .extraLarge: 26
         }
     }
 }
 
 /// The candidate window's chrome size — resolved to a multiplier over the
 /// cell paddings. Independent of the text choice: this knob is how much air
-/// the window puts around the text, not how big the text is. `small` is the
-/// original 1.0 chrome; `medium` is the enlarged default.
+/// the window puts around the text, not how big the text is.
+///
+/// The whole ladder sits at or below upstream's paddings: MacishType's
+/// original air is the LARGE end, and the default is tighter than it
+/// (USER 2026-08-21: the window left too much whitespace around the text).
 enum CandidateWindowSizeChoice: String, CaseIterable, Sendable {
     case small
     case medium
@@ -38,9 +41,9 @@ enum CandidateWindowSizeChoice: String, CaseIterable, Sendable {
 
     var chromeScale: CGFloat {
         switch self {
-        case .small: 1.0
-        case .medium: 1.15
-        case .large: 1.3
+        case .small: 0.7
+        case .medium: 0.85
+        case .large: 1.0
         }
     }
 }
