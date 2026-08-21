@@ -1,19 +1,20 @@
-// The persistence and text contracts the 快捷鍵 pane is built on.
+// The persistence and text contracts the shortcut rows are built on.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// What a unit test can hold the pane to, given a SwiftUI form cannot be brought
-/// up here: the raw values its rows persist, and the strings they read. Whether
-/// each row is wired to the right action is a render check, not a case below.
+/// What a unit test can hold the 快捷鍵 pane's rows to, given a SwiftUI
+/// form cannot be brought up here: the raw values the rows persist, and the
+/// strings they read. Whether each row is wired to the right action is a render
+/// check, not a case below.
 @MainActor
-final class ShortcutSettingsViewTests: XCTestCase {
+final class ShortcutSettingsTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        suiteName = "ShortcutSettingsViewTests.\(UUID().uuidString)"
+        suiteName = "ShortcutSettingsTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
@@ -86,9 +87,6 @@ final class ShortcutSettingsViewTests: XCTestCase {
 
     private static let paneStrings: [StringKey] = [
         .macosShortcutsTab,
-        .macosShortcutsGlobalSection,
-        .macosShortcutsComposingSection,
-        .macosShortcutsFixedKeysNote,
         .macosBindingSlotModifier,
         .macosShortcutUnbound,
         .macosShortcutRecording,

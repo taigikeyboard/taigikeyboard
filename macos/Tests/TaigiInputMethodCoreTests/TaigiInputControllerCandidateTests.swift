@@ -475,11 +475,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         // Found by the command it sends: the menu's titles follow the display language, so a
         // lookup by text would only hold in the language this case was written in.
-        let poj = try XCTUnwrap(
+        let toggle = try XCTUnwrap(
             XCTUnwrap(session.controller.menu()).items
-                .first { $0.action == Selector(("selectInputModePOJ:")) }?.action,
+                .first { $0.action == Selector(("toggleRomanizationFromMenu:")) }?.action,
         )
-        session.controller.doCommand(by: poj, command: [:])
+        session.controller.doCommand(by: toggle, command: [:])
 
         XCTAssertFalse(session.presenter.isShowing)
         XCTAssertEqual(session.controller.settings.inputMode, .poj)

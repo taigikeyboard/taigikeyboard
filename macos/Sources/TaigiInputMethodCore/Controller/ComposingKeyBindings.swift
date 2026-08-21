@@ -18,6 +18,17 @@ enum CandidateSlotModifier: String, CaseIterable, Sendable {
         case .option: .option
         }
     }
+
+    /// The nine chords this modifier stands for, as one string.
+    ///
+    /// Written into a menu row's title rather than set as its `keyEquivalent`:
+    /// a menu item prints one key, and this setting is nine of them.
+    var menuRange: String {
+        switch self {
+        case .control: "⌃1 – ⌃9"
+        case .option: "⌥1 – ⌥9"
+        }
+    }
 }
 
 /// The user's composing key contract, resolved and ready to classify against.

@@ -67,6 +67,16 @@ struct ComposingKeyChord: Hashable, Sendable {
         case candidateSlotChord
     }
 
+    /// The string an `NSMenuItem` prints this chord's key as.
+    ///
+    /// AppKit draws the glyph for the keys it knows — Return, Tab, Space — from
+    /// the character itself, so most of them pass straight through. The back
+    /// tab is the exception: `U+0019` renders as nothing, and ⇧⇥ is the same
+    /// chord to the user.
+    var menuKeyEquivalent: String {
+        key == "\u{19}" ? "\t" : key
+    }
+
     /// Whether this chord is one of the nine `1`…`9` slot chords under
     /// `slotModifier`.
     ///

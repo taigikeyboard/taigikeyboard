@@ -86,6 +86,18 @@ enum ComposingAction: String, CaseIterable, Sendable {
         }
     }
 
+    /// The roster split into the groups the settings pane and the input-source
+    /// menu both draw: the keys that move through the candidates, and the keys
+    /// that end the composition.
+    ///
+    /// Written out rather than derived from `allCases` order so that adding a
+    /// case has to say which group it belongs to — `ComposingActionTests` pins
+    /// that every case appears exactly once.
+    static let groups: [[ComposingAction]] = [
+        [.nextCandidate, .previousCandidate, .pageForward, .pageBackward],
+        [.confirmHighlighted, .commitLiteral, .commitHanji, .commitRomanization],
+    ]
+
     /// Actions that must always be reachable, whatever else the user rebinds.
     ///
     /// Between them these two are the only way to end a composition into the

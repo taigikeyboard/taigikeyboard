@@ -136,6 +136,15 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertNil(bindings.chord(for: .commitRomanization))
     }
 
+    /// A case added to the roster but not to a group would be missing from
+    /// both the pane and the menu, which draw from the groups.
+    func testTheGroups_holdEveryActionExactlyOnce() {
+        let grouped = ComposingAction.groups.flatMap(\.self)
+
+        XCTAssertEqual(Set(grouped), Set(ComposingAction.allCases))
+        XCTAssertEqual(grouped.count, ComposingAction.allCases.count, "an action is in two groups")
+    }
+
     func testEveryAction_hasItsOwnSettingsKey() {
         let names = ComposingAction.allCases.map(\.settingsKeyName)
 

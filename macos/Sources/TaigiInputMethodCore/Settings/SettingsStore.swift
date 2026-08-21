@@ -395,6 +395,15 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue.rawValue, forKey: Keys.inputMode.name) }
     }
 
+    /// The pane the settings window shows. Written as well as read, because
+    /// opening the window ON a pane is how the input-source menu's rows lead to
+    /// the place their key is set — the window binds this key with
+    /// `@AppStorage`, so a write moves it even while it is already open.
+    var selectedSettingsPane: SettingsPane {
+        get { choice(Keys.selectedSettingsPane) }
+        set { userDefaults.set(newValue.rawValue, forKey: Keys.selectedSettingsPane.name) }
+    }
+
     /// The candidate settings a shortcut can flip. Typed properties rather than
     /// a raw key write at the call site, so a toggle always goes through the
     /// same never-written-reads-as-default rule its readers use.

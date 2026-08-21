@@ -73,42 +73,6 @@
         "ja": "漢字とローマ字を入れ替え"
       }
     },
-    "learningSection": {
-      "comment": "Settings section header over the two learning toggles.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "學習",
-        "tailo": "ha̍k-si̍p",
-        "poj": "ha̍k-si̍p",
-        "en": "Learning",
-        "ja": "学習"
-      }
-    },
-    "shortcutsTab": {
-      "comment": "Sidebar label for the settings pane holding the shortcut and key bindings.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "快捷鍵",
-        "tailo": "khuài-tsia̍t kiān",
-        "poj": "khoài-chia̍t kiān",
-        "en": "Shortcuts",
-        "ja": "ショートカット"
-      }
-    },
     "shortcutOpenSettings": {
       "comment": "Shortcut-recorder row: the hotkey that opens this settings window.",
       "scope": {
@@ -197,24 +161,6 @@
         "poj": "chhiat-ōaⁿ hián-sī goân-pún lô-má-jī hāu-soán",
         "en": "Toggle the Typed Romanization Candidate",
         "ja": "入力したローマ字候補の表示を切り替える"
-      }
-    },
-    "menuSettings": {
-      "comment": "Input-source menu command that opens the settings window. The trailing ellipsis is HIG-required for a command that opens a window, and is authored per language rather than appended at the call site.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "設定…",
-        "tailo": "siat-tīng…",
-        "poj": "siat-tēng…",
-        "en": "Settings…",
-        "ja": "設定…"
       }
     },
     "menuFile": {
@@ -413,24 +359,6 @@
         "poj": "soán sû-tián",
         "en": "Choose Dictionaries",
         "ja": "辞書を選ぶ"
-      }
-    },
-    "allSourcesOffFooter": {
-      "comment": "Footer under the supplementary-source toggles: what turning every dictionary off does.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "關掉全部辭典,拍字就袂有詞庫候選。",
-        "tailo": "kuainn-tiāu tsuân-pōo sû-tián, phah-jī tō bē ū sû-khòo hāu-suán.",
-        "poj": "koaiⁿ-tiāu choân-pō͘ sû-tián, phah-jī tō bē ū sû-khò͘ hāu-soán.",
-        "en": "With every dictionary off, typing produces no dictionary candidates.",
-        "ja": "すべての辞書をオフにすると、入力しても辞書候補は出ません。"
       }
     },
     "openURLFailed": {
@@ -1567,8 +1495,8 @@
         "ja": "特大"
       }
     },
-    "shortcutsGlobalSection": {
-      "comment": "Settings section header over the freely recorded global shortcut chords.",
+    "shortcutsTab": {
+      "comment": "Sidebar label for the settings pane holding the shortcut rows.",
       "scope": {
         "platforms": [
           "macos"
@@ -1578,47 +1506,11 @@
         ]
       },
       "values": {
-        "hanji": "全域快捷鍵",
-        "tailo": "tsuân-i̍k khuài-tsia̍t kiān",
-        "poj": "choân-e̍k khoài-chia̍t kiān",
-        "en": "Global Shortcuts",
-        "ja": "グローバルショートカット"
-      }
-    },
-    "shortcutsComposingSection": {
-      "comment": "Settings section header over the pickers that bind keys used while composing.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "組字中的按鍵",
-        "tailo": "tsoo-jī tiong ê àn-kiān",
-        "poj": "cho͘-jī tiong ê àn-kiān",
-        "en": "Keys While Composing",
-        "ja": "入力中のキー"
-      }
-    },
-    "shortcutsFixedKeysNote": {
-      "comment": "Footer under the composing-key pickers, listing the keys that are never bindable.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "方向鍵揀候選字,Page Up／Page Down 翻頁,Esc 取消,Delete 刪字 —— 這幾个袂當改。拍字用的字母、數字佮連字符嘛袂當設做快捷鍵。",
-        "tailo": "Hong-hiòng kiān kíng hāu-suán-jī, Page Up／Page Down huan-ia̍h, Esc tshú-siau, Delete thâi-jī — tsit kuí ê bē-tàng kái. Phah-jī iōng ê jī-bú, sòo-jī kap liân-jī-hû mā bē-tàng siat tsò khuài-tsia̍t kiān.",
-        "poj": "Hong-hiòng kiān kéng hāu-soán-jī, Page Up／Page Down hoan-ia̍h, Esc chhú-siau, Delete thâi-jī — chit kúi ê bē-tàng kái. Phah-jī ēng ê jī-bú, sò͘-jī kap liân-jī-hû mā bē-tàng siat chò khoài-chia̍t kiān.",
-        "en": "Arrow keys move through candidates, Page Up/Page Down turn pages, Esc cancels, and Delete removes a character. These cannot be changed, and neither the letters, digits nor hyphen used to type romanization can be assigned.",
-        "ja": "矢印キーで候補を移動、Page Up／Page Down でページを送り、Esc で取り消し、Delete で 1 文字削除します。これらは変更できません。入力に使う英字・数字・ハイフンも割り当てられません。"
+        "hanji": "快捷鍵",
+        "tailo": "khuài-tsia̍t kiān",
+        "poj": "khoài-chia̍t kiān",
+        "en": "Shortcuts",
+        "ja": "ショートカット"
       }
     },
     "bindingSlotModifier": {

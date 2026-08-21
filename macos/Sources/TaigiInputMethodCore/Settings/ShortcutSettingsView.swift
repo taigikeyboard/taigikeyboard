@@ -1,21 +1,20 @@
-// The 快捷鍵 pane: the global hotkeys, and which key runs which composing action.
+// The 快捷鍵 pane: every key the user can put an action on, in one list.
 
 import KeyboardShortcuts
 import SwiftUI
 
 /// The 快捷鍵 pane of the settings window.
 ///
-/// Two rosters, recorded by two controls, because the keys they hold are
-/// different in kind. A global chord is a Carbon hotkey and always carries a
-/// modifier, so `KeyboardShortcuts.Recorder` takes it. A composing key is
-/// mostly bare — Return, Space, `[` — so `ComposingKeyRecorder` takes it and
-/// refuses the keys a syllable is spelled with.
+/// One list, not two. A shortcut is a shortcut to the user reading the pane;
+/// which of them registers a Carbon hotkey and which is read by the key
+/// classifier is an implementation detail, and splitting the rows on it made
+/// the reader ask what the split meant (USER 2026-08-21).
 ///
-/// Defaults follow the system Zhuyin input method's candidate window wherever
-/// the romanization allows, so a user arriving from that keyboard is not
-/// relearning anything (`ComposingAction`). The one place they cannot: Zhuyin
-/// picks candidates with bare digits, which are TL and POJ tone markers here,
-/// so selection stays a modifier chord.
+/// Two controls all the same, because the keys they hold differ: a global chord
+/// always carries a modifier, so `KeyboardShortcuts.Recorder` records it, while
+/// a composing key is mostly bare — Return, Space, `[` — so
+/// `ComposingKeyRecorder` does. Both are recording fields of the same size and
+/// shape, so the seam does not show.
 ///
 /// `@AppStorage` for the settings the pane owns outright, and the store for the
 /// per-action chords, whose write has to run conflict resolution first.
@@ -29,11 +28,6 @@ struct ShortcutSettingsView: View {
     /// chord can empty the row that had it.
     @State private var bindings = SettingsStore().composingKeyBindings
 
-    /// Which row is listening. Owned here rather than per row so that exactly
-    /// one is armed: two rows listening would install two event monitors, and
-    /// whichever ran first would swallow the key.
-    @State private var recordingAction: ComposingAction?
-
     private let store = SettingsStore()
 
     var body: some View {
@@ -46,40 +40,47 @@ struct ShortcutSettingsView: View {
                         ShortcutConflicts.resolve(after: action)
                     }
                 }
-            } header: {
-                Text(language.string(.macosShortcutsGlobalSection))
-            }
 
-            Section {
-                ForEach(ComposingAction.allCases, id: \.self) { action in
-                    ComposingKeyRecorder(
-                        action: action,
-                        chord: bindings.chord(for: action),
-                        slotModifier: bindings.slotModifier,
-                        recordingAction: $recordingAction,
-                    ) { chord in
-                        record(chord, for: action)
-                    }
+                // Same order the input-source menu draws, so a user who learnt
+                // the roster in one surface reads it in the other: the keys
+                // that move through the candidates, then the keys that end the
+                // composition (`ComposingAction.groups`).
+                ForEach(ComposingAction.groups[0], id: \.self) { action in
+                    recorderRow(action)
                 }
 
+                // Ends the moving-through group, because that is what it does.
                 // Glyphs rather than translated words: a modifier is read off
                 // the keyboard, and ⌃ and ⌥ are the same symbols in every
                 // language the settings window speaks. A picker rather than a
                 // recorder because this row is one modifier standing for nine
                 // chords, not a key.
                 Picker(language.string(.macosBindingSlotModifier), selection: $candidateSlotModifier) {
-                    Text(verbatim: "⌃1 – ⌃9").tag(CandidateSlotModifier.control)
-                    Text(verbatim: "⌥1 – ⌥9").tag(CandidateSlotModifier.option)
+                    ForEach(CandidateSlotModifier.allCases, id: \.self) { modifier in
+                        Text(verbatim: modifier.menuRange).tag(modifier)
+                    }
                 }
-            } header: {
-                Text(language.string(.macosShortcutsComposingSection))
-            } footer: {
-                Text(language.string(.macosShortcutsFixedKeysNote))
+
+                ForEach(ComposingAction.groups[1], id: \.self) { action in
+                    recorderRow(action)
+                }
             }
         }
         .formStyle(.grouped)
         .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
         .onChange(of: candidateSlotModifier) { _, _ in reload() }
+    }
+
+    private func recorderRow(_ action: ComposingAction) -> some View {
+        LabeledContent(action.label(language)) {
+            ComposingKeyRecorder(
+                chord: bindings.chord(for: action),
+                slotModifier: bindings.slotModifier,
+                language: language,
+            ) { chord in
+                record(chord, for: action)
+            }
+        }
     }
 
     /// Writes `chord` to `action`, taking it off whichever row held it.
