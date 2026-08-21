@@ -22,7 +22,7 @@ final class CandidateMetricsTests: XCTestCase {
     /// itemHeight 16+8=24.
     func testSmallestChoices_resolveToTheirLiterals() {
         XCTAssertEqual(originalMetrics.candidateFontSize, 16)
-        XCTAssertEqual(originalMetrics.annotationFontSize, 12)
+        XCTAssertEqual(originalMetrics.annotationFontSize, 13)
         XCTAssertEqual(originalMetrics.candidateAnnotationGap, 11)
         XCTAssertEqual(originalMetrics.horizontalPadding, 6)
         XCTAssertEqual(originalMetrics.verticalPadding, 8)
@@ -38,11 +38,11 @@ final class CandidateMetricsTests: XCTestCase {
     /// text, less whitespace): the font is well above the 16pt reference while
     /// the paddings sit below upstream's 9/12 originals.
     ///
-    /// trace: 中/中 → font 20, ann 12*1.25=15, gap 11*1.25=13.75→14;
+    /// trace: 中/中 → font 20, ann 13*1.25=16.25→16, gap 11*1.25=13.75→14;
     /// chrome 0.85 → h 9*0.85=7.65→8, v 12*0.85=10.2→10; itemHeight 30.
     func testDefaultChoices_areTextForward() {
         XCTAssertEqual(defaultMetrics.candidateFontSize, 20)
-        XCTAssertEqual(defaultMetrics.annotationFontSize, 15)
+        XCTAssertEqual(defaultMetrics.annotationFontSize, 16)
         XCTAssertEqual(defaultMetrics.candidateAnnotationGap, 14)
         XCTAssertEqual(defaultMetrics.horizontalPadding, 8)
         XCTAssertEqual(defaultMetrics.verticalPadding, 10)
@@ -53,7 +53,7 @@ final class CandidateMetricsTests: XCTestCase {
     /// list them in. The largest chrome step is upstream MacishType's original
     /// air — nothing renders roomier than the port did.
     func testLadders_riseWithEveryStep() {
-        XCTAssertEqual(CandidateTextSizeChoice.allCases.map(\.candidateFontSize), [16, 20, 23, 26])
+        XCTAssertEqual(CandidateTextSizeChoice.allCases.map(\.candidateFontSize), [16, 20, 23])
         XCTAssertEqual(CandidateWindowSizeChoice.allCases.map(\.chromeScale), [0.7, 0.85, 1.0])
     }
 
@@ -63,7 +63,7 @@ final class CandidateMetricsTests: XCTestCase {
     /// paddings are the window knob's. Mixing them would make one knob move
     /// the other's geometry.
     func testTextChoice_scalesTheFontsAndTheGapButNotThePaddings() {
-        let larger = CandidateMetrics(textSize: .extraLarge, windowSize: .small)
+        let larger = CandidateMetrics(textSize: .large, windowSize: .small)
 
         XCTAssertGreaterThan(larger.candidateFontSize, originalMetrics.candidateFontSize)
         XCTAssertGreaterThan(larger.annotationFontSize, originalMetrics.annotationFontSize)
@@ -193,7 +193,7 @@ final class CandidateMetricsTests: XCTestCase {
         let original = originalMetrics.baseWidth
 
         XCTAssertGreaterThan(
-            CandidateMetrics(textSize: .extraLarge, windowSize: .small).baseWidth, original,
+            CandidateMetrics(textSize: .large, windowSize: .small).baseWidth, original,
         )
         XCTAssertGreaterThan(
             CandidateMetrics(textSize: .small, windowSize: .large).baseWidth, original,

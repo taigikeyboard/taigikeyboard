@@ -1477,24 +1477,6 @@
         "ja": "大"
       }
     },
-    "sizeExtraLarge": {
-      "comment": "Picker value for the candidate text-size row: the largest step.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "特大",
-        "tailo": "ti̍k-tuā",
-        "poj": "te̍k-tōa",
-        "en": "Extra Large",
-        "ja": "特大"
-      }
-    },
     "shortcutsTab": {
       "comment": "Sidebar label for the settings pane holding the shortcut rows.",
       "scope": {

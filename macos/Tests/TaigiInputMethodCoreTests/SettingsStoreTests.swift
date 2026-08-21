@@ -211,15 +211,23 @@ final class SettingsStoreTests: XCTestCase {
 
     func testCandidateSizes_readWhatTheSizePickersWrite() {
         userDefaults.set(
-            CandidateTextSizeChoice.extraLarge.rawValue,
+            CandidateTextSizeChoice.large.rawValue,
             forKey: SettingsStore.Keys.candidateTextSize.name,
         )
         userDefaults.set(
             CandidateWindowSizeChoice.small.rawValue,
             forKey: SettingsStore.Keys.candidateWindowSize.name,
         )
-        XCTAssertEqual(makeStore().candidateTextSize, .extraLarge)
+        XCTAssertEqual(makeStore().candidateTextSize, .large)
         XCTAssertEqual(makeStore().candidateWindowSize, .small)
+    }
+
+    /// The 特大 tier was removed (USER 2026-08-21): an install that stored it
+    /// reads back as the default rather than crashing or pinning a ghost size.
+    func testCandidateTextSize_storedRetiredExtraLarge_fallsBackToTheDefault() {
+        userDefaults.set("extraLarge", forKey: SettingsStore.Keys.candidateTextSize.name)
+
+        XCTAssertEqual(makeStore().candidateTextSize, .medium)
     }
 
     func testCandidateSizes_withUnknownStoredValues_fallBackToTheDefaults() {

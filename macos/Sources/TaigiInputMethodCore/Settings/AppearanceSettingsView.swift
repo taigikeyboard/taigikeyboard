@@ -71,7 +71,6 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.macosSizeSmall)).tag(CandidateTextSizeChoice.small)
                     Text(language.string(.macosSizeMedium)).tag(CandidateTextSizeChoice.medium)
                     Text(language.string(.macosSizeLarge)).tag(CandidateTextSizeChoice.large)
-                    Text(language.string(.macosSizeExtraLarge)).tag(CandidateTextSizeChoice.extraLarge)
                 }
             }
         }

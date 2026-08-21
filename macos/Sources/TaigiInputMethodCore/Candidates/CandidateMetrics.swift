@@ -13,16 +13,16 @@ enum CandidateTextSizeChoice: String, CaseIterable, Sendable {
     case small
     case medium
     case large
-    case extraLarge
 
     /// The candidate column's font size. The annotation font and the gaps
-    /// scale off this — see `CandidateMetrics`.
+    /// scale off this — see `CandidateMetrics`. Three steps, not four: the
+    /// 特大 tier was dropped (USER 2026-08-21); an install that stored it
+    /// reads back as the default (`SettingsStore.choice`).
     var candidateFontSize: CGFloat {
         switch self {
         case .small: 16
         case .medium: 20
         case .large: 23
-        case .extraLarge: 26
         }
     }
 }
@@ -86,9 +86,12 @@ struct CandidateMetrics: Equatable, Sendable {
         (base * candidateFontSize / Self.baseCandidateFontSize).rounded()
     }
 
-    /// Upstream's reference values at 16pt (`Base16Metrics`).
+    /// Upstream's reference values at 16pt (`Base16Metrics`) — except the
+    /// annotation font, raised from upstream's 12: the second script is a
+    /// reading aid, not a footnote, and 12-on-16 rendered it too small
+    /// (USER 2026-08-21: subtitle bigger).
     private static let baseCandidateFontSize: CGFloat = 16
-    private static let baseAnnotationFontSize: CGFloat = 12
+    private static let baseAnnotationFontSize: CGFloat = 13
     private static let baseCandidateAnnotationGap: CGFloat = 11
     private static let baseHorizontalPadding: CGFloat = 9
     private static let baseVerticalPadding: CGFloat = 12
