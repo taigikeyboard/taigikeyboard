@@ -3854,7 +3854,7 @@
       }
     },
     "i18n_theme_candidateTextSize": {
-      "comment": "Theme editor slider label: candidate text size.",
+      "comment": "Theme editor slider label: candidate text size. Also the macOS 外觀 pane's candidate text-size picker label — same property, same settings-row role.",
       "extractionState": "manual",
       "localizations": {
         "en": {

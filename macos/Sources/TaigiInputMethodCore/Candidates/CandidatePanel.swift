@@ -107,16 +107,20 @@ final class CandidatePanel: CandidatePresenter {
     /// The panel for `layout`, taking down whichever other layout's panel was
     /// up: the settings are live-read per show, so a switch mid-composition
     /// swaps windows on the next keystroke rather than leaving two on screen.
-    /// A cached panel built under a style the setting no longer names is
-    /// rebuilt — style is baked into a panel's backdrop at construction.
+    /// A cached panel built under a style or a size the settings no longer
+    /// name is rebuilt — both are baked in at construction, the style into the
+    /// backdrop and the metrics into every cell's constraints. A stale panel of
+    /// some OTHER layout can only ever reach the screen through this method, so
+    /// leaving it cached until it is asked for costs nothing.
     private func panel(for layout: CandidateLayout) -> CandidateBasePanel {
         let style = settings.candidateWindowStyle.resolved
+        let metrics = settings.candidateMetrics
         var target = panels[layout]
-        if let cached = target, cached.style != style {
+        if let cached = target, cached.style != style || cached.metrics != metrics {
             cached.clear()
             target = nil
         }
-        let resolved = target ?? makePanel(for: layout, style: style)
+        let resolved = target ?? makePanel(for: layout, style: style, metrics: metrics)
         panels[layout] = resolved
         if let previous = panel, previous !== resolved {
             previous.clear()
@@ -125,11 +129,15 @@ final class CandidatePanel: CandidatePresenter {
         return resolved
     }
 
-    private func makePanel(for layout: CandidateLayout, style: CandidateWindowStyle) -> CandidateBasePanel {
+    private func makePanel(
+        for layout: CandidateLayout,
+        style: CandidateWindowStyle,
+        metrics: CandidateMetrics,
+    ) -> CandidateBasePanel {
         switch layout {
-        case .horizontal: HorizontalCandidatePanel(style: style)
-        case .vertical: VerticalCandidatePanel(style: style)
-        case .expandable: ExpandableCandidatePanel(style: style)
+        case .horizontal: HorizontalCandidatePanel(style: style, metrics: metrics)
+        case .vertical: VerticalCandidatePanel(style: style, metrics: metrics)
+        case .expandable: ExpandableCandidatePanel(style: style, metrics: metrics)
         }
     }
 }

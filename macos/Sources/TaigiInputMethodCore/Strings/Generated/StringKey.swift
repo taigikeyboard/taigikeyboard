@@ -160,6 +160,11 @@ enum StringKey: String {
     case macosCandidateAccentGraphite = "i18n_macos_candidateAccentGraphite"
     case macosCandidateAppearanceLight = "i18n_macos_candidateAppearanceLight"
     case macosCandidateAppearanceDark = "i18n_macos_candidateAppearanceDark"
+    case macosCandidateWindowSize = "i18n_macos_candidateWindowSize"
+    case macosSizeSmall = "i18n_macos_sizeSmall"
+    case macosSizeMedium = "i18n_macos_sizeMedium"
+    case macosSizeLarge = "i18n_macos_sizeLarge"
+    case macosSizeExtraLarge = "i18n_macos_sizeExtraLarge"
     case macosShortcutsGlobalSection = "i18n_macos_shortcutsGlobalSection"
     case macosShortcutsComposingSection = "i18n_macos_shortcutsComposingSection"
     case macosShortcutsFixedKeysNote = "i18n_macos_shortcutsFixedKeysNote"
@@ -184,4 +189,5 @@ enum StringKey: String {
     case settingsTlMode = "i18n_settings_tlMode"
     case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
     case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"
+    case themeCandidateTextSize = "i18n_theme_candidateTextSize"
 }

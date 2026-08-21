@@ -1477,6 +1477,96 @@
         "ja": "ダーク"
       }
     },
+    "candidateWindowSize": {
+      "comment": "Picker label: how much air the candidate window puts around its text.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "候選窗大細",
+        "tailo": "hāu-suán thang tuā-sè",
+        "poj": "hāu-soán thang tōa-sè",
+        "en": "Candidate Window Size",
+        "ja": "候補ウィンドウの大きさ"
+      }
+    },
+    "sizeSmall": {
+      "comment": "Picker value shared by the candidate window-size and text-size rows: the smallest step.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "細",
+        "tailo": "sè",
+        "poj": "sè",
+        "en": "Small",
+        "ja": "小"
+      }
+    },
+    "sizeMedium": {
+      "comment": "Picker value shared by the candidate window-size and text-size rows: the default step.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "中",
+        "tailo": "tiong",
+        "poj": "tiong",
+        "en": "Medium",
+        "ja": "中"
+      }
+    },
+    "sizeLarge": {
+      "comment": "Picker value shared by the candidate window-size and text-size rows: the larger step.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "大",
+        "tailo": "tuā",
+        "poj": "tōa",
+        "en": "Large",
+        "ja": "大"
+      }
+    },
+    "sizeExtraLarge": {
+      "comment": "Picker value for the candidate text-size row: the largest step.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "特大",
+        "tailo": "ti̍k-tuā",
+        "poj": "te̍k-tōa",
+        "en": "Extra Large",
+        "ja": "特大"
+      }
+    },
     "shortcutsGlobalSection": {
       "comment": "Settings section header over the freely recorded global shortcut chords.",
       "scope": {

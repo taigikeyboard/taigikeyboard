@@ -162,6 +162,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "石墨色",
         .macosCandidateAppearanceLight: "淺色",
         .macosCandidateAppearanceDark: "深色",
+        .macosCandidateWindowSize: "候選窗大細",
+        .macosSizeSmall: "細",
+        .macosSizeMedium: "中",
+        .macosSizeLarge: "大",
+        .macosSizeExtraLarge: "特大",
         .macosShortcutsGlobalSection: "全域快捷鍵",
         .macosShortcutsComposingSection: "組字中的按鍵",
         .macosShortcutsFixedKeysNote: "方向鍵揀候選字,Page Up／Page Down 翻頁,Esc 取消,Delete 刪字 —— 這幾个袂當改。",
@@ -186,6 +191,7 @@ enum GeneratedStrings {
         .settingsTlMode: "台羅",
         .settingsOutputBothScripts: "括號標註",
         .settingsLiteralRomanCandidate: "顯示原本羅馬字候選",
+        .themeCandidateTextSize: "候選詞大細",
     ]
     private static let english: [StringKey: String] = [
         .commonCancel: "Cancel",
@@ -346,6 +352,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "Graphite",
         .macosCandidateAppearanceLight: "Light",
         .macosCandidateAppearanceDark: "Dark",
+        .macosCandidateWindowSize: "Candidate Window Size",
+        .macosSizeSmall: "Small",
+        .macosSizeMedium: "Medium",
+        .macosSizeLarge: "Large",
+        .macosSizeExtraLarge: "Extra Large",
         .macosShortcutsGlobalSection: "Global Shortcuts",
         .macosShortcutsComposingSection: "Keys While Composing",
         .macosShortcutsFixedKeysNote: "Arrow keys move through candidates, Page Up/Page Down turn pages, Esc cancels, and Delete removes a character. These cannot be changed.",
@@ -370,6 +381,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "Annotate in Brackets",
         .settingsLiteralRomanCandidate: "Show Typed Romanization Candidate",
+        .themeCandidateTextSize: "Candidate Text Size",
     ]
     private static let japanese: [StringKey: String] = [
         .commonCancel: "キャンセル",
@@ -530,6 +542,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "グラファイト",
         .macosCandidateAppearanceLight: "ライト",
         .macosCandidateAppearanceDark: "ダーク",
+        .macosCandidateWindowSize: "候補ウィンドウの大きさ",
+        .macosSizeSmall: "小",
+        .macosSizeMedium: "中",
+        .macosSizeLarge: "大",
+        .macosSizeExtraLarge: "特大",
         .macosShortcutsGlobalSection: "グローバルショートカット",
         .macosShortcutsComposingSection: "入力中のキー",
         .macosShortcutsFixedKeysNote: "矢印キーで候補を移動、Page Up／Page Down でページを送り、Esc で取り消し、Delete で 1 文字削除します。これらは変更できません。",
@@ -554,6 +571,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "括弧で併記",
         .settingsLiteralRomanCandidate: "入力したローマ字候補を表示",
+        .themeCandidateTextSize: "候補の文字の大きさ",
     ]
     private static let tailo: [StringKey: String] = [
         .commonCancel: "tshú-siau",
@@ -714,6 +732,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "tsio̍h-bi̍k-sik",
         .macosCandidateAppearanceLight: "tshián-sik",
         .macosCandidateAppearanceDark: "tshim-sik",
+        .macosCandidateWindowSize: "hāu-suán thang tuā-sè",
+        .macosSizeSmall: "sè",
+        .macosSizeMedium: "tiong",
+        .macosSizeLarge: "tuā",
+        .macosSizeExtraLarge: "ti̍k-tuā",
         .macosShortcutsGlobalSection: "tsuân-i̍k khuài-tsia̍t kiān",
         .macosShortcutsComposingSection: "tsoo-jī tiong ê àn-kiān",
         .macosShortcutsFixedKeysNote: "Hong-hiòng kiān kíng hāu-suán-jī, Page Up／Page Down huan-ia̍h, Esc tshú-siau, Delete thâi-jī — tsit kuí ê bē-tàng kái.",
@@ -738,6 +761,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "kuat-hō phiau-tsù",
         .settingsLiteralRomanCandidate: "hián-sī guân-pún lô-má-jī hāu-suán",
+        .themeCandidateTextSize: "hāu-suán sû tuā-sè",
     ]
     private static let poj: [StringKey: String] = [
         .commonCancel: "chhú-siau",
@@ -898,6 +922,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "chio̍h-be̍k-sek",
         .macosCandidateAppearanceLight: "chhián-sek",
         .macosCandidateAppearanceDark: "chhim-sek",
+        .macosCandidateWindowSize: "hāu-soán thang tōa-sè",
+        .macosSizeSmall: "sè",
+        .macosSizeMedium: "tiong",
+        .macosSizeLarge: "tōa",
+        .macosSizeExtraLarge: "te̍k-tōa",
         .macosShortcutsGlobalSection: "choân-e̍k khoài-chia̍t kiān",
         .macosShortcutsComposingSection: "cho͘-jī tiong ê àn-kiān",
         .macosShortcutsFixedKeysNote: "Hong-hiòng kiān kéng hāu-soán-jī, Page Up／Page Down hoan-ia̍h, Esc chhú-siau, Delete thâi-jī — chit kúi ê bē-tàng kái.",
@@ -922,6 +951,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "koat-hō phiau-chù",
         .settingsLiteralRomanCandidate: "hián-sī goân-pún lô-má-jī hāu-soán",
+        .themeCandidateTextSize: "hāu-soán sû tōa-sè",
     ]
 
     static func lookup(_ language: DisplayLanguage, _ key: StringKey) -> String? {

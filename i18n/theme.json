@@ -122,8 +122,8 @@
       "values": { "hanji": "揤鈕字大細", "tailo": "tshi̍h-liú jī tuā-sè", "poj": "chhi̍h-liú jī tōa-sè", "en": "Key Font Size", "ja": "キー文字の大きさ" }
     },
     "candidateTextSize": {
-      "comment": "Theme editor slider label: candidate text size.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Theme editor slider label: candidate text size. Also the macOS 外觀 pane's candidate text-size picker label — same property, same settings-row role.",
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
       "values": { "hanji": "候選詞大細", "tailo": "hāu-suán sû tuā-sè", "poj": "hāu-soán sû tōa-sè", "en": "Candidate Text Size", "ja": "候補の文字の大きさ" }
     },
     "keyCornerRadius": {
