@@ -206,6 +206,63 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateAccentColor, .auto, "unknown values fall back to 自動")
     }
 
+    // MARK: - Composing key bindings
+
+    func testComposingKeyBindings_withNothingStored_areTheShippedContract() {
+        XCTAssertEqual(makeStore().composingKeyBindings, .default)
+    }
+
+    func testComposingKeyBindings_readEveryStoredChoice() {
+        userDefaults.set(
+            ReturnKeyBehavior.confirmHighlighted.rawValue,
+            forKey: SettingsStore.Keys.returnKeyBehavior.name,
+        )
+        userDefaults.set(
+            SpaceKeyBehavior.nextCandidate.rawValue,
+            forKey: SettingsStore.Keys.spaceKeyBehavior.name,
+        )
+        userDefaults.set(
+            BracketPagingBehavior.disabled.rawValue,
+            forKey: SettingsStore.Keys.bracketPagingBehavior.name,
+        )
+        userDefaults.set(
+            TabCycleBehavior.enabled.rawValue,
+            forKey: SettingsStore.Keys.tabCycleBehavior.name,
+        )
+        userDefaults.set(
+            CandidateSlotModifier.option.rawValue,
+            forKey: SettingsStore.Keys.candidateSlotModifier.name,
+        )
+
+        XCTAssertEqual(
+            makeStore().composingKeyBindings,
+            ComposingKeyBindings(
+                returnKey: .confirmHighlighted,
+                spaceKey: .nextCandidate,
+                bracketPaging: .disabled,
+                tabCycle: .enabled,
+                slotModifier: .option,
+            ),
+        )
+    }
+
+    /// A binding the app cannot honour must not leave the key doing nothing:
+    /// each unknown value reads as the shipped behaviour for that key alone,
+    /// so a hand-edited domain cannot take a key out of service.
+    func testComposingKeyBindings_withUnknownStoredValues_fallBackPerKey() {
+        for key in [
+            SettingsStore.Keys.returnKeyBehavior.name,
+            SettingsStore.Keys.spaceKeyBehavior.name,
+            SettingsStore.Keys.bracketPagingBehavior.name,
+            SettingsStore.Keys.tabCycleBehavior.name,
+            SettingsStore.Keys.candidateSlotModifier.name,
+        ] {
+            userDefaults.set("nonsense", forKey: key)
+        }
+
+        XCTAssertEqual(makeStore().composingKeyBindings, .default)
+    }
+
     /// A forced Tahoe must never reach a panel on an OS that cannot draw it —
     /// `NSGlassEffectView` is macOS 26+ — and the clamp lives in `resolved` so
     /// backdrop, cells and corners can never disagree about the style.

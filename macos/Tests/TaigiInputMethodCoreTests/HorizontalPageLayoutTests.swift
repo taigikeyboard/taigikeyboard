@@ -119,4 +119,22 @@ final class HorizontalPageLayoutTests: XCTestCase {
         XCTAssertEqual(layout.target(for: .down, from: 0), layout.target(for: .pageDown, from: 0))
         XCTAssertEqual(layout.target(for: .up, from: 9), layout.target(for: .pageUp, from: 9))
     }
+
+    /// A bound key whose label says "next candidate" must move exactly one
+    /// candidate here too — in a row that is what `→` already does, and the
+    /// two staying identical is what makes the semantic direction safe to
+    /// route through the same layout.
+    func testSemanticSteps_walkOneCandidateLikeTheArrowsDo() {
+        let layout = pack(Array(repeating: 5, count: 20))
+
+        XCTAssertEqual(layout.target(for: .nextCandidate, from: 0), layout.target(for: .right, from: 0))
+        XCTAssertEqual(layout.target(for: .previousCandidate, from: 5), layout.target(for: .left, from: 5))
+        XCTAssertEqual(
+            layout.target(for: .nextCandidate, from: 8),
+            9,
+            "one step crosses a page boundary rather than stopping at the page's end",
+        )
+        XCTAssertNil(layout.target(for: .previousCandidate, from: 0), "clamps — never wraps")
+        XCTAssertNil(layout.target(for: .nextCandidate, from: 19), "clamps — never wraps")
+    }
 }

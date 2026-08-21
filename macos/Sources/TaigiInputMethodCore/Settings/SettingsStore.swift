@@ -218,6 +218,35 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "candidateAppearanceMode",
             defaultValue: CandidateAppearanceMode.auto,
         )
+
+        /// The five composing key bindings. macOS-only: the phone keyboards
+        /// have no Return, Tab or modifier keys to bind, so their defaults are
+        /// owned by `ComposingKeyBindings` rather than by the shared
+        /// `EngineSettings.defaults`.
+        static let returnKeyBehavior = SettingsKey(
+            name: "returnKeyBehavior",
+            defaultValue: ComposingKeyBindings.default.returnKey,
+        )
+
+        static let spaceKeyBehavior = SettingsKey(
+            name: "spaceKeyBehavior",
+            defaultValue: ComposingKeyBindings.default.spaceKey,
+        )
+
+        static let bracketPagingBehavior = SettingsKey(
+            name: "bracketPagingBehavior",
+            defaultValue: ComposingKeyBindings.default.bracketPaging,
+        )
+
+        static let tabCycleBehavior = SettingsKey(
+            name: "tabCycleBehavior",
+            defaultValue: ComposingKeyBindings.default.tabCycle,
+        )
+
+        static let candidateSlotModifier = SettingsKey(
+            name: "candidateSlotModifier",
+            defaultValue: ComposingKeyBindings.default.slotModifier,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -275,45 +304,58 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         )
     }
 
-    /// The candidate window's layout, read fresh on every access like the rest
-    /// of the store so a change in the settings window applies to the very
-    /// next keystroke's window. Unknown stored values read as the default.
+    /// A setting stored as the raw value of a `String`-backed enum, read fresh
+    /// on every access like the rest of the store so a change in the settings
+    /// window applies to the very next keystroke.
+    ///
+    /// A stored value the type does not name — a hand-edited `defaults write`,
+    /// or a choice a future version removes — reads as the default rather than
+    /// leaving the reader with nothing.
+    private func choice<Value: RawRepresentable>(_ key: SettingsKey<Value>) -> Value
+        where Value.RawValue == String
+    {
+        userDefaults.string(forKey: key.name).flatMap(Value.init(rawValue:)) ?? key.defaultValue
+    }
+
+    /// The candidate window's layout.
     var candidateLayout: CandidateLayout {
-        userDefaults.string(forKey: Keys.candidateLayout.name)
-            .flatMap(CandidateLayout.init(rawValue:))
-            ?? Keys.candidateLayout.defaultValue
+        choice(Keys.candidateLayout)
     }
 
-    /// The candidate window's chrome choice, live-read like `candidateLayout`.
+    /// The candidate window's chrome choice.
     var candidateWindowStyle: CandidateWindowStyleChoice {
-        userDefaults.string(forKey: Keys.candidateWindowStyle.name)
-            .flatMap(CandidateWindowStyleChoice.init(rawValue:))
-            ?? Keys.candidateWindowStyle.defaultValue
+        choice(Keys.candidateWindowStyle)
     }
 
-    /// The candidate highlight's accent choice, live-read like the two above.
+    /// The candidate highlight's accent choice.
     var candidateAccentColor: CandidateAccentChoice {
-        userDefaults.string(forKey: Keys.candidateAccentColor.name)
-            .flatMap(CandidateAccentChoice.init(rawValue:))
-            ?? Keys.candidateAccentColor.defaultValue
+        choice(Keys.candidateAccentColor)
     }
 
-    /// The candidate window's light/dark choice, live-read like the rest.
+    /// The candidate window's light/dark choice.
     var candidateAppearanceMode: CandidateAppearanceMode {
-        userDefaults.string(forKey: Keys.candidateAppearanceMode.name)
-            .flatMap(CandidateAppearanceMode.init(rawValue:))
-            ?? Keys.candidateAppearanceMode.defaultValue
+        choice(Keys.candidateAppearanceMode)
     }
 
-    /// The romanization being typed. A stored value that names no mode — a
-    /// hand-edited `defaults write`, or a mode a future version removes — reads
-    /// as the default rather than as a mode the engine cannot render.
+    /// The user's composing key contract, as one snapshot.
+    ///
+    /// Assembled here rather than read piecemeal inside the classifier: one
+    /// keystroke is classified against one assembled value, so nothing goes
+    /// back to `UserDefaults` part-way through deciding what a key meant.
+    var composingKeyBindings: ComposingKeyBindings {
+        ComposingKeyBindings(
+            returnKey: choice(Keys.returnKeyBehavior),
+            spaceKey: choice(Keys.spaceKeyBehavior),
+            bracketPaging: choice(Keys.bracketPagingBehavior),
+            tabCycle: choice(Keys.tabCycleBehavior),
+            slotModifier: choice(Keys.candidateSlotModifier),
+        )
+    }
+
+    /// The romanization being typed. Written as well as read, which is what
+    /// keeps it out of the run of read-only choices above.
     var inputMode: InputMode {
-        get {
-            userDefaults.string(forKey: Keys.inputMode.name)
-                .flatMap(InputMode.init(rawValue:))
-                ?? Keys.inputMode.defaultValue
-        }
+        get { choice(Keys.inputMode) }
         set { userDefaults.set(newValue.rawValue, forKey: Keys.inputMode.name) }
     }
 

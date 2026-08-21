@@ -137,9 +137,9 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     override func navigate(_ direction: CandidateNavigation) {
         guard !cells.isEmpty else { return }
         switch direction {
-        case .up:
+        case .up, .previousCandidate:
             select(max(selectedIndex - 1, 0))
-        case .down:
+        case .down, .nextCandidate:
             select(min(selectedIndex + 1, cells.count - 1))
         // A column has no candidate to the left or right, so the horizontal
         // keys page — backward and forward respectively, as upstream binds
