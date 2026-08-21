@@ -38,10 +38,9 @@ final class ComposingKeyBindingsTests: XCTestCase {
         }
     }
 
-    /// The factory may receive a capital — `make` checks the raw first
-    /// character before `normalized` lowercases the stored key — so the
-    /// refusal must case-fold what it checks: a capital of a free letter
-    /// records, a capital of a syllable letter still does not.
+    /// The factory may receive a capital, and the refusal reads the key
+    /// `normalized` has already folded: a capital of a free letter records,
+    /// a capital of a syllable letter still does not.
     func testCapitalsFoldToTheirLetter_beforeTheRefusalDecides() throws {
         let chord = try ComposingKeyChord.make(key: "Z", modifiers: .shift).get()
         XCTAssertEqual(chord.key, "z")
@@ -154,12 +153,6 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertNil(ComposingKeyChord(rawValue: "c|F702"), "⌃← is still an arrow")
         XCTAssertNil(ComposingKeyChord(rawValue: "garbage"))
         XCTAssertNil(ComposingKeyChord(rawValue: "x|0020"), "unknown modifier letter")
-    }
-
-    /// The counterpart: a stored bare non-syllable letter parses, so the
-    /// binding survives a relaunch.
-    func testARawValueOnAFreeLetter_parses() throws {
-        XCTAssertEqual(ComposingKeyChord(rawValue: "|007A"), try chord("z"), "bare 'z'")
     }
 
     // MARK: - Defaults

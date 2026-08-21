@@ -344,11 +344,9 @@ enum ComposingKeyIntent: Equatable {
     /// text, not input the engine could parse. Tone digits are handled by the
     /// caller, which knows whether a composition is running.
     ///
-    /// All ASCII letters on purpose, even the eight no syllable uses: a
-    /// custom-dictionary romanization is free text, so any letter must still
-    /// reach the composition. The recorder defends a narrower set
-    /// (`ComposingKeyChord.syllableLetters`) — a bound non-syllable letter
-    /// wins mid-composition because bindings are classified before input.
+    /// Wider than `ComposingKeyChord.syllableLetters` on purpose: a
+    /// custom-dictionary romanization is free text, so every ASCII letter
+    /// must reach the composition.
     static func isRomanizationCharacter(_ character: Character) -> Bool {
         (character.isLetter && character.isASCII) || character == "-"
     }
