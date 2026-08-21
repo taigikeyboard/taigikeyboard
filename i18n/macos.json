@@ -73,42 +73,6 @@
         "ja": "漢字とローマ字を入れ替え"
       }
     },
-    "learningSection": {
-      "comment": "Settings section header over the two learning toggles.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "學習",
-        "tailo": "ha̍k-si̍p",
-        "poj": "ha̍k-si̍p",
-        "en": "Learning",
-        "ja": "学習"
-      }
-    },
-    "shortcutsTab": {
-      "comment": "Sidebar label for the settings pane holding the shortcut and key bindings.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "快捷鍵",
-        "tailo": "khuài-tsia̍t kiān",
-        "poj": "khoài-chia̍t kiān",
-        "en": "Shortcuts",
-        "ja": "ショートカット"
-      }
-    },
     "shortcutOpenSettings": {
       "comment": "Shortcut-recorder row: the hotkey that opens this settings window.",
       "scope": {
@@ -197,24 +161,6 @@
         "poj": "chhiat-ōaⁿ hián-sī goân-pún lô-má-jī hāu-soán",
         "en": "Toggle the Typed Romanization Candidate",
         "ja": "入力したローマ字候補の表示を切り替える"
-      }
-    },
-    "menuSettings": {
-      "comment": "Input-source menu command that opens the settings window. The trailing ellipsis is HIG-required for a command that opens a window, and is authored per language rather than appended at the call site.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "設定…",
-        "tailo": "siat-tīng…",
-        "poj": "siat-tēng…",
-        "en": "Settings…",
-        "ja": "設定…"
       }
     },
     "menuFile": {
@@ -413,24 +359,6 @@
         "poj": "soán sû-tián",
         "en": "Choose Dictionaries",
         "ja": "辞書を選ぶ"
-      }
-    },
-    "allSourcesOffFooter": {
-      "comment": "Footer under the supplementary-source toggles: what turning every dictionary off does.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "關掉全部辭典,拍字就袂有詞庫候選。",
-        "tailo": "kuainn-tiāu tsuân-pōo sû-tián, phah-jī tō bē ū sû-khòo hāu-suán.",
-        "poj": "koaiⁿ-tiāu choân-pō͘ sû-tián, phah-jī tō bē ū sû-khò͘ hāu-soán.",
-        "en": "With every dictionary off, typing produces no dictionary candidates.",
-        "ja": "すべての辞書をオフにすると、入力しても辞書候補は出ません。"
       }
     },
     "openURLFailed": {
@@ -1567,8 +1495,8 @@
         "ja": "特大"
       }
     },
-    "shortcutsGlobalSection": {
-      "comment": "Settings section header over the freely recorded global shortcut chords.",
+    "shortcutsTab": {
+      "comment": "Sidebar label for the settings pane holding the shortcut rows.",
       "scope": {
         "platforms": [
           "macos"
@@ -1578,119 +1506,11 @@
         ]
       },
       "values": {
-        "hanji": "全域快捷鍵",
-        "tailo": "tsuân-i̍k khuài-tsia̍t kiān",
-        "poj": "choân-e̍k khoài-chia̍t kiān",
-        "en": "Global Shortcuts",
-        "ja": "グローバルショートカット"
-      }
-    },
-    "shortcutsComposingSection": {
-      "comment": "Settings section header over the pickers that bind keys used while composing.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "組字中的按鍵",
-        "tailo": "tsoo-jī tiong ê àn-kiān",
-        "poj": "cho͘-jī tiong ê àn-kiān",
-        "en": "Keys While Composing",
-        "ja": "入力中のキー"
-      }
-    },
-    "shortcutsFixedKeysNote": {
-      "comment": "Footer under the composing-key pickers, listing the keys that are never bindable.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "方向鍵揀候選字,Page Up／Page Down 翻頁,Esc 取消,Delete 刪字 —— 這幾个袂當改。",
-        "tailo": "Hong-hiòng kiān kíng hāu-suán-jī, Page Up／Page Down huan-ia̍h, Esc tshú-siau, Delete thâi-jī — tsit kuí ê bē-tàng kái.",
-        "poj": "Hong-hiòng kiān kéng hāu-soán-jī, Page Up／Page Down hoan-ia̍h, Esc chhú-siau, Delete thâi-jī — chit kúi ê bē-tàng kái.",
-        "en": "Arrow keys move through candidates, Page Up/Page Down turn pages, Esc cancels, and Delete removes a character. These cannot be changed.",
-        "ja": "矢印キーで候補を移動、Page Up／Page Down でページを送り、Esc で取り消し、Delete で 1 文字削除します。これらは変更できません。"
-      }
-    },
-    "bindingReturnKey": {
-      "comment": "Picker label: what the Return key does while composing.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "Return 鍵",
-        "tailo": "Return kiān",
-        "poj": "Return kiān",
-        "en": "Return Key",
-        "ja": "Return キー"
-      }
-    },
-    "bindingSpaceKey": {
-      "comment": "Picker label: what the space bar does while the candidate window is up.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "空白鍵",
-        "tailo": "khong-pi̍k kiān",
-        "poj": "khong-pe̍k kiān",
-        "en": "Space Bar",
-        "ja": "スペースキー"
-      }
-    },
-    "bindingBracketPaging": {
-      "comment": "Picker label: what the [ and ] keys do while the candidate window is up.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "[ ] 鍵",
-        "tailo": "[ ] kiān",
-        "poj": "[ ] kiān",
-        "en": "[ and ] Keys",
-        "ja": "[ ] キー"
-      }
-    },
-    "bindingTabCycle": {
-      "comment": "Picker label: what Tab and Shift-Tab do while the candidate window is up.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "Tab 鍵",
-        "tailo": "Tab kiān",
-        "poj": "Tab kiān",
-        "en": "Tab Key",
-        "ja": "Tab キー"
+        "hanji": "快捷鍵",
+        "tailo": "khuài-tsia̍t kiān",
+        "poj": "khoài-chia̍t kiān",
+        "en": "Shortcuts",
+        "ja": "ショートカット"
       }
     },
     "bindingSlotModifier": {
@@ -1711,44 +1531,8 @@
         "ja": "候補選択キー"
       }
     },
-    "bindingCommitLiteral": {
-      "comment": "Picker option: send the romanization exactly as typed, not the highlighted candidate.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "送出原本拍的字",
-        "tailo": "sàng-tshut guân-pún phah ê jī",
-        "poj": "sàng-chhut goân-pún phah ê jī",
-        "en": "Send What I Typed",
-        "ja": "入力したまま確定"
-      }
-    },
-    "bindingConfirmHighlighted": {
-      "comment": "Picker option: send the candidate the window has highlighted.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "送出選著的候選字",
-        "tailo": "sàng-tshut suán-tio̍h ê hāu-suán-jī",
-        "poj": "sàng-chhut soán-tio̍h ê hāu-soán-jī",
-        "en": "Send Highlighted Candidate",
-        "ja": "選択中の候補を確定"
-      }
-    },
-    "bindingNextCandidate": {
-      "comment": "Picker option: move the highlight to the next candidate instead of committing.",
+    "actionNextCandidate": {
+      "comment": "Shortcut row: move the highlight to the next candidate.",
       "scope": {
         "platforms": [
           "macos"
@@ -1761,12 +1545,12 @@
         "hanji": "換下一个候選字",
         "tailo": "uānn ē-tsi̍t ê hāu-suán-jī",
         "poj": "oāⁿ ē-chi̍t ê hāu-soán-jī",
-        "en": "Move to Next Candidate",
-        "ja": "次の候補へ移動"
+        "en": "Next Candidate",
+        "ja": "次の候補"
       }
     },
-    "bindingTurnPage": {
-      "comment": "Picker option: page the candidate window backward and forward.",
+    "actionPreviousCandidate": {
+      "comment": "Shortcut row: move the highlight to the previous candidate.",
       "scope": {
         "platforms": [
           "macos"
@@ -1776,15 +1560,15 @@
         ]
       },
       "values": {
-        "hanji": "翻候選字的頁",
-        "tailo": "huan hāu-suán-jī ê ia̍h",
-        "poj": "hoan hāu-soán-jī ê ia̍h",
-        "en": "Turn Candidate Pages",
-        "ja": "候補ページを送る"
+        "hanji": "換頂一个候選字",
+        "tailo": "uānn tíng-tsi̍t ê hāu-suán-jī",
+        "poj": "oāⁿ téng-chi̍t ê hāu-soán-jī",
+        "en": "Previous Candidate",
+        "ja": "前の候補"
       }
     },
-    "bindingTypeTheCharacter": {
-      "comment": "Picker option: the key types its own character instead of driving the candidate window.",
+    "actionPageForward": {
+      "comment": "Shortcut row: show the next page of candidates.",
       "scope": {
         "platforms": [
           "macos"
@@ -1794,15 +1578,15 @@
         ]
       },
       "values": {
-        "hanji": "照常拍出符號",
-        "tailo": "tsiàu-siông phah-tshut hû-hō",
-        "poj": "chiàu-siông phah-chhut hû-hō",
-        "en": "Type the Character",
-        "ja": "文字として入力"
+        "hanji": "後一頁候選字",
+        "tailo": "āu-tsi̍t ia̍h hāu-suán-jī",
+        "poj": "āu-chi̍t ia̍h hāu-soán-jī",
+        "en": "Next Candidate Page",
+        "ja": "次の候補ページ"
       }
     },
-    "bindingWalkCandidates": {
-      "comment": "Picker option: Tab moves to the next candidate, Shift-Tab to the previous one.",
+    "actionPageBackward": {
+      "comment": "Shortcut row: show the previous page of candidates.",
       "scope": {
         "platforms": [
           "macos"
@@ -1812,15 +1596,15 @@
         ]
       },
       "values": {
-        "hanji": "揀候選字（Tab 下一个、⇧Tab 頂一个）",
-        "tailo": "kíng hāu-suán-jī（Tab ē-tsi̍t ê、⇧Tab tíng-tsi̍t ê）",
-        "poj": "kéng hāu-soán-jī（Tab ē-chi̍t ê、⇧Tab téng-chi̍t ê）",
-        "en": "Move Through Candidates (Tab next, ⇧Tab previous)",
-        "ja": "候補を移動（Tab で次、⇧Tab で前）"
+        "hanji": "頭前一頁候選字",
+        "tailo": "thâu-tsîng tsi̍t ia̍h hāu-suán-jī",
+        "poj": "thâu-chêng chi̍t ia̍h hāu-soán-jī",
+        "en": "Previous Candidate Page",
+        "ja": "前の候補ページ"
       }
     },
-    "bindingLeaveToApp": {
-      "comment": "Picker option: the key is left to the app, which is what it does today.",
+    "actionConfirmHighlighted": {
+      "comment": "Shortcut row: commit the highlighted candidate.",
       "scope": {
         "platforms": [
           "macos"
@@ -1830,15 +1614,15 @@
         ]
       },
       "values": {
-        "hanji": "留予應用程式",
-        "tailo": "lâu hōo ìng-iōng tîng-sik",
-        "poj": "lâu hō͘ èng-iōng têng-sek",
-        "en": "Leave It to the App",
-        "ja": "アプリに渡す"
+        "hanji": "送出選著的候選字",
+        "tailo": "sàng-tshut suán-tio̍h ê hāu-suán-jī",
+        "poj": "sàng-chhut soán-tio̍h ê hāu-soán-jī",
+        "en": "Commit Highlighted Candidate",
+        "ja": "選択中の候補を確定"
       }
     },
-    "bindingReturnFooter": {
-      "comment": "Footer under the Return picker: explains the Shift-Return escape hatch.",
+    "actionCommitLiteral": {
+      "comment": "Shortcut row: commit the romanization exactly as typed.",
       "scope": {
         "platforms": [
           "macos"
@@ -1848,15 +1632,15 @@
         ]
       },
       "values": {
-        "hanji": "揀「送出選著的候選字」的時,⇧Return 猶原送出原本拍的字。",
-        "tailo": "Kíng “sàng-tshut suán-tio̍h ê hāu-suán-jī” ê sî, ⇧Return iu-guân sàng-tshut guân-pún phah ê jī.",
-        "poj": "Kéng “sàng-chhut soán-tio̍h ê hāu-soán-jī” ê sî, ⇧Return iû-goân sàng-chhut goân-pún phah ê jī.",
-        "en": "When Return sends the highlighted candidate, ⇧Return still sends what you typed.",
-        "ja": "Return が候補を確定する設定でも、⇧Return は入力したままを確定します。"
+        "hanji": "送出原本拍的字",
+        "tailo": "sàng-tshut guân-pún phah ê jī",
+        "poj": "sàng-chhut goân-pún phah ê jī",
+        "en": "Commit What I Typed",
+        "ja": "入力したまま確定"
       }
     },
-    "bindingSpaceFooter": {
-      "comment": "Footer under the space picker: names the keys left to commit with when space walks the list.",
+    "actionCommitHanji": {
+      "comment": "Shortcut row: commit the highlighted candidate as Hanji, ignoring the output setting.",
       "scope": {
         "platforms": [
           "macos"
@@ -1866,11 +1650,155 @@
         ]
       },
       "values": {
-        "hanji": "揀「換下一个候選字」的時,用選字鍵送出;Return 若設做送出選著的候選字,嘛會使用 Return。",
-        "tailo": "Kíng “uānn ē-tsi̍t ê hāu-suán-jī” ê sî, iōng suán-jī kiān sàng-tshut; Return nā siat-tsò sàng-tshut suán-tio̍h ê hāu-suán-jī, mā ē-sái iōng Return.",
-        "poj": "Kéng “oāⁿ ē-chi̍t ê hāu-soán-jī” ê sî, ēng soán-jī kiān sàng-chhut; Return nā siat-chò sàng-chhut soán-tio̍h ê hāu-soán-jī, mā ē-sái ēng Return.",
-        "en": "When the space bar moves through candidates, commit with the candidate number keys — or with Return, if you set Return to send the highlighted candidate.",
-        "ja": "スペースキーで候補を移動する設定では、候補選択キーで確定します。Return を「選択中の候補を確定」にしていれば Return でも確定できます。"
+        "hanji": "直接送出漢字",
+        "tailo": "ti̍t-tsiap sàng-tshut Hàn-jī",
+        "poj": "ti̍t-chiap sàng-chhut Hàn-jī",
+        "en": "Commit as Hanji",
+        "ja": "漢字で確定"
+      }
+    },
+    "actionCommitRomanization": {
+      "comment": "Shortcut row: commit the highlighted candidate as romanization, ignoring the output setting.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "直接送出羅馬字",
+        "tailo": "ti̍t-tsiap sàng-tshut Lô-má-jī",
+        "poj": "ti̍t-chiap sàng-chhut Lô-má-jī",
+        "en": "Commit as Romanization",
+        "ja": "ローマ字で確定"
+      }
+    },
+    "shortcutUnbound": {
+      "comment": "Shortcut recorder button when no key is assigned to the row.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "無設定",
+        "tailo": "bô siat-tīng",
+        "poj": "bô siat-tēng",
+        "en": "None",
+        "ja": "未設定"
+      }
+    },
+    "shortcutRecording": {
+      "comment": "Shortcut recorder button while it is waiting for a key press.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "撳一个鍵…",
+        "tailo": "khian tsi̍t ê kiān…",
+        "poj": "khian chi̍t ê kiān…",
+        "en": "Press a key…",
+        "ja": "キーを押してください…"
+      }
+    },
+    "shortcutClear": {
+      "comment": "Accessibility label for the button that clears a shortcut row.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "清掉這个快捷鍵",
+        "tailo": "tshing-tiāu tsit ê khuài-tsia̍t kiān",
+        "poj": "chheng-tiāu chit ê khoài-chia̍t kiān",
+        "en": "Clear this shortcut",
+        "ja": "このショートカットを消去"
+      }
+    },
+    "shortcutRejectedTypingKey": {
+      "comment": "Recorder error: the key pressed is one that types romanization, so it cannot be bound.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這个鍵是拍字用的",
+        "tailo": "tsit ê kiān sī phah-jī iōng ê",
+        "poj": "chit ê kiān sī phah-jī ēng ê",
+        "en": "That key types romanization",
+        "ja": "そのキーは入力に使います"
+      }
+    },
+    "shortcutRejectedReservedKey": {
+      "comment": "Recorder error: the key pressed is reserved by the input method (arrows, paging, Esc, Delete).",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這个鍵輸入法留咧用",
+        "tailo": "tsit ê kiān su-ji̍p-huat lâu teh iōng",
+        "poj": "chit ê kiān su-ji̍p-hoat lâu teh ēng",
+        "en": "That key is reserved",
+        "ja": "そのキーは予約済みです"
+      }
+    },
+    "shortcutRejectedNoKey": {
+      "comment": "Recorder error: the event carried no key that could be recorded.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揀袂著鍵",
+        "tailo": "kíng bē tio̍h kiān",
+        "poj": "kéng bē tio̍h kiān",
+        "en": "No key to record",
+        "ja": "記録できるキーがありません"
+      }
+    },
+    "shortcutRejectedSlotChord": {
+      "comment": "Recorder error: the chord pressed is one of the candidate-slot chords, which are classified before bound actions.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這是選字鍵",
+        "tailo": "tse sī suán-jī kiān",
+        "poj": "che sī soán-jī kiān",
+        "en": "That is a candidate number key",
+        "ja": "それは候補選択キーです"
       }
     }
   }

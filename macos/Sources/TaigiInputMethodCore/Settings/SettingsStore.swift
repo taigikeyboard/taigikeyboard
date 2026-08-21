@@ -236,34 +236,24 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateWindowSizeChoice.medium,
         )
 
-        /// The five composing key bindings. macOS-only: the phone keyboards
-        /// have no Return, Tab or modifier keys to bind, so their defaults are
+        /// Which modifier the candidate-slot chords use. macOS-only: the phone
+        /// keyboards have no modifier keys to chord with, so the default is
         /// owned by `ComposingKeyBindings` rather than by the shared
         /// `EngineSettings.defaults`.
-        static let returnKeyBehavior = SettingsKey(
-            name: "returnKeyBehavior",
-            defaultValue: ComposingKeyBindings.default.returnKey,
-        )
-
-        static let spaceKeyBehavior = SettingsKey(
-            name: "spaceKeyBehavior",
-            defaultValue: ComposingKeyBindings.default.spaceKey,
-        )
-
-        static let bracketPagingBehavior = SettingsKey(
-            name: "bracketPagingBehavior",
-            defaultValue: ComposingKeyBindings.default.bracketPaging,
-        )
-
-        static let tabCycleBehavior = SettingsKey(
-            name: "tabCycleBehavior",
-            defaultValue: ComposingKeyBindings.default.tabCycle,
-        )
-
         static let candidateSlotModifier = SettingsKey(
             name: "candidateSlotModifier",
             defaultValue: ComposingKeyBindings.default.slotModifier,
         )
+
+        /// The per-action composing chords are keyed by
+        /// `ComposingAction.settingsKeyName` rather than named here one by one:
+        /// the roster is the source of truth for which of them exist, and a
+        /// second list would be one an action could be added to only one of.
+        ///
+        /// An absent key means "never touched" and reads as the action's
+        /// default; a stored empty string means the user cleared the row, which
+        /// is why the two cannot be collapsed.
+        static let clearedComposingChord = ""
     }
 
     private let userDefaults: UserDefaults
@@ -377,12 +367,24 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// keystroke is classified against one assembled value, so nothing goes
     /// back to `UserDefaults` part-way through deciding what a key meant.
     var composingKeyBindings: ComposingKeyBindings {
-        ComposingKeyBindings(
-            returnKey: choice(Keys.returnKeyBehavior),
-            spaceKey: choice(Keys.spaceKeyBehavior),
-            bracketPaging: choice(Keys.bracketPagingBehavior),
-            tabCycle: choice(Keys.tabCycleBehavior),
-            slotModifier: choice(Keys.candidateSlotModifier),
+        var chords: [ComposingAction: ComposingKeyChord?] = [:]
+        for action in ComposingAction.allCases {
+            guard let stored = userDefaults.string(forKey: action.settingsKeyName) else { continue }
+            // A chord the current build cannot parse — a hand-edited value, or
+            // one a later version wrote — reads as an empty row rather than as
+            // "never touched": silently restoring the default would undo a
+            // deliberate clearing, and the resolver puts back anything that
+            // must stay reachable.
+            chords[action] = ComposingKeyChord(rawValue: stored)
+        }
+        return ComposingKeyBindings(chords: chords, slotModifier: choice(Keys.candidateSlotModifier))
+    }
+
+    /// Records `chord` on `action`, or clears the row when it is nil.
+    func setComposingChord(_ chord: ComposingKeyChord?, for action: ComposingAction) {
+        userDefaults.set(
+            chord?.rawValue ?? Keys.clearedComposingChord,
+            forKey: action.settingsKeyName,
         )
     }
 
@@ -391,6 +393,15 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var inputMode: InputMode {
         get { choice(Keys.inputMode) }
         set { userDefaults.set(newValue.rawValue, forKey: Keys.inputMode.name) }
+    }
+
+    /// The pane the settings window shows. Written as well as read, because
+    /// opening the window ON a pane is how the input-source menu's rows lead to
+    /// the place their key is set — the window binds this key with
+    /// `@AppStorage`, so a write moves it even while it is already open.
+    var selectedSettingsPane: SettingsPane {
+        get { choice(Keys.selectedSettingsPane) }
+        set { userDefaults.set(newValue.rawValue, forKey: Keys.selectedSettingsPane.name) }
     }
 
     /// The candidate settings a shortcut can flip. Typed properties rather than

@@ -114,8 +114,6 @@ struct DictionaryTogglesView: View {
                 Toggle(language.string(.dictionaryDevSupplementDict), isOn: $isDevEnabled)
             } header: {
                 Text(language.string(.dictionarySupplementSectionTitle))
-            } footer: {
-                Text(language.string(.macosAllSourcesOffFooter))
             }
         }
         .formStyle(.grouped)

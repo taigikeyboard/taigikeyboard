@@ -188,8 +188,8 @@ public final class TaigiInputController: IMKInputController {
     /// Built fresh on every call, which is what the contract asks for: the
     /// system calls this "whenever the menu needs to be drawn so that input
     /// methods can update the menu to reflect their current state"
-    /// (`IMKInputController.h:307-310`). That is what keeps the checkmark on
-    /// the romanization the user is actually typing.
+    /// (`IMKInputController.h:307-310`). That is what keeps each row printing
+    /// the key it currently answers to, with no refresh wiring of its own.
     ///
     /// Nothing here reads session state, so unlike the other entry points this
     /// one asserts no isolation: the mode comes from `UserDefaults`, which is
@@ -235,62 +235,124 @@ public final class TaigiInputController: IMKInputController {
         // notice. Resolved to plain strings here because `menu()` itself is nonisolated.
         // Read before the hop so the closure captures a value, not `self`: the store is a
         // main-actor type, which makes it Sendable, while this controller is not.
+        // Read BEFORE the hop, so the closure captures values rather than this
+        // controller: `menu()` is nonisolated and the controller is not
+        // Sendable, so sending `self` into a main-actor closure does not
+        // compile. Both are Sendable in their own right — the store is
+        // `@unchecked Sendable`, the bindings are a value.
         let injectedLanguage = displayLanguageOverride
-        let chrome = MainActor.assumeIsolated { () -> MenuChrome in
+        let bindings = settings.composingKeyBindings
+        let groups = MainActor.assumeIsolated { () -> [[MenuShortcutRow]] in
             let language = injectedLanguage ?? DisplayLanguageStore.shared
             // Can rebuild the menu bar and relabel the settings window as a side effect: the sync
             // commits a language change, and committing one runs the chrome renderer.
             language.syncFromSettings()
-            let shortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
-            return MenuChrome(
-                settingsTitle: language.string(.macosMenuSettings),
-                tlTitle: language.string(.settingsTlMode),
-                pojTitle: language.string(.settingsPojMode),
-                settingsKey: shortcut?.nsMenuItemKeyEquivalent ?? "",
-                settingsModifiers: shortcut?.modifiers ?? [],
-            )
+
+            let global = ShortcutAction.groups.map { group in
+                group.map { action in
+                    let shortcut = KeyboardShortcuts.getShortcut(for: action.name)
+                    return MenuShortcutRow(
+                        title: action.label(language),
+                        keyEquivalent: shortcut?.nsMenuItemKeyEquivalent ?? "",
+                        modifiers: shortcut?.modifiers ?? [],
+                        action: Self.selector(for: action),
+                    )
+                }
+            }
+            var composing = ComposingAction.groups.map { group in
+                group.map { action in
+                    MenuShortcutRow(
+                        title: Self.title(action.label(language), key: bindings.chord(for: action)),
+                        keyEquivalent: "",
+                        modifiers: [],
+                        action: #selector(openShortcutSettings(_:)),
+                    )
+                }
+            }
+            // Ends the group that moves through the candidates, because that is
+            // what it does — the slot chords are the fastest way to pick one.
+            //
+            // The nine of them stand behind a single setting, which no one
+            // `keyEquivalent` can print, so the range goes in the title: the one
+            // row where the key is text rather than a glyph.
+            composing[0].append(MenuShortcutRow(
+                title: Self.title(
+                    language.string(.macosBindingSlotModifier),
+                    keyText: bindings.slotModifier.menuRange,
+                ),
+                keyEquivalent: "",
+                modifiers: [],
+                action: #selector(openShortcutSettings(_:)),
+            ))
+            return global + composing
         }
-        let settingsItem = NSMenuItem(
-            title: chrome.settingsTitle,
-            action: #selector(showPreferences(_:)),
-            keyEquivalent: chrome.settingsKey,
-        )
-        settingsItem.keyEquivalentModifierMask = chrome.settingsModifiers
-        menu.addItem(settingsItem)
 
-        menu.addItem(.separator())
-
-        // The romanization switch is here as well as in the settings window
-        // because it is the one setting a user changes mid-sentence.
-        let currentMode = settings.inputMode
-        menu.addItem(inputModeItem(
-            title: chrome.tlTitle,
-            action: #selector(selectInputModeTL(_:)),
-            isCurrent: currentMode == .tl,
-        ))
-        menu.addItem(inputModeItem(
-            title: chrome.pojTitle,
-            action: #selector(selectInputModePOJ(_:)),
-            isCurrent: currentMode == .poj,
-        ))
+        // Rules BETWEEN the groups, never leading or trailing — counted off the
+        // groups that actually have rows, so an empty one draws no rule at all.
+        for (index, group) in groups.filter({ !$0.isEmpty }).enumerated() {
+            if index > 0 {
+                menu.addItem(.separator())
+            }
+            for row in group {
+                let item = NSMenuItem(title: row.title, action: row.action, keyEquivalent: row.keyEquivalent)
+                item.keyEquivalentModifierMask = row.modifiers
+                menu.addItem(item)
+            }
+        }
 
         return menu
     }
 
-    /// Everything the input-source menu needs from main-actor state, read in one hop.
-    private struct MenuChrome {
-        let settingsTitle: String
-        let tlTitle: String
-        let pojTitle: String
-        let settingsKey: String
-        let settingsModifiers: NSEvent.ModifierFlags
+    /// One menu row: an action and the key it currently answers to.
+    ///
+    /// The whole menu is the shortcut roster now — every row is something the
+    /// user can reach from a key, and the key is printed beside it (USER
+    /// 2026-08-21). The romanization CHOICE is no longer here: two checkmarked
+    /// rows were a setting rather than a shortcut, and the same switch is one
+    /// row up as an action with a key of its own.
+    ///
+    /// The composing rows do not RUN their action: those keys only mean
+    /// anything while a composition is running, and a menu is open when one is
+    /// not. They open the pane where the key is set instead, which is what a
+    /// user who came looking for a shortcut wanted next (USER 2026-08-21).
+    ///
+    /// Which is also why their key is printed IN the title rather than set as a
+    /// `keyEquivalent`: a key equivalent is LIVE while the menu is tracking, so
+    /// Space or Return would select the row and open the settings window rather
+    /// than doing what the menu's own keyboard handling should. Only the three
+    /// rows that really answer to their chord carry one.
+    private struct MenuShortcutRow {
+        let title: String
+        let keyEquivalent: String
+        let modifiers: NSEvent.ModifierFlags
+        let action: Selector?
     }
 
-    /// One romanization choice, checkmarked when it is the one in use.
-    private func inputModeItem(title: String, action: Selector, isCurrent: Bool) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.state = isCurrent ? .on : .off
-        return item
+    /// A row's title with the key it answers to printed after it.
+    ///
+    /// Two spaces rather than a tab: `NSMenuItem` lays a key equivalent out
+    /// itself, and a title is plain text — so the rows that cannot use one are
+    /// spaced by hand.
+    private static func title(_ label: String, key chord: ComposingKeyChord?) -> String {
+        title(label, keyText: chord.map(ComposingKeyDisplay.text(for:)) ?? "")
+    }
+
+    private static func title(_ label: String, keyText: String) -> String {
+        keyText.isEmpty ? label : "\(label)  \(keyText)"
+    }
+
+    /// One selector per action rather than one selector reading the sender: IMK
+    /// delivers menu commands through `doCommandBySelector:commandDictionary:`,
+    /// where the sender is an info dictionary carrying the `NSMenuItem` under
+    /// `kIMKCommandMenuItemName` rather than the item itself
+    /// (`IMKInputController.h:283-296`). Naming the action in the selector means
+    /// nothing has to be recovered from that dictionary's shape.
+    private static func selector(for action: ShortcutAction) -> Selector {
+        switch action {
+        case .openSettings: #selector(showPreferences(_:))
+        case .toggleRomanization: #selector(toggleRomanizationFromMenu(_:))
+        case .toggleTranslateSwapped: #selector(toggleTranslateSwappedFromMenu(_:))
+        }
     }
 
     /// Deliberately does not call `super`. The inherited implementation looks
@@ -302,22 +364,33 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(nil) { _, _ in SettingsWindowController.shared.show() }
     }
 
+    /// Opens the settings window ON the shortcut pane.
+    ///
+    /// What the composing rows do instead of running: their keys need a
+    /// composition, and there is none while a menu is open — so the row leads
+    /// to where the key is set. The pane is written before the window is asked
+    /// to show, so an already-open window moves to it too.
     @objc
-    private func selectInputModeTL(_: Any!) {
-        switchInputMode(to: .tl)
+    private func openShortcutSettings(_: Any!) {
+        onMainActor(nil) { controller, _ in
+            controller.settings.selectedSettingsPane = .shortcuts
+            SettingsWindowController.shared.show()
+        }
+    }
+
+    /// The menu rows for the two session-scoped actions run the same path their
+    /// chords do, so a setting behaves the same whichever surface changed it.
+    @objc
+    private func toggleRomanizationFromMenu(_: Any!) {
+        onMainActor(nil) { controller, _ in controller.performShortcutAction(.toggleRomanization) }
     }
 
     @objc
-    private func selectInputModePOJ(_: Any!) {
-        switchInputMode(to: .poj)
+    private func toggleTranslateSwappedFromMenu(_: Any!) {
+        onMainActor(nil) { controller, _ in
+            controller.performShortcutAction(.toggleTranslateSwapped)
+        }
     }
-
-    /// One selector per mode rather than one selector reading the sender: IMK
-    /// delivers menu commands through `doCommandBySelector:commandDictionary:`,
-    /// where the sender is an info dictionary carrying the `NSMenuItem` under
-    /// `kIMKCommandMenuItemName` rather than the item itself
-    /// (`IMKInputController.h:283-296`). Naming the mode in the selector means
-    /// nothing has to be recovered from that dictionary's shape.
     private func switchInputMode(to mode: InputMode) {
         Self.logger.debug("switch input mode to \(mode.rawValue)")
         settings.inputMode = mode
@@ -399,7 +472,7 @@ public final class TaigiInputController: IMKInputController {
                 manager.noteCharacterTypedOutsideComposition(characters)
             }
             return false
-        case .commitHighlightedCandidate:
+        case let .commitHighlightedCandidate(rendering):
             // The window answers which absolute index its selection is on. Nil
             // — a window that failed to reach a screen, or state torn down
             // between the fetch and the key — consumes the key without
@@ -409,7 +482,12 @@ public final class TaigiInputController: IMKInputController {
             guard let selectedIndex = candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
                   fetchedCandidates.indices.contains(selectedIndex)
             else { return true }
-            commit(fetchedCandidates[selectedIndex], from: manager, client: client, executing: executor)
+            let candidate = fetchedCandidates[selectedIndex]
+            // A candidate that has not got the script the key asked for is left
+            // alone, and the chord is consumed either way so it never reaches
+            // the host (`CandidateDocumentText.Rendering.canRender`).
+            guard rendering.canRender(candidate) else { return true }
+            commit(candidate, rendering: rendering, from: manager, client: client, executing: executor)
         case let .selectCandidateSlot(slot):
             // A chord aimed at one of the empty slots the last page ends with.
             // Consumed rather than passed on: `⌃7` is a candidate chord while the
@@ -434,11 +512,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func commit(
         _ candidate: ContinuousCandidate,
+        rendering: CandidateDocumentText.Rendering = .settings,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let outcome = manager.commitCandidate(candidate, executing: executor)
+        let outcome = manager.commitCandidate(candidate, rendering: rendering, executing: executor)
         Self.logger.debug("candidate commit \(String(describing: outcome))")
         switch outcome {
         case .finalized:

@@ -1,0 +1,99 @@
+// The persistence and text contracts the shortcut rows are built on.
+
+@testable import TaigiInputMethodCore
+import XCTest
+
+/// What a unit test can hold the 快捷鍵 pane's rows to, given a SwiftUI
+/// form cannot be brought up here: the raw values the rows persist, and the
+/// strings they read. Whether each row is wired to the right action is a render
+/// check, not a case below.
+@MainActor
+final class ShortcutSettingsTests: XCTestCase {
+    private var suiteName = ""
+    private var userDefaults = UserDefaults.standard
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        suiteName = "ShortcutSettingsTests.\(UUID().uuidString)"
+        userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    }
+
+    override func tearDown() {
+        userDefaults.removePersistentDomain(forName: suiteName)
+        super.tearDown()
+    }
+
+    /// The settings keys the rows write. Renaming an action's raw value would
+    /// silently drop every chord recorded under the old spelling.
+    func testActionRawValues_stayStable() {
+        XCTAssertEqual(
+            ComposingAction.allCases.map(\.rawValue),
+            [
+                "nextCandidate", "previousCandidate", "pageForward", "pageBackward",
+                "confirmHighlighted", "commitLiteral", "commitHanji", "commitRomanization",
+            ],
+        )
+        XCTAssertEqual(
+            ComposingAction.nextCandidate.settingsKeyName,
+            "composingShortcut.nextCandidate",
+        )
+        XCTAssertEqual(CandidateSlotModifier.allCases.map(\.rawValue), ["control", "option"])
+    }
+
+    /// A row whose text is missing in one language reads as an identifier — or
+    /// as nothing — for the users who chose that language.
+    func testEveryPaneString_resolvesInEveryDisplayLanguage() {
+        for language in DisplayLanguage.selectableLanguages where language != .system {
+            let store = TestFixtures.makeDisplayLanguageStore(language, userDefaults: userDefaults)
+            for key in Self.paneStrings {
+                let text = store.string(key)
+                XCTAssertFalse(text.isEmpty, "\(key) has nothing to show in \(language)")
+                XCTAssertNotEqual(text, key.rawValue, "\(key) fell back to its own identifier in \(language)")
+            }
+            for action in ComposingAction.allCases {
+                XCTAssertFalse(
+                    action.label(store).isEmpty,
+                    "\(action) has no row label in \(language)",
+                )
+            }
+        }
+    }
+
+    /// Two rows reading alike would leave the user guessing which key they are
+    /// about to rebind.
+    func testActionLabels_readDistinctly() {
+        let store = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
+        let labels = ComposingAction.allCases.map { $0.label(store) }
+
+        XCTAssertEqual(Set(labels).count, labels.count, "two rows read the same: \(labels)")
+    }
+
+    /// What the recorder button shows. Keycap legends rather than translations:
+    /// these are the names printed on the keyboard.
+    func testRecordedChords_readAsKeycapLegends() throws {
+        let cases: [(String, NSEvent.ModifierFlags, String)] = [
+            (" ", [], "Space"),
+            ("\r", [], "↩"),
+            ("\r", .shift, "⇧↩"),
+            ("]", [], "]"),
+            ("j", [.control, .option], "⌃⌥J"),
+        ]
+
+        for (key, modifiers, expected) in cases {
+            let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
+            XCTAssertEqual(ComposingKeyDisplay.text(for: chord), expected)
+        }
+    }
+
+    private static let paneStrings: [StringKey] = [
+        .macosShortcutsTab,
+        .macosBindingSlotModifier,
+        .macosShortcutUnbound,
+        .macosShortcutRecording,
+        .macosShortcutClear,
+        .macosShortcutRejectedTypingKey,
+        .macosShortcutRejectedReservedKey,
+        .macosShortcutRejectedNoKey,
+        .macosShortcutRejectedSlotChord,
+    ]
+}

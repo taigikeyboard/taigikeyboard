@@ -42,7 +42,9 @@ final class ComposingKeyIntentTests: XCTestCase {
 
     func testCompositionControlKeys_belongToTheHostWhenThereIsNoComposition() throws {
         let cases: [(name: String, characters: String, composing: ComposingKeyIntent)] = [
-            ("Return", "\r", .commit),
+            // With no bar up there is no candidate to take, so Return is the
+            // host's paragraph break — after the composition it follows.
+            ("Return", "\r", .commitThenPassThrough),
             ("Escape", "\u{1B}", .cancel),
             ("Backspace", "\u{8}", .deleteBackward),
             ("Delete", "\u{7F}", .deleteBackward),
@@ -282,7 +284,10 @@ final class ComposingKeyIntentTests: XCTestCase {
         )
     }
 
-    func testSpace_picksTheHighlightedCandidateOnlyWhileTheBarIsUp() throws {
+    /// Space walks the candidates, as it does in the system Zhuyin input
+    /// method — the default the shortcut roster ships with
+    /// (`ComposingAction.nextCandidate`).
+    func testSpace_walksTheCandidatesOnlyWhileTheBarIsUp() throws {
         let event = try TestFixtures.keyDownEvent(characters: " ")
 
         XCTAssertEqual(
@@ -291,7 +296,7 @@ final class ComposingKeyIntentTests: XCTestCase {
                 isComposing: true,
                 isShowingCandidates: true,
             ),
-            .commitHighlightedCandidate,
+            .navigate(.nextCandidate),
         )
         XCTAssertEqual(
             ComposingKeyIntent.intent(
@@ -300,21 +305,45 @@ final class ComposingKeyIntentTests: XCTestCase {
                 isShowingCandidates: false,
             ),
             .commitThenInsert(" "),
-            "with no candidates to pick from, Space is the document's space again",
+            "with no candidates to walk through, Space is the document's space again",
         )
     }
 
-    func testReturn_commitsTheLiteral_evenWithACandidateHighlighted() throws {
-        let event = try TestFixtures.keyDownEvent(characters: "\r")
+    /// Return takes the candidate and ⇧Return takes what was typed — the
+    /// Zhuyin pairing, and the reason the literal commit is one of the two
+    /// actions that may never be left unbound.
+    func testReturn_commitsTheCandidate_andShiftReturnTheLiteral() throws {
+        let plain = try TestFixtures.keyDownEvent(characters: "\r")
+        let shifted = try TestFixtures.keyDownEvent(characters: "\r", modifiers: .shift)
 
         XCTAssertEqual(
             ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(event),
+                for: KeyEventSnapshot(plain),
+                isComposing: true,
+                isShowingCandidates: true,
+            ),
+            .commitHighlightedCandidate(.settings),
+        )
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(shifted),
                 isComposing: true,
                 isShowingCandidates: true,
             ),
             .commit,
-            "Enter is the only way to keep what was typed rather than what was suggested",
+            "⇧Return is the only key that keeps what was typed rather than what was suggested",
+        )
+    }
+
+    /// With no bar up there is no candidate to take, so Return ends the
+    /// composition whichever action holds it.
+    func testReturn_endsTheCompositionWithNoBarUp() throws {
+        let event = try TestFixtures.keyDownEvent(characters: "\r")
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
+            .commitThenPassThrough,
+            "the host gets its paragraph break, after the text it follows",
         )
     }
 

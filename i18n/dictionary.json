@@ -80,26 +80,6 @@
         "ja": "カスタム辞書を有効にする"
       }
     },
-    "customDictEnabledInfo": {
-      "comment": "Info-dialog body explaining what enabling the custom dictionary does.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "拍開了後，自訂詞會出現佇候選詞內底；關起來了後，就袂閣出現。",
-        "tailo": "phah-khui liáu-āu, tsū-tīng-sû ē tshut-hiān tī hāu-suán sû lāi-té; kuainn--khí-lâi liáu-āu, tsiū buē koh tshut-hiān.",
-        "poj": "phah-khui liáu-āu, chū-tēng-sû ē chhut-hiān tī hāu-soán sû lāi-té; koaiⁿ--khí-lâi liáu-āu, chiū bōe koh chhut-hiān.",
-        "en": "When on, words you add appear among the candidates. When off, your custom words no longer show up.",
-        "ja": "オンにすると、追加した単語が候補に表示されます。オフにすると、カスタム単語は表示されなくなります。"
-      }
-    },
     "dataManagement": {
       "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
       "scope": {
@@ -1090,26 +1070,6 @@
         "poj": "khai-khé sû pîn kì-lio̍k",
         "en": "Record Word Frequency",
         "ja": "単語頻度を記録"
-      }
-    },
-    "frequencyRecordingEnabledInfo": {
-      "comment": "Info-dialog body explaining what frequency recording does for candidate ranking.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "拍開了後，齒盤會記錄各詞揀過幾擺，定定揀 ê 詞會排較頭前。",
-        "tailo": "phah-khui liáu-āu, khí-puânn ē kì-lio̍k kok ê sû kíng kuè kuí-pái, tiānn-tiānn kíng ê sû ē pâi khah thâu-tsîng.",
-        "poj": "phah-khui liáu-āu, khí-pôaⁿ ē kì-lio̍k kok ê sû kéng kòe kúi-pái, tiāⁿ-tiāⁿ kéng ê sû ē pâi khah thâu-chêng.",
-        "en": "When on, the keyboard records how often you select each word. Frequently selected words move toward the front of the candidate list.",
-        "ja": "オンにすると、各単語を選んだ回数を記録します。よく選ぶ単語は候補リストの前方に移動します。"
       }
     },
     "associationManagement": {

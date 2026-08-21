@@ -13,9 +13,10 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
     /// `KeyboardShortcuts` stores in `UserDefaults.standard` and offers no
     /// suite injection, so a case that records a chord is writing into the
-    /// settings of whoever is running the tests. Saved here and put back in
-    /// `tearDown`.
-    private var savedOpenSettingsShortcut: KeyboardShortcuts.Shortcut?
+    /// settings of whoever is running the tests. The whole roster is saved here
+    /// and put back in `tearDown` — the menu prints every action's chord now, so
+    /// a case can touch any of them.
+    private var savedShortcuts: [ShortcutAction: KeyboardShortcuts.Shortcut?] = [:]
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -26,11 +27,17 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // Pinned, so the menu's titles are the language this case asked for rather than the
         // language of whatever machine is running it.
         controller.displayLanguageOverride = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
-        savedOpenSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
+        savedShortcuts = Dictionary(
+            uniqueKeysWithValues: ShortcutAction.allCases.map {
+                ($0, KeyboardShortcuts.getShortcut(for: $0.name))
+            },
+        )
     }
 
     override func tearDown() {
-        KeyboardShortcuts.setShortcut(savedOpenSettingsShortcut, for: .openSettings)
+        for (action, shortcut) in savedShortcuts {
+            KeyboardShortcuts.setShortcut(shortcut, for: action.name)
+        }
         userDefaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
     }
@@ -48,27 +55,112 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         )
     }
 
-    func testMenu_offersSettingsAndBothRomanizations() throws {
+    /// The menu IS the shortcut roster: every row the 快捷鍵 pane draws, in the
+    /// same order, each printing the key it currently answers to. The
+    /// romanization CHOICE is deliberately absent — two checkmarked rows were a
+    /// setting rather than a shortcut, and the same switch is here as an action
+    /// with a key of its own (USER 2026-08-21).
+    func testMenu_listsEveryShortcutAndNothingElse() throws {
         let titles = try menu().items.filter { !$0.isSeparatorItem }.map(\.title)
 
-        // The literal oracle for this surface: the copy is the authored Hanji, and the two
-        // romanizations read the same here as they do in the settings form.
-        XCTAssertEqual(titles, ["設定…", "台羅", "白話字"])
+        // The literal oracle for this surface: the copy is the authored Hanji,
+        // and it reads the same here as it does in the shortcut pane.
+        // The three global rows carry a real `keyEquivalent`, which AppKit lays
+        // out for them; the rest print their key in the title, because a live
+        // one would fire while the menu is open.
+        XCTAssertEqual(titles, [
+            "開啟設定", "切換 台羅/白話字", "切換 漢羅對調",
+            "換下一个候選字  Space", "換頂一个候選字", "後一頁候選字  ]", "頭前一頁候選字  [",
+            "選字鍵  ⌃1 – ⌃9",
+            "送出選著的候選字  ↩", "送出原本拍的字  ⇧↩", "直接送出漢字", "直接送出羅馬字",
+        ])
+        XCTAssertEqual(
+            titles.count,
+            ShortcutAction.allCases.count + ComposingAction.allCases.count + 1,
+            "a shortcut the pane can set must be a shortcut the menu can show",
+        )
     }
+
+    /// Rules between the groups, never at either end: a leading or trailing
+    /// separator draws a line with nothing under it. Four groups, so three.
+    func testMenu_separatesTheGroups() throws {
+        let items = try menu().items
+
+        XCTAssertFalse(items.first?.isSeparatorItem ?? true, "no rule above the first row")
+        XCTAssertFalse(items.last?.isSeparatorItem ?? true, "no rule below the last row")
+        XCTAssertEqual(
+            items.filter(\.isSeparatorItem).count,
+            ShortcutAction.groups.count + ComposingAction.groups.count - 1,
+            "one rule between each pair of groups",
+        )
+    }
+
+    /// The composing rows print their key, and lead to where it is set: those
+    /// keys need a composition, and a menu is open when there is none.
+    func testTheComposingRows_printTheirKeyAndOpenTheShortcutPane() throws {
+        let items = try menu().items.filter { !$0.isSeparatorItem }
+        let confirm = try XCTUnwrap(items.first { $0.title.hasPrefix("送出選著的候選字") })
+
+        XCTAssertEqual(confirm.title, "送出選著的候選字  ↩", "Return is what a fresh install commits with")
+        XCTAssertEqual(confirm.action, Self.openShortcutSettings)
+    }
+
+    /// A `keyEquivalent` is LIVE while the menu is tracking: Space or Return on
+    /// a row that only means to PRINT them would select it and open the
+    /// settings window instead of doing what the menu's own keyboard handling
+    /// should. Only the rows that really answer to their chord carry one.
+    func testOnlyTheGlobalRows_claimAKeyEquivalent() throws {
+        let language = try XCTUnwrap(controller.displayLanguageOverride)
+        let globalTitles = Set(ShortcutAction.allCases.map { $0.label(language) })
+
+        for item in try menu().items where !item.isSeparatorItem {
+            if globalTitles.contains(item.title) { continue }
+            XCTAssertEqual(
+                item.keyEquivalent,
+                "",
+                "\(item.title) would fire while the menu is open",
+            )
+        }
+    }
+
+    /// Every row a user could click to find out where its key lives goes to the
+    /// same place, including the one whose key is nine chords.
+    func testEveryRowThatIsNotAGlobalAction_opensTheShortcutPane() throws {
+        let language = try XCTUnwrap(controller.displayLanguageOverride)
+        let globalTitles = Set(ShortcutAction.allCases.map { $0.label(language) })
+        let rows = try menu().items.filter { !$0.isSeparatorItem && !globalTitles.contains($0.title) }
+
+        XCTAssertEqual(rows.count, ComposingAction.allCases.count + 1)
+        for row in rows {
+            XCTAssertEqual(row.action, Self.openShortcutSettings, row.title)
+        }
+    }
+
+    /// Clicking one moves the window to the pane, so it opens where the key is
+    /// rather than wherever it was left.
+    func testOpeningTheShortcutPane_selectsIt() throws {
+        controller.settings.selectedSettingsPane = .appearance
+
+        try select(Self.openShortcutSettings)
+
+        XCTAssertEqual(controller.settings.selectedSettingsPane, .shortcuts)
+    }
+
 
     /// The menu is rebuilt on every draw, which is what lets it follow a language change with no
     /// refresh wiring of its own.
     func testMenu_redrawnAfterALanguageChange_readsInTheNewLanguage() throws {
-        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "設定…")
+        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "開啟設定")
 
         try XCTUnwrap(controller.displayLanguageOverride).setLanguage(.english)
 
-        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "Settings…")
+        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "Open Settings")
     }
 
     private static let showPreferences = Selector(("showPreferences:"))
-    private static let selectTL = Selector(("selectInputModeTL:"))
-    private static let selectPOJ = Selector(("selectInputModePOJ:"))
+    private static let openShortcutSettings = Selector(("openShortcutSettings:"))
+    private static let toggleRomanization = Selector(("toggleRomanizationFromMenu:"))
+    private static let toggleTranslateSwapped = Selector(("toggleTranslateSwappedFromMenu:"))
 
     /// The chord lives in the shortcut registry now, not in this file: a user
     /// who never opens the recorder still sees `Ctrl+Shift+,` because that is
@@ -119,26 +211,21 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         }
     }
 
-    func testMenu_checksTheRomanizationInUse() throws {
-        controller.settings.inputMode = .poj
-
-        let menu = try menu()
-
-        XCTAssertEqual(try item(action: Self.selectPOJ, in: menu).state, .on)
-        XCTAssertEqual(try item(action: Self.selectTL, in: menu).state, .off)
-    }
-
     /// The system calls `menu()` every time the menu is drawn so the input
     /// method can reflect its current state (`IMKInputController.h:307-310`).
-    /// A menu built once and cached would show the mode that was in use when
-    /// the process started.
-    func testMenu_reflectsAModeChangedSinceTheLastTimeItWasDrawn() throws {
-        XCTAssertEqual(try item(action: Self.selectTL, in: menu()).state, .on)
+    /// A menu built once and cached would print the chords that were recorded
+    /// when the process started.
+    func testMenu_redrawnAfterRecording_showsTheNewChord() throws {
+        // Started from empty rather than assumed empty: the library writes to
+        // the test process's own defaults domain, which survives the run.
+        KeyboardShortcuts.setShortcut(nil, for: .toggleRomanization)
+        XCTAssertEqual(try item(action: Self.toggleRomanization, in: menu()).keyEquivalent, "")
 
-        controller.settings.inputMode = .poj
+        KeyboardShortcuts.setShortcut(.init(.r, modifiers: [.control, .option]), for: .toggleRomanization)
 
-        XCTAssertEqual(try item(action: Self.selectTL, in: menu()).state, .off)
-        XCTAssertEqual(try item(action: Self.selectPOJ, in: menu()).state, .on)
+        let item = try item(action: Self.toggleRomanization, in: menu())
+        XCTAssertEqual(item.keyEquivalent, "r")
+        XCTAssertEqual(item.keyEquivalentModifierMask, [.control, .option])
     }
 
     /// Automatic validation disables items whose action no responder claims,
@@ -154,8 +241,8 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// it with the info dictionary as the sender — not the `NSMenuItem`, and not
     /// the responder chain (`IMKInputController.h:283-296`). Driving it this way
     /// is what proves a `private @objc` method is reachable at all. The
-    /// dictionary is empty because the two selectors name their own mode and
-    /// read nothing from the sender, which is the property being pinned — and
+    /// dictionary is empty because each selector names its own action and
+    /// reads nothing from the sender, which is the property being pinned — and
     /// because the real keys (`kIMKCommandMenuItemName`) are declared
     /// `extern const NSString*` and do not import into Swift.
     private func select(_ action: Selector) throws {
@@ -163,13 +250,25 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         controller.doCommand(by: sent, command: [:])
     }
 
-    func testSelectingARomanization_storesIt() throws {
-        try select(Self.selectPOJ)
+    /// The menu rows run the same path their chords do, so a setting behaves
+    /// the same whichever surface changed it.
+    func testTheRomanizationRow_togglesTheModeLikeItsChordDoes() throws {
+        XCTAssertEqual(controller.settings.inputMode, .tl)
+
+        try select(Self.toggleRomanization)
 
         XCTAssertEqual(controller.settings.inputMode, .poj)
 
-        try select(Self.selectTL)
+        try select(Self.toggleRomanization)
 
         XCTAssertEqual(controller.settings.inputMode, .tl)
+    }
+
+    func testTheSwapRow_togglesTheSettingLikeItsChordDoes() throws {
+        XCTAssertFalse(controller.settings.isTranslateSwapped)
+
+        try select(Self.toggleTranslateSwapped)
+
+        XCTAssertTrue(controller.settings.isTranslateSwapped)
     }
 }

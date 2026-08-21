@@ -132,8 +132,6 @@ struct FrequencyDataPage: View {
         Form {
             Section {
                 Toggle(language.string(.dictionaryFrequencyRecordingEnabled), isOn: $isRecordingEnabled)
-            } footer: {
-                Text(language.string(.dictionaryFrequencyRecordingEnabledInfo))
             }
 
             Section {

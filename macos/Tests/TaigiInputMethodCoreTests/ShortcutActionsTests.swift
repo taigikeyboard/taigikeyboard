@@ -28,6 +28,15 @@ final class ShortcutActionsTests: XCTestCase {
         return ShortcutAction.allCases.map { $0.label(store) }
     }
 
+    /// A case added to the roster but not to a group would be missing from the
+    /// input-source menu, which draws from the groups.
+    func testTheGroups_holdEveryActionExactlyOnce() {
+        let grouped = ShortcutAction.groups.flatMap(\.self)
+
+        XCTAssertEqual(Set(grouped), Set(ShortcutAction.allCases))
+        XCTAssertEqual(grouped.count, ShortcutAction.allCases.count, "an action is in two groups")
+    }
+
     func testEveryAction_hasItsOwnStorageName() {
         let names = ShortcutAction.allCases.map(\.name.rawValue)
 

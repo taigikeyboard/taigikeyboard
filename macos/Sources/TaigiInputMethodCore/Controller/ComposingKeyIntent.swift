@@ -111,8 +111,10 @@ enum ComposingKeyIntent: Equatable {
     /// window is laid out as a row, a list or a grid, and the window is where
     /// the layout lives (`CandidatePresenter.navigate`).
     case navigate(CandidateNavigation)
-    /// Commit whichever candidate the bar has highlighted.
-    case commitHighlightedCandidate
+    /// Commit whichever candidate the bar has highlighted, written the way
+    /// `rendering` says — normally as the output settings render it, or forced
+    /// to one script by the 直接輸出漢字 / 直接輸出羅馬字 actions.
+    case commitHighlightedCandidate(CandidateDocumentText.Rendering)
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what `⌃1` to `⌃9` address.
     case selectCandidateSlot(Int)
@@ -170,6 +172,30 @@ enum ComposingKeyIntent: Equatable {
     ) -> ComposingKeyIntent {
         let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)
 
+        // The fixed tier, read before anything the user can rebind so that no
+        // binding can shadow it. These are the keys a user who has mis-bound
+        // everything else still has: the way through the candidates, the way
+        // out of the composition, and the way to take a character back.
+        if isShowingCandidates, !modifiers.contains(.shift),
+           modifiers.isDisjoint(with: Self.hostChords),
+           let navigation = key.navigationKey
+        {
+            // Shift deliberately excluded: ⇧← extends a selection, and a user
+            // who has finished choosing a candidate should get that back rather
+            // than walk the bar a second time.
+            return intent(for: navigation)
+        }
+        if modifiers.isDisjoint(with: Self.hostChords), let first = key.characters?.first {
+            switch first {
+            case "\u{1B}": // Escape
+                return isComposing ? .cancel : .passThrough
+            case "\u{8}", "\u{7F}": // Backspace — Control-H and Delete both reach us
+                return isComposing ? .deleteBackward : .passThrough
+            default:
+                break
+            }
+        }
+
         // Read before the host-chord guard below, which would otherwise hand
         // every Control chord straight to the host. Classified from the
         // unmodified characters: both modifiers this chord can use rewrite the
@@ -194,6 +220,20 @@ enum ComposingKeyIntent: Equatable {
             return .selectCandidateSlot(slot)
         }
 
+        // What the user put on this key, read before the host-chord guard so a
+        // chord they deliberately recorded — ⌥Return for 直接輸出漢字, say —
+        // reaches its action. Only an EXACT match does: an unrecorded ⌥ chord
+        // still falls to the host below, because the exception is the binding,
+        // not the modifier.
+        //
+        // Above the named-special-key guard for the same reason, since Return,
+        // Space and Tab are all keys AppKit names and all keys a user may bind.
+        if isComposing, let action = bindings.action(for: key),
+           isShowingCandidates || !action.requiresCandidates
+        {
+            return action.intent
+        }
+
         // Command, control and option chords are the host's shortcuts. This
         // holds mid-composition too: swallowing ⌘S to keep a composition tidy
         // would cost the user their save.
@@ -201,74 +241,16 @@ enum ComposingKeyIntent: Equatable {
             return hostKey(isComposing: isComposing)
         }
 
-        // Shift deliberately excluded: ⇧← extends a selection, and a user who
-        // has finished choosing a candidate should get that back rather than
-        // walk the bar a second time.
-        if isShowingCandidates, !modifiers.contains(.shift),
-           let navigation = key.navigationKey
-        {
-            return intent(for: navigation)
-        }
-
         guard let characters = key.characters, let first = characters.first else {
             return hostKey(isComposing: isComposing)
         }
 
-        switch first {
-        case "\r", "\u{3}": // Return, Enter
-            guard isComposing else { return .passThrough }
-            // Return commits the literal the marked region shows, never the
-            // highlighted candidate: with the bar up the two are different
-            // strings, and this is the only key that keeps what was typed.
-            //
-            // A user who binds Return to the candidate instead keeps that
-            // escape hatch on ⇧Return — Shift is not a host chord, so it
-            // reaches this arm — because a composition nobody can commit
-            // verbatim would make 漢羅 input unreachable.
-            guard isShowingCandidates,
-                  bindings.returnKey == .confirmHighlighted,
-                  !modifiers.contains(.shift)
-            else { return .commit }
-            return .commitHighlightedCandidate
-        case "\u{1B}": // Escape
-            return isComposing ? .cancel : .passThrough
-        case "\u{8}", "\u{7F}": // Backspace — Control-H and Delete both reach us
-            return isComposing ? .deleteBackward : .passThrough
-        case " ":
-            // Space picks the highlighted candidate while the bar is up, or
-            // walks it forward for a user who binds it that way. With no bar it
-            // is ordinary document text that ends the composition it follows,
-            // which is what the `commitThenInsert` arm below does for every
-            // other printable character.
-            if isShowingCandidates {
-                return switch bindings.spaceKey {
-                case .confirmHighlighted: .commitHighlightedCandidate
-                case .nextCandidate: .navigate(.nextCandidate)
-                }
-            }
-        case "\t", "\u{19}": // Tab, ⇧Tab — AppKit sends back tab as U+0019
-            // Read here rather than through the named-special-key guard below,
-            // which is what Tab reaches when the binding is off: with the bar up
-            // Tab is only ours when the user has said so, and it is the host's
-            // focus key every other time.
-            if isShowingCandidates, bindings.tabCycle == .enabled {
-                return .navigate(first == "\t" ? .nextCandidate : .previousCandidate)
-            }
-        case "[", "]":
-            // Compared as characters rather than key codes, so a layout that
-            // puts the brackets elsewhere binds the keys that actually type
-            // them — and `{`/`}` arrive as their own characters, which stay
-            // document text.
-            if isShowingCandidates, bindings.bracketPaging == .enabled {
-                return .navigate(first == "[" ? .pageUp : .pageDown)
-            }
-        default:
-            break
-        }
-
-        // Checked after the keys above, which are `SpecialKey`s we bind on
-        // purpose. What remains are keys AppKit names but we do not act on, and
-        // the check is not subsumed by the scalar rules below: `.lineSeparator`
+        // Keys AppKit names that nothing above claimed. Return and Tab reach
+        // here when the user has moved every action off them, and ending the
+        // composition first is what keeps a paragraph break landing after the
+        // text rather than through it.
+        //
+        // The check is not subsumed by the scalar rules below: `.lineSeparator`
         // is `U+2028` and `.paragraphSeparator` is `U+2029`, ordinary separator
         // scalars that would otherwise read as document text.
         guard !key.isNamedSpecialKey else { return hostKey(isComposing: isComposing) }
@@ -333,7 +315,11 @@ enum ComposingKeyIntent: Equatable {
     /// The candidate slot `⌃1`…`⌃9` addresses, counting from zero. `⌃0` is not
     /// a chord this input method binds: the bar holds nine candidates because
     /// nine is what the digits can name without one of them meaning "the tenth".
-    private static func directSelectionSlot(_ charactersIgnoringModifiers: String?) -> Int? {
+    ///
+    /// Visible to `ComposingKeyChord`, which refuses to record a chord this
+    /// answers for — the slot tier is read first, so such a binding would be
+    /// stored and then never fire.
+    static func directSelectionSlot(_ charactersIgnoringModifiers: String?) -> Int? {
         guard let character = charactersIgnoringModifiers?.first,
               character.isASCII,
               let digit = character.wholeNumberValue,
@@ -345,7 +331,11 @@ enum ComposingKeyIntent: Equatable {
     /// The numeric tone markers of TL and POJ, which the engine reads as ASCII
     /// digits. A full-width `５` or another script's numeral is a character the
     /// engine cannot parse, so it is document text rather than a tone.
-    private static func isToneDigit(_ character: Character) -> Bool {
+    ///
+    /// Visible, with `isRomanizationCharacter`, to `ComposingKeyChord`: between
+    /// them they are the keys a composition is typed with, and a chord may not
+    /// take one away.
+    static func isToneDigit(_ character: Character) -> Bool {
         character.isASCII && character.isNumber
     }
 
@@ -354,7 +344,7 @@ enum ComposingKeyIntent: Equatable {
     /// that separates syllables, so a letter from another script is document
     /// text, not input the engine could parse. Tone digits are handled by the
     /// caller, which knows whether a composition is running.
-    private static func isRomanizationCharacter(_ character: Character) -> Bool {
+    static func isRomanizationCharacter(_ character: Character) -> Bool {
         (character.isLetter && character.isASCII) || character == "-"
     }
 

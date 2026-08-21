@@ -137,8 +137,6 @@ struct CustomDictionaryPage: View {
         Form {
             Section {
                 Toggle(language.string(.dictionaryCustomDictEnabled), isOn: $isCustomDictEnabled)
-            } footer: {
-                Text(language.string(.dictionaryCustomDictEnabledInfo))
             }
 
             Section {

@@ -5,353 +5,362 @@ import AppKit
 import XCTest
 
 /// `ComposingKeyIntentTests` pins the contract as it ships. This one pins what
-/// each binding changes about it, and — just as importantly — what it does not:
-/// a setting that quietly took a typing key away would be worse than no setting.
+/// a rebinding changes about it, and — just as importantly — what it cannot:
+/// a setting that quietly took a typing key away, or left a composition with no
+/// way out, would be worse than no setting.
 final class ComposingKeyBindingsTests: XCTestCase {
-    // MARK: - Defaults
+    // MARK: - What a chord may be
 
-    func testDefaultBindings_areTheShippedContract() {
-        let bindings = ComposingKeyBindings.default
-
-        XCTAssertEqual(bindings.returnKey, .commitLiteral)
-        XCTAssertEqual(bindings.spaceKey, .confirmHighlighted)
-        XCTAssertEqual(bindings.tabCycle, .disabled)
-        XCTAssertEqual(bindings.slotModifier, .control)
-        XCTAssertEqual(
-            bindings.bracketPaging,
-            .enabled,
-            "the brackets page out of the box, the way the system Zhuyin input method's do",
-        )
-    }
-
-    // MARK: - Brackets
-
-    func testBrackets_pageTheBar_underTheDefaultBinding() throws {
-        let cases: [(String, ComposingKeyIntent)] = [
-            ("[", .navigate(.pageUp)),
-            ("]", .navigate(.pageDown)),
-        ]
-
-        for (characters, expected) in cases {
+    /// The keys a TL or POJ syllable is spelled with, tone marker included. A
+    /// recorder that took one would leave the user unable to type it.
+    func testTypingKeys_cannotBeRecordedBare() {
+        for key in ["a", "z", "A", "5", "0", "-"] {
             XCTAssertEqual(
-                try intent(characters, isShowingCandidates: true),
-                expected,
-                "'\(characters)' pages the candidate window, as it does in the system Zhuyin input method",
+                ComposingKeyChord.make(key: key, modifiers: []),
+                .failure(.typesRomanization),
+                "'\(key)' spells romanization — binding it costs the user the key",
             )
         }
     }
 
-    func testBrackets_areDocumentText_whenNoBarIsUp() throws {
-        XCTAssertEqual(
-            try intent("[", isShowingCandidates: false),
-            .commitThenInsert("["),
-            "with no candidates to page through, a bracket is a bracket",
-        )
-        XCTAssertEqual(
-            try intent("[", isComposing: false, isShowingCandidates: false),
-            .passThrough,
-        )
-    }
-
-    func testBrackets_areDocumentText_whenPagingIsTurnedOff() throws {
-        let bindings = ComposingKeyBindings(bracketPaging: .disabled)
-
-        for characters in ["[", "]"] {
-            XCTAssertEqual(
-                try intent(characters, isShowingCandidates: true, bindings: bindings),
-                .commitThenInsert(characters),
-                "a user who needs to type brackets mid-composition turns the binding off",
-            )
-            XCTAssertEqual(
-                try intent(characters, isComposing: false, isShowingCandidates: false, bindings: bindings),
-                .passThrough,
+    /// With a chording modifier they are ordinary chords: ⌥A types no letter.
+    func testTypingKeys_canBeRecordedWithAChordingModifier() {
+        for modifiers in [NSEvent.ModifierFlags.command, .control, .option] {
+            XCTAssertNoThrow(
+                try ComposingKeyChord.make(key: "a", modifiers: modifiers).get(),
+                "⌥A and friends type nothing, so they are bindable",
             )
         }
     }
 
-    func testShiftedBrackets_stayDocumentText_whateverTheBinding() throws {
-        for characters in ["{", "}"] {
-            XCTAssertEqual(
-                try intent(characters, modifiers: .shift, isShowingCandidates: true),
-                .commitThenInsert(characters),
-                "'\(characters)' is its own character, and the binding names the bracket keys by character",
-            )
-        }
-    }
-
-    // MARK: - Return
-
-    func testReturn_commitsTheHighlightedCandidate_whenBound() throws {
-        let bindings = ComposingKeyBindings(returnKey: .confirmHighlighted)
-
+    /// Shift is how a capital is typed, not a chord — ⇧A is still the letter A.
+    func testShiftAlone_doesNotMakeATypingKeyBindable() {
         XCTAssertEqual(
-            try intent("\r", isShowingCandidates: true, bindings: bindings),
-            .commitHighlightedCandidate,
-        )
-        XCTAssertEqual(
-            try intent("\u{3}", isShowingCandidates: true, bindings: bindings),
-            .commitHighlightedCandidate,
-            "the keypad's Enter is the same key to the user",
+            ComposingKeyChord.make(key: "a", modifiers: .shift),
+            .failure(.typesRomanization),
         )
     }
 
-    func testShiftReturn_keepsCommittingTheLiteral_whenReturnIsBoundToTheCandidate() throws {
-        let bindings = ComposingKeyBindings(returnKey: .confirmHighlighted)
+    /// The fixed tier. Reserved whatever modifiers are held, so no binding can
+    /// shadow the way through the candidates or the way out of a composition.
+    func testReservedKeys_cannotBeRecordedAtAll() throws {
+        let arrows = try [
+            NSLeftArrowFunctionKey, NSRightArrowFunctionKey,
+            NSUpArrowFunctionKey, NSDownArrowFunctionKey,
+            NSPageUpFunctionKey, NSPageDownFunctionKey,
+        ].map { try String(XCTUnwrap(UnicodeScalar($0))) }
 
-        XCTAssertEqual(
-            try intent("\r", modifiers: .shift, isShowingCandidates: true, bindings: bindings),
-            .commit,
-            "without this escape hatch there would be no key left that keeps what was typed",
-        )
-    }
-
-    func testReturn_commitsTheLiteral_withNoBarUp_underEitherBinding() throws {
-        for returnKey in ReturnKeyBehavior.allCases {
-            XCTAssertEqual(
-                try intent("\r", isShowingCandidates: false, bindings: ComposingKeyBindings(returnKey: returnKey)),
-                .commit,
-                "there is no highlighted candidate to commit instead",
-            )
-        }
-    }
-
-    func testReturn_staysTheHostsKey_withNoComposition_underEitherBinding() throws {
-        for returnKey in ReturnKeyBehavior.allCases {
-            XCTAssertEqual(
-                try intent(
-                    "\r",
-                    isComposing: false,
-                    isShowingCandidates: false,
-                    bindings: ComposingKeyBindings(returnKey: returnKey),
-                ),
-                .passThrough,
-                "no binding may take Return away from a user who is not composing",
-            )
-        }
-    }
-
-    func testShiftKeypadEnter_alsoCommitsTheLiteral_whenReturnIsBoundToTheCandidate() throws {
-        XCTAssertEqual(
-            try intent(
-                "\u{3}",
-                modifiers: .shift,
-                isShowingCandidates: true,
-                bindings: ComposingKeyBindings(returnKey: .confirmHighlighted),
-            ),
-            .commit,
-            "the escape hatch is the same key on the keypad",
-        )
-    }
-
-    // MARK: - Space
-
-    func testSpace_walksTheBar_whenBoundToNextCandidate() throws {
-        let bindings = ComposingKeyBindings(spaceKey: .nextCandidate)
-
-        XCTAssertEqual(
-            try intent(" ", isShowingCandidates: true, bindings: bindings),
-            .navigate(.nextCandidate),
-            "the semantic direction, not `.right` — a vertical window pages on `.right`",
-        )
-        XCTAssertEqual(
-            try intent(" ", isShowingCandidates: false, bindings: bindings),
-            .commitThenInsert(" "),
-            "with no bar up Space is the document's space under either binding",
-        )
-    }
-
-    // MARK: - Tab
-
-    func testTab_walksTheBar_whenCyclingIsTurnedOn() throws {
-        let bindings = ComposingKeyBindings(tabCycle: .enabled)
-
-        XCTAssertEqual(
-            try intent("\t", isShowingCandidates: true, bindings: bindings),
-            .navigate(.nextCandidate),
-        )
-        XCTAssertEqual(
-            try intent("\u{19}", isShowingCandidates: true, bindings: bindings),
-            .navigate(.previousCandidate),
-            "AppKit sends ⇧Tab as U+0019, its own character rather than Tab plus a flag",
-        )
-    }
-
-    func testTab_staysTheHostFocusKey_whenCyclingIsOff() throws {
-        for characters in ["\t", "\u{19}"] {
-            XCTAssertEqual(
-                try intent(characters, isShowingCandidates: true),
-                .commitThenPassThrough,
-                "'\(characters)' moves the host's focus until the user says otherwise",
-            )
-        }
-    }
-
-    func testTab_staysTheHostFocusKey_whenNoBarIsUp_evenWhenCyclingIsOn() throws {
-        XCTAssertEqual(
-            try intent("\t", isShowingCandidates: false, bindings: ComposingKeyBindings(tabCycle: .enabled)),
-            .commitThenPassThrough,
-            "there is nothing to cycle through",
-        )
-    }
-
-    // MARK: - Candidate slot modifier
-
-    func testOptionDigits_selectCandidates_whenOptionIsTheBoundModifier() throws {
-        let bindings = ComposingKeyBindings(slotModifier: .option)
-        // Option rewrites the digits it is chorded with the way Control does,
-        // which is why the slot is read from the unmodified characters.
-        let optionThree = try TestFixtures.keyDownEvent(
-            characters: "£",
-            modifiers: .option,
-            charactersIgnoringModifiers: "3",
-        )
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(optionThree),
-                isComposing: true,
-                isShowingCandidates: true,
-                bindings: bindings,
-            ),
-            .selectCandidateSlot(2),
-        )
-    }
-
-    func testTheUnboundModifier_keepsHandingItsDigitChordsToTheHost() throws {
-        let cases: [(name: String, bound: CandidateSlotModifier, typed: NSEvent.ModifierFlags)] = [
-            ("Option bound, ⌃3 typed", .option, .control),
-            ("Control bound, ⌥3 typed", .control, .option),
-        ]
-
-        for testCase in cases {
-            let event = try TestFixtures.keyDownEvent(
-                characters: "\u{1B}",
-                modifiers: testCase.typed,
-                charactersIgnoringModifiers: "3",
-            )
-
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: KeyEventSnapshot(event),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                    bindings: ComposingKeyBindings(slotModifier: testCase.bound),
-                ),
-                .commitThenPassThrough,
-                "\(testCase.name): the modifier the user did not choose is still the host's",
-            )
-        }
-    }
-
-    func testOptionDigits_withAnotherChordingModifier_belongToTheHost() throws {
-        for extraModifiers in [NSEvent.ModifierFlags.command, .control, .shift] {
-            let event = try TestFixtures.keyDownEvent(
-                characters: "£",
-                modifiers: extraModifiers.union(.option),
-                charactersIgnoringModifiers: "3",
-            )
-
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: KeyEventSnapshot(event),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                    bindings: ComposingKeyBindings(slotModifier: .option),
-                ),
-                .commitThenPassThrough,
-                "the chord binds ⌥1…⌥9 and nothing built on top of them",
-            )
-        }
-    }
-
-    func testOptionDigits_selectCandidates_whateverElseAppKitReports() throws {
-        for extraModifiers in [NSEvent.ModifierFlags.capsLock, .numericPad, [.numericPad, .function]] {
-            let event = try TestFixtures.keyDownEvent(
-                characters: "£",
-                modifiers: extraModifiers.union(.option),
-                charactersIgnoringModifiers: "3",
-            )
-
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: KeyEventSnapshot(event),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                    bindings: ComposingKeyBindings(slotModifier: .option),
-                ),
-                .selectCandidateSlot(2),
-                "⌥3 with \(extraModifiers) also held is still ⌥3",
-            )
-        }
-    }
-
-    // MARK: - What no binding may take away
-
-    /// Every setting is a chance to bind a key the user needs to type with. The
-    /// keys romanization is built from must survive every combination.
-    func testTypingKeys_surviveEveryBindingCombination() throws {
-        for bindings in Self.everyBindingCombination {
-            for characters in ["t", "a", "-"] {
+        for key in arrows + ["\u{1B}", "\u{8}", "\u{7F}"] {
+            for modifiers in [NSEvent.ModifierFlags(), .control, [.command, .shift]] {
                 XCTAssertEqual(
-                    try intent(characters, isShowingCandidates: true, bindings: bindings),
-                    .input(characters),
-                    "'\(characters)' builds a syllable — no binding may take it away",
+                    ComposingKeyChord.make(key: key, modifiers: modifiers),
+                    .failure(.reservedKey),
                 )
             }
+        }
+    }
+
+    func testAnEventWithNoCharacters_recordsNothing() {
+        XCTAssertEqual(ComposingKeyChord.make(key: nil, modifiers: []), .failure(.noKey))
+        XCTAssertEqual(ComposingKeyChord.make(key: "", modifiers: []), .failure(.noKey))
+    }
+
+    /// Modifiers that say how a key was reached rather than which key it is.
+    /// Keeping them would record ⌃3-on-the-keypad as a different chord from
+    /// ⌃3 on the top row.
+    func testRecording_dropsTheNonChordingModifiers() throws {
+        let chord = try ComposingKeyChord
+            .make(key: "]", modifiers: [.control, .capsLock, .numericPad, .function])
+            .get()
+
+        XCTAssertEqual(chord.modifiers, .control)
+    }
+
+    // MARK: - Storage
+
+    func testChords_roundTripThroughTheirRawValue() throws {
+        for (key, modifiers) in [
+            (" ", NSEvent.ModifierFlags()),
+            ("\r", .shift),
+            ("]", [.command, .control, .option, .shift]),
+        ] as [(String, NSEvent.ModifierFlags)] {
+            let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
+            XCTAssertEqual(ComposingKeyChord(rawValue: chord.rawValue), chord)
+        }
+    }
+
+    func testRawValues_stayStable() throws {
+        XCTAssertEqual(try ComposingKeyChord.make(key: " ", modifiers: []).get().rawValue, "|0020")
+        XCTAssertEqual(try ComposingKeyChord.make(key: "\r", modifiers: .shift).get().rawValue, "s|000D")
+        XCTAssertEqual(
+            try ComposingKeyChord.make(key: "]", modifiers: [.control, .option]).get().rawValue,
+            "co|005D",
+        )
+    }
+
+    /// A hand-edited defaults value goes through the same gate the recorder
+    /// does, so a domain edited behind the app's back cannot install a binding
+    /// that swallows the letters of a syllable.
+    func testRawValues_thatWouldTakeATypingKey_doNotParse() {
+        XCTAssertNil(ComposingKeyChord(rawValue: "|0061"), "bare 'a'")
+        XCTAssertNil(ComposingKeyChord(rawValue: "s|0035"), "⇧5")
+        XCTAssertNil(ComposingKeyChord(rawValue: "c|F702"), "⌃← is still an arrow")
+        XCTAssertNil(ComposingKeyChord(rawValue: "garbage"))
+        XCTAssertNil(ComposingKeyChord(rawValue: "x|0020"), "unknown modifier letter")
+    }
+
+    // MARK: - Defaults
+
+    /// The keys a user arriving from the system Zhuyin input method already
+    /// knows. Selection is the one place that keyboard cannot be matched: it
+    /// picks candidates with bare digits, which are tone markers here.
+    func testDefaults_followTheSystemZhuyinKeyboard() throws {
+        let bindings = ComposingKeyBindings.default
+
+        XCTAssertEqual(bindings.chord(for: .nextCandidate), try chord(" "))
+        XCTAssertEqual(bindings.chord(for: .confirmHighlighted), try chord("\r"))
+        XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
+        XCTAssertEqual(bindings.chord(for: .pageBackward), try chord("["))
+        XCTAssertEqual(bindings.chord(for: .pageForward), try chord("]"))
+        XCTAssertEqual(bindings.slotModifier, .control)
+    }
+
+    /// Unbound out of the box: `←` already walks back, and the two script
+    /// commits would each eat a chord for an action the system keyboard has no
+    /// equivalent of.
+    func testDefaults_leaveTheKeylessActionsUnbound() {
+        let bindings = ComposingKeyBindings.default
+
+        XCTAssertNil(bindings.chord(for: .previousCandidate))
+        XCTAssertNil(bindings.chord(for: .commitHanji))
+        XCTAssertNil(bindings.chord(for: .commitRomanization))
+    }
+
+    /// A case added to the roster but not to a group would be missing from
+    /// both the pane and the menu, which draw from the groups.
+    func testTheGroups_holdEveryActionExactlyOnce() {
+        let grouped = ComposingAction.groups.flatMap(\.self)
+
+        XCTAssertEqual(Set(grouped), Set(ComposingAction.allCases))
+        XCTAssertEqual(grouped.count, ComposingAction.allCases.count, "an action is in two groups")
+    }
+
+    func testEveryAction_hasItsOwnSettingsKey() {
+        let names = ComposingAction.allCases.map(\.settingsKeyName)
+
+        XCTAssertEqual(Set(names).count, names.count, "two actions share a settings key: \(names)")
+    }
+
+    // MARK: - Resolution
+
+    func testAChordRecordedTwice_staysOnTheLastActionOnly() throws {
+        let bindings = ComposingKeyBindings(chords: [
+            .pageForward: try chord("]"),
+            .commitHanji: try chord("]"),
+        ])
+
+        XCTAssertEqual(bindings.chord(for: .commitHanji), try chord("]"))
+        XCTAssertNil(bindings.chord(for: .pageForward), "the earlier row gives the chord up")
+    }
+
+    /// Between them these two are the only way to end a composition into the
+    /// document. A roster where both went missing would leave a user with a
+    /// composition they can only cancel.
+    func testAnAlwaysBoundAction_getsItsDefaultBackWhenCleared() throws {
+        for action in ComposingAction.alwaysBound {
+            let bindings = ComposingKeyBindings(chords: [action: nil])
+
             XCTAssertEqual(
-                try intent("5", isShowingCandidates: true, bindings: bindings),
-                .input("5"),
-                "a bare digit is the numeric tone of `tai5` under every binding",
-            )
-            XCTAssertEqual(
-                try intent("\u{8}", isShowingCandidates: true, bindings: bindings),
-                .deleteBackward,
-            )
-            XCTAssertEqual(
-                try intent("\u{1B}", isShowingCandidates: true, bindings: bindings),
-                .cancel,
-                "Escape is the way out of a composition, whatever else is bound",
+                bindings.chord(for: action),
+                action.defaultChord,
+                "\(action) may not be left with no key",
             )
         }
     }
 
-    /// The 32 combinations of the five settings, which is small enough to walk
-    /// exhaustively rather than sample.
-    private static let everyBindingCombination: [ComposingKeyBindings] = {
-        var combinations: [ComposingKeyBindings] = []
-        for returnKey in ReturnKeyBehavior.allCases {
-            for spaceKey in SpaceKeyBehavior.allCases {
-                for bracketPaging in BracketPagingBehavior.allCases {
-                    for tabCycle in TabCycleBehavior.allCases {
-                        for slotModifier in CandidateSlotModifier.allCases {
-                            combinations.append(ComposingKeyBindings(
-                                returnKey: returnKey,
-                                spaceKey: spaceKey,
-                                bracketPaging: bracketPaging,
-                                tabCycle: tabCycle,
-                                slotModifier: slotModifier,
-                            ))
+    /// Restoring one must not leave its default on two rows.
+    func testRestoringAnAlwaysBoundAction_takesItsChordBack() throws {
+        let bindings = ComposingKeyBindings(chords: [
+            .confirmHighlighted: nil,
+            .commitHanji: try chord("\r"),
+        ])
+
+        XCTAssertEqual(bindings.chord(for: .confirmHighlighted), try chord("\r"))
+        XCTAssertNil(bindings.chord(for: .commitHanji))
+    }
+
+    /// The regression this resolver was rewritten for: filling one always-bound
+    /// row by taking a chord back must not empty the other one. Every
+    /// arrangement of the two rows over their two chords, plus every way a
+    /// third row can be holding one of them.
+    func testTheAlwaysBoundActions_areNeverBothLeftUnbound() throws {
+        let candidates: [ComposingKeyChord?] = try [nil, chord("\r"), chord("\r", .shift), chord("]")]
+        let others = ComposingAction.allCases.filter { !ComposingAction.alwaysBound.contains($0) }
+
+        for confirm in candidates {
+            for literal in candidates {
+                for other in others {
+                    for otherChord in candidates {
+                        let bindings = ComposingKeyBindings(chords: [
+                            .confirmHighlighted: confirm,
+                            .commitLiteral: literal,
+                            other: otherChord,
+                        ])
+
+                        for action in ComposingAction.alwaysBound {
+                            XCTAssertNotNil(
+                                bindings.chord(for: action),
+                                """
+                                \(action) left unbound by confirm=\(String(describing: confirm)) \
+                                literal=\(String(describing: literal)) \
+                                \(other)=\(String(describing: otherChord))
+                                """,
+                            )
                         }
+                        XCTAssertNotEqual(
+                            bindings.chord(for: .confirmHighlighted),
+                            bindings.chord(for: .commitLiteral),
+                            "the two commits cannot share one key",
+                        )
                     }
                 }
             }
         }
-        return combinations
-    }()
+    }
 
-    private func intent(
+    /// Swapping the pair is a state a user can ask for, and both rows stay full
+    /// so nothing is restored over it.
+    func testTheAlwaysBoundActions_maySwapTheirChords() throws {
+        let bindings = ComposingKeyBindings(chords: [
+            .commitLiteral: try chord("\r"),
+            .confirmHighlighted: try chord("\r", .shift),
+        ])
+
+        XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r"))
+        XCTAssertEqual(bindings.chord(for: .confirmHighlighted), try chord("\r", .shift))
+    }
+
+    /// Their two chords belong to them: an ordinary action holding one gives it
+    /// up, so the keys that end a composition stay where a user can find them.
+    func testAnOrdinaryAction_cannotHoldAnAlwaysBoundChord() throws {
+        let bindings = ComposingKeyBindings(chords: [.nextCandidate: try chord("\r", .shift)])
+
+        XCTAssertNil(bindings.chord(for: .nextCandidate))
+        XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
+    }
+
+    // MARK: - The candidate-slot tier
+
+    /// The slot chords are classified before any binding, so a row holding one
+    /// would be recorded and then never fire. Dropped here as well as refused
+    /// by the recorder, because the modifier can be changed afterwards.
+    func testAChordTheSlotTierWouldSwallow_isDropped() throws {
+        let control = ComposingKeyBindings(
+            chords: [.commitHanji: try chord("3", .control)],
+            slotModifier: .control,
+        )
+        XCTAssertNil(control.chord(for: .commitHanji))
+
+        let option = ComposingKeyBindings(
+            chords: [.commitHanji: try chord("3", .control)],
+            slotModifier: .option,
+        )
+        XCTAssertEqual(
+            option.chord(for: .commitHanji),
+            try chord("3", .control),
+            "⌃3 is an ordinary chord once Option holds the slots",
+        )
+    }
+
+    func testIsCandidateSlotChord_namesOnlyTheNineDigitsUnderTheBoundModifier() throws {
+        XCTAssertTrue(try chord("3", .control).isCandidateSlotChord(under: .control))
+        XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .option))
+        XCTAssertFalse(
+            try chord("0", .control).isCandidateSlotChord(under: .control),
+            "⌃0 addresses no slot",
+        )
+        XCTAssertFalse(
+            try chord("3", [.control, .shift]).isCandidateSlotChord(under: .control),
+            "an extra modifier makes it a different chord",
+        )
+        XCTAssertFalse(try chord("]", .control).isCandidateSlotChord(under: .control))
+    }
+
+    // MARK: - Keypad Enter
+
+    /// A keyboard has two Enter keys and a user binding one means both, so the
+    /// keypad's folds into Return rather than being a chord of its own.
+    func testKeypadEnter_isTheSameChordAsReturn() throws {
+        let keypad = try chord("\u{3}")
+
+        XCTAssertEqual(keypad, try chord("\r"))
+        XCTAssertTrue(keypad.matches(try snapshot("\r")))
+        XCTAssertTrue(try chord("\r").matches(try snapshot("\u{3}")))
+        XCTAssertEqual(
+            ComposingKeyBindings.default.action(for: try snapshot("\u{3}")),
+            .confirmHighlighted,
+            "the keypad commits out of the box, as it always has",
+        )
+    }
+
+    func testActionsHolding_namesTheRowsARecordingWouldEmpty() throws {
+        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("]")])
+
+        XCTAssertEqual(
+            bindings.actionsHolding(try chord("]"), excluding: .commitHanji),
+            [.pageForward],
+        )
+        XCTAssertEqual(
+            bindings.actionsHolding(try chord("]"), excluding: .pageForward),
+            [],
+            "the row being recorded is not its own conflict",
+        )
+    }
+
+    // MARK: - Matching
+
+    func testAChordMatches_onlyItsOwnKeyAndModifiers() throws {
+        let optionReturn = try chord("\r", .option)
+
+        XCTAssertTrue(optionReturn.matches(try snapshot("\r", modifiers: .option)))
+        XCTAssertFalse(optionReturn.matches(try snapshot("\r")), "no modifier held")
+        XCTAssertFalse(
+            optionReturn.matches(try snapshot("\r", modifiers: [.option, .shift])),
+            "an extra chording modifier is a different chord",
+        )
+    }
+
+    /// Option rewrites most of the keyboard and Control rewrites the digits, so
+    /// matching reads the unmodified characters — the same field the candidate
+    /// slot chords are read from.
+    func testAChordMatches_throughTheCharactersAModifierRewrote() throws {
+        let optionJ = try chord("j", .option)
+
+        XCTAssertTrue(
+            optionJ.matches(try snapshot("∆", modifiers: .option, unmodified: "j")),
+            "⌥J arrives as ∆",
+        )
+    }
+
+    func testMatching_ignoresTheNonChordingModifiers() throws {
+        let space = try chord(" ")
+
+        XCTAssertTrue(space.matches(try snapshot(" ", modifiers: [.capsLock, .numericPad])))
+    }
+
+    private func chord(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) throws -> ComposingKeyChord {
+        try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
+    }
+
+    private func snapshot(
         _ characters: String,
         modifiers: NSEvent.ModifierFlags = [],
-        isComposing: Bool = true,
-        isShowingCandidates: Bool,
-        bindings: ComposingKeyBindings = .default,
-    ) throws -> ComposingKeyIntent {
-        let event = try TestFixtures.keyDownEvent(characters: characters, modifiers: modifiers)
-        return ComposingKeyIntent.intent(
-            for: KeyEventSnapshot(event),
-            isComposing: isComposing,
-            isShowingCandidates: isShowingCandidates,
-            bindings: bindings,
-        )
+        unmodified: String? = nil,
+    ) throws -> KeyEventSnapshot {
+        try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: characters,
+            modifiers: modifiers,
+            charactersIgnoringModifiers: unmodified,
+        ))
     }
 }

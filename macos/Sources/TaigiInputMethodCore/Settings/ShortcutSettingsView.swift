@@ -1,37 +1,34 @@
-// The 快捷鍵 pane: the global hotkeys, and what each key does while composing.
+// The 快捷鍵 pane: every key the user can put an action on, in one list.
 
 import KeyboardShortcuts
 import SwiftUI
 
 /// The 快捷鍵 pane of the settings window.
 ///
-/// Two kinds of binding, and they are recorded differently on purpose. A global
-/// chord can be anything the user presses, so it gets a recorder. A composing
-/// key cannot: Return, Space and the brackets carry no modifier, and a recorder
-/// that accepted them would let a user bind away the letters they type with.
-/// Those get pickers over choices that are known to leave a usable keyboard
-/// behind (`ComposingKeyBindings`).
+/// One list, not two. A shortcut is a shortcut to the user reading the pane;
+/// which of them registers a Carbon hotkey and which is read by the key
+/// classifier is an implementation detail, and splitting the rows on it made
+/// the reader ask what the split meant (USER 2026-08-21).
 ///
-/// `@AppStorage`-bound like the panes beside it, with the keys and the
-/// fallbacks taken from the store's descriptors, so the form and the key
-/// classifier cannot disagree about either.
+/// Two controls all the same, because the keys they hold differ: a global chord
+/// always carries a modifier, so `KeyboardShortcuts.Recorder` records it, while
+/// a composing key is mostly bare — Return, Space, `[` — so
+/// `ComposingKeyRecorder` does. Both are recording fields of the same size and
+/// shape, so the seam does not show.
+///
+/// `@AppStorage` for the settings the pane owns outright, and the store for the
+/// per-action chords, whose write has to run conflict resolution first.
 struct ShortcutSettingsView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    @AppStorage(SettingsStore.Keys.returnKeyBehavior.name)
-    private var returnKeyBehavior = SettingsStore.Keys.returnKeyBehavior.defaultValue
-
-    @AppStorage(SettingsStore.Keys.spaceKeyBehavior.name)
-    private var spaceKeyBehavior = SettingsStore.Keys.spaceKeyBehavior.defaultValue
-
-    @AppStorage(SettingsStore.Keys.bracketPagingBehavior.name)
-    private var bracketPagingBehavior = SettingsStore.Keys.bracketPagingBehavior.defaultValue
-
-    @AppStorage(SettingsStore.Keys.tabCycleBehavior.name)
-    private var tabCycleBehavior = SettingsStore.Keys.tabCycleBehavior.defaultValue
-
     @AppStorage(SettingsStore.Keys.candidateSlotModifier.name)
     private var candidateSlotModifier = SettingsStore.Keys.candidateSlotModifier.defaultValue
+
+    /// Re-read after every write so the rows repaint together: recording a
+    /// chord can empty the row that had it.
+    @State private var bindings = SettingsStore().composingKeyBindings
+
+    private let store = SettingsStore()
 
     var body: some View {
         Form {
@@ -43,66 +40,67 @@ struct ShortcutSettingsView: View {
                         ShortcutConflicts.resolve(after: action)
                     }
                 }
-            } header: {
-                Text(language.string(.macosShortcutsGlobalSection))
-            }
 
-            Section {
-                captioned(.macosBindingReturnFooter) {
-                    Picker(language.string(.macosBindingReturnKey), selection: $returnKeyBehavior) {
-                        Text(language.string(.macosBindingCommitLiteral)).tag(ReturnKeyBehavior.commitLiteral)
-                        Text(language.string(.macosBindingConfirmHighlighted)).tag(ReturnKeyBehavior.confirmHighlighted)
-                    }
+                // Same order the input-source menu draws, so a user who learnt
+                // the roster in one surface reads it in the other: the keys
+                // that move through the candidates, then the keys that end the
+                // composition (`ComposingAction.groups`).
+                ForEach(ComposingAction.groups[0], id: \.self) { action in
+                    recorderRow(action)
                 }
 
-                captioned(.macosBindingSpaceFooter) {
-                    Picker(language.string(.macosBindingSpaceKey), selection: $spaceKeyBehavior) {
-                        Text(language.string(.macosBindingConfirmHighlighted)).tag(SpaceKeyBehavior.confirmHighlighted)
-                        Text(language.string(.macosBindingNextCandidate)).tag(SpaceKeyBehavior.nextCandidate)
-                    }
-                }
-
-                Picker(language.string(.macosBindingBracketPaging), selection: $bracketPagingBehavior) {
-                    Text(language.string(.macosBindingTurnPage)).tag(BracketPagingBehavior.enabled)
-                    Text(language.string(.macosBindingTypeTheCharacter)).tag(BracketPagingBehavior.disabled)
-                }
-
-                Picker(language.string(.macosBindingTabCycle), selection: $tabCycleBehavior) {
-                    Text(language.string(.macosBindingWalkCandidates)).tag(TabCycleBehavior.enabled)
-                    Text(language.string(.macosBindingLeaveToApp)).tag(TabCycleBehavior.disabled)
-                }
-
+                // Ends the moving-through group, because that is what it does.
                 // Glyphs rather than translated words: a modifier is read off
                 // the keyboard, and ⌃ and ⌥ are the same symbols in every
-                // language the settings window speaks.
+                // language the settings window speaks. A picker rather than a
+                // recorder because this row is one modifier standing for nine
+                // chords, not a key.
                 Picker(language.string(.macosBindingSlotModifier), selection: $candidateSlotModifier) {
-                    Text(verbatim: "⌃1 – ⌃9").tag(CandidateSlotModifier.control)
-                    Text(verbatim: "⌥1 – ⌥9").tag(CandidateSlotModifier.option)
+                    ForEach(CandidateSlotModifier.allCases, id: \.self) { modifier in
+                        Text(verbatim: modifier.menuRange).tag(modifier)
+                    }
                 }
-            } header: {
-                Text(language.string(.macosShortcutsComposingSection))
-            } footer: {
-                Text(language.string(.macosShortcutsFixedKeysNote))
+
+                ForEach(ComposingAction.groups[1], id: \.self) { action in
+                    recorderRow(action)
+                }
             }
         }
         .formStyle(.grouped)
         .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
+        .onChange(of: candidateSlotModifier) { _, _ in reload() }
     }
 
-    /// A control with its explanation under it, as ONE form row.
-    ///
-    /// A caption placed beside the control instead becomes a row of its own in a
-    /// grouped form — separated from what it explains by a divider, and read by
-    /// VoiceOver as an unrelated element. Only a `Section` takes a `footer:`,
-    /// and one section per picker would leave five loose boxes; nesting keeps
-    /// the five together while tying each caption to its control.
-    private func captioned(_ caption: StringKey, @ViewBuilder control: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            control()
-            Text(language.string(caption))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private func recorderRow(_ action: ComposingAction) -> some View {
+        LabeledContent(action.label(language)) {
+            ComposingKeyRecorder(
+                chord: bindings.chord(for: action),
+                slotModifier: bindings.slotModifier,
+                language: language,
+            ) { chord in
+                record(chord, for: action)
+            }
         }
+    }
+
+    /// Writes `chord` to `action`, taking it off whichever row held it.
+    ///
+    /// Last writer wins, and the loser's row visibly empties — the same rule
+    /// the global recorders use (`ShortcutConflicts`), and the one the System
+    /// Settings keyboard pane behaves by.
+    private func record(_ chord: ComposingKeyChord?, for action: ComposingAction) {
+        if let chord {
+            for loser in bindings.actionsHolding(chord, excluding: action) {
+                store.setComposingChord(nil, for: loser)
+            }
+        }
+        store.setComposingChord(chord, for: action)
+        reload()
+    }
+
+    /// Re-reads the resolved bindings, which is also what puts an always-bound
+    /// action's default back after the user clears its row.
+    private func reload() {
+        bindings = store.composingKeyBindings
     }
 }

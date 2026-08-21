@@ -1,4 +1,4 @@
-// The 一般 pane: romanization system, display language, learning toggles.
+// The 一般 pane: romanization system and display language.
 
 import SwiftUI
 
@@ -11,6 +11,11 @@ import SwiftUI
 /// from the store's descriptors, so the form and the engine cannot disagree
 /// about either.
 ///
+/// The two learning switches are deliberately absent. They live on the 詞頻紀錄
+/// and 詞關聯紀錄 panes, next to the data each one governs — a second copy here
+/// was the same `@AppStorage` key drawn twice, which is a settings window
+/// disagreeing with itself.
+///
 /// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
 /// form re-render when the display language changes, with no window rebuild.
 struct GeneralSettingsView: View {
@@ -18,12 +23,6 @@ struct GeneralSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isFrequencyRecordingEnabled.name)
-    private var isFrequencyRecordingEnabled = SettingsStore.Keys.isFrequencyRecordingEnabled.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isAssociationRecordingEnabled.name)
-    private var isAssociationRecordingEnabled = SettingsStore.Keys.isAssociationRecordingEnabled.defaultValue
 
     var body: some View {
         Form {
@@ -41,13 +40,6 @@ struct GeneralSettingsView: View {
                         Text(language.selectionLabel(for: option)).tag(option)
                     }
                 }
-            }
-
-            Section {
-                Toggle(language.string(.dictionaryFrequencyRecordingEnabled), isOn: $isFrequencyRecordingEnabled)
-                Toggle(language.string(.dictionaryAssociationRecordingEnabled), isOn: $isAssociationRecordingEnabled)
-            } header: {
-                Text(language.string(.macosLearningSection))
             }
         }
         .formStyle(.grouped)

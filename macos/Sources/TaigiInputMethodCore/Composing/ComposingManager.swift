@@ -335,17 +335,30 @@ final class ComposingManager {
     /// Commits `candidate`, which must come from the `fetchCandidates()` call
     /// that produced the list the user is looking at.
     ///
-    /// The document rendering is derived here rather than taken from the
-    /// caller: it depends on the same settings snapshot the engine call does,
-    /// and letting a view layer supply it is how the two drift apart.
+    /// The document string is derived here rather than taken from the caller:
+    /// it depends on the same settings snapshot the engine call does, and
+    /// letting a view layer supply it is how the two drift apart. `rendering`
+    /// is a policy, not a string — the 直接輸出漢字 and 直接輸出羅馬字 keys say
+    /// WHICH script to write, and this method still says how.
+    ///
+    /// A forced rendering changes only the document text. The identity the word
+    /// is learnt under stays the `(display text, canonical TL)` pair
+    /// (`CLAUDE.md` Core Principle #7), so committing one word as Hanji does not
+    /// split its frequency or association rows away from the same word
+    /// committed any other way.
     func commitCandidate(
         _ candidate: ContinuousCandidate,
+        rendering: CandidateDocumentText.Rendering = .settings,
         executing executor: ComposingEffectExecutor,
     ) -> CandidateCommitOutcome {
         let settings = settingsProvider.current
         Self.logger.debug("commitCandidate consumedBytes=\(candidate.consumedSpanEnd)")
         guard let transition = RustEngineBridge.composingCommitContinuous(
-            documentText: CandidateDocumentText.text(for: candidate, settings: settings),
+            documentText: CandidateDocumentText.text(
+                for: candidate,
+                settings: settings,
+                rendering: rendering,
+            ),
             canonicalText: candidate.displayText,
             associationTl: candidate.canonicalTl,
             consumedBytes: candidate.consumedSpanEnd,
