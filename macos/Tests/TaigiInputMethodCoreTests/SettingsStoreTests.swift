@@ -247,55 +247,48 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().composingKeyBindings, .default)
     }
 
-    func testComposingKeyBindings_readEveryStoredChoice() {
-        userDefaults.set(
-            ReturnKeyBehavior.confirmHighlighted.rawValue,
-            forKey: SettingsStore.Keys.returnKeyBehavior.name,
-        )
-        userDefaults.set(
-            SpaceKeyBehavior.nextCandidate.rawValue,
-            forKey: SettingsStore.Keys.spaceKeyBehavior.name,
-        )
-        userDefaults.set(
-            BracketPagingBehavior.disabled.rawValue,
-            forKey: SettingsStore.Keys.bracketPagingBehavior.name,
-        )
-        userDefaults.set(
-            TabCycleBehavior.enabled.rawValue,
-            forKey: SettingsStore.Keys.tabCycleBehavior.name,
-        )
-        userDefaults.set(
-            CandidateSlotModifier.option.rawValue,
-            forKey: SettingsStore.Keys.candidateSlotModifier.name,
-        )
+    func testComposingChords_roundTripThroughTheSuite() throws {
+        let store = makeStore()
+        let chord = try XCTUnwrap(ComposingKeyChord(rawValue: "o|000D")) // ⌥Return
 
+        store.setComposingChord(chord, for: .commitHanji)
+
+        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .commitHanji), chord)
         XCTAssertEqual(
-            makeStore().composingKeyBindings,
-            ComposingKeyBindings(
-                returnKey: .confirmHighlighted,
-                spaceKey: .nextCandidate,
-                bracketPaging: .disabled,
-                tabCycle: .enabled,
-                slotModifier: .option,
-            ),
+            userDefaults.string(forKey: ComposingAction.commitHanji.settingsKeyName),
+            "o|000D",
+            "the stored form is what a later build has to keep reading",
         )
     }
 
-    /// A binding the app cannot honour must not leave the key doing nothing:
-    /// each unknown value reads as the shipped behaviour for that key alone,
-    /// so a hand-edited domain cannot take a key out of service.
-    func testComposingKeyBindings_withUnknownStoredValues_fallBackPerKey() {
-        for key in [
-            SettingsStore.Keys.returnKeyBehavior.name,
-            SettingsStore.Keys.spaceKeyBehavior.name,
-            SettingsStore.Keys.bracketPagingBehavior.name,
-            SettingsStore.Keys.tabCycleBehavior.name,
-            SettingsStore.Keys.candidateSlotModifier.name,
-        ] {
-            userDefaults.set("nonsense", forKey: key)
-        }
+    /// Clearing a row is a stored empty string, not an absent key: an absent
+    /// key means "never touched" and reads as the action's default, so the two
+    /// cannot be collapsed without undoing the user's clearing on next launch.
+    func testClearedComposingChord_staysClearedAcrossReads() {
+        let store = makeStore()
 
-        XCTAssertEqual(makeStore().composingKeyBindings, .default)
+        store.setComposingChord(nil, for: .pageForward)
+
+        XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
+        XCTAssertEqual(
+            userDefaults.string(forKey: ComposingAction.pageForward.settingsKeyName),
+            "",
+        )
+    }
+
+    /// A stored chord the build cannot parse reads as an empty row rather than
+    /// as the default: restoring the default would undo a deliberate clearing,
+    /// and anything that must stay reachable is put back by the resolver.
+    func testComposingChords_withAnUnparsableStoredValue_readAsCleared() {
+        userDefaults.set("nonsense", forKey: ComposingAction.pageForward.settingsKeyName)
+
+        XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
+    }
+
+    func testCandidateSlotModifier_withAnUnknownStoredValue_fallsBackToControl() {
+        userDefaults.set("nonsense", forKey: SettingsStore.Keys.candidateSlotModifier.name)
+
+        XCTAssertEqual(makeStore().composingKeyBindings.slotModifier, .control)
     }
 
     /// A forced Tahoe must never reach a panel on an OS that cannot draw it —

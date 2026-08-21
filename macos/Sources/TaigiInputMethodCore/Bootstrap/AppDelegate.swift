@@ -47,6 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before the handlers register, so nothing re-persists what it clears.
         RetiredSettingsCleanup.run()
 
+        // Before the first keystroke can read the bindings, so a user upgrading
+        // mid-session does not type one composition under the old settings and
+        // the next under the new ones.
+        ComposingShortcutMigration.run()
+
         // The hotkey handlers exist for the process's life; whether they FIRE
         // is the coordinator's call, made as sessions register and release
         // their shortcut endpoint. Assigned here rather than defaulted inside

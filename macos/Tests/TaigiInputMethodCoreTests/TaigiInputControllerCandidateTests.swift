@@ -44,7 +44,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let firstCell = try XCTUnwrap(session.presenter.shownContent).cells[0]
         session.client.clearWrites()
 
-        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: " "), client: session.client)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
 
         XCTAssertEqual(session.client.insertedTexts.last, firstCell.text)
     }
@@ -187,10 +187,31 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     // MARK: - Committing
 
-    func testSpace_commitsTheHighlightedCandidate() throws {
+    func testReturn_commitsTheHighlightedCandidate() throws {
         let session = try composedSession()
         session.press(.rightArrow)
         let highlighted = try XCTUnwrap(session.presenter.shownContent).cells[1].text
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\r"),
+            client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(
+            session.client.insertedTexts.last,
+            highlighted,
+            "Return takes the candidate the user moved to, not the one the list opened on",
+        )
+    }
+
+    /// Space walks the bar rather than committing from it — the system Zhuyin
+    /// keyboard's space bar, which is the default this ships with
+    /// (`ComposingAction.nextCandidate`).
+    func testSpace_walksToTheNextCandidateWithoutCommitting() throws {
+        let session = try composedSession()
+        let cells = try XCTUnwrap(session.presenter.shownContent).cells
         session.client.clearWrites()
 
         let handled = try session.controller.handle(
@@ -199,11 +220,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
 
         XCTAssertTrue(handled)
-        XCTAssertEqual(
-            session.client.insertedTexts.last,
-            highlighted,
-            "Space takes the candidate the user moved to, not the one the list opened on",
-        )
+        XCTAssertTrue(session.client.insertedTexts.isEmpty, "walking the bar writes nothing")
+        XCTAssertEqual(session.presenter.selectedIndex, 1)
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).cells, cells)
     }
 
     func testControlDigit_commitsThatSlotOfTheVisiblePage() throws {
@@ -262,13 +281,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// document written and the bar down — rather than loop.
     func testCommittingCandidatesUntilTheBufferRunsOut_endsWithTheBarDown() throws {
         let session = try composedSession()
-        let space = try TestFixtures.keyDownEvent(characters: " ")
+        let confirm = try TestFixtures.keyDownEvent(characters: "\r")
 
         // One press per syllable is the most that can be needed; the extra
         // iterations exist so a failure reads as "never ended" rather than
         // "ended one press later than the fixture guessed".
         for _ in 0 ..< (Self.composition.count + 1) where session.presenter.isShowing {
-            _ = session.controller.handle(space, client: session.client)
+            _ = session.controller.handle(confirm, client: session.client)
         }
 
         XCTAssertFalse(
@@ -281,19 +300,97 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
-    func testReturn_commitsTheLiteralAndTakesTheBarDown() throws {
+    /// 直接送出漢字 and 直接送出羅馬字 write one script whatever the 漢羅
+    /// setting says — the user is overriding their preference for this word,
+    /// not changing it.
+    func testTheHanjiCommit_writesTheHanjiAndLeavesTheSettingAlone() throws {
+        let session = try makeScriptCommitSession(.commitHanji, selecting: { $0.annotation != nil })
+        let expected = try XCTUnwrap(session.cell.annotation)
+        session.client.clearWrites()
+
+        _ = session.controller.handle(session.event, client: session.client)
+
+        XCTAssertEqual(session.client.insertedTexts.last, expected)
+        XCTAssertFalse(
+            session.controller.settings.isTranslateSwapped,
+            "the output setting is untouched — this was one word, not a preference",
+        )
+    }
+
+    func testTheRomanizationCommit_writesTheRomanization() throws {
+        let session = try makeScriptCommitSession(.commitRomanization, selecting: { $0.annotation != nil })
+        session.client.clearWrites()
+
+        _ = session.controller.handle(session.event, client: session.client)
+
+        XCTAssertEqual(session.client.insertedTexts.last, session.cell.text)
+    }
+
+    private struct ScriptCommitSession {
+        let controller: TaigiInputController
+        let client: RecordingTextInputClient
+        let presenter: RecordingCandidatePresenter
+        /// The highlighted cell. Under the shipped output settings it leads
+        /// with the romanization and annotates with the Hanji, which is what
+        /// lets a case name the two scripts without reaching into the
+        /// controller's candidate list.
+        let cell: CandidateCellContent
+        let event: NSEvent
+    }
+
+    /// A composed session with `action` recorded on ⌥Return, moved onto the
+    /// first candidate whose cell `matching` accepts.
+    private func makeScriptCommitSession(
+        _ action: ComposingAction,
+        selecting matching: ((CandidateCellContent) -> Bool)? = nil,
+    ) throws -> ScriptCommitSession {
+        let suiteName = "ScriptCommit.\(UUID().uuidString)"
+        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        addTeardownBlock { userDefaults.removePersistentDomain(forName: suiteName) }
+        let store = SettingsStore(userDefaults: userDefaults)
+        store.setComposingChord(try ComposingKeyChord.make(key: "\r", modifiers: .option).get(), for: action)
+
+        let session = try makeSession()
+        session.controller.settings = store
+        for character in Self.composition.map(String.init) {
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: character),
+                client: session.client,
+            )
+        }
+
+        let cells = try XCTUnwrap(session.presenter.shownContent).cells
+        var index = 0
+        if let matching {
+            guard let match = cells.firstIndex(where: matching) else {
+                throw XCTSkip("the dictionary produced no candidate this case can use")
+            }
+            index = match
+            for _ in 0 ..< index { session.press(.rightArrow) }
+        }
+
+        return ScriptCommitSession(
+            controller: session.controller,
+            client: session.client,
+            presenter: session.presenter,
+            cell: cells[index],
+            event: try TestFixtures.keyDownEvent(characters: "\r", modifiers: .option),
+        )
+    }
+
+    func testShiftReturn_commitsTheLiteralAndTakesTheBarDown() throws {
         let session = try composedSession()
         session.client.clearWrites()
 
         _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\r"),
+            TestFixtures.keyDownEvent(characters: "\r", modifiers: .shift),
             client: session.client,
         )
 
         XCTAssertEqual(
             session.client.insertedTexts.last,
             "taigi",
-            "Enter keeps the letters that were typed, not the candidate the bar suggested",
+            "⇧Return keeps the letters that were typed, not the candidate the bar suggested",
         )
         XCTAssertFalse(session.presenter.isShowing)
     }

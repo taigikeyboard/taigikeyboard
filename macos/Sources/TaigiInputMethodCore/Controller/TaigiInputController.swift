@@ -399,7 +399,7 @@ public final class TaigiInputController: IMKInputController {
                 manager.noteCharacterTypedOutsideComposition(characters)
             }
             return false
-        case .commitHighlightedCandidate:
+        case let .commitHighlightedCandidate(rendering):
             // The window answers which absolute index its selection is on. Nil
             // — a window that failed to reach a screen, or state torn down
             // between the fetch and the key — consumes the key without
@@ -409,7 +409,12 @@ public final class TaigiInputController: IMKInputController {
             guard let selectedIndex = candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
                   fetchedCandidates.indices.contains(selectedIndex)
             else { return true }
-            commit(fetchedCandidates[selectedIndex], from: manager, client: client, executing: executor)
+            let candidate = fetchedCandidates[selectedIndex]
+            // A candidate that has not got the script the key asked for is left
+            // alone, and the chord is consumed either way so it never reaches
+            // the host (`CandidateDocumentText.Rendering.canRender`).
+            guard rendering.canRender(candidate) else { return true }
+            commit(candidate, rendering: rendering, from: manager, client: client, executing: executor)
         case let .selectCandidateSlot(slot):
             // A chord aimed at one of the empty slots the last page ends with.
             // Consumed rather than passed on: `⌃7` is a candidate chord while the
@@ -434,11 +439,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func commit(
         _ candidate: ContinuousCandidate,
+        rendering: CandidateDocumentText.Rendering = .settings,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let outcome = manager.commitCandidate(candidate, executing: executor)
+        let outcome = manager.commitCandidate(candidate, rendering: rendering, executing: executor)
         Self.logger.debug("candidate commit \(String(describing: outcome))")
         switch outcome {
         case .finalized:
