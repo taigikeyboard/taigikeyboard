@@ -1,7 +1,5 @@
-// The 一般 pane: romanization system, display language, learning toggles, and
-// the shortcut recorders.
+// The 一般 pane: romanization system, display language, learning toggles.
 
-import KeyboardShortcuts
 import SwiftUI
 
 /// The 一般 pane of the settings window.
@@ -16,11 +14,6 @@ import SwiftUI
 /// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
 /// form re-render when the display language changes, with no window rebuild.
 struct GeneralSettingsView: View {
-    /// The form is a column of controls that reads best bounded — stretched
-    /// across a wide detail pane, every row becomes a label staring at a
-    /// far-away control. Centered within whatever width the pane has.
-    private static let maximumFormWidth: CGFloat = 640
-
     @Environment(DisplayLanguageStore.self) private var language
 
     @AppStorage(SettingsStore.Keys.inputMode.name)
@@ -56,21 +49,9 @@ struct GeneralSettingsView: View {
             } header: {
                 Text(language.string(.macosLearningSection))
             }
-
-            Section {
-                // One row per action, off the same list the hotkey registration
-                // uses, so a new action cannot appear in one and not the other.
-                ForEach(ShortcutAction.allCases, id: \.self) { action in
-                    KeyboardShortcuts.Recorder(action.label(language), name: action.name) { _ in
-                        ShortcutConflicts.resolve(after: action)
-                    }
-                }
-            } header: {
-                Text(language.string(.macosShortcutsSection))
-            }
         }
         .formStyle(.grouped)
-        .frame(maxWidth: Self.maximumFormWidth)
+        .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
     }
 
     /// The picker's selection, read and written through the store rather than through `@AppStorage`
