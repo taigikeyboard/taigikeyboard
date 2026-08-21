@@ -77,6 +77,18 @@ protocol CandidatePresenter {
         ownedBy owner: ComposingSessionToken,
     )
 
+    /// Replaces every cell's content in place — the same candidate list under
+    /// a new rendering (the 漢羅對調 flip) — keeping the window up, its anchor,
+    /// and the selection on the same absolute index. A no-op unless `owner`
+    /// owns a visible, non-empty window.
+    ///
+    /// A separate contract from `show` on purpose: `show` is the fresh-list
+    /// path and resets the selection to the first candidate, which a pure
+    /// display change must not do. Callable without a client — the window is
+    /// already anchored, so no caret query is needed (the queries `show`
+    /// depends on are only allowed inside key events).
+    func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken)
+
     /// Moves the selection the way the current layout reads `direction`, if
     /// `owner` still owns the window. Clamps at both ends — never wraps
     /// (McBopomofo `HorizontalCandidateController.swift:509`; the D4 rule).

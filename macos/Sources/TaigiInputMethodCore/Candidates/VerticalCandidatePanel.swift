@@ -115,6 +115,16 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         return rebuildRows()
     }
 
+    /// Same list, new rendering: the rows are rebuilt for the new widths, and
+    /// the selection stays on its absolute index, scrolled back into view.
+    override func rerenderCandidates(_ newCells: [CandidateCellContent]) {
+        guard !cells.isEmpty, !newCells.isEmpty else { return }
+        let kept = selectedIndex
+        cells = Array(newCells.prefix(Self.maxDisplayCandidates))
+        replace(panelSize: rebuildRows())
+        select(min(kept, cells.count - 1))
+    }
+
     override func clear() {
         cells = []
         selectedIndex = 0

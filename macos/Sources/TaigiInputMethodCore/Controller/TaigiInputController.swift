@@ -290,12 +290,12 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Shortcut actions
 
-    /// What a recorded chord does while this session owns the engine. Reuses
-    /// the menu handlers' paths so a setting has one behaviour regardless of
-    /// which surface changed it; every case ends with the candidate bar down,
-    /// because the candidates on screen were produced under the setting that
-    /// just changed (same rule as `switchInputMode(to:)`).
-    ///
+    /// What a recorded chord does while this session owns the engine. A
+    /// setting has one behaviour regardless of which surface changed it. What
+    /// happens to the candidate bar follows what the setting invalidates: a
+    /// romanization switch changes what a fetch would return, so its bar comes
+    /// down (same rule as `switchInputMode(to:)`); the 漢羅 swap changes only
+    /// how the same candidates display, so its bar stays and re-renders.
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
         switch action {
@@ -309,9 +309,31 @@ public final class TaigiInputController: IMKInputController {
         case .toggleRomanization:
             switchInputMode(to: settings.inputMode == .tl ? .poj : .tl)
         case .toggleTranslateSwapped:
+            // The bar STAYS: the swap changes how a candidate displays and
+            // commits, never which candidates exist, so the list on screen is
+            // still the right one — re-rendered, selection kept. Dismissing
+            // here read as the window vanishing (real device, 2026-08-21).
             settings.isTranslateSwapped.toggle()
-            dismissCandidates()
+            rerenderCandidatesForDisplayChange()
         }
+    }
+
+    /// Re-renders the candidates on screen after a display-only setting flip.
+    ///
+    /// Through `updateCells`, not `presentCandidates`: this runs from the
+    /// Carbon hotkey path, which has no client to ask for a caret rectangle —
+    /// and needs none, because the window is already anchored. The cells are
+    /// rebuilt through the manager, whose `cellContent(for:)` reads the live
+    /// settings the toggle just wrote.
+    @MainActor
+    private func rerenderCandidatesForDisplayChange() {
+        guard !fetchedCandidates.isEmpty,
+              let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
+        else { return }
+        candidatePresenter.updateCells(
+            fetchedCandidates.map(manager.cellContent(for:)),
+            ownedBy: sessionToken,
+        )
     }
 
     // MARK: - Main-actor work

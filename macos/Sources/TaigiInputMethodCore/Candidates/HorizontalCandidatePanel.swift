@@ -47,6 +47,22 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         return rebuildVisiblePage()
     }
 
+    /// Same list, new rendering: the pages are re-packed for the new widths,
+    /// and the selection stays on its absolute index — whichever page that now
+    /// puts it on.
+    override func rerenderCandidates(_ newCells: [CandidateCellContent]) {
+        guard !cells.isEmpty, !newCells.isEmpty else { return }
+        let kept = selectedIndex
+        cells = Array(newCells.prefix(Self.maxDisplayCandidates))
+        pageLayout = HorizontalPageLayout.pack(
+            widths: cells.map(metrics.measureWidth),
+            slotWidth: metrics.baseWidth,
+        )
+        selectedIndex = min(kept, cells.count - 1)
+        currentPage = pageLayout.pageIndex(containing: selectedIndex) ?? 0
+        replace(panelSize: rebuildVisiblePage())
+    }
+
     /// Empties the window so nothing can be selected or committed from it —
     /// hiding must drop the state, not just the pixels.
     override func clear() {

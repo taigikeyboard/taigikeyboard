@@ -16,6 +16,79 @@ final class CandidateSemanticNavigationTests: XCTestCase {
         CandidateCellContent(text: "候\($0)", annotation: "hau\($0)")
     }
 
+    /// The 漢羅 swap path: same list, new rendering. Every layout keeps the
+    /// selection on its absolute index and swaps every cell's scripts —
+    /// `rerenderCandidates` is a distinct contract from the fresh-list
+    /// `updateCandidates`, which resets the selection to the first candidate.
+    func testEveryLayout_rerenderKeepsTheSelection() {
+        let swapped = Self.cells.map {
+            CandidateCellContent(text: $0.annotation ?? $0.text, annotation: $0.text)
+        }
+        for panel in makePanels() {
+            _ = panel.updateCandidates(Self.cells)
+            panel.navigate(.nextCandidate)
+            panel.navigate(.nextCandidate)
+            panel.navigate(.nextCandidate)
+            XCTAssertEqual(panel.selectedIndex, 3, "\(type(of: panel)): walked to the fourth candidate")
+
+            panel.rerenderCandidates(swapped)
+
+            XCTAssertEqual(
+                panel.selectedIndex, 3,
+                "\(type(of: panel)): a display flip must not move the highlight",
+            )
+            XCTAssertFalse(panel.isEmpty, "\(type(of: panel)): the list survives a re-render")
+            // Slot-chord reachability is only assertable where the mapping is
+            // pure page geometry: the vertical layout numbers its slots off
+            // the live scroll viewport, which a never-presented window does
+            // not have.
+            if !(panel is VerticalCandidatePanel) {
+                XCTAssertTrue(
+                    (0 ..< 9).contains { panel.candidateIndex(forSlot: $0) == panel.selectedIndex },
+                    "\(type(of: panel)): the selection must sit on a page a slot chord can address",
+                )
+            }
+        }
+    }
+
+    /// The expandable layout's mode follows the selection across a re-render:
+    /// a selection past the collapsed row re-expands rather than being folded
+    /// away with the highlight off screen.
+    func testExpandable_rerenderKeepsAnExpandedSelectionExpanded() {
+        let swapped = Self.cells.map {
+            CandidateCellContent(text: $0.annotation ?? $0.text, annotation: $0.text)
+        }
+        let panel = ExpandableCandidatePanel(
+            style: .sequoia,
+            metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+        // Far past any collapsed row's packing budget, so the walk expanded it.
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+        XCTAssertEqual(panel.selectedIndex, 20)
+        XCTAssertEqual(panel.displayMode, .expanded, "the walk must have expanded the grid")
+
+        panel.rerenderCandidates(swapped)
+
+        XCTAssertEqual(panel.selectedIndex, 20)
+        XCTAssertEqual(panel.displayMode, .expanded)
+    }
+
+    /// A cleared panel has nothing to re-render: the call is a no-op rather
+    /// than a resurrection.
+    func testEveryLayout_rerenderAfterClear_staysEmpty() {
+        for panel in makePanels() {
+            _ = panel.updateCandidates(Self.cells)
+            panel.clear()
+
+            panel.rerenderCandidates(Self.cells)
+
+            XCTAssertTrue(panel.isEmpty, "\(type(of: panel)): a cleared panel must stay empty")
+        }
+    }
+
     func testEveryLayout_movesExactlyOneCandidatePerStep() {
         for panel in makePanels() {
             _ = panel.updateCandidates(Self.cells)

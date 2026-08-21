@@ -48,28 +48,29 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertEqual(controller.settings.isTranslateSwapped, !defaults.isTranslateSwapped)
     }
 
-    /// The candidates on screen were produced under the setting that just
-    /// changed, and the key contract lets Space commit the highlighted one —
-    /// so every candidate-affecting shortcut takes the bar down, the same rule
-    /// the input-source menu's romanization items follow.
-    func testEveryCandidateAffectingShortcut_takesTheBarDown() {
-        for action in ShortcutAction.allCases where action != .openSettings {
-            let callsBefore = presenter.calls.count
+    /// What happens to the bar follows what the setting invalidates: the
+    /// romanization switch changes what a fetch would return, so it takes the
+    /// bar down; the 漢羅 swap changes only how the same candidates display,
+    /// so it must NOT dismiss — the re-render path is pinned in
+    /// `TaigiInputControllerCandidateTests`.
+    func testTheRomanizationSwitch_takesTheBarDown_andTheSwapDoesNot() {
+        var callsBefore = presenter.calls.count
+        controller.performShortcutAction(.toggleRomanization)
+        XCTAssertTrue(
+            presenter.calls.dropFirst(callsBefore).contains {
+                if case .hide = $0 { true } else { false }
+            },
+            "a romanization switch left stale candidates on screen",
+        )
 
-            controller.performShortcutAction(action)
-
-            let newCalls = presenter.calls.dropFirst(callsBefore)
-            XCTAssertTrue(
-                newCalls.contains {
-                    if case .hide = $0 {
-                        true
-                    } else {
-                        false
-                    }
-                },
-                "\(action.label) left stale candidates on screen",
-            )
-        }
+        callsBefore = presenter.calls.count
+        controller.performShortcutAction(.toggleTranslateSwapped)
+        XCTAssertFalse(
+            presenter.calls.dropFirst(callsBefore).contains {
+                if case .hide = $0 { true } else { false }
+            },
+            "a display-only swap must not route through dismissal",
+        )
     }
 
     /// 開啟設定 is handled before any session is consulted, so reaching a

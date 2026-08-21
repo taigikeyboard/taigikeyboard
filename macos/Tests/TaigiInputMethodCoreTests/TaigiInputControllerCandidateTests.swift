@@ -484,6 +484,77 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(session.controller.settings.inputMode, .poj)
     }
 
+    /// The 漢羅 swap keeps the bar UP: it changes how a candidate displays and
+    /// commits, never which candidates exist — dismissing here read as the
+    /// window vanishing on the hotkey (real device, 2026-08-21). The same list
+    /// re-renders with the scripts flipped, and the selection keeps its index.
+    /// Saves and restores the REAL stored swap value around `body`: the toggle
+    /// must land in the same defaults domain the manager's settings provider
+    /// reads — `.standard` — so a suite cannot stand in, and a flip left
+    /// behind would fail unrelated cases on the NEXT run (the
+    /// `savedShortcuts` pattern).
+    private func withRestoredSwapSetting(_ body: () throws -> Void) rethrows {
+        let swappedKey = SettingsStore.Keys.isTranslateSwapped.name
+        let savedSwapped = UserDefaults.standard.object(forKey: swappedKey)
+        defer {
+            if let savedSwapped {
+                UserDefaults.standard.set(savedSwapped, forKey: swappedKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: swappedKey)
+            }
+        }
+        try body()
+    }
+
+    func testTogglingTranslateSwapped_rerendersTheBarInPlace() throws {
+        try withRestoredSwapSetting { try togglingTranslateSwappedRerendersTheBarInPlace() }
+    }
+
+    private func togglingTranslateSwappedRerendersTheBarInPlace() throws {
+        let session = try composedSession()
+        _ = try session.controller.handle(Self.arrowEvent(.rightArrow), client: session.client)
+        let before = try XCTUnwrap(session.presenter.shownContent).cells
+        let keptIndex = session.presenter.selectedIndex
+        let swappedBefore = session.controller.settings.isTranslateSwapped
+        let callsBefore = session.presenter.calls.count
+
+        session.controller.performShortcutAction(.toggleTranslateSwapped)
+
+        XCTAssertEqual(session.controller.settings.isTranslateSwapped, !swappedBefore)
+        XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-only flip")
+        XCTAssertFalse(
+            session.presenter.calls.dropFirst(callsBefore)
+                .contains { if case .hide = $0 { true } else { false } },
+            "a swap must not route through dismissal",
+        )
+        XCTAssertEqual(session.presenter.selectedIndex, keptIndex)
+        let after = try XCTUnwrap(session.presenter.shownContent).cells
+        XCTAssertEqual(after.count, before.count)
+        for (befores, afters) in zip(before, after) where befores.annotation != nil {
+            XCTAssertEqual(afters.text, befores.annotation, "primary and annotation must flip")
+            XCTAssertEqual(afters.annotation, befores.text)
+        }
+    }
+
+    /// With a composition but no bar on screen, the swap flips the setting and
+    /// nothing else — no window may appear from a hotkey.
+    func testTogglingTranslateSwapped_withNoBar_showsNothing() throws {
+        try withRestoredSwapSetting {
+            let session = try composedSession()
+            session.controller.hidePalettes()
+            XCTAssertFalse(session.presenter.isShowing)
+            let callsBefore = session.presenter.calls.count
+
+            session.controller.performShortcutAction(.toggleTranslateSwapped)
+
+            XCTAssertFalse(session.presenter.isShowing)
+            XCTAssertEqual(
+                session.presenter.calls.count, callsBefore,
+                "a hotkey with no bar on screen must not touch the presenter",
+            )
+        }
+    }
+
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {
         let session = try composedSession()
 

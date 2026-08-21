@@ -394,6 +394,7 @@ final class RecordingEffectExecutor: ComposingEffectExecutor {
 final class RecordingCandidatePresenter: CandidatePresenter {
     enum Call: Equatable {
         case show(CandidateWindowContent, caretRect: CGRect)
+        case updateCells([CandidateCellContent], isOwner: Bool)
         case navigate(CandidateNavigation)
         case hide(isOwner: Bool)
         case hideForHandover
@@ -430,6 +431,15 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         cells = content.cells
         selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
+    }
+
+    func updateCells(_ newCells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
+        calls.append(.updateCells(newCells, isOwner: self.owner == owner))
+        // The real panel's contract: content changes in place, the window
+        // stays up, and the selection keeps its absolute index (clamped).
+        guard self.owner == owner, !cells.isEmpty, !newCells.isEmpty else { return }
+        cells = newCells
+        selectedIndex = min(selectedIndex, cells.count - 1)
     }
 
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {
