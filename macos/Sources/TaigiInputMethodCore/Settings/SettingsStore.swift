@@ -254,14 +254,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         /// default; a stored empty string means the user cleared the row, which
         /// is why the two cannot be collapsed.
         static let clearedComposingChord = ""
-
-        /// Marks that the day-one behaviour settings have been folded into the
-        /// per-action chords, so `ComposingShortcutMigration` runs once rather
-        /// than re-deriving over the user's later edits every launch.
-        static let composingShortcutSchema = SettingsKey(
-            name: "composingShortcutSchema",
-            defaultValue: 0,
-        )
     }
 
     private let userDefaults: UserDefaults

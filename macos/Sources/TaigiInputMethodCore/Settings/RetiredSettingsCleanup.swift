@@ -4,11 +4,12 @@ import Foundation
 import KeyboardShortcuts
 
 /// Clears what older builds persisted for settings this build no longer
-/// exposes (the 2026-08-21 trim: the 括號標注 and 顯示羅馬字候選 toggles, their
-/// hotkeys, and the 揣辭典 pane), so an upgraded install behaves like a fresh
-/// one. Idempotent, and run every launch rather than behind a version flag:
-/// removing an absent key is free, and re-clearing also catches a manual
-/// `defaults write` that would otherwise resurrect hidden state.
+/// exposes — the 2026-08-21 trim (the 括號標注 and 顯示羅馬字候選 toggles, their
+/// hotkeys, and the 揣辭典 pane) and the first shape of the composing-key
+/// settings — so an upgraded install behaves like a fresh one. Idempotent, and
+/// run every launch rather than behind a version flag: removing an absent key
+/// is free, and re-clearing also catches a manual `defaults write` that would
+/// otherwise resurrect hidden state.
 ///
 /// The engine still reads the two settings keys — they are cross-platform
 /// contract, and the composing carrier encodes them either way — so a stored
@@ -31,9 +32,27 @@ enum RetiredSettingsCleanup {
     /// fallback is framework behaviour this codebase has not pinned.
     private static let retiredPaneRawValue = "dictionarySearch"
 
+    /// The first shape of the composing-key settings, which described what a
+    /// key does rather than which key does a job (`ComposingAction`).
+    ///
+    /// Nothing reads them any more, so a stored value changes no behaviour —
+    /// they are cleared to keep the domain honest, and because a later setting
+    /// reusing one of these names would inherit a value nobody chose for it.
+    /// Not migrated: the shape they replaced never shipped in a release, so the
+    /// only installs that can hold one are builds from main.
+    private static let retiredComposingKeyNames = [
+        "returnKeyBehavior",
+        "spaceKeyBehavior",
+        "bracketPagingBehavior",
+        "tabCycleBehavior",
+    ]
+
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.removeObject(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        for name in retiredComposingKeyNames {
+            userDefaults.removeObject(forKey: name)
+        }
         if userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name)
             == retiredPaneRawValue {
             userDefaults.removeObject(forKey: SettingsStore.Keys.selectedSettingsPane.name)
