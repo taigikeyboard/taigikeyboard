@@ -55,8 +55,8 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     override var isEmpty: Bool { cells.isEmpty }
 
-    override init(style: CandidateWindowStyle) {
-        super.init(style: style)
+    override init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
+        super.init(style: style, metrics: metrics)
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.drawsBackground = false
@@ -107,7 +107,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     // MARK: - Content
 
-    private var rowHeight: CGFloat { CandidateItemView.Metrics.itemHeight + Self.separatorHeight }
+    private var rowHeight: CGFloat { metrics.itemHeight + Self.separatorHeight }
 
     override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
@@ -190,15 +190,15 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         removeRowViews()
         guard !cells.isEmpty else { return .zero }
 
-        let itemHeight = CandidateItemView.Metrics.itemHeight
+        let itemHeight = metrics.itemHeight
         let hasOverflow = cells.count > Self.visibleRows
 
         // Width: the widest displayed cell, floored at one slot and capped so
         // one long phrase cannot stretch the window across the screen.
-        let widest = cells.map(CandidateItemView.measureWidth).max() ?? 0
+        let widest = cells.map(metrics.measureWidth).max() ?? 0
         let contentWidth = min(
-            max(widest, CandidateItemView.baseWidth),
-            CandidateItemView.baseWidth * Self.maxContentColumns,
+            max(widest, metrics.baseWidth),
+            metrics.baseWidth * Self.maxContentColumns,
         )
         let geometry = scrollerGeometry(contentWidth: contentWidth, hasOverflow: hasOverflow)
 
@@ -208,11 +208,11 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // column — clamped to what the capped window can actually hold, since
         // a column wider than the cell would push text past its edge.
         let widestPrimary = cells
-            .map { CandidateItemView.measurePrimaryWidth($0.text) }
+            .map { metrics.measurePrimaryWidth($0.text) }
             .max() ?? 0
         let primaryColumnWidth = min(
             widestPrimary,
-            CandidateItemView.maximumPrimaryColumnWidth(
+            metrics.maximumPrimaryColumnWidth(
                 inCellWidth: geometry.itemWidth,
                 trailingInset: geometry.itemTrailing,
             ),
@@ -231,7 +231,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         rowsContainer.frame.size = NSSize(width: geometry.itemWidth, height: naturalContentHeight)
 
         for (index, cell) in cells.enumerated() {
-            let item = CandidateItemView(style: style)
+            let item = CandidateItemView(style: style, metrics: metrics)
             item.absoluteIndex = index
             item.highlightColor = highlightColor
             item.trailingInset = geometry.itemTrailing
@@ -247,7 +247,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         }
         for index in 0 ..< max(cells.count - 1, 0) {
             let separator = CandidateSeparatorView()
-            separator.horizontalInset = style == .tahoe ? 8 : 0
+            separator.horizontalInset = style == .tahoe ? metrics.tahoeSeparatorInset : 0
             separator.frame = NSRect(
                 x: 0, y: yForRow(index) + itemHeight,
                 width: geometry.itemWidth, height: Self.separatorHeight,
@@ -276,7 +276,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         contentWidth: CGFloat,
         hasOverflow: Bool,
     ) -> (windowWidth: CGFloat, itemWidth: CGFloat, itemTrailing: CGFloat) {
-        let naturalPadding = CandidateItemView.Metrics.horizontalPadding
+        let naturalPadding = metrics.horizontalPadding
         guard hasOverflow else { return (contentWidth, contentWidth, naturalPadding) }
         if NSScroller.preferredScrollerStyle == .legacy {
             let scrollerWidth = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
@@ -320,7 +320,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     }
 
     private func ensureSelectionVisible() {
-        let itemHeight = CandidateItemView.Metrics.itemHeight
+        let itemHeight = metrics.itemHeight
         let rowTop = yForRow(selectedIndex)
         let rowBottom = rowTop + itemHeight
         let viewport = scrollView.contentView.bounds

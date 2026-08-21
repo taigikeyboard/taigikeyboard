@@ -59,8 +59,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     override var isEmpty: Bool { cells.isEmpty }
 
-    override init(style: CandidateWindowStyle) {
-        super.init(style: style)
+    override init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
+        super.init(style: style, metrics: metrics)
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.drawsBackground = false
@@ -83,7 +83,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             rowHighlightView = highlight
         }
 
-        chevronView = CandidateChevronView(style: style)
+        chevronView = CandidateChevronView(style: style, metrics: metrics)
         chevronView.onClick = { [weak self] in
             guard let self, !isAnimating, displayMode == .collapsed, hasOverflow else { return }
             expand(animated: true)
@@ -119,7 +119,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     // MARK: - Content
 
-    private var itemHeight: CGFloat { CandidateItemView.Metrics.itemHeight }
+    private var itemHeight: CGFloat { metrics.itemHeight }
     private var rowHeight: CGFloat { itemHeight + Self.separatorHeight }
     /// Whether the list holds more than the collapsed row shows — what the
     /// chevron, the pill corner and the expand paths all key on.
@@ -128,7 +128,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
-        measuredWidths = cells.map(CandidateItemView.measureWidth)
+        measuredWidths = cells.map(metrics.measureWidth)
         selectedIndex = 0
         return rebuildCollapsed()
     }
@@ -163,9 +163,9 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
         collapsedRow = HorizontalPageLayout.pack(
             widths: measuredWidths,
-            slotWidth: CandidateItemView.baseWidth,
+            slotWidth: metrics.baseWidth,
         ).pages.first ?? []
-        expandedColumnWidth = CandidateItemView.baseWidth
+        expandedColumnWidth = metrics.baseWidth
             * CGFloat(max(HorizontalPageLayout.pageSize, HorizontalPageLayout.minimumPageColumns))
             / CGFloat(expandedColumnCount)
 
@@ -196,7 +196,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func makeItem(candidateIndex: Int) -> CandidateItemView {
-        let item = CandidateItemView(style: style)
+        let item = CandidateItemView(style: style, metrics: metrics)
         item.absoluteIndex = candidateIndex
         item.highlightColor = highlightColor
         item.configure(cells[candidateIndex])
@@ -451,7 +451,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         let needed = max(grid.rows.count - 1, 0)
         while separatorViews.count < needed {
             let separator = CandidateSeparatorView()
-            separator.horizontalInset = style == .tahoe ? 8 : 0
+            separator.horizontalInset = style == .tahoe ? metrics.tahoeSeparatorInset : 0
             rowsContainer.addSubview(separator, positioned: .above, relativeTo: rowHighlightView)
             separatorViews.append(separator)
         }

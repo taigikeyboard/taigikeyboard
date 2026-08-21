@@ -5,8 +5,9 @@ import AppKit
 /// The page-turn control at the right edge of a paged horizontal window,
 /// ported from MacishType's `MacishPageArrowView` (`references/MacishType/
 /// macos/MacishType/MacishCandidateWindow/MacishPageArrowView.swift`; MIT,
-/// © 2026 Luke Chang) at the fixed 16pt font metrics — the font-size scaling
-/// is dropped with the setting that drove it.
+/// © 2026 Luke Chang). Base values are upstream's at 16pt; the symbols and the
+/// width they reserve follow the text scale, as upstream scales them
+/// (`MacishPageArrowView.swift:80-90`).
 final class CandidatePageArrowView: NSView {
     var onPageUp: (() -> Void)?
     var onPageDown: (() -> Void)?
@@ -25,12 +26,25 @@ final class CandidatePageArrowView: NSView {
     private let upImageView: NSImageView
     private let downImageView: NSImageView
 
-    private static let spacing: CGFloat = 4
-    private static let imageWidth: CGFloat = 16
-    private static let padding: CGFloat = 7
+    private static let baseSpacing: CGFloat = 4
+    private static let baseImageWidth: CGFloat = 16
+    private static let basePadding: CGFloat = 7
+    private static let baseSymbolPointSize: CGFloat = 8
+    /// How far the two arrows sit either side of the centre line at 16pt.
+    private static let baseUpOffset: CGFloat = -3
+    private static let baseDownOffset: CGFloat = 4
 
-    init(style: CandidateWindowStyle) {
-        let configuration = NSImage.SymbolConfiguration(pointSize: 8, weight: .medium)
+    private let spacing: CGFloat
+    private let imageWidth: CGFloat
+    private let padding: CGFloat
+
+    init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
+        spacing = metrics.scaledSymbolMetric(Self.baseSpacing)
+        imageWidth = metrics.scaledSymbolMetric(Self.baseImageWidth)
+        padding = metrics.scaledSymbolMetric(Self.basePadding)
+        let configuration = NSImage.SymbolConfiguration(
+            pointSize: metrics.scaledSymbolMetric(Self.baseSymbolPointSize), weight: .medium,
+        )
         upImageView = NSImageView(
             image: NSImage(systemSymbolName: "chevron.up", accessibilityDescription: nil)!
                 .withSymbolConfiguration(configuration)!,
@@ -61,19 +75,23 @@ final class CandidatePageArrowView: NSView {
             // Tahoe's capsule window insets the separator so it does not touch
             // the curved edge; Sequoia's runs full height.
             separator.heightAnchor.constraint(
-                equalTo: heightAnchor, constant: style == .tahoe ? -8 : 0,
+                equalTo: heightAnchor, constant: style == .tahoe ? -metrics.tahoeSeparatorInset : 0,
             ),
             upImageView.leadingAnchor.constraint(
-                equalTo: separator.trailingAnchor, constant: Self.spacing,
+                equalTo: separator.trailingAnchor, constant: spacing,
             ),
-            upImageView.widthAnchor.constraint(equalToConstant: Self.imageWidth),
+            upImageView.widthAnchor.constraint(equalToConstant: imageWidth),
             upImageView.trailingAnchor.constraint(
-                equalTo: trailingAnchor, constant: -Self.padding,
+                equalTo: trailingAnchor, constant: -padding,
             ),
-            upImageView.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -3),
+            upImageView.centerYAnchor.constraint(
+                equalTo: centerYAnchor, constant: metrics.scaledSymbolMetric(Self.baseUpOffset),
+            ),
             downImageView.leadingAnchor.constraint(equalTo: upImageView.leadingAnchor),
             downImageView.widthAnchor.constraint(equalTo: upImageView.widthAnchor),
-            downImageView.centerYAnchor.constraint(equalTo: centerYAnchor, constant: 4),
+            downImageView.centerYAnchor.constraint(
+                equalTo: centerYAnchor, constant: metrics.scaledSymbolMetric(Self.baseDownOffset),
+            ),
         ])
     }
 
@@ -82,7 +100,7 @@ final class CandidatePageArrowView: NSView {
 
     override var intrinsicContentSize: NSSize {
         NSSize(
-            width: 1 + Self.spacing + Self.imageWidth + Self.padding,
+            width: 1 + spacing + imageWidth + padding,
             height: NSView.noIntrinsicMetric,
         )
     }

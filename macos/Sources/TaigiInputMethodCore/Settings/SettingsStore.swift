@@ -218,6 +218,23 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "candidateAppearanceMode",
             defaultValue: CandidateAppearanceMode.auto,
         )
+
+        /// How big the candidate text renders. Presentation-only like
+        /// `candidateLayout`. The default is one step above the size the
+        /// window originally rendered at (USER 2026-08-21) — `small`
+        /// reproduces the original exactly.
+        static let candidateTextSize = SettingsKey(
+            name: "candidateTextSize",
+            defaultValue: CandidateTextSizeChoice.medium,
+        )
+
+        /// How much air the candidate window puts around its text, as a
+        /// multiplier over the cell paddings. Default enlarged like
+        /// `candidateTextSize`.
+        static let candidateWindowSize = SettingsKey(
+            name: "candidateWindowSize",
+            defaultValue: CandidateWindowSizeChoice.medium,
+        )
     }
 
     private let userDefaults: UserDefaults
@@ -303,6 +320,27 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         userDefaults.string(forKey: Keys.candidateAppearanceMode.name)
             .flatMap(CandidateAppearanceMode.init(rawValue:))
             ?? Keys.candidateAppearanceMode.defaultValue
+    }
+
+    /// The candidate text size, live-read like the rest.
+    var candidateTextSize: CandidateTextSizeChoice {
+        userDefaults.string(forKey: Keys.candidateTextSize.name)
+            .flatMap(CandidateTextSizeChoice.init(rawValue:))
+            ?? Keys.candidateTextSize.defaultValue
+    }
+
+    /// The candidate window's chrome size, live-read like the rest.
+    var candidateWindowSize: CandidateWindowSizeChoice {
+        userDefaults.string(forKey: Keys.candidateWindowSize.name)
+            .flatMap(CandidateWindowSizeChoice.init(rawValue:))
+            ?? Keys.candidateWindowSize.defaultValue
+    }
+
+    /// The metrics the candidate window renders at. The one place both size
+    /// choices are resolved together, so no caller has to know that the window
+    /// is sized by two settings rather than one.
+    var candidateMetrics: CandidateMetrics {
+        CandidateMetrics(textSize: candidateTextSize, windowSize: candidateWindowSize)
     }
 
     /// The romanization being typed. A stored value that names no mode — a

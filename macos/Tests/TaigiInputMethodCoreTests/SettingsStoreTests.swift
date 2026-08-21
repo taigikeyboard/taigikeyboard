@@ -195,6 +195,41 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateAppearanceMode, .auto, "unknown values fall back to 自動")
     }
 
+    /// The two size rows default one step above the metrics the window
+    /// originally rendered at (USER 2026-08-21), so an install that never
+    /// touched them gets the larger window — 細 is the way back.
+    func testCandidateSizes_withNothingStored_areTheEnlargedDefaults() {
+        let store = makeStore()
+
+        XCTAssertEqual(store.candidateTextSize, .medium)
+        XCTAssertEqual(store.candidateWindowSize, .medium)
+        XCTAssertEqual(
+            store.candidateMetrics,
+            CandidateMetrics(textSize: .medium, windowSize: .medium),
+        )
+    }
+
+    func testCandidateSizes_readWhatTheSizePickersWrite() {
+        userDefaults.set(
+            CandidateTextSizeChoice.extraLarge.rawValue,
+            forKey: SettingsStore.Keys.candidateTextSize.name,
+        )
+        userDefaults.set(
+            CandidateWindowSizeChoice.small.rawValue,
+            forKey: SettingsStore.Keys.candidateWindowSize.name,
+        )
+        XCTAssertEqual(makeStore().candidateTextSize, .extraLarge)
+        XCTAssertEqual(makeStore().candidateWindowSize, .small)
+    }
+
+    func testCandidateSizes_withUnknownStoredValues_fallBackToTheDefaults() {
+        userDefaults.set("gigantic", forKey: SettingsStore.Keys.candidateTextSize.name)
+        userDefaults.set("gigantic", forKey: SettingsStore.Keys.candidateWindowSize.name)
+
+        XCTAssertEqual(makeStore().candidateTextSize, .medium)
+        XCTAssertEqual(makeStore().candidateWindowSize, .medium)
+    }
+
     func testCandidateAccentColor_readsWhatTheSwatchRowWrites() {
         userDefaults.set(
             CandidateAccentChoice.graphite.rawValue,

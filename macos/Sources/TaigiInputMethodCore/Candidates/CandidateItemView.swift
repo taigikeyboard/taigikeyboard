@@ -12,85 +12,12 @@ import AppKit
 /// candidate is noise the reader has to look past (USER 2026-08-21).
 ///
 /// The annotation column is upstream's, and carries the candidate's other
-/// script — see `CandidateCellContent`.
+/// script — see `CandidateCellContent`. The metrics the cell renders at are
+/// fixed at construction (`CandidateMetrics`): the constraints below capture
+/// them, so a size change rebuilds cells rather than mutating them.
 final class CandidateItemView: NSView {
-    /// Fixed metrics at the one font size this window renders. Upstream scales
-    /// them off a configurable font size; this input method has no font-size
-    /// setting, so the scaling machinery would be dead weight.
-    enum Metrics {
-        static let candidateFontSize: CGFloat = 16
-        static let annotationFontSize: CGFloat = 12
-        static let candidateAnnotationGap: CGFloat = 11
-        /// Equal on both sides, so the candidate sits centred in its own cell —
-        /// the same 9 points upstream lands on with its index column switched
-        /// off (`MacishCandidateItemView.effectiveGap`).
-        static let horizontalPadding: CGFloat = 9
-        static let verticalPadding: CGFloat = 12
-
-        static var itemHeight: CGFloat { candidateFontSize + verticalPadding }
-    }
-
-    /// The narrowest a cell renders: enough for one full-width glyph and no
-    /// annotation. Measured rather than assumed equal to the font size, because
-    /// a full-width advance can round up past it on some macOS versions — and
-    /// the packing budget (`HorizontalPageLayout`) must agree with
-    /// `measureWidth` about minimums or a page drops a column.
-    @MainActor
-    static let baseWidth: CGFloat = {
-        2 * Metrics.horizontalPadding + primaryColumnFloor
-    }()
-
-    /// The candidate column never renders narrower than one full-width glyph,
-    /// which is what keeps single-character cells from collapsing.
-    @MainActor
-    private static let primaryColumnFloor: CGFloat = {
-        max(Metrics.candidateFontSize, measurePrimaryWidth("永"))
-    }()
-
-    /// The width the cell wants for `cell`. Static and font-based rather than
-    /// going through a template view: with fixed chrome widths, the sum IS the
-    /// fitting size, and a shared template view would drag its Auto Layout
-    /// state into every measurement.
-    @MainActor
-    static func measureWidth(_ cell: CandidateCellContent) -> CGFloat {
-        Metrics.horizontalPadding
-            + max(primaryColumnFloor, measurePrimaryWidth(cell.text))
-            + annotationWidth(cell.annotation)
-            + Metrics.horizontalPadding
-    }
-
-    /// The candidate column's width for `text` alone — what the vertical layout
-    /// aligns its rows on, so every annotation in the column starts at the same
-    /// x. Measured at the candidate font, never the annotation's.
-    @MainActor
-    static func measurePrimaryWidth(_ text: String) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: Metrics.candidateFontSize)
-        return ceil((text as NSString).size(withAttributes: [.font: font]).width)
-    }
-
-    /// The widest the candidate column can be in a cell `cellWidth` points
-    /// across, leaving the leading padding and `trailingInset` their room. A layout that
-    /// aligns a column across rows clamps to this: a column wider than the cell
-    /// cannot be honoured, and asking for it anyway would push the text past
-    /// the cell's edge.
-    @MainActor
-    static func maximumPrimaryColumnWidth(inCellWidth cellWidth: CGFloat, trailingInset: CGFloat) -> CGFloat {
-        max(Metrics.candidateFontSize, cellWidth - Metrics.horizontalPadding - trailingInset)
-    }
-
-    /// The gap plus the annotation itself, or nothing at all when there is no
-    /// annotation — an absent second script must cost the cell no width. An
-    /// empty string counts as absent, the way `CandidateCellContent` reads it:
-    /// charging the gap for it would reserve room beside nothing.
-    @MainActor
-    static func annotationWidth(_ annotation: String?) -> CGFloat {
-        guard let annotation, !annotation.isEmpty else { return 0 }
-        let font = NSFont.systemFont(ofSize: Metrics.annotationFontSize)
-        let text = ceil((annotation as NSString).size(withAttributes: [.font: font]).width)
-        return Metrics.candidateAnnotationGap + text
-    }
-
     let style: CandidateWindowStyle
+    private let metrics: CandidateMetrics
     /// Tahoe insets the highlight into a pill; Sequoia paints the whole cell.
     private var contentInset: CGFloat { style == .tahoe ? 2 : 0 }
     /// Tahoe's pill: a separate view under the labels, so the cell's own layer
@@ -129,8 +56,9 @@ final class CandidateItemView: NSView {
     }
 
     /// Extra room the row leaves at its right edge — the vertical layout widens
-    /// it so text stays clear of an overlay scroller.
-    var trailingInset: CGFloat = Metrics.horizontalPadding {
+    /// it so text stays clear of an overlay scroller. Starts at the metrics'
+    /// horizontal padding, which is also what the constraint is built from.
+    var trailingInset: CGFloat {
         didSet {
             guard trailingInset != oldValue else { return }
             trailingConstraint.constant = -trailingInset
@@ -147,8 +75,10 @@ final class CandidateItemView: NSView {
     /// vertical layout's rows align their annotations on one x.
     private var primaryColumnWidthConstraint: NSLayoutConstraint!
 
-    init(style: CandidateWindowStyle) {
+    init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
+        self.metrics = metrics
+        trailingInset = metrics.horizontalPadding
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = true
         wantsLayer = true
@@ -161,11 +91,11 @@ final class CandidateItemView: NSView {
             highlightView = pill
         }
 
-        candidateLabel.font = .systemFont(ofSize: Metrics.candidateFontSize)
+        candidateLabel.font = .systemFont(ofSize: metrics.candidateFontSize)
         candidateLabel.lineBreakMode = .byTruncatingTail
         candidateLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        annotationLabel.font = .systemFont(ofSize: Metrics.annotationFontSize)
+        annotationLabel.font = .systemFont(ofSize: metrics.annotationFontSize)
         annotationLabel.lineBreakMode = .byTruncatingTail
         annotationLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -181,7 +111,7 @@ final class CandidateItemView: NSView {
         addSubview(annotationLabel)
 
         trailingConstraint = annotationLabel.trailingAnchor.constraint(
-            lessThanOrEqualTo: trailingAnchor, constant: -Metrics.horizontalPadding,
+            lessThanOrEqualTo: trailingAnchor, constant: -trailingInset,
         )
         annotationGapConstraint = annotationLabel.leadingAnchor.constraint(
             equalTo: candidateLabel.trailingAnchor, constant: 0,
@@ -190,7 +120,7 @@ final class CandidateItemView: NSView {
         annotationZeroWidthConstraint.priority = .defaultHigh
         annotationZeroWidthConstraint.isActive = true
         primaryColumnWidthConstraint = candidateLabel.widthAnchor.constraint(
-            greaterThanOrEqualToConstant: Metrics.candidateFontSize,
+            greaterThanOrEqualToConstant: metrics.candidateFontSize,
         )
         // Column alignment is a preference, not a promise: in a cell clamped
         // narrower than the column wants (the horizontal packer's row limit,
@@ -200,7 +130,7 @@ final class CandidateItemView: NSView {
 
         NSLayoutConstraint.activate([
             candidateLabel.leadingAnchor.constraint(
-                equalTo: leadingAnchor, constant: Metrics.horizontalPadding,
+                equalTo: leadingAnchor, constant: metrics.horizontalPadding,
             ),
             candidateLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             primaryColumnWidthConstraint,
@@ -222,7 +152,7 @@ final class CandidateItemView: NSView {
         // across renumbering, so a cell that had an annotation and now has none
         // must give the width back — and the reverse must take it again.
         let hasAnnotation = cell.annotation != nil
-        annotationGapConstraint.constant = hasAnnotation ? Metrics.candidateAnnotationGap : 0
+        annotationGapConstraint.constant = hasAnnotation ? metrics.candidateAnnotationGap : 0
         if annotationZeroWidthConstraint.isActive == hasAnnotation {
             annotationZeroWidthConstraint.isActive = !hasAnnotation
         }
@@ -234,7 +164,7 @@ final class CandidateItemView: NSView {
     /// (`MacishVerticalPanel.swift:119-131`). Ignored when narrower than the
     /// one-glyph floor.
     func setPrimaryColumnWidth(_ width: CGFloat) {
-        let target = max(Metrics.candidateFontSize, width)
+        let target = max(metrics.candidateFontSize, width)
         guard primaryColumnWidthConstraint.constant != target else { return }
         primaryColumnWidthConstraint.constant = target
     }

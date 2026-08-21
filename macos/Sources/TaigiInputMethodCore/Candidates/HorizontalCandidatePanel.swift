@@ -19,7 +19,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
 
     private var itemViews: [CandidateItemView] = []
     private lazy var pageArrowView: CandidatePageArrowView = {
-        let view = CandidatePageArrowView(style: style)
+        let view = CandidatePageArrowView(style: style, metrics: metrics)
         view.onPageUp = { [weak self] in self?.navigate(.pageUp) }
         view.onPageDown = { [weak self] in self?.navigate(.pageDown) }
         contentContainer.addSubview(view)
@@ -39,8 +39,8 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
         pageLayout = HorizontalPageLayout.pack(
-            widths: cells.map(CandidateItemView.measureWidth),
-            slotWidth: CandidateItemView.baseWidth,
+            widths: cells.map(metrics.measureWidth),
+            slotWidth: metrics.baseWidth,
         )
         selectedIndex = 0
         currentPage = 0
@@ -96,11 +96,11 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
 
         guard pageLayout.pages.indices.contains(currentPage) else { return .zero }
         let page = pageLayout.pages[currentPage]
-        let itemHeight = CandidateItemView.Metrics.itemHeight
+        let itemHeight = metrics.itemHeight
 
         var x: CGFloat = 0
         for slot in page {
-            let item = CandidateItemView(style: style)
+            let item = CandidateItemView(style: style, metrics: metrics)
             item.absoluteIndex = slot.candidateIndex
             item.highlightColor = highlightColor
             item.configure(cells[slot.candidateIndex])
@@ -127,7 +127,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         // edge does not wander left and right as the pages turn.
         let contentWidth = max(
             x,
-            CandidateItemView.baseWidth
+            metrics.baseWidth
                 * CGFloat(max(HorizontalPageLayout.pageSize, HorizontalPageLayout.minimumPageColumns)),
         )
         let arrowWidth = pageArrowView.intrinsicContentSize.width
