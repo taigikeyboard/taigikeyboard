@@ -1,6 +1,7 @@
 // What the recording field shows, and when.
 
 import AppKit
+import KeyboardShortcuts
 @testable import TaigiInputMethodCore
 import XCTest
 
@@ -75,5 +76,52 @@ final class ComposingKeyRecorderTests: XCTestCase {
     func testAnEmptyRow_promptsToRecord() {
         XCTAssertEqual(field.stringValue, "")
         XCTAssertEqual(field.placeholderString, "無設定")
+    }
+
+    /// The regression the arming hook moved for: recording must be armed by
+    /// FOCUS, not by the editing session — `controlTextDidBeginEditing` only
+    /// fires on the first text change, which loses the first key press. With
+    /// no window, focus is refused outright (a SwiftUI hierarchy still
+    /// assembling itself).
+    func testBecomingFirstResponder_withoutAWindow_isRefused() {
+        let detached = ComposingKeyRecorderField()
+
+        XCTAssertFalse(detached.becomeFirstResponder())
+    }
+
+    /// The window's initial key-view pass must walk past the field — a pane
+    /// that started recording into its first row unasked would swallow every
+    /// key. One runloop turn later the user's own click or Tab lands.
+    func testInitialKeyViewFocus_isRefused_untilTheNextRunloopTurn() {
+        XCTAssertFalse(field.canBecomeKeyView, "the initial key-view pass must pass by")
+
+        let turn = expectation(description: "next runloop turn")
+        DispatchQueue.main.async { turn.fulfill() }
+        wait(for: [turn], timeout: 1)
+
+        XCTAssertTrue(field.canBecomeKeyView, "the user's own click or Tab must land")
+    }
+
+    /// A chord that collides with a live global hotkey must be recorded, not
+    /// acted on: the hotkeys are off for exactly the recording session.
+    func testRecording_pausesTheGlobalHotkeys() {
+        field.beginRecording()
+        XCTAssertFalse(KeyboardShortcuts.isEnabled)
+
+        field.endRecording()
+        XCTAssertTrue(KeyboardShortcuts.isEnabled)
+    }
+
+    /// Teardown has several entry points — editing end, window resign, view
+    /// detach — that overlap on one exit and also fire with no session live.
+    /// The global pause must pair one begin to one end regardless.
+    func testTeardownEntryPoints_maySafelyOverlap() {
+        field.endRecording()
+        XCTAssertTrue(KeyboardShortcuts.isEnabled, "an idle teardown must not touch a session it never had")
+
+        field.beginRecording()
+        field.endRecording()
+        field.endRecording()
+        XCTAssertTrue(KeyboardShortcuts.isEnabled, "a doubled teardown ends the session once")
     }
 }

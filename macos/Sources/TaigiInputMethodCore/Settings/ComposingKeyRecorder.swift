@@ -78,6 +78,21 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     private var eventMonitor: Any?
     private var cancelButtonCell: NSButtonCell?
 
+    /// Refuses the initial key-view focus a window hands out when it opens or
+    /// becomes key, without refusing the click or Tab that comes after — the
+    /// same gate the global recorders run (`RecorderCocoa.canBecomeKeyView`).
+    /// Without it, opening the pane would focus the first composing field and
+    /// start recording into it unasked.
+    private var canBecomeKey = false
+
+    /// Whether a recording session is live. Teardown has several entry
+    /// points — editing end, window resign, view detach — that can fire for
+    /// one session or for none; this is what keeps the global side effects
+    /// (the hotkey pause) paired one begin to one end.
+    private var isRecordingSession = false
+    private var windowDidResignKeyObserver: NSObjectProtocol?
+    private var windowDidBecomeKeyObserver: NSObjectProtocol?
+
     init() {
         super.init(frame: NSRect(x: 0, y: 0, width: Self.minimumWidth, height: 24))
         alignment = .center
@@ -100,7 +115,10 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     }
 
     deinit {
-        MainActor.assumeIsolated { stopMonitoring() }
+        MainActor.assumeIsolated {
+            stopMonitoring()
+            removeWindowObservers()
+        }
     }
 
     override var intrinsicContentSize: NSSize {
@@ -115,21 +133,37 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         set { (cell as? NSSearchFieldCell)?.cancelButtonCell = newValue ? cancelButtonCell : nil }
     }
 
-    /// Recording starts and ends with the field's EDITING session, not with
-    /// `becomeFirstResponder`/`resignFirstResponder`: a text field's first
-    /// responder is its field editor, so the field itself is never asked to
-    /// resign, and the editor is only attached once editing has begun. Same
-    /// hook upstream uses (`KeyboardShortcuts.RecorderCocoa`).
-    func controlTextDidBeginEditing(_: Notification) {
+    /// Recording starts the moment FOCUS arrives, not when the editing
+    /// session does: `controlTextDidBeginEditing` is only sent "upon the
+    /// first user input since the text view became the first responder"
+    /// (Cocoa Text Architecture Guide), so a monitor armed there misses the
+    /// very key press it exists to record — a bare letter landed as field
+    /// text, and a modifier chord, which inserts nothing, could never begin
+    /// the session at all. Same hook upstream uses
+    /// (`RecorderCocoa.becomeFirstResponder`).
+    override func becomeFirstResponder() -> Bool {
+        // No window yet means a SwiftUI hierarchy still assembling itself —
+        // upstream's guard, kept for the same reason.
+        guard window != nil else { return false }
+        guard super.becomeFirstResponder() else { return false }
         beginRecording()
+        return true
     }
 
+    override var canBecomeKeyView: Bool { canBecomeKey }
+
+    /// The normal way a session ends: the field editor detaching posts this
+    /// whenever focus leaves, text change or none — only the BEGIN
+    /// notification waits for input. Window resign and view detach
+    /// (`viewDidMoveToWindow`) are the backstop teardowns for the exits that
+    /// never detach an editor; `endRecording` is idempotent so the paths may
+    /// overlap.
     func controlTextDidEndEditing(_: Notification) {
         endRecording()
     }
 
-    /// Split from the delegate callbacks so a test can drive them: an editing
-    /// session only starts on a key window, which a unit test has no reliable
+    /// Split from the responder hooks so a test can drive them: becoming
+    /// first responder needs a key window, which a unit test has no reliable
     /// way to arrange.
     func beginRecording() {
         rejection = nil
@@ -141,13 +175,30 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         placeholderString = language?.string(.macosShortcutRecording) ?? ""
         // No caret: the field takes keys, it does not take text.
         (currentEditor() as? NSTextView)?.insertionPointColor = .clear
+        // The global hotkeys are off while a chord is recorded: this recorder
+        // accepts modifier chords, and one that collides with a live hotkey
+        // must be recorded, not acted on (upstream pauses the same way).
+        // Guarded by the session flag so the pause pairs one begin to one
+        // end whatever order the teardown entry points fire in.
+        if !isRecordingSession {
+            isRecordingSession = true
+            KeyboardShortcuts.isEnabled = false
+        }
         startMonitoring()
     }
 
     func endRecording() {
         stopMonitoring()
+        if isRecordingSession {
+            isRecordingSession = false
+            KeyboardShortcuts.isEnabled = true
+        }
         rejection = nil
         placeholderString = prompt
+        // The field editor is the window's, shared with every text field in
+        // it — a caret hidden for recording must not stay hidden for the next
+        // field that borrows the editor.
+        (currentEditor() as? NSTextView)?.insertionPointColor = .labelColor
         // `showChord`, not `renderChord`: the field editor may still be
         // attached at this point, and the guarded version would skip the very
         // row it is putting back.
@@ -177,10 +228,61 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        removeWindowObservers()
+        guard let window else {
+            // Detached mid-recording — a pane switch tears the view down
+            // without ever ending the editing session, and a monitor that
+            // outlived its window would swallow every key in the app.
+            endRecording()
+            return
+        }
+
         // Resolved here rather than in `init`, which runs before the language
         // store is handed over.
-        if window != nil, currentEditor() == nil {
+        if currentEditor() == nil {
             placeholderString = prompt
+        }
+
+        // A hidden settings window only hides — recording must not survive
+        // the window losing key, and must not start by itself when it gets
+        // key back (same pair upstream installs).
+        windowDidResignKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification, object: window, queue: nil,
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let window = self.window else { return }
+                endRecording()
+                window.makeFirstResponder(nil)
+            }
+        }
+        windowDidBecomeKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification, object: window, queue: nil,
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.preventBecomingKey()
+            }
+        }
+        preventBecomingKey()
+    }
+
+    /// Closes the door for exactly one runloop turn — long enough for the
+    /// window's initial key-view pass to walk past this field, short enough
+    /// that the user's own click or Tab still lands.
+    private func preventBecomingKey() {
+        canBecomeKey = false
+        Task { @MainActor [weak self] in
+            self?.canBecomeKey = true
+        }
+    }
+
+    private func removeWindowObservers() {
+        if let windowDidResignKeyObserver {
+            NotificationCenter.default.removeObserver(windowDidResignKeyObserver)
+            self.windowDidResignKeyObserver = nil
+        }
+        if let windowDidBecomeKeyObserver {
+            NotificationCenter.default.removeObserver(windowDidBecomeKeyObserver)
+            self.windowDidBecomeKeyObserver = nil
         }
     }
 
@@ -199,7 +301,9 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
 
     private func startMonitoring() {
         guard eventMonitor == nil else { return }
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+        eventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown, .leftMouseUp, .rightMouseUp],
+        ) { [weak self] event in
             // An orphaned monitor hands the key back rather than swallowing it:
             // one that outlived its field and ate every keystroke in the window
             // would be far worse than one that records nothing.
@@ -216,6 +320,19 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
 
     /// Nil swallows the key; returning the event lets it through.
     private func handle(_ event: NSEvent) -> NSEvent? {
+        // A click outside the field is the way most people leave one — the
+        // same escape upstream's monitor grants. Handed through so it also
+        // does whatever it was aimed at.
+        if event.type == .leftMouseUp || event.type == .rightMouseUp {
+            let clickPoint = convert(event.locationInWindow, from: nil)
+            let clickMargin = 3.0
+            if !bounds.insetBy(dx: -clickMargin, dy: -clickMargin).contains(clickPoint) {
+                blur()
+                return event
+            }
+            return nil
+        }
+
         // Key repeat is dropped: holding a key would otherwise record it over
         // and over, each time re-running conflict resolution.
         guard !event.isARepeat else { return nil }
