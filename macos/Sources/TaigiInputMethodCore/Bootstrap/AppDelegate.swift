@@ -47,6 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before the handlers register, so nothing re-persists what it clears.
         RetiredSettingsCleanup.run()
 
+        // Before the shadow resolution below: a migrated-in default that
+        // collides with a chord the user recorded elsewhere must land while
+        // the standing conflict policy can still see it.
+        ShortcutDefaultMigration.run()
+
         // The other half of what an upgrade leaves behind: an `initial:` added
         // in a later version installs itself on every install that never
         // recorded that action, including one where the user had already put

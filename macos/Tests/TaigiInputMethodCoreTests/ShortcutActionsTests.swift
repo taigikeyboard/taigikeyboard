@@ -71,19 +71,20 @@ final class ShortcutActionsTests: XCTestCase {
         )
     }
 
-    /// The two mid-sentence switches arrive bound as well: no row in the menu
-    /// or the pane is blank (USER 2026-08-21). ⌃⌘ plus a letter is where a
-    /// Taiwanese input method puts a switch a user flips while typing —
-    /// vChewing binds every one of its toggles that way, and McBopomofo's
-    /// 簡繁轉換 is ⌃⌘G.
-    func testTheSwitches_startBoundToControlCommandLetters() {
+    /// The two mid-sentence switches arrive bound as well: no row in the pane
+    /// is blank (USER 2026-08-21). ⌃⌘R follows vChewing's toggle convention;
+    /// the 漢羅 swap sits on the bare backtick, the classic Taiwanese-IME
+    /// function key — no TL or POJ syllable is spelled with it, and the hotkey
+    /// is armed only while a Taigi session holds the engine
+    /// (USER 2026-08-21).
+    func testTheSwitches_startOnTheirConventionKeys() {
         XCTAssertEqual(
             ShortcutAction.toggleRomanization.defaultShortcut,
             KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command]),
         )
         XCTAssertEqual(
             ShortcutAction.toggleTranslateSwapped.defaultShortcut,
-            KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
+            KeyboardShortcuts.Shortcut(.backtick),
         )
     }
 
