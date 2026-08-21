@@ -1200,13 +1200,20 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
     // return the sorted pool intact so the caller can exclude FULL
     // duplicates BEFORE truncating.
     //
-    // Fixture: 32 high-freq homophones at `tl:hong` (above
-    // `PARTIAL_PREFIX_OUTPUT_CAP = 30`) + one lower-freq strict-prefix
-    // extension at `tl:hongtshia`. The bounded fetcher would return
-    // 30 homophone rows (the extension does not survive the truncate);
-    // the unbounded fetcher returns all 33 sorted rows (32 homophones
-    // + 1 extension) so a caller-side exclude can drop the 32
-    // homophones and surface the 1 extension.
+    // Fixture: typed `hon`, 32 high-freq extensions at `tl:hong` (above
+    // `PARTIAL_PREFIX_OUTPUT_CAP = 30`) + one lower-freq extension at
+    // `tl:honn`. The bounded fetcher would return 30 `hong` rows (the
+    // `honn` row does not survive the truncate); the unbounded fetcher
+    // returns all 33 sorted rows so a caller-side exclude can drop the
+    // 32 and surface the 1.
+    //
+    // Every row is single-syllable on purpose: the syllable-reach rule
+    // (`typed_prefix_reaches_final_syllable`) drops any extension whose
+    // final syllable the typed body never reaches, so a multi-syllable
+    // extension of a one-syllable input can no longer stand in for "the
+    // row the caller must be able to surface". Saturation and the
+    // bounded/unbounded split are what this test is about, and both
+    // reproduce with same-syllable extensions.
     let mut rows: Vec<Row> = (1..=32)
         .map(|i| Row {
             toneless_key: "hong",
@@ -1217,21 +1224,21 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
         })
         .collect();
     rows.push(Row {
-        toneless_key: "hongtshia",
-        hanzi: "風車",
-        tl: "hong-tshia",
-        syll: 2,
+        toneless_key: "honn",
+        hanzi: "好",
+        tl: "hònn",
+        syll: 1,
         freq: 10,
     });
     let (prefix_index, dict) = build_fixture("item10-unbounded-pool", &rows);
 
-    let key = partial_prefix_key_for("hong");
+    let key = partial_prefix_key_for("hon");
     let freq_map = FrequencyMap::new();
     let ctx_neutral = ctx(&freq_map, 0, &[], &prefix_index, &dict);
 
     // Bounded path: truncated to OUTPUT_CAP. The lower-freq extension
     // is squeezed out by the 32 homophones.
-    let bounded = fetch_partial_prefix_candidates(&key, 4, &ctx_neutral);
+    let bounded = fetch_partial_prefix_candidates(&key, 3, &ctx_neutral);
     assert_eq!(
         bounded.len(),
         PARTIAL_PREFIX_OUTPUT_CAP,
@@ -1239,15 +1246,15 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
         bounded.len()
     );
     assert!(
-        !bounded.iter().any(|c| c.display_text == "風車"),
-        "extension `風車`/hong-tshia should NOT survive bounded truncate when 32 \
-         homophones outscore it; got display_texts: {:?}",
+        !bounded.iter().any(|c| c.display_text == "好"),
+        "extension `好`/hònn should NOT survive bounded truncate when 32 \
+         `hong` rows outscore it; got display_texts: {:?}",
         bounded.iter().map(|c| &c.display_text).collect::<Vec<_>>()
     );
 
     // Unbounded path: full pool, no truncate. The extension is present
-    // alongside all 32 homophones for the caller to filter.
-    let unbounded = fetch_partial_prefix_candidates_unbounded(&key, 4, &ctx_neutral);
+    // alongside all 32 `hong` rows for the caller to filter.
+    let unbounded = fetch_partial_prefix_candidates_unbounded(&key, 3, &ctx_neutral);
     assert_eq!(
         unbounded.len(),
         33,
@@ -1255,9 +1262,9 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
         unbounded.len()
     );
     assert!(
-        unbounded.iter().any(|c| c.display_text == "風車"),
-        "extension `風車`/hong-tshia MUST be present in the unbounded pool so \
-         the caller can surface it after excluding FULL-block homophones"
+        unbounded.iter().any(|c| c.display_text == "好"),
+        "extension `好`/hònn MUST be present in the unbounded pool so \
+         the caller can surface it after excluding FULL-block rows"
     );
 }
 

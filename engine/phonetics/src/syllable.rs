@@ -9,6 +9,92 @@ use unicode_normalization::UnicodeNormalization;
 /// Recognises both NFD combining marks and trailing ASCII digits 1..=9.
 /// `tone` is the empty string when no mark is present.
 // 中文: 把聲調符號從字串裡剝出來,回傳 (去聲調 NFC 字串, 聲調數字);辨識 NFD 組合符號跟結尾 ASCII 數字 1..=9。
+/// The `tl_num` face of a record reading — what `dictionary/build` writes into
+/// the `tl_num` column and `create_fst.py` emits as the `tl:<tl_num>` key
+/// family — plus the byte offset each syllable ENDS at in it.
+///
+/// Per syllable: the spelling with its tone mark removed, then the tone digit,
+/// defaulting to 4 on a stop coda and 1 otherwise for a syllable that carries
+/// no mark. That default is the whole reason this is not
+/// [`crate::normalize_input`]: that function only supplies default tones when
+/// the reading carries a mark SOMEWHERE (`should_add_default_tones`), so an
+/// all-tone-1 reading like `kau-kuan` derives `kaukuan` while the column holds
+/// `kau1kuan1`. Verified against `dictionary/output/dictionary.csv`:
+/// 0 divergences over 168,467 rows.
+// 中文: record 讀法的 tl_num 面(建置端 tl_num 欄 / create_fst.py 的 tl:<tl_num> 家族)
+// 中文:   + 每個音節的結束位移。逐音節 = 去調號拼寫 + 聲調數字,未標調者塞音尾補 4、
+// 中文:   其餘補 1。這正是不能用 normalize_input 的原因:它只在「整串某處有調號」時
+// 中文:   才補預設調,故全第一調的 kau-kuan 會得到 kaukuan,而欄位是 kau1kuan1。
+// 中文:   對 dictionary.csv 168,467 列實測 0 筆不符。
+pub fn tl_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
+    num_face(record_tl, SpellingForm::AsWritten)
+}
+
+/// The `poj_num` face of a record reading, plus per-syllable end offsets —
+/// same shape as [`tl_num_syllable_ends_from_tl`] over the POJ rendering.
+///
+/// The one difference is the spelling form: the build pipeline's `poj_num`
+/// column is ASCII-folded (`ⁿ` → `nn`, `o͘` → `oo`, so `khòaⁿ` → `khoann3`)
+/// while its `tl_num` sibling keeps the glyphs (`thò͘-sái` → `tho͘3sai2`).
+/// Folding TL or keeping POJ each costs tens of thousands of divergences;
+/// matching each column's own convention costs none. Verified against
+/// `dictionary/output/dictionary.csv`: 0 divergences over 168,467 rows.
+// 中文: record 讀法的 poj_num 面 + 每個音節的結束位移,形狀同 tl_num 版,差別只在拼寫形式:
+// 中文:   建置端 poj_num 欄是 ASCII 折疊的(ⁿ→nn、o͘→oo,khòaⁿ → khoann3),
+// 中文:   而 tl_num 欄保留原字(thò͘-sái → tho͘3sai2)。把 TL 折疊、或讓 POJ 不折疊,
+// 中文:   各自要付上萬筆不符;各自照該欄慣例則是 0 筆。對 dictionary.csv 168,467 列實測 0 筆不符。
+pub fn poj_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
+    num_face(
+        &crate::api::tl_display_to_poj_display(record_tl),
+        SpellingForm::AsciiFolded,
+    )
+}
+
+/// Which spelling a `*_num` column carries for a syllable.
+// 中文: `*_num` 欄位對音節採用哪一種拼寫形式。
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SpellingForm {
+    AsWritten,
+    AsciiFolded,
+}
+
+fn num_face(reading: &str, form: SpellingForm) -> (String, Vec<u32>) {
+    let mut out = String::with_capacity(reading.len() + 4);
+    let mut ends = Vec::new();
+    for token in crate::tps::tl_syllable_tokens(reading) {
+        let folded;
+        let token = match form {
+            SpellingForm::AsWritten => token,
+            SpellingForm::AsciiFolded => {
+                folded = crate::taigi_unicode_base_form(token);
+                folded.as_str()
+            }
+        };
+        let (bare, tone) = strip_tone_mark(token);
+        let before = out.len();
+        out.push_str(&bare);
+        if tone.is_empty() {
+            // The coda decides the unmarked tone, and it is read off the
+            // ASCII-folded form either way: `koaihⁿ` is tone 1, not tone 4 —
+            // the `h` is part of a nasal `hⁿ`, which folds to `hnn` and ends
+            // in `n`.
+            // 中文: 未標調的調由韻尾決定,一律看 ASCII 折疊形:koaihⁿ 是第一調不是第四調,
+            // 中文:   其 h 屬鼻化 hⁿ,折疊為 hnn 以 n 結尾。
+            let coda = crate::taigi_unicode_base_form(&bare);
+            out.push(match coda.chars().last() {
+                Some('p' | 't' | 'k' | 'h') => '4',
+                _ => '1',
+            });
+        } else {
+            out.push_str(&tone);
+        }
+        if out.len() != before {
+            ends.push(out.len() as u32);
+        }
+    }
+    (out, ends)
+}
+
 pub fn strip_tone_mark(text: &str) -> (String, String) {
     // Fast path: pure-ASCII input cannot carry combining marks. NFD/NFC are
     // no-ops on ASCII, so skip the allocation. This is the common case for

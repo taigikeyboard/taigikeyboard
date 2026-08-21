@@ -1129,6 +1129,10 @@ pub fn fetch_partial_prefix_candidates_unbounded(
                 .map(|rowid| (fst_key.to_string(), rowid))
                 .collect()
         };
+        // Loop-invariant: the family and the typed body's length are the
+        // same for every hydrated row.
+        // 中文: 家族與輸入 body 長度對每一行都相同,迴圈外算一次。
+        let reach = SyllableReach::new(fst_key);
         for (matched_key, rowid) in hits {
             let Some(record) = ctx.dict.record(rowid) else {
                 continue;
@@ -1181,6 +1185,20 @@ pub fn fetch_partial_prefix_candidates_unbounded(
                 if !reading_passes_space_pin(pinned_body, &record.tl) {
                     continue;
                 }
+            }
+            // Syllable reach: a strict-prefix extension may not carry a
+            // syllable the user never typed into (`tsuisi` must not surface
+            // 水社寮 `tsuí-siā-liâu`). Dictionary rows only — the custom-entry
+            // loop below is deliberately exempt (product owner 2026-08-21: a
+            // word the user added themselves stays prefix-visible).
+            // 中文: 音節到達判定 — 嚴格前綴延伸不得帶入使用者未打進的音節
+            // 中文:   (tsuisi 不可撈出 水社寮)。只作用於字典行;下方 custom
+            // 中文:   詞條迴圈刻意豁免(PO 2026-08-21:使用者自己加的詞維持前綴可見)。
+            if !reach
+                .as_ref()
+                .is_none_or(|reach| reach.admits(&matched_key, &record.tl))
+            {
+                continue;
             }
             let effective = DictionaryReader::effective_source_bitmask(
                 record.bitmask,
@@ -1777,6 +1795,245 @@ fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> boo
     }
     let variant = phonetics::tps_notone_or_variant(&primary);
     !variant.is_empty() && variant.starts_with(body)
+}
+
+/// The typed input must reach INTO a record's FINAL syllable for a
+/// strict-prefix extension hit to be offered as a continuous candidate.
+///
+/// This is the engine-wide rule "a candidate never carries more syllables than
+/// the user has typed" (product owner, 2026-08-21, all three platforms).
+/// Before it, `lookup_prefix` hydrated every row whose key merely STARTS with
+/// what was typed, so `tsuisi` (2 syllables) surfaced 水社寮 `tsuí-siā-liâu`
+/// (3) and `kesithau` (3) surfaced 家私頭仔 `ke-si-thâu-á` (4) — the whole last
+/// syllable was never typed at all.
+///
+/// Stated per-syllable rather than as a syllable-count comparison because "how
+/// many syllables did the user type" has no single answer: `aia` reads as 2
+/// hops (`ai`+`a`) or 3 (`a`+`i`+`a`), and 阿姨仔 `a-î-á` — an EXACT key hit,
+/// not an extension — must survive. Measuring how far the typed bytes reach
+/// into the record's OWN syllable chain answers the product question directly
+/// and leaves exact hits untouched (their key IS the typed body, so the head of
+/// any multi-syllable reading is strictly shorter than it).
+///
+/// Built once per lookup from the typed key, then asked about each hydrated
+/// row: the family and the typed body's length are the same for every row.
+///
+/// **Subsumes, deliberately does not replace, its siblings.** The prefix test
+/// inside [`SyllableReach::syllable_ends`] is the same `starts_with` the three
+/// `matches_continuous_*_toneless_prefix_key` guards run a few lines earlier,
+/// and `phonetics::tps_notone_prefix_boundary_tone` (§41) walks the same
+/// per-syllable accumulation to answer the adjacent question "does the typed
+/// body land ON a boundary, and at what tone". Folding them into one walk is
+/// the right end state, but it would tighten three shipped guards — they
+/// fail-open on a tone-bearing body, this one measures it — so it belongs to a
+/// refactor round with its own behaviour-freeze list, not here. Do not add a
+/// fifth independent reconstruction.
+// 中文: 嚴格前綴延伸候選必須「打進」該詞條的最後一個音節 —— 引擎層規則
+// 中文:   「候選音節數不超過使用者已輸入的音節數」(PO 2026-08-21,三平台一致)。
+// 中文:   修正前 lookup_prefix 會把所有「key 以輸入開頭」的行都撈進來:
+// 中文:   tsuisi(2 音節)撈出 水社寮(3)、kesithau(3)撈出 家私頭仔(4),
+// 中文:   最後一個音節根本沒打到。
+// 中文: 以「逐音節到達與否」而非「音節數比較」表述,因為「使用者打了幾個音節」
+// 中文:   沒有唯一答案(aia 可切 ai+a 也可切 a+i+a),而 阿姨仔 a-î-á 是 exact 命中
+// 中文:   必須留下。量測輸入走進詞條自身音節鏈多遠,正好回答產品問題,且 exact
+// 中文:   命中天然不受影響(其 key 即輸入本身,多音節讀法的 head 必然更短)。
+// 中文: 家族與輸入 body 長度對每一行都相同,故由輸入 key 建一次後逐行詢問。
+struct SyllableReach<'a> {
+    /// `<family>:`, including the colon.
+    family: &'a str,
+    typed_body_len: usize,
+}
+
+impl<'a> SyllableReach<'a> {
+    /// `None` for a key with no `<family>:` prefix — nothing to measure
+    /// against, so the caller leaves every hit alone.
+    // 中文: key 沒有家族前綴 → None,呼叫端全部放行。
+    fn new(typed_key: &'a str) -> Option<Self> {
+        let family_end = typed_key.find(':')? + 1;
+        Some(Self {
+            family: &typed_key[..family_end],
+            typed_body_len: typed_key.len() - family_end,
+        })
+    }
+
+    /// Whether `record_tl` may be offered for the hit that came back as
+    /// `matched_key`.
+    ///
+    /// The reading is selected by `matched_key` — that is the face the row was
+    /// found under, and for the §35 TPS ambiguity families it is a substituted,
+    /// FULL stored key rather than the typed prefix
+    /// (`lookup_prefix_shortest_first_tps_readings`). The reach is measured
+    /// against the TYPED body, since substitution is charwise and cannot
+    /// lengthen the typed prefix.
+    ///
+    /// Fail-open: a hit this cannot place on a reconstructable face keeps its
+    /// pre-rule behaviour rather than being dropped on a derivation miss. Two
+    /// ways that happens, both narrow: a family with no romanization face at
+    /// all (`hanzi:`, or one added after this was written), and a body the
+    /// reconstructed face does not cover — an acronym face, which the sibling
+    /// guards in the same loop already reject on their own. Every production
+    /// romanization face IS reconstructable: `tests/roman_num_face_parity.rs`
+    /// and `tests/tps_notone_parity.rs` pin all five columns byte-for-byte
+    /// against the shipped CSV, so a fail-open here means a real drift, not a
+    /// tolerated gap.
+    // 中文: 讀法用 matched_key 選面(該行是以那個面被找到的;§35 TPS 歧義家族的
+    // 中文:   matched_key 是替換後的完整儲存 key 而非輸入前綴),到達距離用「輸入
+    // 中文:   body」量(替換是逐字元的,不會讓輸入前綴變長)。
+    // 中文: 無法重建的 key 面(縮寫面、過不了 POJ phonotactic gate 的讀法)維持原行為。
+    fn admits(&self, matched_key: &str, record_tl: &str) -> bool {
+        let Some(matched_body) = matched_key.strip_prefix(self.family) else {
+            return true;
+        };
+        let Some(ends) = self.syllable_ends(matched_body, record_tl) else {
+            return true;
+        };
+        // A single-syllable reading is reached by any non-empty typed prefix.
+        // 中文: 單音節讀法,任何非空輸入前綴都算已到達。
+        match ends.len() {
+            0 | 1 => true,
+            count => (ends[count - 2] as usize) < self.typed_body_len,
+        }
+    }
+
+    /// Where each syllable of `record_tl` ends, on the key surface
+    /// `matched_body` was found under — `None` when no reconstructable surface
+    /// covers it.
+    ///
+    /// Surface is read off the body itself, the same way the sibling guards
+    /// read it: an ASCII digit means the numeric-tone family (`tl:<tl_num>` /
+    /// `poj:<poj_num>`), a Bopomofo tone mark means `tps:<tps_num>`, anything
+    /// else is the fused toneless family. The C-3a `er`↔`or` dialect variant is
+    /// a second face of the same reading, so it is tried when the primary does
+    /// not cover the body; the substitution is one Bopomofo scalar for another
+    /// of the same width, so the boundaries carry over unchanged.
+    // 中文: 回傳該詞條在「matched_body 所屬 key 面」上的逐音節結束位移;無可重建的面回 None。
+    // 中文:   面的判定與既有 guard 同法:含 ASCII 數字 → 含調家族 (tl_num/poj_num),
+    // 中文:   含注音調號 → tps_num,其餘為去調 fused 家族。C-3a er↔or 方言變體是同一
+    // 中文:   讀法的第二個面,主面不涵蓋時再試;替換是等寬注音字元,邊界不變。
+    fn syllable_ends(&self, matched_body: &str, record_tl: &str) -> Option<Vec<u32>> {
+        match KeyFace::of(self.family, matched_body)? {
+            KeyFace::TpsNum | KeyFace::TpsNotone => {
+                let (primary, ends) = if matched_body.chars().any(phonetics::is_tps_tone_mark) {
+                    phonetics::tps_num_syllable_ends_from_tl(record_tl)
+                } else {
+                    phonetics::tps_notone_syllable_ends_from_tl(record_tl)
+                };
+                if primary.starts_with(matched_body) {
+                    return Some(ends);
+                }
+                let variant = phonetics::tps_notone_or_variant(&primary);
+                debug_assert!(
+                    variant.is_empty() || variant.len() == primary.len(),
+                    "or-variant substitution must preserve byte offsets",
+                );
+                (!variant.is_empty() && variant.starts_with(matched_body)).then_some(ends)
+            }
+            face @ (KeyFace::TlNum | KeyFace::TlNotone) => {
+                let num = phonetics::tl_num_syllable_ends_from_tl(record_tl);
+                Self::covering(matched_body, num, face == KeyFace::TlNotone)
+            }
+            face @ (KeyFace::PojNum | KeyFace::PojNotone) => {
+                let num = phonetics::poj_num_syllable_ends_from_tl(record_tl);
+                Self::covering(matched_body, num, face == KeyFace::PojNotone)
+            }
+        }
+    }
+
+    /// `ends` when `face` covers `matched_body`, dropping the tone digits first
+    /// when the body came from the toneless surface.
+    ///
+    /// The toneless columns ARE the numeric ones with the digits removed
+    /// (`dictionary/common/notone.py::remove_tone`), so one derivation answers
+    /// both surfaces: dropping a digit shortens that syllable and every
+    /// boundary after it by one. A syllable that is nothing but its tone digit
+    /// disappears entirely, and must not leave a boundary behind — that would
+    /// count a syllable the toneless face does not have.
+    // 中文: face 涵蓋 matched_body 時回傳邊界;body 來自去調面則先剝掉聲調數字。
+    // 中文:   去調欄就是含調欄剝掉數字(notone.py::remove_tone),故一次衍生答兩個面:
+    // 中文:   剝掉一個數字會讓該音節與其後所有邊界各左移一。只由聲調數字構成的音節
+    // 中文:   會整個消失,不可留下邊界,否則會多算一個該面沒有的音節。
+    fn covering(
+        matched_body: &str,
+        (num, ends): (String, Vec<u32>),
+        toneless: bool,
+    ) -> Option<Vec<u32>> {
+        if !toneless {
+            return num.starts_with(matched_body).then_some(ends);
+        }
+        let mut face = String::with_capacity(num.len());
+        let mut face_ends = Vec::with_capacity(ends.len());
+        let mut cursor = 0usize;
+        for end in ends {
+            let syllable = num.get(cursor..end as usize)?;
+            cursor = end as usize;
+            let before = face.len();
+            face.extend(syllable.chars().filter(|c| !c.is_ascii_digit()));
+            if face.len() != before {
+                face_ends.push(face.len() as u32);
+            }
+        }
+        face.starts_with(matched_body).then_some(face_ends)
+    }
+}
+
+/// Which stored key surface a hydrated hit's body belongs to.
+///
+/// `create_fst.py` emits two romanization faces per family — the numeric-tone
+/// column (`tl_num` / `poj_num`, where the digits double as syllable
+/// separators) and the fused toneless one, plus their TPS equivalents — and
+/// they are different coordinate systems: a toneless head measured against a
+/// toned body is short by one digit per syllable. Naming the classification
+/// keeps that decision in one place instead of re-deriving
+/// `any(is_ascii_digit)` at each site.
+///
+/// The sibling guards in this file read the same two predicates but act on them
+/// the OPPOSITE way: `matches_continuous_toneless_prefix_key` and friends
+/// fail-open on a tone-bearing body (numeric-tone keys are reserved for the
+/// non-continuous paths), while [`SyllableReach`] must measure on the toned
+/// face or `tai5` mis-drops. Deliberate divergence, not drift.
+///
+/// `None` for a family with no romanization face at all (`hanzi:`), and for any
+/// family added later — the caller fails open rather than guessing a face.
+// 中文: 判定 hydrate 到的 body 屬於哪個儲存 key 面。create_fst.py 每個家族出兩個
+// 中文:   羅馬字面 —— 含調欄(tl_num/poj_num,數字兼作音節分隔)與去調 fused 欄,
+// 中文:   TPS 同理 —— 兩者是不同座標系:拿去調 head 比含調 body,每音節會短一個數字。
+// 中文:   把這個判定命名,決策就只有一處,不必到處重寫 any(is_ascii_digit)。
+// 中文: 同檔的既有 guard 讀同樣兩個 predicate 但政策相反:matches_continuous_*
+// 中文:   對帶調 body 直接放行(含調 key 保留給非連續路徑),而 SyllableReach 必須
+// 中文:   在含調面上量,否則 tai5 會被誤殺。是刻意分歧,不是漂移。
+// 中文: 沒有羅馬字面的家族(hanzi:)與日後新增的家族回 None,呼叫端放行而不猜面。
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum KeyFace {
+    TlNum,
+    TlNotone,
+    PojNum,
+    PojNotone,
+    TpsNum,
+    TpsNotone,
+}
+
+impl KeyFace {
+    fn of(family: &str, body: &str) -> Option<Self> {
+        let numeric_tone = body.bytes().any(|b| b.is_ascii_digit());
+        match family {
+            "tl:" => Some(if numeric_tone {
+                KeyFace::TlNum
+            } else {
+                KeyFace::TlNotone
+            }),
+            "poj:" => Some(if numeric_tone {
+                KeyFace::PojNum
+            } else {
+                KeyFace::PojNotone
+            }),
+            "tps:" => Some(if body.chars().any(phonetics::is_tps_tone_mark) {
+                KeyFace::TpsNum
+            } else {
+                KeyFace::TpsNotone
+            }),
+            _ => None,
+        }
+    }
 }
 
 fn record_to_candidate(

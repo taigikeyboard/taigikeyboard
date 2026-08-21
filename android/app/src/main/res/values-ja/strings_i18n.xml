@@ -28,6 +28,7 @@
     <string name="i18n_dictionary_save">保存</string>
     <string name="i18n_dictionary_customDictionary">カスタム辞書</string>
     <string name="i18n_dictionary_customDictEnabled">カスタム辞書を有効にする</string>
+    <string name="i18n_dictionary_customDictEnabledInfo">オンにすると、追加した単語が候補に表示されます。オフにすると、カスタム単語は表示されなくなります。</string>
     <string name="i18n_dictionary_dataManagement">キーボードデータ</string>
     <string name="i18n_dictionary_variantDictionary">異体字</string>
     <string name="i18n_dictionary_khiin">在来字</string>
@@ -78,6 +79,7 @@
     <string name="i18n_dictionary_lookupMoe">教育部辞典</string>
     <string name="i18n_dictionary_frequencyManagement">単語頻度の記録</string>
     <string name="i18n_dictionary_frequencyRecordingEnabled">単語頻度を記録</string>
+    <string name="i18n_dictionary_frequencyRecordingEnabledInfo">オンにすると、各単語を選んだ回数を記録します。よく選ぶ単語は候補リストの前方に移動します。</string>
     <string name="i18n_dictionary_associationManagement">単語連携の記録</string>
     <string name="i18n_dictionary_associationRecordingEnabled">単語連携を記録</string>
     <string name="i18n_dictionary_associationRecordingEnabledInfo">オンにすると、単語の前後関係を記録し、次の単語の候補に利用します。</string>

@@ -60,6 +60,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICTIONARY)
     val dictionaryCustomDictEnabled: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_ENABLED)
+    val dictionaryCustomDictEnabledInfo: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_ENABLED_INFO)
     val dictionaryDataManagement: String
         @Composable get() = stringRes(StringKey.DICTIONARY_DATA_MANAGEMENT)
     val dictionaryVariantDictionary: String
@@ -158,6 +160,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_MANAGEMENT)
     val dictionaryFrequencyRecordingEnabled: String
         @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_RECORDING_ENABLED)
+    val dictionaryFrequencyRecordingEnabledInfo: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_RECORDING_ENABLED_INFO)
     val dictionaryAssociationManagement: String
         @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_MANAGEMENT)
     val dictionaryAssociationRecordingEnabled: String

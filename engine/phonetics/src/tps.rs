@@ -409,6 +409,22 @@ pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
 // 中文: encoding-only 不做 phonotactic gate(姿態與 derive_poj_notone_for_match 一致),
 // 中文:   建置端不 gate,runtime gate 會誤殺合法 dict 行。
 pub fn tps_notone_from_tl(record_tl: &str) -> String {
+    tps_notone_collecting(record_tl, None)
+}
+
+/// [`tps_notone_from_tl`] plus the byte offset each syllable ENDS at in the
+/// returned string. Sibling of [`crate::tl_num_syllable_ends_from_tl`]; a
+/// caller measuring how far a typed prefix reaches into a reading needs the
+/// boundaries, not the syllables themselves.
+// 中文: tps_notone_from_tl + 每個音節的結束位移;量測輸入前綴走多遠的呼叫端
+// 中文:   需要的是邊界而不是音節本身。
+pub fn tps_notone_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
+    let mut ends = Vec::new();
+    let notone = tps_notone_collecting(record_tl, Some(&mut ends));
+    (notone, ends)
+}
+
+fn tps_notone_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> String {
     let mut out = String::with_capacity(record_tl.len() * 3);
     for token in tl_syllable_tokens(record_tl) {
         let numeric = crate::api::to_tone_number(token);
@@ -424,7 +440,13 @@ pub fn tps_notone_from_tl(record_tl: &str) -> String {
         // 中文: or_maps_to_er=true 對齊 build pipeline 預設 — Node bridge 預設將 TL er/or 都映射為 ㄜ;
         // 中文:   `tps_notone` 欄一律 ㄜ-glyph,ㄛ 變體在 `tps_notone_var` (C-3a),
         // 中文:   此 runtime helper 只需產出主欄即可比對 guard。
+        let before = out.len();
         out.push_str(&tps_notone_from_numeric_token(&numeric));
+        if out.len() != before {
+            if let Some(ends) = ends.as_deref_mut() {
+                ends.push(out.len() as u32);
+            }
+        }
     }
     out
 }
@@ -435,7 +457,7 @@ pub fn tps_notone_from_tl(record_tl: &str) -> String {
 /// Single source for every per-token TPS derivation below.
 // 中文: record reading 的 TL 音節 token — 依 build pipeline 的三種分隔符 (連字號/空白/tab) 切,
 // 中文:   丟掉輕聲 `--` 產生的空 token。以下逐音節 TPS 衍生皆共用此來源。
-fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> {
+pub(crate) fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> {
     record_tl.split(['-', ' ', '\t']).filter(|t| !t.is_empty())
 }
 
@@ -529,15 +551,34 @@ pub fn tps_notone_or_variant(notone: &str) -> String {
 // 中文: R3 — tps_notone_from_tl 的「保留聲調符號」版本,供自訂詞 tps:num 搜尋鍵;
 // 中文:   逐音節 TL → numeric → to_zhuyin,只剝連字號 / 空白,聲調符號保留。
 pub fn tps_num_from_tl(record_tl: &str) -> String {
+    tps_num_collecting(record_tl, None)
+}
+
+/// [`tps_num_from_tl`] plus per-syllable end offsets — the tone-marked sibling
+/// of [`tps_notone_syllable_ends_from_tl`], same contract.
+// 中文: tps_num_from_tl + 每個音節的結束位移,契約同 tps_notone_syllable_ends_from_tl。
+pub fn tps_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
+    let mut ends = Vec::new();
+    let num = tps_num_collecting(record_tl, Some(&mut ends));
+    (num, ends)
+}
+
+fn tps_num_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> String {
     let mut out = String::with_capacity(record_tl.len() * 3);
     for token in tl_syllable_tokens(record_tl) {
         let numeric = crate::api::to_tone_number(token);
         let tps = to_zhuyin(&numeric, false, true);
+        let before = out.len();
         for ch in tps.chars() {
             if ch == '-' || ch.is_whitespace() {
                 continue;
             }
             out.push(ch);
+        }
+        if out.len() != before {
+            if let Some(ends) = ends.as_deref_mut() {
+                ends.push(out.len() as u32);
+            }
         }
     }
     out

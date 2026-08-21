@@ -28,6 +28,7 @@
     <string name="i18n_dictionary_save">Save</string>
     <string name="i18n_dictionary_customDictionary">Custom Dictionary</string>
     <string name="i18n_dictionary_customDictEnabled">Enable Custom Dictionary</string>
+    <string name="i18n_dictionary_customDictEnabledInfo">When on, words you add appear among the candidates. When off, your custom words no longer show up.</string>
     <string name="i18n_dictionary_dataManagement">Keyboard Data</string>
     <string name="i18n_dictionary_variantDictionary">Variant Characters</string>
     <string name="i18n_dictionary_khiin">Conventional Characters</string>
@@ -78,6 +79,7 @@
     <string name="i18n_dictionary_lookupMoe">MOE Dictionary</string>
     <string name="i18n_dictionary_frequencyManagement">Frequency Records</string>
     <string name="i18n_dictionary_frequencyRecordingEnabled">Record Word Frequency</string>
+    <string name="i18n_dictionary_frequencyRecordingEnabledInfo">When on, the keyboard records how often you select each word. Frequently selected words move toward the front of the candidate list.</string>
     <string name="i18n_dictionary_associationManagement">Association Records</string>
     <string name="i18n_dictionary_associationRecordingEnabled">Record Word Associations</string>
     <string name="i18n_dictionary_associationRecordingEnabledInfo">When on, the keyboard records which words follow each other to improve next-word suggestions.</string>

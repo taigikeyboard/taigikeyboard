@@ -685,6 +685,24 @@
         }
       }
     },
+    "i18n_dictionary_customDictEnabledInfo": {
+      "comment": "Info-dialog body explaining what enabling the custom dictionary does.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, words you add appear among the candidates. When off, your custom words no longer show up."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、追加した単語が候補に表示されます。オフにすると、カスタム単語は表示されなくなります。"
+          }
+        }
+      }
+    },
     "i18n_dictionary_customDictPrivacyWarning": {
       "comment": "Privacy warning against storing sensitive personal data in the custom dictionary.",
       "extractionState": "manual",
@@ -1041,6 +1059,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "単語頻度を記録"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_frequencyRecordingEnabledInfo": {
+      "comment": "Info-dialog body explaining what frequency recording does for candidate ranking.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, the keyboard records how often you select each word. Frequently selected words move toward the front of the candidate list."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、各単語を選んだ回数を記録します。よく選ぶ単語は候補リストの前方に移動します。"
           }
         }
       }

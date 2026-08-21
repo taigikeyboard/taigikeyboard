@@ -28,6 +28,7 @@
     <string name="i18n_dictionary_save">儉起來</string>
     <string name="i18n_dictionary_customDictionary">自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabled">啟用自訂詞庫</string>
+    <string name="i18n_dictionary_customDictEnabledInfo">拍開了後，自訂詞會出現佇候選詞內底；關起來了後，就袂閣出現。</string>
     <string name="i18n_dictionary_dataManagement">使用資料</string>
     <string name="i18n_dictionary_variantDictionary">異用字</string>
     <string name="i18n_dictionary_khiin">在來字</string>
@@ -78,6 +79,7 @@
     <string name="i18n_dictionary_lookupMoe">教育部辭典</string>
     <string name="i18n_dictionary_frequencyManagement">詞頻紀錄</string>
     <string name="i18n_dictionary_frequencyRecordingEnabled">開啟詞頻紀錄</string>
+    <string name="i18n_dictionary_frequencyRecordingEnabledInfo">拍開了後，齒盤會記錄各詞揀過幾擺，定定揀 ê 詞會排較頭前。</string>
     <string name="i18n_dictionary_associationManagement">詞關聯紀錄</string>
     <string name="i18n_dictionary_associationRecordingEnabled">開啟詞關聯紀錄</string>
     <string name="i18n_dictionary_associationRecordingEnabledInfo">拍開了後，齒盤會記錄詞佮詞 ê 前後關係，用來改善下一詞建議。</string>
