@@ -15,6 +15,10 @@ import AppKit
 /// `CandidatePanel`'s business, one level up.
 class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     let style: CandidateWindowStyle
+    /// The size metrics every cell and layout in this window renders at.
+    /// Fixed at construction like `style`: a change rebuilds the panel
+    /// (`CandidatePanel.panel(for:)`).
+    let metrics: CandidateMetrics
     private(set) var backdrop: CandidateBackdrop
     /// The layouts' canvas, origin at the top-left like the layouts think.
     let contentContainer = FlippedContainerView()
@@ -45,8 +49,9 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     private var dragOffsetInWindow: NSPoint = .zero
     private var dragStartOnScreen: NSPoint = .zero
 
-    init(style: CandidateWindowStyle) {
+    init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
+        self.metrics = metrics
         backdrop = CandidateBackdrop.make(style: style)
         super.init(
             contentRect: .zero,
@@ -263,7 +268,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         guard size.width > 0, size.height > 0 else { return }
         let radius: CGFloat = switch style {
         case .sequoia: Self.sequoiaCornerRadius
-        case .tahoe: CandidateItemView.Metrics.itemHeight / 2
+        case .tahoe: metrics.itemHeight / 2
         }
         backdrop.applyUniformCorners(size: size, radius: radius)
     }
@@ -279,7 +284,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
                 rightRadius: size.height / 2,
             )
         case .tahoe:
-            backdrop.applyUniformCorners(size: size, radius: CandidateItemView.Metrics.itemHeight / 2)
+            backdrop.applyUniformCorners(size: size, radius: metrics.itemHeight / 2)
         }
     }
 }

@@ -219,6 +219,23 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateAppearanceMode.auto,
         )
 
+        /// How big the candidate text renders. Presentation-only like
+        /// `candidateLayout`. The default is one step above the size the
+        /// window originally rendered at (USER 2026-08-21) — `small`
+        /// reproduces the original exactly.
+        static let candidateTextSize = SettingsKey(
+            name: "candidateTextSize",
+            defaultValue: CandidateTextSizeChoice.medium,
+        )
+
+        /// How much air the candidate window puts around its text, as a
+        /// multiplier over the cell paddings. Default enlarged like
+        /// `candidateTextSize`.
+        static let candidateWindowSize = SettingsKey(
+            name: "candidateWindowSize",
+            defaultValue: CandidateWindowSizeChoice.medium,
+        )
+
         /// The five composing key bindings. macOS-only: the phone keyboards
         /// have no Return, Tab or modifier keys to bind, so their defaults are
         /// owned by `ComposingKeyBindings` rather than by the shared
@@ -335,6 +352,23 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// The candidate window's light/dark choice.
     var candidateAppearanceMode: CandidateAppearanceMode {
         choice(Keys.candidateAppearanceMode)
+    }
+
+    /// The candidate text size.
+    var candidateTextSize: CandidateTextSizeChoice {
+        choice(Keys.candidateTextSize)
+    }
+
+    /// The candidate window's chrome size.
+    var candidateWindowSize: CandidateWindowSizeChoice {
+        choice(Keys.candidateWindowSize)
+    }
+
+    /// The metrics the candidate window renders at. The one place both size
+    /// choices are resolved together, so no caller has to know that the window
+    /// is sized by two settings rather than one.
+    var candidateMetrics: CandidateMetrics {
+        CandidateMetrics(textSize: candidateTextSize, windowSize: candidateWindowSize)
     }
 
     /// The user's composing key contract, as one snapshot.

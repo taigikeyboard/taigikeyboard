@@ -54,7 +54,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     /// the next candidate, the way `→` does — an expand that kept the old
     /// selection would eat the keypress.
     func testExpandablePanel_expandsWhenAStepLeavesTheCollapsedRow() {
-        let panel = ExpandableCandidatePanel(style: .sequoia)
+        let panel = ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics)
         _ = panel.updateCandidates(Self.cells)
 
         var steps = 0
@@ -71,7 +71,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     /// start of the expanded grid, `←` folds the window back into its row, and a
     /// key whose label says "previous candidate" must not do that.
     func testExpandablePanel_previousCandidateAtTheStart_doesNotCollapseTheGrid() {
-        let panel = ExpandableCandidatePanel(style: .sequoia)
+        let panel = ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics)
         _ = panel.updateCandidates(Self.cells)
         panel.navigate(.down) // expands without animating past the assertions
         XCTAssertEqual(panel.displayMode, .expanded)
@@ -86,7 +86,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     }
 
     func testExpandablePanel_leftAtTheStart_stillCollapsesTheGrid() {
-        let panel = ExpandableCandidatePanel(style: .sequoia)
+        let panel = ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics)
         _ = panel.updateCandidates(Self.cells)
         panel.navigate(.down)
         XCTAssertEqual(panel.displayMode, .expanded)
@@ -99,8 +99,8 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     /// `→` pages a vertical column (`VerticalCandidatePanel.navigate`), which is
     /// exactly the confusion the semantic direction exists to avoid.
     func testVerticalPanel_stepsWhereTheRightArrowWouldHavePaged() {
-        let stepping = VerticalCandidatePanel(style: .sequoia)
-        let paging = VerticalCandidatePanel(style: .sequoia)
+        let stepping = VerticalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics)
+        let paging = VerticalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics)
         _ = stepping.updateCandidates(Self.cells)
         _ = paging.updateCandidates(Self.cells)
 
@@ -117,9 +117,9 @@ final class CandidateSemanticNavigationTests: XCTestCase {
 
     private func makePanels() -> [CandidateBasePanel] {
         [
-            HorizontalCandidatePanel(style: .sequoia),
-            VerticalCandidatePanel(style: .sequoia),
-            ExpandableCandidatePanel(style: .sequoia),
+            HorizontalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
+            VerticalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
+            ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
         ]
     }
 }

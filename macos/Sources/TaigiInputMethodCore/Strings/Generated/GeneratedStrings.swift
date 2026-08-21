@@ -162,6 +162,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "石墨色",
         .macosCandidateAppearanceLight: "淺色",
         .macosCandidateAppearanceDark: "深色",
+        .macosCandidateWindowSize: "候選窗大細",
+        .macosSizeSmall: "細",
+        .macosSizeMedium: "中",
+        .macosSizeLarge: "大",
+        .macosSizeExtraLarge: "特大",
         .navTabDictionary: "詞庫",
         .settingsDisplayLanguage: "顯示語言",
         .settingsDisplayLanguageAutomatic: "自動",
@@ -169,6 +174,7 @@ enum GeneratedStrings {
         .settingsTlMode: "台羅",
         .settingsOutputBothScripts: "括號標註",
         .settingsLiteralRomanCandidate: "顯示原本羅馬字候選",
+        .themeCandidateTextSize: "候選詞大細",
     ]
     private static let english: [StringKey: String] = [
         .commonCancel: "Cancel",
@@ -329,6 +335,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "Graphite",
         .macosCandidateAppearanceLight: "Light",
         .macosCandidateAppearanceDark: "Dark",
+        .macosCandidateWindowSize: "Candidate Window Size",
+        .macosSizeSmall: "Small",
+        .macosSizeMedium: "Medium",
+        .macosSizeLarge: "Large",
+        .macosSizeExtraLarge: "Extra Large",
         .navTabDictionary: "Dictionary",
         .settingsDisplayLanguage: "Display Language",
         .settingsDisplayLanguageAutomatic: "Automatic",
@@ -336,6 +347,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "Annotate in Brackets",
         .settingsLiteralRomanCandidate: "Show Typed Romanization Candidate",
+        .themeCandidateTextSize: "Candidate Text Size",
     ]
     private static let japanese: [StringKey: String] = [
         .commonCancel: "キャンセル",
@@ -496,6 +508,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "グラファイト",
         .macosCandidateAppearanceLight: "ライト",
         .macosCandidateAppearanceDark: "ダーク",
+        .macosCandidateWindowSize: "候補ウィンドウの大きさ",
+        .macosSizeSmall: "小",
+        .macosSizeMedium: "中",
+        .macosSizeLarge: "大",
+        .macosSizeExtraLarge: "特大",
         .navTabDictionary: "辞書",
         .settingsDisplayLanguage: "表示言語",
         .settingsDisplayLanguageAutomatic: "自動",
@@ -503,6 +520,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "括弧で併記",
         .settingsLiteralRomanCandidate: "入力したローマ字候補を表示",
+        .themeCandidateTextSize: "候補の文字の大きさ",
     ]
     private static let tailo: [StringKey: String] = [
         .commonCancel: "tshú-siau",
@@ -663,6 +681,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "tsio̍h-bi̍k-sik",
         .macosCandidateAppearanceLight: "tshián-sik",
         .macosCandidateAppearanceDark: "tshim-sik",
+        .macosCandidateWindowSize: "hāu-suán thang tuā-sè",
+        .macosSizeSmall: "sè",
+        .macosSizeMedium: "tiong",
+        .macosSizeLarge: "tuā",
+        .macosSizeExtraLarge: "ti̍k-tuā",
         .navTabDictionary: "sû-khòo",
         .settingsDisplayLanguage: "hián-sī gí-giân",
         .settingsDisplayLanguageAutomatic: "tsū-tōng",
@@ -670,6 +693,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "kuat-hō phiau-tsù",
         .settingsLiteralRomanCandidate: "hián-sī guân-pún lô-má-jī hāu-suán",
+        .themeCandidateTextSize: "hāu-suán sû tuā-sè",
     ]
     private static let poj: [StringKey: String] = [
         .commonCancel: "chhú-siau",
@@ -830,6 +854,11 @@ enum GeneratedStrings {
         .macosCandidateAccentGraphite: "chio̍h-be̍k-sek",
         .macosCandidateAppearanceLight: "chhián-sek",
         .macosCandidateAppearanceDark: "chhim-sek",
+        .macosCandidateWindowSize: "hāu-soán thang tōa-sè",
+        .macosSizeSmall: "sè",
+        .macosSizeMedium: "tiong",
+        .macosSizeLarge: "tōa",
+        .macosSizeExtraLarge: "te̍k-tōa",
         .navTabDictionary: "sû-khò͘",
         .settingsDisplayLanguage: "hián-sī gí-giân",
         .settingsDisplayLanguageAutomatic: "chū-tōng",
@@ -837,6 +866,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "koat-hō phiau-chù",
         .settingsLiteralRomanCandidate: "hián-sī goân-pún lô-má-jī hāu-soán",
+        .themeCandidateTextSize: "hāu-soán sû tōa-sè",
     ]
 
     static func lookup(_ language: DisplayLanguage, _ key: StringKey) -> String? {

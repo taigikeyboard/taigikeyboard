@@ -19,6 +19,21 @@ enum TestFixtures {
     /// only works until a suite grows past the gap.
     static let generationCounter = GenerationCounter(startingAt: 1000)
 
+    /// The candidate-window metrics a fresh install renders at — what any
+    /// suite exercising a cell or its measurement should use, unless the case
+    /// is specifically about a non-default size.
+    static let defaultCandidateMetrics = CandidateMetrics(
+        textSize: SettingsStore.Keys.candidateTextSize.defaultValue,
+        windowSize: SettingsStore.Keys.candidateWindowSize.defaultValue,
+    )
+
+    /// The width of `text` set in the system font at `size`, which is what
+    /// every candidate-measurement expectation is traced against.
+    @MainActor
+    static func systemFontWidth(of text: String, size: CGFloat) -> CGFloat {
+        (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size)]).width
+    }
+
     /// A key-down event carrying `characters`. The ten-argument AppKit
     /// initializer lives here once; every suite that needs a key event is
     /// otherwise a copy of it.

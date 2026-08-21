@@ -29,6 +29,12 @@ struct AppearanceSettingsView: View {
     @AppStorage(SettingsStore.Keys.candidateWindowStyle.name)
     private var candidateWindowStyle = SettingsStore.Keys.candidateWindowStyle.defaultValue
 
+    @AppStorage(SettingsStore.Keys.candidateWindowSize.name)
+    private var candidateWindowSize = SettingsStore.Keys.candidateWindowSize.defaultValue
+
+    @AppStorage(SettingsStore.Keys.candidateTextSize.name)
+    private var candidateTextSize = SettingsStore.Keys.candidateTextSize.defaultValue
+
     var body: some View {
         Form {
             // The System Settings shape: the mode selector and the accent row
@@ -54,6 +60,21 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.settingsDisplayLanguageAutomatic)).tag(CandidateWindowStyleChoice.auto)
                     Text(language.string(.macosCandidateStyleSequoia)).tag(CandidateWindowStyleChoice.sequoia)
                     Text(language.string(.macosCandidateStyleTahoe)).tag(CandidateWindowStyleChoice.tahoe)
+                }
+                // The two size rows are named steps, not continuous values, so
+                // they are pop-up menus like the rows above rather than
+                // sliders (Apple HIG, Pop-up Buttons: a flat list of mutually
+                // exclusive choices).
+                Picker(language.string(.macosCandidateWindowSize), selection: $candidateWindowSize) {
+                    Text(language.string(.macosSizeSmall)).tag(CandidateWindowSizeChoice.small)
+                    Text(language.string(.macosSizeMedium)).tag(CandidateWindowSizeChoice.medium)
+                    Text(language.string(.macosSizeLarge)).tag(CandidateWindowSizeChoice.large)
+                }
+                Picker(language.string(.themeCandidateTextSize), selection: $candidateTextSize) {
+                    Text(language.string(.macosSizeSmall)).tag(CandidateTextSizeChoice.small)
+                    Text(language.string(.macosSizeMedium)).tag(CandidateTextSizeChoice.medium)
+                    Text(language.string(.macosSizeLarge)).tag(CandidateTextSizeChoice.large)
+                    Text(language.string(.macosSizeExtraLarge)).tag(CandidateTextSizeChoice.extraLarge)
                 }
             }
         }
