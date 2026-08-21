@@ -2,6 +2,7 @@
 
 import AppKit
 import Carbon.HIToolbox
+import KeyboardShortcuts
 import SwiftUI
 
 /// A recording field for one composing action's key.
@@ -278,21 +279,22 @@ enum ComposingKeyDisplay {
     /// legends: they are the same on a keyboard sold anywhere, and translating
     /// "Space" would name a key the user cannot find.
     ///
-    /// No ⌤ among them: the keypad's Enter is stored as Return
-    /// (`ComposingKeyChord`), so a chord never arrives here carrying it.
+    /// No ⌤ and no ⇤ among them: `ComposingKeyChord.normalized` folds the
+    /// keypad's Enter onto Return and the back tab onto Tab, so a chord never
+    /// arrives here carrying either.
     private static let keyNames: [String: String] = [
         " ": "Space",
         "\r": "↩",
         "\t": "⇥",
-        "\u{19}": "⇤",
     ]
 
+    /// The modifiers come from the shortcut library's own renderer rather than
+    /// a second copy of the same four branches: the input-source menu prints
+    /// global chords through `KeyboardShortcuts.Shortcut.description` and
+    /// composing chords through this, side by side in one column, so the two
+    /// have to speak the same glyph vocabulary.
     static func text(for chord: ComposingKeyChord) -> String {
-        var text = ""
-        if chord.modifiers.contains(.control) { text += "⌃" }
-        if chord.modifiers.contains(.option) { text += "⌥" }
-        if chord.modifiers.contains(.shift) { text += "⇧" }
-        if chord.modifiers.contains(.command) { text += "⌘" }
-        return text + (keyNames[chord.key] ?? chord.key.uppercased())
+        chord.modifiers.ks_symbolicRepresentation
+            + (keyNames[chord.key] ?? chord.key.uppercased())
     }
 }

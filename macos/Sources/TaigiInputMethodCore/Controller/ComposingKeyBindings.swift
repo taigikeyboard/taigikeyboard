@@ -115,15 +115,26 @@ struct ComposingKeyBindings: Sendable, Equatable {
         }
     }
 
-    /// Drops a chord from every action but the last one holding it.
+    /// Drops a chord from every action but the last one holding it, with the
+    /// rows still on their own default going first.
     ///
-    /// `allCases` order is the tiebreak, which makes it deterministic rather
-    /// than fair — the pane resolves conflicts as they are made, off
-    /// `actionsHolding(_:excluding:)` above, so this only has to handle a
-    /// defaults domain edited behind the app's back.
+    /// Last wins, so the order IS the policy: a row holding a chord the user
+    /// chose outranks a row holding only what it shipped with. That matters on
+    /// an upgrade, where an action that gains a default can gain one the user
+    /// had already put somewhere else — resolving on `allCases` order alone
+    /// would let the new default silently empty the row they set.
+    ///
+    /// Within each half `allCases` order is the tiebreak, which makes it
+    /// deterministic rather than fair — the pane resolves conflicts as they are
+    /// made, off `actionsHolding(_:excluding:)` above, so that half only has to
+    /// handle a defaults domain edited behind the app's back.
     private static func removeDuplicates(in resolved: inout [ComposingAction: ComposingKeyChord]) {
+        let onItsDefault = resolved.filter { $0.value == $0.key.defaultChord }.keys
+        let order = ComposingAction.allCases.filter(onItsDefault.contains)
+            + ComposingAction.allCases.filter { !onItsDefault.contains($0) }
+
         var seen: [ComposingKeyChord: ComposingAction] = [:]
-        for action in ComposingAction.allCases {
+        for action in order {
             guard let chord = resolved[action] else { continue }
             if let earlier = seen[chord] {
                 resolved[earlier] = nil
@@ -150,7 +161,7 @@ struct ComposingKeyBindings: Sendable, Equatable {
     /// stay where a user can find them.
     private static func restoreUnbound(in resolved: inout [ComposingAction: ComposingKeyChord]) {
         let alwaysBound = ComposingAction.allCases.filter(ComposingAction.alwaysBound.contains)
-        let pool = alwaysBound.compactMap(\.defaultChord)
+        let pool = alwaysBound.map(\.defaultChord)
 
         for (action, chord) in resolved
             where pool.contains(chord) && !ComposingAction.alwaysBound.contains(action)

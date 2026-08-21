@@ -47,6 +47,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before the handlers register, so nothing re-persists what it clears.
         RetiredSettingsCleanup.run()
 
+        // The other half of what an upgrade leaves behind: an `initial:` added
+        // in a later version installs itself on every install that never
+        // recorded that action, including one where the user had already put
+        // that chord on a different action — and `KeyboardShortcuts` fires BOTH
+        // handlers on one keypress. The recorder resolves the collisions the
+        // user makes; this resolves the ones a version does.
+        ShortcutConflicts.resolveDefaultsShadowedByRecordings()
+
         // The hotkey handlers exist for the process's life; whether they FIRE
         // is the coordinator's call, made as sessions register and release
         // their shortcut endpoint. Assigned here rather than defaulted inside

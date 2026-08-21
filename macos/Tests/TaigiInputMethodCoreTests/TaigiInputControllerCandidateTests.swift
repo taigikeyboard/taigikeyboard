@@ -348,7 +348,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         addTeardownBlock { userDefaults.removePersistentDomain(forName: suiteName) }
         let store = SettingsStore(userDefaults: userDefaults)
-        store.setComposingChord(try ComposingKeyChord.make(key: "\r", modifiers: .option).get(), for: action)
+        // Not either action's own default: both script commits ship a Return
+        // chord now, and recording one action's default onto the other would be
+        // a duplicate the resolver drops.
+        let chord = try TestFixtures.chordNoDefaultHolds()
+        store.setComposingChord(chord, for: action)
 
         let session = try makeSession()
         session.controller.settings = store
@@ -374,7 +378,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             client: session.client,
             presenter: session.presenter,
             cell: cells[index],
-            event: try TestFixtures.keyDownEvent(characters: "\r", modifiers: .option),
+            event: try TestFixtures.keyDownEvent(characters: "\r", modifiers: chord.modifiers),
         )
     }
 

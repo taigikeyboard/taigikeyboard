@@ -125,15 +125,50 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(bindings.slotModifier, .control)
     }
 
-    /// Unbound out of the box: `←` already walks back, and the two script
-    /// commits would each eat a chord for an action the system keyboard has no
-    /// equivalent of.
-    func testDefaults_leaveTheKeylessActionsUnbound() {
+    /// The three the system Zhuyin keyboard has no equivalent of are bound too:
+    /// no row in the pane or the menu is blank (USER 2026-08-21). Reversing
+    /// takes McBopomofo's ⇧⇥; the two script commits stay in the Return family,
+    /// which is glyph-independent and so reads the same in every display
+    /// language.
+    func testDefaults_bindTheActionsTheZhuyinKeyboardHasNoKeyFor() throws {
         let bindings = ComposingKeyBindings.default
 
-        XCTAssertNil(bindings.chord(for: .previousCandidate))
+        XCTAssertEqual(bindings.chord(for: .previousCandidate), try chord("\t", .shift))
+        XCTAssertEqual(bindings.chord(for: .commitHanji), try chord("\r", .control))
+        XCTAssertEqual(bindings.chord(for: .commitRomanization), try chord("\r", .option))
+    }
+
+    /// Every action, not just the ones a case names: a new one added with a
+    /// blank default would be a blank row.
+    func testDefaults_leaveNoActionUnbound() {
+        let bindings = ComposingKeyBindings.default
+
+        for action in ComposingAction.allCases {
+            XCTAssertNotNil(bindings.chord(for: action), "\(action.rawValue) starts blank")
+        }
+    }
+
+    /// An upgrade that hands an untouched row a default the user had already
+    /// put on another action must not empty the row they set: what they
+    /// recorded wins, and the row holding only a default gives way.
+    func testAStoredChord_outranksADefaultThatArrivesOnTopOfIt() throws {
+        let optionReturn = try chord("\r", .option) // commitRomanization's default
+
+        let bindings = ComposingKeyBindings(chords: [.commitHanji: optionReturn])
+
+        XCTAssertEqual(bindings.chord(for: .commitHanji), optionReturn, "the recorded row lost its chord")
+        XCTAssertNil(bindings.chord(for: .commitRomanization), "two rows answer to ⌥↩")
+    }
+
+    /// The same the other way round, where `allCases` order would have let the
+    /// recording win on its own — the rule is provenance, not position.
+    func testADefault_givesWayWhateverTheRosterOrder() throws {
+        let controlReturn = try chord("\r", .control) // commitHanji's default
+
+        let bindings = ComposingKeyBindings(chords: [.commitRomanization: controlReturn])
+
+        XCTAssertEqual(bindings.chord(for: .commitRomanization), controlReturn)
         XCTAssertNil(bindings.chord(for: .commitHanji))
-        XCTAssertNil(bindings.chord(for: .commitRomanization))
     }
 
     /// A case added to the roster but not to a group would be missing from
@@ -301,6 +336,31 @@ final class ComposingKeyBindingsTests: XCTestCase {
             .confirmHighlighted,
             "the keypad commits out of the box, as it always has",
         )
+    }
+
+    // MARK: - Back tab
+
+    /// AppKit reports ⇧⇥ as `NSBackTabCharacter` rather than as Tab with Shift
+    /// held. It folds onto Tab for the same reason the keypad's Enter folds
+    /// onto Return: ⇧⇥ is Tab-with-Shift to the user, and every site that
+    /// prints or stores a chord would otherwise have to know the scalar.
+    func testBackTab_isTabWithShift() throws {
+        let backTab = try chord("\u{19}", .shift)
+
+        XCTAssertEqual(backTab, try chord("\t", .shift))
+        XCTAssertTrue(backTab.matches(try snapshot("\u{19}", modifiers: .shift)))
+        XCTAssertEqual(
+            ComposingKeyBindings.default.action(for: try snapshot("\u{19}", modifiers: .shift)),
+            .previousCandidate,
+            "⇧⇥ walks back through the candidates out of the box",
+        )
+        XCTAssertEqual(ComposingKeyDisplay.text(for: backTab), "⇧⇥")
+    }
+
+    /// A chord a build before the fold stored keeps working: `init?(rawValue:)`
+    /// goes back through `make`, which normalizes.
+    func testAStoredBackTab_readsBackAsTabWithShift() throws {
+        XCTAssertEqual(ComposingKeyChord(rawValue: "s|0019"), try chord("\t", .shift))
     }
 
     func testActionsHolding_namesTheRowsARecordingWouldEmpty() throws {

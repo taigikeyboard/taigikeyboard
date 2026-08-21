@@ -10,8 +10,20 @@ extension KeyboardShortcuts.Name {
         "openSettings",
         initial: .init(.comma, modifiers: [.control, .shift]),
     )
-    static let toggleRomanization = Self("toggleRomanization")
-    static let toggleTranslateSwapped = Self("toggleTranslateSwapped")
+    /// ⌃⌘ plus a letter is what a Taiwanese input method puts its mid-sentence
+    /// switches on: vChewing binds every one of its toggles that way
+    /// (`references/vChewing-macOS/Packages/vChewing_MainAssembly4Darwin/Sources/MainAssembly4Darwin/SessionController/IMEMenuSputnik.swift:108-293`),
+    /// and McBopomofo's 簡繁轉換 is ⌃⌘G with 半形標點 on ⌃⌘H
+    /// (`references/McBopomofo/Source/InputMethodController.swift:74-81`). R for
+    /// the romanization, H for the Hanji the 漢羅 switch swaps in.
+    static let toggleRomanization = Self(
+        "toggleRomanization",
+        initial: .init(.r, modifiers: [.control, .command]),
+    )
+    static let toggleTranslateSwapped = Self(
+        "toggleTranslateSwapped",
+        initial: .init(.h, modifiers: [.control, .command]),
+    )
 }
 
 /// One user-assignable action. The list is the single source for the recorder
@@ -40,6 +52,14 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .toggleTranslateSwapped: .toggleTranslateSwapped
         }
     }
+
+    /// The chord a fresh install has on this action, read back from the
+    /// registry the library seeds itself from.
+    ///
+    /// Named here as well as on the `Name` so `ShortcutAction` stays the one
+    /// place that knows everything about an action — and so the composing half
+    /// (`ComposingAction.defaultChord`) has a sibling with the same name.
+    var defaultShortcut: KeyboardShortcuts.Shortcut? { name.initialShortcut }
 
     /// The recorder row's label, under the active display language.
     ///
@@ -121,12 +141,42 @@ enum ShortcutConflicts {
         }
     }
 
+    /// The pure half of the upgrade case: which actions hold a chord only
+    /// because it is their default, while another action holds the same chord
+    /// because the user recorded it there.
+    ///
+    /// An action is "on its default" when what it holds equals what it ships
+    /// with. A user who recorded that same chord by hand is indistinguishable
+    /// from one who never touched the row — and the outcome is the same either
+    /// way, so nothing rests on telling them apart.
+    static func defaultsShadowedByRecordings(
+        shortcutFor: (ShortcutAction) -> KeyboardShortcuts.Shortcut?,
+    ) -> [ShortcutAction] {
+        // Read once per action rather than once per pair: the scan below asks
+        // about every pair, and each read goes to `UserDefaults`.
+        let held = ShortcutAction.allCases.map { (action: $0, shortcut: shortcutFor($0)) }
+        let recorded = held.filter { $0.shortcut != nil && $0.shortcut != $0.action.defaultShortcut }
+        return held
+            .filter { $0.shortcut != nil && $0.shortcut == $0.action.defaultShortcut }
+            .filter { row in recorded.contains { $0.shortcut == row.shortcut } }
+            .map(\.action)
+    }
+
+    /// The impure half of it, run once at startup.
+    @MainActor
+    static func resolveDefaultsShadowedByRecordings() {
+        clear(defaultsShadowedByRecordings { KeyboardShortcuts.getShortcut(for: $0.name) })
+    }
+
     /// The impure half: called from each recorder's `onChange`.
     @MainActor
     static func resolve(after changed: ShortcutAction) {
-        let losers = conflictingActions(with: changed) { action in
-            KeyboardShortcuts.getShortcut(for: action.name)
-        }
+        clear(conflictingActions(with: changed) { KeyboardShortcuts.getShortcut(for: $0.name) })
+    }
+
+    /// What losing a chord means, stated once for both resolutions.
+    @MainActor
+    private static func clear(_ losers: [ShortcutAction]) {
         for loser in losers {
             KeyboardShortcuts.setShortcut(nil, for: loser.name)
         }

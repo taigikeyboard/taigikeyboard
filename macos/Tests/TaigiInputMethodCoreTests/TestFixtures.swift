@@ -237,6 +237,24 @@ enum TestFixtures {
         )
     }
 
+    /// A chord no `ComposingAction` ships with, for a case that needs to record
+    /// one without the binding resolver dropping it as a duplicate.
+    ///
+    /// Derived rather than written down: a default added to the roster would
+    /// otherwise silently invalidate fixtures that have nothing to do with
+    /// defaults.
+    static func chordNoDefaultHolds() throws -> ComposingKeyChord {
+        let taken = Set(ComposingAction.allCases.map(\.defaultChord))
+        let candidates: [NSEvent.ModifierFlags] = [
+            [.control, .option], [.command, .option], [.control, .command],
+        ]
+        for modifiers in candidates {
+            let chord = try ComposingKeyChord.make(key: "\r", modifiers: modifiers).get()
+            if !taken.contains(chord) { return chord }
+        }
+        throw XCTSkip("every Return chord this fixture knows is a default now")
+    }
+
     /// From `<repo>/macos/Tests/TaigiInputMethodCoreTests/TestFixtures.swift`.
     private static let repositoryRoot = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent() // TaigiInputMethodCoreTests

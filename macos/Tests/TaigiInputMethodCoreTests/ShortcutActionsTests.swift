@@ -75,21 +75,71 @@ final class ShortcutActionsTests: XCTestCase {
     /// item can stop declaring a key equivalent of its own.
     func testOpenSettings_startsBoundToControlShiftComma() {
         XCTAssertEqual(
-            KeyboardShortcuts.Name.openSettings.defaultShortcut,
+            ShortcutAction.openSettings.defaultShortcut,
             KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .shift]),
         )
     }
 
-    /// Only 開啟設定 arrives bound: a default chord is a key equivalent taken
-    /// from every host application for as long as this input source is
-    /// selected, so the rest stay unset until the user asks for them.
-    func testOtherActions_startUnbound() {
-        for action in ShortcutAction.allCases where action != .openSettings {
-            XCTAssertNil(
-                action.name.defaultShortcut,
-                "\(action.name.rawValue) claims a chord nobody asked for",
+    /// The two mid-sentence switches arrive bound as well: no row in the menu
+    /// or the pane is blank (USER 2026-08-21). ⌃⌘ plus a letter is where a
+    /// Taiwanese input method puts a switch a user flips while typing —
+    /// vChewing binds every one of its toggles that way, and McBopomofo's
+    /// 簡繁轉換 is ⌃⌘G.
+    func testTheSwitches_startBoundToControlCommandLetters() {
+        XCTAssertEqual(
+            ShortcutAction.toggleRomanization.defaultShortcut,
+            KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command]),
+        )
+        XCTAssertEqual(
+            ShortcutAction.toggleTranslateSwapped.defaultShortcut,
+            KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
+        )
+    }
+
+    /// Every action, not just the ones a case names above: one added without an
+    /// `initial:` would draw a blank row.
+    func testEveryAction_startsBound() {
+        for action in ShortcutAction.allCases {
+            XCTAssertNotNil(
+                action.defaultShortcut,
+                "\(action.name.rawValue) starts blank",
             )
         }
+    }
+
+    /// One chord per action, or both handlers fire on one keypress — the
+    /// defaults have to satisfy the same rule `ShortcutConflicts` enforces on
+    /// what the user records.
+    func testTheDefaults_areAllDifferent() {
+        let defaults = ShortcutAction.allCases.compactMap(\.name.defaultShortcut)
+
+        XCTAssertEqual(Set(defaults).count, ShortcutAction.allCases.count)
+    }
+
+    /// An `initial:` added in a later version installs itself on every install
+    /// that never recorded that action — including one where the user had
+    /// already put that chord on a different action. Both handlers would fire
+    /// on one keypress, so the row holding only a default gives way.
+    func testADefault_givesWayToTheSameChordRecordedElsewhere() {
+        let recorded = KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command])
+        let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { action in
+            switch action {
+            // toggleRomanization's default, recorded by hand on another row.
+            case .openSettings: recorded
+            case .toggleRomanization: recorded
+            case .toggleTranslateSwapped: nil
+            }
+        }
+
+        XCTAssertEqual(shadowed, [.toggleRomanization])
+    }
+
+    /// Every action on its own default is the fresh-install state, and those
+    /// are all different — nothing to resolve.
+    func testTheShippedDefaults_shadowNothing() {
+        let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { $0.defaultShortcut }
+
+        XCTAssertEqual(shadowed, [])
     }
 
     // MARK: - Conflict resolution

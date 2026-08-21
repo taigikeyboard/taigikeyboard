@@ -67,16 +67,6 @@ struct ComposingKeyChord: Hashable, Sendable {
         case candidateSlotChord
     }
 
-    /// The string an `NSMenuItem` prints this chord's key as.
-    ///
-    /// AppKit draws the glyph for the keys it knows — Return, Tab, Space — from
-    /// the character itself, so most of them pass straight through. The back
-    /// tab is the exception: `U+0019` renders as nothing, and ⇧⇥ is the same
-    /// chord to the user.
-    var menuKeyEquivalent: String {
-        key == "\u{19}" ? "\t" : key
-    }
-
     /// Whether this chord is one of the nine `1`…`9` slot chords under
     /// `slotModifier`.
     ///
@@ -136,11 +126,19 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// The form a key is stored and compared in.
     ///
     /// ASCII is lowercased so `⇧[` and `[` cannot be recorded as two chords on
-    /// one key. The keypad's Enter is folded into Return because a keyboard has
-    /// two of them and a user binding one means both — leaving them apart would
-    /// make the keypad quietly stop committing.
+    /// one key. Two keys are folded onto the character they mean, because a
+    /// user binding one means both: the keypad's Enter onto Return, since a
+    /// keyboard has two of them and leaving them apart would make the keypad
+    /// quietly stop committing, and the back tab AppKit reports for ⇧⇥ onto
+    /// Tab, since ⇧⇥ is Tab with Shift held to everyone but AppKit. Folding the
+    /// back tab here rather than at each site that has to know about it is what
+    /// keeps the display table, the defaults and the recorder free of it.
     private static func normalized(_ key: String) -> String {
-        key == "\u{3}" ? "\r" : key.lowercased()
+        switch key {
+        case "\u{3}": "\r" // Keypad Enter
+        case "\u{19}": "\t" // Back tab, which is what ⇧⇥ reports
+        default: key.lowercased()
+        }
     }
 
     /// The letters and the hyphen a syllable is spelled with, plus the digits

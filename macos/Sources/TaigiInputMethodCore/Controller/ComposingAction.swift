@@ -17,14 +17,18 @@ import AppKit
 ///
 /// Defaults follow the system Zhuyin input method's candidate window wherever
 /// the romanization allows it, so a user arriving from that keyboard finds
-/// their muscle memory intact.
+/// their muscle memory intact. Where Zhuyin has nothing to inherit, they follow
+/// another Taiwanese input method or stay in the Return family — each case says
+/// which below. No action ships unbound (USER 2026-08-21).
 enum ComposingAction: String, CaseIterable, Sendable {
     /// Moves the highlight one candidate along. Space by default, the way
     /// Zhuyin's space bar walks the candidate window — the arrows do this too,
     /// and always will.
     case nextCandidate
-    /// Moves the highlight one candidate back. Unbound by default: `←` already
-    /// does it, and Zhuyin has no second key for it.
+    /// Moves the highlight one candidate back. ⇧⇥, the reverse of the ⇥
+    /// McBopomofo walks its candidates with
+    /// (`references/McBopomofo/Source/KeyHandler.mm:817-870`) — `←` does it too,
+    /// and always will.
     case previousCandidate
     /// Shows the next page of candidates. `]`, as in the system candidate
     /// window.
@@ -39,21 +43,35 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// is why it is one of the two actions a binding may never leave unbound.
     case commitLiteral
     /// Commits the highlighted candidate as Hanji, whatever the 漢羅 setting
-    /// says. Unbound by default: it eats a chord, and Zhuyin has no equivalent
-    /// to inherit a default from.
+    /// says. ⌃↩.
     case commitHanji
-    /// Commits the highlighted candidate as romanization, same terms.
+    /// Commits the highlighted candidate as romanization, same terms. ⌥↩.
     case commitRomanization
 
-    /// The chord a fresh install has on this action.
-    var defaultChord: ComposingKeyChord? {
+    /// The chord a fresh install has on this action. Every action has one: a
+    /// row the user has never touched prints a key rather than a blank
+    /// (USER 2026-08-21).
+    ///
+    /// Read from a table built once rather than rebuilt per read: the bindings
+    /// are resolved on every keystroke and every menu draw, and each entry runs
+    /// the bindability gate to build.
+    var defaultChord: ComposingKeyChord { Self.defaultChords[self] ?? freshChord }
+
+    private static let defaultChords: [ComposingAction: ComposingKeyChord] =
+        Dictionary(uniqueKeysWithValues: allCases.map { ($0, $0.freshChord) })
+
+    /// The table's own source, kept a `switch` so a new case cannot compile
+    /// without one.
+    private var freshChord: ComposingKeyChord {
         switch self {
         case .nextCandidate: Self.chord(" ")
+        case .previousCandidate: Self.chord("\t", modifiers: .shift)
         case .pageForward: Self.chord("]")
         case .pageBackward: Self.chord("[")
         case .confirmHighlighted: Self.chord("\r")
         case .commitLiteral: Self.chord("\r", modifiers: .shift)
-        case .previousCandidate, .commitHanji, .commitRomanization: nil
+        case .commitHanji: Self.chord("\r", modifiers: .control)
+        case .commitRomanization: Self.chord("\r", modifiers: .option)
         }
     }
 

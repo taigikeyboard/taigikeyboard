@@ -249,14 +249,16 @@ final class SettingsStoreTests: XCTestCase {
 
     func testComposingChords_roundTripThroughTheSuite() throws {
         let store = makeStore()
-        let chord = try XCTUnwrap(ComposingKeyChord(rawValue: "o|000D")) // ⌥Return
+        // A chord no default holds, so the resolver has no duplicate to drop
+        // and the round trip is the only thing under test.
+        let chord = try TestFixtures.chordNoDefaultHolds()
 
         store.setComposingChord(chord, for: .commitHanji)
 
         XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .commitHanji), chord)
         XCTAssertEqual(
             userDefaults.string(forKey: ComposingAction.commitHanji.settingsKeyName),
-            "o|000D",
+            chord.rawValue,
             "the stored form is what a later build has to keep reading",
         )
     }

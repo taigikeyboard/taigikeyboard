@@ -199,31 +199,19 @@ public final class TaigiInputController: IMKInputController {
     /// `onMainActor` exists to turn into a crash rather than a data race
     /// everywhere it can be checked.
     override public func menu() -> NSMenu! {
-        let menu = NSMenu()
-        // The items below set their own state, and automatic validation would
-        // second-guess it (`references/MacishType/macos/MacishType/InputController.swift:27-29`).
-        menu.autoenablesItems = false
-
-        // The chord is whatever the user recorded for 開啟設定 — initially
-        // `Ctrl+Shift+,`, the chord PR5 shipped hardcoded (⌘, still belongs to
-        // the app being typed into). Read and applied by hand rather than
-        // through the library's `NSMenuItem.setShortcut(for:)`: that helper
-        // registers a `NotificationCenter` observer per item so a long-lived
-        // item can update itself, and this menu is rebuilt from scratch every
-        // time the system draws it (`IMKInputController.h:307-310`) — one
-        // observer would be added per draw and never removed, since removal
-        // only happens by re-binding the same item. Rebuilding IS the update
-        // mechanism the observer exists to provide.
+        // Each row's chord is read and assigned by hand rather than set through
+        // the library's `NSMenuItem.setShortcut(for:)`: that helper registers a
+        // `NotificationCenter` observer per item so a long-lived item can update
+        // itself, and this menu is rebuilt from scratch every time the system
+        // draws it (`IMKInputController.h:307-310`) — one observer would be
+        // added per draw and never removed, since removal only happens by
+        // re-binding the same item. Rebuilding IS the update mechanism the
+        // observer exists to provide. Why every row claims a key equivalent is
+        // `InputSourceMenuRow`'s to say.
         //
-        // The chord also fires through the Carbon hotkey `ShortcutHotkeys`
-        // registers, active only while a session holds the engine — the same
-        // scope the old key equivalent had. Both paths land on
-        // `SettingsWindowController.show()`, which is idempotent, so a double
-        // fire while the input-source menu is open costs nothing. (The library
-        // swaps its hotkeys for a raw event monitor while an `NSMenu` is
-        // tracking, but that depends on `NSMenu.didBeginTracking`, which IMK
-        // does not document for the system-drawn input-source menu — hence the
-        // idempotent target rather than a promise.)
+        // The global chords fire through the Carbon hotkeys `ShortcutHotkeys`
+        // registers, active only while a session holds the engine.
+        //
         // `assumeIsolated` for the same reason the rest of this class hops
         // through `onMainActor`: IMK calls its controllers on the main run
         // loop, and the shortcut store is main-actor-isolated. Asserting turns
@@ -232,9 +220,8 @@ public final class TaigiInputController: IMKInputController {
         // The titles are resolved in the same hop, and the store is synced first: under Automatic
         // the OS language can change while the persisted tag stays `"system"`, so nothing writes the
         // key and no observation fires — a menu rebuilt per draw is exactly the right place to
-        // notice. Resolved to plain strings here because `menu()` itself is nonisolated.
-        // Read before the hop so the closure captures a value, not `self`: the store is a
-        // main-actor type, which makes it Sendable, while this controller is not.
+        // notice.
+        //
         // Read BEFORE the hop, so the closure captures values rather than this
         // controller: `menu()` is nonisolated and the controller is not
         // Sendable, so sending `self` into a main-actor closure does not
@@ -242,7 +229,7 @@ public final class TaigiInputController: IMKInputController {
         // `@unchecked Sendable`, the bindings are a value.
         let injectedLanguage = displayLanguageOverride
         let bindings = settings.composingKeyBindings
-        let groups = MainActor.assumeIsolated { () -> [[MenuShortcutRow]] in
+        let groups = MainActor.assumeIsolated { () -> [[InputSourceMenuRow]] in
             let language = injectedLanguage ?? DisplayLanguageStore.shared
             // Can rebuild the menu bar and relabel the settings window as a side effect: the sync
             // commits a language change, and committing one runs the chrome renderer.
@@ -251,8 +238,8 @@ public final class TaigiInputController: IMKInputController {
             let global = ShortcutAction.groups.map { group in
                 group.map { action in
                     let shortcut = KeyboardShortcuts.getShortcut(for: action.name)
-                    return MenuShortcutRow(
-                        title: action.label(language),
+                    return InputSourceMenuRow(
+                        label: action.label(language),
                         keyEquivalent: shortcut?.nsMenuItemKeyEquivalent ?? "",
                         modifiers: shortcut?.modifiers ?? [],
                         action: Self.selector(for: action),
@@ -261,84 +248,27 @@ public final class TaigiInputController: IMKInputController {
             }
             var composing = ComposingAction.groups.map { group in
                 group.map { action in
-                    MenuShortcutRow(
-                        title: Self.title(action.label(language), key: bindings.chord(for: action)),
-                        keyEquivalent: "",
-                        modifiers: [],
+                    let chord = bindings.chord(for: action)
+                    return InputSourceMenuRow(
+                        label: action.label(language),
+                        keyEquivalent: chord?.key ?? "",
+                        modifiers: chord?.modifiers ?? [],
                         action: #selector(openShortcutSettings(_:)),
                     )
                 }
             }
             // Ends the group that moves through the candidates, because that is
             // what it does — the slot chords are the fastest way to pick one.
-            //
-            // The nine of them stand behind a single setting, which no one
-            // `keyEquivalent` can print, so the range goes in the title: the one
-            // row where the key is text rather than a glyph.
-            composing[0].append(MenuShortcutRow(
-                title: Self.title(
-                    language.string(.macosBindingSlotModifier),
-                    keyText: bindings.slotModifier.menuRange,
-                ),
-                keyEquivalent: "",
-                modifiers: [],
+            // The nine of them stand behind a single setting, so this row's key
+            // is a range rather than a chord.
+            composing[0].append(InputSourceMenuRow(
+                label: language.string(.macosBindingSlotModifier),
+                keyTextInTitle: bindings.slotModifier.menuRange,
                 action: #selector(openShortcutSettings(_:)),
             ))
             return global + composing
         }
-
-        // Rules BETWEEN the groups, never leading or trailing — counted off the
-        // groups that actually have rows, so an empty one draws no rule at all.
-        for (index, group) in groups.filter({ !$0.isEmpty }).enumerated() {
-            if index > 0 {
-                menu.addItem(.separator())
-            }
-            for row in group {
-                let item = NSMenuItem(title: row.title, action: row.action, keyEquivalent: row.keyEquivalent)
-                item.keyEquivalentModifierMask = row.modifiers
-                menu.addItem(item)
-            }
-        }
-
-        return menu
-    }
-
-    /// One menu row: an action and the key it currently answers to.
-    ///
-    /// The whole menu is the shortcut roster now — every row is something the
-    /// user can reach from a key, and the key is printed beside it (USER
-    /// 2026-08-21). The romanization CHOICE is no longer here: two checkmarked
-    /// rows were a setting rather than a shortcut, and the same switch is one
-    /// row up as an action with a key of its own.
-    ///
-    /// The composing rows do not RUN their action: those keys only mean
-    /// anything while a composition is running, and a menu is open when one is
-    /// not. They open the pane where the key is set instead, which is what a
-    /// user who came looking for a shortcut wanted next (USER 2026-08-21).
-    ///
-    /// Which is also why their key is printed IN the title rather than set as a
-    /// `keyEquivalent`: a key equivalent is LIVE while the menu is tracking, so
-    /// Space or Return would select the row and open the settings window rather
-    /// than doing what the menu's own keyboard handling should. Only the three
-    /// rows that really answer to their chord carry one.
-    private struct MenuShortcutRow {
-        let title: String
-        let keyEquivalent: String
-        let modifiers: NSEvent.ModifierFlags
-        let action: Selector?
-    }
-
-    /// A row's title with the key it answers to printed after it.
-    ///
-    /// Two spaces rather than a tab: `NSMenuItem` lays a key equivalent out
-    /// itself, and a title is plain text — so the rows that cannot use one are
-    /// spaced by hand.
-    private static func title(_ label: String, key chord: ComposingKeyChord?) -> String {
-        title(label, keyText: chord.map(ComposingKeyDisplay.text(for:)) ?? "")
-    }
-
-    private static func title(_ label: String, keyText: String) -> String {
-        keyText.isEmpty ? label : "\(label)  \(keyText)"
+        return InputSourceMenuRenderer.menu(groups)
     }
 
     /// One selector per action rather than one selector reading the sender: IMK
