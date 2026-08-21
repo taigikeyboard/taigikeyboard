@@ -72,6 +72,14 @@ final class CandidatePanel: CandidatePresenter {
         self.owner = owner
     }
 
+    func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
+        // `isVisible` on top of the owner guard: ownership is cleared on every
+        // hide path, so the two should agree — but a window taken down behind
+        // the panel's back must not be re-laid-out as if it were on screen.
+        guard self.owner == owner, let panel, !panel.isEmpty, panel.isVisible else { return }
+        panel.rerenderCandidates(cells)
+    }
+
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {
         guard self.owner == owner else { return }
         panel?.navigate(direction)

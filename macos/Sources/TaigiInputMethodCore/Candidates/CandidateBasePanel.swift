@@ -244,6 +244,15 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         preconditionFailure("layout subclasses must override updateCandidates")
     }
 
+    /// Replaces every cell's content in place — the same list under a new
+    /// rendering — keeping the selection on the same absolute index, and
+    /// re-places its own frame for the new measured widths (`replace` keeps a
+    /// same-size drag where it is). NOT `updateCandidates`: that is the
+    /// fresh-list contract and resets the selection and the page.
+    func rerenderCandidates(_: [CandidateCellContent]) {
+        preconditionFailure("layout subclasses must override rerenderCandidates")
+    }
+
     /// Empties the window so nothing can be selected or committed from it —
     /// hiding must drop the state, not just the pixels.
     func clear() { hide() }

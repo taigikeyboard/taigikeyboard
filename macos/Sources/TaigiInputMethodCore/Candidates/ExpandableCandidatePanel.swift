@@ -136,6 +136,19 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         return rebuildCollapsed()
     }
 
+    /// Same list, new rendering. The window lays out collapsed for the new
+    /// widths, then the kept selection decides the mode the way it always
+    /// does: a selection past the collapsed row re-expands through `select`,
+    /// one inside it stays collapsed.
+    override func rerenderCandidates(_ newCells: [CandidateCellContent]) {
+        guard !cells.isEmpty, !newCells.isEmpty else { return }
+        let kept = selectedIndex
+        cells = Array(newCells.prefix(Self.maxDisplayCandidates))
+        measuredWidths = cells.map(metrics.measureWidth)
+        replace(panelSize: rebuildCollapsed())
+        select(min(kept, cells.count - 1))
+    }
+
     override func clear() {
         stopFrameAnimation()
         transition = nil
