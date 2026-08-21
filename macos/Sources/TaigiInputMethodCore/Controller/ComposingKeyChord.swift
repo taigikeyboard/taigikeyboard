@@ -52,9 +52,10 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// Why a key could not be recorded, so the recorder can say so rather than
     /// silently doing nothing.
     enum Rejection: Error, Equatable, Sendable {
-        /// A letter, a digit or the hyphen with no modifier held — the
-        /// characters a TL or POJ syllable is spelled with, tone marker
-        /// included.
+        /// A syllable letter, a digit or the hyphen with no modifier held —
+        /// the characters a TL or POJ syllable is spelled with, tone marker
+        /// included. The eight letters no syllable uses are not refused
+        /// (`syllableLetters`).
         case typesRomanization
         /// Backspace, Escape, the arrows or the paging keys, which the input
         /// method reserves whatever modifiers are held.
@@ -84,7 +85,7 @@ struct ComposingKeyChord: Hashable, Sendable {
     static func make(key rawKey: String?, modifiers rawModifiers: NSEvent.ModifierFlags)
         -> Result<ComposingKeyChord, Rejection>
     {
-        guard let rawKey, let first = rawKey.first else { return .failure(.noKey) }
+        guard let rawKey, !rawKey.isEmpty else { return .failure(.noKey) }
         let key = normalized(rawKey)
         guard !neverBindable.contains(key) else { return .failure(.reservedKey) }
 
@@ -92,7 +93,7 @@ struct ComposingKeyChord: Hashable, Sendable {
         // Shift alone does not make a chord out of a typing key: ⇧A is still
         // the letter A, and binding it would cost the user their capitals.
         let hasChordingModifier = !modifiers.isDisjoint(with: [.command, .control, .option])
-        if !hasChordingModifier, isRomanizationKey(first) {
+        if !hasChordingModifier, let first = key.first, isSyllableTypingKey(first) {
             return .failure(.typesRomanization)
         }
         return .success(ComposingKeyChord(key: key, modifiers: modifiers))
@@ -141,14 +142,28 @@ struct ComposingKeyChord: Hashable, Sendable {
         }
     }
 
-    /// The letters and the hyphen a syllable is spelled with, plus the digits
-    /// that carry its tone (`tai5`).
+    /// The letters a TL or POJ syllable can be spelled with. Eight ASCII
+    /// letters are absent — d f q v w x y z — because neither romanization
+    /// uses them (`knowledge/taigi-phonetics-reference.md` §2–3; verified
+    /// against every `tl`/`poj` column of the production dictionary), and a
+    /// key that spells no syllable is exactly the kind a user wants free for
+    /// a bare binding.
     ///
-    /// Asked of the classifier rather than spelled out again: a chord may not
-    /// take a key that would otherwise reach the composition as input, so the
-    /// refusal has to be the same rule the input path uses.
-    private static func isRomanizationKey(_ character: Character) -> Bool {
-        ComposingKeyIntent.isRomanizationCharacter(character)
+    /// Deliberately narrower than `ComposingKeyIntent.isRomanizationCharacter`:
+    /// the input path keeps accepting all ASCII letters (a custom-dictionary
+    /// romanization is free text), while this set only decides what the
+    /// recorder defends. A bound letter outside it still wins mid-composition
+    /// because the bindings tier is classified before input
+    /// (`ComposingKeyIntent.intent`).
+    private static let syllableLetters = Set("abceghijklmnoprstu")
+
+    /// The letters and the hyphen a syllable is spelled with, plus the digits
+    /// that carry its tone (`tai5`). Asked of the normalized key, so the
+    /// case fold is `normalized`'s — the same way the reserved-key check
+    /// reads it.
+    private static func isSyllableTypingKey(_ character: Character) -> Bool {
+        syllableLetters.contains(character)
+            || character == "-"
             || ComposingKeyIntent.isToneDigit(character)
     }
 }

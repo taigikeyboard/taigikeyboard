@@ -271,6 +271,22 @@ final class SettingsStoreTests: XCTestCase {
         )
     }
 
+    /// The request that freed the eight non-syllable letters: 直接輸出漢字 on a
+    /// bare `z` must survive a relaunch, stored in the same raw form every
+    /// modifier chord uses.
+    func testABareNonSyllableLetter_roundTripsThroughTheSuite() throws {
+        let store = makeStore()
+        let bareZ = try ComposingKeyChord.make(key: "z", modifiers: []).get()
+
+        store.setComposingChord(bareZ, for: .commitHanji)
+
+        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .commitHanji), bareZ)
+        XCTAssertEqual(
+            userDefaults.string(forKey: ComposingAction.commitHanji.settingsKeyName),
+            "|007A",
+        )
+    }
+
     /// Clearing a row is a stored empty string, not an absent key: an absent
     /// key means "never touched" and reads as the action's default, so the two
     /// cannot be collapsed without undoing the user's clearing on next launch.

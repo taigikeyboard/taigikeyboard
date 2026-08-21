@@ -12,15 +12,59 @@ final class ComposingKeyBindingsTests: XCTestCase {
     // MARK: - What a chord may be
 
     /// The keys a TL or POJ syllable is spelled with, tone marker included. A
-    /// recorder that took one would leave the user unable to type it.
+    /// recorder that took one would leave the user unable to type it. The
+    /// whole alphabet is spelled out so a letter dropped from the set by
+    /// mistake fails here; `r` and `c` are the two easy to mistake for free —
+    /// `r` spells the dialectal `ir`/`er` finals and `c` the POJ `ch`/`chh`
+    /// initials.
     func testTypingKeys_cannotBeRecordedBare() {
-        for key in ["a", "z", "A", "5", "0", "-"] {
+        for key in "abceghijklmnoprstu".map(String.init) + ["A", "5", "0", "-"] {
             XCTAssertEqual(
                 ComposingKeyChord.make(key: key, modifiers: []),
                 .failure(.typesRomanization),
                 "'\(key)' spells romanization — binding it costs the user the key",
             )
         }
+    }
+
+    /// The eight letters no TL or POJ syllable uses are the keys a user has
+    /// free to bind bare — the whole point of narrowing the refusal to the
+    /// syllable alphabet.
+    func testNonSyllableLetters_canBeRecordedBare() throws {
+        for key in ["d", "f", "q", "v", "w", "x", "y", "z"] {
+            let chord = try ComposingKeyChord.make(key: key, modifiers: []).get()
+            XCTAssertEqual(chord.key, key)
+            XCTAssertEqual(chord.modifiers, [])
+        }
+    }
+
+    /// The factory may receive a capital, and the refusal reads the key
+    /// `normalized` has already folded: a capital of a free letter records,
+    /// a capital of a syllable letter still does not.
+    func testCapitalsFoldToTheirLetter_beforeTheRefusalDecides() throws {
+        let chord = try ComposingKeyChord.make(key: "Z", modifiers: .shift).get()
+        XCTAssertEqual(chord.key, "z")
+        XCTAssertEqual(chord.modifiers, .shift)
+
+        XCTAssertEqual(
+            ComposingKeyChord.make(key: "R", modifiers: .shift),
+            .failure(.typesRomanization),
+        )
+    }
+
+    /// Bare `z` and ⇧Z are two different chords on one key, and each fires
+    /// only on its own event.
+    func testABareLetterChord_andItsShiftedTwin_doNotCrossMatch() throws {
+        let bare = try ComposingKeyChord.make(key: "z", modifiers: []).get()
+        let shifted = try ComposingKeyChord.make(key: "Z", modifiers: .shift).get()
+
+        let bareEvent = try snapshot("z")
+        let shiftedEvent = try snapshot("Z", modifiers: .shift, unmodified: "z")
+
+        XCTAssertTrue(bare.matches(bareEvent))
+        XCTAssertFalse(bare.matches(shiftedEvent))
+        XCTAssertTrue(shifted.matches(shiftedEvent))
+        XCTAssertFalse(shifted.matches(bareEvent))
     }
 
     /// With a chording modifier they are ordinary chords: ⌥A types no letter.
@@ -82,6 +126,8 @@ final class ComposingKeyBindingsTests: XCTestCase {
         for (key, modifiers) in [
             (" ", NSEvent.ModifierFlags()),
             ("\r", .shift),
+            ("z", []),
+            ("Z", .shift),
             ("]", [.command, .control, .option, .shift]),
         ] as [(String, NSEvent.ModifierFlags)] {
             let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
@@ -406,6 +452,33 @@ final class ComposingKeyBindingsTests: XCTestCase {
         let space = try chord(" ")
 
         XCTAssertTrue(space.matches(try snapshot(" ", modifiers: [.capsLock, .numericPad])))
+    }
+
+    // MARK: - A bare letter through the intent tiers
+
+    /// The design promise behind freeing the eight letters: mid-composition
+    /// the bindings tier is read before input, so the bound letter fires its
+    /// action; everywhere the binding does not apply, the letter is still the
+    /// letter.
+    func testABareBoundLetter_firesItsAction_onlyWhereTheActionApplies() throws {
+        let bindings = ComposingKeyBindings(chords: [.commitHanji: try chord("z")])
+        let z = try snapshot("z")
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: z, isComposing: true, isShowingCandidates: true, bindings: bindings),
+            .commitHighlightedCandidate(.hanji),
+            "the binding wins over literal input while candidates are up",
+        )
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: z, isComposing: true, bindings: bindings),
+            .input("z"),
+            "an action that needs candidates gives the key back when none are up",
+        )
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: z, isComposing: false, bindings: bindings),
+            .input("z"),
+            "with no composition there is nothing to commit — the letter still starts one",
+        )
     }
 
     private func chord(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) throws -> ComposingKeyChord {
