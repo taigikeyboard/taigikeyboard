@@ -22,8 +22,8 @@ final class CandidateMetricsTests: XCTestCase {
     /// itemHeight 16+8=24.
     func testSmallestChoices_resolveToTheirLiterals() {
         XCTAssertEqual(originalMetrics.candidateFontSize, 16)
-        XCTAssertEqual(originalMetrics.annotationFontSize, 13)
-        XCTAssertEqual(originalMetrics.candidateAnnotationGap, 11)
+        XCTAssertEqual(originalMetrics.annotationFontSize, 14)
+        XCTAssertEqual(originalMetrics.candidateAnnotationGap, 7)
         XCTAssertEqual(originalMetrics.horizontalPadding, 6)
         XCTAssertEqual(originalMetrics.verticalPadding, 8)
         XCTAssertEqual(originalMetrics.tahoeSeparatorInset, 6)
@@ -38,12 +38,12 @@ final class CandidateMetricsTests: XCTestCase {
     /// text, less whitespace): the font is well above the 16pt reference while
     /// the paddings sit below upstream's 9/12 originals.
     ///
-    /// trace: 中/中 → font 20, ann 13*1.25=16.25→16, gap 11*1.25=13.75→14;
+    /// trace: 中/中 → font 20, ann 14*1.25=17.5→18, gap 7*1.25=8.75→9;
     /// chrome 0.85 → h 9*0.85=7.65→8, v 12*0.85=10.2→10; itemHeight 30.
     func testDefaultChoices_areTextForward() {
         XCTAssertEqual(defaultMetrics.candidateFontSize, 20)
-        XCTAssertEqual(defaultMetrics.annotationFontSize, 16)
-        XCTAssertEqual(defaultMetrics.candidateAnnotationGap, 14)
+        XCTAssertEqual(defaultMetrics.annotationFontSize, 18)
+        XCTAssertEqual(defaultMetrics.candidateAnnotationGap, 9)
         XCTAssertEqual(defaultMetrics.horizontalPadding, 8)
         XCTAssertEqual(defaultMetrics.verticalPadding, 10)
         XCTAssertEqual(defaultMetrics.itemHeight, 30)

@@ -87,12 +87,13 @@ struct CandidateMetrics: Equatable, Sendable {
     }
 
     /// Upstream's reference values at 16pt (`Base16Metrics`) — except the
-    /// annotation font, raised from upstream's 12: the second script is a
-    /// reading aid, not a footnote, and 12-on-16 rendered it too small
-    /// (USER 2026-08-21: subtitle bigger).
+    /// annotation font and its gap, both retuned from upstream's 12/11: the
+    /// second script is a reading aid, not a footnote, so it renders larger
+    /// and sits closer to the candidate it annotates (USER 2026-08-21,
+    /// two rounds: subtitle bigger, then bigger still with less air).
     private static let baseCandidateFontSize: CGFloat = 16
-    private static let baseAnnotationFontSize: CGFloat = 13
-    private static let baseCandidateAnnotationGap: CGFloat = 11
+    private static let baseAnnotationFontSize: CGFloat = 14
+    private static let baseCandidateAnnotationGap: CGFloat = 7
     private static let baseHorizontalPadding: CGFloat = 9
     private static let baseVerticalPadding: CGFloat = 12
     private static let baseTahoeSeparatorInset: CGFloat = 8
