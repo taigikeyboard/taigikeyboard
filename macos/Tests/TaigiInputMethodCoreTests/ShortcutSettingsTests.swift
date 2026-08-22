@@ -77,6 +77,10 @@ final class ShortcutSettingsTests: XCTestCase {
             ("\r", .shift, "⇧↩"),
             ("]", [], "]"),
             ("j", [.control, .option], "⌃⌥J"),
+            // A bare letter shows the character it types: uppercase on a
+            // modifier-less row would read as ⇧Z (USER 2026-08-22).
+            ("z", [], "z"),
+            ("Z", .shift, "⇧Z"),
         ]
 
         for (key, modifiers, expected) in cases {
