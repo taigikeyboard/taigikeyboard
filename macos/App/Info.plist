@@ -13,10 +13,15 @@
     `ComponentInputModeDict` is deliberately absent: TL and POJ are an in-app
     setting, not OS-level input modes (docs/architecture/macos-roadmap.md D5).
 
-    `AppIcon.icns` is the App Store icon, built from the iOS asset catalogue
-    (`ios/…/AppIcon.appiconset`). `TISIconIsTemplate` is false because that art
-    is fully opaque: rendered as a template mask it would show as a solid blob
-    in the menu bar instead of the icon.
+    Two icons, because the keys answer different questions. `CFBundleIconFile`
+    is who this bundle is: the App Store art built from the iOS asset catalogue
+    (`ios/…/AppIcon.appiconset`), full colour, shown by Finder and System
+    Settings. `tsInputMethodIconFileKey` is what the input source looks like in
+    the menu bar, which Apple's own CJK input methods answer with a template
+    image rather than an app icon — hence `TISIconIsTemplate`, which tells macOS
+    to use only the alpha channel and tint it for the current appearance.
+    `scripts/make-menubar-icon.swift` generates that image and documents its
+    shape.
 -->
 <plist version="1.0">
 <dict>
@@ -49,13 +54,13 @@
 	<key>NSPrincipalClass</key>
 	<string>TaigiInputMethodApplication</string>
 	<key>TISIconIsTemplate</key>
-	<false/>
+	<true/>
 	<key>TISInputSourceID</key>
 	<string>com.siansiansu.inputmethod.TaigiKeyboard</string>
 	<key>TISIntendedLanguage</key>
 	<string>mul</string>
 	<key>tsInputMethodIconFileKey</key>
-	<string>AppIcon.icns</string>
+	<string>MenuBarIcon.tiff</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Latn</string>

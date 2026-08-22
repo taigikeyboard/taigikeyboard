@@ -20,6 +20,7 @@ _read_bundle_identity() {
         -c "Print :CFBundleShortVersionString" \
         -c "Print :CFBundleVersion" \
         -c "Print :LSMinimumSystemVersion" \
+        -c "Print :tsInputMethodIconFileKey" \
         "$plist")"
 
     # Values are single-line and space-free by construction (bundle IDs, class
@@ -35,6 +36,9 @@ _read_bundle_identity() {
         read -r SHORT_VERSION
         read -r BUILD_VERSION
         read -r MINIMUM_SYSTEM_VERSION
+        # A complete filename, unlike CFBundleIconFile, so the bundle script can
+        # copy it without knowing what it is called.
+        read -r MENU_BAR_ICON_NAME
     } <<< "$values"
 }
 

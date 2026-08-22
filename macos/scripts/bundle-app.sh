@@ -72,16 +72,26 @@ cp "$BUILT_EXECUTABLE" "$CONTENTS_DIR/MacOS/$EXECUTABLE_NAME"
 cp "$SOURCE_PLIST" "$CONTENTS_DIR/Info.plist"
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
-echo "==> Copying app icon"
-# Named by Info.plist twice: CFBundleIconFile (Finder, System Settings) and
-# tsInputMethodIconFileKey (the menu-bar input-source item). A missing icon
-# leaves the input method with a generic placeholder in both places.
+echo "==> Copying icons"
+# The two files Info.plist names, one per icon key; Info.plist itself explains
+# why there are two. Either one missing leaves a generic placeholder in its own
+# place, which shows up only once the input method is installed.
+# Rebuild AppIcon.icns with `iconutil` from ios/…/AppIcon.appiconset.
 ICON_FILE="$PACKAGE_DIR/App/AppIcon.icns"
 if [[ ! -s "$ICON_FILE" ]]; then
     echo "error: missing or empty app icon $ICON_FILE" >&2
     exit 1
 fi
 cp "$ICON_FILE" "$CONTENTS_DIR/Resources/AppIcon.icns"
+
+# Named rather than hardcoded: renaming the icon in Info.plist would otherwise
+# ship a bundle that passes every check here and still shows a placeholder.
+MENU_BAR_ICON_FILE="$PACKAGE_DIR/App/$MENU_BAR_ICON_NAME"
+if [[ ! -s "$MENU_BAR_ICON_FILE" ]]; then
+    echo "error: missing or empty menu-bar icon $MENU_BAR_ICON_FILE (regenerate with 'swift scripts/make-menubar-icon.swift')" >&2
+    exit 1
+fi
+cp "$MENU_BAR_ICON_FILE" "$CONTENTS_DIR/Resources/$MENU_BAR_ICON_NAME"
 
 echo "==> Copying dictionary data"
 # Read from the iOS resource directory rather than keeping a third committed
