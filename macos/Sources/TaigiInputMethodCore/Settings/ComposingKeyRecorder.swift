@@ -293,8 +293,14 @@ enum ComposingKeyDisplay {
     /// global chords through `KeyboardShortcuts.Shortcut.description` and
     /// composing chords through this, side by side in one column, so the two
     /// have to speak the same glyph vocabulary.
+    ///
+    /// A chord WITH modifiers keeps the uppercase keycap legend the system
+    /// and the global rows print (`⌃⌥J`). A bare key shows the character it
+    /// types: an uppercase `Z` on a modifier-less row reads as ⇧Z, a key the
+    /// row does not hold (USER 2026-08-22).
     static func text(for chord: ComposingKeyChord) -> String {
-        chord.modifiers.ks_symbolicRepresentation
-            + (keyNames[chord.key] ?? chord.key.uppercased())
+        let keycap = keyNames[chord.key]
+            ?? (chord.modifiers.isEmpty ? chord.key : chord.key.uppercased())
+        return chord.modifiers.ks_symbolicRepresentation + keycap
     }
 }
