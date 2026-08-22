@@ -204,14 +204,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateWindowStyleChoice.auto,
         )
 
-        /// The candidate highlight's accent colour — `auto` follows the
-        /// system (and the host app under Multicolour). Presentation-only
-        /// like `candidateLayout`.
-        static let candidateAccentColor = SettingsKey(
-            name: "candidateAccentColor",
-            defaultValue: CandidateAccentChoice.auto,
-        )
-
         /// The candidate window's light/dark choice — `auto` follows the
         /// system. Presentation-only like `candidateLayout`.
         static let candidateAppearanceMode = SettingsKey(
@@ -332,11 +324,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// The candidate window's chrome choice.
     var candidateWindowStyle: CandidateWindowStyleChoice {
         choice(Keys.candidateWindowStyle)
-    }
-
-    /// The candidate highlight's accent choice.
-    var candidateAccentColor: CandidateAccentChoice {
-        choice(Keys.candidateAccentColor)
     }
 
     /// The candidate window's light/dark choice.

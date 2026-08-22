@@ -163,17 +163,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateWindowStyle, .auto)
     }
 
-    /// The swatch row's contract: 自動 follows the system (no override), and
-    /// every one of the eight circles pins a real colour — a swatch whose
-    /// override resolved to nil would silently behave as 自動.
-    func testCandidateAccentColor_withNothingStored_followsTheSystem() {
-        XCTAssertEqual(makeStore().candidateAccentColor, .auto)
-        XCTAssertNil(CandidateAccentChoice.auto.overrideColor)
-        for choice in CandidateAccentChoice.allCases where choice != .auto {
-            XCTAssertNotNil(choice.overrideColor, "\(choice) must pin a colour")
-        }
-    }
-
     /// The 外觀 row's contract: 自動 forces nothing (the panel resolves
     /// against the system), and the two explicit modes force the matching
     /// appearance — a mode that resolved to nil would silently behave as 自動.
@@ -236,17 +225,6 @@ final class SettingsStoreTests: XCTestCase {
 
         XCTAssertEqual(makeStore().candidateTextSize, .medium)
         XCTAssertEqual(makeStore().candidateWindowSize, .medium)
-    }
-
-    func testCandidateAccentColor_readsWhatTheSwatchRowWrites() {
-        userDefaults.set(
-            CandidateAccentChoice.graphite.rawValue,
-            forKey: SettingsStore.Keys.candidateAccentColor.name,
-        )
-        XCTAssertEqual(makeStore().candidateAccentColor, .graphite)
-
-        userDefaults.set("chartreuse", forKey: SettingsStore.Keys.candidateAccentColor.name)
-        XCTAssertEqual(makeStore().candidateAccentColor, .auto, "unknown values fall back to 自動")
     }
 
     // MARK: - Composing key bindings

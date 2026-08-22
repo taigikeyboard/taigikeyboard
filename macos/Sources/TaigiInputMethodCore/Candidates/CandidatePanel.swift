@@ -55,7 +55,6 @@ final class CandidatePanel: CandidatePresenter {
             anchoredTo: caretRect,
             hostWindowLevel: hostWindowLevel,
             hostBundleIdentifier: hostBundleIdentifier,
-            accentOverride: settings.candidateAccentColor.overrideColor,
             forcedAppearance: settings.candidateAppearanceMode.forcedAppearance,
         )
         guard presented else {

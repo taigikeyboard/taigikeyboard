@@ -1,12 +1,17 @@
-// The 外觀 pane: how the candidate window looks — mode, accent, layout, chrome.
+// The 外觀 pane: how the candidate window looks — mode, layout, chrome, size.
 
 import SwiftUI
 
 /// The 外觀 pane of the settings window, shaped like System Settings'
-/// Appearance pane: an 外觀 row of light/dark/auto thumbnails, a 強調色 row
-/// of colour circles (the same eight MacishType's site demos,
-/// https://luke-chang.github.io/MacishType/), then the candidate window's own
-/// two pickers — layout and chrome generation.
+/// Appearance pane: an 外觀 row of light/dark/auto thumbnails, then the
+/// candidate window's own pickers — layout, chrome generation, and the two
+/// size steps.
+///
+/// There is deliberately no accent-colour row: the highlight follows the
+/// accent picked in System Settings (and the frontmost app's own under
+/// Multicolour), which is what the native candidate window does. A pinned
+/// colour here would be a fixed one, losing both that per-app adaptation and
+/// the light/dark resolution — see `CandidateAccentColor`.
 ///
 /// `@AppStorage`-bound like `GeneralSettingsView`, and for the same reason:
 /// the values are read live by the candidate-window router on every show, so
@@ -16,9 +21,6 @@ struct AppearanceSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.candidateAppearanceMode.name)
     private var candidateAppearanceMode = SettingsStore.Keys.candidateAppearanceMode.defaultValue
-
-    @AppStorage(SettingsStore.Keys.candidateAccentColor.name)
-    private var candidateAccentColor = SettingsStore.Keys.candidateAccentColor.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
@@ -34,14 +36,11 @@ struct AppearanceSettingsView: View {
 
     var body: some View {
         Form {
-            // The System Settings shape: the mode selector and the accent row
-            // share the first group, labels leading like every other row.
+            // The System Settings shape: the mode selector leads its own
+            // group, label leading like every other row.
             Section {
                 LabeledContent(language.string(.macosAppearanceTab)) {
                     AppearanceModeRow(selection: $candidateAppearanceMode)
-                }
-                LabeledContent(language.string(.macosCandidateAccentColor)) {
-                    AccentSwatchRow(selection: $candidateAccentColor)
                 }
             }
 
@@ -91,6 +90,15 @@ private struct AppearanceModeRow: View {
 
     /// System Settings' order: light, dark, then auto.
     private static let modes: [CandidateAppearanceMode] = [.light, .dark, .auto]
+
+    /// The highlight capsule's colour, fixed for the same reason the
+    /// thumbnails' backgrounds are: each depicts ONE mode, so nothing in it may
+    /// resolve against whatever appearance the form happens to render in. It
+    /// stands for a highlight rather than previewing the resolved accent — the
+    /// real one follows the system and the frontmost app (`CandidateAccentColor`).
+    private static let thumbnailHighlightColor = Color(
+        .sRGB, red: 0x00 / 255, green: 0x7A / 255, blue: 0xFF / 255,
+    )
 
     private static let thumbnailSize = CGSize(width: 62, height: 40)
     private static let thumbnailCornerRadius: CGFloat = 8
@@ -167,7 +175,7 @@ private struct AppearanceModeRow: View {
             (dark ? Color(white: 0.16) : Color(white: 0.94))
             HStack(spacing: 2.5) {
                 Capsule()
-                    .fill(Color(nsColor: CandidateAccentChoice.blue.overrideColor ?? .controlAccentColor))
+                    .fill(Self.thumbnailHighlightColor)
                     .frame(width: 12, height: 7)
                 Capsule()
                     .fill(dark ? Color(white: 0.38) : Color(white: 0.74))
@@ -176,70 +184,6 @@ private struct AppearanceModeRow: View {
                     .fill(dark ? Color(white: 0.38) : Color(white: 0.74))
                     .frame(width: 9, height: 7)
             }
-        }
-    }
-}
-
-/// The accent choices as a row of colour circles: 自動 first — drawn as a
-/// conic sweep of all eight, the way System Settings draws Multicolour — then
-/// the eight accents, each a plain disc of its `overrideColor`.
-private struct AccentSwatchRow: View {
-    @Binding var selection: CandidateAccentChoice
-
-    @Environment(DisplayLanguageStore.self) private var language
-
-    /// Larger than System Settings' accent row (USER 2026-08-18 「可以大一點」),
-    /// between it and the 28pt discs MacishType's site demos; the ring floats
-    /// just outside the disc.
-    private static let swatchDiameter: CGFloat = 22
-    private static let swatchSpacing: CGFloat = 10
-    private static let selectionRingPadding: CGFloat = 2.5
-
-    var body: some View {
-        HStack(spacing: Self.swatchSpacing) {
-            ForEach(CandidateAccentChoice.allCases, id: \.self) { choice in
-                swatch(for: choice)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func swatch(for choice: CandidateAccentChoice) -> some View {
-        let name = language.string(choice.labelKey)
-        return Button {
-            selection = choice
-        } label: {
-            swatchFill(for: choice)
-                .frame(width: Self.swatchDiameter, height: Self.swatchDiameter)
-                .clipShape(Circle())
-                .overlay(
-                    // The ring floats a little outside the disc, so the colour
-                    // stays a full circle rather than gaining a border.
-                    Circle()
-                        .strokeBorder(.secondary, lineWidth: 2)
-                        .padding(-Self.selectionRingPadding)
-                        .opacity(selection == choice ? 1 : 0),
-                )
-        }
-        .buttonStyle(.plain)
-        .help(name)
-        .accessibilityLabel(name)
-        .accessibilityAddTraits(selection == choice ? .isSelected : [])
-    }
-
-    @ViewBuilder
-    private func swatchFill(for choice: CandidateAccentChoice) -> some View {
-        if let color = choice.overrideColor {
-            Color(nsColor: color)
-        } else {
-            // 自動: all eight accents in one disc. The stops repeat the first
-            // colour at the end so the sweep closes without a seam.
-            AngularGradient(
-                colors: (CandidateAccentChoice.allCases.compactMap(\.overrideColor)
-                    + [CandidateAccentChoice.blue.overrideColor!])
-                    .map(Color.init(nsColor:)),
-                center: .center,
-            )
         }
     }
 }

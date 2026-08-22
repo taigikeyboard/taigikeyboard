@@ -58,6 +58,17 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         }
     }
 
+    /// The 外觀 pane's accent-colour swatch. Nothing reads the key any more —
+    /// the highlight always follows the system accent — so this keeps the
+    /// defaults domain from carrying a colour nobody can see or change.
+    func testTheRetiredAccentColorChoice_isRemoved() {
+        userDefaults.set("graphite", forKey: "candidateAccentColor")
+
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+
+        XCTAssertNil(userDefaults.object(forKey: "candidateAccentColor"))
+    }
+
     /// The one setting of that shape that survived into the new one, so it must
     /// NOT be swept up with its neighbours.
     func testTheCandidateSlotModifier_isKept() {

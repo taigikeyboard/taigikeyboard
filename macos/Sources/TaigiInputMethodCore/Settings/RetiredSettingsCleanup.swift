@@ -5,8 +5,9 @@ import KeyboardShortcuts
 
 /// Clears what older builds persisted for settings this build no longer
 /// exposes — the 2026-08-21 trim (the 括號標注 and 顯示羅馬字候選 toggles, their
-/// hotkeys, and the 揣辭典 pane) and the first shape of the composing-key
-/// settings — so an upgraded install behaves like a fresh one. Idempotent, and
+/// hotkeys, and the 揣辭典 pane), the first shape of the composing-key
+/// settings, and the retired candidate accent-colour swatch — so an upgraded
+/// install behaves like a fresh one. Idempotent, and
 /// run every launch rather than behind a version flag: removing an absent key
 /// is free, and re-clearing also catches a manual `defaults write` that would
 /// otherwise resurrect hidden state.
@@ -47,12 +48,21 @@ enum RetiredSettingsCleanup {
         "tabCycleBehavior",
     ]
 
+    /// The 外觀 pane's accent-colour swatch row. The candidate highlight now
+    /// always follows the system accent — a pinned colour was a FIXED one, so
+    /// it lost both the frontmost-app adaptation and the light/dark
+    /// resolution (`CandidateAccentColor`). Nothing reads the key any more, so
+    /// clearing it changes no behaviour; it is swept for the same reason as
+    /// the composing-key names above.
+    private static let retiredAccentColorName = "candidateAccentColor"
+
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.removeObject(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         for name in retiredComposingKeyNames {
             userDefaults.removeObject(forKey: name)
         }
+        userDefaults.removeObject(forKey: retiredAccentColorName)
         if userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name)
             == retiredPaneRawValue {
             userDefaults.removeObject(forKey: SettingsStore.Keys.selectedSettingsPane.name)
