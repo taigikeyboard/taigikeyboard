@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint \
         i18n i18n-test \
-        macos-engine macos-protos \
+        macos-engine macos-protos macos-release \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -93,6 +93,13 @@ macos-engine:
 macos-protos:
 	bash $(ENGINE)/scripts/gen-macos-protos.sh
 
+# Signed + notarized installer package for web distribution, and the only
+# entry point for one — `macos/Makefile` is the dev loop and stops at `bundle`.
+# Prerequisites, flags, and the one-time Developer ID setup:
+# docs/architecture/macos-release.md.
+macos-release:
+	bash macos/scripts/release-app.sh $(RELEASE_FLAGS)
+
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
@@ -130,6 +137,7 @@ help:
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-engine       macOS-only shortcut: rebuild macos/RustEngine xcframework"
 	@echo "  make macos-protos       macOS-only shortcut: regenerate macOS .pb.swift"
+	@echo "  make macos-release      Signed + notarized .pkg for web distribution (Developer ID)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"

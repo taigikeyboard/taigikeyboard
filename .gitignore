@@ -93,8 +93,9 @@ Cargo.lock.bak
 !android/app/src/main/jniLibs/**/*.so
 
 # === SwiftPM build cache (macOS input method) ===
-# `.build/` holds compiled products plus the assembled `.app` from
-# macos/scripts/bundle-app.sh; `Package.resolved` is committed.
+# `.build/` holds compiled products, the assembled `.app` from
+# macos/scripts/bundle-app.sh, and the signed installer packages from
+# macos/scripts/release-app.sh; `Package.resolved` is committed.
 macos/.build/
 macos/.swiftpm/
 

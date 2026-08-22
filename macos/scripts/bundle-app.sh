@@ -3,18 +3,44 @@
 # validate it. There is no Xcode project (`.pbxproj` is user-only in this repo),
 # so this script is the only thing that turns build products into a bundle.
 #
-# Usage: bundle-app.sh [debug|release]   (default: debug)
+# Usage: bundle-app.sh [debug|release] [--sign <identity>]   (default: debug, ad-hoc)
+#
+# `--sign` names the code-signing identity to use. Omitted, the bundle is signed
+# ad-hoc, which is all a local install needs. release-app.sh passes a Developer
+# ID Application identity, which additionally opts the bundle into the hardened
+# runtime and a secure timestamp — both prerequisites for notarization.
 #
 # Every check here exists because the failure it catches is invisible until the
 # input method is installed and silently receives no key events.
 
 set -euo pipefail
 
-CONFIGURATION="${1:-debug}"
-if [[ "$CONFIGURATION" != "debug" && "$CONFIGURATION" != "release" ]]; then
-    echo "error: configuration must be 'debug' or 'release', got '$CONFIGURATION'" >&2
+usage_error() {
+    echo "error: $*" >&2
+    echo "usage: bundle-app.sh [debug|release] [--sign <identity>]" >&2
     exit 2
+}
+
+# The configuration stays positional and first, so `--sign` can never be read as
+# one: `bundle-app.sh --sign X` would otherwise sign a *debug* build with a
+# Developer ID certificate.
+CONFIGURATION="${1:-debug}"
+if [[ $# -gt 0 ]]; then
+    shift
 fi
+if [[ "$CONFIGURATION" != "debug" && "$CONFIGURATION" != "release" ]]; then
+    usage_error "configuration must be 'debug' or 'release', got '$CONFIGURATION'"
+fi
+
+# `-` is codesign's own spelling for an ad-hoc signature, so the default flows
+# straight through to the `codesign --sign` call below.
+SIGNING_IDENTITY="-"
+if [[ "${1:-}" == "--sign" ]]; then
+    [[ $# -ge 2 ]] || usage_error "--sign needs an identity"
+    SIGNING_IDENTITY="$2"
+    shift 2
+fi
+[[ $# -eq 0 ]] || usage_error "unexpected argument '$1'"
 
 # shellcheck source=lib/bundle-identity.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
@@ -29,7 +55,7 @@ echo "==> Checking generated i18n strings"
 # repo-root `make i18n`. Checked here rather than only as a Makefile prerequisite because this script
 # runs its own `swift build` below: a bundle assembled by calling the script directly would otherwise
 # ship strings that no longer match their source. Same role as Android's Gradle checkI18nGenerated.
-python3 "$(cd .. && pwd)/tools/i18n/check.py"
+python3 "$REPOSITORY_DIR/tools/i18n/check.py"
 
 echo "==> Building ($CONFIGURATION)"
 swift build --configuration "$CONFIGURATION" --product "$EXECUTABLE_NAME"
@@ -61,7 +87,7 @@ echo "==> Copying dictionary data"
 # Read from the iOS resource directory rather than keeping a third committed
 # copy of ~24MB of generated data. `make dict` regenerates these in place, so
 # both platforms bundle the same build of the dictionary by construction.
-DICTIONARY_SOURCE_DIR="$(cd "$PACKAGE_DIR/.." && pwd)/ios/Resources/Dictionaries"
+DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/ios/Resources/Dictionaries"
 for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     source_file="$DICTIONARY_SOURCE_DIR/$artifact"
     # Fail here rather than ship a bundle whose input method launches, receives
@@ -116,10 +142,19 @@ if grep -q '@rpath/' <<< "$LINKED_LIBRARIES"; then
     exit 1
 fi
 
-echo "==> Signing (ad-hoc)"
-# Ad-hoc is enough for a local install; Developer ID + notarization is a
-# user-gated distribution step.
-codesign --force --sign - --timestamp=none "$APP_DIR"
+if [[ "$SIGNING_IDENTITY" == "-" ]]; then
+    echo "==> Signing (ad-hoc)"
+    # Enough for a local install, and deliberately without a timestamp: a
+    # secure timestamp needs the network, which a dev loop should not.
+    codesign --force --sign "$SIGNING_IDENTITY" --timestamp=none "$APP_DIR"
+else
+    echo "==> Signing ($SIGNING_IDENTITY)"
+    # Hardened runtime and a secure timestamp are both required for
+    # notarization. No `--deep`: it papers over nested-code signing mistakes,
+    # and there is no nested code to sign — the assembly above copies one
+    # executable and data files, nothing else.
+    codesign --force --sign "$SIGNING_IDENTITY" --options runtime --timestamp "$APP_DIR"
+fi
 codesign --verify --strict --verbose=2 "$APP_DIR"
 
 echo ""

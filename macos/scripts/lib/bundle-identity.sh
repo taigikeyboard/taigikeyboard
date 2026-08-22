@@ -17,26 +17,40 @@ _read_bundle_identity() {
         -c "Print :CFBundleExecutable" \
         -c "Print :InputMethodServerControllerClass" \
         -c "Print :NSPrincipalClass" \
+        -c "Print :CFBundleShortVersionString" \
+        -c "Print :CFBundleVersion" \
+        -c "Print :LSMinimumSystemVersion" \
         "$plist")"
 
     # Values are single-line and space-free by construction (bundle IDs, class
-    # names); a `read` per line keeps the order explicit.
+    # names, dotted versions); a `read` per line keeps the order explicit.
     {
         read -r APP_NAME
         read -r BUNDLE_IDENTIFIER
         read -r EXECUTABLE_NAME
         read -r CONTROLLER_CLASS
         read -r PRINCIPAL_CLASS
+        # The marketing version users see, then the version the macOS Installer
+        # compares between releases to decide upgrade from downgrade.
+        read -r SHORT_VERSION
+        read -r BUILD_VERSION
+        read -r MINIMUM_SYSTEM_VERSION
     } <<< "$values"
 }
 
 PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPOSITORY_DIR="$(cd "$PACKAGE_DIR/.." && pwd)"
 SOURCE_PLIST="$PACKAGE_DIR/App/Info.plist"
 
 _read_bundle_identity "$SOURCE_PLIST"
 
 # The assembled bundle, and where an install reads it from and writes it to.
+# `.build/distribution` deliberately avoids `.build/release`, which SwiftPM owns
+# as a symlink to its release build products.
 BUILT_APP="$PACKAGE_DIR/.build/bundle/$APP_NAME.app"
+DISTRIBUTION_DIR="$PACKAGE_DIR/.build/distribution"
+# Where the input method ends up, for a local install and a package install
+# alike: the distributed package installs into the user's home domain too.
 INSTALL_DIR="$HOME/Library/Input Methods"
 INSTALLED_APP="$INSTALL_DIR/$APP_NAME.app"
 INSTALLED_EXECUTABLE="$INSTALLED_APP/Contents/MacOS/$EXECUTABLE_NAME"

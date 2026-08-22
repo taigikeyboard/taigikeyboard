@@ -87,8 +87,11 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   is user-only, hook-enforced). Info.plist committed with concrete values
   (no Xcode `$(…)` placeholders); bundle ID `com.siansiansu.inputmethod.TaigiKeyboard`
   (mandatory `.inputmethod.` third segment). Mach-register temporary exception
-  entitlement required if sandboxed. Ad-hoc codesign for local dev; Developer-ID /
-  notarization user-gated (azooKey-Desktop `pkgbuild.sh` is the pipeline reference).
+  entitlement required if sandboxed. Ad-hoc codesign for local dev; Developer-ID
+  signing + notarization ship as `make macos-release`
+  (`macos/scripts/release-app.sh`). azooKey-Desktop `pkgbuild.sh` was the
+  pipeline reference; what was and was not adopted from it, and why, lives in
+  `docs/architecture/macos-release.md`.
   **Refined at PR2 #520**: the package is a library (`TaigiInputMethodCore`) plus
   a thin executable, not a single executable target, because `swift test` needs
   an importable module and PR3–PR9 are unit-test-heavy. Generated `.pb.swift`

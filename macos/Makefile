@@ -27,6 +27,8 @@ help:
 	@echo "  make clean      - Remove build artefacts"
 	@echo ""
 	@echo "  CONFIGURATION=release make install   (default: $(CONFIGURATION))"
+	@echo ""
+	@echo "  Releases are cut from the repository root: make macos-release"
 
 # The Swift under Strings/Generated is generated from i18n/*.json by the repo-root `make i18n`, so a
 # build can otherwise link strings that no longer match their source. This is the macOS counterpart of
