@@ -1,6 +1,5 @@
 // Which dictionaries the keyboard draws candidates from.
 
-import AppKit
 import SwiftUI
 
 /// The dictionary source toggles, in the sections iOS groups them into
@@ -124,34 +123,4 @@ struct DictionaryTogglesView: View {
     }
 
     private static let kautianURL = URL(string: "https://sutian.moe.edu.tw/")
-}
-
-/// A link out to the web, with the failure shown rather than swallowed.
-///
-/// `NSWorkspace.open` answers `false` when nothing could handle the URL, and a
-/// button that silently does nothing is indistinguishable from a broken one.
-struct ExternalLinkButton: View {
-    @Environment(DisplayLanguageStore.self) private var language
-
-    let titleKey: StringKey
-    let url: URL?
-
-    @State private var didFail = false
-
-    var body: some View {
-        Button {
-            guard let url, NSWorkspace.shared.open(url) else {
-                didFail = true
-                return
-            }
-        } label: {
-            Label(language.string(titleKey), systemImage: "arrow.up.forward.square")
-        }
-        .buttonStyle(.link)
-        .alert(language.string(.macosOpenURLFailed), isPresented: $didFail) {
-            Button(language.string(.commonOk)) {}
-        } message: {
-            Text(url?.absoluteString ?? "")
-        }
-    }
 }

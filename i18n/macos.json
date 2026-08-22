@@ -1782,6 +1782,42 @@
         "en": "That is a candidate number key",
         "ja": "それは候補選択キーです"
       }
+    },
+    "copyrightLine": {
+      "comment": "Settings 一般 pane footer: authorship line beside the sponsor link. Same in every language — a personal name carries no translation. The year is a literal, updated by hand at release time.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "© 2026 Bîn-hiân",
+        "tailo": "© 2026 Bîn-hiân",
+        "poj": "© 2026 Bîn-hiân",
+        "en": "© 2026 Bîn-hiân",
+        "ja": "© 2026 Bîn-hiân"
+      }
+    },
+    "sponsorLink": {
+      "comment": "Settings 一般 pane footer: link out to the ECPay donation page. The heart is part of the authored label, so each language owns its own placement.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "贊助支持 ❤️",
+        "tailo": "tsàn-tsōo tsi-tshî ❤️",
+        "poj": "chàn-chō͘ chi-chhî ❤️",
+        "en": "Support this project ❤️",
+        "ja": "支援する ❤️"
+      }
     }
   }
 }

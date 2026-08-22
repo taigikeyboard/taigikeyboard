@@ -175,6 +175,8 @@ enum StringKey: String {
     case macosShortcutRejectedReservedKey = "i18n_macos_shortcutRejectedReservedKey"
     case macosShortcutRejectedNoKey = "i18n_macos_shortcutRejectedNoKey"
     case macosShortcutRejectedSlotChord = "i18n_macos_shortcutRejectedSlotChord"
+    case macosCopyrightLine = "i18n_macos_copyrightLine"
+    case macosSponsorLink = "i18n_macos_sponsorLink"
     case navTabDictionary = "i18n_nav_tabDictionary"
     case settingsDisplayLanguage = "i18n_settings_displayLanguage"
     case settingsDisplayLanguageAutomatic = "i18n_settings_displayLanguageAutomatic"

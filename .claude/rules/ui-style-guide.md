@@ -163,6 +163,10 @@ Rationale: Android follows platform-default Material 3; iOS keeps its native gre
 
 Never replace these icons with action-specific alternatives (don't use a "Share" icon for share, don't use an "Email" icon for email). All external-resource actions use the same link icon for consistency. Only non-link actions (e.g. Copy, which stays in-app) get distinct icons.
 
+**One carve-out — footer-weight inline links.** A link inside a footnote line (attribution, copyright, sponsor) drops the icon, takes the surrounding line's type, and draws in the same colour as the text beside it. An icon plus an accent colour is what makes a line read as a control; a footer must read as fine print. The affordance moves to the pointer and a hover lift. Scope is strict: the link is inline in a footnote-styled line, not a row, not a button, not a section body. Everything else keeps the icon.
+
+Reference implementation: `ExternalLinkButton.Style.footer` (macOS, `Settings/ExternalLinkButton.swift`), used by the 一般 pane footer. Matches the project site's own footer at `taigi-converter/index.html:206-221`.
+
 ## Feature Grouping by Usage Frequency
 
 Separate features by **usage frequency**, not by data relationship. Frequently-edited content goes on its own page; less-frequently-accessed management features group into a separate management page.
