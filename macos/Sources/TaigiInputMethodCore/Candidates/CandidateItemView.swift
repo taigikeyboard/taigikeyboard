@@ -94,11 +94,11 @@ final class CandidateItemView: NSView {
             highlightView = pill
         }
 
-        candidateLabel.font = .systemFont(ofSize: metrics.candidateFontSize)
+        candidateLabel.font = metrics.candidateFont
         candidateLabel.lineBreakMode = .byTruncatingTail
         candidateLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        annotationLabel.font = .systemFont(ofSize: metrics.annotationFontSize)
+        annotationLabel.font = metrics.annotationFont
         annotationLabel.lineBreakMode = .byTruncatingTail
         annotationLabel.translatesAutoresizingMaskIntoConstraints = false
 

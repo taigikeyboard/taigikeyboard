@@ -22,9 +22,17 @@
     to use only the alpha channel and tint it for the current appearance.
     `scripts/make-menubar-icon.swift` generates that image and documents its
     shape.
+
+    `ATSApplicationFontsPath` activates the typefaces the candidate-window font
+    picker offers (`CandidateFontChoice`), from `Contents/Resources/Fonts` that
+    `scripts/bundle-app.sh` fills. AppKit registers them process-wide at launch,
+    which is why there is no Core Text registration call anywhere in the source;
+    remove this key and every font option silently draws in the system font.
 -->
 <plist version="1.0">
 <dict>
+	<key>ATSApplicationFontsPath</key>
+	<string>Fonts</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>

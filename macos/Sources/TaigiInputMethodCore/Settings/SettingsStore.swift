@@ -255,6 +255,18 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateWindowSizeChoice.medium,
         )
 
+        /// Which typeface the candidate window draws in. The key spelling is
+        /// iOS's (`SharedSettings.swift`) like the rest of this enum, but the
+        /// DEFAULT is macOS's own: a Mac starts on the system font
+        /// (USER 2026-08-23) where iOS starts on Open Huninn. A future settings
+        /// transfer must therefore carry the value a user explicitly stored,
+        /// never a source platform's resolved default — materializing iOS's
+        /// would silently put Open Huninn on a Mac.
+        static let fontType = SettingsKey(
+            name: "fontType",
+            defaultValue: CandidateFontChoice.system,
+        )
+
         /// Which modifier the candidate-slot chords use. macOS-only: the phone
         /// keyboards have no modifier keys to chord with, so the default is
         /// owned by `ComposingKeyBindings` rather than by the shared
@@ -368,11 +380,20 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         choice(Keys.candidateWindowSize)
     }
 
-    /// The metrics the candidate window renders at. The one place both size
-    /// choices are resolved together, so no caller has to know that the window
-    /// is sized by two settings rather than one.
+    /// The candidate window's typeface.
+    var candidateFontChoice: CandidateFontChoice {
+        choice(Keys.fontType)
+    }
+
+    /// The metrics the candidate window renders at. The one place the three
+    /// presentation choices are resolved together, so no caller has to know
+    /// that the window is drawn from three settings rather than one.
     var candidateMetrics: CandidateMetrics {
-        CandidateMetrics(textSize: candidateTextSize, windowSize: candidateWindowSize)
+        CandidateMetrics(
+            textSize: candidateTextSize,
+            windowSize: candidateWindowSize,
+            fontChoice: candidateFontChoice,
+        )
     }
 
     /// The user's composing key contract, as one snapshot.

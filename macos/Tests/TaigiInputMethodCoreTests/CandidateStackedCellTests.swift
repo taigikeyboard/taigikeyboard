@@ -42,6 +42,60 @@ final class CandidateStackedCellTests: XCTestCase {
         }
     }
 
+    /// A scalar none of the bundled faces carries, so a cell containing it is
+    /// laid out in a cascaded fallback face rather than the chosen one. Pinned
+    /// by `testTheCascadeProbe_isUncoveredByEveryBundledFace` — every Taigi
+    /// glyph this project renders IS covered, so the probe has to come from
+    /// outside the repertoire for the fallback case to be exercised at all.
+    private static let cascadeProbe = "😀"
+
+    func testTheCascadeProbe_isUncoveredByEveryBundledFace() {
+        XCTAssertEqual(TestFixtures.unregisterableFontFiles, [])
+        let probe = Self.cascadeProbe.unicodeScalars.first!
+
+        for choice in CandidateFontChoice.allCases where choice != .system {
+            XCTAssertFalse(
+                choice.font(ofSize: 20).coveredCharacterSet.contains(probe),
+                "\(choice) covers the probe — the cascade case below would not cascade",
+            )
+        }
+    }
+
+    /// A stacked cell's height is fixed at construction, so it has to be the
+    /// CHOSEN face's line box — including for text the face has no glyph for,
+    /// which the text system lays out in a cascaded fallback of its own metrics.
+    func testStackedCell_holdsBothLinesInEveryFace() {
+        XCTAssertEqual(TestFixtures.unregisterableFontFiles, [])
+        let contents = [
+            Self.cell,
+            // The cascade cases: a fallback face on each line in turn.
+            CandidateCellContent(text: Self.cascadeProbe, annotation: "hāu-suán"),
+            CandidateCellContent(text: "候選", annotation: Self.cascadeProbe),
+        ]
+        for choice in CandidateFontChoice.allCases {
+            let metrics = CandidateMetrics(
+                textSize: .medium, windowSize: .medium, fontChoice: choice,
+                cellArrangement: .stacked,
+            )
+            for content in contents {
+                let view = CandidateItemView(style: .sequoia, metrics: metrics)
+                view.configure(content)
+                view.frame = NSRect(
+                    x: 0, y: 0,
+                    width: metrics.measureWidth(content), height: metrics.itemHeight,
+                )
+                view.layoutSubtreeIfNeeded()
+
+                for label in view.subviews.compactMap({ $0 as? NSTextField }) {
+                    XCTAssertTrue(
+                        view.bounds.contains(label.frame),
+                        "\(choice)/\(content.text): \(label.frame) must fit \(view.bounds)",
+                    )
+                }
+            }
+        }
+    }
+
     /// The empty-annotation case renders a blank second line rather than
     /// collapsing: a page of cells of two different heights would not line up.
     func testStackedCell_keepsBothLinesInsideItsFrameAtEverySize() {

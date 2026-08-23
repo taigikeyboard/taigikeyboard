@@ -1,11 +1,11 @@
-// The 外觀 pane: how the candidate window looks — mode, layout, chrome, size.
+// The 外觀 pane: how the candidate window looks — mode, layout, chrome, size, font.
 
 import SwiftUI
 
 /// The 外觀 pane of the settings window, shaped like System Settings'
 /// Appearance pane: an 外觀 row of light/dark/auto thumbnails, then the
-/// candidate window's own pickers — layout, chrome generation, and the two
-/// size steps.
+/// candidate window's own pickers — layout, chrome generation, the two size
+/// steps, and the typeface.
 ///
 /// There is deliberately no accent-colour row: the highlight follows the
 /// accent picked in System Settings (and the frontmost app's own under
@@ -33,6 +33,9 @@ struct AppearanceSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.candidateTextSize.name)
     private var candidateTextSize = SettingsStore.Keys.candidateTextSize.defaultValue
+
+    @AppStorage(SettingsStore.Keys.fontType.name)
+    private var fontType = SettingsStore.Keys.fontType.defaultValue
 
     var body: some View {
         Form {
@@ -70,6 +73,14 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.macosSizeSmall)).tag(CandidateTextSizeChoice.small)
                     Text(language.string(.macosSizeMedium)).tag(CandidateTextSizeChoice.medium)
                     Text(language.string(.macosSizeLarge)).tag(CandidateTextSizeChoice.large)
+                }
+                // The roster comes from the type rather than being spelled out
+                // row by row like the pickers above: those name three fixed
+                // steps each, while the fonts are a list the bundle can grow.
+                Picker(language.string(.themeCustomFont), selection: $fontType) {
+                    ForEach(CandidateFontChoice.allCases, id: \.self) { font in
+                        Text(language.string(font.labelKey)).tag(font)
+                    }
                 }
             }
         }

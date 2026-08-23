@@ -49,7 +49,7 @@ enum CandidateWindowSizeChoice: String, CaseIterable, Sendable {
 }
 
 /// Every point value the candidate window's geometry is built from, resolved
-/// once from the two size choices.
+/// once from the two size choices — plus the typeface they are measured in.
 ///
 /// Upstream MacishType scales one mutable set of static metrics off a single
 /// font size (`MacishCandidateItemView.updateFontSize`,
@@ -69,6 +69,12 @@ struct CandidateMetrics: Equatable, Sendable {
     /// same sizes under a different cell arrangement.
     let textSize: CandidateTextSizeChoice
     let windowSize: CandidateWindowSizeChoice
+    /// The typeface both scripts render in. Not a point value like the rest of
+    /// this type, but it belongs here for the two reasons the sizes do: every
+    /// measurement below is taken in it, and a cell bakes it into the labels it
+    /// builds — so a change to it has to reach the panel cache's equality check
+    /// (`CandidatePanel.panel(for:)`) and rebuild the panels.
+    let fontChoice: CandidateFontChoice
     let candidateFontSize: CGFloat
     let annotationFontSize: CGFloat
     let candidateAnnotationGap: CGFloat
@@ -95,6 +101,14 @@ struct CandidateMetrics: Equatable, Sendable {
     /// clears is half the item height, which the chrome knob grows.
     let tahoeSeparatorInset: CGFloat
 
+    /// The face the candidate column is set in. The cells' labels and the
+    /// width arithmetic below both go through this, so a measurement is always
+    /// taken in the font the text is actually drawn in.
+    var candidateFont: NSFont { fontChoice.font(ofSize: candidateFontSize) }
+
+    /// The face the annotation column is set in.
+    var annotationFont: NSFont { fontChoice.font(ofSize: annotationFontSize) }
+
     /// `base`, stated at the reference 16pt, scaled to this metrics' text size
     /// and rounded to a whole point. What the chevron and page-arrow views
     /// size their symbols and reserved widths by, so the rounding policy lives
@@ -120,11 +134,13 @@ struct CandidateMetrics: Equatable, Sendable {
     init(
         textSize: CandidateTextSizeChoice,
         windowSize: CandidateWindowSizeChoice,
+        fontChoice: CandidateFontChoice = .system,
         cellArrangement: CandidateCellArrangement = .inline,
     ) {
         let textScale = textSize.candidateFontSize / Self.baseCandidateFontSize
         self.textSize = textSize
         self.windowSize = windowSize
+        self.fontChoice = fontChoice
         candidateFontSize = textSize.candidateFontSize
         annotationFontSize = (Self.baseAnnotationFontSize * textScale).rounded()
         candidateAnnotationGap = (Self.baseCandidateAnnotationGap * textScale).rounded()
@@ -137,8 +153,8 @@ struct CandidateMetrics: Equatable, Sendable {
         case .inline:
             itemHeight = candidateFontSize + verticalPadding
         case .stacked:
-            itemHeight = (Self.lineHeight(forFontSize: candidateFontSize)
-                + Self.lineHeight(forFontSize: annotationFontSize)
+            itemHeight = (Self.lineHeight(of: fontChoice.font(ofSize: candidateFontSize))
+                + Self.lineHeight(of: fontChoice.font(ofSize: annotationFontSize))
                 + stackedLineGap
                 + verticalPadding).rounded(.up)
         }
@@ -147,14 +163,23 @@ struct CandidateMetrics: Equatable, Sendable {
     /// The same sizes, resolved for a layout that arranges its cells
     /// differently.
     func arranged(_ arrangement: CandidateCellArrangement) -> CandidateMetrics {
-        CandidateMetrics(textSize: textSize, windowSize: windowSize, cellArrangement: arrangement)
+        CandidateMetrics(
+            textSize: textSize,
+            windowSize: windowSize,
+            fontChoice: fontChoice,
+            cellArrangement: arrangement,
+        )
     }
 
-    /// The line box a font of `size` draws in — AppKit's own answer rather
-    /// than font-metric arithmetic, because what a stacked cell has to hold is
+    /// The line box `font` draws in — AppKit's own answer rather than
+    /// font-metric arithmetic, because what a stacked cell has to hold is
     /// exactly what the text system lays a `NSTextField` line out in.
-    private static func lineHeight(forFontSize size: CGFloat) -> CGFloat {
-        NSLayoutManager().defaultLineHeight(for: .systemFont(ofSize: size))
+    ///
+    /// Answered for the chosen face itself: a stacked cell's height is fixed at
+    /// construction, so it has to be the height of the font the labels are
+    /// actually set in, not of the system font.
+    private static func lineHeight(of font: NSFont) -> CGFloat {
+        NSLayoutManager().defaultLineHeight(for: font)
     }
 }
 
@@ -175,20 +200,29 @@ extension CandidateMetrics {
     /// The candidate column never renders narrower than one full-width glyph,
     /// which is what keeps single-character cells from collapsing.
     ///
-    /// Cached per font size, because `measureWidth` reads it once per
+    /// Cached per typeface and size, because `measureWidth` reads it once per
     /// candidate and a list runs to `maxDisplayCandidates` on every keystroke:
     /// measuring the same glyph two hundred times a keypress is work whose
-    /// answer cannot change. The key is the font size rather than the whole
-    /// metrics, since nothing else here moves the measurement, and the text
-    /// ladder is four values long.
+    /// answer cannot change. The key is that pair rather than the whole metrics,
+    /// since nothing else here moves the measurement — and it is the pair rather
+    /// than the size because the measurement is taken in the FACE: the four
+    /// bundled ones all render 「永」 at one em today, which is a fact about
+    /// full-width CJK advances, not a licence to key on the size alone.
     var primaryColumnFloor: CGFloat {
-        if let cached = Self.primaryColumnFloors[candidateFontSize] { return cached }
+        let key = PrimaryColumnFloorKey(fontChoice: fontChoice, fontSize: candidateFontSize)
+        if let cached = Self.primaryColumnFloors[key] { return cached }
         let floor = max(candidateFontSize, measurePrimaryWidth("永"))
-        Self.primaryColumnFloors[candidateFontSize] = floor
+        Self.primaryColumnFloors[key] = floor
         return floor
     }
 
-    private static var primaryColumnFloors: [CGFloat: CGFloat] = [:]
+    /// What a cached floor was measured for.
+    private struct PrimaryColumnFloorKey: Hashable {
+        let fontChoice: CandidateFontChoice
+        let fontSize: CGFloat
+    }
+
+    private static var primaryColumnFloors: [PrimaryColumnFloorKey: CGFloat] = [:]
 
     /// The width a cell wants for `cell`. Font-based rather than going through
     /// a template view: with fixed chrome widths, the sum IS the fitting size,
@@ -210,8 +244,7 @@ extension CandidateMetrics {
     /// aligns its rows on, so every annotation in the column starts at the same
     /// x. Measured at the candidate font, never the annotation's.
     func measurePrimaryWidth(_ text: String) -> CGFloat {
-        let font = NSFont.systemFont(ofSize: candidateFontSize)
-        return ceil((text as NSString).size(withAttributes: [.font: font]).width)
+        ceil((text as NSString).size(withAttributes: [.font: candidateFont]).width)
     }
 
     /// The widest the candidate column can be in a cell `cellWidth` points
@@ -237,7 +270,6 @@ extension CandidateMetrics {
     /// no candidate beside it to be separated from.
     func annotationTextWidth(_ annotation: String?) -> CGFloat {
         guard let annotation, !annotation.isEmpty else { return 0 }
-        let font = NSFont.systemFont(ofSize: annotationFontSize)
-        return ceil((annotation as NSString).size(withAttributes: [.font: font]).width)
+        return ceil((annotation as NSString).size(withAttributes: [.font: annotationFont]).width)
     }
 }

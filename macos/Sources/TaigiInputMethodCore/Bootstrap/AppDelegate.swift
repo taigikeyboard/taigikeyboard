@@ -25,6 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         RustEngineBridge.installLoggerSink()
+        // A bundle assembled without its fonts shows only as a picker whose
+        // every option draws alike, so it is worth one line at launch.
+        CandidateFontChoice.reportUnavailableFonts()
         installLexiconEngine()
         // Opening is asynchronous, so this only starts it. A composition typed
         // before it finishes ranks without the user's history — one keystroke

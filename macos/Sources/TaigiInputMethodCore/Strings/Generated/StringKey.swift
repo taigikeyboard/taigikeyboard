@@ -17,6 +17,11 @@ enum StringKey: String {
     case commonTaiwanPlantDict = "i18n_common_taiwanPlantDict"
     case commonSttiDict = "i18n_common_sttiDict"
     case commonAccentDict = "i18n_common_accentDict"
+    case commonFontSystemDefault = "i18n_common_fontSystemDefault"
+    case commonFontOpenHuninn = "i18n_common_fontOpenHuninn"
+    case commonFontIansui = "i18n_common_fontIansui"
+    case commonFontGenYoMin = "i18n_common_fontGenYoMin"
+    case commonFontGenYoGothic = "i18n_common_fontGenYoGothic"
     case dictionarySave = "i18n_dictionary_save"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"
@@ -191,5 +196,6 @@ enum StringKey: String {
     case settingsTlMode = "i18n_settings_tlMode"
     case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
     case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"
+    case themeCustomFont = "i18n_theme_customFont"
     case themeCandidateTextSize = "i18n_theme_candidateTextSize"
 }

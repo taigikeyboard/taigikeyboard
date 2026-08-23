@@ -149,8 +149,8 @@ final class CandidateMetricsTests: XCTestCase {
         let text = "台語"
         let measured = defaultMetrics.annotationWidth(text) - defaultMetrics.candidateAnnotationGap
 
-        XCTAssertEqual(measured, ceil(TestFixtures.systemFontWidth(of: text, size: defaultMetrics.annotationFontSize)))
-        XCTAssertNotEqual(measured, ceil(TestFixtures.systemFontWidth(of: text, size: defaultMetrics.candidateFontSize)))
+        XCTAssertEqual(measured, ceil(TestFixtures.defaultFontWidth(of: text, size: defaultMetrics.annotationFontSize)))
+        XCTAssertNotEqual(measured, ceil(TestFixtures.defaultFontWidth(of: text, size: defaultMetrics.candidateFontSize)))
     }
 
     /// The gap and each padding are charged once — a cell that double-counted
@@ -163,7 +163,7 @@ final class CandidateMetricsTests: XCTestCase {
         let expected = defaultMetrics.horizontalPadding
             + defaultMetrics.measurePrimaryWidth(cell.text)
             + defaultMetrics.candidateAnnotationGap
-            + ceil(TestFixtures.systemFontWidth(of: annotation, size: defaultMetrics.annotationFontSize))
+            + ceil(TestFixtures.defaultFontWidth(of: annotation, size: defaultMetrics.annotationFontSize))
             + defaultMetrics.horizontalPadding
 
         XCTAssertEqual(defaultMetrics.measureWidth(cell), expected, accuracy: 0.01)

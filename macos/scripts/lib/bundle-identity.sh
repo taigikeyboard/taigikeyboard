@@ -30,6 +30,7 @@ _read_bundle_identity() {
         -c "Print :CFBundleVersion" \
         -c "Print :LSMinimumSystemVersion" \
         -c "Print :tsInputMethodIconFileKey" \
+        -c "Print :ATSApplicationFontsPath" \
         "$plist")"
 
     # Values are single-line and space-free by construction (bundle IDs, class
@@ -48,6 +49,11 @@ _read_bundle_identity() {
         # A complete filename, unlike CFBundleIconFile, so the bundle script can
         # copy it without knowing what it is called.
         read -r MENU_BAR_ICON_NAME
+        # Where AppKit activates the candidate-window typefaces from, relative to
+        # Contents/Resources. Read rather than hardcoded so the bundle script
+        # fills the directory the plist actually names — and so deleting the key
+        # fails the build here rather than shipping fonts nothing activates.
+        read -r APPLICATION_FONTS_PATH
     } <<< "$values"
 }
 

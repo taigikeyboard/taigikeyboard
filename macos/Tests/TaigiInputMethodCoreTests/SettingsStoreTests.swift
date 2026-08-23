@@ -227,6 +227,35 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateWindowSize, .medium)
     }
 
+    /// A fresh Mac renders in the system font (USER 2026-08-23) — the key
+    /// spelling is iOS's, the default is not.
+    func testCandidateFont_withNothingStored_isTheSystemFont() {
+        let store = makeStore()
+
+        XCTAssertEqual(store.candidateFontChoice, .system)
+        XCTAssertEqual(store.candidateMetrics.fontChoice, .system)
+    }
+
+    func testCandidateFont_readsWhatTheFontPickerWrites() {
+        userDefaults.set(
+            CandidateFontChoice.openHuninn.rawValue,
+            forKey: SettingsStore.Keys.fontType.name,
+        )
+        let store = makeStore()
+
+        XCTAssertEqual(store.candidateFontChoice, .openHuninn)
+        XCTAssertEqual(store.candidateMetrics.fontChoice, .openHuninn)
+    }
+
+    /// A face a later version drops — or an iOS value this build does not name
+    /// — reads back as the system font rather than leaving the window with a
+    /// typeface nothing can resolve.
+    func testCandidateFont_withAnUnknownStoredValue_fallsBackToTheSystemFont() {
+        userDefaults.set("comicSans", forKey: SettingsStore.Keys.fontType.name)
+
+        XCTAssertEqual(makeStore().candidateFontChoice, .system)
+    }
+
     // MARK: - Composing key bindings
 
     func testComposingKeyBindings_withNothingStored_areTheShippedContract() {

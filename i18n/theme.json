@@ -2,8 +2,8 @@
   "namespace": "theme",
   "keys": {
     "customFont": {
-      "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). Shared by iOS and Android.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). Shared by iOS, Android and macOS (the macOS candidate-window font picker).",
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
       "values": { "hanji": "字型設定", "tailo": "jī-hîng siat-tīng", "poj": "jī-hêng siat-tēng", "en": "Font", "ja": "フォント" }
     },
     "customThemesSection": {

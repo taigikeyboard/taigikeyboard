@@ -19,6 +19,11 @@ enum GeneratedStrings {
         .commonTaiwanPlantDict: "台灣植物名彙",
         .commonSttiDict: "教育部學科術語臺灣台語對譯",
         .commonAccentDict: "腔口差",
+        .commonFontSystemDefault: "系統",
+        .commonFontOpenHuninn: "粉圓",
+        .commonFontIansui: "芫荽",
+        .commonFontGenYoMin: "源樣明體",
+        .commonFontGenYoGothic: "源樣烏體",
         .dictionarySave: "儉起來",
         .dictionaryCustomDictionary: "自訂詞庫",
         .dictionaryCustomDictEnabled: "啟用自訂詞庫",
@@ -193,6 +198,7 @@ enum GeneratedStrings {
         .settingsTlMode: "台羅",
         .settingsOutputBothScripts: "括號標註",
         .settingsLiteralRomanCandidate: "顯示原本羅馬字候選",
+        .themeCustomFont: "字型設定",
         .themeCandidateTextSize: "候選詞大細",
     ]
     private static let english: [StringKey: String] = [
@@ -211,6 +217,11 @@ enum GeneratedStrings {
         .commonTaiwanPlantDict: "Taiwan Plant Name Glossary",
         .commonSttiDict: "MOE Academic Subject Terminology (Taigi)",
         .commonAccentDict: "Accent Variations",
+        .commonFontSystemDefault: "System",
+        .commonFontOpenHuninn: "Open Huninn",
+        .commonFontIansui: "Iansui",
+        .commonFontGenYoMin: "GenYoMin",
+        .commonFontGenYoGothic: "GenYoGothic",
         .dictionarySave: "Save",
         .dictionaryCustomDictionary: "Custom Dictionary",
         .dictionaryCustomDictEnabled: "Enable Custom Dictionary",
@@ -385,6 +396,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "Annotate in Brackets",
         .settingsLiteralRomanCandidate: "Show Typed Romanization Candidate",
+        .themeCustomFont: "Font",
         .themeCandidateTextSize: "Candidate Text Size",
     ]
     private static let japanese: [StringKey: String] = [
@@ -403,6 +415,11 @@ enum GeneratedStrings {
         .commonTaiwanPlantDict: "台湾植物名彙",
         .commonSttiDict: "教育部 学術用語 台湾語対訳",
         .commonAccentDict: "アクセント差",
+        .commonFontSystemDefault: "システム",
+        .commonFontOpenHuninn: "Open Huninn",
+        .commonFontIansui: "Iansui",
+        .commonFontGenYoMin: "GenYoMin",
+        .commonFontGenYoGothic: "GenYoGothic",
         .dictionarySave: "保存",
         .dictionaryCustomDictionary: "カスタム辞書",
         .dictionaryCustomDictEnabled: "カスタム辞書を有効にする",
@@ -577,6 +594,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "括弧で併記",
         .settingsLiteralRomanCandidate: "入力したローマ字候補を表示",
+        .themeCustomFont: "フォント",
         .themeCandidateTextSize: "候補の文字の大きさ",
     ]
     private static let tailo: [StringKey: String] = [
@@ -595,6 +613,11 @@ enum GeneratedStrings {
         .commonTaiwanPlantDict: "tâi-uân tsi̍t-bu̍t miâ luī",
         .commonSttiDict: "kàu-io̍k-pōo ha̍k-kho su̍t-gí tâi-uân-tâi-gí tuì-i̍k",
         .commonAccentDict: "khiunn-kháu tsha",
+        .commonFontSystemDefault: "hē-thóng",
+        .commonFontOpenHuninn: "hún-înn",
+        .commonFontIansui: "ian-sui",
+        .commonFontGenYoMin: "guân iūnn bîng-thé",
+        .commonFontGenYoGothic: "guân iūnn oo thé",
         .dictionarySave: "khiām--khí-lâi",
         .dictionaryCustomDictionary: "tsū-tīng-sû-khòo",
         .dictionaryCustomDictEnabled: "khé-iōng tsū-tīng-sû-khòo",
@@ -769,6 +792,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "kuat-hō phiau-tsù",
         .settingsLiteralRomanCandidate: "hián-sī guân-pún lô-má-jī hāu-suán",
+        .themeCustomFont: "jī-hîng siat-tīng",
         .themeCandidateTextSize: "hāu-suán sû tuā-sè",
     ]
     private static let poj: [StringKey: String] = [
@@ -787,6 +811,11 @@ enum GeneratedStrings {
         .commonTaiwanPlantDict: "tâi-oân chi̍t-bu̍t miâ lūi",
         .commonSttiDict: "kàu-io̍k-pō͘ ha̍k-kho su̍t-gí tâi-oân-tâi-gí tùi-e̍k",
         .commonAccentDict: "khiuⁿ-kháu chha",
+        .commonFontSystemDefault: "hē-thóng",
+        .commonFontOpenHuninn: "hún-îⁿ",
+        .commonFontIansui: "ian-sui",
+        .commonFontGenYoMin: "goân iūⁿ bêng-thé",
+        .commonFontGenYoGothic: "goân iūⁿ o͘ thé",
         .dictionarySave: "khiām--khí-lâi",
         .dictionaryCustomDictionary: "chū-tēng-sû-khò͘",
         .dictionaryCustomDictEnabled: "khé-iōng chū-tēng-sû-khò͘",
@@ -961,6 +990,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "koat-hō phiau-chù",
         .settingsLiteralRomanCandidate: "hián-sī goân-pún lô-má-jī hāu-soán",
+        .themeCustomFont: "jī-hêng siat-tēng",
         .themeCandidateTextSize: "hāu-soán sû tōa-sè",
     ]
 

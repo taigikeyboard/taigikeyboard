@@ -2,6 +2,7 @@
 // install, and the doubles and factories every composing suite needs.
 
 import AppKit
+import CoreText
 @testable import TaigiInputMethodCore
 import XCTest
 
@@ -25,13 +26,47 @@ enum TestFixtures {
     static let defaultCandidateMetrics = CandidateMetrics(
         textSize: SettingsStore.Keys.candidateTextSize.defaultValue,
         windowSize: SettingsStore.Keys.candidateWindowSize.defaultValue,
+        fontChoice: SettingsStore.Keys.fontType.defaultValue,
     )
 
-    /// The width of `text` set in the system font at `size`, which is what
-    /// every candidate-measurement expectation is traced against.
+    /// `<repo>/ios/Resources/Fonts` — the same directory `bundle-app.sh` copies
+    /// into the assembled `.app`'s `ATSApplicationFontsPath`.
+    static let fontDirectory = repositoryRoot.appendingPathComponent("ios/Resources/Fonts")
+
+    /// Activates the bundled typefaces for this process, and answers which
+    /// files failed to.
+    ///
+    /// The tests run outside any bundle, so Info.plist's
+    /// `ATSApplicationFontsPath` — how the shipped app activates these — does
+    /// nothing here. Without this, every `NSFont(name:)` for a bundled face
+    /// returns nil and every font assertion would pass vacuously against the
+    /// system-font fallback.
+    ///
+    /// Registers the whole directory, which is what `bundle-app.sh` copies —
+    /// so a case whose file stopped shipping fails as an unresolvable
+    /// PostScript name, in the suite that is about names.
+    ///
+    /// Registered once for the whole process: Core Text reports a second
+    /// registration of the same file as an error, and a suite that ran after
+    /// another would see it.
+    static let unregisterableFontFiles: [String] = {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: fontDirectory, includingPropertiesForKeys: nil,
+        )) ?? []
+        return files
+            .filter { ["ttf", "otf"].contains($0.pathExtension) }
+            .filter { !CTFontManagerRegisterFontsForURL($0 as CFURL, .process, nil) }
+            .map(\.lastPathComponent)
+    }()
+
+    /// The width of `text` at `size` in the face a fresh install renders in —
+    /// what every candidate-measurement expectation is traced against, and
+    /// resolved through the same default `defaultCandidateMetrics` uses so the
+    /// oracle follows the default rather than pinning today's value of it.
     @MainActor
-    static func systemFontWidth(of text: String, size: CGFloat) -> CGFloat {
-        (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: size)]).width
+    static func defaultFontWidth(of text: String, size: CGFloat) -> CGFloat {
+        let font = SettingsStore.Keys.fontType.defaultValue.font(ofSize: size)
+        return (text as NSString).size(withAttributes: [.font: font]).width
     }
 
     /// A key-down event carrying `characters`. The ten-argument AppKit

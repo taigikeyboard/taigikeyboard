@@ -148,6 +148,31 @@ for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     cp "$source_file" "$CONTENTS_DIR/Resources/$artifact"
 done
 
+echo "==> Copying fonts"
+# The typefaces the candidate-window font picker offers. Read from the iOS
+# resource directory for the same reason the dictionaries are — no third
+# committed copy — and laid out under the directory Info.plist's
+# ATSApplicationFontsPath names, which is what AppKit activates at launch.
+#
+# The whole directory, deliberately without a list of filenames: which faces
+# exist is `CandidateFontChoice`'s to state, not this script's, and a second
+# roster here is one a new case could be added to only one of.
+FONT_SOURCE_DIR="$REPOSITORY_DIR/ios/Resources/Fonts"
+FONT_DESTINATION_DIR="$CONTENTS_DIR/Resources/$APPLICATION_FONTS_PATH"
+FONT_FILES=()
+for candidate in "$FONT_SOURCE_DIR"/*.ttf "$FONT_SOURCE_DIR"/*.otf; do
+    # Unmatched globs stay literal under this shell's options, so a missing
+    # directory has to be caught by testing the paths themselves — which also
+    # rejects a truncated file rather than shipping one nothing can activate.
+    [[ -s "$candidate" ]] && FONT_FILES+=("$candidate")
+done
+if [[ ${#FONT_FILES[@]} -eq 0 ]]; then
+    echo "error: no font files in $FONT_SOURCE_DIR — the font picker would draw every option in the system font" >&2
+    exit 1
+fi
+mkdir -p "$FONT_DESTINATION_DIR"
+cp "${FONT_FILES[@]}" "$FONT_DESTINATION_DIR/"
+
 echo "==> Linting Info.plist"
 plutil -lint "$CONTENTS_DIR/Info.plist"
 
