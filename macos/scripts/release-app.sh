@@ -74,6 +74,15 @@ fail() {
 [[ "$BUILD_VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] ||
     fail "CFBundleVersion '$BUILD_VERSION' is not a dotted-integer package version"
 
+# The plist documents the rule (MAJOR*10000 + MINOR*100 + PATCH); this is the
+# one place that enforces it, because the failure mode of a stale build version
+# is an Installer that silently refuses to upgrade.
+if [[ "$SHORT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    expected_build_version=$((BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3]))
+    [[ "$BUILD_VERSION" == "$expected_build_version" ]] ||
+        fail "CFBundleVersion '$BUILD_VERSION' does not derive from $SHORT_VERSION (expected $expected_build_version)"
+fi
+
 echo "==> Checking the working tree"
 # Untracked files count: SwiftPM compiles everything under Sources/, so an
 # uncommitted source file would otherwise ship inside a package that claims to
@@ -433,3 +442,13 @@ if [[ "$skip_notarize" == true ]]; then
     echo ""
     echo "  ⚠ not notarized — Gatekeeper blocks this on every Mac but this one."
 fi
+
+# The update-check manifest is a release indicator, edited by hand AFTER the
+# pkg is uploaded and reachable (macos/updates/README.md has the order) — a
+# script writing it here would announce a download that does not exist yet.
+echo ""
+echo "  After the pkg is uploaded, update macos/updates/latest.json to:"
+echo "    {"
+echo "      \"version\": \"$SHORT_VERSION\","
+echo "      \"downloadPageURL\": \"<page hosting this pkg>\""
+echo "    }"

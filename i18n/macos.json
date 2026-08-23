@@ -1656,6 +1656,307 @@
         "en": "Support this project ❤️",
         "ja": "支援する ❤️"
       }
+    },
+    "updateCheckNow": {
+      "comment": "Settings 一般 pane: button that checks for an update immediately, next to the installed version.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "檢查更新",
+        "tailo": "kiám-tsa king-sin",
+        "poj": "kiám-cha keng-sin",
+        "en": "Check for Updates",
+        "ja": "アップデートを確認"
+      }
+    },
+    "updateCurrentVersionLabel": {
+      "comment": "Settings 一般 pane: the installed version, shown beside the check button. Wording mirrors home.json `version`.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "version": "string"
+      },
+      "values": {
+        "hanji": "目前版本 {version}",
+        "tailo": "ba̍k-tsîng pán-pún {version}",
+        "poj": "ba̍k-chêng pán-pún {version}",
+        "en": "Current version {version}",
+        "ja": "現在のバージョン {version}"
+      }
+    },
+    "updateAvailableTitle": {
+      "comment": "Update alert: title when the manifest names a newer version than the installed one.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "有新版本",
+        "tailo": "ū sin pán-pún",
+        "poj": "ū sin pán-pún",
+        "en": "Update Available",
+        "ja": "新しいバージョンがあります"
+      }
+    },
+    "updateAvailableMessage": {
+      "comment": "Update alert: body naming the downloadable version and the installed one.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "latest": "string",
+        "current": "string"
+      },
+      "values": {
+        "hanji": "台語齒盤 {latest} 已經會使下載(目前版本 {current})。",
+        "tailo": "Tâi-gí khí-puânn {latest} í-king ē-sái hā-tsài (ba̍k-tsîng pán-pún {current}).",
+        "poj": "Tâi-gí khí-pôaⁿ {latest} í-keng ē-sái hā-chài (ba̍k-chêng pán-pún {current}).",
+        "en": "TaigiKeyboard {latest} is available for download (you have {current}).",
+        "ja": "台語キーボード {latest} がダウンロードできます(現在は {current})。"
+      }
+    },
+    "updateDownloadAction": {
+      "comment": "Update alert: default button — opens the download page in the browser.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "去下載",
+        "tailo": "khì hā-tsài",
+        "poj": "khì hā-chài",
+        "en": "Download",
+        "ja": "ダウンロード"
+      }
+    },
+    "updateLaterAction": {
+      "comment": "Update alert: dismisses without recording anything — the next check may notify again.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "暫時毋免",
+        "tailo": "tsiām-sî m̄-bián",
+        "poj": "chiām-sî m̄-bián",
+        "en": "Later",
+        "ja": "後で"
+      }
+    },
+    "updateUpToDateTitle": {
+      "comment": "Manual-check alert: the installed version is already the newest published one.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "已經是上新版本",
+        "tailo": "í-king sī siōng sin pán-pún",
+        "poj": "í-keng sī siōng sin pán-pún",
+        "en": "You're up to date",
+        "ja": "最新バージョンです"
+      }
+    },
+    "updateCheckFailedTitle": {
+      "comment": "Manual-check alert: the check could not complete. Automatic checks fail silently instead.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "無法度檢查更新",
+        "tailo": "bô-huat-tōo kiám-tsa king-sin",
+        "poj": "bô-hoat-tō͘ kiám-cha keng-sin",
+        "en": "Could Not Check for Updates",
+        "ja": "アップデートを確認できませんでした"
+      }
+    },
+    "updateCheckFailedMessage": {
+      "comment": "Manual-check alert: generic recovery line — no error taxonomy, the user's only remedy is the network and retrying.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "請檢查網路了後才閣試。",
+        "tailo": "tshiánn kiám-tsa bāng-lōo liáu-āu tsiah koh tshì.",
+        "poj": "chhiáⁿ kiám-cha bāng-lō͘ liáu-āu chiah koh chhì.",
+        "en": "Check your network connection and try again.",
+        "ja": "ネットワーク接続を確認してから、もう一度お試しください。"
+      }
+    },
+    "updateNotificationBody": {
+      "comment": "System notification body when a newer version is published. Says what to do, because a notification's whole job is the one tap that follows it.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "version": "string"
+      },
+      "values": {
+        "hanji": "台語齒盤 {version} 會使下載矣,點一下就去下載頁。",
+        "tailo": "Tâi-gí khí-puânn {version} ē-sái hā-tsài--ah, tiám tsi̍t-ē tō khì hā-tsài-ia̍h.",
+        "poj": "Tâi-gí khí-pôaⁿ {version} ē-sái hā-chài--ah, tiám chi̍t-ē tō khì hā-chài-ia̍h.",
+        "en": "TaigiKeyboard {version} is available. Click to open the download page.",
+        "ja": "台語キーボード {version} が利用できます。クリックしてダウンロードページを開きます。"
+      }
+    },
+    "updateNotifyOfferTitle": {
+      "comment": "Title of the one-time offer, shown the first time the settings window opens: may we notify about new versions?",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "有新版本的時陣通知你?",
+        "tailo": "Ū sin pán-pún ê sî-tsūn thong-ti lí?",
+        "poj": "Ū sin pán-pún ê sî-chūn thong-ti lí?",
+        "en": "Get notified about new versions?",
+        "ja": "新しいバージョンをお知らせしますか？"
+      }
+    },
+    "updateNotifyOfferMessage": {
+      "comment": "Body of the one-time notification offer. States what arrives and how often, because a permission asked without a reason is the one people refuse.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "有新版本的時,會用系統通知講一聲,一个版本干焦講一擺。袂傳送任何拍字內容。",
+        "tailo": "Ū sin pán-pún ê sî, ē iōng hē-thóng thong-ti kóng tsi̍t-siann, tsi̍t ê pán-pún kan-na kóng tsi̍t pái. Buē thuân-sàng jīm-hô phah-jī luē-iông.",
+        "poj": "Ū sin pán-pún ê sî, ē iōng hē-thóng thong-ti kóng chi̍t-siaⁿ, chi̍t ê pán-pún kan-na kóng chi̍t pái. Bōe thoân-sàng jīm-hô phah-jī lōe-iông.",
+        "en": "When a new version is published you get one notification, once per version. Nothing you type is ever sent.",
+        "ja": "新しいバージョンが公開されたときに、バージョンごとに1回だけ通知します。入力内容が送信されることはありません。"
+      }
+    },
+    "updateNotifyOfferEnable": {
+      "comment": "Default button of the one-time notification offer; accepting it is what triggers the system permission prompt.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "開啟通知",
+        "tailo": "khai-khé thong-ti",
+        "poj": "khai-khé thong-ti",
+        "en": "Enable Notifications",
+        "ja": "通知をオンにする"
+      }
+    },
+    "updatePendingVersionLabel": {
+      "comment": "Settings 一般 pane row shown while a newer version is known but not installed. The surface that stays accurate with no network and after a missed notification.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "version": "string"
+      },
+      "values": {
+        "hanji": "有新版本 {version}",
+        "tailo": "ū sin pán-pún {version}",
+        "poj": "ū sin pán-pún {version}",
+        "en": "Version {version} is available",
+        "ja": "バージョン {version} があります"
+      }
+    },
+    "updateNotificationsOffNote": {
+      "comment": "Settings 一般 pane row shown when notifications are refused: says what is lost, and leads out to where it is changed.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "通知關起來,新版本袂主動通知你",
+        "tailo": "Thong-ti kuainn--khí-lâi, sin pán-pún buē tsú-tōng thong-ti lí",
+        "poj": "Thong-ti koaiⁿ--khí-lâi, sin pán-pún bōe chú-tōng thong-ti lí",
+        "en": "Notifications are off, so new versions won't be announced",
+        "ja": "通知がオフのため、新しいバージョンはお知らせされません"
+      }
+    },
+    "updateOpenNotificationSettings": {
+      "comment": "Settings 一般 pane link out to the System Settings notifications pane, beside the notifications-off note.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "去系統設定",
+        "tailo": "khì hē-thóng siat-tīng",
+        "poj": "khì hē-thóng siat-tēng",
+        "en": "Open System Settings",
+        "ja": "システム設定を開く"
+      }
     }
   }
 }

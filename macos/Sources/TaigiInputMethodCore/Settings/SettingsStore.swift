@@ -180,6 +180,33 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: DisplayLanguage.defaultTag,
         )
 
+        /// `UpdateChecker` bookkeeping, named here per the every-key-in-one-place
+        /// rule: when the next automatic check may connect, which version was
+        /// already announced (announced once, never repeated), the newer version
+        /// waiting to be installed, and whether the user has been asked about
+        /// notifications yet.
+        static let updateNextCheckDate = SettingsKey(
+            name: "updateNextCheckDate",
+            defaultValue: Date.distantPast,
+        )
+        static let updateLastNotifiedVersion = SettingsKey(
+            name: "updateLastNotifiedVersion",
+            defaultValue: "",
+        )
+        /// The pending update, stored as the manifest's own wire JSON: version
+        /// and download page are one fact, and two keys could be read torn —
+        /// a new version beside the previous one's URL.
+        static let updatePendingManifest = SettingsKey<Data?>(
+            name: "updatePendingManifest",
+            defaultValue: nil,
+        )
+        /// Whether the notification offer has been put to the user. One-time:
+        /// declining is an answer, and asking again would be nagging.
+        static let hasOfferedUpdateNotifications = SettingsKey(
+            name: "hasOfferedUpdateNotifications",
+            defaultValue: false,
+        )
+
         /// The settings-window pane the sidebar reopens on. UI-only like
         /// `displayLanguage` — the engine never reads it — but registered here
         /// so every defaults key this app writes is named in one place.
@@ -391,6 +418,29 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue.rawValue, forKey: Keys.selectedSettingsPane.name) }
     }
 
+    /// The update-check bookkeeping. Engine-invisible like `displayLanguage`,
+    /// and typed here for the same reason: this store is where every defaults
+    /// key this app writes gets its one typed accessor.
+    var updateNextCheckDate: Date {
+        get { date(Keys.updateNextCheckDate) }
+        set { userDefaults.set(newValue, forKey: Keys.updateNextCheckDate.name) }
+    }
+
+    var updateLastNotifiedVersion: String {
+        get { string(Keys.updateLastNotifiedVersion) }
+        set { userDefaults.set(newValue, forKey: Keys.updateLastNotifiedVersion.name) }
+    }
+
+    var updatePendingManifest: Data? {
+        get { userDefaults.data(forKey: Keys.updatePendingManifest.name) }
+        set { userDefaults.set(newValue, forKey: Keys.updatePendingManifest.name) }
+    }
+
+    var hasOfferedUpdateNotifications: Bool {
+        get { bool(Keys.hasOfferedUpdateNotifications) }
+        set { userDefaults.set(newValue, forKey: Keys.hasOfferedUpdateNotifications.name) }
+    }
+
     /// The candidate settings a shortcut can flip. Typed properties rather than
     /// a raw key write at the call site, so a toggle always goes through the
     /// same never-written-reads-as-default rule its readers use.
@@ -413,7 +463,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// naming no language — a hand-edited `defaults write`, or a language a future version removes —
     /// stays readable here and is clamped once, by `DisplayLanguage.fromTag`, at the display boundary.
     var displayLanguage: String {
-        get { userDefaults.string(forKey: Keys.displayLanguage.name) ?? Keys.displayLanguage.defaultValue }
+        get { string(Keys.displayLanguage) }
         set { userDefaults.set(newValue, forKey: Keys.displayLanguage.name) }
     }
 
@@ -437,6 +487,16 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// default-on setting off on a fresh install.
     private func bool(_ key: SettingsKey<Bool>) -> Bool {
         userDefaults.object(forKey: key.name) as? Bool ?? key.defaultValue
+    }
+
+    /// `object(forKey:)` like `bool(_:)`, and for the same reason: a key that
+    /// was never written must read as its default, not as a reference date.
+    private func date(_ key: SettingsKey<Date>) -> Date {
+        userDefaults.object(forKey: key.name) as? Date ?? key.defaultValue
+    }
+
+    private func string(_ key: SettingsKey<String>) -> String {
+        userDefaults.string(forKey: key.name) ?? key.defaultValue
     }
 }
 

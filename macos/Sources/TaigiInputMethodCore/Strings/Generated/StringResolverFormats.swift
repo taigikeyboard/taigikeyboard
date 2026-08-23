@@ -30,4 +30,20 @@ extension StringResolver {
     func macosRestoreLineAssociationFailed(reason: String) -> String {
         format(.macosRestoreLineAssociationFailed, reason)
     }
+
+    func macosUpdateCurrentVersionLabel(version: String) -> String {
+        format(.macosUpdateCurrentVersionLabel, version)
+    }
+
+    func macosUpdateAvailableMessage(latest: String, current: String) -> String {
+        format(.macosUpdateAvailableMessage, latest, current)
+    }
+
+    func macosUpdateNotificationBody(version: String) -> String {
+        format(.macosUpdateNotificationBody, version)
+    }
+
+    func macosUpdatePendingVersionLabel(version: String) -> String {
+        format(.macosUpdatePendingVersionLabel, version)
+    }
 }

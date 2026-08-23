@@ -1,5 +1,6 @@
-// The 一般 pane: romanization system, display language, and the attribution footer.
+// The 一般 pane: romanization system, display language, updates, and the attribution footer.
 
+import AppKit
 import SwiftUI
 
 /// The 一般 pane of the settings window.
@@ -24,8 +25,19 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
+    /// Whether the system is currently refusing our notices. Re-read when this
+    /// app comes back to the front rather than observed: nothing fires when the
+    /// setting changes, and changing it means a trip to System Settings and back.
+    @State private var areNoticesBlocked = false
+
     var body: some View {
         settingsForm
+            // `didBecomeActive` alone: showing this window activates the app,
+            // so it fires as the pane appears and again after every trip out to
+            // System Settings. A `.task` on top would only duplicate the first.
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                Task { await refreshNoticeReachability() }
+            }
             // The form stays a bounded column; the pane around it takes the whole detail area, so
             // the footer below centres on the window rather than on the column.
             .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
@@ -52,8 +64,49 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
+
+            // The update rows. No toggle and no explanatory text (USER
+            // 2026-08-23): the daily check is always on, and the button is the
+            // on-demand version of the same thing.
+            //
+            // This section is the surface that keeps working when the
+            // notification did not: no network needed, nothing to miss, and
+            // still right after a banner was dismissed weeks ago.
+            Section {
+                LabeledContent(language.resolver.macosUpdateCurrentVersionLabel(version: AppVersion.installed)) {
+                    Button(language.string(.macosUpdateCheckNow)) {
+                        UpdateChecker.shared.checkManually()
+                    }
+                }
+
+                if let pending = UpdateChecker.shared.pendingUpdate {
+                    LabeledContent(
+                        language.resolver.macosUpdatePendingVersionLabel(version: pending.version),
+                    ) {
+                        ExternalLinkButton(
+                            titleKey: .macosUpdateDownloadAction,
+                            url: pending.downloadPageURL,
+                        )
+                    }
+                }
+
+                if areNoticesBlocked {
+                    LabeledContent(language.string(.macosUpdateNotificationsOffNote)) {
+                        Button(language.string(.macosUpdateOpenNotificationSettings)) {
+                            NotificationManager.shared.openSystemNotificationSettings()
+                        }
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
+    }
+
+    /// The same question posting asks, so the pane cannot stay quiet in a state
+    /// where every notice silently fails. `.notAsked` is not blocked — the
+    /// offer covers that case on its own.
+    private func refreshNoticeReachability() async {
+        areNoticesBlocked = await NotificationManager.shared.reachability() == .blocked
     }
 
     /// Centred at the foot of the pane rather than inside the form: it is neither a setting nor a

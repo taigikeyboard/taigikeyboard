@@ -74,6 +74,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if server == nil {
             logger.error("IMKServer creation failed — this process receives no key events")
         }
+
+        // Before the first check can post anything, and before launch is over:
+        // `UNUserNotificationCenter.delegate` is weak and Apple documents this
+        // as the deadline — a delegate set later is a notification tap that
+        // does nothing.
+        NotificationManager.shared.registerDelegate()
+
+        // The update check lives on the process's lifetime, not on any
+        // session's focus: one look shortly after launch, then a timer at the
+        // same cadence as the checker's own once-a-day stamp. The stamp stays
+        // the guard — it is what holds across relaunches and absorbs timer
+        // drift; the timer only keeps a weeks-lived agent asking, and a
+        // tolerance this generous lets the OS coalesce the wakeup.
+        //
+        // The first look is deferred off the wake path: this process is usually
+        // started BY a keystroke, and a DNS lookup plus a TLS handshake has no
+        // business competing with the first character. The daily stamp decides
+        // whether the check happens at all, so a minute either way is nothing.
+        Task {
+            try? await Task.sleep(for: .seconds(30))
+            UpdateChecker.shared.checkAutomatically()
+        }
+        let updateCheckTimer = Timer(timeInterval: UpdateChecker.checkInterval, repeats: true) { _ in
+            Task { @MainActor in UpdateChecker.shared.checkAutomatically() }
+        }
+        updateCheckTimer.tolerance = UpdateChecker.checkInterval / 10
+        RunLoop.main.add(updateCheckTimer, forMode: .common)
     }
 
     /// Rebuilds the AppKit UI that reads its text once and keeps a copy.

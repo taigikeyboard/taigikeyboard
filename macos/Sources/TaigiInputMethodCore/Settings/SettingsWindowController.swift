@@ -66,6 +66,15 @@ final class SettingsWindowController {
         self.window = window
 
         window.makeKeyAndOrderFront(nil)
+        // After the window is up, and only here: the notification offer needs a
+        // frontmost app to be seen, and this is the one moment this process is
+        // frontmost because the user put it there rather than because it
+        // interrupted them. Gated before the task, so every later open costs
+        // one defaults read instead of an allocation and a hop.
+        let settings = SettingsStore()
+        if UpdateNotificationOffer.isPending(in: settings) {
+            Task { await UpdateNotificationOffer.offerIfNeeded(in: settings, parent: window) }
+        }
         // If activation was deferred or refused, `makeKeyAndOrderFront` orders
         // the window only within this app's own layer — where nothing else is —
         // and the user would be left looking at a window that never appeared.

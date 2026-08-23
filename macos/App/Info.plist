@@ -39,10 +39,15 @@
 	<string>TaigiKeyboard</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<!-- The marketing version is kept in lockstep with iOS and Android (one
+	     release train, three platforms). The build version is what Installer's
+	     BundleIsVersionChecked and pkg-ref compare, so it must strictly increase
+	     with every shipped pkg — derived from the marketing version as
+	     MAJOR*10000 + MINOR*100 + PATCH, bumped by hand at release time. -->
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>3.6.5</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>30605</string>
 	<key>InputMethodConnectionName</key>
 	<string>com.siansiansu.inputmethod.TaigiKeyboard_Connection</string>
 	<key>InputMethodServerControllerClass</key>

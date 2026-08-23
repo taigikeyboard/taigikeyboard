@@ -203,8 +203,11 @@ struct BackupService: Sendable {
         return RustEngineBridge.pojToTl(stored) ?? stored
     }
 
+    /// The version stamped into an exported file. `AppVersion` is where this
+    /// process reads its own version; the `"0"` is kept for this one field,
+    /// which has always carried a non-empty stamp.
     private static func bundleVersion() -> String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        AppVersion.installed.isEmpty ? "0" : AppVersion.installed
     }
 
     /// ISO-8601 UTC, POSIX-fixed, so the stamp reads the same wherever the
