@@ -9,6 +9,39 @@ produces.
 
 iOS is unaffected — it continues to ship through App Store Connect.
 
+## Architectures
+
+One universal `.pkg`, not one download per Mac. Every layer carries both
+architectures:
+
+| Layer | Shape |
+|---|---|
+| Rust engine | `RustTaigi.xcframework` — **one** `macos` slice, `macos-arm64_x86_64`. Built as two thin archives and `lipo`-ed together: arm64 and x86_64 macOS are the same *platform*, and `xcodebuild -create-xcframework` rejects two libraries that resolve to it ("represent two equivalent library definitions"). |
+| App executable | One `swift build --arch <arch>` per architecture, then `lipo -create`. Deliberately not the Swift Build backend's multi-architecture mode, which SwiftPM documents for universal binaries but which cannot link this package — it drops the `@_cdecl` logger-sink symbols the Rust archive imports and fails for *both* architectures. vChewing builds per-architecture for the same reason. |
+| Installer | `hostArchitectures="arm64,x86_64"` in the generated distribution. |
+
+`engine/rust-toolchain.toml` declares both Apple desktop targets, so the
+prerequisite is a checkout concern rather than something a build script installs
+behind the developer's back.
+
+**Debug stays native.** `bundle-app.sh debug` builds only for the host
+architecture — recompiling the whole dependency graph for an architecture this
+Mac cannot execute costs every dev-loop iteration and catches nothing.
+`release-app.sh` always passes `release`, so the shipping path cannot take the
+native branch.
+
+Three assertions pin the contract, each an exact set rather than a
+"contains" check, because a bundle that silently lost x86_64 still contains
+arm64 and only an Intel Mac would ever find out:
+
+- the xcframework declares exactly one `macos` slice carrying exactly
+  `arm64,x86_64`;
+- the assembled executable's `lipo -archs` is exactly `arm64,x86_64` (release)
+  or exactly `uname -m` (debug);
+- each slice's `LC_BUILD_VERSION` `minos` equals `LSMinimumSystemVersion`. The
+  Rust builds set `MACOSX_DEPLOYMENT_TARGET=14.0` explicitly to make that true —
+  rustc's per-target default is lower and differs between the two.
+
 ## One-time account setup
 
 Everything here is done once per machine. `make macos-release` fails fast with

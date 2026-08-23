@@ -58,8 +58,47 @@ echo "==> Checking generated i18n strings"
 python3 "$REPOSITORY_DIR/tools/i18n/check.py"
 
 echo "==> Building ($CONFIGURATION)"
-swift build --configuration "$CONFIGURATION" --product "$EXECUTABLE_NAME"
-BUILT_EXECUTABLE="$(swift build --configuration "$CONFIGURATION" --show-bin-path)/$EXECUTABLE_NAME"
+# One universal `.pkg` serves both Mac architectures, so a release bundle has to
+# carry both. Debug is the local dev loop and stays native: compiling the whole
+# dependency graph a second time for an architecture this Mac cannot execute
+# costs every iteration and buys nothing. release-app.sh always passes
+# `release`, so the release path cannot fall into the native branch.
+if [[ "$CONFIGURATION" == "release" ]]; then
+    EXPECTED_ARCHITECTURES="arm64,x86_64"
+    # One native build per architecture, then `lipo` — not the Swift Build
+    # backend's multi-architecture mode, which cannot link this package at all.
+    # Why, and what it fails with: docs/architecture/macos-release.md
+    # § Architectures.
+    SLICE_EXECUTABLES=()
+    for slice_arch in ${EXPECTED_ARCHITECTURES//,/ }; do
+        # Same arguments as the build below: the product directory is
+        # per-architecture, so a differently-spelled query would answer about a
+        # different build.
+        slice_executable="$(swift build --configuration "$CONFIGURATION" \
+            --arch "$slice_arch" --show-bin-path)/$EXECUTABLE_NAME"
+        # Deleting only the final executable forces this run to relink it, while
+        # every object and module cache stays. A successful `swift build` means
+        # SwiftPM considered the graph up to date — which is not the same as
+        # "this executable was produced from what is checked out now", and the
+        # architecture and symbol assertions below cannot tell a complete
+        # universal binary built from last week's sources from today's.
+        rm -f "$slice_executable"
+        swift build --configuration "$CONFIGURATION" --arch "$slice_arch" \
+            --product "$EXECUTABLE_NAME"
+        if [[ ! -x "$slice_executable" ]]; then
+            echo "error: $slice_arch build left no executable at $slice_executable" >&2
+            exit 1
+        fi
+        SLICE_EXECUTABLES+=("$slice_executable")
+    done
+    BUILT_EXECUTABLE="$PACKAGE_DIR/.build/universal-$CONFIGURATION/$EXECUTABLE_NAME"
+    mkdir -p "$(dirname "$BUILT_EXECUTABLE")"
+    lipo -create "${SLICE_EXECUTABLES[@]}" -output "$BUILT_EXECUTABLE"
+else
+    EXPECTED_ARCHITECTURES="$(uname -m)"
+    swift build --configuration "$CONFIGURATION" --product "$EXECUTABLE_NAME"
+    BUILT_EXECUTABLE="$(swift build --configuration "$CONFIGURATION" --show-bin-path)/$EXECUTABLE_NAME"
+fi
 if [[ ! -x "$BUILT_EXECUTABLE" ]]; then
     echo "error: built executable not found at $BUILT_EXECUTABLE" >&2
     exit 1
@@ -113,12 +152,38 @@ echo "==> Linting Info.plist"
 plutil -lint "$CONTENTS_DIR/Info.plist"
 
 echo "==> Checking architecture"
-# The xcframework carries a single macos-arm64 slice, so an executable without
-# arm64 could not have linked the Rust engine at all.
-ARCHITECTURES="$(lipo -archs "$CONTENTS_DIR/MacOS/$EXECUTABLE_NAME")"
-if [[ " $ARCHITECTURES " != *" arm64 "* ]]; then
-    echo "error: executable has architectures '$ARCHITECTURES', expected arm64" >&2
+# The exact set, sorted — not "contains arm64". A release bundle that lost
+# x86_64 still contains arm64, and the only machine that would ever notice is an
+# Intel Mac, at install time, in a user's hands.
+ARCHITECTURES="$(lipo -archs "$CONTENTS_DIR/MacOS/$EXECUTABLE_NAME" |
+    tr ' ' '\n' | LC_ALL=C sort | paste -sd, -)"
+if [[ "$ARCHITECTURES" != "$EXPECTED_ARCHITECTURES" ]]; then
+    echo "error: executable has architectures '$ARCHITECTURES', expected '$EXPECTED_ARCHITECTURES'" >&2
     exit 1
+fi
+
+if [[ "$CONFIGURATION" == "release" ]]; then
+    echo "==> Checking deployment target per slice"
+    # Info.plist claims LSMinimumSystemVersion for the whole app, but each slice
+    # carries its own LC_BUILD_VERSION, and they are produced by different
+    # toolchain defaults. A slice claiming an older minimum would launch on a
+    # macOS the app was never built against.
+    for slice_arch in ${ARCHITECTURES//,/ }; do
+        # `-show-build` is the spelling vtool documents; `minos` is the
+        # LC_BUILD_VERSION field. A slice carrying only the older
+        # LC_VERSION_MIN_MACOSX would leave this empty, which fails closed —
+        # reported as its own case so the message says so.
+        SLICE_MINIMUM="$(vtool -arch "$slice_arch" -show-build \
+            "$CONTENTS_DIR/MacOS/$EXECUTABLE_NAME" | sed -n 's/^ *minos *//p')"
+        if [[ -z "$SLICE_MINIMUM" ]]; then
+            echo "error: $slice_arch slice carries no LC_BUILD_VERSION minos to check" >&2
+            exit 1
+        fi
+        if [[ "$SLICE_MINIMUM" != "$MINIMUM_SYSTEM_VERSION" ]]; then
+            echo "error: $slice_arch slice targets macOS $SLICE_MINIMUM, but the app declares $MINIMUM_SYSTEM_VERSION" >&2
+            exit 1
+        fi
+    done
 fi
 
 # Read once into a variable: piping into `grep -q` closes the pipe early, which

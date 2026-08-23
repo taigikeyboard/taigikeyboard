@@ -5,7 +5,7 @@ import SwiftProtobuf
 import XCTest
 
 /// The first real gate on `macos/RustEngine/RustTaigi.xcframework`: PR1 only
-/// validated the artefact's *shape* (one macos-arm64 slice). These cases push
+/// validated the artefact's *shape* (one macos-arm64_x86_64 slice). These cases push
 /// bytes through the static archive and back, exercising SwiftProtobuf encode
 /// / decode, the C module import, the swift-bridge wrapper, and the Rust
 /// dispatcher in one hop.

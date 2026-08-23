@@ -48,8 +48,9 @@ Host app — IMKTextInput client
 │ 4-fn swift-ffi surface; live-read settings → AppConfig per    │
 │ request; platform_id = 0 until PLATFORM_MACOS lands (PR8a)    │
 ├───────────────────────────────────────────────────────────────┤
-│ macos/RustEngine/RustTaigi.xcframework (aarch64-apple-darwin, │
-│ new additive script) + macOS-owned generated Swift copies     │
+│ macos/RustEngine/RustTaigi.xcframework (universal arm64 +     │
+│ x86_64, new additive script) + macOS-owned generated Swift    │
+│ copies                                                        │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -66,9 +67,11 @@ Phase-0 plan and `memory/project_macos_ime.md`.
 - **D1 Engine artifact** — engine `swift-ffi` crate reused UNCHANGED (4 fns,
   bytes-in/bytes-out protobuf, platform-neutral; `engine/swift-ffi/src/lib.rs:41-54`).
   New additive `engine/scripts/build-macos-xcframework.sh` builds
-  `aarch64-apple-darwin` → `macos/RustEngine/RustTaigi.xcframework` + macOS-owned
-  copies of generated `RustTaigi.swift` / `SwiftBridgeCore.swift`. iOS artifacts
-  untouched. arm64-only; x86_64 is a later user-gated additive step.
+  `aarch64-apple-darwin` + `x86_64-apple-darwin`, `lipo`s them into one universal
+  archive → `macos/RustEngine/RustTaigi.xcframework` + macOS-owned copies of
+  generated `RustTaigi.swift` / `SwiftBridgeCore.swift`. iOS artifacts untouched.
+  (Shipped arm64-only at D1; x86_64 added 2026-08-23 — see
+  `docs/architecture/macos-release.md` § Architectures.)
   `make build` runs the iOS and macOS xcframework scripts together, so the two
   outputs cannot drift behind a `swift-ffi` change. The shared swift-bridge
   post-processing (OUT_DIR discovery, modulemap, `import` injection,
@@ -342,7 +345,6 @@ Methods` sudo install.
   the literal · Esc cancels · `Ctrl+1…9` direct-select as `⌃1`). Bindings now live in D4 above
   and bind at PR4b.
 - PR8a timing (proto regen window vs concurrent iOS/Android session).
-- Intel/x86_64 support (distribution decision).
 - Custom-dict Time-Machine/backup-exclusion policy (decided at PR12; plan default =
   stays inside TM scope, matching the 2026-08-16 learning-DB decision).
 - macOS dogfood acceptance checklist contents (proposed at PR9). **Dogfood cadence decided

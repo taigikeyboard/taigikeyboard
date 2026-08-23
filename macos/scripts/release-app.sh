@@ -307,10 +307,12 @@ cat > "$DISTRIBUTION_XML" <<DISTRIBUTION
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
     <title>$APP_NAME</title>
-    <!-- arm64 only: the engine xcframework carries a single macos-arm64 slice,
-         and without this productbuild would advertise x86_64 too, letting an
-         Intel Mac install a bundle it cannot run. -->
-    <options customize="never" hostArchitectures="arm64"/>
+    <!-- Both architectures, listed rather than left to the default: the bundle
+         is universal, and naming what it supports makes the installer's claim
+         reviewable against bundle-app.sh's architecture assertion. Omitting the
+         attribute lets the Installer match permissively, which would also
+         accept a bundle that had silently lost a slice. -->
+    <options customize="never" hostArchitectures="arm64,x86_64"/>
     <domains enable_currentUserHome="true" enable_localSystem="false" enable_anywhere="false"/>
     <volume-check>
         <allowed-os-versions>
