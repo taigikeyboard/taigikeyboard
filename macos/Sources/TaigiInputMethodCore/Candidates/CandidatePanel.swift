@@ -35,6 +35,10 @@ final class CandidatePanel: CandidatePresenter {
     private var panels: [CandidateLayout: CandidateBasePanel] = [:]
     private var panel: CandidateBasePanel?
 
+    /// The chrome generation every panel this process builds is drawn in. Read
+    /// once rather than per show: it comes from the running OS, not a setting.
+    private let style = CandidateWindowStyle.systemStyle
+
     /// Live-read on every show, so a layout switched in the settings window
     /// applies to the very next keystroke — the store caches nothing.
     var settings = SettingsStore()
@@ -114,19 +118,18 @@ final class CandidatePanel: CandidatePresenter {
     /// The panel for `layout`, taking down whichever other layout's panel was
     /// up: the settings are live-read per show, so a switch mid-composition
     /// swaps windows on the next keystroke rather than leaving two on screen.
-    /// A cached panel built under a style or a size the settings no longer
-    /// name is rebuilt — both are baked in at construction, the style into the
-    /// backdrop and the metrics into every cell's constraints. A stale panel of
-    /// some OTHER layout can only ever reach the screen through this method, so
-    /// leaving it cached until it is asked for costs nothing.
+    /// A cached panel built under a size the settings no longer name is
+    /// rebuilt — the metrics are baked into every cell's constraints at
+    /// construction. A stale panel of some OTHER layout can only ever reach
+    /// the screen through this method, so leaving it cached until it is asked
+    /// for costs nothing.
     private func panel(for layout: CandidateLayout) -> CandidateBasePanel {
-        let style = settings.candidateWindowStyle.resolved
         // The settings resolve the sizes; the layout resolves how its cells
         // hold their two scripts. Both are baked into the panel's cells, so
         // both are settled before the cache below is asked for one.
         let metrics = settings.candidateMetrics.arranged(layout.cellArrangement)
         var target = panels[layout]
-        if let cached = target, cached.style != style || cached.metrics != metrics {
+        if let cached = target, cached.metrics != metrics {
             cached.clear()
             target = nil
         }

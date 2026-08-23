@@ -159,10 +159,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateLayout, .expandable)
     }
 
-    func testCandidateWindowStyle_withNothingStored_followsTheOS() {
-        XCTAssertEqual(makeStore().candidateWindowStyle, .auto)
-    }
-
     /// The 外觀 row's contract: 自動 forces nothing (the panel resolves
     /// against the system), and the two explicit modes force the matching
     /// appearance — a mode that resolved to nil would silently behave as 自動.
@@ -322,18 +318,5 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set("nonsense", forKey: SettingsStore.Keys.candidateSlotModifier.name)
 
         XCTAssertEqual(makeStore().composingKeyBindings.slotModifier, .control)
-    }
-
-    /// A forced Tahoe must never reach a panel on an OS that cannot draw it —
-    /// `NSGlassEffectView` is macOS 26+ — and the clamp lives in `resolved` so
-    /// backdrop, cells and corners can never disagree about the style.
-    func testCandidateWindowStyleChoice_resolvesWithinWhatTheOSCanDraw() {
-        XCTAssertEqual(CandidateWindowStyleChoice.auto.resolved, CandidateWindowStyle.systemResolved)
-        XCTAssertEqual(CandidateWindowStyleChoice.sequoia.resolved, .sequoia)
-        if CandidateWindowStyle.systemResolved == .tahoe {
-            XCTAssertEqual(CandidateWindowStyleChoice.tahoe.resolved, .tahoe)
-        } else {
-            XCTAssertEqual(CandidateWindowStyleChoice.tahoe.resolved, .sequoia)
-        }
     }
 }

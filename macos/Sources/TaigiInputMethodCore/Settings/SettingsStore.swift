@@ -237,13 +237,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateLayout.expandable,
         )
 
-        /// Which chrome generation the candidate window draws — `auto` follows
-        /// the OS. Presentation-only like `candidateLayout`.
-        static let candidateWindowStyle = SettingsKey(
-            name: "candidateWindowStyle",
-            defaultValue: CandidateWindowStyleChoice.auto,
-        )
-
         /// The candidate window's light/dark choice — `auto` follows the
         /// system. Presentation-only like `candidateLayout`.
         static let candidateAppearanceMode = SettingsKey(
@@ -371,11 +364,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// The candidate window's layout.
     var candidateLayout: CandidateLayout {
         choice(Keys.candidateLayout)
-    }
-
-    /// The candidate window's chrome choice.
-    var candidateWindowStyle: CandidateWindowStyleChoice {
-        choice(Keys.candidateWindowStyle)
     }
 
     /// The candidate window's light/dark choice.

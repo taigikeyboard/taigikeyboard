@@ -58,15 +58,19 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         }
     }
 
-    /// The 外觀 pane's accent-colour swatch. Nothing reads the key any more —
-    /// the highlight always follows the system accent — so this keeps the
-    /// defaults domain from carrying a colour nobody can see or change.
-    func testTheRetiredAccentColorChoice_isRemoved() {
+    /// The 外觀 pane's two retired rows: the accent-colour swatch and the
+    /// candidate-window chrome picker. Nothing reads either key any more — the
+    /// highlight always follows the system accent and the chrome always
+    /// follows the running OS — so this keeps the defaults domain from
+    /// carrying values nobody can see or change.
+    func testTheRetiredAppearanceChoices_areRemoved() {
         userDefaults.set("graphite", forKey: "candidateAccentColor")
+        userDefaults.set("sequoia", forKey: "candidateWindowStyle")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
         XCTAssertNil(userDefaults.object(forKey: "candidateAccentColor"))
+        XCTAssertNil(userDefaults.object(forKey: "candidateWindowStyle"))
     }
 
     /// The one setting of that shape that survived into the new one, so it must

@@ -16,7 +16,7 @@ Codex pre-impl review ran 2026-08-18; its rulings are folded in below.
 | 8 colours | Highlight follows the macOS accent colour picked in System Settings → Appearance (blue / purple / pink / red / orange / yellow / green / graphite). When the system is set to Multicolour, the HOST app's `NSAccentColorName` is used when it resolves — best-effort: apps without a named accent asset, and XPC-hosted fields, fall back to the system accent. No colour setting of our own. |
 | 3 layouts | 水平 (horizontal, width-packed pages) · 垂直 (vertical, scrolling) · 展開式 (one row, chevron expands into a width-packed grid). A three-way setting. |
 | Light / dark | The panel follows the system appearance and repaints on appearance change. Upstream's per-client appearance needs the undocumented `windowEffectiveAppearance` selector — rejected; system appearance is the supported fallback. |
-| Sequoia / Tahoe | Sequoia = `NSVisualEffectView` + 6pt corners + row highlight bar. Tahoe = `NSGlassEffectView` + capsule corners + inset pill highlight. Auto-resolves by OS; an override setting exists, and a forced Tahoe resolves to Sequoia below macOS 26 (`NSGlassEffectView` does not exist there). One private-API carve-out survives, guarded by `responds(to:)` and commented: upstream's `_adaptiveAppearance` KVC on `NSGlassEffectView`, without which small glass surfaces flip their own light/dark. |
+| Sequoia / Tahoe | Sequoia = `NSVisualEffectView` + 6pt corners + row highlight bar. Tahoe = `NSGlassEffectView` + capsule corners + inset pill highlight. Resolved from the running OS, with no setting of our own (why, under Settings below). One private-API carve-out survives, guarded by `responds(to:)` and commented: upstream's `_adaptiveAppearance` KVC on `NSGlassEffectView`, without which small glass surfaces flip their own light/dark. |
 
 ## What is ported and what is not
 
@@ -80,10 +80,21 @@ which is also upstream's own test posture.
 | Key | Values | Default |
 |---|---|---|
 | `candidateLayout` | `horizontal` · `vertical` · `expandable` | `horizontal` until PR3 lands, then `expandable` (MacishType's default). The setting UI only ever offers implemented values. |
-| `candidateWindowStyle` | `auto` · `sequoia` · `tahoe` | `auto`; `tahoe` on macOS < 26 resolves to `sequoia` |
+| `candidateAppearanceMode` | `auto` · `light` · `dark` | `auto` |
+| `candidateWindowSize` | `small` · `medium` · `large` | `medium` |
+| `candidateTextSize` | `small` · `medium` · `large` | `medium` |
+| `fontType` | `system` plus the bundled typefaces | `system` |
 
 Presentation-only, so they live beside the store's macOS-only keys, not in
-`EngineSettings`. Accent colour and font size are not settings.
+`EngineSettings`. Accent colour and the chrome generation are not settings —
+both follow the system.
+
+PR3 also shipped a `candidateWindowStyle` override (`auto` · `sequoia` ·
+`tahoe`), removed since. It could not be symmetric: below macOS 26 there is no
+`NSGlassEffectView` to raise a window to Tahoe, so the picker showed three
+entries with one reachable outcome there, and on macOS 26 the only override it
+could honour was dropping back to the older chrome. The stored key is swept by
+`RetiredSettingsCleanup`, in the same call as the accent-colour swatch.
 
 ## Phases
 

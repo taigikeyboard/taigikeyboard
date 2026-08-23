@@ -14,10 +14,14 @@ import AppKit
 /// authoritative for; who OWNS the window (which session may hide it) is
 /// `CandidatePanel`'s business, one level up.
 class CandidateBasePanel: NSPanel, CandidateWindowDragging {
+    /// Which chrome generation this window draws. Injected rather than read
+    /// from `CandidateWindowStyle.systemStyle` so the geometry tests can pin
+    /// `.sequoia` and assert fixed numbers whatever OS they run on; production
+    /// has one caller and it passes the system's (`CandidatePanel`).
     let style: CandidateWindowStyle
     /// The size metrics every cell and layout in this window renders at.
-    /// Fixed at construction like `style`: a change rebuilds the panel
-    /// (`CandidatePanel.panel(for:)`).
+    /// Fixed at construction, and settings-driven, so a change rebuilds the
+    /// panel (`CandidatePanel.panel(for:)`).
     let metrics: CandidateMetrics
     private(set) var backdrop: CandidateBackdrop
     /// The layouts' canvas, origin at the top-left like the layouts think.

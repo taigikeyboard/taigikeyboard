@@ -31,8 +31,10 @@ struct CandidateBackdrop {
         asymmetricCorners(size, leftRadius, rightRadius)
     }
 
-    /// Builds the backdrop for `style`, already clamped to what the OS can
-    /// draw (`CandidateWindowStyle.runnable`).
+    /// Builds the backdrop for `style`, falling back to vibrancy for a
+    /// `.tahoe` asked for below macOS 26 — `NSGlassEffectView` does not exist
+    /// there to construct. Production never asks: the style comes from
+    /// `CandidateWindowStyle.systemStyle`.
     static func make(style: CandidateWindowStyle) -> CandidateBackdrop {
         if style == .tahoe, #available(macOS 26, *) {
             let glass = GlassBackgroundView()

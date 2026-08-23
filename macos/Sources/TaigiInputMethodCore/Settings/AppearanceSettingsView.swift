@@ -1,17 +1,15 @@
-// The 外觀 pane: how the candidate window looks — mode, layout, chrome, size, font.
+// The 外觀 pane: how the candidate window looks — mode, layout, size, font.
 
 import SwiftUI
 
 /// The 外觀 pane of the settings window, shaped like System Settings'
 /// Appearance pane: an 外觀 row of light/dark/auto thumbnails, then the
-/// candidate window's own pickers — layout, chrome generation, the two size
-/// steps, and the typeface.
+/// candidate window's own pickers — layout, the two size steps, and the
+/// typeface.
 ///
-/// There is deliberately no accent-colour row: the highlight follows the
-/// accent picked in System Settings (and the frontmost app's own under
-/// Multicolour), which is what the native candidate window does. A pinned
-/// colour here would be a fixed one, losing both that per-app adaptation and
-/// the light/dark resolution — see `CandidateAccentColor`.
+/// Two rows are deliberately absent, each argued where its own type lives: no
+/// accent-colour swatch (see `CandidateAccentColor`) and no chrome-generation
+/// picker (see `CandidateWindowStyle`). Both follow the system instead.
 ///
 /// `@AppStorage`-bound like `GeneralSettingsView`, and for the same reason:
 /// the values are read live by the candidate-window router on every show, so
@@ -24,9 +22,6 @@ struct AppearanceSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
-
-    @AppStorage(SettingsStore.Keys.candidateWindowStyle.name)
-    private var candidateWindowStyle = SettingsStore.Keys.candidateWindowStyle.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateWindowSize.name)
     private var candidateWindowSize = SettingsStore.Keys.candidateWindowSize.defaultValue
@@ -52,13 +47,6 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.macosCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
                     Text(language.string(.macosCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.macosCandidateLayoutVertical)).tag(CandidateLayout.vertical)
-                }
-                Picker(language.string(.macosCandidateWindowAppearance), selection: $candidateWindowStyle) {
-                    // The shared Automatic label — same word, same picker role
-                    // as the display-language row's.
-                    Text(language.string(.settingsDisplayLanguageAutomatic)).tag(CandidateWindowStyleChoice.auto)
-                    Text(language.string(.macosCandidateStyleSequoia)).tag(CandidateWindowStyleChoice.sequoia)
-                    Text(language.string(.macosCandidateStyleTahoe)).tag(CandidateWindowStyleChoice.tahoe)
                 }
                 // The two size rows are named steps, not continuous values, so
                 // they are pop-up menus like the rows above rather than
