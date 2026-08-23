@@ -121,7 +121,10 @@ final class CandidatePanel: CandidatePresenter {
     /// leaving it cached until it is asked for costs nothing.
     private func panel(for layout: CandidateLayout) -> CandidateBasePanel {
         let style = settings.candidateWindowStyle.resolved
-        let metrics = settings.candidateMetrics
+        // The settings resolve the sizes; the layout resolves how its cells
+        // hold their two scripts. Both are baked into the panel's cells, so
+        // both are settled before the cache below is asked for one.
+        let metrics = settings.candidateMetrics.arranged(layout.cellArrangement)
         var target = panels[layout]
         if let cached = target, cached.style != style || cached.metrics != metrics {
             cached.clear()

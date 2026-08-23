@@ -166,17 +166,34 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         return rebuildCollapsed()
     }
 
-    /// Same list, new rendering. The window lays out collapsed for the new
-    /// widths, then the kept selection decides the mode the way it always
-    /// does: a selection past the collapsed row re-expands through `select`,
-    /// one inside it stays collapsed.
+    /// Same list, new rendering (the 漢羅對調 swap). The window lays out for
+    /// the new widths and comes back in the mode it was already in.
+    ///
+    /// The mode is remembered rather than re-derived from the selection: a
+    /// grid that folded to its row and unfolded again would spend a visible
+    /// frame one row tall and then play the 0.183s unfold, which reads as the
+    /// window blinking rather than its text changing (USER 2026-08-23). The
+    /// relayout runs through `rebuildCollapsed`, which resets the mode as a
+    /// side effect of tearing the cells down, so the answer is taken before it
+    /// and restored after — with `animated: false`, so the swap commits
+    /// exactly one frame. A selection the re-packed row can no longer show
+    /// opens the grid the same way, and the genuine `↓` / chevron expansion
+    /// keeps its animation.
     override func rerenderCandidates(_ newCells: [CandidateCellContent]) {
         guard !cells.isEmpty, !newCells.isEmpty else { return }
         let kept = selectedIndex
+        let wasExpanded = displayMode == .expanded
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
         measuredWidths = cells.map(metrics.measureWidth)
-        replace(panelSize: rebuildCollapsed())
-        select(min(kept, cells.count - 1))
+        let collapsedSize = rebuildCollapsed()
+        selectedIndex = min(kept, cells.count - 1)
+
+        guard wasExpanded || selectedIndex >= collapsedRow.count else {
+            replace(panelSize: collapsedSize)
+            updateHighlights()
+            return
+        }
+        expand(animated: false)
     }
 
     override func clear() {

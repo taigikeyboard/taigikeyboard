@@ -65,17 +65,35 @@ enum CandidateWindowSizeChoice: String, CaseIterable, Sendable {
 /// the paddings — the air around the text. Scaled values round to whole
 /// points the way upstream rounds, so cell arithmetic stays crisp.
 struct CandidateMetrics: Equatable, Sendable {
+    /// What this value was resolved from, kept so a layout can ask for the
+    /// same sizes under a different cell arrangement.
+    let textSize: CandidateTextSizeChoice
+    let windowSize: CandidateWindowSizeChoice
     let candidateFontSize: CGFloat
     let annotationFontSize: CGFloat
     let candidateAnnotationGap: CGFloat
     let horizontalPadding: CGFloat
     let verticalPadding: CGFloat
+    /// Air between the two scripts of a stacked cell. Text-anchored like the
+    /// inline gap it is the vertical counterpart of, and much tighter: two
+    /// lines of one candidate read as one thing only while they sit close.
+    let stackedLineGap: CGFloat
+    /// Where this cell puts its second script. Carried in the metrics because
+    /// the metrics are what a cell bakes into its constraints — the cell reads
+    /// one value rather than two that could disagree.
+    let cellArrangement: CandidateCellArrangement
+
+    /// How tall one cell renders. An inline cell is one line of candidate; a
+    /// stacked one is two line boxes plus the air between them — and keeps
+    /// that height for a cell with no annotation, so a page's rows line up.
+    ///
+    /// Resolved at construction rather than per read: the fonts it measures
+    /// are fixed here, and the layouts read this once per cell they place.
+    let itemHeight: CGFloat
     /// How far Tahoe pulls a hairline in from the capsule's curve, so the
     /// separator does not touch the rounded edge. Chrome-scaled: the curve it
     /// clears is half the item height, which the chrome knob grows.
     let tahoeSeparatorInset: CGFloat
-
-    var itemHeight: CGFloat { candidateFontSize + verticalPadding }
 
     /// `base`, stated at the reference 16pt, scaled to this metrics' text size
     /// and rounded to a whole point. What the chevron and page-arrow views
@@ -96,16 +114,47 @@ struct CandidateMetrics: Equatable, Sendable {
     private static let baseCandidateAnnotationGap: CGFloat = 7
     private static let baseHorizontalPadding: CGFloat = 9
     private static let baseVerticalPadding: CGFloat = 12
+    private static let baseStackedLineGap: CGFloat = 2
     private static let baseTahoeSeparatorInset: CGFloat = 8
 
-    init(textSize: CandidateTextSizeChoice, windowSize: CandidateWindowSizeChoice) {
+    init(
+        textSize: CandidateTextSizeChoice,
+        windowSize: CandidateWindowSizeChoice,
+        cellArrangement: CandidateCellArrangement = .inline,
+    ) {
         let textScale = textSize.candidateFontSize / Self.baseCandidateFontSize
+        self.textSize = textSize
+        self.windowSize = windowSize
         candidateFontSize = textSize.candidateFontSize
         annotationFontSize = (Self.baseAnnotationFontSize * textScale).rounded()
         candidateAnnotationGap = (Self.baseCandidateAnnotationGap * textScale).rounded()
+        stackedLineGap = (Self.baseStackedLineGap * textScale).rounded()
         horizontalPadding = (Self.baseHorizontalPadding * windowSize.chromeScale).rounded()
         verticalPadding = (Self.baseVerticalPadding * windowSize.chromeScale).rounded()
         tahoeSeparatorInset = (Self.baseTahoeSeparatorInset * windowSize.chromeScale).rounded()
+        self.cellArrangement = cellArrangement
+        switch cellArrangement {
+        case .inline:
+            itemHeight = candidateFontSize + verticalPadding
+        case .stacked:
+            itemHeight = (Self.lineHeight(forFontSize: candidateFontSize)
+                + Self.lineHeight(forFontSize: annotationFontSize)
+                + stackedLineGap
+                + verticalPadding).rounded(.up)
+        }
+    }
+
+    /// The same sizes, resolved for a layout that arranges its cells
+    /// differently.
+    func arranged(_ arrangement: CandidateCellArrangement) -> CandidateMetrics {
+        CandidateMetrics(textSize: textSize, windowSize: windowSize, cellArrangement: arrangement)
+    }
+
+    /// The line box a font of `size` draws in — AppKit's own answer rather
+    /// than font-metric arithmetic, because what a stacked cell has to hold is
+    /// exactly what the text system lays a `NSTextField` line out in.
+    private static func lineHeight(forFontSize size: CGFloat) -> CGFloat {
+        NSLayoutManager().defaultLineHeight(for: .systemFont(ofSize: size))
     }
 }
 
@@ -146,10 +195,15 @@ extension CandidateMetrics {
     /// and a shared template view would drag its Auto Layout state into every
     /// measurement.
     func measureWidth(_ cell: CandidateCellContent) -> CGFloat {
-        horizontalPadding
-            + max(primaryColumnFloor, measurePrimaryWidth(cell.text))
-            + annotationWidth(cell.annotation)
-            + horizontalPadding
+        let text = max(primaryColumnFloor, measurePrimaryWidth(cell.text))
+        switch cellArrangement {
+        case .inline:
+            return horizontalPadding + text + annotationWidth(cell.annotation) + horizontalPadding
+        case .stacked:
+            // The two scripts are on top of each other, so the cell is as wide
+            // as the WIDER of them — not as wide as both plus a gap.
+            return horizontalPadding + max(text, annotationTextWidth(cell.annotation)) + horizontalPadding
+        }
     }
 
     /// The candidate column's width for `text` alone — what the vertical layout
@@ -175,8 +229,15 @@ extension CandidateMetrics {
     /// charging the gap for it would reserve room beside nothing.
     func annotationWidth(_ annotation: String?) -> CGFloat {
         guard let annotation, !annotation.isEmpty else { return 0 }
+        return candidateAnnotationGap + annotationTextWidth(annotation)
+    }
+
+    /// The annotation's own width, without the gap that separates it from an
+    /// inline candidate — what a stacked cell measures, its second line having
+    /// no candidate beside it to be separated from.
+    func annotationTextWidth(_ annotation: String?) -> CGFloat {
+        guard let annotation, !annotation.isEmpty else { return 0 }
         let font = NSFont.systemFont(ofSize: annotationFontSize)
-        let text = ceil((annotation as NSString).size(withAttributes: [.font: font]).width)
-        return candidateAnnotationGap + text
+        return ceil((annotation as NSString).size(withAttributes: [.font: font]).width)
     }
 }

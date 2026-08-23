@@ -51,9 +51,9 @@ final class CandidateSemanticNavigationTests: XCTestCase {
         }
     }
 
-    /// The expandable layout's mode follows the selection across a re-render:
-    /// a selection past the collapsed row re-expands rather than being folded
-    /// away with the highlight off screen.
+    /// A re-render keeps the grid open, and keeps the highlight on the
+    /// candidate it was on — a selection the collapsed row cannot show must
+    /// never be folded away out of sight.
     func testExpandable_rerenderKeepsAnExpandedSelectionExpanded() {
         let swapped = Self.cells.map {
             CandidateCellContent(text: $0.annotation ?? $0.text, annotation: $0.text)
@@ -74,6 +74,30 @@ final class CandidateSemanticNavigationTests: XCTestCase {
 
         XCTAssertEqual(panel.selectedIndex, 20)
         XCTAssertEqual(panel.displayMode, .expanded)
+    }
+
+    /// The mode a re-render comes back in is the mode it went in with, NOT one
+    /// re-derived from where the selection sits: a grid opened with `↓` while
+    /// the first candidate is still selected must stay a grid across a 漢羅
+    /// swap. Folding it back to a row and unfolding again is what made the
+    /// window blink on device (USER 2026-08-23).
+    func testExpandable_rerenderKeepsTheGridOpenEvenWithTheSelectionOnRowZero() {
+        let swapped = Self.cells.map {
+            CandidateCellContent(text: $0.annotation ?? $0.text, annotation: $0.text)
+        }
+        let panel = ExpandableCandidatePanel(
+            style: .sequoia,
+            metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+        panel.navigate(.down)
+        XCTAssertEqual(panel.displayMode, .expanded, "`↓` opens the grid")
+        XCTAssertEqual(panel.selectedIndex, 0, "and leaves the selection where it was")
+
+        panel.rerenderCandidates(swapped)
+
+        XCTAssertEqual(panel.displayMode, .expanded)
+        XCTAssertEqual(panel.selectedIndex, 0)
     }
 
     /// A cleared panel has nothing to re-render: the call is a no-op rather

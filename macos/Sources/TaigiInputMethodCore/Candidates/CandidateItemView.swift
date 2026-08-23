@@ -61,19 +61,22 @@ final class CandidateItemView: NSView {
     var trailingInset: CGFloat {
         didSet {
             guard trailingInset != oldValue else { return }
-            trailingConstraint.constant = -trailingInset
+            trailingConstraint?.constant = -trailingInset
         }
     }
 
-    private var trailingConstraint: NSLayoutConstraint!
-    private var annotationGapConstraint: NSLayoutConstraint!
+    /// The inline arrangement's constraints — nil in a stacked cell, whose two
+    /// lines have no column to align, no gap to collapse and no trailing edge
+    /// to inset.
+    private var trailingConstraint: NSLayoutConstraint?
+    private var annotationGapConstraint: NSLayoutConstraint?
     /// Collapses the annotation slot when there is nothing in it: an empty
     /// `NSTextField` still reserves a little baseline padding, which would
     /// otherwise push the trailing edge a few points right.
-    private var annotationZeroWidthConstraint: NSLayoutConstraint!
+    private var annotationZeroWidthConstraint: NSLayoutConstraint?
     /// The candidate column's floor. Raised by `setPrimaryColumnWidth` so the
     /// vertical layout's rows align their annotations on one x.
-    private var primaryColumnWidthConstraint: NSLayoutConstraint!
+    private var primaryColumnWidthConstraint: NSLayoutConstraint?
 
     init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
@@ -110,39 +113,80 @@ final class CandidateItemView: NSView {
         addSubview(candidateLabel)
         addSubview(annotationLabel)
 
-        trailingConstraint = annotationLabel.trailingAnchor.constraint(
+        switch metrics.cellArrangement {
+        case .inline: activateInlineConstraints()
+        case .stacked: activateStackedConstraints()
+        }
+        updateAppearance()
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { fatalError() }
+
+    /// The two scripts side by side on one baseline: the candidate leads, the
+    /// annotation follows it, and the cell is as wide as both together.
+    private func activateInlineConstraints() {
+        let trailing = annotationLabel.trailingAnchor.constraint(
             lessThanOrEqualTo: trailingAnchor, constant: -trailingInset,
         )
-        annotationGapConstraint = annotationLabel.leadingAnchor.constraint(
+        let gap = annotationLabel.leadingAnchor.constraint(
             equalTo: candidateLabel.trailingAnchor, constant: 0,
         )
-        annotationZeroWidthConstraint = annotationLabel.widthAnchor.constraint(equalToConstant: 0)
-        annotationZeroWidthConstraint.priority = .defaultHigh
-        annotationZeroWidthConstraint.isActive = true
-        primaryColumnWidthConstraint = candidateLabel.widthAnchor.constraint(
+        let zeroWidth = annotationLabel.widthAnchor.constraint(equalToConstant: 0)
+        zeroWidth.priority = .defaultHigh
+        zeroWidth.isActive = true
+        let columnWidth = candidateLabel.widthAnchor.constraint(
             greaterThanOrEqualToConstant: metrics.candidateFontSize,
         )
         // Column alignment is a preference, not a promise: in a cell clamped
         // narrower than the column wants (the horizontal packer's row limit,
         // the vertical window's column cap) the cell's own geometry wins and
         // the text truncates, rather than Auto Layout breaking a constraint.
-        primaryColumnWidthConstraint.priority = .defaultHigh
+        columnWidth.priority = .defaultHigh
+        trailingConstraint = trailing
+        annotationGapConstraint = gap
+        annotationZeroWidthConstraint = zeroWidth
+        primaryColumnWidthConstraint = columnWidth
 
         NSLayoutConstraint.activate([
             candidateLabel.leadingAnchor.constraint(
                 equalTo: leadingAnchor, constant: metrics.horizontalPadding,
             ),
             candidateLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            primaryColumnWidthConstraint,
-            annotationGapConstraint,
+            columnWidth,
+            gap,
             annotationLabel.firstBaselineAnchor.constraint(equalTo: candidateLabel.firstBaselineAnchor),
-            trailingConstraint,
+            trailing,
         ])
-        updateAppearance()
     }
 
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    /// The two scripts on top of each other, centred: the candidate above, the
+    /// annotation under it, and the cell as wide as the wider of the two.
+    ///
+    /// The pair is centred through a layout guide spanning both labels rather
+    /// than by pinning either of them to an edge: the cell's height comes from
+    /// its frame (the panels place cells by hand), so a vertical constraint to
+    /// an edge would fight a frame the labels do not get a say in.
+    private func activateStackedConstraints() {
+        let textGuide = NSLayoutGuide()
+        addLayoutGuide(textGuide)
+
+        let padding = metrics.horizontalPadding
+        NSLayoutConstraint.activate([
+            candidateLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            candidateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: padding),
+            candidateLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -padding),
+            annotationLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            annotationLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: padding),
+            annotationLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -padding),
+            annotationLabel.topAnchor.constraint(
+                equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
+            ),
+            textGuide.topAnchor.constraint(equalTo: candidateLabel.topAnchor),
+            textGuide.bottomAnchor.constraint(equalTo: annotationLabel.bottomAnchor),
+            textGuide.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+    }
 
     func configure(_ cell: CandidateCellContent) {
         candidateLabel.stringValue = cell.text
@@ -151,9 +195,12 @@ final class CandidateItemView: NSView {
         // Reconfigured rather than rebuilt: cells are recycled across pages and
         // across renumbering, so a cell that had an annotation and now has none
         // must give the width back — and the reverse must take it again.
+        // A stacked cell keeps its second line's height whether or not there
+        // is anything on it, so its rows stay aligned; only the inline slot
+        // has width to give back.
         let hasAnnotation = cell.annotation != nil
-        annotationGapConstraint.constant = hasAnnotation ? metrics.candidateAnnotationGap : 0
-        if annotationZeroWidthConstraint.isActive == hasAnnotation {
+        annotationGapConstraint?.constant = hasAnnotation ? metrics.candidateAnnotationGap : 0
+        if let annotationZeroWidthConstraint, annotationZeroWidthConstraint.isActive == hasAnnotation {
             annotationZeroWidthConstraint.isActive = !hasAnnotation
         }
         updateAppearance()
@@ -164,6 +211,7 @@ final class CandidateItemView: NSView {
     /// (`MacishVerticalPanel.swift:119-131`). Ignored when narrower than the
     /// one-glyph floor.
     func setPrimaryColumnWidth(_ width: CGFloat) {
+        guard let primaryColumnWidthConstraint else { return }
         let target = max(metrics.candidateFontSize, width)
         guard primaryColumnWidthConstraint.constant != target else { return }
         primaryColumnWidthConstraint.constant = target
