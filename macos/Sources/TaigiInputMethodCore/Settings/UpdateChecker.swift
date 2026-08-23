@@ -42,11 +42,14 @@ struct UpdateManifest: Equatable {
         try JSONEncoder().encode(Wire(version: version, downloadPageURL: downloadPageURL))
     }
 
-    /// Where the manifest is published. Served from the repository until the
-    /// download website exists; when it does, this constant and the manifest's
-    /// own `downloadPageURL` move there together.
+    /// Where the manifest is published. On the project's own domain, not on
+    /// whichever service happens to host it: this constant is compiled into
+    /// every shipped build and old installs keep requesting it forever, so the
+    /// hosting must be able to move without stranding them. It has to be
+    /// anonymously reachable — the app source repository is private, and a
+    /// manifest served from there answers every real user with a 404.
     static let publishedURL =
-        URL(string: "https://raw.githubusercontent.com/taigikeyboard/taigikeyboard/main/macos/updates/latest.json")!
+        URL(string: "https://taigikeyboard.tw/appcast/macos.json")!
 
     /// One bounded GET of the published manifest, off the main actor — the read
     /// and the decode belong on the cooperative pool, not interleaved with key

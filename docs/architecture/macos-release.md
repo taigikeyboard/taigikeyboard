@@ -59,7 +59,7 @@ existing profile should be reused.
 
 ```sh
 make build          # only when engine/ or dictionary/ sources moved
-make macos-release
+make macos-release RELEASE_FLAGS=--publish
 ```
 
 `make macos-release` deliberately does not rebuild the Rust engine or the
@@ -88,17 +88,23 @@ What the script does, in order:
    team that signed the bundle.
 5. **Notarize and staple** — submit, wait, staple the ticket onto the package,
    then `stapler validate` + `spctl --assess --type install`.
-6. **Publish** — move the finished package to
+6. **Name the output** — move the finished package to
    `macos/.build/distribution/TaigiKeyboard-<version>.pkg` only after every check
    passed, and print its SHA-256.
+7. **Publish**, with `--publish` — hand the package to
+   `macos/scripts/publish-release.sh` (see *Publishing the package* below).
 
-Flags, all for throwaway builds:
+Flags:
 
 ```sh
+make macos-release RELEASE_FLAGS=--publish         # upload and announce on success
 make macos-release RELEASE_FLAGS=--skip-notarize   # packaging only, unshippable
 make macos-release RELEASE_FLAGS=--allow-dirty     # build from a dirty tree
 make macos-release RELEASE_FLAGS=--force           # overwrite an existing package
 ```
+
+`--publish` refuses to run alongside either of the two throwaway flags, and the
+refusal comes before the build rather than after the notarization wait.
 
 `--skip-notarize` and `--allow-dirty` both stamp the reason into the output
 filename, so an unpublishable package cannot be confused for a release.
@@ -157,10 +163,44 @@ simply upgrades it. No uninstall step is needed first.
 
 ## Publishing the package
 
-The build stops at a verified local file. Publishing it is manual:
+`macos/scripts/publish-release.sh` — `make macos-publish`, or `--publish` on the
+build above — uploads the package and announces it. It is a separate script
+because the two halves fail for unrelated reasons: a network failure must not
+cost another notarization round trip.
 
-- Attach the `.pkg` to a GitHub release, and publish its SHA-256 alongside.
-- Link to that release from the download page.
+Everything goes to the **website** repository, `taigikeyboard/taigikeyboard.github.io`:
+
+| What | Where | Why there |
+|---|---|---|
+| The `.pkg` | a GitHub release asset, tagged `macos-v<version>` | Release assets live outside git, so they cost the Pages site neither its 1 GB size limit nor its bandwidth allowance, and never enter the site's history. Committing 20 MB per version would do all three. |
+| `appcast/macos.json` | committed, served at `https://taigikeyboard.tw/appcast/macos.json` | The app source repository is private, so nothing served from it — raw file or releases page — answers an anonymous request with anything but `404`. |
+
+In order:
+
+1. Check the package is stapled, passes Gatekeeper, and — read out of its own
+   `Distribution` — declares this bundle identifier at this build version.
+   `--pkg` can point at any file, and the tag and manifest version both come
+   from `Info.plist`, so a stale package would otherwise be announced under the
+   current version's name.
+2. `gh release create`, with `changelog/v<version>.md` as the notes when that
+   file exists. If the release already exists — a re-run after something below
+   failed — the package is uploaded into it instead. Nothing is ever deleted:
+   the manifest may already point at that release, and taking it away to put it
+   back leaves a 404 for as long as the second attempt takes, or forever if it
+   fails.
+3. **Re-fetch the release page and the asset with no credentials at all**, and
+   require `200`. `curl -q --netrc-file /dev/null` is what guarantees that: an
+   authenticated check cannot tell a public URL from a private one, which is
+   exactly how the first version of this shipped pointing at a private
+   repository.
+4. Write `appcast/macos.json`, then poll the live URL until it serves the new
+   version — GitHub Pages has to build and its CDN has to expire.
+
+Step 3 gates step 4 on purpose. The manifest is what every installed copy polls,
+so announcing a version before its download is reachable points all of them at
+a 404 — and the developer's own browser, being logged in, cannot see it happen.
+
+`macos/updates/README.md` documents the manifest wire format.
 
 After installing, the input method has to be added in System Settings → Keyboard
 → Input Sources. The input-source list is cached per login session, so a first

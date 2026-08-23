@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Shared bundle identity, sourced by the macOS scripts.
+# Shared bundle identity and the error exit that goes with it, sourced by the
+# macOS scripts.
 #
 # App/Info.plist is the single source of truth for who this app is and what its
 # executable is called; this file is the single place that reads it and the
 # single place that names the assembled bundle's path. Both the bundle script
 # and the install script source it, so neither re-derives either fact.
+
+# One line on stderr and stop. Lives here rather than in each script because
+# every script that sources this one needs it and an error path that drifts
+# between copies is an error path nobody reads twice.
+fail() {
+    echo "error: $*" >&2
+    exit 1
+}
 
 # One PlistBuddy invocation for every key — the same file is being read either
 # way, and `make` evaluates its variables on every invocation.

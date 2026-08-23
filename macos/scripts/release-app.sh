@@ -5,13 +5,16 @@
 # docs/architecture/macos-release.md covers the one-time account setup this
 # script assumes (two certificates and a stored notarytool profile).
 #
-# Usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force]
+# Usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force] [--publish]
 #
 #   --allow-dirty     Build from a dirty working tree. The output is named
 #                     `-dirty` and must not be published.
 #   --skip-notarize   Stop after signing the package. The output is named
 #                     `-unnotarized`; Gatekeeper blocks it on any other Mac.
 #   --force           Overwrite an existing package with the same name.
+#   --publish         On success, hand the package to publish-release.sh, which
+#                     uploads it and announces it. Refuses the two flags above
+#                     that produce an unpublishable package.
 #
 # Environment overrides, the first two only needed when a certificate cannot be
 # resolved unambiguously:
@@ -42,25 +45,33 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-TaigiKeyboard}"
 allow_dirty=false
 skip_notarize=false
 force_overwrite=false
+publish=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --allow-dirty) allow_dirty=true ;;
         --skip-notarize) skip_notarize=true ;;
         --force) force_overwrite=true ;;
+        --publish) publish=true ;;
         *)
             echo "error: unknown argument '$1'" >&2
-            echo "usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force]" >&2
+            echo "usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force] [--publish]" >&2
             exit 2
             ;;
     esac
     shift
 done
 
-fail() {
-    echo "error: $*" >&2
-    exit 1
-}
+# Both throwaway flags contradict --publish, and both are rejected on the flag
+# rather than on what the flag turns out to allow: --allow-dirty over a tree
+# that happens to be clean still says "I am not building a release". Caught here
+# because the build plus notarization stands between this point and the end.
+if [[ "$publish" == true ]]; then
+    [[ "$skip_notarize" == false ]] ||
+        fail "--publish and --skip-notarize contradict: an unnotarized package cannot be distributed"
+    [[ "$allow_dirty" == false ]] ||
+        fail "--publish and --allow-dirty contradict: a published package must be reproducible from a commit"
+fi
 
 # ---------------------------------------------------------------------------
 # Preflight. Everything that can be known before the build is checked before
@@ -443,12 +454,19 @@ if [[ "$skip_notarize" == true ]]; then
     echo "  ⚠ not notarized — Gatekeeper blocks this on every Mac but this one."
 fi
 
-# The update-check manifest is a release indicator, edited by hand AFTER the
-# pkg is uploaded and reachable (macos/updates/README.md has the order) — a
-# script writing it here would announce a download that does not exist yet.
-echo ""
-echo "  After the pkg is uploaded, update macos/updates/latest.json to:"
-echo "    {"
-echo "      \"version\": \"$SHORT_VERSION\","
-echo "      \"downloadPageURL\": \"<page hosting this pkg>\""
-echo "    }"
+# Uploading and announcing is a separate script, and stays separate even when
+# chained: everything above here is minutes of build and notarization that must
+# not be repeated because a network step failed.
+if [[ "$publish" == true ]]; then
+    # The tree was clean minutes ago, before a build and a notarization wait.
+    # Re-read it: what gets published has to be reproducible from the commit
+    # this claims to be, and an edit landing mid-build would silently break that.
+    [[ "$(git -C "$REPOSITORY_DIR" rev-parse --short HEAD)" == "$HEAD_COMMIT" &&
+        -z "$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)" ]] ||
+        fail "the working tree changed during the build — this package no longer matches $HEAD_COMMIT, rebuild before publishing"
+    echo ""
+    bash "$PACKAGE_DIR/scripts/publish-release.sh" --pkg "$OUTPUT_PKG"
+else
+    echo ""
+    echo "  Publish it with: make macos-publish"
+fi
