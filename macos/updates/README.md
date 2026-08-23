@@ -30,6 +30,13 @@ Keeping a second copy here to review would only give it somewhere to drift, and
 a hand-edited manifest can go live before the package it announces exists. The
 publish script generates it instead, after the download is verified reachable.
 
+The same script writes one more file over there, `_data/macos_release.json`,
+which is what the site's macOS download button links at. The button points
+straight at the package so the download starts on one click, so its URL carries
+the version — and deliberately not at `/releases/latest/download/...`, since
+`latest` resolves across a repository that is a website, not this app's release
+channel.
+
 ## Wire format
 
 | Field | Meaning |
@@ -57,13 +64,17 @@ which runs it straight after a successful build) does the whole sequence:
    committed files, do not count against the 1 GB GitHub Pages site limit or its
    bandwidth allowance, and never enter the site's git history.
 2. Re-fetches the release page and the asset **anonymously**, with no GitHub
-   credentials, and requires both to answer `200`.
-3. Only then writes `appcast/macos.json`, and waits for the live URL to serve
-   the new version.
+   credentials, and requires the page to answer `200` and the asset `206` — one
+   byte, rather than tens of megabytes, to prove it downloads (`200` counts too:
+   it means the server ignored the range and sent the whole thing).
+3. Only then writes `_data/macos_release.json` and `appcast/macos.json`, and
+   waits for the live manifest URL to serve the new version.
 
 Re-running it after a failure is the intended recovery — it adds to an existing
-release rather than replacing it, so a published download is never taken away
-while the manifest still points at it.
+release rather than replacing it, so the release the manifest points at is never
+torn down and rebuilt. Re-publishing a version whose package was already
+uploaded is narrower: replacing an asset removes it first, so that one download
+404s until the upload finishes.
 
 The order is the point. A manifest published before its download is reachable
 points every checker at a 404, and a developer's own browser cannot see that

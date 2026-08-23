@@ -207,6 +207,7 @@ Everything goes to the **website** repository, `taigikeyboard/taigikeyboard.gith
 |---|---|---|
 | The `.pkg` | a GitHub release asset, tagged `macos-v<version>` | Release assets live outside git, so they cost the Pages site neither its 1 GB size limit nor its bandwidth allowance, and never enter the site's history. Committing 20 MB per version would do all three. |
 | `appcast/macos.json` | committed, served at `https://taigikeyboard.tw/appcast/macos.json` | The app source repository is private, so nothing served from it — raw file or releases page — answers an anonymous request with anything but `404`. |
+| `_data/macos_release.json` | committed site data the landing page's macOS download button reads | The button links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and the repository it would resolve against is a website. |
 
 In order:
 
@@ -217,17 +218,25 @@ In order:
    current version's name.
 2. `gh release create`, with `changelog/v<version>.md` as the notes when that
    file exists. If the release already exists — a re-run after something below
-   failed — the package is uploaded into it instead. Nothing is ever deleted:
-   the manifest may already point at that release, and taking it away to put it
+   failed — the package is uploaded into it instead. The release is never
+   deleted: the manifest may already point at it, and taking it away to put it
    back leaves a 404 for as long as the second attempt takes, or forever if it
-   fails.
+   fails. Re-uploading an asset that already exists does remove it first, so
+   re-publishing an *already-announced* version has a window where its download
+   404s; a new version writes a name nothing points at yet.
 3. **Re-fetch the release page and the asset with no credentials at all**, and
-   require `200`. `curl -q --netrc-file /dev/null` is what guarantees that: an
+   require `200` for the page and `206` for the asset — a one-byte range request
+   proves it downloads without pulling tens of megabytes (`200` counts too: the
+   server ignored the range and sent all of it). `curl -q --netrc-file /dev/null` is what guarantees that: an
    authenticated check cannot tell a public URL from a private one, which is
    exactly how the first version of this shipped pointing at a private
    repository.
-4. Write `appcast/macos.json`, then poll the live URL until it serves the new
-   version — GitHub Pages has to build and its CDN has to expire.
+4. Write `_data/macos_release.json`, then `appcast/macos.json`, then poll the
+   live manifest URL until it serves the new version — GitHub Pages has to
+   build and its CDN has to expire. The download link is committed first: a run
+   that dies between the two leaves the site offering a version the update
+   check has not announced yet, rather than announcing one whose download
+   button still points at the release before it.
 
 Step 3 gates step 4 on purpose. The manifest is what every installed copy polls,
 so announcing a version before its download is reachable points all of them at

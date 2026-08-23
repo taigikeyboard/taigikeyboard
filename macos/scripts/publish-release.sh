@@ -11,8 +11,9 @@
 #                 version in App/Info.plist).
 #
 # Re-running after a failure is safe and is the intended recovery: an existing
-# release is added to, never deleted. Nothing here ever takes a published
-# download away, because the manifest may already be pointing at it.
+# release is added to, never deleted, because the manifest may already be
+# pointing at it. Re-publishing a version whose asset is already uploaded is the
+# one exception — see the note on --clobber below.
 
 set -euo pipefail
 
@@ -26,6 +27,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
 # 1 GB GitHub Pages size limit nor its bandwidth allowance.
 PUBLISH_REPOSITORY="taigikeyboard/taigikeyboard.github.io"
 MANIFEST_PATH="appcast/macos.json"
+# The site's macOS download button links straight at the package, so its URL
+# carries the version and changes every release. It is committed as site data
+# rather than written into the page, which keeps this script the only thing that
+# edits it — and keeps the button off `/releases/latest`, which resolves
+# repository-wide on a repository that is a website rather than this app's
+# release channel.
+SITE_RELEASE_PATH="_data/macos_release.json"
 # The domain is the project's own, so the hosting underneath it can change
 # without stranding installs that have UpdateChecker.publishedURL baked in.
 MANIFEST_URL="https://taigikeyboard.tw/$MANIFEST_PATH"
@@ -146,6 +154,12 @@ fi
 # re-run after a half-finished publish safe. Deleting and recreating would take
 # the download away for as long as the second attempt takes — and leave it gone
 # for good if that attempt fails — while the manifest still points at it.
+#
+# --clobber is narrower than that: re-uploading an asset that already exists
+# under the same name removes it first, so re-publishing the *same* version has
+# a window where its download 404s. Only a re-run of an already-announced
+# version is exposed, and the remedy is the same re-run; a new version writes a
+# name nothing points at yet.
 if gh release view "$TAG" --repo "$PUBLISH_REPOSITORY" > /dev/null 2>&1; then
     echo "==> Release $TAG exists — uploading the package into it"
     gh release upload "$TAG" "$pkg_path" --repo "$PUBLISH_REPOSITORY" --clobber
@@ -179,28 +193,60 @@ done
 echo "  page 200, asset $asset_status"
 
 # ---------------------------------------------------------------------------
-# Only now announce it. The manifest is what every installed copy polls, so
-# publishing it before the download exists points all of them at a 404.
+# Only now announce it. Both files below name a download that has just been
+# proven reachable: publishing either one before that points its readers at a
+# 404 — every installed copy in the manifest's case, every visitor in the site's.
 # ---------------------------------------------------------------------------
 
-echo "==> Publishing the update manifest"
 MANIFEST_JSON="$(printf '{\n  "version": "%s",\n  "downloadPageURL": "%s"\n}\n' \
     "$SHORT_VERSION" "$RELEASE_PAGE_URL")"
-python3 -c 'import json,sys; json.loads(sys.stdin.read())' <<< "$MANIFEST_JSON" ||
-    fail "generated manifest is not valid JSON: $MANIFEST_JSON"
+SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
+    "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$RELEASE_PAGE_URL")"
 
-MANIFEST_API="repos/$PUBLISH_REPOSITORY/contents/$MANIFEST_PATH"
-declare -a CONTENT_ARGS=(
-    -X PUT
-    -f "message=chore: macOS update manifest -> $SHORT_VERSION"
-    -f "content=$(printf '%s' "$MANIFEST_JSON" | base64 | tr -d '\n')"
-)
-# Updating an existing file requires the blob it replaces; creating one must not
-# send a sha at all.
-if EXISTING_SHA="$(gh api "$MANIFEST_API" --jq .sha 2>/dev/null)"; then
-    CONTENT_ARGS+=(-f "sha=$EXISTING_SHA")
-fi
-gh api "$MANIFEST_API" "${CONTENT_ARGS[@]}" --jq '.commit.html_url'
+# Create or replace one file in the website repository.
+commit_site_file() {
+    local path="$1" message="$2" content="$3"
+
+    python3 -c 'import json,sys; json.loads(sys.stdin.read())' <<< "$content" ||
+        fail "generated $path is not valid JSON: $content"
+
+    # Assigned on its own line: a command substitution inside a `local`
+    # declaration reports `local`'s own exit status, which would hide a failure
+    # here from `set -e`.
+    local encoded_content
+    encoded_content="$(printf '%s' "$content" | base64 | tr -d '\n')"
+
+    local api="repos/$PUBLISH_REPOSITORY/contents/$path"
+    local -a arguments=(
+        -X PUT
+        -f "message=$message"
+        -f "content=$encoded_content"
+    )
+    # Updating an existing file requires the blob it replaces; creating one must
+    # not send a sha at all. Only a genuine 404 means "creating" — a rate limit
+    # or a permission error read as one would turn into a confusing failure from
+    # the PUT below instead of the reason it actually stopped.
+    local read_result
+    if read_result="$(gh api "$api" --jq .sha 2>&1)"; then
+        arguments+=(-f "sha=$read_result")
+    elif [[ "$read_result" != *"HTTP 404"* ]]; then
+        fail "cannot read $path in $PUBLISH_REPOSITORY: $read_result"
+    fi
+    gh api "$api" "${arguments[@]}" --jq '.commit.html_url'
+}
+
+# The download link goes first as a preference, not a safety property: both
+# files name a download that has already been proven reachable, and the manifest
+# sends people to the release page rather than to the website, so either order
+# leaves both working. This one just means the site offers a new version no
+# later than the update check announces it.
+echo "==> Publishing the website download link"
+commit_site_file "$SITE_RELEASE_PATH" \
+    "chore: macOS download link -> $SHORT_VERSION" "$SITE_RELEASE_JSON"
+
+echo "==> Publishing the update manifest"
+commit_site_file "$MANIFEST_PATH" \
+    "chore: macOS update manifest -> $SHORT_VERSION" "$MANIFEST_JSON"
 
 echo "==> Waiting for $MANIFEST_URL to serve $SHORT_VERSION"
 # GitHub Pages has to build and the CDN has to expire what it holds. Polling the
@@ -224,3 +270,4 @@ echo "✓ published $SHORT_VERSION"
 echo "  release   $RELEASE_PAGE_URL"
 echo "  download  $ASSET_URL"
 echo "  manifest  $MANIFEST_URL"
+echo "  website   https://taigikeyboard.tw/#download"
