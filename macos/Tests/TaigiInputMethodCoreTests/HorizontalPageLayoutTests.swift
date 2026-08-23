@@ -12,8 +12,34 @@ final class HorizontalPageLayoutTests: XCTestCase {
     /// is `10 × max(9, 4) = 90`.
     private static let slotWidth: CGFloat = 10
 
-    private func pack(_ widths: [CGFloat]) -> HorizontalPageLayout {
-        HorizontalPageLayout.pack(widths: widths, slotWidth: Self.slotWidth)
+    /// A cell cap wide enough that only the tests that name their own see it —
+    /// the screen budget the panels pass is far above the row budget too.
+    private static let roomyCellWidth: CGFloat = 1_000
+
+    private func pack(
+        _ widths: [CGFloat],
+        maxCellWidth: CGFloat = HorizontalPageLayoutTests.roomyCellWidth,
+    ) -> HorizontalPageLayout {
+        HorizontalPageLayout.pack(
+            widths: widths,
+            slotWidth: Self.slotWidth,
+            maxCellWidth: maxCellWidth,
+        )
+    }
+
+    /// The packing a panel really asks for: a window budget, and the chrome
+    /// that only shows once the list pages.
+    private func packWindow(
+        _ widths: [CGFloat],
+        windowBudget: CGFloat,
+        chromeWidth: CGFloat,
+    ) -> HorizontalPageLayout {
+        HorizontalPageLayout.pack(
+            widths: widths,
+            slotWidth: Self.slotWidth,
+            windowBudget: windowBudget,
+            chromeWidth: chromeWidth,
+        )
     }
 
     // MARK: - Packing
@@ -32,17 +58,57 @@ final class HorizontalPageLayoutTests: XCTestCase {
         )
     }
 
-    func testPack_wideItemBreaksThePageButAlwaysGetsOne() {
-        // trace: item0 = 10. item1 = 200 clamps to the 90 budget; 10 + 90 > 90
-        // with a non-empty page → break. item2: 90 + 10 > 90 → break again.
+    func testPack_wideItemBreaksThePageAndKeepsItsMeasuredWidth() {
+        // trace: item0 = 10. item1 = 200 > the 90 budget; 10 + 200 > 90 with a
+        // non-empty page → break, and an empty page takes it whole. item2:
+        // 200 + 10 > 90 → break again.
         let layout = pack([10, 200, 10])
 
         XCTAssertEqual(layout.pages.map { $0.map(\.candidateIndex) }, [[0], [1], [2]])
         XCTAssertEqual(
             layout.pages[1][0].width,
-            90,
-            "an oversized candidate is clamped to the page budget, not dropped",
+            200,
+            "a candidate wider than the page budget gets a page at its measured width, "
+                + "so the window widens instead of truncating the text",
         )
+    }
+
+    func testPack_cellNeverExceedsTheScreenBudget() {
+        // trace: the screen leaves 120; item1 wants 200 → clamped to 120, which
+        // is what the window can render without running off the display.
+        let layout = pack([10, 200, 10], maxCellWidth: 120)
+
+        XCTAssertEqual(layout.pages[1][0].width, 120)
+    }
+
+    func testPack_pageBudgetNeverExceedsTheScreenBudget() {
+        // trace: nine 10pt slots want a 90pt budget, but the screen leaves 45 —
+        // the page breaks at 45 instead, so a full page still fits the window.
+        let layout = pack(Array(repeating: 5, count: 20), maxCellWidth: 45)
+
+        XCTAssertEqual(layout.pageBudget, 45)
+        XCTAssertEqual(layout.pages.map(\.count), [4, 4, 4, 4, 4])
+    }
+
+    func testPack_singlePageSpendsTheChromeWidthOnText() {
+        // trace: one 90pt candidate against a 90pt window. It fits a single
+        // page, so no arrow shows and the cell keeps its measured width —
+        // reserving the 20pt arrow here would truncate text for chrome that
+        // is not on screen.
+        let layout = packWindow([90], windowBudget: 90, chromeWidth: 20)
+
+        XCTAssertEqual(layout.pages.count, 1)
+        XCTAssertEqual(layout.pages[0][0].width, 90)
+    }
+
+    func testPack_pagedListReservesTheChromeWidth() {
+        // trace: two 90pt candidates against a 90pt window page separately, so
+        // the arrow shows and the second pass packs against 90 - 20 = 70.
+        let layout = packWindow([90, 90], windowBudget: 90, chromeWidth: 20)
+
+        XCTAssertEqual(layout.pages.map { $0.map(\.candidateIndex) }, [[0], [1]])
+        XCTAssertEqual(layout.pages[0][0].width, 70)
+        XCTAssertEqual(layout.pageBudget, 70)
     }
 
     // MARK: - Chord slots

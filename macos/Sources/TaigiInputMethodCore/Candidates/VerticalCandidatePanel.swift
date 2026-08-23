@@ -27,9 +27,6 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     /// the horizontal page holds.
     private static let visibleRows = HorizontalPageLayout.pageSize
 
-    /// Content width cap, in slot-widths. Independent of the row count.
-    private static let maxContentColumns: CGFloat = 6
-
     /// Air between an overlay scroller and the text it would otherwise touch.
     private static let overlayScrollerGap: CGFloat = 2
 
@@ -203,14 +200,16 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         let itemHeight = metrics.itemHeight
         let hasOverflow = cells.count > Self.visibleRows
 
-        // Width: the widest displayed cell, floored at one slot and capped so
-        // one long phrase cannot stretch the window across the screen.
+        // Width: the widest displayed cell, floored at one slot and capped at
+        // what the screen leaves once the scroller has its share — a long
+        // phrase widens the window rather than truncating inside a fixed one.
         let widest = cells.map(metrics.measureWidth).max() ?? 0
+        let scroller = scrollerLayout(hasOverflow: hasOverflow)
         let contentWidth = min(
             max(widest, metrics.baseWidth),
-            metrics.baseWidth * Self.maxContentColumns,
+            max(metrics.baseWidth, maximumWindowWidth - scroller.allowance),
         )
-        let geometry = scrollerGeometry(contentWidth: contentWidth, hasOverflow: hasOverflow)
+        let geometry = scroller.geometry(contentWidth: contentWidth, naturalPadding: metrics.horizontalPadding)
 
         // Every row's annotation starts at the same x, which is what makes a
         // column of two-script rows readable rather than a ragged edge
@@ -278,24 +277,41 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         return CGSize(width: geometry.windowWidth, height: windowHeight)
     }
 
-    /// How the scroller style splits the window's width, from upstream
-    /// (`MacishVerticalPanel.swift:283-300`): legacy scrollers get their own
-    /// column outside the rows so rounded corners are not clipped; overlay
-    /// scrollers float over a widened trailing inset so text stays clear.
-    private func scrollerGeometry(
-        contentWidth: CGFloat,
-        hasOverflow: Bool,
-    ) -> (windowWidth: CGFloat, itemWidth: CGFloat, itemTrailing: CGFloat) {
-        let naturalPadding = metrics.horizontalPadding
-        guard hasOverflow else { return (contentWidth, contentWidth, naturalPadding) }
-        if NSScroller.preferredScrollerStyle == .legacy {
-            let scrollerWidth = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
-            return (contentWidth + scrollerWidth, contentWidth, naturalPadding)
+    /// What the scroller costs the window, and how the rows share it — from
+    /// upstream (`MacishVerticalPanel.swift:283-300`): legacy scrollers get
+    /// their own column outside the rows so rounded corners are not clipped;
+    /// overlay scrollers float over a widened trailing inset so text stays
+    /// clear. Either way the window is `contentWidth + allowance` wide.
+    private struct ScrollerLayout {
+        /// What the scroller costs the window on top of its content.
+        let allowance: CGFloat
+        /// Whether the rows run under the scroller (overlay) or stop short of
+        /// its column (legacy).
+        let rowsSpanAllowance: Bool
+
+        func geometry(
+            contentWidth: CGFloat,
+            naturalPadding: CGFloat,
+        ) -> (windowWidth: CGFloat, itemWidth: CGFloat, itemTrailing: CGFloat) {
+            let windowWidth = contentWidth + allowance
+            guard rowsSpanAllowance else { return (windowWidth, contentWidth, naturalPadding) }
+            return (windowWidth, windowWidth, naturalPadding + allowance)
         }
-        let scrollerWidth = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .overlay)
-        let trailing = max(naturalPadding, scrollerWidth + Self.overlayScrollerGap)
-        let width = contentWidth - naturalPadding + trailing
-        return (width, width, trailing)
+    }
+
+    /// The scroller's share of the window, resolved from ONE read of the
+    /// preferred style — the allowance and the geometry that spends it cannot
+    /// disagree about which style is on. Resolved before the content width is
+    /// chosen, so the two together stay inside the screen's budget.
+    private func scrollerLayout(hasOverflow: Bool) -> ScrollerLayout {
+        guard hasOverflow else { return ScrollerLayout(allowance: 0, rowsSpanAllowance: false) }
+        guard NSScroller.preferredScrollerStyle != .legacy else {
+            return ScrollerLayout(allowance: currentScrollerWidth, rowsSpanAllowance: false)
+        }
+        return ScrollerLayout(
+            allowance: max(0, currentScrollerWidth + Self.overlayScrollerGap - metrics.horizontalPadding),
+            rowsSpanAllowance: true,
+        )
     }
 
     private func yForRow(_ row: Int) -> CGFloat {

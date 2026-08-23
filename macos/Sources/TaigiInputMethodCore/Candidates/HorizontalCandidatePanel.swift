@@ -11,7 +11,7 @@ import AppKit
 /// cheaper to reason about than keeping every page's views alive and hidden.
 final class HorizontalCandidatePanel: CandidateBasePanel {
     private var cells: [CandidateCellContent] = []
-    private var pageLayout = HorizontalPageLayout(pages: [])
+    private var pageLayout = HorizontalPageLayout.empty
     // `selectedIndex` (base): always a valid index into `cells` while the
     // list is non-empty — this input method selects the first candidate of
     // every fresh list, so the upstream `-1` suspended state is unreachable.
@@ -38,10 +38,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     /// highlight on an unrelated word that happens to have landed there.
     override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
-        pageLayout = HorizontalPageLayout.pack(
-            widths: cells.map(metrics.measureWidth),
-            slotWidth: metrics.baseWidth,
-        )
+        pageLayout = packedLayout()
         selectedIndex = 0
         currentPage = 0
         return rebuildVisiblePage()
@@ -54,10 +51,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         guard !cells.isEmpty, !newCells.isEmpty else { return }
         let kept = selectedIndex
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
-        pageLayout = HorizontalPageLayout.pack(
-            widths: cells.map(metrics.measureWidth),
-            slotWidth: metrics.baseWidth,
-        )
+        pageLayout = packedLayout()
         selectedIndex = min(kept, cells.count - 1)
         currentPage = pageLayout.pageIndex(containing: selectedIndex) ?? 0
         replace(panelSize: rebuildVisiblePage())
@@ -67,7 +61,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     /// hiding must drop the state, not just the pixels.
     override func clear() {
         cells = []
-        pageLayout = HorizontalPageLayout(pages: [])
+        pageLayout = HorizontalPageLayout.empty
         selectedIndex = 0
         currentPage = 0
         itemViews.forEach { $0.removeFromSuperview() }
@@ -103,6 +97,17 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     }
 
     // MARK: - Layout
+
+    /// Packs the whole list against the screen's width budget, less the page
+    /// arrow on the pages that actually show one.
+    private func packedLayout() -> HorizontalPageLayout {
+        HorizontalPageLayout.pack(
+            widths: cells.map(metrics.measureWidth),
+            slotWidth: metrics.baseWidth,
+            windowBudget: maximumWindowWidth,
+            chromeWidth: pageArrowView.intrinsicContentSize.width,
+        )
+    }
 
     /// Rebuilds the visible page's cells and answers with the window size that
     /// fits them.
@@ -140,12 +145,9 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         pageArrowView.canPageUp = currentPage > 0
         pageArrowView.canPageDown = currentPage < pageLayout.pages.count - 1
         // Short pages still get the full packing budget's width, so the arrow
-        // edge does not wander left and right as the pages turn.
-        let contentWidth = max(
-            x,
-            metrics.baseWidth
-                * CGFloat(max(HorizontalPageLayout.pageSize, HorizontalPageLayout.minimumPageColumns)),
-        )
+        // edge does not wander left and right as the pages turn. A page holding
+        // one candidate too wide for the budget keeps its own width.
+        let contentWidth = max(x, pageLayout.pageBudget)
         let arrowWidth = pageArrowView.intrinsicContentSize.width
         pageArrowView.frame = NSRect(x: contentWidth, y: 0, width: arrowWidth, height: itemHeight)
         return CGSize(width: contentWidth + arrowWidth, height: itemHeight)

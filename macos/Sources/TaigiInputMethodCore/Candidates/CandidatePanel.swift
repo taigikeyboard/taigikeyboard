@@ -49,7 +49,7 @@ final class CandidatePanel: CandidatePresenter {
         ownedBy owner: ComposingSessionToken,
     ) {
         let panel = self.panel(for: settings.candidateLayout)
-        let panelSize = panel.updateCandidates(content.cells)
+        let panelSize = panel.layout(content.cells, forCaret: caretRect)
         let presented = panel.present(
             panelSize: panelSize,
             anchoredTo: caretRect,

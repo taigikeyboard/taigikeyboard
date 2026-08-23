@@ -31,6 +31,34 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// to. Stated in the port plan so the truncation is a decision.
     static let maxDisplayCandidates = 200
 
+    /// How much of its screen a stretched window leaves unspent, so a long
+    /// candidate never grows the window edge-to-edge across the display.
+    private static let screenEdgeMargin: CGFloat = 12
+
+    /// The width budget a panel lays out against before any caret has named a
+    /// screen — wide enough for a long phrase, narrow enough to fit the
+    /// smallest display this input method runs on.
+    private static let fallbackMaximumWindowWidth: CGFloat = 640
+
+    /// The widest this window may render, resolved from the screen the caret
+    /// sits on (`layout(_:forCaret:)`).
+    ///
+    /// The layouts size their cells against it rather than against a fixed
+    /// multiple of the slot width: a candidate too long for its cell truncates
+    /// with an ellipsis, so the cell — and the window with it — grows instead,
+    /// up to what the screen can hold. Past that the truncation is the right
+    /// answer, since `CandidatePanelPositioning` clamps an oversized window to
+    /// the screen and text outside it would be CLIPPED rather than elided.
+    private(set) var maximumWindowWidth: CGFloat = fallbackMaximumWindowWidth
+
+    /// The vertical scroller's width for the style the system currently
+    /// prefers. Read through one accessor because the scrolling layouts both
+    /// subtract it from the width budget and add it back onto the window: two
+    /// spellings could disagree and push the content past the frame.
+    var currentScrollerWidth: CGFloat {
+        NSScroller.scrollerWidth(for: .regular, scrollerStyle: NSScroller.preferredScrollerStyle)
+    }
+
     private(set) var highlightColor: NSColor = .selectedContentBackgroundColor
     /// The Multicolour accent follows the HOST app; recorded at show time.
     private var hostBundleIdentifier: String?
@@ -114,6 +142,24 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     }
 
     // MARK: - Placement
+
+    /// Lays `cells` out for the screen `caretRect` is on and answers with the
+    /// window size that fits them.
+    ///
+    /// The budget is resolved here rather than in `present`, which is handed
+    /// the same caret only AFTER the layout has answered with a size: cells are
+    /// measured against the budget, so it has to be known before they are laid
+    /// out, not once they are placed. `final` so no layout can spend a budget
+    /// that was never resolved.
+    final func layout(_ cells: [CandidateCellContent], forCaret caretRect: CGRect) -> CGSize {
+        if let screen = ScreenLookup.screen(containing: caretRect.origin) {
+            maximumWindowWidth = max(
+                metrics.baseWidth,
+                screen.visibleFrame.width - 2 * Self.screenEdgeMargin,
+            )
+        }
+        return updateCandidates(cells)
+    }
 
     /// Places the window sized `panelSize` near `caretRect` and brings it on
     /// screen, one level above the host so the host's own floating panels do

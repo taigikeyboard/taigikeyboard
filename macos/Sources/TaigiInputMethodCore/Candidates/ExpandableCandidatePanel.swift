@@ -116,6 +116,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func handleScrollerStyleChange() {
         scrollView.scrollerStyle = NSScroller.preferredScrollerStyle
         guard isVisible, displayMode == .expanded, !cells.isEmpty, !isAnimating else { return }
+        // The new style's scroller costs the grid a different share of the
+        // screen budget, so the grid is computed again BEFORE the relayout:
+        // laying the old columns out against a narrower window would push the
+        // right-hand one past the frame the positioning clamps to.
+        rebuildGrid()
         replace(panelSize: layoutForMode())
         ensureSelectedRowVisible()
     }
@@ -128,6 +133,31 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// chevron, the pill corner and the expand paths all key on.
     private var hasOverflow: Bool { cells.count > collapsedRow.count }
     private var gridWidth: CGFloat { expandedColumnWidth * CGFloat(expandedColumnCount) }
+    /// The grid's total width, for the tests that pin what a long candidate
+    /// does to it — the panel itself renders the grid rather than reporting it.
+    var expandedGridWidthForTesting: CGFloat { gridWidth }
+    /// The chevron's reserved width — what the collapsed row packs around and
+    /// lays the chevron out at.
+    private var chevronWidth: CGFloat { chevronView.intrinsicContentSize.width }
+
+    /// The grid's column width: the nine-slot row the collapsed mode packs to,
+    /// widened until the longest candidate fits a full row of columns, and
+    /// capped by what the screen leaves once the scroller has its share.
+    ///
+    /// Widening the columns rather than letting a cell span more of them is
+    /// what keeps the grid a grid: every row still divides into
+    /// `expandedColumnCount` columns, so the rows line up under each other.
+    /// The scroller's width is reserved whether or not the grid ends up
+    /// scrolling, since the row count follows from the column width and a
+    /// budget that changed with it would not settle.
+    private func resolvedExpandedColumnWidth() -> CGFloat {
+        let baseline = HorizontalPageLayout.rowBudget(slotWidth: metrics.baseWidth)
+        let budget = maximumWindowWidth - currentScrollerWidth
+        let widest = measuredWidths.max() ?? 0
+        let narrowest = metrics.baseWidth * CGFloat(expandedColumnCount)
+        let width = min(max(baseline, widest), max(narrowest, budget))
+        return width / CGFloat(expandedColumnCount)
+    }
 
     override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))
@@ -177,13 +207,14 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         rowHighlightView?.alphaValue = 0
         guard !cells.isEmpty else { return .zero }
 
+        // The chevron only shows when the row cannot hold the whole list, so
+        // the packing reserves its width only when it will really be there.
         collapsedRow = HorizontalPageLayout.pack(
             widths: measuredWidths,
             slotWidth: metrics.baseWidth,
+            windowBudget: maximumWindowWidth,
+            chromeWidth: chevronWidth,
         ).pages.first ?? []
-        expandedColumnWidth = metrics.baseWidth
-            * CGFloat(max(HorizontalPageLayout.pageSize, HorizontalPageLayout.minimumPageColumns))
-            / CGFloat(expandedColumnCount)
 
         var x: CGFloat = 0
         for slot in collapsedRow {
@@ -194,7 +225,6 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
         updateHighlights()
 
-        let chevronWidth = chevronView.intrinsicContentSize.width
         chevronView.isHidden = !hasOverflow
         var windowWidth = x
         if hasOverflow {
@@ -349,8 +379,21 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     // MARK: - Expand / collapse
 
+    /// Throws the grid's cells away and computes it again — for a column width
+    /// that changed under a grid already on screen. Row 0's views are the
+    /// collapsed row's and are laid out from the grid rather than built by it,
+    /// so they stay.
+    private func rebuildGrid() {
+        removeExpandedItemViews()
+        isGridBuilt = false
+        buildGridIfNeeded()
+    }
+
     private func buildGridIfNeeded() {
         guard !isGridBuilt else { return }
+        // Resolved here rather than with the collapsed row: the column width is
+        // the grid's, and the collapsed row is what every list starts as.
+        expandedColumnWidth = resolvedExpandedColumnWidth()
         grid = ExpandedGridLayout.compute(
             widths: measuredWidths,
             columnWidth: expandedColumnWidth,
@@ -367,6 +410,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             }
         }
         isGridBuilt = true
+        // The fresh cells carry no selection state of their own.
+        updateHighlights()
     }
 
     /// Lays every cell out for the current mode and answers the content size.
@@ -396,7 +441,6 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         for separator in separatorViews {
             separator.isHidden = true
         }
-        let chevronWidth = chevronView.intrinsicContentSize.width
         chevronView.isHidden = !hasOverflow
         if hasOverflow {
             chevronView.frame = NSRect(x: x, y: 0, width: chevronWidth, height: itemHeight)
@@ -751,10 +795,15 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
     }
 
-    private func removeAllItemViews() {
-        (row0ItemViews + expandedItemViews).forEach { $0.removeFromSuperview() }
-        row0ItemViews = []
+    private func removeExpandedItemViews() {
+        expandedItemViews.forEach { $0.removeFromSuperview() }
         expandedItemViews = []
+    }
+
+    private func removeAllItemViews() {
+        row0ItemViews.forEach { $0.removeFromSuperview() }
+        row0ItemViews = []
+        removeExpandedItemViews()
         separatorViews.forEach { $0.removeFromSuperview() }
         separatorViews = []
     }
