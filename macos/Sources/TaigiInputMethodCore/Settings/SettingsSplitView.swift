@@ -15,9 +15,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case appearance
     case shortcuts
     case customDictionary
-    case frequencyData
-    case associationData
-    case backupRestore
     case dictionarySources
 
     var id: String {
@@ -32,9 +29,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: .macosAppearanceTab
         case .shortcuts: .macosShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
-        case .frequencyData: .dictionaryFrequencyManagement
-        case .associationData: .dictionaryAssociationManagement
-        case .backupRestore: .dictionaryBackupRestore
         case .dictionarySources: .macosDictionarySourcesLink
         }
     }
@@ -45,9 +39,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "paintpalette"
         case .shortcuts: "keyboard"
         case .customDictionary: "character.book.closed"
-        case .frequencyData: "chart.bar"
-        case .associationData: "link"
-        case .backupRestore: "externaldrive"
         case .dictionarySources: "books.vertical"
         }
     }
@@ -125,19 +116,13 @@ struct SettingsSplitView: View {
     private var detailView: some View {
         switch selectedPane {
         case .general:
-            GeneralSettingsView()
+            GeneralSettingsView(stores: stores)
         case .appearance:
             AppearanceSettingsView()
         case .shortcuts:
             ShortcutSettingsView()
         case .customDictionary:
             CustomDictionaryPage(store: stores.customDictionary)
-        case .frequencyData:
-            FrequencyDataPage(store: stores.frequency)
-        case .associationData:
-            AssociationDataPage(store: stores.association)
-        case .backupRestore:
-            DataManagementPage(stores: stores)
         case .dictionarySources:
             DictionaryTogglesView()
         }

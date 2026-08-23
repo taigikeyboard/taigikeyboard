@@ -43,19 +43,19 @@ final class StringResolverTests: XCTestCase {
     /// (`test_plural_accessor_names_the_generated_map_as_the_fallback_source`) — where it belongs,
     /// since tying it to a shipping string would make product copy answerable to a codegen test.
     func testGeneratedFormatAccessor_interpolatesTextTheProductDidNotAuthor() {
-        // The store's own failure reason: a placeholder rather than something the call site
-        // concatenates, so each language punctuates around it.
+        // A version string the product never authored: a placeholder rather than something the
+        // call site concatenates, so each language punctuates around it.
         XCTAssertEqual(
-            StringResolver(.hanji).macosRestoreLineFrequencyFailed(reason: "disk I/O error"),
-            "詞頻:失敗(disk I/O error)",
+            StringResolver(.hanji).macosUpdateNotificationBody(version: "3.7.0"),
+            "台語齒盤 3.7.0 會使下載矣，點一下就去下載頁。",
         )
         XCTAssertEqual(
-            StringResolver(.english).macosRestoreLineFrequencyFailed(reason: "disk I/O error"),
-            "Frequency records: failed (disk I/O error)",
+            StringResolver(.english).macosUpdateNotificationBody(version: "3.7.0"),
+            "TaigiKeyboard 3.7.0 is available. Click to open the download page.",
         )
         XCTAssertEqual(
-            StringResolver(.japanese).macosRestoreLineFrequencyFailed(reason: "disk I/O error"),
-            "単語頻度：失敗（disk I/O error）",
+            StringResolver(.japanese).macosUpdateNotificationBody(version: "3.7.0"),
+            "台語キーボード 3.7.0 が利用できます。クリックしてダウンロードページを開きます。",
         )
     }
 }

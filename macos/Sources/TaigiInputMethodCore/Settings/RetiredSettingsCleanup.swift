@@ -9,11 +9,11 @@ import KeyboardShortcuts
 /// is free, and re-clearing also catches a manual `defaults write` that would
 /// otherwise resurrect hidden state.
 ///
-/// The engine still reads the two settings keys — they are cross-platform
-/// contract, and the composing carrier encodes them either way — so a stored
-/// `true` from a build that HAD the toggles would silently keep the feature on
-/// with no UI left to turn it off. Removing the stored values returns both to
-/// their `false` defaults.
+/// The engine still reads the four recording/output settings keys — they are
+/// cross-platform contract, and the composing carrier encodes them either way —
+/// so a value stored by a build that HAD the toggle would silently outlive the
+/// UI that set it. Removing the stored values returns each to its default:
+/// 括號標注 and 顯示羅馬字候選 back off, 詞頻紀錄 and 詞關聯紀錄 back on.
 @MainActor
 enum RetiredSettingsCleanup {
     /// Raw `KeyboardShortcuts.Name`s of the retired hotkey actions, kept so a
@@ -25,10 +25,20 @@ enum RetiredSettingsCleanup {
         KeyboardShortcuts.Name("toggleLiteralRomanCandidate"),
     ]
 
-    /// The sidebar pane removed from `SettingsPane`. Cleared explicitly rather
+    /// Sidebar panes removed from `SettingsPane`. Cleared explicitly rather
     /// than trusting `@AppStorage` to shrug off an unknown raw value — that
     /// fallback is framework behaviour this codebase has not pinned.
-    private static let retiredPaneRawValue = "dictionarySearch"
+    ///
+    /// An explicit tombstone list, NOT "any value that is not a live case": an
+    /// unknown raw value is not necessarily a retired one, and a build that
+    /// cleared everything it did not recognise would reset the selection of
+    /// anyone who also runs a newer build against the same defaults.
+    private static let retiredPaneRawValues: Set<String> = [
+        "dictionarySearch",
+        "frequencyData",
+        "associationData",
+        "backupRestore",
+    ]
 
     /// Retired raw defaults names, grouped by the round that retired them.
     ///
@@ -55,11 +65,27 @@ enum RetiredSettingsCleanup {
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.removeObject(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        // The 詞頻紀錄 / 詞關聯紀錄 toggles went with the panes that carried
+        // them. Unlike the retired names below this changes BEHAVIOUR rather
+        // than only tidying: `SettingsStore.current` still reads both keys, so
+        // a `false` stored by a build that HAD the toggles would keep learning
+        // switched off with nothing left to switch it back on. Clearing them
+        // returns both to their `true` defaults.
+        //
+        // Launch-time, and the read is live, so this restores the default once
+        // per launch rather than making the key unreachable — a deliberate
+        // `defaults write` still takes effect for the rest of that session.
+        // Closing that would mean not reading these from defaults at all, which
+        // is a wider change than this round: the two keys beside them
+        // (`isOutputBothScripts`, `isLiteralRomanCandidateEnabled`) are read
+        // live on purpose — see `CandidateDocumentText`.
+        userDefaults.removeObject(forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
+        userDefaults.removeObject(forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
         for name in retiredDefaultsNames {
             userDefaults.removeObject(forKey: name)
         }
-        if userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name)
-            == retiredPaneRawValue {
+        if let pane = userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name),
+           retiredPaneRawValues.contains(pane) {
             userDefaults.removeObject(forKey: SettingsStore.Keys.selectedSettingsPane.name)
         }
         for name in retiredShortcutNames {

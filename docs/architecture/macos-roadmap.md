@@ -337,6 +337,27 @@ FFI is in-process sync) · OS-level `ComponentInputModeDict` modes for TL/POJ
 (settings toggle instead) · azooKey NSTableView candidate UI · `/Library/Input
 Methods` sudo install.
 
+## Settings pane roster (current)
+
+一般 · 外觀 · 快捷鍵 · 自訂詞庫 · 選辭典.
+
+The 詞頻紀錄, 詞關聯紀錄 and 備份還原 panes that PR12 shipped were removed (USER
+2026-08-24). Both learning tables are self-trimming — `LearningCapacity` caps
+them at 20000 / 50000 rows and evicts least-used-first, so they cannot grow
+without bound (a row ceiling, not a byte one: SQLite does not shrink the file) —
+and the decision was that learned records are not the user's to administer. What replaced the three panes is one destructive button in 一般,
+清除學習紀錄, which empties both tables at once.
+
+Consequences, accepted with the decision: macOS no longer reads or writes
+`.taigi`, so an iOS/Android backup cannot be imported here and learned data does
+not move between Macs. The custom dictionary keeps its own CSV import/export,
+and this Mac's databases stay inside Time Machine scope. The `.taigi` format
+itself is unchanged — iOS and Android still read and write it.
+
+`RetiredSettingsCleanup` sweeps a stored selection pointing at one of the three
+retired panes, and clears the two recording toggles they carried so a stored
+`false` cannot outlive the UI that set it.
+
 ## User-gated open items
 
 - ~~D4 candidate-selection keys vs numeric tone digits~~ — **CLOSED 2026-08-15**: USER took

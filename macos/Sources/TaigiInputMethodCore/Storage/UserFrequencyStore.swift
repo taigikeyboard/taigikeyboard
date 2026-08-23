@@ -33,9 +33,25 @@ final class UserFrequencyStore: @unchecked Sendable {
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// ios/Sources/TaigiKeyboard/Lexicon/Database/UserFrequencyPruner.swift:26-38.
     /// Drift changes how much history a long-running install keeps.
-    private let capacity = LearningCapacity(table: tableName, maxRows: 20000, deleteBatch: 2000)
+    /// A function, not a stored constant: `LearningCapacity` is a reference
+    /// type holding a mutable throttle counter, and a default argument is
+    /// re-evaluated per call. A stored constant would hand every instance of
+    /// this store the same counter, so two of them — a test fixture beside the
+    /// live one — would push each other towards a capacity check.
+    static func shippedCapacity() -> LearningCapacity {
+        LearningCapacity(table: tableName, maxRows: 20000, deleteBatch: 2000)
+    }
 
-    init(directory: @escaping @Sendable () throws -> URL) {
+    private let capacity: LearningCapacity
+
+    /// `capacity` is a parameter so a test can hand in a small cap and watch a
+    /// real `record` call prune — the shipped 20000 is not reachable in a test,
+    /// and the pane that used to make the cap observable is gone.
+    init(
+        directory: @escaping @Sendable () throws -> URL,
+        capacity: LearningCapacity = UserFrequencyStore.shippedCapacity(),
+    ) {
+        self.capacity = capacity
         database = UserDataDatabase(
             fileName: "user_frequency.db",
             name: "UserFrequencyStore",
@@ -96,14 +112,31 @@ final class UserFrequencyStore: @unchecked Sendable {
         }
     }
 
+    /// Every learned row, most-used first, or `nil` when the store could not
+    /// be read. Mirrors `UserAssociationStore.allRows()`, and like it exists
+    /// for the tests: nothing in the shipped UI lists learned rows any more,
+    /// but the capacity ceiling and `deleteAll` are only assertable against the
+    /// table's actual contents.
+    func allRows() -> [FrequencyRow]? {
+        database.read { connection in
+            try connection.query(
+                """
+                SELECT \(Self.rowColumns) FROM \(Self.tableName)
+                ORDER BY \(Self.listOrder);
+                """,
+                decoding: Self.decodeRow,
+            )
+        }
+    }
+
     /// The columns every `FrequencyRow` read selects, next to the decoder that
     /// reads them: the two agree by position, and only stay agreed while they
     /// are edited together.
     private static let rowColumns =
         "word, tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000"
 
-    /// One order for the viewer and the export, with `(word, tl)` as the final
-    /// tie-break so equal counts keep a stable order between two exports.
+    /// One order, most-used first, with `(word, tl)` as the final tie-break so
+    /// equal counts keep a stable order between two reads.
     private static let listOrder = "count DESC, last_used DESC, word ASC, tl ASC"
 
     private static func decodeRow(_ row: SQLiteRowReader) -> FrequencyRow {
@@ -117,76 +150,6 @@ final class UserFrequencyStore: @unchecked Sendable {
 
     // MARK: - User-driven administration
 
-    /// Every learned row, most-used first.
-    ///
-    /// The order is the one the viewer lists in AND the one an export writes,
-    /// with `(word, tl)` as the final tie-break so two rows with equal counts
-    /// and timestamps keep a stable order between one export and the next.
-    func allRows() async throws -> [FrequencyRow] {
-        try await database.perform { connection in
-            try connection.query(
-                """
-                SELECT \(Self.rowColumns) FROM \(Self.tableName)
-                ORDER BY \(Self.listOrder);
-                """,
-                decoding: Self.decodeRow,
-            )
-        }
-    }
-
-    /// A page of learned rows for the viewer, most-used first.
-    ///
-    /// Filter and limit are both SQL: the viewer shows a screenful, and a
-    /// 20000-row store read whole to display a hundred rows is a cost paid on
-    /// every keystroke in the filter box.
-    func rows(filter: String, limit: Int) async throws -> [FrequencyRow] {
-        let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
-        return try await database.perform { connection in
-            guard !trimmed.isEmpty else {
-                return try connection.query(
-                    """
-                    SELECT \(Self.rowColumns) FROM \(Self.tableName)
-                    ORDER BY \(Self.listOrder)
-                    LIMIT ?;
-                    """,
-                    [.integer(limit)],
-                    decoding: Self.decodeRow,
-                )
-            }
-            let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
-            return try connection.query(
-                """
-                SELECT \(Self.rowColumns) FROM \(Self.tableName)
-                WHERE word LIKE ? ESCAPE '\\' OR tl LIKE ? ESCAPE '\\'
-                ORDER BY \(Self.listOrder)
-                LIMIT ?;
-                """,
-                [.text(pattern), .text(pattern), .integer(limit)],
-                decoding: Self.decodeRow,
-            )
-        }
-    }
-
-    /// Forgets one reading of one word.
-    ///
-    /// Both columns are matched because identity is the pair (Core Principle
-    /// #7): forgetting 重/tāng must leave 重/tîng alone. Deleting the legacy
-    /// `tl == ""` row removes only that fallback bucket.
-    @discardableResult
-    func delete(word: String, tl: String) async throws -> Bool {
-        try await database.perform { connection in
-            let existed = try connection.scalar(
-                "SELECT 1 FROM \(Self.tableName) WHERE word = ? AND tl = ? LIMIT 1;",
-                [.text(word), .text(tl)],
-            ) != nil
-            try connection.run(
-                "DELETE FROM \(Self.tableName) WHERE word = ? AND tl = ?;",
-                [.text(word), .text(tl)],
-            )
-            return existed
-        }
-    }
-
     /// Forgets everything, and reports how many rows went.
     @discardableResult
     func deleteAll() async throws -> Int {
@@ -195,35 +158,6 @@ final class UserFrequencyStore: @unchecked Sendable {
             try connection.execute("DELETE FROM \(Self.tableName);")
             try? connection.execute("VACUUM;")
             return existing
-        }
-    }
-
-    /// Merges imported counts in, keeping whichever is higher.
-    ///
-    /// Merge-by-max rather than overwrite or sum: restoring an older backup
-    /// must never walk back a count the user has since built up, and adding
-    /// them would inflate a word every time the same backup was restored.
-    /// A row from a backup written before the pair key carries `tl == ""` and
-    /// merges into that legacy bucket rather than into a real reading.
-    @discardableResult
-    func batchImportMerge(_ rows: [FrequencyRow]) async throws -> Int {
-        guard !rows.isEmpty else { return 0 }
-        return try await database.perform { connection in
-            try connection.withImmediateTransaction {
-                for row in rows {
-                    try connection.run(
-                        """
-                        INSERT INTO \(Self.tableName) (word, tl, count, last_used)
-                        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                        ON CONFLICT(word, tl) DO UPDATE SET
-                            count = MAX(count, excluded.count),
-                            last_used = CURRENT_TIMESTAMP;
-                        """,
-                        [.text(row.word), .text(row.tl), .integer(row.count)],
-                    )
-                }
-                return rows.count
-            }
         }
     }
 

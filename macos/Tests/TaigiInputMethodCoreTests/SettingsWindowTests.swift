@@ -138,15 +138,13 @@ final class SettingsWindowTests: XCTestCase {
     /// Raw values are the persistence contract: `@AppStorage` writes them, so
     /// renaming a case silently resets every user to 一般. The order is also
     /// the sidebar order — the flat list renders `allCases` directly — so
-    /// this doubles as the roster: 一般, 外觀, 快捷鍵, then the dictionary rows
-    /// in the iOS Tab3 order.
+    /// this doubles as the roster. 詞頻紀錄 / 詞關聯紀錄 / 備份復原 are absent by
+    /// decision, not by omission — see `RetiredSettingsCleanup`, which sweeps a
+    /// selection left pointing at one of them.
     func testPaneRawValues_stayStable() {
         XCTAssertEqual(
             SettingsPane.allCases.map(\.rawValue),
-            [
-                "general", "appearance", "shortcuts", "customDictionary",
-                "frequencyData", "associationData", "backupRestore", "dictionarySources",
-            ],
+            ["general", "appearance", "shortcuts", "customDictionary", "dictionarySources"],
         )
     }
 
@@ -164,15 +162,14 @@ final class SettingsWindowTests: XCTestCase {
         let hanji = makeStore(.hanji)
         XCTAssertEqual(
             SettingsPane.allCases.map { hanji.string($0.labelKey) },
-            ["一般", "外觀", "快捷鍵", "自訂詞庫", "詞頻紀錄", "詞關聯紀錄", "備份復原", "選辭典"],
+            ["一般", "外觀", "快捷鍵", "自訂詞庫", "選辭典"],
         )
 
         let english = makeStore(.english)
         XCTAssertEqual(
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
-                "General", "Appearance", "Shortcuts", "Custom Dictionary", "Frequency Records",
-                "Association Records", "Backup and Restore", "Choose Dictionaries",
+                "General", "Appearance", "Shortcuts", "Custom Dictionary", "Choose Dictionaries",
             ],
         )
     }

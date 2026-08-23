@@ -1,5 +1,5 @@
-// The parts every 詞庫 management page has: a filter box, an import/export
-// pair, a destructive clear, and somewhere for a failure to appear.
+// The parts the 詞庫 pages share: a filter box, an import/export pair, a
+// destructive clear, and somewhere for a failure to appear.
 
 import SwiftUI
 
@@ -48,7 +48,6 @@ enum UserDataPageMessage: Identifiable, Hashable {
     /// explanations on two pages.
     case notUTF8
     case imported(Int, skipped: Int)
-    case restored(BackupImportResult)
 
     var id: Self {
         self
@@ -63,8 +62,6 @@ enum UserDataPageMessage: Identifiable, Hashable {
         case let .failure(key, _): language.resolve(key)
         case .notUTF8: language.resolve(.commonImportFailed)
         case .imported: language.resolve(.macosImportComplete)
-        case let .restored(result):
-            language.resolve(result.hasFailure ? .macosRestorePartial : .macosRestoreComplete)
         }
     }
 
@@ -74,44 +71,7 @@ enum UserDataPageMessage: Identifiable, Hashable {
         case .notUTF8: language.resolve(.macosNotUTF8Detail)
         case let .imported(imported, skipped):
             language.dictionaryImportResult(imported: imported, skipped: skipped)
-        case let .restored(result): Self.restoreReport(result, language)
         }
-    }
-
-    /// One line per category, and a failed one says so.
-    ///
-    /// The three databases cannot be restored in one transaction, so a single
-    /// number would have to stand for "nothing to restore", "everything was
-    /// already there" and "it did not work" at once.
-    private static func restoreReport(_ result: BackupImportResult, _ language: StringResolver) -> String {
-        func line(
-            _ outcome: BackupCategoryOutcome,
-            _ restored: (Int) -> String,
-            _ failed: (String) -> String,
-        ) -> String {
-            switch outcome {
-            case let .restored(count): restored(count)
-            case let .failed(reason): failed(reason)
-            }
-        }
-
-        return [
-            line(
-                result.customDictionary,
-                { language.macosRestoreLineCustomDictionary(count: $0) },
-                { language.macosRestoreLineCustomDictionaryFailed(reason: $0) },
-            ),
-            line(
-                result.frequency,
-                { language.macosRestoreLineFrequency(count: $0) },
-                { language.macosRestoreLineFrequencyFailed(reason: $0) },
-            ),
-            line(
-                result.association,
-                { language.macosRestoreLineAssociation(count: $0) },
-                { language.macosRestoreLineAssociationFailed(reason: $0) },
-            ),
-        ].joined(separator: "\n")
     }
 }
 
@@ -179,9 +139,9 @@ extension View {
     }
 }
 
-/// The box the 詞庫 pane types into — above the rows on the three list pages,
-/// and above the results in the dictionary search. All four ask the same
-/// question of the user, so all four ask it in the same words.
+/// The box the 詞庫 pane types into — above the rows in 自訂詞庫, and above the
+/// results in the dictionary search. Both ask the same question of the user, so
+/// both ask it in the same words.
 ///
 /// In the content area rather than the window toolbar: the toolbar belongs to
 /// the settings window's `[一般] [詞庫]` tabs, and a search field placed there
@@ -197,7 +157,9 @@ struct UserDataFilterField: View {
     }
 }
 
-/// The CSV pair every list page offers, and the clear-everything button.
+/// The 自訂詞庫 page's CSV pair and its clear-everything button. Its one caller
+/// since the 詞頻 / 詞關聯 pages were removed, kept a separate view because the
+/// page it serves is already long enough without three more rows inline.
 struct UserDataActionsSection: View {
     @Environment(DisplayLanguageStore.self) private var language
 

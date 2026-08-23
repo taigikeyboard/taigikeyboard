@@ -7,30 +7,6 @@ extension StringResolver {
         format(.dictionaryImportResult, Int64(imported), Int64(skipped))
     }
 
-    func macosRestoreLineCustomDictionary(count: Int) -> String {
-        format(.macosRestoreLineCustomDictionary, Int64(count))
-    }
-
-    func macosRestoreLineFrequency(count: Int) -> String {
-        format(.macosRestoreLineFrequency, Int64(count))
-    }
-
-    func macosRestoreLineAssociation(count: Int) -> String {
-        format(.macosRestoreLineAssociation, Int64(count))
-    }
-
-    func macosRestoreLineCustomDictionaryFailed(reason: String) -> String {
-        format(.macosRestoreLineCustomDictionaryFailed, reason)
-    }
-
-    func macosRestoreLineFrequencyFailed(reason: String) -> String {
-        format(.macosRestoreLineFrequencyFailed, reason)
-    }
-
-    func macosRestoreLineAssociationFailed(reason: String) -> String {
-        format(.macosRestoreLineAssociationFailed, reason)
-    }
-
     func macosUpdateCurrentVersionLabel(version: String) -> String {
         format(.macosUpdateCurrentVersionLabel, version)
     }

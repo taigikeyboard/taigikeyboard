@@ -36,9 +36,9 @@ final class UserDataPageChromeTests: XCTestCase {
         struct StoreError: Error, CustomStringConvertible {
             let description = "disk I/O error"
         }
-        let message = UserDataPageMessage.failure(.macosFrequencyWriteFailed, StoreError())
+        let message = UserDataPageMessage.failure(.macosCustomDictWriteFailed, StoreError())
 
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosFrequencyWriteFailed))
+        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosCustomDictWriteFailed))
         XCTAssertEqual(message.detail(hanji), "disk I/O error")
         XCTAssertEqual(message.detail(english), "disk I/O error")
     }
@@ -50,44 +50,5 @@ final class UserDataPageChromeTests: XCTestCase {
 
         XCTAssertEqual(message.title(hanji), hanji.resolve(.commonImportFailed))
         XCTAssertEqual(message.detail(hanji), hanji.resolve(.macosNotUTF8Detail))
-    }
-
-    func testRestore_whenEveryCategoryLands_reportsCompleteWithOneLineEach() {
-        let message = UserDataPageMessage.restored(BackupImportResult(
-            customDictionary: .restored(12),
-            frequency: .restored(1),
-            association: .restored(0),
-        ))
-
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosRestoreComplete))
-        XCTAssertEqual(message.detail(hanji), """
-        自訂詞庫:新增 12 筆
-        詞頻:處理 1 筆
-        詞關聯:處理 0 筆
-        """)
-    }
-
-    /// The three databases cannot be restored in one transaction, so the report
-    /// keeps its per-category shape when one of them fails rather than
-    /// collapsing to a single sentence that cannot say which — and the failed
-    /// category names its reason in place, in the language's own punctuation.
-    func testRestore_whenOneCategoryFails_keepsTheShapeAndNamesTheReason() {
-        let message = UserDataPageMessage.restored(BackupImportResult(
-            customDictionary: .restored(12),
-            frequency: .failed("disk I/O error"),
-            association: .restored(3),
-        ))
-
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosRestorePartial))
-        XCTAssertEqual(message.detail(hanji), """
-        自訂詞庫:新增 12 筆
-        詞頻:失敗(disk I/O error)
-        詞關聯:處理 3 筆
-        """)
-        XCTAssertEqual(message.detail(english), """
-        Custom dictionary: 12 added
-        Frequency records: failed (disk I/O error)
-        Association records: 3 processed
-        """)
     }
 }

@@ -89,12 +89,31 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         )
     }
 
-    func testSelectionOnTheUnlistedPane_fallsBackToTheDefault() {
-        userDefaults.set("dictionarySearch", forKey: SettingsStore.Keys.selectedSettingsPane.name)
+    /// The learning toggles went with the 詞頻紀錄 / 詞關聯紀錄 panes. This one
+    /// is a behaviour fix, not hygiene: the engine still reads both keys, so a
+    /// stored `false` would keep learning off with no UI left to turn it on.
+    func testStoredFalseOnTheRetiredRecordingToggles_returnsThemToOn() {
+        userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.selectedSettingsPane.name))
+        let settings = SettingsStore(userDefaults: userDefaults).current
+        XCTAssertTrue(settings.isFrequencyRecordingEnabled)
+        XCTAssertTrue(settings.isAssociationRecordingEnabled)
+    }
+
+    func testSelectionOnAnyRetiredPane_fallsBackToTheDefault() {
+        for pane in ["dictionarySearch", "frequencyData", "associationData", "backupRestore"] {
+            userDefaults.set(pane, forKey: SettingsStore.Keys.selectedSettingsPane.name)
+
+            RetiredSettingsCleanup.run(userDefaults: userDefaults)
+
+            XCTAssertNil(
+                userDefaults.object(forKey: SettingsStore.Keys.selectedSettingsPane.name),
+                "\(pane) survived the sweep",
+            )
+        }
     }
 
     func testSelectionOnASurvivingPane_isKept() {
