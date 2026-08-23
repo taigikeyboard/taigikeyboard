@@ -198,6 +198,7 @@ enum GeneratedStrings {
         .settingsTlMode: "台羅",
         .settingsOutputBothScripts: "括號標註",
         .settingsLiteralRomanCandidate: "顯示原本羅馬字候選",
+        .settingsAutoSpace: "自動空白",
         .themeCustomFont: "字型設定",
         .themeCandidateTextSize: "候選詞大細",
     ]
@@ -396,6 +397,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "Annotate in Brackets",
         .settingsLiteralRomanCandidate: "Show Typed Romanization Candidate",
+        .settingsAutoSpace: "Auto-Space",
         .themeCustomFont: "Font",
         .themeCandidateTextSize: "Candidate Text Size",
     ]
@@ -594,6 +596,7 @@ enum GeneratedStrings {
         .settingsTlMode: "Tâi-lô",
         .settingsOutputBothScripts: "括弧で併記",
         .settingsLiteralRomanCandidate: "入力したローマ字候補を表示",
+        .settingsAutoSpace: "自動スペース",
         .themeCustomFont: "フォント",
         .themeCandidateTextSize: "候補の文字の大きさ",
     ]
@@ -792,6 +795,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "kuat-hō phiau-tsù",
         .settingsLiteralRomanCandidate: "hián-sī guân-pún lô-má-jī hāu-suán",
+        .settingsAutoSpace: "tsū-tōng khàng-pe̍h",
         .themeCustomFont: "jī-hîng siat-tīng",
         .themeCandidateTextSize: "hāu-suán sû tuā-sè",
     ]
@@ -990,6 +994,7 @@ enum GeneratedStrings {
         .settingsTlMode: "tâi-lô",
         .settingsOutputBothScripts: "koat-hō phiau-chù",
         .settingsLiteralRomanCandidate: "hián-sī goân-pún lô-má-jī hāu-soán",
+        .settingsAutoSpace: "chū-tōng khàng-pe̍h",
         .themeCustomFont: "jī-hêng siat-tēng",
         .themeCandidateTextSize: "hāu-soán sû tōa-sè",
     ]

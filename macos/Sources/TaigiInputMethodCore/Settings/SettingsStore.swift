@@ -68,6 +68,19 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: EngineSettings.defaults.isCustomDictEnabled,
         )
 
+        /// Auto-insert a trailing space after committing a word. Platform-side
+        /// on every platform — the engine never reads it — so like
+        /// `displayLanguage` the default is owned here rather than by
+        /// `EngineSettings.defaults`. The key spelling is iOS's
+        /// (`SharedSettings.swift:47`); the DEFAULT is macOS's own: a Mac
+        /// starts with auto-space ON (USER 2026-08-23) where the phones start
+        /// OFF, so a future settings transfer must carry only values a user
+        /// explicitly stored.
+        static let isAutoSpaceEnabled = SettingsKey(
+            name: "autoSpaceEnabled",
+            defaultValue: true,
+        )
+
         // The dictionary sources. Key spellings are the iOS ones verbatim
         // (`SharedSettings.swift:53-66`) — including `khiin`, which is the one
         // key with no `Enabled` suffix. The name on the left is the engine's
@@ -478,6 +491,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var isLiteralRomanCandidateEnabled: Bool {
         get { bool(Keys.isLiteralRomanCandidateEnabled) }
         set { userDefaults.set(newValue, forKey: Keys.isLiteralRomanCandidateEnabled.name) }
+    }
+
+    /// Whether committing a word auto-inserts a trailing space. Read by the
+    /// controller's commit paths, never by the engine.
+    var isAutoSpaceEnabled: Bool {
+        get { bool(Keys.isAutoSpaceEnabled) }
+        set { userDefaults.set(newValue, forKey: Keys.isAutoSpaceEnabled.name) }
     }
 
     /// The app UI display language tag. Read as a raw tag rather than a `DisplayLanguage` so a value

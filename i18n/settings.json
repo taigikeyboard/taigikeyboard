@@ -68,7 +68,7 @@
     },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "自動空白", "tailo": "tsū-tōng khàng-pe̍h", "poj": "chū-tōng khàng-pe̍h", "en": "Auto-Space", "ja": "自動スペース" }
     },
     "keyboardSectionTitle": {

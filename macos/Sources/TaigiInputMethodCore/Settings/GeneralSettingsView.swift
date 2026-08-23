@@ -25,6 +25,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
+    @AppStorage(SettingsStore.Keys.isAutoSpaceEnabled.name)
+    private var isAutoSpaceEnabled = SettingsStore.Keys.isAutoSpaceEnabled.defaultValue
+
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
     /// setting changes, and changing it means a trip to System Settings and back.
@@ -63,6 +66,8 @@ struct GeneralSettingsView: View {
                         Text(language.selectionLabel(for: option)).tag(option)
                     }
                 }
+
+                Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
             }
 
             // The update rows. No toggle and no explanatory text (USER

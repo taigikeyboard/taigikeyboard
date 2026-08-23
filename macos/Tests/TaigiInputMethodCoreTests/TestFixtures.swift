@@ -298,6 +298,19 @@ enum TestFixtures {
         .deletingLastPathComponent() // <repo>
 }
 
+extension XCTestCase {
+    /// A settings store over its own throwaway defaults suite, torn down with
+    /// the case — so a case that writes a setting cannot leak it into the
+    /// machine's real domain or into the next case.
+    @MainActor
+    func makeScratchSettingsStore() throws -> SettingsStore {
+        let suiteName = "ScratchSettings.\(UUID().uuidString)"
+        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        addTeardownBlock { userDefaults.removePersistentDomain(forName: suiteName) }
+        return SettingsStore(userDefaults: userDefaults)
+    }
+}
+
 extension DictionarySourceToggles {
     /// Every dictionary switched off — the state the wire cannot say with a
     /// `0`, and so the one both the filter suite and the search suite are

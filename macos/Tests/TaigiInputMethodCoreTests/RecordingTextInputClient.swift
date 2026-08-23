@@ -19,6 +19,24 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     private(set) var writes: [Write] = []
     private(set) var readCalls: [String] = []
 
+    /// The selection this client reports. Defaults to "cannot answer", which is
+    /// what a client without `TSMDocumentAccess` does — the state every case
+    /// not about selection-dependent behaviour should stay in.
+    var selectedRangeToReturn = NSRange(location: NSNotFound, length: NSNotFound)
+
+    /// The document text `attributedSubstring(from:)` slices out of. Nil — the
+    /// default — answers nil for every range, like a client that cannot serve
+    /// substring queries at all. When set, every `insertText` is applied to it
+    /// and moves `selectedRangeToReturn` past the inserted text, the way a real
+    /// client's document and caret follow the edits — so a multi-step case
+    /// (commit → auto space → swap → swap again) verifies each step against
+    /// the state the previous one produced rather than against its fixture.
+    var documentTextForReads: String?
+
+    /// The replacement range of each `insertText`, in write order — how a case
+    /// tells an at-caret insert from a rewrite of committed text.
+    private(set) var insertReplacementRanges: [NSRange] = []
+
     /// The line rectangle this client reports for a character index of the
     /// marked region. Indices absent from the map answer with a zero rectangle,
     /// which is what a real client does for a position it cannot place — and
@@ -54,8 +72,36 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
 
     // MARK: Writes
 
-    func insertText(_ string: Any!, replacementRange _: NSRange) {
-        writes.append(.insertText(Self.plainText(string)))
+    func insertText(_ string: Any!, replacementRange: NSRange) {
+        let text = Self.plainText(string)
+        writes.append(.insertText(text))
+        insertReplacementRanges.append(replacementRange)
+        simulateDocumentMutation(text, replacementRange: replacementRange)
+    }
+
+    /// Applies an insert to the simulated document, when one is configured.
+    /// `NSNotFound` — "at the insertion point" — resolves through the current
+    /// selection, like a real client; with neither a usable range nor a usable
+    /// selection the document is left alone, which is also what a case that
+    /// never configured one gets.
+    private func simulateDocumentMutation(_ text: String, replacementRange: NSRange) {
+        guard let document = documentTextForReads else { return }
+        let documentText = document as NSString
+        let target: NSRange
+        if replacementRange.location != NSNotFound, NSMaxRange(replacementRange) <= documentText.length {
+            target = replacementRange
+        } else if selectedRangeToReturn.location != NSNotFound,
+                  NSMaxRange(selectedRangeToReturn) <= documentText.length
+        {
+            target = selectedRangeToReturn
+        } else {
+            return
+        }
+        documentTextForReads = documentText.replacingCharacters(in: target, with: text)
+        selectedRangeToReturn = NSRange(
+            location: target.location + (text as NSString).length,
+            length: 0,
+        )
     }
 
     func setMarkedText(_ string: Any!, selectionRange: NSRange, replacementRange _: NSRange) {
@@ -80,7 +126,7 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
 
     func selectedRange() -> NSRange {
         readCalls.append(#function)
-        return NSRange(location: NSNotFound, length: NSNotFound)
+        return selectedRangeToReturn
     }
 
     func markedRange() -> NSRange {
@@ -88,9 +134,12 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         return NSRange(location: NSNotFound, length: NSNotFound)
     }
 
-    func attributedSubstring(from _: NSRange) -> NSAttributedString! {
+    func attributedSubstring(from range: NSRange) -> NSAttributedString! {
         readCalls.append(#function)
-        return NSAttributedString()
+        guard let documentTextForReads else { return nil }
+        let text = documentTextForReads as NSString
+        guard range.location != NSNotFound, NSMaxRange(range) <= text.length else { return nil }
+        return NSAttributedString(string: text.substring(with: range))
     }
 
     func length() -> Int {

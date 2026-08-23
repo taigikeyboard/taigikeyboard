@@ -13,6 +13,18 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     override func setUp() {
         super.setUp()
         InstalledLexicon.installOnce()
+        // Auto-space ships ON and would append " " after every commit here —
+        // orthogonal noise to the candidate routing this suite pins, so it is
+        // OFF, which doubles as OFF-gate coverage; `AutoSpaceControllerTests`
+        // owns the ON behaviour. Written to `.standard` rather than through an
+        // injected scratch store because the swap-rerender case needs the
+        // controller and the shared coordinator's engine reading ONE domain.
+        UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
+        super.tearDown()
     }
 
     // MARK: - Showing
@@ -344,10 +356,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         _ action: ComposingAction,
         selecting matching: ((CandidateCellContent) -> Bool)? = nil,
     ) throws -> ScriptCommitSession {
-        let suiteName = "ScriptCommit.\(UUID().uuidString)"
-        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        addTeardownBlock { userDefaults.removePersistentDomain(forName: suiteName) }
-        let store = SettingsStore(userDefaults: userDefaults)
+        let store = try makeScratchSettingsStore()
+        // OFF for the same reason `makeSession` pins it OFF — this factory
+        // replaces that store with its own.
+        store.isAutoSpaceEnabled = false
         // Not either action's own default: both script commits ship a Return
         // chord now, and recording one action's default onto the other would be
         // a duplicate the resolver drops.
@@ -472,10 +484,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// wrong session.
     func testSwitchingRomanization_takesTheBarDown() throws {
         let session = try composedSession()
-        let suiteName = "TaigiInputControllerCandidateTests.\(UUID().uuidString)"
-        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { userDefaults.removePersistentDomain(forName: suiteName) }
-        session.controller.settings = SettingsStore(userDefaults: userDefaults)
+        session.controller.settings = try makeScratchSettingsStore()
         XCTAssertTrue(session.presenter.isShowing, "the composition put a bar up to take down")
 
         session.controller.performShortcutAction(.toggleRomanization)

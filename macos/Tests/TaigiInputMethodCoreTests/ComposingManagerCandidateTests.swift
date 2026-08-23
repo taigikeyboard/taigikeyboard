@@ -96,7 +96,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
             "taigi must offer at least one candidate spanning the whole buffer",
         )
 
-        let outcome = manager.commitCandidate(candidate, executing: executor)
+        let outcome = manager.commitCandidate(candidate, executing: executor).outcome
 
         XCTAssertEqual(outcome, .finalized)
         XCTAssertFalse(manager.isComposing)
@@ -139,7 +139,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
             "taigi must offer at least one candidate shorter than the whole buffer",
         )
 
-        let outcome = manager.commitCandidate(candidate, executing: executor)
+        let outcome = manager.commitCandidate(candidate, executing: executor).outcome
 
         XCTAssertEqual(outcome, .nailed)
         XCTAssertTrue(manager.isComposing)
@@ -185,7 +185,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
         manager.cancelComposition(executing: executor)
         executor.clearEffects()
 
-        let outcome = manager.commitCandidate(candidate, executing: executor)
+        let outcome = manager.commitCandidate(candidate, executing: executor).outcome
 
         XCTAssertEqual(
             outcome,

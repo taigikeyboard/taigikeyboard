@@ -196,6 +196,7 @@ enum StringKey: String {
     case settingsTlMode = "i18n_settings_tlMode"
     case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
     case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"
+    case settingsAutoSpace = "i18n_settings_autoSpace"
     case themeCustomFont = "i18n_theme_customFont"
     case themeCandidateTextSize = "i18n_theme_candidateTextSize"
 }

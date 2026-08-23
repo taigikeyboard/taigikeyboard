@@ -160,30 +160,33 @@ final class ComposingManager {
     /// engine builds the text from its own state — `Σ nailed.display_text +
     /// derived(pending)` (`transition.rs:443`) — so passing the mirrored
     /// display text back in would double-count the nailed prefix.
-    func commitComposition(executing executor: ComposingEffectExecutor) {
+    /// Answers the text the commit wrote, or nil for a commit that never
+    /// reached the engine or wrote nothing — what the controller's auto-space
+    /// earns its trailing space from. Discardable because the lifecycle
+    /// commits have no use for it.
+    @discardableResult
+    func commitComposition(executing executor: ComposingEffectExecutor) -> String? {
         Self.logger.debug("commitComposition")
-        apply(
-            RustEngineBridge.composingCommitRaw(
-                settings: settingsProvider.current,
-                generation: currentGeneration,
-            ),
-            executing: executor,
+        let transition = RustEngineBridge.composingCommitRaw(
+            settings: settingsProvider.current,
+            generation: currentGeneration,
         )
+        apply(transition, executing: executor)
+        return Self.committedText(of: transition)
     }
 
     /// Commits the composition and appends `text` after it in the same engine
     /// step, so one keystroke reaches the host as one document mutation.
-    func commitComposition(thenInsert text: String, executing executor: ComposingEffectExecutor) {
+    @discardableResult
+    func commitComposition(thenInsert text: String, executing executor: ComposingEffectExecutor) -> String? {
         Self.logger.debug("commitCompositionThenInsert '\(text)'")
         let settings = settingsProvider.current
-        apply(
-            RustEngineBridge.composingCommitPreeditThenInsertExternal(
-                text,
-                settings: settings,
-                generation: currentGeneration,
-            ),
-            executing: executor,
+        let transition = RustEngineBridge.composingCommitPreeditThenInsertExternal(
+            text,
+            settings: settings,
+            generation: currentGeneration,
         )
+        apply(transition, executing: executor)
         // This is the one commit path the engine does not describe to the
         // learner: it emits `NextWordClearForNewComposing` and no
         // `NextWordWordSelected` (`engine/composing/src/transition.rs:769-780`),
@@ -199,6 +202,7 @@ final class ComposingManager {
         // composition, which only the engine knows, and a guessed one is
         // written into `prev_tl` for everything that follows.
         nextWordLearner.forgetContext(settings: settings, generation: currentGeneration)
+        return Self.committedText(of: transition)
     }
 
     /// Abandons the composition. Nothing reaches the document: under the
@@ -350,7 +354,7 @@ final class ComposingManager {
         _ candidate: ContinuousCandidate,
         rendering: CandidateDocumentText.Rendering = .settings,
         executing executor: ComposingEffectExecutor,
-    ) -> CandidateCommitOutcome {
+    ) -> (outcome: CandidateCommitOutcome, committedText: String?) {
         let settings = settingsProvider.current
         Self.logger.debug("commitCandidate consumedBytes=\(candidate.consumedSpanEnd)")
         guard let transition = RustEngineBridge.composingCommitContinuous(
@@ -365,12 +369,26 @@ final class ComposingManager {
             syllableCount: candidate.syllableCount,
             settings: settings,
             generation: currentGeneration,
-        ) else { return .unavailable }
+        ) else { return (.unavailable, nil) }
 
         let outcome = CandidateCommitOutcome(transition)
         apply(transition, executing: executor)
         recordUsage(of: candidate, after: outcome, settings: settings)
-        return outcome
+        return (outcome, Self.committedText(of: transition))
+    }
+
+    /// The text `transition` wrote to the document, when it committed one.
+    ///
+    /// Read off the effects — the same signal `CandidateCommitOutcome` reads —
+    /// because the mirror only carries the display rendering, which a forced
+    /// script makes differ from the document string.
+    private static func committedText(of transition: ComposingTransition?) -> String? {
+        transition?.effects.lazy.compactMap { effect in
+            if case let .commitTextReplacingPreedit(text) = effect {
+                return text
+            }
+            return nil
+        }.last
     }
 
     /// Counts a candidate the engine confirmed it took.

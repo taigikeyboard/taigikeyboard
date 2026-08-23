@@ -15,7 +15,7 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
     /// (`IMKInputSession.h:66-72` for `insertText`, `:85-87` for
     /// `setMarkedText`), which is exactly the behaviour an inline composition
     /// wants — the client owns caret placement, we never move it.
-    private static let atInsertionPoint = NSRange(location: NSNotFound, length: NSNotFound)
+    static let atInsertionPoint = NSRange(location: NSNotFound, length: NSNotFound)
 
     private let client: IMKTextInput
     private static let logger = DebugLogger(category: "EffectExecutor")

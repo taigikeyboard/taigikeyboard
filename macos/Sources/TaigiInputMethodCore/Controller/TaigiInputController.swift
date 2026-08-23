@@ -75,6 +75,18 @@ public final class TaigiInputController: IMKInputController {
     /// stored default would have to be evaluated where this class is not.
     var displayLanguageOverride: DisplayLanguageStore?
 
+    /// Where the caret sat right after this controller's last auto-inserted
+    /// trailing space — armed only when the client answered a collapsed
+    /// selection there, and only until the very next key event, which either
+    /// swaps an attaching punctuation with that space or invalidates it.
+    /// Controller state rather than something read from the document because a
+    /// committed document cannot be reliably read back under IMK; the stored
+    /// caret is re-checked against the client before any rewrite, so a caret
+    /// moved by a mouse click this keydown-only controller never saw degrades
+    /// to no swap rather than to deleting a character that was not our space.
+    @MainActor
+    private var autoSpaceSwapCaretLocation: Int?
+
     /// The client this session belongs to, learned at activation — which always
     /// precedes any key event, because a session that never activated never
     /// claimed the engine. `inputControllerWillClose()` gets no sender, and this
@@ -120,6 +132,9 @@ public final class TaigiInputController: IMKInputController {
             // a client query, so the activation rule above still holds.
             controller.candidatePresenter.hideForHandover()
             controller.fetchedCandidates = []
+            // Whatever space a previous focus left armed was measured against
+            // a document this activation may no longer be looking at.
+            controller.autoSpaceSwapCaretLocation = nil
         }
     }
 
@@ -340,6 +355,15 @@ public final class TaigiInputController: IMKInputController {
 
     @MainActor
     private func handle(_ key: KeyEventSnapshot, client: IMKTextInput?) -> Bool {
+        // Every key gets exactly one chance at the swap: the arm is consumed
+        // here — before ANY early return, so an event this session cannot
+        // handle still invalidates it — and only the auto-space paths in the
+        // switch below re-arm it. A key that went anywhere else changed the
+        // document or the caret, and a swap after that would be rewriting text
+        // it never measured.
+        let armedSwapCaretLocation = autoSpaceSwapCaretLocation
+        autoSpaceSwapCaretLocation = nil
+
         guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken),
               let client
         else { return false }
@@ -361,19 +385,40 @@ public final class TaigiInputController: IMKInputController {
             manager.deleteBackward(executing: executor)
             refreshCandidates(from: manager, client: client)
         case .commit:
-            manager.commitComposition(executing: executor)
+            let committedText = manager.commitComposition(executing: executor)
             dismissCandidates()
+            appendAutoSpace(afterCommit: committedText, client: client)
         case .cancel:
             manager.cancelComposition(executing: executor)
             dismissCandidates()
         case let .commitThenInsert(text):
-            manager.commitComposition(thenInsert: text, executing: executor)
+            // The auto space rides the same mutation as the commit —
+            // `AutoSpacePolicy.augmentInsert` explains why and where it lands.
+            let insert = AutoSpacePolicy.augmentInsert(
+                text,
+                afterComposition: manager.displayText,
+                isGateActive: isAutoSpaceGateActive,
+            )
+            let committedText = manager.commitComposition(thenInsert: insert.text, executing: executor)
             dismissCandidates()
+            // Armed only when the engine really wrote the mutation — a commit
+            // it ignored left the document without the space to swap with.
+            if insert.leavesTrailingAutoSpace, committedText != nil {
+                armAutoSpaceSwap(client)
+            }
         case .commitThenPassThrough:
             manager.commitComposition(executing: executor)
             dismissCandidates()
             return false
         case .passThrough:
+            // Attaching punctuation typed right after an auto-inserted space
+            // swaps with it (`guá ` + `?` → `guá? `) instead of reaching the
+            // host — the one pass-through key this input method consumes.
+            if let armedSwapCaretLocation,
+               swapAutoSpace(with: key, armedAt: armedSwapCaretLocation, client: client, manager: manager)
+            {
+                return true
+            }
             // The host gets the key either way. Text going into the document
             // without passing through a composition is still context, though:
             // a full stop typed here is what ends the sentence the next-word
@@ -427,11 +472,17 @@ public final class TaigiInputController: IMKInputController {
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let outcome = manager.commitCandidate(candidate, rendering: rendering, executing: executor)
+        let (outcome, committedText) = manager.commitCandidate(
+            candidate, rendering: rendering, executing: executor,
+        )
         Self.logger.debug("candidate commit \(String(describing: outcome))")
         switch outcome {
         case .finalized:
             dismissCandidates()
+            // Final commit only, mirroring iOS (`ActionHandler+Suggestions.swift:129-133`):
+            // a nailed segment keeps composing more syllables — and writes
+            // nothing to the document under Model B anyway.
+            appendAutoSpace(afterCommit: committedText, client: client)
         case .nailed, .ignored, .unavailable:
             // Anything short of a finished composition is answered by asking the
             // engine what it is holding NOW rather than by reading the outcome:
@@ -509,6 +560,97 @@ public final class TaigiInputController: IMKInputController {
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 
+    // MARK: - Auto-space
+
+    /// The mode gate every auto-space site reads — live, so a toggle flipped in
+    /// the settings window applies to the very next commit.
+    @MainActor
+    private var isAutoSpaceGateActive: Bool {
+        AutoSpacePolicy.isGateActive(
+            isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
+            isTranslateSwapped: settings.isTranslateSwapped,
+            isOutputBothScripts: settings.isOutputBothScripts,
+        )
+    }
+
+    /// Writes the trailing auto space after a commit that produced
+    /// `committedText`, and arms the punctuation swap on it.
+    ///
+    /// A second document mutation rather than part of the commit's: whether
+    /// the space is earned depends on the text the engine decided to write,
+    /// which is only known once the commit has run. `nil` — a commit that
+    /// never reached the engine, or wrote nothing — earns nothing.
+    ///
+    /// Called from the explicit commit paths only. The lifecycle commits
+    /// (`finishComposition` on deactivate, close, or a click outside) leave
+    /// the document alone: the user did not finish a word there, and a space
+    /// appearing at the old caret after focus moved on reads as corruption.
+    @MainActor
+    private func appendAutoSpace(afterCommit committedText: String?, client: IMKTextInput) {
+        guard let committedText,
+              isAutoSpaceGateActive,
+              AutoSpacePolicy.shouldAppendSpace(afterCommitting: committedText)
+        else { return }
+        client.insertText(" ", replacementRange: ClientEffectExecutor.atInsertionPoint)
+        armAutoSpaceSwap(client)
+    }
+
+    /// Remembers where the caret sits now that the auto space is in front of
+    /// it — the position the swap re-checks before it rewrites anything.
+    ///
+    /// A client that cannot answer, answers mid-selection, or answers with the
+    /// caret at the document start simply never arms: the swap degrades to
+    /// pass-through (`guá ?`) rather than risk replacing a character that was
+    /// not our space. Asking here is safe — this runs inside a key event, like
+    /// every client query (see `caretRect`'s activation-only deadlock rule).
+    @MainActor
+    private func armAutoSpaceSwap(_ client: IMKTextInput) {
+        let caret = client.selectedRange()
+        guard caret.location != NSNotFound, caret.length == 0, caret.location > 0 else { return }
+        autoSpaceSwapCaretLocation = caret.location
+    }
+
+    /// Replaces the auto space before the caret with `?` + space — the
+    /// smart-punctuation swap (`guá ` + `?` → `guá? `), matching iOS
+    /// (`ActionHandler+KeyActions.swift:132-147`). Answers whether the key was
+    /// consumed.
+    ///
+    /// Three verifications before the rewrite, because `replacementRange` is a
+    /// real edit of committed text: the caret must still be a collapsed
+    /// selection exactly where the space left it, and the character under the
+    /// range must still be a space. Any client that fails one — including one
+    /// that cannot answer a substring query at all — gets the key passed
+    /// through untouched. Re-armed on success, so `?!` chains keep swapping.
+    @MainActor
+    private func swapAutoSpace(
+        with key: KeyEventSnapshot,
+        armedAt caretLocation: Int,
+        client: IMKTextInput,
+        manager: ComposingManager,
+    ) -> Bool {
+        guard ComposingKeyIntent.isDocumentText(key),
+              let characters = key.characters,
+              AutoSpacePunctuation.isAttaching(characters),
+              isAutoSpaceGateActive
+        else { return false }
+        let caret = client.selectedRange()
+        guard caret.length == 0, caret.location == caretLocation else { return false }
+        let spaceRange = NSRange(location: caretLocation - 1, length: 1)
+        guard let preceding = client.attributedSubstring(from: spaceRange),
+              preceding.string == " "
+        else { return false }
+        client.insertText(characters + " ", replacementRange: spaceRange)
+        // The character still ends the next-word context, exactly as it would
+        // have on the pass-through path it was consumed from.
+        manager.noteCharacterTypedOutsideComposition(characters)
+        // Re-armed by arithmetic rather than another `selectedRange()` query:
+        // the rewrite's end is fully determined by the range just replaced,
+        // and the next swap re-verifies the position against the client
+        // anyway — a client that moved the caret degrades to no swap.
+        autoSpaceSwapCaretLocation = caretLocation + (characters as NSString).length
+        return true
+    }
+
     /// Where the composition's last character is drawn, in screen coordinates.
     ///
     /// Walks back from the end of the marked region until the client answers
@@ -568,6 +710,10 @@ public final class TaigiInputController: IMKInputController {
         // it still has a client to write into, and a session on its way out that
         // leaves one on screen leaves it there for good.
         dismissCandidates()
+        // Focus is moving or the user clicked — either way the caret the swap
+        // was measured against is gone. (No auto space is appended here
+        // either: lifecycle commits are not a finished word.)
+        autoSpaceSwapCaretLocation = nil
         guard let client else { return }
         defer { isMarkedTextVisible = false }
 
