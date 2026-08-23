@@ -113,6 +113,26 @@ class ValidateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._validate({"k": {"scope": {"platforms": ["windows"], "surfaces": ["host"]}, "values": {"hanji": "字"}}})
 
+    def test_halfwidth_comma_in_hanji_rejected(self):
+        with self.assertRaisesRegex(ValueError, "full-width comma"):
+            self._validate({"k": _android_key({"hanji": "拍開,才會收著", "en": "x"})})
+
+    def test_halfwidth_comma_in_other_languages_allowed(self):
+        # Romanization and the OS locales punctuate half-width; the rule is Hanji's alone.
+        self._validate({"k": _android_key({"hanji": "拍開，才會收著", "en": "a, b", "tailo": "phah-khui, tsiah"})})
+
+    def test_comma_between_digits_in_hanji_allowed(self):
+        # A numeric separator is how a number is written, not how a sentence is punctuated.
+        self._validate({"k": _android_key({"hanji": "上限 30,000 項", "en": "x"})})
+
+    def test_comma_with_a_digit_on_only_one_side_in_hanji_rejected(self):
+        # The exemption needs a digit on BOTH sides — a comma that merely touches a number is
+        # still sentence punctuation.
+        for text in ("上限 30,項", "上限 ,000 項"):
+            with self.subTest(text=text):
+                with self.assertRaisesRegex(ValueError, "full-width comma"):
+                    self._validate({"k": _android_key({"hanji": text, "en": "x"})})
+
     def test_valid_passes(self):
         self._validate({"k": _android_key({"hanji": "字", "en": "x"})})
 

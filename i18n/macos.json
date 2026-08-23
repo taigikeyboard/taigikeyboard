@@ -660,7 +660,7 @@
         ]
       },
       "values": {
-        "hanji": "這份資料干焦囥佇你的電腦,袂上傳。匯出的檔案內底有你拍過的字,請家己保管好。",
+        "hanji": "這份資料干焦囥佇你的電腦，袂上傳。匯出的檔案內底有你拍過的字，請家己保管好。",
         "tailo": "tsit hūn tsu-liāu kan-na khǹg tī lí ê tiān-náu, bē siōng-thuân. huē-tshut ê tóng-àn lāi-té ū lí phah--kuè ê jī, tshiánn ka-kī pó-kuán hó.",
         "poj": "chit hūn chu-liāu kan-na khǹg tī lí ê tiān-náu, bē siōng-thoân. hōe-chhut ê tóng-àn lāi-té ū lí phah--kòe ê jī, chhiáⁿ ka-kī pó-koán hó.",
         "en": "This data stays on your Mac and is never uploaded. An exported file contains words you have typed, so keep it safe.",
@@ -786,7 +786,7 @@
         ]
       },
       "values": {
-        "hanji": "台語鍵盤佇 macOS 猶未用關聯來推薦後一个詞,毋過學著的資料會先留咧。",
+        "hanji": "台語鍵盤佇 macOS 猶未用關聯來推薦後一个詞，毋過學著的資料會先留咧。",
         "tailo": "Tâi-gí kiān-puânn tī macOS iáu-buē iōng kuan-liân lâi tshui-tsiàn āu tsi̍t ê sû, m̄-koh ha̍k-tio̍h ê tsu-liāu ē sing lâu--leh.",
         "poj": "Tâi-gí kiān-pôaⁿ tī macOS iáu-bōe iōng koan-liân lâi chhui-chiàn āu chi̍t ê sû, m̄-koh ha̍k-tio̍h ê chu-liāu ē seng lâu--leh.",
         "en": "TaigiKeyboard does not use associations to suggest the next word on macOS yet, but what it has learned is kept.",
@@ -822,7 +822,7 @@
         ]
       },
       "values": {
-        "hanji": "備份內底有自訂詞庫、詞頻佮詞關聯,攏是你拍字的紀錄,請家己保管好。這台電腦的資料會綴 Time Machine 做備份;欲徙去別台電腦,愛用這个檔案。",
+        "hanji": "備份內底有自訂詞庫、詞頻佮詞關聯，攏是你拍字的紀錄，請家己保管好。這台電腦的資料會綴 Time Machine 做備份;欲徙去別台電腦，愛用這个檔案。",
         "tailo": "pī-hūn lāi-té ū tsū-tīng-sû-khòo, sû pîn kah sû kuan-liân, lóng sī lí phah-jī ê kì-lio̍k, tshiánn ka-kī pó-kuán hó. tsit tâi tiān-náu ê tsu-liāu ē tuè Time Machine tsò pī-hūn; beh suá khì pa̍t tâi tiān-náu, ài iōng tsit ê tóng-àn.",
         "poj": "pī-hūn lāi-té ū chū-tēng-sû-khò͘, sû pîn kah sû koan-liân, lóng sī lí phah-jī ê kì-lio̍k, chhiáⁿ ka-kī pó-koán hó. chit tâi tiān-náu ê chu-liāu ē tòe Time Machine chò pī-hūn; beh sóa khì pa̍t tâi tiān-náu, ài iōng chit ê tóng-àn.",
         "en": "A backup holds your custom dictionary, frequency records, and association records — everything the keyboard learned from your typing. Keep the file safe. This Mac's data is covered by Time Machine; moving it to another Mac needs this file.",
@@ -858,7 +858,7 @@
         ]
       },
       "values": {
-        "hanji": "匯入的時,已經有的資料袂消失:自訂詞庫加新的,詞頻佮詞關聯取較大的次數。",
+        "hanji": "匯入的時，已經有的資料袂消失:自訂詞庫加新的，詞頻佮詞關聯取較大的次數。",
         "tailo": "huē-ji̍p ê sî, í-king ū ê tsu-liāu bē siau-sit: tsū-tīng-sû-khòo ke sin ê, sû pîn kah sû kuan-liân tshú khah tuā ê tshù-sòo.",
         "poj": "hōe-ji̍p ê sî, í-keng ū ê chu-liāu bē siau-sit: chū-tēng-sû-khò͘ ke sin ê, sû pîn kah sû koan-liân chhú khah tōa ê chhù-sò͘.",
         "en": "Importing keeps what is already there: custom words are added, and frequency and association records keep whichever count is higher.",
@@ -1786,7 +1786,7 @@
         "version": "string"
       },
       "values": {
-        "hanji": "台語齒盤 {version} 會使下載矣,點一下就去下載頁。",
+        "hanji": "台語齒盤 {version} 會使下載矣，點一下就去下載頁。",
         "tailo": "Tâi-gí khí-puânn {version} ē-sái hā-tsài--ah, tiám tsi̍t-ē tō khì hā-tsài-ia̍h.",
         "poj": "Tâi-gí khí-pôaⁿ {version} ē-sái hā-chài--ah, tiám chi̍t-ē tō khì hā-chài-ia̍h.",
         "en": "TaigiKeyboard {version} is available. Click to open the download page.",
@@ -1822,7 +1822,7 @@
         ]
       },
       "values": {
-        "hanji": "有新版本的時,會用系統通知講一聲,一个版本干焦講一擺。袂傳送任何拍字內容。",
+        "hanji": "有新版本的時，會用系統通知講一聲，一个版本干焦講一擺。袂傳送任何拍字內容。",
         "tailo": "Ū sin pán-pún ê sî, ē iōng hē-thóng thong-ti kóng tsi̍t-siann, tsi̍t ê pán-pún kan-na kóng tsi̍t pái. Buē thuân-sàng jīm-hô phah-jī luē-iông.",
         "poj": "Ū sin pán-pún ê sî, ē iōng hē-thóng thong-ti kóng chi̍t-siaⁿ, chi̍t ê pán-pún kan-na kóng chi̍t pái. Bōe thoân-sàng jīm-hô phah-jī lōe-iông.",
         "en": "When a new version is published you get one notification, once per version. Nothing you type is ever sent.",
@@ -1879,7 +1879,7 @@
         ]
       },
       "values": {
-        "hanji": "系統通知拍開,才會收著更新通知",
+        "hanji": "系統通知拍開，才會收著更新通知",
         "tailo": "Hē-thóng thong-ti phah-khui, tsiah ē siu--tio̍h king-sin thong-ti",
         "poj": "Hē-thóng thong-ti phah-khui, chiah ē siu--tio̍h keng-sin thong-ti",
         "en": "Turn on system notifications to receive update notices",

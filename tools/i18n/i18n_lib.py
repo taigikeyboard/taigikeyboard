@@ -107,6 +107,26 @@ DUPLICATE_KEY_ERROR = "duplicate key"
 # Identifier shape shared by namespace keys and placeholder names (both become Kotlin symbols).
 IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 
+# A half-width comma in a Hanji value, EXCEPT one sitting between two digits.
+#
+# Taiwanese written in 漢字 punctuates full-width. Every other i18n namespace already did;
+# macos.json was the one that drifted (USER 2026-08-24: 「hanji 必須使用全形逗號」). A numeric
+# separator (`上限 30,000 項`) is exempt — that is how a number is written, not how a sentence is
+# punctuated. Comma only: the half-width `; : ? ( )` still in the sources are product copy, and
+# copy is the USER's call.
+#
+# Applied only AFTER plural is ruled out of the base language: `{n, plural, ...}` carries ASCII
+# commas as ICU grammar, so scanning the raw string any earlier reports the wrong error. What is
+# left to scan is literal text plus `{name}` placeholders, whose names are comma-free identifiers.
+# Revisit if `parse_message` ever grows another comma-bearing argument form (`select`, number
+# skeletons) — the scan reads the raw string, not the parsed nodes.
+#
+# Two alternations, not one comma with two negative lookarounds: the exemption needs a digit on
+# BOTH sides, so the rule must fire when EITHER side is a non-digit. A single
+# `(?<![0-9]),(?![0-9])` matches only when both sides are non-digits, which lets `上限 30,項`
+# through (Codex post-impl).
+HANJI_HALFWIDTH_COMMA_RE = re.compile(r"(?<![0-9]),|,(?![0-9])")
+
 # Placeholder type vocabulary: schema type -> per-target facets. The table is the single, complete
 # extension point — adding a type propagates to both the typed accessor signature and the emitted
 # format spec on every platform. Facets per target:
@@ -404,6 +424,11 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
         # inflect nouns by count, so plural belongs only in translations — reject it in the base.
         if _has_plural(base_nodes):
             raise ValueError(f"{path}:{key}: base language '{BASE_LANGUAGE}' must not use plural (author plural only in translations)")
+        if HANJI_HALFWIDTH_COMMA_RE.search(values[BASE_LANGUAGE]):
+            raise ValueError(
+                f"{path}:{key}: '{BASE_LANGUAGE}' must punctuate with the full-width comma '\uff0c', "
+                f"not ',' (a comma between digits is exempt): {values[BASE_LANGUAGE]!r}"
+            )
         base_placeholder_names = set(_names_in_order(base_nodes, []))
         declared = entry.get("placeholders")
         if base_placeholder_names:
