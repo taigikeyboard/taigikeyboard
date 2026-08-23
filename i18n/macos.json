@@ -1923,7 +1923,7 @@
       }
     },
     "updateNotificationsOffNote": {
-      "comment": "Settings 一般 pane row shown when notifications are refused: says what is lost, and leads out to where it is changed.",
+      "comment": "Settings 一般 pane row shown when notifications are refused. Says what turning them on gets you rather than what is currently lost (USER 2026-08-24: 「改為比較正面」), and leads out to where it is changed. The key name still describes when the row appears, not what it says.",
       "scope": {
         "platforms": [
           "macos"
@@ -1933,11 +1933,11 @@
         ]
       },
       "values": {
-        "hanji": "通知關起來,新版本袂主動通知你",
-        "tailo": "Thong-ti kuainn--khí-lâi, sin pán-pún buē tsú-tōng thong-ti lí",
-        "poj": "Thong-ti koaiⁿ--khí-lâi, sin pán-pún bōe chú-tōng thong-ti lí",
-        "en": "Notifications are off, so new versions won't be announced",
-        "ja": "通知がオフのため、新しいバージョンはお知らせされません"
+        "hanji": "系統通知拍開,才會收著更新通知",
+        "tailo": "Hē-thóng thong-ti phah-khui, tsiah ē siu--tio̍h king-sin thong-ti",
+        "poj": "Hē-thóng thong-ti phah-khui, chiah ē siu--tio̍h keng-sin thong-ti",
+        "en": "Turn on system notifications to receive update notices",
+        "ja": "システム通知をオンにすると、アップデートのお知らせを受け取れます"
       }
     },
     "updateOpenNotificationSettings": {
