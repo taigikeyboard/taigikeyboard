@@ -98,6 +98,27 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var autoSpaceSwapCaretLocation: Int?
 
+    /// Whether this session is in 英數 passthrough — every printable key goes
+    /// to the host, no composition starts — toggled by a solo Shift tap.
+    /// Per-session and volatile on purpose: IMK activates the incoming session
+    /// before deactivating the outgoing one, so process-wide state would be
+    /// torn down by the loser of that handoff, and a persisted mode would make
+    /// "why is my keyboard English" survive a relaunch. Fresh focus is Taigi.
+    @MainActor
+    private var isAlphanumericPassthrough = false
+
+    /// The solo-Shift-tap recognizer feeding the toggle above. Session state
+    /// for the same reason: a Shift pressed in one session must not decide in
+    /// another.
+    @MainActor
+    private var shiftTapDetector = ShiftTapDetector()
+
+    /// Where the mode flash goes. `nil` means the shared HUD panel; a test
+    /// injects a recorder, for the same reason `candidatePresenter` is
+    /// injectable — the shipped one puts a real window on screen.
+    @MainActor
+    var modeFlashOverride: ((String) -> Void)?
+
     /// The client this session belongs to, learned at activation — which always
     /// precedes any key event, because a session that never activated never
     /// claimed the engine. `inputControllerWillClose()` gets no sender, and this
@@ -108,14 +129,18 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - IMK entry points
 
-    /// Keydown only, and deliberately nothing else. IMK sends
-    /// `commitComposition:` when the user clicks outside an active composition
-    /// ONLY for input methods whose mask is exactly the default keydown one
-    /// (`IMKInputController.h:154-157`). Widening the mask — for the modifier
-    /// chords a later slice may want — silently trades that behaviour away, and
-    /// a composition left stranded by a click is a visible bug.
+    /// Keydown plus `flagsChanged` — the latter for the solo-Shift 英數
+    /// toggle, and nothing wider. Widening past the default keydown mask costs
+    /// IMK's automatic `commitComposition:` on a click outside the composition
+    /// (`IMKInputController.h:154-157`), so this input method carries that
+    /// duty itself: the `commitComposition(_:)` override below force-commits,
+    /// exactly the pairing McBopomofo runs with the same mask
+    /// (`references/McBopomofo/Source/InputMethodController.swift:209-218`).
+    /// `ShiftAlphanumericControllerTests` pins both halves. `.keyUp` stays
+    /// out: both Shift transitions arrive as `flagsChanged`, and owning key-up
+    /// events would add consume bookkeeping nothing here needs.
     override public func recognizedEvents(_: Any!) -> Int {
-        Int(NSEvent.EventTypeMask.keyDown.rawValue)
+        Int(NSEvent.EventTypeMask([.keyDown, .flagsChanged]).rawValue)
     }
 
     /// CHROMIUM DEADLOCK RULE — never query the client synchronously from here
@@ -135,6 +160,9 @@ public final class TaigiInputController: IMKInputController {
             ComposingSessionCoordinator.shared.registerShortcutTarget(
                 controller, for: controller.sessionToken,
             )
+            // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
+            // decide here.
+            controller.resetAlphanumericMode()
             // Takes the bar down before this session starts typing, and takes
             // it away from the session that was showing it. IMK activates the
             // incoming session before it deactivates the outgoing one, so
@@ -200,11 +228,30 @@ public final class TaigiInputController: IMKInputController {
     }
 
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event, event.type == .keyDown else { return false }
-        // Snapshotted before the hop: `NSEvent` is a reference type that cannot
-        // cross an isolation boundary.
-        let key = KeyEventSnapshot(event)
-        return onMainActor(sender) { controller, client in controller.handle(key, client: client) }
+        guard let event else { return false }
+        switch event.type {
+        case .flagsChanged:
+            // Split off before `KeyEventSnapshot`: a modifier transition
+            // carries no reliable `characters`, and the only fact it holds is
+            // which modifier moved. The clock is read here, with the event,
+            // so the tap window measures the user's hands rather than any
+            // queueing between this thread and the main actor.
+            let keyCode = event.keyCode
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            let timestamp = event.timestamp
+            return onMainActor(sender) { controller, client in
+                controller.handleModifierEvent(
+                    keyCode: keyCode, modifiers: modifiers, timestamp: timestamp, client: client,
+                )
+            }
+        case .keyDown:
+            // Snapshotted before the hop: `NSEvent` is a reference type that
+            // cannot cross an isolation boundary.
+            let key = KeyEventSnapshot(event)
+            return onMainActor(sender) { controller, client in controller.handle(key, client: client) }
+        default:
+            return false
+        }
     }
 
     // MARK: - Input-source menu
@@ -463,9 +510,21 @@ public final class TaigiInputController: IMKInputController {
         let armedSwapCaretLocation = autoSpaceSwapCaretLocation
         autoSpaceSwapCaretLocation = nil
 
+        // A real key-down ends any half-seen Shift tap, whatever the key does
+        // next — this is what keeps ⇧A a capital and ⇧↩ a chord rather than
+        // half a toggle. Before every early return, so a key the session
+        // cannot handle still cancels.
+        shiftTapDetector.noteKeyDown()
+
         guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken),
               let client
         else { return false }
+
+        // 英數 passthrough: the host owns every key until the next solo Shift
+        // tap. Nothing can be composing here — the toggle committed anything
+        // in flight, and no composition has started since — so there is
+        // nothing to guard, and the global hotkeys live above this layer.
+        guard !isAlphanumericPassthrough else { return false }
 
         let intent = ComposingKeyIntent.intent(
             for: key,
@@ -576,6 +635,81 @@ public final class TaigiInputController: IMKInputController {
             candidatePresenter.navigate(direction, ownedBy: sessionToken)
         }
         return true
+    }
+
+    // MARK: - 英數 passthrough
+
+    /// Feeds one modifier transition to the tap detector and, on a completed
+    /// solo Shift tap, flips 英數 passthrough — committing any composition in
+    /// flight first, so the user's characters land in the document before the
+    /// keyboard changes hands.
+    ///
+    /// Only the release that completes a tap is consumed; every other
+    /// modifier transition returns false, so the host keeps seeing the flag
+    /// state it owns. Deliberately narrower than McBopomofo, which consumes
+    /// all `flagsChanged` during an active composition — nothing here needs
+    /// that, and owning events an input method does not act on is how host
+    /// shortcuts break.
+    @MainActor
+    func handleModifierEvent(
+        keyCode: UInt16,
+        modifiers: NSEvent.ModifierFlags,
+        timestamp: TimeInterval,
+        client: IMKTextInput?,
+    ) -> Bool {
+        // Only modifiers a hand can HOLD count as chording. Caps Lock is a
+        // latched state that rides on every event while lit — treating it as
+        // a chord would kill the tap for as long as the light is on — and
+        // `.numericPad`/`.help` are key-location facts, not modifiers.
+        let chordingModifiers: NSEvent.ModifierFlags = [.command, .control, .option, .function]
+        let firedTap = shiftTapDetector.observeFlagsChanged(
+            keyCode: keyCode,
+            shiftIsDown: modifiers.contains(.shift),
+            otherModifiersDown: !modifiers.isDisjoint(with: chordingModifiers),
+            at: timestamp,
+        )
+        guard firedTap, settings.isShiftToggleAlphanumericEnabled else { return false }
+        guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken) else {
+            return false
+        }
+
+        if manager.isComposing {
+            guard let client else { return false }
+            manager.commitComposition(executing: ClientEffectExecutor(client: client))
+            // A commit the engine refused leaves the marked region standing;
+            // entering passthrough over it would strand the user's characters.
+            guard !manager.isComposing else { return false }
+            dismissCandidates()
+            isMarkedTextVisible = false
+        }
+
+        isAlphanumericPassthrough.toggle()
+        flashMode()
+        return true
+    }
+
+    /// Announces the mode the tap just switched into, through the injected
+    /// recorder in tests and the shared HUD in production.
+    @MainActor
+    private func flashMode() {
+        let language = displayLanguageOverride ?? DisplayLanguageStore.shared
+        let text = language.string(
+            isAlphanumericPassthrough ? .macosModeFlashAlphanumeric : .macosModeFlashTaigi,
+        )
+        if let modeFlashOverride {
+            modeFlashOverride(text)
+        } else {
+            ModeFlashPanel.shared.flash(text)
+        }
+    }
+
+    /// Back to Taigi, and any half-seen Shift tap forgotten. Session
+    /// boundaries call this: fresh focus types Taigi, and a Shift pressed in
+    /// one session must not decide in the next.
+    @MainActor
+    private func resetAlphanumericMode() {
+        isAlphanumericPassthrough = false
+        shiftTapDetector.cancelPriming()
     }
 
     // MARK: - Candidates
@@ -823,6 +957,7 @@ public final class TaigiInputController: IMKInputController {
     private func endSession(_ client: IMKTextInput?) {
         finishComposition(into: client)
         ComposingSessionCoordinator.shared.release(sessionToken)
+        resetAlphanumericMode()
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked

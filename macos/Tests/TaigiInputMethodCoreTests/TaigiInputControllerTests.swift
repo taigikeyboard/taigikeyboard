@@ -118,18 +118,10 @@ final class TaigiInputControllerTests: XCTestCase {
         XCTAssertEqual(client.writes, [])
     }
 
-    func testRecognizedEvents_isKeyDownOnly() throws {
-        let controller = try TestFixtures.makeInputController()
-
-        XCTAssertEqual(
-            controller.recognizedEvents(nil),
-            Int(NSEvent.EventTypeMask.keyDown.rawValue),
-            """
-            IMK only sends `commitComposition:` on a click outside the marked region for \
-            input methods whose mask is exactly keyDown (IMKInputController.h:154-157)
-            """,
-        )
-    }
+    // The event-mask pin moved: widening past keyDown costs IMK's automatic
+    // commit-on-click, and the mask, the manual `commitComposition` override
+    // that pays that cost, and the click-outside regression are one contract —
+    // pinned together in `ShiftAlphanumericControllerTests`.
 
     // MARK: - Helpers
 

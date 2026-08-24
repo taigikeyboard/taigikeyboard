@@ -73,6 +73,60 @@
         "ja": "漢字とローマ字を入れ替え中は全角句読点を使用"
       }
     },
+    "shiftToggleAlphanumeric": {
+      "comment": "Settings toggle: a solo Shift tap switches between Taigi and alphanumeric passthrough.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Shift 切換英數",
+        "tailo": "Shift tshiat-uānn ing-sòo",
+        "poj": "Shift chhiat-ōaⁿ eng-sò͘",
+        "en": "Shift Switches to ABC",
+        "ja": "Shiftキーで英数に切り替え"
+      }
+    },
+    "modeFlashAlphanumeric": {
+      "comment": "HUD flash after a Shift tap: the keyboard is now alphanumeric passthrough.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "英數",
+        "tailo": "Ing-sòo",
+        "poj": "Eng-sò͘",
+        "en": "ABC",
+        "ja": "英数"
+      }
+    },
+    "modeFlashTaigi": {
+      "comment": "HUD flash after a Shift tap: the keyboard is back to Taigi.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語",
+        "tailo": "Tâi-gí",
+        "poj": "Tâi-gí",
+        "en": "Taigi",
+        "ja": "台語"
+      }
+    },
     "shortcutToggleRomanization": {
       "comment": "Shortcut-recorder row: the hotkey that switches between the two romanizations. Each row is authored whole rather than composed from the setting's own label, whose wording is a verb phrase in several languages.",
       "scope": {

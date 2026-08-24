@@ -93,6 +93,17 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: true,
         )
 
+        /// Whether a solo Shift tap toggles 英數 passthrough
+        /// (`ShiftTapDetector`). macOS-only — the phones have no Shift key to
+        /// tap — so the default is owned here. ON because the gesture is the
+        /// one MOE 輸入法 users arrive with; the preference stores only the
+        /// permission, never the current mode, which is per-session and
+        /// volatile.
+        static let isShiftToggleAlphanumericEnabled = SettingsKey(
+            name: "shiftTogglesAlphanumericEnabled",
+            defaultValue: true,
+        )
+
         // The dictionary sources. Key spellings are the iOS ones verbatim
         // (`SharedSettings.swift:53-66`) — including `khiin`, which is the one
         // key with no `Enabled` suffix. The name on the left is the engine's
@@ -506,6 +517,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var isFullWidthPunctuationEnabled: Bool {
         get { bool(Keys.isFullWidthPunctuationEnabled) }
         set { userDefaults.set(newValue, forKey: Keys.isFullWidthPunctuationEnabled.name) }
+    }
+
+    /// Whether a solo Shift tap toggles 英數 passthrough. Read on each
+    /// completed tap, never by the engine.
+    var isShiftToggleAlphanumericEnabled: Bool {
+        get { bool(Keys.isShiftToggleAlphanumericEnabled) }
+        set { userDefaults.set(newValue, forKey: Keys.isShiftToggleAlphanumericEnabled.name) }
     }
 
     /// The app UI display language tag. Read as a raw tag rather than a `DisplayLanguage` so a value
