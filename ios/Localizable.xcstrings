@@ -1820,7 +1820,7 @@
       }
     },
     "i18n_dictionary_searchPlaceholder": {
-      "comment": "Search-field placeholder in the dictionary browser.",
+      "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS 自訂詞庫 pane.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3368,7 +3368,7 @@
       }
     },
     "i18n_settings_inputMode": {
-      "comment": "Settings row + sub-screen title for selecting the active input mode.",
+      "comment": "Settings row + sub-screen title for selecting the active input mode. On macOS it labels the picker that chooses between TL and POJ.",
       "extractionState": "manual",
       "localizations": {
         "en": {

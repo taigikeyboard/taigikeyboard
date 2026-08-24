@@ -79,7 +79,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // pane is named after it.
         XCTAssertEqual(
             items.map(\.title),
-            ["一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理", "", "檢查更新"],
+            ["一般", "外觀", "快速齒", "自訂詞庫", "辭典管理", "", "檢查更新"],
         )
         XCTAssertEqual(items.filter(\.isSeparatorItem).count, 1)
         XCTAssertFalse(try XCTUnwrap(items.first).isSeparatorItem)
@@ -118,7 +118,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     }
 
     /// The general form of the rule above: only a doorway may claim a key. A
-    /// row that claims one the user cannot see and re-record in the 快捷鍵
+    /// row that claims one the user cannot see and re-record in the 快速齒
     /// pane is a key taken from the host that no surface admits to.
     func testOnlyTheDoorwayRows_claimAKey() throws {
         let doorwaySelectors = Set(Self.doorways.map(\.selector))

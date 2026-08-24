@@ -150,7 +150,7 @@ struct UserDataFilterField: View {
     @Binding var text: String
 
     var body: some View {
-        TextField(language.string(.macosFilterPlaceholder), text: $text)
+        TextField(language.string(.dictionarySearchPlaceholder), text: $text)
             .textFieldStyle(.roundedBorder)
     }
 }

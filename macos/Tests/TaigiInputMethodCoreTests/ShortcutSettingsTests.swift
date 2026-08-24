@@ -3,7 +3,7 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// What a unit test can hold the 快捷鍵 pane's rows to, given a SwiftUI
+/// What a unit test can hold the 快速齒 pane's rows to, given a SwiftUI
 /// form cannot be brought up here: the raw values the rows persist, and the
 /// strings they read. Whether each row is wired to the right action is a render
 /// check, not a case below.

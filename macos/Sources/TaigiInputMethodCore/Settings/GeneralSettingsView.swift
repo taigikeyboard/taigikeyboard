@@ -55,7 +55,7 @@ struct GeneralSettingsView: View {
     private var settingsForm: some View {
         Form {
             Section {
-                Picker(language.string(.macosRomanizationSystem), selection: $inputMode) {
+                Picker(language.string(.settingsInputMode), selection: $inputMode) {
                     Text(language.string(.settingsTlMode)).tag(InputMode.tl)
                     Text(language.string(.settingsPojMode)).tag(InputMode.poj)
                 }

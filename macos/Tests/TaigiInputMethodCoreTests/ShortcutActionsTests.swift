@@ -46,7 +46,7 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(
             labels(),
             [
-                "一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理",
+                "一般", "外觀", "快速齒", "自訂詞庫", "辭典管理",
                 "切換 台羅/白話字", "切換 漢羅對調",
             ],
         )

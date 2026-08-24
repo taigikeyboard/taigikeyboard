@@ -968,20 +968,21 @@
       }
     },
     "searchPlaceholder": {
-      "comment": "Search-field placeholder in the dictionary browser.",
+      "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS 自訂詞庫 pane.",
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "macos"
         ],
         "surfaces": [
           "host"
         ]
       },
       "values": {
-        "hanji": "拍字揣詞",
-        "tailo": "phah-jī tshuē sû",
-        "poj": "phah-jī chhōe sû",
+        "hanji": "揣字",
+        "tailo": "tshuē jī",
+        "poj": "chhōe jī",
         "en": "Type to search",
         "ja": "入力して検索"
       }
@@ -1305,9 +1306,9 @@
         ]
       },
       "values": {
-        "hanji": "清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「拍字揣詞」。",
-        "tailo": "tshing-tuann kan-ta hián-sī thâu 100 hāng. beh tshuē kî-thann kì-lio̍k, tshiánn iōng ē-kha ê \"phah-jī tshuē sû\".",
-        "poj": "chheng-toaⁿ kan-ta hián-sī thâu 100 hāng. beh chhōe kî-thaⁿ kì-lio̍k, chhiáⁿ iōng ē-kha ê \"phah-jī chhōe sû\".",
+        "hanji": "清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「揣字」。",
+        "tailo": "tshing-tuann kan-ta hián-sī thâu 100 hāng. beh tshuē kî-thann kì-lio̍k, tshiánn iōng ē-kha ê \"tshuē jī\".",
+        "poj": "chheng-toaⁿ kan-ta hián-sī thâu 100 hāng. beh chhōe kî-thaⁿ kì-lio̍k, chhiáⁿ iōng ē-kha ê \"chhōe jī\".",
         "en": "The list shows the first 100 records. Use the \"Type to search\" field below to find other records.",
         "ja": "一覧には先頭の 100 件だけを表示します。ほかの記録は、下の「入力して検索」で検索してください。"
       }

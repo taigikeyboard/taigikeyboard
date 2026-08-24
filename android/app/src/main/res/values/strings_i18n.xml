@@ -73,7 +73,7 @@
     <string name="i18n_dictionary_kautianAccentSintik">新竹偏泉腔</string>
     <string name="i18n_dictionary_kautianAccentTaichung">臺中偏漳腔</string>
     <string name="i18n_dictionary_kautianNameAppendix">姓名附錄</string>
-    <string name="i18n_dictionary_searchPlaceholder">拍字揣詞</string>
+    <string name="i18n_dictionary_searchPlaceholder">揣字</string>
     <string name="i18n_dictionary_noResults">揣無結果</string>
     <string name="i18n_dictionary_lookupChhoe">ChhoeTaigi 辭典</string>
     <string name="i18n_dictionary_lookupMoe">教育部辭典</string>
@@ -90,7 +90,7 @@
     <string name="i18n_dictionary_clearFrequencyMessage">確定欲刪除所有詞頻紀錄？</string>
     <string name="i18n_dictionary_clearAssociationMessage">確定欲刪除所有詞關聯紀錄？</string>
     <string name="i18n_dictionary_noData">無資料</string>
-    <string name="i18n_dictionary_filterHint">清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「拍字揣詞」。</string>
+    <string name="i18n_dictionary_filterHint">清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「揣字」。</string>
     <string name="i18n_dictionary_backupRestore">備份復原</string>
     <string name="i18n_dictionary_exportBackup">一擺全出</string>
     <string name="i18n_dictionary_importBackup">一擺全入</string>
@@ -179,7 +179,7 @@
     <string name="i18n_nav_tabSettings">設定</string>
     <string name="i18n_settings_reset">恢復</string>
     <string name="i18n_settings_inputMode">輸入模式</string>
-    <string name="i18n_settings_displayLanguage">顯示語言</string>
+    <string name="i18n_settings_displayLanguage">介面語言</string>
     <string name="i18n_settings_displayLanguageAutomatic">自動</string>
     <string name="i18n_settings_pojMode">白話字</string>
     <string name="i18n_settings_tlMode">台羅</string>

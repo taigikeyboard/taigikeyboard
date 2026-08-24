@@ -19,24 +19,6 @@
         "ja": "一般"
       }
     },
-    "romanizationSystem": {
-      "comment": "Picker label for which romanization is typed. The macOS picker offers TL and POJ only.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "羅馬字系統",
-        "tailo": "lô-má-jī hē-thóng",
-        "poj": "lô-má-jī hē-thóng",
-        "en": "Romanization",
-        "ja": "ローマ字体系"
-      }
-    },
     "candidateSection": {
       "comment": "Settings section header over the candidate-behaviour toggles.",
       "scope": {
@@ -73,24 +55,6 @@
         "ja": "漢字とローマ字を入れ替え"
       }
     },
-    "shortcutOpenSettings": {
-      "comment": "Shortcut-recorder row: the hotkey that opens this settings window.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "開啟設定",
-        "tailo": "khai-khé siat-tīng",
-        "poj": "khai-khé siat-tēng",
-        "en": "Open Settings",
-        "ja": "設定を開く"
-      }
-    },
     "shortcutToggleRomanization": {
       "comment": "Shortcut-recorder row: the hotkey that switches between the two romanizations. Each row is authored whole rather than composed from the setting's own label, whose wording is a verb phrase in several languages.",
       "scope": {
@@ -125,42 +89,6 @@
         "poj": "chhiat-ōaⁿ hàn-lô tùi-tiāu",
         "en": "Toggle Swapping Hanji and Romanization",
         "ja": "漢字とローマ字の入れ替えを切り替える"
-      }
-    },
-    "shortcutToggleBothScripts": {
-      "comment": "Shortcut-recorder row: the hotkey that turns bracket annotation on and off. Names the setting by the shared label its settings row uses.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "切換 括號標註",
-        "tailo": "tshiat-uānn kuat-hō phiau-tsù",
-        "poj": "chhiat-ōaⁿ koat-hō phiau-chù",
-        "en": "Toggle Bracket Annotation",
-        "ja": "括弧での併記を切り替える"
-      }
-    },
-    "shortcutToggleLiteralRomanCandidate": {
-      "comment": "Shortcut-recorder row: the hotkey that shows or hides the typed-romanization candidate. Names the setting by the shared label its settings row uses.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "切換 顯示原本羅馬字候選",
-        "tailo": "tshiat-uānn hián-sī guân-pún lô-má-jī hāu-suán",
-        "poj": "chhiat-ōaⁿ hián-sī goân-pún lô-má-jī hāu-soán",
-        "en": "Toggle the Typed Romanization Candidate",
-        "ja": "入力したローマ字候補の表示を切り替える"
       }
     },
     "menuFile": {
@@ -323,24 +251,6 @@
         "poj": "choân-soán",
         "en": "Select All",
         "ja": "すべてを選択"
-      }
-    },
-    "dictionarySearchSection": {
-      "comment": "Settings sidebar row + pane title: the dictionary-search page.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "揣辭典",
-        "tailo": "tshuē sû-tián",
-        "poj": "chhōe sû-tián",
-        "en": "Look Up",
-        "ja": "辞書を引く"
       }
     },
     "dictionarySourcesLink": {
@@ -539,24 +449,6 @@
         "poj": "che kái bē tńg--lâi.",
         "en": "This cannot be undone.",
         "ja": "この操作は取り消せません。"
-      }
-    },
-    "userDataPrivacyFooter": {
-      "comment": "Footer under the 自訂詞庫 page's CSV actions: where the data lives and that it never leaves the Mac.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "這份資料干焦囥佇你的電腦，袂上傳。匯出的檔案內底有你拍過的字，請家己保管好。",
-        "tailo": "tsit hūn tsu-liāu kan-na khǹg tī lí ê tiān-náu, bē siōng-thuân. huē-tshut ê tóng-àn lāi-té ū lí phah--kuè ê jī, tshiánn ka-kī pó-kuán hó.",
-        "poj": "chit hūn chu-liāu kan-na khǹg tī lí ê tiān-náu, bē siōng-thoân. hōe-chhut ê tóng-àn lāi-té ū lí phah--kòe ê jī, chhiáⁿ ka-kī pó-koán hó.",
-        "en": "This data stays on your Mac and is never uploaded. An exported file contains words you have typed, so keep it safe.",
-        "ja": "このデータはこの Mac にのみ保存され、アップロードされません。書き出したファイルには入力した単語が含まれるため、大切に保管してください。"
       }
     },
     "customDictEmpty": {
@@ -804,9 +696,9 @@
         ]
       },
       "values": {
-        "hanji": "快捷鍵",
-        "tailo": "khuài-tsia̍t kiān",
-        "poj": "khoài-chia̍t kiān",
+        "hanji": "快速齒",
+        "tailo": "khuài-sok khí",
+        "poj": "khoài-sok khí",
         "en": "Shortcuts",
         "ja": "ショートカット"
       }
@@ -1020,9 +912,9 @@
         ]
       },
       "values": {
-        "hanji": "清掉這个快捷鍵",
-        "tailo": "tshing-tiāu tsit ê khuài-tsia̍t kiān",
-        "poj": "chheng-tiāu chit ê khoài-chia̍t kiān",
+        "hanji": "清掉這个快速齒",
+        "tailo": "tshing-tiāu tsit ê khuài-sok khí",
+        "poj": "chheng-tiāu chit ê khoài-sok khí",
         "en": "Clear this shortcut",
         "ja": "このショートカットを消去"
       }
@@ -1506,24 +1398,6 @@
         "poj": "ha̍k-si̍p kì-lio̍k chheng bē tiāu",
         "en": "Could Not Clear Learning Records",
         "ja": "学習記録を消去できませんでした"
-      }
-    },
-    "filterPlaceholder": {
-      "comment": "Filter-box placeholder on the 自訂詞庫 pane. macOS-only wording: the box filters the entries already on the page, so it says 揣字 rather than the three-platform dictionary.searchPlaceholder.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "揣字",
-        "tailo": "tshuē jī",
-        "poj": "chhōe jī",
-        "en": "Type to search",
-        "ja": "入力して検索"
       }
     }
   }
