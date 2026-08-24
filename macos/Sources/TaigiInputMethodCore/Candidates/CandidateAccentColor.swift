@@ -33,7 +33,8 @@ final class CandidateAccentColor {
 
     private(set) var isMulticolor: Bool
     /// `.some(nil)` caches "this bundle has no accent" so a host without one
-    /// is not re-resolved on every keystroke.
+    /// is not re-resolved on every keystroke. `reresolve()` empties it;
+    /// otherwise an entry lives as long as the process does.
     private var bundleAccentColorCache: [String: NSColor?] = [:]
     private var appearanceObservation: NSKeyValueObservation?
 
@@ -53,6 +54,16 @@ final class CandidateAccentColor {
 
     private func reresolve() {
         isMulticolor = UserDefaults.standard.object(forKey: Self.accentColorKey) == nil
+        // Flushed here rather than left to live as long as the process does.
+        // A host's accent comes from its Info.plist, so it changes when that
+        // app is replaced by a new version, and there is no direct signal for
+        // an app being updated — launch and terminate notifications describe
+        // process lifecycle, not bundle contents. Dropping the answers at the
+        // one moment every colour is already being re-resolved picks an
+        // updated host up at the user's next appearance or accent change
+        // instead of only at the next restart of the input method, and costs
+        // one re-read per host seen again after the flush.
+        bundleAccentColorCache.removeAll()
         NotificationCenter.default.post(name: Self.didChange, object: nil)
     }
 
