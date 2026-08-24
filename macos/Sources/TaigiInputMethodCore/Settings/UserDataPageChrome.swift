@@ -189,36 +189,28 @@ struct UserDataFilterField: View {
     }
 }
 
-/// The 自訂詞庫 page's CSV pair and its clear-everything button. Its one caller
+/// The 自訂詞庫 page's CSV pair and its delete-everything row. Its one caller
 /// since the 詞頻 / 詞關聯 pages were removed, kept a separate view because the
 /// page it serves is already long enough without three more rows inline.
+///
+/// The delete acts on the click, with nothing to confirm (USER 2026-08-25):
+/// the step it used to cost is paid on every deliberate use, and exporting to
+/// CSV is the escape hatch that makes the entries recoverable.
 struct UserDataActionsSection: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     let exportTitle: StringKey
     let importTitle: StringKey
-    let clearTitle: StringKey
-    let clearConfirmation: StringKey
+    let deleteTitle: StringKey
     let onExport: () -> Void
     let onImport: () -> Void
-    let onClear: () -> Void
-
-    @State private var isConfirmingClear = false
+    let onDelete: () -> Void
 
     var body: some View {
         Section {
             Button(language.string(exportTitle), action: onExport)
             Button(language.string(importTitle), action: onImport)
-            Button(language.string(clearTitle), role: .destructive) { isConfirmingClear = true }
-                .confirmationDialog(
-                    language.string(clearConfirmation),
-                    isPresented: $isConfirmingClear,
-                ) {
-                    Button(language.string(clearTitle), role: .destructive, action: onClear)
-                    Button(language.string(.commonCancel), role: .cancel) {}
-                } message: {
-                    Text(language.string(.macosIrreversible))
-                }
+            WideActionRow(titleKey: deleteTitle, role: .destructive, action: onDelete)
         }
     }
 }

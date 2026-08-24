@@ -75,6 +75,12 @@ struct ShortcutSettingsView: View {
             } header: {
                 Text(language.string(.macosKeyboardActionsSection))
             }
+
+            // Its own section, at the end: it acts on every row above it rather
+            // than on any one of them.
+            Section {
+                WideActionRow(titleKey: .themeEditorResetAll, action: restoreDefaults)
+            }
         }
         .formStyle(.grouped)
         .onChange(of: candidateSlotModifier) { _, newModifier in
@@ -137,6 +143,33 @@ struct ShortcutSettingsView: View {
             ShortcutConflicts.resolveGlobalRows(after: chord)
         }
         store.setComposingChord(chord, for: action)
+        reload()
+    }
+
+    /// Puts every row on this pane back to the key it ships with.
+    ///
+    /// Both registries at once, for the reason the pane is one list to begin
+    /// with: which rows register a Carbon hotkey and which are read by the key
+    /// classifier is not a distinction the reader makes, so a button that
+    /// restored half of them would leave rows it visibly did not touch. It is
+    /// also the only way home for a modifierless default — the library's
+    /// recorder refuses to record one, so nothing else can put the bare
+    /// backtick back on 漢羅對調.
+    ///
+    /// Told apart by how each half stores a default: this side removes the
+    /// stored value so the row reads as never touched, while
+    /// `KeyboardShortcuts.reset` writes each name's initial shortcut back into
+    /// its own registry. The user-visible outcome is the same; only the first
+    /// keeps a later version free to change what the default is.
+    ///
+    /// No conflict resolution afterwards. The three tiers' shipped defaults
+    /// hold no chord in common — `ShortcutDefaultsTests` pins that — and
+    /// running the resolver anyway would be worse than redundant: on a future
+    /// collision it would quietly empty one of the rows this button had just
+    /// restored, so the button would stop meaning "the defaults".
+    private func restoreDefaults() {
+        store.resetComposingShortcuts()
+        KeyboardShortcuts.reset(ShortcutAction.allCases.map(\.name))
         reload()
     }
 

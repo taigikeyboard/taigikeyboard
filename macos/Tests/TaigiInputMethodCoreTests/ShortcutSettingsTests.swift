@@ -89,8 +89,48 @@ final class ShortcutSettingsTests: XCTestCase {
         }
     }
 
+    /// Every row comes back, whatever state the domain was left in: a chord the
+    /// user recorded, the empty string that means a row was cleared, and a value
+    /// this build cannot parse — the three ways a row can hold something other
+    /// than its default.
+    func testResetComposingShortcuts_returnsEveryRowToItsDefault() throws {
+        let store = SettingsStore(userDefaults: userDefaults)
+        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .commitHanji)
+        store.setComposingChord(nil, for: .commitRomanization)
+        userDefaults.set("not a chord", forKey: ComposingAction.pageForward.settingsKeyName)
+        userDefaults.set(CandidateSlotModifier.option.rawValue, forKey: SettingsStore.Keys.candidateSlotModifier.name)
+
+        store.resetComposingShortcuts()
+
+        let bindings = store.composingKeyBindings
+        for action in ComposingAction.allCases {
+            XCTAssertEqual(bindings.chord(for: action), action.defaultChord, "\(action) did not come back")
+        }
+        XCTAssertEqual(bindings.slotModifier, .control)
+    }
+
+    /// Removed, not written over: a stored default would be indistinguishable
+    /// from a chord the user chose, and would pin this version's default onto
+    /// an install a later version means to move.
+    func testResetComposingShortcuts_leavesNothingStored() throws {
+        let store = SettingsStore(userDefaults: userDefaults)
+        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .commitHanji)
+        store.setComposingChord(nil, for: .commitRomanization)
+
+        store.resetComposingShortcuts()
+
+        for action in ComposingAction.allCases {
+            XCTAssertNil(
+                userDefaults.object(forKey: action.settingsKeyName),
+                "\(action) still has a stored value",
+            )
+        }
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateSlotModifier.name))
+    }
+
     private static let paneStrings: [StringKey] = [
         .macosShortcutsTab,
+        .themeEditorResetAll,
         .macosBindingSlotModifier,
         .macosShortcutUnbound,
         .macosShortcutRecording,

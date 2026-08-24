@@ -147,7 +147,7 @@ final class CustomDictionaryPageModel {
 struct CustomDictionaryPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// Needed only by the 清除學習紀錄 row; the entries list reads
+    /// Needed only by the 刪除學習紀錄 row; the entries list reads
     /// `stores.customDictionary` through its own model.
     private let stores: UserDataStores
 
@@ -157,8 +157,7 @@ struct CustomDictionaryPage: View {
     /// The table's selection — the row `−` acts on, and the row a double
     /// click edits.
     @State private var selectedRowID: CustomDictionaryRow.ID?
-    @State private var isConfirmingClearLearning = false
-    @State private var clearOutcome: ClearOutcome?
+    @State private var deleteOutcome: DeleteOutcome?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
 
@@ -189,35 +188,23 @@ struct CustomDictionaryPage: View {
             UserDataActionsSection(
                 exportTitle: .dictionaryExportCSV,
                 importTitle: .dictionaryImportCSV,
-                clearTitle: .dictionaryDeleteAll,
-                clearConfirmation: .dictionaryDeleteAllMessage,
+                deleteTitle: .dictionaryDeleteAll,
                 onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportCSV) } },
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
-                onClear: { Task { await model.deleteAll() } },
+                onDelete: { Task { await model.deleteAll() } },
             )
 
             Section {
-                Button(language.string(.macosClearLearningRecords), role: .destructive) {
-                    isConfirmingClearLearning = true
+                WideActionRow(titleKey: .macosClearLearningRecords, role: .destructive) {
+                    Task { await deleteLearningRecords() }
                 }
             }
         }
         .formStyle(.grouped)
-        // Two alerts rather than one with a mode: the question and the receipt
-        // are different states, and a single flag would have to say which.
-        .confirmationDialog(
-            language.string(.macosClearLearningRecords),
-            isPresented: $isConfirmingClearLearning,
-            titleVisibility: .visible,
-        ) {
-            Button(language.string(.macosClearLearningRecords), role: .destructive) {
-                Task { await clearLearningRecords() }
-            }
-            Button(language.string(.commonCancel), role: .cancel) {}
-        } message: {
-            Text(language.string(.macosClearLearningRecordsMessage))
-        }
-        .alert(item: $clearOutcome) { outcome in
+        // The receipt, and only the receipt: the row acts on its click
+        // (USER 2026-08-25), and these records have no visible surface of their
+        // own, so this alert is the whole of what the user is told.
+        .alert(item: $deleteOutcome) { outcome in
             Alert(
                 title: Text(language.string(outcome.titleKey)),
                 message: outcome.diagnostic.map(Text.init),
@@ -233,29 +220,29 @@ struct CustomDictionaryPage: View {
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }
 
-    /// The receipt for `clearLearningRecords`: a title, and on failure the
+    /// The receipt for `deleteLearningRecords`: a title, and on failure the
     /// store's own error text. That text is English and stays that way — it
     /// names a SQLite condition, not something the product has wording for,
     /// the same rule `UserDataPageMessage.failure` follows. Local to this pane
     /// rather than a `UserDataPageMessage` case because the success alert has
     /// no body at all, and there is no long-running work here to veil.
-    private struct ClearOutcome: Identifiable {
+    private struct DeleteOutcome: Identifiable {
         let titleKey: StringKey
         /// `nil` on success — the alert then shows a title and nothing else.
         let diagnostic: String?
 
         var id: String { "\(titleKey.rawValue)|\(diagnostic ?? "")" }
 
-        static let cleared = ClearOutcome(
+        static let deleted = DeleteOutcome(
             titleKey: .macosClearLearningRecordsDone, diagnostic: nil,
         )
 
-        static func failed(_ diagnostic: String) -> ClearOutcome {
-            ClearOutcome(titleKey: .macosClearLearningRecordsFailed, diagnostic: diagnostic)
+        static func failed(_ diagnostic: String) -> DeleteOutcome {
+            DeleteOutcome(titleKey: .macosClearLearningRecordsFailed, diagnostic: diagnostic)
         }
     }
 
-    /// Clears both learning tables.
+    /// Deletes both learning tables.
     ///
     /// Two calls rather than one transaction: they are separate database files,
     /// so there is no transaction that could span them. The second is attempted
@@ -265,7 +252,7 @@ struct CustomDictionaryPage: View {
     ///
     /// The diagnostic names its table, because a bare SQLite string cannot say
     /// which of the two could not be emptied.
-    private func clearLearningRecords() async {
+    private func deleteLearningRecords() async {
         var failures: [String] = []
         do {
             _ = try await stores.frequency.deleteAll()
@@ -277,8 +264,8 @@ struct CustomDictionaryPage: View {
         } catch {
             failures.append("user_association: \(error)")
         }
-        clearOutcome = failures.isEmpty
-            ? .cleared
+        deleteOutcome = failures.isEmpty
+            ? .deleted
             : .failed(failures.joined(separator: "\n"))
     }
 

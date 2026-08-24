@@ -1365,7 +1365,7 @@
       }
     },
     "clearLearningRecords": {
-      "comment": "Destructive button in the 一般 pane: clears the frequency AND association records in one go. macOS has no per-record management UI, so this is the only way to discard what the keyboard learned.",
+      "comment": "Destructive row in the 詞庫 pane: deletes the frequency AND association records in one go. Acts on click, with no confirmation (USER 2026-08-25). macOS has no per-record management UI, so this is the only way to discard what the keyboard learned.",
       "scope": {
         "platforms": [
           "macos"
@@ -1375,11 +1375,11 @@
         ]
       },
       "values": {
-        "hanji": "清除學習紀錄",
-        "tailo": "tshing-tû ha̍k-si̍p kì-lio̍k",
-        "poj": "chheng-tû ha̍k-si̍p kì-lio̍k",
-        "en": "Clear Learning Records",
-        "ja": "学習記録を消去"
+        "hanji": "刪除學習紀錄",
+        "tailo": "san-tû ha̍k-si̍p kì-lio̍k",
+        "poj": "san-tû ha̍k-si̍p kì-lio̍k",
+        "en": "Delete Learning Records",
+        "ja": "学習記録を削除"
       }
     },
     "clearLearningRecordsMessage": {
@@ -1401,7 +1401,7 @@
       }
     },
     "clearLearningRecordsDone": {
-      "comment": "Alert title after the 清除學習紀錄 button finishes.",
+      "comment": "Alert title after the 刪除學習紀錄 row finishes.",
       "scope": {
         "platforms": [
           "macos"
@@ -1419,7 +1419,7 @@
       }
     },
     "clearLearningRecordsFailed": {
-      "comment": "Alert title when 清除學習紀錄 could not empty a table. The store's own diagnostic follows as the body.",
+      "comment": "Alert title when 刪除學習紀錄 could not empty a table. The store's own diagnostic follows as the body.",
       "scope": {
         "platforms": [
           "macos"

@@ -427,6 +427,21 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         )
     }
 
+    /// Puts every key the shortcuts pane owns on this side back to shipped state.
+    ///
+    /// Removes the stored values rather than writing the defaults over them, which
+    /// is the difference between "never touched" and "cleared": a written-through
+    /// default would be indistinguishable from a chord the user chose, and would
+    /// pin this version's default onto an install that a later version means to
+    /// move. The global half of the pane is `KeyboardShortcuts`' own registry and
+    /// is restored by its `reset`, which writes each name's initial shortcut back.
+    func resetComposingShortcuts() {
+        for action in ComposingAction.allCases {
+            userDefaults.removeObject(forKey: action.settingsKeyName)
+        }
+        userDefaults.removeObject(forKey: Keys.candidateSlotModifier.name)
+    }
+
     /// The romanization being typed. Written as well as read, which is what
     /// keeps it out of the run of read-only choices above.
     var inputMode: InputMode {

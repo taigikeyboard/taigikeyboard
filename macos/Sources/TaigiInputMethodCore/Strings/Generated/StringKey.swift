@@ -157,4 +157,5 @@ enum StringKey: String {
     case settingsAutoSpace = "i18n_settings_autoSpace"
     case themeCustomFont = "i18n_theme_customFont"
     case themeCandidateTextSize = "i18n_theme_candidateTextSize"
+    case themeEditorResetAll = "i18n_theme_editorResetAll"
 }

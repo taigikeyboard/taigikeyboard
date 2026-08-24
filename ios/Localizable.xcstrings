@@ -4142,7 +4142,7 @@
       }
     },
     "i18n_theme_editorResetAll": {
-      "comment": "Theme editor button: reset the draft appearance back to defaults.",
+      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; the macOS shortcuts pane reuses it for the same action.",
       "extractionState": "manual",
       "localizations": {
         "en": {

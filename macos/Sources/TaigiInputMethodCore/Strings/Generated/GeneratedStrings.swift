@@ -144,7 +144,7 @@ enum GeneratedStrings {
         .macosUpdatePendingVersionLabel: "有新版本 %1$@",
         .macosUpdateNotificationsOffNote: "系統通知拍開，才會收著更新通知",
         .macosUpdateOpenNotificationSettings: "去系統設定",
-        .macosClearLearningRecords: "清除學習紀錄",
+        .macosClearLearningRecords: "刪除學習紀錄",
         .macosClearLearningRecordsMessage: "詞頻佮詞關聯攏會清掉。這袂影響你的自訂詞庫，後續拍字閣會學轉來。",
         .macosClearLearningRecordsDone: "學習紀錄清掉矣",
         .macosClearLearningRecordsFailed: "學習紀錄清袂掉",
@@ -159,6 +159,7 @@ enum GeneratedStrings {
         .settingsAutoSpace: "自動空白",
         .themeCustomFont: "字型設定",
         .themeCandidateTextSize: "候選詞大細",
+        .themeEditorResetAll: "恢復預設設定",
     ]
     private static let english: [StringKey: String] = [
         .commonCancel: "Cancel",
@@ -301,7 +302,7 @@ enum GeneratedStrings {
         .macosUpdatePendingVersionLabel: "Version %1$@ is available",
         .macosUpdateNotificationsOffNote: "Turn on system notifications to receive update notices",
         .macosUpdateOpenNotificationSettings: "Open System Settings",
-        .macosClearLearningRecords: "Clear Learning Records",
+        .macosClearLearningRecords: "Delete Learning Records",
         .macosClearLearningRecordsMessage: "Both frequency and association records will be cleared. Your custom dictionary is unaffected, and typing will build them up again.",
         .macosClearLearningRecordsDone: "Learning Records Cleared",
         .macosClearLearningRecordsFailed: "Could Not Clear Learning Records",
@@ -316,6 +317,7 @@ enum GeneratedStrings {
         .settingsAutoSpace: "Auto-Space",
         .themeCustomFont: "Font",
         .themeCandidateTextSize: "Candidate Text Size",
+        .themeEditorResetAll: "Reset to Defaults",
     ]
     private static let japanese: [StringKey: String] = [
         .commonCancel: "キャンセル",
@@ -458,7 +460,7 @@ enum GeneratedStrings {
         .macosUpdatePendingVersionLabel: "バージョン %1$@ があります",
         .macosUpdateNotificationsOffNote: "システム通知をオンにすると、アップデートのお知らせを受け取れます",
         .macosUpdateOpenNotificationSettings: "システム設定を開く",
-        .macosClearLearningRecords: "学習記録を消去",
+        .macosClearLearningRecords: "学習記録を削除",
         .macosClearLearningRecordsMessage: "単語頻度と単語連携の記録をすべて消去します。カスタム辞書には影響せず、入力を続ければ再び学習されます。",
         .macosClearLearningRecordsDone: "学習記録を消去しました",
         .macosClearLearningRecordsFailed: "学習記録を消去できませんでした",
@@ -473,6 +475,7 @@ enum GeneratedStrings {
         .settingsAutoSpace: "自動スペース",
         .themeCustomFont: "フォント",
         .themeCandidateTextSize: "候補の文字の大きさ",
+        .themeEditorResetAll: "既定値に戻す",
     ]
     private static let tailo: [StringKey: String] = [
         .commonCancel: "tshú-siau",
@@ -615,7 +618,7 @@ enum GeneratedStrings {
         .macosUpdatePendingVersionLabel: "ū sin pán-pún %1$@",
         .macosUpdateNotificationsOffNote: "Hē-thóng thong-ti phah-khui, tsiah ē siu--tio̍h king-sin thong-ti",
         .macosUpdateOpenNotificationSettings: "khì hē-thóng siat-tīng",
-        .macosClearLearningRecords: "tshing-tû ha̍k-si̍p kì-lio̍k",
+        .macosClearLearningRecords: "san-tû ha̍k-si̍p kì-lio̍k",
         .macosClearLearningRecordsMessage: "sû-pîn kah sû-kuan-liân lóng ē tshing-tiāu. tse bē íng-hióng lí ê tsū-tīng-sû-khòo, āu-sio̍k phah-jī koh ē o̍h tńg-lâi.",
         .macosClearLearningRecordsDone: "ha̍k-si̍p kì-lio̍k tshing-tiāu ah",
         .macosClearLearningRecordsFailed: "ha̍k-si̍p kì-lio̍k tshing bē tiāu",
@@ -630,6 +633,7 @@ enum GeneratedStrings {
         .settingsAutoSpace: "tsū-tōng khàng-pe̍h",
         .themeCustomFont: "jī-hîng siat-tīng",
         .themeCandidateTextSize: "hāu-suán sû tuā-sè",
+        .themeEditorResetAll: "hue-ho̍k ī-siat siat-tīng",
     ]
     private static let poj: [StringKey: String] = [
         .commonCancel: "chhú-siau",
@@ -772,7 +776,7 @@ enum GeneratedStrings {
         .macosUpdatePendingVersionLabel: "ū sin pán-pún %1$@",
         .macosUpdateNotificationsOffNote: "Hē-thóng thong-ti phah-khui, chiah ē siu--tio̍h keng-sin thong-ti",
         .macosUpdateOpenNotificationSettings: "khì hē-thóng siat-tēng",
-        .macosClearLearningRecords: "chheng-tû ha̍k-si̍p kì-lio̍k",
+        .macosClearLearningRecords: "san-tû ha̍k-si̍p kì-lio̍k",
         .macosClearLearningRecordsMessage: "sû-pîn kah sû-koan-liân lóng ē chheng-tiāu. che bē éng-hióng lí ê chū-tēng-sû-khò͘, āu-sio̍k phah-jī koh ē o̍h tńg-lâi.",
         .macosClearLearningRecordsDone: "ha̍k-si̍p kì-lio̍k chheng-tiāu ah",
         .macosClearLearningRecordsFailed: "ha̍k-si̍p kì-lio̍k chheng bē tiāu",
@@ -787,6 +791,7 @@ enum GeneratedStrings {
         .settingsAutoSpace: "chū-tōng khàng-pe̍h",
         .themeCustomFont: "jī-hêng siat-tēng",
         .themeCandidateTextSize: "hāu-soán sû tōa-sè",
+        .themeEditorResetAll: "hoe-ho̍k ī-siat siat-tēng",
     ]
 
     static func lookup(_ language: DisplayLanguage, _ key: StringKey) -> String? {
