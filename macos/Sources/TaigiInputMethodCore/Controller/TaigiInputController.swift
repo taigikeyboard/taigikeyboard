@@ -491,10 +491,14 @@ public final class TaigiInputController: IMKInputController {
             manager.cancelComposition(executing: executor)
             dismissCandidates()
         case let .commitThenInsert(text):
-            // The auto space rides the same mutation as the commit —
-            // `AutoSpacePolicy.augmentInsert` explains why and where it lands.
+            // Mapped before the auto-space augmentation so the full-width
+            // character rides the same single mutation as the commit. The two
+            // policies never fire together — full-width serves the swapped
+            // mode, the auto-space gate the roman-first one — so the order
+            // only keeps the contract uniform, it never composes the rewrites.
+            let documentText = fullWidthMapped(text) ?? text
             let insert = AutoSpacePolicy.augmentInsert(
-                text,
+                documentText,
                 afterComposition: manager.displayText,
                 isGateActive: isAutoSpaceGateActive,
             )
@@ -512,10 +516,24 @@ public final class TaigiInputController: IMKInputController {
         case .passThrough:
             // Attaching punctuation typed right after an auto-inserted space
             // swaps with it (`guá ` + `?` → `guá? `) instead of reaching the
-            // host — the one pass-through key this input method consumes.
+            // host — one of the two pass-through keys this input method
+            // consumes. Read before the full-width map, though the two can
+            // never both apply: the swap needs the auto-space gate, the map
+            // needs the swapped mode, and the gate is off there.
             if let armedSwapCaretLocation,
                swapAutoSpace(with: key, armedAt: armedSwapCaretLocation, client: client, manager: manager)
             {
+                return true
+            }
+            // Full-width punctuation typed outside a composition — the other
+            // consumed pass-through key. The host cannot map a key it types
+            // itself, so the mapped character is written here instead, and the
+            // engine hears about it the same way it would have below.
+            if ComposingKeyIntent.isDocumentText(key), let characters = key.characters,
+               let mapped = fullWidthMapped(characters)
+            {
+                client.insertText(mapped, replacementRange: ClientEffectExecutor.atInsertionPoint)
+                manager.noteCharacterTypedOutsideComposition(mapped)
                 return true
             }
             // The host gets the key either way. Text going into the document
@@ -657,6 +675,21 @@ public final class TaigiInputController: IMKInputController {
     private func dismissCandidates() {
         fetchedCandidates = []
         candidatePresenter.hide(ownedBy: sessionToken)
+    }
+
+    // MARK: - Full-width punctuation
+
+    /// The full-width form of the text a punctuation key just typed, or nil
+    /// when the policy is inactive or the key is not one it maps — live, like
+    /// the auto-space gate below, so the settings toggle applies to the very
+    /// next key.
+    @MainActor
+    private func fullWidthMapped(_ text: String) -> String? {
+        guard FullWidthPunctuation.isActive(
+            isEnabled: settings.isFullWidthPunctuationEnabled,
+            isTranslateSwapped: settings.isTranslateSwapped,
+        ) else { return nil }
+        return FullWidthPunctuation.mapped(text)
     }
 
     // MARK: - Auto-space

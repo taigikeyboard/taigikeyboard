@@ -30,6 +30,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.isAutoSpaceEnabled.name)
     private var isAutoSpaceEnabled = SettingsStore.Keys.isAutoSpaceEnabled.defaultValue
 
+    @AppStorage(SettingsStore.Keys.isFullWidthPunctuationEnabled.name)
+    private var isFullWidthPunctuationEnabled = SettingsStore.Keys.isFullWidthPunctuationEnabled.defaultValue
+
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
     /// setting changes, and changing it means a trip to System Settings and back.
@@ -70,6 +73,11 @@ struct GeneralSettingsView: View {
                 }
 
                 Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
+
+                // The label names the mode it serves (漢羅對調), so a user in
+                // roman-first mode reads why their punctuation is unchanged
+                // rather than a switch that seems to do nothing.
+                Toggle(language.string(.macosFullWidthPunctuation), isOn: $isFullWidthPunctuationEnabled)
             }
 
             // The update rows. No toggle and no explanatory text (USER

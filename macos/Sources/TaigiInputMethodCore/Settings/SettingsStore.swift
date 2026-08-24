@@ -81,6 +81,18 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: true,
         )
 
+        /// Whether typed punctuation becomes full-width while the 漢羅對調
+        /// swap has Hanji coming first (`FullWidthPunctuation`). macOS-only
+        /// and platform-side — the engine never sees the mapped character
+        /// before it is document text — so like `isAutoSpaceEnabled` the
+        /// default is owned here. ON to match what every macOS Chinese input
+        /// method does for CJK output; roman-first output is untouched either
+        /// way, so a fresh install only notices this after swapping to Hanji.
+        static let isFullWidthPunctuationEnabled = SettingsKey(
+            name: "fullWidthPunctuationEnabled",
+            defaultValue: true,
+        )
+
         // The dictionary sources. Key spellings are the iOS ones verbatim
         // (`SharedSettings.swift:53-66`) — including `khiin`, which is the one
         // key with no `Enabled` suffix. The name on the left is the engine's
@@ -486,6 +498,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var isAutoSpaceEnabled: Bool {
         get { bool(Keys.isAutoSpaceEnabled) }
         set { userDefaults.set(newValue, forKey: Keys.isAutoSpaceEnabled.name) }
+    }
+
+    /// Whether typed punctuation becomes full-width in hanji-first output.
+    /// Read by the controller's two punctuation-insertion sites, never by the
+    /// engine.
+    var isFullWidthPunctuationEnabled: Bool {
+        get { bool(Keys.isFullWidthPunctuationEnabled) }
+        set { userDefaults.set(newValue, forKey: Keys.isFullWidthPunctuationEnabled.name) }
     }
 
     /// The app UI display language tag. Read as a raw tag rather than a `DisplayLanguage` so a value

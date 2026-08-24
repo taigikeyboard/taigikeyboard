@@ -55,6 +55,24 @@
         "ja": "漢字とローマ字を入れ替え"
       }
     },
+    "fullWidthPunctuation": {
+      "comment": "Settings toggle: map typed punctuation to full-width while the swap has Hanji coming first. The label names the mode so the roman-first reader knows why nothing changes there.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "漢羅對調時使用全形標點",
+        "tailo": "hàn-lô tuì-tiāu sî iōng tsuân-hîng phiau-tiám",
+        "poj": "hàn-lô tùi-tiāu sî iōng choân-hêng phiau-tiám",
+        "en": "Full-Width Punctuation When Swapped to Hanji",
+        "ja": "漢字とローマ字を入れ替え中は全角句読点を使用"
+      }
+    },
     "shortcutToggleRomanization": {
       "comment": "Shortcut-recorder row: the hotkey that switches between the two romanizations. Each row is authored whole rather than composed from the setting's own label, whose wording is a verb phrase in several languages.",
       "scope": {

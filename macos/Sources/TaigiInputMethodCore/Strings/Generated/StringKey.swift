@@ -69,6 +69,7 @@ enum StringKey: String {
     case macosGeneralTab = "i18n_macos_generalTab"
     case macosCandidateSection = "i18n_macos_candidateSection"
     case macosTranslateSwapped = "i18n_macos_translateSwapped"
+    case macosFullWidthPunctuation = "i18n_macos_fullWidthPunctuation"
     case macosShortcutToggleRomanization = "i18n_macos_shortcutToggleRomanization"
     case macosShortcutToggleTranslateSwapped = "i18n_macos_shortcutToggleTranslateSwapped"
     case macosMenuFile = "i18n_macos_menuFile"
