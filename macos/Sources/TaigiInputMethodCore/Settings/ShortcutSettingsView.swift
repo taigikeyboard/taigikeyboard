@@ -38,6 +38,22 @@ struct ShortcutSettingsView: View {
                 ForEach(ShortcutAction.allCases, id: \.self) { action in
                     KeyboardShortcuts.Recorder(action.label(language), name: action.name) { _ in
                         ShortcutConflicts.resolve(after: action)
+                        // The other registry, by the same rule: this recording
+                        // is the last writer, so a composing row holding the
+                        // same key empties. Carbon dispatches before the
+                        // classifier ever runs, so leaving that row would leave
+                        // a key that reads as bound and does nothing.
+                        ShortcutConflicts.resolveComposingRows(after: action, in: store)
+                        reload()
+                    }
+                    // The nine candidate-slot chords are the one thing this
+                    // recorder refuses rather than resolves: the slot tier is a
+                    // picker, not a row, so it has nothing to empty.
+                    .shortcutValidation { shortcut in
+                        guard ShortcutConflicts.isSlotChord(shortcut, under: bindings.slotModifier)
+                        else { return .allow }
+                        // The same words the composing recorder refuses with.
+                        return .disallow(reason: language.string(.macosShortcutRejectedSlotChord))
                     }
                 }
 
@@ -68,7 +84,14 @@ struct ShortcutSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
-        .onChange(of: candidateSlotModifier) { _, _ in reload() }
+        .onChange(of: candidateSlotModifier) { _, newModifier in
+            // The picker is the last writer: the nine chords it just claimed
+            // come off any global row that held one. The recorder refuses the
+            // other order, so between them no global shortcut sits on a live
+            // slot chord.
+            ShortcutConflicts.resolveGlobalRows(afterSlotModifierChangedTo: newModifier)
+            reload()
+        }
     }
 
     private func recorderRow(_ action: ComposingAction) -> some View {
@@ -93,6 +116,9 @@ struct ShortcutSettingsView: View {
             for loser in bindings.actionsHolding(chord, excluding: action) {
                 store.setComposingChord(nil, for: loser)
             }
+            // And across the seam, same rule: a global shortcut on this key
+            // would fire instead of the row just recorded.
+            ShortcutConflicts.resolveGlobalRows(after: chord)
         }
         store.setComposingChord(chord, for: action)
         reload()

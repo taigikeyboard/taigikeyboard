@@ -91,7 +91,10 @@ struct ComposingKeyBindings: Sendable, Equatable {
     /// The pure half of recording: the recorder asks before it writes, so the
     /// row that loses a chord empties in front of the user rather than being
     /// discovered later. Mirrors `ShortcutConflicts` for the global chords.
-    func actionsHolding(_ chord: ComposingKeyChord, excluding changed: ComposingAction)
+    /// `excluding` is the action being recorded, which is not competing with
+    /// itself; the cross-registry scan asks without one, because the global
+    /// tier is nobody's row here (`ShortcutConflicts`).
+    func actionsHolding(_ chord: ComposingKeyChord, excluding changed: ComposingAction? = nil)
         -> [ComposingAction]
     {
         ComposingAction.allCases.filter { $0 != changed && chords[$0] == chord }

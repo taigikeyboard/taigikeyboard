@@ -63,6 +63,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // user makes; this resolves the ones a version does.
         ShortcutConflicts.resolveDefaultsShadowedByRecordings()
 
+        // And the same job across the two registries, which no recorder can do
+        // for data that predates them: a global shortcut and a composing key
+        // sitting on one chord means the composing one never fires, because
+        // Carbon dispatches before the classifier runs.
+        ShortcutConflicts.resolveAcrossRegistries(in: SettingsStore())
+
         // The hotkey handlers exist for the process's life; whether they FIRE
         // is the coordinator's call, made as sessions register and release
         // their shortcut endpoint. Assigned here rather than defaulted inside

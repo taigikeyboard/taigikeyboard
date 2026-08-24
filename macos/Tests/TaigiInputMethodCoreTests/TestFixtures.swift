@@ -278,16 +278,16 @@ enum TestFixtures {
     /// Derived rather than written down: a default added to the roster would
     /// otherwise silently invalidate fixtures that have nothing to do with
     /// defaults.
-    static func chordNoDefaultHolds() throws -> ComposingKeyChord {
+    static func chordNoDefaultHolds(key: String = "\r") throws -> ComposingKeyChord {
         let taken = Set(ComposingAction.allCases.map(\.defaultChord))
         let candidates: [NSEvent.ModifierFlags] = [
             [.control, .option], [.command, .option], [.control, .command],
         ]
         for modifiers in candidates {
-            let chord = try ComposingKeyChord.make(key: "\r", modifiers: modifiers).get()
+            let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
             if !taken.contains(chord) { return chord }
         }
-        throw XCTSkip("every Return chord this fixture knows is a default now")
+        throw XCTSkip("every \(key) chord this fixture knows is a default now")
     }
 
     /// From `<repo>/macos/Tests/TaigiInputMethodCoreTests/TestFixtures.swift`.

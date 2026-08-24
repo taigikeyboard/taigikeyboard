@@ -1,6 +1,7 @@
 // The user-configurable shortcuts: which actions exist, and how their global
 // hotkeys are registered, gated, and kept from colliding with each other.
 
+import AppKit
 import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
@@ -281,5 +282,246 @@ enum ShortcutConflicts {
         for loser in losers {
             KeyboardShortcuts.setShortcut(nil, for: loser.name)
         }
+    }
+
+    // MARK: - Across the two registries
+
+    /// The composing chord a global shortcut occupies, or nil when the two
+    /// cannot be compared.
+    ///
+    /// The bridge between the registries. A global shortcut is a Carbon key
+    /// CODE; a composing chord is the CHARACTER that key types with no
+    /// modifiers held. `nsMenuItemKeyEquivalent` is the library's own
+    /// translation between them — through the current ASCII-capable layout for
+    /// ordinary keys, and through AppKit's key equivalents for the named ones
+    /// (`Shortcut.swift:689-752`), which is what makes Return, Tab and the
+    /// backtick — the keys this seam is actually about — comparable.
+    ///
+    /// A layout comparison, not a physical-key one: two keys a custom layout
+    /// maps to the same character read as the same chord here, which matches
+    /// how the composing tier identifies its keys in the first place.
+    ///
+    /// Built through the same gate a binding passes, so a chord the gate
+    /// REFUSES answers nil — and correctly so: every chord a composing action
+    /// can hold went through `make` (the recorder, and `init?(rawValue:)` on
+    /// the way back out of storage), so a chord `make` rejects is one no
+    /// binding can hold, and therefore one nothing can collide with.
+    ///
+    /// Nil also when the library cannot name the key at all. Either way nil
+    /// means "no conflict found", never "clear something": wrongly emptying a
+    /// row the user can see is worse than leaving an undetectable collision on
+    /// a key neither tier can hold a binding on.
+    @MainActor
+    static func composingChord(occupiedBy shortcut: KeyboardShortcuts.Shortcut) -> ComposingKeyChord? {
+        try? ComposingKeyChord.make(
+            key: shortcut.key.flatMap { namedKeyCharacters[$0] } ?? shortcut.nsMenuItemKeyEquivalent,
+            modifiers: shortcut.modifiers,
+        ).get()
+    }
+
+    /// Every key the library does not report as the character this side
+    /// stores, and what it types here instead.
+    ///
+    /// Two families need translating. The keys AppKit names come back as
+    /// DISPLAY GLYPHS — `↩` for Return, `⇥` for Tab, `↖` for Home
+    /// (`Shortcut.swift:567-600`) — where a composing chord holds what the key
+    /// types (`\r`, `\t`) or the private-use scalar AppKit names it with. The
+    /// number pad comes back as nil, deliberately, because no SwiftUI key
+    /// equivalent can address it (`Shortcut.swift:527-564`) — but a keypad key
+    /// still TYPES the digit or operator on its face, and neither tier keeps
+    /// the `.numericPad` flag that would tell it apart, so `⌃`-keypad-3 and
+    /// `⌃3` are one chord as far as the candidate slots are concerned.
+    ///
+    /// The reserved keys — the arrows, the paging keys, Escape and the two
+    /// deletes — are here too, though no binding can hold one. Translating
+    /// them is what lets the gate RECOGNISE them: fed the glyph, `make` would
+    /// happily build a `⎋`-the-character chord that matches nothing; fed the
+    /// scalar, it refuses, and the bridge answers nil, which is the honest
+    /// "nothing can collide here". Space and the function keys need no row —
+    /// the library already reports those as the character and the
+    /// `NSF1FunctionKey`-style scalars this side stores.
+    /// `CrossTierShortcutConflictTests` pins both sides of that split, so a
+    /// key that changes sides fails a test rather than going quiet.
+    ///
+    /// Without this the bridge would miss the collisions it exists for: four of
+    /// the eight composing defaults are Return chords, and the slot tier is
+    /// nine digits.
+    private static let namedKeyCharacters: [KeyboardShortcuts.Key: String] = {
+        var characters: [KeyboardShortcuts.Key: String] = [
+            .return: "\r",
+            .keypadEnter: "\r",
+            .tab: "\t",
+            .escape: "\u{1B}",
+            .delete: "\u{8}",
+            .deleteForward: "\u{7F}",
+            .keypad0: "0", .keypad1: "1", .keypad2: "2", .keypad3: "3", .keypad4: "4",
+            .keypad5: "5", .keypad6: "6", .keypad7: "7", .keypad8: "8", .keypad9: "9",
+            .keypadDecimal: ".", .keypadDivide: "/", .keypadEquals: "=",
+            .keypadMinus: "-", .keypadMultiply: "*", .keypadPlus: "+",
+        ]
+        let namedFunctionKeys: [(KeyboardShortcuts.Key, Int)] = [
+            (.home, NSHomeFunctionKey), (.end, NSEndFunctionKey), (.help, NSHelpFunctionKey),
+            (.keypadClear, NSClearLineFunctionKey),
+            (.leftArrow, NSLeftArrowFunctionKey), (.rightArrow, NSRightArrowFunctionKey),
+            (.upArrow, NSUpArrowFunctionKey), (.downArrow, NSDownArrowFunctionKey),
+            (.pageUp, NSPageUpFunctionKey), (.pageDown, NSPageDownFunctionKey),
+        ]
+        for (key, functionKey) in namedFunctionKeys {
+            guard let scalar = UnicodeScalar(functionKey) else { continue }
+            characters[key] = String(scalar)
+        }
+        return characters
+    }()
+
+    /// Which composing actions hold the chord `shortcut` occupies.
+    ///
+    /// The pure half of "a global recording takes the key from the composing
+    /// tier". Both halves of the seam are asked the same way the intra-tier
+    /// rules are (`conflictingActions`, `ComposingKeyBindings.actionsHolding`),
+    /// so the pane resolves every collision by one rule: last writer wins, and
+    /// the loser's row empties in front of the user.
+    @MainActor
+    static func composingActionsHolding(
+        _ shortcut: KeyboardShortcuts.Shortcut,
+        in bindings: ComposingKeyBindings,
+    ) -> [ComposingAction] {
+        guard let chord = composingChord(occupiedBy: shortcut) else { return [] }
+        return bindings.actionsHolding(chord)
+    }
+
+    /// Which global actions hold `chord` — the same question from the other
+    /// side, for a composing recording or a slot-modifier change.
+    @MainActor
+    static func globalActionsHolding(_ chord: ComposingKeyChord) -> [ShortcutAction] {
+        globalActionsHolding(where: { $0 == chord })
+    }
+
+    /// The scan both of those are: bridge what each global action holds, and
+    /// keep the ones whose chord answers `predicate`. A family of chords a
+    /// future setting claims is a new predicate here, not a third near-copy.
+    @MainActor
+    static func globalActionsHolding(
+        where predicate: (ComposingKeyChord) -> Bool,
+        // The one spelling of "what the registry holds now". A stored constant
+        // cannot carry it: `getShortcut` is main-actor isolated, and only a
+        // default argument may call it from this position.
+        shortcutFor: (ShortcutAction) -> KeyboardShortcuts.Shortcut? = {
+            KeyboardShortcuts.getShortcut(for: $0.name)
+        },
+    ) -> [ShortcutAction] {
+        ShortcutAction.allCases.filter { action in
+            guard let shortcut = shortcutFor(action),
+                  let chord = composingChord(occupiedBy: shortcut)
+            else { return false }
+            return predicate(chord)
+        }
+    }
+
+    /// Which global actions hold one of the nine candidate-slot chords under
+    /// `slotModifier`.
+    ///
+    /// The slot tier is a picker rather than a row, so it cannot lose a chord —
+    /// but it CAN take one, when the user switches the modifier onto chords a
+    /// global shortcut already holds. That makes the picker the last writer,
+    /// and these are the rows that empty. The recorder refuses the other order
+    /// (`ShortcutSettingsView`), so between them no global shortcut can sit on
+    /// a live slot chord.
+    /// Whether `shortcut` sits on one of the nine slot chords — the question
+    /// the recorder refuses on and the launch pass clears on, asked the same
+    /// way in both so the two cannot drift.
+    @MainActor
+    static func isSlotChord(
+        _ shortcut: KeyboardShortcuts.Shortcut,
+        under slotModifier: CandidateSlotModifier,
+    ) -> Bool {
+        composingChord(occupiedBy: shortcut)?.isCandidateSlotChord(under: slotModifier) == true
+    }
+
+    @MainActor
+    static func globalActionsHoldingSlotChords(
+        under slotModifier: CandidateSlotModifier,
+    ) -> [ShortcutAction] {
+        globalActionsHolding(where: { $0.isCandidateSlotChord(under: slotModifier) })
+    }
+
+    /// A global recording just landed: take the chord off any composing row
+    /// that held it.
+    @MainActor
+    static func resolveComposingRows(after changed: ShortcutAction, in store: SettingsStore) {
+        guard let shortcut = KeyboardShortcuts.getShortcut(for: changed.name) else { return }
+        for loser in composingActionsHolding(shortcut, in: store.composingKeyBindings) {
+            store.setComposingChord(nil, for: loser)
+        }
+    }
+
+    /// A composing recording just landed: take the chord off any global row
+    /// that held it.
+    @MainActor
+    static func resolveGlobalRows(after chord: ComposingKeyChord) {
+        clear(globalActionsHolding(chord))
+    }
+
+    /// The slot modifier just changed: take the nine slot chords off any
+    /// global row that held one.
+    @MainActor
+    static func resolveGlobalRows(afterSlotModifierChangedTo slotModifier: CandidateSlotModifier) {
+        clear(globalActionsHoldingSlotChords(under: slotModifier))
+    }
+
+    /// Reconciles the two registries at launch, where no recorder ran.
+    ///
+    /// Recording-beats-default, the rule the intra-tier pass above already
+    /// applies: a chord a user chose outranks one an action merely shipped
+    /// with. That is what carries an upgrade — a version that gives a global
+    /// action a default chord a user had already put on a composing row must
+    /// not silently kill that row, and the reverse holds too.
+    ///
+    /// When BOTH sides are user recordings there is nothing honest to compare:
+    /// the stored values carry no timestamps, so the last writer is unknowable.
+    /// The global tier wins that tie, because it is the tier that actually
+    /// fires — Carbon dispatches before the classifier ever runs — so the
+    /// alternative would be keeping a composing row that cannot work. A
+    /// one-time deterministic tie-break, not a claim about who wrote last.
+    @MainActor
+    static func resolveAcrossRegistries(in store: SettingsStore) {
+        let bindings = store.composingKeyBindings
+        // Read once per action, not once per question — the same rule
+        // `defaultsShadowedByRecordings` states above, and for the same
+        // reason: every read goes to `UserDefaults`, and every bridged chord
+        // goes to the keyboard layout. Both passes below ask about the same
+        // seven actions.
+        let held = ShortcutAction.allCases.compactMap { action in
+            KeyboardShortcuts.getShortcut(for: action.name).flatMap { shortcut in
+                composingChord(occupiedBy: shortcut).map { (action: action, shortcut: shortcut, chord: $0) }
+            }
+        }
+
+        for (action, shortcut, chord) in held {
+            let holders = bindings.actionsHolding(chord)
+            guard !holders.isEmpty else { continue }
+
+            let globalIsDefault = shortcut == action.defaultShortcut
+            for holder in holders {
+                // A chord the user chose outranks one an action merely shipped
+                // with — and the composing side counts as chosen when it holds
+                // anything other than its own default.
+                let composingRecordingOutranks = globalIsDefault && chord != holder.defaultChord
+                if composingRecordingOutranks {
+                    KeyboardShortcuts.setShortcut(nil, for: action.name)
+                } else {
+                    store.setComposingChord(nil, for: holder)
+                }
+            }
+        }
+
+        // The slot tier last, and off the same snapshot: a live slot chord on
+        // a global row is the one collision the recorder cannot refuse
+        // retroactively, and clearing a row the loop already cleared is a
+        // no-op.
+        clear(
+            held
+                .filter { $0.chord.isCandidateSlotChord(under: bindings.slotModifier) }
+                .map(\.action),
+        )
     }
 }
