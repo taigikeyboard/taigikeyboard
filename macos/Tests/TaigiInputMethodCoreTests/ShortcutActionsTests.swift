@@ -235,4 +235,16 @@ final class ShortcutActionsTests: XCTestCase {
             "both actions still hold the same chord — one press would run both",
         )
     }
+
+    /// The 快速齒 pane draws the two groups from these, so between them they
+    /// have to be the whole roster — an action in neither would have a hotkey
+    /// registered and no row to record it on.
+    func testPaneOpenersAndCommands_coverEveryAction() {
+        XCTAssertEqual(
+            ShortcutAction.paneOpeners + ShortcutAction.commands,
+            ShortcutAction.allCases,
+        )
+        XCTAssertEqual(ShortcutAction.paneOpeners.map(\.settingsPane), SettingsPane.allCases)
+        XCTAssertTrue(ShortcutAction.commands.allSatisfy { $0.settingsPane == nil })
+    }
 }

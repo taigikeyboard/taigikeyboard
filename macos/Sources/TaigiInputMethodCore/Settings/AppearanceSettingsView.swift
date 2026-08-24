@@ -17,8 +17,8 @@ import SwiftUI
 struct AppearanceSettingsView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    @AppStorage(SettingsStore.Keys.candidateAppearanceMode.name)
-    private var candidateAppearanceMode = SettingsStore.Keys.candidateAppearanceMode.defaultValue
+    @AppStorage(SettingsStore.Keys.appearanceMode.name)
+    private var appearanceMode = SettingsStore.Keys.appearanceMode.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
@@ -38,7 +38,7 @@ struct AppearanceSettingsView: View {
             // group, label leading like every other row.
             Section {
                 LabeledContent(language.string(.macosAppearanceTab)) {
-                    AppearanceModeRow(selection: $candidateAppearanceMode)
+                    AppearanceModeRow(selection: $appearanceMode)
                 }
             }
 
@@ -73,7 +73,6 @@ struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
     }
 }
 
@@ -83,12 +82,12 @@ struct AppearanceSettingsView: View {
 /// windows rather than Apple's desktop artwork — they depict the thing this
 /// setting changes.
 private struct AppearanceModeRow: View {
-    @Binding var selection: CandidateAppearanceMode
+    @Binding var selection: AppearanceMode
 
     @Environment(DisplayLanguageStore.self) private var language
 
     /// System Settings' order: light, dark, then auto.
-    private static let modes: [CandidateAppearanceMode] = [.light, .dark, .auto]
+    private static let modes: [AppearanceMode] = [.light, .dark, .auto]
 
     /// The highlight capsule's colour, fixed for the same reason the
     /// thumbnails' backgrounds are: each depicts ONE mode, so nothing in it may
@@ -113,7 +112,7 @@ private struct AppearanceModeRow: View {
         .padding(.vertical, 4)
     }
 
-    private func thumbnailButton(for mode: CandidateAppearanceMode) -> some View {
+    private func thumbnailButton(for mode: AppearanceMode) -> some View {
         let name = language.string(mode.labelKey)
         return Button {
             selection = mode
@@ -148,7 +147,7 @@ private struct AppearanceModeRow: View {
     /// 自動 is the two fixed thumbnails split down the middle — light on the
     /// left, dark on the right — which is how System Settings depicts it.
     @ViewBuilder
-    private func thumbnail(for mode: CandidateAppearanceMode) -> some View {
+    private func thumbnail(for mode: AppearanceMode) -> some View {
         switch mode {
         case .light:
             miniCandidateWindow(dark: false)

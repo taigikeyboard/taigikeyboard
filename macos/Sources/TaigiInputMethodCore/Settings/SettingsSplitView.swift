@@ -1,4 +1,4 @@
-// The System Settings-style shell: a sidebar of panes, one detail at a time.
+// What the settings window shows: the pane roster, its two columns, and the widths they agree on.
 
 import SwiftUI
 
@@ -44,33 +44,49 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     }
 }
 
-/// Layout the pane forms agree on.
+/// Every number the settings window is sized from.
+///
+/// One place, and stated to the WINDOW (`SettingsWindowController`) rather
+/// than to SwiftUI: the two columns are child hosting controllers, and a
+/// hosting view only writes `contentMinSize`/`contentMaxSize` when it is the
+/// window's own content view. An earlier layout had one hosting controller as
+/// that content view, where the write-back silently replaced the pinned width
+/// with whatever SwiftUI measured.
 enum SettingsPaneLayout {
-    /// The 一般 / 外觀 / 快捷鍵 panes are columns of labelled controls, which
-    /// read best bounded — stretched across a wide detail pane, every row
-    /// becomes a label staring at a far-away control. The 詞庫 pages beside
-    /// them are deliberately unbounded: their rows are content, and content
-    /// takes whatever width the window has.
-    static let maximumFormWidth: CGFloat = 640
+    /// Wide enough for the longest pane label in the five display languages to
+    /// sit on one line beside its icon.
+    static let sidebarWidth: CGFloat = 215
+
+    /// The room the panes were sized for. Not measured from their content:
+    /// it is what the window's previous floor of 760 leaves once the sidebar
+    /// takes 215, and the panes have been read at that width in five
+    /// languages rather than argued to it.
+    static let detailWidth: CGFloat = 545
+
+    /// The window's one width, in both directions: System Settings cannot be
+    /// resized horizontally, and neither can this. Summed from the two columns
+    /// rather than written out, so widening the sidebar cannot silently take
+    /// room from the panes it was sized for.
+    static var contentWidth: CGFloat {
+        sidebarWidth + detailWidth
+    }
+
+    /// The shortest the window goes. One floor for the whole window — the
+    /// sidebar shows every pane, so there is no per-tab size to switch
+    /// between.
+    static let minimumContentHeight: CGFloat = 470
+
+    /// What a first launch opens at.
+    static let initialContentHeight: CGFloat = 560
 }
 
-/// The settings window's content: a `NavigationSplitView` with every pane in
-/// the sidebar, the System Settings shape.
+/// The sidebar: every pane, one flat list.
 ///
-/// The detail router owns each pane's `.navigationTitle` — the pane views
-/// carry none of their own — so exactly one place feeds the window title,
-/// which the hosting controller bridges to the titlebar.
-struct SettingsSplitView: View {
-    /// The stores the dictionary pages read and write. Named here rather than
-    /// reached for inside each page so the whole window is driven by one
-    /// composition root, and a test could hand it its own.
-    let stores: UserDataStores
-
-    /// Was read by the 揣辭典 pane's search service; the pane is unlisted for
-    /// now (not released yet, USER 2026-08-21) and the injection point stays so
-    /// relisting it is one `detailView` case again.
-    let settingsProvider: any EngineSettingsProvider
-
+/// Selection lives in `UserDefaults` rather than in a shared object passed to
+/// both columns: `@AppStorage` observes the key, so the detail view beside
+/// this one re-renders off the same write with nothing wired between them —
+/// and so does a pane written from outside the window entirely.
+struct SettingsSidebarView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     /// `@AppStorage` reads a `String`-backed enum directly: an unknown
@@ -81,39 +97,42 @@ struct SettingsSplitView: View {
     private var selectedPane = SettingsStore.Keys.selectedSettingsPane.defaultValue
 
     var body: some View {
-        // Visibility pinned to `.all`, matching System Settings: the sidebar
-        // IS the navigation, so collapsing it strands the user — and with no
-        // way to collapse, the toggle below is removed rather than orphaned.
-        NavigationSplitView(columnVisibility: .constant(.all)) {
-            // One flat list, no section headers — the sidebar is short enough
-            // to read at a glance, and a group label above the dictionary rows
-            // was a heading with nothing to disambiguate (USER 2026-08-18).
-            // `allCases` IS the sidebar order, which mirrors the iOS Tab3
-            // listing for the dictionary rows.
-            List(selection: $selectedPane) {
-                ForEach(SettingsPane.allCases) { pane in
-                    sidebarRow(pane)
-                }
+        // One flat list, no section headers — the sidebar is short enough
+        // to read at a glance, and a group label above the dictionary rows
+        // was a heading with nothing to disambiguate (USER 2026-08-18).
+        // `allCases` IS the sidebar order, which mirrors the iOS Tab3
+        // listing for the dictionary rows.
+        List(selection: $selectedPane) {
+            ForEach(SettingsPane.allCases) { pane in
+                Label(language.string(pane.labelKey), systemImage: pane.symbolName)
+                    .tag(pane)
             }
-            // System Settings shows no sidebar toggle; without this, the
-            // split view puts one above the sidebar column.
-            .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
-        } detail: {
-            detailView
-                .navigationTitle(language.string(selectedPane.labelKey))
         }
+        // The sidebar list style the split view item's material expects; a
+        // `List` outside a `NavigationSplitView` does not infer it.
+        .listStyle(.sidebar)
     }
+}
 
-    private func sidebarRow(_ pane: SettingsPane) -> some View {
-        Label(language.string(pane.labelKey), systemImage: pane.symbolName)
-            .tag(pane)
-    }
+/// The selected pane's form. Carries no `navigationTitle`: the titlebar takes
+/// its name from `SettingsSplitViewController`, the one place that knows both
+/// the selection and the display language.
+///
+/// The 揣辭典 pane's `EngineSettingsProvider` is not threaded through here.
+/// That pane is unlisted (not released yet, USER 2026-08-21) and nothing else
+/// on this side reads a provider, so carrying one would be three signatures
+/// held open for a caller that does not exist; relisting the pane adds it back
+/// where it is needed.
+struct SettingsDetailView: View {
+    /// The stores the dictionary pages read and write.
+    let stores: UserDataStores
 
-    /// Uniform pane→page mapping: every page brings its own `Form`, so the
-    /// router adds no layout of its own.
-    @ViewBuilder
-    private var detailView: some View {
+    @AppStorage(SettingsStore.Keys.selectedSettingsPane.name)
+    private var selectedPane = SettingsStore.Keys.selectedSettingsPane.defaultValue
+
+    /// Uniform pane→page mapping: every page brings its own `Form`, so this
+    /// adds no layout of its own.
+    var body: some View {
         switch selectedPane {
         case .general:
             GeneralSettingsView()
@@ -126,20 +145,5 @@ struct SettingsSplitView: View {
         case .dictionarySources:
             DictionaryTogglesView()
         }
-    }
-}
-
-/// The hosting root: the split view with its language store injected. A named
-/// type rather than an inline `.environment(...)` expression so the window's
-/// content controller has a concrete `NSHostingController<SettingsRootView>`
-/// type a test can cast to and inspect.
-struct SettingsRootView: View {
-    let stores: UserDataStores
-    let settingsProvider: any EngineSettingsProvider
-    let language: DisplayLanguageStore
-
-    var body: some View {
-        SettingsSplitView(stores: stores, settingsProvider: settingsProvider)
-            .environment(language)
     }
 }

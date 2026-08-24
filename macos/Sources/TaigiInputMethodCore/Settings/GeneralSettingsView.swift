@@ -19,6 +19,12 @@ import SwiftUI
 /// once — lives beside the custom dictionary's own clear button on the 自訂詞庫
 /// pane, so every "throw away what is stored" action is in one place.
 ///
+/// 全形標點 (漢羅對調 output) and Shift 切換英數 are not switches either: both
+/// are always on (USER 2026-08-24), the first because CJK output takes CJK
+/// punctuation and the second because the gesture is the one MOE 輸入法 users
+/// arrive with. Neither had a state worth administering, and both stayed on
+/// by default from the day they shipped.
+///
 /// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
 /// form re-render when the display language changes, with no window rebuild.
 struct GeneralSettingsView: View {
@@ -29,12 +35,6 @@ struct GeneralSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.isAutoSpaceEnabled.name)
     private var isAutoSpaceEnabled = SettingsStore.Keys.isAutoSpaceEnabled.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isFullWidthPunctuationEnabled.name)
-    private var isFullWidthPunctuationEnabled = SettingsStore.Keys.isFullWidthPunctuationEnabled.defaultValue
-
-    @AppStorage(SettingsStore.Keys.isShiftToggleAlphanumericEnabled.name)
-    private var isShiftToggleAlphanumericEnabled = SettingsStore.Keys.isShiftToggleAlphanumericEnabled.defaultValue
 
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
@@ -49,9 +49,7 @@ struct GeneralSettingsView: View {
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                 Task { await refreshNoticeReachability() }
             }
-            // The form stays a bounded column; the pane around it takes the whole detail area, so
-            // the footer below centres on the window rather than on the column.
-            .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
+            // Full width, so the sponsor footer below centres on the window.
             .frame(maxWidth: .infinity)
             .safeAreaInset(edge: .bottom, alignment: .center, spacing: 0) {
                 sponsorFooter
@@ -61,11 +59,14 @@ struct GeneralSettingsView: View {
     private var settingsForm: some View {
         Form {
             Section {
+                // A pop-up like the row under it, not a radio group: System
+                // Settings states a small mutually-exclusive choice with a
+                // pop-up, and two shapes for two adjacent N-of-1 rows read as
+                // a difference that means something.
                 Picker(language.string(.settingsInputMode), selection: $inputMode) {
                     Text(language.string(.settingsTlMode)).tag(InputMode.tl)
                     Text(language.string(.settingsPojMode)).tag(InputMode.poj)
                 }
-                .pickerStyle(.radioGroup)
 
                 Picker(language.string(.settingsDisplayLanguage), selection: displayLanguageSelection) {
                     ForEach(DisplayLanguage.selectableLanguages, id: \.self) { option in
@@ -76,16 +77,6 @@ struct GeneralSettingsView: View {
                 }
 
                 Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
-
-                // The label names the mode it serves (漢羅對調), so a user in
-                // roman-first mode reads why their punctuation is unchanged
-                // rather than a switch that seems to do nothing.
-                Toggle(language.string(.macosFullWidthPunctuation), isOn: $isFullWidthPunctuationEnabled)
-
-                Toggle(
-                    language.string(.macosShiftToggleAlphanumeric),
-                    isOn: $isShiftToggleAlphanumericEnabled,
-                )
             }
 
             // The update rows. No toggle and no explanatory text (USER

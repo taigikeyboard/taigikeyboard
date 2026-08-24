@@ -50,17 +50,6 @@ final class ShiftAlphanumericControllerTests: XCTestCase {
         )
     }
 
-    func testTheSettingOff_disablesTheTap() throws {
-        let session = try makeSession(configure: { $0.isShiftToggleAlphanumericEnabled = false })
-
-        XCTAssertFalse(tap(session, at: 0))
-        let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "t"), client: session.client,
-        )
-        XCTAssertTrue(handled, "still Taigi — the letter composes")
-        XCTAssertEqual(session.flashes, [])
-    }
-
     func testCapsLockLatched_aSoloTapStillToggles() throws {
         // Caps Lock is a latched state riding on every event while lit, not a
         // chord the user is holding — a Shift tap under it must still work.

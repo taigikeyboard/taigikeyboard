@@ -65,7 +65,7 @@ final class CustomDictionaryPageModel {
     }
 
     func exportCSV(in window: NSWindow) async {
-        activity = .working(.macosProgressExporting)
+        guard beginWork(.macosProgressExporting) else { return }
         defer { activity = .idle }
         do {
             let csv = try await CustomDictionaryCSV.encode(store.allRows())
@@ -84,13 +84,16 @@ final class CustomDictionaryPageModel {
     }
 
     func importCSV(in window: NSWindow) async {
+        // The slot is taken before the file panel, not after it: the panel is
+        // modal to the window, but the moment it closes the parse and the
+        // batched writes are still running, and that is exactly the window a
+        // second import could start in.
+        guard beginWork(.macosProgressImporting) else { return }
+        defer { activity = .idle }
         guard let url = await UserDataFilePanels.chooseFileToOpen(
             contentTypes: [.commaSeparatedText, .plainText],
             in: window,
         ) else { return }
-
-        activity = .working(.macosProgressImporting)
-        defer { activity = .idle }
         do {
             // Off the main actor: reading and parsing up to 5 MB of CSV
             // there would freeze the very window that is showing the progress
@@ -109,8 +112,28 @@ final class CustomDictionaryPageModel {
         }
     }
 
-    private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
+    /// Takes the page's one work slot for `label`, or answers false because
+    /// something else holds it.
+    ///
+    /// Mutual exclusion lives here rather than in the view's `.disabled`: a
+    /// greyed-out control is an appearance, and this page deliberately delays
+    /// showing that appearance so a millisecond-long write does not flash it
+    /// (`UserDataPageChrome`). A guard that only existed in the view would be
+    /// absent for exactly as long as the delay lasts — and the operation that
+    /// matters most, a CSV import, spends that window parsing after its file
+    /// panel has already closed.
+    ///
+    /// `@MainActor`, so the check and the claim cannot be interleaved.
+    /// Internal so a test can drive the refusal without racing two real
+    /// database writes to reproduce it.
+    func beginWork(_ label: StringKey) -> Bool {
+        guard !activity.isWorking else { return false }
         activity = .working(label)
+        return true
+    }
+
+    private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
+        guard beginWork(label) else { return }
         defer { activity = .idle }
         do {
             try await body()
@@ -130,6 +153,10 @@ struct CustomDictionaryPage: View {
 
     @State private var model: CustomDictionaryPageModel
     @State private var editing: CustomDictionaryRow?
+
+    /// The table's selection — the row `−` acts on, and the row a double
+    /// click edits.
+    @State private var selectedRowID: CustomDictionaryRow.ID?
     @State private var isConfirmingClearLearning = false
     @State private var clearOutcome: ClearOutcome?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
@@ -148,38 +175,14 @@ struct CustomDictionaryPage: View {
 
             Section {
                 UserDataFilterField(text: $model.filter)
-                if model.rows.isEmpty {
-                    Text(language.string(model.filter.isEmpty ? .macosCustomDictEmpty : .dictionaryNoResults))
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(model.rows) { row in
-                    Button {
-                        editing = row
-                    } label: {
-                        HStack {
-                            Text(row.roman)
-                                .foregroundStyle(.secondary)
-                            Text(row.hanzi)
-                            Spacer()
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button(language.string(.commonDelete), role: .destructive) {
-                            Task { await model.delete(row) }
-                        }
-                    }
-                }
+                entryTable
+                entryTableControls
             } header: {
                 HStack {
                     Text(language.string(.macosEntriesSection))
                     Spacer()
                     Text(countLabel)
                         .foregroundStyle(.secondary)
-                    Button(language.string(.dictionaryAddEntry)) {
-                        editing = CustomDictionaryRow(roman: "", hanzi: "")
-                    }
                 }
             }
 
@@ -279,6 +282,148 @@ struct CustomDictionaryPage: View {
             : .failed(failures.joined(separator: "\n"))
     }
 
+    /// The entries, as the table macOS states a list of records with: click
+    /// selects, double-click edits, and the selection is what the `−` button
+    /// acts on. A `Table` rather than form rows drawn to look like one — the
+    /// highlight, its dimming when the window resigns key, arrow-key
+    /// traversal and the "row N of M" an assistive reader announces all come
+    /// with the control and cannot be restated from outside it.
+    ///
+    /// A definite height, not a floor: a `Table` has no intrinsic content
+    /// height, and one left free to grow inside the form's own scroll view has
+    /// no bound at all.
+    private var entryTable: some View {
+        Table(model.rows, selection: $selectedRowID) {
+            TableColumn(language.string(.dictionaryRomanLabel)) { row in
+                Text(row.roman)
+                    .foregroundStyle(.secondary)
+            }
+            TableColumn(language.string(.dictionaryHanziLabel)) { row in
+                Text(row.hanzi)
+            }
+        }
+        .tableStyle(.inset)
+        // Every row the same colour (USER 2026-08-24). The striping is what
+        // AppKit gives a data table by default; this list is short and reads
+        // as settings content, not as a spreadsheet. Selection is unaffected —
+        // this governs only the unselected rows' backgrounds.
+        .alternatingRowBackgrounds(.disabled)
+        .frame(height: Metrics.tableHeight)
+        // The empty case as an overlay rather than in place of the table: the
+        // filter box above stays reachable, and the columns stay put while a
+        // filter is narrowed to nothing and widened again.
+        .overlay {
+            if model.rows.isEmpty {
+                emptyState
+            }
+        }
+        // `primaryAction` IS the double click. The menu keeps a one-click
+        // route to both verbs for anyone who never discovers it.
+        .contextMenu(forSelectionType: CustomDictionaryRow.ID.self) { ids in
+            if let row = row(for: ids.first) {
+                Button(language.string(.dictionaryEditEntry)) { editing = row }
+                Button(language.string(.commonDelete), role: .destructive) {
+                    Task { await model.delete(row) }
+                }
+            }
+        } primaryAction: { ids in
+            editing = row(for: ids.first)
+        }
+    }
+
+    /// What an empty table shows.
+    ///
+    /// A symbol rather than a sentence for "nothing added yet" (USER
+    /// 2026-08-24): an empty dictionary needs no explaining, and the wording
+    /// was a string in five languages saying what the blank table already
+    /// says. A filtered search that matches nothing DOES get words — that one
+    /// is a result, not a state, and the user needs to know their filter is
+    /// what emptied the list.
+    ///
+    /// The symbol carries the shared empty-state sentence as its accessibility
+    /// label rather than showing it: a reader is still told what the blank
+    /// table means, and no string had to be authored to keep that true — the
+    /// key was already translated for iOS and Android, and its wording ("add a
+    /// custom word with +") holds here now that this pane has a + of its own.
+    @ViewBuilder
+    private var emptyState: some View {
+        if model.filter.isEmpty {
+            Image(systemName: Self.emptyStateSymbolName)
+                .font(.system(size: Metrics.emptyStateSymbolSize))
+                .foregroundStyle(.tertiary)
+                .accessibilityLabel(language.string(.dictionaryCustomDictEmpty))
+        } else {
+            Text(language.string(.dictionaryNoResults))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The `+` / `−` pair under the table, where macOS puts the add and remove
+    /// verbs for an editable list. `−` is disabled with nothing selected
+    /// rather than hidden, so the pair keeps its shape.
+    private var entryTableControls: some View {
+        HStack(spacing: 4) {
+            Button {
+                editing = CustomDictionaryRow(roman: "", hanzi: "")
+            } label: {
+                controlGlyph("plus")
+            }
+            .accessibilityLabel(language.string(.dictionaryAddEntry))
+
+            Button {
+                guard let selectedRow else { return }
+                Task { await model.delete(selectedRow) }
+            } label: {
+                controlGlyph("minus")
+            }
+            .disabled(selectedRow == nil)
+            .accessibilityLabel(language.string(.commonDelete))
+
+            Spacer()
+        }
+        // Small bordered buttons, the size AppKit gives the +/- bar under a
+        // table. `.borderless` around a bare glyph left a hit target the size
+        // of the symbol itself.
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+
+    /// One button's glyph, sized so the button is as big as the control it
+    /// imitates. The frame is what does that — `contentShape` only squares off
+    /// the hit region inside whatever bounds the label already has, it cannot
+    /// grow them.
+    private func controlGlyph(_ symbolName: String) -> some View {
+        Image(systemName: symbolName)
+            .frame(width: 20, height: 14)
+            .contentShape(Rectangle())
+    }
+
+    /// The selected row, or nil when the selection names a row the list no
+    /// longer holds — filtered away, deleted, or reloaded out from under it.
+    /// Nothing clears the id when that happens, and nothing has to: the ids
+    /// are UUIDs, so a stale one can never match a different entry.
+    private var selectedRow: CustomDictionaryRow? {
+        row(for: selectedRowID)
+    }
+
+    private func row(for id: CustomDictionaryRow.ID?) -> CustomDictionaryRow? {
+        model.rows.first { $0.id == id }
+    }
+
+    /// An empty tray, not the pane's own book: the book says "dictionary",
+    /// which is the pane the user is already looking at, where what this
+    /// draws has to say "and there is nothing in it" (USER 2026-08-24).
+    static let emptyStateSymbolName = "tray"
+
+    private enum Metrics {
+        /// Tall enough to read as a list rather than a row or two, short
+        /// enough that the buttons and the CSV actions under it stay on
+        /// screen at the window's floor height.
+        static let tableHeight: CGFloat = 220
+        /// Large enough to read as a state rather than as a control the user
+        /// is meant to press.
+        static let emptyStateSymbolSize: CGFloat = 34
+    }
 
     private var countLabel: String {
         model.totalCount > model.rows.count

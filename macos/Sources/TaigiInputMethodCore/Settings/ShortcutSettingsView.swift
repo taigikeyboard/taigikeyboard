@@ -32,29 +32,21 @@ struct ShortcutSettingsView: View {
 
     var body: some View {
         Form {
+            // Two groups: the keys that open a settings pane do something to
+            // this window, the rest do something to what the user is typing.
+            // Only the second is named — the first sits under the pane's own
+            // title and would be repeating it (USER 2026-08-24).
+            Section {
+                ForEach(ShortcutAction.paneOpeners, id: \.self) { action in
+                    globalRecorderRow(action)
+                }
+            }
+
             Section {
                 // One row per action, off the same list the hotkey registration
                 // uses, so a new action cannot appear in one and not the other.
-                ForEach(ShortcutAction.allCases, id: \.self) { action in
-                    KeyboardShortcuts.Recorder(action.label(language), name: action.name) { _ in
-                        ShortcutConflicts.resolve(after: action)
-                        // The other registry, by the same rule: this recording
-                        // is the last writer, so a composing row holding the
-                        // same key empties. Carbon dispatches before the
-                        // classifier ever runs, so leaving that row would leave
-                        // a key that reads as bound and does nothing.
-                        ShortcutConflicts.resolveComposingRows(after: action, in: store)
-                        reload()
-                    }
-                    // The nine candidate-slot chords are the one thing this
-                    // recorder refuses rather than resolves: the slot tier is a
-                    // picker, not a row, so it has nothing to empty.
-                    .shortcutValidation { shortcut in
-                        guard ShortcutConflicts.isSlotChord(shortcut, under: bindings.slotModifier)
-                        else { return .allow }
-                        // The same words the composing recorder refuses with.
-                        return .disallow(reason: language.string(.macosShortcutRejectedSlotChord))
-                    }
+                ForEach(ShortcutAction.commands, id: \.self) { action in
+                    globalRecorderRow(action)
                 }
 
                 // Same order the input-source menu draws, so a user who learnt
@@ -80,10 +72,11 @@ struct ShortcutSettingsView: View {
                 ForEach(ComposingAction.groups[1], id: \.self) { action in
                     recorderRow(action)
                 }
+            } header: {
+                Text(language.string(.macosKeyboardActionsSection))
             }
         }
         .formStyle(.grouped)
-        .frame(maxWidth: SettingsPaneLayout.maximumFormWidth)
         .onChange(of: candidateSlotModifier) { _, newModifier in
             // The picker is the last writer: the nine chords it just claimed
             // come off any global row that held one. The recorder refuses the
@@ -91,6 +84,29 @@ struct ShortcutSettingsView: View {
             // slot chord.
             ShortcutConflicts.resolveGlobalRows(afterSlotModifierChangedTo: newModifier)
             reload()
+        }
+    }
+
+    /// One global-hotkey row. Shared by both groups, so the conflict rules
+    /// below cannot come to differ between them.
+    private func globalRecorderRow(_ action: ShortcutAction) -> some View {
+        KeyboardShortcuts.Recorder(action.label(language), name: action.name) { _ in
+            ShortcutConflicts.resolve(after: action)
+            // The other registry, by the same rule: this recording is the last
+            // writer, so a composing row holding the same key empties. Carbon
+            // dispatches before the classifier ever runs, so leaving that row
+            // would leave a key that reads as bound and does nothing.
+            ShortcutConflicts.resolveComposingRows(after: action, in: store)
+            reload()
+        }
+        // The nine candidate-slot chords are the one thing this recorder
+        // refuses rather than resolves: the slot tier is a picker, not a row,
+        // so it has nothing to empty.
+        .shortcutValidation { shortcut in
+            guard ShortcutConflicts.isSlotChord(shortcut, under: bindings.slotModifier)
+            else { return .allow }
+            // The same words the composing recorder refuses with.
+            return .disallow(reason: language.string(.macosShortcutRejectedSlotChord))
         }
     }
 

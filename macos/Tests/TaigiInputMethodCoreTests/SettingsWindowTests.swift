@@ -17,6 +17,17 @@ final class SettingsWindowTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
     private var stashedFrameValue: String?
+    /// The window's chrome — its title and its light/dark override — is read
+    /// from the STANDARD defaults by the split controller, which builds its
+    /// own `SettingsStore` rather than taking the suite a test hands the
+    /// language store. So a test that drives the chrome writes there, and
+    /// this puts back whatever the developer's machine had.
+    private var stashedSelectedPane: String?
+    /// Every window a test built. An autosave name binds to one live window at
+    /// a time, so a window still alive from an earlier test makes the next
+    /// one's frame restore silently do nothing — `tearDown` hands the name
+    /// back rather than trusting each window to have been released by then.
+    private var windowsUnderTest: [NSWindow] = []
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -24,6 +35,9 @@ final class SettingsWindowTests: XCTestCase {
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         stashedFrameValue = UserDefaults.standard.string(forKey: Self.frameAutosaveDefaultsKey)
         UserDefaults.standard.removeObject(forKey: Self.frameAutosaveDefaultsKey)
+        stashedSelectedPane = UserDefaults.standard.string(
+            forKey: SettingsStore.Keys.selectedSettingsPane.name,
+        )
     }
 
     override func tearDown() {
@@ -32,105 +46,176 @@ final class SettingsWindowTests: XCTestCase {
         } else {
             UserDefaults.standard.removeObject(forKey: Self.frameAutosaveDefaultsKey)
         }
+        if let stashedSelectedPane {
+            UserDefaults.standard.set(stashedSelectedPane, forKey: SettingsStore.Keys.selectedSettingsPane.name)
+        } else {
+            UserDefaults.standard.removeObject(forKey: SettingsStore.Keys.selectedSettingsPane.name)
+        }
+        for window in windowsUnderTest {
+            window.setFrameAutosaveName("")
+        }
+        windowsUnderTest.removeAll()
         userDefaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
+    }
+
+    /// What `contentMinSize` / `setContentSize` speak, which is NOT
+    /// `contentLayoutRect`: under `.fullSizeContentView` the layout rect
+    /// excludes the titlebar, so a test reading it would measure a window a
+    /// titlebar shorter than the one the limits describe.
+    private func contentSize(of window: NSWindow) -> NSSize {
+        window.contentRect(forFrameRect: window.frame).size
     }
 
     private func makeStore(_ language: DisplayLanguage = .hanji) -> DisplayLanguageStore {
         TestFixtures.makeDisplayLanguageStore(language, userDefaults: userDefaults)
     }
 
-    /// A bare resizable window with no floor of its own, for driving
-    /// `growToMinimum` through both of its branches — `makeWindow` puts
-    /// `contentMinSize` on before sizing, which would clamp the shrink this
-    /// setup needs and leave the grow branch untested.
-    private func makeUnflooredWindow(contentSize: NSSize) -> NSWindow {
-        let window = NSWindow(
-            contentRect: NSRect(origin: .zero, size: contentSize),
-            styleMask: [.titled, .resizable],
-            backing: .buffered,
-            defer: false,
-        )
-        window.isReleasedWhenClosed = false
+    /// Builds the settings window and registers it for the autosave-name
+    /// release in `tearDown`.
+    private func makeWindow(language: DisplayLanguageStore) -> NSWindow {
+        let window = SettingsWindowController.makeWindow(language: language)
+        windowsUnderTest.append(window)
         return window
     }
 
     // MARK: - Window chrome
 
     func testWindow_hostsTheSplitViewRoot() {
-        let window = SettingsWindowController.makeWindow(language: makeStore())
+        let window = makeWindow(language: makeStore())
 
         XCTAssertTrue(window.styleMask.contains(.resizable))
-        XCTAssertNotNil(window.contentViewController as? NSHostingController<SettingsRootView>)
+        XCTAssertNotNil(window.contentViewController as? SettingsSplitViewController)
     }
 
-    /// The titlebar shows the selected pane's name only if the SwiftUI
-    /// `navigationTitle` is bridged out of the hosting controller — nothing
-    /// else writes `window.title` any more.
-    func testWindow_bridgesTheSwiftUITitleIntoTheTitlebar() throws {
-        let window = SettingsWindowController.makeWindow(language: makeStore())
+    /// The sidebar is AppKit's, and pinned: SwiftUI's `NavigationSplitView`
+    /// collapsed on device whatever it was told, so the column states what it
+    /// is through the one public API that can — `NSSplitViewItem`.
+    func testSidebar_cannotCollapseOrResize() throws {
+        let window = makeWindow(language: makeStore())
 
-        let hosting = try XCTUnwrap(window.contentViewController as? NSHostingController<SettingsRootView>)
-        XCTAssertEqual(hosting.sceneBridgingOptions, .all)
+        let split = try XCTUnwrap(window.contentViewController as? SettingsSplitViewController)
+        let sidebar = try XCTUnwrap(split.splitViewItems.first)
+        XCTAssertFalse(sidebar.canCollapse)
+        XCTAssertEqual(sidebar.minimumThickness, SettingsPaneLayout.sidebarWidth)
+        XCTAssertEqual(sidebar.maximumThickness, SettingsPaneLayout.sidebarWidth)
+        XCTAssertEqual(split.splitViewItems.count, 2, "sidebar and detail, nothing else")
+        // A divider position persisted for an immovable divider would be a
+        // second, competing authority on the sidebar's width.
+        XCTAssertNil(split.splitView.autosaveName)
+    }
+
+    /// The System Settings shape: one width, both directions, so the window
+    /// resizes vertically only — including under the zoom button, which reads
+    /// the same two limits.
+    ///
+    /// Asserted AFTER a layout pass, which is the only state that matters and
+    /// the one an earlier version of this test missed: `NSHostingController`
+    /// ships with `sizingOptions` containing `.minSize` and `.maxSize`, so at
+    /// first layout it overwrites both limits with what SwiftUI measured —
+    /// a window pinned only in `makeWindow` measured `min (283, 20)` and
+    /// `max (∞, ∞)` a moment later, and could be dragged to any width.
+    func testWindow_pinsItsWidthAndLeavesTheHeightFree() {
+        let window = makeWindow(language: makeStore())
+        window.contentView?.layoutSubtreeIfNeeded()
+        window.layoutIfNeeded()
+
+        XCTAssertEqual(window.contentMinSize.width, SettingsPaneLayout.contentWidth)
+        XCTAssertEqual(window.contentMaxSize.width, SettingsPaneLayout.contentWidth)
+        XCTAssertEqual(window.contentMinSize.height, SettingsPaneLayout.minimumContentHeight)
+        XCTAssertGreaterThan(window.contentMaxSize.height, window.contentMinSize.height)
+    }
+
+    /// The titlebar names the selected pane, in the display language, written
+    /// by the split controller — the SwiftUI `navigationTitle` bridge is gone
+    /// with the `NavigationSplitView` it came from.
+    func testWindow_titlesTheTitlebarWithTheSelectedPane() {
+        let language = makeStore()
+        SettingsStore().selectedSettingsPane = .shortcuts
+
+        let window = makeWindow(language: language)
+        window.contentViewController?.viewWillAppear()
+
+        XCTAssertEqual(window.title, language.string(SettingsPane.shortcuts.labelKey))
+    }
+
+    /// The window follows the app's own 外觀 setting, not just the system's —
+    /// the same choice the candidate window reads.
+    func testWindow_followsTheAppearanceSetting() {
+        let window = makeWindow(language: makeStore())
+
+        window.contentViewController?.viewWillAppear()
+
+        // Whatever the machine running this has stored, the window's override
+        // has to match what the setting resolves to — including nil for 自動.
+        XCTAssertEqual(window.appearance, SettingsStore().appearanceMode.forcedAppearance)
     }
 
     /// The window must survive being closed: it is cached so reopening returns
     /// the user to where they left it, and releasing it would make the second
     /// open a message to a freed object.
     func testWindow_isNotReleasedWhenClosed() {
-        XCTAssertFalse(SettingsWindowController.makeWindow(language: makeStore()).isReleasedWhenClosed)
+        XCTAssertFalse(makeWindow(language: makeStore()).isReleasedWhenClosed)
     }
 
-    /// With no autosaved frame (setUp clears it), a fresh window opens at no
-    /// less than the explicit initial size — not whatever `.zero` settles
-    /// into — with the one window-wide floor applied. `>=` rather than `==`:
-    /// bridging the split view's toolbar in re-lays-out the window, and the
-    /// exact resulting height belongs to SwiftUI, not to `makeWindow`.
-    func testFreshWindow_opensAtTheInitialSizeWithTheFloorApplied() {
-        let window = SettingsWindowController.makeWindow(language: makeStore())
+    /// With no autosaved frame (setUp clears it), a fresh window opens at the
+    /// explicit initial size — not whatever `.zero` settles into. The width is
+    /// exact because it is pinned; the height is `>=` because laying the
+    /// content out can grow it.
+    func testFreshWindow_opensAtTheInitialSize() {
+        let window = makeWindow(language: makeStore())
 
-        XCTAssertEqual(window.contentMinSize, SettingsWindowController.minimumContentSize)
-        XCTAssertGreaterThanOrEqual(
-            window.contentLayoutRect.size.width,
-            SettingsWindowController.initialContentSize.width - 1,
+        XCTAssertEqual(
+            contentSize(of: window).width,
+            SettingsPaneLayout.contentWidth,
+            accuracy: 1,
         )
         XCTAssertGreaterThanOrEqual(
-            window.contentLayoutRect.size.height,
-            SettingsWindowController.initialContentSize.height - 1,
+            contentSize(of: window).height,
+            SettingsPaneLayout.initialContentHeight - 1,
         )
     }
 
-    /// The real restore path: `contentMinSize` does not grow a frame autosaved
-    /// by a build with a smaller floor — the tabbed window this layout
-    /// replaced had one — so `makeWindow` has to grow it by hand after
-    /// `setFrameAutosaveName` restores it.
+    /// The real restore path: neither limit resizes a frame
+    /// `setFrameAutosaveName` has just restored, so `makeWindow` has to apply
+    /// them by hand afterwards. A frame this narrow is what a build with a
+    /// smaller floor autosaved.
+    ///
+    /// One window per test, not a loop over staged frames: an autosave name
+    /// binds to one live window at a time, so a second window built under the
+    /// same name inside one test restores nothing and would test the fallback.
     func testWindow_growsANarrowAutosavedFrameToTheFloor() throws {
+        try stageAutosavedFrame(width: 380, height: 300)
+
+        let window = makeWindow(language: makeStore())
+
+        let size = contentSize(of: window)
+        XCTAssertEqual(size.width, SettingsPaneLayout.contentWidth, accuracy: 1)
+        XCTAssertEqual(size.height, SettingsPaneLayout.minimumContentHeight, accuracy: 1)
+    }
+
+    /// The other direction, which the build before the width pin autosaved: a
+    /// frame wider than the window may now be comes back in, and the height
+    /// the user had dragged to survives it — `>` the floor rather than an
+    /// exact number, which would pin the titlebar's height into the test.
+    func testWindow_narrowsAWideAutosavedFrameAndKeepsItsHeight() throws {
+        try stageAutosavedFrame(width: 1100, height: 700)
+
+        let window = makeWindow(language: makeStore())
+
+        let size = contentSize(of: window)
+        XCTAssertEqual(size.width, SettingsPaneLayout.contentWidth, accuracy: 1)
+        XCTAssertGreaterThan(size.height, SettingsPaneLayout.minimumContentHeight)
+    }
+
+    /// Stages an autosaved frame in the STANDARD defaults, where AppKit reads
+    /// it back from; `tearDown` puts the developer's own value back.
+    private func stageAutosavedFrame(width: Int, height: Int) throws {
         let screen = try XCTUnwrap(NSScreen.main).frame
         UserDefaults.standard.set(
-            "100 100 380 300 0 0 \(Int(screen.width)) \(Int(screen.height))",
+            "100 100 \(width) \(height) 0 0 \(Int(screen.width)) \(Int(screen.height))",
             forKey: Self.frameAutosaveDefaultsKey,
         )
-
-        let window = SettingsWindowController.makeWindow(language: makeStore())
-
-        let floor = SettingsWindowController.minimumContentSize
-        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.width, floor.width)
-        XCTAssertGreaterThanOrEqual(window.contentLayoutRect.size.height, floor.height)
-    }
-
-    /// Both branches of the grow helper, on a window with no floor of its own
-    /// so the shrink actually lands (see `makeUnflooredWindow`).
-    func testGrowToMinimum_growsASmallWindowAndLeavesALargerOneAlone() {
-        let small = makeUnflooredWindow(contentSize: NSSize(width: 200, height: 200))
-        SettingsWindowController.growToMinimum(small)
-        let floor = SettingsWindowController.minimumContentSize
-        XCTAssertGreaterThanOrEqual(small.contentLayoutRect.size.width, floor.width)
-        XCTAssertGreaterThanOrEqual(small.contentLayoutRect.size.height, floor.height)
-
-        let large = makeUnflooredWindow(contentSize: NSSize(width: 900, height: 700))
-        SettingsWindowController.growToMinimum(large)
-        XCTAssertEqual(large.contentLayoutRect.size.width, 900, accuracy: 1)
-        XCTAssertEqual(large.contentLayoutRect.size.height, 700, accuracy: 1)
     }
 
     // MARK: - Pane roster

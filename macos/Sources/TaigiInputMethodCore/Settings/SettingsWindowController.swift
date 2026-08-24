@@ -18,19 +18,14 @@ final class SettingsWindowController {
 
     private static let logger = DebugLogger(category: "SettingsWindow")
 
-    /// The floor under the window: the sidebar's minimum plus the widest
-    /// pane's list content. One floor for the whole window — the sidebar
-    /// shows every pane, so there is no per-tab size to switch between.
-    static let minimumContentSize = NSSize(width: 760, height: 470)
-
-    /// What a first launch opens at. Explicit rather than derived: a `.zero`
-    /// window under a flexible `NavigationSplitView` is not guaranteed to
-    /// settle on a sensible size on its own.
-    static let initialContentSize = NSSize(width: 860, height: 560)
-
     /// Held rather than recreated, so reopening returns the user to the window
     /// where they left it instead of a fresh one in the middle of the screen.
     private var window: NSWindow?
+
+    /// Keeps the window's light/dark override following the 外觀 setting.
+    /// A window-level fact, so it is owned here with the rest of them —
+    /// the split controller owns what is inside the window, not its chrome.
+    private var appearanceObservation: AnyObject?
 
     /// The window a sheet belongs on, or `nil` when there is none to put one
     /// on: before the window has first been shown, and after it is closed.
@@ -69,6 +64,17 @@ final class SettingsWindowController {
         NSApp.activate()
 
         let window = window ?? Self.makeWindow(language: DisplayLanguageStore.shared)
+        if self.window == nil {
+            // Once, on the window this instance keeps: `makeWindow` is static
+            // so a test can build a window without going through the shared
+            // controller, and an observation belongs to whoever holds the
+            // window it updates.
+            appearanceObservation = SettingsStore().observeChanges(of: SettingsStore.Keys.appearanceMode) {
+                // Fires on whichever thread wrote the value, and carries none —
+                // hop, then re-read.
+                Task { @MainActor in Self.applyAppearance(to: window) }
+            }
+        }
         self.window = window
 
         window.makeKeyAndOrderFront(nil)
@@ -93,59 +99,91 @@ final class SettingsWindowController {
     /// can inspect the chrome — style mask, content size, hosting root —
     /// without ordering a window in front of whoever is running the tests.
     ///
-    /// No `window.title` is written here or anywhere: the hosting controller
-    /// bridges the detail pane's `navigationTitle` into the titlebar, and a
-    /// manual write would compete with it. That also covers language changes —
-    /// the pane titles re-render from the store SwiftUI observes.
+    /// The titlebar is bound, not written: `SettingsSplitViewController` names
+    /// the pane it is showing in its own `title`, and `NSWindow` documents this
+    /// binding as the way that reaches the titlebar. So nothing here has to be
+    /// told when the pane or the display language changes.
     static func makeWindow(language: DisplayLanguageStore) -> NSWindow {
         let window = NSWindow(
             contentRect: .zero,
-            // `.resizable` since the dictionary panes carry lists; the floor
-            // is `minimumContentSize`, applied below.
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            // `.resizable` since the dictionary panes carry lists and the
+            // window has to grow taller for them; the width is pinned below,
+            // so what stays resizable is the height.
+            //
+            // `.fullSizeContentView` with a transparent titlebar is what lets
+            // the sidebar's material run the full height of the window, the
+            // way System Settings' does. `NSSplitViewItem`'s
+            // `allowsFullHeightLayout` is on by default but only takes effect
+            // under this style mask.
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false,
         )
-        let hostingController = NSHostingController(
-            rootView: SettingsRootView(
-                stores: ComposingSessionCoordinator.shared.userDataStores,
-                settingsProvider: SettingsStore(),
-                language: language,
-            ),
+        window.titlebarAppearsTransparent = true
+        let splitViewController = SettingsSplitViewController(
+            stores: ComposingSessionCoordinator.shared.userDataStores,
+            language: language,
         )
-        // Explicit rather than defaulted, pinning the contract: `.all` is what
-        // carries the detail's `navigationTitle` into the titlebar, and any
-        // toolbar content the split view declares into the window toolbar.
-        hostingController.sceneBridgingOptions = .all
-        window.contentViewController = hostingController
+        window.contentViewController = splitViewController
+        window.bind(.title, to: splitViewController, withKeyPath: "title")
+        applyAppearance(to: window)
         // The default is to release the window when it closes, which would turn
         // the second open into a message to a freed object.
         window.isReleasedWhenClosed = false
-        window.contentMinSize = minimumContentSize
-        window.setContentSize(initialContentSize)
+        // The window is the single authority on its own width now: the two
+        // columns are child hosting controllers, and the SwiftUI write-back
+        // that used to overwrite these limits only happens for a hosting view
+        // used AS the window's content view. `.greatestFiniteMagnitude` for
+        // the height, which has no ceiling.
+        window.contentMinSize = NSSize(
+            width: SettingsPaneLayout.contentWidth, height: SettingsPaneLayout.minimumContentHeight,
+        )
+        window.contentMaxSize = NSSize(width: SettingsPaneLayout.contentWidth, height: .greatestFiniteMagnitude)
+        window.setContentSize(NSSize(
+            width: SettingsPaneLayout.contentWidth, height: SettingsPaneLayout.initialContentHeight,
+        ))
         window.center()
         // After `center()`: restoring a saved frame should win over centering,
-        // and saving at all is what returns the user to the size they chose.
+        // and saving at all is what returns the user to the height they chose.
         window.setFrameAutosaveName("TaigiSettingsWindow")
-        // Last, so it sees the restored frame: `contentMinSize` stops future
-        // shrinking but does not grow a frame autosaved by a build with a
-        // smaller floor — the tabbed window this layout replaced had one.
-        growToMinimum(window)
+        // Last, so it sees the restored frame: `contentMinSize`/`contentMaxSize`
+        // bound what the user can DRAG the window to, and neither one resizes a
+        // frame `setFrameAutosaveName` has just restored. The split view keeps
+        // no autosave name of its own — one would persist a divider position
+        // for a divider that cannot move.
+        applyContentSizeLimits(window)
         return window
     }
 
-    /// Grows the window to the content floor if a restored frame sits below
-    /// it, in either dimension. Never shrinks a size the user chose.
-    /// Internal so a test can drive it with a deliberately small frame
-    /// without staging an autosaved one in `UserDefaults`.
-    static func growToMinimum(_ window: NSWindow) {
-        let current = window.contentLayoutRect.size
-        let grown = NSSize(
-            width: max(current.width, minimumContentSize.width),
-            height: max(current.height, minimumContentSize.height),
-        )
-        if grown != current {
-            window.setContentSize(grown)
+    /// Puts the 外觀 setting on the window: 淺色 / 深色 force it, 自動 leaves
+    /// it nil, which is an `NSWindow` resolving against the system.
+    static func applyAppearance(to window: NSWindow) {
+        let appearance = SettingsStore().appearanceMode.forcedAppearance
+        if window.appearance != appearance {
+            window.appearance = appearance
         }
+    }
+
+    /// Puts a restored frame inside the limits `makeWindow` declares: the
+    /// width to `contentWidth` whichever side of it the frame sits on, and the
+    /// height up to the floor if it is under it. Never shrinks a height the
+    /// user chose.
+    ///
+    /// Both width directions matter, and each has shipped: a build with a
+    /// smaller floor autosaved a narrower frame, and the build before this one
+    /// let the window be dragged wider than `contentWidth`.
+    ///
+    /// Internal so a test can drive it with a deliberately off-size frame
+    /// without staging an autosaved one in `UserDefaults`.
+    static func applyContentSizeLimits(_ window: NSWindow) {
+        // `contentRect(forFrameRect:)`, NOT `contentLayoutRect`: under
+        // `.fullSizeContentView` the layout rect excludes the titlebar, so
+        // reading it here would shrink the window by a titlebar's height on
+        // every call — and `setContentSize` speaks the other measure.
+        let currentHeight = window.contentRect(forFrameRect: window.frame).height
+        window.setContentSize(NSSize(
+            width: SettingsPaneLayout.contentWidth,
+            height: max(currentHeight, SettingsPaneLayout.minimumContentHeight),
+        ))
     }
 }

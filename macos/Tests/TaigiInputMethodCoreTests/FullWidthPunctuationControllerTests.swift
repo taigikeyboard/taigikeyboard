@@ -53,20 +53,6 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts, [])
     }
 
-    func testTheToggleOff_passesPunctuationThrough() throws {
-        let session = try makeSession(configure: {
-            $0.isTranslateSwapped = true
-            $0.isFullWidthPunctuationEnabled = false
-        })
-
-        let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: ","), client: session.client,
-        )
-
-        XCTAssertFalse(handled)
-        XCTAssertEqual(session.client.insertedTexts, [])
-    }
-
     func testAnUnmappedCharacter_passesThroughEvenWhenActive() throws {
         // Digits are tone markers and must reach the host as themselves.
         let session = try makeSession(configure: { $0.isTranslateSwapped = true })

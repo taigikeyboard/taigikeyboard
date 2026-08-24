@@ -115,6 +115,18 @@ enum ShortcutAction: CaseIterable, Sendable {
         }
     }
 
+    /// The actions that open a settings pane, and the ones that do something
+    /// to the input method instead. Split off `settingsPane` rather than
+    /// listed by hand, so an action added to one group cannot be missing from
+    /// both.
+    static var paneOpeners: [ShortcutAction] {
+        allCases.filter { $0.settingsPane != nil }
+    }
+
+    static var commands: [ShortcutAction] {
+        allCases.filter { $0.settingsPane == nil }
+    }
+
     /// The pane this action lands the settings window on, or `nil` for the two
     /// switches, which open no window at all.
     var settingsPane: SettingsPane? {

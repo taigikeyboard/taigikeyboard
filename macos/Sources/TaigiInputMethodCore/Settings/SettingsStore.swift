@@ -81,29 +81,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: true,
         )
 
-        /// Whether typed punctuation becomes full-width while the 漢羅對調
-        /// swap has Hanji coming first (`FullWidthPunctuation`). macOS-only
-        /// and platform-side — the engine never sees the mapped character
-        /// before it is document text — so like `isAutoSpaceEnabled` the
-        /// default is owned here. ON to match what every macOS Chinese input
-        /// method does for CJK output; roman-first output is untouched either
-        /// way, so a fresh install only notices this after swapping to Hanji.
-        static let isFullWidthPunctuationEnabled = SettingsKey(
-            name: "fullWidthPunctuationEnabled",
-            defaultValue: true,
-        )
-
-        /// Whether a solo Shift tap toggles 英數 passthrough
-        /// (`ShiftTapDetector`). macOS-only — the phones have no Shift key to
-        /// tap — so the default is owned here. ON because the gesture is the
-        /// one MOE 輸入法 users arrive with; the preference stores only the
-        /// permission, never the current mode, which is per-session and
-        /// volatile.
-        static let isShiftToggleAlphanumericEnabled = SettingsKey(
-            name: "shiftTogglesAlphanumericEnabled",
-            defaultValue: true,
-        )
-
         // The dictionary sources. Key spellings are the iOS ones verbatim
         // (`SharedSettings.swift:53-66`) — including `khiin`, which is the one
         // key with no `Enabled` suffix. The name on the left is the engine's
@@ -260,11 +237,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateLayout.expandable,
         )
 
-        /// The candidate window's light/dark choice — `auto` follows the
-        /// system. Presentation-only like `candidateLayout`.
-        static let candidateAppearanceMode = SettingsKey(
+        /// The app's light/dark choice — `auto` follows the system.
+        /// Presentation-only like `candidateLayout`. The stored name keeps the
+        /// spelling from when only the candidate window read it, so upgrading
+        /// installs need no migration (`AppearanceMode`).
+        static let appearanceMode = SettingsKey(
             name: "candidateAppearanceMode",
-            defaultValue: CandidateAppearanceMode.auto,
+            defaultValue: AppearanceMode.auto,
         )
 
         /// How big the candidate text renders. Presentation-only like
@@ -389,9 +368,10 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         choice(Keys.candidateLayout)
     }
 
-    /// The candidate window's light/dark choice.
-    var candidateAppearanceMode: CandidateAppearanceMode {
-        choice(Keys.candidateAppearanceMode)
+    /// The app's light/dark choice, read by the candidate window and the
+    /// settings window alike.
+    var appearanceMode: AppearanceMode {
+        choice(Keys.appearanceMode)
     }
 
     /// The candidate text size.
@@ -509,21 +489,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var isAutoSpaceEnabled: Bool {
         get { bool(Keys.isAutoSpaceEnabled) }
         set { userDefaults.set(newValue, forKey: Keys.isAutoSpaceEnabled.name) }
-    }
-
-    /// Whether typed punctuation becomes full-width in hanji-first output.
-    /// Read by the controller's two punctuation-insertion sites, never by the
-    /// engine.
-    var isFullWidthPunctuationEnabled: Bool {
-        get { bool(Keys.isFullWidthPunctuationEnabled) }
-        set { userDefaults.set(newValue, forKey: Keys.isFullWidthPunctuationEnabled.name) }
-    }
-
-    /// Whether a solo Shift tap toggles 英數 passthrough. Read on each
-    /// completed tap, never by the engine.
-    var isShiftToggleAlphanumericEnabled: Bool {
-        get { bool(Keys.isShiftToggleAlphanumericEnabled) }
-        set { userDefaults.set(newValue, forKey: Keys.isShiftToggleAlphanumericEnabled.name) }
     }
 
     /// The app UI display language tag. Read as a raw tag rather than a `DisplayLanguage` so a value

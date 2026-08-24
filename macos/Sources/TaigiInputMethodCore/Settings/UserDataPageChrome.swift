@@ -1,15 +1,21 @@
-// The parts the 詞庫 pages share: a filter box, an import/export pair, a
-// destructive clear, and somewhere for a failure to appear.
+// The parts the 詞庫 page is built from: a filter box, an import/export pair,
+// a destructive clear, and somewhere for a failure to appear.
 
 import SwiftUI
 
 /// What a page is doing right now.
 ///
 /// A page is either idle or busy with one named piece of work; there is no
-/// state where two of them run at once, because every action disables the
-/// others while it runs. That is deliberate: the stores serialise anyway, and
-/// a second import queued behind the first would report its counts against a
-/// database the user has already changed.
+/// state where two of them run at once, because an action that finds this
+/// non-idle refuses to start (`CustomDictionaryPageModel.beginWork`). That is
+/// deliberate: the stores serialise anyway, but a second import queued behind
+/// the first would report its counts against a database the user has already
+/// changed.
+///
+/// The refusal lives in the model on purpose. The view greys its controls
+/// too, but only after a delay (`UserDataPageChrome`), so for the first
+/// fraction of a second the interface is not the thing keeping two actions
+/// apart.
 ///
 /// The label is a key rather than a resolved string: a long import can outlive
 /// a display-language change, and the overlay has to follow it.
@@ -94,11 +100,41 @@ private struct UserDataPageChrome: ViewModifier {
     let activity: UserDataPageActivity
     @Binding var message: UserDataPageMessage?
 
+    /// What the overlay says, once the work has run long enough to be worth
+    /// interrupting for — and nil while it has not.
+    ///
+    /// Adding or deleting one entry is a local SQLite write that finishes in
+    /// milliseconds, so anything shown the instant work starts appears and
+    /// vanishes as a flash — the spinner, and the greyed controls under it
+    /// (USER 2026-08-24, twice). Both wait for this.
+    @State private var slowWorkLabel: StringKey?
+
+    /// How long work has to run before the spinner is worth the interruption.
+    private static let overlayDelay = Duration.milliseconds(400)
+
     func body(content: Content) -> some View {
         content
-            .disabled(activity.isWorking)
+            // The same delayed condition the overlay uses, and for the same
+            // reason: disabling a bordered button visibly greys it, so a veil
+            // raised and dropped inside two frames reads as every control on
+            // the page flashing (USER 2026-08-24). This is appearance only —
+            // what actually stops two actions overlapping is the model
+            // refusing the second one.
+            .disabled(slowWorkLabel != nil)
+            // Cancelled and restarted on every change of activity, so
+            // finishing inside the delay window leaves the overlay unshown,
+            // and going idle puts the flag back.
+            .task(id: activity) {
+                guard let labelKey = activity.labelKey else {
+                    slowWorkLabel = nil
+                    return
+                }
+                try? await Task.sleep(for: Self.overlayDelay)
+                guard !Task.isCancelled else { return }
+                slowWorkLabel = labelKey
+            }
             .overlay {
-                if let labelKey = activity.labelKey {
+                if let labelKey = slowWorkLabel {
                     // Indeterminate on purpose: the stores report what they
                     // did when they are done, not how far along they are, and
                     // a percentage this side invented would be a number the
@@ -141,17 +177,15 @@ extension View {
 
 /// The box the 自訂詞庫 pane types into, above its rows.
 ///
-/// In the content area rather than the window toolbar: the toolbar belongs to
-/// the settings window's `[一般] [詞庫]` tabs, and a search field placed there
-/// would be competing with them for the same strip.
+/// An `NSSearchField` (`SearchField`) rather than a text field: what it does
+/// is search, and the magnifier and the clear button are how macOS says so.
 struct UserDataFilterField: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     @Binding var text: String
 
     var body: some View {
-        TextField(language.string(.dictionarySearchPlaceholder), text: $text)
-            .textFieldStyle(.roundedBorder)
+        SearchField(placeholder: language.string(.dictionarySearchPlaceholder), text: $text)
     }
 }
 

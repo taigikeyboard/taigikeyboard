@@ -672,7 +672,7 @@ public final class TaigiInputController: IMKInputController {
             otherModifiersDown: !modifiers.isDisjoint(with: chordingModifiers),
             at: timestamp,
         )
-        guard firedTap, settings.isShiftToggleAlphanumericEnabled else { return false }
+        guard firedTap else { return false }
         guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken) else {
             return false
         }
@@ -839,15 +839,12 @@ public final class TaigiInputController: IMKInputController {
     // MARK: - Full-width punctuation
 
     /// The full-width form of the text a punctuation key just typed, or nil
-    /// when the policy is inactive or the key is not one it maps — live, like
-    /// the auto-space gate below, so the settings toggle applies to the very
-    /// next key.
+    /// when the output is roman-first or the key is not one the policy maps —
+    /// the mode is read live, like the auto-space gate below, so a swap
+    /// applies to the very next key.
     @MainActor
     private func fullWidthMapped(_ text: String) -> String? {
-        guard FullWidthPunctuation.isActive(
-            isEnabled: settings.isFullWidthPunctuationEnabled,
-            isTranslateSwapped: settings.isTranslateSwapped,
-        ) else { return nil }
+        guard settings.isTranslateSwapped else { return nil }
         return FullWidthPunctuation.mapped(text)
     }
 

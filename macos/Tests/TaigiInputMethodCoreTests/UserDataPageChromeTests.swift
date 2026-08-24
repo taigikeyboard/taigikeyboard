@@ -1,3 +1,4 @@
+import AppKit
 @testable import TaigiInputMethodCore
 import XCTest
 
@@ -50,5 +51,61 @@ final class UserDataPageChromeTests: XCTestCase {
 
         XCTAssertEqual(message.title(hanji), hanji.resolve(.commonImportFailed))
         XCTAssertEqual(message.detail(hanji), hanji.resolve(.macosNotUTF8Detail))
+    }
+}
+
+/// The custom-dictionary page's one work slot.
+///
+/// The view greys its controls too, but only after a delay, so this is what
+/// actually keeps two actions from overlapping — including a second CSV
+/// import started while the first is still parsing behind a closed file panel.
+@MainActor
+final class CustomDictionaryWorkSlotTests: XCTestCase {
+    private func makeModel() throws -> CustomDictionaryPageModel {
+        let directory = try TestFixtures.scratchDirectory()
+        return CustomDictionaryPageModel(store: CustomDictionaryStore(directory: { directory }))
+    }
+
+    /// A symbol name that stops resolving renders a blank rectangle and says
+    /// nothing about it.
+    func testTheEmptyStateSymbol_resolves() {
+        XCTAssertNotNil(
+            NSImage(systemSymbolName: CustomDictionaryPage.emptyStateSymbolName, accessibilityDescription: nil),
+        )
+    }
+
+    func testBeginWork_refusesASecondClaimWhileTheFirstIsHeld() throws {
+        let model = try makeModel()
+
+        XCTAssertTrue(model.beginWork(.macosProgressImporting))
+        XCTAssertFalse(
+            model.beginWork(.macosProgressDeleting),
+            "a second action must not start while one is running",
+        )
+        XCTAssertEqual(model.activity, .working(.macosProgressImporting), "the first action keeps the slot")
+    }
+
+    /// A real action, start to finish: it takes the slot on the way in and
+    /// gives it back on the way out, whether the store answered or failed.
+    func testAnAction_leavesTheSlotFreeWhenItEnds() async throws {
+        let model = try makeModel()
+
+        await model.deleteAll()
+
+        XCTAssertEqual(model.activity, .idle)
+        XCTAssertTrue(model.beginWork(.macosProgressSaving))
+    }
+
+    /// And an action that arrives while the slot is held does not run at all.
+    func testAnAction_doesNothingWhileAnotherHoldsTheSlot() async throws {
+        let model = try makeModel()
+        XCTAssertTrue(model.beginWork(.macosProgressImporting))
+
+        await model.deleteAll()
+
+        XCTAssertEqual(
+            model.activity, .working(.macosProgressImporting),
+            "the refused action must not release the slot it never took",
+        )
     }
 }

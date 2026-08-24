@@ -67,6 +67,11 @@ enum RetiredSettingsCleanup {
         // its type, `CandidateAccentColor` and `CandidateWindowStyle`.
         "candidateAccentColor",
         "candidateWindowStyle",
+        // 全形標點 and Shift 切換英數, retired 2026-08-24: both are always on
+        // now, so the stored value is inert either way and this only keeps
+        // the domain honest.
+        "fullWidthPunctuationEnabled",
+        "shiftTogglesAlphanumericEnabled",
     ]
 
     static func run(userDefaults: UserDefaults = .standard) {

@@ -179,11 +179,12 @@
       }
     },
     "customDictEmpty": {
-      "comment": "Empty-state hint shown when the custom dictionary has no entries.",
+      "comment": "Empty-state hint shown when the custom dictionary has no entries. On macOS it is the symbol's accessibility label rather than visible copy; the wording holds there because the pane has a + button too.",
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "macos"
         ],
         "surfaces": [
           "host"

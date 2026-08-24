@@ -1,24 +1,13 @@
-// The full-width punctuation policy: the map's rows and the mode gate.
+// The full-width punctuation policy: the map's rows.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The pure policy — what maps, what never does, and when the feature is
-/// active at all. The controller's use of it is covered by
-/// `FullWidthPunctuationControllerTests`.
+/// The pure policy — what maps and what never does. When it applies at all is
+/// the 漢羅對調 mode, read by the controller and covered by
+/// `FullWidthPunctuationControllerTests`
+/// (`testRomanFirstMode_passesPunctuationThrough`).
 final class FullWidthPunctuationTests: XCTestCase {
-    // MARK: - The gate
-
-    func testActive_onlyWhenEnabledAndSwapped() {
-        XCTAssertTrue(FullWidthPunctuation.isActive(isEnabled: true, isTranslateSwapped: true))
-        XCTAssertFalse(
-            FullWidthPunctuation.isActive(isEnabled: true, isTranslateSwapped: false),
-            "roman-first output keeps Latin punctuation whatever the toggle says",
-        )
-        XCTAssertFalse(FullWidthPunctuation.isActive(isEnabled: false, isTranslateSwapped: true))
-        XCTAssertFalse(FullWidthPunctuation.isActive(isEnabled: false, isTranslateSwapped: false))
-    }
-
     // MARK: - The map
 
     func testEveryMappedPair_followsTheMOETable() {
