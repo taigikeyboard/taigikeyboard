@@ -45,12 +45,17 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["開啟設定", "切換 台羅/白話字", "切換 漢羅對調"],
+            [
+                "開啟設定",
+                "一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理",
+                "切換 台羅/白話字", "切換 漢羅對調",
+            ],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
                 "設定を開く",
+                "一般", "外観", "ショートカット", "カスタム辞書", "辞書の管理",
                 "ローマ字体系を切り替える",
                 "漢字とローマ字の入れ替えを切り替える",
             ],
@@ -114,13 +119,12 @@ final class ShortcutActionsTests: XCTestCase {
     /// on one keypress, so the row holding only a default gives way.
     func testADefault_givesWayToTheSameChordRecordedElsewhere() {
         let recorded = KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command])
+        // toggleRomanization's default, recorded by hand on another row. Named
+        // rather than switched with a `default`, which would quietly absorb
+        // every action added later.
+        let holders: Set<ShortcutAction> = [.openSettings, .toggleRomanization]
         let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { action in
-            switch action {
-            // toggleRomanization's default, recorded by hand on another row.
-            case .openSettings: recorded
-            case .toggleRomanization: recorded
-            case .toggleTranslateSwapped: nil
-            }
+            holders.contains(action) ? recorded : nil
         }
 
         XCTAssertEqual(shadowed, [.toggleRomanization])
@@ -132,6 +136,59 @@ final class ShortcutActionsTests: XCTestCase {
         let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { $0.defaultShortcut }
 
         XCTAssertEqual(shadowed, [])
+    }
+
+    /// The pane doorways start on ⌃⇧ plus the pane's own position in the
+    /// sidebar: one modifier family with 開啟設定 above, and digits rather than
+    /// initials because the window speaks five display languages and an
+    /// initial is a mnemonic in exactly one of them.
+    func testThePaneDoorways_startOnControlShiftTheirSidebarPosition() {
+        let paneDefaults = ShortcutAction.allCases
+            .filter { $0.settingsPane != nil }
+            .map(\.defaultShortcut)
+
+        XCTAssertEqual(
+            paneDefaults,
+            [
+                KeyboardShortcuts.Shortcut(.one, modifiers: [.control, .shift]),
+                KeyboardShortcuts.Shortcut(.two, modifiers: [.control, .shift]),
+                KeyboardShortcuts.Shortcut(.three, modifiers: [.control, .shift]),
+                KeyboardShortcuts.Shortcut(.four, modifiers: [.control, .shift]),
+                KeyboardShortcuts.Shortcut(.five, modifiers: [.control, .shift]),
+            ],
+        )
+    }
+
+    /// Every pane has a doorway and every doorway has a pane, in the sidebar's
+    /// own order: a pane added to `SettingsPane` without one would be reachable
+    /// by no key at all, and the menu draws these rows in this order.
+    func testEveryPane_hasExactlyOneDoorway() {
+        XCTAssertEqual(
+            ShortcutAction.allCases.compactMap(\.settingsPane),
+            SettingsPane.allCases,
+        )
+    }
+
+    /// ⌃ plus a digit is how a user picks the third candidate on screen, and
+    /// the classifier reads that tier before it reads any binding. Shift is
+    /// what keeps these chords out of it — the tier refuses any chord carrying
+    /// a modifier it was not bound to — so the check is worth pinning rather
+    /// than reasoning about.
+    func testNoDefault_isACandidateSlotChord() throws {
+        for action in ShortcutAction.allCases {
+            let shortcut = try XCTUnwrap(action.defaultShortcut)
+            let chord = try ComposingKeyChord.make(
+                key: XCTUnwrap(shortcut.nsMenuItemKeyEquivalent, action.name.rawValue),
+                modifiers: shortcut.modifiers,
+            ).get()
+
+            for slotModifier in CandidateSlotModifier.allCases {
+                XCTAssertFalse(
+                    chord.isCandidateSlotChord(under: slotModifier),
+                    "\(action.name.rawValue) collides with the \(slotModifier) slot tier",
+                )
+            }
+        }
     }
 
     // MARK: - Conflict resolution

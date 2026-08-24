@@ -143,9 +143,9 @@ struct DottedVersion: Comparable {
 /// activates this app, which is what keeps a composition in the user's document
 /// out of reach (`TaigiInputController.finishComposition`).
 ///
-/// The manual path — the settings window's 檢查更新 button — reports every
-/// outcome in an alert. Safe there and nowhere else: the settings window is
-/// already frontmost, so nothing is being composed.
+/// The manual path — the settings window's 檢查更新 button, and the
+/// input-source menu row that opens that window and then starts a check —
+/// reports every outcome on that window (`UpdateAlertPresenter`).
 @Observable
 @MainActor
 final class UpdateChecker {
@@ -170,7 +170,7 @@ final class UpdateChecker {
     private let fetchManifest: @Sendable () async throws -> UpdateManifest
     private let announce: @MainActor (UpdateManifest) async -> Bool
     private let withdrawAnnouncement: @MainActor () -> Void
-    private let presentManualOutcome: @MainActor (Outcome, _ installedVersion: String) -> Void
+    private let presentManualOutcome: @MainActor (Outcome, _ installedVersion: String) async -> Void
 
     private var isCheckInFlight = false
 
@@ -193,7 +193,7 @@ final class UpdateChecker {
         fetchManifest: @escaping @Sendable () async throws -> UpdateManifest = UpdateManifest.fetchPublished,
         announce: @escaping @MainActor (UpdateManifest) async -> Bool = UpdateAnnouncement.post,
         withdrawAnnouncement: @escaping @MainActor () -> Void = UpdateAnnouncement.withdraw,
-        presentManualOutcome: @escaping @MainActor (Outcome, String) -> Void = UpdateAlertPresenter.present,
+        presentManualOutcome: @escaping @MainActor (Outcome, String) async -> Void = UpdateAlertPresenter.present,
     ) {
         self.settings = settings
         self.installedVersionText = installedVersionText
@@ -300,7 +300,7 @@ final class UpdateChecker {
         let answersManualPress = isManualCheck || isManualOutcomeWanted
         isManualOutcomeWanted = false
         if answersManualPress {
-            presentManualOutcome(outcome, installedVersionText)
+            await presentManualOutcome(outcome, installedVersionText)
             return
         }
 
@@ -374,13 +374,30 @@ enum UpdateAnnouncement {
     }
 }
 
-/// The manual check's answer: an `NSAlert` per outcome, worded from the live
-/// display language. Reached only from the settings window's button, where the
-/// window is already frontmost and nothing is being composed — the automatic
-/// path never comes here.
+/// The manual check's answer: a sheet per outcome on the settings window,
+/// worded from the live display language. The automatic path never comes here.
+///
+/// A sheet on that window rather than an app-modal alert, and nothing at all
+/// once the window has gone: a manual check is asked for from the settings
+/// window (its 檢查更新 button, or the menu row that brings the window up
+/// before starting the check), and the answer can be seconds behind the
+/// question. By then the user may be back in their document — where this
+/// `LSUIElement` process is not the active application, so an app-modal alert
+/// would either sit behind what they are reading or, if it were given
+/// activation to be seen, resign their client and commit whatever they were
+/// composing (`UpdateNotificationOffer`). A sheet takes no focus, and a closed
+/// window means the question was dismissed with it. The one outcome that
+/// outlives the window is the one that has somewhere to live: an available
+/// update is recorded before this is called and shows on the 一般 pane.
 @MainActor
 enum UpdateAlertPresenter {
-    static func present(_ outcome: UpdateChecker.Outcome, installedVersion: String) {
+    private static let logger = DebugLogger(category: "UpdateChecker")
+
+    static func present(_ outcome: UpdateChecker.Outcome, installedVersion: String) async {
+        guard let window = SettingsWindowController.shared.windowForSheets else {
+            logger.debug("manual outcome dropped: no settings window to answer in")
+            return
+        }
         let language = DisplayLanguageStore.shared
         language.syncFromSettings()
 
@@ -394,35 +411,42 @@ enum UpdateAlertPresenter {
             )
             alert.addButton(withTitle: language.string(.macosUpdateDownloadAction))
             alert.addButton(withTitle: language.string(.macosUpdateLaterAction))
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            guard await alert.beginSheetModal(for: window) == .alertFirstButtonReturn else { return }
             // Same rule as `ExternalLinkButton`: a button that silently does
             // nothing is indistinguishable from a broken one.
             guard !NSWorkspace.shared.open(manifest.downloadPageURL) else { return }
-            inform(
+            await inform(
                 language.string(.macosOpenURLFailed),
                 detail: manifest.downloadPageURL.absoluteString,
                 language: language,
+                on: window,
             )
 
         case .upToDate:
-            inform(language.string(.macosUpdateUpToDateTitle), language: language)
+            await inform(language.string(.macosUpdateUpToDateTitle), language: language, on: window)
 
         case .failed:
-            inform(
+            await inform(
                 language.string(.macosUpdateCheckFailedTitle),
                 detail: language.string(.macosUpdateCheckFailedMessage),
                 language: language,
+                on: window,
             )
         }
     }
 
-    /// One button, nothing to decide — the shape three of the four alerts here
+    /// One button, nothing to decide — the shape three of the four sheets here
     /// share.
-    private static func inform(_ title: String, detail: String? = nil, language: DisplayLanguageStore) {
+    private static func inform(
+        _ title: String,
+        detail: String? = nil,
+        language: DisplayLanguageStore,
+        on window: NSWindow,
+    ) async {
         let alert = NSAlert()
         alert.messageText = title
         if let detail { alert.informativeText = detail }
         alert.addButton(withTitle: language.string(.commonOk))
-        alert.runModal()
+        await alert.beginSheetModal(for: window)
     }
 }

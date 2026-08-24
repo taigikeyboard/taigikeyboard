@@ -32,11 +32,17 @@ final class SettingsWindowController {
     /// where they left it instead of a fresh one in the middle of the screen.
     private var window: NSWindow?
 
-    /// The window the settings pages are being shown in, for the file panels
-    /// they open as sheets on it. `nil` before the window has ever been shown,
-    /// which is a state no page can be visible in.
-    var presentedWindow: NSWindow? {
-        window
+    /// The window a sheet belongs on, or `nil` when there is none to put one
+    /// on: before the window has first been shown, and after it is closed.
+    ///
+    /// Both halves matter. The window is held rather than released when it
+    /// closes, so "there is a window" and "the user can see it" are different
+    /// questions — and a sheet on a closed window is one nobody answers. Every
+    /// sheet this app raises asks here (`UserDataFilePanels.withSettingsWindow`,
+    /// `UpdateAlertPresenter`), so which window that is stays one fact.
+    var windowForSheets: NSWindow? {
+        guard let window, window.isVisible else { return nil }
+        return window
     }
 
     private init() {}

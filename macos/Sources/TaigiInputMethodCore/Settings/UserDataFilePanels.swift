@@ -25,7 +25,7 @@ enum UserDataFilePanels {
     /// before any work is announced — a veil raised over a panel that never
     /// appeared would never come down.
     static func withSettingsWindow(_ body: (NSWindow) async -> Void) async {
-        guard let window = SettingsWindowController.shared.presentedWindow else { return }
+        guard let window = SettingsWindowController.shared.windowForSheets else { return }
         await body(window)
     }
 

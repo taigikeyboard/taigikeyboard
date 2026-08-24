@@ -1136,7 +1136,7 @@
       }
     },
     "updateCheckNow": {
-      "comment": "Settings 一般 pane: button that checks for an update immediately, next to the installed version.",
+      "comment": "Button in the Settings 一般 pane that checks for an update immediately, next to the installed version, and the input-source menu row that does the same.",
       "scope": {
         "platforms": [
           "macos"

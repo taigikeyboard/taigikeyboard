@@ -20,6 +20,14 @@ import AppKit
 /// a bare system prompt with no reason attached is the one people decline.
 @MainActor
 enum UpdateNotificationOffer {
+    /// Whether an offer is already on its way to the screen. The stored flag
+    /// below cannot answer that on its own: it is written after the first
+    /// `await`, so two calls in the same run-loop turn both read "never
+    /// offered" and both raise a sheet. "Once ever" is this type's invariant,
+    /// so the in-flight half of it is kept here rather than at whichever call
+    /// site happens to be able to arrive twice.
+    private static var isInFlight = false
+
     /// Whether the offer still has to be made. Read synchronously at the call
     /// site so an opened settings window does no work at all once it has been.
     static func isPending(in settings: SettingsStore) -> Bool {
@@ -28,7 +36,9 @@ enum UpdateNotificationOffer {
 
     /// Makes the offer if it has never been made.
     static func offerIfNeeded(in settings: SettingsStore, parent: NSWindow) async {
-        guard !settings.hasOfferedUpdateNotifications else { return }
+        guard !settings.hasOfferedUpdateNotifications, !isInFlight else { return }
+        isInFlight = true
+        defer { isInFlight = false }
         let reachability = await NotificationManager.shared.reachability()
         // Written after the status read but before the alert: waiting for the
         // answer would re-offer to anyone who dismisses by closing the window,

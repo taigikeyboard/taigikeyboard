@@ -75,6 +75,17 @@ public final class TaigiInputController: IMKInputController {
     /// stored default would have to be evaluated where this class is not.
     var displayLanguageOverride: DisplayLanguageStore?
 
+    /// How a menu doorway puts the settings window up, and the update checker
+    /// the 檢查更新 row drives. Both injectable for the same reason
+    /// `displayLanguageOverride` above is, and `nil` means production: a test
+    /// that drove the shipped pair would order a real window in front of
+    /// whoever is running it, and reach the network.
+    @MainActor
+    var settingsPresenterOverride: (@MainActor () -> Void)?
+
+    @MainActor
+    var updateCheckerOverride: UpdateChecker?
+
     /// Where the caret sat right after this controller's last auto-inserted
     /// trailing space — armed only when the client answered a collapsed
     /// selection there, and only until the very next key event, which either
@@ -248,31 +259,53 @@ public final class TaigiInputController: IMKInputController {
             // commits a language change, and committing one runs the chrome renderer.
             language.syncFromSettings()
 
-            // Two rows and nothing else (USER 2026-08-21): the doorway into
-            // the settings window, and the doorway into its shortcut pane.
-            // Every action and every key lives behind those doors — the menu
-            // stopped being the shortcut roster when the agent proved unable
-            // to DISPLAY a composing key without also DISPATCHING it
-            // (`InputSourceMenuRow`). The 開啟設定 chord stays: opening
-            // settings is a real shortcut, and the agent's key column is its
-            // display. The shortcut row has no chord — the pane is a place,
-            // not an action.
-            let openSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openSettings)
-            return [[
-                InputSourceMenuRow(
-                    label: ShortcutAction.openSettings.label(language),
-                    keyEquivalent: openSettingsShortcut?.nsMenuItemKeyEquivalent ?? "",
-                    modifiers: openSettingsShortcut?.modifiers ?? [],
-                    action: #selector(showPreferences(_:)),
-                ),
-                InputSourceMenuRow(
-                    label: language.string(.macosShortcutsTab),
-                    action: #selector(openShortcutSettings(_:)),
-                ),
-            ]]
+            // Doorways only (USER 2026-08-21): the settings window, each of
+            // its panes, and the one command that has somewhere to go rather
+            // than somewhere to be. Every composing key lives behind those
+            // doors — the menu stopped being the shortcut roster when the
+            // agent proved unable to DISPLAY a composing key without also
+            // DISPATCHING it (`InputSourceMenuRow`). These rows may claim a
+            // key equivalent because they ARE shortcuts: every one of them is
+            // an entry in the registry the 快捷鍵 pane records, and their
+            // chords all carry modifiers no composition types.
+            let doorways = Self.menuDoorways.map { doorway in
+                let shortcut = KeyboardShortcuts.getShortcut(for: doorway.action.name)
+                return InputSourceMenuRow(
+                    label: doorway.action.label(language),
+                    keyEquivalent: shortcut?.nsMenuItemKeyEquivalent ?? "",
+                    modifiers: shortcut?.modifiers ?? [],
+                    action: doorway.selector,
+                )
+            }
+            // No chord, by design: an on-demand check is a command a user
+            // reaches for once in a while, and a key equivalent claimed here
+            // is taken from the host application for as long as this input
+            // source is selected.
+            let checkForUpdates = InputSourceMenuRow(
+                label: language.string(.macosUpdateCheckNow),
+                action: #selector(checkForUpdates(_:)),
+            )
+            return [doorways, [checkForUpdates]]
         }
         return InputSourceMenuRenderer.menu(groups)
     }
+
+    /// The menu's first group: every row that opens the settings window, in
+    /// sidebar order under the row that opens it wherever the user left it.
+    ///
+    /// Paired with a selector rather than derived from the action, because IMK
+    /// routes a menu command by selector (`IMKInputController.h:283-296`) and a
+    /// selector cannot be computed. The list IS the roster: a `ShortcutAction`
+    /// missing from it has no menu row, which is how the two mid-sentence
+    /// switches stay out (USER 2026-08-21).
+    private static let menuDoorways: [(action: ShortcutAction, selector: Selector)] = [
+        (.openSettings, #selector(showPreferences(_:))),
+        (.openGeneralPane, #selector(openGeneralPane(_:))),
+        (.openAppearancePane, #selector(openAppearancePane(_:))),
+        (.openShortcutPane, #selector(openShortcutPane(_:))),
+        (.openCustomDictionaryPane, #selector(openCustomDictionaryPane(_:))),
+        (.openDictionarySourcesPane, #selector(openDictionarySourcesPane(_:))),
+    ]
 
     /// Deliberately does not call `super`. The inherited implementation looks
     /// for a `preferences.nib` (`IMKInputController.h:165-170`); this package is
@@ -280,17 +313,71 @@ public final class TaigiInputController: IMKInputController {
     /// is the one the system reserves for this command.
     override public func showPreferences(_: Any!) {
         Self.logger.debug("showPreferences")
-        onMainActor(nil) { _, _ in SettingsWindowController.shared.show() }
+        openSettings(for: .openSettings)
     }
 
-    /// Opens the settings window ON the shortcut pane. The pane is written
-    /// before the window is asked to show, so an already-open window moves to
-    /// it too.
+    /// One selector per pane, because that is the unit IMK routes by. Each
+    /// names the action it sends and nothing else; what opening a pane means
+    /// is `ShortcutHotkeys.openSettings(on:in:)`, shared with the Carbon
+    /// hotkey the same action registers.
     @objc
-    private func openShortcutSettings(_: Any!) {
+    private func openGeneralPane(_: Any!) {
+        openSettings(for: .openGeneralPane)
+    }
+
+    @objc
+    private func openAppearancePane(_: Any!) {
+        openSettings(for: .openAppearancePane)
+    }
+
+    @objc
+    private func openShortcutPane(_: Any!) {
+        openSettings(for: .openShortcutPane)
+    }
+
+    @objc
+    private func openCustomDictionaryPane(_: Any!) {
+        openSettings(for: .openCustomDictionaryPane)
+    }
+
+    @objc
+    private func openDictionarySourcesPane(_: Any!) {
+        openSettings(for: .openDictionarySourcesPane)
+    }
+
+    /// Brings the window up on this controller's own settings store, so a test
+    /// drives the menu through its own defaults suite.
+    private func openSettings(for action: ShortcutAction) {
+        Self.logger.debug("open settings for \(String(describing: action))")
         onMainActor(nil) { controller, _ in
-            controller.settings.selectedSettingsPane = .shortcuts
-            SettingsWindowController.shared.show()
+            ShortcutHotkeys.openSettings(
+                on: action.settingsPane,
+                in: controller.settings,
+                show: controller.settingsPresenterOverride,
+            )
+        }
+    }
+
+    /// Checks for a new version, with the settings window already up.
+    ///
+    /// The window first, then the check, and never the other way round: a
+    /// fetch can take seconds, and the answer is a sheet on that window
+    /// (`UpdateAlertPresenter`). Opening it at the moment the user picks the
+    /// command is what puts the answer somewhere they are already looking —
+    /// and this process is an `LSUIElement` whose activation makes the focused
+    /// client resign, committing whatever was composing into the user's
+    /// document (`UpdateNotificationOffer`), so that cost is paid on their
+    /// click rather than seconds later when the network happens to answer.
+    ///
+    /// 一般 because that is the pane the update state lives on
+    /// (`GeneralSettingsView`), so the outcome has somewhere to land.
+    @objc
+    private func checkForUpdates(_: Any!) {
+        Self.logger.debug("check for updates")
+        openSettings(for: .openGeneralPane)
+        onMainActor(nil) { controller, _ in
+            let checker = controller.updateCheckerOverride ?? UpdateChecker.shared
+            checker.checkManually()
         }
     }
 
@@ -314,7 +401,8 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
         switch action {
-        case .openSettings:
+        case .openSettings, .openGeneralPane, .openAppearancePane, .openShortcutPane,
+             .openCustomDictionaryPane, .openDictionarySourcesPane:
             // Handled process-wide by `ShortcutHotkeys.perform` before any
             // session is consulted: opening a window needs no client, and a
             // user with no focused Taigi session still expects the chord to
