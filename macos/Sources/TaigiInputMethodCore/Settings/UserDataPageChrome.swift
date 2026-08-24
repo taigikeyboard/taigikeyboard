@@ -139,9 +139,7 @@ extension View {
     }
 }
 
-/// The box the 詞庫 pane types into — above the rows in 自訂詞庫, and above the
-/// results in the dictionary search. Both ask the same question of the user, so
-/// both ask it in the same words.
+/// The box the 自訂詞庫 pane types into, above its rows.
 ///
 /// In the content area rather than the window toolbar: the toolbar belongs to
 /// the settings window's `[一般] [詞庫]` tabs, and a search field placed there
@@ -152,7 +150,7 @@ struct UserDataFilterField: View {
     @Binding var text: String
 
     var body: some View {
-        TextField(language.string(.dictionarySearchPlaceholder), text: $text)
+        TextField(language.string(.macosFilterPlaceholder), text: $text)
             .textFieldStyle(.roundedBorder)
     }
 }
@@ -187,8 +185,6 @@ struct UserDataActionsSection: View {
                 } message: {
                     Text(language.string(.macosIrreversible))
                 }
-        } footer: {
-            Text(language.string(.macosUserDataPrivacyFooter))
         }
     }
 }

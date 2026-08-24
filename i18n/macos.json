@@ -354,11 +354,11 @@
         ]
       },
       "values": {
-        "hanji": "選辭典",
-        "tailo": "suán sû-tián",
-        "poj": "soán sû-tián",
-        "en": "Choose Dictionaries",
-        "ja": "辞書を選ぶ"
+        "hanji": "辭典管理",
+        "tailo": "sû-tián kuán-lí",
+        "poj": "sû-tián koán-lí",
+        "en": "Manage Dictionaries",
+        "ja": "辞書の管理"
       }
     },
     "openURLFailed": {
@@ -1506,6 +1506,24 @@
         "poj": "ha̍k-si̍p kì-lio̍k chheng bē tiāu",
         "en": "Could Not Clear Learning Records",
         "ja": "学習記録を消去できませんでした"
+      }
+    },
+    "filterPlaceholder": {
+      "comment": "Filter-box placeholder on the 自訂詞庫 pane. macOS-only wording: the box filters the entries already on the page, so it says 揣字 rather than the three-platform dictionary.searchPlaceholder.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揣字",
+        "tailo": "tshuē jī",
+        "poj": "chhōe jī",
+        "en": "Type to search",
+        "ja": "入力して検索"
       }
     }
   }

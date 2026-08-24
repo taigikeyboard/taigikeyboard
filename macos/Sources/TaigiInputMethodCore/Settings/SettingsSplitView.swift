@@ -116,13 +116,13 @@ struct SettingsSplitView: View {
     private var detailView: some View {
         switch selectedPane {
         case .general:
-            GeneralSettingsView(stores: stores)
+            GeneralSettingsView()
         case .appearance:
             AppearanceSettingsView()
         case .shortcuts:
             ShortcutSettingsView()
         case .customDictionary:
-            CustomDictionaryPage(store: stores.customDictionary)
+            CustomDictionaryPage(stores: stores)
         case .dictionarySources:
             DictionaryTogglesView()
         }

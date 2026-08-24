@@ -972,8 +972,7 @@
       "scope": {
         "platforms": [
           "android",
-          "ios",
-          "macos"
+          "ios"
         ],
         "surfaces": [
           "host"

@@ -162,14 +162,14 @@ final class SettingsWindowTests: XCTestCase {
         let hanji = makeStore(.hanji)
         XCTAssertEqual(
             SettingsPane.allCases.map { hanji.string($0.labelKey) },
-            ["一般", "外觀", "快捷鍵", "自訂詞庫", "選辭典"],
+            ["一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理"],
         )
 
         let english = makeStore(.english)
         XCTAssertEqual(
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
-                "General", "Appearance", "Shortcuts", "Custom Dictionary", "Choose Dictionaries",
+                "General", "Appearance", "Shortcuts", "Custom Dictionary", "Manage Dictionaries",
             ],
         )
     }

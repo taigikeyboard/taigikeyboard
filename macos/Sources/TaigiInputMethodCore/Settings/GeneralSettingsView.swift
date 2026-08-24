@@ -15,20 +15,14 @@ import SwiftUI
 /// The two learning switches are gone, along with the 詞頻紀錄 and 詞關聯紀錄
 /// panes that carried them: the records are always on, they are bounded by
 /// `LearningCapacity`, and the product decision (USER 2026-08-24) is that they
-/// are not the user's to administer. What survives here is the one destructive
-/// verb — clear both at once — so the data still has an end, without a page
-/// that invites managing it row by row.
+/// are not the user's to administer. The one destructive verb — clear both at
+/// once — lives beside the custom dictionary's own clear button on the 自訂詞庫
+/// pane, so every "throw away what is stored" action is in one place.
 ///
 /// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
 /// form re-render when the display language changes, with no window rebuild.
 struct GeneralSettingsView: View {
-    /// Needed only by the 清除學習紀錄 row; the rest of the pane is `@AppStorage`.
-    let stores: UserDataStores
-
     @Environment(DisplayLanguageStore.self) private var language
-
-    @State private var isConfirmingClear = false
-    @State private var clearOutcome: ClearOutcome?
 
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
@@ -111,84 +105,8 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
-
-            Section {
-                Button(language.string(.macosClearLearningRecords), role: .destructive) {
-                    isConfirmingClear = true
-                }
-            }
         }
         .formStyle(.grouped)
-        // Two alerts rather than one with a mode: the question and the receipt
-        // are different states, and a single flag would have to say which.
-        .confirmationDialog(
-            language.string(.macosClearLearningRecords),
-            isPresented: $isConfirmingClear,
-            titleVisibility: .visible,
-        ) {
-            Button(language.string(.macosClearLearningRecords), role: .destructive) {
-                Task { await clearLearningRecords() }
-            }
-            Button(language.string(.commonCancel), role: .cancel) {}
-        } message: {
-            Text(language.string(.macosClearLearningRecordsMessage))
-        }
-        .alert(item: $clearOutcome) { outcome in
-            Alert(
-                title: Text(language.string(outcome.titleKey)),
-                message: outcome.diagnostic.map(Text.init),
-                dismissButton: .default(Text(language.string(.commonOk))),
-            )
-        }
-    }
-
-    /// The receipt for `clearLearningRecords`: a title, and on failure the
-    /// store's own error text. That text is English and stays that way — it
-    /// names a SQLite condition, not something the product has wording for,
-    /// the same rule `UserDataPageMessage.failure` follows. Local to this pane
-    /// rather than a `UserDataPageMessage` case because the success alert has
-    /// no body at all, and there is no long-running work here to veil.
-    private struct ClearOutcome: Identifiable {
-        let titleKey: StringKey
-        /// `nil` on success — the alert then shows a title and nothing else.
-        let diagnostic: String?
-
-        var id: String { "\(titleKey.rawValue)|\(diagnostic ?? "")" }
-
-        static let cleared = ClearOutcome(
-            titleKey: .macosClearLearningRecordsDone, diagnostic: nil,
-        )
-
-        static func failed(_ diagnostic: String) -> ClearOutcome {
-            ClearOutcome(titleKey: .macosClearLearningRecordsFailed, diagnostic: diagnostic)
-        }
-    }
-
-    /// Clears both learning tables.
-    ///
-    /// Two calls rather than one transaction: they are separate database files,
-    /// so there is no transaction that could span them. The second is attempted
-    /// even when the first fails — a store that cannot be reached is no reason
-    /// to leave the other one full — and the alert reports the failure rather
-    /// than claiming the records are gone.
-    ///
-    /// The diagnostic names its table, because a bare SQLite string cannot say
-    /// which of the two could not be emptied.
-    private func clearLearningRecords() async {
-        var failures: [String] = []
-        do {
-            _ = try await stores.frequency.deleteAll()
-        } catch {
-            failures.append("user_frequency: \(error)")
-        }
-        do {
-            _ = try await stores.association.deleteAll()
-        } catch {
-            failures.append("user_association: \(error)")
-        }
-        clearOutcome = failures.isEmpty
-            ? .cleared
-            : .failed(failures.joined(separator: "\n"))
     }
 
     /// The same question posting asks, so the pane cannot stay quiet in a state

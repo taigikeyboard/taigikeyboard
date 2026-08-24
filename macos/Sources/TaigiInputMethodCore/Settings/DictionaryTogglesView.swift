@@ -92,8 +92,6 @@ struct DictionaryTogglesView: View {
                 Toggle(language.string(.commonSttiDict), isOn: $isSttiEnabled)
             } header: {
                 Text(language.string(.dictionaryMoeSectionTitle))
-            } footer: {
-                ExternalLinkButton(titleKey: .commonViewWebsite, url: Self.kautianURL)
             }
 
             Section {
@@ -121,6 +119,4 @@ struct DictionaryTogglesView: View {
     private enum Metrics {
         static let subcollectionIndent: CGFloat = 16
     }
-
-    private static let kautianURL = URL(string: "https://sutian.moe.edu.tw/")
 }

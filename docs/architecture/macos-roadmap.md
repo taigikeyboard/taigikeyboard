@@ -339,7 +339,7 @@ Methods` sudo install.
 
 ## Settings pane roster (current)
 
-一般 · 外觀 · 快捷鍵 · 自訂詞庫 · 選辭典.
+一般 · 外觀 · 快捷鍵 · 自訂詞庫 · 辭典管理.
 
 The 詞頻紀錄, 詞關聯紀錄 and 備份還原 panes that PR12 shipped were removed (USER
 2026-08-24). Both learning tables are self-trimming — `LearningCapacity` caps
