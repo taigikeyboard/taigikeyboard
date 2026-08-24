@@ -18,6 +18,13 @@ import AppKit
 /// can know where a page ends.
 struct CandidateWindowContent: Equatable, Sendable {
     let cells: [CandidateCellContent]
+
+    /// Which key picks a candidate at this moment — what the window draws
+    /// beside each cell. Part of the content rather than a setting, because it
+    /// is a fact about the composition the cells came from: the same list
+    /// typed one keystroke later can be picked by a different key
+    /// (`CandidateSlotKeyStyle`).
+    let slotKeyStyle: CandidateSlotKeyStyle
 }
 
 /// Which way a navigation key asks the candidate window to move.

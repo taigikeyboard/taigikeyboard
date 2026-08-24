@@ -24,7 +24,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
         let swapped = Self.cells.map {
             CandidateCellContent(text: $0.annotation ?? $0.text, annotation: $0.text)
         }
-        for panel in makePanels() {
+        for panel in TestFixtures.candidatePanels() {
             _ = panel.updateCandidates(Self.cells)
             panel.navigate(.nextCandidate)
             panel.navigate(.nextCandidate)
@@ -103,7 +103,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     /// A cleared panel has nothing to re-render: the call is a no-op rather
     /// than a resurrection.
     func testEveryLayout_rerenderAfterClear_staysEmpty() {
-        for panel in makePanels() {
+        for panel in TestFixtures.candidatePanels() {
             _ = panel.updateCandidates(Self.cells)
             panel.clear()
 
@@ -114,7 +114,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     }
 
     func testEveryLayout_movesExactlyOneCandidatePerStep() {
-        for panel in makePanels() {
+        for panel in TestFixtures.candidatePanels() {
             _ = panel.updateCandidates(Self.cells)
             XCTAssertEqual(panel.selectedIndex, 0, "\(type(of: panel)) selects the first candidate")
 
@@ -130,7 +130,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
     /// The D4 rule: navigation clamps and never wraps. A wrap would make a key
     /// held down cycle the list forever instead of stopping at the answer.
     func testEveryLayout_clampsAtBothEnds() {
-        for panel in makePanels() {
+        for panel in TestFixtures.candidatePanels() {
             _ = panel.updateCandidates(Self.cells)
 
             panel.navigate(.previousCandidate)
@@ -212,11 +212,4 @@ final class CandidateSemanticNavigationTests: XCTestCase {
         )
     }
 
-    private func makePanels() -> [CandidateBasePanel] {
-        [
-            HorizontalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
-            VerticalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
-            ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
-        ]
-    }
 }

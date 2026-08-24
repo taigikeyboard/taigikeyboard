@@ -134,6 +134,9 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
             itemViews.append(item)
             x += slot.width
         }
+        // Numbered after the page is built: the digits follow the page, so
+        // they start over at `1` on every turn.
+        refreshIndexLabels(over: itemViews)
         updateHighlights()
 
         let hasMultiplePages = pageLayout.pages.count > 1

@@ -98,15 +98,22 @@ final class CandidateFontChoiceTests: XCTestCase {
             let view = CandidateItemView(style: .sequoia, metrics: metrics)
             view.configure(CandidateCellContent(text: "候選", annotation: "hāu-suán"))
 
+            // Three: the digit hint, then the two scripts. The digit is set in
+            // the SYSTEM font whatever the user chose — it names a key rather
+            // than belonging to the Taigi text.
             let labels = view.subviews.compactMap { $0 as? NSTextField }
-            XCTAssertEqual(labels.count, 2)
+            XCTAssertEqual(labels.count, 3)
             XCTAssertEqual(
                 labels.map(\.font?.fontName),
-                [metrics.candidateFont.fontName, metrics.annotationFont.fontName],
+                [
+                    metrics.indexFont.fontName,
+                    metrics.candidateFont.fontName,
+                    metrics.annotationFont.fontName,
+                ],
             )
             XCTAssertEqual(
                 labels.map(\.font?.pointSize),
-                [metrics.candidateFontSize, metrics.annotationFontSize],
+                [metrics.indexFontSize, metrics.candidateFontSize, metrics.annotationFontSize],
             )
         }
     }

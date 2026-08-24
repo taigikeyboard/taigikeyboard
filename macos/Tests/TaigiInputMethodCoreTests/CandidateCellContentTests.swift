@@ -173,35 +173,52 @@ final class CandidateCellContentTests: XCTestCase {
     /// than breaking the cell's geometry: both the horizontal packer's row
     /// limit and the vertical window's column cap hand a cell less width than
     /// its text wants, and neither may push the label past the cell's edge.
+    /// Both arrangements, since the stacked one centres its two lines in a
+    /// text area the digit column has already taken width from.
     @MainActor
     func testCellClampedNarrowerThanItsText_keepsItsLabelsInside() {
-        let item = CandidateItemView(style: .sequoia, metrics: metrics)
         let cell = CandidateCellContent(
             text: "tâi-gí khí-puânn tsin hó-sè", annotation: "台語齒盤真好勢",
         )
-        item.configure(cell)
-        // Deliberately narrower than `measureWidth` wants — the clamp the
-        // packer applies to an oversized candidate. Hosted in a container the
-        // way the panels host their cells, because a detached view never runs
-        // the layout pass that applies the frame to its subviews.
-        let clampedWidth = metrics.baseWidth * 2
-        let container = FlippedContainerView(frame: NSRect(
-            x: 0, y: 0, width: clampedWidth, height: metrics.itemHeight,
-        ))
-        container.addSubview(item)
-        item.frame = container.bounds
-        container.layoutSubtreeIfNeeded()
+        for arrangement in [CandidateCellArrangement.inline, .stacked] {
+            let metrics = metrics.arranged(arrangement)
+            let item = CandidateItemView(style: .sequoia, metrics: metrics)
+            item.configure(cell)
+            item.setIndexLabel("1")
+            // Deliberately narrower than `measureWidth` wants — the clamp the
+            // packer applies to an oversized candidate. Hosted in a container
+            // the way the panels host their cells, because a detached view
+            // never runs the layout pass that applies the frame to its
+            // subviews.
+            let clampedWidth = metrics.baseWidth * 2
+            let container = FlippedContainerView(frame: NSRect(
+                x: 0, y: 0, width: clampedWidth, height: metrics.itemHeight,
+            ))
+            container.addSubview(item)
+            item.frame = container.bounds
+            container.layoutSubtreeIfNeeded()
 
-        let labels = item.subviews.compactMap { $0 as? NSTextField }
-        XCTAssertEqual(labels.count, 2, "the cell lays out a candidate and an annotation")
-        for label in labels {
-            // Non-zero first, so a layout pass that never ran cannot pass this
-            // case by leaving every frame at the origin.
-            XCTAssertGreaterThan(label.frame.width, 0, "\"\(label.stringValue)\" was never laid out")
-            XCTAssertLessThanOrEqual(
-                label.frame.maxX, clampedWidth + 0.01,
-                "\"\(label.stringValue)\" runs past the clamped cell's edge",
+            let labels = item.subviews.compactMap { $0 as? NSTextField }
+            XCTAssertEqual(
+                labels.count, 3,
+                "\(arrangement): the cell lays out a digit, a candidate and an annotation",
             )
+            for label in labels {
+                // Non-zero first, so a layout pass that never ran cannot pass
+                // this case by leaving every frame at the origin.
+                XCTAssertGreaterThan(
+                    label.frame.width, 0,
+                    "\(arrangement): \"\(label.stringValue)\" was never laid out",
+                )
+                XCTAssertGreaterThanOrEqual(
+                    label.frame.minX, -0.01,
+                    "\(arrangement): \"\(label.stringValue)\" runs past the cell's leading edge",
+                )
+                XCTAssertLessThanOrEqual(
+                    label.frame.maxX, clampedWidth + 0.01,
+                    "\(arrangement): \"\(label.stringValue)\" runs past the clamped cell's edge",
+                )
+            }
         }
     }
 

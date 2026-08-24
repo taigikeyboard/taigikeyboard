@@ -29,6 +29,45 @@ enum TestFixtures {
         fontChoice: SettingsStore.Keys.fontType.defaultValue,
     )
 
+    /// One panel of each layout, at the default metrics — what a suite
+    /// asserting a property EVERY layout must hold walks over.
+    @MainActor
+    static func candidatePanels(style: CandidateWindowStyle = .sequoia) -> [CandidateBasePanel] {
+        [
+            HorizontalCandidatePanel(style: style, metrics: defaultCandidateMetrics),
+            VerticalCandidatePanel(style: style, metrics: defaultCandidateMetrics),
+            ExpandableCandidatePanel(style: style, metrics: defaultCandidateMetrics),
+        ]
+    }
+
+    /// A panel's laid-out cells, in reading order: left to right, top to
+    /// bottom. The panels keep their own cell arrays private, so a suite that
+    /// asserts about what is DRAWN walks the view tree.
+    ///
+    /// Read in each cell's own superview, whose flippedness says which way its
+    /// rows run — the row containers are flipped (row 0 at `y == 0`) while the
+    /// window's content view is not.
+    @MainActor
+    static func candidateCells(in panel: CandidateBasePanel) -> [CandidateItemView] {
+        func collect(_ view: NSView) -> [CandidateItemView] {
+            if let item = view as? CandidateItemView {
+                return [item]
+            }
+            return view.subviews.flatMap(collect)
+        }
+        func topDownY(_ item: CandidateItemView) -> CGFloat {
+            item.superview?.isFlipped == false ? -item.frame.origin.y : item.frame.origin.y
+        }
+        guard let root = panel.contentView else { return [] }
+        return collect(root)
+            .filter { !$0.isHidden }
+            .sorted {
+                topDownY($0) == topDownY($1)
+                    ? $0.frame.origin.x < $1.frame.origin.x
+                    : topDownY($0) < topDownY($1)
+            }
+    }
+
     /// `<repo>/ios/Resources/Fonts` — the same directory `bundle-app.sh` copies
     /// into the assembled `.app`'s `ATSApplicationFontsPath`.
     static let fontDirectory = repositoryRoot.appendingPathComponent("ios/Resources/Fonts")
@@ -461,8 +500,12 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// candidates the user can no longer see.
     var shownContent: CandidateWindowContent? {
         guard isShowing else { return nil }
-        return CandidateWindowContent(cells: cells)
+        return CandidateWindowContent(cells: cells, slotKeyStyle: slotKeyStyle)
     }
+
+    /// The key the window was last told picks a candidate — what a case
+    /// asserting the hint matches the key contract reads.
+    private(set) var slotKeyStyle: CandidateSlotKeyStyle = .bare
 
     var isShowing: Bool {
         owner != nil
@@ -477,6 +520,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     ) {
         self.owner = owner
         cells = content.cells
+        slotKeyStyle = content.slotKeyStyle
         selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
     }

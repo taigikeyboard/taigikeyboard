@@ -78,6 +78,13 @@ struct CandidateMetrics: Equatable, Sendable {
     let candidateFontSize: CGFloat
     let annotationFontSize: CGFloat
     let candidateAnnotationGap: CGFloat
+    /// The digit hint's own size. Text-anchored like the annotation, and half
+    /// again upstream's 8pt at the reference size: the digits are what a bare
+    /// `1`…`9` keypress now aims at (`ComposingKeyIntent`), so they have to be
+    /// legible at a glance rather than merely present.
+    let indexFontSize: CGFloat
+    /// Air between the digit's slot and the candidate beside it.
+    let indexCandidateGap: CGFloat
     let horizontalPadding: CGFloat
     let verticalPadding: CGFloat
     /// Air between the two scripts of a stacked cell. Text-anchored like the
@@ -109,6 +116,12 @@ struct CandidateMetrics: Equatable, Sendable {
     /// The face the annotation column is set in.
     var annotationFont: NSFont { fontChoice.font(ofSize: annotationFontSize) }
 
+    /// The face the digit hint is set in — the system font, never the user's
+    /// candidate typeface: the digit names a key on their keyboard rather than
+    /// belonging to the Taigi text, and a CJK face can set ASCII digits at a
+    /// width the fixed slot was not measured for.
+    var indexFont: NSFont { .systemFont(ofSize: indexFontSize) }
+
     /// `base`, stated at the reference 16pt, scaled to this metrics' text size
     /// and rounded to a whole point. What the chevron and page-arrow views
     /// size their symbols and reserved widths by, so the rounding policy lives
@@ -126,6 +139,12 @@ struct CandidateMetrics: Equatable, Sendable {
     private static let baseCandidateFontSize: CGFloat = 16
     private static let baseAnnotationFontSize: CGFloat = 14
     private static let baseCandidateAnnotationGap: CGFloat = 7
+    private static let baseIndexFontSize: CGFloat = 10
+    private static let baseIndexCandidateGap: CGFloat = 2
+    /// What the slot adds to the digit's own size — upstream's `indexFontSize
+    /// + 2` (`MacishCandidateItemView.swift:22-24`), enough for a digit's
+    /// bearing on either side.
+    private static let indexSlotPadding: CGFloat = 2
     private static let baseHorizontalPadding: CGFloat = 9
     private static let baseVerticalPadding: CGFloat = 12
     private static let baseStackedLineGap: CGFloat = 2
@@ -144,6 +163,8 @@ struct CandidateMetrics: Equatable, Sendable {
         candidateFontSize = textSize.candidateFontSize
         annotationFontSize = (Self.baseAnnotationFontSize * textScale).rounded()
         candidateAnnotationGap = (Self.baseCandidateAnnotationGap * textScale).rounded()
+        indexFontSize = (Self.baseIndexFontSize * textScale).rounded()
+        indexCandidateGap = (Self.baseIndexCandidateGap * textScale).rounded()
         stackedLineGap = (Self.baseStackedLineGap * textScale).rounded()
         horizontalPadding = (Self.baseHorizontalPadding * windowSize.chromeScale).rounded()
         verticalPadding = (Self.baseVerticalPadding * windowSize.chromeScale).rounded()
@@ -194,8 +215,33 @@ extension CandidateMetrics {
     /// the packing budget (`HorizontalPageLayout`) must agree with
     /// `measureWidth` about minimums or a page drops a column.
     var baseWidth: CGFloat {
-        2 * horizontalPadding + primaryColumnFloor
+        2 * horizontalPadding + indexColumnWidth + primaryColumnFloor
     }
+
+    /// The slot the key is centred in: wide enough for every form it can take,
+    /// so the column keeps one width as the live key changes under the user
+    /// (`CandidateIndexLabel.widestLabelForms`). Measured at the index font,
+    /// which is the system's — the slot has to hold `⌥9`, not just `9`.
+    ///
+    /// Cached per size for the reason `primaryColumnFloor` is: every cell of
+    /// every keystroke's list reads it, and the answer cannot change.
+    var indexWidth: CGFloat {
+        if let cached = Self.indexWidths[indexFontSize] { return cached }
+        let font = indexFont
+        let widest = CandidateIndexLabel.widestLabelForms
+            .map { ceil(($0 as NSString).size(withAttributes: [.font: font]).width) }
+            .max() ?? indexFontSize
+        let width = widest + Self.indexSlotPadding
+        Self.indexWidths[indexFontSize] = width
+        return width
+    }
+
+    private static var indexWidths: [CGFloat: CGFloat] = [:]
+
+    /// What the key column costs a cell: its slot plus the gap after it.
+    /// Charged to every cell, including the ones whose position carries no
+    /// key, because the slot is what keeps the candidates on one x.
+    var indexColumnWidth: CGFloat { indexWidth + indexCandidateGap }
 
     /// The candidate column never renders narrower than one full-width glyph,
     /// which is what keeps single-character cells from collapsing.
@@ -232,11 +278,13 @@ extension CandidateMetrics {
         let text = max(primaryColumnFloor, measurePrimaryWidth(cell.text))
         switch cellArrangement {
         case .inline:
-            return horizontalPadding + text + annotationWidth(cell.annotation) + horizontalPadding
+            return horizontalPadding + indexColumnWidth + text
+                + annotationWidth(cell.annotation) + horizontalPadding
         case .stacked:
             // The two scripts are on top of each other, so the cell is as wide
             // as the WIDER of them — not as wide as both plus a gap.
-            return horizontalPadding + max(text, annotationTextWidth(cell.annotation)) + horizontalPadding
+            return horizontalPadding + indexColumnWidth
+                + max(text, annotationTextWidth(cell.annotation)) + horizontalPadding
         }
     }
 
@@ -253,7 +301,7 @@ extension CandidateMetrics {
     /// cannot be honoured, and asking for it anyway would push the text past
     /// the cell's edge.
     func maximumPrimaryColumnWidth(inCellWidth cellWidth: CGFloat, trailingInset: CGFloat) -> CGFloat {
-        max(candidateFontSize, cellWidth - horizontalPadding - trailingInset)
+        max(candidateFontSize, cellWidth - horizontalPadding - indexColumnWidth - trailingInset)
     }
 
     /// The gap plus the annotation itself, or nothing at all when there is no

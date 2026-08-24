@@ -778,9 +778,13 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func updateHighlights() {
-        for item in row0ItemViews + expandedItemViews {
+        let items = row0ItemViews + expandedItemViews
+        for item in items {
             item.isHighlighted = item.absoluteIndex == selectedIndex && !item.isHidden
         }
+        // Renumbered with the highlight: expanded, the digits address the row
+        // the selection is in, so they move when it changes rows.
+        refreshIndexLabels(over: items)
         if displayMode == .expanded, style == .sequoia,
            let (rowIndex, _) = grid.position(of: selectedIndex)
         {

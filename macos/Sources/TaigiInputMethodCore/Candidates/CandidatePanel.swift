@@ -53,6 +53,9 @@ final class CandidatePanel: CandidatePresenter {
         ownedBy owner: ComposingSessionToken,
     ) {
         let panel = self.panel(for: settings.candidateLayout)
+        // Before the cells: the key each of them is drawn with is resolved as
+        // they are built.
+        panel.slotKeyStyle = content.slotKeyStyle
         let panelSize = panel.layout(content.cells, forCaret: caretRect)
         let presented = panel.present(
             panelSize: panelSize,

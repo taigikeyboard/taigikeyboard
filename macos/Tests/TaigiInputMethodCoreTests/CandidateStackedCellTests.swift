@@ -114,7 +114,9 @@ final class CandidateStackedCellTests: XCTestCase {
                     view.layoutSubtreeIfNeeded()
 
                     let labels = view.subviews.compactMap { $0 as? NSTextField }
-                    XCTAssertEqual(labels.count, 2, "a stacked cell draws both scripts")
+                    XCTAssertEqual(
+                        labels.count, 3, "a stacked cell draws the digit and both scripts",
+                    )
                     for label in labels {
                         XCTAssertTrue(
                             view.bounds.contains(label.frame),
@@ -122,8 +124,11 @@ final class CandidateStackedCellTests: XCTestCase {
                                 + "must fit the cell's \(view.bounds)",
                         )
                     }
+                    // Indices 1 and 2: the digit hint is the cell's FIRST text
+                    // field, and it shares neither line — the two scripts are
+                    // the pair this asserts about.
                     XCTAssertNotEqual(
-                        labels[0].frame.minY, labels[1].frame.minY,
+                        labels[1].frame.minY, labels[2].frame.minY,
                         "\(textSize)/\(windowSize): the two scripts sit on separate lines",
                     )
                 }

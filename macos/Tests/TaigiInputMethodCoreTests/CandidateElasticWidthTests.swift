@@ -23,7 +23,7 @@ final class CandidateElasticWidthTests: XCTestCase {
     private static let shortCandidate = CandidateCellContent(text: "候", annotation: "hau")
 
     func testEveryLayout_growsForACandidateTooLongForTheSlotWidths() {
-        for panel in makePanels() {
+        for panel in TestFixtures.candidatePanels() {
             let narrow = panel.updateCandidates([Self.shortCandidate])
             let wide = panel.updateCandidates([Self.longCandidate])
 
@@ -46,7 +46,7 @@ final class CandidateElasticWidthTests: XCTestCase {
             text: String(repeating: "候", count: 400),
             annotation: nil,
         )
-        for panel in makePanels() {
+        for panel in TestFixtures.candidatePanels() {
             let size = panel.updateCandidates(Array(repeating: hugeCandidate, count: 200))
 
             XCTAssertLessThanOrEqual(
@@ -81,11 +81,4 @@ final class CandidateElasticWidthTests: XCTestCase {
         )
     }
 
-    private func makePanels() -> [CandidateBasePanel] {
-        [
-            HorizontalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
-            VerticalCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
-            ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics),
-        ]
-    }
 }

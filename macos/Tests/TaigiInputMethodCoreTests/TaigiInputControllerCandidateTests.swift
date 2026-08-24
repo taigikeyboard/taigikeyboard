@@ -27,6 +27,85 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         super.tearDown()
     }
 
+    // MARK: - Which key picks
+
+    /// The key the window draws is the key that fires. While a tone digit can
+    /// still follow, a bare `2` tones the syllable and only the chord selects;
+    /// once one cannot, the bare digit takes over. Same rule, same buffer, as
+    /// `ComposingKeyIntent` classifies against — a window drawing the other
+    /// one would name a key that does something else.
+    func testSlotKeyHint_followsWhetherABareDigitWouldBeATone() throws {
+        let session = try composedSession()
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.control),
+            "`taigi` ends in a letter, so a bare digit is still a tone",
+        )
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "5"), client: session.client,
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .bare,
+            "nothing TL or POJ spells follows a tone digit, so the digit selects",
+        )
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\u{8}"), client: session.client,
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.control),
+            "Backspace puts the letter tail back, and the chord with it",
+        )
+    }
+
+    /// The drawn modifier is the one the user bound the slots to.
+    func testSlotKeyHint_carriesTheBoundModifier() throws {
+        UserDefaults.standard.set(
+            CandidateSlotModifier.option.rawValue,
+            forKey: SettingsStore.Keys.candidateSlotModifier.name,
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: SettingsStore.Keys.candidateSlotModifier.name,
+            )
+        }
+
+        let session = try composedSession()
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.option),
+        )
+    }
+
+
+    /// The hint is a per-show snapshot, so a rebind reaches it on the very next
+    /// keystroke — the window is never told a modifier that has been replaced.
+    func testSlotKeyHint_followsARebindOnTheNextKeystroke() throws {
+        let session = try composedSession()
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .chorded(.control))
+
+        UserDefaults.standard.set(
+            CandidateSlotModifier.option.rawValue,
+            forKey: SettingsStore.Keys.candidateSlotModifier.name,
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: SettingsStore.Keys.candidateSlotModifier.name,
+            )
+        }
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .chorded(.option),
+        )
+    }
+
     // MARK: - Showing
 
     func testTypingRomanization_putsCandidatesOnTheBar() throws {

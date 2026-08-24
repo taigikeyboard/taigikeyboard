@@ -798,6 +798,7 @@ public final class TaigiInputController: IMKInputController {
         candidatePresenter.show(
             CandidateWindowContent(
                 cells: fetchedCandidates.map(manager.cellContent(for:)),
+                slotKeyStyle: slotKeyStyle(after: manager.rawInput),
             ),
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),
@@ -807,6 +808,26 @@ public final class TaigiInputController: IMKInputController {
             hostBundleIdentifier: client.bundleIdentifier(),
             ownedBy: sessionToken,
         )
+    }
+
+    /// Which key picks a candidate for the buffer as it stands.
+    ///
+    /// The same rule the key handler classifies against
+    /// (`ComposingKeyIntent.canTypeToneDigit`), read from the same buffer, so
+    /// the window cannot draw a key that would do something else — a bare `2`
+    /// after `tai` tones the syllable, and only the chord selects. The
+    /// modifier is the user's, since they can rebind which one the slots take.
+    ///
+    /// Snapshotted per show rather than live-read by the window: every
+    /// keystroke re-fetches and re-shows, so the hint is never older than the
+    /// buffer it describes. A rebind cannot strand a stale one either —
+    /// reaching the shortcut pane moves focus off the client, and
+    /// `finishComposition` takes the bar down with the session.
+    @MainActor
+    private func slotKeyStyle(after rawInput: String) -> CandidateSlotKeyStyle {
+        ComposingKeyIntent.canTypeToneDigit(after: rawInput)
+            ? .chorded(settings.composingKeyBindings.slotModifier)
+            : .bare
     }
 
     @MainActor

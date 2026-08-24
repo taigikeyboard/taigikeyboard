@@ -267,8 +267,10 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
         scrollView.contentView.scroll(to: .zero)
         scrollView.reflectScrolledClipView(scrollView.contentView)
-        anchorRow = -1 // Force the renumber below — 0 would read as "already current".
-        updateRowNumbering()
+        // The rows are fresh and the viewport is back at the top, so the
+        // anchor is 0 and the digits are drawn straight rather than through
+        // `updateRowNumbering`, whose job is noticing that it MOVED.
+        refreshIndexLabels(over: itemViews)
         updateHighlights()
 
         if hasOverflow, NSScroller.preferredScrollerStyle != .legacy {
@@ -373,7 +375,12 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         let newAnchor = max(Int(floor((scrollOffset + rowHeight / 2) / rowHeight)), 0)
         guard newAnchor != anchorRow else { return }
         anchorRow = newAnchor
-
+        // The digits are the anchor made visible: the nine rows a chord can
+        // reach are the nine the viewport shows (`MacishVerticalPanel.swift:
+        // 335-357`). Rows outside it keep their slot — the column the
+        // candidates align on is one width all the way down — and draw
+        // nothing in it.
+        refreshIndexLabels(over: itemViews)
     }
 
     private func updateHighlights() {

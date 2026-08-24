@@ -19,13 +19,20 @@ enum CandidateSlotModifier: String, CaseIterable, Sendable {
         }
     }
 
+    /// How this modifier is written on a key cap — what the candidate window
+    /// draws beside a digit while only the chord can pick it
+    /// (`CandidateIndexLabel`).
+    var symbol: String {
+        switch self {
+        case .control: "⌃"
+        case .option: "⌥"
+        }
+    }
+
     /// The nine chords this modifier stands for, as one string — what the
     /// shortcut pane's picker offers to choose between.
     var menuRange: String {
-        switch self {
-        case .control: "⌃1 – ⌃9"
-        case .option: "⌥1 – ⌥9"
-        }
+        "\(symbol)1 – \(symbol)9"
     }
 }
 

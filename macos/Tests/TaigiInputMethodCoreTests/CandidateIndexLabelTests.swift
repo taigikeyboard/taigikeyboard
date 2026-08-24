@@ -1,0 +1,290 @@
+// The digit beside a candidate names the key that picks it — in every layout.
+
+import AppKit
+@testable import TaigiInputMethodCore
+import XCTest
+
+/// What these pin: the digits drawn in the window and the slots the key handler
+/// resolves are one contract. A cell showing `3` must be the candidate
+/// `candidateIndex(forSlot: 2)` answers with, in whichever layout is up and
+/// wherever the viewport has scrolled to — a digit that named a different
+/// candidate would commit the wrong word on a keypress.
+@MainActor
+final class CandidateIndexLabelTests: XCTestCase {
+    private static let cells: [CandidateCellContent] = (0 ..< 40).map {
+        CandidateCellContent(text: "候\($0)", annotation: "hau\($0)")
+    }
+
+    // MARK: - The digits themselves
+
+    func testSlotDigits_countFromOneAndStopAtTheNinth() {
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .bare), "1")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .bare), "9")
+        // A tenth position: the slot stays reserved, but no key names it —
+        // `⌃0` is unbound and a bare `0` is document text.
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .bare), "")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: -1, style: .bare), "")
+    }
+
+    /// While a tone digit can still follow, a bare `2` tones the syllable — so
+    /// the window draws the chord that DOES pick, under whichever modifier the
+    /// user has bound to the slots.
+    func testSlotKeys_carryTheModifierWhileABareDigitWouldBeATone() {
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .chorded(.control)), "⌃1")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .chorded(.option)), "⌥9")
+        // Past the ninth nothing is drawn in either style: there is no chord
+        // for a tenth slot either.
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .chorded(.control)), "")
+    }
+
+    // MARK: - What each layout draws
+
+    /// The horizontal page renumbers from `1` on every page, which is what its
+    /// slot mapping resolves against.
+    func testHorizontal_numbersEveryPageFromOne() {
+        let panel = HorizontalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+
+        assertDigitsMatchSlots(in: panel)
+        let firstPage = numberedCells(in: panel)
+        XCTAssertEqual(firstPage.first?.digit, "1")
+        XCTAssertEqual(firstPage.map(\.digit), firstPage.indices.map { String($0 + 1) })
+
+        panel.navigate(.pageDown)
+
+        let secondPage = numberedCells(in: panel)
+        XCTAssertNotEqual(
+            secondPage.first?.item.absoluteIndex, firstPage.first?.item.absoluteIndex,
+            "the page turned",
+        )
+        XCTAssertEqual(secondPage.first?.digit, "1", "a page's digits start over")
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The vertical column numbers the nine rows from the viewport's anchor and
+    /// nothing else: rows below the fold keep their slot but draw no digit.
+    func testVertical_numbersOnlyTheRowsTheChordsCanReach() {
+        let panel = VerticalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+
+        let numbered = numberedCells(in: panel)
+        XCTAssertEqual(numbered.map(\.item.absoluteIndex), Array(0 ..< 9))
+        XCTAssertEqual(numbered.map(\.digit), (1 ... 9).map(String.init))
+        assertDigitsMatchSlots(in: panel)
+
+        // Every row still reserves the slot, drawn or not — the column the
+        // candidates align on is one width all the way down.
+        let widths = TestFixtures.candidateCells(in: panel).map { cell -> CGFloat in
+            let labels = cell.subviews.compactMap { $0 as? NSTextField }
+            return labels.first?.frame.width ?? 0
+        }
+        XCTAssertEqual(Set(widths).count, 1, "the digit slot is the same width on every row")
+    }
+
+    /// The collapsed row is the one row the chords address, so it carries the
+    /// digits; expanded, only the selected row does — `candidateIndex(forSlot:)`
+    /// resolves a slot within THAT row, and numbering the others would name
+    /// keys that pick something else.
+    func testExpandable_numbersTheRowTheChordsAddress() {
+        let panel = ExpandableCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+
+        XCTAssertEqual(panel.displayMode, .collapsed)
+        assertDigitsMatchSlots(in: panel)
+        XCTAssertEqual(numberedCells(in: panel).first?.digit, "1")
+
+        // Walking off the collapsed row's end unfolds the grid.
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+        XCTAssertEqual(panel.displayMode, .expanded)
+
+        let numbered = numberedCells(in: panel)
+        XCTAssertTrue(
+            numbered.contains { $0.item.absoluteIndex == panel.selectedIndex },
+            "the selected row is the numbered one",
+        )
+        XCTAssertEqual(numbered.map(\.digit), numbered.indices.map { String($0 + 1) })
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// Walking past the ninth row scrolls the viewport, and the digits follow
+    /// it: the rows the chords reach are the ones on screen, never the list's
+    /// first nine.
+    func testVertical_renumbersAsTheViewportScrolls() {
+        let panel = VerticalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+        // Shown, because the numbering is read off the live scroll viewport —
+        // an unshown window never scrolls, so the anchor could not move.
+        panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 320), display: false)
+        panel.orderFront(nil)
+        defer { panel.orderOut(nil) }
+
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+        XCTAssertEqual(panel.selectedIndex, 20)
+
+        let numbered = numberedCells(in: panel)
+        XCTAssertFalse(numbered.isEmpty, "the visible rows carry the digits")
+        XCTAssertNotEqual(
+            numbered.map(\.item.absoluteIndex), Array(0 ..< 9),
+            "the digits must have left the list's first nine rows",
+        )
+        // Which nine rows those are is the panel's scroll rule, and a test
+        // window's viewport is not the one a user gets — what has to hold is
+        // that whatever is drawn is what the chords pick.
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The expanded grid renumbers as the selection walks between rows — the
+    /// digits name keys that pick from the row the selection is in.
+    func testExpandable_renumbersWhenTheSelectionChangesRows() {
+        let panel = ExpandableCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+        XCTAssertEqual(panel.displayMode, .expanded)
+        let before = numberedCells(in: panel).map(\.item.absoluteIndex)
+
+        panel.navigate(.down)
+
+        let after = numberedCells(in: panel).map(\.item.absoluteIndex)
+        XCTAssertNotEqual(before, after, "a row step moves the digits to the new row")
+        assertDigitsMatchSlots(in: panel)
+
+        panel.navigate(.up)
+        assertDigitsMatchSlots(in: panel)
+
+        // And back to one row: collapsing renumbers the row that is left.
+        while panel.displayMode == .expanded {
+            panel.navigate(.previousCandidate)
+            if panel.selectedIndex == 0 {
+                panel.navigate(.left)
+            }
+        }
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The 漢羅 swap re-renders every cell against the same list. The digits
+    /// belong to the POSITIONS, so they must survive it unmoved.
+    func testEveryLayout_keepsItsDigitsThroughARerender() {
+        let swapped = Self.cells.map {
+            CandidateCellContent(text: $0.annotation ?? $0.text, annotation: $0.text)
+        }
+        for panel in TestFixtures.candidatePanels() {
+            _ = panel.updateCandidates(Self.cells)
+            panel.navigate(.nextCandidate)
+
+            panel.rerenderCandidates(swapped)
+
+            XCTAssertFalse(
+                numberedCells(in: panel).isEmpty,
+                "\(type(of: panel)): the digits survive a display flip",
+            )
+            assertDigitsMatchSlots(in: panel)
+        }
+    }
+
+    /// Under the chord style every layout draws the modifier with the digit,
+    /// and the mapping is untouched — `⌃3` still picks what slot 2 answers.
+    func testEveryLayout_drawsTheChordWhenABareDigitWouldNotPick() {
+        for panel in TestFixtures.candidatePanels() {
+            panel.slotKeyStyle = .chorded(.control)
+            _ = panel.updateCandidates(Self.cells)
+
+            let numbered = numberedCells(in: panel)
+            XCTAssertFalse(numbered.isEmpty, "\(type(of: panel)): the keys are drawn")
+            for (key, _) in numbered {
+                XCTAssertTrue(
+                    key.hasPrefix("⌃"),
+                    "\(type(of: panel)): drew \"\(key)\" where only the chord picks",
+                )
+            }
+            assertDigitsMatchSlots(in: panel)
+        }
+    }
+
+    /// The expandable layout builds its grid on the first expand, long after
+    /// the style was set — those cells carry the chord too.
+    func testExpandable_lazyGridKeepsTheChord() {
+        let panel = ExpandableCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        panel.slotKeyStyle = .chorded(.control)
+        _ = panel.updateCandidates(Self.cells)
+
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+        XCTAssertEqual(panel.displayMode, .expanded, "the walk built the grid")
+
+        let numbered = numberedCells(in: panel)
+        XCTAssertFalse(numbered.isEmpty)
+        for (key, _) in numbered {
+            XCTAssertTrue(key.hasPrefix("⌃"), "a grid cell drew \"\(key)\" without its chord")
+        }
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The slot is as wide as the widest key it can draw, so the column does
+    /// not shift under the user when the live key changes mid-word.
+    func testTheKeyColumn_keepsOneWidthAcrossBothStyles() {
+        let panel = HorizontalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+        let bareWidths = TestFixtures.candidateCells(in: panel).map(\.frame.width)
+
+        panel.slotKeyStyle = .chorded(.option)
+        _ = panel.updateCandidates(Self.cells)
+
+        XCTAssertEqual(
+            TestFixtures.candidateCells(in: panel).map(\.frame.width), bareWidths,
+            "a cell is the same width whichever key picks it",
+        )
+    }
+
+    // MARK: - Helpers
+
+    /// Every digit drawn in `panel` resolves to the candidate its slot chord
+    /// commits — the whole point of drawing them.
+    private func assertDigitsMatchSlots(
+        in panel: CandidateBasePanel, file: StaticString = #filePath, line: UInt = #line,
+    ) {
+        for (key, item) in numberedCells(in: panel) {
+            // The digit is the key's last character in both styles — bare, or
+            // under a one-character modifier symbol.
+            guard let digit = Int(key.suffix(1)) else {
+                return XCTFail(
+                    "\(type(of: panel)): drew a keyless label \"\(key)\"", file: file, line: line,
+                )
+            }
+            XCTAssertEqual(
+                panel.candidateIndex(forSlot: digit - 1), item.absoluteIndex,
+                "\(type(of: panel)): the cell drawn \"\(key)\" is not what that key picks",
+                file: file, line: line,
+            )
+        }
+    }
+
+    /// The cells drawing a digit, in the order they are laid out.
+    private func numberedCells(
+        in panel: CandidateBasePanel,
+    ) -> [(digit: String, item: CandidateItemView)] {
+        TestFixtures.candidateCells(in: panel).compactMap { item in
+            item.indexLabelText.isEmpty ? nil : (item.indexLabelText, item)
+        }
+    }
+}

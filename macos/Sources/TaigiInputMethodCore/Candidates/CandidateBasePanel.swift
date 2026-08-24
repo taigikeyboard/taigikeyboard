@@ -311,6 +311,40 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         preconditionFailure("layout subclasses must override candidateIndex(forSlot:)")
     }
 
+    /// Which key picks a candidate right now — the window draws it beside every
+    /// numbered cell.
+    ///
+    /// Set from the content each `show` carries, before the cells it belongs
+    /// to are built: a fresh list is what a keystroke produces, and the key
+    /// rule reads the same buffer that keystroke changed. A display-only
+    /// re-render keeps it, having changed no buffer.
+    var slotKeyStyle: CandidateSlotKeyStyle = .bare
+
+    /// Draws the key that picks each of `items`, and blanks the rest.
+    ///
+    /// Derived by ASKING `candidateIndex(forSlot:)` — the same override the key
+    /// handler resolves a `1`…`9` press against (`TaigiInputController`) — so
+    /// the digit a cell shows and the candidate that key commits cannot drift
+    /// apart. Each layout's own numbering falls out of its slot mapping: the
+    /// horizontal page restarts at `1`, the vertical column follows its scroll
+    /// anchor, and the expanded grid numbers only the row the selection is in.
+    ///
+    /// The layouts keep only their triggers — a page rebuild, an anchor change,
+    /// a selection or mode change — since that is the part their geometries do
+    /// not share.
+    func refreshIndexLabels(over items: [CandidateItemView]) {
+        var keyByCandidate: [Int: String] = [:]
+        for slot in 0 ..< HorizontalPageLayout.pageSize {
+            guard let candidateIndex = candidateIndex(forSlot: slot) else { continue }
+            keyByCandidate[candidateIndex] = CandidateIndexLabel.text(
+                forSlot: slot, style: slotKeyStyle,
+            )
+        }
+        for item in items {
+            item.setIndexLabel(keyByCandidate[item.absoluteIndex] ?? "")
+        }
+    }
+
     /// Repaints every cell with the freshly resolved highlight colour.
     func applyHighlightColor(_: NSColor) {}
 

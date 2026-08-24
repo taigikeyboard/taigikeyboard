@@ -153,14 +153,16 @@ final class CandidateMetricsTests: XCTestCase {
         XCTAssertNotEqual(measured, ceil(TestFixtures.defaultFontWidth(of: text, size: defaultMetrics.candidateFontSize)))
     }
 
-    /// The gap and each padding are charged once — a cell that double-counted
-    /// any of them would push a column off every page.
+    /// The digit slot, the gap and each padding are charged once — a cell that
+    /// double-counted any of them would push a column off every page.
     @MainActor
     func testMeasuredWidth_isThePaddingsPlusBothColumnsExactlyOnce() throws {
         let cell = CandidateCellContent(text: "tâi-gí khí-puânn", annotation: "台語齒盤")
         let annotation = try XCTUnwrap(cell.annotation)
 
         let expected = defaultMetrics.horizontalPadding
+            + defaultMetrics.indexWidth
+            + defaultMetrics.indexCandidateGap
             + defaultMetrics.measurePrimaryWidth(cell.text)
             + defaultMetrics.candidateAnnotationGap
             + ceil(TestFixtures.defaultFontWidth(of: annotation, size: defaultMetrics.annotationFontSize))
@@ -198,6 +200,52 @@ final class CandidateMetricsTests: XCTestCase {
         XCTAssertGreaterThan(
             CandidateMetrics(textSize: .small, windowSize: .large).baseWidth, original,
         )
+    }
+
+    /// The digit hint scales with the TEXT choice, like the other
+    /// text-anchored distances — a hint that stayed 10pt beside 23pt
+    /// candidates would read as a speck.
+    @MainActor
+    func testIndexColumn_scalesWithTheTextChoiceAndNotTheChrome() {
+        let small = CandidateMetrics(textSize: .small, windowSize: .medium)
+        let large = CandidateMetrics(textSize: .large, windowSize: .medium)
+
+        XCTAssertGreaterThan(large.indexFontSize, small.indexFontSize)
+        XCTAssertGreaterThan(large.indexWidth, small.indexWidth)
+        XCTAssertEqual(
+            CandidateMetrics(textSize: .small, windowSize: .large).indexFontSize,
+            small.indexFontSize,
+            "the chrome knob is air around the text, not the size of it",
+        )
+        // The slot holds the WIDEST form the key can take — `⌥9`, not `9` —
+        // so the column keeps one width as the live key changes.
+        let widest = CandidateIndexLabel.widestLabelForms
+            .map { ceil(($0 as NSString).size(withAttributes: [.font: small.indexFont]).width) }
+            .max() ?? 0
+        XCTAssertEqual(small.indexWidth, widest + 2)
+        XCTAssertGreaterThan(
+            small.indexWidth,
+            ceil(("9" as NSString).size(withAttributes: [.font: small.indexFont]).width) + 2,
+            "a bare digit alone would leave no room for the chord",
+        )
+        XCTAssertEqual(small.indexColumnWidth, small.indexWidth + small.indexCandidateGap)
+    }
+
+    /// The slot is charged to the narrowest cell there is, because every cell
+    /// reserves it whether or not a digit is drawn in it — a packer that
+    /// budgeted without it would fit a column the window cannot render.
+    @MainActor
+    func testBaseWidth_chargesTheDigitSlot() {
+        for arrangement in [CandidateCellArrangement.inline, .stacked] {
+            let metrics = defaultMetrics.arranged(arrangement)
+
+            XCTAssertEqual(
+                metrics.baseWidth,
+                2 * metrics.horizontalPadding + metrics.indexColumnWidth + metrics.primaryColumnFloor,
+                accuracy: 0.01,
+                "\(arrangement)",
+            )
+        }
     }
 
     /// The aligned column can never ask for more than the cell holds — the

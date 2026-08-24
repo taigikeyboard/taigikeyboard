@@ -5,11 +5,14 @@ import AppKit
 /// One cell of the candidate window, ported from MacishType's
 /// `MacishCandidateItemView` (`references/MacishType/macos/MacishType/
 /// MacishCandidateWindow/MacishCandidateItemView.swift`; MIT, © 2026 Luke
-/// Chang) with one deliberate departure: no index column. Upstream numbers
-/// every cell with the key that picks it; the `⌃1`…`⌃9` chords still work here
-/// — bare digits could not be used, being the numeric tone markers of TL and
-/// POJ — but they are not drawn, because a modifier badge beside every
-/// candidate is noise the reader has to look past (USER 2026-08-21).
+/// Chang), index column included.
+///
+/// The column was dropped in the original port (USER 2026-08-21): the only key
+/// that picked a candidate was the `⌃1`…`⌃9` chord, and a modifier badge beside
+/// every candidate is noise the reader has to look past. Bare `1`…`9` now select
+/// wherever the digit cannot be a tone marker (`ComposingKeyIntent`,
+/// 2026-08-24), so the digit names a key the user can just press, and the
+/// column earns its width.
 ///
 /// The annotation column is upstream's, and carries the candidate's other
 /// script — see `CandidateCellContent`. The metrics the cell renders at are
@@ -24,8 +27,15 @@ final class CandidateItemView: NSView {
     /// can stay untouched. Nil on Sequoia.
     private var highlightView: NSView?
 
+    private let indexLabel = NSTextField(labelWithString: "")
     private let candidateLabel = NSTextField(labelWithString: "")
     private let annotationLabel = NSTextField(labelWithString: "")
+
+    /// The digit currently drawn, or `""` for a position no digit names. The
+    /// slot's width is charged to the cell either way, so blanking the text is
+    /// the whole of "no digit here" — a cell that gave the width back would
+    /// break the column its neighbours align on.
+    var indexLabelText: String { indexLabel.stringValue }
 
     /// Which candidate this cell shows, in the absolute order of
     /// `CandidateWindowContent.cells`. The identity clicks and highlights
@@ -94,6 +104,10 @@ final class CandidateItemView: NSView {
             highlightView = pill
         }
 
+        indexLabel.font = metrics.indexFont
+        indexLabel.alignment = .center
+        indexLabel.translatesAutoresizingMaskIntoConstraints = false
+
         candidateLabel.font = metrics.candidateFont
         candidateLabel.lineBreakMode = .byTruncatingTail
         candidateLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -110,8 +124,15 @@ final class CandidateItemView: NSView {
         // instead of breaking the cell's own geometry.
         annotationLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
+        addSubview(indexLabel)
         addSubview(candidateLabel)
         addSubview(annotationLabel)
+
+        NSLayoutConstraint.activate([
+            indexLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: metrics.horizontalPadding),
+            indexLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            indexLabel.widthAnchor.constraint(equalToConstant: metrics.indexWidth),
+        ])
 
         switch metrics.cellArrangement {
         case .inline: activateInlineConstraints()
@@ -150,7 +171,7 @@ final class CandidateItemView: NSView {
 
         NSLayoutConstraint.activate([
             candidateLabel.leadingAnchor.constraint(
-                equalTo: leadingAnchor, constant: metrics.horizontalPadding,
+                equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
             ),
             candidateLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             columnWidth,
@@ -168,17 +189,25 @@ final class CandidateItemView: NSView {
     /// its frame (the panels place cells by hand), so a vertical constraint to
     /// an edge would fight a frame the labels do not get a say in.
     private func activateStackedConstraints() {
+        // The area the two lines live in: what the cell leaves once the digit
+        // column has its slot. They centre in IT rather than in the cell, since
+        // the digit only ever takes width off the leading edge — centring in
+        // the cell would push the pair right of the space it occupies.
         let textGuide = NSLayoutGuide()
         addLayoutGuide(textGuide)
 
         let padding = metrics.horizontalPadding
         NSLayoutConstraint.activate([
-            candidateLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            candidateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: padding),
-            candidateLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -padding),
-            annotationLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            annotationLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: padding),
-            annotationLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -padding),
+            textGuide.leadingAnchor.constraint(
+                equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
+            ),
+            textGuide.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
+            candidateLabel.centerXAnchor.constraint(equalTo: textGuide.centerXAnchor),
+            candidateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: textGuide.leadingAnchor),
+            candidateLabel.trailingAnchor.constraint(lessThanOrEqualTo: textGuide.trailingAnchor),
+            annotationLabel.centerXAnchor.constraint(equalTo: textGuide.centerXAnchor),
+            annotationLabel.leadingAnchor.constraint(greaterThanOrEqualTo: textGuide.leadingAnchor),
+            annotationLabel.trailingAnchor.constraint(lessThanOrEqualTo: textGuide.trailingAnchor),
             annotationLabel.topAnchor.constraint(
                 equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
             ),
@@ -204,6 +233,16 @@ final class CandidateItemView: NSView {
             annotationZeroWidthConstraint.isActive = !hasAnnotation
         }
         updateAppearance()
+    }
+
+    /// Sets the digit that picks this cell, or `""` where none does. Every
+    /// panel renumbers as its viewport moves — the vertical list as it
+    /// scrolls, the expandable grid as the selection changes rows — so the
+    /// no-op case is the common one, and writing `stringValue` dirties the
+    /// text field's layout whether or not the string changed.
+    func setIndexLabel(_ digit: String) {
+        guard indexLabel.stringValue != digit else { return }
+        indexLabel.stringValue = digit
     }
 
     /// Widens the candidate column to `width`, so rows sharing a column start
@@ -236,6 +275,7 @@ final class CandidateItemView: NSView {
 
     private func updateAppearance() {
         if isHighlighted {
+            indexLabel.textColor = .white
             candidateLabel.textColor = .white
             annotationLabel.textColor = .white
             // Resolved under the panel's own appearance: `cgColor` snapshots a
@@ -255,6 +295,7 @@ final class CandidateItemView: NSView {
                 }
             }
         } else {
+            indexLabel.textColor = .secondaryLabelColor
             candidateLabel.textColor = .labelColor
             annotationLabel.textColor = .secondaryLabelColor
             if let pill = highlightView {
