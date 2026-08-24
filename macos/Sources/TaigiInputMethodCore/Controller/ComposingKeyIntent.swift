@@ -164,11 +164,17 @@ enum ComposingKeyIntent: Equatable {
     /// `bindings` carries the parts of the contract the user chooses; why they
     /// arrive as an argument is in `ComposingKeyBindings`. It defaults so that
     /// every call site with no opinion still reads as the shipped contract.
+    ///
+    /// `rawInput` is the composition's raw buffer — the letters and digits as
+    /// typed, before any tone mark is rendered. Only its last character is
+    /// read, and only to answer whether a digit could still be romanization
+    /// (`canTypeToneDigit`).
     static func intent(
         for key: KeyEventSnapshot,
         isComposing: Bool,
         isShowingCandidates: Bool = false,
         bindings: ComposingKeyBindings = .default,
+        rawInput: String = "",
     ) -> ComposingKeyIntent {
         let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)
 
@@ -220,6 +226,26 @@ enum ComposingKeyIntent: Equatable {
             return .selectCandidateSlot(slot)
         }
 
+        // The bare-digit tier. A digit takes its romanization meaning first —
+        // the tone of the syllable being typed — and only when it cannot have
+        // one does it select a candidate. `canTypeToneDigit` is what decides,
+        // and its rule is TL/POJ grammar rather than a mode the user has to
+        // hold in their head: nothing can follow a tone digit but a new
+        // syllable, which always starts with a letter, so a digit typed after
+        // `tai5` was never going to be input.
+        //
+        // Gated on the bar being up, because selecting needs something to
+        // select, and on no chording modifier, so the modifier tier above
+        // keeps its chords whatever the buffer looks like.
+        if isComposing,
+           isShowingCandidates,
+           !canTypeToneDigit(after: rawInput),
+           modifiers.isDisjoint(with: Self.chordingModifiers),
+           let slot = directSelectionSlot(key.charactersIgnoringModifiers)
+        {
+            return .selectCandidateSlot(slot)
+        }
+
         // What the user put on this key, read before the host-chord guard so a
         // chord they deliberately recorded — ⌥Return for 直接輸出漢字, say —
         // reaches its action. Only an EXACT match does: an unrecorded ⌥ chord
@@ -259,7 +285,14 @@ enum ComposingKeyIntent: Equatable {
             return hostKey(isComposing: isComposing)
         }
 
-        if isRomanizationCharacter(first) || (isComposing && isToneDigit(first)) {
+        // A digit still reaches the engine as a tone whenever it could be one.
+        // Where it could not, the slot tier above already took `1`…`9` if
+        // there were candidates to pick; anything left over — `0`, or a digit
+        // typed with no bar up — falls through to document text below, which
+        // is what the engine would have made of `tai52` anyway.
+        if isRomanizationCharacter(first)
+            || (isComposing && canTypeToneDigit(after: rawInput) && isToneDigit(first))
+        {
             return .input(characters)
         }
         // Everything else printable — space, punctuation, a character from
@@ -319,6 +352,36 @@ enum ComposingKeyIntent: Equatable {
     /// Visible to `ComposingKeyChord`, which refuses to record a chord this
     /// answers for — the slot tier is read first, so such a binding would be
     /// stored and then never fire.
+    /// Whether a digit typed now could be part of the romanization — the rule
+    /// that decides what a bare `1`…`9` means mid-composition.
+    ///
+    /// TL and POJ spell a syllable as letters plus at most ONE trailing tone
+    /// digit (`tai5`), and a syllable can only begin with a letter — a hyphen
+    /// separates syllables, so it too is followed by letters. So a digit is
+    /// romanization exactly while the buffer ends in a letter:
+    ///
+    /// - `tai` + `5` → the tone of `tai`
+    /// - `taigi` + `2` → the tone of the syllable being typed
+    /// - `tai5` + `2` → nothing TL or POJ can spell; the engine would keep it
+    ///   verbatim as `tai52` (§10.2), so the key is free to select instead
+    /// - `tai5-` + `2` → same: a syllable starts here, and it starts with a
+    ///   letter
+    ///
+    /// An empty buffer answers true, so the classifier's digit handling reads
+    /// the same for a composition that has not started as for one whose first
+    /// character is still to come.
+    ///
+    /// A letter tail is an affordance, not a phonotactic proof: the composing
+    /// alphabet takes every ASCII letter so a custom-dictionary romanization
+    /// can be typed, so `xyz` + `2` still reaches the engine — which keeps an
+    /// invalid syllable verbatim rather than toning it (§10.2). What the rule
+    /// guarantees is the other direction: where it says "not romanization",
+    /// nothing TL or POJ spells could have followed.
+    static func canTypeToneDigit(after rawInput: String) -> Bool {
+        guard let last = rawInput.last else { return true }
+        return last.isLetter
+    }
+
     static func directSelectionSlot(_ charactersIgnoringModifiers: String?) -> Int? {
         guard let character = charactersIgnoringModifiers?.first,
               character.isASCII,

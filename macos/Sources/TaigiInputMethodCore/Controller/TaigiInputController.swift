@@ -531,6 +531,10 @@ public final class TaigiInputController: IMKInputController {
             isComposing: manager.isComposing,
             isShowingCandidates: !fetchedCandidates.isEmpty,
             bindings: settings.composingKeyBindings,
+            // The raw buffer, not `displayText`: the question is whether the
+            // last thing TYPED was a letter, and the display has already
+            // turned `tai5` into `tâi`.
+            rawInput: manager.rawInput,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
         let executor = ClientEffectExecutor(client: client)
