@@ -46,7 +46,6 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(
             labels(),
             [
-                "開啟設定",
                 "一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理",
                 "切換 台羅/白話字", "切換 漢羅對調",
             ],
@@ -54,26 +53,15 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(
             labels(.japanese),
             [
-                "設定を開く",
                 "一般", "外観", "ショートカット", "カスタム辞書", "辞書の管理",
                 "ローマ字体系を切り替える",
                 "漢字とローマ字の入れ替えを切り替える",
             ],
         )
-        XCTAssertEqual(labels(.english).first, "Open Settings")
+        XCTAssertEqual(labels(.english).first, "General")
         // The trap this replaced: composing a row from the setting's own label produced a doubled
         // verb — "括弧で併記を切り替える", "Toggle Annotate in Brackets".
         XCTAssertFalse(labels(.japanese).contains { $0.contains("併記を切り替えるを") })
-    }
-
-    /// A user who never opens the recorder keeps the chord PR5 shipped
-    /// hardcoded. `initial:` is what carries it, and it is the reason the menu
-    /// item can stop declaring a key equivalent of its own.
-    func testOpenSettings_startsBoundToControlShiftComma() {
-        XCTAssertEqual(
-            ShortcutAction.openSettings.defaultShortcut,
-            KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .shift]),
-        )
     }
 
     /// The two mid-sentence switches arrive bound as well: no row in the pane
@@ -122,7 +110,7 @@ final class ShortcutActionsTests: XCTestCase {
         // toggleRomanization's default, recorded by hand on another row. Named
         // rather than switched with a `default`, which would quietly absorb
         // every action added later.
-        let holders: Set<ShortcutAction> = [.openSettings, .toggleRomanization]
+        let holders: Set<ShortcutAction> = [.openGeneralPane, .toggleRomanization]
         let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { action in
             holders.contains(action) ? recorded : nil
         }
@@ -139,9 +127,9 @@ final class ShortcutActionsTests: XCTestCase {
     }
 
     /// The pane doorways start on ⌃⇧ plus the pane's own position in the
-    /// sidebar: one modifier family with 開啟設定 above, and digits rather than
-    /// initials because the window speaks five display languages and an
-    /// initial is a mnemonic in exactly one of them.
+    /// sidebar: one modifier family, and digits rather than initials because
+    /// the window speaks five display languages and an initial is a mnemonic
+    /// in exactly one of them.
     func testThePaneDoorways_startOnControlShiftTheirSidebarPosition() {
         let paneDefaults = ShortcutAction.allCases
             .filter { $0.settingsPane != nil }

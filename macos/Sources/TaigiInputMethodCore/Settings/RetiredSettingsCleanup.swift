@@ -20,9 +20,16 @@ enum RetiredSettingsCleanup {
     /// stored chord can be cleared: the library persists chords by raw name,
     /// an orphaned chord would spring back to life on any future action that
     /// reused the name, and `ShortcutConflicts` only sees the live roster.
+    /// Declared with no `initial:`, or the construction below would seed the
+    /// very chord this is here to clear.
     private static let retiredShortcutNames = [
         KeyboardShortcuts.Name("toggleBothScripts"),
         KeyboardShortcuts.Name("toggleLiteralRomanCandidate"),
+        // 開啟設定, retired 2026-08-24 when every pane got a row of its own:
+        // a chord for "whichever pane was last used" is a second key for what
+        // 一般 does. Unlike the two above this one shipped, so real installs
+        // hold ⌃⇧, — or whatever the user recorded over it.
+        KeyboardShortcuts.Name("openSettings"),
     ]
 
     /// Sidebar panes removed from `SettingsPane`. Cleared explicitly rather

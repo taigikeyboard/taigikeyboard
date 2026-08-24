@@ -4,19 +4,13 @@
 import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
-    /// `initial:` carries the chord PR5 shipped hardcoded, so a user who never
-    /// opens the recorder keeps `Ctrl+Shift+,` exactly as before.
-    static let openSettings = Self(
-        "openSettings",
-        initial: .init(.comma, modifiers: [.control, .shift]),
-    )
     /// The pane doorways, on ⌃⇧ plus the pane's position in the sidebar.
     ///
-    /// One modifier family with 開啟設定 above, so every key that lands in this
-    /// input method's settings reads as one namespace. Digits rather than
-    /// initials because the settings window speaks five display languages and
-    /// an initial is a mnemonic in exactly one of them; the sidebar's own
-    /// order is the same in all five.
+    /// One modifier family, so every key that lands in this input method's
+    /// settings reads as one namespace. Digits rather than initials because the
+    /// settings window speaks five display languages and an initial is a
+    /// mnemonic in exactly one of them; the sidebar's own order is the same in
+    /// all five.
     ///
     /// ⌃⇧ rather than the neighbouring families: ⌃1–9 is the candidate-slot
     /// tier while Control holds it (`ComposingKeyIntent.directSelectionSlot`),
@@ -79,7 +73,6 @@ extension KeyboardShortcuts.Name {
 /// rows, the handler registration, and the enable/disable gate — adding a case
 /// adds the action everywhere at once.
 enum ShortcutAction: CaseIterable, Sendable {
-    case openSettings
     case openGeneralPane
     case openAppearancePane
     case openShortcutPane
@@ -90,7 +83,6 @@ enum ShortcutAction: CaseIterable, Sendable {
 
     var name: KeyboardShortcuts.Name {
         switch self {
-        case .openSettings: .openSettings
         case .openGeneralPane: .openGeneralPane
         case .openAppearancePane: .openAppearancePane
         case .openShortcutPane: .openShortcutPane
@@ -112,7 +104,6 @@ enum ShortcutAction: CaseIterable, Sendable {
 
     private var destination: Destination {
         switch self {
-        case .openSettings: .named(.macosShortcutOpenSettings)
         case .openGeneralPane: .pane(.general)
         case .openAppearancePane: .pane(.appearance)
         case .openShortcutPane: .pane(.shortcuts)
@@ -123,12 +114,8 @@ enum ShortcutAction: CaseIterable, Sendable {
         }
     }
 
-    /// The pane this action lands the settings window on, or `nil` when it
-    /// lands on none of them in particular.
-    ///
-    /// 開啟設定 is the `nil` case on purpose: it reopens wherever the user last
-    /// was, which is Apple's guidance for a settings window and a different
-    /// command from "go to 一般".
+    /// The pane this action lands the settings window on, or `nil` for the two
+    /// switches, which open no window at all.
     var settingsPane: SettingsPane? {
         guard case let .pane(pane) = destination else { return nil }
         return pane
@@ -199,7 +186,7 @@ enum ShortcutHotkeys {
     /// bar those settings would invalidate.
     static func perform(_ action: ShortcutAction) {
         switch action {
-        case .openSettings, .openGeneralPane, .openAppearancePane, .openShortcutPane,
+        case .openGeneralPane, .openAppearancePane, .openShortcutPane,
              .openCustomDictionaryPane, .openDictionarySourcesPane:
             openSettings(on: action.settingsPane, in: SettingsStore())
         case .toggleRomanization, .toggleTranslateSwapped:

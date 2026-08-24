@@ -129,14 +129,20 @@ final class RetiredSettingsCleanupTests: XCTestCase {
 
     /// The library persists chords by raw name in the standard domain, so a
     /// chord recorded by a pre-trim build would spring back to life on any
-    /// future action that reused the name — cleanup must clear BOTH retired
-    /// names there. Saved and restored per name, because the standard domain
-    /// is the developer's real one.
+    /// future action that reused the name — cleanup must clear EVERY retired
+    /// name there. Saved and restored per name, because the standard domain is
+    /// the developer's real one.
+    ///
+    /// Whatever the user recorded, not merely the shipped default: 開啟設定 was
+    /// re-recordable for as long as it existed, and a chord the user chose is
+    /// exactly the one that would come back.
     func testRetiredHotkeyChords_areCleared() {
         let retiredNames = [
             KeyboardShortcuts.Name("toggleBothScripts"),
             KeyboardShortcuts.Name("toggleLiteralRomanCandidate"),
+            KeyboardShortcuts.Name("openSettings"),
         ]
+        let keys: [KeyboardShortcuts.Key] = [.k, .j, .l]
         let saved = retiredNames.map { ($0, KeyboardShortcuts.getShortcut(for: $0)) }
         defer {
             for (name, shortcut) in saved {
@@ -145,7 +151,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         }
         for (index, name) in retiredNames.enumerated() {
             KeyboardShortcuts.setShortcut(
-                .init(index == 0 ? .k : .j, modifiers: [.control, .option]), for: name,
+                .init(keys[index], modifiers: [.control, .option]), for: name,
             )
         }
 

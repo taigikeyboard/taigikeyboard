@@ -259,9 +259,9 @@ public final class TaigiInputController: IMKInputController {
             // commits a language change, and committing one runs the chrome renderer.
             language.syncFromSettings()
 
-            // Doorways only (USER 2026-08-21): the settings window, each of
-            // its panes, and the one command that has somewhere to go rather
-            // than somewhere to be. Every composing key lives behind those
+            // Doorways only (USER 2026-08-21): every settings pane, and the
+            // one command that has somewhere to go rather than somewhere to
+            // be. Every composing key lives behind those
             // doors — the menu stopped being the shortcut roster when the
             // agent proved unable to DISPLAY a composing key without also
             // DISPATCHING it (`InputSourceMenuRow`). These rows may claim a
@@ -290,16 +290,19 @@ public final class TaigiInputController: IMKInputController {
         return InputSourceMenuRenderer.menu(groups)
     }
 
-    /// The menu's first group: every row that opens the settings window, in
-    /// sidebar order under the row that opens it wherever the user left it.
+    /// The menu's first group: one row per settings pane, in sidebar order.
     ///
     /// Paired with a selector rather than derived from the action, because IMK
     /// routes a menu command by selector (`IMKInputController.h:283-296`) and a
     /// selector cannot be computed. The list IS the roster: a `ShortcutAction`
     /// missing from it has no menu row, which is how the two mid-sentence
     /// switches stay out (USER 2026-08-21).
+    ///
+    /// A generic 開啟設定 row led the group until 2026-08-24, on its own ⌃⇧,
+    /// chord. It went with the chord (USER): once every pane has a row, a row
+    /// that opens whichever pane was last used is a second key for what 一般
+    /// already does.
     private static let menuDoorways: [(action: ShortcutAction, selector: Selector)] = [
-        (.openSettings, #selector(showPreferences(_:))),
         (.openGeneralPane, #selector(openGeneralPane(_:))),
         (.openAppearancePane, #selector(openAppearancePane(_:))),
         (.openShortcutPane, #selector(openShortcutPane(_:))),
@@ -309,49 +312,57 @@ public final class TaigiInputController: IMKInputController {
 
     /// Deliberately does not call `super`. The inherited implementation looks
     /// for a `preferences.nib` (`IMKInputController.h:165-170`); this package is
-    /// built by SwiftPM and has no nib to find. The selector is kept because it
-    /// is the one the system reserves for this command.
+    /// built by SwiftPM and has no nib to find.
+    ///
+    /// No menu row sends this any more, and the header promises only that a row
+    /// whose action IS `showPreferences:` routes here — nothing documents the
+    /// system sending it unprompted. Kept regardless: it is the standard
+    /// override for this command, it costs one call, and it answers correctly
+    /// if any framework or external routing ever does send it. Opening no
+    /// particular pane is right for a generic "preferences" command — the user
+    /// returns where they left off.
     override public func showPreferences(_: Any!) {
         Self.logger.debug("showPreferences")
-        openSettings(for: .openSettings)
+        openSettings(on: nil)
     }
 
     /// One selector per pane, because that is the unit IMK routes by. Each
-    /// names the action it sends and nothing else; what opening a pane means
-    /// is `ShortcutHotkeys.openSettings(on:in:)`, shared with the Carbon
-    /// hotkey the same action registers.
+    /// names the pane it opens and nothing else; what opening one means is
+    /// `ShortcutHotkeys.openSettings(on:in:)`, shared with the Carbon hotkey
+    /// the matching action registers.
     @objc
     private func openGeneralPane(_: Any!) {
-        openSettings(for: .openGeneralPane)
+        openSettings(on: .general)
     }
 
     @objc
     private func openAppearancePane(_: Any!) {
-        openSettings(for: .openAppearancePane)
+        openSettings(on: .appearance)
     }
 
     @objc
     private func openShortcutPane(_: Any!) {
-        openSettings(for: .openShortcutPane)
+        openSettings(on: .shortcuts)
     }
 
     @objc
     private func openCustomDictionaryPane(_: Any!) {
-        openSettings(for: .openCustomDictionaryPane)
+        openSettings(on: .customDictionary)
     }
 
     @objc
     private func openDictionarySourcesPane(_: Any!) {
-        openSettings(for: .openDictionarySourcesPane)
+        openSettings(on: .dictionarySources)
     }
 
     /// Brings the window up on this controller's own settings store, so a test
-    /// drives the menu through its own defaults suite.
-    private func openSettings(for action: ShortcutAction) {
-        Self.logger.debug("open settings for \(String(describing: action))")
+    /// drives the menu through its own defaults suite. `nil` leaves the stored
+    /// pane alone, reopening the window where the user left it.
+    private func openSettings(on pane: SettingsPane?) {
+        Self.logger.debug("open settings on \(pane?.rawValue ?? "the last-used pane")")
         onMainActor(nil) { controller, _ in
             ShortcutHotkeys.openSettings(
-                on: action.settingsPane,
+                on: pane,
                 in: controller.settings,
                 show: controller.settingsPresenterOverride,
             )
@@ -374,7 +385,7 @@ public final class TaigiInputController: IMKInputController {
     @objc
     private func checkForUpdates(_: Any!) {
         Self.logger.debug("check for updates")
-        openSettings(for: .openGeneralPane)
+        openSettings(on: .general)
         onMainActor(nil) { controller, _ in
             let checker = controller.updateCheckerOverride ?? UpdateChecker.shared
             checker.checkManually()
@@ -401,7 +412,7 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
         switch action {
-        case .openSettings, .openGeneralPane, .openAppearancePane, .openShortcutPane,
+        case .openGeneralPane, .openAppearancePane, .openShortcutPane,
              .openCustomDictionaryPane, .openDictionarySourcesPane:
             // Handled process-wide by `ShortcutHotkeys.perform` before any
             // session is consulted: opening a window needs no client, and a

@@ -66,11 +66,11 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         )
     }
 
-    /// Doorways and one command, in that order: the settings window, each of
-    /// its panes in sidebar order, then — past the rule — the check that has
-    /// somewhere to go rather than somewhere to be. No composing key appears
-    /// here; the menu stopped being the shortcut roster when the agent proved
-    /// unable to display one without also dispatching it.
+    /// Doorways and one command, in that order: every settings pane in sidebar
+    /// order, then — past the rule — the check that has somewhere to go rather
+    /// than somewhere to be. No composing key appears here; the menu stopped
+    /// being the shortcut roster when the agent proved unable to display one
+    /// without also dispatching it.
     func testMenu_isTheSettingsDoorwaysThenCheckForUpdates() throws {
         let items = try menu().items
 
@@ -79,7 +79,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // pane is named after it.
         XCTAssertEqual(
             items.map(\.title),
-            ["開啟設定", "一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理", "", "檢查更新"],
+            ["一般", "外觀", "快捷鍵", "自訂詞庫", "辭典管理", "", "檢查更新"],
         )
         XCTAssertEqual(items.filter(\.isSeparatorItem).count, 1)
         XCTAssertFalse(try XCTUnwrap(items.first).isSeparatorItem)
@@ -132,7 +132,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     }
 
     /// Every row starts on the chord its action ships with — ⌃⇧ plus the
-    /// pane's position for the pane rows, and 開啟設定's own ⌃⇧, above them.
+    /// pane's position in the sidebar.
     func testEveryDoorwayRow_showsItsActionsDefaultChord() throws {
         for doorway in Self.doorways {
             let row = try item(action: doorway.selector, in: menu())
@@ -161,12 +161,12 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// A bare function key IS a legal global chord (`KeyboardShortcuts` records
     /// F12 with no modifier), and it keeps its key equivalent.
     func testABareFunctionKeyGlobalChord_keepsItsKeyEquivalent() throws {
-        KeyboardShortcuts.setShortcut(.init(.f12), for: .openSettings)
+        KeyboardShortcuts.setShortcut(.init(.f12), for: .openAppearancePane)
 
-        let settingsItem = try item(action: Self.showPreferences, in: menu())
+        let row = try item(action: Self.openAppearancePane, in: menu())
 
-        XCTAssertFalse(settingsItem.keyEquivalent.isEmpty)
-        XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [])
+        XCTAssertFalse(row.keyEquivalent.isEmpty)
+        XCTAssertEqual(row.keyEquivalentModifierMask, [])
     }
 
     /// Clicking a pane row moves the window to that pane, so it opens where
@@ -215,27 +215,37 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         wait(for: [fetched], timeout: 2)
     }
 
-    /// 開啟設定 reopens where the user last was — Apple's guidance for a
-    /// settings window, and the reason it is a row of its own now that every
-    /// pane has one.
-    func testOpenSettings_leavesTheStoredPaneAlone() throws {
+    /// The generic 開啟設定 row and its ⌃⇧, chord went away on 2026-08-24
+    /// (USER): once every pane has a row, a row for "whichever pane was last
+    /// used" is a second key for what 一般 already does. Pinned so it cannot
+    /// come back by accident — a row here would take a host key again.
+    func testMenu_hasNoOpenSettingsRow() throws {
+        for row in try menu().items {
+            XCTAssertNotEqual(row.action, Self.showPreferences, row.title)
+        }
+    }
+
+    /// The override behind that retired row stays: it is the selector the
+    /// system reserves for this command (`IMKInputController.h:165-170`), and
+    /// a generic "preferences" command reopens where the user left off rather
+    /// than jumping them to a pane they did not ask for.
+    func testShowPreferences_stillOpensTheWindowOnTheStoredPane() {
         controller.settings.selectedSettingsPane = .customDictionary
 
-        try select(Self.showPreferences)
+        controller.showPreferences(nil)
 
         XCTAssertEqual(controller.settings.selectedSettingsPane, .customDictionary)
         XCTAssertEqual(settingsShownCount, 1)
     }
 
-
     /// The menu is rebuilt on every draw, which is what lets it follow a language change with no
     /// refresh wiring of its own.
     func testMenu_redrawnAfterALanguageChange_readsInTheNewLanguage() throws {
-        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "開啟設定")
+        XCTAssertEqual(try item(action: Self.openAppearancePane, in: menu()).title, "外觀")
 
         try XCTUnwrap(controller.displayLanguageOverride).setLanguage(.english)
 
-        XCTAssertEqual(try item(action: Self.showPreferences, in: menu()).title, "Open Settings")
+        XCTAssertEqual(try item(action: Self.openAppearancePane, in: menu()).title, "Appearance")
     }
 
     private static let showPreferences = Selector(("showPreferences:"))
@@ -248,7 +258,6 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// agreeing with itself. The pane is not restated — `settingsPane` is the
     /// one table for that, pinned by `ShortcutActionsTests`.
     private static let doorways: [(action: ShortcutAction, selector: Selector)] = [
-        (.openSettings, showPreferences),
         (.openGeneralPane, Selector(("openGeneralPane:"))),
         (.openAppearancePane, openAppearancePane),
         (.openShortcutPane, Selector(("openShortcutPane:"))),
@@ -256,39 +265,16 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         (.openDictionarySourcesPane, Selector(("openDictionarySourcesPane:"))),
     ]
 
-    /// The chord lives in the shortcut registry now, not in this file: a user
-    /// who never opens the recorder still sees `Ctrl+Shift+,` because that is
-    /// 開啟設定's initial value.
-    func testMenu_showsTheInitialSettingsChord() throws {
-        KeyboardShortcuts.reset(.openSettings)
-
-        let settingsItem = try item(action: Self.showPreferences, in: menu())
-
-        XCTAssertEqual(settingsItem.keyEquivalent, ",")
-        XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [.control, .shift])
-    }
-
-    /// The menu is rebuilt on every draw, which is what lets it show a chord
-    /// the user recorded after the process started.
-    func testMenu_showsARecordedSettingsChord() throws {
-        KeyboardShortcuts.setShortcut(.init(.k, modifiers: [.control, .option]), for: .openSettings)
-
-        let settingsItem = try item(action: Self.showPreferences, in: menu())
-
-        XCTAssertEqual(settingsItem.keyEquivalent, "k")
-        XCTAssertEqual(settingsItem.keyEquivalentModifierMask, [.control, .option])
-    }
-
     /// A cleared shortcut claims no key equivalent at all — the menu item stays,
     /// the chord does not, and no host key is taken for a command the user
     /// unbound.
     func testMenu_claimsNoChordWhenTheShortcutIsCleared() throws {
-        KeyboardShortcuts.setShortcut(nil, for: .openSettings)
+        KeyboardShortcuts.setShortcut(nil, for: .openAppearancePane)
 
-        let settingsItem = try item(action: Self.showPreferences, in: menu())
+        let row = try item(action: Self.openAppearancePane, in: menu())
 
-        XCTAssertEqual(settingsItem.title, "開啟設定")
-        XCTAssertEqual(settingsItem.keyEquivalent, "")
+        XCTAssertEqual(row.title, "外觀")
+        XCTAssertEqual(row.keyEquivalent, "")
     }
 
     /// ⌘, belongs to the application being typed into. A key equivalent claimed
@@ -296,7 +282,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// is selected, so claiming that one would cost the user their app's own
     /// settings shortcut.
     func testMenu_doesNotClaimCommandComma() throws {
-        KeyboardShortcuts.reset(.openSettings)
+        KeyboardShortcuts.reset(ShortcutAction.allCases.map(\.name))
 
         for item in try menu().items {
             XCTAssertFalse(
