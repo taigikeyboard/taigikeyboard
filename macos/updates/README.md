@@ -56,8 +56,8 @@ published yet" looks like on the wire.
 
 ## Publishing a release
 
-`macos/scripts/publish-release.sh` (or `make macos-release RELEASE_FLAGS=--publish`,
-which runs it straight after a successful build) does the whole sequence:
+`macos/scripts/publish-release.sh` — which `make macos-release` runs straight
+after a successful build — does the whole sequence:
 
 1. Checks the package really is this app at this version, then uploads it as a
    GitHub release asset on the website repository — release assets, unlike

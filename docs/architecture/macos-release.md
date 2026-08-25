@@ -92,7 +92,7 @@ existing profile should be reused.
 
 ```sh
 make build          # only when engine/ or dictionary/ sources moved
-make macos-release RELEASE_FLAGS=--publish
+make macos-release
 ```
 
 `make macos-release` deliberately does not rebuild the Rust engine or the
@@ -124,20 +124,28 @@ What the script does, in order:
 6. **Name the output** — move the finished package to
    `macos/.build/distribution/TaigiKeyboard-<version>.pkg` only after every check
    passed, and print its SHA-256.
-7. **Publish**, with `--publish` — hand the package to
-   `macos/scripts/publish-release.sh` (see *Publishing the package* below).
+7. **Publish** — hand the package to `macos/scripts/publish-release.sh` (see
+   *Publishing the package* below).
 
 Flags:
 
+`make macos-release` passes `--force --publish`, so cutting a release needs no
+flags: it publishes, and it overwrites the local package left by a previous
+attempt at the same version. Re-cutting a version is the normal case — a release
+flow is verified by running it — and both defaults exist so that verifying it
+twice takes the same command as verifying it once.
+
+`--publish` refuses to run alongside either throwaway flag, and the refusal comes
+before the build rather than after the notarization wait. Those builds therefore
+bypass the make target:
+
 ```sh
-make macos-release RELEASE_FLAGS=--publish         # upload and announce on success
-make macos-release RELEASE_FLAGS=--skip-notarize   # packaging only, unshippable
-make macos-release RELEASE_FLAGS=--allow-dirty     # build from a dirty tree
-make macos-release RELEASE_FLAGS=--force           # overwrite an existing package
+bash macos/scripts/release-app.sh --skip-notarize   # packaging only, unshippable
+bash macos/scripts/release-app.sh --allow-dirty     # build from a dirty tree
 ```
 
-`--publish` refuses to run alongside either of the two throwaway flags, and the
-refusal comes before the build rather than after the notarization wait.
+`RELEASE_FLAGS` still reaches the script for anything else, but passing either of
+the two above through it fails on purpose.
 
 `--skip-notarize` and `--allow-dirty` both stamp the reason into the output
 filename, so an unpublishable package cannot be confused for a release.

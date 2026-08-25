@@ -93,16 +93,24 @@ macos-engine:
 macos-protos:
 	bash $(ENGINE)/scripts/gen-macos-protos.sh
 
-# Signed + notarized installer package for web distribution, and the only
-# entry point for one — `macos/Makefile` is the dev loop and stops at `bundle`.
-# Prerequisites, flags, and the one-time Developer ID setup:
-# docs/architecture/macos-release.md.
+# Cut a macOS release: build, sign, notarize, upload, announce. The only entry
+# point for one — `macos/Makefile` is the dev loop and stops at `bundle`.
+#
+# `--publish` is baked in because publishing IS the point of this target, and
+# `--force` because re-cutting the same version is the normal case: a release is
+# tested by running this flow, and the local package from the previous attempt
+# must not be what stops the next one.
+#
+# The two throwaway builds contradict publishing and so are refused here by
+# design; run the script directly for those. Prerequisites and the one-time
+# Developer ID setup: docs/architecture/macos-release.md.
 macos-release:
-	bash macos/scripts/release-app.sh $(RELEASE_FLAGS)
+	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
-# Upload the built package and announce it in the update manifest. Separate from
-# the build because a failed upload must not cost another notarization; run
-# `make macos-release RELEASE_FLAGS=--publish` to chain both in one command.
+# Upload an already-built package and announce it. `make macos-release` already
+# chains this on success; this target exists for the recovery case, where the
+# build and notarization succeeded and only the upload failed — re-running the
+# whole thing would cost another notarization round trip.
 macos-publish:
 	bash macos/scripts/publish-release.sh $(PUBLISH_FLAGS)
 
@@ -143,8 +151,8 @@ help:
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-engine       macOS-only shortcut: rebuild macos/RustEngine xcframework"
 	@echo "  make macos-protos       macOS-only shortcut: regenerate macOS .pb.swift"
-	@echo "  make macos-release      Signed + notarized .pkg for web distribution (Developer ID)"
-	@echo "  make macos-publish      Upload that .pkg as a release and update the update manifest"
+	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
+	@echo "  make macos-publish      Re-upload an already-built .pkg (recovery after a failed upload)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
