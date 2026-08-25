@@ -31,24 +31,54 @@ final class AutoSpacePolicyTests: XCTestCase {
 
     func testGate_isOffWheneverTheSettingIsOff() {
         XCTAssertFalse(AutoSpacePolicy.isGateActive(
-            isAutoSpaceEnabled: false, isTranslateSwapped: false, isOutputBothScripts: false,
+            isAutoSpaceEnabled: false, wroteRomanization: true,
         ))
         XCTAssertFalse(AutoSpacePolicy.isGateActive(
-            isAutoSpaceEnabled: false, isTranslateSwapped: true, isOutputBothScripts: true,
+            isAutoSpaceEnabled: false, wroteRomanization: false,
         ))
     }
 
-    func testGate_swappedModeDisables_unlessBothScriptsKeepsTheRomanization() {
-        // trace: iOS isAutoSpaceModeActive (ActionHandler+KeyActions.swift:152-156)
+    func testGate_followsWhetherTheCommitWroteRomanization() {
         XCTAssertTrue(AutoSpacePolicy.isGateActive(
-            isAutoSpaceEnabled: true, isTranslateSwapped: false, isOutputBothScripts: false,
+            isAutoSpaceEnabled: true, wroteRomanization: true,
         ))
         XCTAssertFalse(AutoSpacePolicy.isGateActive(
-            isAutoSpaceEnabled: true, isTranslateSwapped: true, isOutputBothScripts: false,
+            isAutoSpaceEnabled: true, wroteRomanization: false,
         ))
-        XCTAssertTrue(AutoSpacePolicy.isGateActive(
-            isAutoSpaceEnabled: true, isTranslateSwapped: true, isOutputBothScripts: true,
+    }
+
+    /// The primary rendering is the output mode — and 括號標註 counts, because
+    /// `tâi-gí (台語)` HAS the romanization in it.
+    /// trace: iOS isAutoSpaceModeActive (ActionHandler+KeyActions.swift:152-156)
+    func testWritesRomanization_primaryFollowsTheOutputMode() {
+        XCTAssertTrue(AutoSpacePolicy.writesRomanization(
+            script: .primary, isTranslateSwapped: false, isOutputBothScripts: false,
         ))
+        XCTAssertFalse(AutoSpacePolicy.writesRomanization(
+            script: .primary, isTranslateSwapped: true, isOutputBothScripts: false,
+        ))
+        XCTAssertTrue(AutoSpacePolicy.writesRomanization(
+            script: .primary, isTranslateSwapped: true, isOutputBothScripts: true,
+        ))
+    }
+
+    /// The 漢羅 key inverts the mode — and 括號標註 does NOT apply to it, since
+    /// Space writes one script and never the bracketed pair. Without that the
+    /// gate would space a hanji written by Space in romanization mode.
+    func testWritesRomanization_alternateInvertsTheModeAndIgnoresBrackets() {
+        XCTAssertTrue(AutoSpacePolicy.writesRomanization(
+            script: .alternate, isTranslateSwapped: true, isOutputBothScripts: false,
+        ))
+        for bothScripts in [false, true] {
+            XCTAssertFalse(
+                AutoSpacePolicy.writesRomanization(
+                    script: .alternate,
+                    isTranslateSwapped: false,
+                    isOutputBothScripts: bothScripts,
+                ),
+                "bothScripts: \(bothScripts) — Space wrote the hanji, not the pair",
+            )
+        }
     }
 
     // MARK: - Trailing space after a commit

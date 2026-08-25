@@ -96,6 +96,16 @@ protocol CandidatePresenter {
     /// depends on are only allowed inside key events).
     func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken)
 
+    /// Redraws the key beside every numbered cell under `style`, keeping the
+    /// cells, the page, the anchor and the selection exactly as they are.
+    ///
+    /// Its own contract because the selection latch flips the live key WITHOUT
+    /// a new candidate list: navigating does not re-fetch, so nothing calls
+    /// `show` on the keystroke that latches, and a window left drawing `⌃1`
+    /// while a bare `1` picks would be naming a key that does something else —
+    /// the one thing `CandidateSlotKeyStyle` exists to prevent.
+    func updateSlotKeyStyle(_ style: CandidateSlotKeyStyle, ownedBy owner: ComposingSessionToken)
+
     /// Moves the selection the way the current layout reads `direction`, if
     /// `owner` still owns the window. Clamps at both ends — never wraps
     /// (McBopomofo `HorizontalCandidateController.swift:509`; the D4 rule).

@@ -8,21 +8,50 @@ import Foundation
 /// The rules mirror iOS (`ActionHandler+Suggestions.swift` /
 /// `ActionHandler+KeyActions.swift`, behavioral-invariants.md §23): a committed
 /// word gets a trailing space; a trailing hyphen — a syllable the user is
-/// about to continue — suppresses it; the 漢字-swap mode turns the feature off
-/// unless 括號標註 keeps the romanization in the output. macOS retired the
-/// 括號標註 toggle (`RetiredSettingsCleanup` pins it false), so that branch of
-/// the gate never fires here today — it is kept because it IS the iOS formula,
-/// and a second spelling of the gate is how the platforms drift.
+/// about to continue — suppresses it; a commit that put HANJI in the document
+/// turns the feature off unless 括號標註 keeps the romanization in the output.
+/// macOS retired the 括號標註 toggle (`RetiredSettingsCleanup` pins it false),
+/// so that branch of the gate never fires here today — it is kept because it IS
+/// the iOS formula, and a second spelling of the gate is how the platforms
+/// drift.
 enum AutoSpacePolicy {
-    /// True when the current mode auto-inserts a trailing space at all — the
-    /// same gate every insertion site and the punctuation swap read.
-    static func isGateActive(
-        isAutoSpaceEnabled: Bool,
+    /// True when this commit earns a trailing space at all — the same gate
+    /// every insertion site and the punctuation swap read.
+    ///
+    /// `wroteRomanization` rather than the output mode. Spacing is a property
+    /// of romanization — `guá beh khì` needs the gaps, 我欲去 does not — and
+    /// until the 漢羅 key existed the mode was an exact proxy for it, because
+    /// the mode was the only thing deciding what got written. Space commits the
+    /// script the mode does NOT lead with, so the proxy now disagrees with the
+    /// document in both directions; asking the real question keeps ONE rule
+    /// rather than a special case at the call site.
+    /// See `writesRomanization(script:isTranslateSwapped:)`.
+    static func isGateActive(isAutoSpaceEnabled: Bool, wroteRomanization: Bool) -> Bool {
+        isAutoSpaceEnabled && wroteRomanization
+    }
+
+    /// Whether committing `script` under these settings puts romanization in
+    /// the document.
+    ///
+    /// The one place the 漢羅 key's inversion is written down, and the one
+    /// place 括號標註 is read for this purpose: a `.primary` commit under it
+    /// writes `tâi-gí (台語)`, which HAS the romanization in it, while
+    /// `.alternate` writes one script and never the bracketed pair — so the
+    /// exception belongs to the primary rendering alone.
+    ///
+    /// Answers from the settings rather than from the committed string. A
+    /// candidate with no hanji writes its romanization whatever the mode says,
+    /// and this will call that a hanji commit — the same answer the mode proxy
+    /// gave before the 漢羅 key existed, kept rather than quietly changed.
+    static func writesRomanization(
+        script: CandidateScript,
         isTranslateSwapped: Bool,
         isOutputBothScripts: Bool,
     ) -> Bool {
-        guard isAutoSpaceEnabled else { return false }
-        return !isTranslateSwapped || isOutputBothScripts
+        switch script {
+        case .primary: !isTranslateSwapped || isOutputBothScripts
+        case .alternate: isTranslateSwapped
+        }
     }
 
     /// Whether the text a commit just wrote should be followed by a space.

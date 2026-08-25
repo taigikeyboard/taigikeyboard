@@ -18,6 +18,8 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
     private var currentPage = 0
 
     private var itemViews: [CandidateItemView] = []
+
+    override var numberedItemViews: [CandidateItemView] { itemViews }
     private lazy var pageArrowView: CandidatePageArrowView = {
         let view = CandidatePageArrowView(style: style, metrics: metrics)
         view.onPageUp = { [weak self] in self?.navigate(.pageUp) }
@@ -136,7 +138,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         }
         // Numbered after the page is built: the digits follow the page, so
         // they start over at `1` on every turn.
-        refreshIndexLabels(over: itemViews)
+        refreshIndexLabels()
         updateHighlights()
 
         let hasMultiplePages = pageLayout.pages.count > 1

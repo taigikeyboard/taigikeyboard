@@ -9,6 +9,11 @@ import Foundation
 /// no tone can follow — after `tai5`, or the hyphen that starts a new syllable
 /// — the bare digit selects instead (`ComposingKeyIntent.canTypeToneDigit`).
 ///
+/// The second way to `bare` is the selection latch: after `↓`, a bare digit
+/// picks whatever the buffer looks like, because someone who types no tones at
+/// all would otherwise never leave `chorded`
+/// (`ComposingKeyIntent.selectionLatch(after:wasLatched:)`).
+///
 /// The window draws whichever key is live, so the hint can never name a key
 /// that would do something else. McBopomofo writes the same distinction the
 /// same way, folding the modifier into the label text for the states that need
@@ -16,7 +21,8 @@ import Foundation
 /// `{ "⇧ " + $0 }`) rather than styling the digit — which keeps the intensity
 /// of the text free to mean "selected", as it does here.
 enum CandidateSlotKeyStyle: Equatable, Sendable {
-    /// A bare `1`…`9` picks — nothing else can follow a tone digit.
+    /// A bare `1`…`9` picks — no tone can follow the buffer as it stands, or
+    /// the user has said with `↓` that they are choosing rather than typing.
     case bare
     /// Only the chord picks, so the digit is drawn under its modifier.
     case chorded(CandidateSlotModifier)

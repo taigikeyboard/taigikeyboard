@@ -226,6 +226,138 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertNotEqual(session.client.insertedTexts.last, " ")
     }
 
+    // MARK: - The 漢羅 key
+
+    /// Auto-space follows the DOCUMENT, not the output mode: spacing is a
+    /// property of romanization (`guá beh khì` needs the gaps, 我欲去 does
+    /// not), and the 漢羅 key is the one commit whose script disagrees with the
+    /// mode. So 漢字 mode writing a romanization is spaced — the direction the
+    /// old mode-read would have refused (USER 2026-08-25).
+    func testAlternateCommitOfARomanization_earnsItsSpace() throws {
+        let session = try composedSession {
+            $0.isAutoSpaceEnabled = true
+            $0.isTranslateSwapped = true
+        }
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+
+        XCTAssertEqual(session.client.insertedTexts.last, " ")
+    }
+
+    /// And the other direction takes none: a hanji written while the settings
+    /// lead with romanization is still a hanji, whatever the mode says.
+    func testAlternateCommitOfAHanji_takesNoSpace() throws {
+        let session = try composedSession {
+            $0.isAutoSpaceEnabled = true
+            $0.isTranslateSwapped = false
+        }
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+
+        XCTAssertFalse(session.client.insertedTexts.contains(" "))
+    }
+
+    /// The toggle still outranks everything: OFF means no space from the 漢羅
+    /// key either, in the direction that would otherwise earn one.
+    func testAlternateCommit_withTheToggleOff_takesNoSpace() throws {
+        let session = try composedSession {
+            $0.isAutoSpaceEnabled = false
+            $0.isTranslateSwapped = true
+        }
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+
+        XCTAssertFalse(session.client.insertedTexts.contains(" "))
+    }
+
+    /// The punctuation swap has to follow it. The space the 漢羅 key wrote is
+    /// this controller's, so `?` must swap with it (`我ê? `) — re-reading the
+    /// gate under the OUTPUT MODE instead would refuse, because 漢字 mode says
+    /// no commit earns a space, and the one that just did would be denied its
+    /// own. What the armed script is stored for.
+    func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
+        let session = try composedSession {
+            $0.isAutoSpaceEnabled = true
+            $0.isTranslateSwapped = true
+        }
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "?"), client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.client.insertedTexts, ["? "])
+    }
+
+    /// The flip rule cuts both ways: a space armed by the 漢羅 key is
+    /// invalidated by a mode change too, exactly as a `.primary`-armed one is
+    /// (`FullWidthPunctuationControllerTests.testSwappingModesAfterAnArmed…`).
+    /// The gate is re-read for the ARMED script under the CURRENT settings, so
+    /// flipping to romanization-lead makes that alternate commit read as a
+    /// hanji — and its space stops being ours to swap.
+    func testTheSwapDeclinesWhenTheModeFlipsUnderAnAlternateArmedSpace() throws {
+        let session = try composedSession {
+            $0.isAutoSpaceEnabled = true
+            $0.isTranslateSwapped = true
+        }
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+        session.client.clearWrites()
+        session.store.isTranslateSwapped = false
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "?"), client: session.client,
+        )
+
+        XCTAssertFalse(handled, "the space is no longer ours under the settings as they stand")
+        XCTAssertTrue(session.client.writes.isEmpty)
+    }
+
+    /// And the precedence the 漢羅 key newly makes reachable: in 漢字 mode a
+    /// Space-written romanization arms a space, so the `?` that follows matches
+    /// BOTH the auto-space swap and the full-width map. The swap wins and the
+    /// punctuation stays half-width — the word in front of the caret is
+    /// romanization, which reads as Latin text.
+    func testTheSwapOutranksTheFullWidthMap_afterAnAlternateCommit() throws {
+        let session = try composedSession {
+            $0.isAutoSpaceEnabled = true
+            $0.isTranslateSwapped = true
+        }
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: ","), client: session.client,
+        )
+
+        XCTAssertEqual(
+            session.client.insertedTexts, [", "],
+            "half-width — the full-width map would have written 「，」",
+        )
+    }
+
     // MARK: - Helpers
 
     private struct Session {

@@ -46,6 +46,8 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private let scrollView = NSScrollView()
     private let rowsContainer = FlippedContainerView()
     private var itemViews: [CandidateItemView] = []
+
+    override var numberedItemViews: [CandidateItemView] { itemViews }
     private var separatorViews: [CandidateSeparatorView] = []
     private var boundsObserver: (any NSObjectProtocol)?
     private var scrollerStyleObserver: (any NSObjectProtocol)?
@@ -270,7 +272,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // The rows are fresh and the viewport is back at the top, so the
         // anchor is 0 and the digits are drawn straight rather than through
         // `updateRowNumbering`, whose job is noticing that it MOVED.
-        refreshIndexLabels(over: itemViews)
+        refreshIndexLabels()
         updateHighlights()
 
         if hasOverflow, NSScroller.preferredScrollerStyle != .legacy {
@@ -380,7 +382,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // 335-357`). Rows outside it keep their slot — the column the
         // candidates align on is one width all the way down — and draw
         // nothing in it.
-        refreshIndexLabels(over: itemViews)
+        refreshIndexLabels()
     }
 
     private func updateHighlights() {

@@ -865,6 +865,24 @@
         "ja": "入力したまま確定"
       }
     },
+    "actionCommitAlternateScript": {
+      "comment": "Shortcut row: commit the highlighted candidate in the other script (漢羅).",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "送出另外一種寫法",
+        "tailo": "sàng-tshut līng-guā tsi̍t-tsíng siá-huat",
+        "poj": "sàng-chhut lēng-gōa chi̍t-chéng siá-hoat",
+        "en": "Commit the Other Script",
+        "ja": "もう一方の表記で確定"
+      }
+    },
     "shortcutUnbound": {
       "comment": "Shortcut recorder button when no key is assigned to the row.",
       "scope": {

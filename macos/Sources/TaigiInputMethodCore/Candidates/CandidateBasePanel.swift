@@ -320,7 +320,29 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// re-render keeps it, having changed no buffer.
     var slotKeyStyle: CandidateSlotKeyStyle = .bare
 
-    /// Draws the key that picks each of `items`, and blanks the rest.
+    /// Every cell this layout currently draws a key beside, in any order.
+    ///
+    /// Overridden rather than held here because each layout keeps its own item
+    /// views — the expandable one keeps two lists, since its grid rows are
+    /// built separately from the row it unfolds from. Traps like its siblings
+    /// above: a layout that forgot it would repaint nothing and draw `⌃1` while
+    /// a bare `1` picks, which is the silent failure they all guard against.
+    var numberedItemViews: [CandidateItemView] {
+        preconditionFailure("layout subclasses must override numberedItemViews")
+    }
+
+    /// Repaints the keys under a new `style`, changing no geometry.
+    ///
+    /// What the selection latch flips mid-composition (`CandidatePanel
+    /// .updateSlotKeyStyle`). Guarded on a real change so a keystroke that
+    /// leaves the live key alone — most of them — costs nothing.
+    func applySlotKeyStyle(_ style: CandidateSlotKeyStyle) {
+        guard slotKeyStyle != style else { return }
+        slotKeyStyle = style
+        refreshIndexLabels()
+    }
+
+    /// Draws the key that picks each numbered cell, and blanks the rest.
     ///
     /// Derived by ASKING `candidateIndex(forSlot:)` — the same override the key
     /// handler resolves a `1`…`9` press against (`TaigiInputController`) — so
@@ -332,7 +354,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// The layouts keep only their triggers — a page rebuild, an anchor change,
     /// a selection or mode change — since that is the part their geometries do
     /// not share.
-    func refreshIndexLabels(over items: [CandidateItemView]) {
+    func refreshIndexLabels() {
         var keyByCandidate: [Int: String] = [:]
         for slot in 0 ..< HorizontalPageLayout.pageSize {
             guard let candidateIndex = candidateIndex(forSlot: slot) else { continue }
@@ -340,7 +362,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
                 forSlot: slot, style: slotKeyStyle,
             )
         }
-        for item in items {
+        for item in numberedItemViews {
             item.setIndexLabel(keyByCandidate[item.absoluteIndex] ?? "")
         }
     }

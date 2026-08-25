@@ -106,6 +106,300 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
+    // MARK: - The 漢羅 key
+
+    /// Space writes the highlighted candidate in the script Return does not —
+    /// what makes `我ê名` cost one key for the romanized word instead of a round
+    /// trip through the output setting.
+    func testSpace_commitsTheOtherScript() throws {
+        let session = try composedSession()
+        let shown = try XCTUnwrap(session.presenter.shownContent)
+        // Default output leads with the romanization, so the cell's annotation
+        // IS the other script — the one on screen under the primary.
+        let otherScript = try XCTUnwrap(shown.cells[0].annotation)
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+
+        XCTAssertEqual(session.client.insertedTexts.last, otherScript)
+    }
+
+    /// And Return still writes the primary one, from the same list — the two
+    /// keys are the two scripts, and neither moves the output setting.
+    func testReturnAndSpace_writeTheTwoScriptsOfTheSameCandidate() throws {
+        let viaReturn = try composedSession()
+        viaReturn.client.clearWrites()
+        _ = try viaReturn.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\r"), client: viaReturn.client,
+        )
+
+        let viaSpace = try composedSession()
+        viaSpace.client.clearWrites()
+        _ = try viaSpace.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: viaSpace.client,
+        )
+
+        XCTAssertNotEqual(
+            viaSpace.client.insertedTexts.last,
+            viaReturn.client.insertedTexts.last,
+            "the same candidate, the two scripts",
+        )
+        XCTAssertEqual(
+            viaSpace.controller.settings.isTranslateSwapped,
+            viaReturn.controller.settings.isTranslateSwapped,
+            "neither key moves the output setting — that is the point",
+        )
+    }
+
+    /// The mode never moves, however many times the key is used: this is a
+    /// per-word choice, not a toggle wearing a different hat.
+    func testSpace_leavesTheOutputSettingAlone() throws {
+        let session = try composedSession()
+        let before = session.controller.settings.isTranslateSwapped
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
+
+        XCTAssertEqual(session.controller.settings.isTranslateSwapped, before)
+    }
+
+    /// The mirror image, in 漢字 mode — the direction the `我ê名` example is
+    /// actually typed in: Return writes the hanji, Space writes the
+    /// romanization, and the key is the same key either way.
+    func testSwappedMode_ReturnWritesHanjiAndSpaceWritesRomanization() throws {
+        try withRestoredSwapSetting {
+            UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
+
+            let viaReturn = try composedSession()
+            let cell = try XCTUnwrap(viaReturn.presenter.shownContent).cells[0]
+            viaReturn.client.clearWrites()
+            _ = try viaReturn.controller.handle(
+                TestFixtures.keyDownEvent(characters: "\r"), client: viaReturn.client,
+            )
+
+            let viaSpace = try composedSession()
+            viaSpace.client.clearWrites()
+            _ = try viaSpace.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: viaSpace.client,
+            )
+
+            // Swapped, the cell leads with the hanji and annotates the roman.
+            XCTAssertEqual(viaReturn.client.insertedTexts.last, cell.text, "Return: the hanji")
+            XCTAssertEqual(
+                viaSpace.client.insertedTexts.last, cell.annotation, "Space: the romanization",
+            )
+        }
+    }
+
+    /// With 括號標注 on, Return writes the bracketed pair and Space still writes
+    /// ONE script — the bracket setting says how to show a candidate that
+    /// carries both, and Space is the request for the other one by itself.
+    func testBothScriptsMode_SpaceStillWritesASingleScript() throws {
+        try withSetting(SettingsStore.Keys.isOutputBothScripts.name, to: true) {
+            let session = try composedSession()
+            let cell = try XCTUnwrap(session.presenter.shownContent).cells[0]
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+
+            let written = try XCTUnwrap(session.client.insertedTexts.last)
+            XCTAssertEqual(written, cell.annotation)
+            XCTAssertFalse(written.contains("("), "no bracketed pair — one script was asked for")
+        }
+    }
+
+    /// A candidate with only one script declines the key rather than writing
+    /// that script twice — the answer `⌃7` gets on a page with no seventh slot.
+    /// Letting it through instead would drop a raw space into a document that
+    /// still has a composition marked in it.
+    ///
+    /// Driven through the real production source of a hanji-less candidate: the
+    /// §34 literal-romanization candidate, which the engine prepends at index 0
+    /// when the setting is on, and which the bar opens highlighted.
+    func testSpace_onASingleScriptCandidate_writesNothing() throws {
+        try withSetting(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true) {
+            let session = try composedSession()
+            let leading = try XCTUnwrap(session.presenter.shownContent).cells[0]
+            XCTAssertNil(leading.annotation, "the literal candidate has no second script to offer")
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+
+            XCTAssertTrue(session.client.insertedTexts.isEmpty)
+        }
+    }
+
+    // MARK: - The selection latch
+
+    /// `↓` is what gets a toneless typist off the chord. The window has to say
+    /// so on the same keystroke: navigating never re-fetches, so nothing else
+    /// would repaint the keys, and a bar still drawing `⌃1` while a bare `1`
+    /// picks would be naming a key that does something else.
+    func testDownArrow_flipsTheDrawnKeyToBare_onTheSameKeystroke() throws {
+        let session = try composedSession()
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.control),
+            "`taigi` ends in a letter, so the grammar rule alone keeps the chord",
+        )
+
+        session.press(.downArrow)
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .bare,
+            "the user has said they are choosing, so a bare digit picks",
+        )
+    }
+
+    /// And the bare digit really does commit, out of a buffer whose tail is a
+    /// letter — the case the grammar tier alone can never reach.
+    ///
+    /// Slot 1 rather than a later one because a slot deeper in the list can
+    /// hold a partial-span candidate (`tâi` consumes only the `tai` of
+    /// `taigi`), which nails a prefix and re-renders the preedit rather than
+    /// writing to the document — a different contract, and not the one this
+    /// case is about. Which slot maps to which index is pinned at the
+    /// classifier level by `SelectionLatchTests`.
+    func testAfterDownArrow_aBareDigitCommitsThatSlot() throws {
+        let session = try composedSession()
+        let expected = try XCTUnwrap(session.presenter.shownContent).cells[0].text
+
+        session.press(.downArrow)
+        session.client.clearWrites()
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "1"), client: session.client,
+        )
+
+        XCTAssertEqual(session.client.insertedTexts.last, expected)
+    }
+
+    /// The negative control for the case above: the SAME key on the SAME buffer
+    /// without the gesture is still a tone, which is what makes toneless typing
+    /// work at all.
+    func testWithoutDownArrow_theSameDigitIsStillATone() throws {
+        let session = try composedSession()
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "1"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            session.client.insertedTexts.last, nil,
+            "`taigi` + `1` tones the last syllable — nothing is written to the document",
+        )
+    }
+
+    /// The way back is the next thing the user was going to type anyway.
+    func testTypingALetter_takesTheLatchBackOff() throws {
+        let session = try composedSession()
+        session.press(.downArrow)
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .bare)
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.control),
+            "typing is not choosing, so the digits are tones again",
+        )
+    }
+
+    /// Backspace is typing, so it takes the latch off with the letter.
+    ///
+    /// A letter is typed first so the backspace lands back on `taigi` — a
+    /// buffer that both ends in a letter (so the grammar rule alone would say
+    /// `chorded`) and has candidates to draw the keys on. Backspacing straight
+    /// out of `taigi` reaches `taig`, which has none, and a bar that is down
+    /// cannot be asked what key it is drawing.
+    func testBackspace_takesTheLatchBackOff() throws {
+        let session = try composedSession()
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
+        )
+        session.press(.downArrow)
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .bare)
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\u{8}"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.control),
+        )
+    }
+
+    /// The bar going away ends selection mode even when the composition
+    /// survives it — otherwise the next digit would try to pick from a list the
+    /// user can no longer see, and would not tone the syllable they are still
+    /// typing either.
+    func testHidingTheBarMidComposition_endsSelectionMode() throws {
+        let session = try composedSession()
+        session.press(.downArrow)
+
+        session.controller.hidePalettes()
+        session.client.clearWrites()
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "1"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            session.client.insertedTexts.last, nil,
+            "the digit is a tone again, so nothing is committed to the document",
+        )
+        // The style is deliberately NOT asserted here: the digit that proved
+        // the latch was gone also put a tone on the buffer, and a buffer ending
+        // in a tone digit reads `bare` from the grammar rule alone. What the
+        // latch did is visible in the document, not in the hint.
+    }
+
+    /// Picking a candidate that only nails a PREFIX leaves the user owing a
+    /// candidate for the rest of the buffer — still choosing, so the latch
+    /// survives and the next bare digit picks again.
+    func testPickingAPartialCandidate_keepsSelectionMode() throws {
+        let session = try composedSession()
+        session.press(.downArrow)
+
+        // Slot 3 on `taigi` is a partial-span candidate: it consumes `tai` and
+        // leaves `gi` composing, so the bar comes straight back.
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "3"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .bare,
+            "the composition is not finished, so neither is the choosing",
+        )
+    }
+
+    /// Walking the bar is how a Taigi typist LOOKS at the homophones before
+    /// deciding which tone to add. It must stay a glance, not a mode change —
+    /// otherwise the `5` that follows would commit rather than tone.
+    func testWalkingTheBar_leavesTheDigitsAsTones() throws {
+        let session = try composedSession()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\t"), client: session.client,
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+            .chorded(.control),
+        )
+    }
+
     // MARK: - Showing
 
     func testTypingRomanization_putsCandidatesOnTheBar() throws {
@@ -297,16 +591,16 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
-    /// Space walks the bar rather than committing from it — the system Zhuyin
-    /// keyboard's space bar, which is the default this ships with
-    /// (`ComposingAction.nextCandidate`).
-    func testSpace_walksToTheNextCandidateWithoutCommitting() throws {
+    /// ⇥ walks the bar rather than committing from it, pairing with the ⇧⇥ that
+    /// already walked back (`ComposingAction.nextCandidate`). Space held this
+    /// job until 2026-08-25, when it became the 漢羅 key.
+    func testTab_walksToTheNextCandidateWithoutCommitting() throws {
         let session = try composedSession()
         let cells = try XCTUnwrap(session.presenter.shownContent).cells
         session.client.clearWrites()
 
         let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: " "),
+            TestFixtures.keyDownEvent(characters: "\t"),
             client: session.client,
         )
 
@@ -500,15 +794,29 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// behind would fail unrelated cases on the NEXT run (the
     /// `savedShortcuts` pattern).
     private func withRestoredSwapSetting(_ body: () throws -> Void) rethrows {
-        let swappedKey = SettingsStore.Keys.isTranslateSwapped.name
-        let savedSwapped = UserDefaults.standard.object(forKey: swappedKey)
+        try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: nil, body)
+    }
+
+    /// Runs `body` with `key` restored afterwards to whatever it held —
+    /// including "held nothing", which a bare `removeObject` would turn into a
+    /// value a later case never chose. `.standard` rather than a scratch suite
+    /// because the controller and the shared coordinator's engine must read ONE
+    /// domain for these cases to mean anything (see `withRestoredSwapSetting`'s
+    /// callers).
+    private func withSetting(
+        _ key: String,
+        to value: Any?,
+        _ body: () throws -> Void,
+    ) rethrows {
+        let saved = UserDefaults.standard.object(forKey: key)
         defer {
-            if let savedSwapped {
-                UserDefaults.standard.set(savedSwapped, forKey: swappedKey)
+            if let saved {
+                UserDefaults.standard.set(saved, forKey: key)
             } else {
-                UserDefaults.standard.removeObject(forKey: swappedKey)
+                UserDefaults.standard.removeObject(forKey: key)
             }
         }
+        if let value { UserDefaults.standard.set(value, forKey: key) }
         try body()
     }
 

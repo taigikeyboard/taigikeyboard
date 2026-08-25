@@ -44,6 +44,31 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
+    /// A Taiwanese word is the `(漢字, canonical TL)` pair (Core Principle #7),
+    /// and which SCRIPT it was written in is not part of that. Committing the
+    /// other script must therefore land on the same row — otherwise 漢羅 typing
+    /// would quietly split every word's frequency in two, and neither half
+    /// would rank.
+    func testAlternateScriptCommit_learnsTheSameWordAsThePrimaryOne() throws {
+        let manager = try makeManager()
+        let executor = RecordingEffectExecutor()
+        let candidate = try composeAndTakeWholeBufferCandidate(manager, executing: executor)
+
+        _ = manager.commitCandidate(candidate, script: .alternate, executing: executor)
+
+        let rows = try XCTUnwrap(stores.frequency.rows(forWords: [candidate.displayText]))
+        XCTAssertEqual(
+            rows.map { FrequencyRow(word: $0.word, tl: $0.tl, count: $0.count, lastUsedMillis: 0) },
+            [FrequencyRow(
+                word: candidate.displayText,
+                tl: candidate.canonicalTl,
+                count: 1,
+                lastUsedMillis: 0,
+            )],
+            "the identity is the pair, never the rendering that reached the document",
+        )
+    }
+
     func testCommitCandidate_withRecordingOff_learnsNothing() throws {
         let manager = try makeManager(
             settingsProvider: StubEngineSettingsProvider(frequencyRecording: false),
@@ -124,6 +149,55 @@ final class ComposingManagerLearningTests: XCTestCase {
             rows.map { "\($0.pair.previous)→\($0.pair.next)" },
             ["\(first.displayText)→\(second.displayText)"],
             "the engine decided this pair was worth learning; the manager's job is to store it",
+        )
+    }
+
+    /// A 漢羅 sentence mixes the scripts word by word, so a bigram will
+    /// routinely have one half written in each. The pair must still be learnt
+    /// under the identity, not under whichever rendering reached the document —
+    /// otherwise `我 ê` learnt in mixed script would never predict `ê` again.
+    func testABigramWithOneHalfInTheOtherScript_learnsTheSamePair() throws {
+        let manager = try makeManager()
+        let executor = RecordingEffectExecutor()
+
+        let first = try commitWholeBuffer("tai", manager, executing: executor)
+        let second = try composeAndTakeWholeBufferCandidate(manager, executing: executor, "gi")
+        _ = manager.commitCandidate(second, script: .alternate, executing: executor)
+
+        let rows = try XCTUnwrap(stores.association.allRows())
+        XCTAssertEqual(
+            rows.map { "\($0.pair.previous)→\($0.pair.next)" },
+            ["\(first.displayText)→\(second.displayText)"],
+            "the pair is the identity pair, whichever script the document got",
+        )
+    }
+
+    /// `.alternate` on a candidate that has no second script is answered here
+    /// and nowhere else: nothing reaches the engine, nothing reaches the
+    /// document, and nothing is learnt. One decision point — a caller-side
+    /// pre-check plus a fallback here would be two rules for one case.
+    func testAlternateOnASingleScriptCandidate_commitsNothing() throws {
+        let manager = try makeManager()
+        let executor = RecordingEffectExecutor()
+        let candidate = try composeAndTakeWholeBufferCandidate(manager, executing: executor)
+        let romanOnly = TestFixtures.candidate(
+            roman: candidate.roman,
+            hanji: nil,
+            displayText: candidate.displayText,
+            canonicalTl: candidate.canonicalTl,
+            consumedSpanEnd: candidate.consumedSpanEnd,
+            syllableCount: candidate.syllableCount,
+        )
+
+        let (outcome, committedText) = manager.commitCandidate(
+            romanOnly, script: .alternate, executing: executor,
+        )
+
+        XCTAssertEqual(outcome, .ignored)
+        XCTAssertNil(committedText)
+        XCTAssertEqual(
+            try XCTUnwrap(stores.frequency.rows(forWords: [romanOnly.displayText])), [],
+            "a commit that wrote nothing teaches nothing",
         )
     }
 

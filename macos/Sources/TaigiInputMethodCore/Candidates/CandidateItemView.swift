@@ -11,8 +11,10 @@ import AppKit
 /// that picked a candidate was the `⌃1`…`⌃9` chord, and a modifier badge beside
 /// every candidate is noise the reader has to look past. Bare `1`…`9` now select
 /// wherever the digit cannot be a tone marker (`ComposingKeyIntent`,
-/// 2026-08-24), so the digit names a key the user can just press, and the
-/// column earns its width.
+/// 2026-08-24) and, after `↓`, wherever the user has said they are choosing
+/// rather than typing (`ComposingKeyIntent.selectionLatch(after:wasLatched:)`),
+/// so the digit names a key the user can just press, and the column earns its
+/// width.
 ///
 /// The annotation column is upstream's, and carries the candidate's other
 /// script — see `CandidateCellContent`. The metrics the cell renders at are

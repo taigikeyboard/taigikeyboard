@@ -21,9 +21,14 @@ import AppKit
 /// another Taiwanese input method or stay in the Return family — each case says
 /// which below. No action ships unbound (USER 2026-08-21).
 enum ComposingAction: String, CaseIterable, Sendable {
-    /// Moves the highlight one candidate along. Space by default, the way
-    /// Zhuyin's space bar walks the candidate window — the arrows do this too,
-    /// and always will.
+    /// Moves the highlight one candidate along. ⇥ by default — the ⇥
+    /// McBopomofo walks its candidates with, and the forward half of the pair
+    /// `previousCandidate` below already held. The arrows do this too, and
+    /// always will.
+    ///
+    /// It was Space until 2026-08-25, the way Zhuyin's space bar walks the
+    /// candidate window. Space went to `commitAlternateScript`, which has no
+    /// second key that could do its job; walking always had the arrows.
     case nextCandidate
     /// Moves the highlight one candidate back. ⇧⇥, the reverse of the ⇥
     /// McBopomofo walks its candidates with
@@ -42,6 +47,28 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// ⇧Return — the escape hatch that keeps what was typed reachable, which
     /// is why it is one of the two actions a binding may never leave unbound.
     case commitLiteral
+    /// Commits the highlighted candidate in the OTHER script — romanization
+    /// while the settings lead with hanji, and hanji while they lead with
+    /// romanization — without moving the settings.
+    ///
+    /// Space, which this takes from `nextCandidate`. Space was exactly
+    /// redundant there: every layout already reads an arrow as one step along
+    /// the list (`HorizontalPageLayout.target(for:from:)` maps `.right` and
+    /// `.nextCandidate` to the same move; `VerticalCandidatePanel.navigate`
+    /// maps `.down` and `.nextCandidate` to the same move), so the most
+    /// reachable key on the keyboard was spending itself on a duplicate.
+    ///
+    /// What it buys is the 漢羅 sentence. `我ê名` in 漢字 mode used to be
+    /// Return, then `` ` `` to flip the whole input method to romanization,
+    /// Return, `` ` `` to flip back, then Return — three actions for the one
+    /// romanized word. It is now Return / Space / Return.
+    ///
+    /// Mode-relative and self-inverting, which is what makes it one key rather
+    /// than the pair of pinned 直接送出漢字 / 直接送出羅馬字 actions removed in
+    /// #609: there is nothing to remember about which key writes which script.
+    /// rime-phah-taibun binds the same gesture the same way, on `\`
+    /// (`references/rime-phah-taibun/lua/phah_taibun_commit.lua:264`).
+    case commitAlternateScript
 
     /// The chord a fresh install has on this action. Every action has one: a
     /// row the user has never touched prints a key rather than a blank
@@ -59,12 +86,17 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// without one.
     private var freshChord: ComposingKeyChord {
         switch self {
-        case .nextCandidate: Self.chord(" ")
+        // ⇥ and ⇧⇥, a pair: the reverse half was already bound here, so the
+        // forward half costs the user nothing new to learn. Space went to
+        // `commitAlternateScript`, and the arrows walk the list in every layout
+        // whatever this row says.
+        case .nextCandidate: Self.chord("\t")
         case .previousCandidate: Self.chord("\t", modifiers: .shift)
         case .pageForward: Self.chord("]")
         case .pageBackward: Self.chord("[")
         case .confirmHighlighted: Self.chord("\r")
         case .commitLiteral: Self.chord("\r", modifiers: .shift)
+        case .commitAlternateScript: Self.chord(" ")
         }
     }
 
@@ -78,7 +110,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
         switch self {
         case .commitLiteral: false
         case .nextCandidate, .previousCandidate, .pageForward, .pageBackward,
-             .confirmHighlighted: true
+             .confirmHighlighted, .commitAlternateScript: true
         }
     }
 
@@ -92,6 +124,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
         case .pageBackward: .navigate(.pageUp)
         case .confirmHighlighted: .commitHighlightedCandidate
         case .commitLiteral: .commit
+        case .commitAlternateScript: .commitAlternateScript
         }
     }
 
@@ -104,7 +137,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// that every case appears exactly once.
     static let groups: [[ComposingAction]] = [
         [.nextCandidate, .previousCandidate, .pageForward, .pageBackward],
-        [.confirmHighlighted, .commitLiteral],
+        [.confirmHighlighted, .commitLiteral, .commitAlternateScript],
     ]
 
     /// Actions that must always be reachable, whatever else the user rebinds.
@@ -134,6 +167,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
         case .pageBackward: language.string(.macosActionPageBackward)
         case .confirmHighlighted: language.string(.macosActionConfirmHighlighted)
         case .commitLiteral: language.string(.macosActionCommitLiteral)
+        case .commitAlternateScript: language.string(.macosActionCommitAlternateScript)
         }
     }
 

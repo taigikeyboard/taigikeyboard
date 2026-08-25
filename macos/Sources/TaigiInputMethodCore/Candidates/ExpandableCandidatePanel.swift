@@ -51,6 +51,9 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var row0ItemViews: [CandidateItemView] = []
     /// Cells of the grid's rows 1+, built on the first expand of each list.
     private var expandedItemViews: [CandidateItemView] = []
+
+    /// Both lists: expanded, the grid's later rows are numbered too.
+    override var numberedItemViews: [CandidateItemView] { row0ItemViews + expandedItemViews }
     private var separatorViews: [CandidateSeparatorView] = []
     private var chevronView: CandidateChevronView!
     /// Sequoia's expanded selection: a translucent bar under the selected
@@ -778,13 +781,12 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func updateHighlights() {
-        let items = row0ItemViews + expandedItemViews
-        for item in items {
+        for item in numberedItemViews {
             item.isHighlighted = item.absoluteIndex == selectedIndex && !item.isHidden
         }
         // Renumbered with the highlight: expanded, the digits address the row
         // the selection is in, so they move when it changes rows.
-        refreshIndexLabels(over: items)
+        refreshIndexLabels()
         if displayMode == .expanded, style == .sequoia,
            let (rowIndex, _) = grid.position(of: selectedIndex)
         {

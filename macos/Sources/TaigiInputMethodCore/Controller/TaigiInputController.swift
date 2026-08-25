@@ -44,6 +44,17 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var fetchedCandidates: [ContinuousCandidate] = []
 
+    /// Whether the user has said, with `↓`, that they are choosing a candidate
+    /// rather than still typing — which lets a bare `1`…`9` pick one out of a
+    /// buffer that could otherwise still take a tone digit.
+    ///
+    /// Session state, so it lives here rather than in `ComposingKeyBindings`
+    /// (the user's settings) or in the engine (which knows the buffer, not what
+    /// the bar is doing). `ComposingKeyIntent.selectionLatch(after:wasLatched:)`
+    /// is the rule; this is only where the answer is kept between keystrokes.
+    @MainActor
+    private var isSelectionLatched = false
+
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
     /// `NSPanel`, and the default cannot be written as a stored property's
@@ -96,7 +107,19 @@ public final class TaigiInputController: IMKInputController {
     /// moved by a mouse click this keydown-only controller never saw degrades
     /// to no swap rather than to deleting a character that was not our space.
     @MainActor
-    private var autoSpaceSwapCaretLocation: Int?
+    private var armedAutoSpace: ArmedAutoSpace?
+
+    /// A trailing auto space this controller wrote, and what it wrote it for.
+    ///
+    /// The two travel together because the swap needs both: `caretLocation` to
+    /// verify the space is still where it was measured, and `script` to re-read
+    /// the gate the way the commit that armed it read it. Since the 漢羅 key
+    /// those differ — a romanization committed in 漢字 mode earns a space that
+    /// the OUTPUT MODE alone would say was never earned.
+    private struct ArmedAutoSpace {
+        let caretLocation: Int
+        let script: CandidateScript
+    }
 
     /// Whether this session is in 英數 passthrough — every printable key goes
     /// to the host, no composition starts — toggled by a solo Shift tap.
@@ -173,7 +196,7 @@ public final class TaigiInputController: IMKInputController {
             controller.fetchedCandidates = []
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
-            controller.autoSpaceSwapCaretLocation = nil
+            controller.armedAutoSpace = nil
         }
     }
 
@@ -220,7 +243,9 @@ public final class TaigiInputController: IMKInputController {
     /// of. The candidate model is cleared with the window because the two are one
     /// state as far as the key contract is concerned — the arrows and `⌃n` belong
     /// to a bar the user can see, and with the bar gone they go back to the host
-    /// until the next keystroke fetches candidates again.
+    /// until the next keystroke fetches candidates again. The selection latch
+    /// goes with them for the same reason (`dismissCandidates`): the digits
+    /// were picking out of a list that is no longer on screen.
     override public func hidePalettes() {
         Self.logger.debug("hidePalettes")
         onMainActor(nil) { controller, _ in controller.dismissCandidates() }
@@ -507,8 +532,8 @@ public final class TaigiInputController: IMKInputController {
         // switch below re-arm it. A key that went anywhere else changed the
         // document or the caret, and a swap after that would be rewriting text
         // it never measured.
-        let armedSwapCaretLocation = autoSpaceSwapCaretLocation
-        autoSpaceSwapCaretLocation = nil
+        let armedSwap = armedAutoSpace
+        armedAutoSpace = nil
 
         // A real key-down ends any half-seen Shift tap, whatever the key does
         // next — this is what keeps ⇧A a capital and ⇧↩ a chord rather than
@@ -535,8 +560,19 @@ public final class TaigiInputController: IMKInputController {
             // last thing TYPED was a letter, and the display has already
             // turned `tai5` into `tâi`.
             rawInput: manager.rawInput,
+            isSelectionLatched: isSelectionLatched,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
+
+        // Updated BEFORE the intent is carried out, so every path below that
+        // re-shows the bar already draws the key the NEXT keystroke will use.
+        // The classification above is unaffected — it read the latch as it
+        // stood when this key was pressed, which is the only reading that can
+        // be right for the key that flips it.
+        isSelectionLatched = ComposingKeyIntent.selectionLatch(
+            after: intent, wasLatched: isSelectionLatched,
+        )
+
         let executor = ClientEffectExecutor(client: client)
         defer { isMarkedTextVisible = manager.isComposing }
         switch intent {
@@ -555,15 +591,16 @@ public final class TaigiInputController: IMKInputController {
             dismissCandidates()
         case let .commitThenInsert(text):
             // Mapped before the auto-space augmentation so the full-width
-            // character rides the same single mutation as the commit. The two
-            // policies never fire together — full-width serves the swapped
-            // mode, the auto-space gate the roman-first one — so the order
+            // character rides the same single mutation as the commit. On THIS
+            // path the two policies still cannot both fire — full-width serves
+            // the swapped mode, and a `.primary` commit there earns no space —
+            // so the order
             // only keeps the contract uniform, it never composes the rewrites.
             let documentText = fullWidthMapped(text) ?? text
             let insert = AutoSpacePolicy.augmentInsert(
                 documentText,
                 afterComposition: manager.displayText,
-                isGateActive: isAutoSpaceGateActive,
+                isGateActive: isAutoSpaceGateActive(),
             )
             let committedText = manager.commitComposition(thenInsert: insert.text, executing: executor)
             dismissCandidates()
@@ -580,11 +617,18 @@ public final class TaigiInputController: IMKInputController {
             // Attaching punctuation typed right after an auto-inserted space
             // swaps with it (`guá ` + `?` → `guá? `) instead of reaching the
             // host — one of the two pass-through keys this input method
-            // consumes. Read before the full-width map, though the two can
-            // never both apply: the swap needs the auto-space gate, the map
-            // needs the swapped mode, and the gate is off there.
-            if let armedSwapCaretLocation,
-               swapAutoSpace(with: key, armedAt: armedSwapCaretLocation, client: client, manager: manager)
+            // consumes.
+            //
+            // Read BEFORE the full-width map, and since the 漢羅 key that
+            // ordering decides a real case rather than an impossible one: in
+            // 漢字 mode Space writes a romanization and arms a space, and the
+            // `?` that follows matches both rules. The swap wins, and should —
+            // the word in front of the caret is romanization, which reads as
+            // Latin text and takes Latin punctuation, whatever the mode would
+            // say about a hanji word. Pinned by
+            // `AutoSpaceControllerTests.testTheSwapFollowsASpaceTheAlternate…`.
+            if let armedSwap,
+               swapAutoSpace(with: key, armedAt: armedSwap, client: client, manager: manager)
             {
                 return true
             }
@@ -614,6 +658,16 @@ public final class TaigiInputController: IMKInputController {
                 at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
                 from: manager, client: client, executing: executor,
             )
+        case .commitAlternateScript:
+            // The 漢羅 key: same candidate the highlight is on, written in the
+            // other script. A candidate that has only one answers `.ignored`
+            // inside the commit, so the key is consumed and nothing happens —
+            // the same answer `⌃7` gets on a page with no seventh slot.
+            commitCandidate(
+                at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
+                script: .alternate,
+                from: manager, client: client, executing: executor,
+            )
         case let .selectCandidateSlot(slot):
             // A chord aimed at one of the empty slots the last page ends with
             // resolves to no index, and is consumed all the same: `⌃7` is a
@@ -625,6 +679,21 @@ public final class TaigiInputController: IMKInputController {
                 from: manager, client: client, executing: executor,
             )
         case let .navigate(direction):
+            // Navigating is the one path that changes which key picks a
+            // candidate without producing a new list, so it is the one path
+            // that has to say so: `↓` latches, and nothing else here would
+            // repaint the keys the cells are drawn with. Before the move, so
+            // the repaint the move does is already in the new style.
+            //
+            // Not guarded on the latch having CHANGED — `applySlotKeyStyle`
+            // already returns on an unchanged style, and a second copy of that
+            // test here is a claim about the panel that can only ever fall out
+            // of step with it.
+            if direction == .down {
+                candidatePresenter.updateSlotKeyStyle(
+                    slotKeyStyle(after: manager.rawInput), ownedBy: sessionToken,
+                )
+            }
             // The window interprets the direction for its layout and repaints
             // itself — nothing comes back, because the window is authoritative
             // for the selection and the commit paths above ask it.
@@ -721,23 +790,30 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func commitCandidate(
         at index: Int?,
+        script: CandidateScript = .primary,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
         guard let index, fetchedCandidates.indices.contains(index) else { return }
-        commit(fetchedCandidates[index], from: manager, client: client, executing: executor)
+        commit(
+            fetchedCandidates[index], script: script,
+            from: manager, client: client, executing: executor,
+        )
     }
 
     /// Commits one candidate and shows whatever the composition became.
     @MainActor
     private func commit(
         _ candidate: ContinuousCandidate,
+        script: CandidateScript = .primary,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let (outcome, committedText) = manager.commitCandidate(candidate, executing: executor)
+        let (outcome, committedText) = manager.commitCandidate(
+            candidate, script: script, executing: executor,
+        )
         Self.logger.debug("candidate commit \(String(describing: outcome))")
         switch outcome {
         case .finalized:
@@ -745,7 +821,15 @@ public final class TaigiInputController: IMKInputController {
             // Final commit only, mirroring iOS (`ActionHandler+Suggestions.swift:129-133`):
             // a nailed segment keeps composing more syllables — and writes
             // nothing to the document under Model B anyway.
-            appendAutoSpace(afterCommit: committedText, client: client)
+            //
+            // `script` is carried into the gate rather than short-circuiting
+            // it here: spacing is a property of ROMANIZATION, and the 漢羅 key
+            // is the one commit whose script disagrees with the output mode the
+            // gate used to read (`AutoSpacePolicy.isGateActive`). So the answer
+            // follows the document — a romanization written in 漢字 mode is
+            // spaced, a hanji written in 羅馬字 mode is not — and 自動空白 OFF
+            // still means no space anywhere (USER 2026-08-25).
+            appendAutoSpace(afterCommit: committedText, script: script, client: client)
         case .nailed, .ignored, .unavailable:
             // Anything short of a finished composition is answered by asking the
             // engine what it is holding NOW rather than by reading the outcome:
@@ -820,20 +904,28 @@ public final class TaigiInputController: IMKInputController {
 
     /// Which key picks a candidate for the buffer as it stands.
     ///
-    /// The same rule the key handler classifies against
-    /// (`ComposingKeyIntent.canTypeToneDigit`), read from the same buffer, so
-    /// the window cannot draw a key that would do something else — a bare `2`
-    /// after `tai` tones the syllable, and only the chord selects. The
-    /// modifier is the user's, since they can rebind which one the slots take.
+    /// The same two rules the key handler classifies against — the tone-digit
+    /// grammar (`ComposingKeyIntent.canTypeToneDigit`) read from the same
+    /// buffer, and the selection latch over it — so the window cannot draw a
+    /// key that would do something else. The modifier is the user's, since they
+    /// can rebind which one the slots take.
     ///
     /// Snapshotted per show rather than live-read by the window: every
-    /// keystroke re-fetches and re-shows, so the hint is never older than the
-    /// buffer it describes. A rebind cannot strand a stale one either —
+    /// keystroke that changes the buffer re-fetches and re-shows, so the hint
+    /// is never older than the buffer it describes. `↓` is the exception — it
+    /// changes the live key without producing a new list, which is why the
+    /// handler pushes the style to the window itself
+    /// (`CandidatePresenter.updateSlotKeyStyle`). A rebind cannot strand a
+    /// stale hint either —
     /// reaching the shortcut pane moves focus off the client, and
     /// `finishComposition` takes the bar down with the session.
     @MainActor
     private func slotKeyStyle(after rawInput: String) -> CandidateSlotKeyStyle {
-        ComposingKeyIntent.canTypeToneDigit(after: rawInput)
+        // The latch outranks the grammar rule, and has to: it exists precisely
+        // for the buffers the rule keeps answering "a digit could still be a
+        // tone" about.
+        guard !isSelectionLatched else { return .bare }
+        return ComposingKeyIntent.canTypeToneDigit(after: rawInput)
             ? .chorded(settings.composingKeyBindings.slotModifier)
             : .bare
     }
@@ -841,6 +933,11 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func dismissCandidates() {
         fetchedCandidates = []
+        // The bar going away ends selection mode, whether or not the
+        // composition ends with it — `hidePalettes` takes the window down and
+        // leaves the composition running, and a latch surviving that would let
+        // the next digit commit from a bar the user can no longer see.
+        isSelectionLatched = false
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 
@@ -858,14 +955,23 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Auto-space
 
-    /// The mode gate every auto-space site reads — live, so a toggle flipped in
-    /// the settings window applies to the very next commit.
+    /// The gate every auto-space site reads — live, so a toggle flipped in the
+    /// settings window applies to the very next commit.
+    ///
+    /// `script` says which of the candidate's two renderings the commit wrote,
+    /// which is what the gate actually turns on. It defaults to `.primary`
+    /// because every site but the 漢羅 key writes what the settings lead with —
+    /// the mid-composition punctuation path included, which commits the preedit
+    /// as rendered.
     @MainActor
-    private var isAutoSpaceGateActive: Bool {
+    private func isAutoSpaceGateActive(for script: CandidateScript = .primary) -> Bool {
         AutoSpacePolicy.isGateActive(
             isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
-            isTranslateSwapped: settings.isTranslateSwapped,
-            isOutputBothScripts: settings.isOutputBothScripts,
+            wroteRomanization: AutoSpacePolicy.writesRomanization(
+                script: script,
+                isTranslateSwapped: settings.isTranslateSwapped,
+                isOutputBothScripts: settings.isOutputBothScripts,
+            ),
         )
     }
 
@@ -882,13 +988,17 @@ public final class TaigiInputController: IMKInputController {
     /// the document alone: the user did not finish a word there, and a space
     /// appearing at the old caret after focus moved on reads as corruption.
     @MainActor
-    private func appendAutoSpace(afterCommit committedText: String?, client: IMKTextInput) {
+    private func appendAutoSpace(
+        afterCommit committedText: String?,
+        script: CandidateScript = .primary,
+        client: IMKTextInput,
+    ) {
         guard let committedText,
-              isAutoSpaceGateActive,
+              isAutoSpaceGateActive(for: script),
               AutoSpacePolicy.shouldAppendSpace(afterCommitting: committedText)
         else { return }
         client.insertText(" ", replacementRange: ClientEffectExecutor.atInsertionPoint)
-        armAutoSpaceSwap(client)
+        armAutoSpaceSwap(client, script: script)
     }
 
     /// Remembers where the caret sits now that the auto space is in front of
@@ -900,10 +1010,10 @@ public final class TaigiInputController: IMKInputController {
     /// not our space. Asking here is safe — this runs inside a key event, like
     /// every client query (see `caretRect`'s activation-only deadlock rule).
     @MainActor
-    private func armAutoSpaceSwap(_ client: IMKTextInput) {
+    private func armAutoSpaceSwap(_ client: IMKTextInput, script: CandidateScript = .primary) {
         let caret = client.selectedRange()
         guard caret.location != NSNotFound, caret.length == 0, caret.location > 0 else { return }
-        autoSpaceSwapCaretLocation = caret.location
+        armedAutoSpace = ArmedAutoSpace(caretLocation: caret.location, script: script)
     }
 
     /// Replaces the auto space before the caret with `?` + space — the
@@ -920,18 +1030,27 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func swapAutoSpace(
         with key: KeyEventSnapshot,
-        armedAt caretLocation: Int,
+        armedAt armed: ArmedAutoSpace,
         client: IMKTextInput,
         manager: ComposingManager,
     ) -> Bool {
+        // Re-read against the settings as they stand NOW, deliberately: a
+        // toggle switched off or a 漢羅 flip since the commit invalidates the
+        // space it left behind, and the key maps or passes through instead
+        // (`AutoSpaceControllerTests.testTheToggleFlippedOffAfterTheCommit…`,
+        // `FullWidthPunctuationControllerTests.testSwappingModesAfterAnArmed…`).
+        // Read for the script that ARMED it, though, not for `.primary`: a
+        // romanization committed in 漢字 mode by the 漢羅 key really did earn
+        // its space, and asking under the output mode would refuse to swap a
+        // space this controller had just written.
         guard ComposingKeyIntent.isDocumentText(key),
               let characters = key.characters,
               AutoSpacePunctuation.isAttaching(characters),
-              isAutoSpaceGateActive
+              isAutoSpaceGateActive(for: armed.script)
         else { return false }
         let caret = client.selectedRange()
-        guard caret.length == 0, caret.location == caretLocation else { return false }
-        let spaceRange = NSRange(location: caretLocation - 1, length: 1)
+        guard caret.length == 0, caret.location == armed.caretLocation else { return false }
+        let spaceRange = NSRange(location: armed.caretLocation - 1, length: 1)
         guard let preceding = client.attributedSubstring(from: spaceRange),
               preceding.string == " "
         else { return false }
@@ -943,7 +1062,10 @@ public final class TaigiInputController: IMKInputController {
         // the rewrite's end is fully determined by the range just replaced,
         // and the next swap re-verifies the position against the client
         // anyway — a client that moved the caret degrades to no swap.
-        autoSpaceSwapCaretLocation = caretLocation + (characters as NSString).length
+        armedAutoSpace = ArmedAutoSpace(
+            caretLocation: armed.caretLocation + (characters as NSString).length,
+            script: armed.script,
+        )
         return true
     }
 
@@ -1010,7 +1132,7 @@ public final class TaigiInputController: IMKInputController {
         // Focus is moving or the user clicked — either way the caret the swap
         // was measured against is gone. (No auto space is appended here
         // either: lifecycle commits are not a finished word.)
-        autoSpaceSwapCaretLocation = nil
+        armedAutoSpace = nil
         guard let client else { return }
         defer { isMarkedTextVisible = false }
 

@@ -115,6 +115,7 @@ enum StringKey: String {
     case macosActionPageBackward = "i18n_macos_actionPageBackward"
     case macosActionConfirmHighlighted = "i18n_macos_actionConfirmHighlighted"
     case macosActionCommitLiteral = "i18n_macos_actionCommitLiteral"
+    case macosActionCommitAlternateScript = "i18n_macos_actionCommitAlternateScript"
     case macosShortcutUnbound = "i18n_macos_shortcutUnbound"
     case macosShortcutRecording = "i18n_macos_shortcutRecording"
     case macosShortcutClear = "i18n_macos_shortcutClear"

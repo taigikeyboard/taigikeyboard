@@ -256,6 +256,44 @@ final class CandidateIndexLabelTests: XCTestCase {
         )
     }
 
+    // MARK: - Repainting the keys without a new list
+
+    /// The selection latch flips the live key mid-composition, and navigating
+    /// never re-fetches — so the panels have to be able to repaint the keys on
+    /// the cells they are already showing. A window left drawing `⌃1` while a
+    /// bare `1` picks would be naming a key that does something else.
+    ///
+    /// Run at rest and after the viewport has moved, because each layout
+    /// renumbers from a different anchor: the horizontal page restarts at `1`,
+    /// the vertical column follows its scroll, and the expanded grid numbers
+    /// the row the selection is in. A repaint that reached only the cells the
+    /// list started with would leave stale keys on the ones now on screen.
+    func testEveryLayout_repaintsItsKeysInPlace() {
+        for hasMoved in [false, true] {
+            for panel in TestFixtures.candidatePanels() {
+                panel.slotKeyStyle = .chorded(.control)
+                _ = panel.updateCandidates(Self.cells)
+                if hasMoved {
+                    // Far enough to turn a page, scroll a column, unfold a grid.
+                    for _ in 0 ..< 20 {
+                        panel.navigate(.nextCandidate)
+                    }
+                }
+
+                panel.applySlotKeyStyle(.bare)
+
+                let numbered = numberedCells(in: panel)
+                let where_ = "\(type(of: panel)) (moved: \(hasMoved))"
+                XCTAssertFalse(numbered.isEmpty, "\(where_): something must be numbered")
+                XCTAssertTrue(
+                    numbered.allSatisfy { Int($0.digit) != nil },
+                    "\(where_): every drawn key is a bare digit now",
+                )
+                assertDigitsMatchSlots(in: panel)
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     /// Every digit drawn in `panel` resolves to the candidate its slot chord

@@ -36,4 +36,40 @@ enum CandidateDocumentText {
         }
         return settings.isTranslateSwapped ? hanji : candidate.roman
     }
+
+    /// The script `text(for:settings:)` does NOT lead with, or nil when this
+    /// candidate has only one.
+    ///
+    /// What Space commits, so that 漢羅 — Taiwanese written with Han characters
+    /// and romanization mixed inside one sentence — costs one key per word
+    /// instead of a round trip through the output setting. Typing `我ê名` in
+    /// 漢字 mode was ↩ / `` ` `` ↩ `` ` `` / ↩; it is now ↩ / Space / ↩, and the
+    /// mode never moves.
+    ///
+    /// Verbatim: whatever the field holds is what the document gets. The hanji
+    /// field legitimately carries hyphens — 298 dictionary entries write the
+    /// 輕聲 marker into it (`交--人`, `彼--的`), which is MOE orthography and is
+    /// pinned by §21/S8, and the 漢羅 mixed entries (`紅kì-kì`) carry the
+    /// romanized half's own hyphen. Stripping either would be this layer
+    /// second-guessing the dictionary.
+    ///
+    /// Read off the cell rather than resolved again here, which makes it
+    /// structural that Space writes exactly the script the user can already see
+    /// under the primary one — the bar's secondary column IS the offer. The
+    /// swap rule then has one owner instead of a third copy in this directory.
+    ///
+    /// That also settles `isOutputBothScripts` without reading it: the cell
+    /// keeps the two scripts in separate columns whatever that setting says,
+    /// because it describes how to write a candidate carrying BOTH, and this is
+    /// the request for the other one BY ITSELF.
+    ///
+    /// nil when the candidate has one script — the §34 literal candidate, an
+    /// out-of-vocabulary name. Answering with the romanization again would make
+    /// Space a slower Return.
+    static func alternateText(
+        for candidate: ContinuousCandidate,
+        settings: EngineSettings,
+    ) -> String? {
+        CandidateCellContent.cell(for: candidate, settings: settings).annotation
+    }
 }

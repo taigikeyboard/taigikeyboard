@@ -482,6 +482,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     enum Call: Equatable {
         case show(CandidateWindowContent, caretRect: CGRect)
         case updateCells([CandidateCellContent], isOwner: Bool)
+        case updateSlotKeyStyle(CandidateSlotKeyStyle, isOwner: Bool)
         case navigate(CandidateNavigation)
         case hide(isOwner: Bool)
         case hideForHandover
@@ -532,6 +533,17 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         guard self.owner == owner, !cells.isEmpty, !newCells.isEmpty else { return }
         cells = newCells
         selectedIndex = min(selectedIndex, cells.count - 1)
+    }
+
+    func updateSlotKeyStyle(
+        _ style: CandidateSlotKeyStyle,
+        ownedBy owner: ComposingSessionToken,
+    ) {
+        calls.append(.updateSlotKeyStyle(style, isOwner: self.owner == owner))
+        // The real panel's contract: the keys are repainted, and nothing else
+        // about the window moves.
+        guard self.owner == owner, !cells.isEmpty else { return }
+        slotKeyStyle = style
     }
 
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {

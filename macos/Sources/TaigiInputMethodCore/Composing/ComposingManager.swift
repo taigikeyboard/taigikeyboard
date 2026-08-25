@@ -347,14 +347,35 @@ final class ComposingManager {
     /// stays the `(display text, canonical TL)` pair (`CLAUDE.md` Core
     /// Principle #7), so a change of output script does not split a word's
     /// frequency or association rows.
+    /// `script` picks WHICH of the candidate's two renderings the document
+    /// gets. Still derived here rather than handed in as a string, for the
+    /// reason above — the caller says which one it wants, never what it says.
+    ///
+    /// `.alternate` on a candidate that HAS no second script answers `.ignored`
+    /// without reaching the engine, and that is the whole answer: the caller
+    /// asked for something this candidate cannot give, so nothing is written
+    /// and nothing is learnt. Deciding it here rather than behind a caller-side
+    /// pre-check keeps one decision point — a guard at the call site plus a
+    /// fallback here would be two rules for one case, free to disagree.
     func commitCandidate(
         _ candidate: ContinuousCandidate,
+        script: CandidateScript = .primary,
         executing executor: ComposingEffectExecutor,
     ) -> (outcome: CandidateCommitOutcome, committedText: String?) {
         let settings = settingsProvider.current
         Self.logger.debug("commitCandidate consumedBytes=\(candidate.consumedSpanEnd)")
+        let documentText: String
+        switch script {
+        case .primary:
+            documentText = CandidateDocumentText.text(for: candidate, settings: settings)
+        case .alternate:
+            guard let alternate = CandidateDocumentText.alternateText(
+                for: candidate, settings: settings,
+            ) else { return (.ignored, nil) }
+            documentText = alternate
+        }
         guard let transition = RustEngineBridge.composingCommitContinuous(
-            documentText: CandidateDocumentText.text(for: candidate, settings: settings),
+            documentText: documentText,
             canonicalText: candidate.displayText,
             associationTl: candidate.canonicalTl,
             consumedBytes: candidate.consumedSpanEnd,

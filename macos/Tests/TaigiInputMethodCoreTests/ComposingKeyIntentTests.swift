@@ -284,10 +284,10 @@ final class ComposingKeyIntentTests: XCTestCase {
         )
     }
 
-    /// Space walks the candidates, as it does in the system Zhuyin input
-    /// method — the default the shortcut roster ships with
-    /// (`ComposingAction.nextCandidate`).
-    func testSpace_walksTheCandidatesOnlyWhileTheBarIsUp() throws {
+    /// Space writes the highlighted candidate in the OTHER script — the 漢羅
+    /// key (`ComposingAction.commitAlternateScript`). It walked the candidates
+    /// until 2026-08-25, which every layout's arrows already did.
+    func testSpace_commitsTheOtherScriptOnlyWhileTheBarIsUp() throws {
         let event = try TestFixtures.keyDownEvent(characters: " ")
 
         XCTAssertEqual(
@@ -296,7 +296,7 @@ final class ComposingKeyIntentTests: XCTestCase {
                 isComposing: true,
                 isShowingCandidates: true,
             ),
-            .navigate(.nextCandidate),
+            .commitAlternateScript,
         )
         XCTAssertEqual(
             ComposingKeyIntent.intent(
@@ -305,7 +305,8 @@ final class ComposingKeyIntentTests: XCTestCase {
                 isShowingCandidates: false,
             ),
             .commitThenInsert(" "),
-            "with no candidates to walk through, Space is the document's space again",
+            "with no bar up there is no candidate to re-render, so Space is the "
+                + "document's space again — which is how a 漢羅 sentence gets its spaces",
         )
     }
 

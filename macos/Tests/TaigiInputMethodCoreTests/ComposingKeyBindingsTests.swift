@@ -158,12 +158,16 @@ final class ComposingKeyBindingsTests: XCTestCase {
     // MARK: - Defaults
 
     /// The keys a user arriving from the system Zhuyin input method already
-    /// knows. Selection is the one place that keyboard cannot be matched: it
-    /// picks candidates with bare digits, which are tone markers here.
+    /// knows. Two places that keyboard cannot be matched: it picks candidates
+    /// with bare digits, which are tone markers here, and it walks the list
+    /// with Space, which here writes the other script — the 漢羅 key, which a
+    /// Mandarin keyboard has no equivalent of. Walking moved to ⇥, pairing with
+    /// the ⇧⇥ that already walked back.
     func testDefaults_followTheSystemZhuyinKeyboard() throws {
         let bindings = ComposingKeyBindings.default
 
-        XCTAssertEqual(bindings.chord(for: .nextCandidate), try chord(" "))
+        XCTAssertEqual(bindings.chord(for: .nextCandidate), try chord("\t"))
+        XCTAssertEqual(bindings.chord(for: .commitAlternateScript), try chord(" "))
         XCTAssertEqual(bindings.chord(for: .confirmHighlighted), try chord("\r"))
         XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
         XCTAssertEqual(bindings.chord(for: .pageBackward), try chord("["))
@@ -212,6 +216,23 @@ final class ComposingKeyBindingsTests: XCTestCase {
 
         XCTAssertEqual(bindings.chord(for: .pageBackward), bracket)
         XCTAssertNil(bindings.chord(for: .pageForward))
+    }
+
+    /// The upgrade case for the 2026-08-25 move: an install where the user had
+    /// deliberately RECORDED Space on `nextCandidate` keeps it there, and the
+    /// new 漢羅 action arrives empty rather than taking a key out from under
+    /// them. The provenance rule already says this — a recorded chord outranks
+    /// a default landing on top of it — and this pins that it covers the move.
+    func testAUserWhoRecordedSpaceOnWalking_keepsIt() throws {
+        let space = ComposingAction.commitAlternateScript.defaultChord
+
+        let bindings = ComposingKeyBindings(chords: [.nextCandidate: space])
+
+        XCTAssertEqual(bindings.chord(for: .nextCandidate), space)
+        XCTAssertNil(
+            bindings.chord(for: .commitAlternateScript),
+            "the new action does not take a key the user chose for another row",
+        )
     }
 
     /// A case added to the roster but not to a group would be missing from

@@ -79,11 +79,23 @@ final class CandidatePanel: CandidatePresenter {
     }
 
     func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
-        // `isVisible` on top of the owner guard: ownership is cleared on every
-        // hide path, so the two should agree — but a window taken down behind
-        // the panel's back must not be re-laid-out as if it were on screen.
-        guard self.owner == owner, let panel, !panel.isEmpty, panel.isVisible else { return }
-        panel.rerenderCandidates(cells)
+        livePanel(ownedBy: owner)?.rerenderCandidates(cells)
+    }
+
+    func updateSlotKeyStyle(_ style: CandidateSlotKeyStyle, ownedBy owner: ComposingSessionToken) {
+        livePanel(ownedBy: owner)?.applySlotKeyStyle(style)
+    }
+
+    /// The panel `owner` may repaint in place, or nil.
+    ///
+    /// `isVisible` on top of the owner guard: ownership is cleared on every hide
+    /// path, so the two should agree — but a window taken down behind the
+    /// panel's back must not be re-laid-out as if it were on screen. Stated once
+    /// because both in-place update paths need exactly this, and two copies
+    /// could drift into disagreeing about what "showing" means.
+    private func livePanel(ownedBy owner: ComposingSessionToken) -> CandidateBasePanel? {
+        guard self.owner == owner, let panel, !panel.isEmpty, panel.isVisible else { return nil }
+        return panel
     }
 
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {

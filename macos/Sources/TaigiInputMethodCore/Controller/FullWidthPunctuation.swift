@@ -9,12 +9,17 @@ import Foundation
 /// MOE input method's rule (漢字模式全形, 臺羅模式半形): romanized output reads
 /// as Latin text and keeps Latin punctuation, Hanji output reads as CJK text
 /// and gets CJK punctuation. That mode IS the whole gate — there is no
-/// setting beside it (USER 2026-08-24) — and it is deliberately the
-/// complement of `AutoSpacePolicy.isGateActive`: auto-space serves the
-/// roman-first mode, this mapping serves the hanji-first one, and the two are
-/// never active together (macOS pins `isOutputBothScripts` false,
-/// `RetiredSettingsCleanup`). The caller reads the mode
-/// (`TaigiInputController.fullWidthMapped`).
+/// setting beside it (USER 2026-08-24) — and it was written as the exact
+/// complement of `AutoSpacePolicy.isGateActive`: auto-space served the
+/// roman-first mode, this mapping the hanji-first one.
+///
+/// Since the 漢羅 key (2026-08-25) they can meet. Space commits a romanization
+/// while the settings lead with hanji, which earns a trailing space in the very
+/// mode this mapping serves, so a following `?` matches both rules. The
+/// auto-space swap is read first and wins: the word in front of the caret is
+/// romanization, and romanization keeps Latin punctuation whatever the mode
+/// would say about a hanji word (`TaigiInputController`'s `.passThrough` arm).
+/// The caller reads the mode (`TaigiInputController.fullWidthMapped`).
 enum FullWidthPunctuation {
     /// The MOE manual's 符號快捷鍵對照表, minus what this input method must
     /// keep half-width: digits are TL/POJ tone markers, the hyphen is the

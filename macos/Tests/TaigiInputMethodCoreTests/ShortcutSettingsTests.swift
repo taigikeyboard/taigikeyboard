@@ -30,7 +30,7 @@ final class ShortcutSettingsTests: XCTestCase {
             ComposingAction.allCases.map(\.rawValue),
             [
                 "nextCandidate", "previousCandidate", "pageForward", "pageBackward",
-                "confirmHighlighted", "commitLiteral",
+                "confirmHighlighted", "commitLiteral", "commitAlternateScript",
             ],
         )
         XCTAssertEqual(
