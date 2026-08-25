@@ -171,17 +171,14 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(bindings.slotModifier, .control)
     }
 
-    /// The three the system Zhuyin keyboard has no equivalent of are bound too:
-    /// no row in the pane or the menu is blank (USER 2026-08-21). Reversing
-    /// takes McBopomofo's ⇧⇥; the two script commits stay in the Return family,
-    /// which is glyph-independent and so reads the same in every display
-    /// language.
-    func testDefaults_bindTheActionsTheZhuyinKeyboardHasNoKeyFor() throws {
-        let bindings = ComposingKeyBindings.default
-
-        XCTAssertEqual(bindings.chord(for: .previousCandidate), try chord("\t", .shift))
-        XCTAssertEqual(bindings.chord(for: .commitHanji), try chord("\r", .control))
-        XCTAssertEqual(bindings.chord(for: .commitRomanization), try chord("\r", .option))
+    /// Walking BACK through the candidates is the one action the system Zhuyin
+    /// keyboard has no key for, so its default is borrowed from McBopomofo's ⇧⇥
+    /// rather than inherited (`KeyHandler.mm:817-870`).
+    func testTheReverseWalk_takesMcBopomofosShiftTab() throws {
+        XCTAssertEqual(
+            ComposingKeyBindings.default.chord(for: .previousCandidate),
+            try chord("\t", .shift),
+        )
     }
 
     /// Every action, not just the ones a case names: a new one added with a
@@ -197,24 +194,24 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// An upgrade that hands an untouched row a default the user had already
     /// put on another action must not empty the row they set: what they
     /// recorded wins, and the row holding only a default gives way.
-    func testAStoredChord_outranksADefaultThatArrivesOnTopOfIt() throws {
-        let optionReturn = try chord("\r", .option) // commitRomanization's default
+    func testAStoredChord_outranksADefaultThatArrivesOnTopOfIt() {
+        let bracket = ComposingAction.pageForward.defaultChord
 
-        let bindings = ComposingKeyBindings(chords: [.commitHanji: optionReturn])
+        let bindings = ComposingKeyBindings(chords: [.nextCandidate: bracket])
 
-        XCTAssertEqual(bindings.chord(for: .commitHanji), optionReturn, "the recorded row lost its chord")
-        XCTAssertNil(bindings.chord(for: .commitRomanization), "two rows answer to ⌥↩")
+        XCTAssertEqual(bindings.chord(for: .nextCandidate), bracket, "the recorded row lost its chord")
+        XCTAssertNil(bindings.chord(for: .pageForward), "two rows answer to ]")
     }
 
     /// The same the other way round, where `allCases` order would have let the
     /// recording win on its own — the rule is provenance, not position.
-    func testADefault_givesWayWhateverTheRosterOrder() throws {
-        let controlReturn = try chord("\r", .control) // commitHanji's default
+    func testADefault_givesWayWhateverTheRosterOrder() {
+        let bracket = ComposingAction.pageForward.defaultChord
 
-        let bindings = ComposingKeyBindings(chords: [.commitRomanization: controlReturn])
+        let bindings = ComposingKeyBindings(chords: [.pageBackward: bracket])
 
-        XCTAssertEqual(bindings.chord(for: .commitRomanization), controlReturn)
-        XCTAssertNil(bindings.chord(for: .commitHanji))
+        XCTAssertEqual(bindings.chord(for: .pageBackward), bracket)
+        XCTAssertNil(bindings.chord(for: .pageForward))
     }
 
     /// A case added to the roster but not to a group would be missing from
@@ -235,12 +232,15 @@ final class ComposingKeyBindingsTests: XCTestCase {
     // MARK: - Resolution
 
     func testAChordRecordedTwice_staysOnTheLastActionOnly() throws {
+        // Neither row is on its own default, so provenance cannot separate them
+        // and `allCases` order is what decides — the tiebreak this case is for.
+        let recorded = try TestFixtures.chordNoDefaultHolds()
         let bindings = ComposingKeyBindings(chords: [
-            .pageForward: try chord("]"),
-            .commitHanji: try chord("]"),
+            .pageForward: recorded,
+            .pageBackward: recorded,
         ])
 
-        XCTAssertEqual(bindings.chord(for: .commitHanji), try chord("]"))
+        XCTAssertEqual(bindings.chord(for: .pageBackward), recorded)
         XCTAssertNil(bindings.chord(for: .pageForward), "the earlier row gives the chord up")
     }
 
@@ -263,11 +263,11 @@ final class ComposingKeyBindingsTests: XCTestCase {
     func testRestoringAnAlwaysBoundAction_takesItsChordBack() throws {
         let bindings = ComposingKeyBindings(chords: [
             .confirmHighlighted: nil,
-            .commitHanji: try chord("\r"),
+            .pageForward: try chord("\r"),
         ])
 
         XCTAssertEqual(bindings.chord(for: .confirmHighlighted), try chord("\r"))
-        XCTAssertNil(bindings.chord(for: .commitHanji))
+        XCTAssertNil(bindings.chord(for: .pageForward))
     }
 
     /// The regression this resolver was rewritten for: filling one always-bound
@@ -337,17 +337,17 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// by the recorder, because the modifier can be changed afterwards.
     func testAChordTheSlotTierWouldSwallow_isDropped() throws {
         let control = ComposingKeyBindings(
-            chords: [.commitHanji: try chord("3", .control)],
+            chords: [.pageForward: try chord("3", .control)],
             slotModifier: .control,
         )
-        XCTAssertNil(control.chord(for: .commitHanji))
+        XCTAssertNil(control.chord(for: .pageForward))
 
         let option = ComposingKeyBindings(
-            chords: [.commitHanji: try chord("3", .control)],
+            chords: [.pageForward: try chord("3", .control)],
             slotModifier: .option,
         )
         XCTAssertEqual(
-            option.chord(for: .commitHanji),
+            option.chord(for: .pageForward),
             try chord("3", .control),
             "⌃3 is an ordinary chord once Option holds the slots",
         )
@@ -413,7 +413,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
         let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("]")])
 
         XCTAssertEqual(
-            bindings.actionsHolding(try chord("]"), excluding: .commitHanji),
+            bindings.actionsHolding(try chord("]"), excluding: .nextCandidate),
             [.pageForward],
         )
         XCTAssertEqual(
@@ -461,12 +461,12 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// action; everywhere the binding does not apply, the letter is still the
     /// letter.
     func testABareBoundLetter_firesItsAction_onlyWhereTheActionApplies() throws {
-        let bindings = ComposingKeyBindings(chords: [.commitHanji: try chord("z")])
+        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("z")])
         let z = try snapshot("z")
 
         XCTAssertEqual(
             ComposingKeyIntent.intent(for: z, isComposing: true, isShowingCandidates: true, bindings: bindings),
-            .commitHighlightedCandidate(.hanji),
+            .navigate(.pageDown),
             "the binding wins over literal input while candidates are up",
         )
         XCTAssertEqual(
@@ -477,7 +477,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(
             ComposingKeyIntent.intent(for: z, isComposing: false, bindings: bindings),
             .input("z"),
-            "with no composition there is nothing to commit — the letter still starts one",
+            "with no composition there is no page to turn — the letter still starts one",
         )
     }
 

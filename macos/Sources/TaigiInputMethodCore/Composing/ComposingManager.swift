@@ -341,28 +341,20 @@ final class ComposingManager {
     ///
     /// The document string is derived here rather than taken from the caller:
     /// it depends on the same settings snapshot the engine call does, and
-    /// letting a view layer supply it is how the two drift apart. `rendering`
-    /// is a policy, not a string — the 直接輸出漢字 and 直接輸出羅馬字 keys say
-    /// WHICH script to write, and this method still says how.
+    /// letting a view layer supply it is how the two drift apart.
     ///
-    /// A forced rendering changes only the document text. The identity the word
-    /// is learnt under stays the `(display text, canonical TL)` pair
-    /// (`CLAUDE.md` Core Principle #7), so committing one word as Hanji does not
-    /// split its frequency or association rows away from the same word
-    /// committed any other way.
+    /// The document text is not the identity the word is learnt under: that
+    /// stays the `(display text, canonical TL)` pair (`CLAUDE.md` Core
+    /// Principle #7), so a change of output script does not split a word's
+    /// frequency or association rows.
     func commitCandidate(
         _ candidate: ContinuousCandidate,
-        rendering: CandidateDocumentText.Rendering = .settings,
         executing executor: ComposingEffectExecutor,
     ) -> (outcome: CandidateCommitOutcome, committedText: String?) {
         let settings = settingsProvider.current
         Self.logger.debug("commitCandidate consumedBytes=\(candidate.consumedSpanEnd)")
         guard let transition = RustEngineBridge.composingCommitContinuous(
-            documentText: CandidateDocumentText.text(
-                for: candidate,
-                settings: settings,
-                rendering: rendering,
-            ),
+            documentText: CandidateDocumentText.text(for: candidate, settings: settings),
             canonicalText: candidate.displayText,
             associationTl: candidate.canonicalTl,
             consumedBytes: candidate.consumedSpanEnd,
@@ -380,8 +372,8 @@ final class ComposingManager {
     /// The text `transition` wrote to the document, when it committed one.
     ///
     /// Read off the effects — the same signal `CandidateCommitOutcome` reads —
-    /// because the mirror only carries the display rendering, which a forced
-    /// script makes differ from the document string.
+    /// because the mirror carries the display rendering, which the output
+    /// settings can make differ from the document string.
     private static func committedText(of transition: ComposingTransition?) -> String? {
         transition?.effects.lazy.compactMap { effect in
             if case let .commitTextReplacingPreedit(text) = effect {

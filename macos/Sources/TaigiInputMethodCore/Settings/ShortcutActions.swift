@@ -355,9 +355,9 @@ enum ShortcutConflicts {
     /// `CrossTierShortcutConflictTests` pins both sides of that split, so a
     /// key that changes sides fails a test rather than going quiet.
     ///
-    /// Without this the bridge would miss the collisions it exists for: four of
-    /// the eight composing defaults are Return chords, and the slot tier is
-    /// nine digits.
+    /// Without this the bridge would miss the collisions it exists for: the
+    /// composing roster keeps its commit keys in the Return family, and the
+    /// slot tier is nine digits.
     private static let namedKeyCharacters: [KeyboardShortcuts.Key: String] = {
         var characters: [KeyboardShortcuts.Key: String] = [
             .return: "\r",

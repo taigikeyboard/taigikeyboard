@@ -264,28 +264,28 @@ final class SettingsStoreTests: XCTestCase {
         // and the round trip is the only thing under test.
         let chord = try TestFixtures.chordNoDefaultHolds()
 
-        store.setComposingChord(chord, for: .commitHanji)
+        store.setComposingChord(chord, for: .pageForward)
 
-        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .commitHanji), chord)
+        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageForward), chord)
         XCTAssertEqual(
-            userDefaults.string(forKey: ComposingAction.commitHanji.settingsKeyName),
+            userDefaults.string(forKey: ComposingAction.pageForward.settingsKeyName),
             chord.rawValue,
             "the stored form is what a later build has to keep reading",
         )
     }
 
-    /// The request that freed the eight non-syllable letters: 直接輸出漢字 on a
+    /// The request that freed the eight non-syllable letters: an action on a
     /// bare `z` must survive a relaunch, stored in the same raw form every
     /// modifier chord uses.
     func testABareNonSyllableLetter_roundTripsThroughTheSuite() throws {
         let store = makeStore()
         let bareZ = try ComposingKeyChord.make(key: "z", modifiers: []).get()
 
-        store.setComposingChord(bareZ, for: .commitHanji)
+        store.setComposingChord(bareZ, for: .pageBackward)
 
-        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .commitHanji), bareZ)
+        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageBackward), bareZ)
         XCTAssertEqual(
-            userDefaults.string(forKey: ComposingAction.commitHanji.settingsKeyName),
+            userDefaults.string(forKey: ComposingAction.pageBackward.settingsKeyName),
             "|007A",
         )
     }

@@ -55,11 +55,15 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
     func testTheNamedKeys_bridgeToTheCharactersTheComposingTierStores() throws {
         // Return and Tab are where the two registries are most likely to meet:
-        // four of the eight composing defaults are Return chords.
+        // the composing tier keeps its commit keys in the Return family.
         let returnChord = try XCTUnwrap(ShortcutConflicts.composingChord(
-            occupiedBy: KeyboardShortcuts.Shortcut(.return, modifiers: [.control]),
+            occupiedBy: KeyboardShortcuts.Shortcut(.return, modifiers: [.shift]),
         ))
-        XCTAssertEqual(returnChord, ComposingAction.commitHanji.defaultChord, "⌃↩ is 直接輸出漢字")
+        XCTAssertEqual(
+            returnChord,
+            ComposingAction.commitLiteral.defaultChord,
+            "⇧↩ commits what was typed",
+        )
 
         let tabChord = try XCTUnwrap(ShortcutConflicts.composingChord(
             occupiedBy: KeyboardShortcuts.Shortcut(.tab, modifiers: [.shift]),
@@ -174,11 +178,11 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
     func testAGlobalShortcut_isSeenByTheComposingRowHoldingItsChord() {
         let holders = ShortcutConflicts.composingActionsHolding(
-            KeyboardShortcuts.Shortcut(.return, modifiers: [.control]),
+            KeyboardShortcuts.Shortcut(.rightBracket),
             in: .default,
         )
 
-        XCTAssertEqual(holders, [.commitHanji])
+        XCTAssertEqual(holders, [.pageForward])
     }
 
     func testAComposingChordNoGlobalShortcutHolds_findsNothing() {
@@ -237,27 +241,27 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // The upgrade case: a version gives a global action a default chord the
         // user had already recorded on a composing row. The recording wins.
         let chord = try chord("r", [.control, .command])
-        store.setComposingChord(chord, for: .commitHanji)
+        store.setComposingChord(chord, for: .pageForward)
         recordGlobal(.init(.r, modifiers: [.control, .command]), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
         XCTAssertNil(KeyboardShortcuts.getShortcut(for: .toggleRomanization), "the default gives way")
-        XCTAssertEqual(store.composingKeyBindings.chord(for: .commitHanji), chord, "the recording stays")
+        XCTAssertEqual(store.composingKeyBindings.chord(for: .pageForward), chord, "the recording stays")
     }
 
     func testALaunchPass_clearsTheComposingDefaultShadowedByAGlobalRecording() throws {
         let store = try makeScratchSettingsStore()
         // The mirror image: the composing row is on the chord it shipped with,
         // and the user put that chord on a global action by hand.
-        recordGlobal(.init(.return, modifiers: [.control]), for: .toggleRomanization)
+        recordGlobal(.init(.tab, modifiers: [.shift]), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
-        XCTAssertNil(store.composingKeyBindings.chord(for: .commitHanji), "the default gives way")
+        XCTAssertNil(store.composingKeyBindings.chord(for: .previousCandidate), "the default gives way")
         XCTAssertEqual(
             KeyboardShortcuts.getShortcut(for: .toggleRomanization),
-            .init(.return, modifiers: [.control]),
+            .init(.tab, modifiers: [.shift]),
             "the recording stays",
         )
     }
@@ -268,7 +272,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // unknowable. The global tier wins because it is the one that actually
         // dispatches — keeping the composing row would keep a dead key.
         let chord = try TestFixtures.chordNoDefaultHolds(key: "f")
-        store.setComposingChord(chord, for: .commitHanji)
+        store.setComposingChord(chord, for: .pageForward)
         recordGlobal(.init(.f, modifiers: chord.modifiers), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
@@ -277,7 +281,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             KeyboardShortcuts.getShortcut(for: .toggleRomanization),
             .init(.f, modifiers: chord.modifiers),
         )
-        XCTAssertNil(store.composingKeyBindings.chord(for: .commitHanji))
+        XCTAssertNil(store.composingKeyBindings.chord(for: .pageForward))
     }
 
     func testALaunchPass_clearsAGlobalRowSittingOnALiveSlotChord() throws {
@@ -314,7 +318,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // second launch must find nothing left to do — otherwise the stale
         // snapshot would be eating a row per launch.
         let chord = try TestFixtures.chordNoDefaultHolds(key: "f")
-        store.setComposingChord(chord, for: .commitHanji)
+        store.setComposingChord(chord, for: .pageForward)
         recordGlobal(.init(.f, modifiers: chord.modifiers), for: .toggleRomanization)
         ShortcutConflicts.resolveAcrossRegistries(in: store)
         let afterFirst = ComposingAction.allCases.map { store.composingKeyBindings.chord(for: $0) }
@@ -335,13 +339,13 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         let store = try makeScratchSettingsStore()
         // Two global rows against two different composing rows: the snapshot is
         // read once, so this is where a stale read would drop the second clear.
-        recordGlobal(.init(.return, modifiers: [.control]), for: .toggleRomanization)
-        recordGlobal(.init(.return, modifiers: [.option]), for: .openGeneralPane)
+        recordGlobal(.init(.tab, modifiers: [.shift]), for: .toggleRomanization)
+        recordGlobal(.init(.rightBracket), for: .openGeneralPane)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
-        XCTAssertNil(store.composingKeyBindings.chord(for: .commitHanji), "⌃↩ row not cleared")
-        XCTAssertNil(store.composingKeyBindings.chord(for: .commitRomanization), "⌥↩ row not cleared")
+        XCTAssertNil(store.composingKeyBindings.chord(for: .previousCandidate), "⇧⇥ row not cleared")
+        XCTAssertNil(store.composingKeyBindings.chord(for: .pageForward), "] row not cleared")
     }
 
     // MARK: - Always-bound rows survive being cleared

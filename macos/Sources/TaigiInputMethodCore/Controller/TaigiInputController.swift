@@ -607,31 +607,23 @@ public final class TaigiInputController: IMKInputController {
                 manager.noteCharacterTypedOutsideComposition(characters)
             }
             return false
-        case let .commitHighlightedCandidate(rendering):
-            // The window answers which absolute index its selection is on. Nil
-            // — a window that failed to reach a screen, or state torn down
-            // between the fetch and the key — consumes the key without
-            // committing: letting a Space through would drop a stray space into
-            // a document whose composition is still running, and committing
-            // would write a candidate the user cannot see.
-            guard let selectedIndex = candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                  fetchedCandidates.indices.contains(selectedIndex)
-            else { return true }
-            let candidate = fetchedCandidates[selectedIndex]
-            // A candidate that has not got the script the key asked for is left
-            // alone, and the chord is consumed either way so it never reaches
-            // the host (`CandidateDocumentText.Rendering.canRender`).
-            guard rendering.canRender(candidate) else { return true }
-            commit(candidate, rendering: rendering, from: manager, client: client, executing: executor)
+        case .commitHighlightedCandidate:
+            // The window is authoritative for which absolute index its selection
+            // is on.
+            commitCandidate(
+                at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
+                from: manager, client: client, executing: executor,
+            )
         case let .selectCandidateSlot(slot):
-            // A chord aimed at one of the empty slots the last page ends with.
-            // Consumed rather than passed on: `⌃7` is a candidate chord while the
-            // bar is up, and handing it to the host only when the page happens to
-            // be short would make it fire a host shortcut at random.
-            guard let selectedIndex = candidatePresenter.candidateIndex(forSlot: slot, ownedBy: sessionToken),
-                  fetchedCandidates.indices.contains(selectedIndex)
-            else { return true }
-            commit(fetchedCandidates[selectedIndex], from: manager, client: client, executing: executor)
+            // A chord aimed at one of the empty slots the last page ends with
+            // resolves to no index, and is consumed all the same: `⌃7` is a
+            // candidate chord while the bar is up, and handing it to the host
+            // only when the page happens to be short would make it fire a host
+            // shortcut at random.
+            commitCandidate(
+                at: candidatePresenter.candidateIndex(forSlot: slot, ownedBy: sessionToken),
+                from: manager, client: client, executing: executor,
+            )
         case let .navigate(direction):
             // The window interprets the direction for its layout and repaints
             // itself — nothing comes back, because the window is authoritative
@@ -718,18 +710,34 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Candidates
 
-    /// Commits one candidate and shows whatever the composition became.
+    /// Commits the candidate at `index`, or nothing when there is none to
+    /// commit.
+    ///
+    /// Nil — a window that failed to reach a screen, or state torn down between
+    /// the fetch and the key — and an index past the list both mean "nothing to
+    /// commit", and the key is consumed either way: letting a Space through
+    /// would drop a stray space into a document whose composition is still
+    /// running, and committing would write a candidate the user cannot see.
     @MainActor
-    private func commit(
-        _ candidate: ContinuousCandidate,
-        rendering: CandidateDocumentText.Rendering = .settings,
+    private func commitCandidate(
+        at index: Int?,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let (outcome, committedText) = manager.commitCandidate(
-            candidate, rendering: rendering, executing: executor,
-        )
+        guard let index, fetchedCandidates.indices.contains(index) else { return }
+        commit(fetchedCandidates[index], from: manager, client: client, executing: executor)
+    }
+
+    /// Commits one candidate and shows whatever the composition became.
+    @MainActor
+    private func commit(
+        _ candidate: ContinuousCandidate,
+        from manager: ComposingManager,
+        client: IMKTextInput,
+        executing executor: ComposingEffectExecutor,
+    ) {
+        let (outcome, committedText) = manager.commitCandidate(candidate, executing: executor)
         Self.logger.debug("candidate commit \(String(describing: outcome))")
         switch outcome {
         case .finalized:

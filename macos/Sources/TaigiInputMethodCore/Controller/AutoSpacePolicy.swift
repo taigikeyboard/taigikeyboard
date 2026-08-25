@@ -28,8 +28,8 @@ enum AutoSpacePolicy {
     /// Whether the text a commit just wrote should be followed by a space.
     ///
     /// Judged on the actual document string, never on a display mirror: the
-    /// output mode and a forced rendering can make the two differ, and the
-    /// hyphen rule is about what is in front of the caret.
+    /// output mode can make the two differ, and the hyphen rule is about what
+    /// is in front of the caret.
     static func shouldAppendSpace(afterCommitting documentText: String) -> Bool {
         guard !documentText.isEmpty else { return false }
         return !documentText.hasSuffix("-")

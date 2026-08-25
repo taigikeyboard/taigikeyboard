@@ -58,6 +58,24 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         }
     }
 
+    /// The two retired script commits. A chord recorded on either row is
+    /// stored under `ComposingAction.settingsKeyName`, and no row can reach it
+    /// once the action is gone — so it is cleared rather than left in the
+    /// domain for a later action reusing the name to inherit.
+    func testChordsRecordedOnTheRetiredScriptCommits_areRemoved() throws {
+        let names = ["composingShortcut.commitHanji", "composingShortcut.commitRomanization"]
+        let recorded = try ComposingKeyChord.make(key: "z", modifiers: []).get().rawValue
+        for name in names {
+            userDefaults.set(recorded, forKey: name)
+        }
+
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+
+        for name in names {
+            XCTAssertNil(userDefaults.object(forKey: name), "\(name) should be gone")
+        }
+    }
+
     /// The 外觀 pane's two retired rows: the accent-colour swatch and the
     /// candidate-window chrome picker. Nothing reads either key any more — the
     /// highlight always follows the system accent and the chrome always

@@ -30,7 +30,7 @@ final class ShortcutSettingsTests: XCTestCase {
             ComposingAction.allCases.map(\.rawValue),
             [
                 "nextCandidate", "previousCandidate", "pageForward", "pageBackward",
-                "confirmHighlighted", "commitLiteral", "commitHanji", "commitRomanization",
+                "confirmHighlighted", "commitLiteral",
             ],
         )
         XCTAssertEqual(
@@ -95,8 +95,8 @@ final class ShortcutSettingsTests: XCTestCase {
     /// than its default.
     func testResetComposingShortcuts_returnsEveryRowToItsDefault() throws {
         let store = SettingsStore(userDefaults: userDefaults)
-        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .commitHanji)
-        store.setComposingChord(nil, for: .commitRomanization)
+        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .nextCandidate)
+        store.setComposingChord(nil, for: .pageBackward)
         userDefaults.set("not a chord", forKey: ComposingAction.pageForward.settingsKeyName)
         userDefaults.set(CandidateSlotModifier.option.rawValue, forKey: SettingsStore.Keys.candidateSlotModifier.name)
 
@@ -114,8 +114,8 @@ final class ShortcutSettingsTests: XCTestCase {
     /// an install a later version means to move.
     func testResetComposingShortcuts_leavesNothingStored() throws {
         let store = SettingsStore(userDefaults: userDefaults)
-        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .commitHanji)
-        store.setComposingChord(nil, for: .commitRomanization)
+        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .nextCandidate)
+        store.setComposingChord(nil, for: .pageBackward)
 
         store.resetComposingShortcuts()
 

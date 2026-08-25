@@ -85,8 +85,8 @@ struct ComposingKeyBindings: Sendable, Equatable {
 
     /// The action `event` is bound to, if any.
     ///
-    /// Linear over eight actions rather than a dictionary keyed by chord: the
-    /// roster is small enough that the lookup cost is noise next to the
+    /// Linear over the action roster rather than a dictionary keyed by chord:
+    /// the roster is small enough that the lookup cost is noise next to the
     /// keystroke around it, and a chord-keyed dictionary would need the same
     /// duplicate handling a second time to build.
     func action(for event: KeyEventSnapshot) -> ComposingAction? {

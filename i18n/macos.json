@@ -865,42 +865,6 @@
         "ja": "入力したまま確定"
       }
     },
-    "actionCommitHanji": {
-      "comment": "Shortcut row: commit the highlighted candidate as Hanji, ignoring the output setting.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "直接送出漢字",
-        "tailo": "ti̍t-tsiap sàng-tshut Hàn-jī",
-        "poj": "ti̍t-chiap sàng-chhut Hàn-jī",
-        "en": "Commit as Hanji",
-        "ja": "漢字で確定"
-      }
-    },
-    "actionCommitRomanization": {
-      "comment": "Shortcut row: commit the highlighted candidate as romanization, ignoring the output setting.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "直接送出羅馬字",
-        "tailo": "ti̍t-tsiap sàng-tshut Lô-má-jī",
-        "poj": "ti̍t-chiap sàng-chhut Lô-má-jī",
-        "en": "Commit as Romanization",
-        "ja": "ローマ字で確定"
-      }
-    },
     "shortcutUnbound": {
       "comment": "Shortcut recorder button when no key is assigned to the row.",
       "scope": {

@@ -322,7 +322,7 @@ final class ComposingKeyIntentTests: XCTestCase {
                 isComposing: true,
                 isShowingCandidates: true,
             ),
-            .commitHighlightedCandidate(.settings),
+            .commitHighlightedCandidate,
         )
         XCTAssertEqual(
             ComposingKeyIntent.intent(

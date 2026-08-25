@@ -42,11 +42,6 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// ⇧Return — the escape hatch that keeps what was typed reachable, which
     /// is why it is one of the two actions a binding may never leave unbound.
     case commitLiteral
-    /// Commits the highlighted candidate as Hanji, whatever the 漢羅 setting
-    /// says. ⌃↩.
-    case commitHanji
-    /// Commits the highlighted candidate as romanization, same terms. ⌥↩.
-    case commitRomanization
 
     /// The chord a fresh install has on this action. Every action has one: a
     /// row the user has never touched prints a key rather than a blank
@@ -70,8 +65,6 @@ enum ComposingAction: String, CaseIterable, Sendable {
         case .pageBackward: Self.chord("[")
         case .confirmHighlighted: Self.chord("\r")
         case .commitLiteral: Self.chord("\r", modifiers: .shift)
-        case .commitHanji: Self.chord("\r", modifiers: .control)
-        case .commitRomanization: Self.chord("\r", modifiers: .option)
         }
     }
 
@@ -85,7 +78,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
         switch self {
         case .commitLiteral: false
         case .nextCandidate, .previousCandidate, .pageForward, .pageBackward,
-             .confirmHighlighted, .commitHanji, .commitRomanization: true
+             .confirmHighlighted: true
         }
     }
 
@@ -97,9 +90,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
         case .previousCandidate: .navigate(.previousCandidate)
         case .pageForward: .navigate(.pageDown)
         case .pageBackward: .navigate(.pageUp)
-        case .confirmHighlighted: .commitHighlightedCandidate(.settings)
-        case .commitHanji: .commitHighlightedCandidate(.hanji)
-        case .commitRomanization: .commitHighlightedCandidate(.romanization)
+        case .confirmHighlighted: .commitHighlightedCandidate
         case .commitLiteral: .commit
         }
     }
@@ -113,7 +104,7 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// that every case appears exactly once.
     static let groups: [[ComposingAction]] = [
         [.nextCandidate, .previousCandidate, .pageForward, .pageBackward],
-        [.confirmHighlighted, .commitLiteral, .commitHanji, .commitRomanization],
+        [.confirmHighlighted, .commitLiteral],
     ]
 
     /// Actions that must always be reachable, whatever else the user rebinds.
@@ -125,7 +116,13 @@ enum ComposingAction: String, CaseIterable, Sendable {
     static let alwaysBound: Set<ComposingAction> = [.confirmHighlighted, .commitLiteral]
 
     /// The settings key this action's chord is stored under.
-    var settingsKeyName: String { "composingShortcut.\(rawValue)" }
+    var settingsKeyName: String { Self.settingsKeyName(rawValue: rawValue) }
+
+    /// The same key for a raw value the roster no longer has a case for — what
+    /// `RetiredSettingsCleanup` sweeps. Composed here rather than written out
+    /// there, so the namespace has one owner and a tombstone cannot be left
+    /// behind by a rename.
+    static func settingsKeyName(rawValue: String) -> String { "composingShortcut.\(rawValue)" }
 
     /// The recorder row's label, under the active display language.
     @MainActor
@@ -137,8 +134,6 @@ enum ComposingAction: String, CaseIterable, Sendable {
         case .pageBackward: language.string(.macosActionPageBackward)
         case .confirmHighlighted: language.string(.macosActionConfirmHighlighted)
         case .commitLiteral: language.string(.macosActionCommitLiteral)
-        case .commitHanji: language.string(.macosActionCommitHanji)
-        case .commitRomanization: language.string(.macosActionCommitRomanization)
         }
     }
 

@@ -74,6 +74,20 @@ enum RetiredSettingsCleanup {
         "shiftTogglesAlphanumericEnabled",
     ]
 
+    /// Raw values of composing actions removed from the roster: 直接送出漢字 and
+    /// 直接送出羅馬字, retired 2026-08-25 when the 漢羅對調 switch was left as the
+    /// one place a user chooses which script a commit writes.
+    ///
+    /// Their chords are stored under `ComposingAction.settingsKeyName`, which
+    /// only live cases can build — `resetComposingShortcuts` walks `allCases` —
+    /// so a chord recorded on one of these rows is unreachable by every row the
+    /// pane still draws. Kept as raw values and composed through the live
+    /// derivation, so the namespace keeps one owner.
+    private static let retiredComposingActionRawValues = [
+        "commitHanji",
+        "commitRomanization",
+    ]
+
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.removeObject(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
@@ -95,6 +109,9 @@ enum RetiredSettingsCleanup {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
         for name in retiredDefaultsNames {
             userDefaults.removeObject(forKey: name)
+        }
+        for rawValue in retiredComposingActionRawValues {
+            userDefaults.removeObject(forKey: ComposingAction.settingsKeyName(rawValue: rawValue))
         }
         if let pane = userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name),
            retiredPaneRawValues.contains(pane) {

@@ -111,10 +111,9 @@ enum ComposingKeyIntent: Equatable {
     /// window is laid out as a row, a list or a grid, and the window is where
     /// the layout lives (`CandidatePresenter.navigate`).
     case navigate(CandidateNavigation)
-    /// Commit whichever candidate the bar has highlighted, written the way
-    /// `rendering` says — normally as the output settings render it, or forced
-    /// to one script by the 直接輸出漢字 / 直接輸出羅馬字 actions.
-    case commitHighlightedCandidate(CandidateDocumentText.Rendering)
+    /// Commit whichever candidate the bar has highlighted, written as the
+    /// output settings render it.
+    case commitHighlightedCandidate
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what `⌃1` to `⌃9` address.
     case selectCandidateSlot(Int)
@@ -247,7 +246,7 @@ enum ComposingKeyIntent: Equatable {
         }
 
         // What the user put on this key, read before the host-chord guard so a
-        // chord they deliberately recorded — ⌥Return for 直接輸出漢字, say —
+        // chord they deliberately recorded — ⌥Return on a paging row, say —
         // reaches its action. Only an EXACT match does: an unrecorded ⌥ chord
         // still falls to the host below, because the exception is the binding,
         // not the modifier.
