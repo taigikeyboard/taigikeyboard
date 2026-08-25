@@ -6,6 +6,13 @@
 // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
 enum VersionHistory {
     static let entries: [(version: String, date: String, changes: [String])] = [
+        ("3.6.5", "2026/08/25", [
+            "Fixed: the spacebar no longer stops responding after you drag it to move the cursor.",
+            "Fixed: candidates no longer contain syllables you never typed — tsuisi no longer offers 水社寮.",
+            "Fixed: in 方音, space after a syllable now selects the unmarked first and fourth tones.",
+            "Fixed: 方音 keys with two glyphs resolve from the dictionary, so 考卷 and 毋是 need no long press.",
+            "Improved: next-word learning keeps each reading of a 漢字 separate (重 tîng and 重 tāng).",
+        ]),
         ("3.6.4", "2026/08/07", [
             "New: choose Automatic, 漢字, English, 日本語, Tâi-lô, or Pe̍h-ōe-jī as the app and keyboard display language; changes apply live and stay independent of the input mode.",
             "New: feature guides, FAQ content, dictionary-source descriptions, theme names, settings, overlays, alerts, and accessibility labels follow the selected display language.",

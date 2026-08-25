@@ -12,6 +12,17 @@ object VersionHistory {
     val entries: List<VersionEntry> =
         listOf(
             VersionEntry(
+                "3.6.5",
+                "2026/08/25",
+                listOf(
+                    "Changed: Android 11 or newer is required; older versions could not save what the keyboard learned.",
+                    "Fixed: candidates no longer contain syllables you never typed — tsuisi no longer offers 水社寮.",
+                    "Fixed: in 方音, space after a syllable now selects the unmarked first and fourth tones.",
+                    "Fixed: 方音 keys with two glyphs resolve from the dictionary, so 考卷 and 毋是 need no long press.",
+                    "Improved: next-word learning keeps each reading of a 漢字 separate (重 tîng and 重 tāng).",
+                ),
+            ),
+            VersionEntry(
                 "3.6.4",
                 "2026/08/07",
                 listOf(
