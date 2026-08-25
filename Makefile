@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint \
         i18n i18n-test \
-        macos-engine macos-protos macos-release macos-publish \
+        macos-engine macos-protos macos-release \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -107,13 +107,6 @@ macos-protos:
 macos-release:
 	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
-# Upload an already-built package and announce it. `make macos-release` already
-# chains this on success; this target exists for the recovery case, where the
-# build and notarization succeeded and only the upload failed — re-running the
-# whole thing would cost another notarization round trip.
-macos-publish:
-	bash macos/scripts/publish-release.sh $(PUBLISH_FLAGS)
-
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
@@ -152,7 +145,6 @@ help:
 	@echo "  make macos-engine       macOS-only shortcut: rebuild macos/RustEngine xcframework"
 	@echo "  make macos-protos       macOS-only shortcut: regenerate macOS .pb.swift"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
-	@echo "  make macos-publish      Re-upload an already-built .pkg (recovery after a failed upload)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"

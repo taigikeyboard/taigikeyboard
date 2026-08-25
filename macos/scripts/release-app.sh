@@ -479,5 +479,5 @@ if [[ "$publish" == true ]]; then
     bash "$PACKAGE_DIR/scripts/publish-release.sh" --pkg "$OUTPUT_PKG"
 else
     echo ""
-    echo "  Publish it with: make macos-publish"
+    echo "  Publish it with: bash macos/scripts/publish-release.sh"
 fi

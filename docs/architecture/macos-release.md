@@ -204,10 +204,12 @@ simply upgrades it. No uninstall step is needed first.
 
 ## Publishing the package
 
-`macos/scripts/publish-release.sh` — `make macos-publish`, or `--publish` on the
-build above — uploads the package and announces it. It is a separate script
-because the two halves fail for unrelated reasons: a network failure must not
-cost another notarization round trip.
+`macos/scripts/publish-release.sh` uploads the package and announces it.
+`make macos-release` runs it on success, so cutting a release never invokes it
+by hand. It stays a separate script because the two halves fail for unrelated
+reasons — if only the upload failed, running it alone re-publishes the package
+already sitting in `macos/.build/distribution/` without rebuilding or
+re-notarizing.
 
 Everything goes to the **website** repository, `taigikeyboard/taigikeyboard.github.io`:
 
