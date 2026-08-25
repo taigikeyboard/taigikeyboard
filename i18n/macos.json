@@ -91,6 +91,24 @@
         "ja": "台語"
       }
     },
+    "shortcutOpenSettings": {
+      "comment": "Shortcut-recorder row: the hotkey that opens the settings window on whichever pane it was last left on. Each row is authored whole rather than composed from the setting's own label.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "拍開設定",
+        "tailo": "phah-khui siat-tīng",
+        "poj": "phah-khui siat-tēng",
+        "en": "Open Settings",
+        "ja": "設定を開く"
+      }
+    },
     "shortcutToggleRomanization": {
       "comment": "Shortcut-recorder row: the hotkey that switches between the two romanizations. Each row is authored whole rather than composed from the setting's own label, whose wording is a verb phrase in several languages.",
       "scope": {

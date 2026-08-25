@@ -203,10 +203,10 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     }
 
     func testAGlobalShortcutOnASlotChord_isFound_underThatModifierOnly() {
-        recordGlobal(.init(.three, modifiers: [.control]), for: .openGeneralPane)
+        recordGlobal(.init(.three, modifiers: [.control]), for: .openLastSettingsPane)
 
         XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .control), [.openGeneralPane],
+            ShortcutConflicts.globalActionsHoldingSlotChords(under: .control), [.openLastSettingsPane],
         )
         XCTAssertEqual(
             ShortcutConflicts.globalActionsHoldingSlotChords(under: .option), [],
@@ -240,9 +240,9 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         let store = try makeScratchSettingsStore()
         // The upgrade case: a version gives a global action a default chord the
         // user had already recorded on a composing row. The recording wins.
-        let chord = try chord("r", [.control, .command])
+        let chord = try chord("c", [.control, .command])
         store.setComposingChord(chord, for: .pageForward)
-        recordGlobal(.init(.r, modifiers: [.control, .command]), for: .toggleRomanization)
+        recordGlobal(.init(.c, modifiers: [.control, .command]), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
@@ -289,11 +289,11 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // The order the recorder cannot refuse retroactively: the shortcut was
         // recorded while Option held the slots, then the picker moved to
         // Control.
-        recordGlobal(.init(.three, modifiers: [.control]), for: .openAppearancePane)
+        recordGlobal(.init(.three, modifiers: [.control]), for: .openLastSettingsPane)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
-        XCTAssertNil(KeyboardShortcuts.getShortcut(for: .openAppearancePane))
+        XCTAssertNil(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane))
     }
 
     func testALaunchPass_leavesAnUncollidingSetupAlone() throws {
@@ -340,7 +340,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // Two global rows against two different composing rows: the snapshot is
         // read once, so this is where a stale read would drop the second clear.
         recordGlobal(.init(.tab, modifiers: [.shift]), for: .toggleRomanization)
-        recordGlobal(.init(.rightBracket), for: .openGeneralPane)
+        recordGlobal(.init(.rightBracket), for: .openLastSettingsPane)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
@@ -360,7 +360,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // on a chord a global shortcut CAN hold.
         let chord = try chord("r", [.control, .command])
         store.setComposingChord(chord, for: .commitLiteral)
-        recordGlobal(.init(.r, modifiers: [.control, .command]), for: .openGeneralPane)
+        recordGlobal(.init(.r, modifiers: [.control, .command]), for: .openLastSettingsPane)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 

@@ -336,16 +336,18 @@ public final class TaigiInputController: IMKInputController {
             // be. Every composing key lives behind those
             // doors — the menu stopped being the shortcut roster when the
             // agent proved unable to DISPLAY a composing key without also
-            // DISPATCHING it (`InputSourceMenuRow`). These rows may claim a
-            // key equivalent because they ARE shortcuts: every one of them is
-            // an entry in the registry the 快捷鍵 pane records, and their
-            // chords all carry modifiers no composition types.
+            // DISPATCHING it (`InputSourceMenuRow`).
+            //
+            // No key equivalents any more. The pane rows carried the ⌃⇧1–⌃⇧5
+            // chords until 2026-08-25, when those were retired (USER: five
+            // chords was a lot to hold for panes visited about once a day,
+            // which THIS menu already lists by name). The rows outlived them —
+            // the menu IS the way to a named pane now — so they are labelled
+            // from the pane's own name and dispatch straight to it, with no
+            // roster in between.
             let doorways = Self.menuDoorways.map { doorway in
-                let shortcut = KeyboardShortcuts.getShortcut(for: doorway.action.name)
-                return InputSourceMenuRow(
-                    label: doorway.action.label(language),
-                    keyEquivalent: shortcut?.nsMenuItemKeyEquivalent ?? "",
-                    modifiers: shortcut?.modifiers ?? [],
+                InputSourceMenuRow(
+                    label: language.string(doorway.pane.labelKey),
                     action: doorway.selector,
                 )
             }
@@ -367,19 +369,26 @@ public final class TaigiInputController: IMKInputController {
     /// Paired with a selector rather than derived from the action, because IMK
     /// routes a menu command by selector (`IMKInputController.h:283-296`) and a
     /// selector cannot be computed. The list IS the roster: a `ShortcutAction`
-    /// missing from it has no menu row, which is how the two mid-sentence
+    /// missing from it has no menu row, which is how the mid-sentence
     /// switches stay out (USER 2026-08-21).
     ///
+    /// Keyed on the PANE rather than on a `ShortcutAction`: since 2026-08-25
+    /// no global chord opens a named pane, and a row that had to look one up
+    /// would be reading a roster it is no longer part of.
+    ///
     /// A generic 開啟設定 row led the group until 2026-08-24, on its own ⌃⇧,
-    /// chord. It went with the chord (USER): once every pane has a row, a row
-    /// that opens whichever pane was last used is a second key for what 一般
-    /// already does.
-    private static let menuDoorways: [(action: ShortcutAction, selector: Selector)] = [
-        (.openGeneralPane, #selector(openGeneralPane(_:))),
-        (.openAppearancePane, #selector(openAppearancePane(_:))),
-        (.openShortcutPane, #selector(openShortcutPane(_:))),
-        (.openCustomDictionaryPane, #selector(openCustomDictionaryPane(_:))),
-        (.openDictionarySourcesPane, #selector(openDictionarySourcesPane(_:))),
+    /// chord. It went with the chord (USER): once every pane had a row, a row
+    /// that opens whichever pane was last used was a second key for what 一般
+    /// already does. The chord came back on 2026-08-25 as ⌃⌘S once the five
+    /// pane chords went — the reason it was redundant went with them — but the
+    /// ROW did not: the menu already lists every pane by name, and the hotkey
+    /// is visible and rebindable in the 快捷鍵 pane.
+    private static let menuDoorways: [(pane: SettingsPane, selector: Selector)] = [
+        (.general, #selector(openGeneralPane(_:))),
+        (.appearance, #selector(openAppearancePane(_:))),
+        (.shortcuts, #selector(openShortcutPane(_:))),
+        (.customDictionary, #selector(openCustomDictionaryPane(_:))),
+        (.dictionarySources, #selector(openDictionarySourcesPane(_:))),
     ]
 
     /// Deliberately does not call `super`. The inherited implementation looks
@@ -484,8 +493,7 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
         switch action {
-        case .openGeneralPane, .openAppearancePane, .openShortcutPane,
-             .openCustomDictionaryPane, .openDictionarySourcesPane:
+        case .openLastSettingsPane:
             // Handled process-wide by `ShortcutHotkeys.perform` before any
             // session is consulted: opening a window needs no client, and a
             // user with no focused Taigi session still expects the chord to

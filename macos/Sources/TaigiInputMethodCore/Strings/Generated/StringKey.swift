@@ -72,6 +72,7 @@ enum StringKey: String {
     case macosTranslateSwapped = "i18n_macos_translateSwapped"
     case macosModeFlashAlphanumeric = "i18n_macos_modeFlashAlphanumeric"
     case macosModeFlashTaigi = "i18n_macos_modeFlashTaigi"
+    case macosShortcutOpenSettings = "i18n_macos_shortcutOpenSettings"
     case macosShortcutToggleRomanization = "i18n_macos_shortcutToggleRomanization"
     case macosShortcutToggleTranslateSwapped = "i18n_macos_shortcutToggleTranslateSwapped"
     case macosMenuFile = "i18n_macos_menuFile"

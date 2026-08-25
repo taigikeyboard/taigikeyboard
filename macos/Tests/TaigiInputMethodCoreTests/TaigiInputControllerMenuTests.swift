@@ -97,9 +97,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     func testThePaneRows_matchTheSidebar() throws {
         let language = try XCTUnwrap(controller.displayLanguageOverride)
         let paneTitles = try menu().items
-            .filter { row in
-                Self.doorways.contains { $0.selector == row.action && $0.action.settingsPane != nil }
-            }
+            .filter { row in Self.doorways.contains { $0.selector == row.action } }
             .map(\.title)
 
         XCTAssertEqual(paneTitles, SettingsPane.allCases.map { language.string($0.labelKey) })
@@ -131,42 +129,25 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         }
     }
 
-    /// Every row starts on the chord its action ships with — ⌃⇧ plus the
-    /// pane's position in the sidebar.
-    func testEveryDoorwayRow_showsItsActionsDefaultChord() throws {
-        for doorway in Self.doorways {
-            let row = try item(action: doorway.selector, in: menu())
-            let shortcut = try XCTUnwrap(doorway.action.defaultShortcut, row.title)
 
-            XCTAssertEqual(row.keyEquivalent, shortcut.nsMenuItemKeyEquivalent, row.title)
-            XCTAssertEqual(row.keyEquivalentModifierMask, shortcut.modifiers, row.title)
-        }
-    }
-
-    /// And every row prints what its action currently holds, not what it ships
-    /// with: the menu is a view of the registry, rebuilt per draw, rather than
-    /// a second copy of the defaults.
-    func testAPaneRow_showsAChordRecordedAfterLaunch() throws {
+    /// No pane row claims a key equivalent, whatever is in the global registry.
+    ///
+    /// They carried the ⌃⇧1–⌃⇧5 chords until 2026-08-25; those were retired and
+    /// the rows now dispatch straight to a pane. So a chord recorded on the one
+    /// surviving global action must not surface here — a key equivalent drawn
+    /// on a menu item is taken from the host for as long as this input source
+    /// is selected, and these rows no longer have one to spend.
+    func testThePaneRows_claimNoKeyEquivalent() throws {
         KeyboardShortcuts.setShortcut(
             .init(.j, modifiers: [.control, .option]),
-            for: .openAppearancePane,
+            for: .openLastSettingsPane,
         )
 
-        let row = try item(action: Self.openAppearancePane, in: menu())
-
-        XCTAssertEqual(row.keyEquivalent, "j")
-        XCTAssertEqual(row.keyEquivalentModifierMask, [.control, .option])
-    }
-
-    /// A bare function key IS a legal global chord (`KeyboardShortcuts` records
-    /// F12 with no modifier), and it keeps its key equivalent.
-    func testABareFunctionKeyGlobalChord_keepsItsKeyEquivalent() throws {
-        KeyboardShortcuts.setShortcut(.init(.f12), for: .openAppearancePane)
-
-        let row = try item(action: Self.openAppearancePane, in: menu())
-
-        XCTAssertFalse(row.keyEquivalent.isEmpty)
-        XCTAssertEqual(row.keyEquivalentModifierMask, [])
+        for doorway in Self.doorways {
+            let row = try item(action: doorway.selector, in: menu())
+            XCTAssertEqual(row.keyEquivalent, "", "\(doorway.pane) took a host key")
+            XCTAssertEqual(row.keyEquivalentModifierMask, [])
+        }
     }
 
     /// Clicking a pane row moves the window to that pane, so it opens where
@@ -174,7 +155,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// its own pane, which is what a mis-paired selector would break.
     func testEveryPaneRow_selectsItsOwnPane() throws {
         for doorway in Self.doorways {
-            guard let pane = doorway.action.settingsPane else { continue }
+            let pane = doorway.pane
             controller.settings.selectedSettingsPane = pane == .general ? .appearance : .general
 
             try select(doorway.selector)
@@ -252,24 +233,28 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     private static let checkForUpdates = Selector(("checkForUpdates:"))
     private static let openAppearancePane = Selector(("openAppearancePane:"))
 
-    /// The menu's first group, mirrored: the action each row sends and the
+    /// The menu's first group, mirrored: the pane each row opens and the
     /// selector IMK routes it by. A literal rather than a read of the
     /// controller's own table, so a row that moved would fail here instead of
-    /// agreeing with itself. The pane is not restated — `settingsPane` is the
-    /// one table for that, pinned by `ShortcutActionsTests`.
-    private static let doorways: [(action: ShortcutAction, selector: Selector)] = [
-        (.openGeneralPane, Selector(("openGeneralPane:"))),
-        (.openAppearancePane, openAppearancePane),
-        (.openShortcutPane, Selector(("openShortcutPane:"))),
-        (.openCustomDictionaryPane, Selector(("openCustomDictionaryPane:"))),
-        (.openDictionarySourcesPane, Selector(("openDictionarySourcesPane:"))),
+    /// agreeing with itself.
+    ///
+    /// Keyed on the PANE since 2026-08-25. These rows used to carry a
+    /// `ShortcutAction` and draw its chord; the five pane chords were retired
+    /// (USER) and the rows outlived them, so what a row knows now is which
+    /// pane it opens and nothing about the global roster.
+    private static let doorways: [(pane: SettingsPane, selector: Selector)] = [
+        (.general, Selector(("openGeneralPane:"))),
+        (.appearance, openAppearancePane),
+        (.shortcuts, Selector(("openShortcutPane:"))),
+        (.customDictionary, Selector(("openCustomDictionaryPane:"))),
+        (.dictionarySources, Selector(("openDictionarySourcesPane:"))),
     ]
 
-    /// A cleared shortcut claims no key equivalent at all — the menu item stays,
-    /// the chord does not, and no host key is taken for a command the user
-    /// unbound.
-    func testMenu_claimsNoChordWhenTheShortcutIsCleared() throws {
-        KeyboardShortcuts.setShortcut(nil, for: .openAppearancePane)
+    /// The row is still named, and still opens its pane, with nothing in the
+    /// global registry at all — the menu is the way to a named pane now, not a
+    /// display of a chord.
+    func testAPaneRow_isNamedAndKeylessWithNoGlobalShortcutAtAll() throws {
+        KeyboardShortcuts.setShortcut(nil, for: .openLastSettingsPane)
 
         let row = try item(action: Self.openAppearancePane, in: menu())
 

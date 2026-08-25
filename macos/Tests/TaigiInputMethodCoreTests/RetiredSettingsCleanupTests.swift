@@ -151,16 +151,25 @@ final class RetiredSettingsCleanupTests: XCTestCase {
     /// name there. Saved and restored per name, because the standard domain is
     /// the developer's real one.
     ///
-    /// Whatever the user recorded, not merely the shipped default: 開啟設定 was
-    /// re-recordable for as long as it existed, and a chord the user chose is
-    /// exactly the one that would come back.
+    /// Whatever the user recorded, not merely the shipped default: every one
+    /// of these was re-recordable for as long as it existed, and a chord the
+    /// user chose is exactly the one that would come back.
+    ///
+    /// The five pane doorways matter most here: `openLastSettingsPane` is a
+    /// LIVE action on ⌃⌘S, and one of the retired names springing back would
+    /// put a second handler on whatever the user had recorded.
     func testRetiredHotkeyChords_areCleared() {
         let retiredNames = [
             KeyboardShortcuts.Name("toggleBothScripts"),
             KeyboardShortcuts.Name("toggleLiteralRomanCandidate"),
             KeyboardShortcuts.Name("openSettings"),
+            KeyboardShortcuts.Name("openGeneralPane"),
+            KeyboardShortcuts.Name("openAppearancePane"),
+            KeyboardShortcuts.Name("openShortcutPane"),
+            KeyboardShortcuts.Name("openCustomDictionaryPane"),
+            KeyboardShortcuts.Name("openDictionarySourcesPane"),
         ]
-        let keys: [KeyboardShortcuts.Key] = [.k, .j, .l]
+        let keys: [KeyboardShortcuts.Key] = [.k, .j, .l, .f13, .f14, .f15, .f16, .f17]
         let saved = retiredNames.map { ($0, KeyboardShortcuts.getShortcut(for: $0)) }
         defer {
             for (name, shortcut) in saved {

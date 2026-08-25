@@ -45,35 +45,35 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            [
-                "一般", "外觀", "快速齒", "自訂詞庫", "辭典管理",
-                "切換 台羅/白話字", "切換 漢羅對調",
-            ],
+            ["拍開設定", "切換 台羅/白話字", "切換 漢羅對調"],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
-                "一般", "外観", "ショートカット", "カスタム辞書", "辞書の管理",
+                "設定を開く",
                 "ローマ字体系を切り替える",
                 "漢字とローマ字の入れ替えを切り替える",
             ],
         )
-        XCTAssertEqual(labels(.english).first, "General")
+        XCTAssertEqual(labels(.english).first, "Open Settings")
         // The trap this replaced: composing a row from the setting's own label produced a doubled
         // verb — "括弧で併記を切り替える", "Toggle Annotate in Brackets".
         XCTAssertFalse(labels(.japanese).contains { $0.contains("併記を切り替えるを") })
     }
 
     /// The two mid-sentence switches arrive bound as well: no row in the pane
-    /// is blank (USER 2026-08-21). ⌃⌘R follows vChewing's toggle convention;
-    /// the 漢羅 swap sits on the bare backtick, the classic Taiwanese-IME
-    /// function key — no TL or POJ syllable is spelled with it, and the hotkey
-    /// is armed only while a Taigi session holds the engine
-    /// (USER 2026-08-21).
+    /// is blank (USER 2026-08-21). ⌃⌘ is vChewing's toggle family, and C
+    /// rather than the R this had until 2026-08-25 (USER): a switch reached
+    /// for all day is muscle memory by the second day, so what is left to
+    /// optimise is travel — ⌃, ⌘ and C are all bottom row, while R is two rows
+    /// up with the pinky still anchored. The 漢羅 swap sits on the bare
+    /// backtick, the classic Taiwanese-IME function key — no TL or POJ
+    /// syllable is spelled with it, and the hotkey is armed only while a Taigi
+    /// session holds the engine (USER 2026-08-21).
     func testTheSwitches_startOnTheirConventionKeys() {
         XCTAssertEqual(
             ShortcutAction.toggleRomanization.defaultShortcut,
-            KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command]),
+            KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
         )
         XCTAssertEqual(
             ShortcutAction.toggleTranslateSwapped.defaultShortcut,
@@ -106,11 +106,11 @@ final class ShortcutActionsTests: XCTestCase {
     /// already put that chord on a different action. Both handlers would fire
     /// on one keypress, so the row holding only a default gives way.
     func testADefault_givesWayToTheSameChordRecordedElsewhere() {
-        let recorded = KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command])
+        let recorded = KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command])
         // toggleRomanization's default, recorded by hand on another row. Named
         // rather than switched with a `default`, which would quietly absorb
         // every action added later.
-        let holders: Set<ShortcutAction> = [.openGeneralPane, .toggleRomanization]
+        let holders: Set<ShortcutAction> = [.openLastSettingsPane, .toggleRomanization]
         let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { action in
             holders.contains(action) ? recorded : nil
         }
@@ -126,34 +126,30 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(shadowed, [])
     }
 
-    /// The pane doorways start on ⌃⇧ plus the pane's own position in the
-    /// sidebar: one modifier family, and digits rather than initials because
-    /// the window speaks five display languages and an initial is a mnemonic
-    /// in exactly one of them.
-    func testThePaneDoorways_startOnControlShiftTheirSidebarPosition() {
-        let paneDefaults = ShortcutAction.allCases
-            .filter { $0.settingsPane != nil }
-            .map(\.defaultShortcut)
-
+    /// The whole global roster, on one modifier family.
+    ///
+    /// ⌃⇧1–⌃⇧5 opened the five panes until 2026-08-25 (USER: five chords for
+    /// panes the menu bar already lists by name).
+    /// One ⌃⌘S doorway replaced them — a command reached for rarely, so a
+    /// mnemonic pays — and the switch moved to ⌃⌘C, where a command reached
+    /// for all day wants the hand to stay on the bottom row.
+    func testTheGlobalRoster_isOneDoorwayAndTwoSwitches() {
         XCTAssertEqual(
-            paneDefaults,
+            ShortcutAction.allCases.map(\.defaultShortcut),
             [
-                KeyboardShortcuts.Shortcut(.one, modifiers: [.control, .shift]),
-                KeyboardShortcuts.Shortcut(.two, modifiers: [.control, .shift]),
-                KeyboardShortcuts.Shortcut(.three, modifiers: [.control, .shift]),
-                KeyboardShortcuts.Shortcut(.four, modifiers: [.control, .shift]),
-                KeyboardShortcuts.Shortcut(.five, modifiers: [.control, .shift]),
+                KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.backtick),
             ],
         )
     }
 
-    /// Every pane has a doorway and every doorway has a pane, in the sidebar's
-    /// own order: a pane added to `SettingsPane` without one would be reachable
-    /// by no key at all, and the menu draws these rows in this order.
-    func testEveryPane_hasExactlyOneDoorway() {
+    /// No global chord opens a NAMED pane any more; the menu bar does that
+    /// (`TaigiInputControllerMenuTests`). The one doorway reopens wherever the
+    /// user left off, which is what makes it a single key rather than five.
+    func testExactlyOneAction_opensSettings() {
         XCTAssertEqual(
-            ShortcutAction.allCases.compactMap(\.settingsPane),
-            SettingsPane.allCases,
+            ShortcutAction.allCases.filter(\.opensSettings), [.openLastSettingsPane],
         )
     }
 
@@ -236,15 +232,36 @@ final class ShortcutActionsTests: XCTestCase {
         )
     }
 
-    /// The 快速齒 pane draws the two groups from these, so between them they
-    /// have to be the whole roster — an action in neither would have a hotkey
-    /// registered and no row to record it on.
-    func testPaneOpenersAndCommands_coverEveryAction() {
-        XCTAssertEqual(
-            ShortcutAction.paneOpeners + ShortcutAction.commands,
-            ShortcutAction.allCases,
-        )
-        XCTAssertEqual(ShortcutAction.paneOpeners.map(\.settingsPane), SettingsPane.allCases)
-        XCTAssertTrue(ShortcutAction.commands.allSatisfy { $0.settingsPane == nil })
+    /// The live roster and the tombstone roster must not overlap: a retired
+    /// name is cleared on every launch, so an action still using one would
+    /// lose the user's chord each time the app started.
+    func testNoLiveAction_reusesARetiredName() {
+        let retired = Set([
+            "toggleBothScripts", "toggleLiteralRomanCandidate", "openSettings",
+            "openGeneralPane", "openAppearancePane", "openShortcutPane",
+            "openCustomDictionaryPane", "openDictionarySourcesPane",
+        ])
+
+        for action in ShortcutAction.allCases {
+            XCTAssertFalse(
+                retired.contains(action.name.rawValue),
+                "\(action.name.rawValue) is swept by RetiredSettingsCleanup every launch",
+            )
+        }
+    }
+
+    /// The doorway reopens where the user LEFT OFF, which is the whole reason
+    /// one chord replaced five: a chord that landed on a fixed pane would be
+    /// the ⌃⇧1 that was just retired, wearing a different key.
+    @MainActor
+    func testTheSettingsDoorway_leavesTheStoredPaneAlone() throws {
+        let store = try makeScratchSettingsStore()
+        store.selectedSettingsPane = .customDictionary
+        var shown = 0
+
+        ShortcutHotkeys.openSettings(on: nil, in: store, show: { shown += 1 })
+
+        XCTAssertEqual(store.selectedSettingsPane, .customDictionary)
+        XCTAssertEqual(shown, 1, "the window still has to come up")
     }
 }

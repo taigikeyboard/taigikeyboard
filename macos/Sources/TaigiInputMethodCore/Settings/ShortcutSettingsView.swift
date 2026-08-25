@@ -32,20 +32,18 @@ struct ShortcutSettingsView: View {
 
     var body: some View {
         Form {
-            // Two groups: the keys that open a settings pane do something to
-            // this window, the rest do something to what the user is typing.
-            // Only the second is named — the first sits under the pane's own
-            // title and would be repeating it (USER 2026-08-24).
             Section {
-                ForEach(ShortcutAction.paneOpeners, id: \.self) { action in
-                    globalRecorderRow(action)
-                }
-            }
-
-            Section {
-                // One row per action, off the same list the hotkey registration
-                // uses, so a new action cannot appear in one and not the other.
-                ForEach(ShortcutAction.commands, id: \.self) { action in
+                // One row per global action, off the same list the hotkey
+                // registration uses, so a new action cannot appear in one and
+                // not the other.
+                //
+                // One group, since 2026-08-25. There were two — the keys that
+                // opened a settings pane, then the keys that change what the
+                // user is typing — until the five pane chords were retired
+                // (USER: five chords for panes visited about once a day, which
+                // the menu bar already lists by name). What is left is one
+                // doorway and two switches, which is not two groups' worth.
+                ForEach(ShortcutAction.allCases, id: \.self) { action in
                     globalRecorderRow(action)
                 }
 

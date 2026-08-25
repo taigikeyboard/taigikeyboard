@@ -5,52 +5,51 @@ import AppKit
 import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
-    /// The pane doorways, on ⌃⇧ plus the pane's position in the sidebar.
+    /// The way back to the settings window from the keyboard.
     ///
-    /// One modifier family, so every key that lands in this input method's
-    /// settings reads as one namespace. Digits rather than initials because the
-    /// settings window speaks five display languages and an initial is a
-    /// mnemonic in exactly one of them; the sidebar's own order is the same in
-    /// all five.
+    /// ⌃⇧1–⌃⇧5, one per sidebar pane, until 2026-08-25. They went together
+    /// (USER): five chords is a lot to hold for panes a user visits about once
+    /// a day, and the menu bar lists every one of them by name already.
     ///
-    /// ⌃⇧ rather than the neighbouring families: ⌃1–9 is the candidate-slot
-    /// tier while Control holds it (`ComposingKeyIntent.directSelectionSlot`),
-    /// ⌘1–5 is the host application's own tab switching, ⌥ plus a digit types
-    /// a symbol on several layouts and is the other slot modifier a user can
-    /// choose, and ⌃⌘ plus a key is where the mid-sentence switches live.
-    /// Shift is also what keeps these off the slot tier for good: that tier
-    /// refuses any chord carrying a modifier it was not bound to
-    /// (`ComposingKeyIntent.swift:215-218`).
-    static let openGeneralPane = Self(
-        "openGeneralPane",
-        initial: .init(.one, modifiers: [.control, .shift]),
-    )
-    static let openAppearancePane = Self(
-        "openAppearancePane",
-        initial: .init(.two, modifiers: [.control, .shift]),
-    )
-    static let openShortcutPane = Self(
-        "openShortcutPane",
-        initial: .init(.three, modifiers: [.control, .shift]),
-    )
-    static let openCustomDictionaryPane = Self(
-        "openCustomDictionaryPane",
-        initial: .init(.four, modifiers: [.control, .shift]),
-    )
-    static let openDictionarySourcesPane = Self(
-        "openDictionarySourcesPane",
-        initial: .init(.five, modifiers: [.control, .shift]),
+    /// Not because ⌃⇧ was hard to reach — that was the first reading and the
+    /// USER withdrew it the same day, finding the chord comfortable. What did
+    /// not survive the second look was the VALUE: five keys, each opening a
+    /// window the user is not in, against one that reopens where they were.
+    ///
+    /// One doorway replaces them, opening wherever the user left off. It is a
+    /// command reached for rarely, so a mnemonic earns its keep here in a way
+    /// it does not on a key pressed all day: S for Settings, and for the
+    /// siat-tīng and settei the other display languages say. ⌘S belongs to the
+    /// host — this input method never takes a bare Command chord — so ⌃⌘ is
+    /// the family, the same one the switch below lives in. Apple's own list
+    /// leaves ⌃⌘S alone (support.apple.com/en-us/102650), and the Command
+    /// keeps it clear of the bare ⌃S that is XOFF in a terminal.
+    ///
+    /// Not the retired `openSettings` raw value, whatever the resemblance:
+    /// `RetiredSettingsCleanup` clears that name on every launch, and reusing
+    /// it would wipe the user's recorded chord each time.
+    static let openLastSettingsPane = Self(
+        "openLastSettingsPane",
+        initial: .init(.s, modifiers: [.control, .command]),
     )
 
     /// ⌃⌘ plus a letter is what a Taiwanese input method puts its mid-sentence
     /// switches on: vChewing binds every one of its toggles that way
     /// (`references/vChewing-macOS/Packages/vChewing_MainAssembly4Darwin/Sources/MainAssembly4Darwin/SessionController/IMEMenuSputnik.swift:108-293`),
     /// and McBopomofo's 簡繁轉換 is ⌃⌘G with 半形標點 on ⌃⌘H
-    /// (`references/McBopomofo/Source/InputMethodController.swift:74-81`). R for
-    /// the romanization.
+    /// (`references/McBopomofo/Source/InputMethodController.swift:74-81`).
+    ///
+    /// C, and not the R for "romanization" this had until 2026-08-25 (USER).
+    /// A mnemonic is worth having on a command the user has to RECALL; this
+    /// one is reached for all day, so it is muscle memory by the second day
+    /// and what remains is how far the hand has to travel. ⌃, ⌘ and C are all
+    /// on the bottom row: pinky, thumb and middle finger, hand never leaving
+    /// position. R is two rows up with the pinky still anchored on ⌃. Apple
+    /// put ⌘Z/⌘X/⌘C/⌘V on that row for the same reason.
+    /// `ShortcutDefaultMigration` moves installs still on ⌃⌘R.
     static let toggleRomanization = Self(
         "toggleRomanization",
-        initial: .init(.r, modifiers: [.control, .command]),
+        initial: .init(.c, modifiers: [.control, .command]),
     )
     /// Bare backtick, the classic Taiwanese-IME function key (USER 2026-08-21):
     /// no TL or POJ syllable is spelled with it, and the hotkey is armed only
@@ -74,65 +73,24 @@ extension KeyboardShortcuts.Name {
 /// rows, the handler registration, and the enable/disable gate — adding a case
 /// adds the action everywhere at once.
 enum ShortcutAction: CaseIterable, Sendable {
-    case openGeneralPane
-    case openAppearancePane
-    case openShortcutPane
-    case openCustomDictionaryPane
-    case openDictionarySourcesPane
+    /// Opens the settings window on whichever pane the user left it on.
+    case openLastSettingsPane
     case toggleRomanization
     case toggleTranslateSwapped
 
     var name: KeyboardShortcuts.Name {
         switch self {
-        case .openGeneralPane: .openGeneralPane
-        case .openAppearancePane: .openAppearancePane
-        case .openShortcutPane: .openShortcutPane
-        case .openCustomDictionaryPane: .openCustomDictionaryPane
-        case .openDictionarySourcesPane: .openDictionarySourcesPane
+        case .openLastSettingsPane: .openLastSettingsPane
         case .toggleRomanization: .toggleRomanization
         case .toggleTranslateSwapped: .toggleTranslateSwapped
         }
     }
 
-    /// What an action is for: a settings pane to land on, or a command with a
-    /// name of its own. One table, because the pane an action opens and the
-    /// words on its row are the same fact — two switches could disagree, and
-    /// a row labelled 外觀 that opens 一般 would still compile.
-    private enum Destination {
-        case pane(SettingsPane)
-        case named(StringKey)
-    }
-
-    private var destination: Destination {
-        switch self {
-        case .openGeneralPane: .pane(.general)
-        case .openAppearancePane: .pane(.appearance)
-        case .openShortcutPane: .pane(.shortcuts)
-        case .openCustomDictionaryPane: .pane(.customDictionary)
-        case .openDictionarySourcesPane: .pane(.dictionarySources)
-        case .toggleRomanization: .named(.macosShortcutToggleRomanization)
-        case .toggleTranslateSwapped: .named(.macosShortcutToggleTranslateSwapped)
-        }
-    }
-
-    /// The actions that open a settings pane, and the ones that do something
-    /// to the input method instead. Split off `settingsPane` rather than
-    /// listed by hand, so an action added to one group cannot be missing from
-    /// both.
-    static var paneOpeners: [ShortcutAction] {
-        allCases.filter { $0.settingsPane != nil }
-    }
-
-    static var commands: [ShortcutAction] {
-        allCases.filter { $0.settingsPane == nil }
-    }
-
-    /// The pane this action lands the settings window on, or `nil` for the two
-    /// switches, which open no window at all.
-    var settingsPane: SettingsPane? {
-        guard case let .pane(pane) = destination else { return nil }
-        return pane
-    }
+    /// Whether this action opens the settings window rather than doing
+    /// something to the composition in flight. The two need different
+    /// dispatch: a window is process-wide, while a switch has to reach the
+    /// session that owns the engine (`ShortcutHotkeys.perform`).
+    var opensSettings: Bool { self == .openLastSettingsPane }
 
     /// The chord a fresh install has on this action, read back from the
     /// registry the library seeds itself from.
@@ -144,16 +102,16 @@ enum ShortcutAction: CaseIterable, Sendable {
 
     /// The recorder row's label, under the active display language.
     ///
-    /// A pane doorway is named after the pane, in every surface that draws it: the sidebar row, the
-    /// menu row and the recorder row all read 外觀, so a user who learns the name in one finds it in
-    /// the others. A switch row is authored whole rather than composed from the label of the setting
-    /// it flips: those labels are verb phrases, and wrapping one in a "toggle X" frame reads wrong
-    /// in every language — `漢羅対調を切り替える` doubles the verb.
+    /// Authored whole rather than composed from the label of the setting it
+    /// flips: those labels are verb phrases, and wrapping one in a "toggle X"
+    /// frame reads wrong in every language — `漢羅対調を切り替える` doubles the
+    /// verb.
     @MainActor
     func label(_ language: DisplayLanguageStore) -> String {
-        switch destination {
-        case let .pane(pane): language.string(pane.labelKey)
-        case let .named(key): language.string(key)
+        switch self {
+        case .openLastSettingsPane: language.string(.macosShortcutOpenSettings)
+        case .toggleRomanization: language.string(.macosShortcutToggleRomanization)
+        case .toggleTranslateSwapped: language.string(.macosShortcutToggleTranslateSwapped)
         }
     }
 }
@@ -199,9 +157,11 @@ enum ShortcutHotkeys {
     /// bar those settings would invalidate.
     static func perform(_ action: ShortcutAction) {
         switch action {
-        case .openGeneralPane, .openAppearancePane, .openShortcutPane,
-             .openCustomDictionaryPane, .openDictionarySourcesPane:
-            openSettings(on: action.settingsPane, in: SettingsStore())
+        case .openLastSettingsPane:
+            // `nil`, so the window comes back where the user left it. Which
+            // pane that is belongs to the settings window, not to a chord —
+            // the named panes are reached from the menu bar now.
+            openSettings(on: nil, in: SettingsStore())
         case .toggleRomanization, .toggleTranslateSwapped:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
         }

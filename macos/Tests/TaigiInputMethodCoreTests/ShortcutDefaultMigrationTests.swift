@@ -1,4 +1,4 @@
-// The one-time move of the 漢羅對調 default from ⌃⌘H to the bare backtick.
+// The one-time moves of a shortcut default between builds.
 
 import KeyboardShortcuts
 @testable import TaigiInputMethodCore
@@ -78,5 +78,69 @@ final class ShortcutDefaultMigrationTests: XCTestCase {
         migrate()
 
         XCTAssertEqual(stored[.toggleTranslateSwapped], Self.oldDefault)
+    }
+
+    // MARK: - The second migration (⌃⌘R → ⌃⌘C, 2026-08-25)
+
+    private static let oldRomanizationDefault =
+        KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command])
+
+    func testAnInstallOnTheOldRomanizationDefault_movesToControlCommandC() {
+        stored[.toggleRomanization] = Self.oldRomanizationDefault
+
+        migrate()
+
+        XCTAssertEqual(
+            stored[.toggleRomanization],
+            KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
+        )
+    }
+
+    func testARecordedRomanizationChord_isKept() {
+        let recorded = KeyboardShortcuts.Shortcut(.f13, modifiers: [.control, .option])
+        stored[.toggleRomanization] = recorded
+
+        migrate()
+
+        XCTAssertEqual(stored[.toggleRomanization], recorded)
+    }
+
+    /// The reason each migration carries its OWN flag. An install that skipped
+    /// the build carrying the first one arrives with neither done; a shared
+    /// flag would let whichever ran first mark the other as already handled,
+    /// and that install would keep an old default forever.
+    func testBothMigrations_runOnAnInstallThatMissedTheFirstBuild() {
+        stored[.toggleTranslateSwapped] = Self.oldDefault
+        stored[.toggleRomanization] = Self.oldRomanizationDefault
+
+        migrate()
+
+        XCTAssertEqual(stored[.toggleTranslateSwapped], Self.newDefault)
+        XCTAssertEqual(
+            stored[.toggleRomanization],
+            KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
+        )
+    }
+
+    /// And one already done does not hold the other back.
+    func testTheSecondMigration_runsWithTheFirstAlreadyFlagged() {
+        userDefaults.set(true, forKey: "didMoveTranslateSwappedDefaultToBacktick")
+        stored[.toggleRomanization] = Self.oldRomanizationDefault
+
+        migrate()
+
+        XCTAssertEqual(
+            stored[.toggleRomanization],
+            KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
+        )
+    }
+
+    func testTheOldRomanizationDefaultRecordedAfterMigration_isNotClobbered() {
+        migrate()
+        stored[.toggleRomanization] = Self.oldRomanizationDefault
+
+        migrate()
+
+        XCTAssertEqual(stored[.toggleRomanization], Self.oldRomanizationDefault)
     }
 }

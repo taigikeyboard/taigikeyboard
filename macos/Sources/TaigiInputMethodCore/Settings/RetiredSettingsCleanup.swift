@@ -29,7 +29,25 @@ enum RetiredSettingsCleanup {
         // a chord for "whichever pane was last used" is a second key for what
         // 一般 does. Unlike the two above this one shipped, so real installs
         // hold ⌃⇧, — or whatever the user recorded over it.
+        //
+        // The CONCEPT came back on 2026-08-25 as `openLastSettingsPane` on
+        // ⌃⌘S, once the five pane chords below went and took the reason it was
+        // redundant with them. Deliberately under a different raw value: this
+        // sweep runs every launch, so an action reusing the name would have
+        // its chord cleared each time.
         KeyboardShortcuts.Name("openSettings"),
+        // The five pane doorways, ⌃⇧1–⌃⇧5, retired 2026-08-25 (USER): five
+        // chords is a lot to hold for panes visited about once a day, which
+        // the menu bar already lists by name. One ⌃⌘S doorway reopens
+        // wherever the user left off. Cleared rather than
+        // left: a chord the user recorded on a row that no longer exists is
+        // unreachable from the UI and would spring back on any future action
+        // that reused the name.
+        KeyboardShortcuts.Name("openGeneralPane"),
+        KeyboardShortcuts.Name("openAppearancePane"),
+        KeyboardShortcuts.Name("openShortcutPane"),
+        KeyboardShortcuts.Name("openCustomDictionaryPane"),
+        KeyboardShortcuts.Name("openDictionarySourcesPane"),
     ]
 
     /// Sidebar panes removed from `SettingsPane`. Cleared explicitly rather

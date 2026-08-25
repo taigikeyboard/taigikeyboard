@@ -22,10 +22,38 @@ import KeyboardShortcuts
 /// elsewhere is resolved by the standing conflict policy.
 @MainActor
 enum ShortcutDefaultMigration {
-    /// 切換 漢羅對調: ⌃⌘H → bare ` (USER 2026-08-21).
-    private static let backtickFlagKey = "didMoveTranslateSwappedDefaultToBacktick"
-    private static let supersededTranslateSwappedDefault =
-        KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command])
+    /// One superseded default, and the flag that keeps its rewrite to a single
+    /// launch.
+    ///
+    /// A flag PER migration, never one for the file: a shared flag would let
+    /// whichever migration ran first mark the rest as done, so an install that
+    /// upgraded across two of them would take only the earlier one.
+    private struct Migration {
+        let action: ShortcutAction
+        let supersededDefault: KeyboardShortcuts.Shortcut
+        let flagKey: String
+    }
+
+    /// Oldest first. Each is independent — an install may match none, one, or
+    /// both — so they are checked in turn rather than short-circuited.
+    private static let migrations: [Migration] = [
+        // 切換 漢羅對調: ⌃⌘H → bare ` (USER 2026-08-21).
+        Migration(
+            action: .toggleTranslateSwapped,
+            supersededDefault: KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
+            flagKey: "didMoveTranslateSwappedDefaultToBacktick",
+        ),
+        // 切換 台羅/白話字: ⌃⌘R → ⌃⌘C (USER 2026-08-25). R was the mnemonic
+        // for "romanization", but this switch is reached for all day and is
+        // muscle memory by the second day — what is left is how far the hand
+        // travels, and ⌃, ⌘ and C are all on the bottom row while R is two
+        // rows up with the pinky still anchored.
+        Migration(
+            action: .toggleRomanization,
+            supersededDefault: KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command]),
+            flagKey: "didMoveRomanizationDefaultToControlCommandC",
+        ),
+    ]
 
     /// The shortcut store is injectable because the library reads and writes
     /// `UserDefaults.standard` with no suite injection: a test handing in its
@@ -40,17 +68,16 @@ enum ShortcutDefaultMigration {
             KeyboardShortcuts.setShortcut($0, for: $1.name)
         },
     ) {
-        guard !userDefaults.bool(forKey: backtickFlagKey) else { return }
-        // The flag is written whether or not the rewrite ran: an install
-        // already off the old default has nothing to migrate, and must not be
-        // revisited on a later launch either.
-        userDefaults.set(true, forKey: backtickFlagKey)
+        for migration in migrations {
+            guard !userDefaults.bool(forKey: migration.flagKey) else { continue }
+            // The flag is written whether or not the rewrite ran: an install
+            // already off the old default has nothing to migrate, and must not
+            // be revisited on a later launch either.
+            userDefaults.set(true, forKey: migration.flagKey)
 
-        if shortcutFor(.toggleTranslateSwapped) == supersededTranslateSwappedDefault {
-            setShortcut(
-                ShortcutAction.toggleTranslateSwapped.defaultShortcut,
-                .toggleTranslateSwapped,
-            )
+            if shortcutFor(migration.action) == migration.supersededDefault {
+                setShortcut(migration.action.defaultShortcut, migration.action)
+            }
         }
     }
 }

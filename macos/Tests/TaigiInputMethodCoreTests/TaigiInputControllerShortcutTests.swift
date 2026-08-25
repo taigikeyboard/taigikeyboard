@@ -73,14 +73,14 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         )
     }
 
-    /// A pane doorway is handled before any session is consulted, so reaching a
-    /// session with one must do nothing at all — not change a setting, and not
-    /// disturb the composition on screen.
-    func testAPaneDoorwayAction_isInertAtTheSession() {
+    /// The settings doorway is handled before any session is consulted, so
+    /// reaching a session with it must do nothing at all — not change a
+    /// setting, and not disturb the composition on screen.
+    func testTheSettingsDoorwayAction_isInertAtTheSession() {
         let settingsBefore = controller.settings.current
         let callsBefore = presenter.calls.count
 
-        controller.performShortcutAction(.openGeneralPane)
+        controller.performShortcutAction(.openLastSettingsPane)
 
         XCTAssertEqual(controller.settings.current, settingsBefore)
         XCTAssertEqual(presenter.calls.count, callsBefore)
