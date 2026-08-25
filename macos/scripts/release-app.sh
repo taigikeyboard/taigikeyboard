@@ -85,11 +85,20 @@ fi
 [[ "$BUILD_VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] ||
     fail "CFBundleVersion '$BUILD_VERSION' is not a dotted-integer package version"
 
-# The plist documents the rule (MAJOR*10000 + MINOR*100 + PATCH); this is the
-# one place that enforces it, because the failure mode of a stale build version
-# is an Installer that silently refuses to upgrade.
+# The plist documents the rule (MAJOR*10000 + MINOR*100 + PATCH). This enforces
+# it at package time; `tools/release_notes.py check-versions` enforces the same
+# rule during release prep, before any build exists. Both check because the
+# failure mode of a stale build version is an Installer that silently refuses to
+# upgrade, and either entry point can be the first one a release goes through.
 if [[ "$SHORT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-    expected_build_version=$((BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3]))
+    # The derivation is only collision-free while minor and patch each fit their
+    # own decimal field: 3.1.100 and 3.2.0 both derive to 30200, and two releases
+    # sharing a build version is the same silent-refusal failure.
+    for component in "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}"; do
+        ((10#$component <= 99)) ||
+            fail "$SHORT_VERSION: minor and patch must be 0-99; the build version MAJOR*10000 + MINOR*100 + PATCH would collide with another release"
+    done
+    expected_build_version=$((10#${BASH_REMATCH[1]} * 10000 + 10#${BASH_REMATCH[2]} * 100 + 10#${BASH_REMATCH[3]}))
     [[ "$BUILD_VERSION" == "$expected_build_version" ]] ||
         fail "CFBundleVersion '$BUILD_VERSION' does not derive from $SHORT_VERSION (expected $expected_build_version)"
 fi

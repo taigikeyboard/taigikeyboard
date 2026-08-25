@@ -2,7 +2,7 @@
 
 ## Goal
 
-Maintain one concise English What's New source per platform, show the same content inside each app, and let the release owner paste it into App Store Connect or Google Play manually. No store API credentials or publishing automation are involved.
+Maintain one concise English What's New source per mobile platform, show the same content inside each app, and let the release owner paste it into App Store Connect or Google Play manually. No store API credentials or publishing automation are involved.
 
 ## Canonical sources
 
@@ -15,6 +15,23 @@ Each non-empty line is one entry without a bullet marker. `tools/release_notes.p
 
 Platform notes may differ when shipped behavior differs. For a given platform, its canonical notes, in-app version history, and manually pasted store text must contain the same entries.
 
+## macOS is a separate surface
+
+The store notes cover iOS and Android only. macOS announces itself through its own GitHub release: `macos/scripts/publish-release.sh` passes `changelog/vMAJOR.MINOR.PATCH.md` to `gh release create` as the release body when that file exists, and otherwise publishes a one-line `TaigiKeyboard for macOS <version>` note (`docs/architecture/macos-release.md`).
+
+That splits the two surfaces cleanly:
+
+| Surface | Audience | macOS content |
+| --- | --- | --- |
+| `changelog/vMAJOR.MINOR.PATCH.md` | the detailed record, and the macOS GitHub release body | Its own `### macOS` section. Nothing fails without it — the macOS release just ships with the one-line fallback note instead |
+| `changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt` | App Store and Google Play What's New | **Excluded** — mobile users cannot see macOS-only work |
+
+Shared-engine work that ships on every platform is a mobile change too, so it belongs in the mobile notes on its own merits — described by what a phone user sees, not by the platforms it happened to land on.
+
+`validate_notes` enforces the exclusion: `macOS` and `Mac` are forbidden terms in both `ios.txt` and `android.txt`, matched as whole words so ordinary release-note words such as "machine" and "match" still pass.
+
+All three platforms ship one version number. `check-versions` holds `macos/App/Info.plist` to it as well — `CFBundleShortVersionString` equals the release version, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`, the same derivation `macos/scripts/release-app.sh` enforces at package time.
+
 ## Prepare notes
 
 Create both canonical files, then synchronize the apps:
@@ -23,7 +40,7 @@ Create both canonical files, then synchronize the apps:
 python3 tools/release_notes.py sync --version vMAJOR.MINOR.PATCH --date YYYY/MM/DD
 ```
 
-Validate the canonical files, generated app histories, and project marketing versions:
+Validate the canonical files, generated app histories, and the marketing versions of all three platforms:
 
 ```bash
 python3 tools/release_notes.py check --version vMAJOR.MINOR.PATCH

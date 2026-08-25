@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import plistlib
 import re
 import sys
 from dataclasses import dataclass
@@ -18,11 +19,31 @@ FORBIDDEN_MARKETING_PHRASES = (
     "coming soon",
     "free for a limited time",
 )
+# macOS ships its own release notes: `macos/scripts/publish-release.sh` hands
+# `changelog/v<version>.md` to `gh release create`. The store notes are the
+# mobile surface only, so macOS-only work belongs in the detailed changelog and
+# never in either What's New.
+MACOS_TERMS = ("macOS", "Mac", "Macs", "MacBook")
+# "Mac" opens ordinary English words — machine, macro, macron — so it is the one
+# term matched as a whole word. Every other term takes an open tail, which keeps
+# plurals and compounds ("Androids", "macOSX", "MacBooks") caught; the spellings
+# that tail cannot reach from "Mac" are listed above instead.
+WHOLE_WORD_ONLY_TERMS = frozenset({"Mac"})
 PLATFORM_FORBIDDEN_TERMS = {
-    "ios": ("Android", "Google Play", "Play Store"),
-    "android": ("App Store", "TestFlight"),
+    "ios": ("Android", "Google Play", "Play Store", *MACOS_TERMS),
+    "android": ("App Store", "TestFlight", *MACOS_TERMS),
 }
 VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
+# `MAJOR*10000 + MINOR*100 + PATCH` only stays collision-free while each of the
+# lower two components fits its own decimal field: 3.1.100 and 3.2.0 both derive
+# to 30200, and two releases sharing a build version is an Installer that
+# silently refuses to upgrade.
+MAX_MACOS_VERSION_COMPONENT = 99
+
+
+def forbidden_term_pattern(term: str) -> str:
+    tail = "" if term in WHOLE_WORD_ONLY_TERMS else r"\w*"
+    return rf"\b{re.escape(term)}{tail}\b"
 
 
 class ReleaseNotesError(ValueError):
@@ -96,7 +117,7 @@ def validate_notes(notes: PlatformNotes, path: Path | None = None) -> None:
                     f"{label}:{index}: prohibited marketing phrase {phrase!r}",
                 )
         for term in PLATFORM_FORBIDDEN_TERMS[notes.platform]:
-            if term.casefold() in lowercase_entry:
+            if re.search(forbidden_term_pattern(term), entry, flags=re.IGNORECASE):
                 raise ReleaseNotesError(
                     f"{label}:{index}: {notes.platform} notes must not mention {term!r}",
                 )
@@ -358,6 +379,81 @@ def check_project_versions(repo_root: Path, version: str) -> None:
     if len(build_numbers) != 1:
         raise ReleaseNotesError(
             f"iOS app and extension CURRENT_PROJECT_VERSION values differ: {sorted(build_numbers)}",
+        )
+
+    check_macos_version(repo_root, version)
+
+
+def macos_build_version(version: str) -> str:
+    """The dotted-integer package version `MAJOR.MINOR.PATCH` derives into.
+
+    Mirrors `macos/scripts/release-app.sh`, which enforces the same rule at
+    package time. Duplicated rather than shelled out to because this gate runs
+    before any macOS build exists.
+
+    Takes a bare `MAJOR.MINOR.PATCH` — run `normalize_version` on anything that
+    came from a caller.
+    """
+    match = VERSION_PATTERN.fullmatch(version)
+    if match is None:
+        raise ReleaseNotesError(
+            f"version must use MAJOR.MINOR.PATCH: {version!r}",
+        )
+    major, minor, patch = (int(part) for part in match.group(1).split("."))
+    for name, component in (("minor", minor), ("patch", patch)):
+        if component > MAX_MACOS_VERSION_COMPONENT:
+            raise ReleaseNotesError(
+                f"{version}: {name} version {component} exceeds "
+                f"{MAX_MACOS_VERSION_COMPONENT}; the macOS build version "
+                f"MAJOR*10000 + MINOR*100 + PATCH would collide with another release",
+            )
+    return str(major * 10_000 + minor * 100 + patch)
+
+
+def check_macos_version(repo_root: Path, version: str) -> None:
+    """Hold `macos/App/Info.plist` to the same version as the two mobile apps.
+
+    All three platforms ship one version number. macOS is released separately —
+    its own script, its own GitHub release — so nothing else fails when its
+    plist is left behind, and a stale `CFBundleVersion` is an Installer that
+    silently refuses to upgrade.
+    """
+    path = repo_root / "macos/App/Info.plist"
+    try:
+        raw_plist = path.read_bytes()
+    except FileNotFoundError as error:
+        raise ReleaseNotesError(f"missing macOS Info.plist: {path}") from error
+    except OSError as error:
+        raise ReleaseNotesError(
+            f"cannot read macOS Info.plist {path}: {error}",
+        ) from error
+
+    try:
+        plist = plistlib.loads(raw_plist)
+    except Exception as error:
+        raise ReleaseNotesError(f"{path} is not a readable plist: {error}") from error
+
+    # A plist root may be any property-list type; only a dictionary is an
+    # Info.plist, and `.get` on a list would surface as an AttributeError.
+    if not isinstance(plist, dict):
+        raise ReleaseNotesError(
+            f"{path} does not contain a dictionary at its root",
+        )
+
+    short_version = plist.get("CFBundleShortVersionString")
+    if short_version != version:
+        actual = short_version if short_version is not None else "missing"
+        raise ReleaseNotesError(
+            f"macOS CFBundleShortVersionString is {actual}; expected {version}",
+        )
+
+    expected_build = macos_build_version(version)
+    build_version = plist.get("CFBundleVersion")
+    if build_version != expected_build:
+        actual = build_version if build_version is not None else "missing"
+        raise ReleaseNotesError(
+            f"macOS CFBundleVersion is {actual}; expected {expected_build} "
+            f"(MAJOR*10000 + MINOR*100 + PATCH of {version})",
         )
 
 

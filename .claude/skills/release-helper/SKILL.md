@@ -1,6 +1,6 @@
 ---
 name: release-helper
-description: Prepare a release on main, rebuild generated artifacts, update the detailed changelog, create concise English iOS and Android What's New text, mirror it into both apps' version history, validate it, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release.
+description: Prepare a release on main, rebuild generated artifacts, update the detailed changelog, create concise English iOS and Android What's New text, mirror it into both mobile apps' version history, validate it, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release. Does not publish the macOS release.
 ---
 
 # Release Helper
@@ -34,6 +34,12 @@ git log <base-tag>..HEAD --format="%s%n%b%n---"
 
 Trace user-visible behavior by platform. Do not infer release scope from commit subjects alone.
 
+Sort every user-visible change into one of three buckets before writing anything:
+
+- **iOS-only / Android-only** → that platform's store notes, plus its detailed-changelog section.
+- **Shared** (engine, dictionary, behavior landing on both mobile platforms) → both store notes, plus the shared detailed-changelog section. Describe it by what a phone user sees, not by the platforms it landed on.
+- **macOS-only** → the detailed changelog's `### macOS` section ONLY. Never either store note. macOS announces itself through its own GitHub release, which uses `changelog/<target>.md` as the release body — see § macOS.
+
 Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
 - `BLOCKED` → stop before rebuild or edits.
@@ -57,7 +63,7 @@ Update these surfaces idempotently:
 | File | Purpose |
 | --- | --- |
 | `CHANGELOG.md` | Link to the detailed version changelog |
-| `changelog/<target>.md` | Detailed iOS / Android / Dictionary / Shared record |
+| `changelog/<target>.md` | Detailed Shared / iOS / Android / macOS / Dictionary record; also the macOS GitHub release body |
 | `changelog/store/<target>/ios.txt` | Canonical English iOS What's New |
 | `changelog/store/<target>/android.txt` | Canonical English Android What's New |
 | iOS `VersionHistory.swift` | Generated from `ios.txt` |
@@ -73,7 +79,7 @@ Canonical store-note rules:
 - End each entry with punctuation.
 - Include only concrete user-visible changes.
 - Exclude refactors, tests, tooling, dependencies, issue/PR numbers, URLs, rankings, marketing claims, and future work.
-- Do not mention the other platform in platform-specific notes.
+- Do not mention another platform in platform-specific notes: no Android in `ios.txt`, no App Store in `android.txt`, and no macOS in either. `validate_notes` rejects all three.
 - Keep rendered bullets and newlines within 500 Unicode characters.
 - A platform's app history and store text must use exactly the same entries.
 
@@ -120,6 +126,16 @@ python3 tools/release_notes.py print --version <target> --platform android | pbc
 
 The user pastes iOS text into App Store Connect and Android text into the chosen Google Play release, then manually selects builds and submits releases.
 
+## macOS
+
+macOS ships on its own schedule through `macos/scripts/publish-release.sh`, which passes `changelog/<target>.md` to `gh release create` as the release body when that file exists. This skill does not run it and does not publish anything for macOS.
+
+What that means while preparing a mobile release:
+
+- Write the `### macOS` section of `changelog/<target>.md` anyway. That file is the macOS release body, and the publish script falls back to a one-line `TaigiKeyboard for macOS <target>` note when it is absent — nothing fails, the announcement is just empty of content.
+- Keep macOS out of `ios.txt` and `android.txt` entirely. `validate_notes` forbids the whole words `macOS` and `Mac` in both, so a leak fails `check` rather than reaching a store listing.
+- All three platforms carry one version number. `check-versions` verifies `macos/App/Info.plist` too: `CFBundleShortVersionString` equals `<target>`, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`. A failure here is a real edit to make, not a macOS-release concern to defer.
+
 ## Guardrails
 
 - Never edit another version's changelog or store-note files.
@@ -127,4 +143,5 @@ The user pastes iOS text into App Store Connect and Android text into the chosen
 - Never create, move, or push a tag.
 - Never request, store, or use signing certificates, keystores, API keys, or store credentials.
 - Never upload a build, edit a live store listing, or submit production.
+- Never run the macOS release or publish scripts, and never put macOS-only work in a store note.
 - Surface the first actionable rebuild or validation failure and stop before commit.

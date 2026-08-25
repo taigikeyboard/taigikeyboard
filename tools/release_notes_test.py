@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import plistlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -42,6 +43,150 @@ class ReleaseNotesValidationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, "maximum is 500"):
             release_notes.validate_notes(notes)
+
+    def test_rejects_macos_mention_on_both_mobile_platforms(self) -> None:
+        for platform, entry in (
+            ("ios", "New: macOS candidate window shows selection keys."),
+            ("android", "New: the Mac app can now check for updates."),
+        ):
+            with self.subTest(platform=platform):
+                notes = release_notes.PlatformNotes(
+                    platform=platform, entries=(entry,)
+                )
+
+                with self.assertRaisesRegex(
+                    release_notes.ReleaseNotesError, "must not mention"
+                ):
+                    release_notes.validate_notes(notes)
+
+    def test_accepts_ordinary_words_that_begin_with_mac(self) -> None:
+        notes = release_notes.PlatformNotes(
+            platform="ios",
+            entries=(
+                "Fixed: a macro no longer breaks tone marks on any machine.",
+            ),
+        )
+
+        release_notes.validate_notes(notes)
+
+    def test_rejects_plurals_and_compounds_of_forbidden_terms(self) -> None:
+        for platform, entry in (
+            ("ios", "Changed: Androids now share the same candidate order."),
+            ("android", "New: MacBooks can run the same dictionary."),
+            ("android", "New: macOSX support."),
+            ("ios", "New: Macs share the user dictionary."),
+        ):
+            with self.subTest(entry=entry):
+                notes = release_notes.PlatformNotes(
+                    platform=platform, entries=(entry,)
+                )
+
+                with self.assertRaisesRegex(
+                    release_notes.ReleaseNotesError, "must not mention"
+                ):
+                    release_notes.validate_notes(notes)
+
+
+class MacOSVersionGateTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.repo_root = Path(self.temp_dir.name)
+        self.plist_path = self.repo_root / "macos/App/Info.plist"
+        self.plist_path.parent.mkdir(parents=True)
+
+    def write_plist(self, short_version: str, build_version: str) -> None:
+        self.plist_path.write_bytes(
+            plistlib.dumps(
+                {
+                    "CFBundleShortVersionString": short_version,
+                    "CFBundleVersion": build_version,
+                },
+            ),
+        )
+
+    def test_derives_build_version_from_marketing_version(self) -> None:
+        self.assertEqual(release_notes.macos_build_version("3.6.5"), "30605")
+        self.assertEqual(release_notes.macos_build_version("3.10.12"), "31012")
+
+    def test_rejects_components_the_derivation_cannot_encode(self) -> None:
+        # 3.1.100 and 3.2.0 would both derive to 30605-style collisions.
+        for version in ("3.1.100", "3.100.0"):
+            with self.subTest(version=version):
+                with self.assertRaisesRegex(
+                    release_notes.ReleaseNotesError, "would collide"
+                ):
+                    release_notes.macos_build_version(version)
+
+    def test_rejects_a_version_that_is_not_three_components(self) -> None:
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "MAJOR.MINOR.PATCH"
+        ):
+            release_notes.macos_build_version("3.6")
+
+    def test_accepts_matching_versions(self) -> None:
+        self.write_plist("3.6.5", "30605")
+
+        release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_rejects_stale_marketing_version(self) -> None:
+        self.write_plist("3.6.4", "30604")
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "CFBundleShortVersionString is 3.6.4"
+        ):
+            release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_rejects_build_version_that_does_not_derive(self) -> None:
+        self.write_plist("3.6.5", "30604")
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "CFBundleVersion is 30604"
+        ):
+            release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_reports_missing_plist(self) -> None:
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "missing macOS Info.plist"
+        ):
+            release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_reports_a_plist_that_is_not_a_dictionary(self) -> None:
+        self.plist_path.write_bytes(plistlib.dumps(["3.6.5"]))
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "does not contain a dictionary"
+        ):
+            release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_reports_an_unreadable_plist(self) -> None:
+        self.plist_path.write_bytes(b"not a plist at all")
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "is not a readable plist"
+        ):
+            release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_reports_missing_keys(self) -> None:
+        self.plist_path.write_bytes(plistlib.dumps({"CFBundleName": "TaigiKeyboard"}))
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "CFBundleShortVersionString is missing"
+        ):
+            release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+    def test_accepts_a_binary_plist(self) -> None:
+        self.plist_path.write_bytes(
+            plistlib.dumps(
+                {
+                    "CFBundleShortVersionString": "3.6.5",
+                    "CFBundleVersion": "30605",
+                },
+                fmt=plistlib.FMT_BINARY,
+            ),
+        )
+
+        release_notes.check_macos_version(self.repo_root, "3.6.5")
 
 
 class VersionHistorySyncTests(unittest.TestCase):
