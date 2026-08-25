@@ -49,8 +49,8 @@ final class CandidateChevronView: NSView {
         NSLayoutConstraint.activate([
             separator.leadingAnchor.constraint(equalTo: leadingAnchor),
             separator.centerYAnchor.constraint(equalTo: centerYAnchor),
-            // Tahoe insets the hairline from the capsule's curve, like the
-            // page-arrow separator.
+            // Tahoe insets the hairline from the window's rounded edge, like
+            // the page-arrow separator.
             separator.heightAnchor.constraint(
                 equalTo: heightAnchor, constant: style == .tahoe ? -metrics.tahoeSeparatorInset : 0,
             ),

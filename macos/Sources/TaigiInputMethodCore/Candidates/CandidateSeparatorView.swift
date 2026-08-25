@@ -9,7 +9,7 @@ import AppKit
 /// separator colour reads as a solid stripe on the translucent backdrop.
 final class CandidateSeparatorView: NSView {
     /// Tahoe pulls the hairline in from both ends so it does not touch the
-    /// capsule's curved edge; Sequoia runs it full width.
+    /// window's rounded edge; Sequoia runs it full width.
     var horizontalInset: CGFloat = 0 {
         didSet {
             if horizontalInset != oldValue { needsDisplay = true }

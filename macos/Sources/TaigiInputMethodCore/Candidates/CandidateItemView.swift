@@ -21,10 +21,8 @@ import AppKit
 final class CandidateItemView: NSView {
     let style: CandidateWindowStyle
     private let metrics: CandidateMetrics
-    /// Tahoe insets the highlight into a pill; Sequoia paints the whole cell.
-    private var contentInset: CGFloat { style == .tahoe ? 2 : 0 }
-    /// Tahoe's pill: a separate view under the labels, so the cell's own layer
-    /// can stay untouched. Nil on Sequoia.
+    /// Tahoe's highlight: a separate view under the labels, so the cell's own
+    /// layer can stay untouched. Nil on Sequoia.
     private var highlightView: NSView?
 
     private let indexLabel = NSTextField(labelWithString: "")
@@ -56,7 +54,7 @@ final class CandidateItemView: NSView {
 
     /// No equality guard on purpose: `NSColor` compares dynamic colours equal
     /// across light and dark even though they RESOLVE differently, and the
-    /// pill/backdrop snapshot a resolved `CGColor` — so every assignment
+    /// highlight/backdrop snapshot a resolved `CGColor` — so every assignment
     /// repaints, which is what lets `syncTheme` refresh a cell after the
     /// panel's appearance changed under the same colour value.
     var highlightColor: NSColor = .selectedContentBackgroundColor {
@@ -97,11 +95,11 @@ final class CandidateItemView: NSView {
         wantsLayer = true
 
         if style == .tahoe {
-            let pill = NSView()
-            pill.wantsLayer = true
-            pill.isHidden = true
-            addSubview(pill)
-            highlightView = pill
+            let highlight = NSView()
+            highlight.wantsLayer = true
+            highlight.isHidden = true
+            addSubview(highlight)
+            highlightView = highlight
         }
 
         indexLabel.font = metrics.indexFont
@@ -266,11 +264,23 @@ final class CandidateItemView: NSView {
 
     override func layout() {
         super.layout()
-        if let pill = highlightView, isHighlighted {
-            let inset = bounds.insetBy(dx: contentInset, dy: contentInset)
-            pill.frame = inset
-            pill.layer?.cornerRadius = inset.height / 2
+        if let highlight = highlightView, isHighlighted {
+            layoutHighlight(highlight)
         }
+    }
+
+    /// Places the Tahoe highlight and rounds it concentrically with the window
+    /// (`CandidateMetrics.tahoeHighlightCornerRadius`). Sequoia never reaches
+    /// here — it builds no highlight view and paints the whole cell instead.
+    /// Held to the frame the cell was actually given rather than to the
+    /// metrics' item height, which is what the layouts place cells at but not
+    /// what a future one has to.
+    private func layoutHighlight(_ highlight: NSView) {
+        let inset = bounds.insetBy(dx: metrics.tahoeHighlightInset, dy: metrics.tahoeHighlightInset)
+        highlight.frame = inset
+        highlight.layer?.cornerRadius = CandidateMetrics.cornerRadius(
+            metrics.tahoeHighlightCornerRadius, fitting: inset.size,
+        )
     }
 
     private func updateAppearance() {
@@ -283,13 +293,11 @@ final class CandidateItemView: NSView {
             // not this window's unless said so — a forced-dark panel would
             // otherwise pin its highlight at the light resolution.
             effectiveAppearance.performAsCurrentDrawingAppearance {
-                if let pill = highlightView {
+                if let highlight = highlightView {
                     layer?.backgroundColor = nil
-                    let inset = bounds.insetBy(dx: contentInset, dy: contentInset)
-                    pill.frame = inset
-                    pill.layer?.cornerRadius = inset.height / 2
-                    pill.layer?.backgroundColor = highlightColor.cgColor
-                    pill.isHidden = false
+                    layoutHighlight(highlight)
+                    highlight.layer?.backgroundColor = highlightColor.cgColor
+                    highlight.isHidden = false
                 } else {
                     layer?.backgroundColor = highlightColor.cgColor
                 }
@@ -298,8 +306,8 @@ final class CandidateItemView: NSView {
             indexLabel.textColor = .secondaryLabelColor
             candidateLabel.textColor = .labelColor
             annotationLabel.textColor = .secondaryLabelColor
-            if let pill = highlightView {
-                pill.isHidden = true
+            if let highlight = highlightView {
+                highlight.isHidden = true
             } else {
                 layer?.backgroundColor = nil
             }

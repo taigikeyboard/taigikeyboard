@@ -354,13 +354,14 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         guard size.width > 0, size.height > 0 else { return }
         let radius: CGFloat = switch style {
         case .sequoia: Self.sequoiaCornerRadius
-        case .tahoe: metrics.itemHeight / 2
+        case .tahoe: tahoeCornerRadius(for: size)
         }
         backdrop.applyUniformCorners(size: size, radius: radius)
     }
 
-    /// The pill shape a paged window's turning edge takes: Sequoia rounds only
-    /// the arrow side into a half-height pill, Tahoe is a capsule either way.
+    /// The shape a paged window's turning edge takes: Sequoia rounds only the
+    /// arrow side into a half-height pill, Tahoe keeps the one radius it
+    /// rounds every edge to, paged or not.
     func applyPillCorners(size: NSSize) {
         switch style {
         case .sequoia:
@@ -370,8 +371,13 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
                 rightRadius: size.height / 2,
             )
         case .tahoe:
-            backdrop.applyUniformCorners(size: size, radius: metrics.itemHeight / 2)
+            backdrop.applyUniformCorners(size: size, radius: tahoeCornerRadius(for: size))
         }
+    }
+
+    /// The window's Tahoe radius, held to what this window can round.
+    private func tahoeCornerRadius(for size: NSSize) -> CGFloat {
+        CandidateMetrics.cornerRadius(metrics.tahoeContainerCornerRadius, fitting: size)
     }
 }
 

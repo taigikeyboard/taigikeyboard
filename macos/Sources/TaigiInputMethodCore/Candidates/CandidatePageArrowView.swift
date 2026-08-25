@@ -72,8 +72,8 @@ final class CandidatePageArrowView: NSView {
         NSLayoutConstraint.activate([
             separator.leadingAnchor.constraint(equalTo: leadingAnchor),
             separator.centerYAnchor.constraint(equalTo: centerYAnchor),
-            // Tahoe's capsule window insets the separator so it does not touch
-            // the curved edge; Sequoia's runs full height.
+            // Tahoe insets the separator so it does not touch the window's
+            // rounded edge; Sequoia's runs full height.
             separator.heightAnchor.constraint(
                 equalTo: heightAnchor, constant: style == .tahoe ? -metrics.tahoeSeparatorInset : 0,
             ),

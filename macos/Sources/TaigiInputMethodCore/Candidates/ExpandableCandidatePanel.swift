@@ -130,7 +130,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var itemHeight: CGFloat { metrics.itemHeight }
     private var rowHeight: CGFloat { itemHeight + Self.separatorHeight }
     /// Whether the list holds more than the collapsed row shows — what the
-    /// chevron, the pill corner and the expand paths all key on.
+    /// chevron, the paging-edge corner and the expand paths all key on.
     private var hasOverflow: Bool { cells.count > collapsedRow.count }
     private var gridWidth: CGFloat { expandedColumnWidth * CGFloat(expandedColumnCount) }
     /// The grid's total width, for the tests that pin what a long candidate
@@ -967,7 +967,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 /// The translucent bar Sequoia lays under the expanded grid's selected row,
 /// from MacishType's `MacishHighlightView` (`MacishHighlightView.swift`; MIT,
 /// © 2026 Luke Chang). Tahoe has no equivalent — its cells carry their own
-/// pills.
+/// highlight.
 final class CandidateRowHighlightView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)

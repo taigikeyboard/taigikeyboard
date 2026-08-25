@@ -10,8 +10,10 @@ import Foundation
 ///
 /// - `sequoia`: `NSVisualEffectView` vibrancy, 6pt corners, opaque row
 ///   highlight.
-/// - `tahoe`: `NSGlassEffectView` glass, capsule corners, inset pill
-///   highlight — the macOS 26 look.
+/// - `tahoe`: `NSGlassEffectView` glass, an inset concentric highlight, and
+///   corners the cell arrangement picks — a capsule around one-line cells, a
+///   fixed rounded rectangle around two-line ones
+///   (`CandidateMetrics.tahoeContainerCornerRadius`) — the macOS 26 look.
 ///
 /// The running OS picks it; there is no setting of our own, and this is the
 /// canonical statement of why. A picker for it could not be symmetric: below

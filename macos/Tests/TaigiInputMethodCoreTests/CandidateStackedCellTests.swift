@@ -96,6 +96,45 @@ final class CandidateStackedCellTests: XCTestCase {
         }
     }
 
+    /// The Tahoe highlight renders at the metrics' shape policy: inset inside
+    /// the cell, and rounded concentrically with the window rather than as a
+    /// capsule of its own height — which is what a two-line cell used to draw
+    /// (USER 2026-08-25: the digit hint looked like it fell outside the
+    /// selection).
+    func testStackedTahoeCell_drawsTheConcentricHighlightNotACapsule() throws {
+        let metrics = TestFixtures.defaultCandidateMetrics.arranged(.stacked)
+        let view = CandidateItemView(style: .tahoe, metrics: metrics)
+        view.configure(Self.cell)
+        view.frame = NSRect(
+            x: 0, y: 0, width: metrics.measureWidth(Self.cell), height: metrics.itemHeight,
+        )
+        view.isHighlighted = true
+        view.layoutSubtreeIfNeeded()
+
+        let highlight = try XCTUnwrap(view.subviews.first { !($0 is NSTextField) })
+        XCTAssertEqual(highlight.frame, view.bounds.insetBy(dx: 4, dy: 4))
+        XCTAssertEqual(highlight.layer?.cornerRadius, metrics.tahoeHighlightCornerRadius)
+    }
+
+    /// A cell narrower than twice the radius rounds to what it can hold: the
+    /// concentric radius is a fixed number, so the cell it lands in is what
+    /// bounds it (`CandidateMetrics.cornerRadius(_:fitting:)`).
+    func testNarrowTahoeCell_roundsToWhatItCanHold() throws {
+        let metrics = TestFixtures.defaultCandidateMetrics.arranged(.stacked)
+        let view = CandidateItemView(style: .tahoe, metrics: metrics)
+        view.configure(Self.cell)
+        // Narrower than the layouts ever pack, so the width is the binding axis.
+        view.frame = NSRect(x: 0, y: 0, width: 20, height: metrics.itemHeight)
+        view.isHighlighted = true
+        view.layoutSubtreeIfNeeded()
+
+        let highlight = try XCTUnwrap(view.subviews.first { !($0 is NSTextField) })
+        XCTAssertEqual(highlight.layer?.cornerRadius, (20 - 2 * 4) / 2)
+        XCTAssertLessThan(
+            try XCTUnwrap(highlight.layer?.cornerRadius), metrics.tahoeHighlightCornerRadius,
+        )
+    }
+
     /// The empty-annotation case renders a blank second line rather than
     /// collapsing: a page of cells of two different heights would not line up.
     func testStackedCell_keepsBothLinesInsideItsFrameAtEverySize() {

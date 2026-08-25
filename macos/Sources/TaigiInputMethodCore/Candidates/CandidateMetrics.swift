@@ -103,9 +103,12 @@ struct CandidateMetrics: Equatable, Sendable {
     /// Resolved at construction rather than per read: the fonts it measures
     /// are fixed here, and the layouts read this once per cell they place.
     let itemHeight: CGFloat
-    /// How far Tahoe pulls a hairline in from the capsule's curve, so the
-    /// separator does not touch the rounded edge. Chrome-scaled: the curve it
-    /// clears is half the item height, which the chrome knob grows.
+    /// How far Tahoe pulls a hairline in from the window's rounded edge, so
+    /// the separator does not touch the curve. A chrome-scaled visual constant,
+    /// not a function of the radius it clears — the same value also shortens
+    /// the chevron's and the page arrow's separators, split across both ends
+    /// (`CandidateChevronView`, `CandidatePageArrowView`), which no radius
+    /// would give the right answer for.
     let tahoeSeparatorInset: CGFloat
 
     /// The face the candidate column is set in. The cells' labels and the
@@ -121,6 +124,56 @@ struct CandidateMetrics: Equatable, Sendable {
     /// belonging to the Taigi text, and a CJK face can set ASCII digits at a
     /// width the fixed slot was not measured for.
     var indexFont: NSFont { .systemFont(ofSize: indexFontSize) }
+
+    /// The radius Tahoe rounds the WINDOW to — a capsule for a window of
+    /// inline cells, a fixed rounded rectangle for one of stacked cells.
+    ///
+    /// Upstream takes `itemHeight / 2` unconditionally
+    /// (`MacishBasePanel.swift`), which reads as macOS 26's capsule because
+    /// every upstream cell is one line ~30pt tall — the size range the system
+    /// itself capsules (large controls). A stacked cell is two lines and runs
+    /// 45-65pt across the size ladder, where the same formula draws a stadium
+    /// that dwarfs the text inside it (USER 2026-08-25, real device).
+    ///
+    /// Fixed rather than scaled by either knob: the chrome knob is how much
+    /// air the window keeps, and the text knob how big the glyphs are —
+    /// neither is a licence to change the container's shape language, and a
+    /// radius that moved with them would round the window differently at every
+    /// setting.
+    var tahoeContainerCornerRadius: CGFloat {
+        switch cellArrangement {
+        case .inline: itemHeight / 2
+        case .stacked: Self.stackedContainerCornerRadius
+        }
+    }
+
+    /// How far Tahoe insets the selection from the cell's edge, so the
+    /// highlight nests inside the window's own curve rather than touching it.
+    /// A stacked cell takes the wider inset: its container radius no longer
+    /// grows with the cell, so the nesting has to be visible at 16pt.
+    var tahoeHighlightInset: CGFloat {
+        switch cellArrangement {
+        case .inline: Self.inlineHighlightInset
+        case .stacked: Self.stackedHighlightInset
+        }
+    }
+
+    /// The radius the selection is drawn at: concentric with the window, which
+    /// macOS 26 asks for of nested shapes — the inner radius is the outer one
+    /// less the padding between them. Stated unclamped; the box it is drawn in
+    /// clamps it through `cornerRadius(_:fitting:)`.
+    var tahoeHighlightCornerRadius: CGFloat {
+        tahoeContainerCornerRadius - tahoeHighlightInset
+    }
+
+    /// `radius`, held to what a box of `size` can round: a radius past half
+    /// the shorter side would draw a shape wider than the box it rounds. The
+    /// one clamp both the window and the selection go through, so a fixed
+    /// radius (`tahoeContainerCornerRadius`) has a single guard rather than one
+    /// per drawing site.
+    static func cornerRadius(_ radius: CGFloat, fitting size: CGSize) -> CGFloat {
+        min(radius, min(size.width, size.height) / 2)
+    }
 
     /// `base`, stated at the reference 16pt, scaled to this metrics' text size
     /// and rounded to a whole point. What the chevron and page-arrow views
@@ -149,6 +202,13 @@ struct CandidateMetrics: Equatable, Sendable {
     private static let baseVerticalPadding: CGFloat = 12
     private static let baseStackedLineGap: CGFloat = 2
     private static let baseTahoeSeparatorInset: CGFloat = 8
+    /// What a window of two-line cells rounds to — see
+    /// `tahoeContainerCornerRadius` for why it is a constant and not a scale.
+    private static let stackedContainerCornerRadius: CGFloat = 16
+    /// Upstream's inset, which a capsule needs no more of than a hairline's
+    /// worth (`MacishCandidateItemView.swift`).
+    private static let inlineHighlightInset: CGFloat = 2
+    private static let stackedHighlightInset: CGFloat = 4
 
     init(
         textSize: CandidateTextSizeChoice,

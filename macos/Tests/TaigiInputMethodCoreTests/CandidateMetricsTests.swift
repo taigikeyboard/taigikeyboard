@@ -122,6 +122,86 @@ final class CandidateMetricsTests: XCTestCase {
         }
     }
 
+    // MARK: - Tahoe shape policy
+
+    /// A window of one-line cells keeps upstream's capsule: at 24-35pt those
+    /// cells are the size range macOS itself capsules, and the selection sits
+    /// a hairline inside it.
+    ///
+    /// trace: 中/中 inline → itemHeight 30, container 15, inset 2, highlight 13.
+    func testInlineArrangement_keepsTheCapsuleAndItsHairlineInset() {
+        let inline = defaultMetrics.arranged(.inline)
+
+        XCTAssertEqual(inline.tahoeContainerCornerRadius, inline.itemHeight / 2)
+        XCTAssertEqual(inline.tahoeHighlightInset, 2)
+    }
+
+    /// A window of two-line cells rounds to a fixed rectangle instead: the
+    /// capsule formula reads as a stadium once a cell is twice a control tall
+    /// (USER 2026-08-25). The shape is the arrangement's, not the knobs':
+    /// neither how big the text is nor how much air the window keeps may round
+    /// it differently.
+    ///
+    /// trace: 中/中 stacked → itemHeight 57, container 16, inset 4, highlight 12.
+    func testStackedArrangement_roundsToAFixedRectangleAtEveryChoicePair() {
+        for textSize in CandidateTextSizeChoice.allCases {
+            for windowSize in CandidateWindowSizeChoice.allCases {
+                let metrics = CandidateMetrics(
+                    textSize: textSize, windowSize: windowSize, cellArrangement: .stacked,
+                )
+                let label = "\(textSize)/\(windowSize)"
+
+                XCTAssertEqual(metrics.tahoeContainerCornerRadius, 16, label)
+                XCTAssertEqual(metrics.tahoeHighlightInset, 4, label)
+                XCTAssertEqual(metrics.tahoeHighlightCornerRadius, 12, label)
+                XCTAssertLessThan(
+                    metrics.tahoeContainerCornerRadius, metrics.itemHeight / 2,
+                    "\(label): a stacked cell that still resolved to a capsule would not have "
+                        + "been fixed",
+                )
+            }
+        }
+    }
+
+    /// macOS 26 asks nested shapes to be concentric — the inner radius is the
+    /// outer one less the padding between them.
+    func testHighlightRadius_isTheContainersLessTheInsetEverywhere() {
+        for textSize in CandidateTextSizeChoice.allCases {
+            for windowSize in CandidateWindowSizeChoice.allCases {
+                for arrangement in [CandidateCellArrangement.inline, .stacked] {
+                    let metrics = CandidateMetrics(
+                        textSize: textSize, windowSize: windowSize, cellArrangement: arrangement,
+                    )
+
+                    XCTAssertEqual(
+                        metrics.tahoeContainerCornerRadius - metrics.tahoeHighlightCornerRadius,
+                        metrics.tahoeHighlightInset,
+                        "\(textSize)/\(windowSize)/\(arrangement)",
+                    )
+                }
+            }
+        }
+    }
+
+    /// The one clamp both the window and the selection are drawn through: a
+    /// radius past half the shorter side would round a shape wider than the box
+    /// it is rounding, which a FIXED radius has no other guard against.
+    func testCornerRadiusClamp_holdsARadiusToWhatTheBoxCanRound() {
+        let radius = defaultMetrics.arranged(.stacked).tahoeContainerCornerRadius
+
+        // Roomy in both axes: the radius is what the caller asked for.
+        XCTAssertEqual(
+            CandidateMetrics.cornerRadius(radius, fitting: CGSize(width: 200, height: 57)), radius,
+        )
+        // Either axis alone can be the binding one.
+        XCTAssertEqual(
+            CandidateMetrics.cornerRadius(radius, fitting: CGSize(width: 10, height: 57)), 5,
+        )
+        XCTAssertEqual(
+            CandidateMetrics.cornerRadius(radius, fitting: CGSize(width: 200, height: 24)), 12,
+        )
+    }
+
     // MARK: - Measurement
 
     @MainActor
