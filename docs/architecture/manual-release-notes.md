@@ -17,13 +17,13 @@ Platform notes may differ when shipped behavior differs. For a given platform, i
 
 ## macOS is a separate surface
 
-The store notes cover iOS and Android only. macOS announces itself through its own GitHub release: `macos/scripts/publish-release.sh` passes `changelog/vMAJOR.MINOR.PATCH.md` to `gh release create` as the release body when that file exists, and otherwise publishes a one-line `TaigiKeyboard for macOS <version>` note (`docs/architecture/macos-release.md`).
+The store notes cover iOS and Android only. macOS announces itself through its own GitHub release: `macos/scripts/publish-release.sh` extracts the `### macOS` section of `changelog/vMAJOR.MINOR.PATCH.md` and passes that to `gh release create` as the release body, falling back to a one-line `TaigiKeyboard for macOS <version>` note when the section is missing (`docs/architecture/macos-release.md`).
 
 That splits the two surfaces cleanly:
 
 | Surface | Audience | macOS content |
 | --- | --- | --- |
-| `changelog/vMAJOR.MINOR.PATCH.md` | the detailed record, and the macOS GitHub release body | Its own `### macOS` section. Nothing fails without it — the macOS release just ships with the one-line fallback note instead |
+| `changelog/vMAJOR.MINOR.PATCH.md` | the detailed record; its `### macOS` section is the macOS GitHub release body | That section, headed exactly `### macOS`. Nothing fails without it — the macOS release just ships the one-line fallback note instead |
 | `changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt` | App Store and Google Play What's New | **Excluded** — mobile users cannot see macOS-only work |
 
 Shared-engine work that ships on every platform is a mobile change too, so it belongs in the mobile notes on its own merits — described by what a phone user sees, not by the platforms it happened to land on.

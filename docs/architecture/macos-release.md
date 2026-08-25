@@ -226,8 +226,11 @@ In order:
    `--pkg` can point at any file, and the tag and manifest version both come
    from `Info.plist`, so a stale package would otherwise be announced under the
    current version's name.
-2. `gh release create`, with `changelog/v<version>.md` as the notes when that
-   file exists. If the release already exists — a re-run after something below
+2. `gh release create`, with the `### macOS` section of
+   `changelog/v<version>.md` as the notes when that section exists — the rest of
+   that file is iOS and Android work this page's reader cannot install, and
+   their notes reach them through the stores. A missing section falls back to a
+   one-line note rather than failing. If the release already exists — a re-run after something below
    failed — the package is uploaded into it instead. The release is never
    deleted: the manifest may already point at it, and taking it away to put it
    back leaves a 404 for as long as the second attempt takes, or forever if it

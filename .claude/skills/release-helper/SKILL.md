@@ -38,7 +38,7 @@ Sort every user-visible change into one of three buckets before writing anything
 
 - **iOS-only / Android-only** → that platform's store notes, plus its detailed-changelog section.
 - **Shared** (engine, dictionary, behavior landing on both mobile platforms) → both store notes, plus the shared detailed-changelog section. Describe it by what a phone user sees, not by the platforms it landed on.
-- **macOS-only** → the detailed changelog's `### macOS` section ONLY. Never either store note. macOS announces itself through its own GitHub release, which uses `changelog/<target>.md` as the release body — see § macOS.
+- **macOS-only** → the detailed changelog's `### macOS` section ONLY. Never either store note. macOS announces itself through its own GitHub release, whose body is that section — see § macOS.
 
 Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
@@ -63,7 +63,7 @@ Update these surfaces idempotently:
 | File | Purpose |
 | --- | --- |
 | `CHANGELOG.md` | Link to the detailed version changelog |
-| `changelog/<target>.md` | Detailed Shared / iOS / Android / macOS / Dictionary record; also the macOS GitHub release body |
+| `changelog/<target>.md` | Detailed Shared / iOS / Android / macOS / Dictionary record; its `### macOS` section is the macOS GitHub release body |
 | `changelog/store/<target>/ios.txt` | Canonical English iOS What's New |
 | `changelog/store/<target>/android.txt` | Canonical English Android What's New |
 | iOS `VersionHistory.swift` | Generated from `ios.txt` |
@@ -128,11 +128,11 @@ The user pastes iOS text into App Store Connect and Android text into the chosen
 
 ## macOS
 
-macOS ships on its own schedule through `macos/scripts/publish-release.sh`, which passes `changelog/<target>.md` to `gh release create` as the release body when that file exists. This skill does not run it and does not publish anything for macOS.
+macOS ships on its own schedule through `macos/scripts/publish-release.sh`, which extracts the `### macOS` section of `changelog/<target>.md` and passes that to `gh release create` as the release body. The rest of the file stays behind: a macOS release page carrying iOS and Android notes describes work its reader cannot install. This skill does not run the script and does not publish anything for macOS.
 
 What that means while preparing a mobile release:
 
-- Write the `### macOS` section of `changelog/<target>.md` anyway. That file is the macOS release body, and the publish script falls back to a one-line `TaigiKeyboard for macOS <target>` note when it is absent — nothing fails, the announcement is just empty of content.
+- Write the `### macOS` section of `changelog/<target>.md` anyway. That section IS the macOS release body, and the publish script falls back to a one-line `TaigiKeyboard for macOS <target>` note when it is missing — nothing fails, the announcement is just empty of content. Keep the heading exactly `### macOS`; the extraction matches it literally.
 - Keep macOS out of `ios.txt` and `android.txt` entirely. `validate_notes` forbids the whole words `macOS` and `Mac` in both, so a leak fails `check` rather than reaching a store listing.
 - All three platforms carry one version number. `check-versions` verifies `macos/App/Info.plist` too: `CFBundleShortVersionString` equals `<target>`, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`. A failure here is a real edit to make, not a macOS-release concern to defer.
 

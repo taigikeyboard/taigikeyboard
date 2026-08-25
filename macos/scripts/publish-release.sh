@@ -137,12 +137,34 @@ print((reference.get("version") or "") if reference is not None else "")
 # Release notes come from the changelog when the version has one; the website
 # repository's own commit history has nothing to do with this app, so generated
 # notes would be noise.
+#
+# Only its `### macOS` section. That file is shared with iOS and Android, and
+# their sections describe work a reader of this page cannot install — the
+# mobile What's New reaches them through the stores instead. The heading itself
+# is dropped because the release is already titled for macOS.
+#
+# Written to a file rather than passed as `--notes`: the section is markdown
+# whose newlines would not survive being quoted through an argument. This trap
+# replaces the one set above and covers both temporaries.
 NOTES_FILE="$REPOSITORY_DIR/changelog/v$SHORT_VERSION.md"
-declare -a NOTES_ARGS
+MACOS_NOTES_FILE="$(mktemp)"
+trap 'rm -rf "$PACKAGE_IDENTITY_DIR" "$MACOS_NOTES_FILE"' EXIT
+
 if [[ -f "$NOTES_FILE" ]]; then
-    NOTES_ARGS=(--notes-file "$NOTES_FILE")
+    # `^### ` cannot match a `#### ` subheading — the fourth character is a
+    # hash, not the space the pattern requires — so the section keeps its own
+    # subsections and ends at the next sibling.
+    awk '/^### macOS$/ { inside = 1; next } inside && /^### / { exit } inside' \
+        "$NOTES_FILE" > "$MACOS_NOTES_FILE"
+fi
+
+declare -a NOTES_ARGS
+# One test for both failures: no changelog for this version, and a changelog
+# with no macOS section, are the same situation for this page.
+if [[ -s "$MACOS_NOTES_FILE" ]]; then
+    NOTES_ARGS=(--notes-file "$MACOS_NOTES_FILE")
 else
-    echo "  note: no changelog/v$SHORT_VERSION.md — publishing with a minimal note"
+    echo "  note: no '### macOS' section in changelog/v$SHORT_VERSION.md — publishing with a minimal note"
     NOTES_ARGS=(--notes "TaigiKeyboard for macOS $SHORT_VERSION")
 fi
 
