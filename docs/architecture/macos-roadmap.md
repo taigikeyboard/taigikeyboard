@@ -235,7 +235,11 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   2026-08-15 (USER: 「我覺得可以併入到 make build,只是現階段不 release」)**: both
   macOS steps now run inside root `make build`, so no committed artefact can go
   stale behind an engine change and no separate drift rule is needed.
-  `make macos-protos` / `make macos-engine` remain as macOS-only shortcuts.
+  **Revised 2026-08-26 (USER: 「我覺得可以一起,讓指令簡單」)**: the `make
+  macos-protos` / `make macos-engine` shortcuts PR1 added are gone. They only
+  ever saved the 3-5 min mobile rebuild, and regenerating one platform's
+  artefacts from shared sources is what leaves the others stale against the same
+  commit — the hazard `make build` exists to prevent.
   Building macOS ≠ releasing it — release stays user-gated.
 - **D10 Dev loop** — `macos/Makefile`: build → bundle (+ plutil lint,
   codesign --verify, arch check) → install (delete-before-kill, kill by

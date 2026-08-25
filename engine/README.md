@@ -29,7 +29,7 @@ Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing`
 
 ## Toolchain
 
-Rust stable channel (`rust-toolchain.toml`). `prost-build` compiles `.proto` files at build time; `swift-bridge-build` is invoked from `engine/swift-ffi/build.rs` and the resulting bridge artifacts are bundled into the xcframework by `engine/scripts/build-xcframework.sh`. `cargo-ndk` drives the Android cross-compile from `engine/scripts/build-android-libs.sh`. The macOS IME consumes the same `swift-ffi` crate through `engine/scripts/build-macos-xcframework.sh`, which `make build` also runs (`make macos-engine` is a macOS-only shortcut).
+Rust stable channel (`rust-toolchain.toml`). `prost-build` compiles `.proto` files at build time; `swift-bridge-build` is invoked from `engine/swift-ffi/build.rs` and the resulting bridge artifacts are bundled into the xcframework by `engine/scripts/build-xcframework.sh`. `cargo-ndk` drives the Android cross-compile from `engine/scripts/build-android-libs.sh`. The macOS IME consumes the same `swift-ffi` crate through `engine/scripts/build-macos-xcframework.sh`, which `make build` runs as its last step — every platform's artefacts come from one command, so none can go stale behind another.
 
 ## MSRV
 

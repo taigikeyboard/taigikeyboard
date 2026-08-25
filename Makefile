@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint \
         i18n i18n-test \
-        macos-engine macos-protos macos-release \
+        macos-release \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -78,21 +78,6 @@ i18n-test:
 dogfood:
 	python3 $(DICT)/tools/gen_dogfood.py
 
-# ---------------------------------------------------------------------------
-# macOS-only shortcuts (docs/architecture/macos-roadmap.md D1). `make build`
-# already runs both; these exist to iterate on macOS without paying the full
-# 3-5 min iOS + Android rebuild.
-# No `cargo clean -p protos` here: engine/protos/build.rs declares
-# `rerun-if-changed=proto`, so a .proto edit already rebuilds protos (verified);
-# `build`'s clean is belt-and-braces from D9.4.
-# ---------------------------------------------------------------------------
-
-macos-engine:
-	bash $(ENGINE)/scripts/build-macos-xcframework.sh
-
-macos-protos:
-	bash $(ENGINE)/scripts/gen-macos-protos.sh
-
 # Cut a macOS release: build, sign, notarize, upload, announce. The only entry
 # point for one — `macos/Makefile` is the dev loop and stops at `bundle`.
 #
@@ -142,8 +127,6 @@ help:
 	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
-	@echo "  make macos-engine       macOS-only shortcut: rebuild macos/RustEngine xcframework"
-	@echo "  make macos-protos       macOS-only shortcut: regenerate macOS .pb.swift"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
