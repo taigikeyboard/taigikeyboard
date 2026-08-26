@@ -118,10 +118,23 @@ final class TaigiInputControllerTests: XCTestCase {
         XCTAssertEqual(client.writes, [])
     }
 
-    // The event-mask pin moved: widening past keyDown costs IMK's automatic
-    // commit-on-click, and the mask, the manual `commitComposition` override
-    // that pays that cost, and the click-outside regression are one contract —
-    // pinned together in `ShiftAlphanumericControllerTests`.
+    /// Keydown only. The mask carried `flagsChanged` while a solo-Shift tap
+    /// drove 英數; that feature went on 2026-08-26 — there is no English mode
+    /// here now, the user switches input sources — and a mask still asking for
+    /// modifier transitions would be this input method owning events nothing
+    /// reads.
+    ///
+    /// Widening it also costs IMK's automatic `commitComposition:` on a click
+    /// outside the composition (`IMKInputController.h:154-157`), so this is the
+    /// pin that keeps that cost from being paid by accident.
+    func testRecognizedEvents_isKeyDownOnly() throws {
+        let controller = try TestFixtures.makeInputController()
+
+        XCTAssertEqual(
+            NSEvent.EventTypeMask(rawValue: UInt64(controller.recognizedEvents(nil))),
+            .keyDown,
+        )
+    }
 
     // MARK: - Helpers
 

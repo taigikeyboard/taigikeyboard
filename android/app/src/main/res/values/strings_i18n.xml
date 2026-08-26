@@ -36,9 +36,9 @@
     <string name="i18n_dictionary_customDictEmpty">揤 + 符號加入自訂詞</string>
     <string name="i18n_dictionary_addEntry">增加詞</string>
     <string name="i18n_dictionary_editEntry">編輯詞</string>
-    <string name="i18n_dictionary_romanLabel">拍字</string>
+    <string name="i18n_dictionary_romanLabel">拍</string>
     <string name="i18n_dictionary_romanPlaceholder">見本：gâu-tsá</string>
-    <string name="i18n_dictionary_hanziLabel">對應</string>
+    <string name="i18n_dictionary_hanziLabel">揣</string>
     <string name="i18n_dictionary_hanziPlaceholder">見本：𠢕早</string>
     <string name="i18n_dictionary_deleteAll">刪除全部自訂詞</string>
     <string name="i18n_dictionary_deleteAllMessage">敢確定欲刪除所有自訂詞？</string>

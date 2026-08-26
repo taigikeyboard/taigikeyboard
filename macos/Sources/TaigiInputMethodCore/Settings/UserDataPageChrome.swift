@@ -49,6 +49,10 @@ enum UserDataPageMessage: Identifiable, Hashable {
     /// that way: it names a SQLite or file-system condition, not something the
     /// product has wording for.
     case failure(StringKey, diagnostic: String)
+    /// A receipt with nothing to add: a title, and no body at all. For the one
+    /// kind of success whose result the user cannot see — deleting records
+    /// that have no surface of their own.
+    case done(StringKey)
     /// The one refusal a CSV page makes before it has a parser error to report,
     /// its own case so the same wrong file does not get two different
     /// explanations on two pages.
@@ -66,14 +70,18 @@ enum UserDataPageMessage: Identifiable, Hashable {
     func title(_ language: StringResolver) -> String {
         switch self {
         case let .failure(key, _): language.resolve(key)
+        case let .done(key): language.resolve(key)
         case .notUTF8: language.resolve(.commonImportFailed)
         case .imported: language.resolve(.macosImportComplete)
         }
     }
 
-    func detail(_ language: StringResolver) -> String {
+    /// Nil when the title says the whole of it — an alert then draws a title
+    /// and nothing under it, rather than an empty line where a body would be.
+    func detail(_ language: StringResolver) -> String? {
         switch self {
         case let .failure(_, diagnostic): diagnostic
+        case .done: nil
         case .notUTF8: language.resolve(.macosNotUTF8Detail)
         case let .imported(imported, skipped):
             language.dictionaryImportResult(imported: imported, skipped: skipped)
@@ -148,10 +156,14 @@ private struct UserDataPageChrome: ViewModifier {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
+            // The page's ONE alert. A second `.alert` further down the same
+            // chain does not stack — SwiftUI keeps one, and the 刪除學習紀錄
+            // receipt was the one it dropped (USER 2026-08-26: no message
+            // appeared). Every page message goes through here now.
             .alert(item: $message) { message in
                 Alert(
                     title: Text(message.title(language.resolver)),
-                    message: Text(message.detail(language.resolver)),
+                    message: message.detail(language.resolver).map(Text.init),
                     dismissButton: .default(Text(language.string(.commonOk))),
                 )
             }
@@ -208,8 +220,24 @@ struct UserDataActionsSection: View {
 
     var body: some View {
         Section {
-            Button(language.string(exportTitle), action: onExport)
-            Button(language.string(importTitle), action: onImport)
+            // One row, both verbs, trailing (USER 2026-08-26). They are a pair
+            // — the same file, written one way and read the other — and a pair
+            // reads as one choice side by side and as two unrelated commands
+            // stacked. Trailing is where System Settings puts a row's action
+            // button; a `Button` alone in a form row sits leading, in the
+            // column the pane's LABELS occupy, and these rows have no label.
+            //
+            // 匯入 first (USER): the pair ends on the button nearest the
+            // trailing edge, and 匯出 is the one that ends in a file panel the
+            // user then does something with.
+            //
+            // The clear stays a full-width centred `WideActionRow`: it is not
+            // a control on a row, it is the row (USER 2026-08-24).
+            HStack {
+                Spacer()
+                Button(language.string(importTitle), action: onImport)
+                Button(language.string(exportTitle), action: onExport)
+            }
             WideActionRow(titleKey: deleteTitle, role: .destructive, action: onDelete)
         }
     }

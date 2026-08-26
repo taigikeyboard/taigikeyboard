@@ -85,9 +85,10 @@ enum RetiredSettingsCleanup {
         // its type, `CandidateAccentColor` and `CandidateWindowStyle`.
         "candidateAccentColor",
         "candidateWindowStyle",
-        // 全形標點 and Shift 切換英數, retired 2026-08-24: both are always on
-        // now, so the stored value is inert either way and this only keeps
-        // the domain honest.
+        // 全形標點 and Shift 切換英數, retired 2026-08-24. 全形標點 is always
+        // on now; the Shift toggle's whole feature went on 2026-08-26, when
+        // this input method stopped having an English mode. Either way the
+        // stored value is inert, and this only keeps the domain honest.
         "fullWidthPunctuationEnabled",
         "shiftTogglesAlphanumericEnabled",
     ]

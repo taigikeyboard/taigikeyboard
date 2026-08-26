@@ -1,28 +1,98 @@
-// The control that records which key runs a composing action.
+// The control that records which key runs a shortcut, in either registry.
 
 import AppKit
 import Carbon.HIToolbox
 import KeyboardShortcuts
 import SwiftUI
 
-/// A recording field for one composing action's key.
+/// One key press, in both the forms the 快捷鍵 pane's two registries store.
 ///
-/// An `NSSearchField` subclass because that is what the global chords in the
-/// same section are (`KeyboardShortcuts.RecorderCocoa`), and a pane where half
-/// the rows are recording fields and half are push buttons reads as two
-/// features rather than one. Focus drives recording, the placeholder says what
-/// the field wants, and the cancel button clears the row — the shape a user has
-/// already learnt from every other shortcut field on the Mac.
+/// The composing registry stores the CHARACTER a key types unmodified; the
+/// global one stores a Carbon key CODE. A press yields both at once, and only
+/// the recording moment has the `NSEvent` the second is read from — asking for
+/// it later would mean translating a character back into a key code through
+/// whatever layout happened to be active.
+struct RecordedShortcutKey {
+    let chord: ComposingKeyChord
+    /// Nil when the press carries no Carbon key code to store. A composing row
+    /// does not care; a global row must refuse (`Rejection.notAGlobalKey`).
+    let globalShortcut: KeyboardShortcuts.Shortcut?
+}
+
+/// What a GLOBAL row refuses on top of the shared gate.
 ///
-/// `KeyboardShortcuts.Recorder` itself cannot be reused: it records a Carbon
-/// hotkey, which needs a modifier, and the keys that drive a candidate window
-/// are mostly bare — Return, Space, `[`.
+/// Named rather than written inline at the row, so the policy is one testable
+/// statement: the composing tier's extra refusal is `isCandidateSlotChord`,
+/// and this is its opposite number.
+enum GlobalShortcutPolicy {
+    static func rejection(for key: RecordedShortcutKey) -> ComposingKeyChord.Rejection? {
+        // A global row stores a Carbon key CODE. A press that yields none has
+        // nothing to store, so it cannot be recorded here even though the
+        // shared gate passed it.
+        guard let shortcut = key.globalShortcut else { return .notAGlobalKey }
+        // ⌘ with nothing but Shift beside it belongs to the application being
+        // typed into: that is where a Mac puts its menu commands, and this
+        // input method never takes one (`ShortcutActions`, on ⌃⌘S). The
+        // library used to be the thing enforcing it — indirectly, by refusing
+        // the modifier-less keys we now accept — so stating it is part of
+        // owning the recorder. ⌃⌘ and ⌥⌘ are ours to offer; bare ⌘ is not.
+        if key.chord.modifiers.contains(.command),
+           key.chord.modifiers.isDisjoint(with: [.control, .option])
+        {
+            return .belongsToHost
+        }
+        // A hotkey never receives a chord the window server answers first, so
+        // recording one would leave a row that reads as bound and does
+        // nothing. This is the "unless it collides with a system shortcut"
+        // half of USER 2026-08-26 — but narrowed twice, because the API behind
+        // it is blunter than its name.
+        //
+        // `isTakenBySystem` asks `CopySymbolicHotKeys`, whose "enabled" table
+        // carried 170 entries on the development Mac (probe, 2026-08-26) —
+        // including BARE `a`, `s`, `f`, `q` and the bare backtick this very
+        // action ships on. Those are slots, not shortcuts the user could name,
+        // and a blanket refusal would have made the shipped default
+        // unrecordable: exactly the one-way door this whole change exists to
+        // remove. Upstream never blocks on it either; its own policy for a
+        // system collision is `.warn`, a "Use Anyway" dialog this recorder has
+        // no room for.
+        //
+        // So: only a chord that CARRIES a chording modifier is judged, which
+        // is the shape a real system shortcut has — and never a chord one of
+        // this app's own actions ships on, because a default the app hands out
+        // has to be recordable or 恢復預設設定 would produce a row the recorder
+        // itself rejects.
+        guard !key.chord.modifiers.isDisjoint(with: [.command, .control, .option]) else { return nil }
+        guard !isAShippedDefault(shortcut) else { return nil }
+        return shortcut.isTakenBySystem ? .takenBySystem : nil
+    }
+
+    private static func isAShippedDefault(_ shortcut: KeyboardShortcuts.Shortcut) -> Bool {
+        ShortcutAction.allCases.contains { $0.defaultShortcut == shortcut }
+    }
+}
+
+/// A recording field for one shortcut row, composing tier or global.
+///
+/// An `NSSearchField` subclass because that is the shape a user has already
+/// learnt from every other shortcut field on the Mac: focus drives recording,
+/// the placeholder says what the field wants, and the cancel button clears the
+/// row.
+///
+/// Both tiers, since 2026-08-26. The global rows used
+/// `KeyboardShortcuts.Recorder` until then, and it refuses a modifier-less key
+/// outright — `RecorderCocoa.swift:404-410` beeps and swallows the event
+/// before any validation of ours runs — so a user could not put 漢羅代先 on a
+/// bare `z` even though the action SHIPS on a bare backtick (USER 2026-08-26,
+/// real device). One field for both tiers is also what the pane already
+/// claims to be: one list, whose seam is not supposed to show.
 ///
 /// Refusing is part of the job. A user who recorded `a` here would have no way
 /// left to type the letter, so the keys a syllable is spelled with are turned
 /// down — beep, and the reason in the placeholder — rather than accepted
-/// (`ComposingKeyChord.make`).
-struct ComposingKeyRecorder: NSViewRepresentable {
+/// (`ComposingKeyChord.make`). What each tier refuses ON TOP of that is
+/// `additionalRejection`'s to say.
+struct ShortcutKeyRecorder: NSViewRepresentable {
     /// The chord as stored, or nil for an empty row.
     let chord: ComposingKeyChord?
     /// Which modifier currently holds the candidate slots, so a chord that tier
@@ -31,17 +101,20 @@ struct ComposingKeyRecorder: NSViewRepresentable {
     /// Passed rather than read from the environment: this is an AppKit view,
     /// and the strings are resolved inside it.
     let language: DisplayLanguageStore
-    /// Called with the recorded chord, or nil when the user clears the row.
-    let onChange: (ComposingKeyChord?) -> Void
+    /// The tier's own refusals, run after the shared gate passes. Nil accepts
+    /// everything the gate does.
+    var additionalRejection: ((RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
+    /// Called with the recorded key, or nil when the user clears the row.
+    let onRecord: (RecordedShortcutKey?) -> Void
 
-    func makeNSView(context _: Context) -> ComposingKeyRecorderField {
-        let field = ComposingKeyRecorderField()
+    func makeNSView(context _: Context) -> ShortcutKeyRecorderField {
+        let field = ShortcutKeyRecorderField()
         apply(to: field)
         field.chord = chord
         return field
     }
 
-    func updateNSView(_ field: ComposingKeyRecorderField, context _: Context) {
+    func updateNSView(_ field: ShortcutKeyRecorderField, context _: Context) {
         apply(to: field)
         // Guarded: assigning redraws the field, and doing that on every SwiftUI
         // update would fight the row the user is recording into.
@@ -50,22 +123,24 @@ struct ComposingKeyRecorder: NSViewRepresentable {
         }
     }
 
-    private func apply(to field: ComposingKeyRecorderField) {
+    private func apply(to field: ShortcutKeyRecorderField) {
         field.language = language
         field.slotModifier = slotModifier
-        field.onChange = onChange
+        field.additionalRejection = additionalRejection
+        field.onRecord = onRecord
     }
 }
 
 /// The field itself.
-final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
+final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// Upstream's width for the same control, so a section mixing the two does
     /// not step (`KeyboardShortcuts.RecorderCocoa`).
     private static let minimumWidth: Double = 130
 
     var language: DisplayLanguageStore?
     var slotModifier: CandidateSlotModifier = .control
-    var onChange: ((ComposingKeyChord?) -> Void)?
+    var additionalRejection: ((RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
+    var onRecord: ((RecordedShortcutKey?) -> Void)?
 
     var chord: ComposingKeyChord? {
         didSet { renderChord() }
@@ -208,7 +283,7 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// Puts the bound chord on screen — or leaves the field empty, showing the
     /// prompt, when the row has none.
     private func showChord() {
-        super.stringValue = chord.map(ComposingKeyDisplay.text(for:)) ?? ""
+        super.stringValue = chord.map(ShortcutKeyDisplay.text(for:)) ?? ""
         showsCancelButton = !stringValue.isEmpty
     }
 
@@ -223,7 +298,7 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     @objc
     private func clearChord() {
         chord = nil
-        onChange?(nil)
+        onRecord?(nil)
     }
 
     override func viewDidMoveToWindow() {
@@ -296,6 +371,12 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         case .reservedKey: return language.string(.macosShortcutRejectedReservedKey)
         case .noKey: return language.string(.macosShortcutRejectedNoKey)
         case .candidateSlotChord: return language.string(.macosShortcutRejectedSlotChord)
+        case .takenBySystem: return language.string(.macosShortcutRejectedSystemShortcut)
+        // The same words a reserved key is refused with: to the reader both
+        // mean "not this key", and a press the Carbon registry cannot name is
+        // not a distinction worth a sentence of its own.
+        case .notAGlobalKey: return language.string(.macosShortcutRejectedReservedKey)
+        case .belongsToHost: return language.string(.macosShortcutRejectedHostShortcut)
         }
     }
 
@@ -366,9 +447,19 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         case let .success(recorded) where recorded.isCandidateSlotChord(under: slotModifier):
             refuse(.candidateSlotChord)
         case let .success(recorded):
+            // Both storage forms are read here, off the one event that carries
+            // them: the Carbon key code is gone the moment this returns.
+            let key = RecordedShortcutKey(
+                chord: recorded,
+                globalShortcut: KeyboardShortcuts.Shortcut(event: event),
+            )
+            if let reason = additionalRejection?(key) {
+                refuse(reason)
+                return nil
+            }
             rejection = nil
             chord = recorded
-            onChange?(recorded)
+            onRecord?(key)
             blur()
         case let .failure(reason):
             refuse(reason)
@@ -390,7 +481,7 @@ final class ComposingKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
 }
 
 /// How a recorded chord reads on screen.
-enum ComposingKeyDisplay {
+enum ShortcutKeyDisplay {
     /// The names AppKit has no glyph for, and the glyphs it does. Written out
     /// rather than resolved from the system because these are the keycap
     /// legends: they are the same on a keyboard sold anywhere, and translating

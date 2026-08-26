@@ -11,6 +11,9 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     private var userDefaults = UserDefaults.standard
     private var controller: TaigiInputController!
     private var presenter: RecordingCandidatePresenter!
+    /// What the HUD was asked to say, in order. Recorded rather than shown: a
+    /// real flash is a panel ordered in front of whoever is running the tests.
+    private var flashes: [String] = []
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -20,6 +23,13 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.settings = SettingsStore(userDefaults: userDefaults)
         presenter = RecordingCandidatePresenter()
         controller.candidatePresenter = presenter
+        // Pinned, so the flash reads in the language this case asked for rather
+        // than the language of whatever machine is running it.
+        controller.displayLanguageOverride = TestFixtures.makeDisplayLanguageStore(
+            .hanji, userDefaults: userDefaults,
+        )
+        flashes = []
+        controller.modeFlashOverride = { [weak self] text in self?.flashes.append(text) }
     }
 
     override func tearDown() {
@@ -71,6 +81,26 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
             },
             "a display-only swap must not route through dismissal",
         )
+    }
+
+    /// The chord fires from anywhere, so nothing on screen would otherwise say
+    /// which romanization is now live — and a switch with no notice reads as
+    /// the keyboard breaking. Same HUD the Shift tap raises (USER 2026-08-26),
+    /// naming the mode switched INTO.
+    func testTheRomanizationSwitch_announcesTheModeItSwitchedInto() {
+        controller.performShortcutAction(.toggleRomanization)
+        XCTAssertEqual(flashes, ["白話字"])
+
+        controller.performShortcutAction(.toggleRomanization)
+        XCTAssertEqual(flashes, ["白話字", "台羅"])
+    }
+
+    /// The 漢羅 swap does not announce itself: it changes how the candidates on
+    /// screen render, and they re-render where the user is already looking.
+    func testTheTranslateSwap_raisesNoFlash() {
+        controller.performShortcutAction(.toggleTranslateSwapped)
+
+        XCTAssertEqual(flashes, [])
     }
 
     /// The settings doorway is handled before any session is consulted, so

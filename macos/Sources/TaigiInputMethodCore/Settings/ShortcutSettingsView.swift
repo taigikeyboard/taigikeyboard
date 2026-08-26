@@ -10,11 +10,14 @@ import SwiftUI
 /// classifier is an implementation detail, and splitting the rows on it made
 /// the reader ask what the split meant (USER 2026-08-21).
 ///
-/// Two controls all the same, because the keys they hold differ: a global chord
-/// always carries a modifier, so `KeyboardShortcuts.Recorder` records it, while
-/// a composing key is mostly bare — Return, Space, `[` — so
-/// `ComposingKeyRecorder` does. Both are recording fields of the same size and
-/// shape, so the seam does not show.
+/// One CONTROL too, since 2026-08-26: every row is a `ShortcutKeyRecorder`.
+/// The global rows were `KeyboardShortcuts.Recorder` until then, and it beeps
+/// at any modifier-less key before validation of ours can run
+/// (`RecorderCocoa.swift:404-410`) — so 漢羅代先 could not be moved to a bare
+/// `z` even though it SHIPS on a bare backtick (USER, real device). What the
+/// two tiers still differ in is where the recorded key is written and what
+/// each refuses on top of the shared gate, which is what `onRecord` and
+/// `additionalRejection` carry.
 ///
 /// `@AppStorage` for the settings the pane owns outright, and the store for the
 /// per-action chords, whose write has to run conflict resolution first.
@@ -47,10 +50,10 @@ struct ShortcutSettingsView: View {
                     globalRecorderRow(action)
                 }
 
-                // Same order the input-source menu draws, so a user who learnt
-                // the roster in one surface reads it in the other: the keys
-                // that move through the candidates, then the keys that end the
-                // composition (`ComposingAction.groups`).
+                // The keys that move through the candidates, then the keys
+                // that end the composition (`ComposingAction.groups`). No
+                // other surface shows this roster: the input-source menu never
+                // could, since the agent dispatches whatever it draws.
                 ForEach(ComposingAction.groups[0], id: \.self) { action in
                     recorderRow(action)
                 }
@@ -70,8 +73,6 @@ struct ShortcutSettingsView: View {
                 ForEach(ComposingAction.groups[1], id: \.self) { action in
                     recorderRow(action)
                 }
-            } header: {
-                Text(language.string(.macosKeyboardActionsSection))
             }
 
             // Its own section, at the end: it acts on every row above it rather
@@ -91,39 +92,51 @@ struct ShortcutSettingsView: View {
         }
     }
 
-    /// One global-hotkey row. Shared by both groups, so the conflict rules
-    /// below cannot come to differ between them.
+    /// One global-hotkey row.
+    ///
+    /// The chord is read back THROUGH the cross-registry bridge rather than
+    /// rendered by the library: the field speaks `ComposingKeyChord`, and the
+    /// bridge is already the one translation between a Carbon key code and the
+    /// character it types (`ShortcutConflicts.composingChord(occupiedBy:)`).
     private func globalRecorderRow(_ action: ShortcutAction) -> some View {
-        KeyboardShortcuts.Recorder(action.label(language), name: action.name) { _ in
-            ShortcutConflicts.resolve(after: action)
-            // The other registry, by the same rule: this recording is the last
-            // writer, so a composing row holding the same key empties. Carbon
-            // dispatches before the classifier ever runs, so leaving that row
-            // would leave a key that reads as bound and does nothing.
-            ShortcutConflicts.resolveComposingRows(after: action, in: store)
-            reload()
-        }
-        // The nine candidate-slot chords are the one thing this recorder
-        // refuses rather than resolves: the slot tier is a picker, not a row,
-        // so it has nothing to empty.
-        .shortcutValidation { shortcut in
-            guard ShortcutConflicts.isSlotChord(shortcut, under: bindings.slotModifier)
-            else { return .allow }
-            // The same words the composing recorder refuses with.
-            return .disallow(reason: language.string(.macosShortcutRejectedSlotChord))
+        LabeledContent(action.label(language)) {
+            ShortcutKeyRecorder(
+                chord: KeyboardShortcuts.getShortcut(for: action.name)
+                    .flatMap(ShortcutConflicts.composingChord(occupiedBy:)),
+                slotModifier: bindings.slotModifier,
+                language: language,
+                additionalRejection: GlobalShortcutPolicy.rejection(for:),
+            ) { key in
+                record(key?.globalShortcut, for: action)
+            }
         }
     }
 
     private func recorderRow(_ action: ComposingAction) -> some View {
         LabeledContent(action.label(language)) {
-            ComposingKeyRecorder(
+            ShortcutKeyRecorder(
                 chord: bindings.chord(for: action),
                 slotModifier: bindings.slotModifier,
                 language: language,
-            ) { chord in
-                record(chord, for: action)
+            ) { key in
+                record(key?.chord, for: action)
             }
         }
+    }
+
+    /// Writes `shortcut` to `action`, taking it off whichever row held it.
+    ///
+    /// The global-tier twin of `record(_:for:)` below, and the same rule: last
+    /// writer wins across both registries.
+    private func record(_ shortcut: KeyboardShortcuts.Shortcut?, for action: ShortcutAction) {
+        KeyboardShortcuts.setShortcut(shortcut, for: action.name)
+        ShortcutConflicts.resolve(after: action)
+        // The other registry, by the same rule: this recording is the last
+        // writer, so a composing row holding the same key empties. Carbon
+        // dispatches before the classifier ever runs, so leaving that row would
+        // leave a key that reads as bound and does nothing.
+        ShortcutConflicts.resolveComposingRows(after: action, in: store)
+        reload()
     }
 
     /// Writes `chord` to `action`, taking it off whichever row held it.

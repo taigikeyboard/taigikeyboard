@@ -14,8 +14,8 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// `KeyboardShortcuts` stores in `UserDefaults.standard` and offers no
     /// suite injection, so a case that records a chord is writing into the
     /// settings of whoever is running the tests. The whole roster is saved here
-    /// and put back in `tearDown` — the menu prints every action's chord now, so
-    /// a case can touch any of them.
+    /// and put back in `tearDown` — the menu prints the doorway's chord, and a
+    /// case may clear or re-record any of them.
     private var savedShortcuts: [ShortcutAction: KeyboardShortcuts.Shortcut?] = [:]
 
     /// How many times a row asked for the settings window.
@@ -30,9 +30,9 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // Pinned, so the menu's titles are the language this case asked for rather than the
         // language of whatever machine is running it.
         controller.displayLanguageOverride = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
-        // Every doorway row ends in a window. Counted here rather than shown:
-        // an input method's settings window ordered in mid-test lands in front
-        // of whoever is running the tests.
+        // The doorway row ends in a window. Counted here rather than shown: an
+        // input method's settings window ordered in mid-test lands in front of
+        // whoever is running the tests.
         controller.settingsPresenterOverride = { [weak self] in self?.settingsShownCount += 1 }
         savedShortcuts = Dictionary(
             uniqueKeysWithValues: ShortcutAction.allCases.map {
@@ -66,41 +66,42 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         )
     }
 
-    /// Doorways and one command, in that order: every settings pane in sidebar
-    /// order, then — past the rule — the check that has somewhere to go rather
+    /// One doorway and one command, in that order: the way into the settings
+    /// window, then — past the rule — the check that has somewhere to go rather
     /// than somewhere to be. No composing key appears here; the menu stopped
     /// being the shortcut roster when the agent proved unable to display one
     /// without also dispatching it.
-    func testMenu_isTheSettingsDoorwaysThenCheckForUpdates() throws {
+    func testMenu_isTheSettingsDoorwayThenCheckForUpdates() throws {
         let items = try menu().items
 
         // The literal oracle for this surface: the copy is the authored Hanji.
-        // Each pane row reuses the pane's own name, the way a row that opens a
-        // pane is named after it.
-        XCTAssertEqual(
-            items.map(\.title),
-            ["一般", "外觀", "快速齒", "自訂詞庫", "辭典管理", "", "檢查更新"],
-        )
+        XCTAssertEqual(items.map(\.title), ["設定", "", "檢查更新"])
         XCTAssertEqual(items.filter(\.isSeparatorItem).count, 1)
         XCTAssertFalse(try XCTUnwrap(items.first).isSeparatorItem)
         XCTAssertFalse(try XCTUnwrap(items.last).isSeparatorItem)
         XCTAssertEqual(
             items.filter { !$0.isSeparatorItem }.map(\.action),
-            Self.doorways.map(\.selector) + [Self.checkForUpdates],
+            [Self.openSettings, Self.checkForUpdates],
         )
     }
 
-    /// The pane rows read exactly what the sidebar reads, in exactly its
-    /// order: a user who learns 外觀 in one surface must find it in the other,
-    /// and a pane added to the sidebar without a row here would silently have
-    /// no key.
-    func testThePaneRows_matchTheSidebar() throws {
-        let language = try XCTUnwrap(controller.displayLanguageOverride)
-        let paneTitles = try menu().items
-            .filter { row in Self.doorways.contains { $0.selector == row.action } }
-            .map(\.title)
+    /// A row per pane, each named after its own sidebar row, from 2026-08-21
+    /// until 2026-08-26. They went the way the ⌃⇧ chords behind them had
+    /// (USER): five rows into one window are five names for the same thing, and
+    /// naming the panes is the sidebar's job. Pinned so none returns by
+    /// accident — each was a row that could take a host key.
+    func testMenu_hasNoPerPaneRows() throws {
+        let retired = [
+            "openGeneralPane:", "openAppearancePane:", "openShortcutPane:",
+            "openCustomDictionaryPane:", "openDictionarySourcesPane:",
+        ].map { Selector(($0)) }
 
-        XCTAssertEqual(paneTitles, SettingsPane.allCases.map { language.string($0.labelKey) })
+        for row in try menu().items {
+            XCTAssertFalse(
+                row.action.map(retired.contains) ?? false,
+                "\(row.title) still opens a named pane straight from the menu",
+            )
+        }
     }
 
     /// 檢查更新 is a command, not a shortcut, and a key equivalent claimed here
@@ -115,55 +116,53 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertEqual(row.keyEquivalentModifierMask, [])
     }
 
-    /// The general form of the rule above: only a doorway may claim a key. A
-    /// row that claims one the user cannot see and re-record in the 快速齒
-    /// pane is a key taken from the host that no surface admits to.
-    func testOnlyTheDoorwayRows_claimAKey() throws {
-        let doorwaySelectors = Set(Self.doorways.map(\.selector))
-
+    /// The general form of the rule above: only the doorway may claim a key. A
+    /// row that claims one the user cannot see and re-record in the 快捷鍵 pane
+    /// is a key taken from the host that no surface admits to.
+    func testOnlyTheSettingsRow_claimsAKey() throws {
         for row in try menu().items where !row.keyEquivalent.isEmpty {
-            XCTAssertTrue(
-                row.action.map(doorwaySelectors.contains) ?? false,
-                "\(row.title) claims \(row.keyEquivalent) but is not a recordable action",
-            )
+            XCTAssertEqual(row.action, Self.openSettings, "\(row.title) claims \(row.keyEquivalent)")
         }
     }
 
-
-    /// No pane row claims a key equivalent, whatever is in the global registry.
-    ///
-    /// They carried the ⌃⇧1–⌃⇧5 chords until 2026-08-25; those were retired and
-    /// the rows now dispatch straight to a pane. So a chord recorded on the one
-    /// surviving global action must not surface here — a key equivalent drawn
-    /// on a menu item is taken from the host for as long as this input source
-    /// is selected, and these rows no longer have one to spend.
-    func testThePaneRows_claimNoKeyEquivalent() throws {
+    /// The row prints the chord the 快捷鍵 pane holds for it right now, not the
+    /// one it shipped with: the menu is rebuilt on every draw, which is what
+    /// lets it follow a re-recording with no refresh wiring of its own.
+    func testTheSettingsRow_printsTheRecordedChord() throws {
         KeyboardShortcuts.setShortcut(
             .init(.j, modifiers: [.control, .option]),
             for: .openLastSettingsPane,
         )
 
-        for doorway in Self.doorways {
-            let row = try item(action: doorway.selector, in: menu())
-            XCTAssertEqual(row.keyEquivalent, "", "\(doorway.pane) took a host key")
-            XCTAssertEqual(row.keyEquivalentModifierMask, [])
-        }
+        let row = try item(action: Self.openSettings, in: menu())
+
+        XCTAssertEqual(row.keyEquivalent, "j")
+        XCTAssertEqual(row.keyEquivalentModifierMask, [.control, .option])
     }
 
-    /// Clicking a pane row moves the window to that pane, so it opens where
-    /// the key is rather than wherever it was left — and every row lands on
-    /// its own pane, which is what a mis-paired selector would break.
-    func testEveryPaneRow_selectsItsOwnPane() throws {
-        for doorway in Self.doorways {
-            let pane = doorway.pane
-            controller.settings.selectedSettingsPane = pane == .general ? .appearance : .general
+    /// And nothing at all once the user has cleared that row: a key equivalent
+    /// drawn here is taken from the host application for as long as this input
+    /// source is selected, so an action with no chord must spend none.
+    func testTheSettingsRow_claimsNoKeyWithNothingRecorded() throws {
+        KeyboardShortcuts.setShortcut(nil, for: .openLastSettingsPane)
 
-            try select(doorway.selector)
+        let row = try item(action: Self.openSettings, in: menu())
 
-            XCTAssertEqual(controller.settings.selectedSettingsPane, pane)
-        }
+        XCTAssertEqual(row.title, "設定")
+        XCTAssertEqual(row.keyEquivalent, "")
+        XCTAssertEqual(row.keyEquivalentModifierMask, [])
+    }
 
-        XCTAssertEqual(settingsShownCount, SettingsPane.allCases.count)
+    /// Clicking the row opens the window where the user left it, which is what
+    /// the chord it prints does — a row that jumped to a fixed pane would land
+    /// somewhere other than its own key.
+    func testTheSettingsRow_reopensTheStoredPane() throws {
+        controller.settings.selectedSettingsPane = .customDictionary
+
+        try select(Self.openSettings)
+
+        XCTAssertEqual(controller.settings.selectedSettingsPane, .customDictionary)
+        XCTAssertEqual(settingsShownCount, 1)
     }
 
     /// The check needs the window it will answer in, so the row opens it — on
@@ -196,70 +195,14 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         wait(for: [fetched], timeout: 2)
     }
 
-    /// The generic 開啟設定 row and its ⌃⇧, chord went away on 2026-08-24
-    /// (USER): once every pane has a row, a row for "whichever pane was last
-    /// used" is a second key for what 一般 already does. Pinned so it cannot
-    /// come back by accident — a row here would take a host key again.
-    func testMenu_hasNoOpenSettingsRow() throws {
-        for row in try menu().items {
-            XCTAssertNotEqual(row.action, Self.showPreferences, row.title)
-        }
-    }
-
-    /// The override behind that retired row stays: it is the selector the
-    /// system reserves for this command (`IMKInputController.h:165-170`), and
-    /// a generic "preferences" command reopens where the user left off rather
-    /// than jumping them to a pane they did not ask for.
-    func testShowPreferences_stillOpensTheWindowOnTheStoredPane() {
-        controller.settings.selectedSettingsPane = .customDictionary
-
-        controller.showPreferences(nil)
-
-        XCTAssertEqual(controller.settings.selectedSettingsPane, .customDictionary)
-        XCTAssertEqual(settingsShownCount, 1)
-    }
-
     /// The menu is rebuilt on every draw, which is what lets it follow a language change with no
     /// refresh wiring of its own.
     func testMenu_redrawnAfterALanguageChange_readsInTheNewLanguage() throws {
-        XCTAssertEqual(try item(action: Self.openAppearancePane, in: menu()).title, "外觀")
+        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "設定")
 
         try XCTUnwrap(controller.displayLanguageOverride).setLanguage(.english)
 
-        XCTAssertEqual(try item(action: Self.openAppearancePane, in: menu()).title, "Appearance")
-    }
-
-    private static let showPreferences = Selector(("showPreferences:"))
-    private static let checkForUpdates = Selector(("checkForUpdates:"))
-    private static let openAppearancePane = Selector(("openAppearancePane:"))
-
-    /// The menu's first group, mirrored: the pane each row opens and the
-    /// selector IMK routes it by. A literal rather than a read of the
-    /// controller's own table, so a row that moved would fail here instead of
-    /// agreeing with itself.
-    ///
-    /// Keyed on the PANE since 2026-08-25. These rows used to carry a
-    /// `ShortcutAction` and draw its chord; the five pane chords were retired
-    /// (USER) and the rows outlived them, so what a row knows now is which
-    /// pane it opens and nothing about the global roster.
-    private static let doorways: [(pane: SettingsPane, selector: Selector)] = [
-        (.general, Selector(("openGeneralPane:"))),
-        (.appearance, openAppearancePane),
-        (.shortcuts, Selector(("openShortcutPane:"))),
-        (.customDictionary, Selector(("openCustomDictionaryPane:"))),
-        (.dictionarySources, Selector(("openDictionarySourcesPane:"))),
-    ]
-
-    /// The row is still named, and still opens its pane, with nothing in the
-    /// global registry at all — the menu is the way to a named pane now, not a
-    /// display of a chord.
-    func testAPaneRow_isNamedAndKeylessWithNoGlobalShortcutAtAll() throws {
-        KeyboardShortcuts.setShortcut(nil, for: .openLastSettingsPane)
-
-        let row = try item(action: Self.openAppearancePane, in: menu())
-
-        XCTAssertEqual(row.title, "外觀")
-        XCTAssertEqual(row.keyEquivalent, "")
+        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "Settings")
     }
 
     /// ⌘, belongs to the application being typed into. A key equivalent claimed
@@ -284,6 +227,12 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertFalse(try menu().autoenablesItems)
     }
 
+    private static let checkForUpdates = Selector(("checkForUpdates:"))
+    /// The doorway's command: `showPreferences:` is the selector the system
+    /// reserves for it (`IMKInputController.h:165-170`), so the row sends that
+    /// rather than a second one of the controller's own.
+    private static let openSettings = Selector(("showPreferences:"))
+
     /// Goes through the routing IMK really uses: a menu command arrives as
     /// `doCommandBySelector:commandDictionary:`, whose default implementation
     /// checks whether the controller responds to the selector and then performs
@@ -298,5 +247,4 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         let sent = try XCTUnwrap(item(action: action, in: menu()).action)
         controller.doCommand(by: sent, command: [:])
     }
-
 }

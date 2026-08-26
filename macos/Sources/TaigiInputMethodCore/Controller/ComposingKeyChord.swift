@@ -66,6 +66,22 @@ struct ComposingKeyChord: Hashable, Sendable {
         /// classified before bound actions, so the binding would be recorded
         /// and then never fire (`ComposingKeyIntent.intent`).
         case candidateSlotChord
+        /// A chord the system already answers to. Global-tier only: a Carbon
+        /// hotkey never gets a chord the window server has taken first, so
+        /// recording one would leave a row that reads as bound and does
+        /// nothing (`KeyboardShortcuts.Shortcut.isTakenBySystem`).
+        case takenBySystem
+        /// A key press the Carbon registry cannot name. Global-tier only: a
+        /// global row stores a key CODE, and a press that yields none has
+        /// nothing to store.
+        case notAGlobalKey
+        /// A bare ⌘ combination. Global-tier only: ⌘ plus a key is the shape a
+        /// Mac application puts its own menu commands on, and a global hotkey
+        /// takes that key from whatever the user is typing into for as long as
+        /// this input source is selected — ⌘, would cost them their app's own
+        /// settings command. Composing rows never see this: they are read
+        /// inside a composition, not registered process-wide.
+        case belongsToHost
     }
 
     /// Whether this chord is one of the nine `1`…`9` slot chords under

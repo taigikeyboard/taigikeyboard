@@ -71,8 +71,24 @@ struct AppearanceSettingsView: View {
                     }
                 }
             }
+
+            // Its own section, at the end, drawn the way the 快捷鍵 pane draws
+            // its own: it acts on every row above it rather than on any one of
+            // them.
+            Section {
+                WideActionRow(titleKey: .themeEditorResetAll, action: restoreDefaults)
+            }
         }
         .formStyle(.grouped)
+    }
+
+    /// Puts the whole pane back to what a fresh install renders with.
+    ///
+    /// The `@AppStorage` bindings above repaint on their own: removing a key
+    /// is a `UserDefaults` change like any other, and each binding falls back
+    /// to the default it was declared with.
+    private func restoreDefaults() {
+        SettingsStore().resetAppearanceSettings()
     }
 }
 

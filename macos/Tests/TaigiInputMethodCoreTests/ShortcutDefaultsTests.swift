@@ -59,7 +59,7 @@ final class ShortcutDefaultsTests: XCTestCase {
         XCTAssertEqual(
             Set(all).count,
             all.count,
-            "two tiers ship the same chord: \(all.map(ComposingKeyDisplay.text(for:)))",
+            "two tiers ship the same chord: \(all.map(ShortcutKeyDisplay.text(for:)))",
         )
     }
 

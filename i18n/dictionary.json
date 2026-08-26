@@ -239,7 +239,7 @@
       }
     },
     "romanLabel": {
-      "comment": "Field label for the romanization (拍字) column in the custom-entry dialog.",
+      "comment": "Custom-entry column header and field label: the romanization the user types (拍).",
       "scope": {
         "platforms": [
           "android",
@@ -251,9 +251,9 @@
         ]
       },
       "values": {
-        "hanji": "拍字",
-        "tailo": "phah-jī",
-        "poj": "phah-jī",
+        "hanji": "拍",
+        "tailo": "phah",
+        "poj": "phah",
         "en": "Romanization",
         "ja": "ローマ字"
       }
@@ -278,7 +278,7 @@
       }
     },
     "hanziLabel": {
-      "comment": "Field label for the Hanji (對應) column in the custom-entry dialog.",
+      "comment": "Custom-entry column header and field label: what typing the romanization finds (揣).",
       "scope": {
         "platforms": [
           "android",
@@ -290,9 +290,9 @@
         ]
       },
       "values": {
-        "hanji": "對應",
-        "tailo": "tuì-ìng",
-        "poj": "tùi-èng",
+        "hanji": "揣",
+        "tailo": "tshuē",
+        "poj": "chhōe",
         "en": "Hanji",
         "ja": "漢字"
       }

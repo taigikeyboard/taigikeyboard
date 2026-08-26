@@ -2,10 +2,12 @@
 
 import AppKit
 
-/// The 英數/台語 toggle's only feedback: a small HUD that names the new mode
-/// and fades. A mode with no indicator at all reads as the input method
-/// breaking — composition stops starting, punctuation stops mapping — so the
-/// switch announces itself once, the way McBopomofo's toggles do
+/// The only feedback a mode-switching chord has: a small HUD that names the
+/// new mode and fades. Raised by the 台羅/白話字 switch, which fires from
+/// anywhere — a mode with no indicator reads as the input method breaking
+/// (spelling stops matching what the user typed), so the switch announces
+/// itself once,
+/// the way McBopomofo's toggles do
 /// (`references/McBopomofo/Source/NotifierController.swift`), and then gets
 /// out of the way. Nothing persistent: no menu-bar variant, no status item.
 @MainActor

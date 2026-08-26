@@ -55,42 +55,6 @@
         "ja": "漢字とローマ字を入れ替え"
       }
     },
-    "modeFlashAlphanumeric": {
-      "comment": "HUD flash after a Shift tap: the keyboard is now alphanumeric passthrough.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "英數",
-        "tailo": "Ing-sòo",
-        "poj": "Eng-sò͘",
-        "en": "ABC",
-        "ja": "英数"
-      }
-    },
-    "modeFlashTaigi": {
-      "comment": "HUD flash after a Shift tap: the keyboard is back to Taigi.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "台語",
-        "tailo": "Tâi-gí",
-        "poj": "Tâi-gí",
-        "en": "Taigi",
-        "ja": "台語"
-      }
-    },
     "shortcutOpenSettings": {
       "comment": "Shortcut-recorder row: the hotkey that opens the settings window on whichever pane it was last left on. Each row is authored whole rather than composed from the setting's own label.",
       "scope": {
@@ -102,11 +66,11 @@
         ]
       },
       "values": {
-        "hanji": "拍開設定",
-        "tailo": "phah-khui siat-tīng",
-        "poj": "phah-khui siat-tēng",
-        "en": "Open Settings",
-        "ja": "設定を開く"
+        "hanji": "拍開設定選單",
+        "tailo": "phah-khui siat-tīng suán-tuann",
+        "poj": "phah-khui siat-tēng soán-toaⁿ",
+        "en": "Open Settings Menu",
+        "ja": "設定メニューを開く"
       }
     },
     "shortcutToggleRomanization": {
@@ -120,11 +84,11 @@
         ]
       },
       "values": {
-        "hanji": "切換 台羅/白話字",
-        "tailo": "tshiat-uānn tâi-lô / pe̍h-uē-jī",
-        "poj": "chhiat-ōaⁿ tâi-lô / pe̍h-ōe-jī",
-        "en": "Switch Romanization",
-        "ja": "ローマ字体系を切り替える"
+        "hanji": "切換輸入模式",
+        "tailo": "tshiat-uānn su-ji̍p bôo-sik",
+        "poj": "chhiat-ōaⁿ su-ji̍p bô͘-sek",
+        "en": "Switch Input Mode",
+        "ja": "入力モードを切り替える"
       }
     },
     "shortcutToggleTranslateSwapped": {
@@ -138,11 +102,11 @@
         ]
       },
       "values": {
-        "hanji": "切換 漢羅對調",
-        "tailo": "tshiat-uānn hàn-lô tuì-tiāu",
-        "poj": "chhiat-ōaⁿ hàn-lô tùi-tiāu",
-        "en": "Toggle Swapping Hanji and Romanization",
-        "ja": "漢字とローマ字の入れ替えを切り替える"
+        "hanji": "漢字/羅馬字代先",
+        "tailo": "hàn-jī / lô-má-jī tāi-sing",
+        "poj": "hàn-jī / lô-má-jī tāi-seng",
+        "en": "Hanji or Romanization First",
+        "ja": "漢字／ローマ字を先に"
       }
     },
     "menuFile": {
@@ -505,24 +469,6 @@
         "ja": "この操作は取り消せません。"
       }
     },
-    "keyboardActionsSection": {
-      "comment": "Section header over the shortcut rows that act on typing, below the group that opens settings panes.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "齒盤操作",
-        "tailo": "khí-puânn tshau-tsok",
-        "poj": "khí-pôaⁿ chhau-chok",
-        "en": "Keyboard Actions",
-        "ja": "キーボード操作"
-      }
-    },
     "entriesSection": {
       "comment": "Section header over the custom-dictionary rows. The shared key is already the page title one line above.",
       "scope": {
@@ -768,11 +714,11 @@
         ]
       },
       "values": {
-        "hanji": "選字鍵",
-        "tailo": "suán-jī kiān",
-        "poj": "soán-jī kiān",
-        "en": "Candidate Number Keys",
-        "ja": "候補選択キー"
+        "hanji": "選字",
+        "tailo": "suán-jī",
+        "poj": "soán-jī",
+        "en": "Select Candidate",
+        "ja": "候補を選択"
       }
     },
     "actionNextCandidate": {
@@ -786,9 +732,9 @@
         ]
       },
       "values": {
-        "hanji": "換下一个候選字",
-        "tailo": "uānn ē-tsi̍t ê hāu-suán-jī",
-        "poj": "oāⁿ ē-chi̍t ê hāu-soán-jī",
+        "hanji": "後一个字",
+        "tailo": "āu tsi̍t ê jī",
+        "poj": "āu chi̍t ê jī",
         "en": "Next Candidate",
         "ja": "次の候補"
       }
@@ -804,9 +750,9 @@
         ]
       },
       "values": {
-        "hanji": "換頂一个候選字",
-        "tailo": "uānn tíng-tsi̍t ê hāu-suán-jī",
-        "poj": "oāⁿ téng-chi̍t ê hāu-soán-jī",
+        "hanji": "頂一个字",
+        "tailo": "tíng tsi̍t ê jī",
+        "poj": "téng chi̍t ê jī",
         "en": "Previous Candidate",
         "ja": "前の候補"
       }
@@ -822,11 +768,11 @@
         ]
       },
       "values": {
-        "hanji": "後一頁候選字",
-        "tailo": "āu-tsi̍t ia̍h hāu-suán-jī",
-        "poj": "āu-chi̍t ia̍h hāu-soán-jī",
-        "en": "Next Candidate Page",
-        "ja": "次の候補ページ"
+        "hanji": "後一頁",
+        "tailo": "āu tsi̍t ia̍h",
+        "poj": "āu chi̍t ia̍h",
+        "en": "Next Page",
+        "ja": "次のページ"
       }
     },
     "actionPageBackward": {
@@ -840,11 +786,11 @@
         ]
       },
       "values": {
-        "hanji": "頭前一頁候選字",
-        "tailo": "thâu-tsîng tsi̍t ia̍h hāu-suán-jī",
-        "poj": "thâu-chêng chi̍t ia̍h hāu-soán-jī",
-        "en": "Previous Candidate Page",
-        "ja": "前の候補ページ"
+        "hanji": "頂一頁",
+        "tailo": "tíng tsi̍t ia̍h",
+        "poj": "téng chi̍t ia̍h",
+        "en": "Previous Page",
+        "ja": "前のページ"
       }
     },
     "actionConfirmHighlighted": {
@@ -858,11 +804,11 @@
         ]
       },
       "values": {
-        "hanji": "送出選著的候選字",
-        "tailo": "sàng-tshut suán-tio̍h ê hāu-suán-jī",
-        "poj": "sàng-chhut soán-tio̍h ê hāu-soán-jī",
-        "en": "Commit Highlighted Candidate",
-        "ja": "選択中の候補を確定"
+        "hanji": "確定齒",
+        "tailo": "khak-tīng khí",
+        "poj": "khak-tēng khí",
+        "en": "Confirm Key",
+        "ja": "確定キー"
       }
     },
     "actionCommitLiteral": {
@@ -894,10 +840,10 @@
         ]
       },
       "values": {
-        "hanji": "送出另外一種寫法",
-        "tailo": "sàng-tshut līng-guā tsi̍t-tsíng siá-huat",
-        "poj": "sàng-chhut lēng-gōa chi̍t-chéng siá-hoat",
-        "en": "Commit the Other Script",
+        "hanji": "漢羅反向輸出",
+        "tailo": "hàn-lô huán-hiòng su-tshut",
+        "poj": "hàn-lô hoán-hiòng su-chhut",
+        "en": "Commit in the Other Script",
         "ja": "もう一方の表記で確定"
       }
     },
@@ -1027,6 +973,42 @@
         "ja": "それは候補選択キーです"
       }
     },
+    "shortcutRejectedSystemShortcut": {
+      "comment": "Shortcut recorder refusal: the chord is already a system-wide keyboard shortcut, so recording it would give the user a key that never fires.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這是系統的快速齒",
+        "tailo": "tse sī hē-thóng ê khuài-sok khí",
+        "poj": "che sī hē-thóng ê khoài-sok khí",
+        "en": "That is a system shortcut",
+        "ja": "それはシステムのショートカットです"
+      }
+    },
+    "shortcutRejectedHostShortcut": {
+      "comment": "Shortcut recorder refusal: the chord is a bare Command combination, which belongs to the menus of whatever application the user is typing into.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這是應用程式的快速齒",
+        "tailo": "tse sī ìng-iōng-tîng-sik ê khuài-sok khí",
+        "poj": "che sī èng-iōng-thêng-sek ê khoài-sok khí",
+        "en": "That belongs to the app you are typing in",
+        "ja": "それは入力先のアプリのショートカットです"
+      }
+    },
     "copyrightLine": {
       "comment": "Settings 一般 pane footer: authorship line beside the sponsor link. Same in every language — a personal name carries no translation. The year is a literal, updated by hand at release time.",
       "scope": {
@@ -1079,6 +1061,24 @@
         "poj": "kiám-cha keng-sin",
         "en": "Check for Updates",
         "ja": "アップデートを確認"
+      }
+    },
+    "menuSettings": {
+      "comment": "Input-source menu row that opens the settings window on the pane the user left it on.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "設定",
+        "tailo": "siat-tīng",
+        "poj": "siat-tēng",
+        "en": "Settings",
+        "ja": "設定"
       }
     },
     "updateCurrentVersionLabel": {

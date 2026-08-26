@@ -43,6 +43,32 @@ final class CustomDictionaryListQueryTests: XCTestCase {
         XCTAssertEqual(rows.count, 2)
     }
 
+    /// Paging is SQL too, for the reason the limit is: the page the user is on
+    /// is the only page read.
+    func testCustomDictionary_offsetsIntoTheList() async throws {
+        try await seedCustomDictionary()
+
+        let all = try await stores.customDictionary.rows(filter: "", limit: 3)
+        let second = try await stores.customDictionary.rows(filter: "", limit: 1, offset: 1)
+
+        XCTAssertEqual(second.map(\.id), [all[1].id])
+    }
+
+    /// The pager divides THIS number, so it has to count what the list query
+    /// filters — a count taken under a different WHERE would page past the end
+    /// of the results, or stop short of them.
+    func testCustomDictionaryCount_matchesWhatTheFilterReturns() async throws {
+        try await seedCustomDictionary()
+
+        let filtered = try await stores.customDictionary.count(filter: "i")
+        let rows = try await stores.customDictionary.rows(filter: "i", limit: 100)
+
+        let unfiltered = try await stores.customDictionary.count(filter: "")
+
+        XCTAssertEqual(filtered, rows.count)
+        XCTAssertEqual(unfiltered, 3)
+    }
+
     /// A `%` typed into the filter box is a character the user is looking for,
     /// not a wildcard that matches the whole dictionary.
     func testCustomDictionary_treatsWildcardCharactersAsText() async throws {

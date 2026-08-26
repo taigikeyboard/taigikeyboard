@@ -5,23 +5,59 @@ import UniformTypeIdentifiers
 
 /// Reads and writes the custom dictionary on behalf of the page.
 ///
-/// Rows are fetched bounded (`filter` + `LIMIT`) and replaced on every change
-/// rather than held: this window outlives every visit to the page, and a
-/// 30000-row dictionary kept in a view model would stay in memory for the life
-/// of the input method.
+/// Rows are fetched one PAGE at a time and replaced on every change rather than
+/// held: this window outlives every visit to the page, and a 30000-row
+/// dictionary kept in a view model would stay in memory for the life of the
+/// input method.
+///
+/// Paged since 2026-08-26. It was a flat `LIMIT 100`, which had two faults a
+/// 17000-entry dictionary showed at once (USER, real device): rows 101 and past
+/// were unreachable by any means but the filter, and a hundred rows in a
+/// fixed-height `Table` inside a `Form` put one scroll view inside another —
+/// the list would not scroll. A page that FITS the table has neither problem:
+/// nothing is nested to scroll, and every row is reachable by paging.
 @MainActor
 @Observable
 final class CustomDictionaryPageModel {
-    /// What the list shows before the user filters. iOS shows the same number,
-    /// and the point is the same: the list is for finding a word, and the CSV
-    /// export is for reading all of them.
-    static let displayLimit = 100
+    /// How many rows one page holds. Chosen with the table's height rather
+    /// than against it (`CustomDictionaryPage.Metrics`): the point of paging
+    /// here is that a page never needs a scroller of its own.
+    /// `nonisolated` so the table's own height can be derived from it: that
+    /// derivation runs where a view's metrics are declared, outside the actor.
+    nonisolated static let pageSize = 10
 
     private(set) var rows: [CustomDictionaryRow] = []
+    /// Every entry, for the section header — what the dictionary HOLDS, which
+    /// is not what the current filter matches.
     private(set) var totalCount = 0
+    /// How many entries the current filter matches; what the pager divides.
+    private(set) var matchCount = 0
+    /// Which page is on screen, zero-based.
+    private(set) var page = 0
     private(set) var activity: UserDataPageActivity = .idle
     var filter = ""
     var message: UserDataPageMessage?
+
+    /// How many pages the matches fill — at least one, so an empty dictionary
+    /// still reads as "1 / 1" rather than as a pager with nothing in it.
+    var pageCount: Int {
+        max(1, (matchCount + Self.pageSize - 1) / Self.pageSize)
+    }
+
+    var canPageBackward: Bool { page > 0 }
+    var canPageForward: Bool { page + 1 < pageCount }
+
+    func pageBackward() async {
+        guard canPageBackward else { return }
+        page -= 1
+        await load()
+    }
+
+    func pageForward() async {
+        guard canPageForward else { return }
+        page += 1
+        await load()
+    }
 
     /// Which load the rows on screen came from. A query runs off the main
     /// actor and cannot be cancelled once it is on the store's queue, so a
@@ -36,20 +72,52 @@ final class CustomDictionaryPageModel {
         self.store = store
     }
 
+    /// Reloads the page on screen, first pulling it back inside the list if
+    /// the list shrank under it — a delete on the last page, or a filter that
+    /// now matches less. Nothing else clamps `page`, so this is the one place
+    /// it cannot point past the end.
     func load() async {
         loadGeneration += 1
         let generation = loadGeneration
+        // Snapshotted, not read twice: the two queries below straddle an await
+        // apiece, and a keystroke landing between them would count one list and
+        // fetch a page of another — the generation has not advanced yet, so
+        // nothing downstream would catch it.
+        let filter = filter
         do {
-            let loaded = try await store.rows(filter: filter, limit: Self.displayLimit)
+            let matches = try await store.count(filter: filter)
+            guard generation == loadGeneration else { return }
+            matchCount = matches
+            page = min(page, pageCount - 1)
+            let loaded = try await store.rows(
+                filter: filter,
+                limit: Self.pageSize,
+                offset: page * Self.pageSize,
+            )
+            // Only when a filter narrows the list: with no filter the two
+            // counts ask the same question, and paging would run a second
+            // `COUNT(*)` over 17000 rows to be told what it already knows.
+            let total = filter.isEmpty ? matches : try await store.count()
             guard generation == loadGeneration else { return }
             rows = loaded
-            totalCount = try await store.count()
+            totalCount = total
         } catch {
+            // Same guard on the way out: a failure from a load the user has
+            // already typed past must not raise an alert over the list that
+            // replaced it.
+            guard generation == loadGeneration else { return }
             // Not an empty list: "the dictionary is empty" and "the dictionary
             // could not be read" look identical on screen, and only one of them
             // is worth the user doing something about.
             message = .failure(.macosCustomDictReadFailed, error)
         }
+    }
+
+    /// Back to page one, then load. What a filter change asks for: the pages
+    /// it had before are pages of a different list.
+    func loadFirstPage() async {
+        page = 0
+        await load()
     }
 
     func save(_ row: CustomDictionaryRow) async {
@@ -157,7 +225,6 @@ struct CustomDictionaryPage: View {
     /// The table's selection — the row `−` acts on, and the row a double
     /// click edits.
     @State private var selectedRowID: CustomDictionaryRow.ID?
-    @State private var deleteOutcome: DeleteOutcome?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
 
@@ -201,45 +268,13 @@ struct CustomDictionaryPage: View {
             }
         }
         .formStyle(.grouped)
-        // The receipt, and only the receipt: the row acts on its click
-        // (USER 2026-08-25), and these records have no visible surface of their
-        // own, so this alert is the whole of what the user is told.
-        .alert(item: $deleteOutcome) { outcome in
-            Alert(
-                title: Text(language.string(outcome.titleKey)),
-                message: outcome.diagnostic.map(Text.init),
-                dismissButton: .default(Text(language.string(.commonOk))),
-            )
-        }
-        .reloadWhenFilterSettles(model.filter) { await model.load() }
+        .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
         .sheet(item: $editing) { row in
             CustomDictionaryEntrySheet(row: row) { edited in
                 Task { await model.save(edited) }
             }
         }
         .userDataPageChrome(activity: model.activity, message: $model.message)
-    }
-
-    /// The receipt for `deleteLearningRecords`: a title, and on failure the
-    /// store's own error text. That text is English and stays that way — it
-    /// names a SQLite condition, not something the product has wording for,
-    /// the same rule `UserDataPageMessage.failure` follows. Local to this pane
-    /// rather than a `UserDataPageMessage` case because the success alert has
-    /// no body at all, and there is no long-running work here to veil.
-    private struct DeleteOutcome: Identifiable {
-        let titleKey: StringKey
-        /// `nil` on success — the alert then shows a title and nothing else.
-        let diagnostic: String?
-
-        var id: String { "\(titleKey.rawValue)|\(diagnostic ?? "")" }
-
-        static let deleted = DeleteOutcome(
-            titleKey: .macosClearLearningRecordsDone, diagnostic: nil,
-        )
-
-        static func failed(_ diagnostic: String) -> DeleteOutcome {
-            DeleteOutcome(titleKey: .macosClearLearningRecordsFailed, diagnostic: diagnostic)
-        }
     }
 
     /// Deletes both learning tables.
@@ -252,6 +287,13 @@ struct CustomDictionaryPage: View {
     ///
     /// The diagnostic names its table, because a bare SQLite string cannot say
     /// which of the two could not be emptied.
+    ///
+    /// Reported through the page's own message channel rather than an alert of
+    /// its own: two `.alert` modifiers on one chain do not stack, and this was
+    /// the receipt SwiftUI dropped. It is the whole of what the user is told —
+    /// these records have no visible surface, so unlike the custom-dictionary
+    /// clear (whose table simply empties) there is nothing else to read the
+    /// result off.
     private func deleteLearningRecords() async {
         var failures: [String] = []
         do {
@@ -264,9 +306,9 @@ struct CustomDictionaryPage: View {
         } catch {
             failures.append("user_association: \(error)")
         }
-        deleteOutcome = failures.isEmpty
-            ? .deleted
-            : .failed(failures.joined(separator: "\n"))
+        model.message = failures.isEmpty
+            ? .done(.macosClearLearningRecordsDone)
+            : .failure(.macosClearLearningRecordsFailed, diagnostic: failures.joined(separator: "\n"))
     }
 
     /// The entries, as the table macOS states a list of records with: click
@@ -367,6 +409,29 @@ struct CustomDictionaryPage: View {
             .accessibilityLabel(language.string(.commonDelete))
 
             Spacer()
+
+            // Digits only, so the pager needs no wording in five languages —
+            // and the two arrows carry the shortcut pane's own page verbs as
+            // their accessibility labels, which are already translated.
+            Text(verbatim: "\(model.page + 1) / \(model.pageCount)")
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+
+            Button {
+                Task { await model.pageBackward() }
+            } label: {
+                controlGlyph("chevron.left")
+            }
+            .disabled(!model.canPageBackward)
+            .accessibilityLabel(language.string(.macosActionPageBackward))
+
+            Button {
+                Task { await model.pageForward() }
+            } label: {
+                controlGlyph("chevron.right")
+            }
+            .disabled(!model.canPageForward)
+            .accessibilityLabel(language.string(.macosActionPageForward))
         }
         // Small bordered buttons, the size AppKit gives the +/- bar under a
         // table. `.borderless` around a bare glyph left a hit target the size
@@ -403,18 +468,32 @@ struct CustomDictionaryPage: View {
     static let emptyStateSymbolName = "tray"
 
     private enum Metrics {
+        /// One `.inset` table row, and the header above them. Approximate by
+        /// nature — AppKit owns the real metrics — but the direction of the
+        /// error is what matters: a page that comes up a little short still
+        /// shows every one of its rows, because `tableHeight` is derived from
+        /// the page size rather than the page size guessed from a height.
+        static let tableRowHeight: CGFloat = 24
+        static let tableHeaderHeight: CGFloat = 28
         /// Tall enough to read as a list rather than a row or two, short
         /// enough that the buttons and the CSV actions under it stay on
         /// screen at the window's floor height.
-        static let tableHeight: CGFloat = 220
+        static let tableHeight: CGFloat = tableHeaderHeight
+            + CGFloat(CustomDictionaryPageModel.pageSize) * tableRowHeight
         /// Large enough to read as a state rather than as a control the user
         /// is meant to press.
         static let emptyStateSymbolSize: CGFloat = 34
     }
 
+    /// What the dictionary holds — and, while a filter narrows it, how much of
+    /// that the filter matches.
+    ///
+    /// Against the MATCHES, not against the rows on screen: those are one page
+    /// now, so the old comparison read "10 / 17000" on every page of an
+    /// unfiltered list and said nothing about either number.
     private var countLabel: String {
-        model.totalCount > model.rows.count
-            ? "\(model.rows.count) / \(model.totalCount)"
+        model.matchCount < model.totalCount
+            ? "\(model.matchCount) / \(model.totalCount)"
             : "\(model.totalCount)"
     }
 }

@@ -231,10 +231,11 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         /// The candidate window's layout. Presentation-only — the engine never
         /// reads it — and macOS-only, so like `displayLanguage` its default is
         /// owned by its own type rather than `EngineSettings.defaults`.
-        /// Expandable is MacishType's own default, and the port keeps it.
+        /// Expandable was MacishType's own default and the port kept it until
+        /// 2026-08-26; vertical is this keyboard's (USER).
         static let candidateLayout = SettingsKey(
             name: "candidateLayout",
-            defaultValue: CandidateLayout.expandable,
+            defaultValue: CandidateLayout.vertical,
         )
 
         /// The app's light/dark choice — `auto` follows the system.
@@ -439,7 +440,73 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         for action in ComposingAction.allCases {
             userDefaults.removeObject(forKey: action.settingsKeyName)
         }
-        userDefaults.removeObject(forKey: Keys.candidateSlotModifier.name)
+        removeStoredValues(Keys.candidateSlotModifier.name)
+    }
+
+    /// Puts every key the 外觀 pane owns back to shipped state.
+    ///
+    /// Removes the stored values rather than writing the defaults over them,
+    /// for the reason `resetComposingShortcuts` states: a written-through
+    /// default is indistinguishable from a value the user chose, and would pin
+    /// this version's default onto an install a later version means to move.
+    func resetAppearanceSettings() {
+        removeStoredValues(
+            Keys.appearanceMode.name,
+            Keys.candidateLayout.name,
+            Keys.candidateWindowSize.name,
+            Keys.candidateTextSize.name,
+            Keys.fontType.name,
+        )
+    }
+
+    /// Puts every toggle the 辭典管理 pane owns back to shipped state, the
+    /// master sources and the 腔口 subcollections alike.
+    ///
+    /// Removed rather than written, like `resetAppearanceSettings`.
+    ///
+    /// The roster is spelled out because each toggle is its own typed key;
+    /// it mirrors `dictionarySources` above and has to keep mirroring it — a
+    /// source added there and forgotten here is a row this button visibly does
+    /// not restore.
+    func resetDictionarySources() {
+        removeStoredValues(
+            Keys.isKautianEnabled.name,
+            Keys.isTaigitvEnabled.name,
+            Keys.isKunggeEnabled.name,
+            Keys.isSttiEnabled.name,
+            Keys.isItaigiEnabled.name,
+            Keys.isTaijitEnabled.name,
+            Keys.isTaihoaEnabled.name,
+            Keys.isSitbutEnabled.name,
+            Keys.isVariantEnabled.name,
+            Keys.isKhiinEnabled.name,
+            Keys.isKhpooEnabled.name,
+            Keys.isLkkEnabled.name,
+            Keys.isDevEnabled.name,
+            Keys.isKautianAccentLukangEnabled.name,
+            Keys.isKautianAccentSansiaEnabled.name,
+            Keys.isKautianAccentTaipakEnabled.name,
+            Keys.isKautianAccentGilanEnabled.name,
+            Keys.isKautianAccentTainanEnabled.name,
+            Keys.isKautianAccentKaohsiungEnabled.name,
+            Keys.isKautianAccentKinmenEnabled.name,
+            Keys.isKautianAccentMakungEnabled.name,
+            Keys.isKautianAccentSintikEnabled.name,
+            Keys.isKautianAccentTaichungEnabled.name,
+            Keys.isKautianNameAppendixEnabled.name,
+        )
+    }
+
+    /// Puts `names` back to "never touched".
+    ///
+    /// Removing rather than writing the default over them is the rule every
+    /// reset here follows: a written-through default is indistinguishable from
+    /// a value the user chose, and would pin this version's default onto an
+    /// install a later version means to move.
+    private func removeStoredValues(_ names: String...) {
+        for name in names {
+            userDefaults.removeObject(forKey: name)
+        }
     }
 
     /// The romanization being typed. Written as well as read, which is what
@@ -449,10 +516,11 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue.rawValue, forKey: Keys.inputMode.name) }
     }
 
-    /// The pane the settings window shows. Written as well as read, because
-    /// opening the window ON a pane is how the input-source menu's rows lead to
-    /// the place their key is set — the window binds this key with
-    /// `@AppStorage`, so a write moves it even while it is already open.
+    /// The pane the settings window shows. Written as well as read, because a
+    /// caller that opens the window ON a pane — the 檢查更新 row, which needs
+    /// 一般 — moves it there: the window binds this key with `@AppStorage`, so
+    /// a write lands even while it is already open. Left alone by the doorway
+    /// row and its chord, which is what reopens the window where the user was.
     var selectedSettingsPane: SettingsPane {
         get { choice(Keys.selectedSettingsPane) }
         set { userDefaults.set(newValue.rawValue, forKey: Keys.selectedSettingsPane.name) }

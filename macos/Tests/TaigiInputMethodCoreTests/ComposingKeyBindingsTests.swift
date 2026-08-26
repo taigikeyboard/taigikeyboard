@@ -421,7 +421,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
             .previousCandidate,
             "⇧⇥ walks back through the candidates out of the box",
         )
-        XCTAssertEqual(ComposingKeyDisplay.text(for: backTab), "⇧⇥")
+        XCTAssertEqual(ShortcutKeyDisplay.text(for: backTab), "⇧⇥")
     }
 
     /// A chord a build before the fold stored keeps working: `init?(rawValue:)`

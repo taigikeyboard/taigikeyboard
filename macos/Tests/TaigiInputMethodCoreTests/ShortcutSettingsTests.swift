@@ -85,7 +85,7 @@ final class ShortcutSettingsTests: XCTestCase {
 
         for (key, modifiers, expected) in cases {
             let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
-            XCTAssertEqual(ComposingKeyDisplay.text(for: chord), expected)
+            XCTAssertEqual(ShortcutKeyDisplay.text(for: chord), expected)
         }
     }
 

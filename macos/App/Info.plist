@@ -66,6 +66,23 @@
 	<true/>
 	<key>NSPrincipalClass</key>
 	<string>TaigiInputMethodApplication</string>
+	<!-- `TICapsLockLanguageSwitchCapable` is deliberately absent. It was
+	     declared on 2026-08-26 to make Caps Lock switch to and from ABC, the
+	     way Apple's own 新注音 does — MacishType, McBopomofo and vChewing all
+	     carry the key with no Caps Lock code of their own. On this bundle it
+	     did nothing: real device, with the key present in the INSTALLED
+	     Info.plist, Caps Lock stayed a caps lock. The likely reason is the
+	     neutral `TISIntendedLanguage` above — `mul`, with `Latn` in the
+	     repertoire, reads as an input source that already types Latin letters,
+	     so the system offers no ABC to switch to.
+
+	     It is not coming back with a different intended language: this input
+	     method has no English mode at all (USER 2026-08-26). A Mac already
+	     switches input sources with ⌘Space, and switching gives the user the
+	     real ABC source — spelling, auto-capitalisation, the Emoji panel —
+	     rather than the pass-through imitation this once carried. Switching
+	     also ends the session, which commits the composition and disarms the
+	     global hotkeys, so nothing here has to keep an English mode's state. -->
 	<key>TISIconIsTemplate</key>
 	<true/>
 	<key>TISInputSourceID</key>

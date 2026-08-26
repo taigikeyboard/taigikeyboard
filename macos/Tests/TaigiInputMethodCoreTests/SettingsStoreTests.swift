@@ -138,25 +138,77 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     /// Presentation-only like `displayLanguage`: a fresh install shows the
-    /// expandable window — MacishType's own default — and a stored value from
-    /// a build that removed a case, or a hand-edited `defaults write`, reads
-    /// as that default rather than as a layout the router cannot build.
-    func testCandidateLayout_withNothingStored_isExpandable() {
-        XCTAssertEqual(makeStore().candidateLayout, .expandable)
+    /// vertical window (USER 2026-08-26 — the expandable one was MacishType's
+    /// default, carried by the port until then), and a stored value from a
+    /// build that removed a case, or a hand-edited `defaults write`, reads as
+    /// that default rather than as a layout the router cannot build.
+    func testCandidateLayout_withNothingStored_isVertical() {
+        XCTAssertEqual(makeStore().candidateLayout, .vertical)
     }
 
     func testCandidateLayout_readsWhatTheSettingsFormWrites() {
         // The form writes through `@AppStorage`, which stores the raw string.
         userDefaults.set(
-            CandidateLayout.vertical.rawValue,
+            CandidateLayout.expandable.rawValue,
             forKey: SettingsStore.Keys.candidateLayout.name,
         )
-        XCTAssertEqual(makeStore().candidateLayout, .vertical)
+        XCTAssertEqual(makeStore().candidateLayout, .expandable)
     }
 
     func testCandidateLayout_withAnUnknownStoredValue_fallsBackToTheDefault() {
         userDefaults.set("diagonal", forKey: SettingsStore.Keys.candidateLayout.name)
-        XCTAssertEqual(makeStore().candidateLayout, .expandable)
+        XCTAssertEqual(makeStore().candidateLayout, .vertical)
+    }
+
+    /// The 外觀 pane's reset button, which has to reach every key that pane
+    /// owns — a button that restored some of them would leave rows it visibly
+    /// did not touch.
+    func testResetAppearanceSettings_putsEveryRowBack() {
+        let store = makeStore()
+        userDefaults.set(AppearanceMode.dark.rawValue, forKey: SettingsStore.Keys.appearanceMode.name)
+        userDefaults.set(CandidateLayout.horizontal.rawValue, forKey: SettingsStore.Keys.candidateLayout.name)
+        userDefaults.set(
+            CandidateWindowSizeChoice.large.rawValue,
+            forKey: SettingsStore.Keys.candidateWindowSize.name,
+        )
+        userDefaults.set(CandidateTextSizeChoice.small.rawValue, forKey: SettingsStore.Keys.candidateTextSize.name)
+        userDefaults.set(CandidateFontChoice.allCases.last?.rawValue, forKey: SettingsStore.Keys.fontType.name)
+
+        store.resetAppearanceSettings()
+
+        XCTAssertEqual(store.appearanceMode, SettingsStore.Keys.appearanceMode.defaultValue)
+        XCTAssertEqual(store.candidateLayout, SettingsStore.Keys.candidateLayout.defaultValue)
+        XCTAssertEqual(store.candidateWindowSize, SettingsStore.Keys.candidateWindowSize.defaultValue)
+        XCTAssertEqual(store.candidateTextSize, SettingsStore.Keys.candidateTextSize.defaultValue)
+        XCTAssertEqual(store.candidateFontChoice, SettingsStore.Keys.fontType.defaultValue)
+    }
+
+    /// Removed, not written over — the rule `resetComposingShortcuts` states:
+    /// a stored default is indistinguishable from a value the user chose, and
+    /// would pin this version's default onto an install a later version means
+    /// to move.
+    func testResetAppearanceSettings_leavesNothingStored() {
+        userDefaults.set(CandidateLayout.horizontal.rawValue, forKey: SettingsStore.Keys.candidateLayout.name)
+
+        makeStore().resetAppearanceSettings()
+
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateLayout.name))
+    }
+
+    /// The 辭典管理 pane's reset button, which owns the master sources and the
+    /// 腔口 subcollections alike: a 腔口 left switched off would be a source
+    /// the user had visibly restored still missing candidates.
+    func testResetDictionarySources_putsEverySourceAndAccentBack() {
+        let store = makeStore()
+        userDefaults.set(false, forKey: SettingsStore.Keys.isKautianEnabled.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isKautianAccentTainanEnabled.name)
+        userDefaults.set(true, forKey: SettingsStore.Keys.isDevEnabled.name)
+
+        store.resetDictionarySources()
+
+        XCTAssertEqual(store.current.dictionarySources, EngineSettings.defaults.dictionarySources)
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isKautianEnabled.name))
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isKautianAccentTainanEnabled.name))
     }
 
     /// The 外觀 row's contract: 自動 forces nothing (the panel resolves

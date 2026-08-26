@@ -45,17 +45,17 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["拍開設定", "切換 台羅/白話字", "切換 漢羅對調"],
+            ["拍開設定選單", "切換輸入模式", "漢字/羅馬字代先"],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
-                "設定を開く",
-                "ローマ字体系を切り替える",
-                "漢字とローマ字の入れ替えを切り替える",
+                "設定メニューを開く",
+                "入力モードを切り替える",
+                "漢字／ローマ字を先に",
             ],
         )
-        XCTAssertEqual(labels(.english).first, "Open Settings")
+        XCTAssertEqual(labels(.english).first, "Open Settings Menu")
         // The trap this replaced: composing a row from the setting's own label produced a doubled
         // verb — "括弧で併記を切り替える", "Toggle Annotate in Brackets".
         XCTAssertFalse(labels(.japanese).contains { $0.contains("併記を切り替えるを") })

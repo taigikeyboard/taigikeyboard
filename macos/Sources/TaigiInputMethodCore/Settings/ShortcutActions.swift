@@ -143,6 +143,16 @@ enum ShortcutHotkeys {
 
     /// The coordinator calls this as sessions come and go; see
     /// `ComposingSessionCoordinator.registerShortcutTarget`.
+    ///
+    /// Session scope is what makes a BARE key safe to register here — and a
+    /// bare key is bindable (USER 2026-08-26, `ShortcutKeyRecorder`). A Carbon
+    /// hotkey sits above this input method's own key path, so a bare `z` would
+    /// otherwise eat a `z` the user meant to type. It cannot: the only state
+    /// in which the user types plain letters is the system's own ABC input
+    /// source, which this input method has no mode of its own for (USER
+    /// 2026-08-26) — reaching it means SWITCHING input sources, which ends
+    /// this session and so disables every name below before the first letter
+    /// arrives.
     static func setEnabled(_ isEnabled: Bool) {
         if isEnabled {
             KeyboardShortcuts.enable(allNames)
@@ -398,17 +408,6 @@ enum ShortcutConflicts {
     /// and these are the rows that empty. The recorder refuses the other order
     /// (`ShortcutSettingsView`), so between them no global shortcut can sit on
     /// a live slot chord.
-    /// Whether `shortcut` sits on one of the nine slot chords — the question
-    /// the recorder refuses on and the launch pass clears on, asked the same
-    /// way in both so the two cannot drift.
-    @MainActor
-    static func isSlotChord(
-        _ shortcut: KeyboardShortcuts.Shortcut,
-        under slotModifier: CandidateSlotModifier,
-    ) -> Bool {
-        composingChord(occupiedBy: shortcut)?.isCandidateSlotChord(under: slotModifier) == true
-    }
-
     @MainActor
     static func globalActionsHoldingSlotChords(
         under slotModifier: CandidateSlotModifier,

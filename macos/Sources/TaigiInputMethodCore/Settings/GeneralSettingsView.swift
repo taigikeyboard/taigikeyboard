@@ -19,11 +19,11 @@ import SwiftUI
 /// once — lives beside the custom dictionary's own clear button on the 自訂詞庫
 /// pane, so every "throw away what is stored" action is in one place.
 ///
-/// 全形標點 (漢羅對調 output) and Shift 切換英數 are not switches either: both
-/// are always on (USER 2026-08-24), the first because CJK output takes CJK
-/// punctuation and the second because the gesture is the one MOE 輸入法 users
-/// arrive with. Neither had a state worth administering, and both stayed on
-/// by default from the day they shipped.
+/// 全形標點 (漢羅對調 output) is not a switch either: it is always on (USER
+/// 2026-08-24), because CJK output takes CJK punctuation. It never had a state
+/// worth administering. Shift 切換英數 was retired the same day for the same
+/// reason, and the feature itself went on 2026-08-26: this input method has no
+/// English mode, because a Mac already switches input sources with ⌘Space.
 ///
 /// Text comes from the injected `DisplayLanguageStore`: reading it inside `body` is what makes the
 /// form re-render when the display language changes, with no window rebuild.

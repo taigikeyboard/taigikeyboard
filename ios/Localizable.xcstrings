@@ -1082,7 +1082,7 @@
       }
     },
     "i18n_dictionary_hanziLabel": {
-      "comment": "Field label for the Hanji (對應) column in the custom-entry dialog.",
+      "comment": "Custom-entry column header and field label: what typing the romanization finds (揣).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1766,7 +1766,7 @@
       }
     },
     "i18n_dictionary_romanLabel": {
-      "comment": "Field label for the romanization (拍字) column in the custom-entry dialog.",
+      "comment": "Custom-entry column header and field label: the romanization the user types (拍).",
       "extractionState": "manual",
       "localizations": {
         "en": {

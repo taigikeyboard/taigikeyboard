@@ -167,7 +167,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
     /// The filter and the limit are both SQL: a list that read every row and
     /// then dropped all but a hundred would carry a 30000-row dictionary
     /// through memory to show a screenful.
-    func rows(filter: String, limit: Int) async throws -> [CustomDictionaryRow] {
+    func rows(filter: String, limit: Int, offset: Int = 0) async throws -> [CustomDictionaryRow] {
         let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
         return try await database.perform { connection in
             guard !trimmed.isEmpty else {
@@ -176,9 +176,9 @@ final class CustomDictionaryStore: @unchecked Sendable {
                     SELECT id, roman, hanzi, created_at, updated_at
                     FROM \(Self.tableName)
                     ORDER BY updated_at DESC
-                    LIMIT ?;
+                    LIMIT ? OFFSET ?;
                     """,
-                    [.integer(limit)],
+                    [.integer(limit), .integer(offset)],
                     decoding: Self.decodeRow,
                 )
             }
@@ -192,9 +192,9 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 FROM \(Self.tableName)
                 WHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'
                 ORDER BY updated_at DESC
-                LIMIT ?;
+                LIMIT ? OFFSET ?;
                 """,
-                [.text(pattern), .text(pattern), .integer(limit)],
+                [.text(pattern), .text(pattern), .integer(limit), .integer(offset)],
                 decoding: Self.decodeRow,
             )
         }
@@ -203,6 +203,33 @@ final class CustomDictionaryStore: @unchecked Sendable {
     func count() async throws -> Int {
         try await database.perform { connection in
             try Self.entryCount(connection)
+        }
+    }
+
+    /// How many entries `filter` matches — the number the pager divides into
+    /// pages.
+    ///
+    /// Its own query rather than the length of a fetch: a paged list only ever
+    /// holds one page, so it cannot count what it does not hold, and counting
+    /// by fetching 17000 rows to measure them would be the very thing paging
+    /// exists to avoid.
+    ///
+    /// The same two predicates `rows(filter:limit:offset:)` filters on, and
+    /// they have to stay that way: a count taken under a different WHERE would
+    /// page past the end of the list, or stop short of it.
+    func count(filter: String) async throws -> Int {
+        let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return try await count() }
+        let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
+        return try await database.perform { connection in
+            try connection.scalar(
+                """
+                SELECT COUNT(*)
+                FROM \(Self.tableName)
+                WHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\';
+                """,
+                [.text(pattern), .text(pattern)],
+            ) ?? 0
         }
     }
 

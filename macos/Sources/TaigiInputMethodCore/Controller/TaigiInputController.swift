@@ -121,24 +121,9 @@ public final class TaigiInputController: IMKInputController {
         let script: CandidateScript
     }
 
-    /// Whether this session is in 英數 passthrough — every printable key goes
-    /// to the host, no composition starts — toggled by a solo Shift tap.
-    /// Per-session and volatile on purpose: IMK activates the incoming session
-    /// before deactivating the outgoing one, so process-wide state would be
-    /// torn down by the loser of that handoff, and a persisted mode would make
-    /// "why is my keyboard English" survive a relaunch. Fresh focus is Taigi.
-    @MainActor
-    private var isAlphanumericPassthrough = false
-
-    /// The solo-Shift-tap recognizer feeding the toggle above. Session state
-    /// for the same reason: a Shift pressed in one session must not decide in
-    /// another.
-    @MainActor
-    private var shiftTapDetector = ShiftTapDetector()
-
-    /// Where the mode flash goes. `nil` means the shared HUD panel; a test
-    /// injects a recorder, for the same reason `candidatePresenter` is
-    /// injectable — the shipped one puts a real window on screen.
+    /// Where the mode flash goes. `nil` means the shared HUD panel; a test injects a
+    /// recorder, for the same reason `candidatePresenter` is injectable — the
+    /// shipped one puts a real window on screen.
     @MainActor
     var modeFlashOverride: ((String) -> Void)?
 
@@ -152,18 +137,24 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - IMK entry points
 
-    /// Keydown plus `flagsChanged` — the latter for the solo-Shift 英數
-    /// toggle, and nothing wider. Widening past the default keydown mask costs
-    /// IMK's automatic `commitComposition:` on a click outside the composition
-    /// (`IMKInputController.h:154-157`), so this input method carries that
-    /// duty itself: the `commitComposition(_:)` override below force-commits,
-    /// exactly the pairing McBopomofo runs with the same mask
-    /// (`references/McBopomofo/Source/InputMethodController.swift:209-218`).
-    /// `ShiftAlphanumericControllerTests` pins both halves. `.keyUp` stays
-    /// out: both Shift transitions arrive as `flagsChanged`, and owning key-up
-    /// events would add consume bookkeeping nothing here needs.
+    /// Keydown only — the default, restated rather than left implicit so a
+    /// future edit meets the cost of widening it before paying it.
+    ///
+    /// It carried `flagsChanged` too until 2026-08-26, for a solo-Shift 英數
+    /// toggle this input method no longer implements — it has no English mode
+    /// at all now (USER): a Mac switches input sources with ⌘Space, and
+    /// switching hands the user the real ABC source rather than a
+    /// pass-through imitation of one. Nothing reads a modifier transition any
+    /// more, and a mask that keeps asking for them is an input method owning
+    /// events it does not act on.
+    ///
+    /// Widening past keydown costs IMK's automatic `commitComposition:` on a
+    /// click outside the composition (`IMKInputController.h:154-157`), which is
+    /// why the `commitComposition(_:)` override below force-commits — kept even
+    /// now that the mask is narrow again, because it is also what the manual
+    /// commit paths call. `TaigiInputControllerTests` pins the mask.
     override public func recognizedEvents(_: Any!) -> Int {
-        Int(NSEvent.EventTypeMask([.keyDown, .flagsChanged]).rawValue)
+        Int(NSEvent.EventTypeMask.keyDown.rawValue)
     }
 
     /// CHROMIUM DEADLOCK RULE — never query the client synchronously from here
@@ -185,7 +176,6 @@ public final class TaigiInputController: IMKInputController {
             )
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
             // decide here.
-            controller.resetAlphanumericMode()
             // Takes the bar down before this session starts typing, and takes
             // it away from the session that was showing it. IMK activates the
             // incoming session before it deactivates the outgoing one, so
@@ -255,20 +245,6 @@ public final class TaigiInputController: IMKInputController {
     override public func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event else { return false }
         switch event.type {
-        case .flagsChanged:
-            // Split off before `KeyEventSnapshot`: a modifier transition
-            // carries no reliable `characters`, and the only fact it holds is
-            // which modifier moved. The clock is read here, with the event,
-            // so the tap window measures the user's hands rather than any
-            // queueing between this thread and the main actor.
-            let keyCode = event.keyCode
-            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            let timestamp = event.timestamp
-            return onMainActor(sender) { controller, client in
-                controller.handleModifierEvent(
-                    keyCode: keyCode, modifiers: modifiers, timestamp: timestamp, client: client,
-                )
-            }
         case .keyDown:
             // Snapshotted before the hop: `NSEvent` is a reference type that
             // cannot cross an isolation boundary.
@@ -331,26 +307,25 @@ public final class TaigiInputController: IMKInputController {
             // commits a language change, and committing one runs the chrome renderer.
             language.syncFromSettings()
 
-            // Doorways only (USER 2026-08-21): every settings pane, and the
-            // one command that has somewhere to go rather than somewhere to
-            // be. Every composing key lives behind those
-            // doors — the menu stopped being the shortcut roster when the
-            // agent proved unable to DISPLAY a composing key without also
-            // DISPATCHING it (`InputSourceMenuRow`).
+            // One doorway (USER 2026-08-26). There was a row per settings pane
+            // from 2026-08-21 until then: each carried its own ⌃⇧ chord, and
+            // once those were retired the five rows were five names for one
+            // window. What is left is the window itself, opening wherever the
+            // user left it — naming the panes is the sidebar's job.
             //
-            // No key equivalents any more. The pane rows carried the ⌃⇧1–⌃⇧5
-            // chords until 2026-08-25, when those were retired (USER: five
-            // chords was a lot to hold for panes visited about once a day,
-            // which THIS menu already lists by name). The rows outlived them —
-            // the menu IS the way to a named pane now — so they are labelled
-            // from the pane's own name and dispatch straight to it, with no
-            // roster in between.
-            let doorways = Self.menuDoorways.map { doorway in
-                InputSourceMenuRow(
-                    label: language.string(doorway.pane.labelKey),
-                    action: doorway.selector,
-                )
-            }
+            // This row may claim a key equivalent because it IS a shortcut: an
+            // entry in the registry the 快捷鍵 pane records, whose chord
+            // carries modifiers no composition types. Read live, so the row
+            // prints whatever the user last recorded on it. (No composing key
+            // can ever claim one — the agent proved unable to DISPLAY one
+            // without also DISPATCHING it, `InputSourceMenuRow`.)
+            let openSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openLastSettingsPane)
+            let settings = InputSourceMenuRow(
+                label: language.string(.macosMenuSettings),
+                keyEquivalent: openSettingsShortcut?.nsMenuItemKeyEquivalent ?? "",
+                modifiers: openSettingsShortcut?.modifiers ?? [],
+                action: #selector(showPreferences(_:)),
+            )
             // No chord, by design: an on-demand check is a command a user
             // reaches for once in a while, and a key equivalent claimed here
             // is taken from the host application for as long as this input
@@ -359,81 +334,25 @@ public final class TaigiInputController: IMKInputController {
                 label: language.string(.macosUpdateCheckNow),
                 action: #selector(checkForUpdates(_:)),
             )
-            return [doorways, [checkForUpdates]]
+            return [[settings], [checkForUpdates]]
         }
         return InputSourceMenuRenderer.menu(groups)
     }
-
-    /// The menu's first group: one row per settings pane, in sidebar order.
-    ///
-    /// Paired with a selector rather than derived from the action, because IMK
-    /// routes a menu command by selector (`IMKInputController.h:283-296`) and a
-    /// selector cannot be computed. The list IS the roster: a `ShortcutAction`
-    /// missing from it has no menu row, which is how the mid-sentence
-    /// switches stay out (USER 2026-08-21).
-    ///
-    /// Keyed on the PANE rather than on a `ShortcutAction`: since 2026-08-25
-    /// no global chord opens a named pane, and a row that had to look one up
-    /// would be reading a roster it is no longer part of.
-    ///
-    /// A generic 開啟設定 row led the group until 2026-08-24, on its own ⌃⇧,
-    /// chord. It went with the chord (USER): once every pane had a row, a row
-    /// that opens whichever pane was last used was a second key for what 一般
-    /// already does. The chord came back on 2026-08-25 as ⌃⌘S once the five
-    /// pane chords went — the reason it was redundant went with them — but the
-    /// ROW did not: the menu already lists every pane by name, and the hotkey
-    /// is visible and rebindable in the 快捷鍵 pane.
-    private static let menuDoorways: [(pane: SettingsPane, selector: Selector)] = [
-        (.general, #selector(openGeneralPane(_:))),
-        (.appearance, #selector(openAppearancePane(_:))),
-        (.shortcuts, #selector(openShortcutPane(_:))),
-        (.customDictionary, #selector(openCustomDictionaryPane(_:))),
-        (.dictionarySources, #selector(openDictionarySourcesPane(_:))),
-    ]
 
     /// Deliberately does not call `super`. The inherited implementation looks
     /// for a `preferences.nib` (`IMKInputController.h:165-170`); this package is
     /// built by SwiftPM and has no nib to find.
     ///
-    /// No menu row sends this any more, and the header promises only that a row
-    /// whose action IS `showPreferences:` routes here — nothing documents the
-    /// system sending it unprompted. Kept regardless: it is the standard
-    /// override for this command, it costs one call, and it answers correctly
-    /// if any framework or external routing ever does send it. Opening no
-    /// particular pane is right for a generic "preferences" command — the user
-    /// returns where they left off.
+    /// What the menu's 設定 row sends, since 2026-08-26: the header promises
+    /// that a row whose action IS `showPreferences:` routes here
+    /// (`IMKInputController.h:165-170`), which is the selector the system
+    /// reserves for this exact command — so a second one of our own would be
+    /// two names for one body. Opening no particular pane is what both callers
+    /// want: the user returns where they left off, which is also where the
+    /// ⌃⌘S chord the row prints lands.
     override public func showPreferences(_: Any!) {
         Self.logger.debug("showPreferences")
         openSettings(on: nil)
-    }
-
-    /// One selector per pane, because that is the unit IMK routes by. Each
-    /// names the pane it opens and nothing else; what opening one means is
-    /// `ShortcutHotkeys.openSettings(on:in:)`, shared with the Carbon hotkey
-    /// the matching action registers.
-    @objc
-    private func openGeneralPane(_: Any!) {
-        openSettings(on: .general)
-    }
-
-    @objc
-    private func openAppearancePane(_: Any!) {
-        openSettings(on: .appearance)
-    }
-
-    @objc
-    private func openShortcutPane(_: Any!) {
-        openSettings(on: .shortcuts)
-    }
-
-    @objc
-    private func openCustomDictionaryPane(_: Any!) {
-        openSettings(on: .customDictionary)
-    }
-
-    @objc
-    private func openDictionarySourcesPane(_: Any!) {
-        openSettings(on: .dictionarySources)
     }
 
     /// Brings the window up on this controller's own settings store, so a test
@@ -476,10 +395,18 @@ public final class TaigiInputController: IMKInputController {
     private func switchInputMode(to mode: InputMode) {
         Self.logger.debug("switch input mode to \(mode.rawValue)")
         settings.inputMode = mode
-        // The candidates on screen were fetched under the old romanization, and
-        // the key contract lets Space commit whichever one is highlighted. They
-        // go with the mode that produced them.
-        onMainActor(nil) { controller, _ in controller.dismissCandidates() }
+        onMainActor(nil) { controller, _ in
+            // The candidates on screen were fetched under the old
+            // romanization, and the key contract lets Space commit whichever
+            // one is highlighted. They go with the mode that produced them.
+            controller.dismissCandidates()
+            // Then the HUD, because the chord fires from anywhere and a
+            // romanization that changed with
+            // no notice reads as the keyboard breaking — the next syllable
+            // composes under rules nothing on screen said had changed
+            // (USER 2026-08-26).
+            controller.flash(mode == .tl ? .settingsTlMode : .settingsPojMode)
+        }
     }
 
     // MARK: - Shortcut actions
@@ -543,21 +470,9 @@ public final class TaigiInputController: IMKInputController {
         let armedSwap = armedAutoSpace
         armedAutoSpace = nil
 
-        // A real key-down ends any half-seen Shift tap, whatever the key does
-        // next — this is what keeps ⇧A a capital and ⇧↩ a chord rather than
-        // half a toggle. Before every early return, so a key the session
-        // cannot handle still cancels.
-        shiftTapDetector.noteKeyDown()
-
         guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken),
               let client
         else { return false }
-
-        // 英數 passthrough: the host owns every key until the next solo Shift
-        // tap. Nothing can be composing here — the toggle committed anything
-        // in flight, and no composition has started since — so there is
-        // nothing to guard, and the global hotkeys live above this layer.
-        guard !isAlphanumericPassthrough else { return false }
 
         let intent = ComposingKeyIntent.intent(
             for: key,
@@ -710,79 +625,23 @@ public final class TaigiInputController: IMKInputController {
         return true
     }
 
-    // MARK: - 英數 passthrough
-
-    /// Feeds one modifier transition to the tap detector and, on a completed
-    /// solo Shift tap, flips 英數 passthrough — committing any composition in
-    /// flight first, so the user's characters land in the document before the
-    /// keyboard changes hands.
-    ///
-    /// Only the release that completes a tap is consumed; every other
-    /// modifier transition returns false, so the host keeps seeing the flag
-    /// state it owns. Deliberately narrower than McBopomofo, which consumes
-    /// all `flagsChanged` during an active composition — nothing here needs
-    /// that, and owning events an input method does not act on is how host
-    /// shortcuts break.
-    @MainActor
-    func handleModifierEvent(
-        keyCode: UInt16,
-        modifiers: NSEvent.ModifierFlags,
-        timestamp: TimeInterval,
-        client: IMKTextInput?,
-    ) -> Bool {
-        // Only modifiers a hand can HOLD count as chording. Caps Lock is a
-        // latched state that rides on every event while lit — treating it as
-        // a chord would kill the tap for as long as the light is on — and
-        // `.numericPad`/`.help` are key-location facts, not modifiers.
-        let chordingModifiers: NSEvent.ModifierFlags = [.command, .control, .option, .function]
-        let firedTap = shiftTapDetector.observeFlagsChanged(
-            keyCode: keyCode,
-            shiftIsDown: modifiers.contains(.shift),
-            otherModifiersDown: !modifiers.isDisjoint(with: chordingModifiers),
-            at: timestamp,
-        )
-        guard firedTap else { return false }
-        guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken) else {
-            return false
-        }
-
-        if manager.isComposing {
-            guard let client else { return false }
-            manager.commitComposition(executing: ClientEffectExecutor(client: client))
-            // A commit the engine refused leaves the marked region standing;
-            // entering passthrough over it would strand the user's characters.
-            guard !manager.isComposing else { return false }
-            dismissCandidates()
-            isMarkedTextVisible = false
-        }
-
-        isAlphanumericPassthrough.toggle()
-        flashMode()
-        return true
-    }
-
-    /// Announces the mode the tap just switched into, through the injected
+    /// Announces a mode the user just switched into, through the injected
     /// recorder in tests and the shared HUD in production.
+    ///
+    /// One caller since 2026-08-26: the 英數 toggle raised this too, until
+    /// this input method stopped having an English mode (USER). Switching
+    /// input sources is the system's business and it draws its own indicator;
+    /// a second one of ours over it would be announcing a mode nothing here
+    /// owns.
     @MainActor
-    private func flashMode() {
+    private func flash(_ mode: StringKey) {
         let language = displayLanguageOverride ?? DisplayLanguageStore.shared
-        let text = language.string(
-            isAlphanumericPassthrough ? .macosModeFlashAlphanumeric : .macosModeFlashTaigi,
-        )
+        let text = language.string(mode)
         if let modeFlashOverride {
             modeFlashOverride(text)
         } else {
             ModeFlashPanel.shared.flash(text)
         }
-    }
-
-    /// Back to Taigi, and any half-seen Shift tap forgotten. Session
-    /// boundaries call this: fresh focus types Taigi, and a Shift pressed in
-    /// one session must not decide in the next.
-    @MainActor
-    private func resetAlphanumericMode() {
-        isAlphanumericPassthrough = false
-        shiftTapDetector.cancelPriming()
     }
 
     // MARK: - Candidates
@@ -1117,7 +976,6 @@ public final class TaigiInputController: IMKInputController {
     private func endSession(_ client: IMKTextInput?) {
         finishComposition(into: client)
         ComposingSessionCoordinator.shared.release(sessionToken)
-        resetAlphanumericMode()
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked
