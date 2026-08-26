@@ -18,8 +18,10 @@ import AppKit
 /// text field or window the user is actually in.
 ///
 /// Titles come from the display-language resolver, so the menu follows the app's own language
-/// picker. There is no `.lproj` for AppKit to consult — this package ships none by design — so the
-/// alternative is not "follows the system language" but "frozen in one language forever".
+/// picker. The assembled bundle carries `.lproj` directories, but they hold nothing except the
+/// `InfoPlist.strings` naming the input source — this package ships no `Localizable.strings` for
+/// AppKit to resolve a menu title from, so the alternative here is not "follows the system language"
+/// but "frozen in one language forever".
 @MainActor
 enum MainMenu {
     /// The menu the application runs with, ready to assign to `NSApp.mainMenu`.

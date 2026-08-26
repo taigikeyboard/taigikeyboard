@@ -2108,7 +2108,7 @@
       }
     },
     "i18n_home_appHeaderTitle": {
-      "comment": "Home tab large title — the app name.",
+      "comment": "Home tab large title — the app name. ALSO the macOS bundle's localized name (macos/App/*.lproj/InfoPlist.strings) — editing this renames the macOS input source; see MACOS_BUNDLE_NAME_KEY in tools/i18n/i18n_lib.py.",
       "extractionState": "manual",
       "localizations": {
         "en": {

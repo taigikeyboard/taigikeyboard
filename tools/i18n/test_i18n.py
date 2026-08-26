@@ -37,6 +37,29 @@ def _write_namespace(repo_root: Path, namespace: str, keys: dict) -> None:
     )
 
 
+APP_NAME_VALUES = {
+    "hanji": "台語齒盤",
+    "tailo": "Khí-puânn",
+    "poj": "Khí-pôaⁿ",
+    "en": "TaigiKeyboard",
+    "ja": "キーボード",
+}
+
+
+def _app_name_keys(values: dict = APP_NAME_VALUES) -> dict:
+    # The key the macOS bundle name is read from, scoped the way production scopes it — the bundle
+    # name is read by (namespace, key), NOT by a macOS platform scope, and a fixture claiming
+    # otherwise would read as though scoping it were what makes the InfoPlist.strings appear.
+    _namespace, key = i18n_lib.MACOS_BUNDLE_NAME_KEY
+    return {key: _ios_key(values)}
+
+
+def _write_app_name_namespace(repo_root: Path) -> None:
+    # Every REAL source set carries this key, so a fixture that asserts on a production build has to.
+    namespace, _key = i18n_lib.MACOS_BUNDLE_NAME_KEY
+    _write_namespace(repo_root, namespace, _app_name_keys())
+
+
 def _android_key(values: dict, placeholders: dict | None = None) -> dict:
     entry = {"scope": {"platforms": ["android"], "surfaces": ["host"]}, "values": values}
     if placeholders is not None:
@@ -265,9 +288,11 @@ class GeneratedMapCompletenessTest(unittest.TestCase):
     def _build(self, values: dict) -> None:
         # Scoped to every platform because the production flag models the REAL source set, which each
         # platform draws from — a Swift platform scoped to nothing fails its own gate first and would
-        # mask the language-completeness error these cases are about.
+        # mask the language-completeness error these cases are about. Same reason the app-name key is
+        # written: a real source set carries it, and its absence is its own error.
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
+            _write_app_name_namespace(repo)
             _write_namespace(repo, "probe", {"k": _all_platform_key(values)})
             build_outputs(repo, enforce_production_completeness=True)
 
@@ -499,6 +524,59 @@ def _all_platform_key(values: dict, placeholders: dict | None = None) -> dict:
     if placeholders is not None:
         entry["placeholders"] = placeholders
     return entry
+
+
+def _bundle_name_outputs(app_name_values: dict = APP_NAME_VALUES) -> dict:
+    namespace, _key = i18n_lib.MACOS_BUNDLE_NAME_KEY
+    return _build_probe_outputs(_app_name_keys(app_name_values), namespace=namespace)
+
+
+class MacOSBundleNameTest(unittest.TestCase):
+    # The bundle's own name, which macOS resolves from `.lproj/InfoPlist.strings` by SYSTEM language —
+    # a different mechanism from every other string here, which the app's own picker resolves.
+    def _strings(self, outputs, lproj: str) -> str:
+        return outputs[f"{i18n_lib.MACOS_APP_DIR}/{lproj}.lproj/InfoPlist.strings"]
+
+    def test_every_system_language_gets_both_plist_keys_in_its_own_language(self):
+        # The reported bug: a Traditional-Chinese Mac read the untranslated CFBundleName. Apple
+        # documents no order of preference between the two keys for a Text Input Source, so both are
+        # written rather than depending on an undocumented implementation detail.
+        outputs = _bundle_name_outputs()
+        for lang, lproj in i18n_lib.MACOS_BUNDLE_LOCALIZATIONS.items():
+            for plist_key in i18n_lib.MACOS_BUNDLE_NAME_PLIST_KEYS:
+                self.assertIn(f'"{plist_key}" = "{APP_NAME_VALUES[lang]}";', self._strings(outputs, lproj))
+
+    def test_no_lproj_for_a_language_no_mac_can_be_set_to(self):
+        # Tâi-lô and Pe̍h-ōe-jī are product display languages with no OS locale, so a system language
+        # can never select them — an `.lproj` for either would be a directory nothing ever reads.
+        localization_paths = [path for path in _bundle_name_outputs() if path.startswith(f"{i18n_lib.MACOS_APP_DIR}/")]
+        self.assertEqual(
+            sorted(localization_paths),
+            sorted(
+                f"{i18n_lib.MACOS_APP_DIR}/{lproj}.lproj/InfoPlist.strings"
+                for lproj in i18n_lib.MACOS_BUNDLE_LOCALIZATIONS.values()
+            ),
+        )
+
+    def test_value_is_escaped_as_a_strings_literal(self):
+        strings = self._strings(_bundle_name_outputs({**APP_NAME_VALUES, "hanji": 'a"b\\c'}), "zh-Hant")
+        self.assertIn(r'"CFBundleName" = "a\"b\\c";', strings)
+
+    def test_source_without_the_app_name_key_emits_nothing(self):
+        # Unit fixtures author their own tiny namespaces and must not all have to declare a Home tab.
+        outputs = _build_probe_outputs({"k": _all_platform_key({"hanji": "字"})})
+        self.assertFalse([path for path in outputs if path.startswith(f"{i18n_lib.MACOS_APP_DIR}/")])
+
+    def test_cli_build_without_the_app_name_key_fails_naming_it(self):
+        # The same absence in a REAL build would ship a bundle whose input source silently falls back
+        # to the untranslated name in every system language.
+        namespace, key = i18n_lib.MACOS_BUNDLE_NAME_KEY
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, namespace, {"somethingElse": _all_platform_key(APP_NAME_VALUES)})
+            with self.assertRaises(ValueError) as raised:
+                build_outputs(repo, enforce_production_completeness=True)
+        self.assertIn(f"{namespace}:{key}", str(raised.exception))
 
 
 class MacOSEmitTest(unittest.TestCase):

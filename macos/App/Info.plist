@@ -35,6 +35,12 @@
 	<string>Fonts</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<!-- Untranslated fallback, used when the Mac's language matches no `.lproj`
+	     the bundle carries. The localized names live in the generated
+	     `<lang>.lproj/InfoPlist.strings`, which is what macOS actually shows —
+	     see MACOS_BUNDLE_LOCALIZATIONS in tools/i18n/i18n_lib.py. -->
+	<key>CFBundleDisplayName</key>
+	<string>TaigiKeyboard</string>
 	<key>CFBundleExecutable</key>
 	<string>TaigiInputMethod</string>
 	<key>CFBundleIconFile</key>
@@ -60,6 +66,10 @@
 	<string>com.siansiansu.inputmethod.TaigiKeyboard_Connection</string>
 	<key>InputMethodServerControllerClass</key>
 	<string>TaigiInputController</string>
+	<!-- Declares that the localized names exist; Apple documents this as a
+	     performance hint for displaying them. -->
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

@@ -66,6 +66,35 @@ XCSTRINGS_SOURCE_LANGUAGE = "en"
 MACOS_STRINGS_DIR = "macos/Sources/TaigiInputMethodCore/Strings"
 MACOS_GEN_DIR = f"{MACOS_STRINGS_DIR}/Generated"
 
+# The macOS bundle's OWN localized name — THE reference for this mechanism; everywhere else points here.
+#
+# macOS resolves an input source's displayed name (Text Input Sources' `kTISPropertyLocalizedName`,
+# which is what System Settings -> Keyboard -> Input Sources and the menu-bar input menu show) and
+# Finder's app name by matching the SYSTEM language against the `.lproj` directories the bundle
+# carries. With none, every system language falls back to the literal `CFBundleName` — which is why
+# the input source read "TaigiKeyboard" on a Traditional-Chinese Mac. `scripts/bundle-app.sh` copies
+# these into `Contents/Resources/`.
+#
+# That axis is the system language, NOT the app's own display-language picker (`DisplayLanguageStore`,
+# which keeps owning every string drawn inside the app). So only languages a Mac can actually be set
+# to get a directory: Tâi-lô and Pe̍h-ōe-jī are product display languages with no OS locale, and Hanji
+# maps to `zh-Hant` because that is what a Taiwanese Mac runs. Deliberately NOT derived from
+# `IOS_NATIVE_LANGUAGES`: that roster answers to what App Store Connect accepts, which is a different
+# constraint that is allowed to diverge from what a Mac's system language can be.
+MACOS_APP_DIR = "macos/App"
+MACOS_BUNDLE_LOCALIZATIONS = {"en": "en", "ja": "ja", "hanji": "zh-Hant"}
+
+# The i18n key the bundle name is read from. Deliberately NOT expressed as a `macos` platform scope:
+# scoping it would also emit it into the generated Swift string map, where nothing would ever look it
+# up. It is the product's name, so it is the Home tab's title and the bundle's name by construction.
+MACOS_BUNDLE_NAME_KEY = ("home", "appHeaderTitle")
+
+# Both keys carry the same value in every InfoPlist.strings. `CFBundleDisplayName` is what Apple
+# documents for a localized app name; Apple documents no order of preference between the two for a
+# Text Input Source, and MOE's own 教育部臺灣台語輸入法 writes both — so writing both avoids depending
+# on an undocumented implementation detail.
+MACOS_BUNDLE_NAME_PLIST_KEYS = ("CFBundleDisplayName", "CFBundleName")
+
 # Value-language key -> Swift `DisplayLanguage` case. The generated maps index by enum case, not by
 # tag, and two names differ from their tag (`ja`/`en`) — so this is the ONE place that mapping lives.
 # MIRROR: must equal the cases in ios/.../Strings/DisplayLanguage.swift and
@@ -514,6 +543,10 @@ def kotlin_escape(value: str) -> str:
 def swift_escape(value: str) -> str:
     # Swift string-literal escaping. Backslash first so a literal `\(` becomes `\\(` (a backslash +
     # paren, not a string interpolation). Swift has no `$` template syntax, so `%1$lld` is left as-is.
+    #
+    # ALSO the escaping an `InfoPlist.strings` value takes (`_emit_info_plist_strings`) — a `.strings`
+    # value is a C string literal, which is what a Swift one is here. Tune this for a Swift reason and
+    # the bundle names change with it.
     return (
         value.replace("\\", "\\\\")
         .replace('"', '\\"')
@@ -580,6 +613,16 @@ def validate_swift_platform_has_keys(entries, platform: str) -> None:
             f"no key is scoped to {platform!r} — the generated Swift StringKey enum would have no "
             f"cases, which cannot declare a raw type; scope at least one key to {platform!r}"
         )
+
+
+def validate_macos_bundle_name_key(bundle_name_values) -> None:
+    # Like validate_production_completeness and validate_swift_platform_has_keys, a property of the
+    # FULL real source set enforced at the CLI boundary only — unit fixtures author their own tiny
+    # namespaces and must not all have to declare a Home tab. Called where the bundle name is emitted,
+    # the way validate_swift_platform_has_keys is called where its platform's Swift is.
+    if bundle_name_values is None:
+        namespace, key = MACOS_BUNDLE_NAME_KEY
+        raise ValueError(f"{namespace}:{key} is missing — it is the macOS bundle's localized name")
 
 
 def _collect_entries(repo_root: Path):
@@ -943,6 +986,22 @@ def _emit_swift_formats(entries, *, plural_fallback_source: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _bundle_name_values(all_entries):
+    # The app-name entry's values, or None when the source does not carry that key.
+    return next(
+        (entry["values"] for namespace, key, entry in all_entries if (namespace, key) == MACOS_BUNDLE_NAME_KEY),
+        None,
+    )
+
+
+def _emit_info_plist_strings(app_name: str) -> str:
+    # Old-style plist (`"key" = "value";`), the format an `InfoPlist.strings` is. Written UTF-8;
+    # `scripts/bundle-app.sh` converts it to the binary plist Apple's own apps ship.
+    lines = [f"/* {GENERATED_HEADER} */"]
+    lines += [f'"{plist_key}" = "{swift_escape(app_name)}";' for plist_key in MACOS_BUNDLE_NAME_PLIST_KEYS]
+    return "\n".join(lines) + "\n"
+
+
 def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = False) -> dict:
     all_entries = _collect_entries(repo_root)
     # Real CLI builds (generate.py / check.py / Gradle) pass True so a missing production translation
@@ -1009,4 +1068,17 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     outputs[f"{MACOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_swift_formats(
         macos_entries, plural_fallback_source="the generated map"
     )
+
+    # The bundle's own localized name, one `InfoPlist.strings` per system language the bundle answers
+    # to. Emitted from the same authored values as everything else so the product can never be named
+    # one thing in the app and another in the input-source menu.
+    bundle_name_values = _bundle_name_values(all_entries)
+    if enforce_production_completeness:
+        validate_macos_bundle_name_key(bundle_name_values)
+    if bundle_name_values:
+        for lang, lproj in MACOS_BUNDLE_LOCALIZATIONS.items():
+            outputs[f"{MACOS_APP_DIR}/{lproj}.lproj/InfoPlist.strings"] = _emit_info_plist_strings(
+                bundle_name_values[lang]
+            )
+
     return outputs
