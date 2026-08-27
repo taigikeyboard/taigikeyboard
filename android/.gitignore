@@ -25,3 +25,6 @@ hs_err_pid*
 # Track the Gradle wrapper jar despite the *.jar exclusion above.
 # gitignore rules are order-dependent: this `!` must come after `*.jar`.
 !gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin compiler daemon session files
+.kotlin/
