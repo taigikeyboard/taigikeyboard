@@ -33,7 +33,7 @@ class CustomDictionaryService(
     companion object {
         private const val TAG = "CustomDictionaryService"
         private const val DATABASE_NAME = "custom_dictionary.db"
-        private const val DATABASE_VERSION = 6
+        private const val DATABASE_VERSION = 7
 
         /**
          * v3.6.1 R3 cross-mode side-table DDL + indexes + query. `internal` so
@@ -536,6 +536,7 @@ class CustomDictionaryService(
             if (oldVersion < 4) migrateV3ToV4(db)
             if (oldVersion < 5) migrateV4ToV5(db)
             if (oldVersion < 6) migrateV5ToV6(db)
+            if (oldVersion < 7) migrateV6ToV7(db)
             logger.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion")
         }
 
@@ -583,6 +584,27 @@ class CustomDictionaryService(
         // 中文: v5→v6 — 建 custom_search_key 側表 + 索引,對既有每筆 entry 回填 bundle;非破壞,舊欄位不動。
         private fun migrateV5ToV6(db: SQLiteDatabase) {
             createSearchKeyTable(db)
+            regenerateSearchKeys(db)
+        }
+
+        /**
+         * v6 → v7: re-derive after the POJ spelling-glyph fix. `o͘` (U+0358)
+         * used to be dropped from a derived key as if it were a tone
+         * diacritic and the nasal ⁿ survived into the tone-aware key as a
+         * display glyph, while a query key built from the raw keyboard buffer
+         * carries the ASCII `oo` / `nn` the user types — so POJ entries
+         * containing either were unreachable from the keyboard. Same shape as
+         * v3 → v4, which re-derived for the nasal marker.
+         */
+        // 中文: v6→v7 — POJ 拼寫字符修正後重新衍生。o͘ (U+0358) 舊版被當聲調砍掉、
+        // 中文:   鼻化 ⁿ 則以顯示字符留在 num 鍵裡,查詢端 raw buffer 卻是 ASCII oo/nn,
+        // 中文:   含這兩者的 POJ 自訂詞從鍵盤查無。與 v3→v4 (鼻化) 同一種重新衍生。
+        private fun migrateV6ToV7(db: SQLiteDatabase) {
+            regenerateNotone(db)
+            regenerateSearchKeys(db)
+        }
+
+        private fun regenerateSearchKeys(db: SQLiteDatabase) {
             forEachRomanRow(db) { id, roman -> rewriteSearchKeys(db, id, roman) }
         }
 

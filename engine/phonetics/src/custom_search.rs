@@ -176,11 +176,20 @@ fn dedup_nonempty(keys: Vec<CustomSearchKey>) -> Vec<CustomSearchKey> {
 
 // ---- Shared key shaping -------------------------------------------------
 
-/// Lowercase a latin numeric form and drop hyphen + space so it fuses to the
-/// stored `*:num` key shape (e.g. `guá-sī` → `gua2-si7` → `gua2si7`).
+/// Lowercase a latin numeric form, take its base form, and drop hyphen +
+/// space so it fuses to the stored `*:num` key shape (e.g. `guá-sī` →
+/// `gua2-si7` → `gua2si7`).
+///
+/// [`taigi_unicode_base_form`] is what keeps the WRITE key (built from the
+/// stored display roman, so `so͘2` / `kiaⁿ1`) and the QUERY key (built from the
+/// raw keyboard buffer, so `soo2` / `kiann1`) on the same bytes — see
+/// [`derive_notone`] for why the display glyphs cannot reach a key as-is. Both
+/// sides run through this one function, so they cannot drift.
+// 中文: num 形鍵的共同整形 — 小寫、取 base form (o͘→oo、ⁿ→nn)、去連字號/空白。
+// 中文:   寫入端來自顯示形 roman (so͘2/kiaⁿ1)、查詢端來自鍵盤 raw buffer (soo2/kiann1),
+// 中文:   兩邊都走這支所以不會漂移。
 fn fuse_latin_numeric(numeric: &str) -> String {
-    numeric
-        .to_lowercase()
+    crate::taigi_unicode_base_form(&numeric.to_lowercase())
         .chars()
         .filter(|c| *c != '-' && *c != ' ')
         .collect()
@@ -327,6 +336,100 @@ mod tests {
         assert_eq!(q.form, FORM_NUM, "tone mark present → num form");
         assert_eq!(q.key, stored_num.key, "U+02D9 normalized back to U+0307");
         assert!(query_hits_stored(&stored, &q));
+    }
+
+    // 2026-08-28 user report (backlog B1): custom entry `băng-só͘-khó͘` (絆創膏).
+    // POJ writes the vowel /ɔ/ as `o` + U+0358; the raw keyboard buffer holds
+    // the ASCII `oo` the user typed (the oo double-tap rewrite is display-only).
+    // trace: stored poj display = "băng-só͘-khó͘"; derive_notone lowercases,
+    // folds U+0358 → "o", NFD-strips the breve + acutes → "bangsookhoo" — the
+    // same bytes the POJ query "bangsookhoo" produces. Pre-fix the stored key
+    // was "bangsokho", so the entry died at the SECOND `o` under the platform
+    // prefix match.
+    #[test]
+    fn poj_oo_dot_entry_is_findable_by_ascii_oo_query() {
+        let stored = derive_custom_search_keys("băng-só͘-khó͘");
+        assert!(has(&stored, FAMILY_POJ, FORM_NOTONE, "bangsookhoo"));
+        assert!(has(&stored, FAMILY_TL, FORM_NOTONE, "bangsookhoo"));
+
+        let q_poj = derive_custom_query_key("bangsookhoo", "poj").unwrap();
+        assert!(
+            query_hits_stored(&stored, &q_poj),
+            "POJ ASCII `oo` query must find an `o͘`-stored entry"
+        );
+        // TL control — this path was never broken.
+        let q_tl = derive_custom_query_key("bangsookhoo", "tl").unwrap();
+        assert!(query_hits_stored(&stored, &q_tl));
+    }
+
+    // Same fold in the tone-aware branch: the stored `poj:num` key is built
+    // from the display form (`bang9so͘2kho͘2`), the query from the raw buffer
+    // (`bang9soo2khoo2`).
+    #[test]
+    fn poj_oo_dot_entry_is_findable_by_numeric_ascii_query() {
+        let stored = derive_custom_search_keys("băng-só͘-khó͘");
+        assert!(has(&stored, FAMILY_POJ, FORM_NUM, "bang9soo2khoo2"));
+        let q = derive_custom_query_key("bang9soo2khoo2", "poj").unwrap();
+        assert_eq!(q.form, FORM_NUM);
+        assert!(query_hits_stored(&stored, &q));
+    }
+
+    // Nasal sibling of the same defect: POJ display `kiaⁿ` → `to_tone_number`
+    // keeps ⁿ (`kiaⁿ1`), the keyboard buffer holds `kiann1`. `derive_notone`
+    // already folded ⁿ→nn, so only the numeric form was broken.
+    #[test]
+    fn poj_nasal_entry_is_findable_by_numeric_ascii_query() {
+        let stored = derive_custom_search_keys("kiaⁿ");
+        assert!(has(&stored, FAMILY_POJ, FORM_NUM, "kiann1"));
+        let q = derive_custom_query_key("kiann1", "poj").unwrap();
+        assert!(query_hits_stored(&stored, &q));
+    }
+
+    // `o͘` must NOT collapse onto a bare `o`: 芋 `ō͘` and 蚵 `ô` are different
+    // words, and the pre-fix key builder made both `o`.
+    #[test]
+    fn oo_dot_does_not_collapse_onto_bare_o() {
+        let dotted = derive_custom_search_keys("ō͘");
+        let bare = derive_custom_search_keys("ô");
+        assert!(has(&dotted, FAMILY_POJ, FORM_NOTONE, "oo"));
+        assert!(has(&bare, FAMILY_POJ, FORM_NOTONE, "o"));
+        let q_bare = derive_custom_query_key("o", "poj").unwrap();
+        assert!(
+            !query_hits_stored(&dotted, &q_bare),
+            "a bare `o` query must not exact-match the `o͘` entry's key"
+        );
+    }
+
+    // The dot is a scalar of its own in both NFC and NFD, and a tone mark may
+    // sit either side of it depending on how the text was produced. All four
+    // shapes are the same word and must key the same.
+    #[test]
+    fn oo_dot_folds_under_every_composition_and_mark_order() {
+        let expected = derive_custom_query_key("soo", "poj").unwrap().key;
+        for spelling in [
+            "so\u{0358}",         // toneless
+            "s\u{00f3}\u{0358}",  // NFC `ó` + dot
+            "so\u{0301}\u{0358}", // NFD, tone before dot
+            "so\u{0358}\u{0301}", // NFD, dot before tone
+            "SO\u{0358}",         // uppercase base
+        ] {
+            let q = derive_custom_query_key(spelling, "poj").unwrap();
+            assert_eq!(q.key, expected, "spelling {spelling:?} must key as `soo`");
+        }
+    }
+
+    // The nasal marker has an uppercase-modifier twin (ᴺ U+1D3A) a stored
+    // roman can carry; both fold to `nn` in either form.
+    #[test]
+    fn nasal_marker_folds_in_both_glyphs_and_cases() {
+        let expected = derive_custom_query_key("kiann1", "poj").unwrap().key;
+        for spelling in ["kia\u{207f}1", "kia\u{1d3a}1", "KIA\u{207f}1"] {
+            let q = derive_custom_query_key(spelling, "poj").unwrap();
+            assert_eq!(
+                q.key, expected,
+                "spelling {spelling:?} must key as `kiann1`"
+            );
+        }
     }
 
     #[test]

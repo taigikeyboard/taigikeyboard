@@ -34,7 +34,7 @@ enum CustomDictionarySchema {
     /// against any DB whose `PRAGMA user_version` is below this value.
     // 中文: schema 版本號 — 衍生欄位邏輯改動時要 bump,
     // 中文: migrator 會對 PRAGMA user_version 低於此值的 DB 重跑 ALTER + backfill。
-    static let schemaVersion = 2
+    static let schemaVersion = 3
 
     /// Derived column names backed by `CustomDictionaryDerivation`.
     /// Single source of truth for the `ALTER TABLE` migrator.

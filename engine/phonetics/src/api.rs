@@ -384,11 +384,14 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
 /// for keeping genuinely distinct readings (Core Principle #7) apart by
 /// only collapsing when a single canonical target exists.
 ///
-/// **Residual** — does NOT fold spelling families: POJ `chiah` keys to
-/// `chiah`, TL `tsiah` to `tsiah` (no `ch↔ts` / `oa↔ua`). A POJ-spelled
-/// raw next_tl therefore will not collapse onto its TL canonical here;
-/// the write-side R2 fix (continuous commit carries canonical TL) closes
-/// that gap. R1 only needs the common same-family case.
+/// **Residual** — folds ENCODING glyphs, not spelling families. The POJ
+/// nasal marker `ⁿ` and the `o͘` dot U+0358 are alternate encodings of
+/// `nn` / `oo` and DO fold (via `taigi_unicode_base_form`), but a genuine
+/// spelling difference does not: POJ `chiah` keys to `chiah`, TL `tsiah`
+/// to `tsiah` (no `ch↔ts` / `oa↔ua`). A POJ-spelled raw next_tl therefore
+/// will not collapse onto its TL canonical here; the write-side R2 fix
+/// (continuous commit carries canonical TL) closes that gap. R1 only needs
+/// the common same-family case.
 // 中文: 分隔符 + 聲調皆不敏感的「讀音鍵」,把同一音節序列的不同羅馬字寫法收斂到同一鍵
 // 中文:   (taigi / tai5gi2 / tâi-gí → 全部 taigi)。復用 derive_notone(自訂詞 notone 衍生)
 // 中文:   避免兩處邏輯漂移。供 nextword::filter 辨識連續輸入 raw next_tl 與一般 commit
@@ -543,5 +546,17 @@ mod tests {
     #[test]
     fn toneless_reading_key_does_not_fold_spelling_families() {
         assert_ne!(toneless_reading_key("chiah"), toneless_reading_key("tsiah"));
+    }
+
+    // trace: an ENCODING difference is not a spelling family — POJ writes the
+    // same vowel/nasal as TL with a combining dot / modifier letter, so both
+    // renderings are one reading and must key alike.
+    #[test]
+    fn toneless_reading_key_folds_poj_encoding_glyphs() {
+        assert_eq!(
+            toneless_reading_key("ó\u{0358}"),
+            toneless_reading_key("oo")
+        );
+        assert_eq!(toneless_reading_key("kiaⁿ"), toneless_reading_key("kiann"));
     }
 }

@@ -100,6 +100,14 @@ final class ComposingSessionCoordinator {
         let customDictionary = userDataStores.customDictionary
         Task {
             do {
+                // Before the seed: a store written by an older build carries
+                // search keys the current derivation would not produce, and an
+                // entry is findable only under the keys on disk.
+                try await customDictionary.rederiveSearchKeysIfNeeded()
+            } catch {
+                Self.logger.error("custom dictionary key re-derivation failed: \(error)")
+            }
+            do {
                 try await customDictionary.seedIfEmpty()
             } catch {
                 Self.logger.error("custom dictionary seed failed: \(error)")

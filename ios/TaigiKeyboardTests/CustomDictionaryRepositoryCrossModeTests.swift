@@ -85,7 +85,7 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
     /// with NO side-table rows, at `user_version = 1`) is backfilled by the
     /// migrator so a cross-mode query finds it after the repository opens.
     func test_INVARIANT_CUSTOM_DICT_CROSS_MODE_migrationBackfillsExistingRow() async throws {
-        try seedLegacyV1Row(id: "legacy-1", roman: "chiah", hanzi: "食")
+        try seedLegacyRow(id: "legacy-1", roman: "chiah", hanzi: "食", userVersion: 1)
 
         // Opening the repository runs ensureTables + the v1→v2 migrator backfill.
         try await repository.ensureInitialized()
@@ -94,41 +94,6 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
         try await assertFinds(input: "chiah", mode: .poj, expectedHanzi: "食")
     }
 
-    /// Create a v1-shaped DB at `dbPath`: just `custom_dictionary` (no side
-    /// table), one inserted row, `PRAGMA user_version = 1`. Mirrors the
-    /// pre-R3 on-disk shape so the migrator's `< 2` branch fires.
-    private func seedLegacyV1Row(id: String, roman: String, hanzi: String) throws {
-        var db: OpaquePointer?
-        guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
-            throw XCTSkip("could not open temp sqlite for legacy seed")
-        }
-        defer { sqlite3_close(db) }
-
-        let ddl = """
-            CREATE TABLE custom_dictionary (
-                id TEXT PRIMARY KEY,
-                roman TEXT NOT NULL,
-                hanzi TEXT NOT NULL,
-                notone TEXT DEFAULT '',
-                abbrev TEXT DEFAULT '',
-                roman_num TEXT DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """
-        XCTAssertEqual(sqlite3_exec(db, ddl, nil, nil, nil), SQLITE_OK)
-
-        let insert = "INSERT INTO custom_dictionary (id, roman, hanzi) VALUES (?, ?, ?);"
-        var stmt: OpaquePointer?
-        XCTAssertEqual(sqlite3_prepare_v2(db, insert, -1, &stmt, nil), SQLITE_OK)
-        stmt.bindText(1, id)
-        stmt.bindText(2, roman)
-        stmt.bindText(3, hanzi)
-        XCTAssertEqual(sqlite3_step(stmt), SQLITE_DONE)
-        sqlite3_finalize(stmt)
-
-        XCTAssertEqual(sqlite3_exec(db, "PRAGMA user_version = 1;", nil, nil, nil), SQLITE_OK)
-    }
 
     /// INVARIANT_CUSTOM_DICT_CAPACITY — the 30000-row cap constant is pinned on
     /// both platforms (Android `CustomDictionaryCapacityPolicy.MAX_ENTRIES`), and
@@ -156,6 +121,125 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
         try await repository.upsert(entry)
         let afterUpdate = try await repository.count()
         XCTAssertEqual(afterUpdate, 1, "update of an existing id is not a new insert (guard bypass)")
+    }
+
+    /// User report 2026-08-20 (backlog B1): the custom entry
+    /// 「絆創膏 `băng-só͘-khó͘`」 was findable in TL but vanished in POJ at the
+    /// SECOND `o`. POJ writes /ɔ/ as `o` + U+0358 while the raw keyboard
+    /// buffer holds the ASCII `oo` the user typed — the oo double-tap rewrite
+    /// is display-only — so the stored key must fold to the ASCII spelling.
+    func test_pojEntryWithOoDot_isFoundByAsciiOoInput() async throws {
+        try await repository.upsert(CustomDictionaryEntry(roman: "băng-só͘-khó͘", hanzi: "絆創膏"))
+
+        // The keystroke the report died on, and the full romanization after it.
+        try await assertFinds(input: "bangsoo", mode: .poj, expectedHanzi: "絆創膏")
+        try await assertFinds(input: "bangsookhoo", mode: .poj, expectedHanzi: "絆創膏")
+        // The dedicated POJ `o͘` key types U+0358 into the buffer instead.
+        try await assertFinds(input: "bangso\u{0358}kho\u{0358}", mode: .poj, expectedHanzi: "絆創膏")
+        // TL control — this path was never broken.
+        try await assertFinds(input: "bangsookhoo", mode: .tl, expectedHanzi: "絆創膏")
+    }
+
+    /// An entry stored by a pre-v3 build carries the keys THAT build derived,
+    /// and a `o͘` entry's POJ key had the dot dropped as if it were a tone
+    /// diacritic. The v3 migration re-derives every key, so the entry becomes
+    /// reachable from the keyboard again without the user re-adding it.
+    func test_migrationV3_rederivesStaleOoDotKeys() async throws {
+        try seedLegacyRow(
+            id: "legacy-oo-dot",
+            roman: "băng-só͘-khó͘",
+            hanzi: "絆創膏",
+            userVersion: 2,
+            staleKeys: [
+                // What the pre-fix derivation wrote: the dot dropped from the
+                // toneless key, kept as a display glyph in the tone-aware one.
+                (family: "poj", form: "notone", key: "bangsokho"),
+                (family: "poj", form: "num", key: "bang9so\u{0358}2kho\u{0358}2"),
+            ],
+        )
+
+        try await repository.ensureInitialized()
+
+        try await assertFinds(input: "bangsookhoo", mode: .poj, expectedHanzi: "絆創膏")
+        try await assertFinds(input: "bang9soo2khoo2", mode: .poj, expectedHanzi: "絆創膏")
+    }
+
+    /// Create a pre-migration DB at `dbPath`: the main table, one entry, the
+    /// side-table rows as the build of that era derived them (none before v2,
+    /// when the side table did not exist yet), and its `PRAGMA user_version`.
+    /// The DDL is written out rather than taken from `CustomDictionarySchema`
+    /// because the point is the shape an OLD build left behind.
+    private func seedLegacyRow(
+        id: String,
+        roman: String,
+        hanzi: String,
+        userVersion: Int,
+        staleKeys: [(family: String, form: String, key: String)] = [],
+    ) throws {
+        var db: OpaquePointer?
+        guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
+            throw XCTSkip("could not open temp sqlite for legacy seed")
+        }
+        defer { sqlite3_close(db) }
+
+        var ddl = """
+            CREATE TABLE custom_dictionary (
+                id TEXT PRIMARY KEY,
+                roman TEXT NOT NULL,
+                hanzi TEXT NOT NULL,
+                notone TEXT DEFAULT '',
+                abbrev TEXT DEFAULT '',
+                roman_num TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """
+        if userVersion >= 2 {
+            ddl += """
+                CREATE TABLE custom_search_key (
+                    entry_id TEXT NOT NULL,
+                    family   TEXT NOT NULL,
+                    form     TEXT NOT NULL,
+                    key      TEXT NOT NULL
+                );
+            """
+        }
+        XCTAssertEqual(sqlite3_exec(db, ddl, nil, nil, nil), SQLITE_OK)
+
+        var stmt: OpaquePointer?
+        XCTAssertEqual(
+            sqlite3_prepare_v2(db, "INSERT INTO custom_dictionary (id, roman, hanzi) VALUES (?, ?, ?);", -1, &stmt, nil),
+            SQLITE_OK,
+        )
+        stmt.bindText(1, id)
+        stmt.bindText(2, roman)
+        stmt.bindText(3, hanzi)
+        XCTAssertEqual(sqlite3_step(stmt), SQLITE_DONE)
+        sqlite3_finalize(stmt)
+
+        var keyStmt: OpaquePointer?
+        if !staleKeys.isEmpty {
+            XCTAssertEqual(
+                sqlite3_prepare_v2(
+                    db,
+                    "INSERT INTO custom_search_key (entry_id, family, form, key) VALUES (?, ?, ?, ?);",
+                    -1, &keyStmt, nil,
+                ),
+                SQLITE_OK,
+            )
+        }
+        defer { sqlite3_finalize(keyStmt) }
+        for staleKey in staleKeys {
+            sqlite3_reset(keyStmt)
+            sqlite3_clear_bindings(keyStmt)
+            keyStmt.bindText(1, id)
+            keyStmt.bindText(2, staleKey.family)
+            keyStmt.bindText(3, staleKey.form)
+            keyStmt.bindText(4, staleKey.key)
+            XCTAssertEqual(sqlite3_step(keyStmt), SQLITE_DONE)
+        }
+
+        XCTAssertEqual(sqlite3_exec(db, "PRAGMA user_version = \(userVersion);", nil, nil, nil), SQLITE_OK)
     }
 
     // MARK: - Helpers

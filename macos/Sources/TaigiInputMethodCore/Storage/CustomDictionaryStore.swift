@@ -48,7 +48,7 @@ struct CustomDictionaryImportResult: Equatable, Sendable {
 final class CustomDictionaryStore: @unchecked Sendable {
     private static let tableName = "custom_dictionary"
     private static let searchKeyTableName = "custom_search_key"
-    private static let schemaVersion: Int32 = 2
+    private static let schemaVersion: Int32 = 3
 
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryCapacityPolicy.swift:18
@@ -289,6 +289,63 @@ final class CustomDictionaryStore: @unchecked Sendable {
         }
     }
 
+    /// Rebuilds every entry's search keys when the stored database predates the
+    /// current key derivation, then records the new shape.
+    ///
+    /// Search keys are DERIVED: a correction to how a roman becomes a key
+    /// leaves rows already on disk findable only under the old, wrong key. The
+    /// v2 → v3 case is the POJ spelling fix — `o͘` (U+0358) used to be dropped
+    /// from a key as if it were a tone diacritic, and the nasal ⁿ survived into
+    /// the tone-aware key as a display glyph, while the query key carries the
+    /// ASCII `oo` / `nn` a keyboard types. Every POJ entry containing either
+    /// was unreachable until it is re-derived.
+    ///
+    /// Mirrors iOS `CustomDictionaryMigrator` (v3) and Android's v6 → v7. An
+    /// entry whose roman will not derive keeps the keys it has rather than
+    /// losing them: one unparseable row must not decide the fate of the rest.
+    func rederiveSearchKeysIfNeeded() async throws {
+        // The version and the rows it describes are read together: a second hop
+        // for the guard would queue behind whatever else the launch is doing.
+        let stored = try await database.perform { connection -> [(id: String, roman: String)]? in
+            guard connection.userVersion < Self.schemaVersion else { return nil }
+            return try Self.entryRomans(connection)
+        }
+        guard let stored else { return }
+
+        // Derived before the transaction opens, exactly as `batchImport` does:
+        // an FFI round-trip has no business holding the write lock.
+        var derivedByRoman: [String: [CustomSearchKey]] = [:]
+        for entry in stored where derivedByRoman[entry.roman] == nil {
+            guard let keys = deriveSearchKeys(entry.roman), !keys.isEmpty else { continue }
+            derivedByRoman[entry.roman] = keys
+        }
+        let rederived = stored.compactMap { entry in
+            derivedByRoman[entry.roman].map { (id: entry.id, roman: entry.roman, searchKeys: $0) }
+        }
+
+        try await database.perform { connection in
+            try connection.withImmediateTransaction {
+                // Re-read inside the transaction: between the snapshot above and
+                // this write the user may have edited or deleted an entry, and
+                // that write already left current keys behind. Writing the
+                // snapshot's keys over those would re-file the word under a
+                // romanization it no longer has.
+                let current = Dictionary(
+                    try Self.entryRomans(connection).map { ($0.id, $0.roman) },
+                    uniquingKeysWith: { first, _ in first },
+                )
+                for entry in rederived where current[entry.id] == entry.roman {
+                    try Self.replaceSearchKeys(
+                        connection,
+                        entryID: entry.id,
+                        searchKeys: entry.searchKeys,
+                    )
+                }
+                connection.userVersion = Self.schemaVersion
+            }
+        }
+    }
+
     /// Writes the seed entries, but only into a dictionary nobody has touched.
     ///
     /// All-or-nothing on emptiness, like iOS: deleting one seed and relaunching
@@ -423,7 +480,18 @@ final class CustomDictionaryStore: @unchecked Sendable {
         )
         // Replace rather than add: an edited roman must not stay findable
         // under the keys of the roman it replaced.
-        try deleteSearchKeys(connection, entryID: row.id)
+        try replaceSearchKeys(connection, entryID: row.id, searchKeys: searchKeys)
+    }
+
+    /// One entry's side-table rows, swapped for the ones passed in. Must be
+    /// called inside a transaction — between the delete and the inserts the
+    /// entry is findable under nothing.
+    private static func replaceSearchKeys(
+        _ connection: SQLiteConnection,
+        entryID: String,
+        searchKeys: [CustomSearchKey],
+    ) throws {
+        try deleteSearchKeys(connection, entryID: entryID)
         for searchKey in searchKeys {
             try connection.run(
                 """
@@ -431,7 +499,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 VALUES (?, ?, ?, ?);
                 """,
                 [
-                    .text(row.id),
+                    .text(entryID),
                     .text(searchKey.family),
                     .text(searchKey.form),
                     .text(searchKey.key),
@@ -445,6 +513,16 @@ final class CustomDictionaryStore: @unchecked Sendable {
             "DELETE FROM \(searchKeyTableName) WHERE entry_id = ?;",
             [.text(entryID)],
         )
+    }
+
+    /// Every entry as `(id, roman)`, unordered — what the key re-derivation
+    /// needs, without the columns and the sort `allRows` owes the settings list.
+    private static func entryRomans(
+        _ connection: SQLiteConnection,
+    ) throws -> [(id: String, roman: String)] {
+        try connection.query("SELECT id, roman FROM \(tableName);") {
+            (id: $0.text(0), roman: $0.text(1))
+        }
     }
 
     private static func entryCount(_ connection: SQLiteConnection) throws -> Int {
@@ -511,6 +589,11 @@ final class CustomDictionaryStore: @unchecked Sendable {
         // columns. They are write-only there — the query path has used the
         // side table since schema 2 — so macOS does not create them rather
         // than create columns nothing will ever read.
-        connection.userVersion = schemaVersion
+        //
+        // Deliberately does NOT stamp `user_version`: creating tables says
+        // nothing about whether the ROWS in them were derived by the current
+        // logic. `rederiveSearchKeysIfNeeded` is what records the shape, once
+        // it has made the data match it — a stamp here would tell that check
+        // a database it has never looked at is already up to date.
     }
 }

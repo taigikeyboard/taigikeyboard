@@ -14,12 +14,23 @@
 
 use unicode_normalization::UnicodeNormalization;
 
-/// `Method::DeriveNotone` — strips tone diacritics + digits + hyphens + spaces,
-/// after lowercase + nasal marker conversion (ⁿ U+207F / ᴺ U+1D3A → nn).
-// 中文: 去聲調衍生形:小寫化 + 鼻化符號改 nn 後,把所有聲調符號/數字/連字號/空白都拿掉。
+/// `Method::DeriveNotone` — strips tone diacritics + digits + hyphens + spaces
+/// from the base form of `roman`.
+///
+/// The base form ([`taigi_unicode_base_form`]) is what makes a POJ display
+/// roman and the ASCII a keyboard types agree: it rewrites the nasal marker
+/// ⁿ / ᴺ to `nn` and the `o͘` dot U+0358 to `o`, then NFD-decomposes. Both
+/// rewrites MUST happen before the strip below — U+0358 is spelling, not tone
+/// (POJ `o͘` is TL `oo`), yet it sits inside the `0x0300..=0x036F` block
+/// [`is_nonspacing_mark`] treats as tone material, so an unfolded `o͘` would
+/// silently collapse onto a bare `o` and put a stored POJ entry under a key no
+/// keystroke produces (user report 2026-08-20: `băng-só͘-khó͘`).
+// 中文: 去聲調衍生形:先取 base form (鼻化 ⁿ/ᴺ → nn、o͘ 的點 U+0358 → o,再 NFD),
+// 中文:   然後把聲調符號/數字/連字號/空白拿掉。U+0358 是拼寫不是聲調 (POJ o͘ == TL oo),
+// 中文:   但它落在 is_nonspacing_mark 的 0x0300..=0x036F 內,不先折就會被當聲調砍掉,
+// 中文:   存起來的 POJ 自訂詞就落在鍵盤打不出來的鍵上。
 pub(crate) fn derive_notone(roman: &str) -> String {
-    let with_nasal_converted = roman.to_lowercase().replace(['\u{207F}', '\u{1D3A}'], "nn");
-    let decomposed: String = with_nasal_converted.nfd().collect();
+    let decomposed = crate::taigi_unicode_base_form(&roman.to_lowercase());
     let mut result = String::new();
     for ch in decomposed.chars() {
         if is_nonspacing_mark(ch) {

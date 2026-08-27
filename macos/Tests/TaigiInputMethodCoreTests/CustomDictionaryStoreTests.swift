@@ -22,7 +22,22 @@ final class CustomDictionaryStoreTests: XCTestCase {
         },
         maxEntries: Int = CustomDictionaryStore.maxEntries,
     ) throws -> CustomDictionaryStore {
-        let directory = try TestFixtures.scratchDirectory()
+        try makeStore(
+            at: TestFixtures.scratchDirectory(),
+            deriveSearchKeys: deriveSearchKeys,
+            maxEntries: maxEntries,
+        )
+    }
+
+    /// The same store over a directory the caller names, so one case can put
+    /// two stores over one database file.
+    private func makeStore(
+        at directory: URL,
+        deriveSearchKeys: @escaping @Sendable (String) -> [CustomSearchKey]? = {
+            stubSearchKeys(for: $0)
+        },
+        maxEntries: Int = CustomDictionaryStore.maxEntries,
+    ) throws -> CustomDictionaryStore {
         let store = CustomDictionaryStore(
             directory: { directory },
             deriveSearchKeys: deriveSearchKeys,
@@ -34,6 +49,14 @@ final class CustomDictionaryStoreTests: XCTestCase {
             "the store never opened",
         )
         return store
+    }
+
+    /// A store whose derivation stamps `prefix` onto every key, so one case can
+    /// tell the keys an older build wrote from the ones the current one does.
+    private func makeStore(at directory: URL, keyPrefix: String) throws -> CustomDictionaryStore {
+        try makeStore(at: directory, deriveSearchKeys: { roman in
+            [CustomSearchKey(family: "tl", form: "notone", key: "\(keyPrefix)\(roman)")]
+        })
     }
 
     private func row(_ roman: String, _ hanzi: String, id: String = UUID().uuidString) -> CustomDictionaryRow {
@@ -292,6 +315,99 @@ final class CustomDictionaryStoreTests: XCTestCase {
 
         let remaining = try await store.count()
         XCTAssertEqual(remaining, 1)
+    }
+
+    // MARK: - Re-derivation
+
+    /// Search keys are derived, so a correction to the derivation leaves rows
+    /// already on disk findable only under the old, wrong key. The v2 → v3 case
+    /// is the POJ `o͘` / ⁿ spelling fix (user report 2026-08-20).
+    func testKeysWrittenByAnOlderDerivation_areRederived() async throws {
+        let directory = try TestFixtures.scratchDirectory()
+        let oldStore = try makeStore(at: directory, keyPrefix: "old-")
+        try await oldStore.upsert(row("gua", "我"))
+        XCTAssertEqual(oldStore.rows(matching: queryKey("old-gua")).map(\.hanzi), ["我"])
+        // What an older build recorded about the shape it wrote.
+        try setUserVersion(2, in: directory)
+
+        let newStore = try makeStore(at: directory, keyPrefix: "new-")
+        try await newStore.rederiveSearchKeysIfNeeded()
+
+        XCTAssertEqual(
+            newStore.rows(matching: queryKey("new-gua")).map(\.hanzi), ["我"],
+            "the entry has to be findable under the key the current derivation produces",
+        )
+        XCTAssertTrue(
+            newStore.rows(matching: queryKey("old-gua")).isEmpty,
+            "the superseded key has to be gone, not merely joined by the new one",
+        )
+    }
+
+    /// A store already at the current shape must not spend a launch rewriting
+    /// keys that are already right.
+    func testAStoreAtTheCurrentShape_isNotRederived() async throws {
+        let recorder = DerivationRecorder()
+        let directory = try TestFixtures.scratchDirectory()
+        let store = try makeStore(at: directory, deriveSearchKeys: { roman in
+            recorder.record(roman)
+            return stubSearchKeys(for: roman)
+        })
+        // A launch over a new file: nothing to re-derive, and the shape is
+        // recorded — which is what the next launch reads.
+        try await store.rederiveSearchKeysIfNeeded()
+        try await store.upsert(row("gua", "我"))
+
+        try await store.rederiveSearchKeysIfNeeded()
+
+        XCTAssertEqual(recorder.romans, ["gua"], "only the upsert should have derived anything")
+    }
+
+    /// A database that carries rows but no recorded version — an unstamped or
+    /// hand-restored file — is behind by definition, not up to date. Creating
+    /// its tables must not be mistaken for having derived its keys.
+    func testAnUnversionedStoreWithRows_isRederived() async throws {
+        let directory = try TestFixtures.scratchDirectory()
+        let oldStore = try makeStore(at: directory, keyPrefix: "old-")
+        try await oldStore.upsert(row("gua", "我"))
+        try setUserVersion(0, in: directory)
+
+        let newStore = try makeStore(at: directory, keyPrefix: "new-")
+        try await newStore.rederiveSearchKeysIfNeeded()
+
+        XCTAssertEqual(newStore.rows(matching: queryKey("new-gua")).map(\.hanzi), ["我"])
+    }
+
+    /// An entry the user edits while the re-derivation is in flight keeps the
+    /// keys ITS OWN write derived — the snapshot's keys describe a
+    /// romanization the entry no longer has.
+    func testAnEntryEditedDuringRederivation_keepsItsOwnKeys() async throws {
+        let directory = try TestFixtures.scratchDirectory()
+        let oldStore = try makeStore(at: directory, keyPrefix: "old-")
+        let entryID = UUID().uuidString
+        try await oldStore.upsert(row("gua", "我", id: entryID))
+        try setUserVersion(2, in: directory)
+
+        let newStore = try makeStore(at: directory, keyPrefix: "new-")
+        // Stands in for the edit landing between the snapshot read and the
+        // re-derivation write: the row now holds a different romanization,
+        // written with current-derivation keys.
+        try await newStore.upsert(row("goa", "我", id: entryID))
+
+        try await newStore.rederiveSearchKeysIfNeeded()
+
+        XCTAssertEqual(newStore.rows(matching: queryKey("new-goa")).map(\.hanzi), ["我"])
+        XCTAssertTrue(
+            newStore.rows(matching: queryKey("new-gua")).isEmpty,
+            "the superseded romanization must not come back as a key",
+        )
+    }
+
+    /// Stamp the version an older build would have recorded, from a second
+    /// connection to the same file.
+    private func setUserVersion(_ version: Int32, in directory: URL) throws {
+        let connection = SQLiteConnection()
+        try connection.open(at: directory.appendingPathComponent("custom_dictionary.db"))
+        connection.userVersion = version
     }
 
     // MARK: - Not open

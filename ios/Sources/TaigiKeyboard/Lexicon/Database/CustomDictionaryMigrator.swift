@@ -14,6 +14,12 @@ import SQLite3
 /// 2. (v2) Backfill the `custom_search_key` side table for every existing
 ///    entry so cross-input-mode search finds pre-v2 entries. Non-destructive —
 ///    only inserts side rows, never touches `custom_dictionary` user data.
+/// 3. (v3) The POJ spelling-glyph fix: `o͘` (U+0358) used to be stripped from
+///    a derived key as if it were a tone diacritic and the nasal ⁿ survived
+///    into the tone-aware key as a display glyph, while a query key built from
+///    the raw keyboard buffer carries the ASCII `oo` / `nn` the user types —
+///    so every POJ entry containing either was unreachable from the keyboard
+///    until its keys are re-derived.
 ///
 /// Runs after `CustomDictionarySchema.ensureTables`; callers must serialize
 /// access (typically via `SQLiteConnectionManager.execute`).
@@ -31,9 +37,14 @@ enum CustomDictionaryMigrator {
 
         logger.info("[MIGRATE] custom_dictionary.db v\(currentVersion) -> v\(CustomDictionarySchema.schemaVersion)")
 
+        // Structure — the version branches carry only the DDL each step added;
+        // the derived VALUES are then rebuilt once, below. Every reachable
+        // version is behind the current derivation (that is what a bump means),
+        // so backfilling per branch would only repeat the same work.
+        // 中文: 版本分支只放各步驟新增的 DDL;衍生「值」統一在下面重建一次
+        // 中文:   (任何舊版都落後目前的衍生邏輯,逐分支回填只是重複做一樣的事)。
         if currentVersion < 1 {
             addMissingDerivedColumns(db: db)
-            backfillDerivedColumns(db: db)
         }
 
         if currentVersion < 2 {
@@ -41,8 +52,10 @@ enum CustomDictionaryMigrator {
             // ran, but re-create idempotently so the backfill never targets a
             // missing table if call order ever changes.
             try? CustomDictionarySchema.ensureTables(db: db)
-            backfillSearchKeys(db: db)
         }
+
+        backfillDerivedColumns(db: db)
+        backfillSearchKeys(db: db)
 
         sqliteSetUserVersion(db: db, version: CustomDictionarySchema.schemaVersion)
     }
