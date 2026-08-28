@@ -18,7 +18,7 @@ import KeyboardKit
 /// 4. `nextWordController.process()` — record association → update state → predict  (NextWordController)
 // 中文: 台語鍵盤的 ActionHandler。手勢入口走 handle(_:on:),收 release / repeatPress 後派送。
 // 中文: 跨檔協作:KeyActions / Suggestions / CustomActions / Utilities 各掌一塊,主檔只做 dispatch。
-public class ActionHandler: KeyboardAction.StandardActionHandler {
+public class ActionHandler: StandardKeyboardActionHandler {
     // MARK: - Properties
 
     let logger = DebugLogger(category: "ActionHandler")
@@ -66,19 +66,16 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         if action == .space, isSpacebarDragGestureEnding(gesture) {
             // A spacebar long-press moves the cursor instead of typing, so this gesture
             // must not emit a space — hand the teardown to KeyboardKit.
+            // KeyboardKit 10.9 rebuilt `SpacebarDragGestureHandler` as closure-driven and
+            // removed the public `currentDragTextPositionOffset` this branch once reset
+            // (the issue-#545 workaround for a leaked drag offset that permanently killed
+            // the spacebar). Whether KK still keeps equivalent private state is unknowable
+            // (binary-only); drag-end behavior must be re-verified on device after any KK
+            // upgrade.
+            // 中文: KeyboardKit 10.9 重寫拖曳手勢,#545 歸零 workaround 所依賴的 public offset
+            // 中文: 已移除、workaround 被迫退役;KK 內部是否仍有等價私有狀態不可知,拖曳後
+            // 中文: 空白鍵行為仍需實機 dogfood 驗證。
             super.handle(gesture, on: action)
-
-            // FIXME: Workaround for KeyboardKit 10 leaking its spacebar drag offset.
-            // KeyboardKit resets `currentDragTextPositionOffset` only when a *new* drag
-            // starts, never at drag end, and exposes no reset API. A surviving non-zero
-            // offset keeps its internal `isSpaceCursorDrag` classification permanently
-            // true, which killed every later spacebar tap and suppresses
-            // autocorrect-before-space. Must run AFTER `super.handle`, which still reads
-            // the offset while handling the drag end.
-            // Remove when KeyboardKit resets the offset itself or offers a reset API.
-            // 中文: KeyboardKit 只在「新 drag 開始」時歸零 offset,結束時不歸零 — 殘留值會讓它永久
-            // 中文: 誤判成「還在拖曳」,空白鍵從此失效。必須在 super.handle 之後清。
-            spacebarDragGestureHandler.currentDragTextPositionOffset = 0
             return
         }
 
@@ -115,12 +112,15 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     /// Whether `gesture` ends an active spacebar drag gesture — the long-press sequence
     /// that moves the input cursor, whether or not the finger actually moved.
     ///
-    /// `keyboardContext.isSpacebarDragGestureActive` is KeyboardKit's own drag state:
-    /// `.longPress` sets it, and `.release` / `.end` clear it *inside* `super.handle`, so
-    /// it must be read before dispatching to `super`. `.end` is checked as well because a
-    /// cancelled gesture delivers `.end` without a preceding `.release`.
+    /// `keyboardContext.isSpacebarDragGestureActive` is KeyboardKit's own drag state.
+    /// Observed on KK ≤ 10.4: `.longPress` sets it, and `.release` / `.end` clear it
+    /// *inside* `super.handle`, so it must be read before dispatching to `super`. KK is
+    /// binary-only since 10.9 — the timing is an observation to re-verify on device, not
+    /// a documented contract. `.end` is checked as well because a cancelled gesture
+    /// delivers `.end` without a preceding `.release`.
     // 中文: 判定此手勢是否結束一個進行中的 spacebar 拖曳手勢(長按移游標,不論手指有無真的移動)。
-    // 中文: 用 KeyboardKit 自己的 drag 狀態當唯一來源,必須在 super.handle 之前讀(super 會把它清掉)。
+    // 中文: 用 KeyboardKit 自己的 drag 狀態當唯一來源;「super 會把它清掉」是 ≤10.4 的觀察,
+    // 中文: 10.9 起閉源無法查證,升級後靠實機驗證。
     private func isSpacebarDragGestureEnding(_ gesture: Keyboard.Gesture) -> Bool {
         switch gesture {
         case .release, .end:
@@ -141,7 +141,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     }
 
     // 中文: 候選詞點選的 KeyboardKit 入口。English 模式走 KK 預設,Taigi 模式走自家路徑。
-    override public func handle(_ suggestion: Autocomplete.Suggestion) {
+    override public func handle(_ suggestion: AutocompleteSuggestion) {
         // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
         if settings.inputMode == .english {
             super.handle(suggestion)
@@ -159,7 +159,11 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
     /// Part of 3-layer workaround — see KeyboardViewController.setupKeyboardCaseProtection() (Layer 2).
-    /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
+    /// 2026-08-28: removing all layers after migrating to `setupKeyboardKit(for:)`
+    /// (KK 10.9.0) still produced sentence-initial uppercase on device with
+    /// auto-cap OFF — the benchmark-extension result did not reproduce in this
+    /// app, so the workaround stays. Do NOT remove again without a passing
+    /// on-device dogfood of the standard path in THIS app.
     ///
     /// - Shift: always let super handle (preserves doubleTap → Caps Lock)
     /// - Other actions: only call super when auto-cap is on
@@ -195,13 +199,13 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 // 中文: 這是引擎端 prediction 唯一接觸 KeyboardKit 型別的地方。
 extension ActionHandler: AutocompleteContextUpdater {
     /// Engine-side predictions arrive here and are mapped to KeyboardKit
-    /// `Autocomplete.Suggestion` values. This is the only place the
+    /// `AutocompleteSuggestion` values. This is the only place the
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
-    // 中文: 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 Autocomplete.Suggestion。
+    // 中文: 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 AutocompleteSuggestion。
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
         let suggestions = predictions.map { prediction in
-            Autocomplete.Suggestion(
+            AutocompleteSuggestion(
                 text: prediction.text,
                 title: prediction.text,
                 subtitle: prediction.subtitle,

@@ -28,7 +28,10 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// - Layer 1: textDidChangeAsync override (this file) — skips super when auto-cap off
     /// - Layer 2: setupKeyboardCaseProtection (this file) — Combine guard for internal path
     /// Also: tryChangeKeyboardCase override (ActionHandler.swift) — blocks non-shift case changes
-    /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
+    /// 2026-08-28: the standard `setupKeyboardKit(for:)` path (KK 10.9.0) did NOT
+    /// fix the symptom on device in this app (benchmark result not reproduced) —
+    /// workaround restored. Do NOT remove again without a passing on-device
+    /// dogfood of the standard path in THIS app.
     private var expectedKeyboardCase: Keyboard.KeyboardCase = .lowercased
     private var justSwitchedToAlphabetic = false
 

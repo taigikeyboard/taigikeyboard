@@ -8,9 +8,9 @@ import SwiftUI
 /// Overlay that displays expanded candidate grid with navigation controls
 // 中文: 展開候選詞 overlay — 候選詞網格 + 右側控制面板(上下翻頁、translate 切換、收合)。
 struct ExpandedCandidateOverlay: View {
-    let suggestions: [Autocomplete.Suggestion]
+    let suggestions: [AutocompleteSuggestion]
     let selectedCandidateIndex: Int
-    let onSuggestionTap: (Autocomplete.Suggestion) -> Void
+    let onSuggestionTap: (AutocompleteSuggestion) -> Void
     let isTranslateSwapped: Bool
     let onTranslateToggle: () -> Void
     let onCollapse: () -> Void

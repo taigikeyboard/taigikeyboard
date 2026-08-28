@@ -9,7 +9,7 @@ import UIKit
 // 中文: 將 [[KeyDef]] 轉換為 KeyboardKit 的 KeyboardLayout。
 struct LayoutConverter {
     let context: KeyboardContext
-    let config: KeyboardLayout.DeviceConfiguration
+    let config: KeyboardLayoutConfiguration
 
     /// Converts [[KeyDef]] to KeyboardLayout
     // 中文: 進入點 — 把外部 [[KeyDef]] 轉成 KeyboardLayout。
@@ -19,12 +19,12 @@ struct LayoutConverter {
                 createItem(from: keyDef)
             }
         }
-        return KeyboardLayout(itemRows: itemRows, deviceConfiguration: config)
+        return KeyboardLayout(itemRows: itemRows, configuration: config)
     }
 
     // MARK: - Private
 
-    private func createItem(from keyDef: KeyDef) -> KeyboardLayout.Item {
+    private func createItem(from keyDef: KeyDef) -> KeyboardLayoutItem {
         let action = keyDefToAction(keyDef)
         let width = widthFor(keyDef)
         return action.standardLayoutItem(for: config, width: width)
@@ -78,7 +78,7 @@ struct LayoutConverter {
 
     /// Determines key width
     // 中文: 依 KeyDef 種類與螢幕方向決定寬度比例;.char 回 nil 走預設輸入鍵寬。
-    private func widthFor(_ keyDef: KeyDef) -> KeyboardLayout.ItemWidth? {
+    private func widthFor(_ keyDef: KeyDef) -> KeyboardLayoutItem.Width? {
         // Use UIKit native API for orientation (KeyboardKit 10 no longer provides interfaceOrientation)
         let screenBounds = UIScreen.main.bounds
         let isPortrait = screenBounds.height > screenBounds.width

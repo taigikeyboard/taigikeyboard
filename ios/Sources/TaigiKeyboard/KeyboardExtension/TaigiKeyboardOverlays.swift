@@ -14,9 +14,9 @@ extension View {
     func withKeyboardOverlays(
         panels: Binding<OverlayPanelState>,
         expandState: CandidateExpandState,
-        suggestions: [Autocomplete.Suggestion],
+        suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
-        onSuggestionTap: @escaping (Autocomplete.Suggestion) -> Void,
+        onSuggestionTap: @escaping (AutocompleteSuggestion) -> Void,
         isTranslateSwapped: Bool,
         onTranslateToggle: @escaping () -> Void,
         candidateStyle: CandidateView.Style,

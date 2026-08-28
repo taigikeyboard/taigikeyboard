@@ -1,21 +1,21 @@
-// Callouts+TaigiCalloutBuilder.swift
+// TaigiCallouts+Builder.swift
 // Entry point for long-press callout actions.
 // Lookup order: layout-specific (TPS/MOE1/MOE2) → symbol → tone variations (POJ/TL).
-// Maps are defined in Callouts+TaigiCalloutMaps.swift.
+// Maps are defined in TaigiCallouts+Maps.swift.
 
 // 中文: 長按 callout 動作的進入點。
 // 中文: 查詢順序:layout-specific(TPS / MOE1 / MOE2)→ Symbol → 調符變體(POJ / TL)。
-// 中文: callout 資料表定義於 Callouts+TaigiCalloutMaps.swift。
+// 中文: callout 資料表定義於 TaigiCallouts+Maps.swift。
 
 import Foundation
 import KeyboardKit
 
-public extension Callouts {
+public extension TaigiCallouts {
     /// Long-press callout builder: layout-specific → symbol → tone variations
-    // 中文: 長按 callout 的 ActionsBuilder — 依 layout-specific → symbol → 調符變體順序查表。
-    static let taigiCalloutActions: ActionsBuilder = { params in
+    // 中文: 長按 callout 的 builder — 依 layout-specific → symbol → 調符變體順序查表。
+    static let taigiCalloutActions: KeyboardCalloutActions.Builder = { params in
         guard case let .character(char) = params.action else {
-            return Callouts.Actions.english.actions(for: params.action)
+            return KeyboardCalloutActions.english.actions(for: params.action)
         }
 
         // Layout-specific callouts take priority over symbol/tone callouts

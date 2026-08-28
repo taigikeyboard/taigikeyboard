@@ -20,7 +20,7 @@ class CustomLayoutService {
         for context: KeyboardContext,
         appearance: ThemeAppearance? = nil,
     ) -> KeyboardLayout {
-        var config = KeyboardLayout.DeviceConfiguration.standard(for: context)
+        var config = KeyboardLayoutConfiguration.standard(for: context)
         // Layout geometry follows the active (or draft) theme (per-theme key height /
         // corner radius). Non-appearance reads (inputMode / layoutType / globe) stay on
         // the live settings below.

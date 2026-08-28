@@ -12,8 +12,11 @@ private let setupLogger = DebugLogger(category: "KeyboardViewController+Setup")
 extension KeyboardViewController {
     // 中文: 主初始化序 — 必須在第一次存取 KeyboardSettings 前呼叫。
     func setupServices() {
-        // Must be called before any KeyboardSettings access
-        KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
+        // Must be called before any KeyboardSettings access. Legacy setup path
+        // kept on purpose: the standard setupKeyboardKit(for:) migration did
+        // NOT fix the auto-cap symptom on device (2026-08-28) — see the
+        // FIXME layers in KeyboardViewController.
+        KeyboardSettings.setupStore(for: .taigiKeyboard)
 
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
 
@@ -96,7 +99,7 @@ extension KeyboardViewController {
             emojiContext: state.emojiContext,
             feedbackContext: state.feedbackContext,
             feedbackService: services.feedbackService,
-            keyboardAppContext: state.keyboardAppContext,
+            keyboardAppContext: state.appContext,
             spacebarDragGestureHandler: services.spacebarDragGestureHandler,
         )
 

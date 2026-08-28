@@ -20,11 +20,11 @@ struct KeyboardPreviewPanel: View {
     let appliesThemeShadow: Bool
     let colorScheme: ColorScheme
 
-    @State private var previewState = Keyboard.State()
+    @State private var previewState = KeyboardState()
     @State private var composingManager = ComposingManager()
 
     var body: some View {
-        let services = Keyboard.Services(state: previewState)
+        let services = KeyboardServices(state: previewState)
         let layout = CustomLayoutService()
             .keyboardLayout(for: previewState.keyboardContext, appearance: appearance)
         let settings = ThemePreviewEnvironment(

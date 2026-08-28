@@ -13,7 +13,7 @@ import KeyboardKit
 ///
 /// Created by: `TaigiKeyboardView.RenderProviders`
 /// Queried by: `TaigiButtonContent.body` (text branch, after image check)
-/// Depends on: `SettingsSnapshot`, `KeyboardContext`, `Callouts.TPSCallouts`
+/// Depends on: `SettingsSnapshot`, `KeyboardContext`, `TaigiCallouts.TPSCallouts`
 // 中文: 鍵面文字 provider — 渲染鏈第二棒。
 final class ButtonTextProvider {
     /// MOE1/MOE2 punctuation hint mappings.
@@ -41,7 +41,7 @@ final class ButtonTextProvider {
     func isTPSHint(for action: KeyboardAction) -> Bool {
         guard settings.keyboardLayoutType == .tps,
               case let .character(char) = action else { return false }
-        return Callouts.TPSCallouts.actions[char] != nil
+        return TaigiCallouts.TPSCallouts.actions[char] != nil
     }
 
     /// Returns true if the hint is a text hint (smaller font), false for standalone diacritics (larger font).
@@ -53,7 +53,7 @@ final class ButtonTextProvider {
 
         // TPS layout: callout hints are text hints
         if layoutType == .tps {
-            return Callouts.TPSCallouts.actions[char] != nil
+            return TaigiCallouts.TPSCallouts.actions[char] != nil
         }
 
         guard layoutType == .moe1 || layoutType == .moe2 else { return false }
@@ -136,7 +136,7 @@ final class ButtonTextProvider {
 
     /// TPS callout hint: space-separated variant characters.
     private func tpsHintText(for char: String) -> String? {
-        Callouts.TPSCallouts.actions[char]?.joined(separator: " ")
+        TaigiCallouts.TPSCallouts.actions[char]?.joined(separator: " ")
     }
 
     /// Tone diacritic hint for number keys (0-9).

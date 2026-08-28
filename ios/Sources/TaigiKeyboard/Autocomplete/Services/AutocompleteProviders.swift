@@ -45,7 +45,7 @@ protocol SelectionContextProvider: AnyObject {
 /// Abstracts autocomplete context updates so NextWordController doesn't depend
 /// on KeyboardKit's controller hierarchy. The conforming adapter (`ActionHandler`)
 /// translates engine-layer `NextWordEnginePrediction` values into KeyboardKit
-/// `Autocomplete.Suggestion`s at the boundary.
+/// `AutocompleteSuggestion`s at the boundary.
 // 中文: 把 NextWord 預測列表寫回 autocomplete UI 的抽象 protocol,實作通常是 ActionHandler 適配器。
 protocol AutocompleteContextUpdater: AnyObject {
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction])

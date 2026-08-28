@@ -33,8 +33,9 @@ struct TaigiKeyboardApp: App {
         installLexiconEngineForMainApp()
 
         // Configure KeyboardKit to persist settings via App Group.
-        // Must be called before any @AppStorage access.
-        KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
+        // Must be called before any @AppStorage access. Same KeyboardApp value
+        // as the extension's setupKeyboardKit(for:) — identical store + prefix.
+        KeyboardSettings.setupStore(for: .taigiKeyboard)
 
         // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
         let navAppearance = UINavigationBarAppearance()
