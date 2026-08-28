@@ -10,12 +10,10 @@ import Foundation
 /// answers those slots from the positions it draws
 /// (`CandidatePresenter.candidateIndex(forSlot:)`).
 ///
-/// Always the chosen set, whatever the buffer. A bare `1`…`9` also picks once
-/// no tone can follow (`ComposingKeyIntent.canTypeToneDigit`), but the hint
-/// does not swap to it: a key that changes under the user mid-word reads as
-/// the keys having moved, and the set's key keeps working regardless (USER
-/// 2026-08-28, which also retired the `↓` latch that used to flip it).
-/// McBopomofo folds the modifier into the label text the same way
+/// Always the chosen set: it is the only thing that picks (USER 2026-08-28,
+/// which retired both the bare-digit-after-a-tone rule and the `↓` latch
+/// that used to flip the hint to `1`…`9`). McBopomofo folds the modifier
+/// into the label text the same way
 /// (`references/McBopomofo/Source/InputMethodController.swift:869-877`:
 /// `{ "⇧ " + $0 }`) rather than styling the digit — which keeps the intensity
 /// of the text free to mean "selected", as it does here.

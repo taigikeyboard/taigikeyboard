@@ -34,14 +34,12 @@ final class CandidateSlotKeyTests: XCTestCase {
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
         keySet: CandidateSlotKeySet = .bareKeys,
-        rawInput: String = "tai",
     ) -> ComposingKeyIntent {
         ComposingKeyIntent.intent(
             for: key,
             isComposing: isComposing,
             isShowingCandidates: isShowingCandidates,
             bindings: ComposingKeyBindings(slotKeySet: keySet),
-            rawInput: rawInput,
         )
     }
 
@@ -72,9 +70,18 @@ final class CandidateSlotKeyTests: XCTestCase {
         XCTAssertEqual(try makeScratchSettingsStore().composingKeyBindings.slotKeySet, .bareKeys)
     }
 
-    func testABareKey_picksWhetherOrNotAToneCouldStillBeTyped() {
-        XCTAssertEqual(intent(snapshot("q"), rawInput: "tai"), .selectCandidateSlot(0))
-        XCTAssertEqual(intent(snapshot("q"), rawInput: "tai5"), .selectCandidateSlot(0))
+    /// A bare digit never picks, under any set: it is the tone marker, even
+    /// where no tone could follow (`tai5` + `2` → `tai52`, kept verbatim by
+    /// the engine). One set of keys picks; a digit always means one thing.
+    func testABareDigit_isAlwaysTheTone_underEverySet() {
+        for keySet in CandidateSlotKeySet.allCases {
+            XCTAssertEqual(intent(snapshot("2"), keySet: keySet), .input("2"), "\(keySet)")
+            XCTAssertEqual(intent(snapshot("2"), isShowingCandidates: false, keySet: keySet), .input("2"))
+        }
+        XCTAssertEqual(
+            intent(snapshot("2"), isComposing: false, isShowingCandidates: false), .passThrough,
+            "outside a composition a digit is the host's",
+        )
     }
 
     /// Caps Lock is a latched state, not a held chord: the letter still picks.
@@ -106,11 +113,11 @@ final class CandidateSlotKeyTests: XCTestCase {
     }
 
     /// One set is live at a time: under the bare keys a shifted digit is the
-    /// punctuation it types, and a bare `7` is still the tone it was.
+    /// punctuation it types, and a bare `7` is the tone it always is.
     func testUnderTheBareKeys_aShiftedDigitIsPunctuation_andABareDigitATone() throws {
         XCTAssertEqual(try intent(shiftedDigitUS(7)), .commitThenInsert("&"))
         XCTAssertEqual(intent(snapshot(";")), .selectCandidateSlot(8))
-        XCTAssertEqual(intent(snapshot("7"), rawInput: "tai"), .input("7"))
+        XCTAssertEqual(intent(snapshot("7")), .input("7"))
     }
 
     // MARK: - The shifted digits
@@ -122,13 +129,6 @@ final class CandidateSlotKeyTests: XCTestCase {
         for keySet in CandidateSlotKeySet.allCases where keySet != .shift {
             XCTAssertEqual(try intent(shiftedDigitUS(5), keySet: keySet), .commitThenInsert("%"), "\(keySet)")
         }
-    }
-
-    /// Like the modifier chords, it picks whether or not a tone could still
-    /// follow — that is what makes it the path for a toneless composition.
-    func testAShiftedDigit_picksOnBothSidesOfTheToneRule() throws {
-        XCTAssertEqual(try intent(shiftedDigitUS(2), keySet: .shift, rawInput: "tai"), .selectCandidateSlot(1))
-        XCTAssertEqual(try intent(shiftedDigitUS(2), keySet: .shift, rawInput: "tai5"), .selectCandidateSlot(1))
     }
 
     /// The reason the chord costs nothing: punctuation is typed after a

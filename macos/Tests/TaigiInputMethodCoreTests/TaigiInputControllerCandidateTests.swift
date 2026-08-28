@@ -29,10 +29,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     // MARK: - Which key picks
 
-    /// The window draws the chosen set whatever the buffer: after a tone
-    /// digit a bare `2` ALSO picks, but the hint does not swap to `1`…`9` for
-    /// it — a key that moves under the user mid-word reads as the keys having
-    /// moved, and the set's key keeps working regardless.
+    /// The window draws the chosen set whatever the buffer — a tone digit
+    /// changes nothing about which keys pick.
     func testSlotKeyHint_isTheChosenSet_whateverTheBuffer() throws {
         for keySet in CandidateSlotKeySet.allCases {
             let session = try composedSession(under: keySet)
@@ -43,30 +41,30 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             )
             XCTAssertEqual(
                 try XCTUnwrap(session.presenter.shownContent).slotKeySet, keySet,
-                "`taigi5` can be picked from with a bare digit too, but the hint stays on \(keySet)",
+                "`taigi5` is picked from with the same keys as `taigi`",
             )
         }
     }
 
-    /// And the bare digit really does pick there — the grammar rule is a
-    /// selection contract, not a hint contract.
-    func testAfterATone_aBareDigitStillCommits_underEverySet() throws {
+    /// A bare digit after a tone is still typed, not a pick (USER 2026-08-28,
+    /// retiring the 2026-08-24 rule): `taigi5` + `1` composes `taigi51`, and
+    /// nothing reaches the document.
+    func testAfterATone_aBareDigitIsStillTyped_underEverySet() throws {
         for keySet in CandidateSlotKeySet.allCases {
             let session = try composedSession(under: keySet)
             _ = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: "5"), client: session.client,
             )
-            // Slot 1 rather than a later one: a slot deeper in the list can
-            // hold a partial-span candidate, which nails a prefix and writes
-            // nothing to the document.
-            let expected = try XCTUnwrap(session.presenter.shownContent).cells[0].text
             session.client.clearWrites()
 
             _ = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: "1"), client: session.client,
             )
 
-            XCTAssertEqual(session.client.insertedTexts.last, expected, "\(keySet)")
+            XCTAssertEqual(session.client.insertedTexts.last, nil, "\(keySet)")
+            guard case .setMarkedText = session.client.writes.last else {
+                return XCTFail("\(keySet): the digit should have re-rendered the composition — got \(session.client.writes)")
+            }
         }
     }
 

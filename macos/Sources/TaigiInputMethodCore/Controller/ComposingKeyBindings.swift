@@ -7,13 +7,11 @@ import AppKit
 ///
 /// Every case is a whole key SET, not one key: nine slots need nine names, and
 /// what varies between the cases is where those names come from. One set is
-/// live at a time — the picker's four ways of selecting (USER 2026-08-28).
-/// One thing never varies with the choice and is not here: a bare `1`…`9`
-/// picks once no tone can follow the buffer
-/// (`ComposingKeyIntent.canTypeToneDigit`). A bare digit is a TL/POJ tone
-/// marker first (`tai5`), which is why none of the sets below can put the
-/// digits themselves on the slots — and why the system Zhuyin input method's
-/// bare-digit selection cannot be matched here.
+/// live at a time, and it is the ONLY way to pick — the picker's four ways of
+/// selecting (USER 2026-08-28). A bare `1`…`9` is never one of them: a bare
+/// digit is the TL/POJ tone marker (`tai5`), always, which is why none of the
+/// sets below can put the digits themselves on the slots — and why the system
+/// Zhuyin input method's bare-digit selection cannot be matched here.
 enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     /// Nine bare keys, one per slot — `q w d f z x v y ;`. The eight letters
     /// are every letter no TL or POJ syllable spells

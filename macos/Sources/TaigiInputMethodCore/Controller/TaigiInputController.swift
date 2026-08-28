@@ -468,10 +468,6 @@ public final class TaigiInputController: IMKInputController {
             isComposing: manager.isComposing,
             isShowingCandidates: !fetchedCandidates.isEmpty,
             bindings: settings.composingKeyBindings,
-            // The raw buffer, not `displayText`: the question is whether the
-            // last thing TYPED was a letter, and the display has already
-            // turned `tai5` into `tâi`.
-            rawInput: manager.rawInput,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
 
@@ -721,12 +717,10 @@ public final class TaigiInputController: IMKInputController {
         candidatePresenter.show(
             CandidateWindowContent(
                 cells: fetchedCandidates.map(manager.cellContent(for:)),
-                // The set the user chose, whatever the buffer: the hint stays
-                // put rather than swapping to `1`…`9` where a bare digit could
-                // also pick (USER 2026-08-28). A rebind cannot strand a stale
-                // hint — reaching the shortcut pane moves focus off the
-                // client, and `finishComposition` takes the bar down with the
-                // session.
+                // The set the user chose — the only keys that pick. A rebind
+                // cannot strand a stale hint: reaching the shortcut pane moves
+                // focus off the client, and `finishComposition` takes the bar
+                // down with the session.
                 slotKeySet: settings.composingKeyBindings.slotKeySet,
             ),
             anchoredTo: caretRect,
