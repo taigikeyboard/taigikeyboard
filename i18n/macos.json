@@ -19,42 +19,6 @@
         "ja": "一般"
       }
     },
-    "candidateSection": {
-      "comment": "Settings section header over the candidate-behaviour toggles.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "候選",
-        "tailo": "hāu-suán",
-        "poj": "hāu-soán",
-        "en": "Candidates",
-        "ja": "候補"
-      }
-    },
-    "translateSwapped": {
-      "comment": "Settings toggle: commit the romanization instead of the Hanji.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "漢羅對調",
-        "tailo": "hàn-lô tuì-tiāu",
-        "poj": "hàn-lô tùi-tiāu",
-        "en": "Swap Hanji and Romanization",
-        "ja": "漢字とローマ字を入れ替え"
-      }
-    },
     "shortcutOpenSettings": {
       "comment": "Shortcut-recorder row: the hotkey that opens the settings window on whichever pane it was last left on. Each row is authored whole rather than composed from the setting's own label.",
       "scope": {
@@ -449,24 +413,6 @@
         "poj": "chit ê tóng-àn m̄-sī UTF-8 bûn-jī.",
         "en": "This file is not UTF-8 text.",
         "ja": "このファイルは UTF-8 テキストではありません。"
-      }
-    },
-    "irreversible": {
-      "comment": "Body of every 詞庫 clear-everything confirmation; the question itself is the dialog's title.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "這改袂轉來。",
-        "tailo": "tse kái bē tńg--lâi.",
-        "poj": "che kái bē tńg--lâi.",
-        "en": "This cannot be undone.",
-        "ja": "この操作は取り消せません。"
       }
     },
     "entriesSection": {
@@ -883,24 +829,6 @@
         "ja": "キーを押してください…"
       }
     },
-    "shortcutClear": {
-      "comment": "Accessibility label for the button that clears a shortcut row.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "清掉這个快速齒",
-        "tailo": "tshing-tiāu tsit ê khuài-sok khí",
-        "poj": "chheng-tiāu chit ê khoài-sok khí",
-        "en": "Clear this shortcut",
-        "ja": "このショートカットを消去"
-      }
-    },
     "shortcutRejectedTypingKey": {
       "comment": "Recorder error: the key pressed is one that types romanization, so it cannot be bound.",
       "scope": {
@@ -1121,7 +1049,7 @@
       }
     },
     "updateAvailableMessage": {
-      "comment": "Update alert: body naming the downloadable version and the installed one.",
+      "comment": "The one sentence announcing a downloadable version, on both surfaces that announce it: the manual-check sheet and the system notification. The installed version is not repeated and the reader is not told to click — a notification is what it is (USER 2026-08-28: 用字精簡清楚即可).",
       "scope": {
         "platforms": [
           "macos"
@@ -1131,15 +1059,14 @@
         ]
       },
       "placeholders": {
-        "latest": "string",
-        "current": "string"
+        "latest": "string"
       },
       "values": {
-        "hanji": "台語齒盤 {latest} 已經會使下載(目前版本 {current})。",
-        "tailo": "Tâi-gí khí-puânn {latest} í-king ē-sái hā-tsài (ba̍k-tsîng pán-pún {current}).",
-        "poj": "Tâi-gí khí-pôaⁿ {latest} í-keng ē-sái hā-chài (ba̍k-chêng pán-pún {current}).",
-        "en": "TaigiKeyboard {latest} is available for download (you have {current}).",
-        "ja": "台語キーボード {latest} がダウンロードできます(現在は {current})。"
+        "hanji": "台語齒盤 {latest} 會使下載矣。",
+        "tailo": "Tâi-gí khí-puânn {latest} ē-sái hā-tsài--ah.",
+        "poj": "Tâi-gí khí-pôaⁿ {latest} ē-sái hā-chài--ah.",
+        "en": "TaigiKeyboard {latest} is available for download.",
+        "ja": "台語キーボード {latest} がダウンロードできます。"
       }
     },
     "updateDownloadAction": {
@@ -1232,27 +1159,6 @@
         "ja": "ネットワーク接続を確認してから、もう一度お試しください。"
       }
     },
-    "updateNotificationBody": {
-      "comment": "System notification body when a newer version is published. Says what to do, because a notification's whole job is the one tap that follows it.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "placeholders": {
-        "version": "string"
-      },
-      "values": {
-        "hanji": "台語齒盤 {version} 會使下載矣，點一下就去下載頁。",
-        "tailo": "Tâi-gí khí-puânn {version} ē-sái hā-tsài--ah, tiám tsi̍t-ē tō khì hā-tsài-ia̍h.",
-        "poj": "Tâi-gí khí-pôaⁿ {version} ē-sái hā-chài--ah, tiám chi̍t-ē tō khì hā-chài-ia̍h.",
-        "en": "TaigiKeyboard {version} is available. Click to open the download page.",
-        "ja": "台語キーボード {version} が利用できます。クリックしてダウンロードページを開きます。"
-      }
-    },
     "updateNotifyOfferTitle": {
       "comment": "Title of the one-time offer, shown the first time the settings window opens: may we notify about new versions?",
       "scope": {
@@ -1269,24 +1175,6 @@
         "poj": "Ū sin pán-pún ê sî-chūn thong-ti lí?",
         "en": "Get notified about new versions?",
         "ja": "新しいバージョンをお知らせしますか？"
-      }
-    },
-    "updateNotifyOfferMessage": {
-      "comment": "Body of the one-time notification offer. States what arrives and how often, because a permission asked without a reason is the one people refuse.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "有新版本的時，會用系統通知講一聲，一个版本干焦講一擺。袂傳送任何拍字內容。",
-        "tailo": "Ū sin pán-pún ê sî, ē iōng hē-thóng thong-ti kóng tsi̍t-siann, tsi̍t ê pán-pún kan-na kóng tsi̍t pái. Buē thuân-sàng jīm-hô phah-jī luē-iông.",
-        "poj": "Ū sin pán-pún ê sî, ē iōng hē-thóng thong-ti kóng chi̍t-siaⁿ, chi̍t ê pán-pún kan-na kóng chi̍t pái. Bōe thoân-sàng jīm-hô phah-jī lōe-iông.",
-        "en": "When a new version is published you get one notification, once per version. Nothing you type is ever sent.",
-        "ja": "新しいバージョンが公開されたときに、バージョンごとに1回だけ通知します。入力内容が送信されることはありません。"
       }
     },
     "updateNotifyOfferEnable": {
@@ -1364,6 +1252,114 @@
         "ja": "システム設定を開く"
       }
     },
+    "updateDownloadAndInstallAction": {
+      "comment": "Settings 一般 pane: fetches the update package in the app, replacing the trip to the download page. Shown only when the manifest names a package and this build can pin its signer.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "下載安裝",
+        "tailo": "hā-tsài an-tsong",
+        "poj": "hā-chài an-chong",
+        "en": "Download and Install",
+        "ja": "ダウンロードしてインストール"
+      }
+    },
+    "updateInstallAction": {
+      "comment": "Settings 一般 pane: opens the downloaded package in Installer.app. The user's second press — arrival never launches anything by itself.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "安裝",
+        "tailo": "an-tsong",
+        "poj": "an-chong",
+        "en": "Install",
+        "ja": "インストール"
+      }
+    },
+    "updateRetryAction": {
+      "comment": "Settings 一般 pane: tries a failed update download again.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "閣試一擺",
+        "tailo": "koh tshì tsi̍t pái",
+        "poj": "koh chhì chi̍t pái",
+        "en": "Try Again",
+        "ja": "もう一度"
+      }
+    },
+    "updateDownloadFailedNote": {
+      "comment": "Settings 一般 pane: the update package did not finish downloading. Retryable — the package itself may be fine. Kept to the failure alone; the retry button says what to do, and updateCheckFailedMessage already carries the network advice.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "下載失敗",
+        "tailo": "Hā-tsài sit-pāi",
+        "poj": "Hā-chài sit-pāi",
+        "en": "The download did not finish",
+        "ja": "ダウンロードが完了しませんでした"
+      }
+    },
+    "updatePackageRejectedNote": {
+      "comment": "Settings 一般 pane: the downloaded package is not this project's signed installer, so it is never offered for installation. Kept to the fact alone — the 去下載 button beside it is what says where to go instead.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "安裝檔案確認無過",
+        "tailo": "An-tsong tóng-àn khak-jīn bô kuè",
+        "poj": "An-chong tóng-àn khak-jīn bô kòe",
+        "en": "This download could not be verified",
+        "ja": "このダウンロードを検証できませんでした"
+      }
+    },
+    "updateInstallerOpenFailedNote": {
+      "comment": "Settings 一般 pane: the verified package is staged but Installer.app would not open. Retryable; wording mirrors openURLFailed.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "拍袂開安裝程式",
+        "tailo": "phah bē khui an-tsong tîng-sik",
+        "poj": "phah bē khui an-chong thêng-sek",
+        "en": "Could not open the installer",
+        "ja": "インストーラを開けませんでした"
+      }
+    },
     "clearLearningRecords": {
       "comment": "Destructive row in the 詞庫 pane: deletes the frequency AND association records in one go. Acts on click, with no confirmation (USER 2026-08-25). macOS has no per-record management UI, so this is the only way to discard what the keyboard learned.",
       "scope": {
@@ -1380,24 +1376,6 @@
         "poj": "san-tû ha̍k-si̍p kì-lio̍k",
         "en": "Delete Learning Records",
         "ja": "学習記録を削除"
-      }
-    },
-    "clearLearningRecordsMessage": {
-      "comment": "Confirmation body for the 清除學習紀錄 button. Names both record kinds, and that typing rebuilds them.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "詞頻佮詞關聯攏會清掉。這袂影響你的自訂詞庫，後續拍字閣會學轉來。",
-        "tailo": "sû-pîn kah sû-kuan-liân lóng ē tshing-tiāu. tse bē íng-hióng lí ê tsū-tīng-sû-khòo, āu-sio̍k phah-jī koh ē o̍h tńg-lâi.",
-        "poj": "sû-pîn kah sû-koan-liân lóng ē chheng-tiāu. che bē éng-hióng lí ê chū-tēng-sû-khò͘, āu-sio̍k phah-jī koh ē o̍h tńg-lâi.",
-        "en": "Both frequency and association records will be cleared. Your custom dictionary is unaffected, and typing will build them up again.",
-        "ja": "単語頻度と単語連携の記録をすべて消去します。カスタム辞書には影響せず、入力を続ければ再び学習されます。"
       }
     },
     "clearLearningRecordsDone": {

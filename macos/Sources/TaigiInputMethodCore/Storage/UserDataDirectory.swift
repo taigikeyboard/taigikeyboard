@@ -27,21 +27,30 @@ enum UserDataDirectory {
     }
 
     /// The shipped location, created if absent.
+    static func standard() throws -> URL {
+        try container(in: .applicationSupportDirectory)
+    }
+
+    /// This bundle's own directory inside one of the user's library folders,
+    /// created if absent.
     ///
     /// Keyed on the running bundle's own identifier rather than on a constant,
     /// so the directory follows `Info.plist` — the single source of bundle
-    /// identity everything else in this package reads too.
-    static func standard() throws -> URL {
+    /// identity everything else in this package reads too. The search path is a
+    /// parameter because the same per-bundle shape is wanted in more than one
+    /// of them: learning data in Application Support, a staged update installer
+    /// in Caches (`UpdatePackageDownload`).
+    static func container(in searchPath: FileManager.SearchPathDirectory) throws -> URL {
         guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
             throw Failure.noBundleIdentifier
         }
-        let applicationSupport = try FileManager.default.url(
-            for: .applicationSupportDirectory,
+        let library = try FileManager.default.url(
+            for: searchPath,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true,
         )
-        return try created(applicationSupport.appendingPathComponent(bundleIdentifier))
+        return try created(library.appendingPathComponent(bundleIdentifier))
     }
 
     /// Creates `directory` if it does not exist and returns it. Split out so a

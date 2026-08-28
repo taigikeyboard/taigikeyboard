@@ -5,11 +5,23 @@ The macOS input method checks for updates by fetching one static JSON file:
     https://taigikeyboard.tw/appcast/macos.json
 
 It compares `version` against the installed `CFBundleShortVersionString` and,
-when the manifest is strictly newer, offers to open `downloadPageURL` in the
-browser. Notify-only: nothing is downloaded or executed, which is why the file
-needs no signing — HTTPS plus a version comparison is the whole contract.
+when the manifest is strictly newer, offers the update: from the settings window
+the app downloads `packageURL` itself and opens it in Installer.app, and
+everywhere else — the system notification, an old manifest, a development build
+— it opens `downloadPageURL` in the browser.
 
-The reader is `macos/Sources/TaigiInputMethodCore/Settings/UpdateChecker.swift`.
+The file is still unsigned, and that is deliberate now that something it names
+gets executed. Whoever could rewrite this manifest could name any package;
+what stops that package being installed is its own Developer ID signature,
+checked against the team that signed the running copy. Signing the manifest as
+well would add a second key to protect and would be read by the same code that
+already has to distrust it. Gatekeeper cannot make this call alone — it accepts
+any correctly notarized package, including one an attacker notarized under their
+own Developer ID — which is why the team is pinned rather than inferred.
+
+The readers are `macos/Sources/TaigiInputMethodCore/Settings/UpdateChecker.swift`
+(the check) and `UpdateInstallation.swift` / `UpdatePackageVerifier.swift` (the
+download and what it has to prove).
 
 ## Where it lives
 
@@ -42,9 +54,13 @@ channel.
 | Field | Meaning |
 |---|---|
 | `version` | Newest downloadable version, dotted integers only (`3.6.5`). No suffixes — the checker rejects them. |
-| `downloadPageURL` | Page the user lands on, `https` only. A page, not a file: the user downloads and runs the pkg themselves. |
+| `downloadPageURL` | Page the user lands on, `https` only. Required: it is the only route a system notification, a development build, or a pre-3.6.6 install has. |
+| `packageURL` | The `.pkg` itself, `https` only. Optional. Naming it lets the app download and install without a browser; a manifest without it behaves exactly as manifests did before 3.6.6. |
 
-Unknown extra fields are ignored by old installs, so the format can grow.
+Unknown extra fields are ignored by old installs, so the format can grow. A
+`packageURL` that fails validation is dropped on its own rather than failing the
+whole manifest — it carries an added convenience, and one mistake in it must not
+be able to silence update checking for every installed copy.
 
 `downloadPageURL` arrives *in* the manifest, so unlike `publishedURL` it is not
 baked into any build and can be repointed at any time — at a download page on

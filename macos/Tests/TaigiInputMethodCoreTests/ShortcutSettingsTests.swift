@@ -134,7 +134,6 @@ final class ShortcutSettingsTests: XCTestCase {
         .macosBindingSlotModifier,
         .macosShortcutUnbound,
         .macosShortcutRecording,
-        .macosShortcutClear,
         .macosShortcutRejectedTypingKey,
         .macosShortcutRejectedReservedKey,
         .macosShortcutRejectedNoKey,

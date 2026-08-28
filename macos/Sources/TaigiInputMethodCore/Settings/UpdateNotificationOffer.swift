@@ -15,9 +15,14 @@ import AppKit
 /// people: this process first starts when a keystroke wakes it after install,
 /// so "first launch" can land mid-word.
 ///
-/// Explained before it is asked, following
-/// `references/MacishType/macos/MacishType/NotificationManager.swift:150-166` —
-/// a bare system prompt with no reason attached is the one people decline.
+/// Asked with the question and nothing else. It used to carry a body as well,
+/// following `references/MacishType/macos/MacishType/NotificationManager.swift:150-166`
+/// — a bare system prompt with no reason attached is the one people decline —
+/// but the reason was already the question: 「有新版本的時陣通知你?」 says what
+/// arrives and when, and a second line restating it explained nothing. The
+/// sentence about nothing typed being sent went with it (USER 2026-08-28):
+/// this asks for permission to post a notification, and answering a privacy
+/// question nobody asked raises the doubt rather than settling it.
 @MainActor
 enum UpdateNotificationOffer {
     /// Whether an offer is already on its way to the screen. The stored flag
@@ -53,7 +58,6 @@ enum UpdateNotificationOffer {
         let language = DisplayLanguageStore.shared
         let alert = NSAlert()
         alert.messageText = language.string(.macosUpdateNotifyOfferTitle)
-        alert.informativeText = language.string(.macosUpdateNotifyOfferMessage)
         alert.addButton(withTitle: language.string(.macosUpdateNotifyOfferEnable))
         alert.addButton(withTitle: language.string(.macosUpdateLaterAction))
 

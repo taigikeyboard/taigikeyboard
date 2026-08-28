@@ -1,16 +1,27 @@
-// Checks the published release manifest for a newer version and tells the user — notify-only, never installs.
+// Checks the published release manifest for a newer version and tells the user. Fetching the package it names is `UpdateInstallation`.
 
 import AppKit
 import Foundation
 
-/// The published release manifest: the newest downloadable version and the page
-/// it is downloaded from. Served as a static JSON file, so publishing a release
-/// is editing one committed file — no feed generator, no signing key. Safe to be
-/// unsigned because nothing here is executed: the checker only compares the
-/// version and opens the page in the browser.
+/// The published release manifest: the newest version, the page it is
+/// downloaded from, and — since the app can fetch the installer itself — the
+/// package. Served as a static JSON file, so publishing a release is writing one
+/// file: no feed generator, no signing key.
+///
+/// It stays unsigned now that `packageURL` is something the app downloads and
+/// opens, because the manifest is not what is trusted. Whoever could rewrite it
+/// could name any package; what stops that package being installed is its own
+/// Developer ID signature, checked against the team that signed the running copy
+/// (`UpdatePackageVerifier`). Signing the manifest as well would add a second
+/// key to protect and would still be checked by the same code that already has
+/// to distrust it.
 struct UpdateManifest: Equatable {
     let version: String
     let downloadPageURL: URL
+    /// The installer itself, when the publisher named one. Absent from every
+    /// manifest published before in-app downloading shipped, which is why
+    /// nothing may require it.
+    let packageURL: URL?
 
     enum ManifestError: Error {
         case malformed
@@ -20,14 +31,22 @@ struct UpdateManifest: Equatable {
     /// what a remembered pending update is stored as. One shape means one
     /// validation path — a manifest read back from `UserDefaults` is checked
     /// exactly as strictly as one that arrived over HTTPS.
-    private struct Wire: Codable {
+    fileprivate struct Wire: Codable {
         let version: String
         let downloadPageURL: URL
+        let packageURL: URL?
     }
+
 
     /// Decodes and validates in one step, so no caller can hold a manifest the
     /// checker would refuse to act on. Unknown fields are ignored — the wire
     /// format may grow, old installs must keep reading it.
+    ///
+    /// `version` and `downloadPageURL` are required, because without them there
+    /// is no update to report. A `packageURL` that fails validation is dropped
+    /// rather than taken as grounds to refuse the whole manifest: it carries an
+    /// added convenience, and one publishing mistake in it must not be able to
+    /// silence update checking for every installed copy.
     static func decode(_ data: Data) throws -> UpdateManifest {
         guard let wire = try? JSONDecoder().decode(Wire.self, from: data),
               DottedVersion(wire.version) != nil,
@@ -35,11 +54,17 @@ struct UpdateManifest: Equatable {
         else {
             throw ManifestError.malformed
         }
-        return UpdateManifest(version: wire.version, downloadPageURL: wire.downloadPageURL)
+        return UpdateManifest(
+            version: wire.version,
+            downloadPageURL: wire.downloadPageURL,
+            packageURL: wire.packageURL,
+        )
     }
 
     func encoded() throws -> Data {
-        try JSONEncoder().encode(Wire(version: version, downloadPageURL: downloadPageURL))
+        try JSONEncoder().encode(
+            Wire(version: version, downloadPageURL: downloadPageURL, packageURL: packageURL),
+        )
     }
 
     /// Where the manifest is published. On the project's own domain, not on
@@ -53,23 +78,17 @@ struct UpdateManifest: Equatable {
 
     /// One bounded GET of the published manifest, off the main actor — the read
     /// and the decode belong on the cooperative pool, not interleaved with key
-    /// handling. Ephemeral so nothing about the check persists; both timeouts
-    /// set because `timeoutIntervalForRequest` alone only bounds the wait for
-    /// the next byte, not the whole transfer.
+    /// handling.
     static func fetchPublished() async throws -> UpdateManifest {
         let maximumBytes = 64 * 1024
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 5
-        configuration.timeoutIntervalForResource = 15
-        let session = URLSession(configuration: configuration)
+        let session = UpdateHTTP.session(requestTimeout: 5, resourceTimeout: 15)
         defer { session.finishTasksAndInvalidate() }
         let (bytes, response) = try await session.bytes(from: publishedURL)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              response.url?.scheme?.lowercased() == "https",
+        guard UpdateHTTP.isAcceptable(response),
               // The declared length rejects an oversized body before a byte of
               // it is read; the loop below is the backstop for a server that
               // declares nothing or lies.
-              http.expectedContentLength <= Int64(maximumBytes)
+              response.expectedContentLength <= Int64(maximumBytes)
         else {
             throw ManifestError.malformed
         }
@@ -79,6 +98,27 @@ struct UpdateManifest: Equatable {
             guard data.count <= maximumBytes else { throw ManifestError.malformed }
         }
         return try decode(data)
+    }
+}
+
+/// One home for the rule that an unusable `packageURL` is an absent one.
+///
+/// A decoder rather than a check afterwards, because the synthesized one throws
+/// on a `packageURL` that is a number, an object, or a string `URL` refuses —
+/// and that throw would reach the checker as "the manifest is malformed",
+/// silencing update checking for every install over a field that only adds a
+/// convenience. The required two stay strict: without them there is no update
+/// to report.
+///
+/// In an extension so `Wire` keeps the memberwise initializer the encoding side
+/// uses, which declaring this in the body would suppress.
+private extension UpdateManifest.Wire {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(String.self, forKey: .version)
+        downloadPageURL = try container.decode(URL.self, forKey: .downloadPageURL)
+        let package = try? container.decodeIfPresent(URL.self, forKey: .packageURL)
+        packageURL = package?.scheme?.lowercased() == "https" ? package : nil
     }
 }
 
@@ -170,7 +210,7 @@ final class UpdateChecker {
     private let fetchManifest: @Sendable () async throws -> UpdateManifest
     private let announce: @MainActor (UpdateManifest) async -> Bool
     private let withdrawAnnouncement: @MainActor () -> Void
-    private let presentManualOutcome: @MainActor (Outcome, _ installedVersion: String) async -> Void
+    private let presentManualOutcome: @MainActor (Outcome) async -> Void
 
     private var isCheckInFlight = false
 
@@ -193,7 +233,7 @@ final class UpdateChecker {
         fetchManifest: @escaping @Sendable () async throws -> UpdateManifest = UpdateManifest.fetchPublished,
         announce: @escaping @MainActor (UpdateManifest) async -> Bool = UpdateAnnouncement.post,
         withdrawAnnouncement: @escaping @MainActor () -> Void = UpdateAnnouncement.withdraw,
-        presentManualOutcome: @escaping @MainActor (Outcome, String) async -> Void = UpdateAlertPresenter.present,
+        presentManualOutcome: @escaping @MainActor (Outcome) async -> Void = UpdateAlertPresenter.present,
     ) {
         self.settings = settings
         self.installedVersionText = installedVersionText
@@ -300,7 +340,7 @@ final class UpdateChecker {
         let answersManualPress = isManualCheck || isManualOutcomeWanted
         isManualOutcomeWanted = false
         if answersManualPress {
-            await presentManualOutcome(outcome, installedVersionText)
+            await presentManualOutcome(outcome)
             return
         }
 
@@ -336,11 +376,18 @@ final class UpdateChecker {
     private func recordPendingUpdate(_ manifest: UpdateManifest) {
         pendingUpdate = manifest
         settings.updatePendingManifest = try? manifest.encoded()
+        // A package staged for some other release is now unreachable — nothing
+        // offers it any more — so it goes rather than holding tens of megabytes
+        // until the next launch. Naming the version that is still pending is
+        // what stops a daily check re-finding the same release from throwing
+        // away the download the user is about to install.
+        UpdateInstallation.shared.discardStagedPackage(otherThan: manifest.version)
     }
 
     private func clearPendingUpdate() {
         pendingUpdate = nil
         settings.updatePendingManifest = nil
+        UpdateInstallation.shared.discardStagedPackage()
     }
 
 }
@@ -364,7 +411,7 @@ enum UpdateAnnouncement {
         return await NotificationManager.shared.post(
             identifier: identifier,
             title: language.string(.macosUpdateAvailableTitle),
-            body: language.resolver.macosUpdateNotificationBody(version: manifest.version),
+            body: language.resolver.macosUpdateAvailableMessage(latest: manifest.version),
             linkURL: manifest.downloadPageURL,
         )
     }
@@ -393,7 +440,7 @@ enum UpdateAnnouncement {
 enum UpdateAlertPresenter {
     private static let logger = DebugLogger(category: "UpdateChecker")
 
-    static func present(_ outcome: UpdateChecker.Outcome, installedVersion: String) async {
+    static func present(_ outcome: UpdateChecker.Outcome) async {
         guard let window = SettingsWindowController.shared.windowForSheets else {
             logger.debug("manual outcome dropped: no settings window to answer in")
             return
@@ -403,15 +450,31 @@ enum UpdateAlertPresenter {
 
         switch outcome {
         case let .updateAvailable(manifest):
+            // Whether this build can fetch the package at all — the capability,
+            // not the row's current state. Reading the state here would make
+            // this button mean something different depending on whether a
+            // download happened to be running, and send the user to a browser
+            // while a verified package sat staged inches below the sheet.
+            let installsInApp = UpdateInstallation.shared.canInstallInApp(manifest)
             let alert = NSAlert()
             alert.messageText = language.string(.macosUpdateAvailableTitle)
             alert.informativeText = language.resolver.macosUpdateAvailableMessage(
                 latest: manifest.version,
-                current: installedVersion,
             )
-            alert.addButton(withTitle: language.string(.macosUpdateDownloadAction))
+            alert.addButton(
+                withTitle: language.string(
+                    installsInApp ? .macosUpdateDownloadAndInstallAction : .macosUpdateDownloadAction,
+                ),
+            )
             alert.addButton(withTitle: language.string(.macosUpdateLaterAction))
             guard await alert.beginSheetModal(for: window) == .alertFirstButtonReturn else { return }
+            if installsInApp {
+                // Progress, and the 安裝 press that follows it, belong to the
+                // row this sheet is covering. Idempotent for this version, so a
+                // second check while one is arriving or staged fetches nothing.
+                UpdateInstallation.shared.startDownload(for: manifest)
+                return
+            }
             // Same rule as `ExternalLinkButton`: a button that silently does
             // nothing is indistinguishable from a broken one.
             guard !NSWorkspace.shared.open(manifest.downloadPageURL) else { return }

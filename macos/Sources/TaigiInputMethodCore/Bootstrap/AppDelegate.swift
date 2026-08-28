@@ -101,6 +101,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // started BY a keystroke, and a DNS lookup plus a TLS handshake has no
         // business competing with the first character. The daily stamp decides
         // whether the check happens at all, so a minute either way is nothing.
+        // Anything a previous run staged goes now. Not deferred with the check
+        // below: by the time that timer fires the user may have opened the
+        // settings window and started a download, and a late "clean up what the
+        // last run left" would delete this run's.
+        UpdatePackageDownload.removeStagedPackages()
         Task {
             try? await Task.sleep(for: .seconds(30))
             UpdateChecker.shared.checkAutomatically()

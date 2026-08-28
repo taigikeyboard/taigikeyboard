@@ -185,7 +185,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
             },
             // Never the shipped presenter: it would put a sheet on a real
             // window belonging to whoever is running the tests.
-            presentManualOutcome: { _, _ in },
+            presentManualOutcome: { _ in },
         )
 
         try select(Self.checkForUpdates)

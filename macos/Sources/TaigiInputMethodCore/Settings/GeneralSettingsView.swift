@@ -87,20 +87,23 @@ struct GeneralSettingsView: View {
             // notification did not: no network needed, nothing to miss, and
             // still right after a banner was dismissed weeks ago.
             Section {
-                LabeledContent(language.resolver.macosUpdateCurrentVersionLabel(version: AppVersion.installed)) {
-                    Button(language.string(.macosUpdateCheckNow)) {
-                        UpdateChecker.shared.checkManually()
-                    }
-                }
-
+                // One row, never two. A known update replaces the version-and-check
+                // row rather than sitting under it: while an update is waiting,
+                // checking again is the one thing that cannot tell the user
+                // anything they are not already being told, and two rows offering
+                // two verbs for one goal is what made the pane read as two paths.
+                // macOS Software Update has the same single-row shape.
+                //
+                // The daily check still runs, so a release that is pulled stops
+                // being offered on its own, and the input-source menu's 檢查更新
+                // row is still there to force one.
                 if let pending = UpdateChecker.shared.pendingUpdate {
-                    LabeledContent(
-                        language.resolver.macosUpdatePendingVersionLabel(version: pending.version),
-                    ) {
-                        ExternalLinkButton(
-                            titleKey: .macosUpdateDownloadAction,
-                            url: pending.downloadPageURL,
-                        )
+                    pendingUpdateRow(for: pending)
+                } else {
+                    LabeledContent(language.resolver.macosUpdateCurrentVersionLabel(version: AppVersion.installed)) {
+                        Button(language.string(.macosUpdateCheckNow)) {
+                            UpdateChecker.shared.checkManually()
+                        }
                     }
                 }
 
@@ -114,6 +117,49 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// The row shown while a newer version is known but not installed.
+    ///
+    /// Its trailing control is whatever the user's next move is, and the second
+    /// line appears only when something went wrong. The two-press shape is
+    /// deliberate and lives in `UpdateInstallation`: a finished download turns
+    /// this button into 安裝 rather than opening Installer.app on its own, so
+    /// nothing takes the focus away from a document the user may have gone back
+    /// to typing in.
+    private func pendingUpdateRow(for pending: UpdateManifest) -> some View {
+        let installation = UpdateInstallation.shared
+        let offer = installation.offer(for: pending)
+        return LabeledContent {
+            switch offer {
+            case .downloadPage, .packageRejected:
+                ExternalLinkButton(
+                    titleKey: .macosUpdateDownloadAction,
+                    url: pending.downloadPageURL,
+                )
+            case .startDownload:
+                Button(language.string(.macosUpdateDownloadAndInstallAction)) {
+                    installation.startDownload(for: pending)
+                }
+            case .downloading:
+                ProgressView().controlSize(.small)
+            case .install, .installerOpenFailed:
+                Button(language.string(.macosUpdateInstallAction)) {
+                    installation.install()
+                }
+            case .downloadFailed:
+                Button(language.string(.macosUpdateRetryAction)) {
+                    installation.startDownload(for: pending)
+                }
+            }
+        } label: {
+            Text(language.resolver.macosUpdatePendingVersionLabel(version: pending.version))
+            // The note travels with the state rather than being chosen beside
+            // it, so a control and an explanation cannot be paired wrongly.
+            if let noteKey = offer.noteKey {
+                Text(language.string(noteKey))
+            }
+        }
     }
 
     /// The same question posting asks, so the pane cannot stay quiet in a state

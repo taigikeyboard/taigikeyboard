@@ -220,8 +220,13 @@ echo "  page 200, asset $asset_status"
 # 404 — every installed copy in the manifest's case, every visitor in the site's.
 # ---------------------------------------------------------------------------
 
-MANIFEST_JSON="$(printf '{\n  "version": "%s",\n  "downloadPageURL": "%s"\n}\n' \
-    "$SHORT_VERSION" "$RELEASE_PAGE_URL")"
+# `packageURL` is the same asset the site's download button points at, and the
+# same one proven reachable above. Naming it here is what lets the app fetch the
+# installer itself instead of sending the user to a browser; an install that
+# reads it still verifies the package's own Developer ID signature, so this URL
+# is a convenience rather than something trusted.
+MANIFEST_JSON="$(printf '{\n  "version": "%s",\n  "downloadPageURL": "%s",\n  "packageURL": "%s"\n}\n' \
+    "$SHORT_VERSION" "$RELEASE_PAGE_URL" "$ASSET_URL")"
 SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
     "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$RELEASE_PAGE_URL")"
 

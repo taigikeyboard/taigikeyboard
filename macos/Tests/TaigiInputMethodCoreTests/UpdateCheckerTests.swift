@@ -71,6 +71,61 @@ final class UpdateCheckerTests: XCTestCase {
         let manifest = try UpdateManifest.decode(data)
         XCTAssertEqual(manifest.version, "3.6.6")
         XCTAssertEqual(manifest.downloadPageURL.absoluteString, "https://example.com/download")
+        // Absent is the shape of every manifest published before in-app
+        // downloading shipped, and those installs must keep working.
+        XCTAssertNil(manifest.packageURL)
+    }
+
+    func testManifestDecode_readsPackageURL() throws {
+        let data = Data("""
+        {"version": "3.6.6", "downloadPageURL": "https://example.com/download",
+         "packageURL": "https://example.com/TaigiKeyboard-3.6.6.pkg"}
+        """.utf8)
+        let manifest = try UpdateManifest.decode(data)
+        XCTAssertEqual(
+            manifest.packageURL?.absoluteString,
+            "https://example.com/TaigiKeyboard-3.6.6.pkg",
+        )
+    }
+
+    func testManifestDecode_dropsUnusablePackageURL_butKeepsTheManifest() throws {
+        // trace: the package is an added convenience on top of a manifest whose
+        // required half is intact, so one publishing mistake in it degrades to
+        // notify-only rather than silencing update checks for every install.
+        // Every shape a mistake can take, including the ones that would make a
+        // synthesized decoder throw before the scheme is ever looked at.
+        let mistakes = [
+            #""packageURL": "http://example.com/TaigiKeyboard-3.6.6.pkg""#,
+            #""packageURL": 42"#,
+            #""packageURL": {"url": "https://example.com/p.pkg"}"#,
+            #""packageURL": ["https://example.com/p.pkg"]"#,
+            #""packageURL": null"#,
+            #""packageURL": """#,
+        ]
+        for mistake in mistakes {
+            let data = Data("""
+            {"version": "3.6.6", "downloadPageURL": "https://example.com/download", \(mistake)}
+            """.utf8)
+            let manifest = try UpdateManifest.decode(data)
+            XCTAssertEqual(manifest.version, "3.6.6", "for \(mistake)")
+            XCTAssertEqual(
+                manifest.downloadPageURL.absoluteString,
+                "https://example.com/download",
+                "for \(mistake)",
+            )
+            XCTAssertNil(manifest.packageURL, "for \(mistake)")
+        }
+    }
+
+    func testManifestRoundTrip_carriesThePackageURL() throws {
+        // The stored pending manifest is read back through the same validation,
+        // so the package a remembered update names has to survive the trip.
+        let original = UpdateManifest(
+            version: "3.6.6",
+            downloadPageURL: URL(string: "https://example.com/download")!,
+            packageURL: URL(string: "https://example.com/TaigiKeyboard-3.6.6.pkg")!,
+        )
+        XCTAssertEqual(try UpdateManifest.decode(original.encoded()), original)
     }
 
     func testManifestDecode_rejectsNonHTTPSAndMalformedVersion() {
@@ -96,6 +151,7 @@ final class UpdateCheckerTests: XCTestCase {
         let manifest = UpdateManifest(
             version: remote,
             downloadPageURL: URL(string: "https://example.com/download")!,
+            packageURL: nil,
         )
         return UpdateChecker(
             settings: SettingsStore(userDefaults: userDefaults),
@@ -110,7 +166,7 @@ final class UpdateCheckerTests: XCTestCase {
                 return self?.deliverySucceeds ?? false
             },
             withdrawAnnouncement: { [weak self] in self?.withdrawCount += 1 },
-            presentManualOutcome: { [weak self] outcome, _ in
+            presentManualOutcome: { [weak self] outcome in
                 self?.presented.append(outcome)
             },
         )
