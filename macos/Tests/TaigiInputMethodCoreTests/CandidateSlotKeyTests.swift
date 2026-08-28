@@ -29,7 +29,6 @@ final class CandidateSlotKeyTests: XCTestCase {
         )
     }
 
-
     private func intent(
         _ key: KeyEventSnapshot,
         isComposing: Bool = true,
@@ -221,7 +220,7 @@ final class CandidateSlotKeyTests: XCTestCase {
         addTeardownBlock { KeyboardShortcuts.setShortcut(saved, for: .openLastSettingsPane) }
         KeyboardShortcuts.setShortcut(.init(.three, modifiers: [.shift]), for: .openLastSettingsPane)
 
-        ShortcutConflicts.resolveAcrossRegistries(in: try makeScratchSettingsStore())
+        try ShortcutConflicts.resolveAcrossRegistries(in: makeScratchSettingsStore())
 
         XCTAssertNil(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane))
     }
