@@ -157,6 +157,40 @@ public class ActionHandler: StandardKeyboardActionHandler {
         handle(.release, on: action)
     }
 
+    /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
+    /// Part of 3-layer workaround — see KeyboardViewController.setupKeyboardCaseProtection() (Layer 2).
+    /// 2026-08-28: removing all layers after migrating to `setupKeyboardKit(for:)`
+    /// (KK 10.9.0) still produced sentence-initial uppercase on device with
+    /// auto-cap OFF — the benchmark-extension result did not reproduce in this
+    /// app, so the workaround stays. Do NOT remove again without a passing
+    /// on-device dogfood of the standard path in THIS app.
+    ///
+    /// - Shift: always let super handle (preserves doubleTap → Caps Lock)
+    /// - Other actions: only call super when auto-cap is on
+    override public func tryChangeKeyboardCase(
+        after gesture: Keyboard.Gesture,
+        on action: KeyboardAction,
+    ) {
+        let beforeCase = keyboardContext.keyboardCase
+        let isAutoCap = keyboardContext.settings.isAutocapitalizationEnabled
+
+        logger.debug("[CASE][tryChange] gesture=\(String(describing: gesture)) action=\(String(describing: action)) before=\(String(describing: beforeCase)) isAutoCap=\(isAutoCap)")
+
+        // Shift: always let super handle (preserves doubleTap → Caps Lock)
+        if case .shift = action {
+            super.tryChangeKeyboardCase(after: gesture, on: action)
+            logger.debug("[CASE][tryChange] after shift: \(String(describing: keyboardContext.keyboardCase))")
+            return
+        }
+
+        // Other actions: only call super when auto-cap is on
+        if isAutoCap {
+            super.tryChangeKeyboardCase(after: gesture, on: action)
+            logger.debug("[CASE][tryChange] after autoCap: \(String(describing: keyboardContext.keyboardCase))")
+        } else {
+            logger.debug("[CASE][tryChange] skipped (autoCap=false)")
+        }
+    }
 }
 
 // MARK: - AutocompleteContextUpdater

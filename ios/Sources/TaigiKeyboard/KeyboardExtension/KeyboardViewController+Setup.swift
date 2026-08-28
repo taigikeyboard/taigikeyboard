@@ -10,10 +10,14 @@ import UIKit
 private let setupLogger = DebugLogger(category: "KeyboardViewController+Setup")
 
 extension KeyboardViewController {
-    // 中文: 主初始化序 — 由 setupKeyboardKit(for:) completion 呼叫,store 已就緒。
+    // 中文: 主初始化序 — 必須在第一次存取 KeyboardSettings 前呼叫。
     func setupServices() {
-        // Settings store is configured by setupKeyboardKit(for: .taigiKeyboard)
-        // before this runs — see KeyboardViewController.viewWillSetupKeyboardKit.
+        // Must be called before any KeyboardSettings access. Legacy setup path
+        // kept on purpose: the standard setupKeyboardKit(for:) migration did
+        // NOT fix the auto-cap symptom on device (2026-08-28) — see the
+        // FIXME layers in KeyboardViewController.
+        KeyboardSettings.setupStore(for: .taigiKeyboard)
+
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
 
         setupLiquidGlass()
@@ -218,10 +222,6 @@ extension KeyboardViewController {
     // 中文: 從 App Group UserDefaults 重新讀取設定,@AppStorage 對跨 process 變動不會觸發 didSet,
     // 中文: 所以由外部 didChangeNotification 主動驅動。
     func syncSettings() {
-        // viewDidAppear can fire before the setupKeyboardKit completion has
-        // built the services; the completion runs the initial sync itself.
-        guard actionHandler != nil else { return }
-
         var needsAutocompleteReset = false
 
         // Check if input mode changed; if so, recreate AutocompleteService
@@ -272,6 +272,25 @@ extension KeyboardViewController {
             viewWillSetupKeyboardView()
         }
 
+        // Sync auto-capitalization override from KeyboardKit settings
+        let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
+
+        setupLogger.debug("[AUTOCAP][SYNC] isAutoCap=\(isAutoCap) keyboardCase=\(String(describing: state.keyboardContext.keyboardCase))")
+
+        if isAutoCap {
+            if state.keyboardContext.autocapitalizationTypeOverride != nil {
+                state.keyboardContext.autocapitalizationTypeOverride = nil
+            }
+        } else {
+            if state.keyboardContext.autocapitalizationTypeOverride != Keyboard.AutocapitalizationType.none {
+                state.keyboardContext.autocapitalizationTypeOverride = Keyboard.AutocapitalizationType.none
+            }
+            if state.keyboardContext.keyboardCase != .capsLocked,
+               state.keyboardContext.keyboardCase != .lowercased
+            {
+                state.keyboardContext.keyboardCase = .lowercased
+            }
+        }
     }
 
 }
