@@ -57,7 +57,9 @@
 	     release train, three platforms). The build version is what Installer's
 	     BundleIsVersionChecked and pkg-ref compare, so it must strictly increase
 	     with every shipped pkg — derived from the marketing version as
-	     MAJOR*10000 + MINOR*100 + PATCH, bumped by hand at release time. -->
+	     MAJOR*10000 + MINOR*100 + PATCH. Both are written by
+	     `make version VERSION=x.y.z`, which sets the same version on iOS and
+	     Android in the same pass. -->
 	<key>CFBundleShortVersionString</key>
 	<string>3.6.6</string>
 	<key>CFBundleVersion</key>

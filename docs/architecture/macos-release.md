@@ -162,8 +162,12 @@ only reads it:
 
 The Installer decides upgrade-versus-downgrade from `CFBundleVersion`, so it has
 to increase on every published package even when the marketing version does not.
-Neither is bumped automatically: release scope and timing are the maintainer's
-call.
+
+Neither moves on its own — release scope and timing are the maintainer's call —
+but neither is edited by hand either. `make version x.y.z` writes both
+keys here and the matching iOS and Android versions in the same pass, so the
+three platforms cannot drift apart; `python3 tools/release_notes.py
+check-versions --version x.y.z` is the gate that proves they did not.
 
 ## Where it installs
 

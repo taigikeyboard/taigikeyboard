@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint \
         i18n i18n-test \
-        macos-release \
+        macos-release version \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -92,6 +92,29 @@ dogfood:
 macos-release:
 	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
+# Set the one marketing version iOS, Android, and macOS share:
+#
+#   make version 3.6.7
+#
+# Policy and semantics: docs/architecture/manual-release-notes.md § Set the version.
+# The iOS `.pbxproj` is user-owned (Claude may not edit it); this target is the
+# maintainer running that edit.
+#
+# The version is a bare word, which make reads as a second goal — so it gets a
+# do-nothing rule, declared only while `version` is one of the goals. A mistyped
+# target on any other command line still fails the way it should.
+VERSION_ARGS := $(filter-out version,$(MAKECMDGOALS))
+ifneq ($(filter version,$(MAKECMDGOALS)),)
+ifneq ($(VERSION_ARGS),)
+$(eval $(VERSION_ARGS):;@:)
+endif
+endif
+
+version:
+	@version="$(firstword $(VERSION_ARGS) $(VERSION))"; \
+	if [ -z "$$version" ]; then echo "Usage: make version <MAJOR.MINOR.PATCH>"; exit 2; fi; \
+	python3 tools/release_notes.py set-versions --version "$$version"
+
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
@@ -128,6 +151,7 @@ help:
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
+	@echo "  make version 3.6.7      Set that version on iOS + Android + macOS"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"

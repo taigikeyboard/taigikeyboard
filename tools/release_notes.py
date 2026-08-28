@@ -1,12 +1,17 @@
-"""Validate store release notes and mirror them into platform version history."""
+"""Validate store release notes, mirror them into platform version history, and
+check or set the one version number iOS, Android, and macOS share."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import plistlib
 import re
+import stat
 import sys
+import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,6 +44,29 @@ VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
 # to 30200, and two releases sharing a build version is an Installer that
 # silently refuses to upgrade.
 MAX_MACOS_VERSION_COMPONENT = 99
+
+# The three files that hold the release train's version number. Everything else
+# — the two iOS Info.plists, the macOS package name, the update manifest, both
+# About screens — derives from one of these at build or publish time.
+ANDROID_GRADLE_FILE = "android/app/build.gradle.kts"
+IOS_PROJECT_FILE = "ios/TaigiKeyboard.xcodeproj/project.pbxproj"
+MACOS_INFO_PLIST_FILE = "macos/App/Info.plist"
+# Each shipping iOS target carries a Debug and a Release build-settings block, so
+# its bundle identifier appears in exactly two. The test target keeps its own
+# `MARKETING_VERSION = 1.0` and is deliberately absent from this mapping.
+IOS_SHIPPING_BLOCK_COUNTS = {
+    "com.siansiansu.TaigiKeyboard": 2,
+    "com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension": 2,
+}
+IOS_BUILD_SETTINGS_PATTERN = re.compile(
+    r"buildSettings = \{(?P<body>.*?)\n\s*\};", re.DOTALL
+)
+ANDROID_VERSION_NAME_PATTERN = re.compile(
+    r'^\s*versionName\s*=\s*"(?P<value>[^"]*)"', re.MULTILINE
+)
+# The iOS build number is a constant: App Store Connect numbers the uploads of a
+# marketing version itself, so nothing here has to track them.
+IOS_BUILD_NUMBER = "1"
 
 
 def forbidden_term_pattern(term: str) -> str:
@@ -267,13 +295,18 @@ def sync_version_history(repo_root: Path, version: str, release_date: str) -> No
         KOTLIN_LIST_MARKER,
         KOTLIN_ENTRY_PATTERN,
     )
+    originals = {swift_path: original_swift_source, kotlin_path: original_kotlin_source}
+    written: list[Path] = []
     try:
-        swift_path.write_text(swift_source, encoding="utf-8")
-        kotlin_path.write_text(kotlin_source, encoding="utf-8")
+        for path, rendered in (
+            (swift_path, swift_source),
+            (kotlin_path, kotlin_source),
+        ):
+            _write_atomically(path, rendered)
+            written.append(path)
     except OSError:
         # Keep the two generated histories aligned even if the second write fails.
-        swift_path.write_text(original_swift_source, encoding="utf-8")
-        kotlin_path.write_text(original_kotlin_source, encoding="utf-8")
+        _restore_files(originals, written)
         raise
 
 
@@ -330,58 +363,166 @@ def _entry_date(source: str, version: str, pattern: re.Pattern[str]) -> str:
     return date_match.group(1)
 
 
-def check_project_versions(repo_root: Path, version: str) -> None:
-    gradle_source = (repo_root / "android/app/build.gradle.kts").read_text(
-        encoding="utf-8"
-    )
-    android_match = re.search(
-        r'^\s*versionName\s*=\s*"([^"]+)"', gradle_source, re.MULTILINE
-    )
-    if android_match is None or android_match.group(1) != version:
-        actual = android_match.group(1) if android_match else "missing"
-        raise ReleaseNotesError(f"Android versionName is {actual}; expected {version}")
+def read_text_file(repo_root: Path, relative_path: str) -> str:
+    path = repo_root / relative_path
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError as error:
+        raise ReleaseNotesError(f"missing {relative_path}: {path}") from error
+    except (OSError, UnicodeDecodeError) as error:
+        raise ReleaseNotesError(f"cannot read {path}: {error}") from error
 
-    project_source = (
-        repo_root / "ios/TaigiKeyboard.xcodeproj/project.pbxproj"
-    ).read_text(encoding="utf-8")
-    settings_blocks = re.findall(
-        r"buildSettings = \{(?P<body>.*?)\n\s*\};", project_source, re.DOTALL
+
+def _ios_setting_pattern(name: str) -> re.Pattern[str]:
+    return re.compile(rf"\n\s*{name} = (?P<value>[^;\n]*);")
+
+
+def _plist_value_pattern(key: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"<key>{re.escape(key)}</key>\s*<string>(?P<value>[^<]*)</string>"
     )
-    expected_bundle_ids = {
-        "com.siansiansu.TaigiKeyboard": 2,
-        "com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension": 2,
-    }
-    build_numbers: set[str] = set()
-    for bundle_id, expected_count in expected_bundle_ids.items():
+
+
+def _require_xml_plist(plist_source: str) -> None:
+    """A binary plist has no text to edit around, and rewriting it through
+    plistlib would drop the comments this file is written to carry."""
+    if not plist_source.lstrip().startswith("<?xml"):
+        raise ReleaseNotesError(
+            f"{MACOS_INFO_PLIST_FILE} is not XML text; convert it with "
+            "`plutil -convert xml1` before setting a version",
+        )
+
+
+def _plist_value(plist_source: str, key: str) -> str:
+    return _sole_match(
+        _plist_value_pattern(key),
+        plist_source,
+        f"{key} entry in {MACOS_INFO_PLIST_FILE}",
+    ).group("value")
+
+
+def _sole_match(
+    pattern: re.Pattern[str], source: str, description: str
+) -> re.Match[str]:
+    matches = list(pattern.finditer(source))
+    if len(matches) != 1:
+        raise ReleaseNotesError(
+            f"expected exactly one {description}; found {len(matches)}",
+        )
+    return matches[0]
+
+
+def _replaced_value(match: re.Match[str], source: str, new_value: str) -> str:
+    """`source` with this match's `value` group swapped; every other byte kept."""
+    return source[: match.start("value")] + new_value + source[match.end("value") :]
+
+
+def parse_android_version_name(gradle_source: str) -> str:
+    return _sole_match(
+        ANDROID_VERSION_NAME_PATTERN,
+        gradle_source,
+        f"versionName assignment in {ANDROID_GRADLE_FILE}",
+    ).group("value")
+
+
+@dataclass(frozen=True)
+class IOSProjectVersions:
+    """What the shipping targets' build-settings blocks declare today."""
+
+    marketing_version: str
+    build_number: str
+
+
+def parse_ios_project_versions(project_source: str) -> IOSProjectVersions:
+    """Read MARKETING_VERSION and CURRENT_PROJECT_VERSION off the shipping targets.
+
+    Raises unless every shipping bundle identifier owns exactly the expected
+    number of build-settings blocks and each of those blocks declares each
+    setting exactly once — the shape both the checker and the writer rely on.
+    """
+    blocks = list(IOS_BUILD_SETTINGS_PATTERN.finditer(project_source))
+    marketing_versions: list[str] = []
+    build_numbers: list[str] = []
+    for bundle_id, expected_count in IOS_SHIPPING_BLOCK_COUNTS.items():
         matching_blocks = [
-            body
-            for body in settings_blocks
-            if f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};" in body
+            match
+            for match in blocks
+            if f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};" in match.group("body")
         ]
         if len(matching_blocks) != expected_count:
             raise ReleaseNotesError(
                 f"expected {expected_count} iOS build settings blocks for {bundle_id}; "
                 f"found {len(matching_blocks)}",
             )
-        for body in matching_blocks:
-            marketing_match = re.search(r"MARKETING_VERSION = ([^;]+);", body)
-            build_match = re.search(r"CURRENT_PROJECT_VERSION = ([^;]+);", body)
-            if marketing_match is None or marketing_match.group(1) != version:
-                actual = marketing_match.group(1) if marketing_match else "missing"
-                raise ReleaseNotesError(
-                    f"iOS MARKETING_VERSION for {bundle_id} is {actual}; expected {version}",
-                )
-            if build_match is None:
-                raise ReleaseNotesError(
-                    f"CURRENT_PROJECT_VERSION missing for {bundle_id}"
-                )
-            build_numbers.add(build_match.group(1))
-    if len(build_numbers) != 1:
+        for match in matching_blocks:
+            body = match.group("body")
+            marketing_versions.append(
+                _sole_match(
+                    _ios_setting_pattern("MARKETING_VERSION"),
+                    body,
+                    f"MARKETING_VERSION in a {bundle_id} build-settings block",
+                ).group("value")
+            )
+            build_numbers.append(
+                _sole_match(
+                    _ios_setting_pattern("CURRENT_PROJECT_VERSION"),
+                    body,
+                    f"CURRENT_PROJECT_VERSION in a {bundle_id} build-settings block",
+                ).group("value")
+            )
+    # The App Store treats the app and its keyboard extension as one upload, so
+    # either setting differing between them is rejected at submission.
+    distinct_marketing_versions = sorted(set(marketing_versions))
+    if len(distinct_marketing_versions) != 1:
         raise ReleaseNotesError(
-            f"iOS app and extension CURRENT_PROJECT_VERSION values differ: {sorted(build_numbers)}",
+            f"iOS shipping targets declare different MARKETING_VERSION values: {distinct_marketing_versions}",
+        )
+    distinct_build_numbers = sorted(set(build_numbers))
+    if len(distinct_build_numbers) != 1:
+        raise ReleaseNotesError(
+            f"iOS app and extension CURRENT_PROJECT_VERSION values differ: {distinct_build_numbers}",
+        )
+    return IOSProjectVersions(
+        distinct_marketing_versions[0], distinct_build_numbers[0]
+    )
+
+
+def check_versions_in_sources(
+    gradle_source: str,
+    project_source: str,
+    macos_plist: dict,
+    version: str,
+    macos_plist_path: Path,
+) -> None:
+    """Hold three already-loaded project files to one version.
+
+    Taking sources rather than a repo root is what lets `set_project_versions`
+    run the real gate over the rewrite it is about to make, instead of writing
+    first and checking afterwards.
+    """
+    android_version = parse_android_version_name(gradle_source)
+    if android_version != version:
+        raise ReleaseNotesError(
+            f"Android versionName is {android_version}; expected {version}"
         )
 
-    check_macos_version(repo_root, version)
+    ios_versions = parse_ios_project_versions(project_source)
+    if ios_versions.marketing_version != version:
+        raise ReleaseNotesError(
+            f"iOS MARKETING_VERSION is {ios_versions.marketing_version}; expected {version}",
+        )
+    check_macos_plist_values(macos_plist, version, macos_plist_path)
+
+
+def check_project_versions(repo_root: Path, version: str) -> None:
+    macos_plist_path, macos_plist = load_macos_plist(repo_root)
+    check_versions_in_sources(
+        read_text_file(repo_root, ANDROID_GRADLE_FILE),
+        read_text_file(repo_root, IOS_PROJECT_FILE),
+        macos_plist,
+        version,
+        macos_plist_path,
+    )
 
 
 def macos_build_version(version: str) -> str:
@@ -410,24 +551,8 @@ def macos_build_version(version: str) -> str:
     return str(major * 10_000 + minor * 100 + patch)
 
 
-def check_macos_version(repo_root: Path, version: str) -> None:
-    """Hold `macos/App/Info.plist` to the same version as the two mobile apps.
-
-    All three platforms ship one version number. macOS is released separately —
-    its own script, its own GitHub release — so nothing else fails when its
-    plist is left behind, and a stale `CFBundleVersion` is an Installer that
-    silently refuses to upgrade.
-    """
-    path = repo_root / "macos/App/Info.plist"
-    try:
-        raw_plist = path.read_bytes()
-    except FileNotFoundError as error:
-        raise ReleaseNotesError(f"missing macOS Info.plist: {path}") from error
-    except OSError as error:
-        raise ReleaseNotesError(
-            f"cannot read macOS Info.plist {path}: {error}",
-        ) from error
-
+def _plist_dictionary(raw_plist: bytes, path: Path) -> dict:
+    """The plist's root dictionary, or a message naming what is wrong with it."""
     try:
         plist = plistlib.loads(raw_plist)
     except Exception as error:
@@ -439,7 +564,35 @@ def check_macos_version(repo_root: Path, version: str) -> None:
         raise ReleaseNotesError(
             f"{path} does not contain a dictionary at its root",
         )
+    return plist
 
+
+def load_macos_plist(repo_root: Path) -> tuple[Path, dict]:
+    path = repo_root / MACOS_INFO_PLIST_FILE
+    try:
+        raw_plist = path.read_bytes()
+    except FileNotFoundError as error:
+        raise ReleaseNotesError(f"missing macOS Info.plist: {path}") from error
+    except OSError as error:
+        raise ReleaseNotesError(
+            f"cannot read macOS Info.plist {path}: {error}",
+        ) from error
+    return path, _plist_dictionary(raw_plist, path)
+
+
+def check_macos_version(repo_root: Path, version: str) -> None:
+    """Hold `macos/App/Info.plist` to the same version as the two mobile apps.
+
+    All three platforms ship one version number. macOS is released separately —
+    its own script, its own GitHub release — so nothing else fails when its
+    plist is left behind, and a stale `CFBundleVersion` is an Installer that
+    silently refuses to upgrade.
+    """
+    path, plist = load_macos_plist(repo_root)
+    check_macos_plist_values(plist, version, path)
+
+
+def check_macos_plist_values(plist: dict, version: str, path: Path) -> None:
     short_version = plist.get("CFBundleShortVersionString")
     if short_version != version:
         actual = short_version if short_version is not None else "missing"
@@ -457,20 +610,236 @@ def check_macos_version(repo_root: Path, version: str) -> None:
         )
 
 
+def render_android_gradle(gradle_source: str, version: str) -> str:
+    return _replaced_value(
+        _sole_match(
+            ANDROID_VERSION_NAME_PATTERN,
+            gradle_source,
+            f"versionName assignment in {ANDROID_GRADLE_FILE}",
+        ),
+        gradle_source,
+        version,
+    )
+
+
+def render_ios_project(project_source: str, version: str) -> str:
+    """Rewrite the shipping blocks' two version settings, every other byte kept.
+
+    The test target's `MARKETING_VERSION = 1.0` is not a release version, so the
+    rewrite is scoped by bundle identifier rather than applied to the file.
+    """
+    def rewrite_block(match: re.Match[str]) -> str:
+        block = match.group(0)
+        if not any(
+            f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};" in block
+            for bundle_id in IOS_SHIPPING_BLOCK_COUNTS
+        ):
+            return block
+        for name, value in (
+            ("MARKETING_VERSION", version),
+            ("CURRENT_PROJECT_VERSION", IOS_BUILD_NUMBER),
+        ):
+            block = _replaced_value(
+                _sole_match(_ios_setting_pattern(name), block, name), block, value
+            )
+        return block
+
+    return IOS_BUILD_SETTINGS_PATTERN.sub(rewrite_block, project_source)
+
+
+def render_macos_plist(plist_source: str, version: str) -> str:
+    """Swap both version values in the plist text.
+
+    Text, not `plistlib.dump` or `PlistBuddy`: both rebuild the file and drop the
+    hand-written XML comments, including the one above these very keys.
+    """
+    _require_xml_plist(plist_source)
+    rendered = plist_source
+    for key, value in (
+        ("CFBundleShortVersionString", version),
+        ("CFBundleVersion", macos_build_version(version)),
+    ):
+        rendered = _replaced_value(
+            _sole_match(
+                _plist_value_pattern(key),
+                rendered,
+                f"{key} entry in {MACOS_INFO_PLIST_FILE}",
+            ),
+            rendered,
+            value,
+        )
+    return rendered
+
+
+def _reject_downgrade(current_version: str, version: str) -> None:
+    match = VERSION_PATTERN.fullmatch(current_version)
+    if match is None:
+        return
+    current = tuple(int(part) for part in match.group(1).split("."))
+    if tuple(int(part) for part in version.split(".")) < current:
+        raise ReleaseNotesError(
+            f"{version} is lower than the {current_version} already in the tree; "
+            "stores refuse a version that goes backwards — pass --allow-downgrade "
+            "if that is deliberate",
+        )
+
+
+def _write_atomically(path: Path, content: str) -> None:
+    """Replace `path` in one step, keeping its permission bits.
+
+    A temporary file is created 0600, and `os.replace` carries that mode onto the
+    destination — so the mode has to be copied back before the swap, or every run
+    would quietly turn the project files owner-only.
+    """
+    original_mode = stat.S_IMODE(path.stat().st_mode)
+    handle = tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", newline="", dir=path.parent, delete=False
+    )
+    try:
+        with handle:
+            handle.write(content)
+        os.chmod(handle.name, original_mode)
+        os.replace(handle.name, path)
+    except OSError:
+        Path(handle.name).unlink(missing_ok=True)
+        raise
+
+
+def _restore_files(originals: dict[Path, str], written: Iterable[Path]) -> list[Path]:
+    """Put back what a failed run already wrote; name whatever could not be put back."""
+    unrestored: list[Path] = []
+    for path in written:
+        try:
+            _write_atomically(path, originals[path])
+        except OSError:
+            unrestored.append(path)
+    return unrestored
+
+
+def set_project_versions(
+    repo_root: Path,
+    version: str,
+    allow_downgrade: bool = False,
+) -> tuple[str, ...]:
+    """Write `version` into all three platform project files, or into none of them.
+
+    Accepts `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH`. The rewritten contents
+    are held to the same gate the release flow runs, before any real file is
+    touched, so a version that gate would reject never reaches the tree.
+
+    Three files cannot be replaced in one filesystem transaction. A write that
+    fails part-way is rolled back; a rollback that also fails raises with the
+    files it could not put back named in the message.
+    """
+    version = normalize_version(version)
+
+    sources = {
+        relative_path: read_text_file(repo_root, relative_path)
+        for relative_path in (
+            ANDROID_GRADLE_FILE,
+            IOS_PROJECT_FILE,
+            MACOS_INFO_PLIST_FILE,
+        )
+    }
+    plist_source = sources[MACOS_INFO_PLIST_FILE]
+    _require_xml_plist(plist_source)
+
+    current_android = parse_android_version_name(sources[ANDROID_GRADLE_FILE])
+    current_ios = parse_ios_project_versions(sources[IOS_PROJECT_FILE])
+    current_macos = _plist_value(plist_source, "CFBundleShortVersionString")
+    current_macos_build = _plist_value(plist_source, "CFBundleVersion")
+
+    if not allow_downgrade:
+        for current_version in (
+            current_android,
+            current_ios.marketing_version,
+            current_macos,
+        ):
+            _reject_downgrade(current_version, version)
+
+    candidates = {
+        ANDROID_GRADLE_FILE: render_android_gradle(
+            sources[ANDROID_GRADLE_FILE], version
+        ),
+        IOS_PROJECT_FILE: render_ios_project(sources[IOS_PROJECT_FILE], version),
+        MACOS_INFO_PLIST_FILE: render_macos_plist(plist_source, version),
+    }
+
+    # Validate before writing: the rewrite runs through the same gate the release
+    # flow runs, so the real tree never holds a version that gate would reject.
+    # Parsing the rendered plist here also proves the text edit kept it a plist.
+    macos_plist_path = repo_root / MACOS_INFO_PLIST_FILE
+    check_versions_in_sources(
+        candidates[ANDROID_GRADLE_FILE],
+        candidates[IOS_PROJECT_FILE],
+        _plist_dictionary(
+            candidates[MACOS_INFO_PLIST_FILE].encode("utf-8"), macos_plist_path
+        ),
+        version,
+        macos_plist_path,
+    )
+
+    originals = {repo_root / relative_path: content for relative_path, content in sources.items()}
+    written: list[Path] = []
+    try:
+        for relative_path, content in candidates.items():
+            path = repo_root / relative_path
+            _write_atomically(path, content)
+            written.append(path)
+    except OSError as error:
+        # Three files cannot be replaced in one filesystem transaction; restoring
+        # what already landed is what keeps a failed run from leaving the train
+        # split across two versions. Whatever stopped the write can stop the
+        # restore too, so say which files that left behind rather than claim a
+        # rollback that did not happen.
+        unrestored = _restore_files(originals, written)
+        outcome = (
+            "restoring them failed too — "
+            f"{', '.join(str(path.relative_to(repo_root)) for path in unrestored)} "
+            f"still hold {version} and must be checked by hand"
+            if unrestored
+            else "the tree was restored"
+        )
+        raise ReleaseNotesError(
+            f"could not write the project files: {error}; {outcome}",
+        ) from error
+
+    return (
+        f"Android: versionName {current_android} -> {version}",
+        f"iOS: MARKETING_VERSION {current_ios.marketing_version} -> {version}, "
+        f"CURRENT_PROJECT_VERSION {current_ios.build_number} -> {IOS_BUILD_NUMBER}",
+        f"macOS: CFBundleShortVersionString {current_macos} -> {version}, "
+        f"CFBundleVersion {current_macos_build} -> {macos_build_version(version)}",
+    )
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "command",
-        choices=("sync", "check", "check-versions", "print"),
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    def add_command(name: str, help_text: str) -> argparse.ArgumentParser:
+        subparser = subparsers.add_parser(name, help=help_text)
+        subparser.add_argument("--version", required=True)
+        subparser.add_argument(
+            "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
+        )
+        return subparser
+
+    sync = add_command("sync", "Render the canonical notes into both app histories")
+    sync.add_argument("--date", help="Release date in YYYY/MM/DD form", required=True)
+    add_command("check", "Validate the canonical notes and both app histories")
+    add_command("check-versions", "Check all three platform project versions")
+    set_versions = add_command(
+        "set-versions", "Write the version into all three platform project files"
     )
-    parser.add_argument("--version", required=True)
-    parser.add_argument("--platform", choices=("ios", "android"))
-    parser.add_argument(
-        "--date", help="Release date in YYYY/MM/DD form; required for sync"
+    set_versions.add_argument(
+        "--allow-downgrade",
+        action="store_true",
+        help="Permit a version lower than the one already in the tree",
     )
-    parser.add_argument(
-        "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
-    )
+    printer = add_command("print", "Print one platform's store text")
+    printer.add_argument("--platform", choices=("ios", "android"), required=True)
+
     return parser.parse_args()
 
 
@@ -480,10 +849,7 @@ def main() -> int:
         version = normalize_version(args.version)
         repo_root = args.repo_root.resolve()
         if args.command == "sync":
-            if (
-                args.date is None
-                or re.fullmatch(r"\d{4}/\d{2}/\d{2}", args.date) is None
-            ):
+            if re.fullmatch(r"\d{4}/\d{2}/\d{2}", args.date) is None:
                 raise ReleaseNotesError("sync requires --date YYYY/MM/DD")
             sync_version_history(repo_root, version, args.date)
             check_version_history(repo_root, version)
@@ -491,9 +857,12 @@ def main() -> int:
             check_version_history(repo_root, version)
         elif args.command == "check-versions":
             check_project_versions(repo_root, version)
+        elif args.command == "set-versions":
+            for change in set_project_versions(
+                repo_root, version, allow_downgrade=args.allow_downgrade
+            ):
+                print(change)
         else:
-            if args.platform is None:
-                raise ReleaseNotesError("print requires --platform")
             print(load_notes(repo_root, version, args.platform).store_text)
     except ReleaseNotesError as error:
         print(f"error: {error}", file=sys.stderr)

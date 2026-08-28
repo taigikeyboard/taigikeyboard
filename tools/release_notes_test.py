@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import plistlib
+import stat
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import release_notes
@@ -92,7 +94,7 @@ class MacOSVersionGateTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         self.repo_root = Path(self.temp_dir.name)
-        self.plist_path = self.repo_root / "macos/App/Info.plist"
+        self.plist_path = self.repo_root / release_notes.MACOS_INFO_PLIST_FILE
         self.plist_path.parent.mkdir(parents=True)
 
     def write_plist(self, short_version: str, build_version: str) -> None:
@@ -187,6 +189,308 @@ class MacOSVersionGateTests(unittest.TestCase):
         )
 
         release_notes.check_macos_version(self.repo_root, "3.6.5")
+
+
+GRADLE_FIXTURE = """android {
+    defaultConfig {
+        // versionCode = Unix epoch minutes; versionName stays SemVer.
+        versionCode = (System.currentTimeMillis() / 60_000L).toInt()
+        versionName = "3.6.6"
+    }
+}
+"""
+
+PBXPROJ_FIXTURE = """// !$*UTF8*$!
+\t\t8A01 /* Debug */ = {
+\t\t\tbuildSettings = {
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tMARKETING_VERSION = 3.6.6;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
+\t\t\t};
+\t\t};
+\t\t8A02 /* Release */ = {
+\t\t\tbuildSettings = {
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tMARKETING_VERSION = 3.6.6;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
+\t\t\t};
+\t\t};
+\t\t8A03 /* Debug */ = {
+\t\t\tbuildSettings = {
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tMARKETING_VERSION = 3.6.6;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
+\t\t\t};
+\t\t};
+\t\t8A04 /* Release */ = {
+\t\t\tbuildSettings = {
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tMARKETING_VERSION = 3.6.6;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
+\t\t\t};
+\t\t};
+\t\t8A05 /* Debug */ = {
+\t\t\tbuildSettings = {
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tMARKETING_VERSION = 1.0;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboardTests;
+\t\t\t};
+\t\t};
+"""
+
+PLIST_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+\t<key>CFBundleName</key>
+\t<string>TaigiKeyboard</string>
+\t<!-- The marketing version is kept in lockstep with iOS and Android; the build
+\t     version derives as MAJOR*10000 + MINOR*100 + PATCH. -->
+\t<key>CFBundleShortVersionString</key>
+\t<string>3.6.6</string>
+\t<key>CFBundleVersion</key>
+\t<string>30606</string>
+</dict>
+</plist>
+"""
+
+
+PROJECT_FILES = (
+    release_notes.ANDROID_GRADLE_FILE,
+    release_notes.IOS_PROJECT_FILE,
+    release_notes.MACOS_INFO_PLIST_FILE,
+)
+
+
+class ProjectVersionWriterTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.repo_root = Path(self.temp_dir.name)
+        self.write_tree()
+
+    def write_tree(
+        self,
+        gradle: str = GRADLE_FIXTURE,
+        pbxproj: str = PBXPROJ_FIXTURE,
+        plist: str = PLIST_FIXTURE,
+    ) -> None:
+        for relative_path, content in zip(PROJECT_FILES, (gradle, pbxproj, plist)):
+            path = self.repo_root / relative_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8", newline="")
+
+    def read(self, relative_path: str) -> str:
+        return (self.repo_root / relative_path).read_text(encoding="utf-8")
+
+    def snapshot(self) -> dict[str, bytes]:
+        """Every project file's raw bytes — what a rejected run must not change."""
+        return {
+            relative_path: (self.repo_root / relative_path).read_bytes()
+            for relative_path in PROJECT_FILES
+            if (self.repo_root / relative_path).exists()
+        }
+
+    def assert_rejected(self, message: str, version: str, **kwargs: object) -> None:
+        """The run raises and leaves all three files exactly as they were."""
+        before = self.snapshot()
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, message):
+            release_notes.set_project_versions(self.repo_root, version, **kwargs)
+
+        self.assertEqual(self.snapshot(), before)
+
+    def patch_write_failing_on(self, failing_call: int) -> unittest.mock._patch:
+        """Make the nth `_write_atomically` call raise; every other call behaves."""
+        real_write = release_notes._write_atomically
+        calls: list[Path] = []
+
+        def failing_write(path: Path, content: str) -> None:
+            calls.append(path)
+            if len(calls) == failing_call:
+                raise OSError("disk full")
+            real_write(path, content)
+
+        return unittest.mock.patch.object(
+            release_notes, "_write_atomically", failing_write
+        )
+
+    def test_writes_one_version_across_all_three_platforms(self) -> None:
+        changes = release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        release_notes.check_project_versions(self.repo_root, "3.6.7")
+        self.assertEqual(
+            changes,
+            (
+                "Android: versionName 3.6.6 -> 3.6.7",
+                "iOS: MARKETING_VERSION 3.6.6 -> 3.6.7, "
+                "CURRENT_PROJECT_VERSION 1 -> 1",
+                "macOS: CFBundleShortVersionString 3.6.6 -> 3.6.7, "
+                "CFBundleVersion 30606 -> 30607",
+            ),
+        )
+
+    def test_leaves_the_test_target_and_every_other_byte_alone(self) -> None:
+        release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        # Only the four shipping blocks move, and their build number is pinned to
+        # 1 — App Store Connect numbers a version's uploads itself. The test
+        # target keeps its own MARKETING_VERSION = 1.0.
+        self.assertEqual(
+            self.read(release_notes.IOS_PROJECT_FILE),
+            PBXPROJ_FIXTURE.replace(
+                "MARKETING_VERSION = 3.6.6;", "MARKETING_VERSION = 3.6.7;"
+            ),
+        )
+        self.assertEqual(
+            self.read(release_notes.ANDROID_GRADLE_FILE),
+            GRADLE_FIXTURE.replace("3.6.6", "3.6.7"),
+        )
+
+    def test_keeps_the_plists_hand_written_comments(self) -> None:
+        release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        plist_source = self.read(release_notes.MACOS_INFO_PLIST_FILE)
+        self.assertIn("MAJOR*10000 + MINOR*100 + PATCH", plist_source)
+        self.assertEqual(
+            plist_source,
+            PLIST_FIXTURE.replace("3.6.6", "3.6.7").replace("30606", "30607"),
+        )
+
+    def test_pins_the_ios_build_number_to_one(self) -> None:
+        # Whatever the tree carried, every run writes 1: App Store Connect
+        # numbers the uploads of a marketing version itself.
+        self.write_tree(
+            pbxproj=PBXPROJ_FIXTURE.replace(
+                "CURRENT_PROJECT_VERSION = 1;\n\t\t\t\tMARKETING_VERSION = 3.6.6;",
+                "CURRENT_PROJECT_VERSION = 9;\n\t\t\t\tMARKETING_VERSION = 3.6.6;",
+            )
+        )
+
+        changes = release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        self.assertEqual(
+            self.read(release_notes.IOS_PROJECT_FILE).count(
+                "CURRENT_PROJECT_VERSION = 1;"
+            ),
+            5,
+            "four shipping blocks pinned to 1, plus the untouched test target",
+        )
+        self.assertIn("CURRENT_PROJECT_VERSION 9 -> 1", changes[1])
+
+    def test_rerunning_the_current_version_changes_nothing(self) -> None:
+        before = self.snapshot()
+
+        release_notes.set_project_versions(self.repo_root, "3.6.6")
+
+        self.assertEqual(self.snapshot(), before)
+
+    def test_rejects_a_version_that_goes_backwards(self) -> None:
+        self.assert_rejected("lower than", "3.6.5")
+
+    def test_allows_a_downgrade_when_asked_for_one(self) -> None:
+        release_notes.set_project_versions(
+            self.repo_root, "3.6.5", allow_downgrade=True
+        )
+
+        release_notes.check_project_versions(self.repo_root, "3.6.5")
+
+    def test_rejects_a_version_that_is_not_three_components(self) -> None:
+        self.assert_rejected("MAJOR.MINOR.PATCH", "3.6")
+
+    def test_rejects_shipping_targets_that_already_disagree(self) -> None:
+        self.write_tree(
+            pbxproj=PBXPROJ_FIXTURE.replace(
+                "MARKETING_VERSION = 3.6.6;", "MARKETING_VERSION = 3.6.5;", 1
+            )
+        )
+
+        self.assert_rejected("different MARKETING_VERSION", "3.6.7")
+
+    def test_rejects_an_unexpected_number_of_shipping_blocks(self) -> None:
+        self.write_tree(
+            pbxproj=PBXPROJ_FIXTURE.replace(
+                "PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;",
+                "PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboardTests;",
+                1,
+            )
+        )
+
+        self.assert_rejected("expected 2 iOS build settings blocks", "3.6.7")
+
+    def test_rejects_a_duplicate_android_version_name(self) -> None:
+        self.write_tree(gradle=GRADLE_FIXTURE + '        versionName = "3.6.6"\n')
+
+        self.assert_rejected("exactly one versionName", "3.6.7")
+
+    def test_rejects_a_binary_plist_it_cannot_edit_as_text(self) -> None:
+        (self.repo_root / release_notes.MACOS_INFO_PLIST_FILE).write_bytes(
+            plistlib.dumps(
+                {"CFBundleShortVersionString": "3.6.6", "CFBundleVersion": "30606"},
+                fmt=plistlib.FMT_BINARY,
+            )
+        )
+
+        self.assert_rejected("cannot read", "3.6.7")
+
+    def test_rejects_an_xml_plist_that_is_not_a_plist(self) -> None:
+        self.write_tree(plist="{ not a plist }\n")
+
+        self.assert_rejected("is not XML text", "3.6.7")
+
+    def test_reports_a_missing_project_file_without_touching_the_others(self) -> None:
+        (self.repo_root / release_notes.MACOS_INFO_PLIST_FILE).unlink()
+
+        self.assert_rejected("missing macos/", "3.6.7")
+
+    def test_restores_the_tree_when_a_later_write_fails(self) -> None:
+        before = self.snapshot()
+
+        with self.patch_write_failing_on(2):
+            with self.assertRaisesRegex(
+                release_notes.ReleaseNotesError, "the tree was restored"
+            ):
+                release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        self.assertEqual(self.snapshot(), before)
+
+    def test_names_the_files_a_failed_rollback_left_behind(self) -> None:
+        real_write = release_notes._write_atomically
+        calls: list[Path] = []
+
+        def write_once_then_fail(path: Path, content: str) -> None:
+            calls.append(path)
+            if len(calls) == 1:
+                real_write(path, content)
+                return
+            raise OSError("disk full")
+
+        with unittest.mock.patch.object(
+            release_notes, "_write_atomically", write_once_then_fail
+        ):
+            with self.assertRaisesRegex(
+                release_notes.ReleaseNotesError,
+                "restoring them failed too — android/app/build.gradle.kts",
+            ):
+                release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        self.assertIn(
+            'versionName = "3.6.7"', self.read(release_notes.ANDROID_GRADLE_FILE)
+        )
+
+    def test_keeps_each_files_permission_bits(self) -> None:
+        modes = {}
+        for relative_path in PROJECT_FILES:
+            path = self.repo_root / relative_path
+            path.chmod(0o644)
+            modes[relative_path] = stat.S_IMODE(path.stat().st_mode)
+
+        release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        for relative_path, mode in modes.items():
+            self.assertEqual(
+                stat.S_IMODE((self.repo_root / relative_path).stat().st_mode), mode
+            )
 
 
 class VersionHistorySyncTests(unittest.TestCase):

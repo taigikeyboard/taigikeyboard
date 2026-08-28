@@ -62,7 +62,7 @@ Refactors that delete Swift files under a synced-group directory: Xcode auto-rem
 - New file at `Sources/TaigiKeyboard/` ROOT level (siblings to synced groups need manual add).
 - New top-level directory under `Sources/TaigiKeyboard/` — Xcode does NOT auto-promote a new dir to a synced group; user must "Add Files…" or "Convert to Synchronized Group".
 - Binary references (e.g. `ios/RustEngine/RustTaigi.xcframework`) — not synced.
-- `Info.plist`, entitlements, signing, build settings, scheme — always pbxproj-level, always user.
+- `Info.plist`, entitlements, signing, build settings, scheme — always pbxproj-level, always user. **One exception, and it is still user-run**: `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` are written by `make version x.y.z`, which sets the same version on Android and macOS in the same pass and pins the build number to 1 (App Store Connect numbers a version's uploads itself) (`tools/release_notes.py set-versions`). AI still never edits pbxproj — name that command as the user's action item instead of asking for a hand edit in Xcode, because a hand edit desyncs the three platforms until `check-versions` catches it.
 - Adding the same file to a SECOND target — synced group governs the primary target only.
 
 ### Folder renames break synced-group registration — audit drift

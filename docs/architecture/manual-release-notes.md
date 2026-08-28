@@ -32,6 +32,16 @@ Shared-engine work that ships on every platform is a mobile change too, so it be
 
 All three platforms ship one version number. `check-versions` holds `macos/App/Info.plist` to it as well — `CFBundleShortVersionString` equals the release version, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`, the same derivation `macos/scripts/release-app.sh` enforces at package time.
 
+## Set the version
+
+One command writes that version into all three platform project files — the Android `versionName`, the iOS shipping targets' `MARKETING_VERSION`, and both macOS plist keys — or into none of them:
+
+```bash
+make version MAJOR.MINOR.PATCH
+```
+
+Neither build number is a maintainer's problem: the iOS `CURRENT_PROJECT_VERSION` is pinned to 1 because App Store Connect numbers a marketing version's uploads itself, and Android's `versionCode` is epoch minutes.
+
 ## Prepare notes
 
 Create both canonical files, then synchronize the apps:

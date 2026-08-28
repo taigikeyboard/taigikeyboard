@@ -20,7 +20,7 @@ Never create or move a tag, upload a build, edit store metadata, or submit a rel
 - Report open PRs and ask before continuing if any exist.
 - Use `<base-tag>..HEAD` as the release range. State it before edits.
 
-The skill may report a required version change but must not edit the user-owned iOS `.pbxproj`.
+The skill may report a required version change but must not edit the user-owned iOS `.pbxproj`. When `check-versions` fails because the tree still carries the previous version, give the user the one command that sets all three platforms — `make version <target without the v>` — and continue after they run it.
 
 ## 2. Analyze the release
 

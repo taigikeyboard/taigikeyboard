@@ -98,7 +98,7 @@ For each deleted asset, ask: **does any persisted user state reference it by an 
 ### 7. Version monotonicity (store gate)
 
 - **Android** `app/build.gradle.kts` `versionCode` — must strictly increase or the store / installer refuses the update. This repo computes `versionCode = (System.currentTimeMillis()/60_000)` → monotonic by construction; just confirm the expression is unchanged. A hardcoded or decreased versionCode → BLOCKING.
-- **iOS** `CURRENT_PROJECT_VERSION` (build) + `MARKETING_VERSION` in `project.pbxproj` — must increase for App Store. **pbxproj is user-owned** (`.claude/rules/ios-guidelines.md`) — do NOT edit; just read both targets (app + keyboard-extension) and confirm the build number rose. If it did not, flag it as a user action item, not an edit.
+- **iOS** `MARKETING_VERSION` in `project.pbxproj` — must increase for App Store; `make version x.y.z` writes it across all three platforms. `CURRENT_PROJECT_VERSION` stays 1 by design — App Store Connect numbers a marketing version's uploads itself — so a build number that did NOT move is not a finding. **pbxproj is user-owned** (`.claude/rules/ios-guidelines.md`) — do NOT edit it; read both targets (app + keyboard-extension), and when a bump is needed name the `make version` command as a user action item.
 
 ## Output
 
