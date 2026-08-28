@@ -34,6 +34,10 @@ enum FullWidthPunctuation {
         "{": "『", "}": "』",
         "<": "《", ">": "》",
         "'": "、",
+        // The shifted number row (`⇧2`…`⇧8`, `⇧-`, `⇧=`): symbols the MOE table
+        // also writes full-width. `!` `(` `)` above complete the row.
+        "@": "＠", "#": "＃", "$": "＄", "%": "％", "^": "＾", "&": "＆", "*": "＊",
+        "_": "＿", "+": "＋",
     ]
 
     /// The full-width form of one typed character, or nil when the key is not

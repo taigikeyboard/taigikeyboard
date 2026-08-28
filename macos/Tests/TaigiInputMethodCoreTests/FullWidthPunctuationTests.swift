@@ -19,6 +19,8 @@ final class FullWidthPunctuationTests: XCTestCase {
             "{": "『", "}": "』",
             "<": "《", ">": "》",
             "'": "、",
+            "@": "＠", "#": "＃", "$": "＄", "%": "％", "^": "＾", "&": "＆", "*": "＊",
+            "_": "＿", "+": "＋",
         ]
 
         for (typed, fullWidth) in expected {
