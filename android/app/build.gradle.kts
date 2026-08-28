@@ -244,12 +244,14 @@ dependencies {
     testImplementation("org.json:json:20260814")
 
     // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge.
-    // Pinned to the Java artifact that pairs with the `protoc` emitting the
-    // committed gencode (`libprotoc 35.1` ↔ Java `4.35.1`). Lite gencode does not
-    // self-validate the runtime version, so a mismatch surfaces as a compile error
-    // on symbols the older runtime lacks — keep regeneration and this bump in the
-    // same commit.
-    implementation("com.google.protobuf:protobuf-javalite:4.35.1")
+    // Runtime must be >= the `protoc` that emitted the committed gencode; a
+    // NEWER runtime over older gencode is supported, the reverse is not. Lite
+    // gencode does not self-validate the runtime version, so a too-old runtime
+    // surfaces as a compile error on symbols it lacks. 4.36.0 pairs with the
+    // local `libprotoc 36.0` so the next proto regeneration lands on a
+    // matching runtime — when regenerating with a newer protoc, bump this in
+    // the same commit.
+    implementation("com.google.protobuf:protobuf-javalite:4.36.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
