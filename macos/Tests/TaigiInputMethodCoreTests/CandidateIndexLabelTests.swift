@@ -15,32 +15,36 @@ final class CandidateIndexLabelTests: XCTestCase {
         CandidateCellContent(text: "候\($0)", annotation: "hau\($0)")
     }
 
-    // MARK: - The digits themselves
+    // MARK: - The keys themselves
 
-    func testSlotDigits_countFromOneAndStopAtTheNinth() {
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .bare), "1")
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .bare), "9")
-        // A tenth position: the slot stays reserved, but no key names it —
-        // `⌃0` is unbound and a bare `0` is document text.
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .bare), "")
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: -1, style: .bare), "")
+    /// The digit sets draw the modifier and the digit; a tenth position
+    /// stays reserved but no key names it — `⌃0` is unbound and a bare `0`
+    /// is document text.
+    func testSlotKeys_carryTheModifier_andStopAtTheNinth() {
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, keySet: .control), "⌃1")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, keySet: .option), "⌥9")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 2, keySet: .shift), "⇧3")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, keySet: .control), "")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: -1, keySet: .bareKeys), "")
     }
 
-    /// While a tone digit can still follow, a bare `2` tones the syllable — so
-    /// the window draws the chord that DOES pick, under whichever modifier the
-    /// user has bound to the slots.
-    func testSlotKeys_carryTheModifierWhileABareDigitWouldBeATone() {
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .chorded(.control)), "⌃1")
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .chorded(.option)), "⌥9")
-        // Past the ninth nothing is drawn in either style: there is no chord
-        // for a tenth slot either.
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .chorded(.control)), "")
+    /// The bare keys name all nine slots, drawn lowercase — the way each key
+    /// is pressed.
+    func testSlotKeys_underTheBareKeys_areTheNineKeysInSlotOrder() {
+        XCTAssertEqual(
+            (0 ..< 9).map { CandidateIndexLabel.text(forSlot: $0, keySet: .bareKeys) },
+            ["q", "w", "d", "f", "z", "x", "v", "y", ";"],
+        )
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, keySet: .bareKeys), "")
     }
 
     // MARK: - What each layout draws
 
-    /// The horizontal page renumbers from `1` on every page, which is what its
-    /// slot mapping resolves against.
+    /// The horizontal page renumbers from the first slot key on every page,
+    /// which is what its slot mapping resolves against. The panels draw the
+    /// shipped bare keys unless told otherwise.
+    private static let keys = CandidateSlotKeySet.bareKeyRow
+
     func testHorizontal_numbersEveryPageFromOne() {
         let panel = HorizontalCandidatePanel(
             style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
@@ -49,8 +53,8 @@ final class CandidateIndexLabelTests: XCTestCase {
 
         assertDigitsMatchSlots(in: panel)
         let firstPage = numberedCells(in: panel)
-        XCTAssertEqual(firstPage.first?.digit, "1")
-        XCTAssertEqual(firstPage.map(\.digit), firstPage.indices.map { String($0 + 1) })
+        XCTAssertEqual(firstPage.first?.digit, Self.keys[0])
+        XCTAssertEqual(firstPage.map(\.digit), Array(Self.keys.prefix(firstPage.count)))
 
         panel.navigate(.pageDown)
 
@@ -59,7 +63,7 @@ final class CandidateIndexLabelTests: XCTestCase {
             secondPage.first?.item.absoluteIndex, firstPage.first?.item.absoluteIndex,
             "the page turned",
         )
-        XCTAssertEqual(secondPage.first?.digit, "1", "a page's digits start over")
+        XCTAssertEqual(secondPage.first?.digit, Self.keys[0], "a page's keys start over")
         assertDigitsMatchSlots(in: panel)
     }
 
@@ -73,7 +77,7 @@ final class CandidateIndexLabelTests: XCTestCase {
 
         let numbered = numberedCells(in: panel)
         XCTAssertEqual(numbered.map(\.item.absoluteIndex), Array(0 ..< 9))
-        XCTAssertEqual(numbered.map(\.digit), (1 ... 9).map(String.init))
+        XCTAssertEqual(numbered.map(\.digit), Self.keys)
         assertDigitsMatchSlots(in: panel)
 
         // Every row still reserves the slot, drawn or not — the column the
@@ -97,7 +101,7 @@ final class CandidateIndexLabelTests: XCTestCase {
 
         XCTAssertEqual(panel.displayMode, .collapsed)
         assertDigitsMatchSlots(in: panel)
-        XCTAssertEqual(numberedCells(in: panel).first?.digit, "1")
+        XCTAssertEqual(numberedCells(in: panel).first?.digit, Self.keys[0])
 
         // Walking off the collapsed row's end unfolds the grid.
         for _ in 0 ..< 20 {
@@ -110,7 +114,7 @@ final class CandidateIndexLabelTests: XCTestCase {
             numbered.contains { $0.item.absoluteIndex == panel.selectedIndex },
             "the selected row is the numbered one",
         )
-        XCTAssertEqual(numbered.map(\.digit), numbered.indices.map { String($0 + 1) })
+        XCTAssertEqual(numbered.map(\.digit), Array(Self.keys.prefix(numbered.count)))
         assertDigitsMatchSlots(in: panel)
     }
 
@@ -201,7 +205,7 @@ final class CandidateIndexLabelTests: XCTestCase {
     /// and the mapping is untouched — `⌃3` still picks what slot 2 answers.
     func testEveryLayout_drawsTheChordWhenABareDigitWouldNotPick() {
         for panel in TestFixtures.candidatePanels() {
-            panel.slotKeyStyle = .chorded(.control)
+            panel.slotKeySet = .control
             _ = panel.updateCandidates(Self.cells)
 
             let numbered = numberedCells(in: panel)
@@ -222,7 +226,7 @@ final class CandidateIndexLabelTests: XCTestCase {
         let panel = ExpandableCandidatePanel(
             style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
         )
-        panel.slotKeyStyle = .chorded(.control)
+        panel.slotKeySet = .control
         _ = panel.updateCandidates(Self.cells)
 
         for _ in 0 ..< 20 {
@@ -239,59 +243,21 @@ final class CandidateIndexLabelTests: XCTestCase {
     }
 
     /// The slot is as wide as the widest key it can draw, so the column does
-    /// not shift under the user when the live key changes mid-word.
-    func testTheKeyColumn_keepsOneWidthAcrossBothStyles() {
+    /// not shift when the user chooses another set.
+    func testTheKeyColumn_keepsOneWidthAcrossTheSets() {
         let panel = HorizontalCandidatePanel(
             style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
         )
         _ = panel.updateCandidates(Self.cells)
         let bareWidths = TestFixtures.candidateCells(in: panel).map(\.frame.width)
 
-        panel.slotKeyStyle = .chorded(.option)
+        panel.slotKeySet = .option
         _ = panel.updateCandidates(Self.cells)
 
         XCTAssertEqual(
             TestFixtures.candidateCells(in: panel).map(\.frame.width), bareWidths,
             "a cell is the same width whichever key picks it",
         )
-    }
-
-    // MARK: - Repainting the keys without a new list
-
-    /// The selection latch flips the live key mid-composition, and navigating
-    /// never re-fetches — so the panels have to be able to repaint the keys on
-    /// the cells they are already showing. A window left drawing `⌃1` while a
-    /// bare `1` picks would be naming a key that does something else.
-    ///
-    /// Run at rest and after the viewport has moved, because each layout
-    /// renumbers from a different anchor: the horizontal page restarts at `1`,
-    /// the vertical column follows its scroll, and the expanded grid numbers
-    /// the row the selection is in. A repaint that reached only the cells the
-    /// list started with would leave stale keys on the ones now on screen.
-    func testEveryLayout_repaintsItsKeysInPlace() {
-        for hasMoved in [false, true] {
-            for panel in TestFixtures.candidatePanels() {
-                panel.slotKeyStyle = .chorded(.control)
-                _ = panel.updateCandidates(Self.cells)
-                if hasMoved {
-                    // Far enough to turn a page, scroll a column, unfold a grid.
-                    for _ in 0 ..< 20 {
-                        panel.navigate(.nextCandidate)
-                    }
-                }
-
-                panel.applySlotKeyStyle(.bare)
-
-                let numbered = numberedCells(in: panel)
-                let where_ = "\(type(of: panel)) (moved: \(hasMoved))"
-                XCTAssertFalse(numbered.isEmpty, "\(where_): something must be numbered")
-                XCTAssertTrue(
-                    numbered.allSatisfy { Int($0.digit) != nil },
-                    "\(where_): every drawn key is a bare digit now",
-                )
-                assertDigitsMatchSlots(in: panel)
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -302,9 +268,11 @@ final class CandidateIndexLabelTests: XCTestCase {
         in panel: CandidateBasePanel, file: StaticString = #filePath, line: UInt = #line,
     ) {
         for (key, item) in numberedCells(in: panel) {
-            // The digit is the key's last character in both styles — bare, or
-            // under a one-character modifier symbol.
-            guard let digit = Int(key.suffix(1)) else {
+            // The digit is the key's last character under a one-character
+            // modifier symbol; the bare keys map by position instead.
+            guard let digit = Int(key.suffix(1))
+                ?? CandidateSlotKeySet.bareKeyRow.firstIndex(of: key).map({ $0 + 1 })
+            else {
                 return XCTFail(
                     "\(type(of: panel)): drew a keyless label \"\(key)\"", file: file, line: line,
                 )

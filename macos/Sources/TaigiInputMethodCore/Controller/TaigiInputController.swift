@@ -44,17 +44,6 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var fetchedCandidates: [ContinuousCandidate] = []
 
-    /// Whether the user has said, with `↓`, that they are choosing a candidate
-    /// rather than still typing — which lets a bare `1`…`9` pick one out of a
-    /// buffer that could otherwise still take a tone digit.
-    ///
-    /// Session state, so it lives here rather than in `ComposingKeyBindings`
-    /// (the user's settings) or in the engine (which knows the buffer, not what
-    /// the bar is doing). `ComposingKeyIntent.selectionLatch(after:wasLatched:)`
-    /// is the rule; this is only where the answer is kept between keystrokes.
-    @MainActor
-    private var isSelectionLatched = false
-
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
     /// `NSPanel`, and the default cannot be written as a stored property's
@@ -231,11 +220,11 @@ public final class TaigiInputController: IMKInputController {
     /// needs the screen, not when the composition is over, so releasing the
     /// engine or committing here would throw away work the user is in the middle
     /// of. The candidate model is cleared with the window because the two are one
-    /// state as far as the key contract is concerned — the arrows and `⌃n` belong
-    /// to a bar the user can see, and with the bar gone they go back to the host
-    /// until the next keystroke fetches candidates again. The selection latch
-    /// goes with them for the same reason (`dismissCandidates`): the digits
-    /// were picking out of a list that is no longer on screen.
+    /// state as far as the key contract is concerned — the arrows and the slot
+    /// keys belong to a bar the user can see, and with the bar gone they go
+    /// back to the host until the next keystroke fetches candidates again. The
+    /// selection latch goes with them for the same reason (`dismissCandidates`):
+    /// the digits were picking out of a list that is no longer on screen.
     override public func hidePalettes() {
         Self.logger.debug("hidePalettes")
         onMainActor(nil) { controller, _ in controller.dismissCandidates() }
@@ -479,22 +468,8 @@ public final class TaigiInputController: IMKInputController {
             isComposing: manager.isComposing,
             isShowingCandidates: !fetchedCandidates.isEmpty,
             bindings: settings.composingKeyBindings,
-            // The raw buffer, not `displayText`: the question is whether the
-            // last thing TYPED was a letter, and the display has already
-            // turned `tai5` into `tâi`.
-            rawInput: manager.rawInput,
-            isSelectionLatched: isSelectionLatched,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
-
-        // Updated BEFORE the intent is carried out, so every path below that
-        // re-shows the bar already draws the key the NEXT keystroke will use.
-        // The classification above is unaffected — it read the latch as it
-        // stood when this key was pressed, which is the only reading that can
-        // be right for the key that flips it.
-        isSelectionLatched = ComposingKeyIntent.selectionLatch(
-            after: intent, wasLatched: isSelectionLatched,
-        )
 
         let executor = ClientEffectExecutor(client: client)
         defer { isMarkedTextVisible = manager.isComposing }
@@ -602,21 +577,6 @@ public final class TaigiInputController: IMKInputController {
                 from: manager, client: client, executing: executor,
             )
         case let .navigate(direction):
-            // Navigating is the one path that changes which key picks a
-            // candidate without producing a new list, so it is the one path
-            // that has to say so: `↓` latches, and nothing else here would
-            // repaint the keys the cells are drawn with. Before the move, so
-            // the repaint the move does is already in the new style.
-            //
-            // Not guarded on the latch having CHANGED — `applySlotKeyStyle`
-            // already returns on an unchanged style, and a second copy of that
-            // test here is a claim about the panel that can only ever fall out
-            // of step with it.
-            if direction == .down {
-                candidatePresenter.updateSlotKeyStyle(
-                    slotKeyStyle(after: manager.rawInput), ownedBy: sessionToken,
-                )
-            }
             // The window interprets the direction for its layout and repaints
             // itself — nothing comes back, because the window is authoritative
             // for the selection and the commit paths above ask it.
@@ -757,7 +717,11 @@ public final class TaigiInputController: IMKInputController {
         candidatePresenter.show(
             CandidateWindowContent(
                 cells: fetchedCandidates.map(manager.cellContent(for:)),
-                slotKeyStyle: slotKeyStyle(after: manager.rawInput),
+                // The set the user chose — the only keys that pick. A rebind
+                // cannot strand a stale hint: reaching the shortcut pane moves
+                // focus off the client, and `finishComposition` takes the bar
+                // down with the session.
+                slotKeySet: settings.composingKeyBindings.slotKeySet,
             ),
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),
@@ -769,42 +733,9 @@ public final class TaigiInputController: IMKInputController {
         )
     }
 
-    /// Which key picks a candidate for the buffer as it stands.
-    ///
-    /// The same two rules the key handler classifies against — the tone-digit
-    /// grammar (`ComposingKeyIntent.canTypeToneDigit`) read from the same
-    /// buffer, and the selection latch over it — so the window cannot draw a
-    /// key that would do something else. The modifier is the user's, since they
-    /// can rebind which one the slots take.
-    ///
-    /// Snapshotted per show rather than live-read by the window: every
-    /// keystroke that changes the buffer re-fetches and re-shows, so the hint
-    /// is never older than the buffer it describes. `↓` is the exception — it
-    /// changes the live key without producing a new list, which is why the
-    /// handler pushes the style to the window itself
-    /// (`CandidatePresenter.updateSlotKeyStyle`). A rebind cannot strand a
-    /// stale hint either —
-    /// reaching the shortcut pane moves focus off the client, and
-    /// `finishComposition` takes the bar down with the session.
-    @MainActor
-    private func slotKeyStyle(after rawInput: String) -> CandidateSlotKeyStyle {
-        // The latch outranks the grammar rule, and has to: it exists precisely
-        // for the buffers the rule keeps answering "a digit could still be a
-        // tone" about.
-        guard !isSelectionLatched else { return .bare }
-        return ComposingKeyIntent.canTypeToneDigit(after: rawInput)
-            ? .chorded(settings.composingKeyBindings.slotModifier)
-            : .bare
-    }
-
     @MainActor
     private func dismissCandidates() {
         fetchedCandidates = []
-        // The bar going away ends selection mode, whether or not the
-        // composition ends with it — `hidePalettes` takes the window down and
-        // leaves the composition running, and a latch surviving that would let
-        // the next digit commit from a bar the user can no longer see.
-        isSelectionLatched = false
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 

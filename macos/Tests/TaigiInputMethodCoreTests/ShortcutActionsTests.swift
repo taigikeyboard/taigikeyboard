@@ -153,11 +153,11 @@ final class ShortcutActionsTests: XCTestCase {
         )
     }
 
-    /// ⌃ plus a digit is how a user picks the third candidate on screen, and
-    /// the classifier reads that tier before it reads any binding. Shift is
-    /// what keeps these chords out of it — the tier refuses any chord carrying
-    /// a modifier it was not bound to — so the check is worth pinning rather
-    /// than reasoning about.
+    /// A slot key is how a user picks the third candidate on screen, and the
+    /// classifier reads that tier before it reads any binding — under every
+    /// set the picker offers, and the fixed `⇧1`…`⇧9` besides. The tier
+    /// refuses any chord carrying a modifier it was not bound to, so the check
+    /// is worth pinning rather than reasoning about.
     func testNoDefault_isACandidateSlotChord() throws {
         for action in ShortcutAction.allCases {
             let shortcut = try XCTUnwrap(action.defaultShortcut)
@@ -166,10 +166,10 @@ final class ShortcutActionsTests: XCTestCase {
                 modifiers: shortcut.modifiers,
             ).get()
 
-            for slotModifier in CandidateSlotModifier.allCases {
+            for slotKeySet in CandidateSlotKeySet.allCases {
                 XCTAssertFalse(
-                    chord.isCandidateSlotChord(under: slotModifier),
-                    "\(action.name.rawValue) collides with the \(slotModifier) slot tier",
+                    chord.isCandidateSlotChord(under: slotKeySet),
+                    "\(action.name.rawValue) collides with the \(slotKeySet) slot tier",
                 )
             }
         }

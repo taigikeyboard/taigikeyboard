@@ -311,35 +311,24 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         preconditionFailure("layout subclasses must override candidateIndex(forSlot:)")
     }
 
-    /// Which key picks a candidate right now — the window draws it beside every
+    /// Which keys pick the candidates — the window draws each beside its
     /// numbered cell.
     ///
     /// Set from the content each `show` carries, before the cells it belongs
-    /// to are built: a fresh list is what a keystroke produces, and the key
-    /// rule reads the same buffer that keystroke changed. A display-only
-    /// re-render keeps it, having changed no buffer.
-    var slotKeyStyle: CandidateSlotKeyStyle = .bare
+    /// to are built, so the keys are resolved as the cells are. A
+    /// display-only re-render keeps it.
+    var slotKeySet: CandidateSlotKeySet = .bareKeys
 
     /// Every cell this layout currently draws a key beside, in any order.
     ///
     /// Overridden rather than held here because each layout keeps its own item
     /// views — the expandable one keeps two lists, since its grid rows are
     /// built separately from the row it unfolds from. Traps like its siblings
-    /// above: a layout that forgot it would repaint nothing and draw `⌃1` while
-    /// a bare `1` picks, which is the silent failure they all guard against.
+    /// above: a layout that forgot it would leave stale keys on the cells now
+    /// on screen after a page turn or a scroll, which is the silent failure
+    /// they all guard against.
     var numberedItemViews: [CandidateItemView] {
         preconditionFailure("layout subclasses must override numberedItemViews")
-    }
-
-    /// Repaints the keys under a new `style`, changing no geometry.
-    ///
-    /// What the selection latch flips mid-composition (`CandidatePanel
-    /// .updateSlotKeyStyle`). Guarded on a real change so a keystroke that
-    /// leaves the live key alone — most of them — costs nothing.
-    func applySlotKeyStyle(_ style: CandidateSlotKeyStyle) {
-        guard slotKeyStyle != style else { return }
-        slotKeyStyle = style
-        refreshIndexLabels()
     }
 
     /// Draws the key that picks each numbered cell, and blanks the rest.
@@ -358,9 +347,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         var keyByCandidate: [Int: String] = [:]
         for slot in 0 ..< HorizontalPageLayout.pageSize {
             guard let candidateIndex = candidateIndex(forSlot: slot) else { continue }
-            keyByCandidate[candidateIndex] = CandidateIndexLabel.text(
-                forSlot: slot, style: slotKeyStyle,
-            )
+            keyByCandidate[candidateIndex] = CandidateIndexLabel.text(forSlot: slot, keySet: slotKeySet)
         }
         for item in numberedItemViews {
             item.setIndexLabel(keyByCandidate[item.absoluteIndex] ?? "")

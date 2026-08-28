@@ -55,7 +55,7 @@ final class CandidatePanel: CandidatePresenter {
         let panel = self.panel(for: settings.candidateLayout)
         // Before the cells: the key each of them is drawn with is resolved as
         // they are built.
-        panel.slotKeyStyle = content.slotKeyStyle
+        panel.slotKeySet = content.slotKeySet
         let panelSize = panel.layout(content.cells, forCaret: caretRect)
         let presented = panel.present(
             panelSize: panelSize,
@@ -80,10 +80,6 @@ final class CandidatePanel: CandidatePresenter {
 
     func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
         livePanel(ownedBy: owner)?.rerenderCandidates(cells)
-    }
-
-    func updateSlotKeyStyle(_ style: CandidateSlotKeyStyle, ownedBy owner: ComposingSessionToken) {
-        livePanel(ownedBy: owner)?.applySlotKeyStyle(style)
     }
 
     /// The panel `owner` may repaint in place, or nil.

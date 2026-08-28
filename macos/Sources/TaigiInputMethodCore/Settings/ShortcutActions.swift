@@ -292,13 +292,23 @@ enum ShortcutConflicts {
     /// Nil also when the library cannot name the key at all. Either way nil
     /// means "no conflict found", never "clear something": wrongly emptying a
     /// row the user can see is worse than leaving an undetectable collision on
-    /// a key neither tier can hold a binding on.
+    /// a key neither tier can hold a binding on. The one refusal that IS a
+    /// collision — the fixed candidate-slot chord — is read by the launch pass
+    /// through `translation(of:)` below, since no chord exists to compare.
     @MainActor
     static func composingChord(occupiedBy shortcut: KeyboardShortcuts.Shortcut) -> ComposingKeyChord? {
-        try? ComposingKeyChord.make(
+        try? translation(of: shortcut).get()
+    }
+
+    /// The bridge itself: the chord, or the gate's reason there is none.
+    @MainActor
+    private static func translation(of shortcut: KeyboardShortcuts.Shortcut)
+        -> Result<ComposingKeyChord, ComposingKeyChord.Rejection>
+    {
+        ComposingKeyChord.make(
             key: shortcut.key.flatMap { namedKeyCharacters[$0] } ?? shortcut.nsMenuItemKeyEquivalent,
             modifiers: shortcut.modifiers,
-        ).get()
+        )
     }
 
     /// Every key the library does not report as the character this side
@@ -399,20 +409,19 @@ enum ShortcutConflicts {
         }
     }
 
-    /// Which global actions hold one of the nine candidate-slot chords under
-    /// `slotModifier`.
+    /// Which global actions hold a candidate-slot chord under `slotKeySet`.
     ///
     /// The slot tier is a picker rather than a row, so it cannot lose a chord —
-    /// but it CAN take one, when the user switches the modifier onto chords a
-    /// global shortcut already holds. That makes the picker the last writer,
-    /// and these are the rows that empty. The recorder refuses the other order
+    /// but it CAN take one, when the user switches the set onto keys a global
+    /// shortcut already holds. That makes the picker the last writer, and
+    /// these are the rows that empty. The recorder refuses the other order
     /// (`ShortcutSettingsView`), so between them no global shortcut can sit on
     /// a live slot chord.
     @MainActor
     static func globalActionsHoldingSlotChords(
-        under slotModifier: CandidateSlotModifier,
+        under slotKeySet: CandidateSlotKeySet,
     ) -> [ShortcutAction] {
-        globalActionsHolding(where: { $0.isCandidateSlotChord(under: slotModifier) })
+        globalActionsHolding(where: { $0.isCandidateSlotChord(under: slotKeySet) })
     }
 
     /// A global recording just landed: take the chord off any composing row
@@ -432,11 +441,11 @@ enum ShortcutConflicts {
         clear(globalActionsHolding(chord))
     }
 
-    /// The slot modifier just changed: take the nine slot chords off any
-    /// global row that held one.
+    /// The slot key set just changed: take its keys off any global row that
+    /// held one.
     @MainActor
-    static func resolveGlobalRows(afterSlotModifierChangedTo slotModifier: CandidateSlotModifier) {
-        clear(globalActionsHoldingSlotChords(under: slotModifier))
+    static func resolveGlobalRows(afterSlotKeySetChangedTo slotKeySet: CandidateSlotKeySet) {
+        clear(globalActionsHoldingSlotChords(under: slotKeySet))
     }
 
     /// Reconciles the two registries at launch, where no recorder ran.
@@ -461,10 +470,11 @@ enum ShortcutConflicts {
         // reason: every read goes to `UserDefaults`, and every bridged chord
         // goes to the keyboard layout. Both passes below ask about the same
         // seven actions.
-        let held = ShortcutAction.allCases.compactMap { action in
-            KeyboardShortcuts.getShortcut(for: action.name).flatMap { shortcut in
-                composingChord(occupiedBy: shortcut).map { (action: action, shortcut: shortcut, chord: $0) }
-            }
+        let recorded = ShortcutAction.allCases.compactMap { action in
+            KeyboardShortcuts.getShortcut(for: action.name).map { (action: action, shortcut: $0) }
+        }
+        let held = recorded.compactMap { action, shortcut in
+            composingChord(occupiedBy: shortcut).map { (action: action, shortcut: shortcut, chord: $0) }
         }
 
         for (action, shortcut, chord) in held {
@@ -491,7 +501,17 @@ enum ShortcutConflicts {
         // no-op.
         clear(
             held
-                .filter { $0.chord.isCandidateSlotChord(under: bindings.slotModifier) }
+                .filter { $0.chord.isCandidateSlotChord(under: bindings.slotKeySet) }
+                .map(\.action),
+        )
+        // `⇧1`…`⇧9` are not chords at all — the gate refuses them whichever
+        // set is chosen — so they are found by that refusal rather than by
+        // comparison. A row holding one predates the refusal (the recorder
+        // accepted `⇧3` as the `#` it types before 2026-08-28), and Carbon
+        // would dispatch it before the classifier ever saw the digit.
+        clear(
+            recorded
+                .filter { translation(of: $0.shortcut) == .failure(.candidateSlotChord) }
                 .map(\.action),
         )
     }

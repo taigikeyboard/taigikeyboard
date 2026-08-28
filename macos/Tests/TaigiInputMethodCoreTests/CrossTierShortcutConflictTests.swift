@@ -212,6 +212,31 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             ShortcutConflicts.globalActionsHoldingSlotChords(under: .option), [],
             "⌃3 is free while Option holds the slots",
         )
+        XCTAssertEqual(
+            ShortcutConflicts.globalActionsHoldingSlotChords(under: .bareKeys), [],
+            "⌃3 is free while the bare keys hold the slots",
+        )
+    }
+
+    func testAGlobalShortcutOnABareSlotLetter_isFound_underTheLettersOnly() {
+        recordGlobal(.init(.q), for: .openLastSettingsPane)
+
+        XCTAssertEqual(
+            ShortcutConflicts.globalActionsHoldingSlotChords(under: .bareKeys), [.openLastSettingsPane],
+        )
+        XCTAssertEqual(ShortcutConflicts.globalActionsHoldingSlotChords(under: .control), [])
+    }
+
+    /// A shifted digit bridges to the digit, the way a Control digit does —
+    /// the library names the key by what it types unmodified — and the gate
+    /// refuses that as the fixed `⇧1`…`⇧9` slot chord, so the bridge answers
+    /// nil and the recorder can no longer put one on a global row. A row that
+    /// already holds one is the launch pass's
+    /// (`CandidateSlotKeyTests.testALaunchPass_clearsAGlobalRowLeftOnAShiftedDigit`).
+    func testAGlobalShortcutOnAShiftedDigit_cannotBeRecorded_soTheBridgeAnswersNil() {
+        XCTAssertNil(ShortcutConflicts.composingChord(
+            occupiedBy: KeyboardShortcuts.Shortcut(.three, modifiers: [.shift]),
+        ))
     }
 
     // MARK: - Shipped defaults never collide
@@ -287,13 +312,19 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     func testALaunchPass_clearsAGlobalRowSittingOnALiveSlotChord() throws {
         let store = try makeScratchSettingsStore()
         // The order the recorder cannot refuse retroactively: the shortcut was
-        // recorded while Option held the slots, then the picker moved to
-        // Control.
-        recordGlobal(.init(.three, modifiers: [.control]), for: .openLastSettingsPane)
+        // recorded while the digits held the slots, then the picker moved to
+        // the bare keys — the set a fresh store reads.
+        recordGlobal(.init(.q), for: .openLastSettingsPane)
+        // A chord only another set claims stays: ⌃3 is nobody's slot while
+        // the bare keys hold them.
+        recordGlobal(.init(.three, modifiers: [.control]), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
         XCTAssertNil(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane))
+        XCTAssertEqual(
+            KeyboardShortcuts.getShortcut(for: .toggleRomanization), .init(.three, modifiers: [.control]),
+        )
     }
 
     func testALaunchPass_leavesAnUncollidingSetupAlone() throws {

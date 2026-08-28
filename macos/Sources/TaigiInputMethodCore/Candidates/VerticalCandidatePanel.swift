@@ -18,7 +18,7 @@ import AppKit
 /// same x — because this window shows two scripts per row.
 ///
 /// What is kept, because it is the layout's behaviour: the scroll-anchored
-/// slot numbering (the `⌃n` chords address the nine rows around the viewport
+/// slot numbering (the slot keys address the nine rows around the viewport
 /// and move with it — undrawn here, see `CandidateItemView`), the half-row
 /// bottom peek that shows there is more to scroll to, the scroller-style-aware
 /// geometry, and Tahoe's separator treatment.
@@ -33,7 +33,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private static let separatorHeight: CGFloat = 1
 
     private var cells: [CandidateCellContent] = []
-    /// The first row of the nine the `⌃n` chords currently address, derived
+    /// The first row of the nine the slot keys currently address, derived
     /// from the scroll position — the slots renumber as the user scrolls.
     private var anchorRow = 0
     /// The content height all rows want; scrolling shrinks back toward it

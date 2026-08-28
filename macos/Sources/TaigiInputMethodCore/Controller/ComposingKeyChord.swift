@@ -62,9 +62,13 @@ struct ComposingKeyChord: Hashable, Sendable {
         case reservedKey
         /// An event carrying no character to bind.
         case noKey
-        /// One of the nine candidate-slot chords. Refused because that tier is
-        /// classified before bound actions, so the binding would be recorded
-        /// and then never fire (`ComposingKeyIntent.intent`).
+        /// A candidate-slot key: one of the keys the chosen set holds
+        /// (`CandidateSlotKeySet`), or `⇧1`…`⇧9` whichever set is chosen.
+        /// Refused because that tier is classified before bound actions, so
+        /// the binding would be recorded and then never fire
+        /// (`ComposingKeyIntent.intent`). The shifted digits are refused
+        /// unconditionally because a chord is identified by the character it
+        /// types, and `⇧3` types `#` — a row on it could never be matched.
         case candidateSlotChord
         /// A chord the system already answers to. Global-tier only: a Carbon
         /// hotkey never gets a chord the window server has taken first, so
@@ -84,17 +88,19 @@ struct ComposingKeyChord: Hashable, Sendable {
         case belongsToHost
     }
 
-    /// Whether this chord is one of the nine `1`…`9` slot chords under
-    /// `slotModifier`.
+    /// Whether this chord is a key of the set `slotKeySet` puts on the
+    /// candidate slots — the half of the slot tier that is a setting.
     ///
     /// Asked by the recorder rather than by `make`, because the answer changes
-    /// with a setting: ⌥3 is bindable while Control holds the slots, and stops
-    /// being so the moment the user switches the slot modifier to Option.
-    func isCandidateSlotChord(under slotModifier: CandidateSlotModifier) -> Bool {
+    /// with the setting: ⌥3 is bindable while Control holds the slots, and a
+    /// bare `z` while the digits do, and each stops being so the moment the
+    /// picker moves onto it. The fixed half, `⇧1`…`⇧9`, needs no such question:
+    /// `make` refuses it outright, so no chord on it can exist to ask about.
+    func isCandidateSlotChord(under slotKeySet: CandidateSlotKeySet) -> Bool {
         // The classifier's own slot rule rather than a second copy of it: the
         // refusal exists because that tier is read first, so the two have to
         // name the same chords.
-        modifiers == slotModifier.flag && ComposingKeyIntent.directSelectionSlot(key) != nil
+        slotKeySet.slot(forKey: key, heldWith: modifiers) != nil
     }
 
     /// The chord `key` and `modifiers` name, or why it cannot be one.
@@ -106,6 +112,13 @@ struct ComposingKeyChord: Hashable, Sendable {
         guard !neverBindable.contains(key) else { return .failure(.reservedKey) }
 
         let modifiers = chordingModifiers(of: rawModifiers)
+        // `⇧1`…`⇧9` are the `shift` set's slot keys, and no chord on one could
+        // be matched under any set (`Rejection.candidateSlotChord`) — so this
+        // is refused as the slot chord it is, ahead of the typing-key rule
+        // that would otherwise catch the digit with a less true reason.
+        if modifiers == .shift, ComposingKeyIntent.directSelectionSlot(key) != nil {
+            return .failure(.candidateSlotChord)
+        }
         // Shift alone does not make a chord out of a typing key: ⇧A is still
         // the letter A, and binding it would cost the user their capitals.
         let hasChordingModifier = !modifiers.isDisjoint(with: [.command, .control, .option])
@@ -116,8 +129,18 @@ struct ComposingKeyChord: Hashable, Sendable {
     }
 
     /// The chord this event would record, or why it cannot be recorded.
+    ///
+    /// A shifted digit is refused by the same rule that makes it pick under
+    /// the `shift` set (`ComposingKeyIntent.shiftedDigitSlot`), read off the
+    /// event rather than its characters: `charactersIgnoringModifiers` keeps
+    /// Shift and would offer the `#` a US layout types, which the gate below
+    /// would then accept. The string gate still refuses a stored or bridged
+    /// `3` with Shift, so the two paths into a chord agree. Every other
+    /// shifted key keeps the character it types, which is what its stored
+    /// chords already hold.
     static func make(_ key: KeyEventSnapshot) -> Result<ComposingKeyChord, Rejection> {
-        make(key: key.charactersIgnoringModifiers ?? key.characters, modifiers: key.modifiers)
+        guard ComposingKeyIntent.shiftedDigitSlot(key) == nil else { return .failure(.candidateSlotChord) }
+        return make(key: key.charactersIgnoringModifiers ?? key.characters, modifiers: key.modifiers)
     }
 
     /// Whether `event` is this chord. Compared on the unmodified characters for

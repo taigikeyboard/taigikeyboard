@@ -116,10 +116,15 @@ enum TestFixtures {
     /// only differ for a chord — which is exactly what a case passing it
     /// separately is testing: Control rewrites the digits it is held with, so
     /// `⌃3` really does arrive as an Escape in `characters`.
+    ///
+    /// `keyCode` is the hardware key (`KeyEventSnapshot.keyCode`), read by
+    /// the shifted-digit slot chord alone. The default `0` is the `a` key; a
+    /// case about `⇧3` passes `kVK_ANSI_3`.
     static func keyDownEvent(
         characters: String,
         modifiers: NSEvent.ModifierFlags = [],
         charactersIgnoringModifiers: String? = nil,
+        keyCode: UInt16 = 0,
     ) throws -> NSEvent {
         try XCTUnwrap(NSEvent.keyEvent(
             with: .keyDown,
@@ -131,8 +136,23 @@ enum TestFixtures {
             characters: characters,
             charactersIgnoringModifiers: charactersIgnoringModifiers ?? characters,
             isARepeat: false,
-            keyCode: 0,
+            keyCode: keyCode,
         ))
+    }
+
+    /// `⇧1`…`⇧9` as a US layout reports them: the symbol in both character
+    /// fields, the digit only in the key code — which is what the chord is
+    /// read from. `slot` counts from zero; `modifiers` defaults to Shift alone.
+    static func shiftedDigitKeyDownEvent(
+        slot: Int,
+        modifiers: NSEvent.ModifierFlags = .shift,
+    ) throws -> NSEvent {
+        let symbols = ["!", "@", "#", "$", "%", "^", "&", "*", "("]
+        return try keyDownEvent(
+            characters: symbols[slot],
+            modifiers: modifiers,
+            keyCode: ComposingKeyIntent.numberRowKeyCodes[slot],
+        )
     }
 
     /// `client: nil`: IMK rejects anything but a real client proxy here, so a
@@ -482,7 +502,6 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     enum Call: Equatable {
         case show(CandidateWindowContent, caretRect: CGRect)
         case updateCells([CandidateCellContent], isOwner: Bool)
-        case updateSlotKeyStyle(CandidateSlotKeyStyle, isOwner: Bool)
         case navigate(CandidateNavigation)
         case hide(isOwner: Bool)
         case hideForHandover
@@ -501,12 +520,12 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// candidates the user can no longer see.
     var shownContent: CandidateWindowContent? {
         guard isShowing else { return nil }
-        return CandidateWindowContent(cells: cells, slotKeyStyle: slotKeyStyle)
+        return CandidateWindowContent(cells: cells, slotKeySet: slotKeySet)
     }
 
-    /// The key the window was last told picks a candidate — what a case
-    /// asserting the hint matches the key contract reads.
-    private(set) var slotKeyStyle: CandidateSlotKeyStyle = .bare
+    /// The keys the window was last told pick — what a case asserting the
+    /// hint matches the key contract reads.
+    private(set) var slotKeySet: CandidateSlotKeySet = .bareKeys
 
     var isShowing: Bool {
         owner != nil
@@ -521,7 +540,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     ) {
         self.owner = owner
         cells = content.cells
-        slotKeyStyle = content.slotKeyStyle
+        slotKeySet = content.slotKeySet
         selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
     }
@@ -533,17 +552,6 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         guard self.owner == owner, !cells.isEmpty, !newCells.isEmpty else { return }
         cells = newCells
         selectedIndex = min(selectedIndex, cells.count - 1)
-    }
-
-    func updateSlotKeyStyle(
-        _ style: CandidateSlotKeyStyle,
-        ownedBy owner: ComposingSessionToken,
-    ) {
-        calls.append(.updateSlotKeyStyle(style, isOwner: self.owner == owner))
-        // The real panel's contract: the keys are repainted, and nothing else
-        // about the window moves.
-        guard self.owner == owner, !cells.isEmpty else { return }
-        slotKeyStyle = style
     }
 
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {

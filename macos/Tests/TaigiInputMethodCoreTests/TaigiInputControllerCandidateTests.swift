@@ -29,81 +29,72 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     // MARK: - Which key picks
 
-    /// The key the window draws is the key that fires. While a tone digit can
-    /// still follow, a bare `2` tones the syllable and only the chord selects;
-    /// once one cannot, the bare digit takes over. Same rule, same buffer, as
-    /// `ComposingKeyIntent` classifies against — a window drawing the other
-    /// one would name a key that does something else.
-    func testSlotKeyHint_followsWhetherABareDigitWouldBeATone() throws {
-        let session = try composedSession()
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "`taigi` ends in a letter, so a bare digit is still a tone",
-        )
+    /// The window draws the chosen set whatever the buffer — a tone digit
+    /// changes nothing about which keys pick.
+    func testSlotKeyHint_isTheChosenSet_whateverTheBuffer() throws {
+        for keySet in CandidateSlotKeySet.allCases {
+            let session = try composedSession(under: keySet)
+            XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeySet, keySet)
 
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "5"), client: session.client,
-        )
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .bare,
-            "nothing TL or POJ spells follows a tone digit, so the digit selects",
-        )
-
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{8}"), client: session.client,
-        )
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "Backspace puts the letter tail back, and the chord with it",
-        )
-    }
-
-    /// The drawn modifier is the one the user bound the slots to.
-    func testSlotKeyHint_carriesTheBoundModifier() throws {
-        UserDefaults.standard.set(
-            CandidateSlotModifier.option.rawValue,
-            forKey: SettingsStore.Keys.candidateSlotModifier.name,
-        )
-        defer {
-            UserDefaults.standard.removeObject(
-                forKey: SettingsStore.Keys.candidateSlotModifier.name,
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "5"), client: session.client,
+            )
+            XCTAssertEqual(
+                try XCTUnwrap(session.presenter.shownContent).slotKeySet, keySet,
+                "`taigi5` is picked from with the same keys as `taigi`",
             )
         }
-
-        let session = try composedSession()
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.option),
-        )
     }
 
+    /// A bare digit after a tone is still typed, not a pick (USER 2026-08-28,
+    /// retiring the 2026-08-24 rule): `taigi5` + `1` composes `taigi51`, and
+    /// nothing reaches the document.
+    func testAfterATone_aBareDigitIsStillTyped_underEverySet() throws {
+        for keySet in CandidateSlotKeySet.allCases {
+            let session = try composedSession(under: keySet)
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "5"), client: session.client,
+            )
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "1"), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts.last, nil, "\(keySet)")
+            guard case .setMarkedText = session.client.writes.last else {
+                return XCTFail("\(keySet): the digit should have re-rendered the composition — got \(session.client.writes)")
+            }
+        }
+    }
+
+    /// The drawn keys are the set the user chose for the slots.
+    func testSlotKeyHint_carriesTheChosenKeySet() throws {
+        try withSlotKeySet(.option) {
+            let session = try composedSession()
+
+            XCTAssertEqual(
+                try XCTUnwrap(session.presenter.shownContent).slotKeySet,
+                .option,
+            )
+        }
+    }
 
     /// The hint is a per-show snapshot, so a rebind reaches it on the very next
-    /// keystroke — the window is never told a modifier that has been replaced.
+    /// keystroke — the window is never told a key set that has been replaced.
     func testSlotKeyHint_followsARebindOnTheNextKeystroke() throws {
         let session = try composedSession()
-        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .chorded(.control))
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeySet, .bareKeys)
 
-        UserDefaults.standard.set(
-            CandidateSlotModifier.option.rawValue,
-            forKey: SettingsStore.Keys.candidateSlotModifier.name,
-        )
-        defer {
-            UserDefaults.standard.removeObject(
-                forKey: SettingsStore.Keys.candidateSlotModifier.name,
+        try withSlotKeySet(.option) {
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "k"), client: session.client,
+            )
+
+            XCTAssertEqual(
+                try XCTUnwrap(session.presenter.shownContent).slotKeySet, .option,
             )
         }
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .chorded(.option),
-        )
     }
 
     // MARK: - The 漢羅 key
@@ -236,157 +227,31 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    // MARK: - The selection latch
+    // MARK: - No selection mode
 
-    /// `↓` is what gets a toneless typist off the chord. The window has to say
-    /// so on the same keystroke: navigating never re-fetches, so nothing else
-    /// would repaint the keys, and a bar still drawing `⌃1` while a bare `1`
-    /// picks would be naming a key that does something else.
-    func testDownArrow_flipsTheDrawnKeyToBare_onTheSameKeystroke() throws {
-        let session = try composedSession()
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "`taigi` ends in a letter, so the grammar rule alone keeps the chord",
-        )
+    /// `↓` walks into the list and nothing more (USER 2026-08-28, retiring the
+    /// latch that made a bare digit pick after it): the `1` that follows is
+    /// still the tone of the syllable, and the hint has not moved.
+    func testDownArrow_doesNotTurnABareDigitIntoAPick() throws {
+        for keySet in CandidateSlotKeySet.allCases {
+            let session = try composedSession(under: keySet)
+            session.press(.downArrow)
+            XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeySet, keySet)
+            session.client.clearWrites()
 
-        session.press(.downArrow)
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "1"), client: session.client,
+            )
 
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .bare,
-            "the user has said they are choosing, so a bare digit picks",
-        )
-    }
-
-    /// And the bare digit really does commit, out of a buffer whose tail is a
-    /// letter — the case the grammar tier alone can never reach.
-    ///
-    /// Slot 1 rather than a later one because a slot deeper in the list can
-    /// hold a partial-span candidate (`tâi` consumes only the `tai` of
-    /// `taigi`), which nails a prefix and re-renders the preedit rather than
-    /// writing to the document — a different contract, and not the one this
-    /// case is about. Which slot maps to which index is pinned at the
-    /// classifier level by `SelectionLatchTests`.
-    func testAfterDownArrow_aBareDigitCommitsThatSlot() throws {
-        let session = try composedSession()
-        let expected = try XCTUnwrap(session.presenter.shownContent).cells[0].text
-
-        session.press(.downArrow)
-        session.client.clearWrites()
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "1"), client: session.client,
-        )
-
-        XCTAssertEqual(session.client.insertedTexts.last, expected)
-    }
-
-    /// The negative control for the case above: the SAME key on the SAME buffer
-    /// without the gesture is still a tone, which is what makes toneless typing
-    /// work at all.
-    func testWithoutDownArrow_theSameDigitIsStillATone() throws {
-        let session = try composedSession()
-        session.client.clearWrites()
-
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "1"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            session.client.insertedTexts.last, nil,
-            "`taigi` + `1` tones the last syllable — nothing is written to the document",
-        )
-    }
-
-    /// The way back is the next thing the user was going to type anyway.
-    func testTypingALetter_takesTheLatchBackOff() throws {
-        let session = try composedSession()
-        session.press(.downArrow)
-        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .bare)
-
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "typing is not choosing, so the digits are tones again",
-        )
-    }
-
-    /// Backspace is typing, so it takes the latch off with the letter.
-    ///
-    /// A letter is typed first so the backspace lands back on `taigi` — a
-    /// buffer that both ends in a letter (so the grammar rule alone would say
-    /// `chorded`) and has candidates to draw the keys on. Backspacing straight
-    /// out of `taigi` reaches `taig`, which has none, and a bar that is down
-    /// cannot be asked what key it is drawing.
-    func testBackspace_takesTheLatchBackOff() throws {
-        let session = try composedSession()
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
-        )
-        session.press(.downArrow)
-        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .bare)
-
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{8}"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-        )
-    }
-
-    /// The bar going away ends selection mode even when the composition
-    /// survives it — otherwise the next digit would try to pick from a list the
-    /// user can no longer see, and would not tone the syllable they are still
-    /// typing either.
-    func testHidingTheBarMidComposition_endsSelectionMode() throws {
-        let session = try composedSession()
-        session.press(.downArrow)
-
-        session.controller.hidePalettes()
-        session.client.clearWrites()
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "1"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            session.client.insertedTexts.last, nil,
-            "the digit is a tone again, so nothing is committed to the document",
-        )
-        // The style is deliberately NOT asserted here: the digit that proved
-        // the latch was gone also put a tone on the buffer, and a buffer ending
-        // in a tone digit reads `bare` from the grammar rule alone. What the
-        // latch did is visible in the document, not in the hint.
-    }
-
-    /// Picking a candidate that only nails a PREFIX leaves the user owing a
-    /// candidate for the rest of the buffer — still choosing, so the latch
-    /// survives and the next bare digit picks again.
-    func testPickingAPartialCandidate_keepsSelectionMode() throws {
-        let session = try composedSession()
-        session.press(.downArrow)
-
-        // Slot 3 on `taigi` is a partial-span candidate: it consumes `tai` and
-        // leaves `gi` composing, so the bar comes straight back.
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "3"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .bare,
-            "the composition is not finished, so neither is the choosing",
-        )
+            XCTAssertEqual(
+                session.client.insertedTexts.last, nil,
+                "`taigi` + `1` tones the last syllable under \(keySet) — nothing is written",
+            )
+        }
     }
 
     /// Walking the bar is how a Taigi typist LOOKS at the homophones before
-    /// deciding which tone to add. It must stay a glance, not a mode change —
-    /// otherwise the `5` that follows would commit rather than tone.
+    /// deciding which tone to add — a glance, not a mode change.
     func testWalkingTheBar_leavesTheDigitsAsTones() throws {
         let session = try composedSession()
 
@@ -394,10 +259,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             TestFixtures.keyDownEvent(characters: "\t"), client: session.client,
         )
 
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-        )
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeySet, .bareKeys)
     }
 
     // MARK: - Showing
@@ -610,18 +472,26 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).cells, cells)
     }
 
-    func testControlDigit_commitsThatSlotOfTheVisiblePage() throws {
-        let session = try composedSession()
-        let secondCell = try XCTUnwrap(session.presenter.shownContent).cells[1].text
-        session.client.clearWrites()
+    /// Each key that names the second slot commits the second candidate,
+    /// under the set that holds it: the shipped bare key, `⇧2`, `⌃2`.
+    func testEverySlotKey_commitsThatSlotOfTheVisiblePage() throws {
+        let keys: [(name: String, keySet: CandidateSlotKeySet, event: () throws -> NSEvent)] = [
+            ("w", .bareKeys, { try TestFixtures.keyDownEvent(characters: "w") }),
+            ("⇧2", .shift, { try TestFixtures.shiftedDigitKeyDownEvent(slot: 1) }),
+            ("⌃2", .control, { try Self.controlDigitEvent(slot: 1) }),
+        ]
+        for (name, keySet, event) in keys {
+            try withSlotKeySet(keySet) {
+                let session = try composedSession()
+                let secondCell = try XCTUnwrap(session.presenter.shownContent).cells[1].text
+                session.client.clearWrites()
 
-        let handled = try session.controller.handle(
-            Self.controlDigitEvent(slot: 1),
-            client: session.client,
-        )
+                let handled = try session.controller.handle(event(), client: session.client)
 
-        XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts.last, secondCell)
+                XCTAssertTrue(handled, name)
+                XCTAssertEqual(session.client.insertedTexts.last, secondCell, name)
+            }
+        }
     }
 
     /// A candidate that consumes only part of the buffer is nailed rather than
@@ -641,7 +511,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             session.client.clearWrites()
 
             _ = try session.controller.handle(
-                Self.controlDigitEvent(slot: slot),
+                TestFixtures.keyDownEvent(characters: CandidateSlotKeySet.bareKeyRow[slot]),
                 client: session.client,
             )
 
@@ -803,6 +673,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// because the controller and the shared coordinator's engine must read ONE
     /// domain for these cases to mean anything (see `withRestoredSwapSetting`'s
     /// callers).
+    /// The slot key set the sessions inside `body` read, put back afterwards.
+    private func withSlotKeySet(_ keySet: CandidateSlotKeySet, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.candidateSlotModifier.name, to: keySet.rawValue, body)
+    }
+
     private func withSetting(
         _ key: String,
         to value: Any?,
@@ -953,6 +828,22 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     }
 
     /// An activated session that has typed `taigi`, so a bar is up.
+    /// A session under `keySet`, which stays in force for the whole case —
+    /// every keystroke re-reads it — and is put back at teardown.
+    private func composedSession(under keySet: CandidateSlotKeySet) throws -> Session {
+        let key = SettingsStore.Keys.candidateSlotModifier.name
+        let saved = UserDefaults.standard.object(forKey: key)
+        addTeardownBlock {
+            if let saved {
+                UserDefaults.standard.set(saved, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+        UserDefaults.standard.set(keySet.rawValue, forKey: key)
+        return try composedSession()
+    }
+
     private func composedSession(
         presenter: RecordingCandidatePresenter = RecordingCandidatePresenter(),
         caretRects: [Int: CGRect]? = nil,

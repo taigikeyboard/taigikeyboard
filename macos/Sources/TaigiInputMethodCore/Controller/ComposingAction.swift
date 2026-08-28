@@ -12,8 +12,8 @@ import AppKit
 ///   Backspace. A user who mis-bound one would lose the way to move through
 ///   candidates, or the way out of a composition, with the composition still on
 ///   screen and no key left to fix it.
-/// - The candidate-slot chord, which is a modifier plus `1`…`9` rather than one
-///   key, and so is chosen as a modifier (`CandidateSlotModifier`) instead.
+/// - The candidate-slot keys, which are nine names for nine slots rather than
+///   one key, and so are chosen as a set (`CandidateSlotKeySet`) instead.
 ///
 /// Defaults follow the system Zhuyin input method's candidate window wherever
 /// the romanization allows it, so a user arriving from that keyboard finds
