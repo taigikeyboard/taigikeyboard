@@ -76,23 +76,26 @@
 	<true/>
 	<key>NSPrincipalClass</key>
 	<string>TaigiInputMethodApplication</string>
-	<!-- `TICapsLockLanguageSwitchCapable` is deliberately absent. It was
-	     declared on 2026-08-26 to make Caps Lock switch to and from ABC, the
-	     way Apple's own 新注音 does — MacishType, McBopomofo and vChewing all
-	     carry the key with no Caps Lock code of their own. On this bundle it
-	     did nothing: real device, with the key present in the INSTALLED
-	     Info.plist, Caps Lock stayed a caps lock. The likely reason is the
-	     neutral `TISIntendedLanguage` above — `mul`, with `Latn` in the
-	     repertoire, reads as an input source that already types Latin letters,
-	     so the system offers no ABC to switch to.
+	<!-- Caps Lock switches to and from ABC the way Apple's own 新注音 does
+	     (USER 2026-08-28). The system implements the switch — short press
+	     switches source, long press still latches caps, and it draws its own
+	     indicator — so there is no Caps Lock code in this bundle, same as
+	     MacishType, McBopomofo, vChewing and MOE's TaiwaneseTaigi. The user
+	     turns it on under System Settings › Keyboard › Input Sources › Edit…
+	     › "Use Caps Lock to switch to and from ABC".
 
-	     It is not coming back with a different intended language: this input
-	     method has no English mode at all (USER 2026-08-26). A Mac already
-	     switches input sources with ⌘Space, and switching gives the user the
-	     real ABC source — spelling, auto-capitalisation, the Emoji panel —
-	     rather than the pass-through imitation this once carried. Switching
-	     also ends the session, which commits the composition and disarms the
-	     global hotkeys, so nothing here has to keep an English mode's state. -->
+	     Apple documents the key as switching "between Latin and non-Latin
+	     input sources". Declared once before (2026-08-26) it did nothing on a
+	     real device, and a `TISGetInputSourceProperty` probe showed why: macOS
+	     had registered this input method as
+	     `kTISPropertyInputSourceIsASCIICapable = true` — a Latin source, with
+	     no ABC to switch to. The repertoire below then listed `Latn` too, and
+	     every input method that does switch (MOE's TaiwaneseTaigi, vChewing,
+	     McBopomofo) lists Han scripts only, so `Latn` is dropped here although
+	     this input method also types romanization: the key is a
+	     system-integration classification, not an inventory of output. -->
+	<key>TICapsLockLanguageSwitchCapable</key>
+	<true/>
 	<key>TISIconIsTemplate</key>
 	<true/>
 	<key>TISInputSourceID</key>
@@ -103,7 +106,6 @@
 	<string>MenuBarIcon.tiff</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
-		<string>Latn</string>
 		<string>Hant</string>
 	</array>
 	<!-- The `.taigi` backup document. Declared so the open and save panels in
