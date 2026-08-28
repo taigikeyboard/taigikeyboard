@@ -7,14 +7,14 @@ import SwiftUI
 /// Grid cell displaying a single candidate in the expanded overlay
 // 中文: 展開候選詞 overlay 中顯示單一候選的 grid cell。
 struct ExpandedCandidateGridCell: View {
-    let suggestion: Autocomplete.Suggestion
+    let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
     /// 第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
     let isFirstCandidate: Bool
-    let onTap: (Autocomplete.Suggestion) -> Void
+    let onTap: (AutocompleteSuggestion) -> Void
 
     @State private var isPressed: Bool = false
     @Environment(\.colorScheme) private var colorScheme

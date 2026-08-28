@@ -1,4 +1,4 @@
-// Callouts+TaigiCalloutMaps.swift
+// TaigiCallouts+Maps.swift
 // Callout data: TaigiToneMaps (POJ/TL tone variations), TPSCallouts, MOE1Callouts,
 // MOE2Callouts, SymbolCallouts. Each enum provides [String: [String]] action maps.
 // Some keys (e.g. ",", ".", "-") intentionally appear in both layout-specific and
@@ -11,7 +11,12 @@
 import Foundation
 import KeyboardKit
 
-public extension Callouts {
+/// Namespace for Taigi long-press callout data and builders. Our own
+/// namespace — KK's `Callouts` namespace is deprecated and removed in KK 11.
+// 中文: Taigi callout 自有 namespace — KK 的 Callouts namespace 已棄用,KK 11 移除。
+public enum TaigiCallouts {}
+
+public extension TaigiCallouts {
     /// Maps base characters to their toned variants, sorted by tone number.
     ///
     /// D9.4: tables come from `RustEngineBridge.toneVariations` (init bulk-pull

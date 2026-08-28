@@ -18,7 +18,7 @@ import KeyboardKit
 /// 4. `nextWordController.process()` — record association → update state → predict  (NextWordController)
 // 中文: 台語鍵盤的 ActionHandler。手勢入口走 handle(_:on:),收 release / repeatPress 後派送。
 // 中文: 跨檔協作:KeyActions / Suggestions / CustomActions / Utilities 各掌一塊,主檔只做 dispatch。
-public class ActionHandler: KeyboardAction.StandardActionHandler {
+public class ActionHandler: StandardKeyboardActionHandler {
     // MARK: - Properties
 
     let logger = DebugLogger(category: "ActionHandler")
@@ -141,7 +141,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     }
 
     // 中文: 候選詞點選的 KeyboardKit 入口。English 模式走 KK 預設,Taigi 模式走自家路徑。
-    override public func handle(_ suggestion: Autocomplete.Suggestion) {
+    override public func handle(_ suggestion: AutocompleteSuggestion) {
         // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
         if settings.inputMode == .english {
             super.handle(suggestion)
@@ -165,13 +165,13 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 // 中文: 這是引擎端 prediction 唯一接觸 KeyboardKit 型別的地方。
 extension ActionHandler: AutocompleteContextUpdater {
     /// Engine-side predictions arrive here and are mapped to KeyboardKit
-    /// `Autocomplete.Suggestion` values. This is the only place the
+    /// `AutocompleteSuggestion` values. This is the only place the
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
-    // 中文: 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 Autocomplete.Suggestion。
+    // 中文: 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 AutocompleteSuggestion。
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
         let suggestions = predictions.map { prediction in
-            Autocomplete.Suggestion(
+            AutocompleteSuggestion(
                 text: prediction.text,
                 title: prediction.text,
                 subtitle: prediction.subtitle,

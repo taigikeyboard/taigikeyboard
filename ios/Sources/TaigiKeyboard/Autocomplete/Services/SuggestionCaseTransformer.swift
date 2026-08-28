@@ -14,11 +14,11 @@ import KeyboardKit
 enum SuggestionCaseTransformer {
     /// 根據 keyboardCase 轉換候選詞列表
     static func transform(
-        _ suggestions: [Autocomplete.Suggestion],
+        _ suggestions: [AutocompleteSuggestion],
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
         inputMode: InputMode,
-    ) -> [Autocomplete.Suggestion] {
+    ) -> [AutocompleteSuggestion] {
         suggestions.map { suggestion in
             transformSuggestion(
                 suggestion,
@@ -32,11 +32,11 @@ enum SuggestionCaseTransformer {
     // 中文: 對單一候選詞套用 case 轉換。先看 additionalInfo 跳過組字文字 / NextWord 候選,
     // 中文: 其餘交給 Rust bridge 處理。
     private static func transformSuggestion(
-        _ suggestion: Autocomplete.Suggestion,
+        _ suggestion: AutocompleteSuggestion,
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
         inputMode: InputMode,
-    ) -> Autocomplete.Suggestion {
+    ) -> AutocompleteSuggestion {
         // Skip rules — match Android `id < 0 && id != -2` numeric markers
         // via iOS's `additionalInfo` flag-based equivalent.
         if suggestion.additionalInfo["isComposingText"] == "true" {
@@ -66,7 +66,7 @@ enum SuggestionCaseTransformer {
             mode: inputMode,
         )
 
-        return Autocomplete.Suggestion(
+        return AutocompleteSuggestion(
             text: transformedText,
             title: transformedText,
             subtitle: suggestion.subtitle,

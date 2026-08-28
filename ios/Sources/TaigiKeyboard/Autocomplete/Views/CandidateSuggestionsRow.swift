@@ -8,9 +8,9 @@ import SwiftUI
 /// 顯示候選詞橫向滾動列表、右側擴充候選詞 chevron。
 /// 空建議時顯示 spacer；英打模式時改顯示 KeyboardKit 預設候選詞視圖。
 struct CandidateSuggestionsRow: View {
-    let suggestions: [Autocomplete.Suggestion]
+    let suggestions: [AutocompleteSuggestion]
     let selectedCandidateIndex: Int
-    let onSuggestionTap: (Autocomplete.Suggestion) -> Void
+    let onSuggestionTap: (AutocompleteSuggestion) -> Void
     let isTranslateSwapped: Bool
     let isTPSLayout: Bool
     let orMapsToER: Bool
@@ -53,8 +53,8 @@ struct CandidateSuggestionsRow: View {
     /// overrides) is the lever that wins. `candidateTextColor` nil (預設 adaptive) keeps
     /// `theme.primaryTextColor` == `Color(.label)`, preserving the prior adaptive behavior.
     /// Mirrors Android's role-first `EnglishCandidateCell` (#425).
-    private var englishCandidateToolbarStyle: Autocomplete.ToolbarStyle {
-        var style = Autocomplete.ToolbarStyle.standard
+    private var englishCandidateToolbarStyle: AutocompleteToolbarStyle {
+        var style = AutocompleteToolbarStyle.standard
         style.item.titleColor = theme.primaryTextColor
         style.item.subtitleColor = theme.secondaryTextColor
         return style

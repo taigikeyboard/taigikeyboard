@@ -7,16 +7,16 @@ import SwiftUI
 // 中文: 主鍵盤 View,組裝 CandidateView + KeyboardView + Overlay + 背景。
 struct TaigiKeyboardView: View {
     let settings: any KeyboardEnvironment
-    let services: Keyboard.Services
+    let services: KeyboardServices
     let layout: KeyboardLayout
     let emojiKeyboardView: () -> AnyView
-    let calloutStyle: Callouts.CalloutStyle
+    let calloutStyle: KeyboardCalloutStyle
 
     @ObservedObject var autocompleteContext: AutocompleteContext
     @ObservedObject var keyboardContext: KeyboardContext
     let composingManager: ComposingManager
 
-    let onSuggestionTap: (Autocomplete.Suggestion) -> Void
+    let onSuggestionTap: (AutocompleteSuggestion) -> Void
     let onTranslateToggle: () -> Void
     var initialInputMode: InputMode?
 
@@ -32,14 +32,14 @@ struct TaigiKeyboardView: View {
 
     init(
         settings: any KeyboardEnvironment,
-        services: Keyboard.Services,
+        services: KeyboardServices,
         layout: KeyboardLayout,
         emojiKeyboardView: @escaping () -> AnyView,
-        calloutStyle: Callouts.CalloutStyle,
+        calloutStyle: KeyboardCalloutStyle,
         autocompleteContext: AutocompleteContext,
         keyboardContext: KeyboardContext,
         composingManager: ComposingManager,
-        onSuggestionTap: @escaping (Autocomplete.Suggestion) -> Void,
+        onSuggestionTap: @escaping (AutocompleteSuggestion) -> Void,
         onTranslateToggle: @escaping () -> Void,
         initialInputMode: InputMode? = nil,
     ) {
@@ -199,7 +199,7 @@ struct TaigiKeyboardView: View {
     // 中文: 把核心鍵盤 + 四個 overlay + 狀態 onChange 串在一起,從 body 抽出來壓低 type-checker 複雜度。
     private func keyboardWithOverlays(
         p: RenderProviders,
-        suggestions: [Autocomplete.Suggestion],
+        suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
         candidateStyle: CandidateView.Style,
@@ -254,7 +254,7 @@ struct TaigiKeyboardView: View {
     // 中文: 組出 KeyboardKit KeyboardView 主體 — 按鍵內容 / 樣式 / candidate toolbar / callout。
     private func coreKeyboard(
         p: RenderProviders,
-        suggestions: [Autocomplete.Suggestion],
+        suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
         candidateStyle: CandidateView.Style,
@@ -401,7 +401,7 @@ struct TaigiKeyboardView: View {
             }
             return style
         }
-        .keyboardCalloutActions(Callouts.taigiCalloutActions)
+        .keyboardCalloutActions(TaigiCallouts.taigiCalloutActions)
         .keyboardCalloutStyle(calloutStyle)
     }
 

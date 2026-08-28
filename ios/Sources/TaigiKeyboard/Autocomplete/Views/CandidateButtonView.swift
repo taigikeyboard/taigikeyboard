@@ -6,14 +6,14 @@ import SwiftUI
 /// 單個候選詞按鈕視圖
 // 中文: 候選詞按鈕。Tap 後透過 onTap 把 commit 用的 suggestion 回呼給 caller。
 struct CandidateButtonView: View {
-    let suggestion: Autocomplete.Suggestion
+    let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
     /// 第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
     let isFirstCandidate: Bool
-    let onTap: (Autocomplete.Suggestion) -> Void
+    let onTap: (AutocompleteSuggestion) -> Void
 
     @State private var isPressed = false
     @Environment(\.colorScheme) private var colorScheme

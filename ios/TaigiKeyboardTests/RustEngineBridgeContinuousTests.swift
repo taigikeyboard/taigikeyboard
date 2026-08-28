@@ -395,7 +395,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         var msg = Taigi_Engine_CandidateMessage()
         msg.roman = "tâi-uân"
         let data = try msg.serializedData()
-        let decoded = try Taigi_Engine_CandidateMessage(serializedData: data)
+        let decoded = try Taigi_Engine_CandidateMessage(serializedBytes: data)
         XCTAssertEqual(decoded.roman, "tâi-uân")
     }
 
@@ -416,7 +416,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
         // Wire round-trip preserves absence.
         let absentData = try absent.serializedData()
-        let decodedAbsent = try Taigi_Engine_CandidateMessage(serializedData: absentData)
+        let decodedAbsent = try Taigi_Engine_CandidateMessage(serializedBytes: absentData)
         XCTAssertFalse(
             decodedAbsent.hasHanji,
             "absence survives wire round-trip — TAILO candidates must decode to hanji nil",
@@ -430,7 +430,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             "explicit empty-string assignment flips presence — distinguishes 'producer set field' from 'absent'",
         )
         let presentData = try presentEmpty.serializedData()
-        let decodedPresent = try Taigi_Engine_CandidateMessage(serializedData: presentData)
+        let decodedPresent = try Taigi_Engine_CandidateMessage(serializedBytes: presentData)
         XCTAssertTrue(decodedPresent.hasHanji)
         XCTAssertEqual(decodedPresent.hanji, "")
 
@@ -438,7 +438,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         var presentHant = Taigi_Engine_CandidateMessage()
         presentHant.hanji = "臺灣"
         let hantData = try presentHant.serializedData()
-        let decodedHant = try Taigi_Engine_CandidateMessage(serializedData: hantData)
+        let decodedHant = try Taigi_Engine_CandidateMessage(serializedBytes: hantData)
         XCTAssertTrue(decodedHant.hasHanji)
         XCTAssertEqual(decodedHant.hanji, "臺灣")
     }

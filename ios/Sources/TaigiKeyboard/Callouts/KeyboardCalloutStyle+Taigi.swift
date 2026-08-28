@@ -4,7 +4,7 @@
 import KeyboardKit
 
 // 中文: internal(非 public)— 參數 FontType 為 internal,public 會違反存取控制。
-extension Callouts.CalloutStyle {
+extension KeyboardCalloutStyle {
     /// Builds the long-press callout style for a keyboard `fontType`.
     ///
     /// `.system` keeps KeyboardKit's standard callout font; every custom font
@@ -12,11 +12,11 @@ extension Callouts.CalloutStyle {
     /// action, 32pt input). Single source for the keyboard extension and the
     /// appearance-editor preview, so the two never drift.
     // 中文: system 字型回 KeyboardKit 標準樣式;自訂字型套用 Taigi callout 既有字級(action 20 / input 32)。
-    static func taigi(for fontType: FontType) -> Callouts.CalloutStyle {
+    static func taigi(for fontType: FontType) -> KeyboardCalloutStyle {
         guard let fontName = fontType.customFontName else {
             return .standard
         }
-        return Callouts.CalloutStyle(
+        return KeyboardCalloutStyle(
             actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
             inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
         )

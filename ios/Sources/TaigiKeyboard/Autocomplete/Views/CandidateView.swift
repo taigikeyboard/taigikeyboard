@@ -10,11 +10,11 @@ import SwiftUI
 /// `CandidateSuggestionsRow` 負責。
 struct CandidateView: View {
     /// 候選詞建議列表
-    let suggestions: [Autocomplete.Suggestion]
+    let suggestions: [AutocompleteSuggestion]
     /// 當前選中的候選詞索引
     let selectedCandidateIndex: Int
     /// 點擊候選詞時的回調
-    let onSuggestionTap: (Autocomplete.Suggestion) -> Void
+    let onSuggestionTap: (AutocompleteSuggestion) -> Void
     /// 是否交換漢字與羅馬字顯示位置
     let isTranslateSwapped: Bool
     /// 點擊設定按鈕的回調

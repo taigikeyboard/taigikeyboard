@@ -5,7 +5,7 @@ import XCTest
 /// v3.5.8 Phase 9 Item 4 — pins the Continuous-input suggestion-emission
 /// contract that `TaigiAutocompleteService.buildContinuousSuggestions` (producer)
 /// and `ActionHandler+Suggestions.handleSuggestionSelection` (consumer)
-/// share via `Autocomplete.Suggestion.additionalInfo`.
+/// share via `AutocompleteSuggestion.additionalInfo`.
 ///
 /// Mirrors Android `ContinuousSuggestionsContractTest`. If iOS / Android
 /// disagree on these key strings, the platform tap path silently mis-aligns

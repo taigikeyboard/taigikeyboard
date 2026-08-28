@@ -79,13 +79,13 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// 沒有 slot-0 cell)。同步 fetch 無 suspension window,故不需 stale-result
     /// 防護(KeyboardKit `autocomplete(_:updating:)` 的 untracked Task 只在有
     /// `await` 時才有過期風險,本路徑已無 await)。
-    func autocomplete(_ text: String) async throws -> Autocomplete.Result {
+    func autocomplete(_ text: String) async throws -> AutocompleteResult {
         guard !text.isEmpty, activeComposingContext() != nil else {
-            return Autocomplete.Result(inputText: text, suggestions: [])
+            return AutocompleteResult(inputText: text, suggestions: [])
         }
         let candidates = continuousFetcher?.fetchContinuousCandidates() ?? []
         let suggestions = buildContinuousSuggestions(from: candidates)
-        return Autocomplete.Result(inputText: text, suggestions: suggestions)
+        return AutocompleteResult(inputText: text, suggestions: suggestions)
     }
 
     // MARK: - Internal
@@ -152,11 +152,11 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     // 中文: (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
-    ) -> [Autocomplete.Suggestion] {
+    ) -> [AutocompleteSuggestion] {
         candidates.map { c in
             let hanji = c.hanji
             let subtitle = (hanji?.isEmpty == false) ? hanji : nil
-            return Autocomplete.Suggestion(
+            return AutocompleteSuggestion(
                 text: c.roman,
                 title: c.roman,
                 subtitle: subtitle,

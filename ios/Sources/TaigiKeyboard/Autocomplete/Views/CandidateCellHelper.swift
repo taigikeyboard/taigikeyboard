@@ -22,7 +22,7 @@ enum CandidateCellHelper {
     /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）
     /// - 一般模式：`isTranslateSwapped` 決定羅馬字 / 漢字順序
     static func displayTitle(
-        for suggestion: Autocomplete.Suggestion,
+        for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
@@ -46,7 +46,7 @@ enum CandidateCellHelper {
     /// - TPS 模式：無副標題
     /// - 一般模式：`isTranslateSwapped` 決定副標題是羅馬字或漢字
     static func displaySubtitle(
-        for suggestion: Autocomplete.Suggestion,
+        for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
         isTPSLayout: Bool,
     ) -> String? {
@@ -63,11 +63,11 @@ enum CandidateCellHelper {
     /// - TPS 模式：優先輸出漢字；無漢字則輸出 TPS 符號 fallback
     /// - 一般模式：`isTranslateSwapped = true` 輸出漢字；否則輸出羅馬字
     static func suggestionToHandle(
-        for suggestion: Autocomplete.Suggestion,
+        for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
-    ) -> Autocomplete.Suggestion {
+    ) -> AutocompleteSuggestion {
         if isTPSLayout,
            let subtitle = suggestion.subtitle,
            !subtitle.isEmpty
@@ -97,7 +97,7 @@ enum CandidateCellHelper {
     ///
     /// 字體大小由呼叫端從 `CandidateTheme` 環境傳入，避免這裡依賴 `SharedSettings`。
     static func measuredCellWidth(
-        for suggestion: Autocomplete.Suggestion,
+        for suggestion: AutocompleteSuggestion,
         isTPSLayout: Bool,
         orMapsToER: Bool,
         titleFontSize: CGFloat,
@@ -128,7 +128,7 @@ enum CandidateCellHelper {
 
     /// TPS fallback：把羅馬字轉為方音符號顯示。
     private static func tpsFallback(
-        for suggestion: Autocomplete.Suggestion,
+        for suggestion: AutocompleteSuggestion,
         orMapsToER: Bool,
     ) -> String {
         RustEngineBridge.tlNumericToTPS(suggestion.text, orMapsToER: orMapsToER)
@@ -137,13 +137,13 @@ enum CandidateCellHelper {
     /// 以 `newText` 取代原本的 commit text，並把原本的 text 移到 subtitle 以保留 hint。
     /// `keepOriginalSubtitle = true` 時 subtitle 保留原值（TPS 無漢字 fallback 的情境）。
     private static func replacingCommitText(
-        of suggestion: Autocomplete.Suggestion,
+        of suggestion: AutocompleteSuggestion,
         with newText: String,
         keepOriginalSubtitle: Bool = false,
-    ) -> Autocomplete.Suggestion {
+    ) -> AutocompleteSuggestion {
         let additionalDeleteCount = max(0, suggestion.text.count - newText.count)
         let subtitle = keepOriginalSubtitle ? suggestion.subtitle : suggestion.text
-        return Autocomplete.Suggestion(
+        return AutocompleteSuggestion(
             text: newText,
             title: newText,
             subtitle: subtitle,

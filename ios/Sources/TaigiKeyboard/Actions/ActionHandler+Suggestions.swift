@@ -8,7 +8,7 @@ extension ActionHandler {
     // MARK: - Suggestion Selection
 
     // 中文: 候選詞點選主入口。先處理 raw-input 直送,再依組字 / NextWord 路徑組出 commit 字串並更新使用頻率。
-    func handleSuggestionSelection(_ suggestion: Autocomplete.Suggestion) {
+    func handleSuggestionSelection(_ suggestion: AutocompleteSuggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
             composingManager.commitRawInput()
@@ -183,7 +183,7 @@ extension ActionHandler {
     /// Extract romanization and Hanji from suggestion based on display mode
     // 中文: 依顯示模式從候選建議中拆出羅馬字 + 漢字。NextWord 路徑要把先前 swap 過的欄位還原。
     private func parseRomanAndHanzi(
-        from suggestion: Autocomplete.Suggestion,
+        from suggestion: AutocompleteSuggestion,
         isNextWord: Bool,
         effectiveSwapped: Bool,
     ) -> (roman: String, hanzi: String?) {
@@ -235,7 +235,7 @@ extension ActionHandler {
     /// The `suggestion` parameter is kept for future telemetry/logging use
     /// but ComposingManager only needs the candidate text.
     // 中文: NextWord 直接走 textDocumentProxy 插字;一般候選走 ComposingManager.selectSuggestion。
-    private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: Autocomplete.Suggestion) {
+    private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: AutocompleteSuggestion) {
         if isNextWord {
             keyboardContext.textDocumentProxy.insertText(text)
         } else {
