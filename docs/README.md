@@ -50,6 +50,8 @@
 | `architecture/i18n-multilang-plan.md` | App-UI multi-language plan — `i18n/` JSON → codegen resources, multi-PR (in-flight) | Active |
 | `architecture/manual-release-notes.md` | Canonical English What's New, in-app history sync, validation, and manual store paste workflow | Active |
 | `architecture/macos-release.md` | macOS Developer ID signing, notarization, and web-distributed `.pkg` workflow | Active |
+| `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W16, PR table, reference alignment, dogfood run-book | Active |
+| `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
 | `architecture/codex-review-2026-04-19.md` | Strategic Codex review of shared-core roadmap | Historical |
