@@ -660,9 +660,9 @@
         ]
       },
       "values": {
-        "hanji": "選字",
-        "tailo": "suán-jī",
-        "poj": "soán-jī",
+        "hanji": "選字齒",
+        "tailo": "suán-jī khí",
+        "poj": "soán-jī khí",
         "en": "Select Candidate",
         "ja": "候補を選択"
       }
