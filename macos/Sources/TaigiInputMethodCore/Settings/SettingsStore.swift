@@ -231,11 +231,11 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         /// The candidate window's layout. Presentation-only — the engine never
         /// reads it — and macOS-only, so like `displayLanguage` its default is
         /// owned by its own type rather than `EngineSettings.defaults`.
-        /// Expandable was MacishType's own default and the port kept it until
-        /// 2026-08-26; vertical is this keyboard's (USER).
+        /// Expandable — MacishType's own default, carried by the port, swapped
+        /// for vertical on 2026-08-26 and back on 2026-08-28 (USER).
         static let candidateLayout = SettingsKey(
             name: "candidateLayout",
-            defaultValue: CandidateLayout.vertical,
+            defaultValue: CandidateLayout.expandable,
         )
 
         /// The app's light/dark choice — `auto` follows the system.
