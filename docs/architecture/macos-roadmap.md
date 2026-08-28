@@ -107,7 +107,10 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `ComponentInputModeDict` (TL/POJ are an app setting per D5) and sets
   `LSUIElement` — not khiin's `LSBackgroundOnly`, because D5's settings window
   must be able to take key focus — plus `TISIntendedLanguage = mul`, matching
-  the neutral OS language tag iOS adopted in #494.
+  the neutral OS language tag iOS adopted in #494, and
+  `TICapsLockLanguageSwitchCapable` with a `Hant`-only character repertoire so
+  macOS classes the source as non-Latin and lets Caps Lock switch it to and
+  from ABC (Info.plist documents the probe behind that; USER 2026-08-28).
 - **D3 Controller + composing state** — thin per-session `IMKInputController`;
   process-wide `ComposingSessionCoordinator` owns the single ComposingManager +
   monotonic generation allocator (engine composing state is a process singleton,
