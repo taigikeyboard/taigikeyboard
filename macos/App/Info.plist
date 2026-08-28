@@ -61,7 +61,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>3.6.6</string>
 	<key>CFBundleVersion</key>
-	<string>30605</string>
+	<string>30606</string>
 	<key>InputMethodConnectionName</key>
 	<string>com.siansiansu.inputmethod.TaigiKeyboard_Connection</string>
 	<key>InputMethodServerControllerClass</key>
