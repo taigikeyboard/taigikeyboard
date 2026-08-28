@@ -59,7 +59,7 @@
 	     with every shipped pkg — derived from the marketing version as
 	     MAJOR*10000 + MINOR*100 + PATCH, bumped by hand at release time. -->
 	<key>CFBundleShortVersionString</key>
-	<string>3.6.5</string>
+	<string>3.6.6</string>
 	<key>CFBundleVersion</key>
 	<string>30605</string>
 	<key>InputMethodConnectionName</key>
