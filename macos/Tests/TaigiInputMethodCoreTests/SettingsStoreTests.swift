@@ -331,14 +331,16 @@ final class SettingsStoreTests: XCTestCase {
     /// modifier chord uses.
     func testABareNonSyllableLetter_roundTripsThroughTheSuite() throws {
         let store = makeStore()
-        let bareZ = try ComposingKeyChord.make(key: "z", modifiers: []).get()
+        // `y` rather than `z`: the shipped slot key set holds `z`, and a read
+        // through the default set resolves that row empty.
+        let bareY = try ComposingKeyChord.make(key: "y", modifiers: []).get()
 
-        store.setComposingChord(bareZ, for: .pageBackward)
+        store.setComposingChord(bareY, for: .pageBackward)
 
-        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageBackward), bareZ)
+        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageBackward), bareY)
         XCTAssertEqual(
             userDefaults.string(forKey: ComposingAction.pageBackward.settingsKeyName),
-            "|007A",
+            "|0079",
         )
     }
 
@@ -366,9 +368,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
     }
 
-    func testCandidateSlotModifier_withAnUnknownStoredValue_fallsBackToControl() {
+    func testCandidateSlotKeySet_withAnUnknownStoredValue_fallsBackToTheLetters() {
         userDefaults.set("nonsense", forKey: SettingsStore.Keys.candidateSlotModifier.name)
 
-        XCTAssertEqual(makeStore().composingKeyBindings.slotModifier, .control)
+        XCTAssertEqual(makeStore().composingKeyBindings.slotKeySet, .letters)
     }
 }

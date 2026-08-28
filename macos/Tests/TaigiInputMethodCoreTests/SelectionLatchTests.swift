@@ -17,6 +17,7 @@ final class SelectionLatchTests: XCTestCase {
         modifiers: NSEvent.ModifierFlags = [],
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
+        keySet: CandidateSlotKeySet = .letters,
         rawInput: String,
         isSelectionLatched: Bool,
     ) throws -> ComposingKeyIntent {
@@ -25,6 +26,7 @@ final class SelectionLatchTests: XCTestCase {
             for: KeyEventSnapshot(event),
             isComposing: isComposing,
             isShowingCandidates: isShowingCandidates,
+            bindings: ComposingKeyBindings(slotKeySet: keySet),
             rawInput: rawInput,
             isSelectionLatched: isSelectionLatched,
         )
@@ -97,7 +99,8 @@ final class SelectionLatchTests: XCTestCase {
         for latched in [true, false] {
             XCTAssertEqual(
                 try intent(
-                    "3", modifiers: .control, rawInput: "taigi", isSelectionLatched: latched,
+                    "3", modifiers: .control, keySet: .control, rawInput: "taigi",
+                    isSelectionLatched: latched,
                 ),
                 .selectCandidateSlot(2),
                 "the chord picks whatever the latch says — it is classified first",

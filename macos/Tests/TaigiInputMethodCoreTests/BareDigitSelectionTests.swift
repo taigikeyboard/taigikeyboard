@@ -14,6 +14,7 @@ final class BareDigitSelectionTests: XCTestCase {
         modifiers: NSEvent.ModifierFlags = [],
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
+        keySet: CandidateSlotKeySet = .letters,
         rawInput: String,
     ) throws -> ComposingKeyIntent {
         let event = try TestFixtures.keyDownEvent(characters: characters, modifiers: modifiers)
@@ -21,6 +22,7 @@ final class BareDigitSelectionTests: XCTestCase {
             for: KeyEventSnapshot(event),
             isComposing: isComposing,
             isShowingCandidates: isShowingCandidates,
+            bindings: ComposingKeyBindings(slotKeySet: keySet),
             rawInput: rawInput,
         )
     }
@@ -134,18 +136,13 @@ final class BareDigitSelectionTests: XCTestCase {
         // ⌃2 selects whether or not a tone could still be typed — it is the
         // path for the toneless composition, where a bare digit is a tone.
         XCTAssertEqual(
-            try intent("2", modifiers: .control, rawInput: "tai"),
+            try intent("2", modifiers: .control, keySet: .control, rawInput: "tai"),
             .selectCandidateSlot(1),
         )
         XCTAssertEqual(
-            try intent("2", modifiers: .control, rawInput: "tai5"),
+            try intent("2", modifiers: .control, keySet: .control, rawInput: "tai5"),
             .selectCandidateSlot(1),
         )
-    }
-
-    func testAShiftedDigit_isNeverASelection() throws {
-        // ⇧2 types @ — a symbol, not a pick.
-        XCTAssertEqual(try intent("@", modifiers: .shift, rawInput: "tai5"), .commitThenInsert("@"))
     }
 
     func testCapsLockLatched_aBareDigitStillSelects() throws {

@@ -101,7 +101,7 @@ protocol CandidatePresenter {
     ///
     /// Its own contract because the selection latch flips the live key WITHOUT
     /// a new candidate list: navigating does not re-fetch, so nothing calls
-    /// `show` on the keystroke that latches, and a window left drawing `⌃1`
+    /// `show` on the keystroke that latches, and a window left drawing `q`
     /// while a bare `1` picks would be naming a key that does something else —
     /// the one thing `CandidateSlotKeyStyle` exists to prevent.
     func updateSlotKeyStyle(_ style: CandidateSlotKeyStyle, ownedBy owner: ComposingSessionToken)

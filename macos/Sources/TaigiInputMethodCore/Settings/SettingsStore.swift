@@ -276,13 +276,18 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateFontChoice.system,
         )
 
-        /// Which modifier the candidate-slot chords use. macOS-only: the phone
-        /// keyboards have no modifier keys to chord with, so the default is
-        /// owned by `ComposingKeyBindings` rather than by the shared
-        /// `EngineSettings.defaults`.
+        /// Which keys the candidate slots take (`CandidateSlotKeySet`).
+        /// macOS-only: the phone keyboards have no slot keys to choose between,
+        /// so the default is owned by `ComposingKeyBindings` rather than by the
+        /// shared `EngineSettings.defaults`.
+        ///
+        /// The stored name predates the letter set, from when the choice was
+        /// only which modifier held the digits. Kept: the values already stored
+        /// under it (`control`, `option`) still mean what they did, and a
+        /// renamed key would need a migration to buy nothing the user can see.
         static let candidateSlotModifier = SettingsKey(
             name: "candidateSlotModifier",
-            defaultValue: ComposingKeyBindings.default.slotModifier,
+            defaultValue: ComposingKeyBindings.default.slotKeySet,
         )
 
         /// The per-action composing chords are keyed by
@@ -417,7 +422,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             // must stay reachable.
             chords[action] = ComposingKeyChord(rawValue: stored)
         }
-        return ComposingKeyBindings(chords: chords, slotModifier: choice(Keys.candidateSlotModifier))
+        return ComposingKeyBindings(chords: chords, slotKeySet: choice(Keys.candidateSlotModifier))
     }
 
     /// Records `chord` on `action`, or clears the row when it is nil.

@@ -38,8 +38,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "`taigi` ends in a letter, so a bare digit is still a tone",
+            .keyed(.letters),
+            "`taigi` ends in a letter, so a bare digit is still a tone — the letters pick",
         )
 
         _ = try session.controller.handle(
@@ -56,54 +56,38 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "Backspace puts the letter tail back, and the chord with it",
+            .keyed(.letters),
+            "Backspace puts the letter tail back, and the slot keys with it",
         )
     }
 
-    /// The drawn modifier is the one the user bound the slots to.
-    func testSlotKeyHint_carriesTheBoundModifier() throws {
-        UserDefaults.standard.set(
-            CandidateSlotModifier.option.rawValue,
-            forKey: SettingsStore.Keys.candidateSlotModifier.name,
-        )
-        defer {
-            UserDefaults.standard.removeObject(
-                forKey: SettingsStore.Keys.candidateSlotModifier.name,
+    /// The drawn keys are the set the user chose for the slots.
+    func testSlotKeyHint_carriesTheChosenKeySet() throws {
+        try withSlotKeySet(.option) {
+            let session = try composedSession()
+
+            XCTAssertEqual(
+                try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
+                .keyed(.option),
             )
         }
-
-        let session = try composedSession()
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.option),
-        )
     }
-
 
     /// The hint is a per-show snapshot, so a rebind reaches it on the very next
-    /// keystroke — the window is never told a modifier that has been replaced.
+    /// keystroke — the window is never told a key set that has been replaced.
     func testSlotKeyHint_followsARebindOnTheNextKeystroke() throws {
         let session = try composedSession()
-        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .chorded(.control))
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .keyed(.letters))
 
-        UserDefaults.standard.set(
-            CandidateSlotModifier.option.rawValue,
-            forKey: SettingsStore.Keys.candidateSlotModifier.name,
-        )
-        defer {
-            UserDefaults.standard.removeObject(
-                forKey: SettingsStore.Keys.candidateSlotModifier.name,
+        try withSlotKeySet(.option) {
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "k"), client: session.client,
+            )
+
+            XCTAssertEqual(
+                try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .keyed(.option),
             )
         }
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "k"), client: session.client,
-        )
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .chorded(.option),
-        )
     }
 
     // MARK: - The 漢羅 key
@@ -240,14 +224,14 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     /// `↓` is what gets a toneless typist off the chord. The window has to say
     /// so on the same keystroke: navigating never re-fetches, so nothing else
-    /// would repaint the keys, and a bar still drawing `⌃1` while a bare `1`
+    /// would repaint the keys, and a bar still drawing `q` while a bare `1`
     /// picks would be naming a key that does something else.
     func testDownArrow_flipsTheDrawnKeyToBare_onTheSameKeystroke() throws {
         let session = try composedSession()
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
-            "`taigi` ends in a letter, so the grammar rule alone keeps the chord",
+            .keyed(.letters),
+            "`taigi` ends in a letter, so the grammar rule alone keeps the slot keys",
         )
 
         session.press(.downArrow)
@@ -310,7 +294,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
+            .keyed(.letters),
             "typing is not choosing, so the digits are tones again",
         )
     }
@@ -336,7 +320,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
+            .keyed(.letters),
         )
     }
 
@@ -396,7 +380,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .chorded(.control),
+            .keyed(.letters),
         )
     }
 
@@ -610,18 +594,26 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).cells, cells)
     }
 
-    func testControlDigit_commitsThatSlotOfTheVisiblePage() throws {
-        let session = try composedSession()
-        let secondCell = try XCTUnwrap(session.presenter.shownContent).cells[1].text
-        session.client.clearWrites()
+    /// Each key that names the second slot commits the second candidate: the
+    /// shipped letter, the fixed shifted digit, and — under that set — `⌃2`.
+    func testEverySlotKey_commitsThatSlotOfTheVisiblePage() throws {
+        let keys: [(name: String, keySet: CandidateSlotKeySet, event: () throws -> NSEvent)] = [
+            ("w", .letters, { try TestFixtures.keyDownEvent(characters: "w") }),
+            ("⇧2", .letters, { try TestFixtures.shiftedDigitKeyDownEvent(slot: 1) }),
+            ("⌃2", .control, { try Self.controlDigitEvent(slot: 1) }),
+        ]
+        for (name, keySet, event) in keys {
+            try withSlotKeySet(keySet) {
+                let session = try composedSession()
+                let secondCell = try XCTUnwrap(session.presenter.shownContent).cells[1].text
+                session.client.clearWrites()
 
-        let handled = try session.controller.handle(
-            Self.controlDigitEvent(slot: 1),
-            client: session.client,
-        )
+                let handled = try session.controller.handle(event(), client: session.client)
 
-        XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts.last, secondCell)
+                XCTAssertTrue(handled, name)
+                XCTAssertEqual(session.client.insertedTexts.last, secondCell, name)
+            }
+        }
     }
 
     /// A candidate that consumes only part of the buffer is nailed rather than
@@ -641,7 +633,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             session.client.clearWrites()
 
             _ = try session.controller.handle(
-                Self.controlDigitEvent(slot: slot),
+                TestFixtures.shiftedDigitKeyDownEvent(slot: slot),
                 client: session.client,
             )
 
@@ -803,6 +795,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// because the controller and the shared coordinator's engine must read ONE
     /// domain for these cases to mean anything (see `withRestoredSwapSetting`'s
     /// callers).
+    /// The slot key set the sessions inside `body` read, put back afterwards.
+    private func withSlotKeySet(_ keySet: CandidateSlotKeySet, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.candidateSlotModifier.name, to: keySet.rawValue, body)
+    }
+
     private func withSetting(
         _ key: String,
         to value: Any?,

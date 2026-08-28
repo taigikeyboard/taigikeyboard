@@ -93,16 +93,16 @@ final class RetiredSettingsCleanupTests: XCTestCase {
 
     /// The one setting of that shape that survived into the new one, so it must
     /// NOT be swept up with its neighbours.
-    func testTheCandidateSlotModifier_isKept() {
+    func testTheCandidateSlotKeySet_isKept() {
         userDefaults.set(
-            CandidateSlotModifier.option.rawValue,
+            CandidateSlotKeySet.option.rawValue,
             forKey: SettingsStore.Keys.candidateSlotModifier.name,
         )
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
         XCTAssertEqual(
-            SettingsStore(userDefaults: userDefaults).composingKeyBindings.slotModifier,
+            SettingsStore(userDefaults: userDefaults).composingKeyBindings.slotKeySet,
             .option,
         )
     }

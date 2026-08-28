@@ -2,37 +2,88 @@
 
 import AppKit
 
-/// Which modifier the `1`…`9` candidate-slot chords are held with.
+/// Which keys pick a candidate out of the nine slots — the part of the slot
+/// contract the user chooses.
 ///
-/// A choice of modifier rather than of characters: the digits themselves are
-/// not negotiable, because a bare digit is a TL/POJ tone marker (`tai5`) and
-/// binding one would make toned syllables untypable. This is also why the
-/// system Zhuyin input method's bare-digit selection cannot be matched here.
-enum CandidateSlotModifier: String, CaseIterable, Sendable {
+/// Every case is a whole key SET, not one key: nine slots need nine names, and
+/// what varies between the cases is where those names come from. Two things
+/// never vary with the choice and are not here:
+///
+/// - `⇧1`…`⇧9` always pick (`ComposingKeyIntent.shiftedDigitSlot`). A shifted
+///   digit types punctuation, which nobody types while choosing a candidate —
+///   the composition ends first — so the chord costs nothing while the bar is
+///   up and reads as punctuation again the moment it is down (USER
+///   2026-08-28).
+/// - A bare `1`…`9` picks once no tone can follow the buffer
+///   (`ComposingKeyIntent.canTypeToneDigit`). A bare digit is a TL/POJ tone
+///   marker first (`tai5`), which is why none of the sets below can put the
+///   digits themselves on the slots — and why the system Zhuyin input method's
+///   bare-digit selection cannot be matched here.
+enum CandidateSlotKeySet: String, CaseIterable, Sendable {
+    /// Six bare letters on slots 0…5 — `q` `w` `d` `f` `z` `x` — with `⇧7`…`⇧9`
+    /// naming the last three. The letters are six of the eight no TL or POJ
+    /// syllable spells (`ComposingKeyChord.syllableLetters`), so a syllable can
+    /// still be typed with the bar up; they are the left hand's, so the right
+    /// stays on the letters being typed. Rime's Taigi schema offers home-row
+    /// letters the same way
+    /// (`references/rime-phah-taibun/schema/phah_taibun.schema.yaml:136`
+    /// `alternative_select_keys`). The shipped default (USER 2026-08-28).
+    case letters
+    /// `⌃1`…`⌃9`.
     case control
+    /// `⌥1`…`⌥9`.
     case option
 
-    var flag: NSEvent.ModifierFlags {
-        switch self {
-        case .control: .control
-        case .option: .option
+    /// The letters `letters` puts on slots 0…5, in slot order. Lowercase, as
+    /// they are matched and drawn: a bare key types its lowercase form.
+    static let letterKeys = ["q", "w", "d", "f", "z", "x"]
+
+    /// The slot `key` picks under this set with exactly `modifiers` held, or
+    /// nil when it picks none.
+    ///
+    /// `key` is what the key types with no modifiers held
+    /// (`KeyEventSnapshot.charactersIgnoringModifiers`); `modifiers` is only
+    /// the four chording flags, so Caps Lock and the number pad — which say
+    /// how a key was reached, not which key it is — cannot make a slot key
+    /// miss. The one rule the classifier, the recorder's refusal and the
+    /// window's labels all read, so a key drawn beside a candidate is the key
+    /// that picks it.
+    func slot(forKey key: String?, heldWith modifiers: NSEvent.ModifierFlags) -> Int? {
+        guard let digitModifier else {
+            guard modifiers.isEmpty, let key else { return nil }
+            return Self.letterKeys.firstIndex(of: key.lowercased())
         }
+        guard modifiers == digitModifier.flag else { return nil }
+        return ComposingKeyIntent.directSelectionSlot(key)
     }
 
-    /// How this modifier is written on a key cap — what the candidate window
-    /// draws beside a digit while only the chord can pick it
-    /// (`CandidateIndexLabel`).
-    var symbol: String {
-        switch self {
-        case .control: "⌃"
-        case .option: "⌥"
+    /// The key this set gives the candidate in `slot`, or nil where it gives
+    /// none — the letters stop at the sixth, and the fixed `⇧` digits take
+    /// over (`CandidateIndexLabel`, which owns which key is drawn).
+    func label(forSlot slot: Int) -> String? {
+        guard let digitModifier else {
+            return slot < Self.letterKeys.count ? Self.letterKeys[slot] : nil
         }
+        return digitModifier.symbol + String(slot + 1)
     }
 
-    /// The nine chords this modifier stands for, as one string — what the
-    /// shortcut pane's picker offers to choose between.
-    var menuRange: String {
-        "\(symbol)1 – \(symbol)9"
+    /// What the shortcut pane's picker offers to choose between — the keys
+    /// themselves, in the glyphs the keyboard prints them with, so the row
+    /// reads the same in every display language.
+    var menuLabel: String {
+        guard let digitModifier else { return Self.letterKeys.joined(separator: " ") }
+        return "\(digitModifier.symbol)1 – \(digitModifier.symbol)9"
+    }
+
+    /// The modifier the digit chords are held with, and how it is written on
+    /// a key cap. Nil for `letters`, whose keys are bare — so every rule above
+    /// asks this once and reads the answer as "the letters" or "the digits".
+    private var digitModifier: (flag: NSEvent.ModifierFlags, symbol: String)? {
+        switch self {
+        case .letters: nil
+        case .control: (.control, "⌃")
+        case .option: (.option, "⌥")
+        }
     }
 }
 
@@ -56,14 +107,14 @@ enum CandidateSlotModifier: String, CaseIterable, Sendable {
 ///   document.
 struct ComposingKeyBindings: Sendable, Equatable {
     private(set) var chords: [ComposingAction: ComposingKeyChord]
-    var slotModifier: CandidateSlotModifier
+    var slotKeySet: CandidateSlotKeySet
 
     /// What a fresh install types with.
     static let `default` = ComposingKeyBindings()
 
     init(
         chords: [ComposingAction: ComposingKeyChord?] = [:],
-        slotModifier: CandidateSlotModifier = .control,
+        slotKeySet: CandidateSlotKeySet = .letters,
     ) {
         var resolved: [ComposingAction: ComposingKeyChord] = [:]
         for action in ComposingAction.allCases {
@@ -73,11 +124,11 @@ struct ComposingKeyBindings: Sendable, Equatable {
             // whether the action was mentioned at all.
             resolved[action] = chords[action] ?? action.defaultChord
         }
-        Self.removeShadowedByCandidateSlots(in: &resolved, under: slotModifier)
+        Self.removeShadowedByCandidateSlots(in: &resolved, under: slotKeySet)
         Self.removeDuplicates(in: &resolved)
         Self.restoreUnbound(in: &resolved)
         self.chords = resolved
-        self.slotModifier = slotModifier
+        self.slotKeySet = slotKeySet
     }
 
     /// The chord on `action`, or nil when the row is empty.
@@ -110,15 +161,17 @@ struct ComposingKeyBindings: Sendable, Equatable {
     /// Drops a chord the candidate-slot tier would swallow before any binding
     /// is looked at.
     ///
-    /// Needed here as well as in the recorder because the slot modifier can be
+    /// Needed here as well as in the recorder because the slot key set can be
     /// changed afterwards: a ⌥Return recorded while Control held the slots
-    /// keeps working, but a ⌥3 does not, and a row that silently does nothing
-    /// is worse than an empty one.
+    /// keeps working, but a ⌥3 does not — nor does a bare `z` once the letters
+    /// hold them — and a row that silently does nothing is worse than an
+    /// empty one. Dropped from the resolved value, not from storage: the row
+    /// comes back if the picker moves off the set that shadowed it.
     private static func removeShadowedByCandidateSlots(
         in resolved: inout [ComposingAction: ComposingKeyChord],
-        under slotModifier: CandidateSlotModifier,
+        under slotKeySet: CandidateSlotKeySet,
     ) {
-        for (action, chord) in resolved where chord.isCandidateSlotChord(under: slotModifier) {
+        for (action, chord) in resolved where chord.isCandidateSlotChord(under: slotKeySet) {
             resolved[action] = nil
         }
     }

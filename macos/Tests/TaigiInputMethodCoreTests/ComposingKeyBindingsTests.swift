@@ -172,7 +172,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
         XCTAssertEqual(bindings.chord(for: .pageBackward), try chord("["))
         XCTAssertEqual(bindings.chord(for: .pageForward), try chord("]"))
-        XCTAssertEqual(bindings.slotModifier, .control)
+        XCTAssertEqual(bindings.slotKeySet, .letters)
     }
 
     /// Walking BACK through the candidates is the one action the system Zhuyin
@@ -353,19 +353,19 @@ final class ComposingKeyBindingsTests: XCTestCase {
 
     // MARK: - The candidate-slot tier
 
-    /// The slot chords are classified before any binding, so a row holding one
+    /// The slot keys are classified before any binding, so a row holding one
     /// would be recorded and then never fire. Dropped here as well as refused
-    /// by the recorder, because the modifier can be changed afterwards.
+    /// by the recorder, because the key set can be changed afterwards.
     func testAChordTheSlotTierWouldSwallow_isDropped() throws {
         let control = ComposingKeyBindings(
             chords: [.pageForward: try chord("3", .control)],
-            slotModifier: .control,
+            slotKeySet: .control,
         )
         XCTAssertNil(control.chord(for: .pageForward))
 
         let option = ComposingKeyBindings(
             chords: [.pageForward: try chord("3", .control)],
-            slotModifier: .option,
+            slotKeySet: .option,
         )
         XCTAssertEqual(
             option.chord(for: .pageForward),
@@ -374,9 +374,26 @@ final class ComposingKeyBindingsTests: XCTestCase {
         )
     }
 
-    func testIsCandidateSlotChord_namesOnlyTheNineDigitsUnderTheBoundModifier() throws {
+    /// Dropped from the resolved value, not from storage: the same stored
+    /// chords read differently under each set, so a row the letters shadow is
+    /// back the moment the picker moves off them — the way ⌥3 already is.
+    func testABareLetterTheLettersShadow_comesBackUnderTheDigits() throws {
+        let stored: [ComposingAction: ComposingKeyChord?] = [.commitAlternateScript: try chord("z")]
+
+        XCTAssertNil(
+            ComposingKeyBindings(chords: stored, slotKeySet: .letters).chord(for: .commitAlternateScript),
+            "a bare `z` picks the fifth candidate while the letters hold the slots",
+        )
+        XCTAssertEqual(
+            ComposingKeyBindings(chords: stored, slotKeySet: .control).chord(for: .commitAlternateScript),
+            try chord("z"),
+        )
+    }
+
+    func testIsCandidateSlotChord_namesOnlyTheNineDigitsUnderTheChosenModifier() throws {
         XCTAssertTrue(try chord("3", .control).isCandidateSlotChord(under: .control))
         XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .option))
+        XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .letters))
         XCTAssertFalse(
             try chord("0", .control).isCandidateSlotChord(under: .control),
             "⌃0 addresses no slot",
@@ -386,6 +403,40 @@ final class ComposingKeyBindingsTests: XCTestCase {
             "an extra modifier makes it a different chord",
         )
         XCTAssertFalse(try chord("]", .control).isCandidateSlotChord(under: .control))
+    }
+
+    func testIsCandidateSlotChord_namesTheSixBareLettersOnlyUnderTheLetters() throws {
+        for letter in CandidateSlotKeySet.letterKeys {
+            XCTAssertTrue(try chord(letter).isCandidateSlotChord(under: .letters))
+            XCTAssertFalse(try chord(letter).isCandidateSlotChord(under: .control))
+            XCTAssertFalse(
+                try chord(letter, .shift).isCandidateSlotChord(under: .letters),
+                "⇧\(letter) is a chord of its own, not a slot key",
+            )
+        }
+        // The two free letters the set leaves out, and a syllable letter
+        // that could never be recorded bare anyway.
+        XCTAssertFalse(try chord("v").isCandidateSlotChord(under: .letters))
+        XCTAssertFalse(try chord("y").isCandidateSlotChord(under: .letters))
+    }
+
+    /// `⇧1`…`⇧9` pick under every set, so no chord on one can exist at all:
+    /// the factory refuses it as the slot chord it is, whichever set is
+    /// chosen — a stored value cannot smuggle one in either, since it goes
+    /// through the same factory on the way out of storage.
+    func testAShiftedDigit_cannotBeAChord_underAnySet() {
+        for digit in 1 ... 9 {
+            XCTAssertEqual(
+                ComposingKeyChord.make(key: String(digit), modifiers: .shift),
+                .failure(.candidateSlotChord),
+                "⇧\(digit)",
+            )
+        }
+        XCTAssertNil(ComposingKeyChord(rawValue: "s|0033"), "a stored ⇧3 reads as no chord")
+        // `0` names no slot, so ⇧0 is refused for the digit it types, not as
+        // a slot; with another modifier a digit is an ordinary chord.
+        XCTAssertEqual(ComposingKeyChord.make(key: "0", modifiers: .shift), .failure(.typesRomanization))
+        XCTAssertNotNil(try? ComposingKeyChord.make(key: "3", modifiers: [.shift, .command]).get())
     }
 
     // MARK: - Keypad Enter
@@ -482,7 +533,9 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// action; everywhere the binding does not apply, the letter is still the
     /// letter.
     func testABareBoundLetter_firesItsAction_onlyWhereTheActionApplies() throws {
-        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("z")])
+        // Under the digits: the shipped letter set holds `z` itself, and the
+        // slot tier would take the key before this binding was read.
+        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("z")], slotKeySet: .control)
         let z = try snapshot("z")
 
         XCTAssertEqual(

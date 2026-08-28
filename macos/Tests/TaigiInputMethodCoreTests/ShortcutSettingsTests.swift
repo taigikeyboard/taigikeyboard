@@ -37,7 +37,7 @@ final class ShortcutSettingsTests: XCTestCase {
             ComposingAction.nextCandidate.settingsKeyName,
             "composingShortcut.nextCandidate",
         )
-        XCTAssertEqual(CandidateSlotModifier.allCases.map(\.rawValue), ["control", "option"])
+        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.rawValue), ["letters", "control", "option"])
     }
 
     /// A row whose text is missing in one language reads as an identifier — or
@@ -98,7 +98,7 @@ final class ShortcutSettingsTests: XCTestCase {
         store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .nextCandidate)
         store.setComposingChord(nil, for: .pageBackward)
         userDefaults.set("not a chord", forKey: ComposingAction.pageForward.settingsKeyName)
-        userDefaults.set(CandidateSlotModifier.option.rawValue, forKey: SettingsStore.Keys.candidateSlotModifier.name)
+        userDefaults.set(CandidateSlotKeySet.option.rawValue, forKey: SettingsStore.Keys.candidateSlotModifier.name)
 
         store.resetComposingShortcuts()
 
@@ -106,7 +106,7 @@ final class ShortcutSettingsTests: XCTestCase {
         for action in ComposingAction.allCases {
             XCTAssertEqual(bindings.chord(for: action), action.defaultChord, "\(action) did not come back")
         }
-        XCTAssertEqual(bindings.slotModifier, .control)
+        XCTAssertEqual(bindings.slotKeySet, .letters)
     }
 
     /// Removed, not written over: a stored default would be indistinguishable

@@ -1,6 +1,7 @@
 // What one key event means to a composition. Pure classification, no IMK.
 
 import AppKit
+import Carbon.HIToolbox
 
 /// A key AppKit names that this input method binds to candidate navigation.
 ///
@@ -43,6 +44,14 @@ struct KeyEventSnapshot: Sendable {
     /// `characters` would read Ctrl+3 as an Escape and cancel the composition
     /// the chord was meant to pick a candidate from.
     let charactersIgnoringModifiers: String?
+    /// The virtual key code (`NSEvent.keyCode`) — the key's position as the
+    /// system reports it, before any layout turns it into a character.
+    /// Carried for the shifted-digit chord alone: `⇧3` types `#` on a US
+    /// layout and `charactersIgnoringModifiers` keeps Shift, so the number
+    /// row's codes are the one thing that still says which key was pressed
+    /// (`ComposingKeyIntent.shiftedDigitSlot`). Nil for a snapshot built
+    /// without an event.
+    let keyCode: UInt16?
     let modifiers: NSEvent.ModifierFlags
     /// Whether AppKit has a name for this key (`NSEvent.SpecialKey`). Which
     /// name is not recorded: the keys this input method binds are recognized by
@@ -56,10 +65,12 @@ struct KeyEventSnapshot: Sendable {
         modifiers: NSEvent.ModifierFlags,
         isNamedSpecialKey: Bool,
         charactersIgnoringModifiers: String? = nil,
+        keyCode: UInt16? = nil,
         navigationKey: NavigationKey? = nil,
     ) {
         self.characters = characters
         self.charactersIgnoringModifiers = charactersIgnoringModifiers ?? characters
+        self.keyCode = keyCode
         self.modifiers = modifiers
         self.isNamedSpecialKey = isNamedSpecialKey
         self.navigationKey = navigationKey
@@ -71,6 +82,9 @@ struct KeyEventSnapshot: Sendable {
             modifiers: event.modifierFlags,
             isNamedSpecialKey: event.specialKey != nil,
             charactersIgnoringModifiers: event.charactersIgnoringModifiers,
+            // Read only off a key event: `NSEvent.keyCode` raises on any
+            // other type, and the recorder's monitor also sees mouse-ups.
+            keyCode: event.type == .keyDown || event.type == .keyUp ? event.keyCode : nil,
             navigationKey: event.specialKey.flatMap(NavigationKey.init),
         )
     }
@@ -124,7 +138,8 @@ enum ComposingKeyIntent: Equatable {
     /// .alternateText(for:settings:)`).
     case commitAlternateScript
     /// Commit the candidate in this slot of the visible page, counting from
-    /// zero — what `⌃1` to `⌃9` address.
+    /// zero — what the slot keys address (`CandidateSlotKeySet`, `⇧1`…`⇧9`,
+    /// and a bare digit where one can pick).
     case selectCandidateSlot(Int)
 
     /// AppKit encodes function and arrow keys as private-use scalars rather
@@ -159,9 +174,9 @@ enum ComposingKeyIntent: Equatable {
     ///
     /// `isShowingCandidates` is the second state a key's meaning turns on, and
     /// it is here rather than in the controller so that the whole table stays
-    /// readable in one place: the arrows, the paging keys, Space and `⌃1`…`⌃9`
-    /// all belong to the bar while it is up and to the host or the document the
-    /// rest of the time. It defaults to "no bar" because that is the state every
+    /// readable in one place: the arrows, the paging keys, Space and the slot
+    /// keys all belong to the bar while it is up and to the host or the
+    /// document the rest of the time. It defaults to "no bar" because that is the state every
     /// key outside the candidate slice is decided in.
     ///
     /// The two are separate parameters rather than one state because a
@@ -217,28 +232,28 @@ enum ComposingKeyIntent: Equatable {
             }
         }
 
-        // Read before the host-chord guard below, which would otherwise hand
-        // every Control chord straight to the host. Classified from the
-        // unmodified characters: both modifiers this chord can use rewrite the
-        // digits they are chorded with — Control into control characters,
-        // Option into `¡™£` and friends.
+        // The slot-key tier, read before the host-chord guard below — which
+        // would otherwise hand every Control chord straight to the host — and
+        // before the user's bindings, so that no binding can shadow it. Two
+        // rules: the fixed `⇧1`…`⇧9`, and the set the user chose.
         //
-        // The bound modifier must be held and the other three must not be;
-        // everything else AppKit reports is ignored on purpose. Caps Lock does
-        // not change what a digit key means, and the number pad sets
-        // `.numericPad` (and `.function` on some keyboards) — testing for an
-        // exact flag set would make `⌃3` select on the top row and quietly
-        // commit the composition on the keypad.
-        //
-        // The modifier the user did NOT choose keeps falling through to the
-        // host guard below, so `⌥3` stays the host's while Control is bound.
-        let slotModifier = bindings.slotModifier.flag
-        if isShowingCandidates,
-           modifiers.contains(slotModifier),
-           modifiers.isDisjoint(with: Self.chordingModifiers.subtracting(slotModifier)),
-           let slot = directSelectionSlot(key.charactersIgnoringModifiers)
-        {
-            return .selectCandidateSlot(slot)
+        // Only the four chording modifiers are compared, and exactly. Caps
+        // Lock and the number pad (`.numericPad`, plus `.function` on some
+        // keyboards) say how a key was reached, not which key it is — testing
+        // the full flag set would make `⌃3` select on the top row and quietly
+        // commit the composition on the keypad. A modifier the user did NOT
+        // choose keeps falling through to the host guard below, so `⌥3` stays
+        // the host's while Control holds the slots.
+        if isShowingCandidates {
+            if let slot = shiftedDigitSlot(key) {
+                return .selectCandidateSlot(slot)
+            }
+            if let slot = bindings.slotKeySet.slot(
+                forKey: key.charactersIgnoringModifiers,
+                heldWith: modifiers.intersection(Self.chordingModifiers),
+            ) {
+                return .selectCandidateSlot(slot)
+            }
         }
 
         // The bare-digit tier. A digit takes its romanization meaning first —
@@ -369,13 +384,6 @@ enum ComposingKeyIntent: Equatable {
         }
     }
 
-    /// The candidate slot `⌃1`…`⌃9` addresses, counting from zero. `⌃0` is not
-    /// a chord this input method binds: the bar holds nine candidates because
-    /// nine is what the digits can name without one of them meaning "the tenth".
-    ///
-    /// Visible to `ComposingKeyChord`, which refuses to record a chord this
-    /// answers for — the slot tier is read first, so such a binding would be
-    /// stored and then never fire.
     /// Whether a digit typed now could be part of the romanization — the rule
     /// that decides what a bare `1`…`9` means mid-composition.
     ///
@@ -462,6 +470,45 @@ enum ComposingKeyIntent: Equatable {
         }
     }
 
+    /// The slot `key` picks as one of the fixed `⇧1`…`⇧9` chords, counting
+    /// from zero, or nil when it is not one — the rule every key set shares
+    /// (`CandidateSlotKeySet`), asked by the classifier and by the recorder's
+    /// refusal alike (`ComposingKeyChord.make(_:)`).
+    ///
+    /// Shift, and only Shift, among the chording modifiers; then the digit,
+    /// read from the key code first, because Shift rewrites the characters:
+    /// `⇧3` on a US layout types `#`, and the number row's code is what still
+    /// says which key that was. A key code is a position, so this is the same
+    /// nine keys on every layout — on AZERTY, where the bare row types
+    /// `& é " …` and the digits ARE the shifted characters, `⇧&` is still the
+    /// chord that picks the first candidate. (A remapping tool that sends
+    /// another code for the key is respected: the key is then whatever it was
+    /// remapped to.) Then from `charactersIgnoringModifiers`, for a digit the
+    /// number row does not carry: the keypad's, which Shift leaves alone.
+    static func shiftedDigitSlot(_ key: KeyEventSnapshot) -> Int? {
+        guard key.modifiers.intersection(chordingModifiers) == .shift else { return nil }
+        if let keyCode = key.keyCode, let slot = numberRowKeyCodes.firstIndex(of: keyCode) {
+            return slot
+        }
+        return directSelectionSlot(key.charactersIgnoringModifiers)
+    }
+
+    /// The `1`…`9` keys of the number row, in slot order. Carbon's ANSI
+    /// codes are positions on the keyboard and hold on ISO and JIS boards
+    /// too; note that `6` and `9` sit out of numeric order.
+    static let numberRowKeyCodes: [UInt16] = [
+        kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5,
+        kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
+    ].map(UInt16.init)
+
+    /// The slot a digit `1`…`9` names, counting from zero. `0` names none: the
+    /// bar holds nine candidates because nine is what the digits can name
+    /// without one of them meaning "the tenth".
+    ///
+    /// Shared by every rule that reads a digit as a slot — the shifted digit
+    /// above, the modifier sets in `CandidateSlotKeySet`, and the bare-digit
+    /// tier — so the nine digits address the nine slots the same way on all of
+    /// them.
     static func directSelectionSlot(_ charactersIgnoringModifiers: String?) -> Int? {
         guard let character = charactersIgnoringModifiers?.first,
               character.isASCII,

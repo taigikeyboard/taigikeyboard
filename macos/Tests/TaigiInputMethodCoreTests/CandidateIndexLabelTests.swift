@@ -27,14 +27,24 @@ final class CandidateIndexLabelTests: XCTestCase {
     }
 
     /// While a tone digit can still follow, a bare `2` tones the syllable — so
-    /// the window draws the chord that DOES pick, under whichever modifier the
-    /// user has bound to the slots.
+    /// the window draws the key that DOES pick, from whichever set the user
+    /// has chosen for the slots.
     func testSlotKeys_carryTheModifierWhileABareDigitWouldBeATone() {
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .chorded(.control)), "⌃1")
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .chorded(.option)), "⌥9")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .keyed(.control)), "⌃1")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .keyed(.option)), "⌥9")
         // Past the ninth nothing is drawn in either style: there is no chord
         // for a tenth slot either.
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .chorded(.control)), "")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .keyed(.control)), "")
+    }
+
+    /// The letters name six slots and the shifted digits the other three —
+    /// each drawn lowercase or with its `⇧`, the way the key is pressed.
+    func testSlotKeys_underTheLetters_areTheSixLettersThenTheShiftedDigits() {
+        XCTAssertEqual(
+            (0 ..< 9).map { CandidateIndexLabel.text(forSlot: $0, style: .keyed(.letters)) },
+            ["q", "w", "d", "f", "z", "x", "⇧7", "⇧8", "⇧9"],
+        )
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .keyed(.letters)), "")
     }
 
     // MARK: - What each layout draws
@@ -201,7 +211,7 @@ final class CandidateIndexLabelTests: XCTestCase {
     /// and the mapping is untouched — `⌃3` still picks what slot 2 answers.
     func testEveryLayout_drawsTheChordWhenABareDigitWouldNotPick() {
         for panel in TestFixtures.candidatePanels() {
-            panel.slotKeyStyle = .chorded(.control)
+            panel.slotKeyStyle = .keyed(.control)
             _ = panel.updateCandidates(Self.cells)
 
             let numbered = numberedCells(in: panel)
@@ -222,7 +232,7 @@ final class CandidateIndexLabelTests: XCTestCase {
         let panel = ExpandableCandidatePanel(
             style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
         )
-        panel.slotKeyStyle = .chorded(.control)
+        panel.slotKeyStyle = .keyed(.control)
         _ = panel.updateCandidates(Self.cells)
 
         for _ in 0 ..< 20 {
@@ -247,7 +257,7 @@ final class CandidateIndexLabelTests: XCTestCase {
         _ = panel.updateCandidates(Self.cells)
         let bareWidths = TestFixtures.candidateCells(in: panel).map(\.frame.width)
 
-        panel.slotKeyStyle = .chorded(.option)
+        panel.slotKeyStyle = .keyed(.option)
         _ = panel.updateCandidates(Self.cells)
 
         XCTAssertEqual(
@@ -271,7 +281,7 @@ final class CandidateIndexLabelTests: XCTestCase {
     func testEveryLayout_repaintsItsKeysInPlace() {
         for hasMoved in [false, true] {
             for panel in TestFixtures.candidatePanels() {
-                panel.slotKeyStyle = .chorded(.control)
+                panel.slotKeyStyle = .keyed(.control)
                 _ = panel.updateCandidates(Self.cells)
                 if hasMoved {
                     // Far enough to turn a page, scroll a column, unfold a grid.

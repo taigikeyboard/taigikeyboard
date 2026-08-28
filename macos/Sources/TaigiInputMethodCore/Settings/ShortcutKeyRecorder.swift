@@ -95,9 +95,9 @@ enum GlobalShortcutPolicy {
 struct ShortcutKeyRecorder: NSViewRepresentable {
     /// The chord as stored, or nil for an empty row.
     let chord: ComposingKeyChord?
-    /// Which modifier currently holds the candidate slots, so a chord that tier
+    /// Which keys currently hold the candidate slots, so a chord that tier
     /// would swallow can be refused rather than recorded and left inert.
-    let slotModifier: CandidateSlotModifier
+    let slotKeySet: CandidateSlotKeySet
     /// Passed rather than read from the environment: this is an AppKit view,
     /// and the strings are resolved inside it.
     let language: DisplayLanguageStore
@@ -125,7 +125,7 @@ struct ShortcutKeyRecorder: NSViewRepresentable {
 
     private func apply(to field: ShortcutKeyRecorderField) {
         field.language = language
-        field.slotModifier = slotModifier
+        field.slotKeySet = slotKeySet
         field.additionalRejection = additionalRejection
         field.onRecord = onRecord
     }
@@ -138,7 +138,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     private static let minimumWidth: Double = 130
 
     var language: DisplayLanguageStore?
-    var slotModifier: CandidateSlotModifier = .control
+    var slotKeySet: CandidateSlotKeySet = .letters
     var additionalRejection: ((RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
     var onRecord: ((RecordedShortcutKey?) -> Void)?
 
@@ -444,7 +444,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         }
 
         switch ComposingKeyChord.make(KeyEventSnapshot(event)) {
-        case let .success(recorded) where recorded.isCandidateSlotChord(under: slotModifier):
+        case let .success(recorded) where recorded.isCandidateSlotChord(under: slotKeySet):
             refuse(.candidateSlotChord)
         case let .success(recorded):
             // Both storage forms are read here, off the one event that carries

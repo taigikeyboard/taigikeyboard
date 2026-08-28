@@ -325,7 +325,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// Overridden rather than held here because each layout keeps its own item
     /// views — the expandable one keeps two lists, since its grid rows are
     /// built separately from the row it unfolds from. Traps like its siblings
-    /// above: a layout that forgot it would repaint nothing and draw `⌃1` while
+    /// above: a layout that forgot it would repaint nothing and draw `q` while
     /// a bare `1` picks, which is the silent failure they all guard against.
     var numberedItemViews: [CandidateItemView] {
         preconditionFailure("layout subclasses must override numberedItemViews")

@@ -28,7 +28,7 @@ struct HorizontalPageLayout: Equatable {
     let pageBudget: CGFloat
 
     /// How many candidates one page of the window can hold, which is also how
-    /// many the `⌃1`…`⌃9` chords can address.
+    /// many the nine slot keys can address.
     static let pageSize = 9
 
     /// A page never packs fewer potential columns than this: a run of very wide

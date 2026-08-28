@@ -371,7 +371,10 @@ retired panes, and clears the two recording toggles they carried so a stored
   the Codex recommendation whole (bare 0-9 stay text/tone and never start a composition ·
   ←/→ highlight · ↑↓/PgUp/PgDn page · Space commits the highlighted candidate · Enter commits
   the literal · Esc cancels · `Ctrl+1…9` direct-select as `⌃1`). Bindings now live in D4 above
-  and bind at PR4b.
+  and bind at PR4b. **Superseded 2026-08-28** (kept as the decision of record): the shipped
+  slot keys are now the bare letters `q w d f z x` (slots 1–6) with `⇧1…⇧9` picking under
+  every set — `⌃1…9` / `⌥1…9` remain as picker choices (`CandidateSlotKeySet`). A bare digit
+  additionally picks where it cannot be a tone (2026-08-24 grammar rule) or after `↓`.
 - PR8a timing (proto regen window vs concurrent iOS/Android session).
 - Custom-dict Time-Machine/backup-exclusion policy (decided at PR12; plan default =
   stays inside TM scope, matching the 2026-08-16 learning-DB decision).

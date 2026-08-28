@@ -231,11 +231,11 @@ public final class TaigiInputController: IMKInputController {
     /// needs the screen, not when the composition is over, so releasing the
     /// engine or committing here would throw away work the user is in the middle
     /// of. The candidate model is cleared with the window because the two are one
-    /// state as far as the key contract is concerned — the arrows and `⌃n` belong
-    /// to a bar the user can see, and with the bar gone they go back to the host
-    /// until the next keystroke fetches candidates again. The selection latch
-    /// goes with them for the same reason (`dismissCandidates`): the digits
-    /// were picking out of a list that is no longer on screen.
+    /// state as far as the key contract is concerned — the arrows and the slot
+    /// keys belong to a bar the user can see, and with the bar gone they go
+    /// back to the host until the next keystroke fetches candidates again. The
+    /// selection latch goes with them for the same reason (`dismissCandidates`):
+    /// the digits were picking out of a list that is no longer on screen.
     override public func hidePalettes() {
         Self.logger.debug("hidePalettes")
         onMainActor(nil) { controller, _ in controller.dismissCandidates() }
@@ -774,8 +774,8 @@ public final class TaigiInputController: IMKInputController {
     /// The same two rules the key handler classifies against — the tone-digit
     /// grammar (`ComposingKeyIntent.canTypeToneDigit`) read from the same
     /// buffer, and the selection latch over it — so the window cannot draw a
-    /// key that would do something else. The modifier is the user's, since they
-    /// can rebind which one the slots take.
+    /// key that would do something else. The key set is the user's, since they
+    /// can choose which keys the slots take.
     ///
     /// Snapshotted per show rather than live-read by the window: every
     /// keystroke that changes the buffer re-fetches and re-shows, so the hint
@@ -793,7 +793,7 @@ public final class TaigiInputController: IMKInputController {
         // tone" about.
         guard !isSelectionLatched else { return .bare }
         return ComposingKeyIntent.canTypeToneDigit(after: rawInput)
-            ? .chorded(settings.composingKeyBindings.slotModifier)
+            ? .keyed(settings.composingKeyBindings.slotKeySet)
             : .bare
     }
 

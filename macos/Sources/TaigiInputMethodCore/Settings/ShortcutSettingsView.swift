@@ -25,7 +25,7 @@ struct ShortcutSettingsView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     @AppStorage(SettingsStore.Keys.candidateSlotModifier.name)
-    private var candidateSlotModifier = SettingsStore.Keys.candidateSlotModifier.defaultValue
+    private var candidateSlotKeySet = SettingsStore.Keys.candidateSlotModifier.defaultValue
 
     /// Re-read after every write so the rows repaint together: recording a
     /// chord can empty the row that had it.
@@ -59,14 +59,16 @@ struct ShortcutSettingsView: View {
                 }
 
                 // Ends the moving-through group, because that is what it does.
-                // Glyphs rather than translated words: a modifier is read off
-                // the keyboard, and ⌃ and ⌥ are the same symbols in every
-                // language the settings window speaks. A picker rather than a
-                // recorder because this row is one modifier standing for nine
-                // chords, not a key.
-                Picker(language.string(.macosBindingSlotModifier), selection: $candidateSlotModifier) {
-                    ForEach(CandidateSlotModifier.allCases, id: \.self) { modifier in
-                        Text(verbatim: modifier.menuRange).tag(modifier)
+                // Glyphs rather than translated words: the keys are read off
+                // the keyboard, and `q w d f z x`, ⌃ and ⌥ are the same in
+                // every language the settings window speaks. A picker rather
+                // than a recorder because this row is one set standing for
+                // nine slots, not a key. `⇧1`…`⇧9` are not offered: they pick
+                // under every set, and the window draws them where they are
+                // the key that picks.
+                Picker(language.string(.macosBindingSlotModifier), selection: $candidateSlotKeySet) {
+                    ForEach(CandidateSlotKeySet.allCases, id: \.self) { keySet in
+                        Text(verbatim: keySet.menuLabel).tag(keySet)
                     }
                 }
 
@@ -82,12 +84,14 @@ struct ShortcutSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .onChange(of: candidateSlotModifier) { _, newModifier in
-            // The picker is the last writer: the nine chords it just claimed
-            // come off any global row that held one. The recorder refuses the
-            // other order, so between them no global shortcut sits on a live
-            // slot chord.
-            ShortcutConflicts.resolveGlobalRows(afterSlotModifierChangedTo: newModifier)
+        .onChange(of: candidateSlotKeySet) { _, newKeySet in
+            // The picker is the last writer: the keys it just claimed come off
+            // any global row that held one. The recorder refuses the other
+            // order, so between them no global shortcut sits on a live slot
+            // key. Composing rows need no write — they are re-resolved from
+            // storage on every read, and a row the new set shadows comes back
+            // if the picker moves off it again.
+            ShortcutConflicts.resolveGlobalRows(afterSlotKeySetChangedTo: newKeySet)
             reload()
         }
     }
@@ -103,7 +107,7 @@ struct ShortcutSettingsView: View {
             ShortcutKeyRecorder(
                 chord: KeyboardShortcuts.getShortcut(for: action.name)
                     .flatMap(ShortcutConflicts.composingChord(occupiedBy:)),
-                slotModifier: bindings.slotModifier,
+                slotKeySet: bindings.slotKeySet,
                 language: language,
                 additionalRejection: GlobalShortcutPolicy.rejection(for:),
             ) { key in
@@ -116,7 +120,7 @@ struct ShortcutSettingsView: View {
         LabeledContent(action.label(language)) {
             ShortcutKeyRecorder(
                 chord: bindings.chord(for: action),
-                slotModifier: bindings.slotModifier,
+                slotKeySet: bindings.slotKeySet,
                 language: language,
             ) { key in
                 record(key?.chord, for: action)

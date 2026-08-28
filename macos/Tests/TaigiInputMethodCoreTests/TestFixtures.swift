@@ -116,10 +116,15 @@ enum TestFixtures {
     /// only differ for a chord — which is exactly what a case passing it
     /// separately is testing: Control rewrites the digits it is held with, so
     /// `⌃3` really does arrive as an Escape in `characters`.
+    ///
+    /// `keyCode` is the hardware key (`KeyEventSnapshot.keyCode`), read by
+    /// the shifted-digit slot chord alone. The default `0` is the `a` key; a
+    /// case about `⇧3` passes `kVK_ANSI_3`.
     static func keyDownEvent(
         characters: String,
         modifiers: NSEvent.ModifierFlags = [],
         charactersIgnoringModifiers: String? = nil,
+        keyCode: UInt16 = 0,
     ) throws -> NSEvent {
         try XCTUnwrap(NSEvent.keyEvent(
             with: .keyDown,
@@ -131,8 +136,23 @@ enum TestFixtures {
             characters: characters,
             charactersIgnoringModifiers: charactersIgnoringModifiers ?? characters,
             isARepeat: false,
-            keyCode: 0,
+            keyCode: keyCode,
         ))
+    }
+
+    /// `⇧1`…`⇧9` as a US layout reports them: the symbol in both character
+    /// fields, the digit only in the key code — which is what the chord is
+    /// read from. `slot` counts from zero; `modifiers` defaults to Shift alone.
+    static func shiftedDigitKeyDownEvent(
+        slot: Int,
+        modifiers: NSEvent.ModifierFlags = .shift,
+    ) throws -> NSEvent {
+        let symbols = ["!", "@", "#", "$", "%", "^", "&", "*", "("]
+        return try keyDownEvent(
+            characters: symbols[slot],
+            modifiers: modifiers,
+            keyCode: ComposingKeyIntent.numberRowKeyCodes[slot],
+        )
     }
 
     /// `client: nil`: IMK rejects anything but a real client proxy here, so a
