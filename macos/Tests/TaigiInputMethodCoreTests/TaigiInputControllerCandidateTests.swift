@@ -35,10 +35,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// `ComposingKeyIntent` classifies against — a window drawing the other
     /// one would name a key that does something else.
     func testSlotKeyHint_followsWhetherABareDigitWouldBeATone() throws {
-        let session = try composedSession()
+        let session = try composedSession(under: .control)
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.bareKeys),
+            .keyed(.control),
             "`taigi` ends in a letter, so a bare digit is still a tone — the bare keys pick",
         )
 
@@ -56,9 +56,27 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.bareKeys),
+            .keyed(.control),
             "Backspace puts the letter tail back, and the slot keys with it",
         )
+    }
+
+    /// The bare keys are as direct as a bare digit, so the hint never swaps
+    /// to the digits under them — not after a tone, not after `↓` — even
+    /// though the digit tier still picks.
+    func testSlotKeyHint_underTheBareKeys_neverFlipsToTheDigits() throws {
+        let session = try composedSession()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "5"), client: session.client,
+        )
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .keyed(.bareKeys))
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\u{8}"), client: session.client,
+        )
+        session.press(.downArrow)
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .keyed(.bareKeys))
     }
 
     /// The drawn keys are the set the user chose for the slots.
@@ -227,10 +245,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// would repaint the keys, and a bar still drawing `q` while a bare `1`
     /// picks would be naming a key that does something else.
     func testDownArrow_flipsTheDrawnKeyToBare_onTheSameKeystroke() throws {
-        let session = try composedSession()
+        let session = try composedSession(under: .control)
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.bareKeys),
+            .keyed(.control),
             "`taigi` ends in a letter, so the grammar rule alone keeps the slot keys",
         )
 
@@ -284,7 +302,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     /// The way back is the next thing the user was going to type anyway.
     func testTypingALetter_takesTheLatchBackOff() throws {
-        let session = try composedSession()
+        let session = try composedSession(under: .control)
         session.press(.downArrow)
         XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .bare)
 
@@ -294,7 +312,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.bareKeys),
+            .keyed(.control),
             "typing is not choosing, so the digits are tones again",
         )
     }
@@ -307,7 +325,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// out of `taigi` reaches `taig`, which has none, and a bar that is down
     /// cannot be asked what key it is drawing.
     func testBackspace_takesTheLatchBackOff() throws {
-        let session = try composedSession()
+        let session = try composedSession(under: .control)
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "k"), client: session.client,
         )
@@ -320,7 +338,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.bareKeys),
+            .keyed(.control),
         )
     }
 
@@ -352,7 +370,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// candidate for the rest of the buffer — still choosing, so the latch
     /// survives and the next bare digit picks again.
     func testPickingAPartialCandidate_keepsSelectionMode() throws {
-        let session = try composedSession()
+        let session = try composedSession(under: .control)
         session.press(.downArrow)
 
         // Slot 3 on `taigi` is a partial-span candidate: it consumes `tai` and
@@ -950,6 +968,22 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     }
 
     /// An activated session that has typed `taigi`, so a bar is up.
+    /// A session under `keySet`, which stays in force for the whole case —
+    /// every keystroke re-reads it — and is put back at teardown.
+    private func composedSession(under keySet: CandidateSlotKeySet) throws -> Session {
+        let key = SettingsStore.Keys.candidateSlotModifier.name
+        let saved = UserDefaults.standard.object(forKey: key)
+        addTeardownBlock {
+            if let saved {
+                UserDefaults.standard.set(saved, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+        UserDefaults.standard.set(keySet.rawValue, forKey: key)
+        return try composedSession()
+    }
+
     private func composedSession(
         presenter: RecordingCandidatePresenter = RecordingCandidatePresenter(),
         caretRects: [Int: CGRect]? = nil,

@@ -775,7 +775,10 @@ public final class TaigiInputController: IMKInputController {
     /// grammar (`ComposingKeyIntent.canTypeToneDigit`) read from the same
     /// buffer, and the selection latch over it — so the window cannot draw a
     /// key that would do something else. The key set is the user's, since they
-    /// can choose which keys the slots take.
+    /// can choose which keys the slots take; the bare-key set is drawn
+    /// whatever the buffer, because its keys are as direct as a bare digit
+    /// and a hint that swapped between two equally direct keys would only
+    /// move under the user (USER 2026-08-28).
     ///
     /// Snapshotted per show rather than live-read by the window: every
     /// keystroke that changes the buffer re-fetches and re-shows, so the hint
@@ -788,13 +791,13 @@ public final class TaigiInputController: IMKInputController {
     /// `finishComposition` takes the bar down with the session.
     @MainActor
     private func slotKeyStyle(after rawInput: String) -> CandidateSlotKeyStyle {
+        let keySet = settings.composingKeyBindings.slotKeySet
+        guard keySet != .bareKeys else { return .keyed(.bareKeys) }
         // The latch outranks the grammar rule, and has to: it exists precisely
         // for the buffers the rule keeps answering "a digit could still be a
         // tone" about.
         guard !isSelectionLatched else { return .bare }
-        return ComposingKeyIntent.canTypeToneDigit(after: rawInput)
-            ? .keyed(settings.composingKeyBindings.slotKeySet)
-            : .bare
+        return ComposingKeyIntent.canTypeToneDigit(after: rawInput) ? .keyed(keySet) : .bare
     }
 
     @MainActor

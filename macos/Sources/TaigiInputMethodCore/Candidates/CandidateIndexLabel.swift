@@ -16,15 +16,18 @@ import Foundation
 ///
 /// The window draws whichever key is live, so the hint can never name a key
 /// that would do something else — and where several are live it draws the
-/// most direct: the bare digit names all nine slots, so it wins over the set
-/// while it can pick. McBopomofo writes the same distinction the same way,
+/// most direct: the bare digit wins over a modifier chord while it can pick,
+/// and ties with a bare key, which then stays put so the hint does not move
+/// under the user (`TaigiInputController.slotKeyStyle`). McBopomofo writes
+/// the same distinction the same way,
 /// folding the modifier into the label text for the states that need it
 /// (`references/McBopomofo/Source/InputMethodController.swift:869-877`:
 /// `{ "⇧ " + $0 }`) rather than styling the digit — which keeps the intensity
 /// of the text free to mean "selected", as it does here.
 enum CandidateSlotKeyStyle: Equatable, Sendable {
     /// A bare `1`…`9` picks — no tone can follow the buffer as it stands, or
-    /// the user has said with `↓` that they are choosing rather than typing.
+    /// the user has said with `↓` that they are choosing rather than typing —
+    /// and the chosen set is a modifier one.
     case bare
     /// Only the slot keys pick, so each slot is drawn under the key its set
     /// gives it.
