@@ -1,5 +1,5 @@
 // 中文: 鍵盤擴充的主 ViewController。
-// 中文: 主檔負責 KeyboardKit 生命週期 + 輸入欄位偵測 + KeyboardKit 10 auto-cap workaround。
+// 中文: 主檔負責 KeyboardKit 生命週期 + 輸入欄位偵測。
 // 中文: 其他細節在 KeyboardViewController+*.swift 各擴充。
 
 import Combine
@@ -23,14 +23,14 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
-    /// These two properties are part of a 2-layer workaround:
-    /// - Layer 1: textDidChangeAsync override (this file) — skips super when auto-cap off
-    /// - Layer 2: setupKeyboardCaseProtection (this file) — Combine guard for internal path
-    /// Also: tryChangeKeyboardCase override (ActionHandler.swift) — blocks non-shift case changes
-    /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
-    private var expectedKeyboardCase: Keyboard.KeyboardCase = .lowercased
-    private var justSwitchedToAlphabetic = false
+    /// Guards the successful `setupKeyboardKit(for:)` completion body:
+    /// KeyboardKit may invoke the setup hook again in the controller's
+    /// lifetime, and `setupServices()` / `setupSettingsObserver()` are not
+    /// idempotent (service rebuild + duplicate Combine subscriptions).
+    /// A failed completion leaves the guard unset so a retry can complete.
+    // 中文: 成功的 setup completion 只跑一次 — setupServices/observer 不可重入;
+    // 中文: 失敗不消耗 guard,保留重試機會。
+    private var hasCompletedKeyboardKitSetup = false
 
     /// Previous values for change detection in syncSettings()
     var lastInputMode: InputMode?
@@ -90,13 +90,36 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // Register custom fonts from containing app bundle (extension only)
         FontRegistration.registerFontsIfNeeded()
 
-        setupServices()
+        // Everything that touches KeyboardKit settings or services is deferred
+        // to the setupKeyboardKit(for:) completion — see viewWillSetupKeyboardKit.
+    }
 
-        // Observe settings changes (live sync from main app)
-        setupSettingsObserver()
-
-        // Guard keyboardCase against KeyboardKit 10 internal path overriding state
-        setupKeyboardCaseProtection()
+    /// Standard KeyboardKit setup (KK ≥ 10.8.1 / upstream #967): the SDK
+    /// wires App Group settings syncing before its keyboard-case logic reads
+    /// any setting, so `isAutocapitalizationEnabled = false` works with no
+    /// case workarounds. Settings and service writes happen in the completion
+    /// — writes made before setup completes can be overwritten by it.
+    // 中文: KeyboardKit 標準初始化 — 設定與服務組裝一律在 completion 內做,
+    // 中文: setup 前寫入可能被覆寫(官方契約)。
+    override func viewWillSetupKeyboardKit() {
+        setupKeyboardKit(for: .taigiKeyboard) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .failure(let error):
+                // Do not consume the once-guard: a later successful hook
+                // invocation can still complete setup.
+                logger.warning("[SETUP] setupKeyboardKit failed: \(error.localizedDescription)")
+            case .success:
+                guard !hasCompletedKeyboardKitSetup else { return }
+                hasCompletedKeyboardKitSetup = true
+                setupServices()
+                setupSettingsObserver()
+                // viewDidAppear may have fired before this completion; its
+                // syncSettings() call is guarded on actionHandler, so run the
+                // initial sync here.
+                syncSettings()
+            }
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -204,84 +227,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // post-impl P2-2. Android does the equivalent in
         // `NextWordHandler.resetContext()` invoked from `onStartInputView`.
         actionHandler?.nextWordController.bumpEnvelopeGeneration()
-    }
-
-    /// FIXME: Workaround layer 1/2 for KeyboardKit 10 auto-capitalization override.
-    /// Skips super's setKeyboardCase(preferredKeyboardCase) when auto-cap is off.
-    override func textDidChangeAsync(_ textInput: UITextInput?) {
-        let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
-        logger.debug("[CASE][textDidChangeAsync] isAutoCap=\(isAutoCap) keyboardCase=\(String(describing: state.keyboardContext.keyboardCase))")
-
-        if isAutoCap {
-            super.textDidChangeAsync(textInput)
-        } else {
-            performAutocomplete()
-        }
-    }
-
-    // MARK: - KeyboardCase Protection
-
-    /// FIXME: Workaround layer 2/2 — Combine-based guard against KeyboardKit 10
-    /// internally setting keyboardCase = preferredKeyboardCase via a code path that
-    /// bypasses our setKeyboardCase/tryChangeKeyboardCase overrides.
-    ///
-    /// KeyboardKit 10 sets keyboardCase = preferredKeyboardCase via an internal path
-    /// when keyboardType switches to alphabetic, bypassing our tryChangeKeyboardCase
-    /// and setKeyboardCase overrides. This guard observes keyboardCase changes and
-    /// restores the expected state when auto-capitalization is off.
-    // 中文: KeyboardKit 10 auto-cap workaround 第二層 — 用 Combine 觀察 keyboardCase 變動,
-    // 中文: 在 auto-cap 關閉時把被內部路徑改掉的大寫狀態還原。
-    private func setupKeyboardCaseProtection() {
-        // Initialize expected value
-        expectedKeyboardCase = state.keyboardContext.keyboardCase
-
-        // Observe keyboardType changes and set the flag
-        state.keyboardContext.$keyboardType
-            .removeDuplicates()
-            .dropFirst()
-            .sink { [weak self] newType in
-                guard let self else { return }
-                if newType == .alphabetic {
-                    justSwitchedToAlphabetic = true
-                    logger.debug("[CASE][PROTECT] keyboardType → alphabetic, flag set")
-                }
-            }
-            .store(in: &cancellables)
-
-        // Observe keyboardCase changes and block unexpected mutations
-        state.keyboardContext.$keyboardCase
-            .removeDuplicates()
-            .dropFirst()
-            .sink { [weak self] newCase in
-                guard let self else { return }
-                let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
-
-                logger.debug("[CASE][PROTECT] newCase=\(String(describing: newCase)) expected=\(String(describing: expectedKeyboardCase)) isAutoCap=\(isAutoCap) justSwitched=\(justSwitchedToAlphabetic)")
-
-                // Block unexpected uppercased when auto-cap is off and just switched to alphabetic
-                if !isAutoCap,
-                   justSwitchedToAlphabetic,
-                   newCase == .uppercased,
-                   expectedKeyboardCase != .uppercased,
-                   expectedKeyboardCase != .capsLocked
-                {
-                    logger.debug("[CASE][PROTECT] ⚠️ BLOCKING uppercased, restoring to \(String(describing: expectedKeyboardCase))")
-                    // Restore asynchronously to ensure KeyboardKit internal processing completes first
-                    let targetCase = expectedKeyboardCase
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self else { return }
-                        logger.debug("[CASE][PROTECT] async restoring to \(String(describing: targetCase))")
-                        state.keyboardContext.keyboardCase = targetCase
-                    }
-                } else {
-                    // Update expected value (legitimate change)
-                    expectedKeyboardCase = newCase
-                }
-
-                // Clear the flag regardless of whether we blocked
-                justSwitchedToAlphabetic = false
-            }
-            .store(in: &cancellables)
     }
 
     // MARK: - UIResponder Text Input Overrides
