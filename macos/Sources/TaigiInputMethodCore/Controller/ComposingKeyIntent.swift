@@ -192,19 +192,12 @@ enum ComposingKeyIntent: Equatable {
     /// typed, before any tone mark is rendered. Only its last character is
     /// read, and only to answer whether a digit could still be romanization
     /// (`canTypeToneDigit`).
-    ///
-    /// `isSelectionLatched` is the third state a key's meaning turns on: while
-    /// it holds, a bare digit picks a candidate even where the buffer could
-    /// still take a tone. The controller owns it — it is session state, not a
-    /// setting — and `selectionLatch(after:wasLatched:)` is the rule it keeps
-    /// it by.
     static func intent(
         for key: KeyEventSnapshot,
         isComposing: Bool,
         isShowingCandidates: Bool = false,
         bindings: ComposingKeyBindings = .default,
         rawInput: String = "",
-        isSelectionLatched: Bool = false,
     ) -> ComposingKeyIntent {
         let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)
 
@@ -254,23 +247,16 @@ enum ComposingKeyIntent: Equatable {
         // and its rule is TL/POJ grammar rather than a mode the user has to
         // hold in their head: nothing can follow a tone digit but a new
         // syllable, which always starts with a letter, so a digit typed after
-        // `tai5` was never going to be input.
-        //
-        // `isSelectionLatched` is the second way in, and it exists because the
-        // grammar rule alone never reaches the typist it was written for: a
-        // toneless buffer ALWAYS ends in a letter (`tai`, `taigi`), so
-        // `canTypeToneDigit` is permanently true and someone who does not know
-        // the tones — the majority, since a Taigi speaker need never have
-        // learnt them — is left on the chord forever. The latch is the user
-        // saying, with `↓`, that they are choosing rather than typing; see
-        // `selectionLatch(after:wasLatched:)`.
+        // `tai5` was never going to be input. A toneless buffer always ends
+        // in a letter, so this tier never reaches a typist who adds no tones —
+        // the slot key set is what they pick with, and the window draws it.
         //
         // Gated on the bar being up, because selecting needs something to
-        // select, and on no chording modifier, so the modifier tier above
+        // select, and on no chording modifier, so the slot-key tier above
         // keeps its chords whatever the buffer looks like.
         if isComposing,
            isShowingCandidates,
-           isSelectionLatched || !canTypeToneDigit(after: rawInput),
+           !canTypeToneDigit(after: rawInput),
            modifiers.isDisjoint(with: Self.chordingModifiers),
            let slot = directSelectionSlot(key.charactersIgnoringModifiers)
         {
@@ -404,62 +390,6 @@ enum ComposingKeyIntent: Equatable {
     static func canTypeToneDigit(after rawInput: String) -> Bool {
         guard let last = rawInput.last else { return true }
         return last.isLetter
-    }
-
-    /// How the selection latch stands after `intent` has been carried out.
-    ///
-    /// The latch is what lets a bare `1`…`9` pick a candidate out of a buffer
-    /// that could still take a tone digit. It turns on for one gesture only —
-    /// `↓`, the key that means "into the list" on every layout — and off again
-    /// the moment the user does something that is typing rather than choosing.
-    ///
-    /// `↓` alone, and not the other ways of walking the bar: `⇥` and the arrows
-    /// are how a Taigi typist LOOKS at the homophones before deciding which
-    /// tone to add, so latching on them would turn a glance into a mode change
-    /// and make the very next `5` commit a candidate instead of toning the
-    /// syllable. `↓` is the one a user already reaches for to go INTO a
-    /// list, and binding it costs no new key and no new `ComposingAction`.
-    ///
-    /// Keyed on the key pressed, NOT on where the selection lands — those are
-    /// different questions, and only the first one says what the user meant.
-    /// The horizontal layout reads `.down` and `.pageDown` as the same page
-    /// turn (`HorizontalPageLayout.target(for:from:)`), so on that layout the
-    /// two keys move the selection identically and only `↓` latches. That is
-    /// the intended asymmetry: the paging keys — `⇞`, `⇟`, `[` and `]` — are
-    /// for looking further down the list, which is the glance this rule is
-    /// written to protect.
-    ///
-    /// Typing clears it, so the way back is the next thing the user was going
-    /// to type anyway; so does anything that ends the composition, which is
-    /// where the bar and the list it selects from go too.
-    ///
-    /// Picking a candidate does NOT clear it, and that is deliberate. It is
-    /// choosing, not typing, and what it did is not knowable here: a slot the
-    /// page never filled commits nothing at all, and a candidate that consumes
-    /// only part of the buffer nails a prefix and leaves the user mid-choice
-    /// over the rest — `taigikhipuann` picking 台語 and then still owing a
-    /// candidate for `khipuann`. Where a pick really does finish the
-    /// composition, the bar comes down with it and
-    /// `TaigiInputController.dismissCandidates` clears the latch there, which
-    /// is the one place that knows.
-    ///
-    /// The rest — the other navigations, and a pass-through the host owns —
-    /// leave it alone: none of them is a statement either way.
-    ///
-    /// Pure, and separate from the classification above, because it runs AFTER
-    /// an intent rather than producing one: the key that latches is classified
-    /// against the latch as it stood when it was pressed.
-    static func selectionLatch(after intent: ComposingKeyIntent, wasLatched: Bool) -> Bool {
-        switch intent {
-        case .navigate(.down):
-            true
-        case .input, .deleteBackward, .commit, .cancel, .commitThenInsert,
-             .commitThenPassThrough:
-            false
-        case .commitHighlightedCandidate, .commitAlternateScript, .selectCandidateSlot,
-             .navigate, .passThrough:
-            wasLatched
-        }
     }
 
     /// The slot `key` picks as one of the `⇧1`…`⇧9` chords, counting from

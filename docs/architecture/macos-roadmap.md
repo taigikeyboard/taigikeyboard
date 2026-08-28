@@ -374,7 +374,8 @@ retired panes, and clears the two recording toggles they carried so a stored
   and bind at PR4b. **Superseded 2026-08-28** (kept as the decision of record): the shipped
   slot keys are now the bare keys `q w d f z x v y ;` (slots 1–9); `⇧1…9` / `⌃1…9` / `⌥1…9`
   are the other three picker choices, one live at a time (`CandidateSlotKeySet`). A bare digit
-  additionally picks where it cannot be a tone (2026-08-24 grammar rule) or after `↓`.
+  additionally picks where it cannot be a tone (2026-08-24 grammar rule); the `↓` latch of #610
+  is retired (2026-08-28) and the window always draws the chosen set.
 - PR8a timing (proto regen window vs concurrent iOS/Android session).
 - Custom-dict Time-Machine/backup-exclusion policy (decided at PR12; plan default =
   stays inside TM scope, matching the 2026-08-16 learning-DB decision).

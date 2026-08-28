@@ -502,7 +502,6 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     enum Call: Equatable {
         case show(CandidateWindowContent, caretRect: CGRect)
         case updateCells([CandidateCellContent], isOwner: Bool)
-        case updateSlotKeyStyle(CandidateSlotKeyStyle, isOwner: Bool)
         case navigate(CandidateNavigation)
         case hide(isOwner: Bool)
         case hideForHandover
@@ -521,12 +520,12 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// candidates the user can no longer see.
     var shownContent: CandidateWindowContent? {
         guard isShowing else { return nil }
-        return CandidateWindowContent(cells: cells, slotKeyStyle: slotKeyStyle)
+        return CandidateWindowContent(cells: cells, slotKeySet: slotKeySet)
     }
 
-    /// The key the window was last told picks a candidate — what a case
-    /// asserting the hint matches the key contract reads.
-    private(set) var slotKeyStyle: CandidateSlotKeyStyle = .bare
+    /// The keys the window was last told pick — what a case asserting the
+    /// hint matches the key contract reads.
+    private(set) var slotKeySet: CandidateSlotKeySet = .bareKeys
 
     var isShowing: Bool {
         owner != nil
@@ -541,7 +540,7 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     ) {
         self.owner = owner
         cells = content.cells
-        slotKeyStyle = content.slotKeyStyle
+        slotKeySet = content.slotKeySet
         selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
     }
@@ -553,17 +552,6 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         guard self.owner == owner, !cells.isEmpty, !newCells.isEmpty else { return }
         cells = newCells
         selectedIndex = min(selectedIndex, cells.count - 1)
-    }
-
-    func updateSlotKeyStyle(
-        _ style: CandidateSlotKeyStyle,
-        ownedBy owner: ComposingSessionToken,
-    ) {
-        calls.append(.updateSlotKeyStyle(style, isOwner: self.owner == owner))
-        // The real panel's contract: the keys are repainted, and nothing else
-        // about the window moves.
-        guard self.owner == owner, !cells.isEmpty else { return }
-        slotKeyStyle = style
     }
 
     func navigate(_ direction: CandidateNavigation, ownedBy owner: ComposingSessionToken) {

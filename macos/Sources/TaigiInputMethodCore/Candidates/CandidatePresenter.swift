@@ -19,12 +19,11 @@ import AppKit
 struct CandidateWindowContent: Equatable, Sendable {
     let cells: [CandidateCellContent]
 
-    /// Which key picks a candidate at this moment — what the window draws
-    /// beside each cell. Part of the content rather than a setting, because it
-    /// is a fact about the composition the cells came from: the same list
-    /// typed one keystroke later can be picked by a different key
-    /// (`CandidateSlotKeyStyle`).
-    let slotKeyStyle: CandidateSlotKeyStyle
+    /// Which keys pick the candidates — what the window draws beside each
+    /// cell (`CandidateIndexLabel`). Carried with the content rather than read
+    /// by the window, so the keys drawn are the ones the keystroke that
+    /// produced this list was classified against.
+    let slotKeySet: CandidateSlotKeySet
 }
 
 /// Which way a navigation key asks the candidate window to move.
@@ -95,16 +94,6 @@ protocol CandidatePresenter {
     /// already anchored, so no caret query is needed (the queries `show`
     /// depends on are only allowed inside key events).
     func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken)
-
-    /// Redraws the key beside every numbered cell under `style`, keeping the
-    /// cells, the page, the anchor and the selection exactly as they are.
-    ///
-    /// Its own contract because the selection latch flips the live key WITHOUT
-    /// a new candidate list: navigating does not re-fetch, so nothing calls
-    /// `show` on the keystroke that latches, and a window left drawing `q`
-    /// while a bare `1` picks would be naming a key that does something else —
-    /// the one thing `CandidateSlotKeyStyle` exists to prevent.
-    func updateSlotKeyStyle(_ style: CandidateSlotKeyStyle, ownedBy owner: ComposingSessionToken)
 
     /// Moves the selection the way the current layout reads `direction`, if
     /// `owner` still owns the window. Clamps at both ends — never wraps
