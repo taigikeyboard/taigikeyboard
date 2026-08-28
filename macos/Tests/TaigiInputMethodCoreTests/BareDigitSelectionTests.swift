@@ -14,7 +14,7 @@ final class BareDigitSelectionTests: XCTestCase {
         modifiers: NSEvent.ModifierFlags = [],
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
-        keySet: CandidateSlotKeySet = .letters,
+        keySet: CandidateSlotKeySet = .bareKeys,
         rawInput: String,
     ) throws -> ComposingKeyIntent {
         let event = try TestFixtures.keyDownEvent(characters: characters, modifiers: modifiers)

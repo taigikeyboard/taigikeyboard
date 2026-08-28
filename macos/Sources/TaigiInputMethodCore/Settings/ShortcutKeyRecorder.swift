@@ -138,7 +138,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     private static let minimumWidth: Double = 130
 
     var language: DisplayLanguageStore?
-    var slotKeySet: CandidateSlotKeySet = .letters
+    var slotKeySet: CandidateSlotKeySet = .bareKeys
     var additionalRejection: ((RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
     var onRecord: ((RecordedShortcutKey?) -> Void)?
 

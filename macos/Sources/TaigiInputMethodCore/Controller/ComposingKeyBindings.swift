@@ -13,30 +13,33 @@ import AppKit
 ///   digit types punctuation, which nobody types while choosing a candidate —
 ///   the composition ends first — so the chord costs nothing while the bar is
 ///   up and reads as punctuation again the moment it is down (USER
-///   2026-08-28).
+///   2026-08-28). Never drawn: every set names all nine slots itself, and the
+///   window draws the most direct key.
 /// - A bare `1`…`9` picks once no tone can follow the buffer
 ///   (`ComposingKeyIntent.canTypeToneDigit`). A bare digit is a TL/POJ tone
 ///   marker first (`tai5`), which is why none of the sets below can put the
 ///   digits themselves on the slots — and why the system Zhuyin input method's
 ///   bare-digit selection cannot be matched here.
 enum CandidateSlotKeySet: String, CaseIterable, Sendable {
-    /// Six bare letters on slots 0…5 — `q` `w` `d` `f` `z` `x` — with `⇧7`…`⇧9`
-    /// naming the last three. The letters are six of the eight no TL or POJ
-    /// syllable spells (`ComposingKeyChord.syllableLetters`), so a syllable can
-    /// still be typed with the bar up; they are the left hand's, so the right
-    /// stays on the letters being typed. Rime's Taigi schema offers home-row
-    /// letters the same way
-    /// (`references/rime-phah-taibun/schema/phah_taibun.schema.yaml:136`
-    /// `alternative_select_keys`). The shipped default (USER 2026-08-28).
-    case letters
+    /// Nine bare keys, one per slot — `q w d f z x v y ;`. The eight letters
+    /// are every letter no TL or POJ syllable spells
+    /// (`ComposingKeyChord.syllableLetters`), so a syllable can still be typed
+    /// with the bar up; `;` is the ninth because neither romanization writes
+    /// it and, unlike `,` or `.`, nobody types it straight after a word to end
+    /// a composition. Rime's Taigi schema offers a bare row the same way,
+    /// `;` included (`references/rime-phah-taibun/schema/phah_taibun.schema.yaml:136`
+    /// `alternative_select_keys: "asdfghjkl;"`). The shipped default (USER
+    /// 2026-08-28; nine rather than six so every slot of a nine-row page has
+    /// a bare key).
+    case bareKeys
     /// `⌃1`…`⌃9`.
     case control
     /// `⌥1`…`⌥9`.
     case option
 
-    /// The letters `letters` puts on slots 0…5, in slot order. Lowercase, as
+    /// The keys `bareKeys` puts on slots 0…8, in slot order. Lowercase, as
     /// they are matched and drawn: a bare key types its lowercase form.
-    static let letterKeys = ["q", "w", "d", "f", "z", "x"]
+    static let bareKeyRow = ["q", "w", "d", "f", "z", "x", "v", "y", ";"]
 
     /// The slot `key` picks under this set with exactly `modifiers` held, or
     /// nil when it picks none.
@@ -51,19 +54,16 @@ enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     func slot(forKey key: String?, heldWith modifiers: NSEvent.ModifierFlags) -> Int? {
         guard let digitModifier else {
             guard modifiers.isEmpty, let key else { return nil }
-            return Self.letterKeys.firstIndex(of: key.lowercased())
+            return Self.bareKeyRow.firstIndex(of: key.lowercased())
         }
         guard modifiers == digitModifier.flag else { return nil }
         return ComposingKeyIntent.directSelectionSlot(key)
     }
 
-    /// The key this set gives the candidate in `slot`, or nil where it gives
-    /// none — the letters stop at the sixth, and the fixed `⇧` digits take
-    /// over (`CandidateIndexLabel`, which owns which key is drawn).
-    func label(forSlot slot: Int) -> String? {
-        guard let digitModifier else {
-            return slot < Self.letterKeys.count ? Self.letterKeys[slot] : nil
-        }
+    /// The key this set gives the candidate in `slot`, for the nine slots a
+    /// page holds (`CandidateIndexLabel`, which owns which key is drawn).
+    func label(forSlot slot: Int) -> String {
+        guard let digitModifier else { return Self.bareKeyRow[slot] }
         return digitModifier.symbol + String(slot + 1)
     }
 
@@ -71,16 +71,16 @@ enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     /// themselves, in the glyphs the keyboard prints them with, so the row
     /// reads the same in every display language.
     var menuLabel: String {
-        guard let digitModifier else { return Self.letterKeys.joined(separator: " ") }
+        guard let digitModifier else { return Self.bareKeyRow.joined(separator: " ") }
         return "\(digitModifier.symbol)1 – \(digitModifier.symbol)9"
     }
 
     /// The modifier the digit chords are held with, and how it is written on
-    /// a key cap. Nil for `letters`, whose keys are bare — so every rule above
-    /// asks this once and reads the answer as "the letters" or "the digits".
+    /// a key cap. Nil for `bareKeys` — so every rule above asks this once and
+    /// reads the answer as "the bare keys" or "the digits".
     private var digitModifier: (flag: NSEvent.ModifierFlags, symbol: String)? {
         switch self {
-        case .letters: nil
+        case .bareKeys: nil
         case .control: (.control, "⌃")
         case .option: (.option, "⌥")
         }
@@ -114,7 +114,7 @@ struct ComposingKeyBindings: Sendable, Equatable {
 
     init(
         chords: [ComposingAction: ComposingKeyChord?] = [:],
-        slotKeySet: CandidateSlotKeySet = .letters,
+        slotKeySet: CandidateSlotKeySet = .bareKeys,
     ) {
         var resolved: [ComposingAction: ComposingKeyChord] = [:]
         for action in ComposingAction.allCases {
@@ -163,8 +163,8 @@ struct ComposingKeyBindings: Sendable, Equatable {
     ///
     /// Needed here as well as in the recorder because the slot key set can be
     /// changed afterwards: a ⌥Return recorded while Control held the slots
-    /// keeps working, but a ⌥3 does not — nor does a bare `z` once the letters
-    /// hold them — and a row that silently does nothing is worse than an
+    /// keeps working, but a ⌥3 does not — nor does a bare `z` once the bare
+    /// keys hold them — and a row that silently does nothing is worse than an
     /// empty one. Dropped from the resolved value, not from storage: the row
     /// comes back if the picker moves off the set that shadowed it.
     private static func removeShadowedByCandidateSlots(

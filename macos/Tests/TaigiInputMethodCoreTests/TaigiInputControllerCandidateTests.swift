@@ -38,8 +38,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.letters),
-            "`taigi` ends in a letter, so a bare digit is still a tone — the letters pick",
+            .keyed(.bareKeys),
+            "`taigi` ends in a letter, so a bare digit is still a tone — the bare keys pick",
         )
 
         _ = try session.controller.handle(
@@ -56,7 +56,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.letters),
+            .keyed(.bareKeys),
             "Backspace puts the letter tail back, and the slot keys with it",
         )
     }
@@ -77,7 +77,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// keystroke — the window is never told a key set that has been replaced.
     func testSlotKeyHint_followsARebindOnTheNextKeystroke() throws {
         let session = try composedSession()
-        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .keyed(.letters))
+        XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeyStyle, .keyed(.bareKeys))
 
         try withSlotKeySet(.option) {
             _ = try session.controller.handle(
@@ -230,7 +230,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.letters),
+            .keyed(.bareKeys),
             "`taigi` ends in a letter, so the grammar rule alone keeps the slot keys",
         )
 
@@ -294,7 +294,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.letters),
+            .keyed(.bareKeys),
             "typing is not choosing, so the digits are tones again",
         )
     }
@@ -320,7 +320,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.letters),
+            .keyed(.bareKeys),
         )
     }
 
@@ -380,7 +380,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(session.presenter.shownContent).slotKeyStyle,
-            .keyed(.letters),
+            .keyed(.bareKeys),
         )
     }
 
@@ -598,8 +598,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// shipped letter, the fixed shifted digit, and — under that set — `⌃2`.
     func testEverySlotKey_commitsThatSlotOfTheVisiblePage() throws {
         let keys: [(name: String, keySet: CandidateSlotKeySet, event: () throws -> NSEvent)] = [
-            ("w", .letters, { try TestFixtures.keyDownEvent(characters: "w") }),
-            ("⇧2", .letters, { try TestFixtures.shiftedDigitKeyDownEvent(slot: 1) }),
+            ("w", .bareKeys, { try TestFixtures.keyDownEvent(characters: "w") }),
+            ("⇧2", .bareKeys, { try TestFixtures.shiftedDigitKeyDownEvent(slot: 1) }),
             ("⌃2", .control, { try Self.controlDigitEvent(slot: 1) }),
         ]
         for (name, keySet, event) in keys {

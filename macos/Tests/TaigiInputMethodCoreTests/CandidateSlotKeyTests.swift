@@ -33,7 +33,7 @@ final class CandidateSlotKeyTests: XCTestCase {
         _ key: KeyEventSnapshot,
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
-        keySet: CandidateSlotKeySet = .letters,
+        keySet: CandidateSlotKeySet = .bareKeys,
         rawInput: String = "tai",
     ) -> ComposingKeyIntent {
         ComposingKeyIntent.intent(
@@ -56,22 +56,23 @@ final class CandidateSlotKeyTests: XCTestCase {
         snapshot(")", modifiers: .shift, keyCode: kVK_ANSI_0)
     }
 
-    // MARK: - The letters
+    // MARK: - The bare keys
 
-    func testTheSixLetters_pickSlotsZeroToFive_whileTheBarIsUp() {
-        for (slot, letter) in CandidateSlotKeySet.letterKeys.enumerated() {
-            XCTAssertEqual(intent(snapshot(letter)), .selectCandidateSlot(slot), letter)
+    func testTheNineBareKeys_pickSlotsZeroToEight_whileTheBarIsUp() {
+        XCTAssertEqual(CandidateSlotKeySet.bareKeyRow.count, HorizontalPageLayout.pageSize, "one key per slot")
+        for (slot, key) in CandidateSlotKeySet.bareKeyRow.enumerated() {
+            XCTAssertEqual(intent(snapshot(key)), .selectCandidateSlot(slot), key)
         }
     }
 
     /// The set is the shipped one: a fresh `ComposingKeyBindings` reads it,
     /// and so does a store with nothing recorded.
-    func testTheLetters_areTheShippedSet() throws {
-        XCTAssertEqual(ComposingKeyBindings.default.slotKeySet, .letters)
-        XCTAssertEqual(try makeScratchSettingsStore().composingKeyBindings.slotKeySet, .letters)
+    func testTheBareKeys_areTheShippedSet() throws {
+        XCTAssertEqual(ComposingKeyBindings.default.slotKeySet, .bareKeys)
+        XCTAssertEqual(try makeScratchSettingsStore().composingKeyBindings.slotKeySet, .bareKeys)
     }
 
-    func testTheLetters_pickWhetherOrNotAToneCouldStillBeTyped() {
+    func testABareKey_picksWhetherOrNotAToneCouldStillBeTyped() {
         XCTAssertEqual(intent(snapshot("q"), rawInput: "tai"), .selectCandidateSlot(0))
         XCTAssertEqual(intent(snapshot("q"), rawInput: "tai5"), .selectCandidateSlot(0))
     }
@@ -83,28 +84,32 @@ final class CandidateSlotKeyTests: XCTestCase {
         XCTAssertEqual(intent(snapshot("Q", modifiers: .shift, keyCode: kVK_ANSI_Q)), .input("Q"))
     }
 
-    /// The letters are the slot tier's only while the bar is up: with none,
+    /// The bare keys are the slot tier's only while the bar is up: with none,
     /// or under another set, `q` is a letter a custom-dictionary romanization
-    /// may need.
-    func testALetter_isInputWhereverItIsNotASlotKey() {
+    /// may need, and `;` is the punctuation it types.
+    func testABareKey_isItselfWhereverItIsNotASlotKey() {
         XCTAssertEqual(intent(snapshot("q"), isShowingCandidates: false), .input("q"))
         XCTAssertEqual(intent(snapshot("q"), isComposing: false, isShowingCandidates: false), .input("q"))
         XCTAssertEqual(intent(snapshot("q"), keySet: .control), .input("q"))
         XCTAssertEqual(intent(snapshot("q"), keySet: .option), .input("q"))
+        XCTAssertEqual(intent(snapshot(";"), isShowingCandidates: false), .commitThenInsert(";"))
+        XCTAssertEqual(intent(snapshot(";"), keySet: .control), .commitThenInsert(";"))
     }
 
-    /// The two free letters the set leaves out, and a syllable letter, stay
-    /// input.
-    func testTheLettersOutsideTheSet_stayInput() {
-        for letter in ["v", "y", "a"] {
-            XCTAssertEqual(intent(snapshot(letter)), .input(letter), letter)
+    /// A syllable letter, and the punctuation typed straight after a word to
+    /// end it, stay what they were: the set takes no key a composition needs.
+    func testKeysOutsideTheSet_stayWhatTheyType() {
+        XCTAssertEqual(intent(snapshot("a")), .input("a"))
+        for punctuation in [",", ".", "'"] {
+            XCTAssertEqual(intent(snapshot(punctuation)), .commitThenInsert(punctuation), punctuation)
         }
     }
 
-    /// Slots 6…8 have no letter; the shifted digits are how the set reaches
-    /// them, and a bare `7` is still the tone it was.
-    func testTheLastThreeSlots_underTheLetters_takeTheShiftedDigit() throws {
+    /// The shifted digits still pick under the bare keys — a second key for
+    /// the same slot — and a bare `7` is still the tone it was.
+    func testAShiftedDigit_underTheBareKeys_isASecondKeyForTheSlot() throws {
         XCTAssertEqual(try intent(shiftedDigitUS(7)), .selectCandidateSlot(6))
+        XCTAssertEqual(intent(snapshot(";")), .selectCandidateSlot(8))
         XCTAssertEqual(intent(snapshot("7"), rawInput: "tai"), .input("7"))
     }
 
@@ -207,7 +212,9 @@ final class CandidateSlotKeyTests: XCTestCase {
     // MARK: - The picker
 
     func testTheMenuLabels_nameTheKeysThemselves() {
-        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.menuLabel), ["q w d f z x", "⌃1 – ⌃9", "⌥1 – ⌥9"])
+        XCTAssertEqual(
+            CandidateSlotKeySet.allCases.map(\.menuLabel), ["q w d f z x v y ;", "⌃1 – ⌃9", "⌥1 – ⌥9"],
+        )
     }
 
     // MARK: - A global row left on a shifted digit

@@ -17,7 +17,7 @@ final class SelectionLatchTests: XCTestCase {
         modifiers: NSEvent.ModifierFlags = [],
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
-        keySet: CandidateSlotKeySet = .letters,
+        keySet: CandidateSlotKeySet = .bareKeys,
         rawInput: String,
         isSelectionLatched: Bool,
     ) throws -> ComposingKeyIntent {

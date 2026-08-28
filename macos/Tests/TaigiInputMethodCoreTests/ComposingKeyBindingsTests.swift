@@ -172,7 +172,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
         XCTAssertEqual(bindings.chord(for: .pageBackward), try chord("["))
         XCTAssertEqual(bindings.chord(for: .pageForward), try chord("]"))
-        XCTAssertEqual(bindings.slotKeySet, .letters)
+        XCTAssertEqual(bindings.slotKeySet, .bareKeys)
     }
 
     /// Walking BACK through the candidates is the one action the system Zhuyin
@@ -375,14 +375,14 @@ final class ComposingKeyBindingsTests: XCTestCase {
     }
 
     /// Dropped from the resolved value, not from storage: the same stored
-    /// chords read differently under each set, so a row the letters shadow is
+    /// chords read differently under each set, so a row the bare keys shadow is
     /// back the moment the picker moves off them — the way ⌥3 already is.
     func testABareLetterTheLettersShadow_comesBackUnderTheDigits() throws {
         let stored: [ComposingAction: ComposingKeyChord?] = [.commitAlternateScript: try chord("z")]
 
         XCTAssertNil(
-            ComposingKeyBindings(chords: stored, slotKeySet: .letters).chord(for: .commitAlternateScript),
-            "a bare `z` picks the fifth candidate while the letters hold the slots",
+            ComposingKeyBindings(chords: stored, slotKeySet: .bareKeys).chord(for: .commitAlternateScript),
+            "a bare `z` picks the fifth candidate while the bare keys hold the slots",
         )
         XCTAssertEqual(
             ComposingKeyBindings(chords: stored, slotKeySet: .control).chord(for: .commitAlternateScript),
@@ -393,7 +393,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     func testIsCandidateSlotChord_namesOnlyTheNineDigitsUnderTheChosenModifier() throws {
         XCTAssertTrue(try chord("3", .control).isCandidateSlotChord(under: .control))
         XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .option))
-        XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .letters))
+        XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .bareKeys))
         XCTAssertFalse(
             try chord("0", .control).isCandidateSlotChord(under: .control),
             "⌃0 addresses no slot",
@@ -405,19 +405,18 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertFalse(try chord("]", .control).isCandidateSlotChord(under: .control))
     }
 
-    func testIsCandidateSlotChord_namesTheSixBareLettersOnlyUnderTheLetters() throws {
-        for letter in CandidateSlotKeySet.letterKeys {
-            XCTAssertTrue(try chord(letter).isCandidateSlotChord(under: .letters))
-            XCTAssertFalse(try chord(letter).isCandidateSlotChord(under: .control))
+    func testIsCandidateSlotChord_namesTheNineBareKeysOnlyUnderTheBareKeys() throws {
+        for key in CandidateSlotKeySet.bareKeyRow {
+            XCTAssertTrue(try chord(key).isCandidateSlotChord(under: .bareKeys))
+            XCTAssertFalse(try chord(key).isCandidateSlotChord(under: .control))
             XCTAssertFalse(
-                try chord(letter, .shift).isCandidateSlotChord(under: .letters),
-                "⇧\(letter) is a chord of its own, not a slot key",
+                try chord(key, .shift).isCandidateSlotChord(under: .bareKeys),
+                "⇧\(key) is a chord of its own, not a slot key",
             )
         }
-        // The two free letters the set leaves out, and a syllable letter
-        // that could never be recorded bare anyway.
-        XCTAssertFalse(try chord("v").isCandidateSlotChord(under: .letters))
-        XCTAssertFalse(try chord("y").isCandidateSlotChord(under: .letters))
+        // Bare punctuation outside the set stays an ordinary chord.
+        XCTAssertFalse(try chord(",").isCandidateSlotChord(under: .bareKeys))
+        XCTAssertFalse(try chord("'").isCandidateSlotChord(under: .bareKeys))
     }
 
     /// `⇧1`…`⇧9` pick under every set, so no chord on one can exist at all:

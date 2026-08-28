@@ -50,12 +50,9 @@ enum CandidateIndexLabel {
     /// lines up with the nine above it.
     static func text(forSlot slot: Int, style: CandidateSlotKeyStyle) -> String {
         guard (0 ..< HorizontalPageLayout.pageSize).contains(slot) else { return "" }
-        let digit = String(slot + 1)
         switch style {
-        case .bare: return digit
-        // Where the set has no key for the slot, the fixed `⇧` digit is the
-        // key that picks it (`ComposingKeyIntent.shiftedDigitSlot`).
-        case let .keyed(keySet): return keySet.label(forSlot: slot) ?? "⇧" + digit
+        case .bare: return String(slot + 1)
+        case let .keyed(keySet): return keySet.label(forSlot: slot)
         }
     }
 

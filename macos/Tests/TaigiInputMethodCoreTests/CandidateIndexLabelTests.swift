@@ -37,14 +37,14 @@ final class CandidateIndexLabelTests: XCTestCase {
         XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .keyed(.control)), "")
     }
 
-    /// The letters name six slots and the shifted digits the other three —
-    /// each drawn lowercase or with its `⇧`, the way the key is pressed.
-    func testSlotKeys_underTheLetters_areTheSixLettersThenTheShiftedDigits() {
+    /// The bare keys name all nine slots, drawn lowercase — the way each key
+    /// is pressed.
+    func testSlotKeys_underTheBareKeys_areTheNineKeysInSlotOrder() {
         XCTAssertEqual(
-            (0 ..< 9).map { CandidateIndexLabel.text(forSlot: $0, style: .keyed(.letters)) },
-            ["q", "w", "d", "f", "z", "x", "⇧7", "⇧8", "⇧9"],
+            (0 ..< 9).map { CandidateIndexLabel.text(forSlot: $0, style: .keyed(.bareKeys)) },
+            ["q", "w", "d", "f", "z", "x", "v", "y", ";"],
         )
-        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .keyed(.letters)), "")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .keyed(.bareKeys)), "")
     }
 
     // MARK: - What each layout draws

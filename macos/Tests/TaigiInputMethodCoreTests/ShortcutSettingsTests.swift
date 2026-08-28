@@ -37,7 +37,7 @@ final class ShortcutSettingsTests: XCTestCase {
             ComposingAction.nextCandidate.settingsKeyName,
             "composingShortcut.nextCandidate",
         )
-        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.rawValue), ["letters", "control", "option"])
+        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.rawValue), ["bareKeys", "control", "option"])
     }
 
     /// A row whose text is missing in one language reads as an identifier — or
@@ -106,7 +106,7 @@ final class ShortcutSettingsTests: XCTestCase {
         for action in ComposingAction.allCases {
             XCTAssertEqual(bindings.chord(for: action), action.defaultChord, "\(action) did not come back")
         }
-        XCTAssertEqual(bindings.slotKeySet, .letters)
+        XCTAssertEqual(bindings.slotKeySet, .bareKeys)
     }
 
     /// Removed, not written over: a stored default would be indistinguishable

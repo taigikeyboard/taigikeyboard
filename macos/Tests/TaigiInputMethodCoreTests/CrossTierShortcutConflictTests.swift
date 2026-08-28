@@ -213,8 +213,8 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             "⌃3 is free while Option holds the slots",
         )
         XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .letters), [],
-            "⌃3 is free while the letters hold the slots",
+            ShortcutConflicts.globalActionsHoldingSlotChords(under: .bareKeys), [],
+            "⌃3 is free while the bare keys hold the slots",
         )
     }
 
@@ -222,7 +222,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         recordGlobal(.init(.q), for: .openLastSettingsPane)
 
         XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .letters), [.openLastSettingsPane],
+            ShortcutConflicts.globalActionsHoldingSlotChords(under: .bareKeys), [.openLastSettingsPane],
         )
         XCTAssertEqual(ShortcutConflicts.globalActionsHoldingSlotChords(under: .control), [])
     }
@@ -313,10 +313,10 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         let store = try makeScratchSettingsStore()
         // The order the recorder cannot refuse retroactively: the shortcut was
         // recorded while the digits held the slots, then the picker moved to
-        // the letters — the set a fresh store reads.
+        // the bare keys — the set a fresh store reads.
         recordGlobal(.init(.q), for: .openLastSettingsPane)
         // A chord only another set claims stays: ⌃3 is nobody's slot while
-        // the letters hold them.
+        // the bare keys hold them.
         recordGlobal(.init(.three, modifiers: [.control]), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)

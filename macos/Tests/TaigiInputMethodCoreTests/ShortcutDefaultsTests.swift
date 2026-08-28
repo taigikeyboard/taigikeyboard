@@ -43,13 +43,13 @@ final class ShortcutDefaultsTests: XCTestCase {
         )
     }
 
-    /// The chords the slot tier claims out of the box: the six letters of the
-    /// set it ships with. The nine shifted digits every set shares are not
+    /// The chords the slot tier claims out of the box: the nine bare keys of
+    /// the set it ships with. The nine shifted digits every set shares are not
     /// chords at all — `ComposingKeyChord.make` refuses them — so no default
     /// can sit on one (`ComposingKeyBindingsTests.testAShiftedDigit_cannotBeAChord_underAnySet`).
     private func slotChords() throws -> [ComposingKeyChord] {
-        try CandidateSlotKeySet.letterKeys.map { letter in
-            try ComposingKeyChord.make(key: letter, modifiers: []).get()
+        try CandidateSlotKeySet.bareKeyRow.map { key in
+            try ComposingKeyChord.make(key: key, modifiers: []).get()
         }
     }
 
