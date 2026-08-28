@@ -202,6 +202,59 @@ fn to_poj_non_ts_initial_unchanged() {
     assert_eq!(to_poj("h", "a", "2"), "h\u{00e1}");
 }
 
+// MARK: - `au` coda regression — user report 2026-08-28 (落 rendered `lau̍h`).
+// The closed-syllable "mark the second vowel" rule is a POJ orthographic
+// exception owned by `oa` / `oe` alone; `au` keeps its `a` nucleus before a
+// coda. Canonical: taigi-converter `tests/poj.test.js` "auh keeps mark on a".
+
+#[test]
+fn to_poj_auh_keeps_mark_on_a() {
+    assert_eq!(to_poj("l", "auh", "8"), "la\u{030d}uh");
+    assert_eq!(to_poj("l", "auh", "2"), "l\u{00e1}uh");
+}
+
+#[test]
+fn to_poj_aunnh_keeps_mark_on_a() {
+    assert_eq!(to_poj("l", "aunnh", "8"), "la\u{030d}u\u{207f}h");
+}
+
+#[test]
+fn to_poj_au_open_keeps_mark_on_a() {
+    assert_eq!(to_poj("l", "au", "8"), "la\u{030d}u");
+}
+
+#[test]
+fn to_poj_oa_oe_coda_exception_is_preserved() {
+    // Open and nasalized keep the mark on `o`; a consonant coda moves it.
+    assert_eq!(to_poj("g", "ua", "2"), "g\u{00f3}a");
+    assert_eq!(to_poj("p", "uann", "3"), "p\u{00f2}a\u{207f}");
+    assert_eq!(to_poj("ts", "uah", "8"), "choa\u{030d}h");
+    assert_eq!(to_poj("ts", "uan", "5"), "cho\u{00e2}n");
+    assert_eq!(to_poj("k", "ueh", "8"), "koe\u{030d}h");
+}
+
+#[test]
+fn to_poj_ui_keeps_mark_on_u() {
+    // POJ diverges from TL here on purpose: 水 is `chúi` in POJ, `tsuí` in TL.
+    assert_eq!(to_poj("ts", "ui", "2"), "ch\u{00fa}i");
+}
+
+// MARK: - dialectal `ere` / `iri` trailing-vowel placement.
+// Canonical taigi-converter `d990cb9`; MOE manual rule (5)4(6) "ere marks the
+// latter e, e.g. erê" — mirrored on the TL side by `place_tl_tone_mark`.
+
+#[test]
+fn to_poj_ere_marks_trailing_vowel() {
+    assert_eq!(to_poj("p", "ere", "5"), "per\u{00ea}");
+    assert_eq!(to_poj("p", "ereh", "8"), "pere\u{030d}h");
+}
+
+#[test]
+fn to_poj_iri_marks_trailing_vowel() {
+    assert_eq!(to_poj("p", "iri", "5"), "pir\u{00ee}");
+    assert_eq!(to_poj("p", "irinn", "5"), "pir\u{00ee}\u{207f}");
+}
+
 // MARK: - P2 regression — Codex PR #183 discussion r3143646949.
 // place_poj_tone_mark suffix lookahead must decode the next Unicode scalar,
 // not cast a single byte. Previously, finals like the POJ form of TL `uannh`

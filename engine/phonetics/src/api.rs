@@ -484,6 +484,9 @@ mod tests {
         assert_eq!(to_tone_marks("teng2", InputMode::Poj), "t\u{e9}ng");
         assert_eq!(to_tone_marks("goa2", InputMode::Poj), "g\u{f3}a");
         assert_eq!(to_tone_marks("chiah8", InputMode::Poj), "chia\u{30d}h");
+        // `au` keeps its `a` nucleus before a coda (落 la̍uh), unlike the
+        // `oa` / `oe` closed-syllable exception.
+        assert_eq!(to_tone_marks("lauh8", InputMode::Poj), "la\u{30d}uh");
     }
 
     // trace: the single-syllable validator is `split_initial_final ∘

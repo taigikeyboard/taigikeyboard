@@ -416,7 +416,7 @@ tshî,徐,50,chhî,tshi5,chhi5,ㄑㄧˊ,,tshi,chhi,ㄑㄧ,,,,,,True,False
 kōo,怙,50,kō͘,koo7,koo7,ㄍㆦ˫,,koo,koo,ㄍㆦ,,,,,,True,False
 siōnn,想,50,siōⁿ,sionn7,sionn7,ㄒㄧㆧ˫,,sionn,sionn,ㄒㄧㆧ,,,,,,True,False
 khái,愷,50,khái,khai2,khai2,ㄎㄞˋ,,khai,khai,ㄎㄞ,,,,,,True,False
-tse̍re,截,50,che̍re,tsere8,chere8,ㄗㄜㆤ̇,ㄗㄛㆤ̇,tsere,chere,ㄗㄜㆤ,ㄗㄛㆤ,,,,,True,False
+tse̍re,截,50,chere̍,tsere8,chere8,ㄗㄜㆤ̇,ㄗㄛㆤ̇,tsere,chere,ㄗㄜㆤ,ㄗㄛㆤ,,,,,True,False
 tsha̋i,才,50,chhăi,tshai9,chhai9,ㄘㄞˆ,,tshai,chhai,ㄘㄞ,,,,,,True,False
 khok,扣,50,khok,khok4,khok4,ㄎㆦㆻ,,khok,khok,ㄎㆦㆻ,,,,,,True,False
 tshé,扯,50,chhé,tshe2,chhe2,ㄘㆤˋ,,tshe,chhe,ㄘㆤ,,,,,,True,False
@@ -457,7 +457,6 @@ ki̍t,汔,50,ki̍t,kit8,kit8,ㄍㄧㆵ̇,,kit,kit,ㄍㄧㆵ,,,,,,True,False
 suann,汕,50,soaⁿ,suann1,soann1,ㄙㄨㆩ,,suann,soann,ㄙㄨㆩ,,,,,,True,False
 hóng,汞,50,hóng,hong2,hong2,ㄏㆲˋ,,hong,hong,ㄏㆲ,,,,,,True,False
 phe̍h,沫,50,phe̍h,pheh8,pheh8,ㄆㆤㆷ̇,,pheh,pheh,ㄆㆤㆷ,,,,,,True,False
-phe̍rh,沫,50,phe̍rh,pherh8,pherh8,ㄆㄜㆷ̇,ㄆㄛㆷ̇,pherh,pherh,ㄆㄜㆷ,ㄆㄛㆷ,,,,,True,False
 pho,泡,50,pho,pho1,pho1,ㄆㄛ,,pho,pho,ㄆㄛ,,,,,,True,False
 phū,浡,50,phū,phu7,phu7,ㄆㄨ˫,,phu,phu,ㄆㄨ,,,,,,True,False
 nuā,涎,50,nōa,nua7,noa7,ㄋㄨㄚ˫,,nua,noa,ㄋㄨㄚ,,,,,,True,True
@@ -473,7 +472,6 @@ iok,煜,50,iok,iok4,iok4,ㄧㆦㆻ,,iok,iok,ㄧㆦㆻ,,,,,,True,False
 iāng,煬,50,iāng,iang7,iang7,ㄧㄤ˫,,iang,iang,ㄧㄤ,,,,,,True,False
 thn̄g,熥,50,thn̄g,thng7,thng7,ㄊㆭ˫,,thng,thng,ㄊㆭ,,,,,,True,False
 lîn,燐,50,lîn,lin5,lin5,ㄌㄧㄣˊ,,lin,lin,ㄌㄧㄣ,,,,,,True,False
-lerê,犁,50,lêre,lere5,lere5,ㄌㄜㆤˊ,ㄌㄛㆤˊ,lere,lere,ㄌㄜㆤ,ㄌㄛㆤ,,,,,True,False
 suân,璿,50,soân,suan5,soan5,ㄙㄨㄢˊ,,suan,soan,ㄙㄨㄢ,,,,,,True,False
 luî,癗,50,lûi,lui5,lui5,ㄌㄨㄧˊ,,lui,lui,ㄌㄨㄧ,,,,,,True,False
 gîn,睨,50,gîn,gin5,gin5,ㆣㄧㄣˊ,,gin,gin,ㆣㄧㄣ,,,,,,True,False
@@ -486,10 +484,9 @@ iū,祐,50,iū,iu7,iu7,ㄧㄨ˫,,iu,iu,ㄧㄨ,,,,,,True,False
 jiông,禳,50,jiông,jiong5,jiong5,ㆢㄧㆲˊ,,jiong,jiong,ㆢㄧㆲ,,,,,,True,False
 ta̍t,笛,50,ta̍t,tat8,tat8,ㄉㄚㆵ̇,,tat,tat,ㄉㄚㆵ,,,,,,True,False
 ti̍k,笛,50,te̍k,tik8,tek8,ㄉㄧㆻ̇,,tik,tek,ㄉㄧㆻ,,,,,,True,False
-lerē,笠,50,lēre,lere7,lere7,ㄌㄜㆤ˫,ㄌㄛㆤ˫,lere,lere,ㄌㄜㆤ,ㄌㄛㆤ,,,,,True,False
+lerē,笠,50,lerē,lere7,lere7,ㄌㄜㆤ˫,ㄌㄛㆤ˫,lere,lere,ㄌㄜㆤ,ㄌㄛㆤ,,,,,True,False
 thuàn,篆,50,thoàn,thuan3,thoan3,ㄊㄨㄢ˪,,thuan,thoan,ㄊㄨㄢ,,,,,,True,False
 buê,糜,50,bôe,bue5,boe5,ㆠㄨㆤˊ,,bue,boe,ㆠㄨㆤ,,,,,,True,False
-bêr,糜,50,bêr,ber5,ber5,ㆠㄜˊ,ㆠㄛˊ,ber,ber,ㆠㄜ,ㆠㄛ,,,,,True,False
 kuǎn,縣,50,koǎn,kuan6,koan6,ㄍㄨㄢˇ,,kuan,koan,ㄍㄨㄢ,,,,,,True,False
 u̍t,聿,50,u̍t,ut8,ut8,ㄨㆵ̇,,ut,ut,ㄨㆵ,,,,,,True,False
 ôo,胡,50,ô͘,oo5,oo5,ㆦˊ,,oo,oo,ㆦ,,,,,,True,False
@@ -504,7 +501,6 @@ khing,虹,50,kheng,khing1,kheng1,ㄎㄧㄥ,,khing,kheng,ㄎㄧㄥ,,,,,,True,Fals
 khīng,虹,50,khēng,khing7,kheng7,ㄎㄧㄥ˫,,khing,kheng,ㄎㄧㄥ,,,,,,True,False
 hā,蚶,50,hā,ha7,ha7,ㄏㄚ˫,,ha,ha,ㄏㄚ,,,,,,True,False
 hē,蟹,50,hē,he7,he7,ㄏㆤ˫,,he,he,ㄏㆤ,,,,,,True,False
-phēr,被,50,phēr,pher7,pher7,ㄆㄜ˫,ㄆㄛ˫,pher,pher,ㄆㄜ,ㄆㄛ,,,,,True,False
 buâ,覓,50,bôa,bua5,boa5,ㆠㄨㄚˊ,,bua,boa,ㆠㄨㄚ,,,,,,True,False
 bā,覓,50,bā,ba7,ba7,ㆠㄚ˫,,ba,ba,ㆠㄚ,,,,,,True,False
 bǎ,覓,50,bǎ,ba6,ba6,ㆠㄚˇ,,ba,ba,ㆠㄚ,,,,,,True,False
@@ -534,7 +530,7 @@ bí,鎂,50,bí,bi2,bi2,ㆠㄧˋ,,bi,bi,ㆠㄧ,,,,,,True,False
 siunn,鑲,50,siuⁿ,siunn1,siunn1,ㄒㄧㆫ,,siunn,siunn,ㄒㄧㆫ,,,,,,True,False
 khàm,闞,50,khàm,kham3,kham3,ㄎㆰ˪,,kham,kham,ㄎㆰ,,,,,,True,False
 gún-tau,阮兜,50,gún-tau,gun2tau1,gun2tau1,ㆣㄨㄣˋㄉㄠ,,guntau,guntau,ㆣㄨㄣㄉㄠ,,gt,gt,ㆣㄉ,,True,False
-pha̍uh,雹,50,phau̍h,phauh8,phauh8,ㄆㄠㆷ̇,,phauh,phauh,ㄆㄠㆷ,,,,,,True,False
+pha̍uh,雹,50,pha̍uh,phauh8,phauh8,ㄆㄠㆷ̇,,phauh,phauh,ㄆㄠㆷ,,,,,,True,False
 gê,霓,50,gê,ge5,ge5,ㆣㆤˊ,,ge,ge,ㆣㆤ,,,,,,True,False
 gî,騎,50,gî,gi5,gi5,ㆣㄧˊ,,gi,gi,ㆣㄧ,,,,,,True,False
 khî,騎,50,khî,khi5,khi5,ㄎㄧˊ,,khi,khi,ㄎㄧ,,,,,,True,False
@@ -1888,7 +1884,7 @@ tsha-tshò,差錯,25,chha-chhò,tsha1tsho3,chha1chho3,ㄘㄚㄘㄛ˪,,tshatsho,c
 kí-hāi,己亥,25,kí-hāi,ki2hai7,ki2hai7,ㄍㄧˋㄏㄞ˫,,kihai,kihai,ㄍㄧㄏㄞ,,kh,kh,ㄍㄏ,,True,False
 pa-hí,巴喜,25,pa-hí,pa1hi2,pa1hi2,ㄅㄚㄏㄧˋ,,pahi,pahi,ㄅㄚㄏㄧ,,ph,ph,ㄅㄏ,,True,False
 bá-suh,巴士,25,bá-suh,ba2suh4,ba2suh4,ㆠㄚˋㄙㄨㆷ,,basuh,basuh,ㆠㄚㄙㄨㆷ,,bs,bs,ㆠㄙ,,True,False
-pa-la̍uh,巴落,25,pa-lau̍h,pa1lauh8,pa1lauh8,ㄅㄚㄌㄠㆷ̇,,palauh,palauh,ㄅㄚㄌㄠㆷ,,pl,pl,ㄅㄌ,,True,False
+pa-la̍uh,巴落,25,pa-la̍uh,pa1lauh8,pa1lauh8,ㄅㄚㄌㄠㆷ̇,,palauh,palauh,ㄅㄚㄌㄠㆷ,,pl,pl,ㄅㄌ,,True,False
 tshī-tiônn,市場,25,chhī-tiôⁿ,tshi7tionn5,chhi7tionn5,ㄑㄧ˫ㄉㄧㆧˊ,,tshitionn,chhitionn,ㄑㄧㄉㄧㆧ,,tt,ct,ㄑㄉ,,True,False
 pòo-phâng,布帆,25,pò͘-phâng,poo3phang5,poo3phang5,ㄅㆦ˪ㄆㄤˊ,,poophang,poophang,ㄅㆦㄆㄤ,,pp,pp,ㄅㄆ,,True,True
 pòo-pînn,布棚,25,pò͘-pîⁿ,poo3pinn5,poo3pinn5,ㄅㆦ˪ㄅㆪˊ,,poopinn,poopinn,ㄅㆦㄅㆪ,,pp,pp,ㄅㄅ,,True,True
@@ -2154,7 +2150,7 @@ guá-beh,我欲,25,góa-beh,gua2beh4,goa2beh4,ㆣㄨㄚˋㆠㆤㆷ,,guabeh,goabe
 guá-tsia,我遮,25,góa-chia,gua2tsia1,goa2chia1,ㆣㄨㄚˋㄐㄧㄚ,,guatsia,goachia,ㆣㄨㄚㄐㄧㄚ,,gt,gc,ㆣㄐ,,True,False
 tshiâng-á,戕仔,25,chhiâng-á,tshiang5a2,chhiang5a2,ㄑㄧㄤˊㄚˋ,,tshianga,chhianga,ㄑㄧㄤㄚ,,ta,ca,ㄑㄚ,,True,False
 tse̍h-tôo,截圖,25,che̍h-tô͘,tseh8too5,cheh8too5,ㄗㆤㆷ̇ㄉㆦˊ,,tsehtoo,chehtoo,ㄗㆤㆷㄉㆦ,,tt,ct,ㄗㄉ,,True,False
-tse̍re-tôo,截圖,25,che̍re-tô͘,tsere8too5,chere8too5,ㄗㄜㆤ̇ㄉㆦˊ,ㄗㄛㆤ̇ㄉㆦˊ,tseretoo,cheretoo,ㄗㄜㆤㄉㆦ,ㄗㄛㆤㄉㆦ,tt,ct,ㄗㄉ,,True,False
+tse̍re-tôo,截圖,25,chere̍-tô͘,tsere8too5,chere8too5,ㄗㄜㆤ̇ㄉㆦˊ,ㄗㄛㆤ̇ㄉㆦˊ,tseretoo,cheretoo,ㄗㄜㆤㄉㆦ,ㄗㄛㆤㄉㆦ,tt,ct,ㄗㄉ,,True,False
 tsia̍t-tôo,截圖,25,chia̍t-tô͘,tsiat8too5,chiat8too5,ㄐㄧㄚㆵ̇ㄉㆦˊ,,tsiattoo,chiattoo,ㄐㄧㄚㆵㄉㆦ,,tt,ct,ㄐㄉ,,True,False
 tsue̍h-tôo,截圖,25,choe̍h-tô͘,tsueh8too5,choeh8too5,ㄗㄨㆤㆷ̇ㄉㆦˊ,,tsuehtoo,choehtoo,ㄗㄨㆤㆷㄉㆦ,,tt,ct,ㄗㄉ,,True,False
 tsia̍t-ki,截肢,25,chia̍t-ki,tsiat8ki1,chiat8ki1,ㄐㄧㄚㆵ̇ㄍㄧ,,tsiatki,chiatki,ㄐㄧㄚㆵㄍㄧ,,tk,ck,ㄐㄍ,,True,False
@@ -3094,7 +3090,7 @@ tîm-kiû,沉球,25,tîm-kiû,tim5kiu5,tim5kiu5,ㄉㄧㆬˊㄍㄧㄨˊ,,timkiu,t
 tîm-tsuì,沉醉,25,tîm-chùi,tim5tsui3,tim5chui3,ㄉㄧㆬˊㄗㄨㄧ˪,,timtsui,timchui,ㄉㄧㆬㄗㄨㄧ,,tt,tc,ㄉㄗ,,True,False
 bi̍t-lo̍h,沒落,25,bi̍t-lo̍h,bit8loh8,bit8loh8,ㆠㄧㆵ̇ㄌㄛㆷ̇,,bitloh,bitloh,ㆠㄧㆵㄌㄛㆷ,,bl,bl,ㆠㄌ,,True,False
 bu̍t-lo̍h,沒落,25,bu̍t-lo̍h,but8loh8,but8loh8,ㆠㄨㆵ̇ㄌㄛㆷ̇,,butloh,butloh,ㆠㄨㆵㄌㄛㆷ,,bl,bl,ㆠㄌ,,True,False
-ta̍uh-ta̍uh,沓沓,25,tau̍h-tau̍h,tauh8tauh8,tauh8tauh8,ㄉㄠㆷ̇ㄉㄠㆷ̇,,tauhtauh,tauhtauh,ㄉㄠㆷㄉㄠㆷ,,tt,tt,ㄉㄉ,,True,False
+ta̍uh-ta̍uh,沓沓,25,ta̍uh-ta̍uh,tauh8tauh8,tauh8tauh8,ㄉㄠㆷ̇ㄉㄠㆷ̇,,tauhtauh,tauhtauh,ㄉㄠㆷㄉㄠㆷ,,tt,tt,ㄉㄉ,,True,False
 ta̍p-tih,沓滴,25,ta̍p-tih,tap8tih4,tap8tih4,ㄉㄚㆴ̇ㄉㄧㆷ,,taptih,taptih,ㄉㄚㆴㄉㄧㆷ,,tt,tt,ㄉㄉ,,True,False
 sua-á,沙仔,25,soa-á,sua1a2,soa1a2,ㄙㄨㄚㄚˋ,,suaa,soaa,ㄙㄨㄚㄚ,,sa,sa,ㄙㄚ,,True,False
 sa-teh,沙嗲,25,sa-teh,sa1teh4,sa1teh4,ㄙㄚㄉㆤㆷ,,sateh,sateh,ㄙㄚㄉㆤㆷ,,st,st,ㄙㄉ,,True,False
@@ -3312,7 +3308,7 @@ siâu-tsí,潲子,25,siâu-chí,siau5tsi2,siau5chi2,ㄒㄧㄠˊㄐㄧˋ,,siautsi
 siap-phānn,澀奅,25,siap-phāⁿ,siap4phann7,siap4phann7,ㄒㄧㄚㆴㄆㆩ˫,,siapphann,siapphann,ㄒㄧㄚㆴㄆㆩ,,sp,sp,ㄒㄆ,,True,False
 tshū-jiō,澍尿,25,chhū-jiō,tshu7jio7,chhu7jio7,ㄘㄨ˫ㆢㄧㄛ˫,,tshujio,chhujio,ㄘㄨㆢㄧㄛ,,tj,cj,ㄘㆢ,,True,False
 tshū-liō,澍尿,25,chhū-liō,tshu7lio7,chhu7lio7,ㄘㄨ˫ㄌㄧㄛ˫,,tshulio,chhulio,ㄘㄨㄌㄧㄛ,,tl,cl,ㄘㄌ,,True,False
-ha̍unnh-ha̍unnh,澩澩,25,hau̍ⁿh-hau̍ⁿh,haunnh8haunnh8,haunnh8haunnh8,ㄏㆯㆷ̇ㄏㆯㆷ̇,,haunnhhaunnh,haunnhhaunnh,ㄏㆯㆷㄏㆯㆷ,,hh,hh,ㄏㄏ,,True,False
+ha̍unnh-ha̍unnh,澩澩,25,ha̍uⁿh-ha̍uⁿh,haunnh8haunnh8,haunnh8haunnh8,ㄏㆯㆷ̇ㄏㆯㆷ̇,,haunnhhaunnh,haunnhhaunnh,ㄏㆯㆷㄏㆯㆷ,,hh,hh,ㄏㄏ,,True,False
 tiān-hún,澱粉,25,tiān-hún,tian7hun2,tian7hun2,ㄉㄧㄢ˫ㄏㄨㄣˋ,,tianhun,tianhun,ㄉㄧㄢㄏㄨㄣ,,th,th,ㄉㄏ,,True,False
 tâm-tē,澹地,25,tâm-tē,tam5te7,tam5te7,ㄉㆰˊㄉㆤ˫,,tamte,tamte,ㄉㆰㄉㆤ,,tt,tt,ㄉㄉ,,True,False
 tâm-sué,澹洗,25,tâm-sóe,tam5sue2,tam5soe2,ㄉㆰˊㄙㄨㆤˋ,,tamsue,tamsoe,ㄉㆰㄙㄨㆤ,,ts,ts,ㄉㄙ,,True,False
@@ -3874,8 +3870,8 @@ ngī-tsiānn,硬掙,25,ngī-chiāⁿ,ngi7tsiann7,ngi7chiann7,ㄫㄧ˫ㄐㄧㆩ˫
 ngē-tshah,硬插,25,ngē-chhah,nge7tshah4,nge7chhah4,ㄫㆤ˫ㄘㄚㆷ,,ngetshah,ngechhah,ㄫㆤㄘㄚㆷ,,nt,nc,ㄫㄘ,,True,False
 ngī-tshah,硬插,25,ngī-chhah,ngi7tshah4,ngi7chhah4,ㄫㄧ˫ㄘㄚㆷ,,ngitshah,ngichhah,ㄫㄧㄘㄚㆷ,,nt,nc,ㄫㄘ,,True,False
 ngē-sí,硬死,25,ngē-sí,nge7si2,nge7si2,ㄫㆤ˫ㄒㄧˋ,,ngesi,ngesi,ㄫㆤㄒㄧ,,ns,ns,ㄫㄒ,,True,False
-ngē-ha̍unnh,硬澩,25,ngē-hau̍ⁿh,nge7haunnh8,nge7haunnh8,ㄫㆤ˫ㄏㆯㆷ̇,,ngehaunnh,ngehaunnh,ㄫㆤㄏㆯㆷ,,nh,nh,ㄫㄏ,,True,False
-ngī-ha̍unnh,硬澩,25,ngī-hau̍ⁿh,ngi7haunnh8,ngi7haunnh8,ㄫㄧ˫ㄏㆯㆷ̇,,ngihaunnh,ngihaunnh,ㄫㄧㄏㆯㆷ,,nh,nh,ㄫㄏ,,True,False
+ngē-ha̍unnh,硬澩,25,ngē-ha̍uⁿh,nge7haunnh8,nge7haunnh8,ㄫㆤ˫ㄏㆯㆷ̇,,ngehaunnh,ngehaunnh,ㄫㆤㄏㆯㆷ,,nh,nh,ㄫㄏ,,True,False
+ngī-ha̍unnh,硬澩,25,ngī-ha̍uⁿh,ngi7haunnh8,ngi7haunnh8,ㄫㄧ˫ㄏㆯㆷ̇,,ngihaunnh,ngihaunnh,ㄫㄧㄏㆯㆷ,,nh,nh,ㄫㄏ,,True,False
 ngē-kńg,硬管,25,ngē-kńg,nge7kng2,nge7kng2,ㄫㆤ˫ㄍㆭˋ,,ngekng,ngekng,ㄫㆤㄍㆭ,,nk,nk,ㄫㄍ,,True,False
 ngī-kńg,硬管,25,ngī-kńg,ngi7kng2,ngi7kng2,ㄫㄧ˫ㄍㆭˋ,,ngikng,ngikng,ㄫㄧㄍㆭ,,nk,nk,ㄫㄍ,,True,False
 ngē-si,硬絲,25,ngē-si,nge7si1,nge7si1,ㄫㆤ˫ㄒㄧ,,ngesi,ngesi,ㄫㆤㄒㄧ,,ns,ns,ㄫㄒ,,True,False
@@ -4899,7 +4895,7 @@ bē-tē,賣地,25,bē-tē,be7te7,be7te7,ㆠㆤ˫ㄉㆤ˫,,bete,bete,ㆠㆤㄉㆤ
 bē-tsiá,賣者,25,bē-chiá,be7tsia2,be7chia2,ㆠㆤ˫ㄐㄧㄚˋ,,betsia,bechia,ㆠㆤㄐㄧㄚ,,bt,bc,ㆠㄐ,,True,False
 tsiān-jîn,賤人,25,chiān-jîn,tsian7jin5,chian7jin5,ㄐㄧㄢ˫ㆢㄧㄣˊ,,tsianjin,chianjin,ㄐㄧㄢㆢㄧㄣ,,tj,cj,ㄐㆢ,,True,False
 tsit-tsú,質子,25,chit-chú,tsit4tsu2,chit4chu2,ㄐㄧㆵㄗㄨˋ,,tsittsu,chitchu,ㄐㄧㆵㄗㄨ,,tt,cc,ㄐㄗ,,True,False
-tóo-ba̍uh,賭貿,25,tó͘-bau̍h,too2bauh8,too2bauh8,ㄉㆦˋㆠㄠㆷ̇,,toobauh,toobauh,ㄉㆦㆠㄠㆷ,,tb,tb,ㄉㆠ,,True,False
+tóo-ba̍uh,賭貿,25,tó͘-ba̍uh,too2bauh8,too2bauh8,ㄉㆦˋㆠㄠㆷ̇,,toobauh,toobauh,ㄉㆦㆠㄠㆷ,,tb,tb,ㄉㆠ,,True,False
 luā-hô,賴和,25,lōa-hô,lua7ho5,loa7ho5,ㄌㄨㄚ˫ㄏㄛˊ,,luaho,loaho,ㄌㄨㄚㄏㄛ,,lh,lh,ㄌㄏ,,True,False
 tsuán-tsînn,賺錢,25,choán-chîⁿ,tsuan2tsinn5,choan2chinn5,ㄗㄨㄢˋㄐㆪˊ,,tsuantsinn,choanchinn,ㄗㄨㄢㄐㆪ,,tt,cc,ㄗㄐ,,True,False
 tsàn-siann,贊聲,25,chàn-siaⁿ,tsan3siann1,chan3siann1,ㄗㄢ˪ㄒㄧㆩ,,tsansiann,chansiann,ㄗㄢㄒㄧㆩ,,ts,cs,ㄗㄒ,,True,False
@@ -7483,7 +7479,7 @@ khá-sū-kòo,巧士購,16,khá-sū-kò͘,kha2su7koo3,kha2su7koo3,ㄎㄚˋㄙㄨ
 khiáu-ki-á,巧機仔,16,khiáu-ki-á,khiau2ki1a2,khiau2ki1a2,ㄎㄧㄠˋㄍㄧㄚˋ,,khiaukia,khiaukia,ㄎㄧㄠㄍㄧㄚ,,kka,kka,ㄎㄍㄚ,,True,False
 kī-jîn-luī,巨人類,16,kī-jîn-lūi,ki7jin5lui7,ki7jin5lui7,ㄍㄧ˫ㆢㄧㄣˊㄌㄨㄧ˫,,kijinlui,kijinlui,ㄍㄧㆢㄧㄣㄌㄨㄧ,,kjl,kjl,ㄍㆢㄌ,,True,False
 kī-hē-tsō,巨蟹座,16,kī-hē-chō,ki7he7tso7,ki7he7cho7,ㄍㄧ˫ㄏㆤ˫ㄗㄛ˫,,kihetso,kihecho,ㄍㄧㄏㆤㄗㄛ,,kht,khc,ㄍㄏㄗ,,True,False
-kīr-hēre-tsō,巨蟹座,16,kīr-hēre-chō,kir7here7tso7,kir7here7cho7,ㄍㆨ˫ㄏㄜㆤ˫ㄗㄛ˫,ㄍㆨ˫ㄏㄛㆤ˫ㄗㄛ˫,kirheretso,kirherecho,ㄍㆨㄏㄜㆤㄗㄛ,ㄍㆨㄏㄛㆤㄗㄛ,kht,khc,ㄍㄏㄗ,,True,False
+kīr-hēre-tsō,巨蟹座,16,kīr-herē-chō,kir7here7tso7,kir7here7cho7,ㄍㆨ˫ㄏㄜㆤ˫ㄗㄛ˫,ㄍㆨ˫ㄏㄛㆤ˫ㄗㄛ˫,kirheretso,kirherecho,ㄍㆨㄏㄜㆤㄗㄛ,ㄍㆨㄏㄛㆤㄗㄛ,kht,khc,ㄍㄏㄗ,,True,False
 kū-huē-tsō,巨蟹座,16,kū-hōe-chō,ku7hue7tso7,ku7hoe7cho7,ㄍㄨ˫ㄏㄨㆤ˫ㄗㄛ˫,,kuhuetso,kuhoecho,ㄍㄨㄏㄨㆤㄗㄛ,,kht,khc,ㄍㄏㄗ,,True,False
 pa-lóng-ué,巴壟衛,16,pa-lóng-óe,pa1long2ue2,pa1long2oe2,ㄅㄚㄌㆲˋㄨㆤˋ,,palongue,palongoe,ㄅㄚㄌㆲㄨㆤ,,plu,plo,ㄅㄌㄨ,,True,False
 pa-pí-lûn,巴比倫,16,pa-pí-lûn,pa1pi2lun5,pa1pi2lun5,ㄅㄚㄅㄧˋㄌㄨㄣˊ,,papilun,papilun,ㄅㄚㄅㄧㄌㄨㄣ,,ppl,ppl,ㄅㄅㄌ,,True,False
@@ -8695,7 +8691,7 @@ tiâm-tsik-giâm,沉積岩,16,tiâm-chek-giâm,tiam5tsik4giam5,tiam5chek4giam5,�
 tiâm-tsik-gâm,沉積岩,16,tiâm-chek-gâm,tiam5tsik4gam5,tiam5chek4gam5,ㄉㄧㆰˊㄐㄧㆻㆣㆰˊ,,tiamtsikgam,tiamchekgam,ㄉㄧㆰㄐㄧㆻㆣㆰ,,ttg,tcg,ㄉㄐㆣ,,True,False
 tîm-tsik-giâm,沉積岩,16,tîm-chek-giâm,tim5tsik4giam5,tim5chek4giam5,ㄉㄧㆬˊㄐㄧㆻㆣㄧㆰˊ,,timtsikgiam,timchekgiam,ㄉㄧㆬㄐㄧㆻㆣㄧㆰ,,ttg,tcg,ㄉㄐㆣ,,True,False
 tîm-tsik-gâm,沉積岩,16,tîm-chek-gâm,tim5tsik4gam5,tim5chek4gam5,ㄉㄧㆬˊㄐㄧㆻㆣㆰˊ,,timtsikgam,timchekgam,ㄉㄧㆬㄐㄧㆻㆣㆰ,,ttg,tcg,ㄉㄐㆣ,,True,False
-ta̍uh-ta̍uh-á,沓沓仔,16,tau̍h-tau̍h-á,tauh8tauh8a2,tauh8tauh8a2,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋ,,tauhtauha,tauhtauha,ㄉㄠㆷㄉㄠㆷㄚ,,tta,tta,ㄉㄉㄚ,,True,False
+ta̍uh-ta̍uh-á,沓沓仔,16,ta̍uh-ta̍uh-á,tauh8tauh8a2,tauh8tauh8a2,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋ,,tauhtauha,tauhtauha,ㄉㄠㆷㄉㄠㆷㄚ,,tta,tta,ㄉㄉㄚ,,True,False
 tshiong-thian-phàu,沖天炮,16,chhiong-thian-phàu,tshiong1thian1phau3,chhiong1thian1phau3,ㄑㄧㆲㄊㄧㄢㄆㄠ˪,,tshiongthianphau,chhiongthianphau,ㄑㄧㆲㄊㄧㄢㄆㄠ,,ttp,ctp,ㄑㄊㄆ,,True,False
 sua-thâu-kak,沙頭角,16,soa-thâu-kak,sua1thau5kak4,soa1thau5kak4,ㄙㄨㄚㄊㄠˊㄍㄚㆻ,,suathaukak,soathaukak,ㄙㄨㄚㄊㄠㄍㄚㆻ,,stk,stk,ㄙㄊㄍ,,True,False
 hô-siōng-tsiu,河上洲,16,hô-siōng-chiu,ho5siong7tsiu1,ho5siong7chiu1,ㄏㄛˊㄒㄧㆲ˫ㄐㄧㄨ,,hosiongtsiu,hosiongchiu,ㄏㄛㄒㄧㆲㄐㄧㄨ,,hst,hsc,ㄏㄒㄐ,,True,False
@@ -8930,7 +8926,7 @@ liû-lám-khì,瀏覽器,16,liû-lám-khì,liu5lam2khi3,liu5lam2khi3,ㄌㄧㄨˊ
 kuàn-bo̍k-tsâng,灌木叢,16,koàn-bo̍k-châng,kuan3bok8tsang5,koan3bok8chang5,ㄍㄨㄢ˪ㆠㆦㆻ̇ㄗㄤˊ,,kuanboktsang,koanbokchang,ㄍㄨㄢㆠㆦㆻㄗㄤ,,kbt,kbc,ㄍㆠㄗ,,True,True
 kuàn-bo̍k-tsông,灌木叢,16,koàn-bo̍k-chông,kuan3bok8tsong5,koan3bok8chong5,ㄍㄨㄢ˪ㆠㆦㆻ̇ㄗㆲˊ,,kuanboktsong,koanbokchong,ㄍㄨㄢㆠㆦㆻㄗㆲ,,kbt,kbc,ㄍㆠㄗ,,True,False
 kuàn-thih-sái,灌鐵屎,16,koàn-thih-sái,kuan3thih4sai2,koan3thih4sai2,ㄍㄨㄢ˪ㄊㄧㆷㄙㄞˋ,,kuanthihsai,koanthihsai,ㄍㄨㄢㄊㄧㆷㄙㄞ,,kts,kts,ㄍㄊㄙ,,True,False
-hué-ka-la̍uh,火加落,16,hóe-ka-lau̍h,hue2ka1lauh8,hoe2ka1lauh8,ㄏㄨㆤˋㄍㄚㄌㄠㆷ̇,,huekalauh,hoekalauh,ㄏㄨㆤㄍㄚㄌㄠㆷ,,hkl,hkl,ㄏㄍㄌ,,True,True
+hué-ka-la̍uh,火加落,16,hóe-ka-la̍uh,hue2ka1lauh8,hoe2ka1lauh8,ㄏㄨㆤˋㄍㄚㄌㄠㆷ̇,,huekalauh,hoekalauh,ㄏㄨㆤㄍㄚㄌㄠㆷ,,hkl,hkl,ㄏㄍㄌ,,True,True
 hué-tshuì-ah,火喙鴨,16,hóe-chhùi-ah,hue2tshui3ah4,hoe2chhui3ah4,ㄏㄨㆤˋㄘㄨㄧ˪ㄚㆷ,,huetshuiah,hoechhuiah,ㄏㄨㆤㄘㄨㄧㄚㆷ,,hta,hca,ㄏㄘㄚ,,True,False
 hué-sìng-kâu,火性猴,16,hóe-sèng-kâu,hue2sing3kau5,hoe2seng3kau5,ㄏㄨㆤˋㄒㄧㄥ˪ㄍㄠˊ,,huesingkau,hoesengkau,ㄏㄨㆤㄒㄧㄥㄍㄠ,,hsk,hsk,ㄏㄒㄍ,,True,False
 hué-khióng-liông,火恐龍,16,hóe-khióng-liông,hue2khiong2liong5,hoe2khiong2liong5,ㄏㄨㆤˋㄎㄧㆲˋㄌㄧㆲˊ,,huekhiongliong,hoekhiongliong,ㄏㄨㆤㄎㄧㆲㄌㄧㆲ,,hkl,hkl,ㄏㄎㄌ,,True,False
@@ -11303,7 +11299,7 @@ thâu-khak-gông,頭殼楞,16,thâu-khak-gông,thau5khak4gong5,thau5khak4gong5,�
 thâu-mn̂g-tsing,頭毛精,16,thâu-mn̂g-cheng,thau5mng5tsing1,thau5mng5cheng1,ㄊㄠˊㄇㆭˊㄐㄧㄥ,,thaumngtsing,thaumngcheng,ㄊㄠㄇㆭㄐㄧㄥ,,tmt,tmc,ㄊㄇㄐ,,True,False
 thâu-moo-tshài,頭毛菜,16,thâu-mo͘-chhài,thau5moo1tshai3,thau5moo1chhai3,ㄊㄠˊㄇㆦㄘㄞ˪,,thaumootshai,thaumoochhai,ㄊㄠㄇㆦㄘㄞ,,tmt,tmc,ㄊㄇㄘ,,True,False
 thâu-lôo-hiunn,頭爐香,16,thâu-lô͘-hiuⁿ,thau5loo5hiunn1,thau5loo5hiunn1,ㄊㄠˊㄌㆦˊㄏㄧㆫ,,thauloohiunn,thauloohiunn,ㄊㄠㄌㆦㄏㄧㆫ,,tlh,tlh,ㄊㄌㄏ,,True,False
-thâu-lerê-lerê,頭犁犁,16,thâu-lêre-lêre,thau5lere5lere5,thau5lere5lere5,ㄊㄠˊㄌㄜㆤˊㄌㄜㆤˊ,ㄊㄠˊㄌㄛㆤˊㄌㄛㆤˊ,thaulerelere,thaulerelere,ㄊㄠㄌㄜㆤㄌㄜㆤ,ㄊㄠㄌㄛㆤㄌㄛㆤ,tll,tll,ㄊㄌㄌ,,True,False
+thâu-lerê-lerê,頭犁犁,16,thâu-lerê-lerê,thau5lere5lere5,thau5lere5lere5,ㄊㄠˊㄌㄜㆤˊㄌㄜㆤˊ,ㄊㄠˊㄌㄛㆤˊㄌㄛㆤˊ,thaulerelere,thaulerelere,ㄊㄠㄌㄜㆤㄌㄜㆤ,ㄊㄠㄌㄛㆤㄌㄛㆤ,tll,tll,ㄊㄌㄌ,,True,False
 thâu-ba̍k-tsiáu,頭目鳥,16,thâu-ba̍k-chiáu,thau5bak8tsiau2,thau5bak8chiau2,ㄊㄠˊㆠㄚㆻ̇ㄐㄧㄠˋ,,thaubaktsiau,thaubakchiau,ㄊㄠㆠㄚㆻㄐㄧㄠ,,tbt,tbc,ㄊㆠㄐ,,True,False
 thâu-kuà-kut,頭蓋骨,16,thâu-kòa-kut,thau5kua3kut4,thau5koa3kut4,ㄊㄠˊㄍㄨㄚ˪ㄍㄨㆵ,,thaukuakut,thaukoakut,ㄊㄠㄍㄨㄚㄍㄨㆵ,,tkk,tkk,ㄊㄍㄍ,,True,False
 thâu-khí-sing,頭起先,16,thâu-khí-seng,thau5khi2sing1,thau5khi2seng1,ㄊㄠˊㄎㄧˋㄒㄧㄥ,,thaukhising,thaukhiseng,ㄊㄠㄎㄧㄒㄧㄥ,,tks,tks,ㄊㄎㄒ,,True,False
@@ -13409,9 +13405,9 @@ kiû-sîn-mn̄g-pu̍t,求神問佛,12,kiû-sîn-mn̄g-pu̍t,kiu5sin5mng7put8,kiu
 kuānn-lâu-sap-tih,汗流屑滴,12,kōaⁿ-lâu-sap-tih,kuann7lau5sap4tih4,koann7lau5sap4tih4,ㄍㄨㆩ˫ㄌㄠˊㄙㄚㆴㄉㄧㆷ,,kuannlausaptih,koannlausaptih,ㄍㄨㆩㄌㄠㄙㄚㆴㄉㄧㆷ,,klst,klst,ㄍㄌㄙㄉ,,True,False
 kuānn-lâu-tsap-tih,汗流汁滴,12,kōaⁿ-lâu-chap-tih,kuann7lau5tsap4tih4,koann7lau5chap4tih4,ㄍㄨㆩ˫ㄌㄠˊㄗㄚㆴㄉㄧㆷ,,kuannlautsaptih,koannlauchaptih,ㄍㄨㆩㄌㄠㄗㄚㆴㄉㄧㆷ,,kltt,klct,ㄍㄌㄗㄉ,,True,False
 hān-lîu-kiap-puē,汗流浹背,12,hān-liû-kiap-pōe,han7liu5kiap4pue7,han7liu5kiap4poe7,ㄏㄢ˫ㄌㄧㄨˊㄍㄧㄚㆴㄅㄨㆤ˫,,hanliukiappue,hanliukiappoe,ㄏㄢㄌㄧㄨㄍㄧㄚㆴㄅㄨㆤ,,hlkp,hlkp,ㄏㄌㄍㄅ,,True,False
-ta̍uh-ta̍uh-á-lâi,沓沓仔來,12,tau̍h-tau̍h-á-lâi,tauh8tauh8a2lai5,tauh8tauh8a2lai5,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋㄌㄞˊ,,tauhtauhalai,tauhtauhalai,ㄉㄠㆷㄉㄠㆷㄚㄌㄞ,,ttal,ttal,ㄉㄉㄚㄌ,,True,False
-ta̍uh-ta̍uh-á-sī,沓沓仔是,12,tau̍h-tau̍h-á-sī,tauh8tauh8a2si7,tauh8tauh8a2si7,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋㄒㄧ˫,,tauhtauhasi,tauhtauhasi,ㄉㄠㆷㄉㄠㆷㄚㄒㄧ,,ttas,ttas,ㄉㄉㄚㄒ,,True,False
-ta̍uh-ta̍uh-á-kiânn,沓沓仔行,12,tau̍h-tau̍h-á-kiâⁿ,tauh8tauh8a2kiann5,tauh8tauh8a2kiann5,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋㄍㄧㆩˊ,,tauhtauhakiann,tauhtauhakiann,ㄉㄠㆷㄉㄠㆷㄚㄍㄧㆩ,,ttak,ttak,ㄉㄉㄚㄍ,,True,False
+ta̍uh-ta̍uh-á-lâi,沓沓仔來,12,ta̍uh-ta̍uh-á-lâi,tauh8tauh8a2lai5,tauh8tauh8a2lai5,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋㄌㄞˊ,,tauhtauhalai,tauhtauhalai,ㄉㄠㆷㄉㄠㆷㄚㄌㄞ,,ttal,ttal,ㄉㄉㄚㄌ,,True,False
+ta̍uh-ta̍uh-á-sī,沓沓仔是,12,ta̍uh-ta̍uh-á-sī,tauh8tauh8a2si7,tauh8tauh8a2si7,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋㄒㄧ˫,,tauhtauhasi,tauhtauhasi,ㄉㄠㆷㄉㄠㆷㄚㄒㄧ,,ttas,ttas,ㄉㄉㄚㄒ,,True,False
+ta̍uh-ta̍uh-á-kiânn,沓沓仔行,12,ta̍uh-ta̍uh-á-kiâⁿ,tauh8tauh8a2kiann5,tauh8tauh8a2kiann5,ㄉㄠㆷ̇ㄉㄠㆷ̇ㄚˋㄍㄧㆩˊ,,tauhtauhakiann,tauhtauhakiann,ㄉㄠㆷㄉㄠㆷㄚㄍㄧㆩ,,ttak,ttak,ㄉㄉㄚㄍ,,True,False
 sa-bui-sa-bui,沙微沙微,12,sa-bui-sa-bui,sa1bui1sa1bui1,sa1bui1sa1bui1,ㄙㄚㆠㄨㄧㄙㄚㆠㄨㄧ,,sabuisabui,sabuisabui,ㄙㄚㆠㄨㄧㄙㄚㆠㄨㄧ,,sbsb,sbsb,ㄙㆠㄙㆠ,,True,False
 sa-ko-hî-thâu,沙鍋魚頭,12,sa-ko-hî-thâu,sa1ko1hi5thau5,sa1ko1hi5thau5,ㄙㄚㄍㄛㄏㄧˊㄊㄠˊ,,sakohithau,sakohithau,ㄙㄚㄍㄛㄏㄧㄊㄠ,,skht,skht,ㄙㄍㄏㄊ,,True,False
 sa-long-pa-suh,沙龍巴斯,12,sa-long-pa-suh,sa1long1pa1suh4,sa1long1pa1suh4,ㄙㄚㄌㆲㄅㄚㄙㄨㆷ,,salongpasuh,salongpasuh,ㄙㄚㄌㆲㄅㄚㄙㄨㆷ,,slps,slps,ㄙㄌㄅㄙ,,True,False
@@ -14755,7 +14751,7 @@ tian-tò-thâu-senn,顛倒頭生,12,tian-tò-thâu-seⁿ,tian1to3thau5senn1,tian
 tian-tò-thâu-sǹg,顛倒頭算,12,tian-tò-thâu-sǹg,tian1to3thau5sng3,tian1to3thau5sng3,ㄉㄧㄢㄉㄛ˪ㄊㄠˊㄙㆭ˪,,tiantothausng,tiantothausng,ㄉㄧㄢㄉㄛㄊㄠㄙㆭ,,ttts,ttts,ㄉㄉㄊㄙ,,True,False
 kòo-kann--ê,顧監的,12,kò͘-kaⁿ--ê,koo3kann1e5,koo3kann1e5,ㄍㆦ˪ㄍㆩㆤˊ,,kookanne,kookanne,ㄍㆦㄍㆩㆤ,,kke,kke,ㄍㄍㆤ,,True,False
 hong-siann-pò-iánn,風聲報影,12,hong-siaⁿ-pò-iáⁿ,hong1siann1po3iann2,hong1siann1po3iann2,ㄏㆲㄒㄧㆩㄅㄛ˪ㄧㆩˋ,,hongsiannpoiann,hongsiannpoiann,ㄏㆲㄒㄧㆩㄅㄛㄧㆩ,,hspi,hspi,ㄏㄒㄅㄧ,,True,False
-hong-khah-serè-káng,風較細港,12,hong-khah-sère-káng,hong1khah4sere3kang2,hong1khah4sere3kang2,ㄏㆲㄎㄚㆷㄙㄜㆤ˪ㄍㄤˋ,ㄏㆲㄎㄚㆷㄙㄛㆤ˪ㄍㄤˋ,hongkhahserekang,hongkhahserekang,ㄏㆲㄎㄚㆷㄙㄜㆤㄍㄤ,ㄏㆲㄎㄚㆷㄙㄛㆤㄍㄤ,hksk,hksk,ㄏㄎㄙㄍ,,True,False
+hong-khah-serè-káng,風較細港,12,hong-khah-serè-káng,hong1khah4sere3kang2,hong1khah4sere3kang2,ㄏㆲㄎㄚㆷㄙㄜㆤ˪ㄍㄤˋ,ㄏㆲㄎㄚㆷㄙㄛㆤ˪ㄍㄤˋ,hongkhahserekang,hongkhahserekang,ㄏㆲㄎㄚㆷㄙㄜㆤㄍㄤ,ㄏㆲㄎㄚㆷㄙㄛㆤㄍㄤ,hksk,hksk,ㄏㄎㄙㄍ,,True,False
 hong-khah-suè-káng,風較細港,12,hong-khah-sòe-káng,hong1khah4sue3kang2,hong1khah4soe3kang2,ㄏㆲㄎㄚㆷㄙㄨㆤ˪ㄍㄤˋ,,hongkhahsuekang,hongkhahsoekang,ㄏㆲㄎㄚㆷㄙㄨㆤㄍㄤ,,hksk,hksk,ㄏㄎㄙㄍ,,True,False
 hong-khah-sè-káng,風較細港,12,hong-khah-sè-káng,hong1khah4se3kang2,hong1khah4se3kang2,ㄏㆲㄎㄚㆷㄙㆤ˪ㄍㄤˋ,,hongkhahsekang,hongkhahsekang,ㄏㆲㄎㄚㆷㄙㆤㄍㄤ,,hksk,hksk,ㄏㄎㄙㄍ,,True,False
 huang-khah-suè-káng,風較細港,12,hoang-khah-sòe-káng,huang1khah4sue3kang2,hoang1khah4soe3kang2,ㄏㄨㄤㄎㄚㆷㄙㄨㆤ˪ㄍㄤˋ,,huangkhahsuekang,hoangkhahsoekang,ㄏㄨㄤㄎㄚㆷㄙㄨㆤㄍㄤ,,hksk,hksk,ㄏㄎㄙㄍ,,True,False
@@ -15352,7 +15348,7 @@ kíng-tshat-tuā--ê,警察大--的,10,kéng-chhat-tōa--ê,king2tshat4tua7e5,ke
 phì-lūn-kóng,譬論講,10,phì-lūn-kóng,phi3lun7kong2,phi3lun7kong2,ㄆㄧ˪ㄌㄨㄣ˫ㄍㆲˋ,,philunkong,philunkong,ㄆㄧㄌㄨㄣㄍㆲ,,plk,plk,ㄆㄌㄍ,,True,False
 tha̍k--kuè-bô-huê,讀過無回,10,tha̍k--kòe-bô-hôe,thak8kue3bo5hue5,thak8koe3bo5hoe5,ㄊㄚㆻ̇ㄍㄨㆤ˪ㆠㄛˊㄏㄨㆤˊ,,thakkuebohue,thakkoebohoe,ㄊㄚㆻㄍㄨㆤㆠㄛㄏㄨㆤ,,tkbh,tkbh,ㄊㄍㆠㄏ,,True,False
 kuì-som-som,貴參參,10,kùi-som-som,kui3som1som1,kui3som1som1,ㄍㄨㄧ˪ㄙㆱㄙㆱ,,kuisomsom,kuisomsom,ㄍㄨㄧㄙㆱㄙㆱ,,kss,kss,ㄍㄙㄙ,,True,False
-ba̍uh,貿,10,bau̍h,bauh8,bauh8,ㆠㄠㆷ̇,,bauh,bauh,ㆠㄠㆷ,,,,,,True,False
+ba̍uh,貿,10,ba̍uh,bauh8,bauh8,ㆠㄠㆷ̇,,bauh,bauh,ㆠㄠㆷ,,,,,,True,False
 tsha̍t-thâu,賊頭,10,chha̍t-thâu,tshat8thau5,chhat8thau5,ㄘㄚㆵ̇ㄊㄠˊ,,tshatthau,chhatthau,ㄘㄚㆵㄊㄠ,,tt,ct,ㄘㄊ,,True,False
 luā-luā-sô,賴賴趖,10,lōa-lōa-sô,lua7lua7so5,loa7loa7so5,ㄌㄨㄚ˫ㄌㄨㄚ˫ㄙㄛˊ,,lualuaso,loaloaso,ㄌㄨㄚㄌㄨㄚㄙㄛ,,lls,lls,ㄌㄌㄙ,,True,False
 tsáu-lōo,走路,10,cháu-lō͘,tsau2loo7,chau2loo7,ㄗㄠˋㄌㆦ˫,,tsauloo,chauloo,ㄗㄠㄌㆦ,,tl,cl,ㄗㄌ,,True,False
@@ -15910,14 +15906,18 @@ hiok,旭,0,hiok,hiok4,hiok4,ㄏㄧㆦㆻ,,hiok,hiok,ㄏㄧㆦㆻ,,,,,,True,False
 iāu,曜,0,iāu,iau7,iau7,ㄧㄠ˫,,iau,iau,ㄧㄠ,,,,,,True,False
 huân,桓,0,hoân,huan5,hoan5,ㄏㄨㄢˊ,,huan,hoan,ㄏㄨㄢ,,,,,,True,False
 som,森,0,som,som1,som1,ㄙㆱ,,som,som,ㄙㆱ,,,,,,True,False
+phe̍rh,沫,0,phe̍rh,pherh8,pherh8,ㄆㄜㆷ̇,ㄆㄛㆷ̇,pherh,pherh,ㄆㄜㆷ,ㄆㄛㆷ,,,,,True,False
 khip,泣,0,khip,khip4,khip4,ㄎㄧㆴ,,khip,khip,ㄎㄧㆴ,,,,,,True,False
 giû,牛,0,giû,giu5,giu5,ㆣㄧㄨˊ,,giu,giu,ㆣㄧㄨ,,,,,,True,False
+lerê,犁,0,lerê,lere5,lere5,ㄌㄜㆤˊ,ㄌㄛㆤˊ,lere,lere,ㄌㄜㆤ,ㄌㄛㆤ,,,,,True,False
 khián,犬,0,khián,khian2,khian2,ㄎㄧㄢˋ,,khian,khian,ㄎㄧㄢ,,,,,,True,False
 hiân,玄,0,hiân,hian5,hian5,ㄏㄧㄢˊ,,hian,hian,ㄏㄧㄢ,,,,,,True,False
 nguí,研,0,ngúi,ngui2,ngui2,ㄫㄨㄧˋ,,ngui,ngui,ㄫㄨㄧ,,,,,,True,False
 ngái,研,0,ngái,ngai2,ngai2,ㄫㄞˋ,,ngai,ngai,ㄫㄞ,,,,,,True,False
+bêr,糜,0,bêr,ber5,ber5,ㆠㄜˊ,ㆠㄛˊ,ber,ber,ㆠㄜ,ㆠㄛ,,,,,True,False
 ngōo,臥,0,ngō͘,ngoo7,ngoo7,ㄫㆦ˫,,ngoo,ngoo,ㄫㆦ,,,,,,True,False
 tshong,蒼,0,chhong,tshong1,chhong1,ㄘㆲ,,tshong,chhong,ㄘㆲ,,,,,,True,False
+phēr,被,0,phēr,pher7,pher7,ㄆㄜ˫,ㄆㄛ˫,pher,pher,ㄆㄜ,ㄆㄛ,,,,,True,False
 tsi̍k,賊,0,che̍k,tsik8,chek8,ㄐㄧㆻ̇,,tsik,chek,ㄐㄧㆻ,,,,,,True,False
 huán,返,0,hoán,huan2,hoan2,ㄏㄨㄢˋ,,huan,hoan,ㄏㄨㄢ,,,,,,True,False
 ip,邑,0,ip,ip4,ip4,ㄧㆴ,,ip,ip,ㄧㆴ,,,,,,True,False

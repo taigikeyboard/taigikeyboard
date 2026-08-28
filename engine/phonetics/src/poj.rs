@@ -64,6 +64,17 @@ fn place_poj_tone_mark(final_str: &str, mark: &str) -> String {
         return final_str.replacen('a', &format!("a{mark}"), 1);
     }
 
+    // Dialectal `ere` / `iri` take the mark on the trailing vowel (`erê`,
+    // `irî`), matching TL and the MOE manual rule for `ere`. They hold no
+    // adjacent ASCII vowel pair, so without these the single-vowel fallback
+    // below would mark the leading vowel.
+    if final_str.contains("ere") {
+        return final_str.replacen("ere", &format!("ere{mark}"), 1);
+    }
+    if final_str.contains("iri") {
+        return final_str.replacen("iri", &format!("iri{mark}"), 1);
+    }
+
     // Two adjacent ASCII vowels. Mirrors poj.js placePojToneMark vowel-pair
     // logic; multi-branch chain collapsed for clippy::if_same_then_else.
     if let Some(m) = TWO_VOWELS.find(final_str) {
@@ -71,14 +82,20 @@ fn place_poj_tone_mark(final_str: &str, mark: &str) -> String {
         let start = m.start();
         let first = bytes[start] as char;
         let second = bytes[start + 1] as char;
-        let chars_count = final_str.chars().count();
         let nasal_without_h_prefix = (final_str.ends_with('\u{207f}')
             || final_str.ends_with('\u{1d3a}'))
             && !final_str.ends_with("h\u{207f}")
             && !final_str.ends_with("h\u{1d3a}");
+        // `oa` / `oe` are the only pairs whose mark moves off the leading
+        // vowel, and only when a consonant coda closes the syllable (oa̍h
+        // 活, choân 全, koe̍h); open (góa 我, ōe 話) and nasalized
+        // (pòaⁿ 半) forms keep it on `o`. Every other pair keeps its own
+        // nucleus — `au` is `a̍u` even before a coda (la̍uh 落), which the
+        // unguarded coda lookahead used to break.
+        let is_oa_oe_pair = first == 'o' && (second == 'a' || second == 'e');
         let target = if first == 'i' {
             second
-        } else if second != 'i' && chars_count > 2 && !nasal_without_h_prefix {
+        } else if is_oa_oe_pair && !nasal_without_h_prefix {
             // Suffix lookahead must decode the next Unicode scalar, not cast
             // a single byte. `final_str` here can carry multi-byte ⁿ (U+207F,
             // 3 bytes) or ᴺ (U+1D3A, 3 bytes) at `after`; `bytes[after] as
