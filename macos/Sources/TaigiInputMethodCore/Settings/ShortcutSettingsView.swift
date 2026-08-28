@@ -60,12 +60,10 @@ struct ShortcutSettingsView: View {
 
                 // Ends the moving-through group, because that is what it does.
                 // Glyphs rather than translated words: the keys are read off
-                // the keyboard, and `q w d f z x v y ;`, ⌃ and ⌥ are the same in
+                // the keyboard, and `q w d f z x v y ;`, ⇧, ⌃ and ⌥ are the same in
                 // every language the settings window speaks. A picker rather
                 // than a recorder because this row is one set standing for
-                // nine slots, not a key. `⇧1`…`⇧9` are not offered: they pick
-                // under every set, and the window draws them where they are
-                // the key that picks.
+                // nine slots, not a key.
                 Picker(language.string(.macosBindingSlotModifier), selection: $candidateSlotKeySet) {
                     ForEach(CandidateSlotKeySet.allCases, id: \.self) { keySet in
                         Text(verbatim: keySet.menuLabel).tag(keySet)

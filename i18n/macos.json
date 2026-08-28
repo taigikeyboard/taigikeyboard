@@ -650,7 +650,7 @@
       }
     },
     "bindingSlotModifier": {
-      "comment": "Picker label: which key set picks a candidate by slot (q w d f z x v y ;, ⌃1-9 or ⌥1-9; ⇧1-9 always pick).",
+      "comment": "Picker label: which key set picks a candidate by slot (q w d f z x v y ;, ⇧1-9, ⌃1-9 or ⌥1-9).",
       "scope": {
         "platforms": [
           "macos"

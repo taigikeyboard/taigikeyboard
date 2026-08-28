@@ -504,11 +504,11 @@ enum ShortcutConflicts {
                 .filter { $0.chord.isCandidateSlotChord(under: bindings.slotKeySet) }
                 .map(\.action),
         )
-        // The fixed `⇧1`…`⇧9` are not chords at all — the gate refuses them —
-        // so they are found by that refusal rather than by comparison. A row
-        // holding one predates the fixed tier (the recorder accepted `⇧3` as
-        // the `#` it types before 2026-08-28), and Carbon would dispatch it
-        // before the classifier ever saw the digit.
+        // `⇧1`…`⇧9` are not chords at all — the gate refuses them whichever
+        // set is chosen — so they are found by that refusal rather than by
+        // comparison. A row holding one predates the refusal (the recorder
+        // accepted `⇧3` as the `#` it types before 2026-08-28), and Carbon
+        // would dispatch it before the classifier ever saw the digit.
         clear(
             recorded
                 .filter { translation(of: $0.shortcut) == .failure(.candidateSlotChord) }

@@ -594,12 +594,12 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).cells, cells)
     }
 
-    /// Each key that names the second slot commits the second candidate: the
-    /// shipped letter, the fixed shifted digit, and — under that set — `⌃2`.
+    /// Each key that names the second slot commits the second candidate,
+    /// under the set that holds it: the shipped bare key, `⇧2`, `⌃2`.
     func testEverySlotKey_commitsThatSlotOfTheVisiblePage() throws {
         let keys: [(name: String, keySet: CandidateSlotKeySet, event: () throws -> NSEvent)] = [
             ("w", .bareKeys, { try TestFixtures.keyDownEvent(characters: "w") }),
-            ("⇧2", .bareKeys, { try TestFixtures.shiftedDigitKeyDownEvent(slot: 1) }),
+            ("⇧2", .shift, { try TestFixtures.shiftedDigitKeyDownEvent(slot: 1) }),
             ("⌃2", .control, { try Self.controlDigitEvent(slot: 1) }),
         ]
         for (name, keySet, event) in keys {
@@ -633,7 +633,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             session.client.clearWrites()
 
             _ = try session.controller.handle(
-                TestFixtures.shiftedDigitKeyDownEvent(slot: slot),
+                TestFixtures.keyDownEvent(characters: CandidateSlotKeySet.bareKeyRow[slot]),
                 client: session.client,
             )
 

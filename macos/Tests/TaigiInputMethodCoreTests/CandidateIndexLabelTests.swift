@@ -32,6 +32,7 @@ final class CandidateIndexLabelTests: XCTestCase {
     func testSlotKeys_carryTheModifierWhileABareDigitWouldBeATone() {
         XCTAssertEqual(CandidateIndexLabel.text(forSlot: 0, style: .keyed(.control)), "⌃1")
         XCTAssertEqual(CandidateIndexLabel.text(forSlot: 8, style: .keyed(.option)), "⌥9")
+        XCTAssertEqual(CandidateIndexLabel.text(forSlot: 2, style: .keyed(.shift)), "⇧3")
         // Past the ninth nothing is drawn in either style: there is no chord
         // for a tenth slot either.
         XCTAssertEqual(CandidateIndexLabel.text(forSlot: 9, style: .keyed(.control)), "")

@@ -6,20 +6,14 @@ import AppKit
 /// contract the user chooses.
 ///
 /// Every case is a whole key SET, not one key: nine slots need nine names, and
-/// what varies between the cases is where those names come from. Two things
-/// never vary with the choice and are not here:
-///
-/// - `⇧1`…`⇧9` always pick (`ComposingKeyIntent.shiftedDigitSlot`). A shifted
-///   digit types punctuation, which nobody types while choosing a candidate —
-///   the composition ends first — so the chord costs nothing while the bar is
-///   up and reads as punctuation again the moment it is down (USER
-///   2026-08-28). Never drawn: every set names all nine slots itself, and the
-///   window draws the most direct key.
-/// - A bare `1`…`9` picks once no tone can follow the buffer
-///   (`ComposingKeyIntent.canTypeToneDigit`). A bare digit is a TL/POJ tone
-///   marker first (`tai5`), which is why none of the sets below can put the
-///   digits themselves on the slots — and why the system Zhuyin input method's
-///   bare-digit selection cannot be matched here.
+/// what varies between the cases is where those names come from. One set is
+/// live at a time — the picker's four ways of selecting (USER 2026-08-28).
+/// One thing never varies with the choice and is not here: a bare `1`…`9`
+/// picks once no tone can follow the buffer
+/// (`ComposingKeyIntent.canTypeToneDigit`). A bare digit is a TL/POJ tone
+/// marker first (`tai5`), which is why none of the sets below can put the
+/// digits themselves on the slots — and why the system Zhuyin input method's
+/// bare-digit selection cannot be matched here.
 enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     /// Nine bare keys, one per slot — `q w d f z x v y ;`. The eight letters
     /// are every letter no TL or POJ syllable spells
@@ -32,10 +26,27 @@ enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     /// 2026-08-28; nine rather than six so every slot of a nine-row page has
     /// a bare key).
     case bareKeys
+    /// `⇧1`…`⇧9`. A shifted digit types punctuation, which nobody types while
+    /// choosing a candidate — the composition ends first — so the chord costs
+    /// nothing while the bar is up and reads as punctuation again the moment
+    /// it is down (USER 2026-08-28). Read off the number row's key codes,
+    /// since Shift rewrites the characters (`ComposingKeyIntent.shiftedDigitSlot`).
+    case shift
     /// `⌃1`…`⌃9`.
     case control
     /// `⌥1`…`⌥9`.
     case option
+
+    /// The slot `key` picks under this set, or nil when it picks none — the
+    /// classifier's question, asked of the whole event because the shifted
+    /// digits are only knowable from the key code.
+    func slot(for key: KeyEventSnapshot) -> Int? {
+        guard self != .shift else { return ComposingKeyIntent.shiftedDigitSlot(key) }
+        return slot(
+            forKey: key.charactersIgnoringModifiers,
+            heldWith: key.modifiers.intersection([.command, .control, .option, .shift]),
+        )
+    }
 
     /// The keys `bareKeys` puts on slots 0…8, in slot order. Lowercase, as
     /// they are matched and drawn: a bare key types its lowercase form.
@@ -45,12 +56,14 @@ enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     /// nil when it picks none.
     ///
     /// `key` is what the key types with no modifiers held
-    /// (`KeyEventSnapshot.charactersIgnoringModifiers`); `modifiers` is only
-    /// the four chording flags, so Caps Lock and the number pad — which say
-    /// how a key was reached, not which key it is — cannot make a slot key
-    /// miss. The one rule the classifier, the recorder's refusal and the
-    /// window's labels all read, so a key drawn beside a candidate is the key
-    /// that picks it.
+    /// (`KeyEventSnapshot.charactersIgnoringModifiers`, or a chord's key);
+    /// `modifiers` is only the four chording flags, so Caps Lock and the
+    /// number pad — which say how a key was reached, not which key it is —
+    /// cannot make a slot key miss. The one rule the classifier, the
+    /// recorder's refusal and the window's labels all read, so a key drawn
+    /// beside a candidate is the key that picks it. For `shift` this answers
+    /// for a chord already keyed on the digit; an EVENT goes through
+    /// `slot(for:)`, because `⇧3` types `#`.
     func slot(forKey key: String?, heldWith modifiers: NSEvent.ModifierFlags) -> Int? {
         guard let digitModifier else {
             guard modifiers.isEmpty, let key else { return nil }
@@ -81,6 +94,7 @@ enum CandidateSlotKeySet: String, CaseIterable, Sendable {
     private var digitModifier: (flag: NSEvent.ModifierFlags, symbol: String)? {
         switch self {
         case .bareKeys: nil
+        case .shift: (.shift, "⇧")
         case .control: (.control, "⌃")
         case .option: (.option, "⌥")
         }

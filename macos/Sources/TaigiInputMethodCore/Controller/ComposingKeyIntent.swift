@@ -234,8 +234,8 @@ enum ComposingKeyIntent: Equatable {
 
         // The slot-key tier, read before the host-chord guard below — which
         // would otherwise hand every Control chord straight to the host — and
-        // before the user's bindings, so that no binding can shadow it. Two
-        // rules: the fixed `⇧1`…`⇧9`, and the set the user chose.
+        // before the user's bindings, so that no binding can shadow it. Which
+        // keys pick is the user's set (`CandidateSlotKeySet`).
         //
         // Only the four chording modifiers are compared, and exactly. Caps
         // Lock and the number pad (`.numericPad`, plus `.function` on some
@@ -244,16 +244,8 @@ enum ComposingKeyIntent: Equatable {
         // commit the composition on the keypad. A modifier the user did NOT
         // choose keeps falling through to the host guard below, so `⌥3` stays
         // the host's while Control holds the slots.
-        if isShowingCandidates {
-            if let slot = shiftedDigitSlot(key) {
-                return .selectCandidateSlot(slot)
-            }
-            if let slot = bindings.slotKeySet.slot(
-                forKey: key.charactersIgnoringModifiers,
-                heldWith: modifiers.intersection(Self.chordingModifiers),
-            ) {
-                return .selectCandidateSlot(slot)
-            }
+        if isShowingCandidates, let slot = bindings.slotKeySet.slot(for: key) {
+            return .selectCandidateSlot(slot)
         }
 
         // The bare-digit tier. A digit takes its romanization meaning first —
@@ -470,10 +462,11 @@ enum ComposingKeyIntent: Equatable {
         }
     }
 
-    /// The slot `key` picks as one of the fixed `⇧1`…`⇧9` chords, counting
-    /// from zero, or nil when it is not one — the rule every key set shares
-    /// (`CandidateSlotKeySet`), asked by the classifier and by the recorder's
-    /// refusal alike (`ComposingKeyChord.make(_:)`).
+    /// The slot `key` picks as one of the `⇧1`…`⇧9` chords, counting from
+    /// zero, or nil when it is not one — the `shift` set's rule
+    /// (`CandidateSlotKeySet.slot(for:)`), asked by the recorder's refusal as
+    /// well (`ComposingKeyChord.make(_:)`), which reserves these chords
+    /// whichever set is live.
     ///
     /// Shift, and only Shift, among the chording modifiers; then the digit,
     /// read from the key code first, because Shift rewrites the characters:

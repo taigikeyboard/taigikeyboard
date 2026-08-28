@@ -37,7 +37,7 @@ final class ShortcutSettingsTests: XCTestCase {
             ComposingAction.nextCandidate.settingsKeyName,
             "composingShortcut.nextCandidate",
         )
-        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.rawValue), ["bareKeys", "control", "option"])
+        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.rawValue), ["bareKeys", "shift", "control", "option"])
     }
 
     /// A row whose text is missing in one language reads as an identifier — or
