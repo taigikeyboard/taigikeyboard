@@ -480,9 +480,9 @@
         ]
       },
       "values": {
-        "hanji": "垂直",
-        "tailo": "suî-ti̍t",
-        "poj": "sûi-ti̍t",
+        "hanji": "徛直",
+        "tailo": "khiā-ti̍t",
+        "poj": "khiā-ti̍t",
         "en": "Vertical",
         "ja": "垂直"
       }
@@ -498,9 +498,9 @@
         ]
       },
       "values": {
-        "hanji": "展開式",
-        "tailo": "tián-khui-sik",
-        "poj": "tián-khui-sek",
+        "hanji": "展開",
+        "tailo": "thián-khui",
+        "poj": "thián-khui",
         "en": "Expandable",
         "ja": "展開式"
       }
