@@ -1,0 +1,49 @@
+[package]
+name = "taigi-windows-tsf"
+description = "The Text Services Framework text service (TaigiKeyboard.dll): COM shell over taigi-windows-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+# `TaigiKeyboard.dll` — the file name the installer registers.
+name = "TaigiKeyboard"
+crate-type = ["cdylib"]
+
+[dependencies]
+taigi-windows-core.workspace = true
+taigi-windows-storage.workspace = true
+log.workspace = true
+windows-core.workspace = true
+
+[dependencies.windows]
+workspace = true
+features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Ole",
+    "Win32_System_Registry",
+    "Win32_System_SystemServices",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_TextServices",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+# JUSTIFICATION (workspace default is `unsafe_code = "forbid"`): a COM server
+# cannot be written without `unsafe` — the exported entry points take raw
+# pointers from the host, every TSF call is `unsafe` in the `windows` crate,
+# and the registry API is raw. Every block carries a `// SAFETY:` comment
+# (`.claude/rules/rust-ffi-safety.md` §3); the pure crates keep the forbid.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+missing_safety_doc = "allow"

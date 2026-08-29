@@ -11,11 +11,14 @@
 
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help i18n-check test check-gnu check-msvc check fmt lint build clean
+.PHONY: help i18n-check test check-gnu check-msvc check-dll check fmt lint build clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
 # checked for from macOS. A crate that pulls in C (the storage crate's bundled
-# rusqlite) is gnu-only here — see rust-toolchain.toml. Both rosters grow with
+# rusqlite) is gnu-only here — see rust-toolchain.toml. The TSF crate links the
+# `windows` bindings, which do not build for a macOS host at all: its unit
+# tests are type-checked by `check-gnu` (`--all-targets`) and RUN only on a
+# Windows machine (`cargo test -p taigi-windows-tsf`). Both rosters grow with
 # the workspace; they name what exists today.
 MSVC_CHECKABLE := -p taigi-windows-core
 HOST_TESTABLE  := -p taigi-windows-core -p taigi-windows-storage
@@ -27,6 +30,7 @@ help:
 	@echo "  make test        - Native tests for the host-testable crates"
 	@echo "  make check-gnu   - clippy -D warnings, full graph, target x86_64-pc-windows-gnu"
 	@echo "  make check-msvc  - cargo check for the C-free crates, target x86_64-pc-windows-msvc"
+	@echo "  make check-dll   - GNU release link of TaigiKeyboard.dll + export-table check (W13)"
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt         - cargo fmt"
 	@echo "  make build       - (Windows) cargo build --release for the shipping target"
@@ -46,7 +50,19 @@ check-gnu:
 check-msvc:
 	cargo check $(MSVC_CHECKABLE) --all-targets --target x86_64-pc-windows-msvc
 
-check: test check-gnu check-msvc
+# The DLL really links (lto, panic=unwind) and exports the four COM entry
+# points unmangled — what regsvr32 will look for. mingw's objdump reads the
+# PE export table; the names must appear exactly, so a renamed or `#[no_mangle]`
+# -less export fails here rather than on the user's machine.
+DLL_GNU := target/x86_64-pc-windows-gnu/release/TaigiKeyboard.dll
+check-dll:
+	cargo build -p taigi-windows-tsf --release --target x86_64-pc-windows-gnu
+	@for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do \
+		x86_64-w64-mingw32-objdump -p $(DLL_GNU) | grep -qw "$$symbol" || { echo "missing export: $$symbol"; exit 1; }; \
+	done
+	@echo "exports OK: $(DLL_GNU)"
+
+check: test check-gnu check-msvc check-dll
 	cargo fmt -- --check
 
 # Plain `cargo fmt`, never `--all`: `--all` also formats path dependencies, i.e.

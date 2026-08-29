@@ -12,6 +12,7 @@ resolver = "2"
 members = [
     "crates/taigi-windows-core",
     "crates/taigi-windows-storage",
+    "crates/taigi-windows-tsf",
 ]
 
 [workspace.package]
@@ -38,9 +39,15 @@ thiserror = "2"
 rusqlite = { version = "0.40", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 tempfile = "3"
+# The COM / TSF bindings. `#[implement]` (the COM-object macro) lives in
+# `windows-core`, which is a direct dependency because the macro's expansion
+# names it.
+windows = "0.62"
+windows-core = "0.62"
 
 taigi-windows-core = { path = "crates/taigi-windows-core" }
 taigi-windows-storage = { path = "crates/taigi-windows-storage" }
+taigi-windows-tsf = { path = "crates/taigi-windows-tsf" }
 
 [workspace.lints.rust]
 # Every crate opts in with `[lints] workspace = true`. The default is the

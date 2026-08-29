@@ -143,7 +143,10 @@ impl SettingsFileStore {
     }
 
     /// Load → mutate → save under a lock, the one shape every settings
-    /// mutation takes: a write always starts from the file (the other
+    /// mutation takes. CONTRACT: `mutate` changes the document only through
+    /// its typed setters (which bump `revision`) and never touches
+    /// `revision` itself — the save is skipped when the revision did not move.
+    /// The rest of the shape: a write always starts from the file (the other
     /// process may have written since), the document's own per-mutation
     /// revision bump is what the TIP compares, and the lock keeps two
     /// updaters — the settings window and the TIP's launch pass — from
@@ -154,8 +157,13 @@ impl SettingsFileStore {
     ) -> Result<SettingsDocument, SettingsFileError> {
         let _guard = self.lock_for_update()?;
         let mut document = self.load()?;
+        let revision_before = document.revision;
         mutate(&mut document);
-        self.save(&document)?;
+        // A mutation that changed nothing writes nothing: the file keeps its
+        // fingerprint and no reader re-parses it.
+        if document.revision != revision_before {
+            self.save(&document)?;
+        }
         Ok(document)
     }
 
@@ -372,6 +380,15 @@ mod tests {
             .unwrap();
         assert!(store.update(|_| {}).is_ok());
         assert!(!lock.exists(), "the lock is released after the update");
-        assert!(!store.path().with_extension("json.0.tmp").exists());
+        assert!(!store.path().exists(), "a no-op update writes no file");
+        store
+            .update(|document| document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false))
+            .unwrap();
+        assert!(store.path().exists());
+        assert!(fs::read_dir(directory.path()).unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .ends_with(".tmp")));
     }
 }

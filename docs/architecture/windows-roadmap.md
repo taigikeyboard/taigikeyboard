@@ -68,7 +68,7 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
 Runtime data: %APPDATA%\TaigiKeyboard\{settings.json, user_frequency.db,
 user_association.db, custom_dictionary.db}; install dir %ProgramFiles%\TaigiKeyboard\
 {TaigiKeyboard.dll (x64), x86\TaigiKeyboard.dll, arm64\TaigiKeyboard.dll,
-TaigiKeyboardSettings.exe, dictionaries\*, fonts\*}.
+TaigiKeyboardSettings.exe, Dictionaries\*, Fonts\*}.
 ```
 
 ## Design decisions (W1–W16, grounded in code; Codex verdict per item)
@@ -302,7 +302,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR2 | Scaffold + core composing | `windows/` workspace + toolchain; `taigi-windows-core`: settings model + revision, engine bridge (envelope, AppConfig, generation, lexicon install, logger), `ComposingSessionCoordinator` keyed by context token, ComposingManager port (3-phase apply, effects, fetch protocol, commit outcomes), `ComposingKeyIntent` 7-tier table + `KeyEventSnapshot`; engine round-trip tests against `ios/Resources/Dictionaries`. **Locks**: word identity `(漢字, canonical TL)`, context ownership + handover, engine generation rules, effect ordering + failure semantics, settings revision | Pending |
 | PR3 | Core candidates | `CandidateMetrics<TextMeasurer>`, `HorizontalPageLayout`, `VerticalLayout`, `ExpandedGridLayout`, positioning, index labels, cell content, document text; macOS oracle numbers as tests | PR #627 open (stacked); Codex post-impl BLOCK×3/RISK×6 fixed `f2af405d` (models own scroll offset, `VerticalLayoutInput`/`VerticalGeometry`, cell rects + hit tests + `UnfoldPlan`) |
 | PR4 | Storage + policies | `taigi-windows-storage`: rusqlite stores (freq v2 / assoc v6 / custom v3, byte-identical SQL, WAL + bounded busy handling, migration under `BEGIN IMMEDIATE`), `LearningCapacity`, CSV codec, seeds, settings file store (atomic replace); core: `AutoSpacePolicy` + attaching set, `FullWidthPunctuation`, `NextWordLearner`, shortcuts model (chords, registries, conflicts, recorder gate) | PR #628 open (stacked on #627); `NextWordLearner` already landed in PR2b; Codex post-impl pending |
-| PR5a | TSF lifecycle | COM exports + class factory + symmetric registration + GUIDs; `TextService` activate/deactivate; thread-mgr / thread-focus sinks; context identity; lang-bar button + menu; settings reload; spawn settings exe; **smoke TIP that composes nothing** | Pending |
+| PR5a | TSF lifecycle | COM exports + class factory + symmetric registration + GUIDs; `TextService` activate/deactivate; thread-mgr / thread-focus sinks; context identity; lang-bar button + menu; settings reload; spawn settings exe; **smoke TIP that composes nothing** | PR open (stacked on #628); `taigi-windows-tsf` cdylib links under mingw + export check (`make check-dll`); unit tests type-checked only (no host run); Codex post-impl pending |
 | PR5b | TSF composing | key sink → snapshot → intent → manager inside sync edit sessions; composition start/update/commit per context; display attribute; preserved keys; password/read-only gating; handover | Pending |
 | PR6 | TSF UI | candidate window (D2D/DWrite renderer, 3 layouts, DPI scope, theme, mouse, private fonts, caret positioning + fallbacks, device loss) + UI-less `ITfCandidateListUIElement` contract; mode flash panel; unfold animation | Pending |
 | PR7 | Settings exe I | eframe shell + sidebar + 一般 / 外觀 / 快捷鍵 panes + shortcut recorder + display language + fonts | Pending |

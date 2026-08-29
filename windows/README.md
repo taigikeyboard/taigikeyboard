@@ -11,6 +11,7 @@ input method. Design record and phase table:
 |---|---|---|
 | `crates/taigi-windows-core` | lib, `unsafe_code = forbid`, no C deps | Everything that does not need a Win32 handle: settings model, engine bridge, composing orchestration, key classifier, candidate geometry, shortcuts, strings. Tested natively on any host. |
 | `crates/taigi-windows-storage` (PR4) | lib | rusqlite user stores, settings file, CSV. |
+| `crates/taigi-windows-tsf` (PR5a) | cdylib `TaigiKeyboard.dll`, the ONE crate with `unsafe` | DLL exports, registration, the `TextService` COM object (sinks, tray button + menu, settings reload, context identity), per-process runtime. Not host-testable: `make check-dll` links it under mingw and checks the export table. |
 | `crates/taigi-windows-update` (PR9) | lib | update manifest, download, Authenticode verification. |
 | `crates/taigi-windows-tsf` (PR5) | cdylib `TaigiKeyboard.dll` | The COM text service + candidate window. |
 | `crates/taigi-windows-settings` (PR7) | bin `TaigiKeyboardSettings.exe` | The settings window. |
