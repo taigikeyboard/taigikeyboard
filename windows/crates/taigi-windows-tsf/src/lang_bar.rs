@@ -7,19 +7,20 @@
 
 use crate::guids::CLSID_TEXT_SERVICE;
 use crate::module::instance;
-use crate::registration::SERVICE_DESCRIPTION;
+use crate::registration::{PRODUCT_NAME_STRING_ID, SERVICE_DESCRIPTION};
 use crate::wide::{fill_fixed, to_wide};
 use taigi_windows_core::keys::ShortcutAction;
 use taigi_windows_core::settings::SettingsDocument;
 use taigi_windows_core::strings::{StringKey, StringResolver};
-use windows::core::{Result, PCWSTR};
+use windows::core::{Result, PCWSTR, PWSTR};
 use windows::Win32::Graphics::Gdi::HBITMAP;
 use windows::Win32::UI::TextServices::{
     ITfMenu, GUID_LBI_INPUTMODE, TF_LANGBARITEMINFO, TF_LBI_STYLE_BTN_MENU,
     TF_LBI_STYLE_SHOWNINTRAY, TF_LBMENUF_SEPARATOR,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CopyIcon, LoadIconW, LoadImageW, HICON, IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTSIZE,
+    CopyIcon, LoadIconW, LoadImageW, LoadStringW, HICON, IDI_APPLICATION, IMAGE_ICON,
+    LR_DEFAULTSIZE,
 };
 
 /// Menu command ids `OnMenuSelect` receives back.
@@ -32,6 +33,32 @@ const ICON_RESOURCE_ID: u16 = 1;
 /// What the tray shows when it draws text instead of the icon.
 pub const TRAY_TEXT: &str = "台";
 
+/// The product name in the user's UI language — the DLL's own STRINGTABLE
+/// (`build-support/resource.rs`), resolved by `LoadString` with Windows'
+/// language fallback. The same string Windows Settings shows through the
+/// indirect profile description, so the tray, its tooltip and Settings agree.
+/// A DLL built without string resources answers the untranslated name.
+pub fn product_name() -> String {
+    let id: u32 = PRODUCT_NAME_STRING_ID
+        .parse()
+        .expect("TAIGI_PRODUCT_NAME_STRING_ID is a build-script integer");
+    let mut buffer = [0u16; 128];
+    // SAFETY: `buffer` is a writable UTF-16 buffer of the passed length; the
+    // instance is this DLL's own (set in DllMain).
+    let length = unsafe {
+        LoadStringW(
+            Some(instance()),
+            id,
+            PWSTR(buffer.as_mut_ptr()),
+            buffer.len() as i32,
+        )
+    };
+    if length <= 0 {
+        return SERVICE_DESCRIPTION.to_owned();
+    }
+    String::from_utf16_lossy(&buffer[..length as usize])
+}
+
 pub fn item_info() -> TF_LANGBARITEMINFO {
     let mut info = TF_LANGBARITEMINFO {
         clsidService: CLSID_TEXT_SERVICE,
@@ -40,7 +67,7 @@ pub fn item_info() -> TF_LANGBARITEMINFO {
         ulSort: 0,
         szDescription: [0; 32],
     };
-    fill_fixed(&mut info.szDescription, SERVICE_DESCRIPTION);
+    fill_fixed(&mut info.szDescription, &product_name());
     info
 }
 

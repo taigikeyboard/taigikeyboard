@@ -607,6 +607,25 @@ class MacOSBundleNameTest(unittest.TestCase):
         outputs = _build_probe_outputs({"k": _all_platform_key({"hanji": "字"})})
         self.assertFalse([path for path in outputs if path.startswith(f"{i18n_lib.MACOS_APP_DIR}/")])
 
+    def test_windows_gets_the_same_name_per_ui_language_as_a_string_table_source(self):
+        # Windows' `.lproj` twin: the DLL's STRINGTABLE, one block per UI language, same values.
+        source = _bundle_name_outputs()[i18n_lib.WINDOWS_PRODUCT_NAME_FILE]
+        self.assertIn("pub const PRODUCT_NAMES: &[(u16, &str)] = &[", source)
+        for lang, langid in i18n_lib.WINDOWS_PRODUCT_NAME_LANGIDS.items():
+            self.assertIn(f'(0x{langid:04X}, "{APP_NAME_VALUES[lang]}"),', source)
+        self.assertEqual(
+            set(i18n_lib.WINDOWS_PRODUCT_NAME_LANGIDS), set(i18n_lib.MACOS_BUNDLE_LOCALIZATIONS),
+            "the two desktop platforms name the input method in the same set of system languages",
+        )
+
+    def test_windows_product_name_is_escaped_as_a_rust_literal(self):
+        source = _bundle_name_outputs({**APP_NAME_VALUES, "hanji": 'a"b\\c'})[i18n_lib.WINDOWS_PRODUCT_NAME_FILE]
+        self.assertIn(r'(0x0404, "a\"b\\c"),', source)
+
+    def test_source_without_the_app_name_key_emits_no_windows_product_names(self):
+        outputs = _build_probe_outputs({"k": _all_platform_key({"hanji": "字"})})
+        self.assertNotIn(i18n_lib.WINDOWS_PRODUCT_NAME_FILE, outputs)
+
     def test_cli_build_without_the_app_name_key_fails_naming_it(self):
         # The same absence in a REAL build would ship a bundle whose input source silently falls back
         # to the untranslated name in every system language.

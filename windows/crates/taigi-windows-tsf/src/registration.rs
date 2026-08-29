@@ -22,10 +22,27 @@ use windows::Win32::UI::TextServices::{
     GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT, GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD,
 };
 
-/// What the CLSID key and the profile are named. The profile description is
-/// what Windows Settings lists under 中文(台灣) — the product name, hanji
-/// first like the macOS `CFBundleName`.
-pub const SERVICE_DESCRIPTION: &str = "台語齒盤 Taigi Keyboard";
+/// What the CLSID key is named, and what the language bar falls back to when
+/// the DLL carries no string resources (a build without a resource
+/// compiler). Untranslated on purpose — the Mac's `CFBundleName` — because the
+/// OS-visible name is localized: see [`profile_description`].
+pub const SERVICE_DESCRIPTION: &str = "TaigiKeyboard";
+
+/// The STRINGTABLE id the build script stores the localized product name
+/// under, in every language `product_name_strings.rs` carries
+/// (`build-support/resource.rs`, exported as this env var so the two cannot
+/// drift).
+pub const PRODUCT_NAME_STRING_ID: &str = env!("TAIGI_PRODUCT_NAME_STRING_ID");
+
+/// The profile description Windows Settings and the language bar show —
+/// an indirect string, `@<dll>,-<id>`, which the shell resolves against the
+/// user's UI language every time it is displayed (Microsoft's own IMEs
+/// register theirs this way). The twin of the Mac's `.lproj/InfoPlist.strings`
+/// (#613): the name follows the SYSTEM language, not the app's display-language
+/// picker.
+pub fn profile_description(dll_path: &str) -> String {
+    format!("@{dll_path},-{PRODUCT_NAME_STRING_ID}")
+}
 
 /// STACKED-PR NOTE: the display-attribute provider lands with PR5b and the
 /// UI-less candidate list with PR6; this DLL is only installed as the
@@ -82,7 +99,7 @@ fn register_clsid(dll_path: &str) -> Result<()> {
 /// the DLL's own resource, index 0 — added with the installer (PR10); until
 /// then Windows shows its generic keyboard glyph.
 fn register_profile(dll_path: &str) -> Result<()> {
-    let description = to_wide_nul(SERVICE_DESCRIPTION);
+    let description = to_wide_nul(&profile_description(dll_path));
     let icon_file = to_wide_nul(dll_path);
     // SAFETY: TSF's own registration objects, created and used on the
     // regsvr32 thread inside the apartment `with_apartment` opened; every

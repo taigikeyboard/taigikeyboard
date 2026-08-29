@@ -5,11 +5,46 @@
 
 // 中文: DLL 與設定視窗共用的少量 Win32 呼叫;非 Windows 主機給中性值,讓呼叫端在 macOS 上可測。
 
-/// The user's locale name, e.g. `zh-TW` / `ja-JP` / `en-US`, for the
-/// `system` display language. Empty when the platform cannot say.
+/// The user's preferred UI language, e.g. `zh-TW` / `ja-JP` / `en-US`, for
+/// the `system` display language. Empty when the platform cannot say.
+///
+/// The UI language list (`GetUserPreferredUILanguages`), NOT the regional
+/// format locale (`GetUserDefaultLocaleName`): the Mac reads
+/// `Locale.preferredLanguages.first` (`DisplayLanguageStore.swift:122-128`),
+/// and an English-UI machine set to a Taiwan region must draw English here
+/// too, not Hanji. The format locale is only the fallback for a machine whose
+/// UI-language list cannot be read.
 #[cfg(windows)]
 pub fn system_locale() -> String {
-    use windows::Win32::Globalization::GetUserDefaultLocaleName;
+    use windows::core::PWSTR;
+    use windows::Win32::Globalization::{
+        GetUserDefaultLocaleName, GetUserPreferredUILanguages, MUI_LANGUAGE_NAME,
+    };
+    let mut count = 0u32;
+    let mut length = 0u32;
+    // SAFETY: the documented size query — no buffer, the required length
+    // comes back in `length` (UTF-16 units, double-NUL-terminated list).
+    let sized =
+        unsafe { GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, None, &mut length) };
+    if sized.is_ok() && length > 0 {
+        let mut buffer = vec![0u16; length as usize];
+        // SAFETY: a writable buffer of exactly the length the query asked for.
+        let filled = unsafe {
+            GetUserPreferredUILanguages(
+                MUI_LANGUAGE_NAME,
+                &mut count,
+                Some(PWSTR(buffer.as_mut_ptr())),
+                &mut length,
+            )
+        };
+        if filled.is_ok() {
+            // The first entry of the multi-string is the top preference.
+            let first_end = buffer.iter().position(|&unit| unit == 0).unwrap_or(0);
+            if first_end > 0 {
+                return String::from_utf16_lossy(&buffer[..first_end]);
+            }
+        }
+    }
     let mut buffer = [0u16; 85];
     // SAFETY: `buffer` is a valid writable UTF-16 buffer of the passed
     // length (LOCALE_NAME_MAX_LENGTH is 85).

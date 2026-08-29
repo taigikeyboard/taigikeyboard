@@ -114,6 +114,18 @@ MACOS_BUNDLE_NAME_KEY = ("home", "appHeaderTitle")
 # on an undocumented implementation detail.
 MACOS_BUNDLE_NAME_PLIST_KEYS = ("CFBundleDisplayName", "CFBundleName")
 
+# Windows twin of the `.lproj` mechanism: the input method's OS-visible name (Windows Settings, the
+# language bar, the tray tooltip) is a STRINGTABLE in the DLL, one language block per UI language the
+# product answers to, which Windows resolves against the SYSTEM UI language — through the indirect
+# `@<dll>,-<id>` profile description at registration and `LoadString` at runtime. Same key and same
+# languages as the Mac; the values are the LANGIDs a `.rc` `LANGUAGE` statement takes. Any other UI
+# language falls through Windows' own resource search order (neutral → en-US), so `en` doubles as
+# the untranslated fallback the way `CFBundleName` does on the Mac. Emitted as a Rust `include!` the
+# build scripts render (`windows/build-support/resource.rs`) — a build script cannot depend on a
+# workspace crate, so the generated strings cannot live in `taigi-windows-core`.
+WINDOWS_PRODUCT_NAME_FILE = "windows/build-support/product_name_strings.rs"
+WINDOWS_PRODUCT_NAME_LANGIDS = {"en": 0x0409, "ja": 0x0411, "hanji": 0x0404}
+
 # Value-language key -> Swift `DisplayLanguage` case. The generated maps index by enum case, not by
 # tag, and two names differ from their tag (`ja`/`en`) — so this is the ONE place that mapping lives.
 # MIRROR: must equal the cases in ios/.../Strings/DisplayLanguage.swift and
@@ -1198,6 +1210,17 @@ def _bundle_name_values(all_entries):
     )
 
 
+def _emit_windows_product_names(app_name_values: dict) -> str:
+    # `(LANGID, name)` per UI language, in a stable order; `resource.rs` renders one STRINGTABLE
+    # block each. Rust-escaped: the file is `include!`d into the build script.
+    lines = [f"// {GENERATED_HEADER}", "// (LANGID, product name) — one STRINGTABLE block each; resource.rs renders them."]
+    lines.append("pub const PRODUCT_NAMES: &[(u16, &str)] = &[")
+    for lang, langid in WINDOWS_PRODUCT_NAME_LANGIDS.items():
+        lines.append(f'    (0x{langid:04X}, "{rust_escape(app_name_values[lang])}"),')
+    lines.append("];")
+    return "\n".join(lines) + "\n"
+
+
 def _emit_info_plist_strings(app_name: str) -> str:
     # Old-style plist (`"key" = "value";`), the format an `InfoPlist.strings` is. Written UTF-8;
     # `scripts/bundle-app.sh` converts it to the binary plist Apple's own apps ship.
@@ -1296,5 +1319,6 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
             outputs[f"{MACOS_APP_DIR}/{lproj}.lproj/InfoPlist.strings"] = _emit_info_plist_strings(
                 bundle_name_values[lang]
             )
+        outputs[WINDOWS_PRODUCT_NAME_FILE] = _emit_windows_product_names(bundle_name_values)
 
     return outputs

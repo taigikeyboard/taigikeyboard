@@ -209,7 +209,17 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   symmetric** (CLSID, profile, each category, display-attribute provider) — Microsoft
   requires individual category removal. Fresh GUIDs allocated in Phase 0. rakukan's
   `HKLM → HKCU CTF\TIP` copy for Windows 11 Settings visibility is NOT adopted (its
-  uninstall deletes other IMEs' keys) — dogfood item.
+  uninstall deletes other IMEs' keys) — dogfood item. **Localized name (2026-08-29,
+  parity with macOS #613)**: the profile description is the indirect string
+  `@<dll>,-100`, resolved by Windows against the SYSTEM UI language from the DLL's
+  STRINGTABLE (`build-support/resource.rs`, one `LANGUAGE` block per entry of
+  `product_name_strings.rs`, which `make i18n` writes from the same key as the Mac's
+  `InfoPlist.strings`: en / ja / zh-Hant); the tray button and its tooltip `LoadString`
+  the same id at runtime. Other UI languages fall to en-US through Windows' resource
+  search order — the Mac's untranslated `CFBundleName` fallback. **System display
+  language** reads `GetUserPreferredUILanguages` (the UI language, `Locale.preferredLanguages`
+  on the Mac), not `GetUserDefaultLocaleName` (the regional format) — an English-UI
+  machine in a Taiwan region draws English, as macOS does.
 - **W8 Installer + release** — Inno Setup 6 (`windows/installer/TaigiKeyboard.iss`;
   rakukan `rakukan_installer.iss`; Codex F6 CONFIRM): admin, `{autopf}\TaigiKeyboard`,
   explicit 32/64-bit registry views and the matching `regsvr32` binary per architecture
@@ -434,7 +444,17 @@ Ordered in layers — stop at the first foundation failure:
 2. `regsvr32 TaigiKeyboard.dll` from an elevated prompt → the TIP appears under
    設定 → 時間與語言 → 語言 → 中文(台灣) → 鍵盤. If invisible on Windows 11, evaluate
    rakukan's HKLM→HKCU copy (W7 open item) before anything else. `regsvr32 /u` removes
-   every key it added (W7 symmetry).
+   every key it added (W7 symmetry). **Name**: Settings and the tray show 台語齒盤 on a
+   zh-TW UI, 台湾語キーボード on ja, TaigiKeyboard on en and on any other UI language —
+   never the literal `@C:\...\TaigiKeyboard.dll,-100` (that would mean the shell did not
+   resolve the indirect description: fall back to a plain string in `register_profile`).
+   Switch the Windows display language and sign out/in to see it follow; check all three
+   consumers separately (Settings profile name, tray item text, tray tooltip — different
+   processes resolve them); a UI language with no block (fr-FR) must show `TaigiKeyboard`;
+   an install path with spaces must still resolve; the MSVC release build (rc.exe, not
+   the host's windres) must carry all three `LANGUAGE` blocks — `Get-Content` the
+   installer's DLL through PowerShell's `[System.Diagnostics.FileVersionInfo]` is not
+   enough, read the string table (`resource hacker` or `LoadString` from the settings exe).
 3. Notepad: type `taigi` → underlined preedit, candidate window below the caret,
    `q` commits slot 0, Return commits highlighted, Space commits the alternate script,
    Esc cancels, digits are tones. Then Word / Chrome / Windows Terminal / a UWP app
@@ -444,7 +464,9 @@ Ordered in layers — stop at the first foundation failure:
 5. Settings exe: each pane matches the macOS pane order and controls; typing Taiwanese
    INTO the custom-dict fields (egui IME path: preedit, commit, backspace, caret); CJK
    glyphs render; file dialogs return focus; changing a setting is visible on the next
-   keystroke without restart.
+   keystroke without restart. Display language 自動: an English Windows UI with a
+   Taiwan region setting draws the settings window in English (UI language wins, as on
+   the Mac); a zh-TW UI draws Hanji.
 6. Installer: fresh install, upgrade over a running IME (expect the sign-out note),
    uninstall leaves `%APPDATA%\TaigiKeyboard` in place; scheduled task exists.
 7. Update: `--check-updates` reads the live manifest; toast appears; download + verify +
