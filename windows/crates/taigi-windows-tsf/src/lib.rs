@@ -6,8 +6,8 @@
 //! PR5a gave it the lifecycle (activation, sinks, tray button + menu,
 //! settings reload); PR5b the composing: key sink → classifier → engine +
 //! document inside synchronous edit sessions, display attribute, preserved
-//! keys, password / read-only gating, context handover. The candidate
-//! window is PR6.
+//! keys, password / read-only gating, context handover; PR6 the candidate
+//! window (Direct2D over the core models), the UI-less list and the mode flash.
 
 // 中文: TSF 文字服務 DLL 的五個匯出點;每個 COM 進入點都包 catch_unwind,PR5a 只做生命週期不組字。
 
@@ -30,6 +30,7 @@ mod runtime;
 mod session;
 mod settings_launcher;
 mod text_service;
+mod ui;
 mod wide;
 
 use std::ffi::c_void;

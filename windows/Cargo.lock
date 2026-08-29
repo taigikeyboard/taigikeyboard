@@ -696,6 +696,7 @@ dependencies = [
  "taigi-windows-storage",
  "windows",
  "windows-core",
+ "windows-numerics",
 ]
 
 [[package]]

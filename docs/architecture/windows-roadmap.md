@@ -122,7 +122,15 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   read-only context, teardown — all normal paths, checked on both the call `HRESULT`
   and `phrSession`) leaves engine + document untouched and the key is returned to the
   host unconsumed. Never `RequestEditSession` from a WndProc / timer / focus callback
-  (rakukan `docs/DESIGN.md:745-747`). DB writes go to a per-process bounded writer
+  (rakukan `docs/DESIGN.md:745-747`); the ONE other entry is the UI-less
+  `ITfCandidateListUIElementBehavior::Finalize` / `Abort` — a host-initiated synchronous
+  call on the TIP thread outside any session of ours, which runs the key path with the
+  commit / cancel intent (khiin `candidate_list_ui.rs:346-356`) and is refused when the
+  engine is busy (the host re-entered us). Focus / context callbacks (`OnSetFocus`,
+  `OnPushContext`, `OnPopContext`, `OnKillThreadFocus`) take the window down through a
+  POSTED message to the popup (PR6 Codex), never synchronously; the window itself is
+  shown / hidden only AFTER the edit session returned and the engine lock dropped, so
+  the host's `BeginUIElement` / `SetWindowPos` re-entry never meets a held lock. DB writes go to a per-process bounded writer
   thread; the frequency snapshot is read on the key thread with `busy_timeout = 0`
   (busy → no boost this keystroke; macOS reads sync too, `ComposingManager.swift:292-298`).
   Engine + dictionaries initialise lazily on the first key the TIP handles, never in
@@ -141,20 +149,30 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   are explicit paths; the renderer owns NO composition state), rounded corners via
   DWM, DPI computed from the window's monitor inside a **thread** DPI-awareness scope
   (Codex: an in-proc DLL must not change the host process's DPI context), light/dark
-  from the appearance setting or the system theme. The three layouts, metrics, paging,
+  from the appearance setting or the system theme (read once, re-read on
+  `WM_SETTINGCHANGE` / `WM_THEMECHANGED` / `WM_DWMCOLORIZATIONCOLORCHANGED`, never per
+  keystroke). Every monitor query runs inside that same DPI scope (`GetDpiForMonitor`
+  answers per the calling thread's awareness), `WM_DPICHANGED` re-anchors to the caret on
+  the new monitor (the OS's suggested frame only when the caret is on no monitor), and a
+  caret rect from a host that is not per-monitor aware is mapped through
+  `LogicalToPhysicalPointForPerMonitorDPI` before use. The three layouts, metrics, paging,
   grid, positioning and index-label rules are the macOS pure models ported verbatim
   (`Candidates/HorizontalPageLayout.swift`, `ExpandedGridLayout.swift`,
   `CandidateMetrics.swift`, `CandidatePanelPositioning.swift`) with their test
   oracles as Rust tests. Sequoia geometry (6 pt corners, full-cell highlight). Caret
   rect from `ITfContextView::GetTextExt` on the collapsed selection (rakukan
-  `on_compose.rs:29-43`), treating clipped / empty / failed rects as "no anchor" with
-  khiin's fallbacks (`composition_utils.rs:31-69`). Mouse click selects, never commits
+  `on_compose.rs:29-43`), treating clipped / empty / failed rects as "no anchor" —
+  composition end → composition start → selection (khiin `composition_utils.rs:31-69`),
+  then NO window (the Mac's `presentCandidates` rule; a host-window-corner fallback was
+  refused by the PR6 Codex review). Mouse click selects, never commits
   (`CandidateItemView.swift:47-48`, identical semantics), so no edit session is needed
   from the window. **Codex: UI-less mode is a v1 architecture item, not a dogfood
   note** — the TIP registers `GUID_TFCAT_TIPCAP_UIELEMENTENABLED`, implements
   `ITfUIElement` + `ITfCandidateListUIElement` over the same list model, and calls
   `ITfUIElementMgr::BeginUIElement`; when the host answers "do not show", the popup
-  stays hidden and the host renders the list itself (khiin `tip/candidate_list_ui.rs`).
+  stays hidden and the host renders the list itself (khiin `tip/candidate_list_ui.rs`);
+  `ITfUIElement::Show` from the host hides / re-shows the popup with the list kept, and
+  the list the host sees is the same `MAX_DISPLAY_CANDIDATES`-capped one the layouts hold.
 - **W5 Keys** — `KeyEventSnapshot{characters, charactersIgnoringModifiers, vk, shift,
   ctrl, alt, win, navigationKey, isNamedSpecialKey}`; modifiers sampled ONCE at entry
   (Codex: `GetKeyState` drifts under autorepeat/re-entrancy); characters via
@@ -303,8 +321,8 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR3 | Core candidates | `CandidateMetrics<TextMeasurer>`, `HorizontalPageLayout`, `VerticalLayout`, `ExpandedGridLayout`, positioning, index labels, cell content, document text; macOS oracle numbers as tests | PR #627 open (stacked); Codex post-impl BLOCK×3/RISK×6 fixed `f2af405d` (models own scroll offset, `VerticalLayoutInput`/`VerticalGeometry`, cell rects + hit tests + `UnfoldPlan`) |
 | PR4 | Storage + policies | `taigi-windows-storage`: rusqlite stores (freq v2 / assoc v6 / custom v3, byte-identical SQL, WAL + bounded busy handling, migration under `BEGIN IMMEDIATE`), `LearningCapacity`, CSV codec, seeds, settings file store (atomic replace); core: `AutoSpacePolicy` + attaching set, `FullWidthPunctuation`, `NextWordLearner`, shortcuts model (chords, registries, conflicts, recorder gate) | PR #628 open (stacked on #627); `NextWordLearner` already landed in PR2b; Codex post-impl pending |
 | PR5a | TSF lifecycle | COM exports + class factory + symmetric registration + GUIDs; `TextService` activate/deactivate; thread-mgr / thread-focus sinks; context identity; lang-bar button + menu; settings reload; spawn settings exe; **smoke TIP that composes nothing** | PR open (stacked on #628); `taigi-windows-tsf` cdylib links under mingw + export check (`make check-dll`); unit tests type-checked only (no host run); Codex post-impl pending |
-| PR5b | TSF composing | key sink → snapshot → intent → manager inside sync edit sessions; composition start/update/commit per context; display attribute; preserved keys; password/read-only gating; handover | PR open (stacked on PR5a); candidates = headless list until PR6; Codex post-impl pending |
-| PR6 | TSF UI | candidate window (D2D/DWrite renderer, 3 layouts, DPI scope, theme, mouse, private fonts, caret positioning + fallbacks, device loss) + UI-less `ITfCandidateListUIElement` contract; mode flash panel; unfold animation | Pending |
+| PR5b | TSF composing | key sink → snapshot → intent → manager inside sync edit sessions; composition start/update/commit per context; display attribute; preserved keys; password/read-only gating; handover | PR #630 open (stacked on #629); Codex post-impl fixed `db4c53a7` |
+| PR6 | TSF UI | candidate window (D2D/DWrite renderer, 3 layouts, DPI scope, theme, mouse, private fonts, caret positioning + fallbacks, device loss) + UI-less `ITfCandidateListUIElement` contract; mode flash panel; unfold animation | PR #631 open (stacked on #630); host-verified only (`make check`, no Windows device); Codex post-impl 7 BLOCK / 12 RISK / 8 NIT fixed in the follow-up commit |
 | PR7 | Settings exe I | eframe shell + sidebar + 一般 / 外觀 / 快捷鍵 panes + shortcut recorder + display language + fonts | Pending |
 | PR8 | Settings exe II | 自訂詞庫 (table, CRUD sheet, CSV import/export, delete all, clear learning) + 詞庫來源 + unlisted 辭典搜尋 + external lookup URLs | Pending |
 | PR9 | Updates | `taigi-windows-update`: manifest model + checker + download + Authenticode pin + install flow; `--check-updates` headless mode; toast; 一般-pane rows | Pending |

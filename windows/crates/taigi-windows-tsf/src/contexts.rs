@@ -28,8 +28,6 @@ pub struct ContextState {
     /// The list the last fetch produced; empty = no candidates showing.
     pub candidates: Vec<ContinuousCandidate>,
     /// The highlighted candidate (PR5b: a headless list; PR6's window
-    /// takes this over).
-    pub selected: usize,
     /// Which script's commit left an auto space in front of the caret, so
     /// the next attaching punctuation may swap with it (§23), together
     /// with the caret's range at that moment — the position the swap

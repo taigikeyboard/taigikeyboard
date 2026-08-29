@@ -36,9 +36,14 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 - `DllCanUnloadNow` returns `S_FALSE` forever; `DllMain` only stores the HINSTANCE (no threads,
   no COM, no file I/O).
 - Engine + dictionaries initialise lazily on the first key the TIP handles, never in `Activate`.
-- Edit sessions: `TF_ES_SYNC | TF_ES_READWRITE` from inside the key sink only. Never call
-  `RequestEditSession` from a WndProc or timer callback.
-- `ITfThreadMgrEventSink::OnSetFocus` only queues work (`PostMessage`) and returns.
+- Edit sessions: `TF_ES_SYNC | TF_ES_READWRITE` from inside the key sink, or from the UI-less
+  element's host-initiated `Finalize` / `Abort` (same key path, refused when the engine is busy).
+  Never call `RequestEditSession` from a WndProc or timer callback.
+- `ITfThreadMgrEventSink::OnSetFocus` (and the other focus / context sinks) only flag state and
+  post the window's hide (`PostMessage`), then return. The candidate window is shown / hidden
+  after the edit session returned, never inside it.
+- Every `HWND` owns nothing: the `PopupWindow` owns the handler box, the window borrows a pointer.
+  Monitor / DPI queries run inside the per-monitor-v2 thread scope (`with_per_monitor_dpi`).
 - `OnTestKeyDown` and `OnKeyDown` run the same classifier — terminals skip the former.
 - Every `unsafe` block carries a `// SAFETY:` comment (`rust-ffi-safety.md` §3).
 - Verify any Win32/TSF API shape against the `windows` crate metadata (`cargo doc` / the crate

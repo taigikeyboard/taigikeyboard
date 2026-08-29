@@ -14,6 +14,8 @@ pub const GUID_PROFILE: GUID = GUID::from_u128(0xDCC522F5_B3FC_4D81_98DD_E4E0FD9
 #[allow(dead_code)] // registered with the display-attribute provider, PR5b
 pub const GUID_DISPLAY_ATTRIBUTE_INPUT: GUID =
     GUID::from_u128(0xEE6EAB46_FF70_47D6_AEEA_F1E1C3C40234);
+/// The UI-less candidate list element (`ITfUIElement::GetGUID`).
+pub const GUID_CANDIDATE_UI_ELEMENT: GUID = GUID::from_u128(0xA4C87E11_DF98_4062_BC51_327C4C2043E9);
 /// Preserved key: open the settings window (PR5b registers it).
 #[allow(dead_code)] // `ITfKeystrokeMgr::PreserveKey`, PR5b
 pub const GUID_PRESERVED_KEY_SETTINGS: GUID =

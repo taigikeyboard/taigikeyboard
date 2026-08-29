@@ -44,6 +44,8 @@ tempfile = "3"
 # names it.
 windows = "0.62"
 windows-core = "0.62"
+# `Vector2` for Direct2D draw origins (the `windows` crate takes it by this type).
+windows-numerics = "0.3"
 
 taigi-windows-core = { path = "crates/taigi-windows-core" }
 taigi-windows-storage = { path = "crates/taigi-windows-storage" }

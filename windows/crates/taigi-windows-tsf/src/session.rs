@@ -15,25 +15,32 @@
 
 use crate::composition::{is_password_field, is_read_only, CompositionEditor, NullExecutor};
 use crate::contexts::ContextEntry;
+use crate::contexts::ContextRegistry;
 use crate::edit_session;
 use crate::key_translation;
 use crate::runtime::Runtime;
 use crate::settings_launcher;
 use crate::text_service::TextService_Impl;
+use crate::ui::presenter::CandidatePresenter;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_windows_core::composing::{
-    CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, ComposingManager,
-    ComposingSessionCoordinator, ContextToken,
+    CandidateCellContent, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript,
+    ComposingManager, ComposingSessionCoordinator, ContextToken,
 };
 use taigi_windows_core::engine::ContinuousCandidate;
 use taigi_windows_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot, ShortcutAction,
 };
 use taigi_windows_core::policies;
-use taigi_windows_core::settings::{keys, InputMode, SettingsDocument};
+use taigi_windows_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
+use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows::core::{Interface, BOOL};
-use windows::Win32::Foundation::{LPARAM, WPARAM};
-use windows::Win32::UI::TextServices::{ITfComposition, ITfCompositionSink, ITfContext, ITfRange};
+use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
+use windows::Win32::UI::TextServices::{
+    ITfComposition, ITfCompositionSink, ITfContext, ITfDocumentMgr, ITfRange,
+};
 use windows_core::IUnknownImpl;
 
 /// Whether TSF is asking (`OnTestKeyDown`) or delivering (`OnKeyDown`).
@@ -160,12 +167,9 @@ impl TextService_Impl {
                     .map(ComposingManager::is_composing)
             })
             .unwrap_or(false);
-        let is_showing = self
-            .state
-            .borrow_mut()
-            .contexts
-            .entry_mut(identity)
-            .is_some_and(|entry| !entry.state.candidates.is_empty());
+        let _ = identity;
+        let presenter = self.state.borrow().presenter.clone();
+        let is_showing = presenter.is_some_and(|presenter| presenter.borrow().is_showing(token));
         (is_composing, is_showing)
     }
 
@@ -221,6 +225,15 @@ impl TextService_Impl {
         settings: &SettingsDocument,
     ) -> KeyOutcome {
         let runtime = Runtime::shared();
+        // A hide a focus callback could not post (the presenter was busy
+        // inside a session) lands here, before anything new is shown.
+        let hide_pending = std::mem::take(&mut self.state.borrow_mut().is_ui_hide_pending);
+        if hide_pending {
+            let presenter = self.state.borrow().presenter.clone();
+            if let Some(presenter) = presenter {
+                presenter.borrow_mut().hide_for_handover();
+            }
+        }
         let mut coordinator = match runtime.coordinator().lock() {
             Ok(guard) => guard,
             Err(poisoned) => poisoned.into_inner(),
@@ -247,23 +260,27 @@ impl TextService_Impl {
         // Every key gets exactly one chance at the swap: the arm is consumed
         // here, before any early return, and only the auto-space paths below
         // re-arm it.
-        let (composition, armed_swap, mut candidates, selected) = {
+        let (composition, armed_swap, candidates, presenter) = {
             let mut state = self.state.borrow_mut();
+            let presenter = state.presenter.clone();
             match state.contexts.entry_mut(identity) {
                 Some(entry) => (
                     entry.state.composition.take(),
                     entry.state.armed_auto_space.take(),
                     std::mem::take(&mut entry.state.candidates),
-                    entry.state.selected,
+                    presenter,
                 ),
-                None => (None, None, Vec::new(), 0),
+                None => (None, None, Vec::new(), presenter),
             }
         };
-        let mut list = CandidateList {
-            candidates: std::mem::take(&mut candidates),
-            selected,
-        };
+        let mut list = CandidateSource { candidates };
         let mut armed_after: Option<(CandidateScript, ITfRange)> = None;
+        let surface = Surface {
+            presenter,
+            token,
+            slot_key_set: ComposingKeyBindings::from_document(settings).slot_key_set,
+            actions: RefCell::new(Vec::new()),
+        };
 
         let session = edit_session::read_write(context, client_id, |ec| {
             if is_password_field(context, ec) {
@@ -278,6 +295,7 @@ impl TextService_Impl {
                 manager,
                 &mut editor,
                 &mut list,
+                &surface,
                 armed_swap.as_ref(),
             );
             if let Some(error) = editor.failure.take() {
@@ -285,12 +303,22 @@ impl TextService_Impl {
                 manager.cancel_composition(&mut NullExecutor);
                 editor.abandon();
                 list.clear();
+                surface.hide();
                 return Ok((KeyOutcome::Consumed, None));
             }
             armed_after = editor.armed.take();
             Ok((outcome, editor.composition.take()))
         });
         drop(coordinator);
+        // The window is touched only now — outside the session and the
+        // engine lock, so a host re-entering us from `BeginUIElement` /
+        // `SetWindowPos` finds neither held.
+        if let Some(caret) = surface.apply(settings) {
+            self.state.borrow_mut().focused_caret = POINT {
+                x: caret.left,
+                y: caret.top,
+            };
+        }
 
         let (outcome, composition_after) = match session {
             Ok(answer) => answer,
@@ -307,7 +335,6 @@ impl TextService_Impl {
             state.contexts.entry_mut(identity).map(|entry| {
                 let previous = std::mem::replace(&mut entry.state.composition, composition_after);
                 entry.state.candidates = list.candidates;
-                entry.state.selected = list.selected;
                 let previous_arm =
                     std::mem::replace(&mut entry.state.armed_auto_space, armed_after);
                 (previous, previous_arm)
@@ -316,6 +343,60 @@ impl TextService_Impl {
         drop(previous);
         drop(armed_swap);
         outcome
+    }
+
+    /// `ITfCandidateListUIElementBehavior::Finalize`: the host commits the
+    /// highlighted candidate — the key path with the commit key's intent.
+    pub(crate) fn ui_element_finalize(&self) -> windows::core::Result<()> {
+        self.run_from_ui_element(ComposingKeyIntent::CommitHighlightedCandidate)
+    }
+
+    /// `ITfCandidateListUIElementBehavior::Abort`: the host cancels the
+    /// composition — Escape's intent.
+    pub(crate) fn ui_element_abort(&self) -> windows::core::Result<()> {
+        self.run_from_ui_element(ComposingKeyIntent::Cancel)
+    }
+
+    /// A host-initiated synchronous call on the TIP thread, outside any
+    /// session of ours: it runs like a key, under the owning context's own
+    /// edit session. Refused (`E_UNEXPECTED`) when no list is up, the
+    /// owner's context is gone, or the engine is busy — which means the
+    /// host re-entered us from inside our own session.
+    fn run_from_ui_element(&self, intent: ComposingKeyIntent) -> windows::core::Result<()> {
+        let busy = || windows::core::Error::from_hresult(E_UNEXPECTED);
+        let presenter = self.state.borrow().presenter.clone();
+        let owner = presenter
+            .as_ref()
+            .and_then(|presenter| presenter.try_borrow().ok()?.owner())
+            .ok_or_else(busy)?;
+        let context = {
+            let mut state = self.state.borrow_mut();
+            state
+                .contexts
+                .entry_by_token_mut(owner)
+                .map(|entry| Rc::clone(&entry.context))
+        }
+        .ok_or_else(busy)?;
+        let identity = ContextRegistry::identity(&context).ok_or_else(busy)?;
+        let runtime = Runtime::shared();
+        let engine_free = runtime
+            .coordinator_if_built()
+            .is_some_and(|mutex| mutex.try_lock().is_ok());
+        if !engine_free {
+            log::warn!("ui_element.reentered intent={intent:?}");
+            return Err(busy());
+        }
+        let settings = runtime.settings.current();
+        let outcome = self.run_key(
+            &context,
+            owner,
+            identity,
+            &KeyEventSnapshot::default(),
+            &intent,
+            &settings,
+        );
+        log::debug!("ui_element.intent {intent:?} outcome={outcome:?}");
+        Ok(())
     }
 
     /// Engine work a callback could not do because the engine was busy
@@ -410,7 +491,12 @@ impl TextService_Impl {
             }
         }
         log::info!("key.handover finished_previous={finished}");
-        // The previous context's candidates are gone with its ownership.
+        // The previous context's candidates and window are gone with its
+        // ownership (`hideForHandover`).
+        let presenter = self.state.borrow().presenter.clone();
+        if let Some(presenter) = presenter {
+            presenter.borrow_mut().hide_for_handover();
+        }
         let stale = {
             let mut state = self.state.borrow_mut();
             state.contexts.entry_by_token_mut(owner).map(|entry| {
@@ -454,6 +540,10 @@ impl TextService_Impl {
         };
         drop(held);
         let Some(token) = token else { return };
+        let presenter = self.state.borrow().presenter.clone();
+        if let Some(presenter) = presenter {
+            presenter.borrow_mut().hide(token);
+        }
         let reset_now = Runtime::shared()
             .coordinator_if_built()
             .is_some_and(|mutex| match mutex.try_lock() {
@@ -531,10 +621,34 @@ impl TextService_Impl {
                     log::error!("shortcut.toggle_romanization_failed error={error}");
                 }
                 // The candidates on screen were fetched under the old
-                // romanization; they go with the mode that produced them.
-                let mut state = self.state.borrow_mut();
-                if let Some(entry) = state.contexts.entry_mut(identity) {
-                    entry.state.candidates.clear();
+                // romanization; they go with the mode that produced them —
+                // then the HUD, because the chord fires from anywhere and a
+                // romanization that changed with no notice reads as the
+                // keyboard breaking (USER 2026-08-26).
+                let (token, presenter, flash) = {
+                    let mut state = self.state.borrow_mut();
+                    let token = state.contexts.entry_mut(identity).map(|entry| {
+                        entry.state.candidates.clear();
+                        entry.token
+                    });
+                    (token, state.presenter.clone(), state.mode_flash.clone())
+                };
+                if let (Some(token), Some(presenter)) = (token, presenter) {
+                    presenter.borrow_mut().hide(token);
+                }
+                let settings = runtime.settings.current();
+                let mode: InputMode = settings.choice(&keys::INPUT_MODE);
+                let key = match mode {
+                    InputMode::Poj => StringKey::SettingsPojMode,
+                    _ => StringKey::SettingsTlMode,
+                };
+                let text = StringResolver::new(runtime.display_language())
+                    .resolve(key)
+                    .to_owned();
+                if let Some(flash) = flash {
+                    let anchor = self.state.borrow().focused_caret;
+                    let appearance: AppearanceMode = settings.choice(&keys::APPEARANCE_MODE);
+                    flash.borrow_mut().flash(&text, anchor, appearance);
                 }
             }
             ShortcutAction::ToggleTranslateSwapped => {
@@ -548,49 +662,160 @@ impl TextService_Impl {
                 }) {
                     log::error!("shortcut.toggle_translate_swapped_failed error={error}");
                 }
-                // The list stays (the swap changes how a candidate displays,
-                // never which exist); PR6 re-renders it.
+                // The list STAYS: the swap changes how a candidate displays,
+                // never which exist — re-rendered in place, selection kept
+                // (dismissing read as the window vanishing, 2026-08-21).
+                let (token, candidates, presenter) = {
+                    let mut state = self.state.borrow_mut();
+                    let presenter = state.presenter.clone();
+                    match state.contexts.entry_mut(identity) {
+                        Some(entry) => {
+                            (Some(entry.token), entry.state.candidates.clone(), presenter)
+                        }
+                        None => (None, Vec::new(), presenter),
+                    }
+                };
+                if let (Some(token), Some(presenter), Some(mutex)) =
+                    (token, presenter, runtime.coordinator_if_built())
+                {
+                    if let Ok(coordinator) = mutex.try_lock() {
+                        if let Some(manager) = coordinator.manager_ref(token) {
+                            let settings = runtime.settings.current();
+                            let cells: Vec<_> =
+                                candidates.iter().map(|c| manager.cell_content(c)).collect();
+                            presenter.borrow_mut().update_cells(cells, &settings, token);
+                        }
+                    }
+                }
             }
         }
         runtime.settings.current();
     }
 }
 
-/// The headless candidate list for one context (PR5b).
-struct CandidateList {
+/// The candidates the engine offered for one context — the list the
+/// window's absolute indices point into.
+struct CandidateSource {
     candidates: Vec<ContinuousCandidate>,
-    selected: usize,
 }
 
-impl CandidateList {
+impl CandidateSource {
     fn clear(&mut self) {
         self.candidates.clear();
-        self.selected = 0;
     }
+}
 
-    fn replace(&mut self, candidates: Vec<ContinuousCandidate>) {
-        self.candidates = candidates;
-        self.selected = 0;
-    }
+/// One thing the key decided the window should do, replayed after the
+/// session: reading the caret needs the edit cookie, showing a window does
+/// not — and showing one inside the session would run the host's
+/// `BeginUIElement` / `SetWindowPos` re-entry with the engine lock held.
+enum SurfaceAction {
+    Show {
+        cells: Vec<CandidateCellContent>,
+        caret: RECT,
+        document: Option<ITfDocumentMgr>,
+    },
+    Hide,
+    Navigate(CandidateNavigation),
+}
 
-    fn navigate(&mut self, direction: CandidateNavigation) {
-        if self.candidates.is_empty() {
+/// The window, as one key sees it: the presenter (if this host got one)
+/// plus the owner token and the slot keys the list was classified against.
+/// Reads answer from the presenter at once; writes are queued for `apply`.
+struct Surface {
+    presenter: Option<Rc<RefCell<CandidatePresenter>>>,
+    token: ContextToken,
+    slot_key_set: taigi_windows_core::keys::CandidateSlotKeySet,
+    actions: RefCell<Vec<SurfaceAction>>,
+}
+
+impl Surface {
+    /// Queues the list for the screen anchored to the caret; a host that
+    /// cannot say where its caret is gets no window and no list (as on the
+    /// Mac). The caret is read HERE, under the session's cookie.
+    fn present(
+        &self,
+        source: &mut CandidateSource,
+        manager: &ComposingManager,
+        editor: &CompositionEditor<'_>,
+    ) {
+        if self.presenter.is_none() {
+            source.clear();
             return;
         }
-        match direction {
-            CandidateNavigation::Right
-            | CandidateNavigation::Down
-            | CandidateNavigation::NextCandidate => {
-                self.selected = (self.selected + 1).min(self.candidates.len() - 1);
-            }
-            CandidateNavigation::Left
-            | CandidateNavigation::Up
-            | CandidateNavigation::PreviousCandidate => {
-                self.selected = self.selected.saturating_sub(1);
-            }
-            // Paging needs a layout — the window's (PR6).
-            CandidateNavigation::PageUp | CandidateNavigation::PageDown => {}
+        if source.candidates.is_empty() {
+            self.hide();
+            return;
         }
+        let Some(caret) = editor.caret_rect() else {
+            log::debug!("candidates.no_caret_rect — list dropped");
+            source.clear();
+            self.hide();
+            return;
+        };
+        let cells: Vec<_> = source
+            .candidates
+            .iter()
+            .map(|c| manager.cell_content(c))
+            .collect();
+        let document = editor.document();
+        self.actions.borrow_mut().push(SurfaceAction::Show {
+            cells,
+            caret,
+            document,
+        });
+    }
+
+    fn hide(&self) {
+        self.actions.borrow_mut().push(SurfaceAction::Hide);
+    }
+
+    fn navigate(&self, direction: CandidateNavigation) {
+        self.actions
+            .borrow_mut()
+            .push(SurfaceAction::Navigate(direction));
+    }
+
+    /// Replays the queued actions on the presenter, in order. Answers the
+    /// caret the list was anchored to when one was shown.
+    fn apply(&self, settings: &SettingsDocument) -> Option<RECT> {
+        let presenter = self.presenter.as_ref()?;
+        let actions = std::mem::take(&mut *self.actions.borrow_mut());
+        let mut shown_at = None;
+        for action in actions {
+            let mut presenter = presenter.borrow_mut();
+            match action {
+                SurfaceAction::Show {
+                    cells,
+                    caret,
+                    document,
+                } => {
+                    presenter.show(
+                        cells,
+                        self.slot_key_set,
+                        caret,
+                        settings,
+                        self.token,
+                        document,
+                    );
+                    shown_at = Some(caret);
+                }
+                SurfaceAction::Hide => presenter.hide(self.token),
+                SurfaceAction::Navigate(direction) => presenter.navigate(direction, self.token),
+            }
+        }
+        shown_at
+    }
+
+    fn selected_index(&self) -> Option<usize> {
+        self.presenter.as_ref()?.borrow().selected_index(self.token)
+    }
+
+    fn candidate_index_for_slot(&self, slot: usize) -> Option<usize> {
+        self.presenter
+            .as_ref()?
+            .borrow()
+            .candidate_index_for_slot(slot, self.token)
     }
 }
 
@@ -603,23 +828,27 @@ fn perform_intent(
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     editor: &mut CompositionEditor<'_>,
-    list: &mut CandidateList,
+    list: &mut CandidateSource,
+    surface: &Surface,
     armed_swap: Option<&(CandidateScript, ITfRange)>,
 ) -> KeyOutcome {
     match intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, editor);
             refresh_candidates(manager, list);
+            surface.present(list, manager, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::DeleteBackward => {
             manager.delete_backward(editor);
             refresh_candidates(manager, list);
+            surface.present(list, manager, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::Commit => {
             let committed = manager.commit_composition(editor);
             list.clear();
+            surface.hide();
             append_auto_space(
                 committed.as_deref(),
                 CandidateScript::Primary,
@@ -631,6 +860,7 @@ fn perform_intent(
         ComposingKeyIntent::Cancel => {
             manager.cancel_composition(editor);
             list.clear();
+            surface.hide();
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::CommitThenInsert(text) => {
@@ -641,6 +871,7 @@ fn perform_intent(
             let insert = policies::augment_insert(&document_text, manager.display_text(), gate);
             let committed = manager.commit_composition_then_insert(&insert.text, editor);
             list.clear();
+            surface.hide();
             if insert.leaves_trailing_auto_space && committed.is_some() {
                 editor.arm_swap(CandidateScript::Primary);
             }
@@ -649,6 +880,7 @@ fn perform_intent(
         ComposingKeyIntent::CommitThenPassThrough => {
             manager.commit_composition(editor);
             list.clear();
+            surface.hide();
             KeyOutcome::ToHost
         }
         ComposingKeyIntent::PassThrough => {
@@ -680,61 +912,68 @@ fn perform_intent(
         }
         ComposingKeyIntent::CommitHighlightedCandidate => {
             commit_candidate(
-                list.selected,
+                surface.selected_index(),
                 CandidateScript::Primary,
                 settings,
                 manager,
                 editor,
                 list,
+                surface,
             );
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::CommitAlternateScript => {
             commit_candidate(
-                list.selected,
+                surface.selected_index(),
                 CandidateScript::Alternate,
                 settings,
                 manager,
                 editor,
                 list,
+                surface,
             );
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::SelectCandidateSlot(slot) => {
             // A chord aimed at an empty slot is consumed all the same.
             commit_candidate(
-                *slot,
+                surface.candidate_index_for_slot(*slot),
                 CandidateScript::Primary,
                 settings,
                 manager,
                 editor,
                 list,
+                surface,
             );
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::Navigate(direction) => {
-            list.navigate(*direction);
+            surface.navigate(*direction);
             KeyOutcome::Consumed
         }
     }
 }
 
-fn refresh_candidates(manager: &mut ComposingManager, list: &mut CandidateList) {
+fn refresh_candidates(manager: &mut ComposingManager, list: &mut CandidateSource) {
     match manager.fetch_candidates() {
         CandidateFetchOutcome::Unavailable | CandidateFetchOutcome::NotComposing => list.clear(),
-        CandidateFetchOutcome::Found(candidates) => list.replace(candidates),
+        CandidateFetchOutcome::Found(candidates) => list.candidates = candidates,
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn commit_candidate(
-    index: usize,
+    index: Option<usize>,
     script: CandidateScript,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     editor: &mut CompositionEditor<'_>,
-    list: &mut CandidateList,
+    list: &mut CandidateSource,
+    surface: &Surface,
 ) {
-    let Some(candidate) = list.candidates.get(index).cloned() else {
+    // Nil (no window) and an index past the list both mean nothing to
+    // commit; the key is consumed either way.
+    let Some(candidate) = index.and_then(|index| list.candidates.get(index).cloned()) else {
         return;
     };
     let (outcome, committed) = manager.commit_candidate(&candidate, script, editor);
@@ -742,12 +981,14 @@ fn commit_candidate(
     match outcome {
         CandidateCommitOutcome::Finalized => {
             list.clear();
+            surface.hide();
             append_auto_space(committed.as_deref(), script, settings, editor);
         }
         CandidateCommitOutcome::Nailed
         | CandidateCommitOutcome::Ignored
         | CandidateCommitOutcome::Unavailable => {
             refresh_candidates(manager, list);
+            surface.present(list, manager, editor);
         }
     }
 }

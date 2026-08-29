@@ -22,8 +22,12 @@ use crate::registration::SERVICE_DESCRIPTION;
 use crate::runtime::Runtime;
 use crate::session::KeyPhase;
 use crate::settings_launcher;
+use crate::ui::mode_flash::ModeFlash;
+use crate::ui::presenter::CandidatePresenter;
+use crate::ui::render::RenderFactory;
 use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::rc::Rc;
 use taigi_windows_core::composing::ContextToken;
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
@@ -75,6 +79,16 @@ pub(crate) struct ServiceState {
     /// Tokens whose engine ownership could not be released in a callback
     /// (the engine was busy); released under the next key's lock.
     pub(crate) deferred_releases: Vec<ContextToken>,
+    /// The candidate window (one per service — its thread pumps it) and the
+    /// mode flash, behind `Rc` so the key path borrows them, not the state.
+    /// Where the mode flash goes: the screen point of the last caret the
+    /// window anchored to, or the primary monitor's origin before any.
+    pub(crate) focused_caret: windows::Win32::Foundation::POINT,
+    /// A focus / context callback wanted the window down but the presenter
+    /// was busy (a session in flight): the next key hides first.
+    pub(crate) is_ui_hide_pending: bool,
+    pub(crate) presenter: Option<Rc<RefCell<CandidatePresenter>>>,
+    pub(crate) mode_flash: Option<Rc<RefCell<ModeFlash>>>,
 }
 
 #[implement(
@@ -171,6 +185,28 @@ impl TextService_Impl {
         preserved.sync(&keystroke_mgr, client_id, &settings);
         self.state.borrow_mut().preserved_keys = preserved;
 
+        // The renderer: Direct2D/DirectWrite factories + the bundled fonts,
+        // once per activation. A host without Direct2D (a remote session's
+        // basic display) keeps typing with no window (logged).
+        match RenderFactory::new() {
+            Ok(factory) => {
+                let factory = Rc::new(factory);
+                let presenter = Rc::new(RefCell::new(CandidatePresenter::new(Rc::clone(&factory))));
+                presenter.borrow_mut().attach(
+                    thread_mgr.clone(),
+                    self.to_object(),
+                    Rc::downgrade(&presenter),
+                );
+                let flash = ModeFlash::new(factory);
+                let mut state = self.state.borrow_mut();
+                state.presenter = Some(presenter);
+                state.mode_flash = Some(Rc::new(RefCell::new(flash)));
+            }
+            Err(error) => {
+                log::error!("ui.render_factory_failed error={error} — no candidate window")
+            }
+        }
+
         // Cosmetic: a tray button that fails to add is logged, not fatal.
         match thread_mgr.cast::<ITfLangBarItemMgr>() {
             Ok(lang_bar_mgr) => {
@@ -193,8 +229,19 @@ impl TextService_Impl {
     /// reference the state held is moved out under the borrow and released
     /// after it.
     fn deactivate(&self) -> Result<()> {
-        // The compositions still open are finished into their documents
-        // first — they need the contexts and the engine still wired.
+        // The windows first (no candidate may outlive its service), then the
+        // compositions still open are finished into their documents — they
+        // need the contexts and the engine still wired.
+        let (presenter, flash) = {
+            let mut state = self.state.borrow_mut();
+            (state.presenter.take(), state.mode_flash.take())
+        };
+        if let Some(presenter) = presenter {
+            presenter.borrow_mut().detach();
+        }
+        if let Some(flash) = flash {
+            flash.borrow_mut().destroy();
+        }
         let mut entries = std::mem::take(&mut self.state.borrow_mut().contexts).into_entries();
         self.finish_all_compositions(&mut entries);
         let (
@@ -307,6 +354,27 @@ impl TextService_Impl {
         state.focus_generation += 1;
     }
 
+    /// A focus / context callback's one permitted move on the window: a
+    /// posted hide (W3). `owner` = only that context's list; `None` =
+    /// whichever is up. When the presenter is mid-session (the callback
+    /// re-entered us), the hide is flagged for the next key instead.
+    fn request_ui_hide(&self, owner: Option<ContextToken>) {
+        let presenter = self.state.borrow().presenter.clone();
+        let Some(presenter) = presenter else {
+            return;
+        };
+        let posted = match presenter.try_borrow() {
+            Ok(presenter) => {
+                presenter.request_hide(owner);
+                true
+            }
+            Err(_) => false,
+        };
+        if !posted {
+            self.state.borrow_mut().is_ui_hide_pending = true;
+        }
+    }
+
     /// Re-registers the preserved keys when the settings revision moved.
     /// Cheap when it did not (one comparison); COM only when it did.
     pub(crate) fn sync_preserved_keys(
@@ -391,9 +459,10 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
     }
 
     /// Called synchronously from `msctf!_NotifyCallbacks`: records the
-    /// identity, flags the settings re-read, returns. No COM call, no I/O
-    /// (rakukan `factory.rs:1304-1330`). The queue is the next key-sink
-    /// call until PR6 gives the DLL a window to `PostMessage` to.
+    /// identity, flags the settings re-read, posts the window's hide,
+    /// returns. No COM call, no I/O (rakukan `factory.rs:1304-1330`); the
+    /// candidate list of the document that lost focus comes down on the
+    /// message loop, its composition at the next key (handover).
     fn OnSetFocus(
         &self,
         pdimfocus: Ref<ITfDocumentMgr>,
@@ -403,23 +472,33 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
             let focused = pdimfocus
                 .as_ref()
                 .map_or(0, |document| document.as_raw() as usize);
-            let mut state = self.state.borrow_mut();
-            if state.focused_document != focused {
-                state.focused_document = focused;
-                state.focus_generation += 1;
-                if focused != 0 {
-                    state.is_settings_refresh_pending = true;
+            let changed = {
+                let mut state = self.state.borrow_mut();
+                let changed = state.focused_document != focused;
+                if changed {
+                    state.focused_document = focused;
+                    state.focus_generation += 1;
+                    if focused != 0 {
+                        state.is_settings_refresh_pending = true;
+                    }
                 }
+                changed
+            };
+            if changed {
+                self.request_ui_hide(None);
             }
             Ok(())
         })
     }
 
+    /// A context pushed over the focused one (a modal edit, a transitory
+    /// context): whatever list was up belongs to the context underneath.
     fn OnPushContext(&self, pic: Ref<ITfContext>) -> Result<()> {
         guarded("ITfThreadMgrEventSink::OnPushContext", || {
             if let Some(context) = pic.as_ref() {
                 self.token_for(context);
                 self.state.borrow_mut().focus_generation += 1;
+                self.request_ui_hide(None);
             }
             Ok(())
         })
@@ -435,6 +514,7 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
                 // released HERE, outside the borrow; the engine ownership too.
                 if let Some(entry) = forgotten {
                     log::debug!("tsf.context_popped token={:?}", entry.token);
+                    self.request_ui_hide(Some(entry.token));
                     let released = Runtime::shared()
                         .coordinator_if_built()
                         .is_some_and(|mutex| match mutex.try_lock() {
@@ -467,10 +547,13 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
         })
     }
 
-    /// Alt+Tab to another process: the candidate window (PR6) hides here.
+    /// Alt+Tab to another process: the candidate window comes down (the
+    /// list with it — a hidden list must not keep answering slot keys),
+    /// through the same posted hide the document-focus callback uses.
     fn OnKillThreadFocus(&self) -> Result<()> {
         guarded("ITfThreadFocusSink::OnKillThreadFocus", || {
             self.state.borrow_mut().focus_generation += 1;
+            self.request_ui_hide(None);
             Ok(())
         })
     }

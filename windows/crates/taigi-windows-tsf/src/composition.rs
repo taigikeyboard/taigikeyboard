@@ -159,6 +159,18 @@ impl<'a> CompositionEditor<'a> {
         }
     }
 
+    /// Where the composition's caret is on screen (pixels), for the window.
+    pub fn caret_rect(&self) -> Option<windows::Win32::Foundation::RECT> {
+        crate::ui::caret::caret_rect(self.context, self.ec, self.composition.as_ref())
+    }
+
+    /// The document this session's context belongs to (the UI-less list
+    /// reports it to the host).
+    pub fn document(&self) -> Option<windows::Win32::UI::TextServices::ITfDocumentMgr> {
+        // SAFETY: a query on the live context.
+        unsafe { self.context.GetDocumentMgr() }.ok()
+    }
+
     fn record(&mut self, outcome: Result<()>) {
         if let Err(error) = outcome {
             log::error!("composition.edit_failed error={error}");
