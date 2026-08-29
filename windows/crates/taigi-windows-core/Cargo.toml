@@ -1,0 +1,23 @@
+[package]
+name = "taigi-windows-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Platform-independent core of the Windows input method: settings model, engine bridge, composing orchestration, key classifier, candidate geometry, strings"
+
+# Pure crate on purpose: no `windows`, no rusqlite, no networking. That is
+# what lets it run its tests natively on the macOS host and be `cargo check`ed
+# for the MSVC targets there (docs/architecture/windows-roadmap.md W1/W13).
+[lints]
+workspace = true
+
+[dependencies]
+dispatch = { workspace = true }
+protos = { workspace = true }
+prost = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

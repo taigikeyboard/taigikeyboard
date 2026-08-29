@@ -10,6 +10,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt lint \
         i18n i18n-test \
         macos-release version \
+        windows-check \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -92,6 +93,14 @@ dogfood:
 macos-release:
 	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
+# Host-side gate for the Windows input method (no Windows machine needed):
+# i18n check + native tests for the pure crates + clippy against the
+# x86_64-pc-windows-gnu target (full crate graph via mingw-w64) + cargo check
+# against x86_64-pc-windows-msvc for the C-free crates. Compilation proof only;
+# behaviour is the dogfood run-book's (docs/architecture/windows-roadmap.md W13).
+windows-check:
+	$(MAKE) -C windows check
+
 # Set the one marketing version iOS, Android, and macOS share:
 #
 #   make version 3.6.7
@@ -151,6 +160,7 @@ help:
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
+	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo "  make version 3.6.7      Set that version on iOS + Android + macOS"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""

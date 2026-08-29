@@ -113,3 +113,5 @@ ios/build/
 /references/
 .tmp/
 client_secret.json
+# === Windows input method (windows/ Cargo workspace) ===
+windows/target/

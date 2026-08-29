@@ -1,0 +1,18 @@
+# Static CRT for every MSVC artifact: the TIP DLL is loaded into processes the
+# installer never touched, and the settings exe must run on a machine with no
+# Visual C++ redistributable (khiin `windows/ime/.cargo/config.toml`). The
+# release script's import-table check is what proves no `vcruntime*.dll` /
+# `msvcp*.dll` import slipped in (docs/architecture/windows-roadmap.md W14).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# The host-check target. Cross-linking from macOS goes through mingw-w64's
+# gcc, which cargo cannot guess.
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"

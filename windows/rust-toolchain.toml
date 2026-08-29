@@ -1,0 +1,24 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
+# JUSTIFICATION: shipped ABIs + the host check target.
+#   x86_64-pc-windows-msvc  — v1 release target (64-bit hosts).
+#   i686-pc-windows-msvc    — the 32-bit TIP DLL for WOW64 hosts; built now,
+#                             shipped once x64 registration is proven on a real
+#                             machine (docs/architecture/windows-roadmap.md W8).
+#   aarch64-pc-windows-msvc — Windows on ARM; built, not published without a
+#                             native smoke test (same entry).
+#   x86_64-pc-windows-gnu   — NOT shipped. The macOS host has no MSVC C
+#                             toolchain, so this is the target `make
+#                             windows-check` uses to check the whole workspace
+#                             as it grows (a bundled SQLite compiles via
+#                             mingw-w64 here, not via cl.exe); the MSVC targets
+#                             can only be `cargo check`ed for crates with no C
+#                             dependency (W13).
+targets = [
+    "x86_64-pc-windows-msvc",
+    "i686-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-pc-windows-gnu",
+]

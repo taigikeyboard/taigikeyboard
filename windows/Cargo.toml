@@ -1,0 +1,58 @@
+# Windows input method — its own Cargo workspace, deliberately NOT a member of
+# `engine/`: that workspace forbids `unsafe_code` (a TSF COM server cannot) and
+# pins Apple/Android toolchain targets. The engine crates are consumed by path,
+# so the TIP links the same `dispatch` / `protos` every other platform speaks to.
+#
+# Version is the single source of truth for the Windows release train and is
+# written by the repo-root `make version x.y.z` alongside iOS / Android / macOS.
+# Design record: docs/architecture/windows-roadmap.md.
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/taigi-windows-core",
+]
+
+[workspace.package]
+version = "3.6.6"
+edition = "2021"
+rust-version = "1.86"
+license = "MIT"
+repository = "https://github.com/siansiansu/taigikeyboard"
+publish = false
+
+[workspace.dependencies]
+# Engine crates, by path. `dispatch` is the one entry point the TIP calls;
+# `protos` gives the prost types the envelope is built from.
+dispatch = { path = "../engine/dispatch" }
+protos = { path = "../engine/protos" }
+prost = "0.14"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+taigi-windows-core = { path = "crates/taigi-windows-core" }
+
+[workspace.lints.rust]
+# Every crate opts in with `[lints] workspace = true`. The default is the
+# strict one the pure crates must keep; a shell that needs `unsafe` (a COM
+# server does) overrides it in its own manifest with a JUSTIFICATION, the way
+# `engine/android-jni` does.
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# Unwinding stays ON for the DLL: every COM entry point is a `catch_unwind`
+# boundary (`docs/engine/ffi-safety.md` §2), and `panic = "abort"` would take
+# the host process down with the input method. rakukan chose abort and spent
+# a doc page auditing the consequences (`references/rakukan/docs/handoff.md`).
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "unwind"
+
+[profile.dev]
+debug = "line-tables-only"
