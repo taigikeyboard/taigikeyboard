@@ -145,7 +145,7 @@ struct DictionarySearchResultRow: View {
                 .fixedSize()
             }
         }
-        .alert(language.string(.macosOpenURLFailed), isPresented: $didFailToOpen) {
+        .alert(language.string(.desktopOpenURLFailed), isPresented: $didFailToOpen) {
             Button(language.string(.commonOk)) {}
         }
     }

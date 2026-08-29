@@ -25,11 +25,11 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// the current display language instead of the one it was built in.
     var labelKey: StringKey {
         switch self {
-        case .general: .macosGeneralTab
-        case .appearance: .macosAppearanceTab
-        case .shortcuts: .macosShortcutsTab
+        case .general: .desktopGeneralTab
+        case .appearance: .desktopAppearanceTab
+        case .shortcuts: .desktopShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
-        case .dictionarySources: .macosDictionarySourcesLink
+        case .dictionarySources: .desktopDictionarySourcesLink
         }
     }
 

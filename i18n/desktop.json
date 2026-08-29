@@ -1,11 +1,12 @@
 {
-  "namespace": "macos",
+  "namespace": "desktop",
   "keys": {
     "generalTab": {
       "comment": "Settings sidebar row + pane title: the general settings pane.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -23,7 +24,8 @@
       "comment": "Shortcut-recorder row: the hotkey that opens the settings window on whichever pane it was last left on. Each row is authored whole rather than composed from the setting's own label.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -41,7 +43,8 @@
       "comment": "Shortcut-recorder row: the hotkey that switches between the two romanizations. Each row is authored whole rather than composed from the setting's own label, whose wording is a verb phrase in several languages.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -59,7 +62,8 @@
       "comment": "Shortcut-recorder row: the hotkey that flips which script is committed.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -77,7 +81,8 @@
       "comment": "Menu-bar File menu title. An LSUIElement process builds its own menu bar so the settings window keeps the standard editing shortcuts.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -95,7 +100,8 @@
       "comment": "File menu item: close the front window (⌘W).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -113,7 +119,8 @@
       "comment": "Menu-bar Edit menu title.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -131,7 +138,8 @@
       "comment": "Edit menu item (⌘Z).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -149,7 +157,8 @@
       "comment": "Edit menu item (⇧⌘Z).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -167,7 +176,8 @@
       "comment": "Edit menu item (⌘X).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -185,7 +195,8 @@
       "comment": "Edit menu item (⌘C).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -203,7 +214,8 @@
       "comment": "Edit menu item (⌘V).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -221,7 +233,8 @@
       "comment": "Edit menu item (⌘A).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -239,7 +252,8 @@
       "comment": "Settings sidebar row + pane title: the dictionary-source toggles page. iOS lists the toggles inline instead.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -257,7 +271,8 @@
       "comment": "Alert title when NSWorkspace could not open a dictionary's web page. macOS-only: the iOS opener is fire-and-forget.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -275,7 +290,8 @@
       "comment": "Alert title when the custom-dictionary store could not be read.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -293,7 +309,8 @@
       "comment": "Alert title when a custom-dictionary write failed.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -311,7 +328,8 @@
       "comment": "Label under the spinner while a 詞庫 page saves. macOS-only: the mobile apps have no blocking overlay.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -329,7 +347,8 @@
       "comment": "Label under the spinner while a 詞庫 page deletes.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -347,7 +366,8 @@
       "comment": "Label under the spinner while a 詞庫 page writes a CSV.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -365,7 +385,8 @@
       "comment": "Label under the spinner while a 詞庫 page reads a CSV.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -383,7 +404,8 @@
       "comment": "Alert title after a CSV import finished. iOS titles the alert with the action's own name instead.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -401,7 +423,8 @@
       "comment": "Alert body when an imported file is not UTF-8 — a different cause from a malformed CSV, which has its own message.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -419,7 +442,8 @@
       "comment": "Section header over the custom-dictionary rows. The shared key is already the page title one line above.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -437,7 +461,8 @@
       "comment": "Picker label in the 一般 pane: which shape the candidate window takes (horizontal row / vertical list / expandable grid).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -455,7 +480,8 @@
       "comment": "Picker value: the horizontal single-row candidate window, paged left to right.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -473,7 +499,8 @@
       "comment": "Picker value: the vertical scrolling-list candidate window.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -491,7 +518,8 @@
       "comment": "Picker value: the expandable candidate window — one row that unfolds into a grid via its chevron.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -509,7 +537,8 @@
       "comment": "Settings sidebar row + pane title: the candidate-window appearance pane (light/dark mode, layout, size, font).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -527,7 +556,8 @@
       "comment": "Caption under the light-mode thumbnail in the 外觀 pane's appearance selector, mirroring System Settings' Appearance row.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -545,7 +575,8 @@
       "comment": "Caption under the dark-mode thumbnail in the 外觀 pane's appearance selector, mirroring System Settings' Appearance row.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -563,7 +594,8 @@
       "comment": "Picker label: how much air the candidate window puts around its text.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -581,7 +613,8 @@
       "comment": "Picker value shared by the candidate window-size and text-size rows: the smallest step.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -599,7 +632,8 @@
       "comment": "Picker value shared by the candidate window-size and text-size rows: the default step, named Standard (USER 2026-08-21).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -617,7 +651,8 @@
       "comment": "Picker value shared by the candidate window-size and text-size rows: the larger step.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -635,7 +670,8 @@
       "comment": "Sidebar label for the settings pane holding the shortcut rows.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -653,7 +689,8 @@
       "comment": "Picker label: which key set picks a candidate by slot (q w d f z x v y ;, ⇧1-9, ⌃1-9 or ⌥1-9).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -671,7 +708,8 @@
       "comment": "Shortcut row: move the highlight to the next candidate.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -689,7 +727,8 @@
       "comment": "Shortcut row: move the highlight to the previous candidate.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -707,7 +746,8 @@
       "comment": "Shortcut row: show the next page of candidates.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -725,7 +765,8 @@
       "comment": "Shortcut row: show the previous page of candidates.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -743,7 +784,8 @@
       "comment": "Shortcut row: commit the highlighted candidate.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -761,7 +803,8 @@
       "comment": "Shortcut row: commit the romanization exactly as typed.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -779,7 +822,8 @@
       "comment": "Shortcut row: commit the highlighted candidate in the other script (漢羅).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -797,7 +841,8 @@
       "comment": "Shortcut recorder button when no key is assigned to the row.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -815,7 +860,8 @@
       "comment": "Shortcut recorder button while it is waiting for a key press.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -833,7 +879,8 @@
       "comment": "Recorder error: the key pressed is one that types romanization, so it cannot be bound.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -851,7 +898,8 @@
       "comment": "Recorder error: the key pressed is reserved by the input method (arrows, paging, Esc, Delete).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -869,7 +917,8 @@
       "comment": "Recorder error: the event carried no key that could be recorded.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -887,7 +936,8 @@
       "comment": "Recorder error: the chord pressed is one of the candidate-slot chords, which are classified before bound actions.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -905,7 +955,8 @@
       "comment": "Shortcut recorder refusal: the chord is already a system-wide keyboard shortcut, so recording it would give the user a key that never fires.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -923,7 +974,8 @@
       "comment": "Shortcut recorder refusal: the chord is a bare Command combination, which belongs to the menus of whatever application the user is typing into.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -941,7 +993,8 @@
       "comment": "Settings 一般 pane footer: authorship line beside the sponsor link. Same in every language — a personal name carries no translation. The year is a literal, updated by hand at release time.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -959,7 +1012,8 @@
       "comment": "Settings 一般 pane footer: link out to the ECPay donation page. The heart is part of the authored label, so each language owns its own placement.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -977,7 +1031,8 @@
       "comment": "Button in the Settings 一般 pane that checks for an update immediately, next to the installed version, and the input-source menu row that does the same.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -995,7 +1050,8 @@
       "comment": "Input-source menu row that opens the settings window on the pane the user left it on.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1013,7 +1069,8 @@
       "comment": "Settings 一般 pane: the installed version, shown beside the check button. Wording mirrors home.json `version`.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1034,7 +1091,8 @@
       "comment": "Update alert: title when the manifest names a newer version than the installed one.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1052,7 +1110,8 @@
       "comment": "The one sentence announcing a downloadable version, on both surfaces that announce it: the manual-check sheet and the system notification. The installed version is not repeated and the reader is not told to click — a notification is what it is (USER 2026-08-28: 用字精簡清楚即可).",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1073,7 +1132,8 @@
       "comment": "Update alert: default button — opens the download page in the browser.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1091,7 +1151,8 @@
       "comment": "Update alert: dismisses without recording anything — the next check may notify again.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1109,7 +1170,8 @@
       "comment": "Manual-check alert: the installed version is already the newest published one.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1127,7 +1189,8 @@
       "comment": "Manual-check alert: the check could not complete. Automatic checks fail silently instead.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1145,7 +1208,8 @@
       "comment": "Manual-check alert: generic recovery line — no error taxonomy, the user's only remedy is the network and retrying.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1163,7 +1227,8 @@
       "comment": "Title of the one-time offer, shown the first time the settings window opens: may we notify about new versions?",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1181,7 +1246,8 @@
       "comment": "Default button of the one-time notification offer; accepting it is what triggers the system permission prompt.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1199,7 +1265,8 @@
       "comment": "Settings 一般 pane row shown while a newer version is known but not installed. The surface that stays accurate with no network and after a missed notification.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1220,7 +1287,8 @@
       "comment": "Settings 一般 pane row shown when notifications are refused. Says what turning them on gets you rather than what is currently lost (USER 2026-08-24: 「改為比較正面」), and leads out to where it is changed. The key name still describes when the row appears, not what it says.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1238,7 +1306,8 @@
       "comment": "Settings 一般 pane link out to the System Settings notifications pane, beside the notifications-off note.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1256,7 +1325,8 @@
       "comment": "Settings 一般 pane: fetches the update package in the app, replacing the trip to the download page. Shown only when the manifest names a package and this build can pin its signer.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1274,7 +1344,8 @@
       "comment": "Settings 一般 pane: opens the downloaded package in Installer.app. The user's second press — arrival never launches anything by itself.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1292,7 +1363,8 @@
       "comment": "Settings 一般 pane: tries a failed update download again.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1310,7 +1382,8 @@
       "comment": "Settings 一般 pane: the update package did not finish downloading. Retryable — the package itself may be fine. Kept to the failure alone; the retry button says what to do, and updateCheckFailedMessage already carries the network advice.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1328,7 +1401,8 @@
       "comment": "Settings 一般 pane: the downloaded package is not this project's signed installer, so it is never offered for installation. Kept to the fact alone — the 去下載 button beside it is what says where to go instead.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1346,7 +1420,8 @@
       "comment": "Settings 一般 pane: the verified package is staged but Installer.app would not open. Retryable; wording mirrors openURLFailed.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1364,7 +1439,8 @@
       "comment": "Destructive row in the 詞庫 pane: deletes the frequency AND association records in one go. Acts on click, with no confirmation (USER 2026-08-25). macOS has no per-record management UI, so this is the only way to discard what the keyboard learned.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1382,7 +1458,8 @@
       "comment": "Alert title after the 刪除學習紀錄 row finishes.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1400,7 +1477,8 @@
       "comment": "Alert title when 刪除學習紀錄 could not empty a table. The store's own diagnostic follows as the body.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"

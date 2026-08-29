@@ -46,9 +46,9 @@ enum MainMenu {
     private static let appMenuTitle = "TaigiKeyboard"
 
     private static func fileMenu(_ language: DisplayLanguageStore) -> NSMenu {
-        let menu = NSMenu(title: language.string(.macosMenuFile))
+        let menu = NSMenu(title: language.string(.desktopMenuFile))
         menu.addItem(
-            withTitle: language.string(.macosMenuClose),
+            withTitle: language.string(.desktopMenuClose),
             action: #selector(NSWindow.performClose(_:)),
             keyEquivalent: "w",
         )
@@ -56,17 +56,17 @@ enum MainMenu {
     }
 
     private static func editMenu(_ language: DisplayLanguageStore) -> NSMenu {
-        let menu = NSMenu(title: language.string(.macosMenuEdit))
+        let menu = NSMenu(title: language.string(.desktopMenuEdit))
         // Undo and redo are declared by `NSUndoManager`'s responder chain and
         // have no Swift-visible selector to name, unlike the four below.
-        menu.addItem(withTitle: language.string(.macosMenuUndo), action: Selector(("undo:")), keyEquivalent: "z")
-        menu.addItem(withTitle: language.string(.macosMenuRedo), action: Selector(("redo:")), keyEquivalent: "Z")
+        menu.addItem(withTitle: language.string(.desktopMenuUndo), action: Selector(("undo:")), keyEquivalent: "z")
+        menu.addItem(withTitle: language.string(.desktopMenuRedo), action: Selector(("redo:")), keyEquivalent: "Z")
         menu.addItem(.separator())
-        menu.addItem(withTitle: language.string(.macosMenuCut), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        menu.addItem(withTitle: language.string(.macosMenuCopy), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        menu.addItem(withTitle: language.string(.macosMenuPaste), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        menu.addItem(withTitle: language.string(.desktopMenuCut), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        menu.addItem(withTitle: language.string(.desktopMenuCopy), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        menu.addItem(withTitle: language.string(.desktopMenuPaste), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         menu.addItem(
-            withTitle: language.string(.macosMenuSelectAll),
+            withTitle: language.string(.desktopMenuSelectAll),
             action: #selector(NSText.selectAll(_:)),
             keyEquivalent: "a",
         )

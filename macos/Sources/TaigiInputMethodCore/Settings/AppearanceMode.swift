@@ -35,8 +35,8 @@ enum AppearanceMode: String, CaseIterable, Sendable {
     var labelKey: StringKey {
         switch self {
         case .auto: .settingsDisplayLanguageAutomatic
-        case .light: .macosCandidateAppearanceLight
-        case .dark: .macosCandidateAppearanceDark
+        case .light: .desktopCandidateAppearanceLight
+        case .dark: .desktopCandidateAppearanceDark
         }
     }
 }

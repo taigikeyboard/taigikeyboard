@@ -70,9 +70,9 @@ final class UpdateInstallation {
         /// that is a line nobody needs to read.
         var noteKey: StringKey? {
             switch self {
-            case .downloadFailed: .macosUpdateDownloadFailedNote
-            case .packageRejected: .macosUpdatePackageRejectedNote
-            case .installerOpenFailed: .macosUpdateInstallerOpenFailedNote
+            case .downloadFailed: .desktopUpdateDownloadFailedNote
+            case .packageRejected: .desktopUpdatePackageRejectedNote
+            case .installerOpenFailed: .desktopUpdateInstallerOpenFailedNote
             case .downloadPage, .startDownload, .downloading, .install: nil
             }
         }

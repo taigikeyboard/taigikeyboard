@@ -3,7 +3,7 @@
   "keys": {
     "customFont": {
       "comment": "Global keyboard font row label, shown in the Settings tab and as the font-picker title (font is a global setting, not a per-theme field). Shared by iOS, Android and macOS (the macOS candidate-window font picker).",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "字型設定", "tailo": "jī-hîng siat-tīng", "poj": "jī-hêng siat-tēng", "en": "Font", "ja": "フォント" }
     },
     "customThemesSection": {
@@ -123,7 +123,7 @@
     },
     "candidateTextSize": {
       "comment": "Theme editor slider label: candidate text size. Also the macOS 外觀 pane's candidate text-size picker label — same property, same settings-row role.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "候選詞大細", "tailo": "hāu-suán sû tuā-sè", "poj": "hāu-soán sû tōa-sè", "en": "Candidate Text Size", "ja": "候補の文字の大きさ" }
     },
     "keyCornerRadius": {
@@ -168,7 +168,7 @@
     },
     "editorResetAll": {
       "comment": "Reset-to-defaults button. Theme editor on Android and iOS; the macOS shortcuts pane reuses it for the same action.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "恢復預設設定", "tailo": "hue-ho̍k ī-siat siat-tīng", "poj": "hoe-ho̍k ī-siat siat-tēng", "en": "Reset to Defaults", "ja": "既定値に戻す" }
     },
     "defaultName": {

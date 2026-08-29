@@ -129,14 +129,14 @@ final class ShortcutSettingsTests: XCTestCase {
     }
 
     private static let paneStrings: [StringKey] = [
-        .macosShortcutsTab,
+        .desktopShortcutsTab,
         .themeEditorResetAll,
-        .macosBindingSlotModifier,
-        .macosShortcutUnbound,
-        .macosShortcutRecording,
-        .macosShortcutRejectedTypingKey,
-        .macosShortcutRejectedReservedKey,
-        .macosShortcutRejectedNoKey,
-        .macosShortcutRejectedSlotChord,
+        .desktopBindingSlotModifier,
+        .desktopShortcutUnbound,
+        .desktopShortcutRecording,
+        .desktopShortcutRejectedTypingKey,
+        .desktopShortcutRejectedReservedKey,
+        .desktopShortcutRejectedNoKey,
+        .desktopShortcutRejectedSlotChord,
     ]
 }

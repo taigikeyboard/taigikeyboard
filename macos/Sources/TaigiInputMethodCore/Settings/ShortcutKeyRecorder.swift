@@ -247,7 +247,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         // empty, and a refusal has nowhere else to be read.
         super.stringValue = ""
         showsCancelButton = false
-        placeholderString = language?.string(.macosShortcutRecording) ?? ""
+        placeholderString = language?.string(.desktopShortcutRecording) ?? ""
         // No caret: the field takes keys, it does not take text.
         (currentEditor() as? NSTextView)?.insertionPointColor = .clear
         // The global hotkeys are off while a chord is recorded: this recorder
@@ -365,18 +365,18 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// attempt was turned down.
     private var prompt: String {
         guard let language else { return "" }
-        guard let rejection else { return language.string(.macosShortcutUnbound) }
+        guard let rejection else { return language.string(.desktopShortcutUnbound) }
         switch rejection {
-        case .typesRomanization: return language.string(.macosShortcutRejectedTypingKey)
-        case .reservedKey: return language.string(.macosShortcutRejectedReservedKey)
-        case .noKey: return language.string(.macosShortcutRejectedNoKey)
-        case .candidateSlotChord: return language.string(.macosShortcutRejectedSlotChord)
-        case .takenBySystem: return language.string(.macosShortcutRejectedSystemShortcut)
+        case .typesRomanization: return language.string(.desktopShortcutRejectedTypingKey)
+        case .reservedKey: return language.string(.desktopShortcutRejectedReservedKey)
+        case .noKey: return language.string(.desktopShortcutRejectedNoKey)
+        case .candidateSlotChord: return language.string(.desktopShortcutRejectedSlotChord)
+        case .takenBySystem: return language.string(.desktopShortcutRejectedSystemShortcut)
         // The same words a reserved key is refused with: to the reader both
         // mean "not this key", and a press the Carbon registry cannot name is
         // not a distinction worth a sentence of its own.
-        case .notAGlobalKey: return language.string(.macosShortcutRejectedReservedKey)
-        case .belongsToHost: return language.string(.macosShortcutRejectedHostShortcut)
+        case .notAGlobalKey: return language.string(.desktopShortcutRejectedReservedKey)
+        case .belongsToHost: return language.string(.desktopShortcutRejectedHostShortcut)
         }
     }
 

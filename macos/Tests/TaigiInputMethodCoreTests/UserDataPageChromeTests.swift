@@ -14,17 +14,17 @@ final class UserDataPageChromeTests: XCTestCase {
     private let english = StringResolver(.english)
 
     func testActivity_carriesAKeyRatherThanAResolvedLabel() {
-        XCTAssertEqual(UserDataPageActivity.working(.macosProgressImporting).labelKey, .macosProgressImporting)
+        XCTAssertEqual(UserDataPageActivity.working(.desktopProgressImporting).labelKey, .desktopProgressImporting)
         XCTAssertNil(UserDataPageActivity.idle.labelKey)
-        XCTAssertTrue(UserDataPageActivity.working(.macosProgressImporting).isWorking)
+        XCTAssertTrue(UserDataPageActivity.working(.desktopProgressImporting).isWorking)
         XCTAssertFalse(UserDataPageActivity.idle.isWorking)
     }
 
     func testSameMessage_resolvesInWhicheverLanguageIsAskedFor() {
         let message = UserDataPageMessage.imported(12, skipped: 3)
 
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosImportComplete))
-        XCTAssertEqual(message.title(english), english.resolve(.macosImportComplete))
+        XCTAssertEqual(message.title(hanji), hanji.resolve(.desktopImportComplete))
+        XCTAssertEqual(message.title(english), english.resolve(.desktopImportComplete))
         XCTAssertEqual(message.detail(hanji), hanji.dictionaryImportResult(imported: 12, skipped: 3))
         XCTAssertEqual(message.detail(english), english.dictionaryImportResult(imported: 12, skipped: 3))
         XCTAssertNotEqual(message.title(hanji), message.title(english))
@@ -37,9 +37,9 @@ final class UserDataPageChromeTests: XCTestCase {
         struct StoreError: Error, CustomStringConvertible {
             let description = "disk I/O error"
         }
-        let message = UserDataPageMessage.failure(.macosCustomDictWriteFailed, StoreError())
+        let message = UserDataPageMessage.failure(.desktopCustomDictWriteFailed, StoreError())
 
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosCustomDictWriteFailed))
+        XCTAssertEqual(message.title(hanji), hanji.resolve(.desktopCustomDictWriteFailed))
         XCTAssertEqual(message.detail(hanji), "disk I/O error")
         XCTAssertEqual(message.detail(english), "disk I/O error")
     }
@@ -50,7 +50,7 @@ final class UserDataPageChromeTests: XCTestCase {
         let message = UserDataPageMessage.notUTF8
 
         XCTAssertEqual(message.title(hanji), hanji.resolve(.commonImportFailed))
-        XCTAssertEqual(message.detail(hanji), hanji.resolve(.macosNotUTF8Detail))
+        XCTAssertEqual(message.detail(hanji), hanji.resolve(.desktopNotUTF8Detail))
     }
 }
 
@@ -66,9 +66,9 @@ final class UserDataPageDoneMessageTests: XCTestCase {
     private let hanji = StringResolver(.hanji)
 
     func testADoneMessage_hasATitleAndNoBody() {
-        let message = UserDataPageMessage.done(.macosClearLearningRecordsDone)
+        let message = UserDataPageMessage.done(.desktopClearLearningRecordsDone)
 
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.macosClearLearningRecordsDone))
+        XCTAssertEqual(message.title(hanji), hanji.resolve(.desktopClearLearningRecordsDone))
         XCTAssertNil(message.detail(hanji))
     }
 
@@ -76,7 +76,7 @@ final class UserDataPageDoneMessageTests: XCTestCase {
     /// every message answers.
     func testAFailureMessage_stillCarriesItsDiagnostic() {
         let message = UserDataPageMessage.failure(
-            .macosClearLearningRecordsFailed, diagnostic: "disk I/O error",
+            .desktopClearLearningRecordsFailed, diagnostic: "disk I/O error",
         )
 
         XCTAssertEqual(message.detail(hanji), "disk I/O error")
@@ -107,12 +107,12 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     func testBeginWork_refusesASecondClaimWhileTheFirstIsHeld() throws {
         let model = try makeModel()
 
-        XCTAssertTrue(model.beginWork(.macosProgressImporting))
+        XCTAssertTrue(model.beginWork(.desktopProgressImporting))
         XCTAssertFalse(
-            model.beginWork(.macosProgressDeleting),
+            model.beginWork(.desktopProgressDeleting),
             "a second action must not start while one is running",
         )
-        XCTAssertEqual(model.activity, .working(.macosProgressImporting), "the first action keeps the slot")
+        XCTAssertEqual(model.activity, .working(.desktopProgressImporting), "the first action keeps the slot")
     }
 
     /// A real action, start to finish: it takes the slot on the way in and
@@ -123,18 +123,18 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
         await model.deleteAll()
 
         XCTAssertEqual(model.activity, .idle)
-        XCTAssertTrue(model.beginWork(.macosProgressSaving))
+        XCTAssertTrue(model.beginWork(.desktopProgressSaving))
     }
 
     /// And an action that arrives while the slot is held does not run at all.
     func testAnAction_doesNothingWhileAnotherHoldsTheSlot() async throws {
         let model = try makeModel()
-        XCTAssertTrue(model.beginWork(.macosProgressImporting))
+        XCTAssertTrue(model.beginWork(.desktopProgressImporting))
 
         await model.deleteAll()
 
         XCTAssertEqual(
-            model.activity, .working(.macosProgressImporting),
+            model.activity, .working(.desktopProgressImporting),
             "the refused action must not release the slot it never took",
         )
     }

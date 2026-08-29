@@ -64,7 +64,7 @@ struct ShortcutSettingsView: View {
                 // every language the settings window speaks. A picker rather
                 // than a recorder because this row is one set standing for
                 // nine slots, not a key.
-                Picker(language.string(.macosBindingSlotModifier), selection: $candidateSlotKeySet) {
+                Picker(language.string(.desktopBindingSlotModifier), selection: $candidateSlotKeySet) {
                     ForEach(CandidateSlotKeySet.allCases, id: \.self) { keySet in
                         Text(verbatim: keySet.menuLabel).tag(keySet)
                     }

@@ -37,30 +37,30 @@ struct AppearanceSettingsView: View {
             // The System Settings shape: the mode selector leads its own
             // group, label leading like every other row.
             Section {
-                LabeledContent(language.string(.macosAppearanceTab)) {
+                LabeledContent(language.string(.desktopAppearanceTab)) {
                     AppearanceModeRow(selection: $appearanceMode)
                 }
             }
 
             Section {
-                Picker(language.string(.macosCandidateWindowLayout), selection: $candidateLayout) {
-                    Text(language.string(.macosCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
-                    Text(language.string(.macosCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
-                    Text(language.string(.macosCandidateLayoutVertical)).tag(CandidateLayout.vertical)
+                Picker(language.string(.desktopCandidateWindowLayout), selection: $candidateLayout) {
+                    Text(language.string(.desktopCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
+                    Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
+                    Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
                 }
                 // The two size rows are named steps, not continuous values, so
                 // they are pop-up menus like the rows above rather than
                 // sliders (Apple HIG, Pop-up Buttons: a flat list of mutually
                 // exclusive choices).
-                Picker(language.string(.macosCandidateWindowSize), selection: $candidateWindowSize) {
-                    Text(language.string(.macosSizeSmall)).tag(CandidateWindowSizeChoice.small)
-                    Text(language.string(.macosSizeMedium)).tag(CandidateWindowSizeChoice.medium)
-                    Text(language.string(.macosSizeLarge)).tag(CandidateWindowSizeChoice.large)
+                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateWindowSize) {
+                    Text(language.string(.desktopSizeSmall)).tag(CandidateWindowSizeChoice.small)
+                    Text(language.string(.desktopSizeMedium)).tag(CandidateWindowSizeChoice.medium)
+                    Text(language.string(.desktopSizeLarge)).tag(CandidateWindowSizeChoice.large)
                 }
                 Picker(language.string(.themeCandidateTextSize), selection: $candidateTextSize) {
-                    Text(language.string(.macosSizeSmall)).tag(CandidateTextSizeChoice.small)
-                    Text(language.string(.macosSizeMedium)).tag(CandidateTextSizeChoice.medium)
-                    Text(language.string(.macosSizeLarge)).tag(CandidateTextSizeChoice.large)
+                    Text(language.string(.desktopSizeSmall)).tag(CandidateTextSizeChoice.small)
+                    Text(language.string(.desktopSizeMedium)).tag(CandidateTextSizeChoice.medium)
+                    Text(language.string(.desktopSizeLarge)).tag(CandidateTextSizeChoice.large)
                 }
                 // The roster comes from the type rather than being spelled out
                 // row by row like the pickers above: those name three fixed

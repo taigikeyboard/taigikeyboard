@@ -109,7 +109,7 @@ final class CustomDictionaryPageModel {
             // Not an empty list: "the dictionary is empty" and "the dictionary
             // could not be read" look identical on screen, and only one of them
             // is worth the user doing something about.
-            message = .failure(.macosCustomDictReadFailed, error)
+            message = .failure(.desktopCustomDictReadFailed, error)
         }
     }
 
@@ -121,19 +121,19 @@ final class CustomDictionaryPageModel {
     }
 
     func save(_ row: CustomDictionaryRow) async {
-        await perform(.macosProgressSaving) { try await self.store.upsert(row) }
+        await perform(.desktopProgressSaving) { try await self.store.upsert(row) }
     }
 
     func delete(_ row: CustomDictionaryRow) async {
-        await perform(.macosProgressDeleting) { _ = try await self.store.delete(id: row.id) }
+        await perform(.desktopProgressDeleting) { _ = try await self.store.delete(id: row.id) }
     }
 
     func deleteAll() async {
-        await perform(.macosProgressDeleting) { _ = try await self.store.deleteAll() }
+        await perform(.desktopProgressDeleting) { _ = try await self.store.deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
-        guard beginWork(.macosProgressExporting) else { return }
+        guard beginWork(.desktopProgressExporting) else { return }
         defer { activity = .idle }
         do {
             let csv = try await CustomDictionaryCSV.encode(store.allRows())
@@ -156,7 +156,7 @@ final class CustomDictionaryPageModel {
         // modal to the window, but the moment it closes the parse and the
         // batched writes are still running, and that is exactly the window a
         // second import could start in.
-        guard beginWork(.macosProgressImporting) else { return }
+        guard beginWork(.desktopProgressImporting) else { return }
         defer { activity = .idle }
         guard let url = await UserDataFilePanels.chooseFileToOpen(
             contentTypes: [.commaSeparatedText, .plainText],
@@ -207,7 +207,7 @@ final class CustomDictionaryPageModel {
             try await body()
             await load()
         } catch {
-            message = .failure(.macosCustomDictWriteFailed, error)
+            message = .failure(.desktopCustomDictWriteFailed, error)
         }
     }
 }
@@ -245,7 +245,7 @@ struct CustomDictionaryPage: View {
                 entryTableControls
             } header: {
                 HStack {
-                    Text(language.string(.macosEntriesSection))
+                    Text(language.string(.desktopEntriesSection))
                     Spacer()
                     Text(countLabel)
                         .foregroundStyle(.secondary)
@@ -262,7 +262,7 @@ struct CustomDictionaryPage: View {
             )
 
             Section {
-                WideActionRow(titleKey: .macosClearLearningRecords, role: .destructive) {
+                WideActionRow(titleKey: .desktopClearLearningRecords, role: .destructive) {
                     Task { await deleteLearningRecords() }
                 }
             }
@@ -307,8 +307,8 @@ struct CustomDictionaryPage: View {
             failures.append("user_association: \(error)")
         }
         model.message = failures.isEmpty
-            ? .done(.macosClearLearningRecordsDone)
-            : .failure(.macosClearLearningRecordsFailed, diagnostic: failures.joined(separator: "\n"))
+            ? .done(.desktopClearLearningRecordsDone)
+            : .failure(.desktopClearLearningRecordsFailed, diagnostic: failures.joined(separator: "\n"))
     }
 
     /// The entries, as the table macOS states a list of records with: click
@@ -423,7 +423,7 @@ struct CustomDictionaryPage: View {
                 controlGlyph("chevron.left")
             }
             .disabled(!model.canPageBackward)
-            .accessibilityLabel(language.string(.macosActionPageBackward))
+            .accessibilityLabel(language.string(.desktopActionPageBackward))
 
             Button {
                 Task { await model.pageForward() }
@@ -431,7 +431,7 @@ struct CustomDictionaryPage: View {
                 controlGlyph("chevron.right")
             }
             .disabled(!model.canPageForward)
-            .accessibilityLabel(language.string(.macosActionPageForward))
+            .accessibilityLabel(language.string(.desktopActionPageForward))
         }
         // Small bordered buttons, the size AppKit gives the +/- bar under a
         // table. `.borderless` around a bare glyph left a hit target the size

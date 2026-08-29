@@ -161,13 +161,13 @@ enum ComposingAction: String, CaseIterable, Sendable {
     @MainActor
     func label(_ language: DisplayLanguageStore) -> String {
         switch self {
-        case .nextCandidate: language.string(.macosActionNextCandidate)
-        case .previousCandidate: language.string(.macosActionPreviousCandidate)
-        case .pageForward: language.string(.macosActionPageForward)
-        case .pageBackward: language.string(.macosActionPageBackward)
-        case .confirmHighlighted: language.string(.macosActionConfirmHighlighted)
-        case .commitLiteral: language.string(.macosActionCommitLiteral)
-        case .commitAlternateScript: language.string(.macosActionCommitAlternateScript)
+        case .nextCandidate: language.string(.desktopActionNextCandidate)
+        case .previousCandidate: language.string(.desktopActionPreviousCandidate)
+        case .pageForward: language.string(.desktopActionPageForward)
+        case .pageBackward: language.string(.desktopActionPageBackward)
+        case .confirmHighlighted: language.string(.desktopActionConfirmHighlighted)
+        case .commitLiteral: language.string(.desktopActionCommitLiteral)
+        case .commitAlternateScript: language.string(.desktopActionCommitAlternateScript)
         }
     }
 

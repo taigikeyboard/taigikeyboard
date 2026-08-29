@@ -100,16 +100,16 @@ struct GeneralSettingsView: View {
                 if let pending = UpdateChecker.shared.pendingUpdate {
                     pendingUpdateRow(for: pending)
                 } else {
-                    LabeledContent(language.resolver.macosUpdateCurrentVersionLabel(version: AppVersion.installed)) {
-                        Button(language.string(.macosUpdateCheckNow)) {
+                    LabeledContent(language.resolver.desktopUpdateCurrentVersionLabel(version: AppVersion.installed)) {
+                        Button(language.string(.desktopUpdateCheckNow)) {
                             UpdateChecker.shared.checkManually()
                         }
                     }
                 }
 
                 if areNoticesBlocked {
-                    LabeledContent(language.string(.macosUpdateNotificationsOffNote)) {
-                        Button(language.string(.macosUpdateOpenNotificationSettings)) {
+                    LabeledContent(language.string(.desktopUpdateNotificationsOffNote)) {
+                        Button(language.string(.desktopUpdateOpenNotificationSettings)) {
                             NotificationManager.shared.openSystemNotificationSettings()
                         }
                     }
@@ -134,26 +134,26 @@ struct GeneralSettingsView: View {
             switch offer {
             case .downloadPage, .packageRejected:
                 ExternalLinkButton(
-                    titleKey: .macosUpdateDownloadAction,
+                    titleKey: .desktopUpdateDownloadAction,
                     url: pending.downloadPageURL,
                 )
             case .startDownload:
-                Button(language.string(.macosUpdateDownloadAndInstallAction)) {
+                Button(language.string(.desktopUpdateDownloadAndInstallAction)) {
                     installation.startDownload(for: pending)
                 }
             case .downloading:
                 ProgressView().controlSize(.small)
             case .install, .installerOpenFailed:
-                Button(language.string(.macosUpdateInstallAction)) {
+                Button(language.string(.desktopUpdateInstallAction)) {
                     installation.install()
                 }
             case .downloadFailed:
-                Button(language.string(.macosUpdateRetryAction)) {
+                Button(language.string(.desktopUpdateRetryAction)) {
                     installation.startDownload(for: pending)
                 }
             }
         } label: {
-            Text(language.resolver.macosUpdatePendingVersionLabel(version: pending.version))
+            Text(language.resolver.desktopUpdatePendingVersionLabel(version: pending.version))
             // The note travels with the state rather than being chosen beside
             // it, so a control and an explanation cannot be paired wrongly.
             if let noteKey = offer.noteKey {
@@ -178,11 +178,11 @@ struct GeneralSettingsView: View {
     /// text around it.
     private var sponsorFooter: some View {
         HStack(spacing: Metrics.footerSpacing) {
-            Text(language.string(.macosCopyrightLine))
+            Text(language.string(.desktopCopyrightLine))
             // Punctuation between two labels, with nothing to say on its own.
             Text(verbatim: "\u{00B7}")
                 .accessibilityHidden(true)
-            ExternalLinkButton(titleKey: .macosSponsorLink, url: Self.sponsorURL, style: .footer)
+            ExternalLinkButton(titleKey: .desktopSponsorLink, url: Self.sponsorURL, style: .footer)
         }
         .font(.footnote)
         .foregroundStyle(.secondary)

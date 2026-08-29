@@ -57,9 +57,9 @@ enum UpdateNotificationOffer {
 
         let language = DisplayLanguageStore.shared
         let alert = NSAlert()
-        alert.messageText = language.string(.macosUpdateNotifyOfferTitle)
-        alert.addButton(withTitle: language.string(.macosUpdateNotifyOfferEnable))
-        alert.addButton(withTitle: language.string(.macosUpdateLaterAction))
+        alert.messageText = language.string(.desktopUpdateNotifyOfferTitle)
+        alert.addButton(withTitle: language.string(.desktopUpdateNotifyOfferEnable))
+        alert.addButton(withTitle: language.string(.desktopUpdateLaterAction))
 
         // A sheet on the settings window, never an app-modal alert: this is
         // only ever reached with that window up, which is the whole reason the

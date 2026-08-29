@@ -410,8 +410,8 @@ enum UpdateAnnouncement {
         language.syncFromSettings()
         return await NotificationManager.shared.post(
             identifier: identifier,
-            title: language.string(.macosUpdateAvailableTitle),
-            body: language.resolver.macosUpdateAvailableMessage(latest: manifest.version),
+            title: language.string(.desktopUpdateAvailableTitle),
+            body: language.resolver.desktopUpdateAvailableMessage(latest: manifest.version),
             linkURL: manifest.downloadPageURL,
         )
     }
@@ -457,16 +457,16 @@ enum UpdateAlertPresenter {
             // while a verified package sat staged inches below the sheet.
             let installsInApp = UpdateInstallation.shared.canInstallInApp(manifest)
             let alert = NSAlert()
-            alert.messageText = language.string(.macosUpdateAvailableTitle)
-            alert.informativeText = language.resolver.macosUpdateAvailableMessage(
+            alert.messageText = language.string(.desktopUpdateAvailableTitle)
+            alert.informativeText = language.resolver.desktopUpdateAvailableMessage(
                 latest: manifest.version,
             )
             alert.addButton(
                 withTitle: language.string(
-                    installsInApp ? .macosUpdateDownloadAndInstallAction : .macosUpdateDownloadAction,
+                    installsInApp ? .desktopUpdateDownloadAndInstallAction : .desktopUpdateDownloadAction,
                 ),
             )
-            alert.addButton(withTitle: language.string(.macosUpdateLaterAction))
+            alert.addButton(withTitle: language.string(.desktopUpdateLaterAction))
             guard await alert.beginSheetModal(for: window) == .alertFirstButtonReturn else { return }
             if installsInApp {
                 // Progress, and the 安裝 press that follows it, belong to the
@@ -479,19 +479,19 @@ enum UpdateAlertPresenter {
             // nothing is indistinguishable from a broken one.
             guard !NSWorkspace.shared.open(manifest.downloadPageURL) else { return }
             await inform(
-                language.string(.macosOpenURLFailed),
+                language.string(.desktopOpenURLFailed),
                 detail: manifest.downloadPageURL.absoluteString,
                 language: language,
                 on: window,
             )
 
         case .upToDate:
-            await inform(language.string(.macosUpdateUpToDateTitle), language: language, on: window)
+            await inform(language.string(.desktopUpdateUpToDateTitle), language: language, on: window)
 
         case .failed:
             await inform(
-                language.string(.macosUpdateCheckFailedTitle),
-                detail: language.string(.macosUpdateCheckFailedMessage),
+                language.string(.desktopUpdateCheckFailedTitle),
+                detail: language.string(.desktopUpdateCheckFailedMessage),
                 language: language,
                 on: window,
             )

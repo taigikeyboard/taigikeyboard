@@ -8,27 +8,27 @@
     },
     "inputMode": {
       "comment": "Settings row + sub-screen title for selecting the active input mode. On macOS it labels the picker that chooses between TL and POJ.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "輸入模式", "tailo": "su-ji̍p bôo-sik", "poj": "su-ji̍p bô͘-sek", "en": "Input Mode", "ja": "入力モード" }
     },
     "displayLanguage": {
       "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Most option labels are endonyms (own-script, not i18n keys); the Automatic option uses displayLanguageAutomatic.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "介面語言", "tailo": "kài-bīn gí-giân", "poj": "kài-bīn gí-giân", "en": "Display Language", "ja": "表示言語" }
     },
     "displayLanguageAutomatic": {
       "comment": "Display-language picker option that follows the OS/device language (ja->日本語, zh->漢字, else->English). Unlike the other rows this is a translated label, not an endonym.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "自動", "tailo": "tsū-tōng", "poj": "chū-tōng", "en": "Automatic", "ja": "自動" }
     },
     "pojMode": {
       "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字", "tailo": "pe̍h-uē-jī", "poj": "pe̍h-ōe-jī", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "tlMode": {
       "comment": "Input-mode option: Tâi-lô (台羅) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "台羅", "tailo": "tâi-lô", "poj": "tâi-lô", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
     "englishMode": {
@@ -48,12 +48,12 @@
     },
     "outputBothScripts": {
       "comment": "Toggle label: annotate committed text with the other script in brackets.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "括號標註", "tailo": "kuat-hō phiau-tsù", "poj": "koat-hō phiau-chù", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "literalRomanCandidate": {
       "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "顯示原本羅馬字候選", "tailo": "hián-sī guân-pún lô-má-jī hāu-suán", "poj": "hián-sī goân-pún lô-má-jī hāu-soán", "en": "Show Typed Romanization Candidate", "ja": "入力したローマ字候補を表示" }
     },
     "literalRomanCandidateInfo": {
@@ -68,7 +68,7 @@
     },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "自動空白", "tailo": "tsū-tōng khàng-pe̍h", "poj": "chū-tōng khàng-pe̍h", "en": "Auto-Space", "ja": "自動スペース" }
     },
     "keyboardSectionTitle": {

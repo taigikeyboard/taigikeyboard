@@ -34,7 +34,7 @@ struct ExternalLinkButton: View {
 
     var body: some View {
         styledButton
-            .alert(language.string(.macosOpenURLFailed), isPresented: $didFail) {
+            .alert(language.string(.desktopOpenURLFailed), isPresented: $didFail) {
                 Button(language.string(.commonOk)) {}
             } message: {
                 Text(url?.absoluteString ?? "")

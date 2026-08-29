@@ -32,7 +32,7 @@ GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 # or let a shipped one render incomplete.
 PRODUCTION_LANGUAGES = ("hanji", "en", "ja", "tailo", "poj")
 
-VALID_PLATFORMS = {"ios", "android", "macos"}
+VALID_PLATFORMS = {"ios", "android", "macos", "windows"}
 VALID_SURFACES = {"host", "extension"}
 VALID_VALUE_LANGUAGES = {"hanji", "tailo", "poj", "ja", "en"}
 
@@ -65,6 +65,14 @@ XCSTRINGS_SOURCE_LANGUAGE = "en"
 # across the three platforms — only the storage mechanism differs (intentional divergence).
 MACOS_STRINGS_DIR = "macos/Sources/TaigiInputMethodCore/Strings"
 MACOS_GEN_DIR = f"{MACOS_STRINGS_DIR}/Generated"
+
+# Windows output location. The input method is a Rust workspace (`windows/`), so its strings are a
+# generated Rust module compiled straight into `taigi-windows-core`. Like macOS, ALL FIVE production
+# languages are generated maps — there is no resource bundle. The hand-written `strings/mod.rs`
+# next to it owns `DisplayLanguage`, `StringResolver` and the positional formatter the generated
+# functions call; only this file is ever regenerated.
+WINDOWS_STRINGS_DIR = "windows/crates/taigi-windows-core/src/strings"
+WINDOWS_GEN_FILE = f"{WINDOWS_STRINGS_DIR}/generated.rs"
 
 # The macOS bundle's OWN localized name — THE reference for this mechanism; everywhere else points here.
 #
@@ -139,7 +147,7 @@ IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 # A half-width comma in a Hanji value, EXCEPT one sitting between two digits.
 #
 # Taiwanese written in 漢字 punctuates full-width. Every other i18n namespace already did;
-# macos.json was the one that drifted (USER 2026-08-24: 「hanji 必須使用全形逗號」). A numeric
+# desktop.json (then macos.json) was the one that drifted (USER 2026-08-24: 「hanji 必須使用全形逗號」). A numeric
 # separator (`上限 30,000 項`) is exempt — that is how a number is written, not how a sentence is
 # punctuated. Comma only: the half-width `; : ? ( )` still in the sources are product copy, and
 # copy is the USER's call.
@@ -170,14 +178,38 @@ PLACEHOLDER_TYPES = {
     "int": {
         "kotlin": {"param": "Int", "conv": "d"},
         "swift": {"param": "Int", "conv": "lld", "cast": "Int64"},
+        # Rust has no printf: the template carries `{N}` positional slots that the hand-written
+        # `format_positional` in strings/mod.rs substitutes with `Display` renderings, so the facet
+        # declares only the accessor parameter type.
+        "rust": {"param": "i64"},
     },
     # For text the product does not author — a store's own error description — so the
     # punctuation around it can be written per language instead of concatenated in code.
     "string": {
         "kotlin": {"param": "String", "conv": "s"},
         "swift": {"param": "String", "conv": "@", "cast": None},
+        "rust": {"param": "&str"},
     },
 }
+
+# Value-language key -> Rust `DisplayLanguage` variant, and the variant that maps nothing.
+# MIRROR: must equal the variants in windows/crates/taigi-windows-core/src/strings/mod.rs.
+RUST_LANGUAGE_VARIANTS = {"hanji": "Hanji", "tailo": "Tailo", "poj": "Poj", "ja": "Japanese", "en": "English"}
+RUST_SYSTEM_VARIANT = "System"
+RUST_MAP_LANGUAGES = tuple((lang, RUST_LANGUAGE_VARIANTS[lang]) for lang in PRODUCTION_LANGUAGES)
+
+# Rust strict + reserved keywords — a generated accessor is a Rust function name and a placeholder
+# name a parameter name; reject any that cannot be one. `r#` raw identifiers are deliberately not
+# emitted: an accessor that needs one reads worse than a renamed key.
+RUST_KEYWORDS = frozenset(
+    {
+        "as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum", "extern",
+        "false", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub",
+        "ref", "return", "self", "Self", "static", "struct", "super", "trait", "true", "type", "unsafe",
+        "use", "where", "while", "abstract", "become", "box", "do", "final", "gen", "macro", "override",
+        "priv", "try", "typeof", "unsized", "virtual", "yield",
+    }
+)
 
 # Swift hard keywords — a generated accessor name maps to a Swift symbol, so reject any that
 # cannot be one. The accessor is namespace-prefixed (`commonCancel`), so a collision is unlikely,
@@ -355,6 +387,14 @@ def _lower_atom(node, order: list, declared: dict, target: str) -> str:
     # Lower one non-plural node to its positional-template fragment. Shared by the native-resource path
     # (_lower_nodes) and the runtime plural path (_plural_template_parts) so the %N$conv mapping has
     # one definition. `arg` covers both `{name}` and a plural arm's `#` (which parses to an arg node).
+    if target == "rust":
+        # `format_positional` reads `{N}` (0-based). No `%` to protect and no conversion char to
+        # pick. Literal braces need no escaping: the message grammar has no way to author one (an
+        # unnamed or unbalanced `{` is rejected by `parse_message`), so a `{` in a lowered template
+        # is always a slot.
+        if node[0] == "lit":
+            return node[1]
+        return f"{{{order.index(node[1])}}}"
     if node[0] == "lit":
         return node[1].replace("%", "%%")  # literal % must survive String.format untouched
     index = order.index(node[1]) + 1
@@ -470,7 +510,12 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
                 # StringResolverFormats.kt, Swift in StringResolverFormats.swift), so reject a name
                 # that is a keyword on either — e.g. `default` is legal in Kotlin but emits an illegal
                 # Swift `default: Int` parameter (Codex post-impl).
-                if not IDENTIFIER_RE.fullmatch(name) or name in KOTLIN_KEYWORDS or name in SWIFT_KEYWORDS:
+                if (
+                    not IDENTIFIER_RE.fullmatch(name)
+                    or name in KOTLIN_KEYWORDS
+                    or name in SWIFT_KEYWORDS
+                    or name in RUST_KEYWORDS
+                ):
                     raise ValueError(f"{path}:{key}: placeholder name {name!r} must be a lowerCamelCase non-keyword identifier")
                 if ptype not in PLACEHOLDER_TYPES:
                     raise ValueError(f"{path}:{key}: placeholder {name!r} type {ptype!r} not in {sorted(PLACEHOLDER_TYPES)}")
@@ -554,6 +599,29 @@ def swift_escape(value: str) -> str:
     )
 
 
+def rust_escape(value: str) -> str:
+    # Rust string-literal escaping. Backslash first for the same reason as swift_escape. Braces are
+    # left alone: the runtime formatter is hand-written (`format_positional`), not `format!`, so a
+    # `{` is only ever the `{N}` slot `_lower_atom` emitted.
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+    )
+
+
+def rust_variant(namespace: str, key: str) -> str:
+    # `commonCancel` -> `CommonCancel`: the accessor with its first letter raised is a valid Rust
+    # enum variant, and keeps the key's own casing so `iTaigiDict` stays readable (`CommonITaigiDict`).
+    accessor = l10n_accessor(namespace, key)
+    return accessor[0].upper() + accessor[1:]
+
+
+def rust_accessor(namespace: str, key: str) -> str:
+    # `desktopUpdateCurrentVersionLabel` -> `desktop_update_current_version_label`.
+    return _camel_to_snake(l10n_accessor(namespace, key))
+
+
 def _json_identity(value: str) -> str:
     # The xcstrings emitter serializes via json.dumps, which performs all JSON escaping; values are
     # passed through unchanged so placeholder conversion is the only transform applied beforehand.
@@ -569,6 +637,7 @@ def _validate_global(entries) -> None:
     # and no accessor may be a reserved keyword on either platform (it becomes a Kotlin val / Swift case).
     seen_res = {}
     seen_accessor = {}
+    seen_rust_accessor = {}
     for namespace, key, _entry in entries:
         origin = f"{namespace}:{key}"
         name = res_name(namespace, key)
@@ -581,6 +650,18 @@ def _validate_global(entries) -> None:
         seen_accessor[accessor] = origin
         if accessor in KOTLIN_KEYWORDS or accessor in SWIFT_KEYWORDS:
             raise ValueError(f"accessor {accessor!r} ({origin}) is a reserved Kotlin/Swift keyword")
+        # The Rust accessor is a DIFFERENT transform (snake_case), so it is checked after its own
+        # lowering: two distinct camelCase accessors can collapse to one snake_case name
+        # (`probeA1` / `probeA_1` both -> `probe_a_1`), and a snake_case name can be a Rust keyword
+        # the camelCase form was not.
+        rust_fn = rust_accessor(namespace, key)
+        if rust_fn in seen_rust_accessor:
+            raise ValueError(
+                f"duplicate Rust accessor {rust_fn!r}: {seen_rust_accessor[rust_fn]} and {origin} lower to the same snake_case name"
+            )
+        seen_rust_accessor[rust_fn] = origin
+        if rust_fn in RUST_KEYWORDS or rust_variant(namespace, key) in RUST_KEYWORDS:
+            raise ValueError(f"accessor {accessor!r} ({origin}) lowers to a reserved Rust identifier")
 
 
 def validate_production_completeness(entries) -> None:
@@ -601,25 +682,26 @@ def validate_production_completeness(entries) -> None:
             )
 
 
-def validate_swift_platform_has_keys(entries, platform: str) -> None:
-    # A raw-value enum with no cases is not legal Swift ("an enum with no cases cannot declare a raw
-    # type"), so a Swift platform scoped to zero keys would emit a StringKey.swift that does not
-    # compile — and the hand-written StringResolver, which reads `key.rawValue`, would fail with it.
-    # Fail here with the cause instead, naming the fix. Like validate_production_completeness this is a
-    # property of the FULL real source set, enforced at the CLI boundary only: unit fixtures scope keys
-    # to one platform at a time on purpose, and nothing compiles their output.
+def validate_platform_has_keys(entries, platform: str) -> None:
+    # A platform scoped to zero keys has no strings to ship. On the Swift platforms it does not even
+    # compile: a raw-value enum with no cases is not legal Swift ("an enum with no cases cannot
+    # declare a raw type"), and the hand-written StringResolver reads `key.rawValue`. Rust tolerates
+    # an empty enum, but an input method with no strings is the same mistake. Fail here with the
+    # cause instead, naming the fix. Like validate_production_completeness this is a property of the
+    # FULL real source set, enforced at the CLI boundary only: unit fixtures scope keys to one
+    # platform at a time on purpose, and nothing compiles their output.
     if not entries:
         raise ValueError(
-            f"no key is scoped to {platform!r} — the generated Swift StringKey enum would have no "
-            f"cases, which cannot declare a raw type; scope at least one key to {platform!r}"
+            f"no key is scoped to {platform!r} — the generated StringKey enum would have no cases "
+            f"(not even legal Swift for a raw-value enum); scope at least one key to {platform!r}"
         )
 
 
 def validate_macos_bundle_name_key(bundle_name_values) -> None:
-    # Like validate_production_completeness and validate_swift_platform_has_keys, a property of the
+    # Like validate_production_completeness and validate_platform_has_keys, a property of the
     # FULL real source set enforced at the CLI boundary only — unit fixtures author their own tiny
     # namespaces and must not all have to declare a Home tab. Called where the bundle name is emitted,
-    # the way validate_swift_platform_has_keys is called where its platform's Swift is.
+    # the way validate_platform_has_keys is called where its platform's Swift is.
     if bundle_name_values is None:
         namespace, key = MACOS_BUNDLE_NAME_KEY
         raise ValueError(f"{namespace}:{key} is missing — it is the macOS bundle's localized name")
@@ -986,6 +1068,100 @@ def _emit_swift_formats(entries, *, plural_fallback_source: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _emit_rust_strings(entries) -> str:
+    # One file for the whole Windows string surface: the typed key enum, the per-language lookup
+    # tables, and one typed format function per placeholder-bearing key. Everything hand-written
+    # (`DisplayLanguage`, `StringResolver`, `format_positional`) lives in the sibling `mod.rs`.
+    lines = [
+        f"// {GENERATED_HEADER}",
+        "",
+        "use super::{DisplayLanguage, StringResolver};",
+        "",
+        "/// Typed key for every Windows i18n string. `as_str` is the shared cross-platform key name,",
+        "/// which is also the last-resort fallback text (`StringResolver::resolve`).",
+        "#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]",
+        "pub enum StringKey {",
+    ]
+    for namespace, key, _entry in entries:
+        lines.append(f"    {rust_variant(namespace, key)},")
+    lines.extend(["}", "", "impl StringKey {", "    pub fn as_str(self) -> &'static str {", "        match self {"])
+    for namespace, key, _entry in entries:
+        lines.append(f'            Self::{rust_variant(namespace, key)} => "{res_name(namespace, key)}",')
+    lines.extend(["        }", "    }", "}", ""])
+
+    lines.append("pub(super) fn lookup(language: DisplayLanguage, key: StringKey) -> Option<&'static str> {")
+    lines.append("    match language {")
+    for lang, variant in RUST_MAP_LANGUAGES:
+        lines.append(f"        DisplayLanguage::{variant} => {lang}(key),")
+    lines.append(f"        DisplayLanguage::{RUST_SYSTEM_VARIANT} => None,")
+    lines.extend(["    }", "}"])
+
+    for lang, _variant in RUST_MAP_LANGUAGES:
+        pairs = [(namespace, key, entry) for namespace, key, entry in entries if lang in entry["values"]]
+        lines.extend(["", f"fn {lang}(key: StringKey) -> Option<&'static str> {{"])
+        if not pairs:
+            lines.extend(["    let _ = key;", "    None", "}"])
+            continue
+        lines.append("    Some(match key {")
+        for namespace, key, entry in pairs:
+            value = _finalize_value(entry["values"][lang], rust_escape, entry, "rust")
+            lines.append(f'        StringKey::{rust_variant(namespace, key)} => "{value}",')
+        if len(pairs) != len(entries):
+            lines.append("        _ => return None,")
+        lines.extend(["    })", "}"])
+
+    fmt_entries = [
+        (namespace, key, entry, _plural_languages(entry))
+        for namespace, key, entry in entries
+        if _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
+    ]
+    lines.append("")
+    if not fmt_entries:
+        lines.append("// No format-arg keys are currently authored.")
+        return "\n".join(lines) + "\n"
+    lines.append("impl StringResolver {")
+    for index, (namespace, key, entry, plural_langs) in enumerate(fmt_entries):
+        order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
+        declared = entry["placeholders"]
+        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['rust']['param']}" for name in order)
+        args = ", ".join(f"&{name}" for name in order)
+        accessor = rust_accessor(namespace, key)
+        variant = rust_variant(namespace, key)
+        if index:
+            lines.append("")
+        lines.append(f"    pub fn {accessor}(&self, {params}) -> String {{")
+        if plural_langs:
+            # Only English is plural-bearing (enforced above); the stored `other` arm is what every
+            # other language renders through the plain lookup. One ternary PER plural node — the
+            # Kotlin/Swift model — so a message with several plurals lets each follow its own count.
+            _lang, nodes = plural_langs[0]
+            parts = _plural_template_parts(
+                nodes,
+                order,
+                declared,
+                "rust",
+                rust_escape,
+                lambda n, o, t: f"if {n} == 1 {{ {o} }} else {{ {t} }}",
+            )
+            joined = ",\n                ".join(parts)
+            lines.extend(
+                [
+                    f"        if self.language == DisplayLanguage::{RUST_LANGUAGE_VARIANTS['en']} {{",
+                    "            // CLDR en plural: category 'one' iff n == 1; the generated map holds the 'other' fallback.",
+                    "            let template = [",
+                    f"                {joined},",
+                    "            ]",
+                    "            .concat();",
+                    f"            return self.format_template(&template, &[{args}]);",
+                    "        }",
+                ]
+            )
+        lines.append(f"        self.format(StringKey::{variant}, &[{args}])")
+        lines.append("    }")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
 def _bundle_name_values(all_entries):
     # The app-name entry's values, or None when the source does not carry that key.
     return next(
@@ -1031,7 +1207,7 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     # Hanji/TL/POJ use a generated Swift map because App Store Connect rejects their bundle tags.
     ios_entries = [item for item in all_entries if "ios" in item[2]["scope"]["platforms"]]
     if enforce_production_completeness:
-        validate_swift_platform_has_keys(ios_entries, "ios")
+        validate_platform_has_keys(ios_entries, "ios")
     outputs[IOS_XCSTRINGS] = _emit_xcstrings(ios_entries)
     outputs[f"{IOS_GEN_DIR}/StringKey.swift"] = _emit_swift_string_key(
         ios_entries,
@@ -1051,7 +1227,7 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     # the package has no resource bundle at all — so there is no catalog counterpart to emit.
     macos_entries = [item for item in all_entries if "macos" in item[2]["scope"]["platforms"]]
     if enforce_production_completeness:
-        validate_swift_platform_has_keys(macos_entries, "macos")
+        validate_platform_has_keys(macos_entries, "macos")
     outputs[f"{MACOS_GEN_DIR}/StringKey.swift"] = _emit_swift_string_key(
         macos_entries,
         doc=("/// Typed key for every macOS i18n string. The raw value is the shared cross-platform key name.",),
@@ -1068,6 +1244,15 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     outputs[f"{MACOS_GEN_DIR}/StringResolverFormats.swift"] = _emit_swift_formats(
         macos_entries, plural_fallback_source="the generated map"
     )
+
+    # Windows artifacts cover only windows-scoped keys — one generated Rust module, every production
+    # language a map, exactly the macOS shape in another language. An empty scope is legal Rust (an
+    # empty enum) but would leave the input method with no strings, so it is refused like the Swift
+    # platforms are.
+    windows_entries = [item for item in all_entries if "windows" in item[2]["scope"]["platforms"]]
+    if enforce_production_completeness:
+        validate_platform_has_keys(windows_entries, "windows")
+    outputs[WINDOWS_GEN_FILE] = _emit_rust_strings(windows_entries)
 
     # The bundle's own localized name, one `InfoPlist.strings` per system language the bundle answers
     # to. Emitted from the same authored values as everything else so the product can never be named

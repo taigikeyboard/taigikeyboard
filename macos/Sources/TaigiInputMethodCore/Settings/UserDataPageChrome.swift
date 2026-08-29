@@ -72,7 +72,7 @@ enum UserDataPageMessage: Identifiable, Hashable {
         case let .failure(key, _): language.resolve(key)
         case let .done(key): language.resolve(key)
         case .notUTF8: language.resolve(.commonImportFailed)
-        case .imported: language.resolve(.macosImportComplete)
+        case .imported: language.resolve(.desktopImportComplete)
         }
     }
 
@@ -82,7 +82,7 @@ enum UserDataPageMessage: Identifiable, Hashable {
         switch self {
         case let .failure(_, diagnostic): diagnostic
         case .done: nil
-        case .notUTF8: language.resolve(.macosNotUTF8Detail)
+        case .notUTF8: language.resolve(.desktopNotUTF8Detail)
         case let .imported(imported, skipped):
             language.dictionaryImportResult(imported: imported, skipped: skipped)
         }

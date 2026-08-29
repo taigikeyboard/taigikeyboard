@@ -46,15 +46,15 @@ final class StringResolverTests: XCTestCase {
         // A version string the product never authored: a placeholder rather than something the
         // call site concatenates, so each language punctuates around it.
         XCTAssertEqual(
-            StringResolver(.hanji).macosUpdateAvailableMessage(latest: "3.7.0"),
+            StringResolver(.hanji).desktopUpdateAvailableMessage(latest: "3.7.0"),
             "台語齒盤 3.7.0 會使下載矣。",
         )
         XCTAssertEqual(
-            StringResolver(.english).macosUpdateAvailableMessage(latest: "3.7.0"),
+            StringResolver(.english).desktopUpdateAvailableMessage(latest: "3.7.0"),
             "TaigiKeyboard 3.7.0 is available for download.",
         )
         XCTAssertEqual(
-            StringResolver(.japanese).macosUpdateAvailableMessage(latest: "3.7.0"),
+            StringResolver(.japanese).desktopUpdateAvailableMessage(latest: "3.7.0"),
             "台語キーボード 3.7.0 がダウンロードできます。",
         )
     }

@@ -109,9 +109,9 @@ enum ShortcutAction: CaseIterable, Sendable {
     @MainActor
     func label(_ language: DisplayLanguageStore) -> String {
         switch self {
-        case .openLastSettingsPane: language.string(.macosShortcutOpenSettings)
-        case .toggleRomanization: language.string(.macosShortcutToggleRomanization)
-        case .toggleTranslateSwapped: language.string(.macosShortcutToggleTranslateSwapped)
+        case .openLastSettingsPane: language.string(.desktopShortcutOpenSettings)
+        case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
+        case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
         }
     }
 }

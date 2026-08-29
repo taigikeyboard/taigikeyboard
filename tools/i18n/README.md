@@ -49,6 +49,21 @@ Staleness is guarded automatically, not by a manual make target:
 - A Swift platform scoped to zero keys is rejected by `make i18n` / `check.py`: `enum StringKey: String {}`
   is not legal Swift, so an empty scope would emit a package that cannot compile.
 
+## Generated artifacts (Windows)
+
+- `windows/crates/taigi-windows-core/src/strings/generated.rs` — one Rust module: `StringKey` enum,
+  a per-language `fn hanji(key)` … `fn en(key)` table for **all five** production languages, and one
+  typed `StringResolver` method per format key. The hand-written `strings/mod.rs` beside it owns
+  `DisplayLanguage`, `StringResolver` and the `{N}` positional formatter the generated methods call.
+- Same shape as macOS (every language a map, no resource bundle); the input method is a Rust
+  workspace, so the emitter targets Rust instead of Swift. Resolution behavior is identical
+  (`docs/architecture/behavioral-invariants.md` §37).
+- Format keys lower to `{N}` positional slots (0-based, base-text order); there is no printf
+  conversion char to pick, and the message grammar cannot author a literal brace, so none needs escaping.
+- Rust accessors are snake_case (`desktop_update_available_message`); the validator rejects a Rust
+  keyword and two keys whose camelCase names collapse to one snake_case name.
+- `windows/Makefile`'s `i18n-check` gates the generated file exactly like the macOS one.
+
 ## Source schema
 
 ```jsonc
@@ -57,7 +72,7 @@ Staleness is guarded automatically, not by a manual make target:
   "keys": {
     "inputMode": {
       "comment": "translator context",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "placeholders": { "count": "int" },   // optional; named {count}, never %d
       "values": {
         "hanji": "輸入模式",                 // required base language
@@ -76,7 +91,7 @@ Rules enforced by the generator (the lint config disables `MissingTranslation`, 
 the generator's job):
 
 - Duplicate JSON keys are rejected (not silently last-wins).
-- `scope.platforms` ⊆ {ios, android, macos}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
+- `scope.platforms` ⊆ {ios, android, macos, windows}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
   A key reaches only the platforms it is scoped to; adding a platform to an existing key's scope is
   byte-neutral for the artifacts of the other platforms.
 - Every key must define the base language (`hanji`).

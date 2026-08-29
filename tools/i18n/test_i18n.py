@@ -134,7 +134,7 @@ class ValidateTest(unittest.TestCase):
 
     def test_bad_scope_rejected(self):
         with self.assertRaises(ValueError):
-            self._validate({"k": {"scope": {"platforms": ["windows"], "surfaces": ["host"]}, "values": {"hanji": "字"}}})
+            self._validate({"k": {"scope": {"platforms": ["linux"], "surfaces": ["host"]}, "values": {"hanji": "字"}}})
 
     def test_halfwidth_comma_in_hanji_rejected(self):
         with self.assertRaisesRegex(ValueError, "full-width comma"):
@@ -520,7 +520,7 @@ class PlaceholderTypeTest(unittest.TestCase):
 
 
 def _all_platform_key(values: dict, placeholders: dict | None = None) -> dict:
-    entry = {"scope": {"platforms": ["android", "ios", "macos"], "surfaces": ["host"]}, "values": values}
+    entry = {"scope": {"platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"]}, "values": values}
     if placeholders is not None:
         entry["placeholders"] = placeholders
     return entry
@@ -584,7 +584,7 @@ class MacOSEmitTest(unittest.TestCase):
 
     def test_valid_platforms_roster(self):
         # The scope vocabulary is the platform roster; a fourth platform must be added here first.
-        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos"})
+        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos", "windows"})
 
     def test_map_carries_every_production_language(self):
         # The whole point of the macOS shape: en/ja resolve from the generated map too, because the
@@ -656,8 +656,8 @@ class MacOSEmitTest(unittest.TestCase):
         before = self._outputs(keys)
         after = self._outputs({"k": _all_platform_key({"hanji": "字", "en": "Word"})})
         for path, content in before.items():
-            if path.startswith(i18n_lib.MACOS_GEN_DIR):
-                continue  # the macOS artifacts are exactly what the added scope is supposed to change
+            if path.startswith(i18n_lib.MACOS_GEN_DIR) or path == i18n_lib.WINDOWS_GEN_FILE:
+                continue  # the desktop artifacts are exactly what the added scope is supposed to change
             self.assertEqual(after[path], content, path)
 
     def test_format_accessor_reuses_the_swift_facet(self):
@@ -910,6 +910,127 @@ class ProductionContentTests(unittest.TestCase):
                     self.assertIsInstance(value, str, f"{rel}: {lang} is not a string")
                     self.assertTrue(value.strip(), f"{rel}: {lang} is empty")
         self.assertEqual(total, EXPECTED_CONTENT_STRING_COUNT, "expected 80 localizable content strings")
+
+
+class WindowsEmitTest(unittest.TestCase):
+    _outputs = staticmethod(_build_probe_outputs)
+
+    def _windows_key(self, values, platforms=("android", "ios", "macos", "windows")):
+        return {"scope": {"platforms": list(platforms), "surfaces": ["host"]}, "values": values}
+
+    def test_rust_module_carries_every_production_language(self):
+        # Same shape as macOS: no resource bundle, so every production language is a generated map
+        # with a DISTINCT sentinel per language, and `.system` maps nothing.
+        outputs = self._outputs(
+            {"k": self._windows_key({"hanji": "字", "tailo": "jī-tailo", "poj": "jī-poj", "en": "Word", "ja": "文字"})},
+        )
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn("pub enum StringKey {", rust)
+        self.assertIn("    ProbeK,", rust)
+        self.assertIn('Self::ProbeK => "i18n_probe_k",', rust)
+        for lang, sentinel in (("hanji", "字"), ("tailo", "jī-tailo"), ("poj", "jī-poj"), ("en", "Word"), ("ja", "文字")):
+            body = rust.split(f"fn {lang}(key: StringKey)", 1)[1].split("\n}", 1)[0]
+            self.assertIn(f'StringKey::ProbeK => "{sentinel}"', body)
+        for variant in i18n_lib.RUST_LANGUAGE_VARIANTS.values():
+            self.assertIn(f"DisplayLanguage::{variant} =>", rust)
+        self.assertIn("DisplayLanguage::System => None", rust)
+
+    def test_windows_scope_filters_keys_and_leaves_other_platforms_byte_identical(self):
+        shared = self._windows_key({"hanji": "S"})
+        windows_only = self._windows_key({"hanji": "W"}, platforms=("windows",))
+        macos_only = self._windows_key({"hanji": "M"}, platforms=("macos",))
+        before = self._outputs({"shared": shared, "macosOnly": macos_only})
+        after = self._outputs({"shared": shared, "macosOnly": macos_only, "windowsOnly": windows_only})
+        rust = after[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn("ProbeShared", rust)
+        self.assertIn("ProbeWindowsOnly", rust)
+        self.assertNotIn("ProbeMacosOnly", rust)
+        for path, content in before.items():
+            if path != i18n_lib.WINDOWS_GEN_FILE:
+                self.assertEqual(content, after[path], path)
+
+    def test_format_key_emits_positional_template_and_typed_fn(self):
+        outputs = self._outputs(
+            {
+                "why": {
+                    "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                    "placeholders": {"reason": "string", "count": "int"},
+                    "values": {"hanji": "失敗{count}次（{reason}）", "en": "{reason}: failed {count} times"},
+                }
+            },
+        )
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        # Base-text order fixes the slots: count={0}, reason={1} — the reordered English keeps its mapping.
+        self.assertIn('StringKey::ProbeWhy => "失敗{0}次（{1}）"', rust)
+        self.assertIn('StringKey::ProbeWhy => "{1}: failed {0} times"', rust)
+        self.assertIn("pub fn probe_why(&self, count: i64, reason: &str) -> String {", rust)
+        self.assertIn("self.format(StringKey::ProbeWhy, &[&count, &reason])", rust)
+
+    def test_english_plural_branches_on_count(self):
+        outputs = self._outputs(
+            {
+                "rows": {
+                    "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                    "placeholders": {"n": "int"},
+                    "values": {"hanji": "{n} 列", "en": "{n, plural, one {# row} other {# rows}}"},
+                }
+            },
+        )
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn("if self.language == DisplayLanguage::English {", rust)
+        self.assertIn('if n == 1 { "{0} row" } else { "{0} rows" }', rust)
+        self.assertIn("return self.format_template(&template, &[&n]);", rust)
+
+    def test_several_plurals_each_follow_their_own_count(self):
+        # Two plural nodes in one message must not share the first node's count — the reason the
+        # emitter lowers per node (Kotlin/Swift `_plural_template_parts` model) instead of per arm.
+        outputs = self._outputs(
+            {
+                "result": {
+                    "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                    "placeholders": {"imported": "int", "skipped": "int"},
+                    "values": {
+                        "hanji": "匯入{imported}筆，略過{skipped}筆",
+                        "en": "{imported, plural, one {# entry} other {# entries}} imported, "
+                        "{skipped, plural, one {# entry} other {# entries}} skipped",
+                    },
+                }
+            },
+        )
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn('if imported == 1 { "{0} entry" } else { "{0} entries" }', rust)
+        self.assertIn('if skipped == 1 { "{1} entry" } else { "{1} entries" }', rust)
+        self.assertIn('" imported, "', rust)
+        self.assertIn("pub fn probe_result(&self, imported: i64, skipped: i64) -> String {", rust)
+
+    def test_rust_keyword_placeholder_and_snake_case_collision_rejected(self):
+        with self.assertRaisesRegex(ValueError, "non-keyword identifier"):
+            i18n_lib.validate_namespace(
+                "probe",
+                {
+                    "namespace": "probe",
+                    "keys": {
+                        "k": {
+                            "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                            "placeholders": {"loop": "int"},
+                            "values": {"hanji": "{loop}"},
+                        }
+                    },
+                },
+                Path("probe.json"),
+            )
+        with self.assertRaisesRegex(ValueError, "duplicate Rust accessor"):
+            i18n_lib._validate_global(
+                [
+                    ("probe", "aB", {"scope": {"platforms": ["windows"], "surfaces": ["host"]}, "values": {"hanji": "1"}}),
+                    ("probe", "a_b", {"scope": {"platforms": ["windows"], "surfaces": ["host"]}, "values": {"hanji": "2"}}),
+                ]
+            )
+
+    def test_windows_scoped_to_zero_keys_is_rejected_at_cli_boundary(self):
+        with self.assertRaises(ValueError) as raised:
+            i18n_lib.validate_platform_has_keys([], "windows")
+        self.assertIn("windows", str(raised.exception))
 
 
 if __name__ == "__main__":

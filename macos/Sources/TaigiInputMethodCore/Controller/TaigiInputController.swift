@@ -310,7 +310,7 @@ public final class TaigiInputController: IMKInputController {
             // without also DISPATCHING it, `InputSourceMenuRow`.)
             let openSettingsShortcut = KeyboardShortcuts.getShortcut(for: .openLastSettingsPane)
             let settings = InputSourceMenuRow(
-                label: language.string(.macosMenuSettings),
+                label: language.string(.desktopMenuSettings),
                 keyEquivalent: openSettingsShortcut?.nsMenuItemKeyEquivalent ?? "",
                 modifiers: openSettingsShortcut?.modifiers ?? [],
                 action: #selector(showPreferences(_:)),
@@ -320,7 +320,7 @@ public final class TaigiInputController: IMKInputController {
             // is taken from the host application for as long as this input
             // source is selected.
             let checkForUpdates = InputSourceMenuRow(
-                label: language.string(.macosUpdateCheckNow),
+                label: language.string(.desktopUpdateCheckNow),
                 action: #selector(checkForUpdates(_:)),
             )
             return [[settings], [checkForUpdates]]

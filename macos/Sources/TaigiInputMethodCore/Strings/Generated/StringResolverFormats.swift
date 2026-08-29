@@ -3,19 +3,19 @@
 import Foundation
 
 extension StringResolver {
+    func desktopUpdateCurrentVersionLabel(version: String) -> String {
+        format(.desktopUpdateCurrentVersionLabel, version)
+    }
+
+    func desktopUpdateAvailableMessage(latest: String) -> String {
+        format(.desktopUpdateAvailableMessage, latest)
+    }
+
+    func desktopUpdatePendingVersionLabel(version: String) -> String {
+        format(.desktopUpdatePendingVersionLabel, version)
+    }
+
     func dictionaryImportResult(imported: Int, skipped: Int) -> String {
         format(.dictionaryImportResult, Int64(imported), Int64(skipped))
-    }
-
-    func macosUpdateCurrentVersionLabel(version: String) -> String {
-        format(.macosUpdateCurrentVersionLabel, version)
-    }
-
-    func macosUpdateAvailableMessage(latest: String) -> String {
-        format(.macosUpdateAvailableMessage, latest)
-    }
-
-    func macosUpdatePendingVersionLabel(version: String) -> String {
-        format(.macosUpdatePendingVersionLabel, version)
     }
 }
