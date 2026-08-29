@@ -53,13 +53,14 @@
 	<string>TaigiKeyboard</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<!-- The marketing version is kept in lockstep with iOS and Android (one
-	     release train, three platforms). The build version is what Installer's
+	<!-- The marketing version is kept in lockstep with Windows (one desktop
+	     release train, two platforms; iOS and Android are the separately numbered
+	     mobile train). The build version is what Installer's
 	     BundleIsVersionChecked and pkg-ref compare, so it must strictly increase
 	     with every shipped pkg — derived from the marketing version as
 	     MAJOR*10000 + MINOR*100 + PATCH. Both are written by
-	     `make version VERSION=x.y.z`, which sets the same version on iOS and
-	     Android in the same pass. -->
+	     `make version-desktop x.y.z`, which sets the same version on Windows in
+	     the same pass. -->
 	<key>CFBundleShortVersionString</key>
 	<string>3.6.6</string>
 	<key>CFBundleVersion</key>

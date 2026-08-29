@@ -308,12 +308,16 @@ class ProjectVersionWriterTests(unittest.TestCase):
             if (self.repo_root / relative_path).exists()
         }
 
-    def assert_rejected(self, message: str, version: str, **kwargs: object) -> None:
-        """The run raises and leaves all three files exactly as they were."""
+    def assert_rejected(
+        self, message: str, version: str, train: str, **kwargs: object
+    ) -> None:
+        """The run raises and leaves all four files exactly as they were."""
         before = self.snapshot()
 
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, message):
-            release_notes.set_project_versions(self.repo_root, version, **kwargs)
+            release_notes.set_project_versions(
+                self.repo_root, version, train, **kwargs
+            )
 
         self.assertEqual(self.snapshot(), before)
 
@@ -332,27 +336,81 @@ class ProjectVersionWriterTests(unittest.TestCase):
             release_notes, "_write_atomically", failing_write
         )
 
-    def test_writes_one_version_across_all_three_platforms(self) -> None:
-        changes = release_notes.set_project_versions(self.repo_root, "3.6.7")
+    def test_writes_the_mobile_trains_version_to_both_mobile_platforms(self) -> None:
+        changes = release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
 
-        release_notes.check_project_versions(self.repo_root, "3.6.7")
+        release_notes.check_project_versions(self.repo_root, "3.6.7", "mobile")
         self.assertEqual(
             changes,
             (
                 "Android: versionName 3.6.6 -> 3.6.7",
                 "iOS: MARKETING_VERSION 3.6.6 -> 3.6.7, "
                 "CURRENT_PROJECT_VERSION 1 -> 1",
-                "macOS: CFBundleShortVersionString 3.6.6 -> 3.6.7, "
-                "CFBundleVersion 30606 -> 30607",
-                "Windows: workspace version 3.6.6 -> 3.6.7",
             ),
         )
+
+    def test_writes_the_desktop_trains_version_to_both_desktop_platforms(self) -> None:
+        changes = release_notes.set_project_versions(self.repo_root, "3.7.0", "desktop")
+
+        release_notes.check_project_versions(self.repo_root, "3.7.0", "desktop")
+        self.assertEqual(
+            changes,
+            (
+                "macOS: CFBundleShortVersionString 3.6.6 -> 3.7.0, "
+                "CFBundleVersion 30606 -> 30700",
+                "Windows: workspace version 3.6.6 -> 3.7.0",
+            ),
+        )
+
+    def test_a_train_bump_leaves_the_other_trains_files_alone(self) -> None:
+        # The two trains are numbered independently: a mobile release must not
+        # move macOS or Windows, and a desktop release must not move iOS or
+        # Android — that is the whole point of having two.
+        desktop_before = {
+            path: self.read(path)
+            for path in release_notes.TRAIN_FILES["desktop"]
+        }
+        release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
+        self.assertEqual(
+            {path: self.read(path) for path in release_notes.TRAIN_FILES["desktop"]},
+            desktop_before,
+        )
+        release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
+
+        mobile_before = {
+            path: self.read(path) for path in release_notes.TRAIN_FILES["mobile"]
+        }
+        release_notes.set_project_versions(self.repo_root, "4.0.0", "desktop")
+        self.assertEqual(
+            {path: self.read(path) for path in release_notes.TRAIN_FILES["mobile"]},
+            mobile_before,
+        )
+        release_notes.check_project_versions(self.repo_root, "3.6.7", "mobile")
+
+    def test_a_train_never_reads_the_other_trains_files(self) -> None:
+        # A missing or broken file on the other train is not this train's
+        # problem: a mobile release must not be blocked by a macOS plist, nor a
+        # desktop release by the user-owned pbxproj.
+        for train, other in (("mobile", "desktop"), ("desktop", "mobile")):
+            with self.subTest(train=train):
+                self.write_tree()
+                for relative_path in release_notes.TRAIN_FILES[other]:
+                    (self.repo_root / relative_path).unlink()
+
+                release_notes.set_project_versions(self.repo_root, "3.6.7", train)
+
+                release_notes.check_project_versions(self.repo_root, "3.6.7", train)
+
+    def test_rejects_an_unknown_train(self) -> None:
+        self.assert_rejected("unknown release train", "3.6.7", "tablet")
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "unknown release train"):
+            release_notes.check_project_versions(self.repo_root, "3.6.6", "tablet")
 
     def test_refuses_a_cargo_manifest_without_a_workspace_version(self) -> None:
         self.write_tree(cargo=CARGO_FIXTURE.replace('version = "3.6.6"\n', ""))
 
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, "found 0"):
-            release_notes.set_project_versions(self.repo_root, "3.6.7")
+            release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
 
     def test_refuses_a_cargo_manifest_with_two_workspace_package_tables(self) -> None:
         # A duplicate key inside one table is TOML-invalid (Cargo refuses it);
@@ -362,10 +420,10 @@ class ProjectVersionWriterTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, "found 2"):
-            release_notes.set_project_versions(self.repo_root, "3.6.7")
+            release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
 
     def test_moves_only_the_windows_workspace_version(self) -> None:
-        release_notes.set_project_versions(self.repo_root, "3.6.7")
+        release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
 
         cargo_source = self.read(release_notes.WINDOWS_CARGO_FILE)
         self.assertEqual(
@@ -377,7 +435,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
         self.assertIn('egui = "=0.31.1"', cargo_source)
 
     def test_leaves_the_test_target_and_every_other_byte_alone(self) -> None:
-        release_notes.set_project_versions(self.repo_root, "3.6.7")
+        release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
 
         # Only the four shipping blocks move, and their build number is pinned to
         # 1 — App Store Connect numbers a version's uploads itself. The test
@@ -394,7 +452,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
         )
 
     def test_keeps_the_plists_hand_written_comments(self) -> None:
-        release_notes.set_project_versions(self.repo_root, "3.6.7")
+        release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
 
         plist_source = self.read(release_notes.MACOS_INFO_PLIST_FILE)
         self.assertIn("MAJOR*10000 + MINOR*100 + PATCH", plist_source)
@@ -413,7 +471,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
             )
         )
 
-        changes = release_notes.set_project_versions(self.repo_root, "3.6.7")
+        changes = release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
 
         self.assertEqual(
             self.read(release_notes.IOS_PROJECT_FILE).count(
@@ -427,22 +485,35 @@ class ProjectVersionWriterTests(unittest.TestCase):
     def test_rerunning_the_current_version_changes_nothing(self) -> None:
         before = self.snapshot()
 
-        release_notes.set_project_versions(self.repo_root, "3.6.6")
+        for train in release_notes.TRAIN_CHOICES:
+            release_notes.set_project_versions(self.repo_root, "3.6.6", train)
 
         self.assertEqual(self.snapshot(), before)
 
     def test_rejects_a_version_that_goes_backwards(self) -> None:
-        self.assert_rejected("lower than", "3.6.5")
+        for train in release_notes.TRAIN_CHOICES:
+            with self.subTest(train=train):
+                self.assert_rejected("lower than", "3.6.5", train)
+
+    def test_judges_a_downgrade_against_its_own_train_only(self) -> None:
+        # Desktop moved ahead; mobile going to a number below desktop's is
+        # not a downgrade of anything mobile has shipped.
+        release_notes.set_project_versions(self.repo_root, "4.0.0", "desktop")
+
+        release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
+
+        release_notes.check_project_versions(self.repo_root, "3.6.7", "mobile")
+        release_notes.check_project_versions(self.repo_root, "4.0.0", "desktop")
 
     def test_allows_a_downgrade_when_asked_for_one(self) -> None:
         release_notes.set_project_versions(
-            self.repo_root, "3.6.5", allow_downgrade=True
+            self.repo_root, "3.6.5", "mobile", allow_downgrade=True
         )
 
-        release_notes.check_project_versions(self.repo_root, "3.6.5")
+        release_notes.check_project_versions(self.repo_root, "3.6.5", "mobile")
 
     def test_rejects_a_version_that_is_not_three_components(self) -> None:
-        self.assert_rejected("MAJOR.MINOR.PATCH", "3.6")
+        self.assert_rejected("MAJOR.MINOR.PATCH", "3.6", "mobile")
 
     def test_rejects_shipping_targets_that_already_disagree(self) -> None:
         self.write_tree(
@@ -451,7 +522,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
             )
         )
 
-        self.assert_rejected("different MARKETING_VERSION", "3.6.7")
+        self.assert_rejected("different MARKETING_VERSION", "3.6.7", "mobile")
 
     def test_rejects_an_unexpected_number_of_shipping_blocks(self) -> None:
         self.write_tree(
@@ -462,12 +533,12 @@ class ProjectVersionWriterTests(unittest.TestCase):
             )
         )
 
-        self.assert_rejected("expected 2 iOS build settings blocks", "3.6.7")
+        self.assert_rejected("expected 2 iOS build settings blocks", "3.6.7", "mobile")
 
     def test_rejects_a_duplicate_android_version_name(self) -> None:
         self.write_tree(gradle=GRADLE_FIXTURE + '        versionName = "3.6.6"\n')
 
-        self.assert_rejected("exactly one versionName", "3.6.7")
+        self.assert_rejected("exactly one versionName", "3.6.7", "mobile")
 
     def test_rejects_a_binary_plist_it_cannot_edit_as_text(self) -> None:
         (self.repo_root / release_notes.MACOS_INFO_PLIST_FILE).write_bytes(
@@ -477,17 +548,17 @@ class ProjectVersionWriterTests(unittest.TestCase):
             )
         )
 
-        self.assert_rejected("cannot read", "3.6.7")
+        self.assert_rejected("cannot read", "3.6.7", "desktop")
 
     def test_rejects_an_xml_plist_that_is_not_a_plist(self) -> None:
         self.write_tree(plist="{ not a plist }\n")
 
-        self.assert_rejected("is not XML text", "3.6.7")
+        self.assert_rejected("is not XML text", "3.6.7", "desktop")
 
     def test_reports_a_missing_project_file_without_touching_the_others(self) -> None:
         (self.repo_root / release_notes.MACOS_INFO_PLIST_FILE).unlink()
 
-        self.assert_rejected("missing macos/", "3.6.7")
+        self.assert_rejected("missing macos/", "3.6.7", "desktop")
 
     def test_restores_the_tree_when_a_later_write_fails(self) -> None:
         before = self.snapshot()
@@ -496,7 +567,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 release_notes.ReleaseNotesError, "the tree was restored"
             ):
-                release_notes.set_project_versions(self.repo_root, "3.6.7")
+                release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
 
         self.assertEqual(self.snapshot(), before)
 
@@ -518,7 +589,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 release_notes.ReleaseNotesError,
                 "restoring them failed too — android/app/build.gradle.kts",
             ):
-                release_notes.set_project_versions(self.repo_root, "3.6.7")
+                release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
 
         self.assertIn(
             'versionName = "3.6.7"', self.read(release_notes.ANDROID_GRADLE_FILE)
@@ -531,7 +602,8 @@ class ProjectVersionWriterTests(unittest.TestCase):
             path.chmod(0o644)
             modes[relative_path] = stat.S_IMODE(path.stat().st_mode)
 
-        release_notes.set_project_versions(self.repo_root, "3.6.7")
+        for train in release_notes.TRAIN_CHOICES:
+            release_notes.set_project_versions(self.repo_root, "3.6.7", train)
 
         for relative_path, mode in modes.items():
             self.assertEqual(

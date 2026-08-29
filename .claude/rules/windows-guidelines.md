@@ -70,4 +70,5 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `ProductVersion = <workspace version>` — the updater's package check reads them; keep the
   `build-support/resource.rs` block and the `.iss` `VersionInfo*` directives in step.
 - Version source of truth = `windows/Cargo.toml` `[workspace.package] version`, written only by
-  `make version x.y.z`.
+  `make version-desktop x.y.z` (the desktop train — macOS + Windows share one number;
+  iOS + Android are the separately numbered mobile train).

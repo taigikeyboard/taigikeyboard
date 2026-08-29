@@ -1,7 +1,8 @@
 # Shared by the Windows release scripts: where things are and what version
 # this checkout is. The version's single source of truth is
 # `windows/Cargo.toml` `[workspace.package] version` (roadmap W8), which the
-# repo-root `make version x.y.z` writes alongside the other platforms.
+# repo-root `make version-desktop x.y.z` writes alongside macOS (the desktop
+# train; iOS + Android are numbered separately).
 
 fail() {
     echo "error: $*" >&2

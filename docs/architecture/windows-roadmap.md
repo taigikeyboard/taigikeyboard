@@ -226,7 +226,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `_data/windows_release.json`, poll live). Root `make windows-release`,
   `make windows-check`. Version source of truth = `windows/Cargo.toml`
   `[workspace.package] version`; `tools/release_notes.py` `set-versions` /
-  `check-versions` extended so `make version x.y.z` moves all four platforms.
+  `check-versions` extended so `make version-desktop x.y.z` moves macOS + Windows together
+  (the desktop train; iOS + Android are the separately numbered mobile train — USER 2026-08-29).
 - **W9 Update check** — manifest `https://taigikeyboard.tw/appcast/windows.json`, the
   macOS wire schema unchanged (`macos/updates/README.md` § Wire format). **Codex: REFUTE
   the TIP-spawns-updater trigger** (host policy, security products, process ancestry).

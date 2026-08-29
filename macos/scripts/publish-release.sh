@@ -153,7 +153,7 @@ print((reference.get("version") or "") if reference is not None else "")
 # Written to a file rather than passed as `--notes`: the section is markdown
 # whose newlines would not survive being quoted through an argument. This trap
 # replaces the one set above and covers both temporaries.
-NOTES_FILE="$REPOSITORY_DIR/changelog/v$SHORT_VERSION.md"
+NOTES_FILE="$REPOSITORY_DIR/changelog/desktop-v$SHORT_VERSION.md"
 MACOS_NOTES_FILE="$(mktemp)"
 trap 'rm -rf "$PACKAGE_IDENTITY_DIR" "$MACOS_NOTES_FILE"' EXIT
 
@@ -171,7 +171,7 @@ declare -a NOTES_ARGS
 if [[ -s "$MACOS_NOTES_FILE" ]]; then
     NOTES_ARGS=(--notes-file "$MACOS_NOTES_FILE")
 else
-    echo "  note: no '### macOS' section in changelog/v$SHORT_VERSION.md — publishing with a minimal note"
+    echo "  note: no '### macOS' section in changelog/desktop-v$SHORT_VERSION.md — publishing with a minimal note"
     NOTES_ARGS=(--notes "TaigiKeyboard for macOS $SHORT_VERSION")
 fi
 

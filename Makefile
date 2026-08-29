@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint \
         i18n i18n-test \
-        macos-release version \
+        macos-release version-mobile version-desktop \
         windows-check windows-release \
         update-submodules
 
@@ -108,28 +108,36 @@ windows-check:
 windows-release:
 	bash windows/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
-# Set the one marketing version iOS, Android, and macOS share:
+# Set a release train's marketing version. Two trains, two numbers: mobile
+# (iOS + Android share one) and desktop (macOS + Windows share one), moving
+# independently:
 #
-#   make version 3.6.7
+#   make version-mobile 3.6.7
+#   make version-desktop 3.7.0
 #
 # Policy and semantics: docs/architecture/manual-release-notes.md § Set the version.
 # The iOS `.pbxproj` is user-owned (Claude may not edit it); this target is the
 # maintainer running that edit.
 #
 # The version is a bare word, which make reads as a second goal — so it gets a
-# do-nothing rule, declared only while `version` is one of the goals. A mistyped
-# target on any other command line still fails the way it should.
-VERSION_ARGS := $(filter-out version,$(MAKECMDGOALS))
-ifneq ($(filter version,$(MAKECMDGOALS)),)
+# do-nothing rule, declared only while one version target is among the goals. A
+# mistyped target on any other command line still fails the way it should. One
+# train per invocation: both targets on one line would read the same bare word.
+VERSION_TARGETS := version-mobile version-desktop
+VERSION_ARGS := $(filter-out $(VERSION_TARGETS),$(MAKECMDGOALS))
+ifneq ($(filter $(VERSION_TARGETS),$(MAKECMDGOALS)),)
+ifneq ($(words $(filter $(VERSION_TARGETS),$(MAKECMDGOALS))),1)
+$(error one release train per invocation: make version-mobile X.Y.Z  or  make version-desktop X.Y.Z)
+endif
 ifneq ($(VERSION_ARGS),)
 $(eval $(VERSION_ARGS):;@:)
 endif
 endif
 
-version:
+version-mobile version-desktop:
 	@version="$(firstword $(VERSION_ARGS) $(VERSION))"; \
-	if [ -z "$$version" ]; then echo "Usage: make version <MAJOR.MINOR.PATCH>"; exit 2; fi; \
-	python3 tools/release_notes.py set-versions --version "$$version"
+	if [ -z "$$version" ]; then echo "Usage: make $@ <MAJOR.MINOR.PATCH>"; exit 2; fi; \
+	python3 tools/release_notes.py set-versions --train "$(patsubst version-%,%,$@)" --version "$$version"
 
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
@@ -169,7 +177,8 @@ help:
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo "  make windows-release    Cut a Windows release (on Windows): build, sign, package, publish"
-	@echo "  make version 3.6.7      Set that version on iOS + Android + macOS"
+	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
+	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"

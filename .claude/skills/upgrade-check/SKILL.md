@@ -98,7 +98,7 @@ For each deleted asset, ask: **does any persisted user state reference it by an 
 ### 7. Version monotonicity (store gate)
 
 - **Android** `app/build.gradle.kts` `versionCode` — must strictly increase or the store / installer refuses the update. This repo computes `versionCode = (System.currentTimeMillis()/60_000)` → monotonic by construction; just confirm the expression is unchanged. A hardcoded or decreased versionCode → BLOCKING.
-- **iOS** `MARKETING_VERSION` in `project.pbxproj` — must increase for App Store; `make version x.y.z` writes it across all three platforms. `CURRENT_PROJECT_VERSION` stays 1 by design — App Store Connect numbers a marketing version's uploads itself — so a build number that did NOT move is not a finding. **pbxproj is user-owned** (`.claude/rules/ios-guidelines.md`) — do NOT edit it; read both targets (app + keyboard-extension), and when a bump is needed name the `make version` command as a user action item.
+- **iOS** `MARKETING_VERSION` in `project.pbxproj` — must increase for App Store; `make version-mobile x.y.z` writes it on iOS + Android together (the mobile train). macOS + Windows are the separately numbered **desktop train** (`make version-desktop x.y.z`; `CFBundleVersion` = `MAJOR*10000 + MINOR*100 + PATCH` must increase per shipped pkg). A desktop audit takes a main-repo commit as `<base-ref>` — desktop release tags (`macos-v*` / `windows-v*`) live on the website repo and are not in this history. `CURRENT_PROJECT_VERSION` stays 1 by design — App Store Connect numbers a marketing version's uploads itself — so a build number that did NOT move is not a finding. **pbxproj is user-owned** (`.claude/rules/ios-guidelines.md`) — do NOT edit it; read both targets (app + keyboard-extension), and when a bump is needed name the `make version-mobile` / `make version-desktop` command as a user action item.
 
 ## Output
 
@@ -114,7 +114,7 @@ Emit a markdown report:
 |---|------|------|-------------------------------|--------|
 ...
 
-## Behavior changes — confirm each is in changelog/<target>.md
+## Behavior changes — confirm each is in changelog/<target>.md (mobile) / changelog/desktop-<target>.md (desktop)
 - ...
 
 ## Blocking — must fix before release

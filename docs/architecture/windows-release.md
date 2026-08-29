@@ -42,7 +42,7 @@ Python 3, and:
 
 ```sh
 make build              # only when engine/ or dictionary/ sources moved
-make version 3.7.0      # once per release train, at the repository root
+make version-desktop 3.7.0   # macOS + Windows together, at the repository root
 make windows-release    # from Git Bash, on the Windows machine
 ```
 
@@ -91,8 +91,10 @@ bash windows/scripts/release-app.sh --allow-dirty    # build from a dirty tree
 
 ## Versioning
 
-One number for all four platforms, written by `make version x.y.z`
-(`tools/release_notes.py set-versions`): `windows/Cargo.toml`
+One number for the desktop train — macOS and Windows share it; iOS and
+Android are the separately numbered mobile train — written by
+`make version-desktop x.y.z` (`tools/release_notes.py set-versions --train
+desktop`): `windows/Cargo.toml`
 `[workspace.package] version` is the Windows source of truth; every crate
 inherits it, the VERSIONINFO blocks and the installer read it, and the
 update manifest announces it. The build number the macOS package carries
@@ -158,7 +160,8 @@ reading its own payload.
    (what every installed copy pins).
 2. Creates (or reuses) the GitHub release `windows-v<version>` on the
    website repository with the `### Windows` section of
-   `changelog/v<version>.md`, and uploads the installer as its asset.
+   `changelog/desktop-v<version>.md` (the desktop train's record), and
+   uploads the installer as its asset.
 3. Fetches the release page and one byte of the asset **anonymously** — the
    page must answer `200`, the asset `206` (or `200`).
 4. Writes `_data/windows_release.json` — one file, one commit — then waits

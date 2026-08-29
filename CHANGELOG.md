@@ -1,5 +1,13 @@
 # Changelog
 
+Two release trains, two version numbers (`docs/architecture/manual-release-notes.md` § Two release trains).
+
+## Desktop — macOS + Windows
+
+_First desktop-train release pending; entries link to `changelog/desktop-vX.Y.Z.md`._
+
+## Mobile — iOS + Android
+
 - [v3.6.5](changelog/v3.6.5.md)
 - [v3.6.4](changelog/v3.6.4.md)
 - [v3.6.3](changelog/v3.6.3.md)

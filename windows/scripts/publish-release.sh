@@ -89,7 +89,7 @@ else
     echo "  note: WINDOWS_SIGNING_THUMBPRINT is not set — the signer is trusted but not pinned to the release certificate"
 fi
 
-NOTES_FILE="$REPOSITORY_DIR/changelog/v$SHORT_VERSION.md"
+NOTES_FILE="$REPOSITORY_DIR/changelog/desktop-v$SHORT_VERSION.md"
 WINDOWS_NOTES_FILE="$(mktemp)"
 trap 'rm -f "$WINDOWS_NOTES_FILE"' EXIT
 if [[ -f "$NOTES_FILE" ]]; then
@@ -100,7 +100,7 @@ declare -a NOTES_ARGS
 if [[ -s "$WINDOWS_NOTES_FILE" ]]; then
     NOTES_ARGS=(--notes-file "$WINDOWS_NOTES_FILE")
 else
-    echo "  note: no '### Windows' section in changelog/v$SHORT_VERSION.md — publishing with a minimal note"
+    echo "  note: no '### Windows' section in changelog/desktop-v$SHORT_VERSION.md — publishing with a minimal note"
     NOTES_ARGS=(--notes "TaigiKeyboard for Windows $SHORT_VERSION")
 fi
 

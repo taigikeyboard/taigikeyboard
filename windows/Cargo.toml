@@ -3,8 +3,10 @@
 # pins Apple/Android toolchain targets. The engine crates are consumed by path,
 # so the TIP links the same `dispatch` / `protos` every other platform speaks to.
 #
-# Version is the single source of truth for the Windows release train and is
-# written by the repo-root `make version x.y.z` alongside iOS / Android / macOS.
+# Version is the Windows source of truth for the desktop release train (macOS +
+# Windows share one number; iOS + Android are the separately numbered mobile
+# train) and is written by the repo-root `make version-desktop x.y.z` alongside
+# macOS.
 # Design record: docs/architecture/windows-roadmap.md.
 
 [workspace]

@@ -15,32 +15,33 @@ Each non-empty line is one entry without a bullet marker. `tools/release_notes.p
 
 Platform notes may differ when shipped behavior differs. For a given platform, its canonical notes, in-app version history, and manually pasted store text must contain the same entries.
 
-## macOS is a separate surface
+## Two release trains
 
-The store notes cover iOS and Android only. macOS announces itself through its own GitHub release: `macos/scripts/publish-release.sh` extracts the `### macOS` section of `changelog/vMAJOR.MINOR.PATCH.md` and passes that to `gh release create` as the release body, falling back to a one-line `TaigiKeyboard for macOS <version>` note when the section is missing (`docs/architecture/macos-release.md`).
+Two version numbers, moving independently (USER 2026-08-29):
 
-That splits the two surfaces cleanly:
+| Train | Platforms | Version files | Detailed record | Announces itself through |
+| --- | --- | --- | --- | --- |
+| **mobile** | iOS + Android | Android `versionName`, iOS shipping targets' `MARKETING_VERSION` | `changelog/vMAJOR.MINOR.PATCH.md` | App Store / Google Play What's New (`changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt`) |
+| **desktop** | macOS + Windows | both macOS plist keys, `windows/Cargo.toml` `[workspace.package] version` | `changelog/desktop-vMAJOR.MINOR.PATCH.md` | its own GitHub release per platform: `macos/scripts/publish-release.sh` extracts the `### macOS` section and `windows/scripts/publish-release.sh` the `### Windows` section as the release body, each falling back to a one-line `TaigiKeyboard for <platform> <version>` note when its section is missing |
 
-| Surface | Audience | macOS content |
-| --- | --- | --- |
-| `changelog/vMAJOR.MINOR.PATCH.md` | the detailed record; its `### macOS` section is the macOS GitHub release body | That section, headed exactly `### macOS`. Nothing fails without it — the macOS release just ships the one-line fallback note instead |
-| `changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt` | App Store and Google Play What's New | **Excluded** — mobile users cannot see macOS-only work |
+Within a train the platforms cannot drift apart — `set-versions` writes both files or neither, and `check-versions` holds both to one number. Across trains nothing is compared: a mobile 3.6.7 and a desktop 3.7.0 are two unrelated facts, and the same number appearing in both is a coincidence, not a link. The repository's `vMAJOR.MINOR.PATCH` git tags are the mobile train's (`dictionary/build/version_snapshot.py` reads them); desktop releases are tagged `macos-v…` / `windows-v…` on the website repository.
 
-Shared-engine work that ships on every platform is a mobile change too, so it belongs in the mobile notes on its own merits — described by what a phone user sees, not by the platforms it happened to land on.
+The store notes cover the mobile train only. Shared-engine work that ships on every platform is a mobile change too, so it belongs in the mobile notes on its own merits — described by what a phone user sees, not by the platforms it happened to land on. Desktop-only work never enters `changelog/vMAJOR.MINOR.PATCH.md`: it waits for the desktop train's own file.
 
 `validate_notes` enforces the exclusion: `macOS` and `Mac` are forbidden terms in both `ios.txt` and `android.txt`, matched as whole words so ordinary release-note words such as "machine" and "match" still pass.
 
-All three platforms ship one version number. `check-versions` holds `macos/App/Info.plist` to it as well — `CFBundleShortVersionString` equals the release version, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`, the same derivation `macos/scripts/release-app.sh` enforces at package time.
+`check-versions --train desktop` holds `macos/App/Info.plist` to the desktop version — `CFBundleShortVersionString` equals it, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`, the same derivation `macos/scripts/release-app.sh` enforces at package time — and `windows/Cargo.toml` to the same number. That build number is what Installer compares between packages, so the desktop train only ever moves upward; the per-train downgrade guard in `set-versions` is what enforces it.
 
 ## Set the version
 
-One command writes that version into all three platform project files — the Android `versionName`, the iOS shipping targets' `MARKETING_VERSION`, and both macOS plist keys — or into none of them:
+One command per train writes that train's version into both of its project files, or into neither:
 
 ```bash
-make version MAJOR.MINOR.PATCH
+make version-mobile MAJOR.MINOR.PATCH    # iOS + Android
+make version-desktop MAJOR.MINOR.PATCH   # macOS + Windows
 ```
 
-Neither build number is a maintainer's problem: the iOS `CURRENT_PROJECT_VERSION` is pinned to 1 because App Store Connect numbers a marketing version's uploads itself, and Android's `versionCode` is epoch minutes.
+One train per invocation. Neither build number is a maintainer's problem: the iOS `CURRENT_PROJECT_VERSION` is pinned to 1 because App Store Connect numbers a marketing version's uploads itself, Android's `versionCode` is epoch minutes, and the macOS `CFBundleVersion` derives from the desktop version.
 
 ## Prepare notes
 
@@ -50,11 +51,11 @@ Create both canonical files, then synchronize the apps:
 python3 tools/release_notes.py sync --version vMAJOR.MINOR.PATCH --date YYYY/MM/DD
 ```
 
-Validate the canonical files, generated app histories, and the marketing versions of all three platforms:
+Validate the canonical files, generated app histories, and the mobile train's marketing versions:
 
 ```bash
 python3 tools/release_notes.py check --version vMAJOR.MINOR.PATCH
-python3 tools/release_notes.py check-versions --version vMAJOR.MINOR.PATCH
+python3 tools/release_notes.py check-versions --train mobile --version vMAJOR.MINOR.PATCH
 python3 tools/release_notes_test.py
 ```
 

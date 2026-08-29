@@ -1,5 +1,9 @@
 """Validate store release notes, mirror them into platform version history, and
-check or set the one version number iOS, Android, and macOS share."""
+check or set a release train's version number.
+
+Two trains, two numbers: `mobile` (iOS + Android share one) and `desktop`
+(macOS + Windows share one). They move independently; within a train the
+platforms cannot drift apart."""
 
 from __future__ import annotations
 
@@ -24,9 +28,10 @@ FORBIDDEN_MARKETING_PHRASES = (
     "coming soon",
     "free for a limited time",
 )
-# macOS ships its own release notes: `macos/scripts/publish-release.sh` hands
-# `changelog/v<version>.md` to `gh release create`. The store notes are the
-# mobile surface only, so macOS-only work belongs in the detailed changelog and
+# The desktop train ships its own release notes: `macos/scripts/publish-release.sh`
+# and `windows/scripts/publish-release.sh` hand their platform's section of
+# `changelog/desktop-v<version>.md` to `gh release create`. The store notes are
+# the mobile surface only, so desktop-only work belongs in that desktop file and
 # never in either What's New.
 MACOS_TERMS = ("macOS", "Mac", "Macs", "MacBook")
 # "Mac" opens ordinary English words — machine, macro, macron — so it is the one
@@ -45,7 +50,7 @@ VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
 # silently refuses to upgrade.
 MAX_MACOS_VERSION_COMPONENT = 99
 
-# The four files that hold the release train's version number. Everything else
+# The four files that hold a release train's version number. Everything else
 # — the two iOS Info.plists, the macOS package name, the update manifests, the
 # Windows binaries' VERSIONINFO, both About screens — derives from one of these
 # at build or publish time.
@@ -53,6 +58,14 @@ ANDROID_GRADLE_FILE = "android/app/build.gradle.kts"
 IOS_PROJECT_FILE = "ios/TaigiKeyboard.xcodeproj/project.pbxproj"
 MACOS_INFO_PLIST_FILE = "macos/App/Info.plist"
 WINDOWS_CARGO_FILE = "windows/Cargo.toml"
+# Which files a train owns. A version write touches exactly one train's files
+# and leaves the other train's alone (USER 2026-08-29: mobile and desktop are
+# numbered separately so each can ship on its own cadence).
+TRAIN_FILES = {
+    "mobile": (ANDROID_GRADLE_FILE, IOS_PROJECT_FILE),
+    "desktop": (MACOS_INFO_PLIST_FILE, WINDOWS_CARGO_FILE),
+}
+TRAIN_CHOICES = tuple(TRAIN_FILES)
 # Each shipping iOS target carries a Debug and a Release build-settings block, so
 # its bundle identifier appears in exactly two. The test target keeps its own
 # `MARKETING_VERSION = 1.0` and is deliberately absent from this mapping.
@@ -515,15 +528,12 @@ def parse_ios_project_versions(project_source: str) -> IOSProjectVersions:
     )
 
 
-def check_versions_in_sources(
+def check_mobile_versions_in_sources(
     gradle_source: str,
     project_source: str,
-    macos_plist: dict,
     version: str,
-    macos_plist_path: Path,
-    windows_cargo_source: str,
 ) -> None:
-    """Hold the four already-loaded project files to one version.
+    """Hold the two already-loaded mobile project files to one version.
 
     Taking sources rather than a repo root is what lets `set_project_versions`
     run the real gate over the rewrite it is about to make, instead of writing
@@ -540,6 +550,15 @@ def check_versions_in_sources(
         raise ReleaseNotesError(
             f"iOS MARKETING_VERSION is {ios_versions.marketing_version}; expected {version}",
         )
+
+
+def check_desktop_versions_in_sources(
+    macos_plist: dict,
+    macos_plist_path: Path,
+    windows_cargo_source: str,
+    version: str,
+) -> None:
+    """Hold the two already-loaded desktop project files to one version."""
     check_macos_plist_values(macos_plist, version, macos_plist_path)
     windows_version = parse_windows_version(windows_cargo_source)
     if windows_version != version:
@@ -548,16 +567,25 @@ def check_versions_in_sources(
         )
 
 
-def check_project_versions(repo_root: Path, version: str) -> None:
-    macos_plist_path, macos_plist = load_macos_plist(repo_root)
-    check_versions_in_sources(
-        read_text_file(repo_root, ANDROID_GRADLE_FILE),
-        read_text_file(repo_root, IOS_PROJECT_FILE),
-        macos_plist,
-        version,
-        macos_plist_path,
-        read_text_file(repo_root, WINDOWS_CARGO_FILE),
-    )
+def check_project_versions(repo_root: Path, version: str, train: str) -> None:
+    """Hold one train's project files to `version`; the other train is not read."""
+    if train == "mobile":
+        check_mobile_versions_in_sources(
+            read_text_file(repo_root, ANDROID_GRADLE_FILE),
+            read_text_file(repo_root, IOS_PROJECT_FILE),
+            version,
+        )
+        return
+    if train == "desktop":
+        macos_plist_path, macos_plist = load_macos_plist(repo_root)
+        check_desktop_versions_in_sources(
+            macos_plist,
+            macos_plist_path,
+            read_text_file(repo_root, WINDOWS_CARGO_FILE),
+            version,
+        )
+        return
+    raise ReleaseNotesError(f"unknown release train {train!r}; expected one of {TRAIN_CHOICES}")
 
 
 def macos_build_version(version: str) -> str:
@@ -616,9 +644,9 @@ def load_macos_plist(repo_root: Path) -> tuple[Path, dict]:
 
 
 def check_macos_version(repo_root: Path, version: str) -> None:
-    """Hold `macos/App/Info.plist` to the same version as the two mobile apps.
+    """Hold `macos/App/Info.plist` to the desktop train's version.
 
-    All three platforms ship one version number. macOS is released separately —
+    macOS and Windows ship one version number. macOS is released separately —
     its own script, its own GitHub release — so nothing else fails when its
     plist is left behind, and a stale `CFBundleVersion` is an Installer that
     silently refuses to upgrade.
@@ -754,70 +782,90 @@ def _restore_files(originals: dict[Path, str], written: Iterable[Path]) -> list[
 def set_project_versions(
     repo_root: Path,
     version: str,
+    train: str,
     allow_downgrade: bool = False,
 ) -> tuple[str, ...]:
-    """Write `version` into all three platform project files, or into none of them.
+    """Write `version` into one train's two project files, or into neither.
 
     Accepts `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH`. The rewritten contents
     are held to the same gate the release flow runs, before any real file is
-    touched, so a version that gate would reject never reaches the tree.
+    touched, so a version that gate would reject never reaches the tree. The
+    other train's files are never read, let alone written.
 
-    Four files cannot be replaced in one filesystem transaction. A write that
+    Two files cannot be replaced in one filesystem transaction. A write that
     fails part-way is rolled back; a rollback that also fails raises with the
     files it could not put back named in the message.
     """
     version = normalize_version(version)
+    if train not in TRAIN_FILES:
+        raise ReleaseNotesError(
+            f"unknown release train {train!r}; expected one of {TRAIN_CHOICES}"
+        )
 
     sources = {
         relative_path: read_text_file(repo_root, relative_path)
-        for relative_path in (
-            ANDROID_GRADLE_FILE,
-            IOS_PROJECT_FILE,
-            MACOS_INFO_PLIST_FILE,
-            WINDOWS_CARGO_FILE,
+        for relative_path in TRAIN_FILES[train]
+    }
+
+    if train == "mobile":
+        current_android = parse_android_version_name(sources[ANDROID_GRADLE_FILE])
+        current_ios = parse_ios_project_versions(sources[IOS_PROJECT_FILE])
+        current_versions = (current_android, current_ios.marketing_version)
+        candidates = {
+            ANDROID_GRADLE_FILE: render_android_gradle(
+                sources[ANDROID_GRADLE_FILE], version
+            ),
+            IOS_PROJECT_FILE: render_ios_project(sources[IOS_PROJECT_FILE], version),
+        }
+        changes = (
+            f"Android: versionName {current_android} -> {version}",
+            f"iOS: MARKETING_VERSION {current_ios.marketing_version} -> {version}, "
+            f"CURRENT_PROJECT_VERSION {current_ios.build_number} -> {IOS_BUILD_NUMBER}",
         )
-    }
-    plist_source = sources[MACOS_INFO_PLIST_FILE]
-    _require_xml_plist(plist_source)
+    else:
+        plist_source = sources[MACOS_INFO_PLIST_FILE]
+        _require_xml_plist(plist_source)
+        current_macos = _plist_value(plist_source, "CFBundleShortVersionString")
+        current_macos_build = _plist_value(plist_source, "CFBundleVersion")
+        current_windows = parse_windows_version(sources[WINDOWS_CARGO_FILE])
+        current_versions = (current_macos, current_windows)
+        candidates = {
+            MACOS_INFO_PLIST_FILE: render_macos_plist(plist_source, version),
+            WINDOWS_CARGO_FILE: render_windows_cargo(
+                sources[WINDOWS_CARGO_FILE], version
+            ),
+        }
+        changes = (
+            f"macOS: CFBundleShortVersionString {current_macos} -> {version}, "
+            f"CFBundleVersion {current_macos_build} -> {macos_build_version(version)}",
+            f"Windows: workspace version {current_windows} -> {version}",
+        )
 
-    current_android = parse_android_version_name(sources[ANDROID_GRADLE_FILE])
-    current_ios = parse_ios_project_versions(sources[IOS_PROJECT_FILE])
-    current_macos = _plist_value(plist_source, "CFBundleShortVersionString")
-    current_macos_build = _plist_value(plist_source, "CFBundleVersion")
-    current_windows = parse_windows_version(sources[WINDOWS_CARGO_FILE])
-
+    # A train's number never goes backwards: the stores refuse a lower mobile
+    # version, and a lower desktop version is a macOS Installer that refuses
+    # the upgrade (`CFBundleVersion` derives from it) plus a Windows dictionary
+    # stamp that goes back in time.
     if not allow_downgrade:
-        for current_version in (
-            current_android,
-            current_ios.marketing_version,
-            current_macos,
-            current_windows,
-        ):
+        for current_version in current_versions:
             _reject_downgrade(current_version, version)
-
-    candidates = {
-        ANDROID_GRADLE_FILE: render_android_gradle(
-            sources[ANDROID_GRADLE_FILE], version
-        ),
-        IOS_PROJECT_FILE: render_ios_project(sources[IOS_PROJECT_FILE], version),
-        MACOS_INFO_PLIST_FILE: render_macos_plist(plist_source, version),
-        WINDOWS_CARGO_FILE: render_windows_cargo(sources[WINDOWS_CARGO_FILE], version),
-    }
 
     # Validate before writing: the rewrite runs through the same gate the release
     # flow runs, so the real tree never holds a version that gate would reject.
     # Parsing the rendered plist here also proves the text edit kept it a plist.
-    macos_plist_path = repo_root / MACOS_INFO_PLIST_FILE
-    check_versions_in_sources(
-        candidates[ANDROID_GRADLE_FILE],
-        candidates[IOS_PROJECT_FILE],
-        _plist_dictionary(
-            candidates[MACOS_INFO_PLIST_FILE].encode("utf-8"), macos_plist_path
-        ),
-        version,
-        macos_plist_path,
-        candidates[WINDOWS_CARGO_FILE],
-    )
+    if train == "mobile":
+        check_mobile_versions_in_sources(
+            candidates[ANDROID_GRADLE_FILE], candidates[IOS_PROJECT_FILE], version
+        )
+    else:
+        macos_plist_path = repo_root / MACOS_INFO_PLIST_FILE
+        check_desktop_versions_in_sources(
+            _plist_dictionary(
+                candidates[MACOS_INFO_PLIST_FILE].encode("utf-8"), macos_plist_path
+            ),
+            macos_plist_path,
+            candidates[WINDOWS_CARGO_FILE],
+            version,
+        )
 
     originals = {repo_root / relative_path: content for relative_path, content in sources.items()}
     written: list[Path] = []
@@ -827,7 +875,7 @@ def set_project_versions(
             _write_atomically(path, content)
             written.append(path)
     except OSError as error:
-        # Four files cannot be replaced in one filesystem transaction; restoring
+        # Two files cannot be replaced in one filesystem transaction; restoring
         # what already landed is what keeps a failed run from leaving the train
         # split across two versions. Whatever stopped the write can stop the
         # restore too, so say which files that left behind rather than claim a
@@ -844,14 +892,7 @@ def set_project_versions(
             f"could not write the project files: {error}; {outcome}",
         ) from error
 
-    return (
-        f"Android: versionName {current_android} -> {version}",
-        f"iOS: MARKETING_VERSION {current_ios.marketing_version} -> {version}, "
-        f"CURRENT_PROJECT_VERSION {current_ios.build_number} -> {IOS_BUILD_NUMBER}",
-        f"macOS: CFBundleShortVersionString {current_macos} -> {version}, "
-        f"CFBundleVersion {current_macos_build} -> {macos_build_version(version)}",
-        f"Windows: workspace version {current_windows} -> {version}",
-    )
+    return changes
 
 
 def _parse_args() -> argparse.Namespace:
@@ -869,10 +910,19 @@ def _parse_args() -> argparse.Namespace:
     sync = add_command("sync", "Render the canonical notes into both app histories")
     sync.add_argument("--date", help="Release date in YYYY/MM/DD form", required=True)
     add_command("check", "Validate the canonical notes and both app histories")
-    add_command("check-versions", "Check all three platform project versions")
-    set_versions = add_command(
-        "set-versions", "Write the version into all three platform project files"
+    check_versions = add_command(
+        "check-versions", "Check one release train's project versions"
     )
+    set_versions = add_command(
+        "set-versions", "Write the version into one release train's project files"
+    )
+    for train_command in (check_versions, set_versions):
+        train_command.add_argument(
+            "--train",
+            choices=TRAIN_CHOICES,
+            required=True,
+            help="mobile = iOS + Android; desktop = macOS + Windows",
+        )
     set_versions.add_argument(
         "--allow-downgrade",
         action="store_true",
@@ -897,10 +947,10 @@ def main() -> int:
         elif args.command == "check":
             check_version_history(repo_root, version)
         elif args.command == "check-versions":
-            check_project_versions(repo_root, version)
+            check_project_versions(repo_root, version, args.train)
         elif args.command == "set-versions":
             for change in set_project_versions(
-                repo_root, version, allow_downgrade=args.allow_downgrade
+                repo_root, version, args.train, allow_downgrade=args.allow_downgrade
             ):
                 print(change)
         else:
