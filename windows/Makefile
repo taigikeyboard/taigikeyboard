@@ -14,11 +14,11 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: help i18n-check test check-gnu check-msvc check fmt lint build clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
-# checked for from macOS. A crate that pulls in C (the storage crate's
-# rusqlite, when it joins) is gnu-only here — see rust-toolchain.toml. Both
-# rosters grow with the workspace; they name what exists today.
+# checked for from macOS. A crate that pulls in C (the storage crate's bundled
+# rusqlite) is gnu-only here — see rust-toolchain.toml. Both rosters grow with
+# the workspace; they name what exists today.
 MSVC_CHECKABLE := -p taigi-windows-core
-HOST_TESTABLE  := -p taigi-windows-core
+HOST_TESTABLE  := -p taigi-windows-core -p taigi-windows-storage
 
 help:
 	@echo "Windows input method — dev loop"

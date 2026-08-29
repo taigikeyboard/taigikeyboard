@@ -11,6 +11,7 @@
 resolver = "2"
 members = [
     "crates/taigi-windows-core",
+    "crates/taigi-windows-storage",
 ]
 
 [workspace.package]
@@ -31,8 +32,15 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+# `bundled` compiles SQLite in: no system library to find on a user's machine,
+# one version everywhere, and the same WAL/UPSERT capability floor on every
+# Windows the DLL loads on (contrast Android, `android-guidelines.md §8a`).
+rusqlite = { version = "0.40", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
 
 taigi-windows-core = { path = "crates/taigi-windows-core" }
+taigi-windows-storage = { path = "crates/taigi-windows-storage" }
 
 [workspace.lints.rust]
 # Every crate opts in with `[lints] workspace = true`. The default is the

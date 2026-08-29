@@ -134,18 +134,18 @@ impl SettingsDocument {
 
     fn set_raw(&mut self, name: &str, value: Value) {
         self.values.insert(name.to_owned(), value);
-        self.bump();
+        self.bump_revision();
     }
 
     /// Forgets `name`, so it reads as its default again. A no-op (no
     /// revision bump) for a key that was not stored.
     pub fn remove(&mut self, name: &str) {
         if self.values.remove(name).is_some() {
-            self.bump();
+            self.bump_revision();
         }
     }
 
-    fn bump(&mut self) {
+    fn bump_revision(&mut self) {
         self.revision = self.revision.saturating_add(1);
     }
 
@@ -177,6 +177,14 @@ impl SettingsDocument {
             self.remove(&action.settings_key_name());
         }
         self.remove(keys::CANDIDATE_SLOT_MODIFIER.name);
+    }
+
+    /// Puts every global shortcut row back to shipped state — removed, not
+    /// written, like the composing rows. The pane's reset calls both.
+    pub fn reset_global_shortcuts(&mut self) {
+        for action in crate::keys::ShortcutAction::ALL {
+            self.remove(&action.settings_key_name());
+        }
     }
 
     /// Puts every toggle the 詞庫來源 pane owns back to shipped state.
