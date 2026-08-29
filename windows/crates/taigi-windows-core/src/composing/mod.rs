@@ -1,0 +1,26 @@
+//! The composing orchestration: one user intent in, the engine mirror
+//! updated and the engine's effects handed to the client that asked.
+//!
+//! Port of `macos/Sources/TaigiInputMethodCore/Composing/*.swift` +
+//! `NextWord/NextWordLearner.swift` + `Candidates/{CandidateDocumentText,
+//! CandidateCellContent,CandidateScript}.swift`. The TSF shell implements
+//! [`ComposingEffectExecutor`] over an edit session; the storage crate
+//! implements the three store traits; tests implement all of them in memory.
+
+// 中文: 組字流程 — 引擎鏡像、效果依序執行、候選提取/送出、學習握手;平台端只實作 trait。
+
+mod coordinator;
+mod document_text;
+mod learner;
+mod manager;
+mod outcomes;
+mod stores;
+
+pub use coordinator::{ComposingSessionCoordinator, ContextToken};
+pub use document_text::{CandidateCellContent, CandidateScript};
+pub use learner::NextWordLearner;
+pub use manager::{ComposingEffectExecutor, ComposingManager};
+pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
+pub use stores::{
+    AssociationSink, Clock, CustomDictionarySource, FrequencySource, NoStores, SystemClock,
+};

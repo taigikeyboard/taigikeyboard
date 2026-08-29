@@ -12,6 +12,7 @@ mod bridge;
 mod composing;
 mod lexicon;
 mod nextword;
+mod phonetics;
 mod transition;
 
 pub use composing::{
@@ -28,6 +29,10 @@ pub use nextword::{
     reset_full as nextword_reset_full,
     update_last_selected_word as nextword_update_last_selected_word,
     word_selected as nextword_word_selected, AssociationPair, NextWordEffect, NextWordOutcome,
+};
+pub use phonetics::{
+    derive_custom_query_key, derive_custom_search_keys, nfd_preprocess_for_lookup, poj_to_tl,
+    strip_tone, tl_to_poj, CustomSearchKey,
 };
 pub use transition::{
     CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,

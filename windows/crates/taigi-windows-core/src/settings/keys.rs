@@ -186,6 +186,20 @@ pub const CANDIDATE_WINDOW_SIZE: SettingsKey<CandidateWindowSizeChoice> =
 pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
     SettingsKey::new("fontType", CandidateFontChoice::System);
 
+/// Which keys the candidate slots take (`CandidateSlotKeySet`). The stored
+/// name predates the letter set, from when the choice was only which
+/// modifier held the digits; kept because the values already stored under it
+/// still mean what they did (`SettingsStore.swift:277-292`).
+pub const CANDIDATE_SLOT_MODIFIER: SettingsKey<crate::keys::CandidateSlotKeySet> = SettingsKey::new(
+    "candidateSlotModifier",
+    crate::keys::CandidateSlotKeySet::BareKeys,
+);
+
+/// What a user-cleared composing chord row stores. An absent key means "never
+/// touched" and reads as the action's default; the empty string means the
+/// user cleared the row, which is why the two cannot be collapsed.
+pub const CLEARED_COMPOSING_CHORD: &str = "";
+
 /// The keys the 外觀 pane's reset removes (`SettingsStore.swift:457-465`).
 pub const APPEARANCE_KEYS: [&str; 5] = [
     APPEARANCE_MODE.name,

@@ -156,6 +156,29 @@ impl SettingsDocument {
         }
     }
 
+    /// Records `chord` on `action`, or clears the row when `None`
+    /// (`SettingsStore.swift:437-442`).
+    pub fn set_composing_chord(
+        &mut self,
+        action: crate::keys::ComposingAction,
+        chord: Option<&crate::keys::ComposingKeyChord>,
+    ) {
+        let value = chord.map_or_else(
+            || keys::CLEARED_COMPOSING_CHORD.to_owned(),
+            |chord| chord.raw_value(),
+        );
+        self.set_raw_string(&action.settings_key_name(), &value);
+    }
+
+    /// Puts every key the shortcuts pane owns on the composing side back to
+    /// shipped state — removed, not written (`SettingsStore.swift:444-449`).
+    pub fn reset_composing_shortcuts(&mut self) {
+        for action in crate::keys::ComposingAction::ALL {
+            self.remove(&action.settings_key_name());
+        }
+        self.remove(keys::CANDIDATE_SLOT_MODIFIER.name);
+    }
+
     /// Puts every toggle the 詞庫來源 pane owns back to shipped state.
     pub fn reset_dictionary_sources(&mut self) {
         for name in keys::DICTIONARY_SOURCE_KEYS {
