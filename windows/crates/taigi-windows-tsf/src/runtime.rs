@@ -24,7 +24,6 @@ use taigi_windows_core::settings::{
 };
 use taigi_windows_core::strings::{DisplayLanguage, StringResolver};
 use taigi_windows_storage::{user_data_directory, LiveSettings, SettingsFileStore, UserDataStores};
-use windows::Win32::Globalization::GetUserDefaultLocaleName;
 
 /// The install directory's dictionary folder — where the installer (PR10)
 /// copies `ios/Resources/Dictionaries/` (no third committed copy, W2).
@@ -223,25 +222,12 @@ impl Runtime {
     /// machine's when it says `system`.
     pub fn display_language(&self) -> DisplayLanguage {
         let tag = self.settings.current().string(&keys::DISPLAY_LANGUAGE);
-        DisplayLanguage::from_tag(&tag).effective(&system_locale())
+        DisplayLanguage::from_tag(&tag).effective(&taigi_windows_platform::system_locale())
     }
 
     pub fn strings(&self) -> StringResolver {
         StringResolver::new(self.display_language())
     }
-}
-
-/// The user's locale name, e.g. `zh-TW` / `ja-JP` / `en-US`, for the
-/// `system` display language.
-pub fn system_locale() -> String {
-    let mut buffer = [0u16; 85];
-    // SAFETY: `buffer` is a valid writable UTF-16 buffer of the passed length
-    // (LOCALE_NAME_MAX_LENGTH is 85).
-    let length = unsafe { GetUserDefaultLocaleName(&mut buffer) };
-    if length <= 1 {
-        return String::new();
-    }
-    String::from_utf16_lossy(&buffer[..(length as usize).saturating_sub(1)])
 }
 
 /// The dictionary stamp the engine caches under: the crate version as one

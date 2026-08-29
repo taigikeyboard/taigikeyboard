@@ -226,10 +226,15 @@ impl ComposingKeyChord {
         if self.modifiers.shift {
             parts.push("Shift".to_owned());
         }
+        // A chord WITH modifiers keeps the uppercase keycap legend (`Ctrl+J`);
+        // a bare key shows the character it types — an uppercase `Z` on a
+        // modifier-less row reads as Shift+Z, a key the row does not hold
+        // (USER 2026-08-22; `ShortcutKeyDisplay.swift:509-513`).
         parts.push(match self.key.as_str() {
             "\r" => "Enter".to_owned(),
             "\t" => "Tab".to_owned(),
             " " => "Space".to_owned(),
+            other if self.modifiers.is_empty() => other.to_owned(),
             other => other.to_ascii_uppercase(),
         });
         parts.join("+")
@@ -447,5 +452,7 @@ mod tests {
         assert_eq!(chord("\r", KeyModifiers::SHIFT).display(), "Shift+Enter");
         assert_eq!(chord("]", KeyModifiers::CONTROL).display(), "Ctrl+]");
         assert_eq!(chord(" ", KeyModifiers::NONE).display(), "Space");
+        assert_eq!(chord("z", KeyModifiers::NONE).display(), "z");
+        assert_eq!(chord("z", KeyModifiers::CONTROL).display(), "Ctrl+Z");
     }
 }

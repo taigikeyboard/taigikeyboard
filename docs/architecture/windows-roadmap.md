@@ -291,8 +291,17 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   WinUI3/WPF (a fourth language, unbuildable here, P/Invoke for search + SQLite) and
   raw Win32 controls. Parity = information architecture, control semantics and
   workflow (ported); the chrome is egui's — **platform-adapted presentation**. CJK
-  glyphs from the bundled `jf-openhuninn-2.1.ttf` (the file macOS ships) loaded into
-  egui's font definitions.
+  glyphs from the bundled `jf-openhuninn-2.1.ttf` (the file macOS ships) APPENDED to
+  egui's proportional family (a fallback for the hanji egui's faces lack; Latin keeps
+  egui's face). `accesskit` is ON (a Windows accessibility tree for the settings window
+  — product decision, PR7 Codex). Live reload while idle = a repaint requested every
+  second (eframe repaints only on events; the DLL's writes are not events). No
+  `%APPDATA%` ⇒ the window is read-only on the defaults and says so — never a file the
+  DLL would not read. **Named limitations for the dogfood run-book (PR11)**: the
+  shortcut recorder's chord keys follow egui's logical `Key` with US-layout folds for
+  shifted punctuation (a bare press takes the typed text and is exact); AltGr-shaped
+  chords (Ctrl+Alt) are refused on both tiers rather than disambiguated; the keypad `+`
+  reads as `=`; the Win key cannot be recorded (egui has no such modifier).
 - **W16 Docs** — roadmap = decisions + PR DAG + acceptance; memory = round hand-off;
   `docs/architecture/windows-release.md` = operator procedure;
   `.claude/rules/windows-guidelines.md` = durable constraints; `windows/updates/README.md`
@@ -323,7 +332,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR5a | TSF lifecycle | COM exports + class factory + symmetric registration + GUIDs; `TextService` activate/deactivate; thread-mgr / thread-focus sinks; context identity; lang-bar button + menu; settings reload; spawn settings exe; **smoke TIP that composes nothing** | PR open (stacked on #628); `taigi-windows-tsf` cdylib links under mingw + export check (`make check-dll`); unit tests type-checked only (no host run); Codex post-impl pending |
 | PR5b | TSF composing | key sink → snapshot → intent → manager inside sync edit sessions; composition start/update/commit per context; display attribute; preserved keys; password/read-only gating; handover | PR #630 open (stacked on #629); Codex post-impl fixed `db4c53a7` |
 | PR6 | TSF UI | candidate window (D2D/DWrite renderer, 3 layouts, DPI scope, theme, mouse, private fonts, caret positioning + fallbacks, device loss) + UI-less `ITfCandidateListUIElement` contract; mode flash panel; unfold animation | PR #631 open (stacked on #630); host-verified only (`make check`, no Windows device); Codex post-impl 7 BLOCK / 12 RISK / 8 NIT fixed in the follow-up commit |
-| PR7 | Settings exe I | eframe shell + sidebar + 一般 / 外觀 / 快捷鍵 panes + shortcut recorder + display language + fonts | Pending |
+| PR7 | Settings exe I | eframe shell + sidebar + 一般 / 外觀 / 快捷鍵 panes + shortcut recorder + display language + fonts; `taigi-windows-platform` (locale / open URL / beep, host stubs); `settings::launch` CLI contract shared with the DLL; core `keys::recorder` decision + choice `label_key`s | PR #632 open (stacked on #631); host-verified (`make check` incl. native exe tests + `check-exe` link); update rows = PR9, dictionary panes = PR8; Codex post-impl 1 BLOCK / 8 RISK / 5 NIT fixed in the follow-up commit |
 | PR8 | Settings exe II | 自訂詞庫 (table, CRUD sheet, CSV import/export, delete all, clear learning) + 詞庫來源 + unlisted 辭典搜尋 + external lookup URLs | Pending |
 | PR9 | Updates | `taigi-windows-update`: manifest model + checker + download + Authenticode pin + install flow; `--check-updates` headless mode; toast; 一般-pane rows | Pending |
 | PR10 | Installer + release | Inno script (x64 first; x86/ARM64 gated), scheduled task, `release-app.sh`, `publish-release.sh`, `windows/Makefile` dev loop, `windows-release.md`, `windows/updates/README.md` | Pending |

@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 taigi-windows-core.workspace = true
 windows-numerics.workspace = true
 taigi-windows-storage.workspace = true
+taigi-windows-platform.workspace = true
 log.workspace = true
 windows-core.workspace = true
 

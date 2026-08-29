@@ -12,6 +12,7 @@ mod action;
 mod bindings;
 mod chord;
 mod intent;
+mod recorder;
 mod shortcut_actions;
 mod slot_key_set;
 mod snapshot;
@@ -20,6 +21,9 @@ pub use action::ComposingAction;
 pub use bindings::ComposingKeyBindings;
 pub use chord::{ChordRejection, ComposingKeyChord};
 pub use intent::{CandidateNavigation, ComposingKeyIntent};
+pub use recorder::{
+    evaluate_press, rejection_message_key, RecordedPress, RecorderOutcome, RecorderTier,
+};
 pub use shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 pub use slot_key_set::CandidateSlotKeySet;
 pub use snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};

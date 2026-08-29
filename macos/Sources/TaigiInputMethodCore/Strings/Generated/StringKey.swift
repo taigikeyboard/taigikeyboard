@@ -39,6 +39,7 @@ enum StringKey: String {
     case desktopOpenURLFailed = "i18n_desktop_openURLFailed"
     case desktopCustomDictReadFailed = "i18n_desktop_customDictReadFailed"
     case desktopCustomDictWriteFailed = "i18n_desktop_customDictWriteFailed"
+    case desktopSettingsWriteFailed = "i18n_desktop_settingsWriteFailed"
     case desktopProgressSaving = "i18n_desktop_progressSaving"
     case desktopProgressDeleting = "i18n_desktop_progressDeleting"
     case desktopProgressExporting = "i18n_desktop_progressExporting"

@@ -30,6 +30,18 @@ pub enum CandidateLayout {
     Vertical,
 }
 
+impl CandidateLayout {
+    /// The picker row's i18n key (`AppearanceSettingsView.swift:259-263`).
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Expandable => StringKey::DesktopCandidateLayoutExpandable,
+            Self::Horizontal => StringKey::DesktopCandidateLayoutHorizontal,
+            Self::Vertical => StringKey::DesktopCandidateLayoutVertical,
+        }
+    }
+}
+
 impl SettingChoice for CandidateLayout {
     const ALL: &'static [Self] = &[Self::Expandable, Self::Horizontal, Self::Vertical];
     /// MacishType's own default, carried by the macOS port (USER 2026-08-28).
@@ -52,6 +64,18 @@ pub enum AppearanceMode {
     Light,
     Dark,
     Auto,
+}
+
+impl AppearanceMode {
+    /// The thumbnail caption's i18n key (`AppearanceMode.swift:35-40`): `Auto` shares the display-language picker's "automatic" word.
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Light => StringKey::DesktopCandidateAppearanceLight,
+            Self::Dark => StringKey::DesktopCandidateAppearanceDark,
+            Self::Auto => StringKey::SettingsDisplayLanguageAutomatic,
+        }
+    }
 }
 
 impl SettingChoice for AppearanceMode {
@@ -77,6 +101,16 @@ pub enum CandidateTextSizeChoice {
 }
 
 impl CandidateTextSizeChoice {
+    /// The three named steps share the window-size row's words (`AppearanceSettingsView.swift:268-277`).
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Small => StringKey::DesktopSizeSmall,
+            Self::Medium => StringKey::DesktopSizeMedium,
+            Self::Large => StringKey::DesktopSizeLarge,
+        }
+    }
+
     /// Candidate font size in points.
     /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift:21-27`.
     pub fn font_size(self) -> f32 {
@@ -110,6 +144,16 @@ pub enum CandidateWindowSizeChoice {
 }
 
 impl CandidateWindowSizeChoice {
+    /// The picker row's i18n key (`AppearanceSettingsView.swift:268-272`).
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Small => StringKey::DesktopSizeSmall,
+            Self::Medium => StringKey::DesktopSizeMedium,
+            Self::Large => StringKey::DesktopSizeLarge,
+        }
+    }
+
     /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift:42-48`.
     pub fn scale(self) -> f32 {
         match self {
@@ -147,6 +191,18 @@ pub enum CandidateFontChoice {
 }
 
 impl CandidateFontChoice {
+    /// The picker row's i18n key (`CandidateFontChoice.swift:54-62`).
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::System => StringKey::CommonFontSystemDefault,
+            Self::OpenHuninn => StringKey::CommonFontOpenHuninn,
+            Self::Iansui => StringKey::CommonFontIansui,
+            Self::GenYoMin => StringKey::CommonFontGenYoMin,
+            Self::GenYoGothic => StringKey::CommonFontGenYoGothic,
+        }
+    }
+
     /// The bundled file under the install dir's `fonts\`, or `None` for the
     /// system face.
     pub fn file_name(self) -> Option<&'static str> {

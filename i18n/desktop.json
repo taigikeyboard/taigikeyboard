@@ -324,6 +324,25 @@
         "ja": "カスタム辞書に保存できませんでした"
       }
     },
+    "settingsWriteFailed": {
+      "comment": "Banner title in the settings window when settings.json could not be written (the control snaps back).",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "設定寫袂入去",
+        "tailo": "siat-tīng siá bē ji̍p--khì",
+        "poj": "siat-tēng siá bē ji̍p--khì",
+        "en": "Could Not Save the Settings",
+        "ja": "設定を保存できませんでした"
+      }
+    },
     "progressSaving": {
       "comment": "Label under the spinner while a 詞庫 page saves. macOS-only: the mobile apps have no blocking overlay.",
       "scope": {

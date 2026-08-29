@@ -15,6 +15,7 @@ mod choices;
 mod document;
 mod engine_settings;
 pub mod keys;
+pub mod launch;
 
 pub use choices::{
     AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,

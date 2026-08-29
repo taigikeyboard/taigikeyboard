@@ -32,7 +32,7 @@ pub use custom_dictionary::{
     CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
 };
 pub use database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
-pub use directory::{created, user_data_directory, DirectoryError};
+pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};
 pub use frequency::UserFrequencyStore;
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
 pub use timestamp::utc_timestamp_now;

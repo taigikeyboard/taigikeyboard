@@ -13,6 +13,8 @@ members = [
     "crates/taigi-windows-core",
     "crates/taigi-windows-storage",
     "crates/taigi-windows-tsf",
+    "crates/taigi-windows-platform",
+    "crates/taigi-windows-settings",
 ]
 
 [workspace.package]
@@ -50,6 +52,13 @@ windows-numerics = "0.3"
 taigi-windows-core = { path = "crates/taigi-windows-core" }
 taigi-windows-storage = { path = "crates/taigi-windows-storage" }
 taigi-windows-tsf = { path = "crates/taigi-windows-tsf" }
+taigi-windows-platform = { path = "crates/taigi-windows-platform" }
+# The settings window's UI toolkit, pinned to the API this session authored
+# against (roadmap W15); bump only with a Windows machine to run the result.
+# `accesskit` ON: the settings window exposes a Windows accessibility tree
+# (screen readers, keyboard navigation) — a product decision, not chrome.
+eframe = { version = "=0.31.1", default-features = false, features = ["accesskit", "glow", "default_fonts", "persistence"] }
+egui = "=0.31.1"
 
 [workspace.lints.rust]
 # Every crate opts in with `[lints] workspace = true`. The default is the
