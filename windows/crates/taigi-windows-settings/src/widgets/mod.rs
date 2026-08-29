@@ -7,4 +7,5 @@ pub mod alert;
 pub mod appearance_thumbnails;
 pub mod external_link;
 pub mod recorder;
+pub mod update_alert;
 pub mod wide_action_row;

@@ -21,8 +21,8 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 # tests are type-checked by `check-gnu` (`--all-targets`) and RUN only on a
 # Windows machine (`cargo test -p taigi-windows-tsf`). Both rosters grow with
 # the workspace; they name what exists today.
-MSVC_CHECKABLE := -p taigi-windows-core -p taigi-windows-platform
-HOST_TESTABLE  := -p taigi-windows-core -p taigi-windows-storage -p taigi-windows-platform -p taigi-windows-settings
+MSVC_CHECKABLE := -p taigi-windows-core -p taigi-windows-platform -p taigi-windows-update
+HOST_TESTABLE  := -p taigi-windows-core -p taigi-windows-storage -p taigi-windows-platform -p taigi-windows-update -p taigi-windows-settings
 
 help:
 	@echo "Windows input method — dev loop"

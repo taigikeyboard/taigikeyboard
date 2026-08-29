@@ -7,15 +7,14 @@
 
 use super::{choice_combo, labelled_row, section_break};
 use crate::app::SettingsApp;
+use crate::updates::INSTALLED_VERSION;
 use crate::widgets::external_link;
 use taigi_windows_core::settings::{keys, InputMode};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey};
+use taigi_windows_update::{checker, Offer};
 
 /// `GeneralSettingsView.sponsorURL`.
 const SPONSOR_URL: &str = "https://p.ecpay.com.tw/AA663DE";
-/// The version the settings window belongs to — the workspace's, which
-/// `make version` writes (`AppVersion.installed`).
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     let strings = app.strings();
@@ -84,13 +83,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     });
 
     section_break(ui);
-    // One row, never two (`GeneralSettingsView.swift:89-108`): the version,
-    // with the on-demand check beside it once PR9 lands.
-    labelled_row(
-        ui,
-        &strings.format(StringKey::DesktopUpdateCurrentVersionLabel, &[&VERSION]),
-        |_ui| {},
-    );
+    update_row(ui, app);
 
     // Centred at the foot of the pane rather than inside the form: it is
     // neither a setting nor a note about one (`sponsorFooter`).
@@ -125,4 +118,72 @@ fn footer_width(ui: &egui::Ui, strings: &taigi_windows_core::strings::StringReso
         + measure("\u{00B7}")
         + measure(strings.resolve(StringKey::DesktopSponsorLink))
         + 2.0 * 4.0
+}
+
+/// One row, never two (`GeneralSettingsView.swift:89-117`): a known update
+/// replaces the version-and-check row rather than sitting under it, and its
+/// trailing control is whatever the user's next move is; the note appears
+/// only when something went wrong.
+fn update_row(ui: &mut egui::Ui, app: &mut SettingsApp) {
+    let strings = app.strings();
+    let pending = checker::pending_update(app.document(), INSTALLED_VERSION);
+    let mut updates = app.updates.take().expect("updates present");
+    match pending {
+        None => {
+            let label = strings.format(
+                StringKey::DesktopUpdateCurrentVersionLabel,
+                &[&INSTALLED_VERSION],
+            );
+            labelled_row(ui, &label, |ui| {
+                let checking = updates.is_checking();
+                if ui
+                    .add_enabled(
+                        !checking,
+                        egui::Button::new(strings.resolve(StringKey::DesktopUpdateCheckNow)),
+                    )
+                    .clicked()
+                {
+                    updates.check_manually(app);
+                }
+                if checking {
+                    ui.spinner();
+                }
+            });
+        }
+        Some(manifest) => {
+            let offer = updates.installation.offer(&manifest);
+            let label = strings.format(
+                StringKey::DesktopUpdatePendingVersionLabel,
+                &[&manifest.version],
+            );
+            labelled_row(ui, &label, |ui| {
+                let action = match &offer {
+                    Offer::DownloadPage | Offer::PackageRejected => {
+                        Some(StringKey::DesktopUpdateDownloadAction)
+                    }
+                    Offer::StartDownload => Some(StringKey::DesktopUpdateDownloadAndInstallAction),
+                    Offer::Install(_) | Offer::InstallerOpenFailed(_) => {
+                        Some(StringKey::DesktopUpdateInstallAction)
+                    }
+                    Offer::DownloadFailed => Some(StringKey::DesktopUpdateRetryAction),
+                    Offer::Downloading => None,
+                };
+                match action {
+                    Some(key) => {
+                        if ui.button(strings.resolve(key)).clicked() {
+                            updates.act_on_offer(app, &manifest);
+                        }
+                    }
+                    None => {
+                        ui.spinner();
+                    }
+                }
+            });
+            if let Some(note) = offer.note_key() {
+                ui.weak(strings.resolve(note));
+                ui.add_space(super::ROW_SPACING[1]);
+            }
+        }
+    }
+    app.updates = Some(updates);
 }

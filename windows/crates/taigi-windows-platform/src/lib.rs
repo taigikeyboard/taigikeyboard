@@ -75,6 +75,37 @@ pub fn beep() {
 #[cfg(not(windows))]
 pub fn beep() {}
 
+/// Claims the named per-session mutex for this process's lifetime; answers
+/// `false` when another process of ours already holds it (the handle is
+/// deliberately never closed — it IS the claim). The host stub always
+/// answers `true`.
+#[cfg(windows)]
+pub fn acquire_single_instance(name: &str) -> bool {
+    use windows::core::PCWSTR;
+    use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
+    use windows::Win32::System::Threading::CreateMutexW;
+    let wide: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+    // SAFETY: a NUL-terminated name alive for the call; the returned handle
+    // is intentionally leaked so the mutex outlives every scope.
+    let created = unsafe { CreateMutexW(None, false, PCWSTR(wide.as_ptr())) };
+    match created {
+        Ok(_) => {
+            // SAFETY: the last-error read right after the call that set it.
+            let last_error = unsafe { GetLastError() };
+            last_error != ERROR_ALREADY_EXISTS
+        }
+        Err(error) => {
+            log::warn!("platform.single_instance_failed error={error}");
+            true
+        }
+    }
+}
+
+#[cfg(not(windows))]
+pub fn acquire_single_instance(_name: &str) -> bool {
+    true
+}
+
 /// A debug-build logger to the debugger's output window
 /// (`OutputDebugStringW`; DebugView shows it). Release builds install
 /// nothing: no log leaves a release build (`security-rules.md`).

@@ -242,6 +242,18 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `WinVerifyTrust` Authenticode + the signer certificate's **thumbprint/subject pinned
   against the running exe's own signature** (Codex: a bare subject-string compare is
   too weak; an unsigned running copy → download-page path only, as macOS ad-hoc builds).
+  **PR9 decisions (Codex post-impl)**: the pin is the signer LEAF's thumbprint — stronger
+  than a subject compare, with a known break: a renewed certificate is not accepted by
+  the copies signed with the old one, so the first release under a new certificate
+  ships through the download page and in-app updates resume from it (Windows has no
+  team-id equivalent to pin). The settings window is single-instance (a named mutex),
+  so one process owns the download stage; the announcement is CLAIMED inside the
+  locked `settings.json` write before the toast is posted (the scheduled task and an
+  open window cannot both toast); the scheduled task forbids parallel instances
+  (PR10). Staging = `%LOCALAPPDATA%\TaigiKeyboard\Updates\<uuid>\<version>.exe`;
+  no `%LOCALAPPDATA%` ⇒ no in-app install (never a roaming stage); stale folders are
+  removed at the next launch, which PR10's installer must not trigger while it still
+  reads its own payload.
 - **W10 Settings reload** — `settings.json` carries a monotonically increasing
   `revision`; the TIP uses mtime/size as the cheap change detector on `OnSetFocus` and
   on the first key of each composition, reloads, and only then adopts the new
@@ -303,7 +315,16 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   chords (Ctrl+Alt) are refused on both tiers rather than disambiguated; the keypad `+`
   reads as `=`; the Win key cannot be recorded (egui has no such modifier).
 - **W16 Docs** — roadmap = decisions + PR DAG + acceptance; memory = round hand-off;
-  `docs/architecture/windows-release.md` = operator procedure;
+  `docs/architecture/windows-release.md` = operator procedure. **PR10 contract for PR9's
+  code** (Codex): sign `TaigiKeyboardSettings.exe` and every installer with the SAME
+  Authenticode leaf; VERSIONINFO on both with an identical non-empty `ProductName` and
+  the installer's `ProductVersion` = the workspace version; `packageURL` names the
+  signed final `.exe`; a Start-menu shortcut to the settings exe with
+  `System.AppUserModel.ID = TaigiKeyboard.Settings`; a per-user scheduled task running
+  the installed exe with exactly `--check-updates`, `MultipleInstances=IgnoreNew`;
+  `Dictionaries\` and `Fonts\` beside the exe (never the working directory); no
+  settings-exe launch from the installer before its payload is fully consumed; a
+  certificate-rotation release goes through the download page once;
   `.claude/rules/windows-guidelines.md` = durable constraints; `windows/updates/README.md`
   = manifest contract only. No duplicated truth between them.
 
@@ -334,7 +355,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR6 | TSF UI | candidate window (D2D/DWrite renderer, 3 layouts, DPI scope, theme, mouse, private fonts, caret positioning + fallbacks, device loss) + UI-less `ITfCandidateListUIElement` contract; mode flash panel; unfold animation | PR #631 open (stacked on #630); host-verified only (`make check`, no Windows device); Codex post-impl 7 BLOCK / 12 RISK / 8 NIT fixed in the follow-up commit |
 | PR7 | Settings exe I | eframe shell + sidebar + 一般 / 外觀 / 快捷鍵 panes + shortcut recorder + display language + fonts; `taigi-windows-platform` (locale / open URL / beep, host stubs); `settings::launch` CLI contract shared with the DLL; core `keys::recorder` decision + choice `label_key`s | PR #632 open (stacked on #631); host-verified (`make check` incl. native exe tests + `check-exe` link); update rows = PR9, dictionary panes = PR8; Codex post-impl 1 BLOCK / 8 RISK / 5 NIT fixed in the follow-up commit |
 | PR8 | Settings exe II | 自訂詞庫 (paged `egui_extras` table, CRUD sheet, CSV import/export via `rfd`, delete all, clear learning — writes on a background thread behind one work slot + 400 ms spinner) + 詞庫來源 (three sections, 教典 subcollections indented/disabled) + unlisted 辭典搜尋 (`--pane dictionarySearch`; lexicon loaded on first query) + external lookup URLs; core `engine::lexicon` search ops + `DictionarySource::from_bitmask/badge_key` + `LexiconRow::sorted_for_search`, `engine::external_lookup`, `dictionary_artifacts::dictionary_version` shared with the DLL | PR #633 open (stacked on #632); host-verified (`make check`); Codex post-impl 1 BLOCK / 12 RISK / 5 NIT fixed in the follow-up commit (every store call incl. loads and the search off the UI thread, generation-gated; fixed table height; disabled look after 400 ms; atomic CSV export; dialogs parented to the window; seeds / re-derivation at launch; read-only banner from the first frame; one alert at a time) |
-| PR9 | Updates | `taigi-windows-update`: manifest model + checker + download + Authenticode pin + install flow; `--check-updates` headless mode; toast; 一般-pane rows | Pending |
+| PR9 | Updates | `taigi-windows-update`: `manifest` (wire format = macOS's, `DottedVersion` zero-padded), `checker` (due / stamp-before-fetch / record / announce-once, pure over `SettingsDocument`), `transport` (`ManifestFetcher` + `PackageDownloader` traits; `ureq` over schannel, 64 KiB / 200 MiB ceilings, HTTPS+200 only), `installation` (the `Offer` state machine, staging `%LOCALAPPDATA%\TaigiKeyboard\Updates\<uuid>\<version>.exe`, download + verify on a thread), `verify` (WinVerifyTrust + signer thumbprint pinned to the running exe + VERSIONINFO product/version; host stub = no in-app install), `toast` (WinRT, AUMID `TaigiKeyboard.Settings`); settings exe: overdue check at launch, `--check-now` alert, `--check-updates` headless, 一般-pane pending row per offer | PR #634 open (stacked on #633); host-verified (`make check`; Win32 paths type-checked by gnu/msvc); Codex post-impl 2 BLOCK / 10 RISK / 4 NIT fixed in the follow-up commit (ureq `NativeTls` + platform verifier, unaligned reads + RAII guards in `verify`, stale-download cleanup by the worker, single-instance window, announcement claim, headless staging cleanup) |
 | PR10 | Installer + release | Inno script (x64 first; x86/ARM64 gated), scheduled task, `release-app.sh`, `publish-release.sh`, `windows/Makefile` dev loop, `windows-release.md`, `windows/updates/README.md` | Pending |
 | PR11 | Dogfood fixes | first real-Windows smoke: fixes from the run-book + memory hand-off (not admin-only) | Pending |
 

@@ -13,6 +13,7 @@
 use crate::panes;
 use crate::panes::custom_dictionary::CustomDictionaryPageModel;
 use crate::panes::dictionary_search::DictionarySearchModel;
+use crate::updates::UpdateState;
 use crate::widgets::alert::PageMessage;
 use crate::widgets::recorder::RecorderState;
 use std::path::PathBuf;
@@ -63,6 +64,9 @@ pub struct SettingsApp {
     pub recorder: RecorderState,
     pub custom_dictionary: CustomDictionaryPageModel,
     pub search: DictionarySearchModel,
+    /// Taken out for the frame that drives it (it needs the app mutably)
+    /// and put back — never `None` between frames.
+    pub updates: Option<UpdateState>,
     /// A URL the browser refused to open, shown until dismissed
     /// (`ExternalLinkButton.swift:740-744`).
     pub message: Option<PageMessage>,
@@ -76,10 +80,12 @@ impl SettingsApp {
         data_directory: PathBuf,
         pane: SettingsPane,
         is_read_only: bool,
+        is_check_now: bool,
     ) -> Self {
         crate::fonts::install(&creation.egui_ctx);
         let document = live.refresh_if_changed();
         let title = pane_title(&strings_for(&document), pane);
+        let updates = UpdateState::new();
         let stores = UserDataStores::new(data_directory);
         if !is_read_only {
             stores.open();
@@ -111,9 +117,19 @@ impl SettingsApp {
             recorder: RecorderState::default(),
             custom_dictionary: CustomDictionaryPageModel::default(),
             search: DictionarySearchModel::default(),
+            updates: Some(updates),
             message: None,
             title,
         };
+        // The overdue daily check, or the menu's 檢查更新 (`--check-now`)
+        // — the manual one always answers.
+        let mut updates = app.updates.take().expect("updates present");
+        if is_check_now {
+            updates.check_manually(&mut app);
+        } else if !is_read_only {
+            updates.check_if_due(&mut app);
+        }
+        app.updates = Some(updates);
         // `--pane` is a selection like a click: persisted, so the next
         // plain launch reopens there too.
         if app.document.choice(&keys::SELECTED_SETTINGS_PANE) != pane {
@@ -219,6 +235,38 @@ impl SettingsApp {
         ui.add_space(8.0);
     }
 
+    /// Collects the check and the download in flight; the manual outcome
+    /// is shown as its own alert with its own buttons.
+    fn drive_updates(&mut self, ctx: &egui::Context) {
+        let mut updates = self.updates.take().expect("updates present");
+        updates.poll(self);
+        if updates.is_checking() || updates.installation.is_downloading() {
+            ctx.request_repaint_after(Duration::from_millis(100));
+        }
+        if let Some(outcome) = updates.manual_outcome.clone() {
+            let strings = self.strings();
+            match crate::widgets::update_alert::show(ctx, &strings, &outcome) {
+                Some(crate::widgets::update_alert::UpdateAlertAction::Proceed) => {
+                    updates.manual_outcome = None;
+                    if let taigi_windows_update::Outcome::UpdateAvailable(manifest) =
+                        &outcome.outcome
+                    {
+                        if outcome.installs_in_app {
+                            updates.installation.start_download(manifest);
+                        } else {
+                            crate::updates::open_download_page(self, manifest);
+                        }
+                    }
+                }
+                Some(crate::widgets::update_alert::UpdateAlertAction::Dismiss) => {
+                    updates.manual_outcome = None;
+                }
+                None => {}
+            }
+        }
+        self.updates = Some(updates);
+    }
+
     /// ONE alert at a time, whichever page raised it first in this order;
     /// the next shows once it is dismissed (two `.alert`s on one chain do
     /// not stack on the Mac either).
@@ -246,6 +294,7 @@ impl eframe::App for SettingsApp {
         ctx.request_repaint_after(IDLE_REFRESH_INTERVAL);
         self.sync_theme(ctx);
         self.sync_title(ctx);
+        self.drive_updates(ctx);
         panes::sidebar::show(ctx, self);
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {

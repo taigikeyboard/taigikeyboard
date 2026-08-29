@@ -14,6 +14,7 @@ mod fonts;
 mod keys;
 mod panes;
 mod search;
+mod updates;
 mod widgets;
 mod work;
 
@@ -31,6 +32,9 @@ const INITIAL_HEIGHT: f32 = 560.0;
 /// monitor is this tall.
 const MAXIMUM_HEIGHT: f32 = 16_384.0;
 
+/// The per-session mutex that makes the window single-instance.
+const SINGLE_INSTANCE_NAME: &str = "Local\\TaigiKeyboardSettings";
+
 /// Where the window's own frame is remembered between launches — beside
 /// the settings, never inside them (the TIP re-reads `settings.json` on
 /// every change, and a drag must not be one).
@@ -40,8 +44,13 @@ fn main() -> eframe::Result {
     taigi_windows_platform::install_debug_logger();
     let launch = LaunchOptions::parse(std::env::args().skip(1));
     if launch.headless_check {
-        // Roadmap W9 / PR9: the scheduled task's check runs here with no window.
-        log::info!("settings.headless_check_not_available_yet");
+        headless_check();
+        return Ok(());
+    }
+    // One window per user: a second launch (the menu row pressed twice)
+    // exits — two windows would each own a download stage and a recorder.
+    if !taigi_windows_platform::acquire_single_instance(SINGLE_INSTANCE_NAME) {
+        log::info!("settings.already_running");
         return Ok(());
     }
     // No per-user directory (`%APPDATA%` unset): the window opens on the
@@ -87,7 +96,63 @@ fn main() -> eframe::Result {
                 directory,
                 pane,
                 is_read_only,
+                launch.check_now,
             )))
         }),
     )
+}
+
+/// `--check-updates`: the scheduled task's daily check (roadmap W9) — no
+/// window. Due ⇒ fetch, record the outcome the way the window would, and
+/// toast a version not announced before.
+fn headless_check() {
+    use taigi_windows_update::checker;
+    let Ok(directory) = user_data_directory() else {
+        return;
+    };
+    let store = SettingsFileStore::new(&directory);
+    let Ok(document) = store.load() else {
+        return;
+    };
+    let now = updates::now_ms();
+    if !checker::is_due(&document, now) {
+        return;
+    }
+    if store
+        .update(|document| checker::stamp_next_check(document, now))
+        .is_err()
+    {
+        return;
+    }
+    let outcome = checker::check(
+        &taigi_windows_update::HttpTransport,
+        updates::INSTALLED_VERSION,
+    );
+    let Ok(document) = store.update(|document| checker::record(document, &outcome)) else {
+        return;
+    };
+    // The window's side effects, without a window: a package staged for
+    // another version goes; the announcement is claimed under the lock.
+    let keep = match &outcome {
+        checker::Outcome::UpdateAvailable(manifest) => Some(manifest.version.as_str()),
+        checker::Outcome::UpToDate => None,
+        checker::Outcome::Failed => return,
+    };
+    if let Some(local) = updates::local_data_directory() {
+        let staging = taigi_windows_update::installation::staging_directory(&local);
+        taigi_windows_update::installation::remove_staged_packages_other_than(&staging, keep);
+    }
+    if let checker::Outcome::UpdateAvailable(manifest) = &outcome {
+        let version = manifest.version.clone();
+        let mut claimed = false;
+        if store
+            .update(|document| claimed = checker::claim_announcement(document, &version))
+            .is_err()
+        {
+            return;
+        }
+        if claimed {
+            updates::post_toast(&app::strings_for(&document), manifest);
+        }
+    }
 }

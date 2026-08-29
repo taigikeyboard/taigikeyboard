@@ -15,6 +15,7 @@ members = [
     "crates/taigi-windows-tsf",
     "crates/taigi-windows-platform",
     "crates/taigi-windows-settings",
+    "crates/taigi-windows-update",
 ]
 
 [workspace.package]
@@ -53,6 +54,7 @@ taigi-windows-core = { path = "crates/taigi-windows-core" }
 taigi-windows-storage = { path = "crates/taigi-windows-storage" }
 taigi-windows-tsf = { path = "crates/taigi-windows-tsf" }
 taigi-windows-platform = { path = "crates/taigi-windows-platform" }
+taigi-windows-update = { path = "crates/taigi-windows-update" }
 # The settings window's UI toolkit, pinned to the API this session authored
 # against (roadmap W15); bump only with a Windows machine to run the result.
 # `accesskit` ON: the settings window exposes a Windows accessibility tree

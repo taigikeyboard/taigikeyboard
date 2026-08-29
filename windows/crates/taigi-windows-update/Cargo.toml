@@ -1,0 +1,46 @@
+[package]
+name = "taigi-windows-update"
+description = "Update check, download, verification and the two-stage install offer — port of the macOS UpdateChecker / UpdateInstallation / UpdatePackageVerifier"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+taigi-windows-core.workspace = true
+taigi-windows-platform.workspace = true
+log.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+# HTTPS through the system TLS stack (schannel on Windows; the macOS host's
+# Security framework for the native tests) — `native-tls-no-default`, so no
+# bundled root store ages inside the binary; `transport.rs` selects the
+# provider and the platform verifier explicitly.
+ureq = { version = "3", default-features = false, features = ["native-tls-no-default"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Security_Cryptography",
+    "Win32_Security_WinTrust",
+    "Win32_Storage_FileSystem",
+    "Win32_System_LibraryLoader",
+    "Data_Xml_Dom",
+    "UI_Notifications",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints.rust]
+# JUSTIFICATION: Authenticode (`WinVerifyTrust` + CryptoAPI) and VERSIONINFO
+# are raw Win32; each `unsafe` block is one call sequence with a `// SAFETY:`
+# line, confined to `verify.rs`. Every other module is safe Rust.
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
