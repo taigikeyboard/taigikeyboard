@@ -13,7 +13,9 @@ mod cli;
 mod fonts;
 mod keys;
 mod panes;
+mod search;
 mod widgets;
+mod work;
 
 use app::SettingsApp;
 use cli::LaunchOptions;
@@ -60,6 +62,7 @@ fn main() -> eframe::Result {
     });
     let title = app::pane_title(&app::strings_for(&document), pane);
     let window_state = directory.join(WINDOW_STATE_FILE);
+    let directory = directory.clone();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title(title)
@@ -81,6 +84,7 @@ fn main() -> eframe::Result {
             Ok(Box::new(SettingsApp::new(
                 creation,
                 live,
+                directory,
                 pane,
                 is_read_only,
             )))

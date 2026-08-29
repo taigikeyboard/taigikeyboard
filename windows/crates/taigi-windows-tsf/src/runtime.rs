@@ -25,10 +25,6 @@ use taigi_windows_core::settings::{
 use taigi_windows_core::strings::{DisplayLanguage, StringResolver};
 use taigi_windows_storage::{user_data_directory, LiveSettings, SettingsFileStore, UserDataStores};
 
-/// The install directory's dictionary folder — where the installer (PR10)
-/// copies `ios/Resources/Dictionaries/` (no third committed copy, W2).
-pub const DICTIONARIES_DIR_NAME: &str = "Dictionaries";
-
 /// What this host process may touch, probed ONCE and logged once (Codex W2:
 /// an AppContainer host cannot read `%APPDATA%`; the TIP then runs on
 /// shipped defaults and learns nothing, and never re-probes per keystroke).
@@ -204,7 +200,7 @@ impl Runtime {
     }
 
     pub fn dictionaries_directory() -> Option<PathBuf> {
-        install_directory().map(|directory| directory.join(DICTIONARIES_DIR_NAME))
+        install_directory().map(|directory| directory.join(DictionaryArtifacts::DIRECTORY_NAME))
     }
 
     /// The launch-time pass over both shortcut registries; writes only when
@@ -230,23 +226,8 @@ impl Runtime {
     }
 }
 
-/// The dictionary stamp the engine caches under: the crate version as one
-/// integer (`3.6.6` → `30606`), the same number the macOS `CFBundleVersion`
-/// carries, because the data is rebuilt by the release that bumps it. Every
-/// component is assumed < 100 (the release train's shape); a larger one
-/// would collide and is refused loudly.
 pub fn dictionary_version() -> u32 {
-    let mut parts = env!("CARGO_PKG_VERSION")
-        .split('.')
-        .map(|part| part.parse::<u32>().unwrap_or(0));
-    let major = parts.next().unwrap_or(0);
-    let minor = parts.next().unwrap_or(0);
-    let patch = parts.next().unwrap_or(0);
-    assert!(
-        minor < 100 && patch < 100,
-        "version components must stay below 100"
-    );
-    major * 10_000 + minor * 100 + patch
+    taigi_windows_core::dictionary_artifacts::dictionary_version(env!("CARGO_PKG_VERSION"))
 }
 
 #[cfg(test)]

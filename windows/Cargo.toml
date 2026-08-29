@@ -59,6 +59,9 @@ taigi-windows-platform = { path = "crates/taigi-windows-platform" }
 # (screen readers, keyboard navigation) — a product decision, not chrome.
 eframe = { version = "=0.31.1", default-features = false, features = ["accesskit", "glow", "default_fonts", "persistence"] }
 egui = "=0.31.1"
+egui_extras = { version = "=0.31.1", default-features = false }
+# Native file dialogs (Win32 common dialogs); no GTK / portal features.
+rfd = { version = "0.17", default-features = false }
 
 [workspace.lints.rust]
 # Every crate opts in with `[lints] workspace = true`. The default is the

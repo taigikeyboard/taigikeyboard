@@ -24,6 +24,10 @@ pub enum DictionaryArtifactsError {
 
 impl DictionaryArtifacts {
     /// File names as `dictionary/build/deploy.sh` writes them.
+    /// The install directory's dictionary folder — where the installer
+    /// copies `ios/Resources/Dictionaries/` (no third committed copy, W2).
+    pub const DIRECTORY_NAME: &'static str = "Dictionaries";
+
     pub const FILE_NAMES: [&'static str; 4] = [
         "dictionary.fst",
         "dictionary.bin",
@@ -76,5 +80,35 @@ mod tests {
         let err = DictionaryArtifacts::locate(&dir).unwrap_err();
         assert!(err.to_string().contains("syllables.fst"), "{err}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// The dictionary stamp the engine caches under: a crate version as one
+/// integer (`3.6.6` → `30606`), the same number the macOS `CFBundleVersion`
+/// carries, because the data is rebuilt by the release that bumps it. Every
+/// process that installs the lexicon (the DLL, the settings window) passes
+/// its own `CARGO_PKG_VERSION` — one workspace version, one stamp.
+pub fn dictionary_version(crate_version: &str) -> u32 {
+    let mut parts = crate_version
+        .split('.')
+        .map(|part| part.parse::<u32>().unwrap_or(0));
+    let major = parts.next().unwrap_or(0);
+    let minor = parts.next().unwrap_or(0);
+    let patch = parts.next().unwrap_or(0);
+    assert!(
+        minor < 100 && patch < 100,
+        "version components must stay below 100"
+    );
+    major * 10_000 + minor * 100 + patch
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::*;
+
+    #[test]
+    fn the_stamp_has_the_macos_bundle_version_shape() {
+        assert_eq!(dictionary_version("3.6.6"), 30_606);
+        assert_eq!(dictionary_version(env!("CARGO_PKG_VERSION")) % 100, 6);
     }
 }

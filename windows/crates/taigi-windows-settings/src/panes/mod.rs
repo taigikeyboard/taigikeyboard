@@ -1,10 +1,13 @@
 //! The panes, one module each, in the sidebar's order
-//! (`SettingsPane.allCases`). `show` is the pane→form mapping of
-//! `SettingsDetailView` (`SettingsSplitView.swift:126-149`).
+//! (`SettingsPane.allCases`) plus the unlisted search page. `show` is the
+//! pane→form mapping of `SettingsDetailView` (`SettingsSplitView.swift:126-149`).
 
 // 中文: 各設定 pane;`show` 依目前選取畫出對應表單。
 
 pub mod appearance;
+pub mod custom_dictionary;
+pub mod dictionary_search;
+pub mod dictionary_sources;
 pub mod general;
 pub mod shortcuts;
 pub mod sidebar;
@@ -20,20 +23,16 @@ pub const ROW_SPACING: [f32; 2] = [24.0, 10.0];
 /// to sit beside its control.
 pub const LABEL_WIDTH: f32 = 200.0;
 
-pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
+pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp, frame: &eframe::Frame) {
     egui::Frame::NONE
         .inner_margin(FORM_INSET)
         .show(ui, |ui| match app.pane() {
             SettingsPane::General => general::show(ui, app),
             SettingsPane::Appearance => appearance::show(ui, app),
             SettingsPane::Shortcuts => shortcuts::show(ui, app),
-            // The dictionary panes arrive with PR8; until then the pane
-            // is its title and nothing else.
-            SettingsPane::CustomDictionary
-            | SettingsPane::DictionarySources
-            | SettingsPane::DictionarySearch => {
-                ui.heading(crate::app::pane_title(&app.strings(), app.pane()));
-            }
+            SettingsPane::CustomDictionary => custom_dictionary::show(ui, app, frame),
+            SettingsPane::DictionarySources => dictionary_sources::show(ui, app),
+            SettingsPane::DictionarySearch => dictionary_search::show(ui, app),
         });
 }
 

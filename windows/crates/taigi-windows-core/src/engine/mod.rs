@@ -10,6 +10,7 @@
 
 mod bridge;
 mod composing;
+mod external_lookup;
 mod lexicon;
 mod nextword;
 mod phonetics;
@@ -20,10 +21,11 @@ pub use composing::{
     enter_continuous, fetch_at_pos, reset, CommitContinuousArgs, CustomEntry, FetchArgs,
     FrequencyRow,
 };
+pub use external_lookup::{chhoe_url, digit_tone_form, moe_url};
 pub use lexicon::{
-    dictionary_filters, enabled_sources_bitmask, install as lexicon_install, DictionaryFilters,
-    DictionarySource, LexiconInstallStats, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
-    NO_SOURCES_ENABLED_BITMASK,
+    dictionary_filters, enabled_sources_bitmask, install as lexicon_install, is_hanzi,
+    search_by_hanzi, search_with_sources, DictionaryFilters, DictionarySource, LexiconInstallStats,
+    LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK, NO_SOURCES_ENABLED_BITMASK,
 };
 pub use nextword::{
     reset_full as nextword_reset_full,

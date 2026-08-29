@@ -1,22 +1,26 @@
 //! The window: a sidebar of panes and the selected pane's form, over one
-//! live `settings.json`. Port of `SettingsSplitView.swift` +
-//! `SettingsWindowController.swift`: the selection persists
-//! (`selectedSettingsPane`), the title names the pane, the window follows
-//! the 外觀 setting, and every value is re-read each frame — with a frame
-//! requested every second while idle, since eframe repaints only on events
-//! and the DLL's own writes (a TL/POJ chord) are not events — so a change
-//! made outside shows without a restart (W10; `@AppStorage`'s job on the
-//! Mac).
+//! live `settings.json` and the three user-data stores. Port of
+//! `SettingsSplitView.swift` + `SettingsWindowController.swift`: the
+//! selection persists (`selectedSettingsPane`), the title names the pane,
+//! the window follows the 外觀 setting, and every value is re-read each
+//! frame — with a frame requested every second while idle, since eframe
+//! repaints only on events and the DLL's own writes (a TL/POJ chord) are
+//! not events — so a change made outside shows without a restart (W10;
+//! `@AppStorage`'s job on the Mac).
 
 // 中文: 設定視窗本體 — 側欄 + 目前 pane;每一幀重讀 settings.json(閒置時每秒要一幀),寫入走原子更新;寫失敗顯示橫幅。
 
 use crate::panes;
+use crate::panes::custom_dictionary::CustomDictionaryPageModel;
+use crate::panes::dictionary_search::DictionarySearchModel;
+use crate::widgets::alert::PageMessage;
 use crate::widgets::recorder::RecorderState;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use taigi_windows_core::settings::{keys, AppearanceMode, SettingsDocument, SettingsPane};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
-use taigi_windows_storage::LiveSettings;
+use taigi_windows_storage::{LiveSettings, UserDataStores};
 
 /// How long an idle window waits before checking the file again: one
 /// `stat` a second is nothing, and a chord's effect showing within a second
@@ -42,19 +46,26 @@ pub fn pane_title(strings: &StringResolver, pane: SettingsPane) -> String {
 pub struct SettingsApp {
     live: LiveSettings,
     document: Arc<SettingsDocument>,
+    stores: UserDataStores,
+    /// Whether this process has loaded the dictionaries into the engine —
+    /// only the search page needs them, so its first query loads them.
+    is_lexicon_loaded: bool,
     pane: SettingsPane,
     /// No per-user directory (`%APPDATA%` unset): the window shows the
-    /// defaults and refuses every write, saying so — never a file the DLL
-    /// would not read (roadmap W2's unsupported-capability rule).
+    /// defaults and refuses every write, saying so from the first frame —
+    /// never a file the DLL would not read (roadmap W2's
+    /// unsupported-capability rule). The data panes list nothing.
     is_read_only: bool,
     /// The last write that failed, shown as a banner until a write
     /// succeeds: a control that snaps back with no word is a control that
     /// looks broken.
     write_failure: Option<String>,
     pub recorder: RecorderState,
+    pub custom_dictionary: CustomDictionaryPageModel,
+    pub search: DictionarySearchModel,
     /// A URL the browser refused to open, shown until dismissed
     /// (`ExternalLinkButton.swift:740-744`).
-    pub failed_url: Option<String>,
+    pub message: Option<PageMessage>,
     title: String,
 }
 
@@ -62,20 +73,45 @@ impl SettingsApp {
     pub fn new(
         creation: &eframe::CreationContext<'_>,
         live: LiveSettings,
+        data_directory: PathBuf,
         pane: SettingsPane,
         is_read_only: bool,
     ) -> Self {
         crate::fonts::install(&creation.egui_ctx);
         let document = live.refresh_if_changed();
         let title = pane_title(&strings_for(&document), pane);
+        let stores = UserDataStores::new(data_directory);
+        if !is_read_only {
+            stores.open();
+            // What the DLL does on its first consumed key, done here too:
+            // a fresh install whose first visitor is this window still gets
+            // its seeds, and an older dictionary its re-derived keys.
+            let custom_dictionary = Arc::clone(&stores.custom_dictionary);
+            std::thread::Builder::new()
+                .name("taigi-custom-dictionary-launch".into())
+                .spawn(move || {
+                    if let Err(error) = custom_dictionary.rederive_search_keys_if_needed() {
+                        log::error!("custom_dictionary.rederive_failed error={error}");
+                    }
+                    if let Err(error) = custom_dictionary.seed_if_empty() {
+                        log::error!("custom_dictionary.seed_failed error={error}");
+                    }
+                })
+                .ok();
+        }
         let mut app = Self {
             live,
             document,
+            stores,
+            is_lexicon_loaded: false,
             pane,
             is_read_only,
-            write_failure: None,
+            // Said from the first frame, not at the first refused write.
+            write_failure: is_read_only.then(|| "APPDATA".to_owned()),
             recorder: RecorderState::default(),
-            failed_url: None,
+            custom_dictionary: CustomDictionaryPageModel::default(),
+            search: DictionarySearchModel::default(),
+            message: None,
             title,
         };
         // `--pane` is a selection like a click: persisted, so the next
@@ -88,6 +124,24 @@ impl SettingsApp {
 
     pub fn document(&self) -> &SettingsDocument {
         &self.document
+    }
+
+    pub fn stores(&self) -> &UserDataStores {
+        &self.stores
+    }
+
+    pub fn is_read_only(&self) -> bool {
+        self.is_read_only
+    }
+
+    pub fn is_lexicon_loaded(&self) -> bool {
+        self.is_lexicon_loaded
+    }
+
+    /// The search job loads the dictionaries when it has to; what it found
+    /// is remembered so the next query does not load them again.
+    pub fn note_lexicon_loaded(&mut self, is_loaded: bool) {
+        self.is_lexicon_loaded = is_loaded;
     }
 
     pub fn strings(&self) -> StringResolver {
@@ -114,7 +168,6 @@ impl SettingsApp {
     /// failed write is reported, not swallowed.
     pub fn update_document(&mut self, mutate: impl FnOnce(&mut SettingsDocument)) {
         if self.is_read_only {
-            self.write_failure = Some("APPDATA".to_owned());
             return;
         }
         match self.live.store().update(mutate) {
@@ -165,10 +218,25 @@ impl SettingsApp {
             });
         ui.add_space(8.0);
     }
+
+    /// ONE alert at a time, whichever page raised it first in this order;
+    /// the next shows once it is dismissed (two `.alert`s on one chain do
+    /// not stack on the Mac either).
+    fn show_alert(&mut self, ctx: &egui::Context) {
+        let strings = self.strings();
+        let slot = if self.message.is_some() {
+            &mut self.message
+        } else if self.custom_dictionary.message.is_some() {
+            &mut self.custom_dictionary.message
+        } else {
+            &mut self.search.message
+        };
+        crate::widgets::alert::show(ctx, &strings, slot);
+    }
 }
 
 impl eframe::App for SettingsApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Before any widget sees the frame's input: a recording row takes
         // every key of this frame for itself.
         self.recorder.intercept(ctx);
@@ -183,9 +251,9 @@ impl eframe::App for SettingsApp {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
                 self.show_write_failure(ui);
-                panes::show(ui, self);
+                panes::show(ui, self, frame);
             });
         });
-        crate::widgets::external_link::show_failure(ctx, self);
+        self.show_alert(ctx);
     }
 }
