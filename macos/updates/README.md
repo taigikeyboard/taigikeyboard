@@ -26,8 +26,7 @@ download and what it has to prove).
 ## Where it lives
 
 The file itself is **not** in this repository. It is served from the website
-repository, `taigikeyboard/taigikeyboard.github.io`, at `appcast/macos.json`,
-and `macos/scripts/publish-release.sh` is what writes it there.
+repository, `taigikeyboard/taigikeyboard.github.io`, at `appcast/macos.json`.
 
 Two constraints put it there rather than here:
 
@@ -39,15 +38,45 @@ Two constraints put it there rather than here:
   be repointed at different hosting later without stranding them.
 
 Keeping a second copy here to review would only give it somewhere to drift, and
-a hand-edited manifest can go live before the package it announces exists. The
-publish script generates it instead, after the download is verified reachable.
+a hand-edited manifest can go live before the package it announces exists.
 
-The same script writes one more file over there, `_data/macos_release.json`,
-which is what the site's macOS download button links at. The button points
-straight at the package so the download starts on one click, so its URL carries
-the version — and deliberately not at `/releases/latest/download/...`, since
-`latest` resolves across a repository that is a website, not this app's release
+### One published fact, one committed file
+
+A release writes exactly one file over there, `_data/macos_release.json`:
+
+```json
+{
+  "version": "3.6.6",
+  "tag": "macos-v3.6.6",
+  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/macos-v3.6.6/TaigiKeyboard-3.6.6.pkg",
+  "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/tag/macos-v3.6.6"
+}
+```
+
+That file is what the site's macOS download button links at — straight at the
+package so the download starts on one click, which is why its URL carries the
+version, and deliberately not `/releases/latest/download/...`, since `latest`
+resolves across a repository that is a website rather than this app's release
 channel.
+
+The manifest is **rendered** from it by the site's own build:
+`appcast/macos.json` over there is a Jekyll template reading
+`site.data.macos_release`, mapping `releasePageURL` → `downloadPageURL` and
+`downloadURL` → `packageURL`. Nothing writes it directly.
+
+It was two literal files until 2026-08-29, each committed by the publish script
+in its own commit. **Two commits seconds apart race.** Every GitHub Pages run
+deploys the tree of *its own commit*, not the branch tip, so whichever run
+finishes last wins — and on 2026-08-28 that was the run for the earlier commit.
+The site's download button read 3.6.6 while the manifest served 3.6.5, for a
+day, with both files correct on `main` the whole time. The publish script's
+liveness poll did not catch it: the manifest genuinely was live at 3.6.6 when it
+looked, and was reverted afterwards.
+
+One file cannot race with itself, so that is the shape now. It also removes the
+duplication that made the two files drift-capable in the first place: `version`
+was in both, and `downloadURL`/`packageURL` and `releasePageURL`/`downloadPageURL`
+were the same two URLs under different names.
 
 ## Wire format
 
@@ -83,8 +112,10 @@ after a successful build — does the whole sequence:
    credentials, and requires the page to answer `200` and the asset `206` — one
    byte, rather than tens of megabytes, to prove it downloads (`200` counts too:
    it means the server ignored the range and sent the whole thing).
-3. Only then writes `_data/macos_release.json` and `appcast/macos.json`, and
-   waits for the live manifest URL to serve the new version.
+3. Only then writes `_data/macos_release.json` — one commit — and waits for the
+   live manifest URL to serve the new version. That wait is also what proves the
+   site rendered the manifest from what was committed, which is the one step of
+   the announcement the script no longer performs itself.
 
 Re-running it after a failure is the intended recovery — it adds to an existing
 release rather than replacing it, so the release the manifest points at is never

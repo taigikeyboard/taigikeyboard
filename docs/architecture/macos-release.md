@@ -220,8 +220,8 @@ Everything goes to the **website** repository, `taigikeyboard/taigikeyboard.gith
 | What | Where | Why there |
 |---|---|---|
 | The `.pkg` | a GitHub release asset, tagged `macos-v<version>` | Release assets live outside git, so they cost the Pages site neither its 1 GB size limit nor its bandwidth allowance, and never enter the site's history. Committing 20 MB per version would do all three. |
-| `appcast/macos.json` | committed, served at `https://taigikeyboard.tw/appcast/macos.json` | The app source repository is private, so nothing served from it — raw file or releases page — answers an anonymous request with anything but `404`. |
-| `_data/macos_release.json` | committed site data the landing page's macOS download button reads | The button links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and the repository it would resolve against is a website. |
+| `_data/macos_release.json` | committed site data — **the only file a release writes** | The landing page's macOS download button reads it and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and the repository it would resolve against is a website. |
+| `appcast/macos.json` | **rendered** from that data by the site's own build, served at `https://taigikeyboard.tw/appcast/macos.json` | The app source repository is private, so nothing served from it — raw file or releases page — answers an anonymous request with anything but `404`. Rendered rather than written because two files meant two commits, and two Pages runs seconds apart deploy their own trees: see *One published fact, one committed file* in `macos/updates/README.md` for the day the manifest sat a release behind. |
 
 In order:
 
@@ -248,12 +248,11 @@ In order:
    authenticated check cannot tell a public URL from a private one, which is
    exactly how the first version of this shipped pointing at a private
    repository.
-4. Write `_data/macos_release.json`, then `appcast/macos.json`, then poll the
-   live manifest URL until it serves the new version — GitHub Pages has to
-   build and its CDN has to expire. The download link is committed first: a run
-   that dies between the two leaves the site offering a version the update
-   check has not announced yet, rather than announcing one whose download
-   button still points at the release before it.
+4. Write `_data/macos_release.json` — one file, one commit — then poll the live
+   manifest URL until it serves the new version: GitHub Pages has to build and
+   its CDN has to expire. That poll does double duty, because the manifest is
+   rendered rather than written: it is the only thing that proves the site built
+   what was committed.
 
 Step 3 gates step 4 on purpose. The manifest is what every installed copy polls,
 so announcing a version before its download is reachable points all of them at

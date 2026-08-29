@@ -26,17 +26,24 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
 # stored outside git, so hosting them alongside the site costs it neither the
 # 1 GB GitHub Pages size limit nor its bandwidth allowance.
 PUBLISH_REPOSITORY="taigikeyboard/taigikeyboard.github.io"
-MANIFEST_PATH="appcast/macos.json"
-# The site's macOS download button links straight at the package, so its URL
-# carries the version and changes every release. It is committed as site data
-# rather than written into the page, which keeps this script the only thing that
-# edits it — and keeps the button off `/releases/latest`, which resolves
-# repository-wide on a repository that is a website rather than this app's
-# release channel.
+# The one file a release writes over there. The site's macOS download button
+# links straight at the package, so its URL carries the version and changes
+# every release; it is committed as site data rather than written into the page,
+# which keeps this script the only thing that edits it — and keeps the button
+# off `/releases/latest`, which resolves repository-wide on a repository that is
+# a website rather than this app's release channel.
+#
+# The update manifest at `appcast/macos.json` is *rendered* from this file by
+# the site's own build, not written here. It used to be a second literal file
+# this script committed separately, and two commits seconds apart raced: each
+# Pages run deploys the tree of its own commit, so on 2026-08-28 the run for the
+# earlier commit finished last and served a manifest one release behind for a
+# day, while the download button was already current. One published fact, one
+# committed file, nothing to race.
 SITE_RELEASE_PATH="_data/macos_release.json"
 # The domain is the project's own, so the hosting underneath it can change
 # without stranding installs that have UpdateChecker.publishedURL baked in.
-MANIFEST_URL="https://taigikeyboard.tw/$MANIFEST_PATH"
+MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 # A tag names what it versions, and that repository is a website: a bare
 # `v3.6.5` there would not say which artifact it belongs to.
 TAG="macos-v$SHORT_VERSION"
@@ -215,18 +222,16 @@ done
 echo "  page 200, asset $asset_status"
 
 # ---------------------------------------------------------------------------
-# Only now announce it. Both files below name a download that has just been
-# proven reachable: publishing either one before that points its readers at a
-# 404 — every installed copy in the manifest's case, every visitor in the site's.
+# Only now announce it. The file below names a download that has just been
+# proven reachable, and both readers of it — every visitor in the download
+# button's case, every installed copy in the manifest's — would otherwise be
+# pointed at a 404.
 # ---------------------------------------------------------------------------
 
-# `packageURL` is the same asset the site's download button points at, and the
-# same one proven reachable above. Naming it here is what lets the app fetch the
-# installer itself instead of sending the user to a browser; an install that
-# reads it still verifies the package's own Developer ID signature, so this URL
-# is a convenience rather than something trusted.
-MANIFEST_JSON="$(printf '{\n  "version": "%s",\n  "downloadPageURL": "%s",\n  "packageURL": "%s"\n}\n' \
-    "$SHORT_VERSION" "$RELEASE_PAGE_URL" "$ASSET_URL")"
+# `downloadURL` reaches the app as the manifest's `packageURL`, which is what
+# lets it fetch the installer itself instead of sending the user to a browser;
+# an install that reads it still verifies the package's own Developer ID
+# signature, so the URL is a convenience rather than something trusted.
 SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
     "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$RELEASE_PAGE_URL")"
 
@@ -262,33 +267,34 @@ commit_site_file() {
     gh api "$api" "${arguments[@]}" --jq '.commit.html_url'
 }
 
-# The download link goes first as a preference, not a safety property: both
-# files name a download that has already been proven reachable, and the manifest
-# sends people to the release page rather than to the website, so either order
-# leaves both working. This one just means the site offers a new version no
-# later than the update check announces it.
-echo "==> Publishing the website download link"
+echo "==> Publishing the release data"
 commit_site_file "$SITE_RELEASE_PATH" \
-    "chore: macOS download link -> $SHORT_VERSION" "$SITE_RELEASE_JSON"
-
-echo "==> Publishing the update manifest"
-commit_site_file "$MANIFEST_PATH" \
-    "chore: macOS update manifest -> $SHORT_VERSION" "$MANIFEST_JSON"
+    "chore: macOS release -> $SHORT_VERSION" "$SITE_RELEASE_JSON"
 
 echo "==> Waiting for $MANIFEST_URL to serve $SHORT_VERSION"
 # GitHub Pages has to build and the CDN has to expire what it holds. Polling the
 # real URL is the only thing that proves the release is actually announced;
-# everything before this only proves it was committed.
+# everything before this only proves it was committed. It also proves the site
+# rendered the manifest from what was committed, which is the one step of the
+# announcement this script no longer performs itself.
+#
+# Both published fields are checked, not just the version. `packageURL` is what
+# lets the app fetch the installer itself, and a manifest missing it still reads
+# as a perfectly valid update — the app just sends the user to a browser
+# instead. So a render that dropped it would satisfy a version-only poll and
+# quietly cost every install the in-app download; there is no later signal that
+# it happened.
 for attempt in $(seq 1 30); do
-    live_version="$(anonymous_curl --header 'Cache-Control: no-cache' "$MANIFEST_URL" 2>/dev/null |
+    live_manifest="$(anonymous_curl --header 'Cache-Control: no-cache' "$MANIFEST_URL" 2>/dev/null |
         python3 -c 'import json,sys
 try:
-    print(json.load(sys.stdin).get("version") or "")
+    manifest = json.load(sys.stdin)
+    print((manifest.get("version") or "") + " " + (manifest.get("packageURL") or ""))
 except Exception:
-    print("")' || true)"
-    [[ "$live_version" == "$SHORT_VERSION" ]] && break
+    print(" ")' || true)"
+    [[ "$live_manifest" == "$SHORT_VERSION $ASSET_URL" ]] && break
     [[ $attempt -eq 30 ]] &&
-        fail "manifest still serving '${live_version:-nothing}' after 5 minutes — check the Pages deployment"
+        fail "manifest still serving '${live_manifest% *}' with package '${live_manifest#* }' after 5 minutes, wanted '$SHORT_VERSION' and '$ASSET_URL' — check the Pages deployment"
     sleep 10
 done
 
