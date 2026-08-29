@@ -8,10 +8,8 @@
 
 // 中文: 組字管理者對真實引擎的整合測試;記憶體儲存 + 錄影執行器;與 macOS 測試逐案對應。
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
@@ -66,18 +64,18 @@ impl SettingsProvider for MutableSettings {
 
 #[derive(Default)]
 struct Memory {
-    frequency: RefCell<HashMap<(String, String), i64>>,
-    associations: RefCell<Vec<AssociationPair>>,
-    custom: RefCell<Vec<CustomEntry>>,
-    now_ms: RefCell<i64>,
+    frequency: Mutex<HashMap<(String, String), i64>>,
+    associations: Mutex<Vec<AssociationPair>>,
+    custom: Mutex<Vec<CustomEntry>>,
+    now_ms: Mutex<i64>,
 }
 
 #[derive(Clone)]
-struct Handle(Rc<Memory>);
+struct Handle(Arc<Memory>);
 
 impl FrequencySource for Handle {
     fn rows_for_words(&self, words: &[String]) -> Option<Vec<FrequencyRow>> {
-        let store = self.0.frequency.borrow();
+        let store = self.0.frequency.lock().unwrap();
         Some(
             store
                 .iter()
@@ -95,7 +93,8 @@ impl FrequencySource for Handle {
         *self
             .0
             .frequency
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .entry((word.to_owned(), tl.to_owned()))
             .or_insert(0) += 1;
     }
@@ -105,7 +104,8 @@ impl CustomDictionarySource for Handle {
     fn rows_matching(&self, _family: &str, _form: &str, key: &str) -> Vec<CustomEntry> {
         self.0
             .custom
-            .borrow()
+            .lock()
+            .unwrap()
             .iter()
             .filter(|entry| {
                 entry
@@ -120,13 +120,13 @@ impl CustomDictionarySource for Handle {
 
 impl AssociationSink for Handle {
     fn record(&self, pairs: &[AssociationPair]) {
-        self.0.associations.borrow_mut().extend_from_slice(pairs);
+        self.0.associations.lock().unwrap().extend_from_slice(pairs);
     }
 }
 
 impl Clock for Handle {
     fn now_ms(&self) -> i64 {
-        *self.0.now_ms.borrow()
+        *self.0.now_ms.lock().unwrap()
     }
 }
 
@@ -168,14 +168,14 @@ impl Recorder {
 struct Rig {
     manager: ComposingManager,
     settings: MutableSettings,
-    memory: Rc<Memory>,
+    memory: Arc<Memory>,
     recorder: Recorder,
 }
 
 fn rig() -> Rig {
-    let memory = Rc::new(Memory::default());
-    *memory.now_ms.borrow_mut() = 1_000;
-    let handle = Handle(Rc::clone(&memory));
+    let memory = Arc::new(Memory::default());
+    *memory.now_ms.lock().unwrap() = 1_000;
+    let handle = Handle(Arc::clone(&memory));
     let settings = MutableSettings::default();
     let manager = ComposingManager::new(
         Arc::new(settings.clone()),
@@ -235,7 +235,7 @@ impl Rig {
     }
 
     fn advance_clock(&self, ms: i64) {
-        *self.memory.now_ms.borrow_mut() += ms;
+        *self.memory.now_ms.lock().unwrap() += ms;
     }
 }
 
@@ -425,7 +425,7 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     assert_eq!(outcome, CandidateCommitOutcome::Ignored);
     assert_eq!(committed, None);
     assert!(
-        rig.memory.frequency.borrow().is_empty(),
+        rig.memory.frequency.lock().unwrap().is_empty(),
         "an ignored commit learns nothing"
     );
 }
@@ -458,7 +458,7 @@ fn commit_candidate_counts_the_word_under_its_reading_in_either_script() {
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
     rig.commit(&taigi, CandidateScript::Alternate);
-    let store = rig.memory.frequency.borrow();
+    let store = rig.memory.frequency.lock().unwrap();
     assert_eq!(
         store.get(&("台語".to_owned(), "tâi-gí".to_owned())),
         Some(&2),
@@ -477,7 +477,7 @@ fn commit_candidate_with_recording_off_learns_nothing() {
     let taigi = rig.candidate("台語");
     let (outcome, _) = rig.commit(&taigi, CandidateScript::Primary);
     assert_eq!(outcome, CandidateCommitOutcome::Finalized);
-    assert!(rig.memory.frequency.borrow().is_empty());
+    assert!(rig.memory.frequency.lock().unwrap().is_empty());
 }
 
 #[test]
@@ -488,7 +488,7 @@ fn a_repeatedly_committed_candidate_overtakes_the_one_above_it() {
     let neutral = rig.candidates();
     let underdog = neutral.last().cloned().expect("candidates");
     assert_ne!(underdog.display_text, neutral[0].display_text);
-    rig.memory.frequency.borrow_mut().insert(
+    rig.memory.frequency.lock().unwrap().insert(
         (underdog.display_text.clone(), underdog.canonical_tl.clone()),
         500,
     );
@@ -514,7 +514,7 @@ fn two_commits_in_a_row_learn_the_bigram_and_a_full_stop_breaks_it() {
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
     {
-        let pairs = rig.memory.associations.borrow();
+        let pairs = rig.memory.associations.lock().unwrap();
         assert!(
             pairs.iter().any(|p| p.previous == "台"
                 && p.next == "語"
@@ -523,7 +523,7 @@ fn two_commits_in_a_row_learn_the_bigram_and_a_full_stop_breaks_it() {
             "{pairs:?}"
         );
     }
-    rig.memory.associations.borrow_mut().clear();
+    rig.memory.associations.lock().unwrap().clear();
 
     // A full stop typed outside a composition ends the context.
     rig.manager.note_character_typed_outside_composition("。");
@@ -534,11 +534,12 @@ fn two_commits_in_a_row_learn_the_bigram_and_a_full_stop_breaks_it() {
     assert!(
         !rig.memory
             .associations
-            .borrow()
+            .lock()
+            .unwrap()
             .iter()
             .any(|p| p.next == "文"),
         "{:?}",
-        rig.memory.associations.borrow()
+        rig.memory.associations.lock().unwrap()
     );
 }
 
@@ -555,7 +556,7 @@ fn a_comma_leaves_the_bigram_intact_and_a_letter_outside_is_not_a_word() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    let pairs = rig.memory.associations.borrow();
+    let pairs = rig.memory.associations.lock().unwrap();
     assert!(
         pairs.iter().any(|p| p.previous == "台" && p.next == "語"),
         "{pairs:?}"
@@ -578,7 +579,7 @@ fn with_association_recording_off_two_commits_learn_nothing() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    assert!(rig.memory.associations.borrow().is_empty());
+    assert!(rig.memory.associations.lock().unwrap().is_empty());
 }
 
 #[test]
@@ -593,9 +594,9 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
     assert!(
-        rig.memory.associations.borrow().is_empty(),
+        rig.memory.associations.lock().unwrap().is_empty(),
         "{:?}",
-        rig.memory.associations.borrow()
+        rig.memory.associations.lock().unwrap()
     );
 
     // Punctuation committed mid-composition drops the context rather than
@@ -609,7 +610,8 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     assert!(!rig
         .memory
         .associations
-        .borrow()
+        .lock()
+        .unwrap()
         .iter()
         .any(|p| p.next == "文"));
 }
@@ -621,7 +623,7 @@ fn custom_entries_reach_the_fetch_only_while_the_setting_is_on() {
     // A pair the bundled dictionary does not carry, so its presence can only
     // come from the custom store (𠢕早 / gâu-tsá is a real dictionary word
     // and would surface with the setting off too).
-    rig.memory.custom.borrow_mut().push(CustomEntry {
+    rig.memory.custom.lock().unwrap().push(CustomEntry {
         roman: "khiam-tsi".into(),
         hanzi: "測試自訂".into(),
     });

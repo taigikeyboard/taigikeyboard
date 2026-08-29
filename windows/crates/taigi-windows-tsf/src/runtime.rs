@@ -11,7 +11,11 @@
 
 use crate::module::install_directory;
 use std::path::PathBuf;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
+use taigi_windows_core::composing::{
+    AssociationSink, ComposingManager, ComposingSessionCoordinator, CustomDictionarySource,
+    FrequencySource, NextWordLearner, NoStores, SystemClock,
+};
 use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{lexicon_install, LexiconInstallStats};
 use taigi_windows_core::keys::ShortcutConflicts;
@@ -48,12 +52,16 @@ pub struct Runtime {
     settings_store: Option<SettingsFileStore>,
     stores: Option<UserDataStores>,
     first_key: OnceLock<FirstKeySetup>,
+    /// The one composing engine driver per process, keyed by context
+    /// token (roadmap W3). Behind a mutex because one process may host
+    /// thread managers on several threads; held for the length of one
+    /// synchronous edit session, never across a callback into the host.
+    coordinator: OnceLock<Mutex<ComposingSessionCoordinator>>,
 }
 
 /// What the first handled key set up, kept so later keys skip it.
 #[derive(Clone, Copy, Debug)]
 pub struct FirstKeySetup {
-    #[allow(dead_code)] // read by the key sink's first consumed key (PR5b)
     pub lexicon: Option<LexiconInstallStats>,
 }
 
@@ -97,7 +105,49 @@ impl Runtime {
             settings_store,
             stores,
             first_key: OnceLock::new(),
+            coordinator: OnceLock::new(),
         }
+    }
+
+    pub fn settings_store(&self) -> Option<&SettingsFileStore> {
+        self.settings_store.as_ref()
+    }
+
+    /// The coordinator only if a key has already built it — for callbacks
+    /// that must not bring the engine up (termination, focus loss).
+    pub fn coordinator_if_built(&self) -> Option<&Mutex<ComposingSessionCoordinator>> {
+        self.coordinator.get()
+    }
+
+    /// The coordinator, built on first use over the stores this host has
+    /// (`NoStores` where it has none). `prepare_for_first_key` must have run.
+    pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
+        self.coordinator.get_or_init(|| {
+            let settings: Arc<dyn taigi_windows_core::settings::SettingsProvider> =
+                Arc::clone(&self.settings) as _;
+            let (frequency, custom, association): (
+                Box<dyn FrequencySource>,
+                Box<dyn CustomDictionarySource>,
+                Box<dyn AssociationSink>,
+            ) = match &self.stores {
+                Some(stores) => (
+                    Box::new(Arc::clone(&stores.frequency)),
+                    Box::new(Arc::clone(&stores.custom_dictionary)),
+                    Box::new(Arc::clone(&stores.association)),
+                ),
+                None => (Box::new(NoStores), Box::new(NoStores), Box::new(NoStores)),
+            };
+            let learner = NextWordLearner::new(association, Box::new(SystemClock));
+            let manager = ComposingManager::new(
+                settings,
+                frequency,
+                custom,
+                learner,
+                Box::new(SystemClock),
+                1,
+            );
+            Mutex::new(ComposingSessionCoordinator::new(manager))
+        })
     }
 
     /// Everything the first CONSUMED key needs, done once per process (never
@@ -106,7 +156,6 @@ impl Runtime {
     /// (seed + key re-derivation queued behind the open, as on macOS
     /// `openUserDataStores`), and the shortcut registries reconciled
     /// (`AppDelegate.swift:56-70`). Idempotent.
-    #[allow(dead_code)] // the key sink calls this once a key is actually consumed (PR5b)
     pub fn prepare_for_first_key(&self) -> &FirstKeySetup {
         self.first_key.get_or_init(|| {
             let lexicon = self.install_lexicon();

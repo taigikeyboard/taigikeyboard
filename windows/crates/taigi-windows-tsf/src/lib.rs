@@ -3,9 +3,11 @@
 //! every COM method body is a `catch_unwind` boundary — a panic must never
 //! cross into the host process (`.claude/rules/windows-guidelines.md` § TSF).
 //!
-//! Roadmap PR5a: lifecycle only. The service activates, registers its sinks,
-//! shows in the tray with the macOS input-source menu, reloads settings on
-//! focus, and passes EVERY key back to the host — composing is PR5b.
+//! PR5a gave it the lifecycle (activation, sinks, tray button + menu,
+//! settings reload); PR5b the composing: key sink → classifier → engine +
+//! document inside synchronous edit sessions, display attribute, preserved
+//! keys, password / read-only gating, context handover. The candidate
+//! window is PR6.
 
 // 中文: TSF 文字服務 DLL 的五個匯出點;每個 COM 進入點都包 catch_unwind,PR5a 只做生命週期不組字。
 
@@ -13,13 +15,19 @@
 
 mod class_factory;
 mod com_guard;
+mod composition;
 mod contexts;
+mod display_attribute;
+mod edit_session;
 mod guids;
+mod key_translation;
 mod lang_bar;
 mod module;
+mod preserved_keys;
 mod registration;
 mod registry;
 mod runtime;
+mod session;
 mod settings_launcher;
 mod text_service;
 mod wide;

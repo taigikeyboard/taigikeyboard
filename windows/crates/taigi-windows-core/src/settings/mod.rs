@@ -33,7 +33,7 @@ pub use engine_settings::{
 /// user intent takes ONE snapshot and passes it down, so a compound operation
 /// (an `Append` followed by an `EnterContinuous`) cannot straddle a change.
 // 中文: 設定即時讀取介面;一個使用者意圖只取一次快照,避免跨呼叫讀到不同值。
-pub trait SettingsProvider {
+pub trait SettingsProvider: Send + Sync {
     /// The document as of now. Cheap to call: implementations hand out a
     /// shared, already-parsed copy and only re-read the file when it changed.
     fn current(&self) -> std::sync::Arc<SettingsDocument>;

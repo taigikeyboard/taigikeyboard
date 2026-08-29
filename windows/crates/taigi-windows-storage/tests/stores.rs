@@ -528,12 +528,18 @@ fn the_engine_derivation_finds_a_poj_entry_typed_as_tl() {
     stores.custom_dictionary.open_blocking();
     stores.custom_dictionary.seed_if_empty().unwrap();
     let query = derive_custom_query_key("tsiahpa", InputMode::Tl).expect("a query key");
-    let found = stores.custom_dictionary.rows_matching(&query, 20);
+    // The `Arc` also implements the trait (its keystroke-path shape); the
+    // inherent, row-returning method is named explicitly.
+    let found = CustomDictionaryStore::rows_matching(&stores.custom_dictionary, &query, 20);
     assert_eq!(hanzi_of(&found), ["食飽未"]);
     assert!(derive_custom_search_keys("gâu-tsá").is_some_and(|keys| !keys.is_empty()));
     let poj_query = derive_custom_query_key("chiahpa", InputMode::Poj).expect("a POJ query key");
     assert_eq!(
-        hanzi_of(&stores.custom_dictionary.rows_matching(&poj_query, 20)),
+        hanzi_of(&CustomDictionaryStore::rows_matching(
+            &stores.custom_dictionary,
+            &poj_query,
+            20
+        )),
         ["食飽未"]
     );
 }

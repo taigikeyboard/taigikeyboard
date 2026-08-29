@@ -1,7 +1,6 @@
 //! The text service: the COM object TSF activates once per thread manager.
-//! PR5a scope — lifecycle, sinks, tray button + menu, settings reload,
-//! context identity. Every key goes back to the host (`FALSE`); composing
-//! arrives with PR5b.
+//! Lifecycle, sinks, tray button + menu, settings reload, context identity
+//! (PR5a); the composing path itself is `session.rs` (PR5b).
 //!
 //! Threading (roadmap W3): TSF is STA — every method here runs on the
 //! host's UI thread, so the state is a `RefCell`. RULE: no COM call of any
@@ -16,9 +15,12 @@
 
 use crate::com_guard::guarded;
 use crate::contexts::ContextRegistry;
+use crate::display_attribute::{self, DisplayAttributeEnumerator};
 use crate::lang_bar::{self, LANG_BAR_SINK_COOKIE, MENU_CHECK_FOR_UPDATES, MENU_OPEN_SETTINGS};
+use crate::preserved_keys::{self, PreservedKeys};
 use crate::registration::SERVICE_DESCRIPTION;
 use crate::runtime::Runtime;
+use crate::session::KeyPhase;
 use crate::settings_launcher;
 use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -27,9 +29,11 @@ use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
 use windows::Win32::UI::TextServices::{
-    ITfContext, ITfDocumentMgr, ITfKeyEventSink, ITfKeyEventSink_Impl, ITfKeystrokeMgr,
-    ITfLangBarItem, ITfLangBarItemButton, ITfLangBarItemButton_Impl, ITfLangBarItemMgr,
-    ITfLangBarItemSink, ITfLangBarItem_Impl, ITfMenu, ITfSource, ITfSource_Impl,
+    IEnumTfDisplayAttributeInfo, ITfComposition, ITfCompositionSink, ITfCompositionSink_Impl,
+    ITfContext, ITfDisplayAttributeInfo, ITfDisplayAttributeProvider,
+    ITfDisplayAttributeProvider_Impl, ITfDocumentMgr, ITfKeyEventSink, ITfKeyEventSink_Impl,
+    ITfKeystrokeMgr, ITfLangBarItem, ITfLangBarItemButton, ITfLangBarItemButton_Impl,
+    ITfLangBarItemMgr, ITfLangBarItemSink, ITfLangBarItem_Impl, ITfMenu, ITfSource, ITfSource_Impl,
     ITfTextInputProcessorEx, ITfTextInputProcessorEx_Impl, ITfTextInputProcessor_Impl,
     ITfThreadFocusSink, ITfThreadFocusSink_Impl, ITfThreadMgr, ITfThreadMgrEventSink,
     ITfThreadMgrEventSink_Impl, TfLBIClick, TF_INVALID_COOKIE, TF_LANGBARITEMINFO, TF_LBI_ICON,
@@ -40,16 +44,21 @@ use windows_core::{implement, IUnknownImpl};
 
 /// Everything `Activate` set up and `Deactivate` takes down.
 #[derive(Default)]
-struct ServiceState {
+pub(crate) struct ServiceState {
     thread_mgr: Option<ITfThreadMgr>,
-    client_id: u32,
+    pub(crate) client_id: u32,
     activate_flags: u32,
     thread_mgr_sink_cookie: u32,
     thread_focus_sink_cookie: u32,
     is_key_sink_advised: bool,
+    /// Kept for the preserved-key re-registration on a settings change.
+    keystroke_mgr: Option<ITfKeystrokeMgr>,
+    preserved_keys: PreservedKeys,
+    /// The atom `RegisterGUID` gave the preedit's display attribute.
+    pub(crate) display_attribute_atom: u32,
     is_lang_bar_added: bool,
     lang_bar_sink: Option<ITfLangBarItemSink>,
-    contexts: ContextRegistry,
+    pub(crate) contexts: ContextRegistry,
     /// Tokens are allocated here until PR5b hands allocation to the
     /// composing coordinator (one counter, never a COM address).
     next_context_token: u64,
@@ -59,6 +68,13 @@ struct ServiceState {
     /// Set by the focus callbacks, consumed by the next key-sink call: the
     /// settings file is re-read there, never inside `_NotifyCallbacks`.
     is_settings_refresh_pending: bool,
+    /// Bumped by every focus / context event. A key compares it around the
+    /// ownership handover: a change means COM re-entrancy moved the focus,
+    /// and the key goes back to the host (coordinator contract points 3 / 4).
+    pub(crate) focus_generation: u64,
+    /// Tokens whose engine ownership could not be released in a callback
+    /// (the engine was busy); released under the next key's lock.
+    pub(crate) deferred_releases: Vec<ContextToken>,
 }
 
 #[implement(
@@ -66,11 +82,13 @@ struct ServiceState {
     ITfThreadMgrEventSink,
     ITfThreadFocusSink,
     ITfKeyEventSink,
+    ITfCompositionSink,
+    ITfDisplayAttributeProvider,
     ITfLangBarItemButton,
     ITfSource
 )]
 pub struct TextService {
-    state: RefCell<ServiceState>,
+    pub(crate) state: RefCell<ServiceState>,
 }
 
 impl TextService {
@@ -139,7 +157,19 @@ impl TextService_Impl {
                 true,
             )?
         };
-        self.state.borrow_mut().is_key_sink_advised = true;
+        let kept_keystroke_mgr = keystroke_mgr.clone();
+        {
+            let mut state = self.state.borrow_mut();
+            state.is_key_sink_advised = true;
+            state.keystroke_mgr = Some(kept_keystroke_mgr);
+        }
+        let atom = display_attribute::register_input_atom();
+        self.state.borrow_mut().display_attribute_atom = atom;
+        // The global shortcuts, from the stored chords (roadmap W5).
+        let settings = runtime.settings.current();
+        let mut preserved = std::mem::take(&mut self.state.borrow_mut().preserved_keys);
+        preserved.sync(&keystroke_mgr, client_id, &settings);
+        self.state.borrow_mut().preserved_keys = preserved;
 
         // Cosmetic: a tray button that fails to add is logged, not fatal.
         match thread_mgr.cast::<ITfLangBarItemMgr>() {
@@ -163,6 +193,10 @@ impl TextService_Impl {
     /// reference the state held is moved out under the borrow and released
     /// after it.
     fn deactivate(&self) -> Result<()> {
+        // The compositions still open are finished into their documents
+        // first — they need the contexts and the engine still wired.
+        let mut entries = std::mem::take(&mut self.state.borrow_mut().contexts).into_entries();
+        self.finish_all_compositions(&mut entries);
         let (
             thread_mgr,
             client_id,
@@ -170,8 +204,9 @@ impl TextService_Impl {
             thread_focus_cookie,
             key_sink,
             lang_bar,
-            contexts,
             sink,
+            keystroke_mgr,
+            mut preserved,
         ) = {
             let mut state = self.state.borrow_mut();
             (
@@ -181,16 +216,21 @@ impl TextService_Impl {
                 std::mem::replace(&mut state.thread_focus_sink_cookie, TF_INVALID_COOKIE),
                 std::mem::take(&mut state.is_key_sink_advised),
                 std::mem::take(&mut state.is_lang_bar_added),
-                std::mem::take(&mut state.contexts),
                 state.lang_bar_sink.take(),
+                state.keystroke_mgr.take(),
+                std::mem::take(&mut state.preserved_keys),
             )
         };
-        let released = contexts.into_tokens();
         log::info!(
             "tsf.deactivate client_id={client_id} contexts_released={}",
-            released.len()
+            entries.len()
         );
+        drop(entries);
         drop(sink);
+        if let Some(keystroke_mgr) = &keystroke_mgr {
+            preserved.unregister(keystroke_mgr);
+        }
+        drop(keystroke_mgr);
         let Some(thread_mgr) = thread_mgr else {
             return Ok(());
         };
@@ -228,7 +268,7 @@ impl TextService_Impl {
     /// The token for `context`, allocating on first sight. The identity
     /// query and the `AddRef` happen before the borrow; only the insert is
     /// under it. PR5b threads the coordinator's allocator through here.
-    fn token_for(&self, context: &ITfContext) -> Option<ContextToken> {
+    pub(crate) fn token_for(&self, context: &ITfContext) -> Option<(ContextToken, usize)> {
         let identity = ContextRegistry::identity(context)?;
         let owned = context.clone();
         let (token, duplicate) = {
@@ -246,21 +286,52 @@ impl TextService_Impl {
         };
         // A reference the registry did not keep is released outside the borrow.
         drop(duplicate);
-        Some(token)
+        Some((token, identity))
     }
 
     /// Settings may have changed while another window had focus: the focus
     /// callbacks only flag it, and the next key-sink call re-reads (one
     /// `stat`, W10). Never inside `_NotifyCallbacks`.
-    fn refresh_settings_if_pending(&self) {
+    pub(crate) fn refresh_settings_if_pending(&self) {
         let pending = std::mem::take(&mut self.state.borrow_mut().is_settings_refresh_pending);
-        if pending {
-            Runtime::shared().settings.current();
+        if !pending {
+            return;
         }
+        let settings = Runtime::shared().settings.current();
+        self.sync_preserved_keys(&settings);
     }
 
     fn request_settings_refresh(&self) {
-        self.state.borrow_mut().is_settings_refresh_pending = true;
+        let mut state = self.state.borrow_mut();
+        state.is_settings_refresh_pending = true;
+        state.focus_generation += 1;
+    }
+
+    /// Re-registers the preserved keys when the settings revision moved.
+    /// Cheap when it did not (one comparison); COM only when it did.
+    pub(crate) fn sync_preserved_keys(
+        &self,
+        settings: &taigi_windows_core::settings::SettingsDocument,
+    ) {
+        let already_current =
+            self.state.borrow().preserved_keys.revision == Some(settings.revision);
+        if already_current {
+            return;
+        }
+        let (keystroke_mgr, mut preserved, client_id) = {
+            let mut state = self.state.borrow_mut();
+            (
+                state.keystroke_mgr.take(),
+                std::mem::take(&mut state.preserved_keys),
+                state.client_id,
+            )
+        };
+        if let Some(keystroke_mgr) = &keystroke_mgr {
+            preserved.sync(keystroke_mgr, client_id, settings);
+        }
+        let mut state = self.state.borrow_mut();
+        state.preserved_keys = preserved;
+        state.keystroke_mgr = keystroke_mgr;
     }
 
     fn notify_lang_bar(&self) {
@@ -335,6 +406,7 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
             let mut state = self.state.borrow_mut();
             if state.focused_document != focused {
                 state.focused_document = focused;
+                state.focus_generation += 1;
                 if focused != 0 {
                     state.is_settings_refresh_pending = true;
                 }
@@ -347,6 +419,7 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
         guarded("ITfThreadMgrEventSink::OnPushContext", || {
             if let Some(context) = pic.as_ref() {
                 self.token_for(context);
+                self.state.borrow_mut().focus_generation += 1;
             }
             Ok(())
         })
@@ -358,11 +431,27 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
                 let identity = ContextRegistry::identity(context);
                 let forgotten =
                     identity.and_then(|identity| self.state.borrow_mut().contexts.forget(identity));
-                // The registry's reference to the context is released HERE,
-                // outside the borrow.
-                if let Some((held, token)) = forgotten {
-                    drop(held);
-                    log::debug!("tsf.context_popped token={token:?}");
+                // The registry's references (context, composition) are
+                // released HERE, outside the borrow; the engine ownership too.
+                if let Some(entry) = forgotten {
+                    log::debug!("tsf.context_popped token={:?}", entry.token);
+                    let released = Runtime::shared()
+                        .coordinator_if_built()
+                        .is_some_and(|mutex| match mutex.try_lock() {
+                            Ok(mut coordinator) => {
+                                coordinator.release(entry.token);
+                                true
+                            }
+                            Err(_) => false,
+                        });
+                    let mut state = self.state.borrow_mut();
+                    state.focus_generation += 1;
+                    if !released {
+                        // The engine was busy: released under the next key.
+                        state.deferred_releases.push(entry.token);
+                    }
+                    drop(state);
+                    drop(entry);
                 }
             }
             Ok(())
@@ -380,13 +469,15 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
 
     /// Alt+Tab to another process: the candidate window (PR6) hides here.
     fn OnKillThreadFocus(&self) -> Result<()> {
-        guarded("ITfThreadFocusSink::OnKillThreadFocus", || Ok(()))
+        guarded("ITfThreadFocusSink::OnKillThreadFocus", || {
+            self.state.borrow_mut().focus_generation += 1;
+            Ok(())
+        })
     }
 }
 
-/// PR5a: a smoke TIP that composes nothing — every key goes back to the
-/// host. `OnTestKeyDown` and `OnKeyDown` must always agree (terminals skip
-/// the former); both answer through one function so they cannot drift.
+/// `OnTestKeyDown` and `OnKeyDown` answer through one classification
+/// (terminals skip the former) — `session::key_down`.
 impl ITfKeyEventSink_Impl for TextService_Impl {
     fn OnSetFocus(&self, fforeground: BOOL) -> Result<()> {
         guarded("ITfKeyEventSink::OnSetFocus", || {
@@ -397,14 +488,9 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         })
     }
 
-    fn OnTestKeyDown(
-        &self,
-        pic: Ref<ITfContext>,
-        _wparam: WPARAM,
-        _lparam: LPARAM,
-    ) -> Result<BOOL> {
+    fn OnTestKeyDown(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnTestKeyDown", || {
-            Ok(self.wants_key(pic.as_ref()))
+            Ok(self.key_down(pic.as_ref(), wparam, lparam, KeyPhase::Test))
         })
     }
 
@@ -412,9 +498,9 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         guarded("ITfKeyEventSink::OnTestKeyUp", || Ok(BOOL::from(false)))
     }
 
-    fn OnKeyDown(&self, pic: Ref<ITfContext>, _wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
+    fn OnKeyDown(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnKeyDown", || {
-            Ok(self.wants_key(pic.as_ref()))
+            Ok(self.key_down(pic.as_ref(), wparam, lparam, KeyPhase::Deliver))
         })
     }
 
@@ -422,24 +508,60 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         guarded("ITfKeyEventSink::OnKeyUp", || Ok(BOOL::from(false)))
     }
 
-    fn OnPreservedKey(&self, _pic: Ref<ITfContext>, _rguid: *const GUID) -> Result<BOOL> {
-        guarded("ITfKeyEventSink::OnPreservedKey", || Ok(BOOL::from(false)))
+    fn OnPreservedKey(&self, pic: Ref<ITfContext>, rguid: *const GUID) -> Result<BOOL> {
+        guarded("ITfKeyEventSink::OnPreservedKey", || {
+            if rguid.is_null() {
+                return Ok(BOOL::from(false));
+            }
+            // SAFETY: null-checked; TSF's own GUID pointer.
+            let Some(action) = preserved_keys::action_for_guid(unsafe { &*rguid }) else {
+                return Ok(BOOL::from(false));
+            };
+            let identity = pic
+                .as_ref()
+                .and_then(|context| self.token_for(context))
+                .map_or(0, |(_, identity)| identity);
+            self.perform_global(action, identity);
+            Ok(BOOL::from(true))
+        })
     }
 }
 
-impl TextService_Impl {
-    /// The one answer both key-down entry points give. The context's
-    /// identity is registered so PR5b's classifier finds a token waiting;
-    /// nothing heavier happens here — the engine and the stores come up
-    /// only for a key the classifier CONSUMES (roadmap W3), never for one
-    /// merely observed.
-    fn wants_key(&self, context: Option<&ITfContext>) -> BOOL {
-        self.refresh_settings_if_pending();
-        if let Some(context) = context {
-            let token = self.token_for(context);
-            log::trace!("tsf.key context_token={token:?}");
-        }
-        BOOL::from(false)
+impl ITfCompositionSink_Impl for TextService_Impl {
+    /// The host ended the composition (a click elsewhere, focus loss).
+    fn OnCompositionTerminated(
+        &self,
+        _ecwrite: u32,
+        pcomposition: Ref<ITfComposition>,
+    ) -> Result<()> {
+        guarded("ITfCompositionSink::OnCompositionTerminated", || {
+            if let Some(composition) = pcomposition.as_ref() {
+                self.composition_terminated(composition);
+            }
+            Ok(())
+        })
+    }
+}
+
+impl ITfDisplayAttributeProvider_Impl for TextService_Impl {
+    fn EnumDisplayAttributeInfo(&self) -> Result<IEnumTfDisplayAttributeInfo> {
+        guarded(
+            "ITfDisplayAttributeProvider::EnumDisplayAttributeInfo",
+            || Ok(DisplayAttributeEnumerator::new().into()),
+        )
+    }
+
+    fn GetDisplayAttributeInfo(&self, guid: *const GUID) -> Result<ITfDisplayAttributeInfo> {
+        guarded(
+            "ITfDisplayAttributeProvider::GetDisplayAttributeInfo",
+            || {
+                if guid.is_null() {
+                    return Err(Error::from_hresult(E_INVALIDARG));
+                }
+                // SAFETY: null-checked; TSF's own GUID pointer.
+                display_attribute::info_for(unsafe { &*guid })
+            },
+        )
     }
 }
 

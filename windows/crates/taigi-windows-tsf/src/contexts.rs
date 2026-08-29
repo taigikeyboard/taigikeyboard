@@ -12,13 +12,46 @@
 // 中文: 每個活著的 ITfContext 對應一個 token;COM 呼叫都在借用之外,這裡只做 map 操作。
 
 use std::collections::HashMap;
-use taigi_windows_core::composing::ContextToken;
+use std::rc::Rc;
+use taigi_windows_core::composing::{CandidateScript, ContextToken};
+use taigi_windows_core::engine::ContinuousCandidate;
 use windows::core::{IUnknown, Interface};
-use windows::Win32::UI::TextServices::ITfContext;
+use windows::Win32::UI::TextServices::{ITfComposition, ITfContext, ITfRange};
+
+/// What one context is composing right now, beside the engine's own state:
+/// the TSF composition object, the candidates fetched for it, and the
+/// auto-space arm. Plain data — the composition handle is only ever moved
+/// in and out under the borrow, never called under it.
+#[derive(Default)]
+pub struct ContextState {
+    pub composition: Option<ITfComposition>,
+    /// The list the last fetch produced; empty = no candidates showing.
+    pub candidates: Vec<ContinuousCandidate>,
+    /// The highlighted candidate (PR5b: a headless list; PR6's window
+    /// takes this over).
+    pub selected: usize,
+    /// Which script's commit left an auto space in front of the caret, so
+    /// the next attaching punctuation may swap with it (§23), together
+    /// with the caret's range at that moment — the position the swap
+    /// re-checks before it rewrites anything (the Mac's `caretLocation`).
+    pub armed_auto_space: Option<(CandidateScript, ITfRange)>,
+    /// The host ended this context's composition while the engine could not
+    /// be reached (a callback re-entering a running session): the engine is
+    /// reset at the next key instead of silently drifting.
+    pub is_engine_reset_pending: bool,
+}
+
+pub struct ContextEntry {
+    /// `Rc` so a second handle for a handover is a Rust clone, not an
+    /// `AddRef` under the borrow; the one COM reference drops with the Rc.
+    pub context: Rc<ITfContext>,
+    pub token: ContextToken,
+    pub state: ContextState,
+}
 
 #[derive(Default)]
 pub struct ContextRegistry {
-    entries: HashMap<usize, (ITfContext, ContextToken)>,
+    entries: HashMap<usize, ContextEntry>,
 }
 
 impl ContextRegistry {
@@ -42,23 +75,43 @@ impl ContextRegistry {
         owned: ITfContext,
         allocate: impl FnOnce() -> ContextToken,
     ) -> (ContextToken, Option<ITfContext>) {
-        if let Some((_, token)) = self.entries.get(&identity) {
-            return (*token, Some(owned));
+        if let Some(entry) = self.entries.get(&identity) {
+            return (entry.token, Some(owned));
         }
         let token = allocate();
-        self.entries.insert(identity, (owned, token));
+        self.entries.insert(
+            identity,
+            ContextEntry {
+                context: Rc::new(owned),
+                token,
+                state: ContextState::default(),
+            },
+        );
         (token, None)
+    }
+
+    pub fn entry_mut(&mut self, identity: usize) -> Option<&mut ContextEntry> {
+        self.entries.get_mut(&identity)
+    }
+
+    /// The entry holding `token`, for the handover and the composition sink.
+    pub fn entry_by_token_mut(&mut self, token: ContextToken) -> Option<&mut ContextEntry> {
+        self.entries.values_mut().find(|entry| entry.token == token)
+    }
+
+    pub fn entries_mut(&mut self) -> impl Iterator<Item = &mut ContextEntry> {
+        self.entries.values_mut()
     }
 
     /// Drops the mapping at teardown and hands back the reference and the
     /// token, so the caller releases the reference outside its borrow.
-    pub fn forget(&mut self, identity: usize) -> Option<(ITfContext, ContextToken)> {
+    pub fn forget(&mut self, identity: usize) -> Option<ContextEntry> {
         self.entries.remove(&identity)
     }
 
-    /// Every mapping, moved out (deactivation): the caller drops the
+    /// Every entry, moved out (deactivation): the caller releases the
     /// references outside its borrow.
-    pub fn into_tokens(self) -> Vec<ContextToken> {
-        self.entries.into_values().map(|(_, token)| token).collect()
+    pub fn into_entries(self) -> Vec<ContextEntry> {
+        self.entries.into_values().collect()
     }
 }
