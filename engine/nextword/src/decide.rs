@@ -665,7 +665,12 @@ mod tests {
         // three different ways: iOS split on `-` into `tâi` / `gí khí` /
         // `puânn` (a "part" with a space in it), Android into four syllables,
         // macOS into the two words. Now all three give the two words.
-        for platform in [Platform::Ios, Platform::Android, Platform::Macos] {
+        for platform in [
+            Platform::Ios,
+            Platform::Android,
+            Platform::Macos,
+            Platform::Windows,
+        ] {
             let mut state = PersistedState::default();
             let result = apply(
                 &mut state,
@@ -751,6 +756,23 @@ mod tests {
             e.kind,
             Some(next_word_effect::Kind::CancelContextTimeout(_))
         )));
+    }
+
+    #[test]
+    fn windows_platform_id_passes_validation() {
+        // trace: `PLATFORM_WINDOWS = 4` decodes to `Platform::Windows`, so the
+        // UNSPECIFIED gate at the top of `apply` must let it through exactly
+        // like the three older platforms.
+        let mut state = PersistedState::default();
+        assert!(
+            apply(
+                &mut state,
+                Intent::SetIsShowing { is_showing: false },
+                &config(Platform::Windows, true, false),
+            )
+            .is_ok(),
+            "PLATFORM_WINDOWS must not read as PLATFORM_UNSPECIFIED",
+        );
     }
 
     #[test]
