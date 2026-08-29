@@ -74,6 +74,17 @@ MACOS_GEN_DIR = f"{MACOS_STRINGS_DIR}/Generated"
 WINDOWS_STRINGS_DIR = "windows/crates/taigi-windows-core/src/strings"
 WINDOWS_GEN_FILE = f"{WINDOWS_STRINGS_DIR}/generated.rs"
 
+# The Windows installer's own strings (roadmap W8). Inno Setup speaks per-language `[CustomMessages]`
+# sections, so the windows-scoped `desktop.installer*` keys are ALSO emitted as one `#include`d
+# `.iss` fragment — the installer's languages are exactly the macOS bundle's system localizations
+# (`MACOS_BUNDLE_LOCALIZATIONS`: Hanji / English / Japanese), named as Inno names them. Tâi-lô and
+# POJ have no Inno base language, so the installer (like the macOS Installer) cannot offer them;
+# the app itself does. Escaping is Inno's: `%n` newline, `%%` percent, `%1`… positional arguments
+# (`FmtMessage` / `{cm:Key,arg}`) in the key's declared placeholder order.
+WINDOWS_INSTALLER_MESSAGES_FILE = "windows/installer/Messages.iss"
+WINDOWS_INSTALLER_KEY_PREFIX = "installer"
+INNO_LANGUAGES = {"hanji": "chinesetraditional", "en": "english", "ja": "japanese"}
+
 # The macOS bundle's OWN localized name — THE reference for this mechanism; everywhere else points here.
 #
 # macOS resolves an input source's displayed name (Text Input Sources' `kTISPropertyLocalizedName`,
@@ -1068,6 +1079,23 @@ def _emit_swift_formats(entries, *, plural_fallback_source: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def inno_escape(text: str, placeholder_order: list[str]) -> str:
+    # `%` first, so the `%n` / `%1` written after it are not doubled.
+    escaped = text.replace("%", "%%").replace("\n", "%n")
+    for position, name in enumerate(placeholder_order, start=1):
+        escaped = escaped.replace("{" + name + "}", f"%{position}")
+    return escaped
+
+
+def _emit_inno_messages(entries) -> str:
+    lines = [f"; {GENERATED_HEADER}", "; Included by TaigiKeyboard.iss; the [Languages] section there names these languages.", "", "[CustomMessages]"]
+    for _namespace, key, entry in entries:
+        placeholder_order = list(entry.get("placeholders", {}))
+        for language, inno_name in INNO_LANGUAGES.items():
+            lines.append(f"{inno_name}.{key}={inno_escape(entry['values'][language], placeholder_order)}")
+    return "\n".join(lines) + "\n"
+
+
 def _emit_rust_strings(entries) -> str:
     # One file for the whole Windows string surface: the typed key enum, the per-language lookup
     # tables, and one typed format function per placeholder-bearing key. Everything hand-written
@@ -1253,6 +1281,9 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     if enforce_production_completeness:
         validate_platform_has_keys(windows_entries, "windows")
     outputs[WINDOWS_GEN_FILE] = _emit_rust_strings(windows_entries)
+    installer_entries = [item for item in windows_entries if item[1].startswith(WINDOWS_INSTALLER_KEY_PREFIX)]
+    if installer_entries:
+        outputs[WINDOWS_INSTALLER_MESSAGES_FILE] = _emit_inno_messages(installer_entries)
 
     # The bundle's own localized name, one `InfoPlist.strings` per system language the bundle answers
     # to. Emitted from the same authored values as everything else so the product can never be named

@@ -45,12 +45,14 @@ VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
 # silently refuses to upgrade.
 MAX_MACOS_VERSION_COMPONENT = 99
 
-# The three files that hold the release train's version number. Everything else
-# — the two iOS Info.plists, the macOS package name, the update manifest, both
-# About screens — derives from one of these at build or publish time.
+# The four files that hold the release train's version number. Everything else
+# — the two iOS Info.plists, the macOS package name, the update manifests, the
+# Windows binaries' VERSIONINFO, both About screens — derives from one of these
+# at build or publish time.
 ANDROID_GRADLE_FILE = "android/app/build.gradle.kts"
 IOS_PROJECT_FILE = "ios/TaigiKeyboard.xcodeproj/project.pbxproj"
 MACOS_INFO_PLIST_FILE = "macos/App/Info.plist"
+WINDOWS_CARGO_FILE = "windows/Cargo.toml"
 # Each shipping iOS target carries a Debug and a Release build-settings block, so
 # its bundle identifier appears in exactly two. The test target keeps its own
 # `MARKETING_VERSION = 1.0` and is deliberately absent from this mapping.
@@ -63,6 +65,12 @@ IOS_BUILD_SETTINGS_PATTERN = re.compile(
 )
 ANDROID_VERSION_NAME_PATTERN = re.compile(
     r'^\s*versionName\s*=\s*"(?P<value>[^"]*)"', re.MULTILINE
+)
+# The workspace version: the first `version = "…"` inside `[workspace.package]`
+# (every Windows crate inherits it with `version.workspace = true`).
+WINDOWS_WORKSPACE_VERSION_PATTERN = re.compile(
+    r'^\[workspace\.package\]\n(?:(?!\[)[^\n]*\n)*?version = "(?P<value>[^"]*)"',
+    re.MULTILINE,
 )
 # The iOS build number is a constant: App Store Connect numbers the uploads of a
 # marketing version itself, so nothing here has to track them.
@@ -417,6 +425,26 @@ def _replaced_value(match: re.Match[str], source: str, new_value: str) -> str:
     return source[: match.start("value")] + new_value + source[match.end("value") :]
 
 
+def parse_windows_version(cargo_source: str) -> str:
+    return _sole_match(
+        WINDOWS_WORKSPACE_VERSION_PATTERN,
+        cargo_source,
+        f"[workspace.package] version in {WINDOWS_CARGO_FILE}",
+    ).group("value")
+
+
+def render_windows_cargo(cargo_source: str, version: str) -> str:
+    return _replaced_value(
+        _sole_match(
+            WINDOWS_WORKSPACE_VERSION_PATTERN,
+            cargo_source,
+            f"[workspace.package] version in {WINDOWS_CARGO_FILE}",
+        ),
+        cargo_source,
+        version,
+    )
+
+
 def parse_android_version_name(gradle_source: str) -> str:
     return _sole_match(
         ANDROID_VERSION_NAME_PATTERN,
@@ -493,8 +521,9 @@ def check_versions_in_sources(
     macos_plist: dict,
     version: str,
     macos_plist_path: Path,
+    windows_cargo_source: str,
 ) -> None:
-    """Hold three already-loaded project files to one version.
+    """Hold the four already-loaded project files to one version.
 
     Taking sources rather than a repo root is what lets `set_project_versions`
     run the real gate over the rewrite it is about to make, instead of writing
@@ -512,6 +541,11 @@ def check_versions_in_sources(
             f"iOS MARKETING_VERSION is {ios_versions.marketing_version}; expected {version}",
         )
     check_macos_plist_values(macos_plist, version, macos_plist_path)
+    windows_version = parse_windows_version(windows_cargo_source)
+    if windows_version != version:
+        raise ReleaseNotesError(
+            f"Windows workspace version is {windows_version}; expected {version}"
+        )
 
 
 def check_project_versions(repo_root: Path, version: str) -> None:
@@ -522,6 +556,7 @@ def check_project_versions(repo_root: Path, version: str) -> None:
         macos_plist,
         version,
         macos_plist_path,
+        read_text_file(repo_root, WINDOWS_CARGO_FILE),
     )
 
 
@@ -727,7 +762,7 @@ def set_project_versions(
     are held to the same gate the release flow runs, before any real file is
     touched, so a version that gate would reject never reaches the tree.
 
-    Three files cannot be replaced in one filesystem transaction. A write that
+    Four files cannot be replaced in one filesystem transaction. A write that
     fails part-way is rolled back; a rollback that also fails raises with the
     files it could not put back named in the message.
     """
@@ -739,6 +774,7 @@ def set_project_versions(
             ANDROID_GRADLE_FILE,
             IOS_PROJECT_FILE,
             MACOS_INFO_PLIST_FILE,
+            WINDOWS_CARGO_FILE,
         )
     }
     plist_source = sources[MACOS_INFO_PLIST_FILE]
@@ -748,12 +784,14 @@ def set_project_versions(
     current_ios = parse_ios_project_versions(sources[IOS_PROJECT_FILE])
     current_macos = _plist_value(plist_source, "CFBundleShortVersionString")
     current_macos_build = _plist_value(plist_source, "CFBundleVersion")
+    current_windows = parse_windows_version(sources[WINDOWS_CARGO_FILE])
 
     if not allow_downgrade:
         for current_version in (
             current_android,
             current_ios.marketing_version,
             current_macos,
+            current_windows,
         ):
             _reject_downgrade(current_version, version)
 
@@ -763,6 +801,7 @@ def set_project_versions(
         ),
         IOS_PROJECT_FILE: render_ios_project(sources[IOS_PROJECT_FILE], version),
         MACOS_INFO_PLIST_FILE: render_macos_plist(plist_source, version),
+        WINDOWS_CARGO_FILE: render_windows_cargo(sources[WINDOWS_CARGO_FILE], version),
     }
 
     # Validate before writing: the rewrite runs through the same gate the release
@@ -777,6 +816,7 @@ def set_project_versions(
         ),
         version,
         macos_plist_path,
+        candidates[WINDOWS_CARGO_FILE],
     )
 
     originals = {repo_root / relative_path: content for relative_path, content in sources.items()}
@@ -787,7 +827,7 @@ def set_project_versions(
             _write_atomically(path, content)
             written.append(path)
     except OSError as error:
-        # Three files cannot be replaced in one filesystem transaction; restoring
+        # Four files cannot be replaced in one filesystem transaction; restoring
         # what already landed is what keeps a failed run from leaving the train
         # split across two versions. Whatever stopped the write can stop the
         # restore too, so say which files that left behind rather than claim a
@@ -810,6 +850,7 @@ def set_project_versions(
         f"CURRENT_PROJECT_VERSION {current_ios.build_number} -> {IOS_BUILD_NUMBER}",
         f"macOS: CFBundleShortVersionString {current_macos} -> {version}, "
         f"CFBundleVersion {current_macos_build} -> {macos_build_version(version)}",
+        f"Windows: workspace version {current_windows} -> {version}",
     )
 
 

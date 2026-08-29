@@ -105,6 +105,9 @@ pub enum StringKey {
     DesktopClearLearningRecords,
     DesktopClearLearningRecordsDone,
     DesktopClearLearningRecordsFailed,
+    DesktopInstallerDllLocked,
+    DesktopInstallerStepFailed,
+    DesktopInstallerSignOutNote,
     DictionarySave,
     DictionaryCustomDictionary,
     DictionaryCustomDictEnabled,
@@ -266,6 +269,9 @@ impl StringKey {
             Self::DesktopClearLearningRecords => "i18n_desktop_clearLearningRecords",
             Self::DesktopClearLearningRecordsDone => "i18n_desktop_clearLearningRecordsDone",
             Self::DesktopClearLearningRecordsFailed => "i18n_desktop_clearLearningRecordsFailed",
+            Self::DesktopInstallerDllLocked => "i18n_desktop_installerDllLocked",
+            Self::DesktopInstallerStepFailed => "i18n_desktop_installerStepFailed",
+            Self::DesktopInstallerSignOutNote => "i18n_desktop_installerSignOutNote",
             Self::DictionarySave => "i18n_dictionary_save",
             Self::DictionaryCustomDictionary => "i18n_dictionary_customDictionary",
             Self::DictionaryCustomDictEnabled => "i18n_dictionary_customDictEnabled",
@@ -439,6 +445,9 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopClearLearningRecords => "刪除學習紀錄",
         StringKey::DesktopClearLearningRecordsDone => "學習紀錄清掉矣",
         StringKey::DesktopClearLearningRecordsFailed => "學習紀錄清袂掉",
+        StringKey::DesktopInstallerDllLocked => "台語齒盤猶閣予執行中的程式咧用，檔案無法度換掉。\n\n請先換做別个輸入法，登出 Windows 閣再登入，然後閣執行一擺這个安裝程式。免重新開機。",
+        StringKey::DesktopInstallerStepFailed => "安裝程式無法度完成這个步驟：{0}\n\n若有舊版，已經復原矣。詳細請看安裝紀錄。",
+        StringKey::DesktopInstallerSignOutNote => "若是輸入法清單內底無看著台語齒盤，請登出 Windows 閣再登入。",
         StringKey::DictionarySave => "儉起來",
         StringKey::DictionaryCustomDictionary => "自訂詞庫",
         StringKey::DictionaryCustomDictEnabled => "啟用自訂詞庫",
@@ -600,6 +609,9 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopClearLearningRecords => "Delete Learning Records",
         StringKey::DesktopClearLearningRecordsDone => "Learning Records Cleared",
         StringKey::DesktopClearLearningRecordsFailed => "Could Not Clear Learning Records",
+        StringKey::DesktopInstallerDllLocked => "Taigi Keyboard is still in use by a running application, so its files cannot be replaced.\n\nSwitch to another input method, sign out of Windows, sign in again, and run this installer once more. No restart is needed.",
+        StringKey::DesktopInstallerStepFailed => "Setup could not complete this step: {0}\n\nThe previous version, if any, was put back. Details are in the setup log.",
+        StringKey::DesktopInstallerSignOutNote => "If Taigi Keyboard does not appear in the input-method list, sign out of Windows and sign in again.",
         StringKey::DictionarySave => "Save",
         StringKey::DictionaryCustomDictionary => "Custom Dictionary",
         StringKey::DictionaryCustomDictEnabled => "Enable Custom Dictionary",
@@ -761,6 +773,9 @@ fn ja(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopClearLearningRecords => "学習記録を削除",
         StringKey::DesktopClearLearningRecordsDone => "学習記録を消去しました",
         StringKey::DesktopClearLearningRecordsFailed => "学習記録を消去できませんでした",
+        StringKey::DesktopInstallerDllLocked => "Taigi Keyboard は実行中のアプリケーションに使用されているため、ファイルを置き換えられません。\n\n別の入力方式に切り替えてから Windows からサインアウトし、再度サインインしてこのインストーラーを実行してください。再起動は不要です。",
+        StringKey::DesktopInstallerStepFailed => "次の手順を完了できませんでした: {0}\n\n以前のバージョンがあれば元に戻しました。詳細はセットアップのログを参照してください。",
+        StringKey::DesktopInstallerSignOutNote => "入力方式の一覧に Taigi Keyboard が表示されない場合は、Windows からサインアウトして再度サインインしてください。",
         StringKey::DictionarySave => "保存",
         StringKey::DictionaryCustomDictionary => "カスタム辞書",
         StringKey::DictionaryCustomDictEnabled => "カスタム辞書を有効にする",
@@ -922,6 +937,9 @@ fn tailo(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopClearLearningRecords => "san-tû ha̍k-si̍p kì-lio̍k",
         StringKey::DesktopClearLearningRecordsDone => "ha̍k-si̍p kì-lio̍k tshing-tiāu ah",
         StringKey::DesktopClearLearningRecordsFailed => "ha̍k-si̍p kì-lio̍k tshing bē tiāu",
+        StringKey::DesktopInstallerDllLocked => "Tâi-gí khí-puânn iáu-koh hōo tsip-hîng-tiong ê thîng-sik teh iōng, tóng-àn bô-huat-tōo uānn-tiāu.\n\nTshiánn sing uānn-tsò pa̍t ê su-ji̍p-huat, ting-tshut Windows koh-tsài ting-ji̍p, jiân-āu koh tsip-hîng tsi̍t pái tsit ê an-tsong thîng-sik. Bián tîng-sin khui-ki.",
+        StringKey::DesktopInstallerStepFailed => "An-tsong thîng-sik bô-huat-tōo uân-sîng tsit ê pōo-tsàu: {0}\n\nNā ū kū-pán, í-king ho̍k-guân--ah. Siông-sè tshiánn khuànn an-tsong kì-lo̍k.",
+        StringKey::DesktopInstallerSignOutNote => "Nā-sī su-ji̍p-huat tshing-tuann lāi-té bô khuànn-tio̍h Tâi-gí khí-puânn, tshiánn ting-tshut Windows koh-tsài ting-ji̍p.",
         StringKey::DictionarySave => "khiām--khí-lâi",
         StringKey::DictionaryCustomDictionary => "tsū-tīng-sû-khòo",
         StringKey::DictionaryCustomDictEnabled => "khé-iōng tsū-tīng-sû-khòo",
@@ -1083,6 +1101,9 @@ fn poj(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopClearLearningRecords => "san-tû ha̍k-si̍p kì-lio̍k",
         StringKey::DesktopClearLearningRecordsDone => "ha̍k-si̍p kì-lio̍k chheng-tiāu ah",
         StringKey::DesktopClearLearningRecordsFailed => "ha̍k-si̍p kì-lio̍k chheng bē tiāu",
+        StringKey::DesktopInstallerDllLocked => "Tâi-gí khí-pôaⁿ iáu-koh hō͘ chip-hêng-tiong ê thêng-sek teh iōng, tóng-àn bô-hoat-tō͘ ōaⁿ-tiāu.\n\nChhiáⁿ seng ōaⁿ-chò pa̍t ê su-ji̍p-hoat, teng-chhut Windows koh-chài teng-ji̍p, jiân-āu koh chip-hêng chi̍t pái chit ê an-chong thêng-sek. Bián têng-sin khui-ki.",
+        StringKey::DesktopInstallerStepFailed => "An-chong thêng-sek bô-hoat-tō͘ oân-sêng chit ê pō͘-chàu: {0}\n\nNā ū kū-pán, í-keng ho̍k-goân--ah. Siông-sè chhiáⁿ khòaⁿ an-chong kì-lo̍k.",
+        StringKey::DesktopInstallerSignOutNote => "Nā-sī su-ji̍p-hoat chheng-toaⁿ lāi-té bô khòaⁿ-tio̍h Tâi-gí khí-pôaⁿ, chhiáⁿ teng-chhut Windows koh-chài teng-ji̍p.",
         StringKey::DictionarySave => "khiām--khí-lâi",
         StringKey::DictionaryCustomDictionary => "chū-tēng-sû-khò͘",
         StringKey::DictionaryCustomDictEnabled => "khé-iōng chū-tēng-sû-khò͘",
@@ -1154,6 +1175,10 @@ impl StringResolver {
 
     pub fn desktop_update_pending_version_label(&self, version: &str) -> String {
         self.format(StringKey::DesktopUpdatePendingVersionLabel, &[&version])
+    }
+
+    pub fn desktop_installer_step_failed(&self, step: &str) -> String {
+        self.format(StringKey::DesktopInstallerStepFailed, &[&step])
     }
 
     pub fn dictionary_import_result(&self, imported: i64, skipped: i64) -> String {

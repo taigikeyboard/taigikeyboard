@@ -15,7 +15,9 @@ import i18n_lib
 from i18n_lib import (
     DUPLICATE_KEY_ERROR,
     PRODUCTION_LANGUAGES,
+    WINDOWS_INSTALLER_MESSAGES_FILE,
     build_outputs,
+    inno_escape,
     kotlin_escape,
     l10n_accessor,
     load_namespace,
@@ -313,6 +315,44 @@ class GeneratedMapCompletenessTest(unittest.TestCase):
         # A key authoring neither tailo nor poj fails production completeness — every picker option must render.
         with self.assertRaisesRegex(ValueError, "missing production language"):
             self._build({"hanji": "字", "ja": "字", "en": "char"})
+
+
+class InnoMessagesTest(unittest.TestCase):
+    def test_inno_escape_newline_percent_and_positional_placeholders(self):
+        self.assertEqual(inno_escape("100% done: {step}\nnext {other}", ["step", "other"]), "100%% done: %1%nnext %2")
+
+    def test_installer_keys_emit_one_line_per_inno_language(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_app_name_namespace(repo)
+            _write_namespace(
+                repo,
+                "desktop",
+                {
+                    "installerNote": {
+                        "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                        "placeholders": {"step": "string"},
+                        "values": {"hanji": "步驟：{step}", "tailo": "pōo-tsàu: {step}", "poj": "pō͘-chàu: {step}", "en": "Step: {step}", "ja": "手順: {step}"},
+                    },
+                    "plainKey": _all_platform_key({"hanji": "字", "tailo": "jī", "poj": "jī", "en": "x", "ja": "字"}),
+                },
+            )
+            outputs = build_outputs(repo)
+        messages = outputs[WINDOWS_INSTALLER_MESSAGES_FILE]
+        self.assertIn("[CustomMessages]", messages)
+        self.assertIn("chinesetraditional.installerNote=步驟：%1", messages)
+        self.assertIn("english.installerNote=Step: %1", messages)
+        self.assertIn("japanese.installerNote=手順: %1", messages)
+        # Tâi-lô / POJ have no Inno base language; non-installer keys stay out of the fragment.
+        self.assertNotIn("tailo", messages)
+        self.assertNotIn("plainKey", messages)
+
+    def test_no_installer_keys_emits_no_fragment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_app_name_namespace(repo)
+            _write_namespace(repo, "probe", {"k": _all_platform_key({"hanji": "字", "tailo": "jī", "poj": "jī", "en": "x", "ja": "字"})})
+            self.assertNotIn(WINDOWS_INSTALLER_MESSAGES_FILE, build_outputs(repo))
 
 
 class PlaceholderValidationTest(unittest.TestCase):

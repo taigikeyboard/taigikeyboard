@@ -63,6 +63,11 @@ Staleness is guarded automatically, not by a manual make target:
 - Rust accessors are snake_case (`desktop_update_available_message`); the validator rejects a Rust
   keyword and two keys whose camelCase names collapse to one snake_case name.
 - `windows/Makefile`'s `i18n-check` gates the generated file exactly like the macOS one.
+- `windows/installer/Messages.iss` — the Inno Setup `[CustomMessages]` fragment for the
+  windows-scoped `desktop.installer*` keys, `#include`d by `windows/installer/TaigiKeyboard.iss`.
+  Languages = the macOS bundle's system localizations (Hanji → `chinesetraditional`, `english`,
+  `japanese`); Tâi-lô / POJ have no Inno base language. Inno escaping (`%n`, `%%`, `%1`…) is the
+  generator's; a `{placeholder}` becomes a positional argument for `FmtMessage`.
 
 ## Source schema
 

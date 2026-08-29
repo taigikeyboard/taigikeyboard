@@ -1510,6 +1510,63 @@
         "en": "Could Not Clear Learning Records",
         "ja": "学習記録を消去できませんでした"
       }
+    },
+    "installerDllLocked": {
+      "comment": "Windows installer (Inno Setup): the install stops because a running application still holds TaigiKeyboard.dll; the one recipe that frees it. No macOS counterpart (a .pkg replaces the bundle in place).",
+      "scope": {
+        "platforms": [
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤猶閣予執行中的程式咧用，檔案無法度換掉。\n\n請先換做別个輸入法，登出 Windows 閣再登入，然後閣執行一擺這个安裝程式。免重新開機。",
+        "tailo": "Tâi-gí khí-puânn iáu-koh hōo tsip-hîng-tiong ê thîng-sik teh iōng, tóng-àn bô-huat-tōo uānn-tiāu.\n\nTshiánn sing uānn-tsò pa̍t ê su-ji̍p-huat, ting-tshut Windows koh-tsài ting-ji̍p, jiân-āu koh tsip-hîng tsi̍t pái tsit ê an-tsong thîng-sik. Bián tîng-sin khui-ki.",
+        "poj": "Tâi-gí khí-pôaⁿ iáu-koh hō͘ chip-hêng-tiong ê thêng-sek teh iōng, tóng-àn bô-hoat-tō͘ ōaⁿ-tiāu.\n\nChhiáⁿ seng ōaⁿ-chò pa̍t ê su-ji̍p-hoat, teng-chhut Windows koh-chài teng-ji̍p, jiân-āu koh chip-hêng chi̍t pái chit ê an-chong thêng-sek. Bián têng-sin khui-ki.",
+        "en": "Taigi Keyboard is still in use by a running application, so its files cannot be replaced.\n\nSwitch to another input method, sign out of Windows, sign in again, and run this installer once more. No restart is needed.",
+        "ja": "Taigi Keyboard は実行中のアプリケーションに使用されているため、ファイルを置き換えられません。\n\n別の入力方式に切り替えてから Windows からサインアウトし、再度サインインしてこのインストーラーを実行してください。再起動は不要です。"
+      }
+    },
+    "installerStepFailed": {
+      "comment": "Windows installer: a registration or scheduled-task step failed after the files were copied; the previous version was restored. {step} names the failed command.",
+      "scope": {
+        "platforms": [
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "step": "string"
+      },
+      "values": {
+        "hanji": "安裝程式無法度完成這个步驟：{step}\n\n若有舊版，已經復原矣。詳細請看安裝紀錄。",
+        "tailo": "An-tsong thîng-sik bô-huat-tōo uân-sîng tsit ê pōo-tsàu: {step}\n\nNā ū kū-pán, í-king ho̍k-guân--ah. Siông-sè tshiánn khuànn an-tsong kì-lo̍k.",
+        "poj": "An-chong thêng-sek bô-hoat-tō͘ oân-sêng chit ê pō͘-chàu: {step}\n\nNā ū kū-pán, í-keng ho̍k-goân--ah. Siông-sè chhiáⁿ khòaⁿ an-chong kì-lo̍k.",
+        "en": "Setup could not complete this step: {step}\n\nThe previous version, if any, was put back. Details are in the setup log.",
+        "ja": "次の手順を完了できませんでした: {step}\n\n以前のバージョンがあれば元に戻しました。詳細はセットアップのログを参照してください。"
+      }
+    },
+    "installerSignOutNote": {
+      "comment": "Windows installer: the line added to the finished page — a new text service can need a sign-out before Windows lists it.",
+      "scope": {
+        "platforms": [
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "若是輸入法清單內底無看著台語齒盤，請登出 Windows 閣再登入。",
+        "tailo": "Nā-sī su-ji̍p-huat tshing-tuann lāi-té bô khuànn-tio̍h Tâi-gí khí-puânn, tshiánn ting-tshut Windows koh-tsài ting-ji̍p.",
+        "poj": "Nā-sī su-ji̍p-hoat chheng-toaⁿ lāi-té bô khòaⁿ-tio̍h Tâi-gí khí-pôaⁿ, chhiáⁿ teng-chhut Windows koh-chài teng-ji̍p.",
+        "en": "If Taigi Keyboard does not appear in the input-method list, sign out of Windows and sign in again.",
+        "ja": "入力方式の一覧に Taigi Keyboard が表示されない場合は、Windows からサインアウトして再度サインインしてください。"
+      }
     }
   }
 }

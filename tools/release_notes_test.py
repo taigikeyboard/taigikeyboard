@@ -255,10 +255,26 @@ PLIST_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+CARGO_FIXTURE = """[workspace]
+resolver = "2"
+members = ["crates/taigi-windows-core"]
+
+[workspace.package]
+version = "3.6.6"
+edition = "2021"
+
+[workspace.dependencies]
+# A dependency pinned to a version that must NOT move with the release.
+windows = { version = "0.62" }
+egui = "=0.31.1"
+"""
+
+
 PROJECT_FILES = (
     release_notes.ANDROID_GRADLE_FILE,
     release_notes.IOS_PROJECT_FILE,
     release_notes.MACOS_INFO_PLIST_FILE,
+    release_notes.WINDOWS_CARGO_FILE,
 )
 
 
@@ -274,8 +290,9 @@ class ProjectVersionWriterTests(unittest.TestCase):
         gradle: str = GRADLE_FIXTURE,
         pbxproj: str = PBXPROJ_FIXTURE,
         plist: str = PLIST_FIXTURE,
+        cargo: str = CARGO_FIXTURE,
     ) -> None:
-        for relative_path, content in zip(PROJECT_FILES, (gradle, pbxproj, plist)):
+        for relative_path, content in zip(PROJECT_FILES, (gradle, pbxproj, plist, cargo)):
             path = self.repo_root / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8", newline="")
@@ -327,8 +344,37 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 "CURRENT_PROJECT_VERSION 1 -> 1",
                 "macOS: CFBundleShortVersionString 3.6.6 -> 3.6.7, "
                 "CFBundleVersion 30606 -> 30607",
+                "Windows: workspace version 3.6.6 -> 3.6.7",
             ),
         )
+
+    def test_refuses_a_cargo_manifest_without_a_workspace_version(self) -> None:
+        self.write_tree(cargo=CARGO_FIXTURE.replace('version = "3.6.6"\n', ""))
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "found 0"):
+            release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+    def test_refuses_a_cargo_manifest_with_two_workspace_package_tables(self) -> None:
+        # A duplicate key inside one table is TOML-invalid (Cargo refuses it);
+        # the duplicate that parses is a second `[workspace.package]` table.
+        self.write_tree(
+            cargo=CARGO_FIXTURE + '\n[workspace.package]\nversion = "3.6.6"\n'
+        )
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "found 2"):
+            release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+    def test_moves_only_the_windows_workspace_version(self) -> None:
+        release_notes.set_project_versions(self.repo_root, "3.6.7")
+
+        cargo_source = self.read(release_notes.WINDOWS_CARGO_FILE)
+        self.assertEqual(
+            cargo_source,
+            CARGO_FIXTURE.replace('version = "3.6.6"', 'version = "3.6.7"'),
+        )
+        # The pinned dependency versions are not the release train's.
+        self.assertIn('windows = { version = "0.62" }', cargo_source)
+        self.assertIn('egui = "=0.31.1"', cargo_source)
 
     def test_leaves_the_test_target_and_every_other_byte_alone(self) -> None:
         release_notes.set_project_versions(self.repo_root, "3.6.7")

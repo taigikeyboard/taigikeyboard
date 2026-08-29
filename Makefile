@@ -10,7 +10,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt lint \
         i18n i18n-test \
         macos-release version \
-        windows-check \
+        windows-check windows-release \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -101,6 +101,13 @@ macos-release:
 windows-check:
 	$(MAKE) -C windows check
 
+# Cut a Windows release — on a Windows machine, from Git Bash: release
+# builds, signing, the Inno Setup installer, publish to the website repo
+# (windows/scripts/release-app.sh; procedure and one-time setup in
+# docs/architecture/windows-release.md). Same flag policy as macos-release.
+windows-release:
+	bash windows/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
+
 # Set the one marketing version iOS, Android, and macOS share:
 #
 #   make version 3.6.7
@@ -161,6 +168,7 @@ help:
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
+	@echo "  make windows-release    Cut a Windows release (on Windows): build, sign, package, publish"
 	@echo "  make version 3.6.7      Set that version on iOS + Android + macOS"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""

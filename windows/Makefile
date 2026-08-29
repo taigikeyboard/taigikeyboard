@@ -11,7 +11,7 @@
 
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help i18n-check test check-gnu check-msvc check-dll check fmt lint build clean
+.PHONY: help i18n-check test check-gnu check-msvc check-dll check-exe check fmt lint build release clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
 # checked for from macOS. A crate that pulls in C (the storage crate's bundled
@@ -36,6 +36,7 @@ help:
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt         - cargo fmt"
 	@echo "  make build       - (Windows) cargo build --release for the shipping target"
+	@echo "  make release     - (Windows) build, sign, package with Inno Setup and publish (scripts/release-app.sh)"
 
 # The Rust under crates/taigi-windows-core/src/strings/generated.rs is written
 # by the repo-root `make i18n`; a stale copy would compile strings that no
@@ -85,6 +86,10 @@ lint:
 
 build:
 	cargo build --release --target x86_64-pc-windows-msvc
+
+# The whole release on a Windows machine (Git Bash): docs/architecture/windows-release.md.
+release:
+	bash scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
 clean:
 	cargo clean
