@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Publish a built Windows installer (roadmap W8): a GitHub release on the
 # website repository tagged windows-v<version>, verified reachable WITHOUT
-# credentials, then `_data/windows_release.json` (the site's download
-# button) and `appcast/windows.json` (what every installed copy polls —
-# windows/updates/README.md), and a wait until the live manifest serves the
-# new version. Mirror of macos/scripts/publish-release.sh; the order is the
-# point — a manifest published before its download is reachable points every
-# checker at a 404.
+# credentials, then ONE committed file, `_data/windows_release.json` (the
+# site's download button; the site renders `appcast/windows.json` — what every
+# installed copy polls, windows/updates/README.md — from it), and a wait until
+# the live manifest serves the new version. Mirror of
+# macos/scripts/publish-release.sh; the order is the point — a manifest
+# published before its download is reachable points every checker at a 404.
 #
 #   bash windows/scripts/publish-release.sh [--installer <path>]
 
@@ -14,9 +14,24 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/identity.sh"
 
 PUBLISH_REPOSITORY="taigikeyboard/taigikeyboard.github.io"
-MANIFEST_PATH="appcast/windows.json"
+# The one file a release writes over there. The site's Windows download button
+# links straight at the installer, so its URL carries the version and changes
+# every release; it is committed as site data rather than written into the
+# page, which keeps this script the only thing that edits it.
+#
+# The update manifest at `appcast/windows.json` is *rendered* from this file
+# by the site's own build, not written here. The macOS flow learned this the
+# hard way (macos/updates/README.md § One published fact, one committed file):
+# two files meant two commits seconds apart, each Pages run deploys the tree of
+# its own commit, and the run for the earlier commit finishing last served a
+# manifest one release behind for a day. One published fact, one committed
+# file, nothing to race.
 SITE_RELEASE_PATH="_data/windows_release.json"
-MANIFEST_URL="https://taigikeyboard.tw/$MANIFEST_PATH"
+# The domain is the project's own, so the hosting underneath it can change
+# without stranding installs that have manifest::PUBLISHED_URL baked in.
+MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
+# A tag names what it versions, and that repository is a website: a bare
+# `v3.6.5` there would not say which artifact it belongs to.
 TAG="windows-v$SHORT_VERSION"
 RELEASE_PAGE_URL="https://github.com/$PUBLISH_REPOSITORY/releases/tag/$TAG"
 
@@ -114,11 +129,22 @@ for attempt in 1 2 3 4 5; do
 done
 echo "  page 200, asset $asset_status"
 
-MANIFEST_JSON="$(printf '{\n  "version": "%s",\n  "downloadPageURL": "%s",\n  "packageURL": "%s"\n}\n' \
-    "$SHORT_VERSION" "$RELEASE_PAGE_URL" "$ASSET_URL")"
+# ---------------------------------------------------------------------------
+# Only now announce it. The file below names a download that has just been
+# proven reachable, and both readers of it — every visitor in the download
+# button's case, every installed copy in the manifest's — would otherwise be
+# pointed at a 404.
+# ---------------------------------------------------------------------------
+
+# `downloadURL` reaches the input method as the manifest's `packageURL`, which
+# is what lets it fetch the installer itself instead of sending the user to a
+# browser; an install that reads it still verifies the installer's own
+# Authenticode signature against the pinned certificate, so the URL is a
+# convenience rather than something trusted.
 SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
     "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$RELEASE_PAGE_URL")"
 
+# Create or replace one file in the website repository.
 commit_site_file() {
     local path="$1" message="$2" content="$3"
     python3 -c 'import json,sys; json.loads(sys.stdin.read())' <<< "$content" ||
@@ -140,24 +166,34 @@ commit_site_file() {
     gh api "$api" "${arguments[@]}" --jq '.commit.html_url'
 }
 
-echo "==> Publishing the website download link"
+echo "==> Publishing the release data"
 commit_site_file "$SITE_RELEASE_PATH" \
-    "chore: Windows download link -> $SHORT_VERSION" "$SITE_RELEASE_JSON"
-echo "==> Publishing the update manifest"
-commit_site_file "$MANIFEST_PATH" \
-    "chore: Windows update manifest -> $SHORT_VERSION" "$MANIFEST_JSON"
+    "chore: Windows release -> $SHORT_VERSION" "$SITE_RELEASE_JSON"
 
 echo "==> Waiting for $MANIFEST_URL to serve $SHORT_VERSION"
+# GitHub Pages has to build and the CDN has to expire what it holds. Polling the
+# real URL is the only thing that proves the release is actually announced;
+# everything before this only proves it was committed. It also proves the site
+# rendered the manifest from what was committed, which is the one step of the
+# announcement this script does not perform itself.
+#
+# Both published fields are checked, not just the version. `packageURL` is what
+# lets the input method fetch the installer itself, and a manifest missing it
+# still reads as a perfectly valid update — the user is sent to a browser
+# instead. So a render that dropped it would satisfy a version-only poll and
+# quietly cost every install the in-app download; there is no later signal that
+# it happened.
 for attempt in $(seq 1 30); do
-    live_version="$(anonymous_curl --header 'Cache-Control: no-cache' "$MANIFEST_URL" 2>/dev/null |
+    live_manifest="$(anonymous_curl --header 'Cache-Control: no-cache' "$MANIFEST_URL" 2>/dev/null |
         python3 -c 'import json,sys
 try:
-    print(json.load(sys.stdin).get("version") or "")
+    manifest = json.load(sys.stdin)
+    print((manifest.get("version") or "") + " " + (manifest.get("packageURL") or ""))
 except Exception:
-    print("")' || true)"
-    [[ "$live_version" == "$SHORT_VERSION" ]] && break
+    print(" ")' || true)"
+    [[ "$live_manifest" == "$SHORT_VERSION $ASSET_URL" ]] && break
     [[ $attempt -eq 30 ]] &&
-        fail "manifest still serving '${live_version:-nothing}' after 5 minutes — check the Pages deployment"
+        fail "manifest still serving '${live_manifest% *}' with package '${live_manifest#* }' after 5 minutes, wanted '$SHORT_VERSION' and '$ASSET_URL' — check the Pages deployment"
     sleep 10
 done
 

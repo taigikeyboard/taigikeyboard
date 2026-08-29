@@ -30,11 +30,45 @@ Unknown extra fields are ignored. Before the first release the manifest reads
 
 ## Where it lives
 
-In the website repository (`taigikeyboard/taigikeyboard.github.io`, at
-`appcast/windows.json`), written by `windows/scripts/publish-release.sh` only
-after the installer is anonymously reachable — never by hand, never from this
-(private) repository. The same script writes `_data/windows_release.json` for
-the site's download button.
+In the website repository (`taigikeyboard/taigikeyboard.github.io`), at
+`appcast/windows.json` — never by hand, never from this (private)
+repository, and never before the installer is anonymously reachable.
+
+### One published fact, one committed file
+
+`windows/scripts/publish-release.sh` writes exactly one file over there,
+`_data/windows_release.json`:
+
+```json
+{
+  "version": "3.7.0",
+  "tag": "windows-v3.7.0",
+  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/windows-v3.7.0/TaigiKeyboard-3.7.0-Setup.exe",
+  "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/tag/windows-v3.7.0"
+}
+```
+
+That file is what the site's Windows download button links at — straight at
+the installer so the download starts on one click, which is why its URL
+carries the version, and deliberately not `/releases/latest/download/...`,
+since `latest` resolves across a repository that is a website rather than
+this input method's release channel. Whether the button is shown at all is
+the site's `enable_windows_download` flag, not this file: the release flow
+fills the file the moment any installer is published, a throwaway test
+publish included.
+
+The manifest is **rendered** from it by the site's own build:
+`appcast/windows.json` over there is a Jekyll template reading
+`site.data.windows_release`, mapping `releasePageURL` → `downloadPageURL`
+and `downloadURL` → `packageURL`. Nothing writes it directly.
+
+Same shape as macOS (`macos/updates/README.md` § One published fact, one
+committed file), for the reason recorded there: two literal files meant two
+commits seconds apart, every GitHub Pages run deploys the tree of *its own*
+commit, and on 2026-08-28 the run for the earlier commit finished last and
+served the macOS manifest a release behind for a day. One file cannot race
+with itself. Before the first Windows release the data file names `0.0.0`
+with no download, which notifies nobody.
 
 ## Who checks, when
 

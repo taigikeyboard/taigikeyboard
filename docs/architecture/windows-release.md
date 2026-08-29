@@ -161,14 +161,17 @@ reading its own payload.
    `changelog/v<version>.md`, and uploads the installer as its asset.
 3. Fetches the release page and one byte of the asset **anonymously** — the
    page must answer `200`, the asset `206` (or `200`).
-4. Writes `_data/windows_release.json` (the site's download button) and
-   `appcast/windows.json` (the manifest every installed copy polls,
-   `windows/updates/README.md`), then waits until
-   `https://taigikeyboard.tw/appcast/windows.json` serves the new version.
+4. Writes `_data/windows_release.json` — one file, one commit — then waits
+   until `https://taigikeyboard.tw/appcast/windows.json` serves the new
+   version **and** its installer URL. The manifest every installed copy
+   polls is rendered from that data file by the site's own build
+   (`windows/updates/README.md` § One published fact, one committed file),
+   so the poll is also what proves the site built what was committed.
 
 Re-running after a failure adds to the existing release rather than tearing
-it down; the manifest is written only after the download is provably
-reachable.
+it down; the data file is written only after the download is provably
+reachable. The site advertises the download only once its
+`enable_windows_download` flag is on — the data file alone does not.
 
 ## Notes
 
