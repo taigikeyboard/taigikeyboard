@@ -3168,6 +3168,7 @@ dependencies = [
  "egui",
  "egui_extras",
  "log",
+ "raw-window-handle",
  "rfd",
  "taigi-windows-core",
  "taigi-windows-platform",

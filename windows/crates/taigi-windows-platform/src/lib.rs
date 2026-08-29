@@ -1,5 +1,6 @@
 //! The few Win32 calls both the DLL and the settings window need — the
-//! user's locale, opening a URL, the alert sound — behind plain functions.
+//! user's locale, opening a URL, the alert sound, what the system says about
+//! appearance — behind plain functions.
 //! On a non-Windows host (the macOS build gate, `make check`) each answers
 //! the neutral value, so the callers compile and test natively.
 
@@ -210,4 +211,166 @@ pub fn executable_directory() -> Option<std::path::PathBuf> {
         .ok()?
         .parent()
         .map(std::path::Path::to_path_buf)
+}
+
+/// An sRGB colour as the system reports it.
+pub type Rgb = (u8, u8, u8);
+
+/// `HKCU\…\Themes\Personalize\AppsUseLightTheme` = 0 → dark. Missing (older
+/// Windows) → light. Read by the candidate window for its 自動 mode; the
+/// settings window lets egui/winit read the same value.
+#[cfg(windows)]
+pub fn system_prefers_dark() -> bool {
+    use windows::core::w;
+    use windows::Win32::Foundation::ERROR_SUCCESS;
+    use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
+    let mut value: u32 = 1;
+    let mut size = std::mem::size_of::<u32>() as u32;
+    // SAFETY: a DWORD read into a local of the size passed.
+    let status = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
+            w!("AppsUseLightTheme"),
+            RRF_RT_REG_DWORD,
+            None,
+            Some(&mut value as *mut u32 as *mut _),
+            Some(&mut size),
+        )
+    };
+    status == ERROR_SUCCESS && value == 0
+}
+
+#[cfg(not(windows))]
+pub fn system_prefers_dark() -> bool {
+    false
+}
+
+/// The DWM colorization colour (`0xAARRGGBB`, alpha dropped — it describes
+/// the frame blend, not a colour a highlight can carry), the closest thing
+/// to the user's accent an in-proc DLL can read without WinRT. `None` when
+/// DWM is not composing (a remote session).
+#[cfg(windows)]
+pub fn system_accent() -> Option<Rgb> {
+    use windows::core::BOOL;
+    use windows::Win32::Graphics::Dwm::DwmGetColorizationColor;
+    let mut color = 0u32;
+    let mut opaque = BOOL(0);
+    // SAFETY: out-pointers to locals.
+    unsafe { DwmGetColorizationColor(&mut color, &mut opaque) }.ok()?;
+    Some((
+        ((color >> 16) & 0xFF) as u8,
+        ((color >> 8) & 0xFF) as u8,
+        (color & 0xFF) as u8,
+    ))
+}
+
+#[cfg(not(windows))]
+pub fn system_accent() -> Option<Rgb> {
+    None
+}
+
+/// The colours a high-contrast theme dictates. When one is on, every
+/// surface of ours must draw with these and nothing of its own — the whole
+/// point of the theme is that the user chose them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HighContrastColors {
+    pub window: Rgb,
+    pub window_text: Rgb,
+    pub highlight: Rgb,
+    pub highlight_text: Rgb,
+    pub gray_text: Rgb,
+}
+
+/// `SPI_GETHIGHCONTRAST`: the system colours when a high-contrast theme is
+/// on, `None` when it is off. Re-read on `WM_THEMECHANGED` /
+/// `WM_SETTINGCHANGE`, which Windows sends when the theme flips.
+#[cfg(windows)]
+pub fn high_contrast_colors() -> Option<HighContrastColors> {
+    use windows::Win32::Graphics::Gdi::{
+        GetSysColor, COLOR_GRAYTEXT, COLOR_HIGHLIGHT, COLOR_HIGHLIGHTTEXT, COLOR_WINDOW,
+        COLOR_WINDOWTEXT,
+    };
+    use windows::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SystemParametersInfoW, SPI_GETHIGHCONTRAST, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
+    };
+    let mut info = HIGHCONTRASTW {
+        cbSize: std::mem::size_of::<HIGHCONTRASTW>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: the documented query — `cbSize` set, the struct's own size
+    // passed, written in place.
+    let queried = unsafe {
+        SystemParametersInfoW(
+            SPI_GETHIGHCONTRAST,
+            info.cbSize,
+            Some(&mut info as *mut HIGHCONTRASTW as *mut _),
+            SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+        )
+    };
+    if queried.is_err() || !info.dwFlags.contains(HCF_HIGHCONTRASTON) {
+        return None;
+    }
+    // COLORREF is `0x00BBGGRR`.
+    let sys = |index| {
+        // SAFETY: a plain query returning an integer.
+        let color = unsafe { GetSysColor(index) };
+        (
+            (color & 0xFF) as u8,
+            ((color >> 8) & 0xFF) as u8,
+            ((color >> 16) & 0xFF) as u8,
+        )
+    };
+    Some(HighContrastColors {
+        window: sys(COLOR_WINDOW),
+        window_text: sys(COLOR_WINDOWTEXT),
+        highlight: sys(COLOR_HIGHLIGHT),
+        highlight_text: sys(COLOR_HIGHLIGHTTEXT),
+        gray_text: sys(COLOR_GRAYTEXT),
+    })
+}
+
+#[cfg(not(windows))]
+pub fn high_contrast_colors() -> Option<HighContrastColors> {
+    None
+}
+
+/// Paints a top-level window's title bar dark or light
+/// (`DWMWA_USE_IMMERSIVE_DARK_MODE`): winit leaves the caption light whatever
+/// the client area draws, and a light caption over a dark form is the one
+/// thing that makes a window look foreign on Windows 11. Documented for
+/// Windows 11 (build 22000+); Windows 10 20H1+ honours the same value in
+/// practice — a compatibility target for the run-book, not a guarantee: a
+/// refusal degrades to the light caption and a debug log. `hwnd` is the raw
+/// handle (`raw_window_handle::Win32WindowHandle::hwnd`).
+#[cfg(windows)]
+pub fn set_dark_title_bar(hwnd: isize, is_dark: bool) {
+    use windows::core::BOOL;
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
+    let value = BOOL(i32::from(is_dark));
+    // SAFETY: a BOOL of the size passed, on a window handle winit owns for
+    // the life of the app.
+    let result = unsafe {
+        DwmSetWindowAttribute(
+            HWND(hwnd as *mut _),
+            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            &value as *const BOOL as *const _,
+            std::mem::size_of::<BOOL>() as u32,
+        )
+    };
+    if let Err(error) = result {
+        log::debug!("platform.dark_title_bar_unsupported error={error}");
+    }
+}
+
+#[cfg(not(windows))]
+pub fn set_dark_title_bar(_hwnd: isize, _is_dark: bool) {}
+
+/// `%WINDIR%\Fonts` — where the system's own faces live (Segoe UI Variable,
+/// Segoe Fluent Icons). `None` off Windows or with no `WINDIR`.
+pub fn system_fonts_directory() -> Option<std::path::PathBuf> {
+    let windir = std::env::var_os("WINDIR").or_else(|| std::env::var_os("SystemRoot"))?;
+    Some(std::path::PathBuf::from(windir).join("Fonts"))
 }

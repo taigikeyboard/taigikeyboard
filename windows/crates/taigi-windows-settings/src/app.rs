@@ -10,12 +10,14 @@
 
 // 中文: 設定視窗本體 — 側欄 + 目前 pane;每一幀重讀 settings.json(閒置時每秒要一幀),寫入走原子更新;寫失敗顯示橫幅。
 
+use crate::fonts::InstalledFonts;
 use crate::panes;
 use crate::panes::custom_dictionary::CustomDictionaryPageModel;
 use crate::panes::dictionary_search::DictionarySearchModel;
 use crate::updates::UpdateState;
 use crate::widgets::alert::PageMessage;
 use crate::widgets::recorder::RecorderState;
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -71,7 +73,20 @@ pub struct SettingsApp {
     /// (`ExternalLinkButton.swift:740-744`).
     pub message: Option<PageMessage>,
     title: String,
+    fonts: InstalledFonts,
+    /// The window's own HWND, for the DWM title-bar colour; `None` off
+    /// Windows or when winit gives no handle.
+    hwnd: Option<isize>,
+    /// What the title bar was last painted as, so DWM is told only on a
+    /// change (a frame every second while idle).
+    is_title_bar_dark: Option<bool>,
+    /// The accent the visuals were last built with; rebuilt on a change,
+    /// not per frame.
+    accent: Option<egui::Color32>,
 }
+
+/// The Windows default blue, when DWM reports no accent (a remote session).
+const FALLBACK_ACCENT: egui::Color32 = egui::Color32::from_rgb(0x00, 0x78, 0xD4);
 
 impl SettingsApp {
     pub fn new(
@@ -82,7 +97,11 @@ impl SettingsApp {
         is_read_only: bool,
         is_check_now: bool,
     ) -> Self {
-        crate::fonts::install(&creation.egui_ctx);
+        let fonts = crate::fonts::install(&creation.egui_ctx);
+        let hwnd = match creation.window_handle().map(|handle| handle.as_raw()) {
+            Ok(RawWindowHandle::Win32(handle)) => Some(handle.hwnd.get()),
+            _ => None,
+        };
         let document = live.refresh_if_changed();
         let title = pane_title(&strings_for(&document), pane);
         let updates = UpdateState::new();
@@ -120,6 +139,10 @@ impl SettingsApp {
             updates: Some(updates),
             message: None,
             title,
+            fonts,
+            hwnd,
+            is_title_bar_dark: None,
+            accent: None,
         };
         // The overdue daily check, or the menu's 檢查更新 (`--check-now`)
         // — the manual one always answers.
@@ -168,6 +191,10 @@ impl SettingsApp {
         self.pane
     }
 
+    pub fn fonts(&self) -> InstalledFonts {
+        self.fonts
+    }
+
     /// The selection lives in `settings.json` like every other setting, as
     /// it does in `UserDefaults` on the Mac. The DLL reloads once for a
     /// pane click it does not care about — accepted: one `stat` and a parse
@@ -196,7 +223,7 @@ impl SettingsApp {
         self.document = self.live.refresh_if_changed();
     }
 
-    fn sync_theme(&self, ctx: &egui::Context) {
+    fn sync_theme(&mut self, ctx: &egui::Context) {
         let mode: AppearanceMode = self.document.choice(&keys::APPEARANCE_MODE);
         let preference = match mode {
             AppearanceMode::Light => egui::ThemePreference::Light,
@@ -206,6 +233,46 @@ impl SettingsApp {
         if ctx.options(|options| options.theme_preference) != preference {
             ctx.set_theme(preference);
         }
+        self.sync_accent(ctx);
+        self.sync_title_bar(ctx);
+    }
+
+    /// The selection colour is the user's accent, as it is in every native
+    /// Windows window (`Color.accentColor` on the Mac) — not egui's blue.
+    /// Both visuals are rebuilt on a change so a theme flip keeps it.
+    fn sync_accent(&mut self, ctx: &egui::Context) {
+        let accent = taigi_windows_platform::system_accent()
+            .map_or(FALLBACK_ACCENT, |(r, g, b)| {
+                egui::Color32::from_rgb(r, g, b)
+            });
+        if self.accent == Some(accent) {
+            return;
+        }
+        self.accent = Some(accent);
+        for (theme, mut visuals) in [
+            (egui::Theme::Light, egui::Visuals::light()),
+            (egui::Theme::Dark, egui::Visuals::dark()),
+        ] {
+            visuals.selection.bg_fill = accent;
+            visuals.selection.stroke.color = accent_text_color(accent);
+            visuals.hyperlink_color = accent;
+            ctx.set_visuals_of(theme, visuals);
+        }
+    }
+
+    /// The caption follows the client area: winit paints it light whatever
+    /// the form draws, and a light caption over a dark form is what makes a
+    /// window look foreign on Windows 11.
+    fn sync_title_bar(&mut self, ctx: &egui::Context) {
+        let Some(hwnd) = self.hwnd else {
+            return;
+        };
+        let is_dark = ctx.theme() == egui::Theme::Dark;
+        if self.is_title_bar_dark == Some(is_dark) {
+            return;
+        }
+        self.is_title_bar_dark = Some(is_dark);
+        taigi_windows_platform::set_dark_title_bar(hwnd, is_dark);
     }
 
     fn sync_title(&mut self, ctx: &egui::Context) {
@@ -280,6 +347,27 @@ impl SettingsApp {
             &mut self.search.message
         };
         crate::widgets::alert::show(ctx, &strings, slot);
+    }
+}
+
+/// White on a deep accent, near-black on a pale one (the yellow / mint
+/// presets) — the same WCAG luminance gate the candidate window applies
+/// (`ui/theme.rs::LIGHT_HIGHLIGHT_LUMINANCE`).
+fn accent_text_color(accent: egui::Color32) -> egui::Color32 {
+    let linear = |channel: u8| {
+        let channel = f32::from(channel) / 255.0;
+        if channel <= 0.03928 {
+            channel / 12.92
+        } else {
+            ((channel + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    let luminance =
+        0.2126 * linear(accent.r()) + 0.7152 * linear(accent.g()) + 0.0722 * linear(accent.b());
+    if luminance > 0.55 {
+        egui::Color32::from_black_alpha(217)
+    } else {
+        egui::Color32::WHITE
     }
 }
 

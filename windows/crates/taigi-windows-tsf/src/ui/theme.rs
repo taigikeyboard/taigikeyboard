@@ -1,21 +1,18 @@
 //! Colours: light / dark from the appearance setting or the system, the
-//! highlight from the Windows accent. NAMED DIVERGENCE from macOS: no
-//! vibrancy / glass backdrop on Windows — an opaque card. The Sequoia
-//! accent darkening (`CandidateAccentColor.sequoiaAdjusted`) is kept so the
-//! highlight reads like the native window's. The system's answers are read
-//! once ([`SystemTheme::read`]) and cached by the caller until Windows says
-//! they changed (`WM_SETTINGCHANGE` / `WM_THEMECHANGED` /
+//! highlight from the Windows accent, and — when a high-contrast theme is
+//! on — every colour from the system, nothing of ours. NAMED DIVERGENCE
+//! from macOS: no vibrancy / glass backdrop on Windows — an opaque card. The
+//! Sequoia accent darkening (`CandidateAccentColor.sequoiaAdjusted`) is kept
+//! so the highlight reads like the native window's. The system's answers are
+//! read once ([`SystemTheme::read`]) and cached by the caller until Windows
+//! says they changed (`WM_SETTINGCHANGE` / `WM_THEMECHANGED` /
 //! `WM_DWMCOLORIZATIONCOLORCHANGED`) — not per keystroke.
 
-// 中文: 顏色主題 — 亮/暗、系統強調色;Windows 無毛玻璃,改用不透明卡片(具名差異);系統值快取到主題變更訊息才重讀。
+// 中文: 顏色主題 — 亮/暗、系統強調色、高對比全用系統色;Windows 無毛玻璃,改用不透明卡片(具名差異);系統值快取到主題變更訊息才重讀。
 
 use taigi_windows_core::settings::AppearanceMode;
-use windows::core::w;
-use windows::core::BOOL;
-use windows::Win32::Foundation::ERROR_SUCCESS;
+use taigi_windows_platform::{HighContrastColors, Rgb};
 use windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F;
-use windows::Win32::Graphics::Dwm::DwmGetColorizationColor;
-use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Theme {
@@ -50,6 +47,10 @@ const fn rgba(r: u8, g: u8, b: u8, a: f32) -> D2D1_COLOR_F {
 /// The accent when the system reports none: Windows' default blue.
 const FALLBACK_ACCENT: D2D1_COLOR_F = rgb(0x00, 0x78, 0xD4);
 
+const fn from_rgb((r, g, b): Rgb) -> D2D1_COLOR_F {
+    rgb(r, g, b)
+}
+
 /// Above this relative luminance a highlight is light enough that white
 /// text on it fails contrast; the text goes dark instead (a pale accent
 /// such as the yellow or mint presets).
@@ -63,22 +64,31 @@ pub struct SystemTheme {
     /// describes the DWM frame blend, not a colour a highlight can carry,
     /// so it is dropped on purpose.
     pub accent: D2D1_COLOR_F,
+    /// The system colours when a high-contrast theme is on. They win over
+    /// the mode, the accent and every colour of ours: the user chose them
+    /// to be able to read, and a card in our greys defeats that.
+    pub high_contrast: Option<HighContrastColors>,
 }
 
 impl SystemTheme {
-    /// One registry read and one DWM call.
+    /// One registry read, one DWM call, one `SystemParametersInfo`.
     pub fn read() -> Self {
         Self {
-            prefers_dark: system_prefers_dark(),
-            accent: system_accent().unwrap_or(FALLBACK_ACCENT),
+            prefers_dark: taigi_windows_platform::system_prefers_dark(),
+            accent: taigi_windows_platform::system_accent().map_or(FALLBACK_ACCENT, from_rgb),
+            high_contrast: taigi_windows_platform::high_contrast_colors(),
         }
     }
 }
 
 impl Theme {
     /// Resolves the theme for `mode` against `system`: `Auto` follows
-    /// `AppsUseLightTheme`, the highlight is the accent.
+    /// `AppsUseLightTheme`, the highlight is the accent — unless a
+    /// high-contrast theme is on, which dictates every colour.
     pub fn resolve(mode: AppearanceMode, system: &SystemTheme) -> Self {
+        if let Some(high_contrast) = system.high_contrast {
+            return Self::high_contrast(high_contrast);
+        }
         let is_dark = match mode {
             AppearanceMode::Light => false,
             AppearanceMode::Dark => true,
@@ -116,6 +126,28 @@ impl Theme {
     }
 }
 
+impl Theme {
+    /// Every colour from the high-contrast scheme: `COLOR_WINDOW` /
+    /// `COLOR_WINDOWTEXT` for the card, `COLOR_HIGHLIGHT` /
+    /// `COLOR_HIGHLIGHTTEXT` for the selection, `COLOR_GRAYTEXT` for
+    /// everything secondary — no alpha, no accent fit: a high-contrast
+    /// scheme is opaque by definition.
+    fn high_contrast(colors: HighContrastColors) -> Self {
+        let background = from_rgb(colors.window);
+        let gray = from_rgb(colors.gray_text);
+        Self {
+            is_dark: relative_luminance(background) < 0.5,
+            background,
+            text: from_rgb(colors.window_text),
+            secondary_text: gray,
+            tertiary_text: gray,
+            separator: gray,
+            highlight: from_rgb(colors.highlight),
+            highlighted_text: from_rgb(colors.highlight_text),
+        }
+    }
+}
+
 /// Upstream's measured affine fit of what the native window does with the
 /// accent (`MacishBasePanel.swift:129-137`).
 fn sequoia_adjusted(color: D2D1_COLOR_F) -> D2D1_COLOR_F {
@@ -140,40 +172,6 @@ fn relative_luminance(color: D2D1_COLOR_F) -> f32 {
     0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
 }
 
-/// `HKCU\…\Themes\Personalize\AppsUseLightTheme` = 0 → dark. Missing (older
-/// Windows) → light.
-fn system_prefers_dark() -> bool {
-    let mut value: u32 = 1;
-    let mut size = std::mem::size_of::<u32>() as u32;
-    // SAFETY: a DWORD read into a local of the size passed.
-    let status = unsafe {
-        RegGetValueW(
-            HKEY_CURRENT_USER,
-            w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
-            w!("AppsUseLightTheme"),
-            RRF_RT_REG_DWORD,
-            None,
-            Some(&mut value as *mut u32 as *mut _),
-            Some(&mut size),
-        )
-    };
-    status == ERROR_SUCCESS && value == 0
-}
-
-/// The DWM colorization colour (`0xAARRGGBB`, alpha dropped), the closest
-/// thing to the user's accent an in-proc DLL can read without WinRT.
-fn system_accent() -> Option<D2D1_COLOR_F> {
-    let mut color = 0u32;
-    let mut opaque = BOOL(0);
-    // SAFETY: out-pointers to locals.
-    unsafe { DwmGetColorizationColor(&mut color, &mut opaque) }.ok()?;
-    Some(rgb(
-        ((color >> 16) & 0xFF) as u8,
-        ((color >> 8) & 0xFF) as u8,
-        (color & 0xFF) as u8,
-    ))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,12 +183,14 @@ mod tests {
         let pale = SystemTheme {
             prefers_dark: false,
             accent: rgb(0xF0, 0xE6, 0x8C),
+            high_contrast: None,
         };
         let theme = Theme::resolve(AppearanceMode::Light, &pale);
         assert!(theme.highlighted_text.r < 0.5);
         let deep = SystemTheme {
             prefers_dark: true,
             accent: FALLBACK_ACCENT,
+            high_contrast: None,
         };
         let theme = Theme::resolve(AppearanceMode::Auto, &deep);
         assert!(theme.is_dark);
@@ -202,8 +202,77 @@ mod tests {
         let dark_system = SystemTheme {
             prefers_dark: true,
             accent: FALLBACK_ACCENT,
+            high_contrast: None,
         };
         assert!(!Theme::resolve(AppearanceMode::Light, &dark_system).is_dark);
         assert!(Theme::resolve(AppearanceMode::Dark, &dark_system).is_dark);
+    }
+
+    #[test]
+    fn a_high_contrast_scheme_dictates_every_colour_over_mode_and_accent() {
+        // trace: "High Contrast Black" — window #000000, text #FFFFFF,
+        // highlight #1AEBFF (cyan), highlight text #000000, gray #00FF00.
+        let system = SystemTheme {
+            prefers_dark: false,
+            accent: rgb(0xF0, 0xE6, 0x8C),
+            high_contrast: Some(HighContrastColors {
+                window: (0x00, 0x00, 0x00),
+                window_text: (0xFF, 0xFF, 0xFF),
+                highlight: (0x1A, 0xEB, 0xFF),
+                highlight_text: (0x00, 0x00, 0x00),
+                gray_text: (0x00, 0xFF, 0x00),
+            }),
+        };
+        // Light mode asked for; the scheme still wins.
+        let theme = Theme::resolve(AppearanceMode::Light, &system);
+        assert!(theme.is_dark);
+        assert_eq!(theme.background, rgb(0x00, 0x00, 0x00));
+        assert_eq!(theme.text, rgb(0xFF, 0xFF, 0xFF));
+        assert_eq!(
+            theme.highlight,
+            rgb(0x1A, 0xEB, 0xFF),
+            "the accent fit is not applied"
+        );
+        assert_eq!(theme.highlighted_text, rgb(0x00, 0x00, 0x00));
+        assert_eq!(theme.secondary_text, rgb(0x00, 0xFF, 0x00));
+        assert_eq!(theme.separator, rgb(0x00, 0xFF, 0x00));
+        assert!(
+            (theme.text.a - 1.0).abs() < f32::EPSILON,
+            "opaque, no alpha of ours"
+        );
+    }
+
+    #[test]
+    fn a_light_high_contrast_scheme_reads_as_light_and_stays_opaque_throughout() {
+        // trace: "High Contrast White" — window #FFFFFF, text #000000,
+        // highlight #37006E, highlight text #FFFFFF, gray #600000.
+        let system = SystemTheme {
+            prefers_dark: true,
+            accent: FALLBACK_ACCENT,
+            high_contrast: Some(HighContrastColors {
+                window: (0xFF, 0xFF, 0xFF),
+                window_text: (0x00, 0x00, 0x00),
+                highlight: (0x37, 0x00, 0x6E),
+                highlight_text: (0xFF, 0xFF, 0xFF),
+                gray_text: (0x60, 0x00, 0x00),
+            }),
+        };
+        let theme = Theme::resolve(AppearanceMode::Dark, &system);
+        assert!(
+            !theme.is_dark,
+            "a white window is a light theme, whatever the mode asked"
+        );
+        assert_eq!(theme.tertiary_text, rgb(0x60, 0x00, 0x00));
+        for color in [
+            theme.background,
+            theme.text,
+            theme.secondary_text,
+            theme.tertiary_text,
+            theme.separator,
+            theme.highlight,
+            theme.highlighted_text,
+        ] {
+            assert!((color.a - 1.0).abs() < f32::EPSILON, "every colour opaque");
+        }
     }
 }

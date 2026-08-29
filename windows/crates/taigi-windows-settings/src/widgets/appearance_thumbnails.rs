@@ -20,8 +20,6 @@ const THUMBNAIL_SIZE: egui::Vec2 = egui::vec2(62.0, 40.0);
 const THUMBNAIL_CORNER_RADIUS: f32 = 8.0;
 const THUMBNAIL_SPACING: f32 = 14.0;
 const SELECTION_RING_PADDING: f32 = 2.0;
-/// Stands for a highlight rather than previewing the resolved accent.
-const HIGHLIGHT: egui::Color32 = egui::Color32::from_rgb(0x00, 0x7A, 0xFF);
 
 /// Draws the row bound to `selection`; answers whether it changed.
 pub fn show(ui: &mut egui::Ui, selection: &mut AppearanceMode, strings: &StringResolver) -> bool {
@@ -34,18 +32,21 @@ pub fn show(ui: &mut egui::Ui, selection: &mut AppearanceMode, strings: &StringR
                 if response.clicked() {
                     *selection = mode;
                 }
+                // The thumbnail's highlighted cell is the user's accent —
+                // what the real window highlights in (`sync_accent`).
+                let highlight = ui.visuals().selection.bg_fill;
                 let painter = ui.painter();
                 let corner = THUMBNAIL_CORNER_RADIUS;
                 match mode {
-                    AppearanceMode::Light => paint_bar(painter, rect, false),
-                    AppearanceMode::Dark => paint_bar(painter, rect, true),
+                    AppearanceMode::Light => paint_bar(painter, rect, false, highlight),
+                    AppearanceMode::Dark => paint_bar(painter, rect, true, highlight),
                     AppearanceMode::Auto => {
                         // Light on the left, dark on the right, split down
                         // the middle — how System Settings depicts it.
-                        paint_bar(painter, rect, false);
+                        paint_bar(painter, rect, false, highlight);
                         let mut right = rect;
                         right.min.x = rect.center().x;
-                        paint_bar(&painter.with_clip_rect(right), rect, true);
+                        paint_bar(&painter.with_clip_rect(right), rect, true, highlight);
                     }
                 }
                 // A hairline so the light thumbnail keeps an edge on a light
@@ -81,7 +82,7 @@ pub fn show(ui: &mut egui::Ui, selection: &mut AppearanceMode, strings: &StringR
 
 /// A miniature of what the setting controls: a candidate bar on the
 /// mode's background.
-fn paint_bar(painter: &egui::Painter, rect: egui::Rect, dark: bool) {
+fn paint_bar(painter: &egui::Painter, rect: egui::Rect, dark: bool, highlight: egui::Color32) {
     let background = if dark {
         egui::Color32::from_gray(0x29)
     } else {
@@ -101,7 +102,7 @@ fn paint_bar(painter: &egui::Painter, rect: egui::Rect, dark: bool) {
     let y = rect.center().y - height / 2.0;
     for (index, width) in widths.into_iter().enumerate() {
         let capsule = egui::Rect::from_min_size(egui::pos2(x, y), egui::vec2(width, height));
-        let color = if index == 0 { HIGHLIGHT } else { cell };
+        let color = if index == 0 { highlight } else { cell };
         painter.rect_filled(capsule, height / 2.0, color);
         x += width + spacing;
     }

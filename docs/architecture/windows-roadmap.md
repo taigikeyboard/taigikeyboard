@@ -313,10 +313,23 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   are **unverified until Windows dogfood** and sit in the run-book. Chosen over C#
   WinUI3/WPF (a fourth language, unbuildable here, P/Invoke for search + SQLite) and
   raw Win32 controls. Parity = information architecture, control semantics and
-  workflow (ported); the chrome is egui's — **platform-adapted presentation**. CJK
-  glyphs from the bundled `jf-openhuninn-2.1.ttf` (the file macOS ships) APPENDED to
-  egui's proportional family (a fallback for the hanji egui's faces lack; Latin keeps
-  egui's face). `accesskit` is ON (a Windows accessibility tree for the settings window
+  workflow (ported); the chrome is egui's — **platform-adapted presentation**, brought
+  as close to Fluent as egui allows (2026-08-29 parity audit): the system UI face
+  (`SegUIVar.ttf`, `segoeui.ttf` on Windows 10) PREPENDED to egui's proportional
+  family so Latin is drawn as every other Windows window draws it; the bundled
+  `jf-openhuninn-2.1.ttf` (the file macOS ships) APPENDED as the fallback for the hanji
+  the faces before it lack; the sidebar rows carry Segoe Fluent Icons / MDL2 glyphs
+  (`SegoeIcons.ttf` / `segmdl2.ttf`, same code points) where the Mac shows SF Symbols —
+  skipped, not boxed, on a machine without the face; the selection / hyperlink colour
+  is the DWM accent (`taigi_windows_platform::system_accent`, one reader shared with
+  the candidate window) with the same luminance gate for its text; the caption is
+  painted dark with `DWMWA_USE_IMMERSIVE_DARK_MODE` whenever the resolved theme is
+  dark (winit leaves it light). **Not adopted**: Mica / Acrylic backdrop — egui
+  paints an opaque client area, so `DWMWA_SYSTEMBACKDROP_TYPE` would show nothing;
+  WinUI controls (a fourth language). High contrast: the candidate window draws
+  entirely in the scheme's `GetSysColor`s when `SPI_GETHIGHCONTRAST` says one is on
+  (re-read on `WM_THEMECHANGED`); the egui settings window has no high-contrast mode
+  of its own — named limitation. `accesskit` is ON (a Windows accessibility tree for the settings window
   — product decision, PR7 Codex). Live reload while idle = a repaint requested every
   second (eframe repaints only on events; the DLL's writes are not events). No
   `%APPDATA%` ⇒ the window is read-only on the defaults and says so — never a file the
@@ -466,11 +479,30 @@ Ordered in layers — stop at the first foundation failure:
    glyphs render; file dialogs return focus; changing a setting is visible on the next
    keystroke without restart. Display language 自動: an English Windows UI with a
    Taiwan region setting draws the settings window in English (UI language wins, as on
-   the Mac); a zh-TW UI draws Hanji.
+   the Mac); a zh-TW UI draws Hanji. **Fluent**: Latin in Segoe UI Variable (compare
+   the digits against Windows Settings); the five sidebar rows carry a glyph each
+   (gear / palette / keyboard / book / library), none a box; the selected row, the
+   外觀 thumbnail ring and links are the user's accent colour (change it in
+   個人化 → 色彩 and watch the window follow within a second — try a deep blue and
+   a pale yellow / mint: selected text white vs near-black, links readable); in 深色
+   the title bar is dark, not white, and the app's explicit 淺色/深色 controls the
+   caption against the opposite system theme; on Windows 10 (record the build:
+   `segoeui.ttf` / `segmdl2.ttf`, and `DWMWA_USE_IMMERSIVE_DARK_MODE` is documented for
+   Windows 11 only — a refusal must degrade to a light caption, never crash). Sidebar
+   rows: hover, Tab focus and Narrator focus stay visible; icon and label share a
+   baseline at 200 % DPI; each of the five glyphs means what its pane means in both
+   icon faces. Remote Desktop (no DWM accent): settings and candidate window both
+   fall back to `#0078D4`.
 6. Installer: fresh install, upgrade over a running IME (expect the sign-out note),
    uninstall leaves `%APPDATA%\TaigiKeyboard` in place; scheduled task exists.
 7. Update: `--check-updates` reads the live manifest; toast appears; download + verify +
    install from the 一般 pane.
 8. Acceptance matrix: UI-less host, AltGr layout, high contrast, remote desktop.
+   High contrast: turn on a scheme (Alt+Shift+PrintScreen) — the candidate window
+   must draw in the scheme's window / text / highlight colours with no grey of ours,
+   and flip back the moment the scheme goes off, without restarting the host. One
+   black-background and one white-background scheme; check selected, unselected,
+   annotation, separator, the expanded list and the mode flash; toggle the scheme
+   both while a candidate window is showing and while none is.
 
 Per-PR dogfood lists are appended in each PR body.
