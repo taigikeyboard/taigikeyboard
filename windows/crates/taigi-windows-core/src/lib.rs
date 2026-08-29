@@ -14,6 +14,7 @@
 // 中文: Windows 輸入法的平台無關核心 — 設定模型、引擎橋接、組字流程、鍵盤分類、候選幾何、字串。
 // 中文: 行為以 macOS 版為準,每個移植項目都註明對應的 Swift 檔。
 
+pub mod candidates;
 pub mod composing;
 pub mod dictionary_artifacts;
 pub mod engine;
