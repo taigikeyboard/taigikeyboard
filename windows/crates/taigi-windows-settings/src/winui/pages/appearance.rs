@@ -12,7 +12,7 @@
 
 use super::choice_row;
 use crate::winui::cards;
-use crate::winui::window::{Message, SettingsWindow, SettingsWrite};
+use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_windows_core::settings::{
     keys, AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,
     CandidateWindowSizeChoice, SettingChoice,
@@ -33,7 +33,7 @@ pub fn view(
             AppearanceMode::ALL,
             document.choice(&keys::APPEARANCE_MODE),
             |mode: AppearanceMode| strings.resolve(mode.label_key()).to_owned(),
-            |mode| SettingsWrite::choice(&keys::APPEARANCE_MODE, mode),
+            |mode| Message::set_choice(mode, &keys::APPEARANCE_MODE),
             context,
         ),
         cards::section_gap(),
@@ -42,7 +42,7 @@ pub fn view(
             CandidateLayout::ALL,
             document.choice(&keys::CANDIDATE_LAYOUT),
             |choice: CandidateLayout| strings.resolve(choice.label_key()).to_owned(),
-            |choice| SettingsWrite::choice(&keys::CANDIDATE_LAYOUT, choice),
+            |choice| Message::set_choice(choice, &keys::CANDIDATE_LAYOUT),
             context,
         ),
         // The two size rows are named steps, not continuous values: pop-ups
@@ -52,7 +52,7 @@ pub fn view(
             CandidateWindowSizeChoice::ALL,
             document.choice(&keys::CANDIDATE_WINDOW_SIZE),
             |choice: CandidateWindowSizeChoice| strings.resolve(choice.label_key()).to_owned(),
-            |choice| SettingsWrite::choice(&keys::CANDIDATE_WINDOW_SIZE, choice),
+            |choice| Message::set_choice(choice, &keys::CANDIDATE_WINDOW_SIZE),
             context,
         ),
         choice_row(
@@ -60,7 +60,7 @@ pub fn view(
             CandidateTextSizeChoice::ALL,
             document.choice(&keys::CANDIDATE_TEXT_SIZE),
             |choice: CandidateTextSizeChoice| strings.resolve(choice.label_key()).to_owned(),
-            |choice| SettingsWrite::choice(&keys::CANDIDATE_TEXT_SIZE, choice),
+            |choice| Message::set_choice(choice, &keys::CANDIDATE_TEXT_SIZE),
             context,
         ),
         // The roster comes from the type: a list the bundle can grow.
@@ -69,7 +69,7 @@ pub fn view(
             CandidateFontChoice::ALL,
             document.choice(&keys::FONT_TYPE),
             |choice: CandidateFontChoice| strings.resolve(choice.label_key()).to_owned(),
-            |choice| SettingsWrite::choice(&keys::FONT_TYPE, choice),
+            |choice| Message::set_choice(choice, &keys::FONT_TYPE),
             context,
         ),
         // Its own section, at the end: it acts on every row above it.
@@ -77,7 +77,7 @@ pub fn view(
         cards::action(
             strings.resolve(StringKey::ThemeEditorResetAll),
             false,
-            context.callback(|()| Message::ResetAppearance),
+            context.callback(|()| Message::Reset(ResetScope::Appearance)),
         ),
     ))
 }

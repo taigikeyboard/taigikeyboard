@@ -111,6 +111,32 @@ pub fn open_url(url: &str) -> bool {
 }
 
 /// The default system alert sound (`NSSound.beep()`).
+/// Whether the window the user is typing into belongs to THIS thread.
+/// The shortcut recorder asks: Reactor exposes no activation event, so a
+/// row left recording when the user switches app is ended by the window's
+/// own beat instead (`ShortcutKeyRecorder`'s `WindowFocused(false)` on the
+/// egui side).
+#[cfg(windows)]
+pub fn is_foreground_thread() -> bool {
+    use windows::Win32::System::Threading::GetCurrentThreadId;
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    // SAFETY: two reads of window-manager state; a null foreground window
+    // (a lock screen, a switch in progress) reads as "not ours".
+    unsafe {
+        let foreground = GetForegroundWindow();
+        if foreground.is_invalid() {
+            return false;
+        }
+        GetWindowThreadProcessId(foreground, None) == GetCurrentThreadId()
+    }
+}
+
+/// The host has no window manager; the callers are Windows-only.
+#[cfg(not(windows))]
+pub fn is_foreground_thread() -> bool {
+    true
+}
+
 #[cfg(windows)]
 pub fn beep() {
     use windows::Win32::System::Diagnostics::Debug::MessageBeep;

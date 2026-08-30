@@ -5,21 +5,25 @@
 // 中文: 各 pane 的頁面 — 純呈現函式,狀態全在 SettingsWindow。
 
 pub mod appearance;
+pub mod dictionary_sources;
 pub mod general;
+pub mod shortcuts;
 
 use crate::winui::cards;
-use crate::winui::window::{Message, SettingsWindow, SettingsWrite};
+use crate::winui::window::{Message, SettingsWindow};
 use windows_reactor::*;
 
 /// A pop-up over a roster: the labels in the roster's order, the stored
-/// value selected, and the chosen entry sent back as the write it stands
-/// for — so the window applies it without knowing which picker it was.
+/// value selected, and the chosen entry handed to `to_message` — `None`
+/// when the pop-up cleared its selection. The row says what it MEANS, so a
+/// picker that owes more than one write (the slot-key set owes its
+/// conflict pass) is not forced through a single-key write.
 pub fn choice_row<T: Copy + PartialEq + 'static>(
     header: &str,
     roster: &'static [T],
     current: T,
     label: impl Fn(T) -> String,
-    write: impl Fn(T) -> SettingsWrite + 'static,
+    to_message: impl Fn(Option<T>) -> Message + 'static,
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let labels = roster.iter().map(|choice| label(*choice)).collect();
@@ -29,11 +33,7 @@ pub fn choice_row<T: Copy + PartialEq + 'static>(
         labels,
         selected,
         context.callback(move |index: Option<usize>| {
-            Message::SetChoice(
-                index
-                    .and_then(|index| roster.get(index))
-                    .map(|choice| write(*choice)),
-            )
+            to_message(index.and_then(|index| roster.get(index)).copied())
         }),
     )
 }

@@ -20,6 +20,8 @@ use windows_reactor::*;
 const CARD_PADDING: (f64, f64) = (16.0, 12.0);
 /// `SettingsCardMinHeight`.
 const CARD_MIN_HEIGHT: f64 = 68.0;
+/// `SettingsExpanderItemMinHeight`: an expanded item is shorter than a card.
+const SUB_ROW_MIN_HEIGHT: f64 = 48.0;
 /// `ControlCornerRadius`.
 const CARD_CORNER_RADIUS: f64 = 4.0;
 /// Between the header and the control, when the line is tight.
@@ -31,13 +33,38 @@ const PICKER_WIDTH: f64 = 220.0;
 /// Between two groups of cards; Settings draws no rule between them. The
 /// stack's own spacing is already there, so the spacer carries the rest.
 const SECTION_GAP: f64 = 16.0 - CARD_SPACING;
+/// The air around a section's title, the stack's own spacing taken off.
+const SECTION_TITLE_TOP: f64 = 24.0 - CARD_SPACING;
+const SECTION_TITLE_BOTTOM: f64 = 8.0 - CARD_SPACING;
 
 fn padding() -> Thickness {
     Thickness::xy(CARD_PADDING.0, CARD_PADDING.1)
 }
 
-/// One setting in its own card: `header` at the left, wrapping into what
-/// the control leaves, and `control` at the right, both centred on the line.
+/// One setting's line: `header` at the left, wrapping into what the
+/// control leaves, and `control` at the right, both centred. The shape
+/// inside a card, an `Expander`'s header, and an expanded item alike.
+pub fn line(header: &str, control: impl Into<View>) -> View {
+    Grid::new()
+        .columns([GridLength::STAR, GridLength::Auto])
+        .column_spacing(CONTROL_GAP)
+        .children((
+            TextBlock::new()
+                .text(header)
+                .text_wrapping(TextWrapping::Wrap)
+                .vertical_alignment(VerticalAlignment::Center)
+                .grid_column(0),
+            // The control is already a `View` (a builder that took its
+            // slots), which carries no attached grid property — a
+            // `Border` is the thinnest thing that can carry one.
+            Border::new()
+                .grid_column(1)
+                .vertical_alignment(VerticalAlignment::Center)
+                .content(control),
+        ))
+}
+
+/// One setting in its own card.
 pub fn row(header: &str, control: impl Into<View>) -> View {
     Border::new()
         .background(ThemeBrush::CardBackground)
@@ -46,41 +73,38 @@ pub fn row(header: &str, control: impl Into<View>) -> View {
         .corner_radius(CornerRadius::uniform(CARD_CORNER_RADIUS))
         .padding(padding())
         .min_height(CARD_MIN_HEIGHT)
-        .content(
-            Grid::new()
-                .columns([GridLength::STAR, GridLength::Auto])
-                .column_spacing(CONTROL_GAP)
-                .children((
-                    TextBlock::new()
-                        .text(header)
-                        .text_wrapping(TextWrapping::Wrap)
-                        .vertical_alignment(VerticalAlignment::Center)
-                        .grid_column(0),
-                    // The control is already a `View` (a builder that took its
-                    // slots), which carries no attached grid property — a
-                    // `Border` is the thinnest thing that can carry one.
-                    Border::new()
-                        .grid_column(1)
-                        .vertical_alignment(VerticalAlignment::Center)
-                        .content(control),
-                )),
-        )
+        .content(line(header, control))
+}
+
+/// A setting inside an `Expander`'s content: the same line, without a card
+/// of its own — the expander already draws the group
+/// (`SettingsExpanderItem`, which is shorter than a card).
+pub fn sub_row(header: &str, control: impl Into<View>) -> View {
+    Border::new()
+        .padding(padding())
+        .min_height(SUB_ROW_MIN_HEIGHT)
+        .content(line(header, control))
 }
 
 /// One on/off setting in its own card. The switch shows no On / Off word:
 /// WinUI's default pair is in the SYSTEM's language, which is not
 /// necessarily the display language this window was told to speak.
-pub fn switch_row(header: &str, is_on: bool, on_toggled: Callback<bool>) -> View {
-    row(
-        header,
-        ToggleSwitch::new()
-            .is_on(is_on)
-            .on_toggled(on_toggled)
-            .slots([
-                SlotView::new(ToggleSwitchSlot::OnContent, View::empty()),
-                SlotView::new(ToggleSwitchSlot::OffContent, View::empty()),
-            ]),
-    )
+/// `is_enabled` is false for a row that follows a parent switch — greyed,
+/// never cleared, so the choice comes back with its parent.
+pub fn switch_row(header: &str, is_on: bool, is_enabled: bool, on_toggled: Callback<bool>) -> View {
+    row(header, switch(is_on, is_enabled, on_toggled))
+}
+
+/// The switch itself, for a caller that places its own line.
+pub fn switch(is_on: bool, is_enabled: bool, on_toggled: Callback<bool>) -> View {
+    ToggleSwitch::new()
+        .is_on(is_on)
+        .is_enabled(is_enabled)
+        .on_toggled(on_toggled)
+        .slots([
+            SlotView::new(ToggleSwitchSlot::OnContent, View::empty()),
+            SlotView::new(ToggleSwitchSlot::OffContent, View::empty()),
+        ])
 }
 
 /// A pop-up of named choices in one card; the answer is the chosen index
@@ -130,4 +154,18 @@ pub fn action(text: &str, is_destructive: bool, on_click: Callback<()>) -> View 
 /// The air between two groups of cards.
 pub fn section_gap() -> View {
     Border::new().height(SECTION_GAP).into()
+}
+
+/// A section's title above its cards (`BodyStrongTextBlockStyle`).
+pub fn section_title(text: &str) -> View {
+    TextBlock::new()
+        .text(text)
+        .font_weight(FontWeight::SEMI_BOLD)
+        .margin(Thickness::new(
+            0.0,
+            SECTION_TITLE_TOP,
+            0.0,
+            SECTION_TITLE_BOTTOM,
+        ))
+        .into()
 }

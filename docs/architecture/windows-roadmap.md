@@ -417,7 +417,12 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   (a) **Tab is reported but NOT swallowed** — `evaluate_press` answers a bare Tab with
   `PassThrough`, meaning recording ends AND the key walks the form, which it cannot do
   if the hook ate it. It is never remembered as swallowed, so its key-up goes to the
-  window too. (b) **The hook drains, it does not just unhook**: dropping the guard stops
+  window too. **W17-B**: Reactor exposes no activation event at this pin, so a row the
+  user walked away from is released by the window's own beat instead — the tick asks
+  `platform::is_foreground_thread()` while (and only while) a row records. Up to a
+  second later than the egui field's `WindowFocused(false)`, and no key can be recorded
+  in between: the hook is thread-scoped, so while another app has focus none reaches it.
+  (b) **The hook drains, it does not just unhook**: dropping the guard stops
   the reporting, but the hook stays installed until every key it swallowed has been
   released — WinUI invokes a focused `Button` on the key-UP of Space, so a lone up is a
   press the user did not make. A later `install()` on the same thread takes over a
@@ -505,7 +510,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 | W17-A0 | Reactor foundation | pinned `windows-reactor` git dep + MSVC-only `as_self_contained()` in `build.rs` (rc resources coexist), `make check-box` (ssh MSVC clippy) folded into `windows-check`, `release-app.sh` runtime staging + DLL no-WinUI import gate, `.iss` runtime files + uninstall, docs; egui entry point UNTOUCHED | **Merged** #647 (`fdbe647b`) |
 | W17-A | Shell + 一般 + 外觀 | `SettingsWindow` component (NavigationView, Mica, theme, size, title, live-reload tick, InfoBar banner, ContentDialog alerts), SettingsCard / choice / switch / action-card widgets, 一般 + 外觀 pages, update row + outcome dialog; ALTERNATE entry `--winui` (replaces A0's `--winui-smoke`, which the real window subsumes) — egui stays production until W17-C. Shared seams so nothing is written twice: `updates::UpdateHost` (both windows drive one check / offer / announce), `presentation` (display language, pane titles + glyphs, sponsor link), `user_data::open_at_launch` (the launch store migrations both entries owe). The Reactor sidebar lists only the panes this build has pages for; a stored or `--pane` selection it has no page for opens on 一般 IN MEMORY and is never written back, so a preview launch cannot move the egui window's selection | **Merged** #648 (`cf498ea6`) |
 | W17-B1 | Platform recorder hook | `taigi-windows-platform`: `WH_KEYBOARD` thread hook (RAII + drain, `catch_unwind`, down+up swallow, bounded delivery closure, host stub) + the shared `ToUnicodeEx` translation moved out of the TSF crate so the recorder reads a key exactly as the classifier does (`key_translation::recorded_press`, AppKit reserved scalars for the keys that type nothing); pure tests for the `lParam` decode, the swallow bookkeeping and the scalar table. `make check-box` widens to the platform crate — its key translation IS the Win32 keyboard API, so its tests cannot run on the macOS host | **Merged** #649 (`33c0f844`) |
-| W17-B | 快捷鍵 + 詞庫來源 | recorder widget over B1 + shortcuts page; dictionary sources with `Expander` | Pending |
+| W17-B | 快捷鍵 + 詞庫來源 | recorder rows over the B1 hook (`RecorderTarget` routes BOTH registries through one `store`, so the conflict pass cannot be forgotten on one of them) + shortcuts page; 詞庫來源 with 教典 as an `Expander` header over its eleven subcollections. Reactor exposes no focus event, so every message that is not the recording itself ends it — the "clicked elsewhere" the egui field watched for — and the tick releases a row the user walked away from. The slot-key-set picker keeps its `resolve_after_slot_key_set_change` pass: `choice_row` answers with the MESSAGE the row means, not a single-key write | Pending |
 | W17-C | 自訂詞庫 + 辭典搜尋 + cutover | ListView table, paging, CRUD ContentDialog, `rfd` CSV on background jobs, ProgressRing overlay, delete-all / clear-learning; search page; THEN delete egui (`app.rs` shell, `theme.rs`, `fonts.rs`, `keys.rs`, `work.rs`, egui widgets, eframe/egui deps) and make Reactor the only entry | Pending |
 
 W17 merge rule (Codex Q8): A0 may merge alone (no behaviour change). A / B1 / B / C are

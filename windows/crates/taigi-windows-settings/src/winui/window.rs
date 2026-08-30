@@ -20,10 +20,16 @@ use crate::winui::pages;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
+use taigi_windows_core::keys::{
+    evaluate_press, CandidateSlotKeySet, ChordRejection, ComposingAction, ComposingKeyBindings,
+    ComposingKeyChord, RecordedPress, RecorderOutcome, RecorderTier, ShortcutAction,
+    ShortcutConflicts,
+};
 use taigi_windows_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
 };
 use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_windows_platform::keyboard_hook::{Delivery, KeyboardHook};
 use taigi_windows_storage::{LiveSettings, UserDataStores};
 use taigi_windows_update::checker;
 use windows_reactor::*;
@@ -34,12 +40,17 @@ type PageView = fn(&SettingsWindow, &StringResolver, &mut ViewContext<SettingsWi
 
 /// The panes this window has pages for, in sidebar order, each with the
 /// page that draws it — one table, so a pane cannot be listed without a
-/// page or reachable without a row. 快捷鍵 arrives with W17-B and the
-/// dictionary pages with W17-C; the egui window lists all five until the
-/// W17-C cutover, so a pane missing here is still reachable there.
-const PANES: [(SettingsPane, PageView); 2] = [
+/// page or reachable without a row. 自訂詞庫 and the unlisted 辭典搜尋
+/// arrive with W17-C; the egui window lists all five until that cutover,
+/// so a pane missing here is still reachable there.
+const PANES: [(SettingsPane, PageView); 4] = [
     (SettingsPane::General, pages::general::view),
     (SettingsPane::Appearance, pages::appearance::view),
+    (SettingsPane::Shortcuts, pages::shortcuts::view),
+    (
+        SettingsPane::DictionarySources,
+        pages::dictionary_sources::view,
+    ),
 ];
 
 fn page_view(pane: SettingsPane) -> Option<PageView> {
@@ -143,6 +154,66 @@ impl SettingsWrite {
     }
 }
 
+/// Which pane's 恢復預設 card was pressed. Each puts back exactly the keys
+/// that pane owns.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ResetScope {
+    Appearance,
+    /// Both shortcut registries at once, and no conflict pass afterwards:
+    /// the shipped defaults hold no chord in common
+    /// (`ShortcutSettingsView.swift:578-603`).
+    Shortcuts,
+    DictionarySources,
+}
+
+/// Which row is recording, and so which registry it writes to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecorderTarget {
+    Global(ShortcutAction),
+    Composing(ComposingAction),
+}
+
+impl RecorderTarget {
+    pub fn label_key(self) -> StringKey {
+        match self {
+            Self::Global(action) => action.label_key(),
+            Self::Composing(action) => action.label_key(),
+        }
+    }
+
+    fn tier(self) -> RecorderTier {
+        match self {
+            Self::Global(_) => RecorderTier::Global,
+            Self::Composing(_) => RecorderTier::Composing,
+        }
+    }
+
+    /// Stores `chord` on this row, emptying whatever else held it — last
+    /// writer wins across BOTH registries (`ShortcutConflicts`).
+    fn store(self, document: &mut SettingsDocument, chord: Option<&ComposingKeyChord>) {
+        match self {
+            Self::Global(action) => {
+                action.store_in(document, chord);
+                ShortcutConflicts::resolve_after_global_recording(document, action);
+            }
+            Self::Composing(action) => {
+                if let Some(chord) = chord {
+                    ShortcutConflicts::resolve_after_composing_recording(document, action, chord);
+                }
+                document.set_composing_chord(action, chord);
+            }
+        }
+    }
+}
+
+impl Message {
+    /// What a pop-up over a `SettingChoice` means; a pop-up that cleared
+    /// its selection writes nothing.
+    pub fn set_choice<T: SettingChoice>(choice: Option<T>, key: &SettingsKey<T>) -> Self {
+        Self::SetChoice(choice.map(|value| SettingsWrite::choice(key, value)))
+    }
+}
+
 #[derive(Clone)]
 pub enum Message {
     /// The live-reload beat; a generation that is not the current one is a
@@ -151,8 +222,17 @@ pub enum Message {
     SelectPane(Option<String>),
     /// `None` when a pop-up cleared its selection: nothing to write.
     SetChoice(Option<SettingsWrite>),
-    SetAutoSpace(bool),
-    ResetAppearance,
+    SetSwitch(SettingsKey<bool>, bool),
+    /// The slot-key set is not a plain choice: the keys it claims must
+    /// come off any global row that held one.
+    SetSlotKeySet(Option<CandidateSlotKeySet>),
+    Reset(ResetScope),
+    StartRecording(RecorderTarget),
+    /// A key the hook took while a row was recording. The generation is
+    /// the recording it was taken for: a press that arrives after that row
+    /// stopped is not this row's.
+    RecordedPress(u64, RecordedPress),
+    ClearShortcut(RecorderTarget),
     CheckForUpdates,
     ActOnOffer,
     UpdateAlertClosed(ContentDialogResult),
@@ -167,6 +247,7 @@ pub struct SettingsWindow {
     /// A URL the browser refused to open, or another page's report.
     message: Option<PageMessage>,
     updates: UpdateState,
+    recorder: Recorder,
     tick_generation: u64,
     /// The beat in flight and the interval it was armed at, so a message
     /// that does not change the interval leaves it alone.
@@ -184,6 +265,74 @@ impl SettingsWindow {
 
     pub fn updates(&self) -> &UpdateState {
         &self.updates
+    }
+
+    pub fn is_recording(&self, target: RecorderTarget) -> bool {
+        self.recorder.target == Some(target)
+    }
+
+    pub fn recorder_rejection(&self) -> Option<ChordRejection> {
+        self.recorder.rejection
+    }
+
+    /// Starts recording on `target`, over a hook that reports every press
+    /// to this component. A row already recording is replaced: its hook
+    /// guard drops here, and the new one takes it over with the keys the
+    /// old one had hidden still owed their key-ups.
+    fn start_recording(&mut self, target: RecorderTarget, context: &ComponentContext<Self>) {
+        self.recorder.generation = self.recorder.generation.wrapping_add(1);
+        let generation = self.recorder.generation;
+        let sender = context.sender();
+        // Bounded: the send queues the press on this component and wakes
+        // it. A refused send means the queue is full or the component is
+        // going away — either way the key stays hidden from the form
+        // rather than being typed into it.
+        self.recorder.hook = KeyboardHook::install(move |press| {
+            if sender.send(Message::RecordedPress(generation, press)) {
+                Delivery::Accepted
+            } else {
+                Delivery::Full
+            }
+        });
+        if self.recorder.hook.is_none() {
+            log::error!("recorder.hook_unavailable");
+            return;
+        }
+        self.recorder.target = Some(target);
+        self.recorder.rejection = None;
+    }
+
+    /// Ends the recording, whatever ended it. Bumping the generation makes
+    /// every press still in flight this row's no longer.
+    fn stop_recording(&mut self) {
+        self.recorder.generation = self.recorder.generation.wrapping_add(1);
+        self.recorder.target = None;
+        self.recorder.rejection = None;
+        self.recorder.hook = None;
+    }
+
+    /// One press, judged by the shared decision (`keys::evaluate_press`) —
+    /// the same one the Mac and the egui window ask.
+    fn record_press(&mut self, press: &RecordedPress) {
+        let Some(target) = self.recorder.target else {
+            return;
+        };
+        let slot_key_set = ComposingKeyBindings::from_document(self.document()).slot_key_set;
+        match evaluate_press(target.tier(), slot_key_set, press) {
+            RecorderOutcome::Recorded(chord) => {
+                self.stop_recording();
+                self.settings
+                    .update(|document| target.store(document, Some(&chord)));
+            }
+            RecorderOutcome::Refused(reason) => {
+                self.recorder.rejection = Some(reason);
+                taigi_windows_platform::beep();
+            }
+            // Escape leaves the row as it was; Tab leaves it AND walks the
+            // form, which the hook let it do by not swallowing it.
+            RecorderOutcome::Blurred | RecorderOutcome::PassThrough => self.stop_recording(),
+            RecorderOutcome::Ignored => {}
+        }
     }
 
     fn select_pane(&mut self, pane: SettingsPane) {
@@ -281,6 +430,21 @@ impl SettingsWindow {
 /// even if it is still delivered. Live generations start at 1.
 const CANCELLED_TICK: u64 = 0;
 
+/// The row that is recording, if any, and the hook it listens through.
+/// The hook is dropped the moment the row stops — and drains itself, so a
+/// key still held when it stops does not reach the form as a lone key-up.
+#[derive(Default)]
+struct Recorder {
+    target: Option<RecorderTarget>,
+    /// Why the last press was turned down, shown in place of the prompt
+    /// until the next press.
+    rejection: Option<ChordRejection>,
+    /// Which recording a press belongs to; a press from an earlier one is
+    /// dropped rather than recorded against the row now showing.
+    generation: u64,
+    hook: Option<KeyboardHook>,
+}
+
 /// The 外觀 setting drives the whole window, not only the candidate window
 /// (`AppearanceSettingsView`): WinUI resolves `System` against the machine.
 fn window_theme(mode: AppearanceMode) -> WindowTheme {
@@ -314,6 +478,7 @@ impl Component for SettingsWindow {
             launch,
             message: None,
             updates: UpdateState::new(),
+            recorder: Recorder::default(),
             tick_generation: 0,
             tick: None,
         };
@@ -334,6 +499,15 @@ impl Component for SettingsWindow {
     }
 
     fn update(&mut self, message: Self::Message, context: &ComponentContext<Self>) {
+        // A row records until something else happens. Reactor exposes no
+        // focus event, so every message that is not the recording itself
+        // IS the "clicked elsewhere" the egui field watched for.
+        if !matches!(
+            message,
+            Message::Tick(_) | Message::RecordedPress(..) | Message::StartRecording(_)
+        ) {
+            self.stop_recording();
+        }
         match message {
             Message::Tick(generation) => {
                 if generation != self.tick_generation {
@@ -343,6 +517,14 @@ impl Component for SettingsWindow {
                 }
                 self.settings.refresh();
                 self.updates.poll(&mut self.settings);
+                // Reactor exposes no activation event, so the beat is
+                // where a row the user walked away from is released
+                // (`WindowFocused(false)` on the egui side). Asked only
+                // while a row records, and only once a second.
+                if self.recorder.target.is_some() && !taigi_windows_platform::is_foreground_thread()
+                {
+                    self.stop_recording();
+                }
                 self.arm_tick(context);
                 return;
             }
@@ -358,10 +540,35 @@ impl Component for SettingsWindow {
                 self.settings.update(|document| write.apply(document))
             }
             Message::SetChoice(None) => {}
-            Message::SetAutoSpace(is_on) => self
+            Message::SetSwitch(key, is_on) => self
                 .settings
-                .update(move |document| document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_on)),
-            Message::ResetAppearance => self.settings.update(SettingsDocument::reset_appearance),
+                .update(move |document| document.set_bool(&key, is_on)),
+            Message::SetSlotKeySet(Some(set)) => self.settings.update(move |document| {
+                document.set_choice(&keys::CANDIDATE_SLOT_MODIFIER, set);
+                // The picker is the last writer: the keys it just claimed
+                // come off any global row that held one. Composing rows
+                // need no write — they are re-resolved from storage on
+                // every read.
+                ShortcutConflicts::resolve_after_slot_key_set_change(document, set);
+            }),
+            Message::SetSlotKeySet(None) => {}
+            Message::Reset(scope) => self.settings.update(|document| match scope {
+                ResetScope::Appearance => document.reset_appearance(),
+                ResetScope::Shortcuts => {
+                    document.reset_composing_shortcuts();
+                    document.reset_global_shortcuts();
+                }
+                ResetScope::DictionarySources => document.reset_dictionary_sources(),
+            }),
+            Message::StartRecording(target) => self.start_recording(target, context),
+            Message::RecordedPress(generation, press) => {
+                if generation == self.recorder.generation {
+                    self.record_press(&press);
+                }
+            }
+            Message::ClearShortcut(target) => self
+                .settings
+                .update(|document| target.store(document, None)),
             Message::CheckForUpdates => self.updates.check_manually(&mut self.settings),
             Message::ActOnOffer => {
                 let Some(manifest) = checker::pending_update(self.document(), INSTALLED_VERSION)
@@ -480,20 +687,96 @@ mod tests {
     }
 
     #[test]
+    fn the_last_row_to_record_a_chord_is_the_one_that_keeps_it() {
+        // trace: both registries go through `RecorderTarget::store`, so the
+        // conflict pass cannot be forgotten on one of them. Ctrl+K on a
+        // global row, then the same chord on a composing row: the global
+        // row empties (`ShortcutConflicts`).
+        let chord = ComposingKeyChord::make(
+            Some("k"),
+            taigi_windows_core::keys::KeyModifiers {
+                control: true,
+                ..Default::default()
+            },
+        )
+        .expect("Ctrl+K is a chord");
+        let mut document = SettingsDocument::default();
+        let global = RecorderTarget::Global(ShortcutAction::ToggleRomanization);
+        global.store(&mut document, Some(&chord));
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&document),
+            Some(chord.clone())
+        );
+
+        RecorderTarget::Composing(ComposingAction::PageForward).store(&mut document, Some(&chord));
+        assert_eq!(
+            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
+            Some(&chord)
+        );
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&document),
+            None,
+            "the row that had it first gives it up"
+        );
+
+        // Clearing empties only the row it was pressed on.
+        RecorderTarget::Composing(ComposingAction::PageForward).store(&mut document, None);
+        assert_eq!(
+            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
+            None
+        );
+    }
+
+    #[test]
+    fn choosing_a_slot_key_set_takes_its_keys_off_the_global_row_that_held_one() {
+        // trace: the picker is the last writer. Ctrl+3 is a slot chord
+        // under the Control set, so switching to that set must empty the
+        // global row holding it — the egui pane's
+        // `resolve_after_slot_key_set_change`, which a plain one-key write
+        // would have dropped on the floor.
+        let chord = ComposingKeyChord::make(
+            Some("3"),
+            taigi_windows_core::keys::KeyModifiers {
+                control: true,
+                ..Default::default()
+            },
+        )
+        .expect("Ctrl+3 is a chord");
+        let mut document = SettingsDocument::default();
+        RecorderTarget::Global(ShortcutAction::ToggleTranslateSwapped)
+            .store(&mut document, Some(&chord));
+        assert_eq!(
+            ShortcutAction::ToggleTranslateSwapped.chord_in(&document),
+            Some(chord)
+        );
+
+        document.set_choice(&keys::CANDIDATE_SLOT_MODIFIER, CandidateSlotKeySet::Control);
+        ShortcutConflicts::resolve_after_slot_key_set_change(
+            &mut document,
+            CandidateSlotKeySet::Control,
+        );
+        assert_eq!(
+            ShortcutAction::ToggleTranslateSwapped.chord_in(&document),
+            None,
+            "the slot set claimed the key"
+        );
+    }
+
+    #[test]
     fn only_the_panes_with_pages_are_listed_and_the_rest_have_no_view() {
         // trace: the roster and the dispatch are one table, so a pane
         // cannot be listed without a page or drawn without a row.
         assert!(page_view(SettingsPane::General).is_some());
         assert!(page_view(SettingsPane::Appearance).is_some());
+        assert!(page_view(SettingsPane::Shortcuts).is_some());
+        assert!(page_view(SettingsPane::DictionarySources).is_some());
         for pane in [
-            SettingsPane::Shortcuts,
             SettingsPane::CustomDictionary,
-            SettingsPane::DictionarySources,
             SettingsPane::DictionarySearch,
         ] {
             assert!(
                 page_view(pane).is_none(),
-                "{pane:?} has no page until W17-B/C"
+                "{pane:?} has no page until W17-C"
             );
         }
     }
