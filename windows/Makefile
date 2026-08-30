@@ -11,7 +11,7 @@
 
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help i18n-check test check-gnu check-msvc check-dll check-exe check fmt lint build release clean
+.PHONY: help i18n-check test check-gnu check-msvc check-dll check-exe check fmt lint build install uninstall reload release clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
 # checked for from macOS. A crate that pulls in C (the storage crate's bundled
@@ -36,6 +36,9 @@ help:
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt         - cargo fmt"
 	@echo "  make build       - (Windows) cargo build --release for the shipping target"
+	@echo "  make install     - (Windows, elevated) build and register the text service from this checkout"
+	@echo "  make uninstall   - (Windows, elevated) unregister it"
+	@echo "  make reload      - (Windows, elevated) re-register without rebuilding"
 	@echo "  make release     - (Windows) build, sign, package with Inno Setup and publish (scripts/release-app.sh)"
 
 # The Rust under crates/taigi-windows-core/src/strings/generated.rs is written
@@ -86,6 +89,22 @@ lint:
 
 build:
 	cargo build --release --target x86_64-pc-windows-msvc
+
+# The development install, counterpart of the macOS Makefile's install/
+# uninstall/reload: registers the build tree in place rather than installing
+# into Program Files. Elevated, because regsvr32 writes HKLM. `install` builds
+# for itself instead of depending on `build`: it has to unregister and set the
+# loaded dll aside FIRST, or the linker cannot replace it.
+DEV_INSTALL := powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-dev.ps1
+
+install:
+	$(DEV_INSTALL) install
+
+uninstall:
+	$(DEV_INSTALL) uninstall
+
+reload:
+	$(DEV_INSTALL) reload
 
 # The whole release on a Windows machine (Git Bash): docs/architecture/windows-release.md.
 release:

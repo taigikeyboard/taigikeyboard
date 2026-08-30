@@ -20,7 +20,8 @@ also needs a native smoke test). The installer refuses a 32-bit Windows
 
 A Windows machine (or VM) with Git Bash (`cygpath`, `sha256sum`, `base64`,
 `curl`), PowerShell (reads the built files' VERSIONINFO and signature back),
-Python 3, and:
+Python 3, GNU **make** (`winget install ezwinports.make` — Git for Windows does
+not ship it, and every `make` target below needs it), and:
 
 1. **Rust** with the `x86_64-pc-windows-msvc` target (`rustup target add`).
 2. **Inno Setup 6.5 or newer** (`x64compatible` is 6.3 syntax; the official

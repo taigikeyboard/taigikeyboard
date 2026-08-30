@@ -35,11 +35,20 @@ The dogfood run-book in the roadmap owns that.
 
 ```sh
 make build          # cargo build --release --target x86_64-pc-windows-msvc
+make install        # build + register this checkout (ELEVATED shell)
+make uninstall      # unregister; %APPDATA% user data stays
+make reload         # re-register what is already built, no rebuild
 make release        # build, sign, package (Inno Setup), publish — see below
 ```
 
-A development install is `regsvr32 target\x86_64-pc-windows-msvc\release\TaigiKeyboard.dll`
-from an elevated prompt (`/u` to unregister) with `Dictionaries\` and `Fonts\`
-copied beside the DLL (`scripts/release-app.sh` stages exactly that layout).
+`make install` is the development install, the counterpart of the macOS
+Makefile's: it registers the build tree in place instead of installing into
+Program Files, and it does the whole dance — unregister, set the loaded DLL
+aside so the linker can replace it, build, stage `Dictionaries\` and `Fonts\`
+beside the DLL (the layout `scripts/release-app.sh` also stages, because the
+DLL resolves them from its own directory), register, refresh the input
+indicator. Needs an elevated shell: `regsvr32` writes HKLM. Underneath it is
+`scripts/install-dev.ps1`, which can be run directly with the same three
+arguments.
 Releases: `docs/architecture/windows-release.md` (`make windows-release` at the
 repository root); the update manifest contract: `updates/README.md`.
