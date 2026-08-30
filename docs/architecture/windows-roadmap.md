@@ -412,6 +412,29 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   the TSF crate's `key_translation`, not a weaker copy; chords use the VK table. The
   decision stays `keys::evaluate_press` (core, untouched). The old egui limitations
   (keypad `+`, Win key, AltGr) are re-classified against the hook in PR B1.
+  **W17-B1 contracts** (Codex ANALYSIS-ONLY 2026-08-31: GO WITH CHANGES on all seven
+  forks; four of them were behaviour bugs in the plan, all folded in):
+  (a) **Tab is reported but NOT swallowed** — `evaluate_press` answers a bare Tab with
+  `PassThrough`, meaning recording ends AND the key walks the form, which it cannot do
+  if the hook ate it. It is never remembered as swallowed, so its key-up goes to the
+  window too. (b) **The hook drains, it does not just unhook**: dropping the guard stops
+  the reporting, but the hook stays installed until every key it swallowed has been
+  released — WinUI invokes a focused `Button` on the key-UP of Space, so a lone up is a
+  press the user did not make. A later `install()` on the same thread takes over a
+  still-draining hook (the user has since clicked another row with the mouse; nothing is
+  held). (c) **A full queue still swallows** — a key lost beats a key typed into the
+  form — while a gone one passes through; the two are distinct answers, not one bool.
+  (d) **Delivery is a closure, not a channel the UI polls**: a press queued for the next
+  1 s / 100 ms tick would be a visibly late keystroke, so the hook calls a bounded
+  `Fn(RecordedPress) -> Delivery` that hands the press to Reactor's own local queue and
+  wakes it. The thread-local state is read with `try_borrow_mut` (a re-entrant callback
+  passes the key through rather than panicking) and its borrow is never held across the
+  delivery closure or across Win32; the recording generation lives in the message that
+  closure sends, not in the platform. **OPEN, and the first dogfood question of W17-B**:
+  whether `WH_KEYBOARD` sees the keys of a WinUI 3 XAML island at all, or whether input
+  arrives through the CoreMessaging dispatcher queue — if it does not, the fallback is
+  `WH_GETMESSAGE` or the App SDK's `InputKeyboardSource` / `PreTranslateKeyboardSource`.
+  Nothing else in W17-B depends on which.
   **Behaviour freeze** (Codex Q7): every `settings.json` write, store call, the
   one-work-slot rule, CSV codec, the `Offer` machine, `--check-updates`, the launcher
   contract stay byte-for-byte. Named observable changes: window frame not persisted;
@@ -481,7 +504,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR11 | Dogfood fixes | first real-Windows smoke: fixes from the run-book + memory hand-off (not admin-only) | Pending |
 | W17-A0 | Reactor foundation | pinned `windows-reactor` git dep + MSVC-only `as_self_contained()` in `build.rs` (rc resources coexist), `make check-box` (ssh MSVC clippy) folded into `windows-check`, `release-app.sh` runtime staging + DLL no-WinUI import gate, `.iss` runtime files + uninstall, docs; egui entry point UNTOUCHED | **Merged** #647 (`fdbe647b`) |
 | W17-A | Shell + 一般 + 外觀 | `SettingsWindow` component (NavigationView, Mica, theme, size, title, live-reload tick, InfoBar banner, ContentDialog alerts), SettingsCard / choice / switch / action-card widgets, 一般 + 外觀 pages, update row + outcome dialog; ALTERNATE entry `--winui` (replaces A0's `--winui-smoke`, which the real window subsumes) — egui stays production until W17-C. Shared seams so nothing is written twice: `updates::UpdateHost` (both windows drive one check / offer / announce), `presentation` (display language, pane titles + glyphs, sponsor link), `user_data::open_at_launch` (the launch store migrations both entries owe). The Reactor sidebar lists only the panes this build has pages for; a stored or `--pane` selection it has no page for opens on 一般 IN MEMORY and is never written back, so a preview launch cannot move the egui window's selection | **Merged** #648 (`cf498ea6`) |
-| W17-B1 | Platform recorder hook | `taigi-windows-platform`: `WH_KEYBOARD` thread hook (RAII, catch_unwind, down+up swallow, try_send channel, host stub) + shared `ToUnicodeEx` bare-press naming with the TSF crate; pure tests | Pending |
+| W17-B1 | Platform recorder hook | `taigi-windows-platform`: `WH_KEYBOARD` thread hook (RAII + drain, `catch_unwind`, down+up swallow, bounded delivery closure, host stub) + the shared `ToUnicodeEx` translation moved out of the TSF crate so the recorder reads a key exactly as the classifier does (`key_translation::recorded_press`, AppKit reserved scalars for the keys that type nothing); pure tests for the `lParam` decode, the swallow bookkeeping and the scalar table. `make check-box` widens to the platform crate — its key translation IS the Win32 keyboard API, so its tests cannot run on the macOS host | Pending |
 | W17-B | 快捷鍵 + 詞庫來源 | recorder widget over B1 + shortcuts page; dictionary sources with `Expander` | Pending |
 | W17-C | 自訂詞庫 + 辭典搜尋 + cutover | ListView table, paging, CRUD ContentDialog, `rfd` CSV on background jobs, ProgressRing overlay, delete-all / clear-learning; search page; THEN delete egui (`app.rs` shell, `theme.rs`, `fonts.rs`, `keys.rs`, `work.rs`, egui widgets, eframe/egui deps) and make Reactor the only entry | Pending |
 

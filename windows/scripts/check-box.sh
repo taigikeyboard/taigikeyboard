@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# The settings crate's real gate (roadmap W13 amendment, W17): clippy + tests
-# on the Windows box, for the MSVC target that ships. The macOS gnu check only
-# type-checks it — `windows-reactor-setup` refuses the gnu target, and
-# `windows-reactor` has no host build at all.
+# The Windows-only crates' real gate (roadmap W13 amendment, W17): clippy +
+# tests on the box, for the MSVC target that ships. The macOS gnu check only
+# type-checks them — `windows-reactor-setup` refuses the gnu target,
+# `windows-reactor` has no host build at all, and the platform crate's key
+# translation is the Win32 keyboard API itself (so its tests cannot run on
+# the macOS host either).
 #
 # Gates the PUSHED commit (commit-first ordering): the box keeps its own gate
 # clone, fetches HEAD's SHA, checks it out detached and runs cargo there. An
@@ -41,8 +43,8 @@ remote+="; git -C '$BOX_REPO' fetch -q --prune origin '+refs/heads/*:refs/remote
 remote+="; if (-not (git -C '$BOX_REPO' branch -r --contains $sha)) { Write-Error 'HEAD $sha is on no remote branch: push first, the box gates the pushed commit'; exit 1 }"
 remote+="; git -C '$BOX_REPO' checkout -q --detach $sha; if (\$LASTEXITCODE -ne 0) { exit 1 }"
 remote+="; Set-Location '$BOX_REPO/windows'"
-remote+="; cargo clippy -p taigi-windows-settings --all-targets -- -D warnings; if (\$LASTEXITCODE -ne 0) { exit 1 }"
-remote+="; cargo test -p taigi-windows-settings; exit \$LASTEXITCODE"
+remote+="; cargo clippy -p taigi-windows-settings -p taigi-windows-platform --all-targets -- -D warnings; if (\$LASTEXITCODE -ne 0) { exit 1 }"
+remote+="; cargo test -p taigi-windows-settings -p taigi-windows-platform; exit \$LASTEXITCODE"
 
 echo "==> check-box: $BOX ($BOX_REPO) @ $sha"
 ssh -o BatchMode=yes -o ConnectTimeout=15 "$BOX" "$remote" ||

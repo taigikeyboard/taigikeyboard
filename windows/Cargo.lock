@@ -3157,6 +3157,7 @@ name = "taigi-windows-platform"
 version = "3.6.6"
 dependencies = [
  "log",
+ "taigi-windows-core",
  "windows 0.62.2",
 ]
 

@@ -3,6 +3,17 @@
 //! appearance — behind plain functions.
 //! On a non-Windows host (the macOS build gate, `make check`) each answers
 //! the neutral value, so the callers compile and test natively.
+//!
+//! Two of them are big enough to be their own modules: [`key_translation`]
+//! (one key-down → the snapshot the classifier reads and the press the
+//! shortcut recorder records, roadmap W5) and [`keyboard_hook`] (the
+//! thread-scoped `WH_KEYBOARD` the recorder listens through, W17-B1).
+
+/// Windows-only: it IS the Win32 keyboard API. The macOS gate type-checks
+/// it for the gnu target and `make check-box` runs its tests on the box.
+#[cfg(windows)]
+pub mod key_translation;
+pub mod keyboard_hook;
 
 // 中文: DLL 與設定視窗共用的少量 Win32 呼叫;非 Windows 主機給中性值,讓呼叫端在 macOS 上可測。
 
