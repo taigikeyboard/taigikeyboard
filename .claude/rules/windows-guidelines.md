@@ -36,7 +36,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   defaults, storage schemas, CSV, update flow all mirror `macos/Sources/TaigiInputMethodCore/**`.
   A port carries a `// mirrors macos/.../<File>.swift:<line>` comment on the mirrored constant or
   rule. Drift is a bug unless the roadmap names it as an intentional divergence.
-- Named divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
+- Named divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, no `.taigi` pane (macOS
   retired it too).
 

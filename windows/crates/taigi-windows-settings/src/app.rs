@@ -14,62 +14,28 @@ use crate::fonts::InstalledFonts;
 use crate::panes;
 use crate::panes::custom_dictionary::CustomDictionaryPageModel;
 use crate::panes::dictionary_search::DictionarySearchModel;
+use crate::presentation::{pane_title, PageMessage};
+use crate::settings_writer::{SettingsWriter, BUSY_REFRESH_INTERVAL, IDLE_REFRESH_INTERVAL};
 use crate::theme;
 use crate::updates::UpdateState;
-use crate::widgets::alert::PageMessage;
 use crate::widgets::recorder::RecorderState;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
 use taigi_windows_core::settings::{keys, AppearanceMode, SettingsDocument, SettingsPane};
-use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_windows_core::strings::{StringKey, StringResolver};
 use taigi_windows_storage::{LiveSettings, UserDataStores};
 
-/// How long an idle window waits before checking the file again: one
-/// `stat` a second is nothing, and a chord's effect showing within a second
-/// reads as live.
-const IDLE_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
-
-/// The resolver for the document's display language, `system` resolved
-/// against the machine (`DisplayLanguageStore.syncFromSettings`).
-pub fn strings_for(document: &SettingsDocument) -> StringResolver {
-    let tag = document.string(&keys::DISPLAY_LANGUAGE);
-    let language =
-        DisplayLanguage::from_tag(&tag).effective(&taigi_windows_platform::system_locale());
-    StringResolver::new(language)
-}
-
-/// The window title = the selected pane's label (`SettingsSplitViewController`).
-pub fn pane_title(strings: &StringResolver, pane: SettingsPane) -> String {
-    strings
-        .resolve(pane.title_key().unwrap_or(StringKey::DesktopGeneralTab))
-        .to_owned()
-}
-
 pub struct SettingsApp {
-    live: LiveSettings,
-    document: Arc<SettingsDocument>,
+    settings: SettingsWriter,
     stores: UserDataStores,
     /// Whether this process has loaded the dictionaries into the engine —
     /// only the search page needs them, so its first query loads them.
     is_lexicon_loaded: bool,
     pane: SettingsPane,
-    /// No per-user directory (`%APPDATA%` unset): the window shows the
-    /// defaults and refuses every write, saying so from the first frame —
-    /// never a file the DLL would not read (roadmap W2's
-    /// unsupported-capability rule). The data panes list nothing.
-    is_read_only: bool,
-    /// The last write that failed, shown as a banner until a write
-    /// succeeds: a control that snaps back with no word is a control that
-    /// looks broken.
-    write_failure: Option<String>,
     pub recorder: RecorderState,
     pub custom_dictionary: CustomDictionaryPageModel,
     pub search: DictionarySearchModel,
-    /// Taken out for the frame that drives it (it needs the app mutably)
-    /// and put back — never `None` between frames.
-    pub updates: Option<UpdateState>,
+    pub updates: UpdateState,
     /// A URL the browser refused to open, shown until dismissed
     /// (`ExternalLinkButton.swift:740-744`).
     pub message: Option<PageMessage>,
@@ -106,41 +72,18 @@ impl SettingsApp {
             Ok(RawWindowHandle::Win32(handle)) => Some(handle.hwnd.get()),
             _ => None,
         };
-        let document = live.refresh_if_changed();
-        let title = pane_title(&strings_for(&document), pane);
-        let updates = UpdateState::new();
-        let stores = UserDataStores::new(data_directory);
-        if !is_read_only {
-            stores.open();
-            // What the DLL does on its first consumed key, done here too:
-            // a fresh install whose first visitor is this window still gets
-            // its seeds, and an older dictionary its re-derived keys.
-            let custom_dictionary = Arc::clone(&stores.custom_dictionary);
-            std::thread::Builder::new()
-                .name("taigi-custom-dictionary-launch".into())
-                .spawn(move || {
-                    if let Err(error) = custom_dictionary.rederive_search_keys_if_needed() {
-                        log::error!("custom_dictionary.rederive_failed error={error}");
-                    }
-                    if let Err(error) = custom_dictionary.seed_if_empty() {
-                        log::error!("custom_dictionary.seed_failed error={error}");
-                    }
-                })
-                .ok();
-        }
+        let settings = SettingsWriter::new(std::rc::Rc::new(live), is_read_only);
+        let title = pane_title(&settings.strings(), pane);
+        let stores = crate::user_data::open_at_launch(data_directory, is_read_only);
         let mut app = Self {
-            live,
-            document,
+            settings,
             stores,
             is_lexicon_loaded: false,
             pane,
-            is_read_only,
-            // Said from the first frame, not at the first refused write.
-            write_failure: is_read_only.then(|| "APPDATA".to_owned()),
             recorder: RecorderState::default(),
             custom_dictionary: CustomDictionaryPageModel::default(),
             search: DictionarySearchModel::default(),
-            updates: Some(updates),
+            updates: UpdateState::new(),
             message: None,
             title,
             fonts,
@@ -150,23 +93,21 @@ impl SettingsApp {
         };
         // The overdue daily check, or the menu's 檢查更新 (`--check-now`)
         // — the manual one always answers.
-        let mut updates = app.updates.take().expect("updates present");
         if is_check_now {
-            updates.check_manually(&mut app);
+            app.updates.check_manually(&mut app.settings);
         } else if !is_read_only {
-            updates.check_if_due(&mut app);
+            app.updates.check_if_due(&mut app.settings);
         }
-        app.updates = Some(updates);
         // `--pane` is a selection like a click: persisted, so the next
         // plain launch reopens there too.
-        if app.document.choice(&keys::SELECTED_SETTINGS_PANE) != pane {
+        if app.document().choice(&keys::SELECTED_SETTINGS_PANE) != pane {
             app.select_pane(pane);
         }
         app
     }
 
     pub fn document(&self) -> &SettingsDocument {
-        &self.document
+        self.settings.document()
     }
 
     pub fn stores(&self) -> &UserDataStores {
@@ -174,7 +115,7 @@ impl SettingsApp {
     }
 
     pub fn is_read_only(&self) -> bool {
-        self.is_read_only
+        self.settings.is_read_only()
     }
 
     pub fn is_lexicon_loaded(&self) -> bool {
@@ -188,7 +129,7 @@ impl SettingsApp {
     }
 
     pub fn strings(&self) -> StringResolver {
-        strings_for(&self.document)
+        self.settings.strings()
     }
 
     pub fn pane(&self) -> SettingsPane {
@@ -215,26 +156,18 @@ impl SettingsApp {
         self.update_document(|document| document.set_choice(&keys::SELECTED_SETTINGS_PANE, pane));
     }
 
-    /// One atomic edit of `settings.json` (lock, load, mutate, save), then
-    /// the window's copy follows the file — the same path the DLL's own
-    /// writes take, so two writers cannot lose each other's change. A
-    /// failed write is reported, not swallowed.
     pub fn update_document(&mut self, mutate: impl FnOnce(&mut SettingsDocument)) {
-        if self.is_read_only {
-            return;
-        }
-        match self.live.store().update(mutate) {
-            Ok(_) => self.write_failure = None,
-            Err(error) => {
-                log::error!("settings.update_failed error={error}");
-                self.write_failure = Some(error.to_string());
-            }
-        }
-        self.document = self.live.refresh_if_changed();
+        self.settings.update(mutate);
+    }
+
+    /// The 一般 pane's 檢查更新 press: the update state and the settings
+    /// are both the window's, and they are disjoint fields.
+    pub fn check_for_updates(&mut self) {
+        self.updates.check_manually(&mut self.settings);
     }
 
     fn sync_theme(&mut self, ctx: &egui::Context) {
-        let mode: AppearanceMode = self.document.choice(&keys::APPEARANCE_MODE);
+        let mode: AppearanceMode = self.document().choice(&keys::APPEARANCE_MODE);
         let preference = match mode {
             AppearanceMode::Light => egui::ThemePreference::Light,
             AppearanceMode::Dark => egui::ThemePreference::Dark,
@@ -288,7 +221,7 @@ impl SettingsApp {
     }
 
     fn show_write_failure(&self, ui: &mut egui::Ui) {
-        let Some(detail) = &self.write_failure else {
+        let Some(detail) = self.settings.write_failure() else {
             return;
         };
         let strings = self.strings();
@@ -309,33 +242,23 @@ impl SettingsApp {
     /// Collects the check and the download in flight; the manual outcome
     /// is shown as its own alert with its own buttons.
     fn drive_updates(&mut self, ctx: &egui::Context) {
-        let mut updates = self.updates.take().expect("updates present");
-        updates.poll(self);
-        if updates.is_checking() || updates.installation.is_downloading() {
-            ctx.request_repaint_after(Duration::from_millis(100));
+        self.updates.poll(&mut self.settings);
+        if self.updates.is_busy() {
+            ctx.request_repaint_after(BUSY_REFRESH_INTERVAL);
         }
-        if let Some(outcome) = updates.manual_outcome.clone() {
-            let strings = self.strings();
-            match crate::widgets::update_alert::show(ctx, &strings, &outcome) {
-                Some(crate::widgets::update_alert::UpdateAlertAction::Proceed) => {
-                    updates.manual_outcome = None;
-                    if let taigi_windows_update::Outcome::UpdateAvailable(manifest) =
-                        &outcome.outcome
-                    {
-                        if outcome.installs_in_app {
-                            updates.installation.start_download(manifest);
-                        } else {
-                            crate::updates::open_download_page(self, manifest);
-                        }
-                    }
-                }
-                Some(crate::widgets::update_alert::UpdateAlertAction::Dismiss) => {
-                    updates.manual_outcome = None;
-                }
-                None => {}
+        let Some(outcome) = self.updates.manual_outcome().cloned() else {
+            return;
+        };
+        let strings = self.strings();
+        match crate::widgets::update_alert::show(ctx, &strings, &outcome) {
+            Some(crate::widgets::update_alert::UpdateAlertAction::Proceed) => {
+                self.message = self.updates.proceed_with_manual_outcome();
             }
+            Some(crate::widgets::update_alert::UpdateAlertAction::Dismiss) => {
+                self.updates.dismiss_manual_outcome();
+            }
+            None => {}
         }
-        self.updates = Some(updates);
     }
 
     /// ONE alert at a time, whichever page raised it first in this order;
@@ -361,7 +284,7 @@ impl eframe::App for SettingsApp {
         self.recorder.intercept(ctx);
         // One `stat` per frame; the DLL's writes (a chord, a menu row) land
         // here without being told.
-        self.document = self.live.refresh_if_changed();
+        self.settings.refresh();
         ctx.request_repaint_after(IDLE_REFRESH_INTERVAL);
         self.sync_theme(ctx);
         self.sync_title(ctx);

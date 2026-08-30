@@ -286,6 +286,21 @@ impl SettingsPane {
             Self::DictionarySearch => return None,
         })
     }
+
+    /// The sidebar row's Segoe Fluent Icons / MDL2 Assets glyph — the same
+    /// code points in both faces — matching the Mac's symbol per pane:
+    /// gearshape → Settings, paintpalette → Color, keyboard →
+    /// KeyboardClassic, character.book.closed → Dictionary,
+    /// books.vertical → Library (`SettingsSplitView.swift:36-44`).
+    pub fn icon_glyph(self) -> &'static str {
+        match self {
+            Self::General => "\u{E713}",
+            Self::Appearance => "\u{E790}",
+            Self::Shortcuts => "\u{E765}",
+            Self::CustomDictionary => "\u{E82D}",
+            Self::DictionarySources | Self::DictionarySearch => "\u{E8F1}",
+        }
+    }
 }
 
 impl SettingChoice for SettingsPane {

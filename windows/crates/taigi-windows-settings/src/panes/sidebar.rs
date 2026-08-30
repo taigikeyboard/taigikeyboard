@@ -31,20 +31,6 @@ const LABEL_GAP: f32 = 16.0;
 /// The selection indicator: a 3×16 pill on the row's left edge.
 const INDICATOR_SIZE: egui::Vec2 = egui::vec2(3.0, 16.0);
 
-/// The Segoe Fluent Icons / MDL2 Assets glyph for each pane — the same
-/// code points in both faces — matching the Mac's symbol per pane:
-/// gearshape → Settings, paintpalette → Color, keyboard → KeyboardClassic,
-/// character.book.closed → Dictionary, books.vertical → Library.
-fn icon_glyph(pane: SettingsPane) -> &'static str {
-    match pane {
-        SettingsPane::General => "\u{E713}",
-        SettingsPane::Appearance => "\u{E790}",
-        SettingsPane::Shortcuts => "\u{E765}",
-        SettingsPane::CustomDictionary => "\u{E82D}",
-        SettingsPane::DictionarySources | SettingsPane::DictionarySearch => "\u{E8F1}",
-    }
-}
-
 pub fn show(ctx: &egui::Context, app: &mut SettingsApp) {
     let strings = app.strings();
     let current = app.pane();
@@ -127,7 +113,7 @@ fn navigation_row(
         painter.text(
             egui::pos2(x, rect.center().y),
             egui::Align2::LEFT_CENTER,
-            icon_glyph(pane),
+            pane.icon_glyph(),
             egui::FontId::new(ICON_SIZE, icon_family()),
             ui.visuals().text_color(),
         );

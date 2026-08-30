@@ -1,12 +1,12 @@
 //! What a manual update check answers with (`UpdateAlertPresenter`): an
 //! update — with its download (or download-and-install) button and 稍後;
-//! up to date; or the check failed.
+//! up to date; or the check failed. The wording is `ManualOutcome`'s, so
+//! this window and the WinUI one say the same thing.
 
 // 中文: 手動檢查更新的結果視窗 — 有更新(下載/下載並安裝 + 稍後)、已是最新、檢查失敗。
 
 use crate::updates::ManualOutcome;
 use taigi_windows_core::strings::{StringKey, StringResolver};
-use taigi_windows_update::Outcome;
 
 /// What the user pressed.
 pub enum UpdateAlertAction {
@@ -20,26 +20,10 @@ pub fn show(
     strings: &StringResolver,
     outcome: &ManualOutcome,
 ) -> Option<UpdateAlertAction> {
-    let (title, detail): (StringKey, Option<String>) = match &outcome.outcome {
-        Outcome::UpdateAvailable(manifest) => (
-            StringKey::DesktopUpdateAvailableTitle,
-            Some(strings.format(
-                StringKey::DesktopUpdateAvailableMessage,
-                &[&manifest.version],
-            )),
-        ),
-        Outcome::UpToDate => (StringKey::DesktopUpdateUpToDateTitle, None),
-        Outcome::Failed => (
-            StringKey::DesktopUpdateCheckFailedTitle,
-            Some(
-                strings
-                    .resolve(StringKey::DesktopUpdateCheckFailedMessage)
-                    .to_owned(),
-            ),
-        ),
-    };
+    let (title, detail) = outcome.alert_text(strings);
+    let proceed = outcome.proceed_key();
     let mut action = None;
-    egui::Window::new(strings.resolve(title))
+    egui::Window::new(title)
         .id(egui::Id::new("update_alert"))
         .collapsible(false)
         .resizable(false)
@@ -52,14 +36,9 @@ pub fn show(
             }
             ui.with_layout(
                 egui::Layout::right_to_left(egui::Align::Center),
-                |ui| match &outcome.outcome {
-                    Outcome::UpdateAvailable(_) => {
-                        let proceed = if outcome.installs_in_app {
-                            StringKey::DesktopUpdateDownloadAndInstallAction
-                        } else {
-                            StringKey::DesktopUpdateDownloadAction
-                        };
-                        if ui.button(strings.resolve(proceed)).clicked() {
+                |ui| match proceed {
+                    Some(key) => {
+                        if ui.button(strings.resolve(key)).clicked() {
                             action = Some(UpdateAlertAction::Proceed);
                         }
                         if ui
@@ -69,7 +48,7 @@ pub fn show(
                             action = Some(UpdateAlertAction::Dismiss);
                         }
                     }
-                    Outcome::UpToDate | Outcome::Failed => {
+                    None => {
                         if ui.button(strings.resolve(StringKey::CommonOk)).clicked() {
                             action = Some(UpdateAlertAction::Dismiss);
                         }

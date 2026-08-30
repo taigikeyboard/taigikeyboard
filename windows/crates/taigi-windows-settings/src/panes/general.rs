@@ -7,15 +7,13 @@
 
 use super::{choice_combo, section_gap};
 use crate::app::SettingsApp;
+use crate::presentation::{self, SPONSOR_URL};
 use crate::updates::INSTALLED_VERSION;
 use crate::widgets::external_link;
 use crate::widgets::settings_card::{self, row};
 use taigi_windows_core::settings::{keys, InputMode};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey};
-use taigi_windows_update::{checker, Offer};
-
-/// `GeneralSettingsView.sponsorURL`.
-const SPONSOR_URL: &str = "https://p.ecpay.com.tw/AA663DE";
+use taigi_windows_update::checker;
 
 pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     let strings = app.strings();
@@ -27,10 +25,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     // A pop-up like the row under it, not a radio group (System Settings'
     // shape for a small mutually-exclusive choice).
     row(ui, strings.resolve(StringKey::SettingsInputMode), |ui| {
-        let label = |mode: InputMode| match mode {
-            InputMode::Tl => strings.resolve(StringKey::SettingsTlMode).to_owned(),
-            InputMode::Poj => strings.resolve(StringKey::SettingsPojMode).to_owned(),
-        };
+        let label = |mode: InputMode| strings.resolve(mode.label_key()).to_owned();
         let choices = [InputMode::Tl, InputMode::Poj].map(|mode| (mode, label(mode)));
         if choice_combo(
             ui,
@@ -51,14 +46,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
         strings.resolve(StringKey::SettingsDisplayLanguage),
         |ui| {
             let label = |language: DisplayLanguage| {
-                language.endonym().map_or_else(
-                    || {
-                        strings
-                            .resolve(StringKey::SettingsDisplayLanguageAutomatic)
-                            .to_owned()
-                    },
-                    str::to_owned,
-                )
+                presentation::display_language_label(language, &strings)
             };
             let choices = DisplayLanguage::PICKER.map(|language| (language, label(language)));
             if choice_combo(
@@ -129,63 +117,44 @@ fn footer_width(ui: &egui::Ui, strings: &taigi_windows_core::strings::StringReso
 /// only when something went wrong.
 fn update_row(ui: &mut egui::Ui, app: &mut SettingsApp) {
     let strings = app.strings();
-    let pending = checker::pending_update(app.document(), INSTALLED_VERSION);
-    let mut updates = app.updates.take().expect("updates present");
-    match pending {
-        None => {
-            let label = strings.format(
-                StringKey::DesktopUpdateCurrentVersionLabel,
-                &[&INSTALLED_VERSION],
-            );
-            row(ui, &label, |ui| {
-                let checking = updates.is_checking();
-                if ui
-                    .add_enabled(
-                        !checking,
-                        egui::Button::new(strings.resolve(StringKey::DesktopUpdateCheckNow)),
-                    )
-                    .clicked()
-                {
-                    updates.check_manually(app);
-                }
-                if checking {
-                    ui.spinner();
-                }
-            });
-        }
-        Some(manifest) => {
-            let offer = updates.installation.offer(&manifest);
-            let label = strings.format(
-                StringKey::DesktopUpdatePendingVersionLabel,
-                &[&manifest.version],
-            );
-            row(ui, &label, |ui| {
-                let action = match &offer {
-                    Offer::DownloadPage | Offer::PackageRejected => {
-                        Some(StringKey::DesktopUpdateDownloadAction)
-                    }
-                    Offer::StartDownload => Some(StringKey::DesktopUpdateDownloadAndInstallAction),
-                    Offer::Install(_) | Offer::InstallerOpenFailed(_) => {
-                        Some(StringKey::DesktopUpdateInstallAction)
-                    }
-                    Offer::DownloadFailed => Some(StringKey::DesktopUpdateRetryAction),
-                    Offer::Downloading => None,
-                };
-                match action {
-                    Some(key) => {
-                        if ui.button(strings.resolve(key)).clicked() {
-                            updates.act_on_offer(app, &manifest);
-                        }
-                    }
-                    None => {
-                        ui.spinner();
-                    }
-                }
-            });
-            if let Some(note) = offer.note_key() {
-                ui.weak(strings.resolve(note));
+    let Some(manifest) = checker::pending_update(app.document(), INSTALLED_VERSION) else {
+        let label = strings.format(
+            StringKey::DesktopUpdateCurrentVersionLabel,
+            &[&INSTALLED_VERSION],
+        );
+        let checking = app.updates.is_checking();
+        row(ui, &label, |ui| {
+            if ui
+                .add_enabled(
+                    !checking,
+                    egui::Button::new(strings.resolve(StringKey::DesktopUpdateCheckNow)),
+                )
+                .clicked()
+            {
+                app.check_for_updates();
+            }
+            if checking {
+                ui.spinner();
+            }
+        });
+        return;
+    };
+    let offer = app.updates.installation.offer(&manifest);
+    let label = strings.format(
+        StringKey::DesktopUpdatePendingVersionLabel,
+        &[&manifest.version],
+    );
+    row(ui, &label, |ui| match offer.action_key() {
+        Some(key) => {
+            if ui.button(strings.resolve(key)).clicked() {
+                app.message = app.updates.act_on_offer(&manifest);
             }
         }
+        None => {
+            ui.spinner();
+        }
+    });
+    if let Some(note) = offer.note_key() {
+        ui.weak(strings.resolve(note));
     }
-    app.updates = Some(updates);
 }

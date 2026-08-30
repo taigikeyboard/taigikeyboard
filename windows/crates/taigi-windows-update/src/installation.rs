@@ -39,6 +39,23 @@ impl Offer {
         }
     }
 
+    /// The label of the button that acts on the state, so a control and
+    /// the state it acts on cannot be paired wrongly. `None` while a
+    /// download runs: there is nothing to press, only a spinner.
+    pub fn action_key(&self) -> Option<StringKey> {
+        match self {
+            Self::DownloadPage | Self::PackageRejected => {
+                Some(StringKey::DesktopUpdateDownloadAction)
+            }
+            Self::StartDownload => Some(StringKey::DesktopUpdateDownloadAndInstallAction),
+            Self::Install(_) | Self::InstallerOpenFailed(_) => {
+                Some(StringKey::DesktopUpdateInstallAction)
+            }
+            Self::DownloadFailed => Some(StringKey::DesktopUpdateRetryAction),
+            Self::Downloading => None,
+        }
+    }
+
     /// The note that travels with the state, so a control and an
     /// explanation cannot be paired wrongly.
     pub fn note_key(&self) -> Option<StringKey> {
@@ -295,6 +312,29 @@ fn run_download(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn every_offer_pairs_its_button_with_its_note_and_only_a_download_shows_neither() {
+        // trace: the pending row draws `action_key`'s button, or a spinner
+        // when there is none, and `note_key`'s line under it. A download in
+        // flight is the one state with nothing to press.
+        let staged = std::path::PathBuf::from("staged.exe");
+        for offer in [
+            Offer::DownloadPage,
+            Offer::StartDownload,
+            Offer::DownloadFailed,
+            Offer::PackageRejected,
+            Offer::Install(staged.clone()),
+            Offer::InstallerOpenFailed(staged),
+        ] {
+            assert!(
+                offer.action_key().is_some(),
+                "{offer:?} leaves the user nothing to press"
+            );
+        }
+        assert_eq!(Offer::Downloading.action_key(), None);
+        assert_eq!(Offer::Downloading.note_key(), None);
+    }
+
     use super::*;
     use crate::transport::FetchError;
 

@@ -20,6 +20,16 @@ impl InputMode {
     pub fn wire(self) -> &'static str {
         self.raw()
     }
+
+    /// The picker row's i18n key, as every other choice type carries one
+    /// (`GeneralSettingsView.swift`).
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Tl => StringKey::SettingsTlMode,
+            Self::Poj => StringKey::SettingsPojMode,
+        }
+    }
 }
 
 impl SettingChoice for InputMode {

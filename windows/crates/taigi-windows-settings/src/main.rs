@@ -13,9 +13,12 @@ mod cli;
 mod fonts;
 mod keys;
 mod panes;
+mod presentation;
 mod search;
+mod settings_writer;
 mod theme;
 mod updates;
+mod user_data;
 mod widgets;
 #[cfg(windows)]
 mod winui;
@@ -23,6 +26,7 @@ mod work;
 
 use app::SettingsApp;
 use cli::LaunchOptions;
+use presentation::{pane_title, strings_for};
 use taigi_windows_core::settings::SettingsPane;
 use taigi_windows_storage::{user_data_directory, LiveSettings, SettingsFileStore};
 
@@ -45,15 +49,6 @@ const WINDOW_STATE_FILE: &str = "settings-window.ron";
 
 fn main() -> eframe::Result {
     taigi_windows_platform::install_debug_logger();
-    // W17-A0: the WinUI foundation smoke — a window on the staged runtime,
-    // nothing of the app. Goes with the egui entry at the W17-C cutover.
-    #[cfg(windows)]
-    if std::env::args().any(|argument| argument == winui::SMOKE_FLAG) {
-        if !winui::run_smoke() {
-            std::process::exit(1);
-        }
-        return Ok(());
-    }
     let launch = LaunchOptions::parse(std::env::args().skip(1));
     if launch.headless_check {
         headless_check();
@@ -81,7 +76,17 @@ fn main() -> eframe::Result {
     let pane: SettingsPane = launch.pane.unwrap_or_else(|| {
         document.choice(&taigi_windows_core::settings::keys::SELECTED_SETTINGS_PANE)
     });
-    let title = app::pane_title(&app::strings_for(&document), pane);
+    // W17: the WinUI 3 window, while the egui one is still what ships. The
+    // flag is the only difference — same single instance, same settings
+    // file, same `--pane` / `--check-now` contract.
+    #[cfg(windows)]
+    if launch.is_winui {
+        if !winui::run(live, directory, pane, is_read_only, launch.check_now) {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+    let title = pane_title(&strings_for(&document), pane);
     let window_state = directory.join(WINDOW_STATE_FILE);
     let directory = directory.clone();
     let options = eframe::NativeOptions {
@@ -164,7 +169,7 @@ fn headless_check() {
             return;
         }
         if claimed {
-            updates::post_toast(&app::strings_for(&document), manifest);
+            updates::post_toast(&strings_for(&document), manifest);
         }
     }
 }

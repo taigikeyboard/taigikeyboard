@@ -11,7 +11,7 @@
 
 use super::section_gap;
 use crate::app::SettingsApp;
-use crate::widgets::alert::PageMessage;
+use crate::presentation::PageMessage;
 use crate::widgets::settings_card;
 use crate::work::PendingWork;
 use std::path::PathBuf;

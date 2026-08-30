@@ -370,12 +370,26 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   + one page per pane; SettingsCard = `Border(CardBackground, CardStroke, 1px, 4px,
   padding 16×12)` over `Grid[★, auto]`; 教典 subcollections in an `Expander`; the
   destructive / reset actions are real `Button`s carrying the card (Codex Q6: keyboard
-  activation + UIA role; brushes via `resource_overrides` — spike whether the override
-  keys keep theme resolution; else Subtle button chrome around an inner card `Border`,
-  never a pointer-only `Border`); alerts = `ContentDialog`; banners = `InfoBar`; busy =
+  activation + UIA role); alerts = `ContentDialog`; banners = `InfoBar`; busy =
   `ProgressRing`. Window: `client_size(760, 560)` + min constraints; frame position is
   NOT persisted (`settings-window.ron` retired) — named divergence from the Mac's
   autosaved frame.
+  **Codex Q6's spike is answered by the API, not by the box (W17-A)**: `ResourceValue`
+  carries only `Color` / `CornerRadius` / `Thickness` — there is no theme-brush resource
+  value, so any `ButtonBackground` override would freeze a literal colour against
+  light / dark / high contrast. The action card is therefore a full-width DEFAULT-style
+  `Button` wearing its own native actionable-card chrome, with only the theme-independent
+  geometry overridden (`ControlCornerRadius` 4, `ButtonPadding` 16×12) and the label in
+  `ThemeBrush::Accent` (`SystemCritical` when destructive). Not "looks like a card" —
+  native actionable-card chrome, to be judged on the box in normal / hover / pressed /
+  disabled / high contrast.
+  **Two more named divergences from the Mac, decided in W17-A**: (a) the 外觀 mode is a
+  native pop-up, not the Mac's three drawn light / dark / auto thumbnails — the setting's
+  semantics (three options, their order, the stored value, live apply, `Auto` following
+  the system) are what parity owns, and Windows 11 Settings itself uses a pop-up for
+  "Choose your mode"; (b) the window's width floor is 600, not the Mac's fixed 760, so
+  `NavigationView` can actually reach the ~641px threshold its adaptive pane behaviour —
+  and the acceptance line below — exists for.
   **Timers** (Codex Q5): live reload (W10) = a re-armed single-flight
   `spawn_background(sleep 1 s → Tick{generation})`; the closure checks cancellation after
   the sleep; every message that can arrive late (tick, filter debounce, spinner delay,
@@ -465,8 +479,8 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR9 | Updates | `taigi-windows-update`: `manifest` (wire format = macOS's, `DottedVersion` zero-padded), `checker` (due / stamp-before-fetch / record / announce-once, pure over `SettingsDocument`), `transport` (`ManifestFetcher` + `PackageDownloader` traits; `ureq` over schannel, 64 KiB / 200 MiB ceilings, HTTPS+200 only), `installation` (the `Offer` state machine, staging `%LOCALAPPDATA%\TaigiKeyboard\Updates\<uuid>\<version>.exe`, download + verify on a thread), `verify` (WinVerifyTrust + signer thumbprint pinned to the running exe + VERSIONINFO product/version; host stub = no in-app install), `toast` (WinRT, AUMID `TaigiKeyboard.Settings`); settings exe: overdue check at launch, `--check-now` alert, `--check-updates` headless, 一般-pane pending row per offer | **Merged** #634 (`101034f5`) |
 | PR10 | Installer + release | `windows/installer/TaigiKeyboard.iss` (admin, `{autopf}\TaigiKeyboard`, x64compatible, Inno 6.5+; languages = macOS bundle's zh-Hant/en/ja with Hanji first as fallback, messages generated from `desktop.installer*` into `Messages.iss` by `make i18n` — USER 2026-08-29「macos有什麼語言，windows就有什麼」; unregister + stop settings exe + rename lock-probe with the sign-out recipe before copying; regsvr32 x64 + SysWOW64 for a staged x86 DLL; AUMID Start-menu shortcut; per-user scheduled task from `update-check-task.xml` created as the original user, `IgnoreNew`; symmetric uninstall, `%APPDATA%` kept) · `build-support/resource.rs` + both crates' `build.rs` (icon id 1 + VERSIONINFO with `VFT_APP`/`VFT_DLL` via rc.exe / llvm-rc / windres; `TAIGI_REQUIRE_RESOURCES=1` = compile failure fatal, no windres on MSVC) · `resources/TaigiKeyboard.ico` (`tools/windows/make-ico.py`) · `scripts/{lib/identity.sh,release-app.sh,publish-release.sh}` (mirror of macOS; signtool by thumbprint, env-gated; VERSIONINFO read back from DLL/exe/installer via PowerShell and compared to the checkout; `dumpbin /dependents` no-VC-runtime gate; publisher pins the installer's signer to `WINDOWS_SIGNING_THUMBPRINT`; `windows-v<ver>` release on the website repo; `appcast/windows.json` + `_data/windows_release.json`; poll live) · root `make windows-release`, `windows/Makefile release` · `tools/release_notes.py` set/check-versions += `windows/Cargo.toml` · docs `windows-release.md`, `windows/updates/README.md`, README | **Merged** #635 (`05c06cd0`) — 2026-08-29 USER「merge all PR」; installer languages = macOS bundle set (hanji/en/ja) via `desktop.installer*` → `Messages.iss` |
 | PR11 | Dogfood fixes | first real-Windows smoke: fixes from the run-book + memory hand-off (not admin-only) | Pending |
-| W17-A0 | Reactor foundation | pinned `windows-reactor` git dep + MSVC-only `as_self_contained()` in `build.rs` (rc resources coexist), `make check-box` (ssh MSVC clippy) folded into `windows-check`, `release-app.sh` runtime staging + DLL no-WinUI import gate, `.iss` runtime files + uninstall, docs; egui entry point UNTOUCHED | Pending |
-| W17-A | Shell + 一般 + 外觀 | `SettingsWindow` component (NavigationView, Mica, theme, size, title, live-reload tick, InfoBar banners, ContentDialog alerts), SettingsCard/button-card widgets, 一般 + 外觀 pages, update row + outcome dialog; ships as an ALTERNATE entry (`--winui` or feature) — egui stays production until W17-C | Pending |
+| W17-A0 | Reactor foundation | pinned `windows-reactor` git dep + MSVC-only `as_self_contained()` in `build.rs` (rc resources coexist), `make check-box` (ssh MSVC clippy) folded into `windows-check`, `release-app.sh` runtime staging + DLL no-WinUI import gate, `.iss` runtime files + uninstall, docs; egui entry point UNTOUCHED | **Merged** #647 (`fdbe647b`) |
+| W17-A | Shell + 一般 + 外觀 | `SettingsWindow` component (NavigationView, Mica, theme, size, title, live-reload tick, InfoBar banner, ContentDialog alerts), SettingsCard / choice / switch / action-card widgets, 一般 + 外觀 pages, update row + outcome dialog; ALTERNATE entry `--winui` (replaces A0's `--winui-smoke`, which the real window subsumes) — egui stays production until W17-C. Shared seams so nothing is written twice: `updates::UpdateHost` (both windows drive one check / offer / announce), `presentation` (display language, pane titles + glyphs, sponsor link), `user_data::open_at_launch` (the launch store migrations both entries owe). The Reactor sidebar lists only the panes this build has pages for; a stored or `--pane` selection it has no page for opens on 一般 IN MEMORY and is never written back, so a preview launch cannot move the egui window's selection | Pending |
 | W17-B1 | Platform recorder hook | `taigi-windows-platform`: `WH_KEYBOARD` thread hook (RAII, catch_unwind, down+up swallow, try_send channel, host stub) + shared `ToUnicodeEx` bare-press naming with the TSF crate; pure tests | Pending |
 | W17-B | 快捷鍵 + 詞庫來源 | recorder widget over B1 + shortcuts page; dictionary sources with `Expander` | Pending |
 | W17-C | 自訂詞庫 + 辭典搜尋 + cutover | ListView table, paging, CRUD ContentDialog, `rfd` CSV on background jobs, ProgressRing overlay, delete-all / clear-learning; search page; THEN delete egui (`app.rs` shell, `theme.rs`, `fonts.rs`, `keys.rs`, `work.rs`, egui widgets, eframe/egui deps) and make Reactor the only entry | Pending |
