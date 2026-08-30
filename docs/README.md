@@ -109,6 +109,7 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
 | `reports/2026-06-24-i18n-migration-audit.md` | i18n remaining-migration coverage audit (G1-G6 scope) | Historical |
+| `reports/2026-08-30-hanlo-together-mode-research.md` | 漢羅齊出 (one-label hanji+roman candidate mode, TL/POJ) — research only, open questions for USER, not implemented | Plan |
 | `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
 | `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
 
