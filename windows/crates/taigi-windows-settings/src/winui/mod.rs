@@ -12,6 +12,8 @@
 mod cards;
 mod file_dialog;
 mod pages;
+#[cfg(test)]
+mod pane_planning;
 mod window;
 
 pub use window::run;

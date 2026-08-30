@@ -32,6 +32,13 @@ windows-reactor.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 
+# `test` exposes the headless `Pump` + `RecordingRuntime`, which plan a view
+# tree with no WinUI runtime and no desktop — what `winui::pane_planning`
+# needs to catch a tree the reactor refuses (`winui/pane_planning.rs`). A
+# dev-dependency feature does not reach the shipped binary.
+[target.'cfg(windows)'.dev-dependencies]
+windows-reactor = { workspace = true, features = ["test"] }
+
 [build-dependencies]
 windows-reactor-setup.workspace = true
 

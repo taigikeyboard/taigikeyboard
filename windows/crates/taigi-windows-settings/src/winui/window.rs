@@ -106,6 +106,29 @@ impl PartialEq for SettingsWindowInput {
     }
 }
 
+impl SettingsWindowInput {
+    /// The one place a launch is assembled, so `run` and the pane-planning
+    /// tests reach the component through the same path. The stores are
+    /// passed in rather than opened here: opening them is a LAUNCH-time
+    /// side effect (migrations on a background thread), and a test that
+    /// only plans a view tree must not start one.
+    pub(crate) fn new(
+        live: LiveSettings,
+        stores: UserDataStores,
+        is_read_only: bool,
+        pane: SettingsPane,
+        is_check_now: bool,
+    ) -> Self {
+        Self(Rc::new(Launch {
+            live: Rc::new(live),
+            stores,
+            is_read_only,
+            pane,
+            is_check_now,
+        }))
+    }
+}
+
 /// Answers whether the window ran to a normal close; a failed launch is a
 /// non-zero exit so a gate can tell it from success.
 pub fn run(
@@ -115,13 +138,13 @@ pub fn run(
     is_read_only: bool,
     is_check_now: bool,
 ) -> bool {
-    let input = SettingsWindowInput(Rc::new(Launch {
-        live: Rc::new(live),
-        stores: crate::user_data::open_at_launch(directory, is_read_only),
+    let input = SettingsWindowInput::new(
+        live,
+        crate::user_data::open_at_launch(directory, is_read_only),
         is_read_only,
         pane,
         is_check_now,
-    }));
+    );
     match App::run_component::<SettingsWindow>(input) {
         Ok(()) => true,
         Err(error) => {
