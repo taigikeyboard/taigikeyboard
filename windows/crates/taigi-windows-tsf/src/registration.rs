@@ -11,15 +11,16 @@ use crate::guids::{CLSID_TEXT_SERVICE, GUID_PROFILE, LANGID_ZH_TW};
 use crate::module::module_path;
 use crate::registry::{delete_tree, Key};
 use crate::wide::to_wide_nul;
-use windows::core::{Error, Interface, Result, GUID};
-use windows::Win32::Foundation::E_UNEXPECTED;
-use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
+use windows::core::{Error, Interface, Result, GUID, HRESULT};
+use windows::Win32::Foundation::{E_FAIL, E_UNEXPECTED, S_FALSE, S_OK};
+use windows::Win32::System::Com::{CoCreateInstance, IEnumGUID, CLSCTX_INPROC_SERVER};
 use windows::Win32::System::Registry::HKEY_CLASSES_ROOT;
 use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
 use windows::Win32::UI::TextServices::{
     CLSID_TF_CategoryMgr, CLSID_TF_InputProcessorProfiles, ITfCategoryMgr,
     ITfInputProcessorProfileMgr, ITfInputProcessorProfiles, GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
     GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT, GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD,
+    TF_INPUTPROCESSORPROFILE,
 };
 
 /// What the CLSID key is named, and what the language bar falls back to when
@@ -75,13 +76,162 @@ pub fn register_server() -> Result<()> {
 /// Every step is attempted; the first failure is reported after the rest
 /// ran, so a half-registered install is not left behind by an early return.
 pub fn unregister_server() -> Result<()> {
-    let categories = unregister_categories();
-    let profile = unregister_profile();
-    let clsid = delete_tree(
-        HKEY_CLASSES_ROOT,
-        &format!("CLSID\\{}", guid_key(&CLSID_TEXT_SERVICE)),
+    // Remove everything, then judge by what is left rather than by what the
+    // removals returned. TSF answers a bare `E_FAIL` (0x80004005) both for a
+    // real failure and for a thing that was never there — measured on Windows
+    // 11: a second `regsvr32 /u` has `UnregisterCategory` and
+    // `UnregisterProfile` fail that way while the state is correctly empty —
+    // so an HRESULT here cannot tell "nothing to do" from "could not do it",
+    // and no allowlist would be honest. Only the postcondition can.
+    verify_unregistered([
+        unregister_categories(),
+        unregister_profile(),
+        delete_tree(
+            HKEY_CLASSES_ROOT,
+            &format!("CLSID\\{}", guid_key(&CLSID_TEXT_SERVICE)),
+        ),
+    ])
+}
+
+/// What "unregistered" means, asked rather than assumed: TSF no longer knows
+/// this text service, no longer knows its language profile, it belongs to no
+/// category, and the CLSID tree is gone. This is what makes `regsvr32 /u`
+/// idempotent — a second run finds nothing to remove, is told so in the only
+/// vocabulary TSF has, and still reports success because the end state is the
+/// one it promised.
+///
+/// Every probe is three-valued. "I could not find out" is never "it is gone":
+/// an unreachable category manager or a registry read that fails on anything
+/// but "not found" leaves the service possibly registered, and saying
+/// otherwise would be the same lie the HRESULTs tell.
+fn verify_unregistered(removals: [Result<()>; 3]) -> Result<()> {
+    let mut remaining: Vec<String> = Vec::new();
+    let mut record = |what: &str, probe: Result<bool>| match probe {
+        Ok(true) => remaining.push(what.to_owned()),
+        Ok(false) => {}
+        Err(error) => remaining.push(format!("{what} (could not be checked: {error})")),
+    };
+    record("text service", service_is_registered());
+    record("language profile", profile_is_registered());
+    record(
+        "category membership",
+        registered_category_count().map(|count| count > 0),
     );
-    categories.and(profile).and(clsid)
+    record(
+        "CLSID registration",
+        Key::exists(
+            HKEY_CLASSES_ROOT,
+            &format!("CLSID\\{}", guid_key(&CLSID_TEXT_SERVICE)),
+        ),
+    );
+    if remaining.is_empty() {
+        return Ok(());
+    }
+    // Only now are the removal HRESULTs worth anything: with state left over,
+    // why a removal complained is the first thing a maintainer wants.
+    for (step, result) in ["categories", "profile", "clsid"].iter().zip(&removals) {
+        if let Err(error) = result {
+            log::error!("tsf.unregister.step_failed step={step} error={error}");
+        }
+    }
+    let remaining = remaining.join(", ");
+    log::error!("tsf.unregister.incomplete remaining={remaining}");
+    Err(Error::new(
+        E_FAIL,
+        format!("still registered after unregistering: {remaining}"),
+    ))
+}
+
+/// Whether TSF still lists this CLSID as a text service. `RegisterProfile` is
+/// not the only registration `register_server` makes — `Register` puts the
+/// service itself in TSF's list — so an absent profile alone does not prove
+/// the service is gone.
+fn service_is_registered() -> Result<bool> {
+    // SAFETY: as `register_profile`; the enumerator is TSF's own and is only
+    // read through the checked helper below.
+    unsafe {
+        let profiles: ITfInputProcessorProfiles =
+            CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_INPROC_SERVER)?;
+        let services = profiles.EnumInputProcessorInfo()?;
+        Ok(enumerated_guids(&services)?.contains(&CLSID_TEXT_SERVICE))
+    }
+}
+
+/// Whether TSF still knows our language profile, found by enumerating rather
+/// than by asking for it: `GetProfile` answers a bare `E_FAIL` both for a
+/// profile that is absent and for one it could not look up, so its failure
+/// proves nothing either way.
+fn profile_is_registered() -> Result<bool> {
+    // SAFETY: as `register_profile`. `batch` is written for as many entries as
+    // `fetched` reports and only that many are read.
+    unsafe {
+        let profiles: ITfInputProcessorProfiles =
+            CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_INPROC_SERVER)?;
+        let manager: ITfInputProcessorProfileMgr = profiles.cast()?;
+        let enumerator = manager.EnumProfiles(LANGID_ZH_TW)?;
+        loop {
+            let mut batch = [TF_INPUTPROCESSORPROFILE::default(); 8];
+            let mut fetched = 0u32;
+            // This binding returns `Result<()>`, so `S_FALSE` and `S_OK` are
+            // both `Ok` and only the count says whether the enumeration is
+            // done. A failure still propagates — an enumeration that broke is
+            // not an enumeration that ended.
+            enumerator.Next(&mut batch, &mut fetched)?;
+            let fetched = usize::try_from(fetched).unwrap_or(0);
+            if batch[..fetched].iter().any(|profile| {
+                profile.clsid == CLSID_TEXT_SERVICE && profile.guidProfile == GUID_PROFILE
+            }) {
+                return Ok(true);
+            }
+            if fetched == 0 {
+                return Ok(false);
+            }
+        }
+    }
+}
+
+/// How many categories this text service still belongs to — asked of the
+/// category manager rather than of the registry, because where TSF keeps
+/// category membership is its own business.
+fn registered_category_count() -> Result<usize> {
+    // SAFETY: as `register_categories`.
+    unsafe {
+        let manager: ITfCategoryMgr =
+            CoCreateInstance(&CLSID_TF_CategoryMgr, None, CLSCTX_INPROC_SERVER)?;
+        Ok(enumerated_guids(&manager.EnumCategoriesInItem(&CLSID_TEXT_SERVICE)?)?.len())
+    }
+}
+
+/// Drains an `IEnumGUID`, refusing to call a failed enumeration an empty one.
+fn enumerated_guids(enumerator: &IEnumGUID) -> Result<Vec<GUID>> {
+    let mut all = Vec::new();
+    loop {
+        let mut batch = [GUID::zeroed(); 8];
+        let mut fetched = 0u32;
+        // SAFETY: `batch` is written for as many entries as `fetched` reports.
+        let status = unsafe { enumerator.Next(&mut batch, Some(&mut fetched)) };
+        let fetched = usize::try_from(fetched).unwrap_or(0);
+        all.extend_from_slice(&batch[..fetched]);
+        if !enumeration_continues(status, fetched)? {
+            return Ok(all);
+        }
+    }
+}
+
+/// The COM enumerator contract: `S_OK` filled the batch and there may be more,
+/// `S_FALSE` is the last (possibly partial) one, and any failure means the
+/// enumeration did not finish — which must not be mistaken for reaching the
+/// end, since that is exactly how a broken probe reports "nothing there".
+fn enumeration_continues(status: HRESULT, fetched: usize) -> Result<bool> {
+    if status == S_OK {
+        // A conforming enumerator fills the batch on S_OK; a zero fetch would
+        // otherwise spin forever.
+        return Ok(fetched > 0);
+    }
+    if status == S_FALSE {
+        return Ok(false);
+    }
+    Err(Error::from_hresult(status))
 }
 
 /// `HKCR\CLSID\{clsid}` = description; `\InProcServer32` = DLL path,
