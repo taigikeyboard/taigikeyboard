@@ -178,7 +178,7 @@ fn result_row(
             egui::Frame::NONE
                 .fill(ui.visuals().faint_bg_color)
                 .inner_margin(egui::Margin::symmetric(6, 2))
-                .corner_radius(4.0)
+                .corner_radius(crate::theme::CONTROL_CORNER_RADIUS)
                 .show(ui, |ui| {
                     ui.small(strings.resolve(key));
                 });

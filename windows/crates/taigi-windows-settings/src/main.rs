@@ -14,6 +14,7 @@ mod fonts;
 mod keys;
 mod panes;
 mod search;
+mod theme;
 mod updates;
 mod widgets;
 mod work;

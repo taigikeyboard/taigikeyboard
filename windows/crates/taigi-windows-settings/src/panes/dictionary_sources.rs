@@ -1,19 +1,17 @@
 //! 詞庫來源: which dictionaries the engine draws from, in three sections —
-//! 教育部, the others, the supplements — with 教典's eleven subcollections
-//! indented under it and greyed while it is off. Port of
-//! `DictionaryTogglesView.swift`. Every toggle is read live by the engine
-//! bridge on the next fetch.
+//! 教育部, the others, the supplements — each one card of switches, with
+//! 教典's eleven subcollections indented under it and greyed while it is
+//! off. Port of `DictionaryTogglesView.swift`. Every toggle is read live by
+//! the engine bridge on the next fetch.
 
-// 中文: 詞庫來源頁 — 三個區段的開關,教典子集縮排、教典關閉時停用;恢復預設。
+// 中文: 詞庫來源頁 — 三個區段各一張卡片的開關,教典子集縮排、教典關閉時停用;恢復預設。
 
-use super::section_break;
+use super::section_gap;
 use crate::app::SettingsApp;
-use crate::widgets::wide_action_row;
+use crate::widgets::settings_card::{self, CardRows};
+use crate::widgets::toggle_switch;
 use taigi_windows_core::settings::{keys, SettingsKey};
 use taigi_windows_core::strings::{StringKey, StringResolver};
-
-/// `Metrics.subcollectionIndent`.
-const SUBCOLLECTION_INDENT: f32 = 16.0;
 
 const KAUTIAN_SUBCOLLECTIONS: [(&SettingsKey<bool>, StringKey); 11] = [
     (
@@ -92,60 +90,71 @@ const SUPPLEMENTS: [(&SettingsKey<bool>, StringKey); 5] = [
 pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     let strings = app.strings();
 
-    ui.strong(strings.resolve(StringKey::DictionaryMoeSectionTitle));
-    ui.add_space(6.0);
-    let is_kautian_enabled = toggle(
+    settings_card::section_title(
         ui,
-        app,
-        &strings,
-        &keys::IS_KAUTIAN_ENABLED,
-        StringKey::CommonMoeDict,
+        strings.resolve(StringKey::DictionaryMoeSectionTitle),
+        None,
     );
-    // Disabled, not cleared, while 教典 is off: the choices come back with it.
-    ui.add_enabled_ui(is_kautian_enabled, |ui| {
-        ui.indent("kautian_subcollections", |ui| {
-            ui.spacing_mut().indent = SUBCOLLECTION_INDENT;
-            for (key, label) in KAUTIAN_SUBCOLLECTIONS {
-                toggle(ui, app, &strings, key, label);
+    settings_card::group(ui, |rows| {
+        let is_kautian_enabled = toggle_row(
+            rows,
+            app,
+            &strings,
+            &keys::IS_KAUTIAN_ENABLED,
+            StringKey::CommonMoeDict,
+            None,
+        );
+        // Disabled, not cleared, while 教典 is off: the choices come back with it.
+        for (key, label) in KAUTIAN_SUBCOLLECTIONS {
+            toggle_row(rows, app, &strings, key, label, Some(is_kautian_enabled));
+        }
+        for (key, label) in MOE_OTHERS {
+            toggle_row(rows, app, &strings, key, label, None);
+        }
+    });
+
+    for (title, sources) in [
+        (StringKey::DictionaryOtherSectionTitle, &OTHERS[..]),
+        (
+            StringKey::DictionarySupplementSectionTitle,
+            &SUPPLEMENTS[..],
+        ),
+    ] {
+        settings_card::section_title(ui, strings.resolve(title), None);
+        settings_card::group(ui, |rows| {
+            for (key, label) in sources {
+                toggle_row(rows, app, &strings, key, *label, None);
             }
         });
-    });
-    for (key, label) in MOE_OTHERS {
-        toggle(ui, app, &strings, key, label);
     }
 
-    section_break(ui);
-    ui.strong(strings.resolve(StringKey::DictionaryOtherSectionTitle));
-    ui.add_space(6.0);
-    for (key, label) in OTHERS {
-        toggle(ui, app, &strings, key, label);
-    }
-
-    section_break(ui);
-    ui.strong(strings.resolve(StringKey::DictionarySupplementSectionTitle));
-    ui.add_space(6.0);
-    for (key, label) in SUPPLEMENTS {
-        toggle(ui, app, &strings, key, label);
-    }
-
-    section_break(ui);
-    if wide_action_row::show(ui, strings.resolve(StringKey::ThemeEditorResetAll), false) {
+    section_gap(ui);
+    if settings_card::action(ui, strings.resolve(StringKey::ThemeEditorResetAll), false) {
         app.update_document(|document| document.reset_dictionary_sources());
     }
 }
 
-/// One toggle bound to `key`; answers its value after the row.
-fn toggle(
-    ui: &mut egui::Ui,
+/// One switch bound to `key` in the card; a subcollection
+/// (`parent_enabled` given) is indented and follows its parent's state.
+/// Answers the value after the row.
+fn toggle_row(
+    rows: &mut CardRows,
     app: &mut SettingsApp,
     strings: &StringResolver,
     key: &SettingsKey<bool>,
     label: StringKey,
+    parent_enabled: Option<bool>,
 ) -> bool {
     let mut value = app.document().bool(key);
-    if ui.checkbox(&mut value, strings.resolve(label)).changed() {
-        app.update_document(|document| document.set_bool(key, value));
+    let header = strings.resolve(label);
+    let control = |ui: &mut egui::Ui| {
+        if toggle_switch::show(ui, &mut value, header).changed() {
+            app.update_document(|document| document.set_bool(key, value));
+        }
+    };
+    match parent_enabled {
+        None => rows.row(header, control),
+        Some(enabled) => rows.sub_row(enabled, header, control),
     }
-    ui.add_space(2.0);
     value
 }

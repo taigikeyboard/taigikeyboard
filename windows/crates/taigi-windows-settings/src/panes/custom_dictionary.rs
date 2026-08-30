@@ -9,10 +9,10 @@
 
 // 中文: 自訂詞庫頁 — 分頁表格、篩選、新增/編輯/刪除、CSV 匯入匯出、清除學習紀錄;所有資料庫呼叫都在背景執行緒。
 
-use super::{labelled_row, section_break};
+use super::section_gap;
 use crate::app::SettingsApp;
 use crate::widgets::alert::PageMessage;
-use crate::widgets::wide_action_row;
+use crate::widgets::settings_card;
 use crate::work::PendingWork;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -35,6 +35,9 @@ const TABLE_HEADER_HEIGHT: f32 = 28.0;
 /// table where they were.
 const TABLE_HEIGHT: f32 = TABLE_HEADER_HEIGHT + PAGE_SIZE as f32 * TABLE_ROW_HEIGHT;
 const EMPTY_STATE_SYMBOL_SIZE: f32 = 34.0;
+/// The card's padding around the table: tighter than a setting's, so the
+/// columns keep their width.
+const TABLE_CARD_PADDING: i8 = 8;
 const ENTRY_SHEET_WIDTH: f32 = 360.0;
 
 /// The row being added or edited in the sheet.
@@ -385,17 +388,15 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp, frame: &eframe::Frame) {
     let mut model = std::mem::take(&mut app.custom_dictionary);
 
     let mut is_enabled = app.document().bool(&keys::IS_CUSTOM_DICT_ENABLED);
-    labelled_row(
+    if settings_card::switch_row(
         ui,
         strings.resolve(StringKey::DictionaryCustomDictEnabled),
-        |ui| {
-            if ui.checkbox(&mut is_enabled, "").changed() {
-                app.update_document(|document| {
-                    document.set_bool(&keys::IS_CUSTOM_DICT_ENABLED, is_enabled)
-                });
-            }
-        },
-    );
+        &mut is_enabled,
+    ) {
+        app.update_document(|document| {
+            document.set_bool(&keys::IS_CUSTOM_DICT_ENABLED, is_enabled)
+        });
+    }
     // No user-data directory: the stores never opened, and the banner at
     // the top of the window says so — nothing to list, nothing to write.
     if app.is_read_only() {
@@ -423,15 +424,12 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp, frame: &eframe::Frame) {
     // 400 ms as the spinner so a millisecond-long write does not flash it.
     let looks_busy = model.work.as_ref().is_some_and(PendingWork::is_slow);
 
-    section_break(ui);
     ui.add_enabled_ui(!looks_busy, |ui| {
-        ui.horizontal(|ui| {
-            ui.strong(strings.resolve(StringKey::DesktopEntriesSection));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.weak(model.count_label());
-            });
-        });
-        ui.add_space(6.0);
+        settings_card::section_title(
+            ui,
+            strings.resolve(StringKey::DesktopEntriesSection),
+            Some(&model.count_label()),
+        );
         let filter = ui.add(
             egui::TextEdit::singleline(&mut model.filter)
                 .hint_text(strings.resolve(StringKey::DictionarySearchPlaceholder))
@@ -442,10 +440,14 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp, frame: &eframe::Frame) {
             ui.ctx().request_repaint_after(FILTER_SETTLE);
         }
         ui.add_space(6.0);
-        entry_table(ui, &mut model, &strings);
-        entry_table_controls(ui, &mut model, &strings, &store);
+        // The table and its controls in one card, as a list sits in one
+        // `ListView` surface on Windows.
+        settings_card::frame(ui, egui::Margin::same(TABLE_CARD_PADDING), |ui| {
+            entry_table(ui, &mut model, &strings);
+            entry_table_controls(ui, &mut model, &strings, &store);
+        });
 
-        section_break(ui);
+        section_gap(ui);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui
                 .button(strings.resolve(StringKey::DictionaryExportCSV))
@@ -461,7 +463,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp, frame: &eframe::Frame) {
             }
         });
         ui.add_space(6.0);
-        if wide_action_row::show(ui, strings.resolve(StringKey::DictionaryDeleteAll), true) {
+        if settings_card::action(ui, strings.resolve(StringKey::DictionaryDeleteAll), true) {
             model.write(
                 StringKey::DesktopProgressDeleting,
                 Arc::clone(&store),
@@ -474,8 +476,8 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp, frame: &eframe::Frame) {
             );
         }
 
-        section_break(ui);
-        if wide_action_row::show(
+        section_gap(ui);
+        if settings_card::action(
             ui,
             strings.resolve(StringKey::DesktopClearLearningRecords),
             true,

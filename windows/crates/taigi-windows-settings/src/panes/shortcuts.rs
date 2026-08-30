@@ -8,10 +8,10 @@
 
 // 中文: 快捷鍵 pane — 全域三顆 + 組字動作 + 選字鍵組 + 恢復預設;後寫者贏。
 
-use super::{choice_combo, labelled_row, section_break};
+use super::{choice_combo, section_gap};
 use crate::app::SettingsApp;
 use crate::widgets::recorder::{self, RecorderEvent};
-use crate::widgets::wide_action_row;
+use crate::widgets::settings_card::{self, row};
 use taigi_windows_core::keys::{
     CandidateSlotKeySet, ComposingAction, ComposingKeyBindings, RecorderTier, ShortcutAction,
     ShortcutConflicts,
@@ -31,7 +31,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
 
     // One group (2026-08-25): one doorway and two switches.
     for (action, chord) in &global_chords {
-        labelled_row(ui, strings.resolve(action.label_key()), |ui| {
+        row(ui, strings.resolve(action.label_key()), |ui| {
             let event = recorder::show(
                 ui,
                 action.raw(),
@@ -65,7 +65,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     // Ends the moving-through group. Glyphs rather than translated words:
     // the keys are read off the keyboard. A picker, not a recorder: one
     // set standing for nine slots.
-    labelled_row(
+    row(
         ui,
         strings.resolve(StringKey::DesktopBindingSlotModifier),
         |ui| {
@@ -97,8 +97,8 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
 
     // Both registries at once, and no conflict pass afterwards: the shipped
     // defaults hold no chord in common (`ShortcutSettingsView.swift:578-603`).
-    section_break(ui);
-    if wide_action_row::show(ui, strings.resolve(StringKey::ThemeEditorResetAll), false) {
+    section_gap(ui);
+    if settings_card::action(ui, strings.resolve(StringKey::ThemeEditorResetAll), false) {
         app.update_document(|document| {
             document.reset_composing_shortcuts();
             document.reset_global_shortcuts();
@@ -114,7 +114,7 @@ fn composing_row(
     bindings: &ComposingKeyBindings,
     action: ComposingAction,
 ) {
-    labelled_row(ui, strings.resolve(action.label_key()), |ui| {
+    row(ui, strings.resolve(action.label_key()), |ui| {
         let event = recorder::show(
             ui,
             action.raw(),

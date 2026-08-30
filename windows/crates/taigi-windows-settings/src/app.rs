@@ -14,6 +14,7 @@ use crate::fonts::InstalledFonts;
 use crate::panes;
 use crate::panes::custom_dictionary::CustomDictionaryPageModel;
 use crate::panes::dictionary_search::DictionarySearchModel;
+use crate::theme;
 use crate::updates::UpdateState;
 use crate::widgets::alert::PageMessage;
 use crate::widgets::recorder::RecorderState;
@@ -98,6 +99,9 @@ impl SettingsApp {
         is_check_now: bool,
     ) -> Self {
         let fonts = crate::fonts::install(&creation.egui_ctx);
+        // Typography and spacing once, for both themes; the colours follow
+        // the accent in `sync_accent`.
+        creation.egui_ctx.all_styles_mut(theme::apply_style);
         let hwnd = match creation.window_handle().map(|handle| handle.as_raw()) {
             Ok(RawWindowHandle::Win32(handle)) => Some(handle.hwnd.get()),
             _ => None,
@@ -191,6 +195,12 @@ impl SettingsApp {
         self.pane
     }
 
+    /// The selected pane's name — the window's caption and the page's
+    /// heading, kept current by `sync_title` before the panes draw.
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
     pub fn fonts(&self) -> InstalledFonts {
         self.fonts
     }
@@ -239,7 +249,7 @@ impl SettingsApp {
 
     /// The selection colour is the user's accent, as it is in every native
     /// Windows window (`Color.accentColor` on the Mac) — not egui's blue.
-    /// Both visuals are rebuilt on a change so a theme flip keeps it.
+    /// Both themes' visuals are rebuilt on a change so a theme flip keeps it.
     fn sync_accent(&mut self, ctx: &egui::Context) {
         let accent = taigi_windows_platform::system_accent()
             .map_or(FALLBACK_ACCENT, |(r, g, b)| {
@@ -249,14 +259,8 @@ impl SettingsApp {
             return;
         }
         self.accent = Some(accent);
-        for (theme, mut visuals) in [
-            (egui::Theme::Light, egui::Visuals::light()),
-            (egui::Theme::Dark, egui::Visuals::dark()),
-        ] {
-            visuals.selection.bg_fill = accent;
-            visuals.selection.stroke.color = accent_text_color(accent);
-            visuals.hyperlink_color = accent;
-            ctx.set_visuals_of(theme, visuals);
+        for theme in [egui::Theme::Light, egui::Theme::Dark] {
+            ctx.set_visuals_of(theme, theme::visuals(theme, accent));
         }
     }
 
@@ -291,7 +295,7 @@ impl SettingsApp {
         egui::Frame::NONE
             .fill(ui.visuals().error_fg_color.gamma_multiply(0.15))
             .inner_margin(10.0)
-            .corner_radius(6.0)
+            .corner_radius(theme::CONTROL_CORNER_RADIUS)
             .show(ui, |ui| {
                 ui.colored_label(
                     ui.visuals().error_fg_color,
@@ -350,27 +354,6 @@ impl SettingsApp {
     }
 }
 
-/// White on a deep accent, near-black on a pale one (the yellow / mint
-/// presets) — the same WCAG luminance gate the candidate window applies
-/// (`ui/theme.rs::LIGHT_HIGHLIGHT_LUMINANCE`).
-fn accent_text_color(accent: egui::Color32) -> egui::Color32 {
-    let linear = |channel: u8| {
-        let channel = f32::from(channel) / 255.0;
-        if channel <= 0.03928 {
-            channel / 12.92
-        } else {
-            ((channel + 0.055) / 1.055).powf(2.4)
-        }
-    };
-    let luminance =
-        0.2126 * linear(accent.r()) + 0.7152 * linear(accent.g()) + 0.0722 * linear(accent.b());
-    if luminance > 0.55 {
-        egui::Color32::from_black_alpha(217)
-    } else {
-        egui::Color32::WHITE
-    }
-}
-
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Before any widget sees the frame's input: a recording row takes
@@ -384,7 +367,10 @@ impl eframe::App for SettingsApp {
         self.sync_title(ctx);
         self.drive_updates(ctx);
         panes::sidebar::show(ctx, self);
-        egui::CentralPanel::default().show(ctx, |ui| {
+        // No margin of its own: the pane's inset (`panes::FORM_INSET`) is
+        // the only one, not egui's 8px plus it.
+        let ground = egui::Frame::central_panel(&ctx.style()).inner_margin(0);
+        egui::CentralPanel::default().frame(ground).show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
                 self.show_write_failure(ui);

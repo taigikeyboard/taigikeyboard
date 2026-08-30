@@ -6,9 +6,10 @@
 
 // 中文: 外觀 pane — 亮暗縮圖列、版面/大小/字型 picker、恢復預設。
 
-use super::{choice_combo, labelled_row, section_break};
+use super::{choice_combo, section_gap};
 use crate::app::SettingsApp;
-use crate::widgets::{appearance_thumbnails, wide_action_row};
+use crate::widgets::appearance_thumbnails;
+use crate::widgets::settings_card::{self, row};
 use taigi_windows_core::settings::{
     keys, AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,
     CandidateWindowSizeChoice, SettingChoice,
@@ -25,14 +26,14 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     let mut font: CandidateFontChoice = document.choice(&keys::FONT_TYPE);
 
     // The System Settings shape: the mode selector leads its own group.
-    labelled_row(ui, strings.resolve(StringKey::DesktopAppearanceTab), |ui| {
+    row(ui, strings.resolve(StringKey::DesktopAppearanceTab), |ui| {
         if appearance_thumbnails::show(ui, &mut mode, &strings) {
             app.update_document(|document| document.set_choice(&keys::APPEARANCE_MODE, mode));
         }
     });
 
-    section_break(ui);
-    labelled_row(
+    section_gap(ui);
+    row(
         ui,
         strings.resolve(StringKey::DesktopCandidateWindowLayout),
         |ui| {
@@ -54,7 +55,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     );
     // The two size rows are named steps, not continuous values: pop-ups
     // rather than sliders (Apple HIG, Pop-up Buttons).
-    labelled_row(
+    row(
         ui,
         strings.resolve(StringKey::DesktopCandidateWindowSize),
         |ui| {
@@ -74,7 +75,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
             }
         },
     );
-    labelled_row(
+    row(
         ui,
         strings.resolve(StringKey::ThemeCandidateTextSize),
         |ui| {
@@ -95,7 +96,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
         },
     );
     // The roster comes from the type: a list the bundle can grow.
-    labelled_row(ui, strings.resolve(StringKey::ThemeCustomFont), |ui| {
+    row(ui, strings.resolve(StringKey::ThemeCustomFont), |ui| {
         let choices = CandidateFontChoice::ALL
             .iter()
             .map(|choice| (*choice, strings.resolve(choice.label_key()).to_owned()));
@@ -111,8 +112,8 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     });
 
     // Its own section, at the end: it acts on every row above it.
-    section_break(ui);
-    if wide_action_row::show(ui, strings.resolve(StringKey::ThemeEditorResetAll), false) {
+    section_gap(ui);
+    if settings_card::action(ui, strings.resolve(StringKey::ThemeEditorResetAll), false) {
         app.update_document(|document| document.reset_appearance());
     }
 }

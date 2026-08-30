@@ -5,10 +5,11 @@
 
 // 中文: 一般 pane — 輸入模式、介面語言、自動空白、版本、頁尾。
 
-use super::{choice_combo, labelled_row, section_break};
+use super::{choice_combo, section_gap};
 use crate::app::SettingsApp;
 use crate::updates::INSTALLED_VERSION;
 use crate::widgets::external_link;
+use crate::widgets::settings_card::{self, row};
 use taigi_windows_core::settings::{keys, InputMode};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey};
 use taigi_windows_update::{checker, Offer};
@@ -25,7 +26,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
 
     // A pop-up like the row under it, not a radio group (System Settings'
     // shape for a small mutually-exclusive choice).
-    labelled_row(ui, strings.resolve(StringKey::SettingsInputMode), |ui| {
+    row(ui, strings.resolve(StringKey::SettingsInputMode), |ui| {
         let label = |mode: InputMode| match mode {
             InputMode::Tl => strings.resolve(StringKey::SettingsTlMode).to_owned(),
             InputMode::Poj => strings.resolve(StringKey::SettingsPojMode).to_owned(),
@@ -45,7 +46,7 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
     // Endonyms for the authored languages, so a user can find their own
     // language whatever the UI currently reads in; `System` is the one
     // translated row.
-    labelled_row(
+    row(
         ui,
         strings.resolve(StringKey::SettingsDisplayLanguage),
         |ui| {
@@ -74,15 +75,17 @@ pub fn show(ui: &mut egui::Ui, app: &mut SettingsApp) {
         },
     );
 
-    labelled_row(ui, strings.resolve(StringKey::SettingsAutoSpace), |ui| {
-        if ui.checkbox(&mut is_auto_space, "").changed() {
-            app.update_document(|document| {
-                document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space)
-            });
-        }
-    });
+    if settings_card::switch_row(
+        ui,
+        strings.resolve(StringKey::SettingsAutoSpace),
+        &mut is_auto_space,
+    ) {
+        app.update_document(|document| {
+            document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space)
+        });
+    }
 
-    section_break(ui);
+    section_gap(ui);
     update_row(ui, app);
 
     // Centred at the foot of the pane rather than inside the form: it is
@@ -134,7 +137,7 @@ fn update_row(ui: &mut egui::Ui, app: &mut SettingsApp) {
                 StringKey::DesktopUpdateCurrentVersionLabel,
                 &[&INSTALLED_VERSION],
             );
-            labelled_row(ui, &label, |ui| {
+            row(ui, &label, |ui| {
                 let checking = updates.is_checking();
                 if ui
                     .add_enabled(
@@ -156,7 +159,7 @@ fn update_row(ui: &mut egui::Ui, app: &mut SettingsApp) {
                 StringKey::DesktopUpdatePendingVersionLabel,
                 &[&manifest.version],
             );
-            labelled_row(ui, &label, |ui| {
+            row(ui, &label, |ui| {
                 let action = match &offer {
                     Offer::DownloadPage | Offer::PackageRejected => {
                         Some(StringKey::DesktopUpdateDownloadAction)
@@ -181,7 +184,6 @@ fn update_row(ui: &mut egui::Ui, app: &mut SettingsApp) {
             });
             if let Some(note) = offer.note_key() {
                 ui.weak(strings.resolve(note));
-                ui.add_space(super::ROW_SPACING[1]);
             }
         }
     }
