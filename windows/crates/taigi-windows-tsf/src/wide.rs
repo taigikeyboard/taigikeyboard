@@ -2,14 +2,14 @@
 
 // 中文: UTF-16 轉換小工具。
 
-/// `text` as NUL-terminated UTF-16 — what `RegisterProfile`, `PreserveKey`
-/// and the registry want.
+/// `text` as NUL-terminated UTF-16 — what `RegisterProfile`, `PreserveKey`,
+/// `AppendMenuW` and the registry want.
 pub fn to_wide_nul(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
-/// `text` as UTF-16 WITHOUT the terminator — what `ITfMenu::AddMenuItem`
-/// wants (it takes a length).
+/// `text` as UTF-16 WITHOUT the terminator — what `ITfRange::SetText` and
+/// DirectWrite want (they take a length).
 pub fn to_wide(text: &str) -> Vec<u16> {
     text.encode_utf16().collect()
 }

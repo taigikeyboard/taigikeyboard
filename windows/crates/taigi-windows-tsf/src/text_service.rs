@@ -675,30 +675,41 @@ impl ITfLangBarItem_Impl for TextService_Impl {
 }
 
 impl ITfLangBarItemButton_Impl for TextService_Impl {
-    /// A menu-style button: TSF asks `InitMenu` for the rows on click.
-    fn OnClick(&self, _click: TfLBIClick, _pt: &POINT, _prcarea: *const RECT) -> Result<()> {
-        guarded("ITfLangBarItemButton::OnClick", || Ok(()))
-    }
-
-    fn InitMenu(&self, pmenu: Ref<ITfMenu>) -> Result<()> {
-        guarded("ITfLangBarItemButton::InitMenu", || {
-            let menu = pmenu.ok()?;
+    /// Both mouse buttons raise the menu — this button has no mode to
+    /// toggle, and the Mac opens its menu on a plain click
+    /// (`TaigiInputController.swift:264-329`). The rows are drawn here
+    /// rather than through `InitMenu`: the taskbar input indicator never
+    /// drives the TSF menu (`lang_bar`'s module header).
+    fn OnClick(&self, _click: TfLBIClick, pt: &POINT, _prcarea: *const RECT) -> Result<()> {
+        guarded("ITfLangBarItemButton::OnClick", || {
             let runtime = Runtime::shared();
             let rows = lang_bar::menu_rows(&runtime.strings(), &runtime.settings.current());
-            lang_bar::populate(menu, &rows)
+            if let Some(id) = lang_bar::show_popup(&rows, *pt) {
+                match id {
+                    MENU_OPEN_SETTINGS => settings_launcher::open_settings(),
+                    MENU_CHECK_FOR_UPDATES => settings_launcher::check_for_updates(),
+                    other => log::warn!("tsf.menu_unknown_id id={other}"),
+                }
+                self.notify_lang_bar();
+            }
+            Ok(())
         })
     }
 
-    fn OnMenuSelect(&self, wid: u32) -> Result<()> {
-        guarded("ITfLangBarItemButton::OnMenuSelect", || {
-            match wid {
-                MENU_OPEN_SETTINGS => settings_launcher::open_settings(),
-                MENU_CHECK_FOR_UPDATES => settings_launcher::check_for_updates(),
-                other => log::warn!("tsf.menu_unknown_id id={other}"),
-            }
-            self.notify_lang_bar();
-            Ok(())
-        })
+    /// The declarative menu of a `TF_LBI_STYLE_BTN_MENU` button, which this
+    /// item is not — `OnClick` draws its own. Answered as an empty menu
+    /// rather than `E_NOTIMPL`: a host that probes it (the legacy desktop
+    /// language bar) reads a failure as a broken item, and mozc leaves the
+    /// same no-op `S_OK` for a non-menu button
+    /// (`tip_lang_bar_menu.cc:619-624`).
+    fn InitMenu(&self, _pmenu: Ref<ITfMenu>) -> Result<()> {
+        guarded("ITfLangBarItemButton::InitMenu", || Ok(()))
+    }
+
+    /// The other half of the declarative menu; nothing selects from an
+    /// empty one, and an unexpected id is not this item's error to raise.
+    fn OnMenuSelect(&self, _wid: u32) -> Result<()> {
+        guarded("ITfLangBarItemButton::OnMenuSelect", || Ok(()))
     }
 
     /// A caller-owned icon: TSF destroys what it is given.
