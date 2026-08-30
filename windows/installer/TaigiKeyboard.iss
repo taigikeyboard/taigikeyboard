@@ -8,6 +8,9 @@
 ;   TaigiKeyboard.dll              (x64 text service, signed)
 ;   x86\TaigiKeyboard.dll          (optional — WOW64 hosts; roadmap: gated)
 ;   TaigiKeyboardSettings.exe      (signed)
+;   Runtime\*                      (the Windows App Runtime the settings window
+;                                   runs on — self-contained, roadmap W17;
+;                                   installed BESIDE the exe)
 ;   Dictionaries\*                 (from ios/Resources/Dictionaries, W2)
 ;   Fonts\*                        (from ios/Resources/Fonts)
 ;   update-check-task.xml          (the scheduled task's definition)
@@ -99,6 +102,9 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Source: "{#Dist}\{#ServiceDll}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Dist}\x86\{#ServiceDll}"; DestDir: "{app}\x86"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#Dist}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion
+; W17: the Windows App Runtime files sit beside the exe (their loader looks
+; in the exe's directory); Inno records each and removes them on uninstall.
+Source: "{#Dist}\Runtime\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#Dist}\Dictionaries\*"; DestDir: "{app}\Dictionaries"; Flags: ignoreversion
 Source: "{#Dist}\Fonts\*"; DestDir: "{app}\Fonts"; Flags: ignoreversion
 Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion

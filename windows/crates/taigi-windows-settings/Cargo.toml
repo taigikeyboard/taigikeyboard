@@ -24,5 +24,14 @@ rfd.workspace = true
 raw-window-handle.workspace = true
 log.workspace = true
 
+# W17: WinUI 3. Windows-only — the crate does not compile on the macOS host
+# (its generated bindings are Windows types), so the host tests cover the
+# non-UI modules and `make check-box` covers this one on the box.
+[target.'cfg(windows)'.dependencies]
+windows-reactor.workspace = true
+
+[build-dependencies]
+windows-reactor-setup.workspace = true
+
 [lints]
 workspace = true

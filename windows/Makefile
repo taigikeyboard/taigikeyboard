@@ -1,9 +1,11 @@
 # Dev loop for the Windows input method. Two audiences:
 #
-#   * on the macOS host (no Windows machine): `make check` is the whole gate —
-#     native tests for the host-testable crates + cross-target checks for
-#     every crate the workspace currently holds (docs/architecture/
-#     windows-roadmap.md W13). Compilation proof only, never behaviour;
+#   * on the macOS host: `make check` is the whole gate — native tests for the
+#     host-testable crates + cross-target checks for every crate the workspace
+#     holds (docs/architecture/windows-roadmap.md W13), plus `check-box`: the
+#     settings crate's clippy + tests on the Windows box over ssh (W17 — its
+#     WinUI dependency has no host build). Compilation proof only, never
+#     behaviour;
 #   * on a Windows machine: `make build` produces the release DLL + exe;
 #     `make install` registers the DLL (elevated prompt) — see README.md.
 #
@@ -11,7 +13,7 @@
 
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help i18n-check test check-gnu check-msvc check-dll check-exe check fmt lint build install uninstall reload release clean
+.PHONY: help i18n-check test check-gnu check-msvc check-dll check-exe check-box check fmt lint build install uninstall reload release clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
 # checked for from macOS. A crate that pulls in C (the storage crate's bundled
@@ -27,12 +29,13 @@ HOST_TESTABLE  := -p taigi-windows-core -p taigi-windows-storage -p taigi-window
 help:
 	@echo "Windows input method — dev loop"
 	@echo ""
-	@echo "  make check       - Host-side gate: i18n check + native tests + gnu clippy + msvc check"
+	@echo "  make check       - The gate: i18n check + native tests + gnu clippy + msvc check + check-box"
 	@echo "  make test        - Native tests for the host-testable crates"
 	@echo "  make check-gnu   - clippy -D warnings, full graph, target x86_64-pc-windows-gnu"
 	@echo "  make check-msvc  - cargo check for the C-free crates, target x86_64-pc-windows-msvc"
 	@echo "  make check-dll   - GNU release link of TaigiKeyboard.dll + export-table check (W13)"
 	@echo "  make check-exe   - GNU release link of TaigiKeyboardSettings.exe (W13)"
+	@echo "  make check-box   - Settings crate clippy + tests on the Windows box, pushed HEAD (W17)"
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt         - cargo fmt"
 	@echo "  make build       - (Windows) cargo build --release for the shipping target"
@@ -76,7 +79,11 @@ check-exe:
 	@test -f $(EXE_GNU) || { echo "missing: $(EXE_GNU)"; exit 1; }
 	@echo "exe OK: $(EXE_GNU)"
 
-check: test check-gnu check-msvc check-dll check-exe
+# The settings crate on the target that ships: the box (ssh), pushed HEAD.
+check-box:
+	bash scripts/check-box.sh
+
+check: test check-gnu check-msvc check-dll check-exe check-box
 	cargo fmt -- --check
 
 # Plain `cargo fmt`, never `--all`: `--all` also formats path dependencies, i.e.

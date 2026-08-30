@@ -23,7 +23,7 @@ members = [
 [workspace.package]
 version = "3.6.6"
 edition = "2021"
-rust-version = "1.86"
+rust-version = "1.95"  # windows-reactor's floor (W17); the box runs 1.98
 license = "MIT"
 repository = "https://github.com/siansiansu/taigikeyboard"
 publish = false
@@ -68,6 +68,14 @@ raw-window-handle = "0.6"
 egui_extras = { version = "=0.31.1", default-features = false }
 # Native file dialogs (Win32 common dialogs); no GTK / portal features.
 rfd = { version = "0.17", default-features = false }
+# W17: the settings window's UI — WinUI 3 through Microsoft's declarative Rust
+# library. crates.io carries only 0.0.0 placeholders, so this is a git
+# dependency pinned to the commit the 2026-08-30 spike built and ran on the
+# Windows box; bump only in its own round, built and smoke-run there. The
+# setup crate stages the self-contained Windows App Runtime from build.rs
+# (MSVC only — it refuses the gnu host check).
+windows-reactor = { git = "https://github.com/microsoft/windows-rs", rev = "dc720b3674c46ceb82d758ed20959977b32e60a9" }
+windows-reactor-setup = { git = "https://github.com/microsoft/windows-rs", rev = "dc720b3674c46ceb82d758ed20959977b32e60a9" }
 
 [workspace.lints.rust]
 # Every crate opts in with `[lints] workspace = true`. The default is the

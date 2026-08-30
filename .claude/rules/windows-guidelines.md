@@ -20,7 +20,12 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   git dependency pinned to a commit SHA (W17; crates.io has only placeholders) — bump only in its
   own round, built and smoke-run on the box. The settings crate's real gate is `make check-box`
   (ssh MSVC clippy); the macOS gnu check is a type-check only (`reactor-setup` refuses gnu).
-- The TSF DLL never links or loads WinUI / the Windows App Runtime (release-script import gate).
+- The TSF DLL never links or loads WinUI / the Windows App Runtime (release-script import +
+  manifest-marker gates). Bumping the `windows-reactor` pin changes the staged runtime set: the
+  bump PR must add `[InstallDelete]` entries for every name in the PREVIOUS
+  `build-support/windows-app-runtime-files.txt` that the new list drops (Inno never removes files
+  a newer `[Files]` wildcard stops covering), and `build-support/resource.rs` must never emit an
+  `RT_MANIFEST` (the linker embeds the runtime's).
   Reactor exposes no keyboard events: the shortcut recorder uses a THREAD-scoped `WH_KEYBOARD`
   hook in `taigi-windows-platform` (RAII, `catch_unwind`, swallow down+up while recording,
   pass-through otherwise) — never a global hook, never a raw XAML object mutation.

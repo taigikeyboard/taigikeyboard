@@ -17,6 +17,8 @@ mod search;
 mod theme;
 mod updates;
 mod widgets;
+#[cfg(windows)]
+mod winui;
 mod work;
 
 use app::SettingsApp;
@@ -43,6 +45,15 @@ const WINDOW_STATE_FILE: &str = "settings-window.ron";
 
 fn main() -> eframe::Result {
     taigi_windows_platform::install_debug_logger();
+    // W17-A0: the WinUI foundation smoke — a window on the staged runtime,
+    // nothing of the app. Goes with the egui entry at the W17-C cutover.
+    #[cfg(windows)]
+    if std::env::args().any(|argument| argument == winui::SMOKE_FLAG) {
+        if !winui::run_smoke() {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
     let launch = LaunchOptions::parse(std::env::args().skip(1));
     if launch.headless_check {
         headless_check();

@@ -65,8 +65,12 @@ What `windows/scripts/release-app.sh` does, in order:
    `ProductVersion` and the script compares them to the checkout (the
    updater's package check reads the same block); `dumpbin /dependents`
    proves neither binary imports `vcruntime*.dll` / `msvcp*.dll`
-   (`+crt-static`, roadmap W14).
-4. **Stage** — `windows/.build/staging/`: the DLL, the exe, `Dictionaries\`
+   (`+crt-static`, roadmap W14), and that the DLL imports nothing of WinUI /
+   the Windows App Runtime (W17 — only the settings exe may).
+4. **Stage** — `windows/.build/staging/`: the DLL, the exe, `Runtime\` (the
+   Windows App Runtime files the settings exe's build script staged in the
+   target directory — every name in
+   `windows/build-support/windows-app-runtime-files.txt`, W17), `Dictionaries\`
    (the four artifacts from `ios/Resources/Dictionaries`, each required
    non-empty), `Fonts\` (every face in `ios/Resources/Fonts`), and the
    scheduled task's definition.
@@ -122,8 +126,8 @@ every process of every user and `regsvr32` writes HKLM. In order:
   wording. Tâi-lô / POJ have no Inno base language (the macOS Installer
   cannot show them either); the app itself offers all five.
 - **Files** — `TaigiKeyboard.dll` (+ `x86\TaigiKeyboard.dll` when staged),
-  `TaigiKeyboardSettings.exe`, `Dictionaries\`, `Fonts\`,
-  `update-check-task.xml`.
+  `TaigiKeyboardSettings.exe` with the Windows App Runtime files beside it
+  (W17), `Dictionaries\`, `Fonts\`, `update-check-task.xml`.
 - **Registration** — `regsvr32 /s` on the DLL (the DLL's `DllRegisterServer`
   registers the CLSID, the `0x0404` profile, the categories and the
   display-attribute provider — roadmap W7). Run from `[Code]`, not `[Run]`:

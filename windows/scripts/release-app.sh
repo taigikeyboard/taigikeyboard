@@ -129,6 +129,23 @@ for binary in "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE"; do
         fail "$(basename "$binary") imports the VC runtime — the release must be statically linked (+crt-static)"
     fi
 done
+# W17: the text service is loaded into every host process and must never
+# pull WinUI / the Windows App Runtime in with it — only the settings exe
+# links them.
+dll_imports="$(dumpbin /nologo /dependents "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
+if grep -iqE 'microsoft\.ui\.|windowsappruntime|microsoft\.internal\.frameworkudk' <<< "$dll_imports"; then
+    echo "$dll_imports" >&2
+    fail "$SERVICE_DLL imports WinUI / the Windows App Runtime — the text service must not (roadmap W17)"
+fi
+# WinUI is reached through activatable classes named in an embedded manifest,
+# not through static imports (so the check above cannot see it): the exe must
+# carry the setup crate's self-contained manifest, and the DLL must not.
+WINUI_MANIFEST_MARKER="windows-reactor-self-contained"
+grep -aq "$WINUI_MANIFEST_MARKER" "$TARGET_DIR/$SETTINGS_EXE" ||
+    fail "$SETTINGS_EXE carries no self-contained Windows App Runtime manifest ($WINUI_MANIFEST_MARKER) — build.rs did not stage the runtime"
+if grep -aq "$WINUI_MANIFEST_MARKER" "$TARGET_DIR/$SERVICE_DLL"; then
+    fail "$SERVICE_DLL carries the WinUI manifest — the text service must not (roadmap W17)"
+fi
 
 echo "==> Staging the install layout"
 rm -rf "$STAGING_DIR"
@@ -151,6 +168,22 @@ for candidate in "$FONTS_SOURCE_DIR"/*.ttf "$FONTS_SOURCE_DIR"/*.otf; do
 done
 [[ $font_count -gt 0 ]] || fail "no font files in $FONTS_SOURCE_DIR"
 cp "$TASK_DEFINITION" "$STAGING_DIR/"
+# W17: the Windows App Runtime the settings exe runs on, staged beside the
+# exe by its build script (self-contained; the names are the setup crate's
+# list, vendored). Every entry must be there — a missing DLL is a window
+# that will not open on the user's machine.
+RUNTIME_LIST="$WINDOWS_DIR/build-support/windows-app-runtime-files.txt"
+mkdir -p "$STAGING_DIR/Runtime"
+runtime_count=0
+while IFS= read -r name; do
+    name="${name%%$'\r'}"
+    [[ -z "$name" || "$name" == \#* ]] && continue
+    source_path="$TARGET_DIR/$name"
+    [[ -e "$source_path" ]] || fail "missing Windows App Runtime file $name in $TARGET_DIR (windows-reactor-setup staging)"
+    cp -R "$source_path" "$STAGING_DIR/Runtime/"
+    runtime_count=$((runtime_count + 1))
+done < "$RUNTIME_LIST"
+[[ $runtime_count -gt 0 ]] || fail "no Windows App Runtime entries in $RUNTIME_LIST"
 
 echo "==> Signing the binaries"
 sign_file "$STAGING_DIR/$SERVICE_DLL"
