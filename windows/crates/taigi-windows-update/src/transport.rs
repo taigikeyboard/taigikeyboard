@@ -45,13 +45,20 @@ impl HttpTransport {
     /// The system TLS stack (schannel on Windows) with the SYSTEM roots:
     /// ureq's default provider is rustls, and the `native-tls` feature
     /// alone does not switch it — both are chosen here, explicitly.
-    fn agent(connect: Duration, total: Duration) -> ureq::Agent {
-        let tls = ureq::tls::TlsConfig::builder()
+    ///
+    /// ureq checks this provider against a compile-time feature and panics
+    /// when the crate was built without it, so the choice is its own
+    /// function: the regression test drives the real one.
+    fn tls_config() -> ureq::tls::TlsConfig {
+        ureq::tls::TlsConfig::builder()
             .provider(ureq::tls::TlsProvider::NativeTls)
             .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-            .build();
+            .build()
+    }
+
+    fn agent(connect: Duration, total: Duration) -> ureq::Agent {
         ureq::Agent::config_builder()
-            .tls_config(tls)
+            .tls_config(Self::tls_config())
             .timeout_connect(Some(connect))
             .timeout_global(Some(total))
             .http_status_as_error(false)
@@ -121,5 +128,58 @@ impl PackageDownloader for HttpTransport {
             return Err(FetchError::TooLarge);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::TcpListener;
+
+    /// Accepts one connection and hangs up, so a client reaches the TLS
+    /// handshake and then meets an immediate EOF. Returns the port.
+    fn server_that_accepts_then_hangs_up() -> u16 {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("local addr").port();
+        std::thread::spawn(move || {
+            if let Ok((stream, _)) = listener.accept() {
+                drop(stream);
+            }
+        });
+        port
+    }
+
+    // `agent` names `TlsProvider::NativeTls`, and ureq gates that on the
+    // umbrella `native-tls` feature at compile time. Building against the
+    // `native-tls-no-default` subset it is composed of compiles clean and
+    // then panics on the first https request — which is every update check
+    // there is, and which no other test here reaches because they all run
+    // over a mock transport.
+    //
+    // The request has to survive TCP for this to bite: ureq chains
+    // `TcpConnector` ahead of the provider check, so a refused port errors
+    // out before the check runs and would pass with the bug present. Hence
+    // a real listener. Proxies are off and the timeouts are short for the
+    // same reason — an env proxy would fail at CONNECT, ahead of the check,
+    // and the production 20-minute ceiling is no safety net for a test.
+    // What is under test is the TLS configuration, which is the production
+    // one.
+    #[test]
+    fn an_https_request_reaches_the_tls_layer_and_fails_rather_than_panicking() {
+        let port = server_that_accepts_then_hangs_up();
+        let agent = ureq::Agent::config_builder()
+            .tls_config(HttpTransport::tls_config())
+            .proxy(None)
+            .timeout_connect(Some(Duration::from_secs(5)))
+            .timeout_global(Some(Duration::from_secs(20)))
+            .build()
+            .new_agent();
+
+        let outcome = agent.get(format!("https://127.0.0.1:{port}/")).call();
+
+        assert!(
+            outcome.is_err(),
+            "expected the aborted handshake to surface as an error"
+        );
     }
 }

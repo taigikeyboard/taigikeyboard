@@ -17,10 +17,15 @@ serde.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 # HTTPS through the system TLS stack (schannel on Windows; the macOS host's
-# Security framework for the native tests) — `native-tls-no-default`, so no
-# bundled root store ages inside the binary; `transport.rs` selects the
-# provider and the platform verifier explicitly.
-ureq = { version = "3", default-features = false, features = ["native-tls-no-default"] }
+# Security framework for the native tests). `transport.rs` selects
+# `TlsProvider::NativeTls`, and ureq gates that on `cfg!(feature =
+# "native-tls")` (`ureq-3/src/tls/mod.rs`) — a compile-time check against the
+# umbrella feature, not the `native-tls-no-default` subset it is built from.
+# Naming the subset alone builds fine and then panics on the first https
+# request. No bundled root store reaches the connector regardless: the roots
+# the umbrella adds are only read by the `RootCerts::WebPki` arm, and
+# `transport.rs` asks for `RootCerts::PlatformVerifier` (the OS store).
+ureq = { version = "3", default-features = false, features = ["native-tls"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [
