@@ -16,8 +16,14 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   not behaviour — behaviour is the dogfood run-book's job. Never claim "works on Windows".
 - Put logic in `taigi-windows-core` (`unsafe_code = forbid`, host-testable) whenever it does not
   need a Win32 handle. `taigi-windows-tsf` and `taigi-windows-settings` are thin shells.
-- Pin UI-framework versions the session can author against (`eframe`/`egui` 0.31). Do not bump
-  them without a Windows box to run the result on.
+- Pin UI-framework versions to what has actually run on the Windows box: `windows-reactor` is a
+  git dependency pinned to a commit SHA (W17; crates.io has only placeholders) — bump only in its
+  own round, built and smoke-run on the box. The settings crate's real gate is `make check-box`
+  (ssh MSVC clippy); the macOS gnu check is a type-check only (`reactor-setup` refuses gnu).
+- The TSF DLL never links or loads WinUI / the Windows App Runtime (release-script import gate).
+  Reactor exposes no keyboard events: the shortcut recorder uses a THREAD-scoped `WH_KEYBOARD`
+  hook in `taigi-windows-platform` (RAII, `catch_unwind`, swallow down+up while recording,
+  pass-through otherwise) — never a global hook, never a raw XAML object mutation.
 
 ## macOS is the behaviour oracle
 
@@ -25,7 +31,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   defaults, storage schemas, CSV, update flow all mirror `macos/Sources/TaigiInputMethodCore/**`.
   A port carries a `// mirrors macos/.../<File>.swift:<line>` comment on the mirrored constant or
   rule. Drift is a bug unless the roadmap names it as an intentional divergence.
-- Named divergences so far: egui chrome (not SwiftUI), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
+- Named divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, no `.taigi` pane (macOS
   retired it too).
 

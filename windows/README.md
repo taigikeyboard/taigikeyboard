@@ -14,7 +14,7 @@ input method. Design record and phase table:
 | `crates/taigi-windows-tsf` (PR5a) | cdylib `TaigiKeyboard.dll`, the ONE crate with `unsafe` | DLL exports, registration, the `TextService` COM object (sinks, tray button + menu, settings reload, context identity), per-process runtime. Not host-testable: `make check-dll` links it under mingw and checks the export table. |
 | `crates/taigi-windows-platform` (PR7) | lib, the few Win32 calls both binaries need | locale, `ShellExecuteW`, beep, single-instance mutex, local date, debug logger; host stubs so the exe tests natively. |
 | `crates/taigi-windows-update` (PR9) | lib | update manifest, checker, download (`ureq` over schannel), Authenticode + VERSIONINFO verification, toast. |
-| `crates/taigi-windows-settings` (PR7-9) | bin `TaigiKeyboardSettings.exe` (eframe/egui `=0.31.1`) | The settings window: 一般 / 外觀 / 快捷鍵 / 自訂詞庫 / 詞庫來源 (+ unlisted 辭典搜尋), the update flow, `--check-updates` headless. |
+| `crates/taigi-windows-settings` (PR7-9, W17) | bin `TaigiKeyboardSettings.exe` (WinUI 3 via `windows-reactor`, self-contained Windows App Runtime beside it; egui until the W17 cutover) | The settings window: 一般 / 外觀 / 快捷鍵 / 自訂詞庫 / 詞庫來源 (+ unlisted 辭典搜尋), the update flow, `--check-updates` headless. |
 | `build-support/resource.rs` | build-script include | The icon + VERSIONINFO both binaries embed (`rc.exe` / `llvm-rc` / `windres`). |
 | `installer/` + `scripts/` (PR10) | Inno Setup script, scheduled-task definition, release + publish scripts | `docs/architecture/windows-release.md`. |
 

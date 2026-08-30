@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `windows`, `TSF`, `Text Services Framework`, `fourth platform`, `engine reuse`, `macOS parity`
-> **Status**: Phase 0 approved 2026-08-29 (Fable 5 research + Codex ANALYSIS-ONLY pre-impl review, verdicts folded in below); implementation in progress, authored WITHOUT a Windows machine
+> **Status**: Phase 0 approved 2026-08-29; PR1–PR10 + parity audit merged 2026-08-29 (authored without a Windows machine). **W17 (2026-08-30)**: the settings window moves from egui to WinUI 3 via `windows-reactor` — USER decision, Codex GO WITH CHANGES; a Windows box (`ssh win`) now exists and gates it. Phase status in memory.
 > **Session memory**: `memory/project_windows_ime.md` (phase status + active pointer)
 > **Sibling**: `docs/architecture/macos-roadmap.md` — the platform this one mirrors
 
@@ -24,9 +24,11 @@ Two consequences shape every decision below:
    presentation** · **unsupported host capability** · **intentionally deferred** ·
    **unverified until Windows dogfood**. Each delta is named per
    `.claude/rules/cross-platform-alignment.md` §3.
-2. **No Windows machine exists yet.** Everything is authored blind and verified on the
-   macOS host (§ W13). First-run breakage on a real Windows box is expected and is the
-   dogfood's job — see § Dogfood run-book.
+2. **PR1–PR10 were authored without a Windows machine** and verified on the macOS host
+   (§ W13). Since 2026-08-30 a Windows box exists (`ssh win`, MSVC Rust 1.98, no .NET):
+   W17 and everything after it is built and smoke-run there; the macOS host keeps the
+   fast type-check. First-run breakage on the box is the dogfood's job — see § Dogfood
+   run-book.
 
 **Hard constraints**: release / tag / store actions stay user-gated. TL + POJ only, no
 TPS (same as macOS). Shared-surface changes (engine proto, i18n, release tooling) are
@@ -60,15 +62,17 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
         │ ShellExecuteW("TaigiKeyboardSettings.exe")            ▲ settings.json (revision)
         ▼                                                       │
 ┌────────────────────────────────────────────────────────────────┴───────────────────┐
-│ TaigiKeyboardSettings.exe (crate taigi-windows-settings, eframe/egui =0.31.1)      │
-│  sidebar: 一般 / 外觀 / 快捷鍵 / 自訂詞庫 / 詞庫來源 (+ unlisted 辭典搜尋)           │
-│  custom-dict CRUD + CSV · shortcut recorder · update check/download/verify/install  │
-│  `--check-updates` headless mode (run by a per-user scheduled task)                 │
+│ TaigiKeyboardSettings.exe (crate taigi-windows-settings, WinUI 3 via windows-reactor│
+│  — W17; egui until the W17 cutover) · self-contained Windows App Runtime beside it   │
+│  NavigationView: 一般 / 外觀 / 快捷鍵 / 自訂詞庫 / 詞庫來源 (+ unlisted 辭典搜尋)    │
+│  custom-dict CRUD + CSV · shortcut recorder (WH_KEYBOARD thread hook) · update      │
+│  check/download/verify/install · `--check-updates` headless (per-user scheduled task)│
+│  The TSF DLL never links or loads WinUI (artifact-inspected, W17).                  │
 └────────────────────────────────────────────────────────────────────────────────────┘
 Runtime data: %APPDATA%\TaigiKeyboard\{settings.json, user_frequency.db,
 user_association.db, custom_dictionary.db}; install dir %ProgramFiles%\TaigiKeyboard\
 {TaigiKeyboard.dll (x64), x86\TaigiKeyboard.dll, arm64\TaigiKeyboard.dll,
-TaigiKeyboardSettings.exe, Dictionaries\*, Fonts\*}.
+TaigiKeyboardSettings.exe + the Windows App Runtime files (W17), Dictionaries\*, Fonts\*}.
 ```
 
 ## Design decisions (W1–W16, grounded in code; Codex verdict per item)
@@ -301,43 +305,113 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   gate. The repo removed CI deliberately (PR #274, USER) → recorded as a **user-gated
   open item**, not adopted here. What `cargo check` cannot catch is listed in
   `.claude/rules/windows-guidelines.md` § TSF / COM discipline.
+  **W17 amendment (2026-08-30)**: `windows-reactor-setup`'s build script refuses the
+  gnu target (`unsupported target environment: gnu`, spike), while `windows-reactor`
+  itself type-checks on it. So the settings crate's build script stages the runtime
+  only for MSVC and the gnu `cargo check` stays a type-check; the REAL gate for the
+  settings crate is `make check-box` = `ssh win cargo clippy -p taigi-windows-settings
+  --all-targets -- -D warnings` on the MSVC box, folded into `make windows-check`
+  (Codex Q4: an unreachable box is a gate FAILURE, never a silent skip; the daily gate
+  now depends on that box — the only clean alternative is Windows CI, user-gated).
 - **W14 Toolchain** — `windows/rust-toolchain.toml`: stable + `x86_64-pc-windows-msvc`
   (v1 ship), `i686-pc-windows-msvc`, `aarch64-pc-windows-msvc` (prepared — listed, not
   built by the release script) + `x86_64-pc-windows-gnu` (host check). `+crt-static`
   for the MSVC DLL and exe, verified per artifact by the release script's import-table
   check (`dumpbin /dependents`: no `vcruntime*.dll` / `msvcp*.dll` imports).
-- **W15 UI framework for settings** — eframe/egui **`=0.31.1`** (its API is the one
-  this session can author against; 0.36 changed `App::update` and the panel API).
-  Codex F2 CONFIRM WITH CONDITIONS: egui-winit 0.31 has IME integration, but
-  preedit/commit/backspace in `TextEdit`, CJK font fallback, and `rfd` dialog parenting
-  are **unverified until Windows dogfood** and sit in the run-book. Chosen over C#
-  WinUI3/WPF (a fourth language, unbuildable here, P/Invoke for search + SQLite) and
-  raw Win32 controls. Parity = information architecture, control semantics and
-  workflow (ported); the chrome is egui's — **platform-adapted presentation**, brought
-  as close to Fluent as egui allows (2026-08-29 parity audit): the system UI face
-  (`SegUIVar.ttf`, `segoeui.ttf` on Windows 10) PREPENDED to egui's proportional
-  family so Latin is drawn as every other Windows window draws it; the bundled
-  `jf-openhuninn-2.1.ttf` (the file macOS ships) APPENDED as the fallback for the hanji
-  the faces before it lack; the sidebar rows carry Segoe Fluent Icons / MDL2 glyphs
-  (`SegoeIcons.ttf` / `segmdl2.ttf`, same code points) where the Mac shows SF Symbols —
-  skipped, not boxed, on a machine without the face; the selection / hyperlink colour
-  is the DWM accent (`taigi_windows_platform::system_accent`, one reader shared with
-  the candidate window) with the same luminance gate for its text; the caption is
-  painted dark with `DWMWA_USE_IMMERSIVE_DARK_MODE` whenever the resolved theme is
-  dark (winit leaves it light). **Not adopted**: Mica / Acrylic backdrop — egui
-  paints an opaque client area, so `DWMWA_SYSTEMBACKDROP_TYPE` would show nothing;
-  WinUI controls (a fourth language). High contrast: the candidate window draws
-  entirely in the scheme's `GetSysColor`s when `SPI_GETHIGHCONTRAST` says one is on
-  (re-read on `WM_THEMECHANGED`); the egui settings window has no high-contrast mode
-  of its own — named limitation. `accesskit` is ON (a Windows accessibility tree for the settings window
-  — product decision, PR7 Codex). Live reload while idle = a repaint requested every
-  second (eframe repaints only on events; the DLL's writes are not events). No
-  `%APPDATA%` ⇒ the window is read-only on the defaults and says so — never a file the
-  DLL would not read. **Named limitations for the dogfood run-book (PR11)**: the
-  shortcut recorder's chord keys follow egui's logical `Key` with US-layout folds for
-  shifted punctuation (a bare press takes the typed text and is exact); AltGr-shaped
-  chords (Ctrl+Alt) are refused on both tiers rather than disambiguated; the keypad `+`
-  reads as `=`; the Win key cannot be recorded (egui has no such modifier).
+  **W17 amendment**: `windows-reactor` needs rust-version 1.95 (box has 1.98, edition
+  2024). The no-VC-runtime gate covers OUR two binaries only; the Windows App Runtime
+  DLLs staged beside the exe are Microsoft's (they import the system UCRT
+  `api-ms-win-crt-*`, no `vcruntime140` — string-inspected on the box) and are never
+  judged by it.
+- **W15 UI framework for settings — SUPERSEDED by W17 (2026-08-30)**. History: PR7/PR8/#641/#645
+  shipped an eframe/egui `=0.31.1` window (system faces prepended, DWM accent, dark
+  caption, then a Fluent-token restyle in #645). USER 2026-08-30 after seeing it run:
+  「egui很醜,放棄egui方案 … win設定選單改為windows原生UI元件, modern win style」. The egui
+  code stays on `main` until the W17 cutover PR deletes it; its named limitations (no
+  Mica, no high contrast, egui IME path, accesskit tree) die with it.
+- **W17 Settings window on WinUI 3 via `windows-reactor`** (Codex ANALYSIS-ONLY
+  2026-08-30: GO WITH CHANGES, all folded in). Framework = `windows-reactor` 0.100
+  (microsoft/windows-rs `crates/libs/reactor`, pure-Rust declarative WinUI 3:
+  `Component { create / update / view }`, typed messages, `spawn_background`, generated
+  builders for 86 controls, `WindowVisuals { theme, backdrop: Mica, client_size }`,
+  `ThemeBrush::{CardBackground, CardStroke, Accent, …}`). Chosen over C# WinUI 3 (a
+  fourth language, .NET on the box, SQLite/engine over FFI/IPC) and raw WinUI through
+  `windows-bindgen` (XAML bootstrap, event tokens and tree diff by hand): zero FFI —
+  `taigi-windows-core/-storage/-update/-platform` are called directly. **Risk
+  register**: git dependency pinned to the spike-proven commit
+  `dc720b3674c46ceb82d758ed20959977b32e60a9` (crates.io holds only `0.0.0`
+  placeholders); rust-version 1.95; API 3 months old — a bump is its own round on the
+  box. Flip-to-C# triggers (Codex Q1): reconciliation/state loss that cannot be
+  worked around, unreliable native `TextBox` IME / UIA / `ContentDialog` focus /
+  `NavigationView` lifetime on the box, upstream churn forcing a fork. A missing
+  property on one control is NOT a trigger. **Spike 2026-08-30 on the box**: both
+  reactor samples build in 1m57s and run; self-contained runtime = 65 MB / 42 files +
+  3 MB exe.
+  **Deployment = self-contained** (Codex Q2): `windows_reactor_setup::as_self_contained()`
+  in the settings crate's `build.rs` (MSVC only; skipped on the gnu host check) stages
+  the `Microsoft.WindowsAppSDK.Runtime` 2.4.0 files beside the exe and embeds the
+  activatable-class app manifest via `/MANIFEST:EMBED` (coexists with the rc-embedded
+  icon + VERSIONINFO — verified in PR A0). `release-app.sh` copies the runtime files to
+  staging; `.iss` installs them into `{app}` beside the exe; uninstall removes them
+  (user data untouched). No Windows App Runtime install, no MSIX provisioning, offline
+  install, deterministic version; the installer grows ~25–35 MB compressed.
+  Framework-dependent (116 MB `WindowsAppRuntimeInstall.exe` chained in Inno) rejected.
+  **The TSF DLL inherits nothing**: `dumpbin /imports TaigiKeyboard.dll` must not name
+  `Microsoft.UI.Xaml*` / `Microsoft.WindowsAppRuntime*`; Reactor lives only in the
+  settings binary's graph (release-script gate). `Fonts\` stays — the candidate window
+  needs it.
+  **What WinUI gives natively** (all of §W15's hand-rolled parts): Mica, system
+  light/dark + the app's own 淺色/深色 (`WindowTheme`), accent, high contrast, Segoe UI
+  Variable + Segoe Fluent Icons, hanji via the system font fallback (no bundled UI
+  face; `fonts.rs` / `theme.rs` deleted), UIA/Narrator, keyboard navigation, and a
+  `TextBox` that is a real TSF host — the 自訂詞庫 fields take 台語 from our own TIP.
+  **Shape**: one `SettingsWindow` component (NavigationView Left, pane toggle / back /
+  settings hidden, `open_pane_length` 215, `FontIcon` glyphs U+E713/E790/E765/E82D/E8F1)
+  + one page per pane; SettingsCard = `Border(CardBackground, CardStroke, 1px, 4px,
+  padding 16×12)` over `Grid[★, auto]`; 教典 subcollections in an `Expander`; the
+  destructive / reset actions are real `Button`s carrying the card (Codex Q6: keyboard
+  activation + UIA role; brushes via `resource_overrides` — spike whether the override
+  keys keep theme resolution; else Subtle button chrome around an inner card `Border`,
+  never a pointer-only `Border`); alerts = `ContentDialog`; banners = `InfoBar`; busy =
+  `ProgressRing`. Window: `client_size(760, 560)` + min constraints; frame position is
+  NOT persisted (`settings-window.ron` retired) — named divergence from the Mac's
+  autosaved frame.
+  **Timers** (Codex Q5): live reload (W10) = a re-armed single-flight
+  `spawn_background(sleep 1 s → Tick{generation})`; the closure checks cancellation after
+  the sleep; every message that can arrive late (tick, filter debounce, spinner delay,
+  recorder poll) carries a generation and is a no-op when stale; OS resources (the
+  hook) are freed by RAII/component drop, never by a message.
+  **Shortcut recorder** — Reactor exposes NO keyboard events (only static
+  `KeyAccelerator`s; `TextBox::on_text_changed` cannot see Tab/Escape/modifiers) →
+  while a row records, a THREAD-scoped `SetWindowsHookExW(WH_KEYBOARD, …,
+  GetCurrentThreadId())` in `taigi-windows-platform` (Codex Q3, all conditions
+  adopted): installed and removed on the XAML thread; static `extern "system"`
+  callback under `catch_unwind`, `nCode < 0` → `CallNextHookEx`, pass-through when not
+  recording / untranslatable / channel gone; swallows BOTH key-down and key-up of the
+  keys it takes (return 1) so XAML never sees a lone key-up; bounded work only
+  (`try_send` into an `mpsc`); `HHOOK` in an RAII guard released on recorded / Escape /
+  Tab / explicit `StopRecording` from every interaction that ends it (Codex: do not
+  rely on root `Border::on_pointer_pressed` bubbling — children that handle the press
+  swallow it) / window focus loss (the egui behaviour, kept) / pane change / window
+  close / drop; a recording generation discards stale presses. Bare-press names come
+  from `ToUnicodeEx` with the W5 rules (HKL, dead keys, surrogates, AltGr) — shared with
+  the TSF crate's `key_translation`, not a weaker copy; chords use the VK table. The
+  decision stays `keys::evaluate_press` (core, untouched). The old egui limitations
+  (keypad `+`, Win key, AltGr) are re-classified against the hook in PR B1.
+  **Behaviour freeze** (Codex Q7): every `settings.json` write, store call, the
+  one-work-slot rule, CSV codec, the `Offer` machine, `--check-updates`, the launcher
+  contract stay byte-for-byte. Named observable changes: window frame not persisted;
+  label click no longer toggles a switch (reset/destructive cards DO fire on the whole
+  card, being buttons); UI hanji = system fallback face; native `TextBox` IME / caret /
+  undo / clipboard; native focus order, focus visuals, Narrator; high contrast now
+  supported; `ContentDialog` Escape/Enter/focus-trap semantics; `ListView` selection +
+  keyboard semantics; `rfd` owner HWND re-verified; the installed exe (including the
+  headless `--check-updates` run) now needs the runtime files beside it; second launch
+  with a different `--pane` must still switch + foreground the existing window
+  (single-instance mutex kept, activation re-verified).
+  **Gate**: § W13 amendment (`make check-box`). Each PR: builds on the box, launches
+  headless without crashing (ssh session 0 cannot show a window), USER screenshots on
+  the box's console.
 - **W16 Docs** — roadmap = decisions + PR DAG + acceptance; memory = round hand-off;
   `docs/architecture/windows-release.md` = operator procedure. **PR10 contract for PR9's
   code** (Codex): sign `TaigiKeyboardSettings.exe` and every installer with the SAME
@@ -346,7 +420,9 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   signed final `.exe`; a Start-menu shortcut to the settings exe with
   `System.AppUserModel.ID = TaigiKeyboard.Settings`; a per-user scheduled task running
   the installed exe with exactly `--check-updates`, `MultipleInstances=IgnoreNew`;
-  `Dictionaries\` and `Fonts\` beside the exe (never the working directory); no
+  `Dictionaries\` and `Fonts\` beside the exe (never the working directory) — and,
+  from W17, the Windows App Runtime files beside the exe (the headless updater depends
+  on the complete install directory); no
   settings-exe launch from the installer before its payload is fully consumed; a
   certificate-rotation release goes through the download page once;
   `.claude/rules/windows-guidelines.md` = durable constraints; `windows/updates/README.md`
@@ -359,6 +435,13 @@ UI-less candidate hosts (games, some Store apps) · password / secure fields (no
 composition, no learning) · AltGr layouts · high contrast · screen reader (candidate
 window exposes text via UIA — deferred, named) · touch keyboard · remote desktop ·
 Chrome child-HWND focus · Notepad composition length cap · Windows Terminal.
+W17 adds (settings window): native `TextBox` 台語 IME · Narrator/UIA + Tab order ·
+`ContentDialog` focus trap + Escape/Enter · `NavigationView` adaptive width (pane
+collapse below its threshold) · Mica on Windows 10 (falls back) · runtime files
+missing → a readable failure, not a silent exit · clean/offline install · hook
+released on every exit path, keys swallowed only while recording · live system
+theme / high-contrast change · `--check-updates` from the non-interactive scheduled
+task session · uninstall removes the runtime files, keeps `%APPDATA%`.
 
 ## Phase / PR table
 
@@ -382,6 +465,16 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR9 | Updates | `taigi-windows-update`: `manifest` (wire format = macOS's, `DottedVersion` zero-padded), `checker` (due / stamp-before-fetch / record / announce-once, pure over `SettingsDocument`), `transport` (`ManifestFetcher` + `PackageDownloader` traits; `ureq` over schannel, 64 KiB / 200 MiB ceilings, HTTPS+200 only), `installation` (the `Offer` state machine, staging `%LOCALAPPDATA%\TaigiKeyboard\Updates\<uuid>\<version>.exe`, download + verify on a thread), `verify` (WinVerifyTrust + signer thumbprint pinned to the running exe + VERSIONINFO product/version; host stub = no in-app install), `toast` (WinRT, AUMID `TaigiKeyboard.Settings`); settings exe: overdue check at launch, `--check-now` alert, `--check-updates` headless, 一般-pane pending row per offer | **Merged** #634 (`101034f5`) |
 | PR10 | Installer + release | `windows/installer/TaigiKeyboard.iss` (admin, `{autopf}\TaigiKeyboard`, x64compatible, Inno 6.5+; languages = macOS bundle's zh-Hant/en/ja with Hanji first as fallback, messages generated from `desktop.installer*` into `Messages.iss` by `make i18n` — USER 2026-08-29「macos有什麼語言，windows就有什麼」; unregister + stop settings exe + rename lock-probe with the sign-out recipe before copying; regsvr32 x64 + SysWOW64 for a staged x86 DLL; AUMID Start-menu shortcut; per-user scheduled task from `update-check-task.xml` created as the original user, `IgnoreNew`; symmetric uninstall, `%APPDATA%` kept) · `build-support/resource.rs` + both crates' `build.rs` (icon id 1 + VERSIONINFO with `VFT_APP`/`VFT_DLL` via rc.exe / llvm-rc / windres; `TAIGI_REQUIRE_RESOURCES=1` = compile failure fatal, no windres on MSVC) · `resources/TaigiKeyboard.ico` (`tools/windows/make-ico.py`) · `scripts/{lib/identity.sh,release-app.sh,publish-release.sh}` (mirror of macOS; signtool by thumbprint, env-gated; VERSIONINFO read back from DLL/exe/installer via PowerShell and compared to the checkout; `dumpbin /dependents` no-VC-runtime gate; publisher pins the installer's signer to `WINDOWS_SIGNING_THUMBPRINT`; `windows-v<ver>` release on the website repo; `appcast/windows.json` + `_data/windows_release.json`; poll live) · root `make windows-release`, `windows/Makefile release` · `tools/release_notes.py` set/check-versions += `windows/Cargo.toml` · docs `windows-release.md`, `windows/updates/README.md`, README | **Merged** #635 (`05c06cd0`) — 2026-08-29 USER「merge all PR」; installer languages = macOS bundle set (hanji/en/ja) via `desktop.installer*` → `Messages.iss` |
 | PR11 | Dogfood fixes | first real-Windows smoke: fixes from the run-book + memory hand-off (not admin-only) | Pending |
+| W17-A0 | Reactor foundation | pinned `windows-reactor` git dep + MSVC-only `as_self_contained()` in `build.rs` (rc resources coexist), `make check-box` (ssh MSVC clippy) folded into `windows-check`, `release-app.sh` runtime staging + DLL no-WinUI import gate, `.iss` runtime files + uninstall, docs; egui entry point UNTOUCHED | Pending |
+| W17-A | Shell + 一般 + 外觀 | `SettingsWindow` component (NavigationView, Mica, theme, size, title, live-reload tick, InfoBar banners, ContentDialog alerts), SettingsCard/button-card widgets, 一般 + 外觀 pages, update row + outcome dialog; ships as an ALTERNATE entry (`--winui` or feature) — egui stays production until W17-C | Pending |
+| W17-B1 | Platform recorder hook | `taigi-windows-platform`: `WH_KEYBOARD` thread hook (RAII, catch_unwind, down+up swallow, try_send channel, host stub) + shared `ToUnicodeEx` bare-press naming with the TSF crate; pure tests | Pending |
+| W17-B | 快捷鍵 + 詞庫來源 | recorder widget over B1 + shortcuts page; dictionary sources with `Expander` | Pending |
+| W17-C | 自訂詞庫 + 辭典搜尋 + cutover | ListView table, paging, CRUD ContentDialog, `rfd` CSV on background jobs, ProgressRing overlay, delete-all / clear-learning; search page; THEN delete egui (`app.rs` shell, `theme.rs`, `fonts.rs`, `keys.rs`, `work.rs`, egui widgets, eframe/egui deps) and make Reactor the only entry | Pending |
+
+W17 merge rule (Codex Q8): A0 may merge alone (no behaviour change). A / B1 / B / C are
+**stacked** — none merges to `main` on its own; `main` never carries a Reactor build
+that lacks a pane. Installer + release plumbing lands in A0 so the first Reactor exe
+starts on a clean install.
 
 Dependencies: PR2 → PR3/PR4 (parallelisable) → PR5a → PR5b → PR6; PR7 → PR8; PR9 needs
 PR4 + PR7; PR10 last.
@@ -474,25 +567,21 @@ Ordered in layers — stop at the first foundation failure:
    (expect W2 degradation there) / a password field (expect no composition).
 4. Lang-bar button in the tray: menu 設定 opens the exe; Ctrl+Shift+S / Ctrl+Shift+C /
    `` ` `` work while the TIP is active.
-5. Settings exe: each pane matches the macOS pane order and controls; typing Taiwanese
-   INTO the custom-dict fields (egui IME path: preedit, commit, backspace, caret); CJK
-   glyphs render; file dialogs return focus; changing a setting is visible on the next
-   keystroke without restart. Display language 自動: an English Windows UI with a
-   Taiwan region setting draws the settings window in English (UI language wins, as on
-   the Mac); a zh-TW UI draws Hanji. **Fluent**: Latin in Segoe UI Variable (compare
-   the digits against Windows Settings); the five sidebar rows carry a glyph each
-   (gear / palette / keyboard / book / library), none a box; the selected row, the
-   外觀 thumbnail ring and links are the user's accent colour (change it in
-   個人化 → 色彩 and watch the window follow within a second — try a deep blue and
-   a pale yellow / mint: selected text white vs near-black, links readable); in 深色
-   the title bar is dark, not white, and the app's explicit 淺色/深色 controls the
-   caption against the opposite system theme; on Windows 10 (record the build:
-   `segoeui.ttf` / `segmdl2.ttf`, and `DWMWA_USE_IMMERSIVE_DARK_MODE` is documented for
-   Windows 11 only — a refusal must degrade to a light caption, never crash). Sidebar
-   rows: hover, Tab focus and Narrator focus stay visible; icon and label share a
-   baseline at 200 % DPI; each of the five glyphs means what its pane means in both
-   icon faces. Remote Desktop (no DWM accent): settings and candidate window both
-   fall back to `#0078D4`.
+5. Settings exe (W17, WinUI 3): each pane matches the macOS pane order and controls;
+   typing Taiwanese INTO the custom-dict `TextBox`es with our own TIP (composition,
+   commit, backspace, caret — a native TSF host); Mica behind the window on Windows 11,
+   a solid ground on Windows 10; the window follows 個人化 → 色彩 (accent) and the
+   system light/dark live, and the app's own 淺色/深色 overrides it; high contrast
+   (Alt+Shift+PrintScreen) redraws the whole window in the scheme; the five
+   NavigationView items carry Segoe Fluent Icons glyphs; Narrator reads every card's
+   header for its switch/combo; Tab order walks nav → cards → controls with visible
+   focus; 快捷鍵 recording swallows Tab/Space/Enter only while a row records and
+   releases the hook on Escape, click-away, focus loss, pane change and close (no key
+   ever stays swallowed); `ContentDialog`s trap focus and answer Escape; second launch
+   with `--pane` switches the existing window; changing a setting is visible on the
+   next keystroke without restart; display language 自動: an English Windows UI with a
+   Taiwan region draws English (UI language wins, as on the Mac), a zh-TW UI draws
+   Hanji in the system's CJK face.
 6. Installer: fresh install, upgrade over a running IME (expect the sign-out note),
    uninstall leaves `%APPDATA%\TaigiKeyboard` in place; scheduled task exists.
 7. Update: `--check-updates` reads the live manifest; toast appears; download + verify +
