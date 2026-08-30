@@ -115,7 +115,7 @@ echo "==> Copying icons"
 # The two files Info.plist names, one per icon key; Info.plist itself explains
 # why there are two. Either one missing leaves a generic placeholder in its own
 # place, which shows up only once the input method is installed.
-# Rebuild AppIcon.icns with `iconutil` from ios/…/AppIcon.appiconset.
+# Regenerate AppIcon.icns with `swift tools/desktop/make-app-icon.swift`.
 ICON_FILE="$PACKAGE_DIR/App/AppIcon.icns"
 if [[ ! -s "$ICON_FILE" ]]; then
     echo "error: missing or empty app icon $ICON_FILE" >&2

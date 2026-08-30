@@ -41,7 +41,7 @@ def main(argv: list[str]) -> int:
         entry_size = 0 if size == 256 else size
         directory += struct.pack("<BBBBHHII", entry_size, entry_size, 0, 0, 1, 32, len(data), offset)
         offset += len(data)
-    output.write_bytes(header + directory + b"".join(images))
+    output.write_bytes(header + directory + b"".join(data for _, data in images))
     print(f"wrote {output} ({len(images)} entries)")
     return 0
 
