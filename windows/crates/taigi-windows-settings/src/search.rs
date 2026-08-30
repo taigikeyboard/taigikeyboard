@@ -35,6 +35,15 @@ pub struct DictionarySearchResult {
 }
 
 impl DictionarySearchResult {
+    /// A stable identity for the row: a replaced result list must not
+    /// reuse the native node — or the menu — of a different word.
+    pub fn key(&self) -> String {
+        match &self.id {
+            ResultId::System(id) => format!("system:{id}"),
+            ResultId::Custom(id) => format!("custom:{id}"),
+        }
+    }
+
     pub fn moe_url(&self) -> Option<String> {
         self.lookup_tl.as_deref().and_then(moe_url)
     }

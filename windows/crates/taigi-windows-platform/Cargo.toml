@@ -13,6 +13,9 @@ publish.workspace = true
 # DLL's classifier, a recorded press for the settings window's recorder.
 # `taigi-windows-core` depends on nothing here, so the edge is one way.
 taigi-windows-core.workspace = true
+# The shape `rfd` asks a dialog's owner window for; the HWND behind it is
+# this crate's to read.
+raw-window-handle.workspace = true
 log.workspace = true
 
 [target.'cfg(windows)'.dependencies]

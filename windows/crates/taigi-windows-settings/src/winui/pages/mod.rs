@@ -5,6 +5,8 @@
 // 中文: 各 pane 的頁面 — 純呈現函式,狀態全在 SettingsWindow。
 
 pub mod appearance;
+pub mod custom_dictionary;
+pub mod dictionary_search;
 pub mod dictionary_sources;
 pub mod general;
 pub mod shortcuts;

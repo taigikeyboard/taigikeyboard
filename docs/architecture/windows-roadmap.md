@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `windows`, `TSF`, `Text Services Framework`, `fourth platform`, `engine reuse`, `macOS parity`
-> **Status**: Phase 0 approved 2026-08-29; PR1–PR10 + parity audit merged 2026-08-29 (authored without a Windows machine). **W17 (2026-08-30)**: the settings window moves from egui to WinUI 3 via `windows-reactor` — USER decision, Codex GO WITH CHANGES; a Windows box (`ssh win`) now exists and gates it. Phase status in memory.
+> **Status**: Phase 0 approved 2026-08-29; PR1–PR10 + parity audit merged 2026-08-29 (authored without a Windows machine). **W17 (2026-08-30/31)**: the settings window moved from egui to WinUI 3 via `windows-reactor` — USER decision, Codex GO WITH CHANGES; a Windows box (`ssh win`) gates it. A0 / A / B1 / B merged; C is the cutover. Phase status in memory.
 > **Session memory**: `memory/project_windows_ime.md` (phase status + active pointer)
 > **Sibling**: `docs/architecture/macos-roadmap.md` — the platform this one mirrors
 
@@ -63,7 +63,7 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
         ▼                                                       │
 ┌────────────────────────────────────────────────────────────────┴───────────────────┐
 │ TaigiKeyboardSettings.exe (crate taigi-windows-settings, WinUI 3 via windows-reactor│
-│  — W17; egui until the W17 cutover) · self-contained Windows App Runtime beside it   │
+│  — WinUI 3 since the W17-C cutover) · self-contained Windows App Runtime beside it  │
 │  NavigationView: 一般 / 外觀 / 快捷鍵 / 自訂詞庫 / 詞庫來源 (+ unlisted 辭典搜尋)    │
 │  custom-dict CRUD + CSV · shortcut recorder (WH_KEYBOARD thread hook) · update      │
 │  check/download/verify/install · `--check-updates` headless (per-user scheduled task)│
@@ -511,7 +511,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 | W17-A | Shell + 一般 + 外觀 | `SettingsWindow` component (NavigationView, Mica, theme, size, title, live-reload tick, InfoBar banner, ContentDialog alerts), SettingsCard / choice / switch / action-card widgets, 一般 + 外觀 pages, update row + outcome dialog; ALTERNATE entry `--winui` (replaces A0's `--winui-smoke`, which the real window subsumes) — egui stays production until W17-C. Shared seams so nothing is written twice: `updates::UpdateHost` (both windows drive one check / offer / announce), `presentation` (display language, pane titles + glyphs, sponsor link), `user_data::open_at_launch` (the launch store migrations both entries owe). The Reactor sidebar lists only the panes this build has pages for; a stored or `--pane` selection it has no page for opens on 一般 IN MEMORY and is never written back, so a preview launch cannot move the egui window's selection | **Merged** #648 (`cf498ea6`) |
 | W17-B1 | Platform recorder hook | `taigi-windows-platform`: `WH_KEYBOARD` thread hook (RAII + drain, `catch_unwind`, down+up swallow, bounded delivery closure, host stub) + the shared `ToUnicodeEx` translation moved out of the TSF crate so the recorder reads a key exactly as the classifier does (`key_translation::recorded_press`, AppKit reserved scalars for the keys that type nothing); pure tests for the `lParam` decode, the swallow bookkeeping and the scalar table. `make check-box` widens to the platform crate — its key translation IS the Win32 keyboard API, so its tests cannot run on the macOS host | **Merged** #649 (`33c0f844`) |
 | W17-B | 快捷鍵 + 詞庫來源 | recorder rows over the B1 hook (`RecorderTarget` routes BOTH registries through one `store`, so the conflict pass cannot be forgotten on one of them) + shortcuts page; 詞庫來源 with 教典 as an `Expander` header over its eleven subcollections. Reactor exposes no focus event, so every message that is not the recording itself ends it — the "clicked elsewhere" the egui field watched for — and the tick releases a row the user walked away from. The slot-key-set picker keeps its `resolve_after_slot_key_set_change` pass: `choice_row` answers with the MESSAGE the row means, not a single-key write | **Merged** #650 (`758fe4a0`) |
-| W17-C | 自訂詞庫 + 辭典搜尋 + cutover | ListView table, paging, CRUD ContentDialog, `rfd` CSV on background jobs, ProgressRing overlay, delete-all / clear-learning; search page; THEN delete egui (`app.rs` shell, `theme.rs`, `fonts.rs`, `keys.rs`, `work.rs`, egui widgets, eframe/egui deps) and make Reactor the only entry | Pending |
+| W17-C | 自訂詞庫 + 辭典搜尋 + cutover | `ListView` table + header, paging, CRUD `ContentDialog`, `rfd` CSV over `platform::dialog_owner()` (Reactor hands out no HWND), busy card after 400 ms, delete-all / clear-learning; the unlisted search page; THEN egui goes — `app.rs`, `theme.rs`, `fonts.rs`, `keys.rs`, `panes/**`, `widgets/**`, and the eframe / egui / egui_extras pins. Background work moves from `work::PendingWork` to Reactor's `spawn_background` (`work.rs` survives ONLY for `UpdateState`, which is not a component and has no context). `main()` returns `ExitCode`; `--winui` goes with the window it selected. `check-exe` retires — the exe can only link on MSVC now, so `check-box` builds it | Pending |
 
 W17 merge rule (Codex Q8): A0 may merge alone (no behaviour change). A / B1 / B / C are
 **stacked** — none merges to `main` on its own; `main` never carries a Reactor build

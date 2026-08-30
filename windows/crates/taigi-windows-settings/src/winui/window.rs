@@ -17,6 +17,8 @@ use crate::settings_writer::{SettingsWriter, BUSY_REFRESH_INTERVAL, IDLE_REFRESH
 use crate::updates::{UpdateState, INSTALLED_VERSION};
 use crate::winui::cards;
 use crate::winui::pages;
+use crate::winui::pages::custom_dictionary::CustomDictionaryModel;
+use crate::winui::pages::dictionary_search::DictionarySearchModel;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
@@ -38,22 +40,29 @@ use windows_reactor::*;
 /// guide's rule for a subtree that owns nothing.
 type PageView = fn(&SettingsWindow, &StringResolver, &mut ViewContext<SettingsWindow>) -> View;
 
-/// The panes this window has pages for, in sidebar order, each with the
-/// page that draws it — one table, so a pane cannot be listed without a
-/// page or reachable without a row. 自訂詞庫 and the unlisted 辭典搜尋
-/// arrive with W17-C; the egui window lists all five until that cutover,
-/// so a pane missing here is still reachable there.
-const PANES: [(SettingsPane, PageView); 4] = [
+/// The panes the sidebar lists, in order, each with the page that draws
+/// it — one table, so a pane cannot be listed without a page or reachable
+/// without a row.
+const PANES: [(SettingsPane, PageView); 5] = [
     (SettingsPane::General, pages::general::view),
     (SettingsPane::Appearance, pages::appearance::view),
     (SettingsPane::Shortcuts, pages::shortcuts::view),
+    (
+        SettingsPane::CustomDictionary,
+        pages::custom_dictionary::view,
+    ),
     (
         SettingsPane::DictionarySources,
         pages::dictionary_sources::view,
     ),
 ];
 
+/// The page for a pane the sidebar does not list: built, reachable only by
+/// `--pane dictionarySearch`, exactly as on macOS (USER 2026-08-21).
 fn page_view(pane: SettingsPane) -> Option<PageView> {
+    if pane == SettingsPane::DictionarySearch {
+        return Some(pages::dictionary_search::view);
+    }
     PANES
         .iter()
         .find(|(listed, _)| *listed == pane)
@@ -80,9 +89,9 @@ const FORM_INSET: f64 = 24.0;
 /// changes, so identity is the right comparison.
 pub struct Launch {
     live: Rc<LiveSettings>,
-    /// Held open for the window's life, exactly as the egui window holds
-    /// it: the launch migrations run off it, and the W17-C pages read it.
-    _stores: UserDataStores,
+    /// Held open for the window's life: the launch migrations run off it,
+    /// and the 自訂詞庫 and 辭典搜尋 pages read it.
+    stores: UserDataStores,
     is_read_only: bool,
     pane: SettingsPane,
     is_check_now: bool,
@@ -108,7 +117,7 @@ pub fn run(
 ) -> bool {
     let input = SettingsWindowInput(Rc::new(Launch {
         live: Rc::new(live),
-        _stores: crate::user_data::open_at_launch(directory, is_read_only),
+        stores: crate::user_data::open_at_launch(directory, is_read_only),
         is_read_only,
         pane,
         is_check_now,
@@ -227,6 +236,8 @@ pub enum Message {
     /// come off any global row that held one.
     SetSlotKeySet(Option<CandidateSlotKeySet>),
     Reset(ResetScope),
+    CustomDictionary(pages::custom_dictionary::Message),
+    DictionarySearch(pages::dictionary_search::Message),
     StartRecording(RecorderTarget),
     /// A key the hook took while a row was recording. The generation is
     /// the recording it was taken for: a press that arrives after that row
@@ -237,7 +248,7 @@ pub enum Message {
     ActOnOffer,
     UpdateAlertClosed(ContentDialogResult),
     DismissAlert,
-    OpenUrl(&'static str),
+    OpenUrl(String),
 }
 
 pub struct SettingsWindow {
@@ -247,6 +258,8 @@ pub struct SettingsWindow {
     /// A URL the browser refused to open, or another page's report.
     message: Option<PageMessage>,
     updates: UpdateState,
+    custom_dictionary: CustomDictionaryModel,
+    dictionary_search: DictionarySearchModel,
     recorder: Recorder,
     tick_generation: u64,
     /// The beat in flight and the interval it was armed at, so a message
@@ -265,6 +278,18 @@ impl SettingsWindow {
 
     pub fn updates(&self) -> &UpdateState {
         &self.updates
+    }
+
+    pub fn is_read_only(&self) -> bool {
+        self.settings.is_read_only()
+    }
+
+    pub fn custom_dictionary(&self) -> &CustomDictionaryModel {
+        &self.custom_dictionary
+    }
+
+    pub fn dictionary_search(&self) -> &DictionarySearchModel {
+        &self.dictionary_search
     }
 
     pub fn is_recording(&self, target: RecorderTarget) -> bool {
@@ -335,10 +360,23 @@ impl SettingsWindow {
         }
     }
 
-    fn select_pane(&mut self, pane: SettingsPane) {
+    fn select_pane(&mut self, pane: SettingsPane, context: &ComponentContext<Self>) {
         self.pane = pane;
         self.settings
             .update(|document| document.set_choice(&keys::SELECTED_SETTINGS_PANE, pane));
+        self.enter_pane(context);
+    }
+
+    /// What a pane needs the first time it is shown. 自訂詞庫 is the only
+    /// one with something to fetch, and it fetches it once.
+    fn enter_pane(&mut self, context: &ComponentContext<Self>) {
+        if self.pane == SettingsPane::CustomDictionary && !self.settings.is_read_only() {
+            pages::custom_dictionary::ensure_loaded(
+                &mut self.custom_dictionary,
+                &self.launch.stores,
+                context,
+            );
+        }
     }
 
     /// The interval the beat should be running at: a check or a download
@@ -478,6 +516,8 @@ impl Component for SettingsWindow {
             launch,
             message: None,
             updates: UpdateState::new(),
+            custom_dictionary: CustomDictionaryModel::default(),
+            dictionary_search: DictionarySearchModel::default(),
             recorder: Recorder::default(),
             tick_generation: 0,
             tick: None,
@@ -492,7 +532,9 @@ impl Component for SettingsWindow {
         // `--pane` is a selection like a click: persisted, so the next
         // plain launch reopens there too.
         if listed && window.document().choice(&keys::SELECTED_SETTINGS_PANE) != window.pane {
-            window.select_pane(window.pane);
+            window.select_pane(window.pane, context);
+        } else {
+            window.enter_pane(context);
         }
         window.arm_tick(context);
         window
@@ -533,7 +575,7 @@ impl Component for SettingsWindow {
                     return;
                 };
                 if pane != self.pane && page_view(pane).is_some() {
-                    self.select_pane(pane);
+                    self.select_pane(pane, context);
                 }
             }
             Message::SetChoice(Some(write)) => {
@@ -560,6 +602,42 @@ impl Component for SettingsWindow {
                 }
                 ResetScope::DictionarySources => document.reset_dictionary_sources(),
             }),
+            Message::CustomDictionary(message) => {
+                let Self {
+                    launch,
+                    custom_dictionary,
+                    message: alert,
+                    ..
+                } = self;
+                pages::custom_dictionary::update(
+                    custom_dictionary,
+                    message,
+                    pages::custom_dictionary::PageEnvironment {
+                        stores: &launch.stores,
+                        message: alert,
+                    },
+                    context,
+                );
+            }
+            Message::DictionarySearch(message) => {
+                let Self {
+                    launch,
+                    settings,
+                    dictionary_search,
+                    message: alert,
+                    ..
+                } = self;
+                pages::dictionary_search::update(
+                    dictionary_search,
+                    message,
+                    pages::dictionary_search::PageEnvironment {
+                        stores: &launch.stores,
+                        document: settings.document(),
+                        message: alert,
+                    },
+                    context,
+                );
+            }
             Message::StartRecording(target) => self.start_recording(target, context),
             Message::RecordedPress(generation, press) => {
                 if generation == self.recorder.generation {
@@ -586,7 +664,11 @@ impl Component for SettingsWindow {
                 };
             }
             Message::DismissAlert => self.message = None,
-            Message::OpenUrl(url) => self.message = presentation::open_url(url),
+            Message::OpenUrl(url) => {
+                if !url.is_empty() {
+                    self.message = presentation::open_url(&url);
+                }
+            }
         }
         self.retune_tick(context);
     }
@@ -763,21 +845,24 @@ mod tests {
     }
 
     #[test]
-    fn only_the_panes_with_pages_are_listed_and_the_rest_have_no_view() {
+    fn every_pane_has_a_page_and_only_the_search_one_is_unlisted() {
         // trace: the roster and the dispatch are one table, so a pane
-        // cannot be listed without a page or drawn without a row.
-        assert!(page_view(SettingsPane::General).is_some());
-        assert!(page_view(SettingsPane::Appearance).is_some());
-        assert!(page_view(SettingsPane::Shortcuts).is_some());
-        assert!(page_view(SettingsPane::DictionarySources).is_some());
-        for pane in [
-            SettingsPane::CustomDictionary,
-            SettingsPane::DictionarySearch,
-        ] {
+        // cannot be listed without a page or drawn without a row — and
+        // 辭典搜尋 is built but unlisted, reachable only by `--pane`
+        // (macOS does the same, USER 2026-08-21).
+        for pane in SettingsPane::SIDEBAR {
             assert!(
-                page_view(pane).is_none(),
-                "{pane:?} has no page until W17-C"
+                PANES.iter().any(|(listed, _)| *listed == pane),
+                "{pane:?} is in the sidebar but has no row"
             );
+            assert!(page_view(pane).is_some(), "{pane:?} has no page");
         }
+        assert!(page_view(SettingsPane::DictionarySearch).is_some());
+        assert!(
+            !PANES
+                .iter()
+                .any(|(listed, _)| *listed == SettingsPane::DictionarySearch),
+            "辭典搜尋 stays out of the sidebar"
+        );
     }
 }

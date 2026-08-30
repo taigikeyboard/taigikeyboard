@@ -57,19 +57,14 @@ taigi-windows-storage = { path = "crates/taigi-windows-storage" }
 taigi-windows-tsf = { path = "crates/taigi-windows-tsf" }
 taigi-windows-platform = { path = "crates/taigi-windows-platform" }
 taigi-windows-update = { path = "crates/taigi-windows-update" }
-# The settings window's UI toolkit, pinned to the API this session authored
-# against (roadmap W15); bump only with a Windows machine to run the result.
-# `accesskit` ON: the settings window exposes a Windows accessibility tree
-# (screen readers, keyboard navigation) — a product decision, not chrome.
-eframe = { version = "=0.31.1", default-features = false, features = ["accesskit", "glow", "default_fonts", "persistence"] }
-egui = "=0.31.1"
-# The settings window's HWND, for the DWM dark title bar; eframe's own pin.
+# The window handle a file dialog is owned by. `rfd` asks for it through
+# this trait; the HWND behind it is `taigi-windows-platform`'s to read,
+# since Reactor hands none out.
 raw-window-handle = "0.6"
-egui_extras = { version = "=0.31.1", default-features = false }
 # Native file dialogs (Win32 common dialogs); no GTK / portal features.
 rfd = { version = "0.17", default-features = false }
-# W17: the settings window's UI — WinUI 3 through Microsoft's declarative Rust
-# library. crates.io carries only 0.0.0 placeholders, so this is a git
+# The settings window's UI — WinUI 3 through Microsoft's declarative Rust
+# library (roadmap W17; it replaced eframe/egui at the W17-C cutover). crates.io carries only 0.0.0 placeholders, so this is a git
 # dependency pinned to the commit the 2026-08-30 spike built and ran on the
 # Windows box; bump only in its own round, built and smoke-run there. The
 # setup crate stages the self-contained Windows App Runtime from build.rs

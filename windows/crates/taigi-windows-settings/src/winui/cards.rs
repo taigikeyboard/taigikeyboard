@@ -127,19 +127,51 @@ pub fn choice_row(
 
 /// A clickable card: the whole card is the button, `text` at its left in
 /// the accent (`is_destructive`: the critical colour).
+///
+/// Not a `Border` with a pointer handler and not a card-coloured override:
+/// `ResourceValue` carries no theme brush, so a background override would
+/// freeze a literal colour against light / dark / high contrast. A real
+/// `Button` in native actionable-card chrome keeps the keyboard
+/// activation, the UIA role and the hover / pressed / focus states.
 pub fn action(text: &str, is_destructive: bool, on_click: Callback<()>) -> View {
+    action_enabled(text, is_destructive, true, on_click)
+}
+
+/// The air between two groups of cards.
+pub fn section_gap() -> View {
+    Border::new().height(SECTION_GAP).into()
+}
+
+/// The card's frame around content that is not one setting's line — a
+/// list and its controls, or a busy overlay.
+pub fn frame(content: impl Into<View>) -> View {
+    Border::new()
+        .background(ThemeBrush::CardBackground)
+        .border_brush(ThemeBrush::CardStroke)
+        .border_thickness(Thickness::uniform(1.0))
+        .corner_radius(CornerRadius::uniform(CARD_CORNER_RADIUS))
+        .padding(padding())
+        .content(content)
+}
+
+/// A clickable card that can be turned off while a job holds the page.
+pub fn action_enabled(
+    text: &str,
+    is_destructive: bool,
+    is_enabled: bool,
+    on_click: Callback<()>,
+) -> View {
     let foreground = if is_destructive {
         ThemeBrush::SystemCritical
     } else {
         ThemeBrush::Accent
     };
     Button::new()
+        .is_enabled(is_enabled)
         .on_click(on_click)
         .horizontal_alignment(HorizontalAlignment::Stretch)
         .horizontal_content_alignment(HorizontalAlignment::Left)
         .min_height(CARD_MIN_HEIGHT)
-        // Geometry only — a colour override here would be a literal, and a
-        // literal does not follow light / dark / high contrast.
         .resource_overrides(
             ResourceOverrides::new()
                 .set(
@@ -151,9 +183,23 @@ pub fn action(text: &str, is_destructive: bool, on_click: Callback<()>) -> View 
         .content(TextBlock::new().text(text).foreground(foreground))
 }
 
-/// The air between two groups of cards.
-pub fn section_gap() -> View {
-    Border::new().height(SECTION_GAP).into()
+/// A section's title with a count at the line's right (`{matched} / {total}`).
+pub fn section_title_with_count(text: &str, count: &str) -> View {
+    Grid::new()
+        .columns([GridLength::STAR, GridLength::Auto])
+        .margin(Thickness::new(
+            0.0,
+            SECTION_TITLE_TOP,
+            0.0,
+            SECTION_TITLE_BOTTOM,
+        ))
+        .children((
+            TextBlock::new()
+                .text(text)
+                .font_weight(FontWeight::SEMI_BOLD)
+                .grid_column(0),
+            TextBlock::new().text(count).opacity(0.65).grid_column(1),
+        ))
 }
 
 /// A section's title above its cards (`BodyStrongTextBlockStyle`).

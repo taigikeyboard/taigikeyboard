@@ -146,7 +146,7 @@ fn footer(strings: &StringResolver, context: &mut ViewContext<SettingsWindow>) -
             // that refuses must be reported, never swallowed
             // (`ExternalLinkButton.swift:740-744`).
             HyperlinkButton::new()
-                .on_click(context.callback(|()| Message::OpenUrl(SPONSOR_URL)))
+                .on_click(context.callback(|()| Message::OpenUrl(SPONSOR_URL.to_owned())))
                 .content(strings.resolve(StringKey::DesktopSponsorLink)),
         ))
 }

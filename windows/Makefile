@@ -13,7 +13,7 @@
 
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help i18n-check test check-gnu check-msvc check-dll check-exe check-box check fmt lint build install uninstall reload release clean
+.PHONY: help i18n-check test check-gnu check-msvc check-dll check-box check fmt lint build install uninstall reload release clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
 # checked for from macOS. A crate that pulls in C (the storage crate's bundled
@@ -34,8 +34,7 @@ help:
 	@echo "  make check-gnu   - clippy -D warnings, full graph, target x86_64-pc-windows-gnu"
 	@echo "  make check-msvc  - cargo check for the C-free crates, target x86_64-pc-windows-msvc"
 	@echo "  make check-dll   - GNU release link of TaigiKeyboard.dll + export-table check (W13)"
-	@echo "  make check-exe   - GNU release link of TaigiKeyboardSettings.exe (W13)"
-	@echo "  make check-box   - Settings crate clippy + tests on the Windows box, pushed HEAD (W17)"
+	@echo "  make check-box   - Settings + platform crates: clippy, tests and the release link on the Windows box, pushed HEAD (W17)"
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt         - cargo fmt"
 	@echo "  make build       - (Windows) cargo build --release for the shipping target"
@@ -71,19 +70,14 @@ check-dll:
 	done
 	@echo "exports OK: $(DLL_GNU)"
 
-# The settings window really links as a Windows GUI executable (eframe +
-# glow + winit under mingw), the second artifact the installer ships.
-EXE_GNU := target/x86_64-pc-windows-gnu/release/TaigiKeyboardSettings.exe
-check-exe:
-	cargo build -p taigi-windows-settings --release --target x86_64-pc-windows-gnu
-	@test -f $(EXE_GNU) || { echo "missing: $(EXE_GNU)"; exit 1; }
-	@echo "exe OK: $(EXE_GNU)"
-
 # The settings crate on the target that ships: the box (ssh), pushed HEAD.
+# It is also the ONLY place the settings exe links — its UI is WinUI 3, and
+# `windows-reactor-setup` refuses every target but MSVC, so there is no gnu
+# exe to build any more (the old `check-exe` went with eframe at W17-C).
 check-box:
 	bash scripts/check-box.sh
 
-check: test check-gnu check-msvc check-dll check-exe check-box
+check: test check-gnu check-msvc check-dll check-box
 	cargo fmt -- --check
 
 # Plain `cargo fmt`, never `--all`: `--all` also formats path dependencies, i.e.

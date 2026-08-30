@@ -111,6 +111,52 @@ pub fn open_url(url: &str) -> bool {
 }
 
 /// The default system alert sound (`NSSound.beep()`).
+/// The window a file dialog must be modal to, in the shape `rfd` asks for.
+/// Reactor hands out no HWND, so it is read from the thread inside the
+/// message handler that opens the dialog — which is the UI thread, whose
+/// active window is the settings window. An unowned dialog would be free
+/// to fall behind that window.
+pub struct DialogOwner(#[allow(dead_code)] std::num::NonZeroIsize);
+
+#[cfg(windows)]
+impl raw_window_handle::HasWindowHandle for DialogOwner {
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        let handle = raw_window_handle::RawWindowHandle::Win32(
+            raw_window_handle::Win32WindowHandle::new(self.0),
+        );
+        // SAFETY: the HWND is a window of this thread, read moments ago,
+        // and the returned borrow is tied to `&self` — it cannot outlive
+        // the owner. `rfd` copies the raw handle out to own the dialog.
+        Ok(unsafe { raw_window_handle::WindowHandle::borrow_raw(handle) })
+    }
+}
+
+#[cfg(windows)]
+impl raw_window_handle::HasDisplayHandle for DialogOwner {
+    fn display_handle(
+        &self,
+    ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+        Ok(raw_window_handle::DisplayHandle::windows())
+    }
+}
+
+/// The window this thread has active, or `None` when it has none.
+#[cfg(windows)]
+pub fn dialog_owner() -> Option<DialogOwner> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::GetActiveWindow;
+    // SAFETY: one read of this thread's window-manager state.
+    let window = unsafe { GetActiveWindow() };
+    std::num::NonZeroIsize::new(window.0 as isize).map(DialogOwner)
+}
+
+/// The host has no window manager; the caller is Windows-only.
+#[cfg(not(windows))]
+pub fn dialog_owner() -> Option<DialogOwner> {
+    None
+}
+
 /// Whether the window the user is typing into belongs to THIS thread.
 /// The shortcut recorder asks: Reactor exposes no activation event, so a
 /// row left recording when the user switches app is ended by the window's

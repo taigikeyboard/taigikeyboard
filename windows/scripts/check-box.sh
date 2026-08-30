@@ -44,7 +44,11 @@ remote+="; if (-not (git -C '$BOX_REPO' branch -r --contains $sha)) { Write-Erro
 remote+="; git -C '$BOX_REPO' checkout -q --detach $sha; if (\$LASTEXITCODE -ne 0) { exit 1 }"
 remote+="; Set-Location '$BOX_REPO/windows'"
 remote+="; cargo clippy -p taigi-windows-settings -p taigi-windows-platform --all-targets -- -D warnings; if (\$LASTEXITCODE -ne 0) { exit 1 }"
-remote+="; cargo test -p taigi-windows-settings -p taigi-windows-platform; exit \$LASTEXITCODE"
+remote+="; cargo test -p taigi-windows-settings -p taigi-windows-platform; if (\$LASTEXITCODE -ne 0) { exit 1 }"
+# The settings exe only links here: its UI is WinUI 3, and the setup crate
+# refuses every target but MSVC. This replaces the gnu `check-exe` that
+# went with eframe at the W17-C cutover.
+remote+="; cargo build --release -p taigi-windows-settings; exit \$LASTEXITCODE"
 
 echo "==> check-box: $BOX ($BOX_REPO) @ $sha"
 ssh -o BatchMode=yes -o ConnectTimeout=15 "$BOX" "$remote" ||

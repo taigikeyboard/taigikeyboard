@@ -1,6 +1,6 @@
 [package]
 name = "taigi-windows-settings"
-description = "TaigiKeyboardSettings.exe — the settings window, an eframe/egui port of the macOS settings window's panes"
+description = "TaigiKeyboardSettings.exe — the settings window, a WinUI 3 port of the macOS settings window's panes"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,16 +17,15 @@ taigi-windows-core.workspace = true
 taigi-windows-storage.workspace = true
 taigi-windows-platform.workspace = true
 taigi-windows-update.workspace = true
-eframe.workspace = true
-egui.workspace = true
-egui_extras.workspace = true
 rfd.workspace = true
+# `rfd` takes the dialog's owner window through this trait; Reactor hands
+# out no HWND, so the window is read from the thread (`winui::file_dialog`).
 raw-window-handle.workspace = true
 log.workspace = true
 
-# W17: WinUI 3. Windows-only — the crate does not compile on the macOS host
-# (its generated bindings are Windows types), so the host tests cover the
-# non-UI modules and `make check-box` covers this one on the box.
+# WinUI 3 (roadmap W17). Windows-only — the crate's UI does not compile on
+# the macOS host, so the host tests cover the non-UI modules and
+# `make check-box` covers the rest on the box.
 [target.'cfg(windows)'.dependencies]
 windows-reactor.workspace = true
 

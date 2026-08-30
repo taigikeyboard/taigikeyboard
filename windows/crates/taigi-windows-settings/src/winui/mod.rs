@@ -10,6 +10,7 @@
 // 中文: WinUI 3 設定視窗(W17)— 同一份 settings.json,原生 Windows 11 外觀。
 
 mod cards;
+mod file_dialog;
 mod pages;
 mod window;
 
