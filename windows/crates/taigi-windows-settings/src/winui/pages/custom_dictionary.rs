@@ -733,28 +733,31 @@ fn entry_table(
         )
         .height(TABLE_HEIGHT)
         .collection_slot(ListViewSlot::Items, items);
+    // `cards::frame` stacks what it is given, so these three sit in its
+    // panel with no spacing of its own — the header and the controls carry
+    // their own `TABLE_HEADER_GAP` margins.
     cards::frame(View::fragment((
-        // The column names, above the list rather than inside it: a
-        // `ListView` has no header of its own.
-        Grid::new()
-            .columns([GridLength::Star(1.0), GridLength::Star(1.0)])
-            .column_spacing(TABLE_COLUMN_GAP)
-            .margin(Thickness::new(
-                TABLE_HEADER_INSET,
-                0.0,
-                0.0,
-                TABLE_HEADER_GAP,
-            ))
-            .children((
-                TextBlock::new()
-                    .text(strings.resolve(StringKey::DictionaryRomanLabel))
-                    .font_weight(FontWeight::SEMI_BOLD)
-                    .grid_column(0),
-                TextBlock::new()
-                    .text(strings.resolve(StringKey::DictionaryHanziLabel))
-                    .font_weight(FontWeight::SEMI_BOLD)
-                    .grid_column(1),
-            )),
+            // The column names, above the list rather than inside it: a
+            // `ListView` has no header of its own.
+            Grid::new()
+                .columns([GridLength::Star(1.0), GridLength::Star(1.0)])
+                .column_spacing(TABLE_COLUMN_GAP)
+                .margin(Thickness::new(
+                    TABLE_HEADER_INSET,
+                    0.0,
+                    0.0,
+                    TABLE_HEADER_GAP,
+                ))
+                .children((
+                    TextBlock::new()
+                        .text(strings.resolve(StringKey::DictionaryRomanLabel))
+                        .font_weight(FontWeight::SEMI_BOLD)
+                        .grid_column(0),
+                    TextBlock::new()
+                        .text(strings.resolve(StringKey::DictionaryHanziLabel))
+                        .font_weight(FontWeight::SEMI_BOLD)
+                        .grid_column(1),
+                )),
         list,
         table_controls(model, strings, context, is_enabled, has_selection),
     )))

@@ -114,9 +114,17 @@ pub fn view(
                         ),
                     ),
                 ),
+                // The eleven rows go in ONE `StackPanel`:
+                // `ExpanderSlot::Content` is a single-child slot, and the
+                // reactor's multi-child form (`SlotView::collection`) does
+                // not apply — `Expander.Content` is one ContentPresenter.
+                // What a multi-root fragment costs here is in
+                // `cards::frame`. `keyed_children` keeps each row's
+                // identity on its settings key; no `spacing`, an expanded
+                // item's own padding is the gap (`SettingsExpanderItem`).
                 SlotView::new(
                     ExpanderSlot::Content,
-                    View::keyed_fragment(KAUTIAN_SUBCOLLECTIONS.map(|(key, label)| {
+                    StackPanel::new().keyed_children(KAUTIAN_SUBCOLLECTIONS.map(|(key, label)| {
                         (
                             key.name,
                             cards::sub_row(
