@@ -66,13 +66,15 @@ PrivilegesRequired=admin
 ; x64 only for v1 (roadmap W8); the 32-bit DLL is shipped once x64 is proven.
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Inno's own default is 6.1sp1 (Windows 7 SP1). Windows 10 is where this is
-; written and tested: the theme comes from `AppsUseLightTheme`, the windows
-; declare per-monitor DPI v2, and the UI asks DWM for the dark title bar and
-; the accent colour. Those calls degrade rather than fail on an older
-; machine, so this is a support boundary, not a crash guard — but no build
-; below 10 has ever been run.
-MinVersion=10.0
+; Inno's own default is 6.1sp1 (Windows 7 SP1). 17763 is Windows 10 1809,
+; the oldest build the Windows App Runtime supports (Microsoft, Windows App
+; SDK § supported Windows releases) — the settings window is WinUI 3 over
+; that runtime and does not start below it, so this is a hard floor, not a
+; preference. The rest degrades rather than fails: the theme comes from
+; `AppsUseLightTheme`, the windows declare per-monitor DPI v2, and the UI
+; asks DWM for the dark title bar and the accent colour. What is actually
+; run is Windows 11; every Windows 10 below 22H2 is out of support.
+MinVersion=10.0.17763
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\{#SettingsExe}
 SetupIconFile=..\resources\TaigiKeyboard.ico
