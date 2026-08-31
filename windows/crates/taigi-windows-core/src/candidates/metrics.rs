@@ -392,10 +392,12 @@ mod tests {
     use CandidateWindowSizeChoice as W;
 
     #[test]
-    fn small_small_and_medium_medium_match_the_macos_traces() {
-        // trace: CandidateMetricsTests.swift:23-50 — 9*0.7=6.3→6, 12*0.7=8.4→8,
-        // 8*0.7=5.6→6; medium: 14*1.25=17.5→18, 7*1.25=8.75→9, 9*0.85=7.65→8,
-        // 12*0.85=10.2→10.
+    fn small_small_and_medium_medium_resolve_the_traced_values() {
+        // The text values follow the macOS trace (CandidateMetricsTests.swift:23-50);
+        // the chrome values follow the tighter Windows ladder (`CandidateWindowSizeChoice::scale`).
+        // trace: small — 9*0.6=5.4→5, 12*0.6=7.2→7, 8*0.6=4.8→5, item 16+7=23;
+        // medium — 14*1.25=17.5→18, 7*1.25=8.75→9, 9*0.72=6.48→6, 12*0.72=8.64→9,
+        // item 20+9=29.
         let m = metrics(T::Small, W::Small, Inline);
         assert_eq!(
             (
@@ -407,7 +409,7 @@ mod tests {
                 m.tahoe_separator_inset(),
                 m.item_height()
             ),
-            (16.0, 14.0, 7.0, 6.0, 8.0, 6.0, 24.0)
+            (16.0, 14.0, 7.0, 5.0, 7.0, 5.0, 23.0)
         );
         assert_eq!(m.scaled_symbol_metric(11.0), 11.0);
         assert_eq!(m.scaled_symbol_metric(8.0), 8.0);
@@ -421,7 +423,7 @@ mod tests {
                 m.vertical_padding(),
                 m.item_height()
             ),
-            (20.0, 18.0, 9.0, 8.0, 10.0, 30.0)
+            (20.0, 18.0, 9.0, 6.0, 9.0, 29.0)
         );
     }
 

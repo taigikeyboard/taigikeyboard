@@ -217,6 +217,28 @@ function Restart-InputIndicator {
     Start-Sleep -Seconds 2
 }
 
+# A running settings window holds its own exe open, and cargo replaces that
+# exe on every build — so leaving it up fails the link with `os error 5`
+# (access denied), an error that names neither the file nor the holder. The
+# installer stops it for the same reason (TaigiKeyboard.iss,
+# `StopSettingsWindow` in PrepareToInstall).
+#
+# Matched by PATH, not by name or session: what has to go is whatever runs
+# THIS build output. An installed copy under Program Files is somebody else's
+# window and stays up, while the desktop's own window is stopped even when
+# this script is driven over SSH — session 0 there, session 1 for the window,
+# so a session filter would spare the one process actually in the way.
+function Stop-SettingsWindow {
+    $running = Get-Process -Name ([System.IO.Path]::GetFileNameWithoutExtension($SettingsExe)) -ErrorAction SilentlyContinue |
+        Where-Object {
+            try { $_.MainModule.FileName -eq $SettingsExe } catch { $false }
+        }
+    foreach ($process in $running) {
+        Stop-Process -InputObject $process -Force -ErrorAction SilentlyContinue
+        Write-Host "  closed the settings window ($($process.Id))"
+    }
+}
+
 function Unregister-Service {
     $registered = Get-RegisteredDll
     if (-not $registered) {
@@ -259,6 +281,7 @@ switch ($Action) {
         # so fewer of them are holding it when the linker wants to replace it.
         Unregister-Service
         Write-Host '==> Freeing the build output'
+        Stop-SettingsWindow
         Clear-BuildOutput
         Build-Service
         if (-not (Test-Path $ServiceDll)) { Fail "the build produced no $ServiceDll" }

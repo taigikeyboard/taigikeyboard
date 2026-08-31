@@ -154,12 +154,18 @@ impl CandidateWindowSizeChoice {
         }
     }
 
-    /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift:42-48`.
+    /// NAMED DIVERGENCE from `macos/.../Candidates/CandidateMetrics.swift:42-48`
+    /// (USER 2026-09-01, first real-Windows dogfood): every step of the Windows
+    /// ladder is one notch tighter than the Mac's `0.7 / 0.85 / 1.0`. The point
+    /// values are read as DIPs here and as points on the Mac, so the same
+    /// number lands differently against the platform's own chrome; the window
+    /// carried too much air on Windows. The text ladder is untouched — this is
+    /// the chrome knob, and the two stay independent.
     pub fn scale(self) -> f32 {
         match self {
-            Self::Small => 0.7,
-            Self::Medium => 0.85,
-            Self::Large => 1.0,
+            Self::Small => 0.6,
+            Self::Medium => 0.72,
+            Self::Large => 0.85,
         }
     }
 }
@@ -348,8 +354,11 @@ mod tests {
     }
 
     #[test]
-    fn ladders_match_macos() {
-        // trace: CandidateMetricsTests.swift:55-58 pins [16, 20, 23] and [0.7, 0.85, 1.0].
+    fn the_text_ladder_matches_macos_and_the_chrome_ladder_is_a_notch_tighter() {
+        // trace: CandidateMetricsTests.swift:55-58 pins [16, 20, 23] and
+        // [0.7, 0.85, 1.0]. The text ladder is shared; the chrome ladder is the
+        // named divergence (USER 2026-09-01) — each step one notch tighter, and
+        // the whole ladder still under the Mac's, never over it.
         let sizes: Vec<f32> = CandidateTextSizeChoice::ALL
             .iter()
             .map(|c| c.font_size())
@@ -359,7 +368,11 @@ mod tests {
             .iter()
             .map(|c| c.scale())
             .collect();
-        assert_eq!(scales, [0.7, 0.85, 1.0]);
+        assert_eq!(scales, [0.6, 0.72, 0.85]);
+        assert!(
+            scales.windows(2).all(|pair| pair[0] < pair[1]),
+            "the ladder still climbs"
+        );
     }
 
     #[test]
