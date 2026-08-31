@@ -29,6 +29,23 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   Reactor exposes no keyboard events: the shortcut recorder uses a THREAD-scoped `WH_KEYBOARD`
   hook in `taigi-windows-platform` (RAII, `catch_unwind`, swallow down+up while recording,
   pass-through otherwise) — never a global hook, never a raw XAML object mutation.
+- **A single-child content or slot takes exactly ONE view.** `Border::content`, `Button::content`
+  and every non-collection `SlotView::new` resolve to one native root; `View::fragment` /
+  `View::keyed_fragment` flatten to one root per child, so a fragment in one of those places is
+  `PumpError::StructureUnsupported` — an unhandled `E_FAIL` out of `OnLaunched`, which XAML turns
+  into a PROCESS FAIL-FAST with no message anywhere but Windows Error Reporting. Group the
+  children in a panel (`StackPanel::keyed_children` to keep their identity); `SlotView::collection`
+  only works on slots the reactor marks as collections, which `ExpanderSlot::Content` is not.
+  Shipped twice in W17 and found only on the device. `cards::frame` now stacks what it is given
+  so that one card helper cannot fail this way again, and every pane is mounted headlessly by
+  `winui::pane_planning` against the reactor's `RecordingRuntime` — **a new pane belongs in that
+  test.** The net reaches each pane's LAUNCH state only: a subtree behind user state (a dialog,
+  a busy overlay, a search result row) is `View::empty()` there and is still dogfood-only.
+- **A lang-bar item's menu is drawn by us, not by TSF.** The Windows 8+ taskbar input indicator
+  hosts `GUID_LBI_INPUTMODE` and routes clicks to `ITfLangBarItemButton::OnClick`; it never drives
+  `InitMenu`, so a `TF_LBI_STYLE_BTN_MENU` item shows nothing at all there. The item is a
+  `TF_LBI_STYLE_BTN_BUTTON` and `lang_bar::show_popup` builds a Win32 popup — mozc
+  (`tip_lang_bar.cc:196-240`) and khiin-rs (`lang_bar_indicator.rs:53-58`) both do exactly this.
 
 ## macOS is the behaviour oracle
 

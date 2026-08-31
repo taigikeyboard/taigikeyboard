@@ -144,6 +144,15 @@ pub fn section_gap() -> View {
 
 /// The card's frame around content that is not one setting's line — a
 /// list and its controls, or a busy overlay.
+///
+/// The content is stacked before it is framed, and that is not cosmetic: a
+/// `Border`'s content is SINGLE-CHILD, and a `View::fragment` of several
+/// rows resolves to one native root per row, which the reactor refuses to
+/// plan (`PumpError::StructureUnsupported`). That refusal reaches the user
+/// as a process fail-fast with no message — it shipped twice in W17 — so
+/// the one place that can make it impossible does. The panel adds no
+/// spacing and no alignment of its own: a single child fills the frame the
+/// way it did when `Border` held it directly.
 pub fn frame(content: impl Into<View>) -> View {
     Border::new()
         .background(ThemeBrush::CardBackground)
@@ -151,7 +160,7 @@ pub fn frame(content: impl Into<View>) -> View {
         .border_thickness(Thickness::uniform(1.0))
         .corner_radius(CornerRadius::uniform(CARD_CORNER_RADIUS))
         .padding(padding())
-        .content(content)
+        .content(StackPanel::new().children([content.into()]))
 }
 
 /// A clickable card that can be turned off while a job holds the page.

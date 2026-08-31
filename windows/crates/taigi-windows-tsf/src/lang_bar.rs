@@ -2,30 +2,48 @@
 //! 設定 / separator / 檢查更新 (`TaigiInputController.swift:264-329`;
 //! roadmap W6). The button sits in the standard input-mode slot
 //! (`GUID_LBI_INPUTMODE`, rakukan `language_bar.rs:21-23`).
+//!
+//! The menu is DRAWN HERE, from `OnClick`, rather than declared through
+//! TSF's `TF_LBI_STYLE_BTN_MENU` / `InitMenu`: the Windows 8+ taskbar input
+//! indicator that hosts `GUID_LBI_INPUTMODE` routes a click to
+//! `ITfLangBarItemButton::OnClick` and never drives the TSF menu, so a
+//! menu-style button there answers a click with nothing at all (observed
+//! 2026-08-31 on Windows 11). Both mainstream TIPs do it this way — mozc
+//! registers its tray item as a non-menu button and builds a Win32 popup in
+//! `OnClick` (`tip_lang_bar.cc:196-240`, `tip_lang_bar_menu.cc:243-330`),
+//! and khiin-rs does the same (`lang_bar_indicator.rs:53-58,194-215`).
+//! `InitMenu` is the legacy desktop language bar's path, off by default on
+//! Windows 11.
 
 // 中文: 語言列(系統匣)按鈕與選單:設定 / 分隔線 / 檢查更新,與 macOS 輸入來源選單一致。
+// Windows 8 以後工作列的輸入指示器只會呼叫 OnClick,不會走 TSF 的 InitMenu,所以選單由這裡自己畫。
 
 use crate::guids::CLSID_TEXT_SERVICE;
 use crate::module::instance;
 use crate::registration::{PRODUCT_NAME_STRING_ID, SERVICE_DESCRIPTION};
-use crate::wide::{fill_fixed, to_wide};
+use crate::ui::window;
+use crate::wide::{fill_fixed, to_wide_nul};
 use taigi_windows_core::keys::ShortcutAction;
 use taigi_windows_core::settings::SettingsDocument;
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows::core::{Result, PCWSTR, PWSTR};
-use windows::Win32::Graphics::Gdi::HBITMAP;
+use windows::Win32::Foundation::{HWND, POINT};
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetActiveWindow, GetFocus};
 use windows::Win32::UI::TextServices::{
-    ITfMenu, GUID_LBI_INPUTMODE, TF_LANGBARITEMINFO, TF_LBI_STYLE_BTN_MENU,
-    TF_LBI_STYLE_SHOWNINTRAY, TF_LBMENUF_SEPARATOR,
+    GUID_LBI_INPUTMODE, TF_LANGBARITEMINFO, TF_LBI_STYLE_BTN_BUTTON, TF_LBI_STYLE_SHOWNINTRAY,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CopyIcon, LoadIconW, LoadImageW, LoadStringW, HICON, IDI_APPLICATION, IMAGE_ICON,
-    LR_DEFAULTSIZE,
+    AppendMenuW, CopyIcon, CreatePopupMenu, DestroyMenu, LoadIconW, LoadImageW, LoadStringW,
+    TrackPopupMenuEx, HICON, HMENU, IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTSIZE, MF_SEPARATOR,
+    MF_STRING, TPM_NONOTIFY, TPM_RETURNCMD,
 };
 
-/// Menu command ids `OnMenuSelect` receives back.
+/// Menu command ids `show_popup` answers with. `TPM_RETURNCMD` spells a
+/// dismissed menu as 0, so an id of 0 would read as "the user chose
+/// nothing" — the one rule a new row has to keep.
 pub const MENU_OPEN_SETTINGS: u32 = 1;
 pub const MENU_CHECK_FOR_UPDATES: u32 = 2;
+const _: () = assert!(MENU_OPEN_SETTINGS != 0 && MENU_CHECK_FOR_UPDATES != 0);
 /// The one cookie `ITfSource::AdviseSink` hands out for the lang-bar sink.
 pub const LANG_BAR_SINK_COOKIE: u32 = 0x5461_6967;
 /// The DLL icon resource the installer build adds (PR10); index 1.
@@ -63,7 +81,10 @@ pub fn item_info() -> TF_LANGBARITEMINFO {
     let mut info = TF_LANGBARITEMINFO {
         clsidService: CLSID_TEXT_SERVICE,
         guidItem: GUID_LBI_INPUTMODE,
-        dwStyle: TF_LBI_STYLE_BTN_MENU | TF_LBI_STYLE_SHOWNINTRAY,
+        // A plain button, NOT `TF_LBI_STYLE_BTN_MENU`: the taskbar input
+        // indicator gives a menu-style button's click to nobody (see the
+        // module header). The rows come from `OnClick` → `show_popup`.
+        dwStyle: TF_LBI_STYLE_BTN_BUTTON | TF_LBI_STYLE_SHOWNINTRAY,
         ulSort: 0,
         szDescription: [0; 32],
     };
@@ -72,12 +93,10 @@ pub fn item_info() -> TF_LANGBARITEMINFO {
 }
 
 /// The rows, in order, as (id, label) — `None` is a separator. Pure, so the
-/// menu is testable without an `ITfMenu`. The 設定 row prints the chord the
-/// user last recorded on it, tab-separated the way Win32 menus place
-/// accelerators — `ITfMenu::AddMenuItem` documents only a text buffer, so
-/// whether the language bar renders the tab as an accelerator column or
-/// literally is a Windows DOGFOOD item (run-book); 檢查更新 carries none by
-/// design.
+/// menu is testable without a live menu. The 設定 row prints the chord the
+/// user last recorded on it, tab-separated: a Win32 menu draws what follows
+/// a tab in its accelerator column, which is what `show_popup` builds.
+/// 檢查更新 carries no chord by design.
 pub fn menu_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
@@ -100,37 +119,95 @@ pub fn menu_rows(
     ]
 }
 
-pub fn populate(menu: &ITfMenu, rows: &[Option<(u32, String)>]) -> Result<()> {
+/// The window a popup is owned by: the focused window of the calling
+/// thread, which inside a lang-bar callback is the host's own text window
+/// (mozc passes `GetFocus()` the same way), and the thread's active window
+/// when nothing holds focus. `TrackPopupMenuEx` refuses a null owner, so a
+/// thread with neither gets no menu rather than a failed call.
+fn popup_owner() -> Option<HWND> {
+    // SAFETY: plain queries about the calling thread's own windows.
+    let window = unsafe {
+        let focused = GetFocus();
+        if focused.is_invalid() {
+            GetActiveWindow()
+        } else {
+            focused
+        }
+    };
+    (!window.is_invalid()).then_some(window)
+}
+
+/// `point` with x pulled back inside the monitor's work area, so a menu
+/// raised from the right-hand end of the taskbar is not drawn off-screen
+/// (mozc `tip_lang_bar_menu.cc:311-322`).
+fn clamped_to_work_area(point: POINT) -> POINT {
+    let Some(area) = window::monitor_at(point) else {
+        return point;
+    };
+    POINT {
+        x: point.x.clamp(area.work_area.left, area.work_area.right),
+        y: point.y,
+    }
+}
+
+/// Draws `rows` as a Win32 popup at `point` and answers the id the user
+/// chose, or `None` for a dismissed menu.
+///
+/// `TPM_RETURNCMD` hands the id back here instead of posting `WM_COMMAND`
+/// to a window that has no handler for it, and `TPM_NONOTIFY` keeps the
+/// owner from seeing the menu's own messages — a host that reacts to them
+/// has been seen to change the menu's state underneath it (mozc's IE 10
+/// note, `tip_lang_bar_menu.cc:308-310`). Alignment and button flags are
+/// left at their defaults, which are all zero.
+pub fn show_popup(rows: &[Option<(u32, String)>], point: POINT) -> Option<u32> {
+    let owner = popup_owner()?;
+    // SAFETY: a menu this call owns; `OwnedMenu` destroys it on every exit,
+    // a panic through the COM guard included.
+    let menu = OwnedMenu(unsafe { CreatePopupMenu() }.ok()?);
     for row in rows {
-        // SAFETY: `menu` is the live ITfMenu TSF handed InitMenu; the text
-        // slice outlives the call; no bitmaps, no submenu out-pointer.
-        unsafe {
+        // SAFETY: the menu is ours and still alive; each text buffer
+        // outlives its call.
+        let appended = unsafe {
             match row {
                 Some((id, label)) => {
-                    let text = to_wide(label);
-                    menu.AddMenuItem(
-                        *id,
-                        0,
-                        HBITMAP::default(),
-                        HBITMAP::default(),
-                        &text,
-                        std::ptr::null_mut(),
-                    )?;
+                    let text = to_wide_nul(label);
+                    AppendMenuW(menu.0, MF_STRING, *id as usize, PCWSTR(text.as_ptr()))
                 }
-                None => {
-                    menu.AddMenuItem(
-                        0,
-                        TF_LBMENUF_SEPARATOR,
-                        HBITMAP::default(),
-                        HBITMAP::default(),
-                        &[],
-                        std::ptr::null_mut(),
-                    )?;
-                }
+                None => AppendMenuW(menu.0, MF_SEPARATOR, 0, PCWSTR::null()),
             }
+        };
+        if let Err(error) = appended {
+            log::warn!("lang_bar.menu_append_failed error={error}");
+            return None;
         }
     }
-    Ok(())
+    let point = clamped_to_work_area(point);
+    // SAFETY: the menu is ours and filled; the owner is a live window of
+    // the calling thread. This runs a nested modal message loop — nothing
+    // of ours is borrowed across it, the rows are already owned values.
+    let chosen = unsafe {
+        TrackPopupMenuEx(
+            menu.0,
+            TPM_NONOTIFY.0 | TPM_RETURNCMD.0,
+            point.x,
+            point.y,
+            owner,
+            None,
+        )
+    };
+    // `TPM_RETURNCMD` returns the chosen id, or 0 for a menu the user
+    // dismissed (and for an error, which is the same nothing to do).
+    (chosen.0 > 0).then_some(chosen.0 as u32)
+}
+
+/// A popup menu for as long as the call that built it.
+struct OwnedMenu(HMENU);
+
+impl Drop for OwnedMenu {
+    fn drop(&mut self) {
+        // SAFETY: destroying a menu this type owns, exactly once.
+        unsafe { DestroyMenu(self.0).ok() };
+    }
 }
 
 /// A CALLER-OWNED icon — `ITfLangBarItemButton::GetIcon`'s contract is
@@ -185,9 +262,12 @@ mod tests {
             !rows[0].as_ref().unwrap().1.contains('\t'),
             "a cleared row prints no chord"
         );
+        // A plain tray button, whose click reaches `OnClick`. A
+        // `TF_LBI_STYLE_BTN_MENU` here shows no menu at all in the
+        // Windows 8+ taskbar input indicator (module header).
         assert_eq!(
             item_info().dwStyle,
-            TF_LBI_STYLE_BTN_MENU | TF_LBI_STYLE_SHOWNINTRAY
+            TF_LBI_STYLE_BTN_BUTTON | TF_LBI_STYLE_SHOWNINTRAY
         );
     }
 }

@@ -518,6 +518,20 @@ W17 merge rule (Codex Q8): A0 may merge alone (no behaviour change). A / B1 / B 
 that lacks a pane. Installer + release plumbing lands in A0 so the first Reactor exe
 starts on a clean install.
 
+**W17 first dogfood, 2026-08-31 — what the blind build cost.** Two panes (詞庫來源, 自訂詞庫)
+fail-fasted the process the moment they were opened: each handed a multi-root `View::fragment`
+to a single-child content / slot, which the reactor answers with
+`PumpError::StructureUnsupported` — an unhandled `E_FAIL` out of `OnLaunched` that XAML turns
+into a crash with no message anywhere but Windows Error Reporting. Because the shortcut opens
+the pane the user last had open, visiting either one made every later Ctrl+Shift+S die at once,
+which read as "the shortcut is broken". The tray button was the second miss: a
+`TF_LBI_STYLE_BTN_MENU` item shows no menu in the Windows 8+ taskbar input indicator, which
+routes clicks to `OnClick` and never drives `InitMenu`. Both are fixed, and every pane is now
+mounted headlessly against the reactor's `RecordingRuntime` by `winui::pane_planning` — the
+planning layer is platform-independent, so that test catches this whole class before a device
+ever sees it. Rules in `.claude/rules/windows-guidelines.md` § Authored without a Windows
+machine.
+
 Dependencies: PR2 → PR3/PR4 (parallelisable) → PR5a → PR5b → PR6; PR7 → PR8; PR9 needs
 PR4 + PR7; PR10 last.
 

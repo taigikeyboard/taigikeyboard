@@ -54,6 +54,12 @@ $WindowsDir = Join-Path $RepositoryDir 'windows'
 $ReleaseTarget = 'x86_64-pc-windows-msvc'
 $TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
 $ServiceDll = Join-Path $TargetDir 'TaigiKeyboard.dll'
+# The linker writes `release\deps\TaigiKeyboard.dll` and cargo hard-links it
+# into `release\`: TWO NAMES, ONE FILE. Moving one aside does not free the
+# other, so a loaded dll still failed the link with LNK1104 until both were
+# moved (observed 2026-08-30, fixed 2026-08-31). Every name the linker needs
+# free, in the order the sweep visits them.
+$ServiceDllNames = @($ServiceDll, (Join-Path $TargetDir 'deps\TaigiKeyboard.dll'))
 $SettingsExe = Join-Path $TargetDir 'TaigiKeyboardSettings.exe'
 $DictionariesSource = Join-Path $RepositoryDir 'ios\Resources\Dictionaries'
 $FontsSource = Join-Path $RepositoryDir 'ios\Resources\Fonts'
@@ -107,10 +113,10 @@ function Get-DllHolders([string] $Path) {
 # anything. The installer plays the same trick (TaigiKeyboard.iss, the rename
 # lock probe). The stamp matters: an earlier set-aside copy can still be held,
 # and renaming onto its name fails.
-function Clear-BuildOutput {
+function Clear-DllName([string] $Path) {
     # Copies an earlier run could not delete because something still had them
     # open. Whatever is holding one may have exited since.
-    Get-ChildItem "$ServiceDll.locked.*" -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-ChildItem "$Path.locked.*" -ErrorAction SilentlyContinue | ForEach-Object {
         try {
             Remove-Item $_.FullName -Force -ErrorAction Stop
             Write-Host "  swept $($_.Name)"
@@ -118,7 +124,7 @@ function Clear-BuildOutput {
             Write-Host "  left in place, $($_.Name): $($_.Exception.Message)"
         }
     }
-    if (-not (Test-Path $ServiceDll)) { return }
+    if (-not (Test-Path $Path)) { return }
 
     # Set aside unconditionally rather than probing first. There is no cheap,
     # honest test for "can the linker replace this" — renaming the file to its
@@ -128,19 +134,29 @@ function Clear-BuildOutput {
     # too), then try to delete the set-aside copy. Deleting succeeds exactly
     # when nothing held it, which both frees the name for the linker and
     # leaves no residue in the ordinary case.
-    $aside = "TaigiKeyboard.dll.locked." + [Guid]::NewGuid().ToString('N').Substring(0, 8)
+    $aside = (Split-Path $Path -Leaf) + '.locked.' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
     try {
-        Rename-Item $ServiceDll $aside -ErrorAction Stop
+        Rename-Item $Path $aside -ErrorAction Stop
     } catch {
-        $holders = (Get-DllHolders $ServiceDll | ForEach-Object { "$($_.ProcessName) ($($_.Id))" }) -join ', '
-        Fail "could not move $ServiceDll aside: $($_.Exception.Message). Held by: $holders"
+        $holders = (Get-DllHolders $Path | ForEach-Object { "$($_.ProcessName) ($($_.Id))" }) -join ', '
+        Fail "could not move $Path aside: $($_.Exception.Message). Held by: $holders"
     }
-    $asidePath = Join-Path (Split-Path $ServiceDll -Parent) $aside
+    $asidePath = Join-Path (Split-Path $Path -Parent) $aside
     try {
         Remove-Item $asidePath -Force -ErrorAction Stop
     } catch {
         $holders = (Get-DllHolders $asidePath | ForEach-Object { "$($_.ProcessName) ($($_.Id))" }) -join ', '
         Write-Host "  previous build still loaded by $holders; kept as $aside"
+    }
+}
+
+# Frees every name the linker writes the service dll through. A host that
+# already mapped the old dll keeps running the OLD code — no installer can
+# reach into another process — but the names being free is what lets the
+# build produce a new one at all, so a host started afterwards gets it.
+function Clear-BuildOutput {
+    foreach ($name in $ServiceDllNames) {
+        Clear-DllName $name
     }
 }
 
