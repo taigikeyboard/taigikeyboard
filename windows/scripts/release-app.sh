@@ -124,10 +124,17 @@ require_version_info "$TARGET_DIR/$SERVICE_DLL"
 require_version_info "$TARGET_DIR/$SETTINGS_EXE"
 for binary in "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE"; do
     imports="$(dumpbin /nologo /dependents "$(windows_path "$binary")" | tr -d '\r')"
-    if grep -iqE 'vcruntime[0-9]*(d)?\.dll|msvcp[0-9]*(d)?\.dll' <<< "$imports"; then
+    if grep -iqE 'vcruntime[0-9]*(d)?\.dll|msvcp[0-9]*(d)?\.dll|msvcr[0-9]*(d)?\.dll|msvcrt\.dll|ucrtbase(d)?\.dll|api-ms-win-crt-' <<< "$imports"; then
         echo "$imports" >&2
-        fail "$(basename "$binary") imports the VC runtime — the release must be statically linked (+crt-static)"
+        fail "$(basename "$binary") imports the C runtime — the release must be statically linked (+crt-static)"
     fi
+done
+# The four entry points regsvr32 looks for: an export table that lost one
+# registers nothing, and the failure surfaces on the user's machine.
+exports="$(dumpbin /nologo /exports "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
+for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
+    grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
+        fail "$SERVICE_DLL does not export $symbol"
 done
 # W17: the text service is loaded into every host process and must never
 # pull WinUI / the Windows App Runtime in with it — only the settings exe

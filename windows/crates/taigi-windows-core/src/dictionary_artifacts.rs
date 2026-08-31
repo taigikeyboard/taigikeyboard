@@ -109,6 +109,12 @@ mod version_tests {
     #[test]
     fn the_stamp_has_the_macos_bundle_version_shape() {
         assert_eq!(dictionary_version("3.6.6"), 30_606);
-        assert_eq!(dictionary_version(env!("CARGO_PKG_VERSION")) % 100, 6);
+        assert_eq!(dictionary_version("10.0.0"), 100_000);
+        // The crate's own version, read for its patch rather than compared to
+        // a literal: the literal was `6`, and the 3.6.7 bump turned a
+        // property of the encoding into a failing test of the version number.
+        let version = env!("CARGO_PKG_VERSION");
+        let patch: u32 = version.rsplit('.').next().unwrap().parse().unwrap();
+        assert_eq!(dictionary_version(version) % 100, patch);
     }
 }

@@ -37,13 +37,18 @@ use super::manager::ComposingManager;
 /// COM pointer address: a torn-down context leaves its ownership behind and
 /// the allocator can hand the same address to the next one, which would then
 /// inherit the dead one's half-typed composition).
+///
+/// `usize` because the token's other life is as a `WPARAM` in the window's
+/// queued hide request: matching the transport's own width is what makes the
+/// round trip cast-free, and what would keep it honest on a target where
+/// `WPARAM` is narrower than a `u64`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct ContextToken(pub u64);
+pub struct ContextToken(pub usize);
 
 pub struct ComposingSessionCoordinator {
     manager: ComposingManager,
     current_owner: Option<ContextToken>,
-    next_token: u64,
+    next_token: usize,
 }
 
 impl ComposingSessionCoordinator {
@@ -57,13 +62,13 @@ impl ComposingSessionCoordinator {
 
     /// A fresh, never-used token for a context the shell just met. `0` is
     /// never handed out (it reads as "no token" in queued messages), and the
-    /// counter cannot silently wrap onto a live value: at `u64::MAX` — which
-    /// no process reaches — it stops advancing and the panic is caught at the
-    /// COM boundary like any other.
+    /// counter cannot silently wrap onto a live value: at `usize::MAX` —
+    /// which no process reaches — it stops advancing and the panic is caught
+    /// at the COM boundary like any other.
     pub fn allocate_token(&mut self) -> ContextToken {
         let value = self.next_token;
         assert!(
-            value != 0 && value != u64::MAX,
+            value != 0 && value != usize::MAX,
             "context token space exhausted"
         );
         self.next_token += 1;

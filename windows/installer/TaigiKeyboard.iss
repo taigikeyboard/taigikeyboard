@@ -63,9 +63,15 @@ DisableDirPage=yes
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
-; x64 only for v1 (roadmap W8); the 32-bit DLL is shipped once x64 is proven.
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+; `x64os`, not `x64compatible`: the latter also matches Arm64 Windows 11,
+; which runs x64 binaries under emulation. A text service is loaded in the
+; host process's own architecture and no Arm64 service is built, so on an
+; Arm64 machine this would install and then do nothing in every Arm64-native
+; application (Notepad, Edge, Office) while working in emulated ones. For an
+; input method that is indistinguishable from broken, so the architecture
+; check refuses it (USER 2026-09-01: no Arm64 release for now).
+ArchitecturesAllowed=x64os
+ArchitecturesInstallIn64BitMode=x64os
 ; Inno's own default is 6.1sp1 (Windows 7 SP1). 17763 is Windows 10 1809,
 ; the oldest build the Windows App Runtime supports (Microsoft, Windows App
 ; SDK § supported Windows releases) — the settings window is WinUI 3 over
@@ -213,9 +219,16 @@ begin
   NeedsRestart := False;
   StopSettingsWindow;
   BackupDll := '';
+  // The backup is taken BEFORE anything is unregistered, and a copy that
+  // fails stops the install right there: past this point the old
+  // registration is gone, and a rollback with no backup to restore would
+  // leave the machine with neither the old service nor the new one.
   if FileExists(X64Dll) then begin
+    if not CopyFile(X64Dll, X64Dll + '.setup-backup', False) then begin
+      Result := FmtMessage(CustomMessage('installerStepFailed'), ['backup ' + X64Dll]);
+      Exit;
+    end;
     BackupDll := X64Dll + '.setup-backup';
-    CopyFile(X64Dll, BackupDll, False);
     RegisterDll(X64Regsvr32, X64Dll, True);
   end;
   if FileExists(X86Dll) then
@@ -266,14 +279,30 @@ begin
     RegisterDll(X86Regsvr32, X86Dll, True);
   RegisterDll(X64Regsvr32, X64Dll, True);
   if BackupDll <> '' then begin
-    CopyFile(BackupDll, X64Dll, False);
-    RegisterDll(X64Regsvr32, X64Dll, False);
+    // A restore that failed is the one state worth being able to find in the
+    // log afterwards: the machine then has neither the old service nor the
+    // new one.
+    if not CopyFile(BackupDll, X64Dll, False) then
+      Log('rollback: could not restore ' + X64Dll + ' from ' + BackupDll)
+    else if not RegisterDll(X64Regsvr32, X64Dll, False) then
+      Log('rollback: restored ' + X64Dll + ' but could not register it');
   end;
 end;
 
-// After the files are in place: register, create the task — and treat
-// either failing as THE installation failing: roll back, then raise, which
-// makes Setup report an error and undo its file installation.
+// After the files are in place: register, create the task — and treat either
+// failing as THE installation failing.
+//
+// What "rolling back" can mean here is narrower than it looks. Setup
+// finalizes the uninstall log BEFORE ssPostInstall, and its own documentation
+// says that after that point "any subsequent errors will not cause what was
+// installed before to be rolled back" (Inno Setup, Setup installation order).
+// So the new payload — the settings exe, the Windows App Runtime, the
+// dictionaries, the fonts — stays on disk whatever happens here. What
+// RollBack restores is the thing that makes the input method exist at all:
+// the previous version's service DLL and its registration, plus the
+// scheduled task. The exception then makes Setup report the failure, and the
+// user is left with a working previous input method and an installer to run
+// again.
 procedure RegisterEverything;
 var
   Failure: String;

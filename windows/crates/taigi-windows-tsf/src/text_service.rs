@@ -64,7 +64,7 @@ pub(crate) struct ServiceState {
     pub(crate) contexts: ContextRegistry,
     /// Tokens are allocated here until PR5b hands allocation to the
     /// composing coordinator (one counter, never a COM address).
-    next_context_token: u64,
+    next_context_token: usize,
     /// The `IUnknown` identity of the focused document manager — recorded,
     /// never dereferenced; a late focus notification is a hint (contract 7).
     focused_document: usize,
@@ -325,6 +325,15 @@ impl TextService_Impl {
                 ..
             } = &mut *state;
             contexts.token_for(identity, owned, || {
+                // Same contract as `ComposingSessionCoordinator::allocate_token`:
+                // `0` reads as "no token" in the window's queued messages, so
+                // the counter must stop rather than wrap onto it. No process
+                // reaches this; the panic is caught at the COM boundary like
+                // any other.
+                assert!(
+                    *next_context_token != 0 && *next_context_token != usize::MAX,
+                    "context token space exhausted"
+                );
                 let token = ContextToken(*next_context_token);
                 *next_context_token += 1;
                 token

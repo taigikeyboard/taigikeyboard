@@ -141,7 +141,7 @@ impl WindowRef {
     /// context callback may do to the window (W3). `owner` = the context
     /// whose list should come down; `None` = whichever is up.
     pub fn post_hide_request(&self, owner: Option<ContextToken>) {
-        let token = owner.map_or(0, |token| token.0 as usize);
+        let token = owner.map_or(0, |token| token.0);
         // SAFETY: a posted message to our own window; nothing is borrowed.
         if let Err(error) =
             unsafe { PostMessageW(Some(self.hwnd), WM_HIDE_REQUEST, WPARAM(token), LPARAM(0)) }
@@ -445,7 +445,7 @@ fn handle_message(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> O
         }
         WM_HIDE_REQUEST => {
             let handler = handler_of(hwnd)?;
-            let owner = (wparam.0 != 0).then_some(ContextToken(wparam.0 as u64));
+            let owner = (wparam.0 != 0).then_some(ContextToken(wparam.0));
             match handler.try_borrow_mut() {
                 Ok(mut handler) => handler.hide_requested(&window, owner),
                 // Busy: re-queued behind whatever is running.

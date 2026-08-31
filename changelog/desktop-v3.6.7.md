@@ -74,3 +74,8 @@ same user-data schemas as macOS.
 - Windows 10 1809 (build 17763) is the floor: the settings window's runtime does
   not start below it. Windows 11 is what the input method is developed and
   tested on.
+- x64 only. Windows on Arm is refused by the installer — no Arm64 service is
+  built, and an x64 one cannot be loaded by an Arm64-native application, so
+  the input method would be silently absent in most of them. 32-bit
+  applications have no input method either; everywhere Taiwanese is typically
+  typed is 64-bit today.

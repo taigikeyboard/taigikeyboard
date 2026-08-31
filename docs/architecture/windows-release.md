@@ -8,13 +8,64 @@ of a product archive.
 
 ## Architectures
 
-x64 only for v1. The 32-bit DLL (WOW64 hosts) and ARM64 are **prepared**
-targets — listed in `rust-toolchain.toml`, not built by the release script —
-and ship once x64 registration + uninstall are proven on a real machine (ARM64
-also needs a native smoke test). The installer refuses a 32-bit Windows
-(`ArchitecturesAllowed=x64compatible`) and, when an
-`x86\` DLL is staged by hand, registers it with the 32-bit `regsvr32`
-(`SysWOW64`).
+**x64 only.** A text service is loaded into every process that takes text
+input and the DLL must match THAT process's architecture, so this is two
+separate questions — which machines can install, and which applications the
+input method works in.
+
+`ArchitecturesAllowed=x64os`, so an **Arm64 machine is refused**.
+`x64compatible` — what this used to say — also matches Arm64 Windows 11,
+which runs x64 binaries under emulation: the installer would succeed and the
+input method would then do nothing in every Arm64-native application while
+working in emulated ones. For an input method that is indistinguishable from
+broken.
+
+**32-bit applications have no input method**, and that is a deliberate gap
+(USER 2026-09-01: revisit when a user reports it). Everywhere Taiwanese is
+typically typed is 64-bit today — browsers, Notepad, the chat clients. The
+known exception is Office 2016 and earlier, and any Microsoft 365 installed
+before January 2019, which defaulted to 32-bit and stays 32-bit until it is
+reinstalled.
+
+### What a 32-bit or Arm64 round would have to know
+
+Both were investigated on 2026-09-01; this is the measured record, so it does
+not have to be re-derived.
+
+**32-bit** is a working build, not a research problem. `cargo build --release
+--target i686-pc-windows-msvc -p taigi-windows-tsf` succeeds after one fix:
+on 32-bit the `windows` crate maps `SetWindowLongPtrW` onto `SetWindowLongW`,
+whose value parameter is an `i32`, not an `isize` (the only error in the whole
+graph, `ui/window.rs`). The resulting DLL is machine `14C`, exports the four
+entry points undecorated, and imports no C runtime. It must be installed
+BESIDE the 64-bit one under its own name, not in an `x86\` subdirectory: a
+service resolves `Dictionaries\`, `Fonts\` and the settings exe from its OWN
+directory (`module::install_directory`).
+
+Registration, measured with `regsvr32` and a registry dump:
+
+- `CLSID\{…}\InprocServer32` is per-architecture — the 64-bit view and the
+  WOW6432Node view hold different paths, and registering one does not disturb
+  the other. Both services use the SAME CLSID, which is what Microsoft's TSF
+  guidance asks for: one logical input method, one entry in the language list.
+- `HKLM\SOFTWARE\Microsoft\CTF\TIP\{…}` — the profile, its description and
+  icon, and the four categories — is SHARED, and mirrored into both views.
+  The **last** registration wins: registering the 32-bit service after the
+  64-bit one left the profile's description naming the 32-bit DLL. So the
+  order has to be 32-bit first, 64-bit last.
+- Unregistering EITHER architecture removes that shared profile and all four
+  categories from BOTH views while the other's `InprocServer32` stays — an
+  input method registered with COM and absent from the language list. The
+  pair is one transaction, and a rollback has to back up and restore both.
+
+**Arm64** is a research problem. A single CLSID's `InprocServer32` is one
+path, and Arm64-native and x64-emulated processes read the SAME 64-bit
+registry view, so there is no registry-level way to serve both: Microsoft's
+answer for a 64-bit in-process COM server is an **Arm64X pure forwarder** — a
+code-less Arm64X DLL that the loader redirects to an Arm64 or an x64 DLL
+(`link /dll /noentry /machine:arm64x /defArm64Native:…`). It also needs the VS
+Arm64/Arm64EC build tools, which the release machine does not have
+(`bin/Hostx64` holds `x64` and `x86` only), and a machine to test on.
 
 ## One-time machine setup
 
