@@ -16,8 +16,15 @@ use windows_reactor::*;
 const CARD_PADDING: (f64, f64) = (16.0, 12.0);
 /// `SettingsCardMinHeight`.
 const CARD_MIN_HEIGHT: f64 = 68.0;
-/// `SettingsExpanderItemMinHeight`: an expanded item is shorter than a card.
+/// `SettingsExpanderItemMinHeight`: a row inside a group is shorter than a
+/// card of its own.
 const SUB_ROW_MIN_HEIGHT: f64 = 48.0;
+/// The left step that says a row belongs to the row above it, the way
+/// `SettingsExpanderItem` steps its content in.
+const GROUP_INDENT: f64 = 16.0;
+/// `TextFillColorDisabled` is 36% of the theme's text colour, in both the
+/// light and the dark resource dictionary.
+const DISABLED_LABEL_OPACITY: f64 = 0.36;
 /// `ControlCornerRadius`.
 const CARD_CORNER_RADIUS: f64 = 4.0;
 /// Between the header and the control, when the line is tight.
@@ -39,8 +46,20 @@ fn padding() -> Thickness {
 
 /// One setting's line: `header` at the left, wrapping into what the
 /// control leaves, and `control` at the right, both centred. The shape
-/// inside a card, an `Expander`'s header, and an expanded item alike.
+/// inside a card and inside a `group` alike.
 pub fn line(header: &str, control: impl Into<View>) -> View {
+    dimmable_line(header, true, control)
+}
+
+/// `line`, with the header greyed when the setting cannot be changed.
+///
+/// A control greys itself; its name does not, and a row whose switch is
+/// disabled under a full-strength label reads as a switch that is merely
+/// off. `TextFillColorDisabledBrush` is what WinUI would put there, and the
+/// reactor exposes no such brush — the same 36% the light and dark
+/// resources both resolve to, applied to the theme's own text colour, is
+/// the nearest thing that stays theme- and high-contrast-correct.
+fn dimmable_line(header: &str, is_enabled: bool, control: impl Into<View>) -> View {
     Grid::new()
         .columns([GridLength::STAR, GridLength::Auto])
         .column_spacing(CONTROL_GAP)
@@ -49,6 +68,11 @@ pub fn line(header: &str, control: impl Into<View>) -> View {
                 .text(header)
                 .text_wrapping(TextWrapping::Wrap)
                 .vertical_alignment(VerticalAlignment::Center)
+                .opacity(if is_enabled {
+                    1.0
+                } else {
+                    DISABLED_LABEL_OPACITY
+                })
                 .grid_column(0),
             // The control is already a `View` (a builder that took its
             // slots), which carries no attached grid property — a
@@ -72,14 +96,66 @@ pub fn row(header: &str, control: impl Into<View>) -> View {
         .content(line(header, control))
 }
 
-/// A setting inside an `Expander`'s content: the same line, without a card
-/// of its own — the expander already draws the group
+/// A setting that belongs to the row above it, inside a `group`: the same
+/// line, without a card of its own — the group already draws one
 /// (`SettingsExpanderItem`, which is shorter than a card).
-pub fn sub_row(header: &str, control: impl Into<View>) -> View {
+///
+/// The step in is at the LEFT only. The right padding stays the card's, so
+/// every control in the group — the parent's and the children's — sits on
+/// one vertical line while only the labels say which is which.
+///
+/// `is_enabled` greys the label as well as the control, the way the Mac's
+/// `.disabled(!isKautianEnabled)` greys the whole `Group`. The row stays in
+/// the tree and stays readable either way — greyed, never removed, never
+/// cleared.
+pub fn sub_row(header: &str, is_enabled: bool, control: impl Into<View>) -> View {
     Border::new()
-        .padding(padding())
+        .padding(Thickness::new(
+            CARD_PADDING.0 + GROUP_INDENT,
+            CARD_PADDING.1,
+            CARD_PADDING.0,
+            CARD_PADDING.1,
+        ))
         .min_height(SUB_ROW_MIN_HEIGHT)
-        .content(line(header, control))
+        .content(dimmable_line(header, is_enabled, control))
+}
+
+/// A parent setting and the settings that belong to it, in ONE card that is
+/// always open: what a `SettingsExpander` looks like expanded, without the
+/// chevron.
+///
+/// Not an `Expander` with `is_expanded(true)`: its header is a
+/// `ToggleButton`, so a click, Space or Enter still collapses it whatever
+/// the property says, and taking that away needs a `ControlTemplate` the
+/// reactor does not expose. These subcollections are browsed, never
+/// collapsed (USER 2026-08-31), so the card that cannot collapse is the
+/// honest shape — and it drops the two overlapping interactions the old
+/// header carried (expand the group / flip the switch inside it).
+///
+/// The card carries no padding of its own; each row carries its own, which
+/// is what lets `sub_row` step its label in without moving its control.
+/// `children` are keyed so a row keeps its identity on its settings key.
+pub fn group(
+    parent: impl Into<View>,
+    children: impl IntoIterator<Item = (&'static str, View)>,
+) -> View {
+    Border::new()
+        .background(ThemeBrush::CardBackground)
+        .border_brush(ThemeBrush::CardStroke)
+        .border_thickness(Thickness::uniform(1.0))
+        .corner_radius(CornerRadius::uniform(CARD_CORNER_RADIUS))
+        // `Border`'s content is single-child, for the reason written out on
+        // `frame`: the panel is what makes a parent row plus its children
+        // one native root.
+        .content(
+            StackPanel::new().children([
+                Border::new()
+                    .padding(padding())
+                    .min_height(CARD_MIN_HEIGHT)
+                    .content(parent),
+                StackPanel::new().keyed_children(children),
+            ]),
+        )
 }
 
 /// One on/off setting in its own card. The switch shows no On / Off word:

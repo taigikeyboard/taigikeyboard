@@ -1,10 +1,10 @@
 //! 詞庫來源: which dictionaries the engine draws from, in three sections —
 //! 教育部, the others, the supplements — with 教典's eleven subcollections
-//! inside an `Expander` under it, greyed while 教典 is off. Port of
+//! always visible under it, greyed while 教典 is off. Port of
 //! `DictionaryTogglesView.swift`. Every toggle is read live by the engine
 //! bridge on the next fetch.
 
-// 中文: 詞庫來源頁 — 三個區段的開關;教典子集收在 Expander 內,教典關閉時停用;恢復預設。
+// 中文: 詞庫來源頁 — 三個區段的開關;教典子集恆展開在教典下方,教典關閉時停用;恢復預設。
 
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
@@ -92,53 +92,39 @@ pub fn view(
     let is_kautian_enabled = window.document().bool(&keys::IS_KAUTIAN_ENABLED);
     View::fragment((
         cards::section_title(strings.resolve(StringKey::DictionaryMoeSectionTitle)),
-        // The parent source IS the expander's header, and its
-        // subcollections are the content — the toolkit's `SettingsExpander`
-        // shape, which keeps eleven rows from burying the three sources
-        // under them. Disabled, not cleared, while 教典 is off: the choices
-        // come back with it.
-        Expander::new()
-            .horizontal_alignment(HorizontalAlignment::Stretch)
-            .is_expanded(false)
-            .slots([
-                SlotView::new(
-                    ExpanderSlot::Header,
-                    cards::line(
-                        strings.resolve(StringKey::CommonMoeDict),
+        // 教典 and its eleven subcollections are ONE always-open card: the
+        // parent source is the group's first line, the subcollections step
+        // in under it and stay browsable — they are read far more often
+        // than they are changed, and a collapsed group hides which 腔口 the
+        // engine is currently drawing from. Why this is a card and not an
+        // `Expander` that starts open is written out on `cards::group`.
+        // Disabled, not cleared, while 教典 is off: the choices come back
+        // with it. `DictionaryTogglesView.swift` indents the same eleven
+        // under the same master toggle.
+        cards::group(
+            cards::line(
+                strings.resolve(StringKey::CommonMoeDict),
+                cards::switch(
+                    is_kautian_enabled,
+                    true,
+                    context.callback(|is_on| Message::SetSwitch(keys::IS_KAUTIAN_ENABLED, is_on)),
+                ),
+            ),
+            KAUTIAN_SUBCOLLECTIONS.map(|(key, label)| {
+                (
+                    key.name,
+                    cards::sub_row(
+                        strings.resolve(label),
+                        is_kautian_enabled,
                         cards::switch(
+                            window.document().bool(&key),
                             is_kautian_enabled,
-                            true,
-                            context.callback(|is_on| {
-                                Message::SetSwitch(keys::IS_KAUTIAN_ENABLED, is_on)
-                            }),
+                            context.callback(move |is_on| Message::SetSwitch(key, is_on)),
                         ),
                     ),
-                ),
-                // The eleven rows go in ONE `StackPanel`:
-                // `ExpanderSlot::Content` is a single-child slot, and the
-                // reactor's multi-child form (`SlotView::collection`) does
-                // not apply — `Expander.Content` is one ContentPresenter.
-                // What a multi-root fragment costs here is in
-                // `cards::frame`. `keyed_children` keeps each row's
-                // identity on its settings key; no `spacing`, an expanded
-                // item's own padding is the gap (`SettingsExpanderItem`).
-                SlotView::new(
-                    ExpanderSlot::Content,
-                    StackPanel::new().keyed_children(KAUTIAN_SUBCOLLECTIONS.map(|(key, label)| {
-                        (
-                            key.name,
-                            cards::sub_row(
-                                strings.resolve(label),
-                                cards::switch(
-                                    window.document().bool(&key),
-                                    is_kautian_enabled,
-                                    context.callback(move |is_on| Message::SetSwitch(key, is_on)),
-                                ),
-                            ),
-                        )
-                    })),
-                ),
-            ]),
+                )
+            }),
+        ),
         source_rows(window, strings, context, &MOE_OTHERS),
         cards::section_title(strings.resolve(StringKey::DictionaryOtherSectionTitle)),
         source_rows(window, strings, context, &OTHERS),
