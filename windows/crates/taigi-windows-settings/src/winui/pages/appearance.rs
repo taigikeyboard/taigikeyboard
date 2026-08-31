@@ -74,9 +74,11 @@ pub fn view(
         ),
         // Its own section, at the end: it acts on every row above it.
         cards::section_gap(),
-        cards::action(
+        cards::action_row(
             strings.resolve(StringKey::ThemeEditorResetAll),
+            strings.resolve(StringKey::SettingsReset),
             false,
+            true,
             context.callback(|()| Message::Reset(ResetScope::Appearance)),
         ),
     ))

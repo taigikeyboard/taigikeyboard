@@ -3,7 +3,7 @@
   "keys": {
     "reset": {
       "comment": "Generic restore-to-default action label / a11y description (恢復 = restore). Used by the reset-settings dialog AND reused for the color-picker / slider reset-icon contentDescription on the theme + layout editors.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "恢復", "tailo": "hue-ho̍k", "poj": "hoe-ho̍k", "en": "Reset", "ja": "リセット" }
     },
     "inputMode": {

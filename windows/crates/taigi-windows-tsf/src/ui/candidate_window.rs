@@ -49,8 +49,17 @@ const SCREEN_EDGE_MARGIN: f32 = 12.0;
 const FALLBACK_MAXIMUM_WINDOW_WIDTH: f32 = 640.0;
 /// Our drawn scroller (overlay style): its width and the gap to the text.
 const SCROLLER_WIDTH: f32 = 12.0;
-/// The Sequoia chrome radius (`CandidateBasePanel.sequoiaCornerRadius`).
-const CORNER_RADIUS: f32 = 6.0;
+/// `ControlCornerRadius`: what Windows 11 rounds a list's selection to.
+/// The Mac's own value here was 6 (`CandidateBasePanel.sequoiaCornerRadius`).
+const CORNER_RADIUS: f32 = 4.0;
+/// `OverlayCornerRadius`: what Windows 11 rounds a flyout to, and what
+/// `DWMWCP_ROUND` already clips this window to — the stroke follows that
+/// curve so the two do not fight at the corners.
+const OVERLAY_CORNER_RADIUS: f32 = 8.0;
+/// The hairline Windows 11 draws around a flyout. One DIP, so the stroke's
+/// centre line is inset half of it — a stroke laid on the surface edge puts
+/// half of itself outside and is clipped to a half-width, uneven line.
+const BORDER_THICKNESS: f32 = 1.0;
 /// Page-arrow / chevron geometry at 16 pt (`CandidatePageArrowView`,
 /// `CandidateChevronView`), scaled through `scaled_symbol_metric`.
 const ARROW_SPACING: f32 = 4.0;
@@ -627,17 +636,46 @@ impl CandidateWindow {
         // SAFETY: drawing calls on our own target between Begin/EndDraw.
         unsafe {
             target.Clear(Some(&theme.background));
-            let Some(layout) = &self.layout else { return };
-            match layout {
-                LayoutModel::Horizontal(model) => {
-                    self.draw_horizontal(target, brush, metrics, model)
-                }
-                LayoutModel::Vertical(model) => self.draw_vertical(target, brush, metrics, model),
-                LayoutModel::Expandable(model) => {
-                    self.draw_expandable(target, brush, metrics, model)
+            if let Some(layout) = &self.layout {
+                match layout {
+                    LayoutModel::Horizontal(model) => {
+                        self.draw_horizontal(target, brush, metrics, model)
+                    }
+                    LayoutModel::Vertical(model) => {
+                        self.draw_vertical(target, brush, metrics, model)
+                    }
+                    LayoutModel::Expandable(model) => {
+                        self.draw_expandable(target, brush, metrics, model)
+                    }
                 }
             }
+            // Last, over the content's edge: a cell that reaches the surface
+            // edge must not paint the hairline away.
+            self.draw_border(target, brush);
         }
+    }
+
+    /// The flyout hairline around the whole surface.
+    ///
+    /// Measured from the TARGET, not from `self.size`: the surface is
+    /// `ceil(size * scale)` pixels, so at a fractional scale it is up to one
+    /// pixel wider than the logical size — a hairline drawn to `self.size`
+    /// would float that far inside the right and bottom edges.
+    unsafe fn draw_border(&self, target: &ID2D1HwndRenderTarget, brush: &ID2D1SolidColorBrush) {
+        let inset = BORDER_THICKNESS / 2.0;
+        let surface = target.GetSize();
+        brush.SetColor(&self.theme.border);
+        let rounded = D2D1_ROUNDED_RECT {
+            rect: D2D_RECT_F {
+                left: inset,
+                top: inset,
+                right: surface.width - inset,
+                bottom: surface.height - inset,
+            },
+            radiusX: OVERLAY_CORNER_RADIUS - inset,
+            radiusY: OVERLAY_CORNER_RADIUS - inset,
+        };
+        target.DrawRoundedRectangle(&rounded, brush, BORDER_THICKNESS, None);
     }
 
     unsafe fn draw_horizontal(

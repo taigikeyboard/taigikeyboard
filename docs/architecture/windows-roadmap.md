@@ -187,8 +187,13 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `ComposingKeyIntent.swift:41-46`) — AltGr chords (Ctrl+Alt) are left untouched so
   international layouts keep their glyphs. The 7-tier intent table
   (`ComposingKeyIntent.swift:196-292`) ports verbatim (identical semantics). Shortcut
-  defaults — **Codex F7: Ctrl+Shift, not Ctrl+Alt (AltGr is a real conflict)**:
-  `openLastSettingsPane` Ctrl+Shift+S, `toggleRomanization` Ctrl+Shift+C,
+  defaults:
+  `openLastSettingsPane` Ctrl+Alt+S, `toggleRomanization` Ctrl+Alt+C — the Mac's ⌃⌘ roster
+  under this platform's ⌘→Ctrl / ⌃→Alt mapping, so the letters and the family both carry over
+  (USER 2026-08-31). Ctrl+Shift is not free with those letters (另存新檔 / DevTools picker) and
+  no other modifier pair is either; Ctrl+Alt is allowed on the GLOBAL tier only — its chords are
+  preserved keys, live only while this TIP is, so an AltGr layout is never the one in force. The
+  composing tier still refuses it,
   `toggleTranslateSwapped` bare `` ` `` (consumed in the key sink only while the TIP is
   active and the classifier says so — a bare key is not a preserved key). Slot-key sets
   identical (`ComposingKeyBindings.swift:15-36`): bare `q w d f z x v y ;` default,
@@ -523,7 +528,8 @@ fail-fasted the process the moment they were opened: each handed a multi-root `V
 to a single-child content / slot, which the reactor answers with
 `PumpError::StructureUnsupported` — an unhandled `E_FAIL` out of `OnLaunched` that XAML turns
 into a crash with no message anywhere but Windows Error Reporting. Because the shortcut opens
-the pane the user last had open, visiting either one made every later Ctrl+Shift+S die at once,
+the pane the user last had open, visiting either one made every later Ctrl+Shift+S (the settings
+chord at the time) die at once,
 which read as "the shortcut is broken". The tray button was the second miss: a
 `TF_LBI_STYLE_BTN_MENU` item shows no menu in the Windows 8+ taskbar input indicator, which
 routes clicks to `OnClick` and never drives `InitMenu`. Both are fixed, and every pane is now
@@ -588,7 +594,7 @@ registration, desktop toast requirements).
 | GDI candidate rendering | rakukan `candidate_window.rs:295-400` | No DPI, no private fonts, no dark mode there — all three are macOS parity items. |
 | `panic = "abort"` in the DLL | rakukan `Cargo.toml:55-59` | Every COM entry is a `catch_unwind` boundary per `docs/engine/ffi-safety.md`; abort would take the host down. |
 | TIP spawning the updater from a keystroke | (own first draft) | Codex W9: host policy / security products / process ancestry. Scheduled task instead. |
-| Ctrl+Alt shortcut defaults | (own first draft) | Codex F7: AltGr conflict on non-US layouts. |
+| Ctrl+Alt **composing** bindings | (own first draft) | Codex F7: AltGr conflict on non-US layouts — a composing binding stands for as long as it is bound. The GLOBAL tier does allow Ctrl+Alt (USER 2026-08-31): those chords answer only while this TIP is selected, and they are what carries the Mac's ⌃⌘ roster over. |
 | `GUID_TFCAT_TIPCAP_COMLESS`, `IMMERSIVESUPPORT` | khiin/rakukan register all seven | Codex W6: declaring capabilities the TIP does not have. |
 | HKLM → HKCU `CTF\TIP` registry copy | rakukan `rakukan_installer.iss:134-138` | Uninstall deletes the whole HKCU TIP key — other IMEs' settings. Dogfood decides if Windows 11 needs anything. |
 | `MessageBox` in `DllRegisterServer`, `panic!` in edit sessions, advising a second sink object | khiin `dll.rs:173-180`, `edit_session.rs:32`, `key_event_sink.rs:87-88` | Live bugs, not patterns. |
@@ -621,7 +627,7 @@ Ordered in layers — stop at the first foundation failure:
    `q` commits slot 0, Return commits highlighted, Space commits the alternate script,
    Esc cancels, digits are tones. Then Word / Chrome / Windows Terminal / a UWP app
    (expect W2 degradation there) / a password field (expect no composition).
-4. Lang-bar button in the tray: menu 設定 opens the exe; Ctrl+Shift+S / Ctrl+Shift+C /
+4. Lang-bar button in the tray: menu 設定 opens the exe; Ctrl+Alt+S / Ctrl+Alt+C /
    `` ` `` work while the TIP is active.
 5. Settings exe (W17, WinUI 3): each pane matches the macOS pane order and controls;
    typing Taiwanese INTO the custom-dict `TextBox`es with our own TIP (composition,

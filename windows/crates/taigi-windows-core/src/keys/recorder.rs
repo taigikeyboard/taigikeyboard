@@ -78,11 +78,13 @@ pub fn evaluate_press(
     if chord.is_candidate_slot_chord(slot_key_set) {
         return RecorderOutcome::Refused(ChordRejection::CandidateSlotChord);
     }
-    // Ctrl+Alt IS AltGr on most non-US layouts, and Windows reports AltGr
-    // as exactly that: a composing binding on it would take the glyph that
-    // layout types with it. Refused on BOTH tiers (the global gate refuses
-    // it on its own; PR7 Codex review).
-    if chord.modifiers.control && chord.modifiers.alt {
+    // Ctrl+Alt IS AltGr on most non-US layouts, and Windows reports AltGr as
+    // exactly that: a COMPOSING binding on it would take the glyph that
+    // layout types with it, for as long as the binding stands. The global
+    // tier is different and decides for itself (`global_rejection`) — its
+    // chords are TSF preserved keys, live only while this TIP is selected —
+    // and that is the family the Mac's ⌃⌘ roster maps onto (USER 2026-08-31).
+    if tier == RecorderTier::Composing && chord.modifiers.control && chord.modifiers.alt {
         return RecorderOutcome::Refused(ChordRejection::TakenBySystem);
     }
     if tier == RecorderTier::Global {
@@ -254,8 +256,12 @@ mod tests {
     }
 
     #[test]
-    fn an_alt_gr_shaped_chord_is_refused_on_the_composing_tier_too() {
+    fn an_alt_gr_shaped_chord_is_refused_on_the_composing_tier_and_taken_on_the_global_one() {
         // trace: Ctrl+Alt+Q → make Ok (host chord) → not a slot → AltGr gate.
+        // A composing binding on AltGr would take that layout's glyph for as
+        // long as it stands; a global one is a preserved key that lives only
+        // while this TIP is selected, and it is the family the Mac's ⌃⌘
+        // roster maps onto.
         let alt_gr = KeyModifiers::CONTROL.with(KeyModifiers::ALT);
         assert_eq!(
             evaluate_press(
@@ -264,6 +270,16 @@ mod tests {
                 &press("q", alt_gr)
             ),
             RecorderOutcome::Refused(ChordRejection::TakenBySystem)
+        );
+        assert_eq!(
+            evaluate_press(
+                RecorderTier::Global,
+                CandidateSlotKeySet::BareKeys,
+                &press("q", alt_gr)
+            ),
+            RecorderOutcome::Recorded(
+                ComposingKeyChord::make(Some("q"), alt_gr).expect("bindable")
+            )
         );
     }
 }

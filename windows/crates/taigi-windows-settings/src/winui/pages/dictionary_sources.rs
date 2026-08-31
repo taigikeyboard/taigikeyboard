@@ -145,9 +145,11 @@ pub fn view(
         cards::section_title(strings.resolve(StringKey::DictionarySupplementSectionTitle)),
         source_rows(window, strings, context, &SUPPLEMENTS),
         cards::section_gap(),
-        cards::action(
+        cards::action_row(
             strings.resolve(StringKey::ThemeEditorResetAll),
+            strings.resolve(StringKey::SettingsReset),
             false,
+            true,
             context.callback(|()| Message::Reset(ResetScope::DictionarySources)),
         ),
     ))

@@ -78,9 +78,11 @@ pub fn view(
         // shipped defaults hold no chord in common
         // (`ShortcutSettingsView.swift:578-603`).
         cards::section_gap(),
-        cards::action(
+        cards::action_row(
             strings.resolve(StringKey::ThemeEditorResetAll),
+            strings.resolve(StringKey::SettingsReset),
             false,
+            true,
             context.callback(|()| Message::Reset(ResetScope::Shortcuts)),
         ),
     ))

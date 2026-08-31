@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use taigi_windows_core::candidates::{FontSpec, TextMeasurer};
 use taigi_windows_core::settings::{CandidateFontChoice, SettingChoice};
-use windows::core::{Interface, Result, PCWSTR};
+use windows::core::{Interface, Result, BOOL, PCWSTR};
 use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HWND};
 use windows::Win32::Graphics::Direct2D::Common::{
     D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT, D2D_SIZE_U,
@@ -36,21 +36,26 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_UNKNOWN;
 /// The install directory's font folder — where the installer (PR10) copies
 /// `ios/Resources/Fonts/` (macOS `bundle-app.sh:178-201`).
 pub const FONTS_DIR_NAME: &str = "Fonts";
-/// The face the UI (index labels) and the `System` choice draw in.
-const SYSTEM_FONT_FAMILY: &str = "Segoe UI";
+/// The face the UI (index labels) and the `System` choice draw in on
+/// Windows 11 — the same family the WinUI settings window renders in, so
+/// the two windows of this input method do not disagree.
+const SYSTEM_FONT_FAMILY: &str = "Segoe UI Variable Text";
+/// What Windows 10 has instead: the variable family shipped with 11.
+const LEGACY_SYSTEM_FONT_FAMILY: &str = "Segoe UI";
 const LOCALE: &str = "zh-TW";
 
 /// Family names as the bundled files declare them (what a text format asks
-/// for). Mirrors macOS's PostScript names on the same files; a name the
-/// collection does not carry falls back to the system face.
-fn family_name(choice: CandidateFontChoice) -> &'static str {
-    match choice {
-        CandidateFontChoice::System => SYSTEM_FONT_FAMILY,
+/// for). Mirrors macOS's PostScript names on the same files. `System` is
+/// not one of them — it is whatever this Windows carries, which only
+/// [`system_family`] knows.
+fn bundled_family_name(choice: CandidateFontChoice) -> Option<&'static str> {
+    Some(match choice {
+        CandidateFontChoice::System => return None,
         CandidateFontChoice::OpenHuninn => "jf-openhuninn-2.1",
         CandidateFontChoice::Iansui => "Iansui",
         CandidateFontChoice::GenYoMin => "GenYoMin2TW",
         CandidateFontChoice::GenYoGothic => "GenYoGothic2TW",
-    }
+    })
 }
 
 /// Process-wide factories plus the caches built from them.
@@ -61,6 +66,8 @@ pub struct RenderFactory {
     /// in the system face (as macOS `CandidateFontChoice.font(named:)`
     /// degrades) — per face, not per folder.
     private_fonts: Option<PrivateFonts>,
+    /// The UI family this Windows really carries, resolved once.
+    system_family: &'static str,
     formats: RefCell<HashMap<FormatKey, IDWriteTextFormat>>,
     ellipsis: RefCell<HashMap<FormatKey, IDWriteInlineObject>>,
 }
@@ -101,10 +108,12 @@ impl RenderFactory {
             )
         };
         let private_fonts = load_private_fonts(&dwrite);
+        let system_family = system_family(&dwrite);
         Ok(Self {
             d2d,
             dwrite,
             private_fonts,
+            system_family,
             formats: RefCell::new(HashMap::new()),
             ellipsis: RefCell::new(HashMap::new()),
         })
@@ -126,11 +135,12 @@ impl RenderFactory {
             .as_ref()
             .filter(|fonts| fonts.loaded.contains(&font.choice))
             .and_then(|fonts| fonts.collection.cast().ok());
-        let family = to_wide_nul(if collection.is_some() {
-            family_name(font.choice)
-        } else {
-            SYSTEM_FONT_FAMILY
-        });
+        let family = to_wide_nul(
+            collection
+                .as_ref()
+                .and(bundled_family_name(font.choice))
+                .unwrap_or(self.system_family),
+        );
         // SAFETY: valid NUL-terminated strings; the collection is ours or none.
         let format = unsafe {
             self.dwrite.CreateTextFormat(
@@ -241,6 +251,42 @@ impl RenderFactory {
             self.d2d
                 .CreateHwndRenderTarget(&target_properties, &hwnd_properties)
         }
+    }
+}
+
+/// The UI family to draw in: the Windows 11 variable face when this system
+/// carries it, the Windows 10 one otherwise.
+///
+/// Probed rather than left to DirectWrite's mapper: `CreateTextFormat`
+/// accepts a family that does not exist and substitutes at LAYOUT time, so
+/// a missing family would not fail anywhere this code could see — it would
+/// just draw in whatever the mapper picked, and measure in it too.
+fn system_family(dwrite: &IDWriteFactory3) -> &'static str {
+    // SAFETY: a collection query and a name lookup on the calling thread;
+    // the out-parameters are live locals.
+    unsafe {
+        let mut collection: Option<IDWriteFontCollection1> = None;
+        if dwrite
+            .GetSystemFontCollection(false, &mut collection, false)
+            .is_err()
+        {
+            return LEGACY_SYSTEM_FONT_FAMILY;
+        }
+        let Some(collection) = collection else {
+            return LEGACY_SYSTEM_FONT_FAMILY;
+        };
+        let name = to_wide_nul(SYSTEM_FONT_FAMILY);
+        let mut index = 0u32;
+        let mut exists = BOOL::default();
+        if collection
+            .FindFamilyName(PCWSTR(name.as_ptr()), &mut index, &mut exists)
+            .is_err()
+            || !exists.as_bool()
+        {
+            log::debug!("fonts.system_variable_absent");
+            return LEGACY_SYSTEM_FONT_FAMILY;
+        }
+        SYSTEM_FONT_FAMILY
     }
 }
 

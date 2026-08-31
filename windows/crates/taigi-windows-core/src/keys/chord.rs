@@ -189,8 +189,15 @@ impl ComposingKeyChord {
         format!("{letters}|{scalars}")
     }
 
-    /// Back through the same gate the recorder goes through, so a hand-edited
-    /// value cannot install a binding the recorder would have refused.
+    /// Back through [`Self::make`], the gate that defends the typing keys, so
+    /// a hand-edited value cannot install a binding that swallows the letters
+    /// of a syllable.
+    ///
+    /// NOT the recorder's whole gate: the tier rules — the candidate-slot
+    /// keys, `global_rejection`, and the composing tier's Ctrl+Alt refusal —
+    /// live in `evaluate_press`, which a value read from `settings.json` does
+    /// not pass through. A hand-edited file can therefore hold a chord the
+    /// recorder would have refused; only the UI is gated.
     pub fn from_raw(raw: &str) -> Option<Self> {
         let (letters, scalars) = raw.split_once('|')?;
         let mut modifiers = KeyModifiers::NONE;

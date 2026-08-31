@@ -1,18 +1,14 @@
 //! The SettingsCard: the one shape every setting in the Windows 11
 //! Settings app sits in (Windows Community Toolkit `SettingsCard`) — a
 //! full-width card on the ground, 1px stroke, 4px corners, the setting's
-//! name at the left and its control at the right. `action` is the
-//! clickable card, the whole card being the button.
+//! name at the left and its control at the right. `action_row` puts a
+//! command in that same shape: what it does at the left, the button that
+//! runs it at the right.
 //!
 //! Every colour is a `ThemeBrush`, never a literal: light, dark and high
-//! contrast are WinUI's to resolve. That rules out the toolkit's
-//! `IsClickEnabled` card built from a `Border` plus overridden button
-//! brushes — `ResourceValue` carries no theme brush — so `action` is a
-//! real `Button` wearing native actionable-card chrome, which keeps the
-//! keyboard activation, the UIA role and the hover / pressed / focus
-//! states that a pointer-only `Border` would lose.
+//! contrast are WinUI's to resolve.
 
-// 中文: 設定卡片 — 單列卡片與整張可點的動作卡;顏色一律用 ThemeBrush,不寫死色值。
+// 中文: 設定卡片 — 單列卡片;命令也是同一個形狀(左標題、右按鈕);顏色一律用 ThemeBrush,不寫死色值。
 
 use windows_reactor::*;
 
@@ -125,18 +121,6 @@ pub fn choice_row(
     )
 }
 
-/// A clickable card: the whole card is the button, `text` at its left in
-/// the accent (`is_destructive`: the critical colour).
-///
-/// Not a `Border` with a pointer handler and not a card-coloured override:
-/// `ResourceValue` carries no theme brush, so a background override would
-/// freeze a literal colour against light / dark / high contrast. A real
-/// `Button` in native actionable-card chrome keeps the keyboard
-/// activation, the UIA role and the hover / pressed / focus states.
-pub fn action(text: &str, is_destructive: bool, on_click: Callback<()>) -> View {
-    action_enabled(text, is_destructive, true, on_click)
-}
-
 /// The air between two groups of cards.
 pub fn section_gap() -> View {
     Border::new().height(SECTION_GAP).into()
@@ -163,33 +147,39 @@ pub fn frame(content: impl Into<View>) -> View {
         .content(StackPanel::new().children([content.into()]))
 }
 
-/// A clickable card that can be turned off while a job holds the page.
-pub fn action_enabled(
-    text: &str,
+/// A command in a card: `header` says what it does, `verb` is the button
+/// that runs it, at the card's right where Windows 11 Settings puts a
+/// row's action button.
+///
+/// NOT a full-width clickable card, which this drew while it was a port of
+/// the Mac's `WideActionRow`: in Windows 11 Settings a whole-card button
+/// means NAVIGATION and carries a chevron, so an action wearing that shape
+/// reads as a link to somewhere.
+///
+/// A destructive command keeps its critical colour — on the button's text,
+/// the only channel left once the card stops being the button. It is the
+/// standing cue for these two commands, and it is not paid for by the
+/// confirmation the caller puts in front of them; both are wanted.
+pub fn action_row(
+    header: &str,
+    verb: &str,
     is_destructive: bool,
     is_enabled: bool,
     on_click: Callback<()>,
 ) -> View {
-    let foreground = if is_destructive {
-        ThemeBrush::SystemCritical
+    let label = TextBlock::new().text(verb);
+    let label = if is_destructive {
+        label.foreground(ThemeBrush::SystemCritical)
     } else {
-        ThemeBrush::Accent
+        label
     };
-    Button::new()
-        .is_enabled(is_enabled)
-        .on_click(on_click)
-        .horizontal_alignment(HorizontalAlignment::Stretch)
-        .horizontal_content_alignment(HorizontalAlignment::Left)
-        .min_height(CARD_MIN_HEIGHT)
-        .resource_overrides(
-            ResourceOverrides::new()
-                .set(
-                    "ControlCornerRadius",
-                    CornerRadius::uniform(CARD_CORNER_RADIUS),
-                )
-                .set("ButtonPadding", padding()),
-        )
-        .content(TextBlock::new().text(text).foreground(foreground))
+    row(
+        header,
+        Button::new()
+            .is_enabled(is_enabled)
+            .on_click(on_click)
+            .content(label),
+    )
 }
 
 /// A section's title with a count at the line's right (`{matched} / {total}`).

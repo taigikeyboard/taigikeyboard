@@ -43,6 +43,13 @@ pub fn action_for_guid(guid: &GUID) -> Option<ShortcutAction> {
 /// A chord as TSF wants it: the virtual key the character sits on in the
 /// current layout plus the modifier bits. `None` when the layout has no
 /// key for the character (the recorder's `NotAGlobalKey`, hit late).
+///
+/// ⚠ The layout's own required modifiers are OR-ed into the chord's, and a
+/// bitmask cannot say "twice": on a layout where the character itself needs
+/// AltGr, `Ctrl+Alt+<char>` registers the key that layout types the
+/// character WITH, not that key plus Ctrl+Alt. Neither `s` nor `c` needs a
+/// modifier on the layouts this input method is typed on, so the shipped
+/// defaults are unaffected — a dogfood item per layout, not a live bug.
 pub fn preserved_key(chord: &ComposingKeyChord) -> Option<TF_PRESERVEDKEY> {
     let character = chord.key.encode_utf16().next()?;
     // SAFETY: plain layout queries on the calling thread.

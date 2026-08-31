@@ -1,14 +1,21 @@
 //! Colours: light / dark from the appearance setting or the system, the
 //! highlight from the Windows accent, and — when a high-contrast theme is
-//! on — every colour from the system, nothing of ours. NAMED DIVERGENCE
-//! from macOS: no vibrancy / glass backdrop on Windows — an opaque card. The
-//! Sequoia accent darkening (`CandidateAccentColor.sequoiaAdjusted`) is kept
-//! so the highlight reads like the native window's. The system's answers are
-//! read once ([`SystemTheme::read`]) and cached by the caller until Windows
-//! says they changed (`WM_SETTINGCHANGE` / `WM_THEMECHANGED` /
-//! `WM_DWMCOLORIZATIONCOLORCHANGED`) — not per keystroke.
+//! on — every colour from the system, nothing of ours.
+//!
+//! The values are the WinUI common theme resources, so this popup reads as
+//! a Windows 11 flyout rather than as the Mac panel it was ported from
+//! (`Common_themeresources_any.xaml`). Each is named on the constant it
+//! sets. NAMED DIVERGENCE from macOS: no vibrancy / glass backdrop on
+//! Windows — an opaque surface with a flyout stroke; and the Sequoia accent
+//! darkening (`CandidateAccentColor.sequoiaAdjusted`) is NOT applied — it is
+//! a measured fit of what an AppKit window does to the accent, and a
+//! selection here is meant to be the Windows system accent exactly.
+//!
+//! The system's answers are read once ([`SystemTheme::read`]) and cached by
+//! the caller until Windows says they changed (`WM_SETTINGCHANGE` /
+//! `WM_THEMECHANGED` / `WM_DWMCOLORIZATIONCOLORCHANGED`) — not per keystroke.
 
-// 中文: 顏色主題 — 亮/暗、系統強調色、高對比全用系統色;Windows 無毛玻璃,改用不透明卡片(具名差異);系統值快取到主題變更訊息才重讀。
+// 中文: 顏色主題 — 亮/暗、系統強調色、高對比全用系統色;色值取自 WinUI common theme resources(不是 Mac 的灰);不套 Sequoia 修正;Windows 無毛玻璃,改用不透明面 + flyout 邊框(具名差異)。
 
 use taigi_windows_core::settings::AppearanceMode;
 use taigi_windows_platform::{HighContrastColors, Rgb};
@@ -22,6 +29,9 @@ pub struct Theme {
     pub secondary_text: D2D1_COLOR_F,
     pub tertiary_text: D2D1_COLOR_F,
     pub separator: D2D1_COLOR_F,
+    /// The hairline around the whole popup (`SurfaceStrokeColorFlyout`).
+    /// Windows 11 draws one on every flyout; the Mac panel had none.
+    pub border: D2D1_COLOR_F,
     pub highlight: D2D1_COLOR_F,
     pub highlighted_text: D2D1_COLOR_F,
 }
@@ -94,7 +104,7 @@ impl Theme {
             AppearanceMode::Dark => true,
             AppearanceMode::Auto => system.prefers_dark,
         };
-        let highlight = sequoia_adjusted(system.accent);
+        let highlight = system.accent;
         let highlighted_text = if relative_luminance(highlight) > LIGHT_HIGHLIGHT_LUMINANCE {
             rgba(0x00, 0x00, 0x00, 0.85)
         } else {
@@ -103,22 +113,28 @@ impl Theme {
         if is_dark {
             Self {
                 is_dark,
-                background: rgb(0x2B, 0x2B, 0x2B),
-                text: rgba(0xFF, 0xFF, 0xFF, 0.85),
-                secondary_text: rgba(0xFF, 0xFF, 0xFF, 0.55),
-                tertiary_text: rgba(0xFF, 0xFF, 0xFF, 0.25),
-                separator: rgba(0xFF, 0xFF, 0xFF, 0.12),
+                // SolidBackgroundFillColorBase
+                background: rgb(0x20, 0x20, 0x20),
+                // TextFillColorPrimary / Secondary / Tertiary
+                text: rgb(0xFF, 0xFF, 0xFF),
+                secondary_text: rgba(0xFF, 0xFF, 0xFF, 0.7725),
+                tertiary_text: rgba(0xFF, 0xFF, 0xFF, 0.5294),
+                // DividerStrokeColorDefault
+                separator: rgba(0xFF, 0xFF, 0xFF, 0.0837),
+                // SurfaceStrokeColorFlyout
+                border: rgba(0x00, 0x00, 0x00, 0.2),
                 highlight,
                 highlighted_text,
             }
         } else {
             Self {
                 is_dark,
-                background: rgb(0xF6, 0xF6, 0xF6),
-                text: rgba(0x00, 0x00, 0x00, 0.85),
-                secondary_text: rgba(0x00, 0x00, 0x00, 0.50),
-                tertiary_text: rgba(0x00, 0x00, 0x00, 0.26),
-                separator: rgba(0x00, 0x00, 0x00, 0.10),
+                background: rgb(0xF3, 0xF3, 0xF3),
+                text: rgba(0x00, 0x00, 0x00, 0.8942),
+                secondary_text: rgba(0x00, 0x00, 0x00, 0.6063),
+                tertiary_text: rgba(0x00, 0x00, 0x00, 0.4458),
+                separator: rgba(0x00, 0x00, 0x00, 0.0578),
+                border: rgba(0x00, 0x00, 0x00, 0.0578),
                 highlight,
                 highlighted_text,
             }
@@ -131,7 +147,9 @@ impl Theme {
     /// `COLOR_WINDOWTEXT` for the card, `COLOR_HIGHLIGHT` /
     /// `COLOR_HIGHLIGHTTEXT` for the selection, `COLOR_GRAYTEXT` for
     /// everything secondary — no alpha, no accent fit: a high-contrast
-    /// scheme is opaque by definition.
+    /// scheme is opaque by definition. The border is `COLOR_WINDOWTEXT`,
+    /// not the flyout's alpha: the whole point of the scheme is that the
+    /// edge of a surface is visible.
     fn high_contrast(colors: HighContrastColors) -> Self {
         let background = from_rgb(colors.window);
         let gray = from_rgb(colors.gray_text);
@@ -142,21 +160,10 @@ impl Theme {
             secondary_text: gray,
             tertiary_text: gray,
             separator: gray,
+            border: from_rgb(colors.window_text),
             highlight: from_rgb(colors.highlight),
             highlighted_text: from_rgb(colors.highlight_text),
         }
-    }
-}
-
-/// Upstream's measured affine fit of what the native window does with the
-/// accent (`MacishBasePanel.swift:129-137`).
-fn sequoia_adjusted(color: D2D1_COLOR_F) -> D2D1_COLOR_F {
-    let adjust = |channel: f32| (channel * 0.9417 - 0.0594).max(0.0);
-    D2D1_COLOR_F {
-        r: adjust(color.r),
-        g: adjust(color.g),
-        b: adjust(color.b),
-        a: color.a,
     }
 }
 
@@ -178,8 +185,8 @@ mod tests {
 
     #[test]
     fn a_pale_accent_gets_dark_highlighted_text_and_a_deep_one_white() {
-        // trace: luminance(#F0E68C khaki) ≈ 0.77 after the Sequoia fit → dark
-        // text; luminance(#0078D4) ≈ 0.17 → white.
+        // trace: luminance(#F0E68C khaki) ≈ 0.81 → dark text;
+        // luminance(#0078D4) ≈ 0.17 → white. No accent fit is applied.
         let pale = SystemTheme {
             prefers_dark: false,
             accent: rgb(0xF0, 0xE6, 0x8C),
@@ -195,6 +202,41 @@ mod tests {
         let theme = Theme::resolve(AppearanceMode::Auto, &deep);
         assert!(theme.is_dark);
         assert!(theme.highlighted_text.r > 0.9);
+    }
+
+    #[test]
+    fn the_highlight_is_the_system_accent_exactly() {
+        // The Sequoia affine fit is a measurement of what an AppKit window
+        // does to the accent; a Windows selection is the system accent.
+        let system = SystemTheme {
+            prefers_dark: false,
+            accent: rgb(0x00, 0x78, 0xD4),
+            high_contrast: None,
+        };
+        assert_eq!(
+            Theme::resolve(AppearanceMode::Light, &system).highlight,
+            rgb(0x00, 0x78, 0xD4)
+        );
+    }
+
+    #[test]
+    fn every_mode_carries_a_visible_flyout_border() {
+        for mode in [AppearanceMode::Light, AppearanceMode::Dark] {
+            let system = SystemTheme {
+                prefers_dark: false,
+                accent: FALLBACK_ACCENT,
+                high_contrast: None,
+            };
+            let theme = Theme::resolve(mode, &system);
+            assert!(theme.border.a > 0.0, "{mode:?} draws no hairline");
+            // `SurfaceStrokeColorFlyout` is a black ink in BOTH themes —
+            // it does not flip with the mode the way the text ramp does.
+            assert_eq!(
+                (theme.border.r, theme.border.g, theme.border.b),
+                (0.0, 0.0, 0.0),
+                "{mode:?}"
+            );
+        }
     }
 
     #[test]
@@ -231,7 +273,7 @@ mod tests {
         assert_eq!(
             theme.highlight,
             rgb(0x1A, 0xEB, 0xFF),
-            "the accent fit is not applied"
+            "the system highlight, not the app accent"
         );
         assert_eq!(theme.highlighted_text, rgb(0x00, 0x00, 0x00));
         assert_eq!(theme.secondary_text, rgb(0x00, 0xFF, 0x00));
@@ -269,6 +311,7 @@ mod tests {
             theme.secondary_text,
             theme.tertiary_text,
             theme.separator,
+            theme.border,
             theme.highlight,
             theme.highlighted_text,
         ] {

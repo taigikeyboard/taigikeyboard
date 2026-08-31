@@ -52,14 +52,37 @@ impl ShortcutAction {
         self == Self::OpenLastSettingsPane
     }
 
-    /// The chord a fresh install has on this action. Ctrl+Shift rather than
-    /// the Mac's ⌃⌘ (Codex F7: Ctrl+Alt is AltGr on many layouts); the bare
-    /// backtick is the Mac's own default and is consumed in the key sink only
-    /// while the TIP is active, never registered as a preserved key.
+    /// The chord a fresh install has on this action. The bare backtick is the
+    /// Mac's own default and is consumed in the key sink only while the TIP is
+    /// active, never registered as a preserved key.
+    ///
+    /// Ctrl+Alt is the Mac's ⌃⌘ under this platform's modifier mapping
+    /// (`windows-guidelines.md`: ⌘→Ctrl, ⌃→Alt), so the two desktops keep one
+    /// roster: ⌃⌘S → Ctrl+Alt+S for 設定, ⌃⌘C → Ctrl+Alt+C for the
+    /// romanization switch. The letters are the Mac's reasons, unchanged — S
+    /// for Settings / siat-tīng / settei, and C for the bottom row a key
+    /// pressed all day should sit on (`ShortcutActions.swift:31-52`). USER
+    /// 2026-08-31: the chord logic has to match macOS's.
+    ///
+    /// Ctrl+Shift is NOT that family and its S and C are both taken —
+    /// Ctrl+Shift+S is 另存新檔 in Word / Excel / LibreOffice / GIMP / Inkscape
+    /// and 全部儲存 in Visual Studio; Ctrl+Shift+C opens the DevTools element
+    /// picker in Chrome / Edge. Nor is any other pair of modifiers free with
+    /// these letters: Alt+Shift is the input-language-switch chord and Word's
+    /// Alt+Shift+<letter> family, Win+Shift+S is 剪取工具 and Win+Ctrl+S is
+    /// speech recognition (and Win chords are refused outright below).
+    /// Ctrl+Alt+S is JetBrains' own Settings chord, i.e. an existing Windows
+    /// convention for exactly this command. What it does cost, and what a
+    /// user rebinds away from if it bites: Word's 分割視窗, Visual Studio's
+    /// Server Explorer (S) and Call Stack (C), and Teams' see-all-chats (C).
+    ///
+    /// Changing a default here moves every install that never recorded the row:
+    /// nothing writes a default into `settings.json`, so an absent key IS the
+    /// default (`chord_in`). No migration flag, unlike the Mac's.
     pub fn default_chord(self) -> ComposingKeyChord {
         let (key, modifiers) = match self {
-            Self::OpenLastSettingsPane => ("s", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT)),
-            Self::ToggleRomanization => ("c", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT)),
+            Self::OpenLastSettingsPane => ("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
+            Self::ToggleRomanization => ("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleTranslateSwapped => ("`", KeyModifiers::NONE),
         };
         ComposingKeyChord::make(Some(key), modifiers).unwrap_or_else(|rejection| {
@@ -106,12 +129,12 @@ impl ShortcutAction {
 /// - `BelongsToHost`: Ctrl alone, or Alt alone, with a key — where a Windows
 ///   application puts its own commands (Ctrl+S) and its menu mnemonics
 ///   (Alt+F). A preserved key on one would take it from whatever the user is
-///   typing into for as long as this input method is selected. Ctrl+Shift
-///   and Alt+Shift are ours to offer, like the Mac's ⌃⌘.
-/// - `TakenBySystem`: a Win-key chord — the OS answers those first — or a
-///   Ctrl+Alt chord, which is AltGr on most non-US layouts. Windows has no
-///   `CopySymbolicHotKeys`; this is a conservative static policy, not a
-///   complete collision check (a dogfood item per layout).
+///   typing into for as long as this input method is selected. Ctrl+Shift,
+///   Alt+Shift and Ctrl+Alt are ours to offer, like the Mac's ⌃⌘: a SECOND
+///   modifier is what lifts a chord out of the host's own space.
+/// - `TakenBySystem`: a Win-key chord — the OS answers those first. Windows
+///   has no `CopySymbolicHotKeys`; this is a conservative static policy, not
+///   a complete collision check (a dogfood item per layout).
 /// - `NotAGlobalKey`: a key the preserved-key registration cannot name (not
 ///   a single printable ASCII character).
 pub fn global_rejection(chord: &ComposingKeyChord) -> Option<ChordRejection> {
@@ -126,15 +149,26 @@ pub fn global_rejection(chord: &ComposingKeyChord) -> Option<ChordRejection> {
     if modifiers.win {
         return Some(ChordRejection::TakenBySystem);
     }
-    // Ctrl+Alt IS AltGr on most non-US layouts: a preserved key on one would
-    // take the glyph that layout types with it (Codex F7 / PR4 review). No
-    // layout-aware check is worth the false confidence — refused outright,
-    // whatever else is held.
-    if modifiers.control && modifiers.alt {
-        return Some(ChordRejection::TakenBySystem);
-    }
-    let host_only_control = modifiers.control && !modifiers.shift;
-    let host_only_alt = modifiers.alt && !modifiers.shift;
+    // Ctrl+Alt is allowed HERE and refused on the composing tier
+    // (`evaluate_press`). It is AltGr on layouts that have one, and a
+    // composing binding would take the glyph such a layout types with it —
+    // but a global chord answers only while this Taiwanese TIP is the
+    // selected one, both ways it can be reached: as a preserved key
+    // registered at activation and unregistered at Deactivate
+    // (`preserved_keys.rs`), and as the key sink's fallback for hosts that
+    // bypass preserved keys (`session.rs`). Reaching a layout where
+    // AltGr+<letter> types a glyph means having selected a different
+    // language profile, which is not this TIP. That leaves Ctrl+Alt as the
+    // one two-modifier family that carries the Mac's ⌃⌘ roster over intact
+    // (USER 2026-08-31; Codex confirmed the lifetime on both paths). NOT
+    // proven by an invariant — a layout substitution under this TIP is a
+    // dogfood item, as is a layout on which `VkKeyScanExW` reports the
+    // letter itself as needing AltGr (`preserved_key` ORs the two).
+    // "Only" as in nothing else held: Ctrl+Alt is neither the host's Ctrl+S
+    // nor its Alt+F, so each test excludes the other modifier as well as
+    // Shift.
+    let host_only_control = modifiers.control && !modifiers.shift && !modifiers.alt;
+    let host_only_alt = modifiers.alt && !modifiers.shift && !modifiers.control;
     if host_only_control || host_only_alt {
         return Some(ChordRejection::BelongsToHost);
     }
@@ -310,11 +344,11 @@ mod tests {
         assert_eq!(names.len(), 3);
         assert_eq!(
             ShortcutAction::OpenLastSettingsPane.default_chord(),
-            chord("s", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT))
+            chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
         assert_eq!(
             ShortcutAction::ToggleRomanization.default_chord(),
-            chord("c", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT))
+            chord("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
         assert_eq!(
             ShortcutAction::ToggleTranslateSwapped.default_chord(),
@@ -365,6 +399,57 @@ mod tests {
     }
 
     #[test]
+    fn the_global_policy_answers_every_modifier_combination() {
+        // The whole 16-cell table, so widening one rule cannot quietly open
+        // another cell. A SECOND modifier is what lifts a chord out of the
+        // host's space; the Win key is the OS's whatever else is held.
+        use ChordRejection::{BelongsToHost, TakenBySystem, TypesRomanization};
+        let cell = |shift, control, alt, win| {
+            let modifiers = KeyModifiers {
+                shift,
+                control,
+                alt,
+                win,
+            };
+            // `q` spells no syllable, so a bare chord on it is makeable and
+            // the answer is the POLICY's, not the constructor's.
+            ComposingKeyChord::make(Some("q"), modifiers).map(|chord| global_rejection(&chord))
+        };
+        // shift, control, alt, win → what the policy says
+        let expected = [
+            ((false, false, false, false), Ok(None)),
+            ((true, false, false, false), Ok(None)),
+            ((false, true, false, false), Ok(Some(BelongsToHost))),
+            ((false, false, true, false), Ok(Some(BelongsToHost))),
+            ((true, true, false, false), Ok(None)),
+            ((true, false, true, false), Ok(None)),
+            ((false, true, true, false), Ok(None)),
+            ((true, true, true, false), Ok(None)),
+            ((false, false, false, true), Ok(Some(TakenBySystem))),
+            ((true, false, false, true), Ok(Some(TakenBySystem))),
+            ((false, true, false, true), Ok(Some(TakenBySystem))),
+            ((false, false, true, true), Ok(Some(TakenBySystem))),
+            ((true, true, false, true), Ok(Some(TakenBySystem))),
+            ((true, false, true, true), Ok(Some(TakenBySystem))),
+            ((false, true, true, true), Ok(Some(TakenBySystem))),
+            ((true, true, true, true), Ok(Some(TakenBySystem))),
+        ];
+        for ((shift, control, alt, win), want) in expected {
+            assert_eq!(
+                cell(shift, control, alt, win),
+                want,
+                "shift={shift} control={control} alt={alt} win={win}"
+            );
+        }
+        // A syllable letter is the constructor's refusal, before the policy,
+        // and only while no host chord is held.
+        assert_eq!(
+            ComposingKeyChord::make(Some("s"), KeyModifiers::NONE).map(|_| ()),
+            Err(TypesRomanization)
+        );
+    }
+
+    #[test]
     fn global_policy_refuses_host_and_system_chords() {
         assert_eq!(
             global_rejection(&chord("s", KeyModifiers::CONTROL)),
@@ -380,8 +465,9 @@ mod tests {
         );
         assert_eq!(
             global_rejection(&chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))),
-            Some(ChordRejection::TakenBySystem),
-            "Ctrl+Alt is AltGr"
+            None,
+            "Ctrl+Alt carries the Mac's ⌃⌘ roster: a preserved key lives only \
+             while this TIP does, so an AltGr layout is never the one in force"
         );
         assert_eq!(
             global_rejection(&chord("s", KeyModifiers::ALT.with(KeyModifiers::SHIFT))),

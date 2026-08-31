@@ -247,7 +247,7 @@ mod tests {
         assert_eq!(rows.len(), 3);
         let (id, label) = rows[0].as_ref().unwrap();
         assert_eq!(*id, MENU_OPEN_SETTINGS);
-        assert!(label.ends_with("\tCtrl+Shift+S"), "{label}");
+        assert!(label.ends_with("\tCtrl+Alt+S"), "{label}");
         assert!(rows[1].is_none(), "a separator between the two groups");
         let (id, label) = rows[2].as_ref().unwrap();
         assert_eq!(*id, MENU_CHECK_FOR_UPDATES);

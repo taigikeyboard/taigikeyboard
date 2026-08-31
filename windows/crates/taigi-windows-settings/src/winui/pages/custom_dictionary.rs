@@ -10,10 +10,13 @@
 //! work slot (refused, not queued — a queued delete would name a row the
 //! list may no longer show).
 //!
-//! Named divergence: the Mac's double-click-to-edit and right-click menu
-//! become an explicit ✎ button over the selection. Reactor's `ListView`
+//! Named divergences: the Mac's double-click-to-edit and right-click menu
+//! become an explicit ✎ button over the selection (Reactor's `ListView`
 //! exposes neither a double-click nor a per-item flyout, and a button over
-//! the selection is reachable from the keyboard, which neither was.
+//! the selection is reachable from the keyboard, which neither was); and
+//! the empty list says so in WORDS rather than the Mac's `tray` symbol —
+//! Segoe Fluent Icons has no empty-container glyph, and a Windows 11 empty
+//! state is a line of text.
 
 // 中文: 自訂詞庫頁 — 分頁表格、篩選、新增/編輯/刪除、CSV 匯入匯出、清除學習紀錄;所有資料庫呼叫都在背景執行緒。⚠ 無雙擊/右鍵選單(Reactor 沒有),改用選取 + ✎ 按鈕。
 
@@ -60,6 +63,43 @@ pub enum EntryField {
     Hanzi,
 }
 
+/// A command that empties a store, waiting on its confirmation.
+///
+/// Confirmed rather than run on the press (neither the Mac nor this window
+/// used to ask): the button that runs it no longer IS the card, so the
+/// press is that much easier to make by accident, and there is no undo —
+/// the ✎ / − verbs act on one row, these two empty a table.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Confirm {
+    DeleteAll,
+    ClearLearningRecords,
+}
+
+impl Confirm {
+    fn title_key(self) -> StringKey {
+        match self {
+            Self::DeleteAll => StringKey::DictionaryDeleteAll,
+            Self::ClearLearningRecords => StringKey::DesktopClearLearningRecords,
+        }
+    }
+
+    /// The question under the title. 清除學習紀錄 has none authored, and its
+    /// title already asks it.
+    fn message_key(self) -> Option<StringKey> {
+        match self {
+            Self::DeleteAll => Some(StringKey::DictionaryDeleteAllMessage),
+            Self::ClearLearningRecords => None,
+        }
+    }
+
+    fn message(self) -> Message {
+        match self {
+            Self::DeleteAll => Message::DeleteAll,
+            Self::ClearLearningRecords => Message::ClearLearningRecords,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Message {
     FilterChanged(String),
@@ -76,6 +116,10 @@ pub enum Message {
     EntryDialogClosed(ContentDialogResult),
     Export,
     Import,
+    /// A destructive command asking for its confirmation.
+    Ask(Confirm),
+    ConfirmClosed(ContentDialogResult),
+    /// Confirmed — only [`Message::ConfirmClosed`] sends these.
     DeleteAll,
     ClearLearningRecords,
     JobFinished(u64, Box<JobOutcome>),
@@ -130,6 +174,8 @@ pub struct CustomDictionaryModel {
     /// under a reload.
     selected_id: Option<String>,
     editing: Option<EditingRow>,
+    /// The destructive command waiting on its dialog, if any.
+    confirming: Option<Confirm>,
     /// The page's one work slot: `Some` while a write runs. A file
     /// dialog does not need it — it is modal and runs on the UI thread,
     /// so no second command can arrive while it is up (the egui page had
@@ -168,11 +214,15 @@ impl CustomDictionaryModel {
 
     /// What the dictionary holds — and, while a filter narrows it, how much
     /// of that the filter matches.
+    ///
+    /// Against the counts, not against the filter box (`CustomDictionaryPage
+    /// .swift:countLabel`): a filter that matches everything says nothing by
+    /// saying "17000 / 17000".
     fn count_label(&self) -> String {
-        if self.filter.trim().is_empty() {
-            self.total_count.to_string()
-        } else {
+        if self.match_count < self.total_count {
             format!("{} / {}", self.match_count, self.total_count)
+        } else {
+            self.total_count.to_string()
         }
     }
 }
@@ -348,6 +398,25 @@ pub fn update(
         }
         Message::Export => export(model, stores, context),
         Message::Import => import(model, stores, context),
+        Message::Ask(confirm) => model.confirming = Some(confirm),
+        Message::ConfirmClosed(result) => {
+            let confirmed = model.confirming.take().filter(|_| {
+                // The primary button is the destructive one; Escape, the
+                // close button and a dismissal all leave the store alone.
+                result == ContentDialogResult::Primary
+            });
+            if let Some(confirm) = confirmed {
+                update(
+                    model,
+                    confirm.message(),
+                    PageEnvironment {
+                        stores,
+                        message: alert,
+                    },
+                    context,
+                );
+            }
+        }
         Message::DeleteAll => {
             let store = Arc::clone(&stores.custom_dictionary);
             write(
@@ -674,21 +743,26 @@ pub fn view(
         entry_table(model, strings, context, is_enabled),
         cards::section_gap(),
         csv_row(strings, context, is_enabled),
-        cards::action_enabled(
+        cards::action_row(
             strings.resolve(StringKey::DictionaryDeleteAll),
+            strings.resolve(StringKey::CommonDelete),
             true,
             is_enabled,
-            context.callback(|()| WindowMessage::CustomDictionary(Message::DeleteAll)),
+            context
+                .callback(|()| WindowMessage::CustomDictionary(Message::Ask(Confirm::DeleteAll))),
         ),
         cards::section_gap(),
-        cards::action_enabled(
+        cards::action_row(
             strings.resolve(StringKey::DesktopClearLearningRecords),
+            strings.resolve(StringKey::CommonDelete),
             true,
             is_enabled,
-            context.callback(|()| WindowMessage::CustomDictionary(Message::ClearLearningRecords)),
+            context.callback(|()| {
+                WindowMessage::CustomDictionary(Message::Ask(Confirm::ClearLearningRecords))
+            }),
         ),
         busy_overlay(model, strings),
-        entry_dialog(model, strings, context),
+        dialog(model, strings, context),
     ))
 }
 
@@ -733,31 +807,38 @@ fn entry_table(
         )
         .height(TABLE_HEIGHT)
         .collection_slot(ListViewSlot::Items, items);
+    // OVER the list, not in place of it (`CustomDictionaryPage.swift:363-371`):
+    // the columns and the controls under them stay put while a filter is
+    // narrowed to nothing and widened again. The sentence is only ever there
+    // when the list has no rows to press, and a `TextBlock` takes no focus —
+    // a background-less `Border` is itself not hit-testable, but its child
+    // still is, so this does not rely on the overlay being transparent.
+    let list = Grid::new().children((list, Border::new().content(empty_state(model, strings))));
     // `cards::frame` stacks what it is given, so these three sit in its
     // panel with no spacing of its own — the header and the controls carry
     // their own `TABLE_HEADER_GAP` margins.
     cards::frame(View::fragment((
-            // The column names, above the list rather than inside it: a
-            // `ListView` has no header of its own.
-            Grid::new()
-                .columns([GridLength::Star(1.0), GridLength::Star(1.0)])
-                .column_spacing(TABLE_COLUMN_GAP)
-                .margin(Thickness::new(
-                    TABLE_HEADER_INSET,
-                    0.0,
-                    0.0,
-                    TABLE_HEADER_GAP,
-                ))
-                .children((
-                    TextBlock::new()
-                        .text(strings.resolve(StringKey::DictionaryRomanLabel))
-                        .font_weight(FontWeight::SEMI_BOLD)
-                        .grid_column(0),
-                    TextBlock::new()
-                        .text(strings.resolve(StringKey::DictionaryHanziLabel))
-                        .font_weight(FontWeight::SEMI_BOLD)
-                        .grid_column(1),
-                )),
+        // The column names, above the list rather than inside it: a
+        // `ListView` has no header of its own.
+        Grid::new()
+            .columns([GridLength::Star(1.0), GridLength::Star(1.0)])
+            .column_spacing(TABLE_COLUMN_GAP)
+            .margin(Thickness::new(
+                TABLE_HEADER_INSET,
+                0.0,
+                0.0,
+                TABLE_HEADER_GAP,
+            ))
+            .children((
+                TextBlock::new()
+                    .text(strings.resolve(StringKey::DictionaryRomanLabel))
+                    .font_weight(FontWeight::SEMI_BOLD)
+                    .grid_column(0),
+                TextBlock::new()
+                    .text(strings.resolve(StringKey::DictionaryHanziLabel))
+                    .font_weight(FontWeight::SEMI_BOLD)
+                    .grid_column(1),
+            )),
         list,
         table_controls(model, strings, context, is_enabled, has_selection),
     )))
@@ -890,6 +971,71 @@ fn busy_overlay(model: &CustomDictionaryModel, strings: &StringResolver) -> View
     )
 }
 
+/// What a list with no rows says. Two different things: an empty dictionary
+/// is a STATE the + button answers, a filter matching nothing is a RESULT
+/// of what the user typed (`CustomDictionaryPage.swift:378-396`).
+///
+/// Words rather than the Mac's `tray` symbol: Segoe Fluent Icons carries no
+/// empty-container glyph, and a Windows 11 empty state is a line of text —
+/// which also keeps the sentence a screen reader is told from being an
+/// accessibility label bolted onto a picture.
+fn empty_state(model: &CustomDictionaryModel, strings: &StringResolver) -> View {
+    let Some(key) = empty_state_key(model) else {
+        return View::empty();
+    };
+    TextBlock::new()
+        .text(strings.resolve(key))
+        .text_wrapping(TextWrapping::Wrap)
+        .opacity(SECONDARY_OPACITY)
+        .horizontal_alignment(HorizontalAlignment::Center)
+        .vertical_alignment(VerticalAlignment::Center)
+        .into()
+}
+
+/// Which sentence [`empty_state`] shows, or `None` while there are rows.
+fn empty_state_key(model: &CustomDictionaryModel) -> Option<StringKey> {
+    if !model.rows.is_empty() {
+        return None;
+    }
+    Some(if model.filter.is_empty() {
+        StringKey::DictionaryCustomDictEmpty
+    } else {
+        StringKey::DictionaryNoResults
+    })
+}
+
+/// The one dialog the page can have up. An entry is being edited or a
+/// destructive command is being confirmed — never both: the verbs that
+/// start either are on the same page and only one of them can be pressed.
+fn dialog(
+    model: &CustomDictionaryModel,
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+) -> View {
+    if model.editing.is_some() {
+        return entry_dialog(model, strings, context);
+    }
+    let Some(confirm) = model.confirming else {
+        return View::empty();
+    };
+    ContentDialog::new()
+        .title(strings.resolve(confirm.title_key()))
+        .primary_button_text(strings.resolve(StringKey::CommonDelete))
+        .close_button_text(strings.resolve(StringKey::CommonCancel))
+        .is_open(true)
+        .on_closed(
+            context
+                .callback(|result| WindowMessage::CustomDictionary(Message::ConfirmClosed(result))),
+        )
+        .content(match confirm.message_key() {
+            Some(key) => TextBlock::new()
+                .text(strings.resolve(key))
+                .text_wrapping(TextWrapping::Wrap)
+                .into(),
+            None => View::empty(),
+        })
+}
+
 /// Add or edit one entry (`CustomDictionaryEntrySheet`). Enter and Escape
 /// are the dialog's own: `ContentDialog` gives the primary and close
 /// buttons those keys, which is what the egui sheet hand-rolled.
@@ -949,4 +1095,64 @@ fn entry_dialog(
                     ),
             )),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn model(match_count: usize, total_count: usize, filter: &str) -> CustomDictionaryModel {
+        CustomDictionaryModel {
+            match_count,
+            total_count,
+            filter: filter.to_owned(),
+            ..CustomDictionaryModel::default()
+        }
+    }
+
+    #[test]
+    fn the_count_reads_as_one_number_until_a_filter_actually_narrows_it() {
+        // trace: `CustomDictionaryPage.swift:countLabel` — against the
+        // counts, not against the box. A filter every entry matches says
+        // nothing by saying "2 / 2".
+        assert_eq!(model(2, 2, "").count_label(), "2");
+        assert_eq!(model(2, 2, "tsia").count_label(), "2");
+        assert_eq!(model(1, 2, "tsia").count_label(), "1 / 2");
+    }
+
+    #[test]
+    fn an_empty_list_says_which_kind_of_empty_it_is() {
+        // trace: `CustomDictionaryPage.swift:378-396` — an empty dictionary
+        // is a state the + button answers; a filter matching nothing is a
+        // result of what was typed.
+        assert_eq!(
+            empty_state_key(&model(0, 0, "")),
+            Some(StringKey::DictionaryCustomDictEmpty)
+        );
+        assert_eq!(
+            empty_state_key(&model(0, 2, "zzz")),
+            Some(StringKey::DictionaryNoResults)
+        );
+        let mut listed = model(1, 1, "");
+        listed.rows.push(CustomDictionaryRow::new("tsia̍h", "食"));
+        assert_eq!(empty_state_key(&listed), None, "rows say it themselves");
+    }
+
+    #[test]
+    fn both_destructive_commands_are_confirmed_and_only_one_asks_a_question() {
+        assert_eq!(
+            Confirm::DeleteAll.title_key(),
+            StringKey::DictionaryDeleteAll
+        );
+        assert_eq!(
+            Confirm::DeleteAll.message_key(),
+            Some(StringKey::DictionaryDeleteAllMessage)
+        );
+        // 刪除學習紀錄 has no question string authored; its title asks it.
+        assert_eq!(
+            Confirm::ClearLearningRecords.title_key(),
+            StringKey::DesktopClearLearningRecords
+        );
+        assert_eq!(Confirm::ClearLearningRecords.message_key(), None);
+    }
 }

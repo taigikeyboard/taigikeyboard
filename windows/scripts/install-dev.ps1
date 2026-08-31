@@ -270,7 +270,7 @@ switch ($Action) {
         Restart-InputIndicator
         Write-Host ''
         Write-Host "OK  registered $ServiceDll"
-        Write-Host '    Win+Space to switch to it. Settings is Ctrl+Shift+S while it is active.'
+        Write-Host '    Win+Space to switch to it. Settings is Ctrl+Alt+S while it is active.'
     }
     'uninstall' {
         Assert-Elevated
