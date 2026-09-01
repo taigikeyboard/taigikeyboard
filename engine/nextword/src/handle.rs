@@ -100,6 +100,7 @@ mod tests {
             is_association_recording_enabled: true,
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
+            candidate_display_mode: 0,
         }
     }
 

@@ -295,12 +295,42 @@ fn handle_fetch_at_pos(
             candidates.insert(0, literal);
         }
     }
+    // 候選詞顯示 = 羅馬字 (§44): the cell hides the hanji, so rows that differ
+    // only in hanji (同音異字 食/𤆬 `tsia̍h`, or the §34 literal beside dict
+    // `台/tâi`) are visible duplicates. Collapse them here — AFTER the
+    // literal prepend, which is why this pass does not sit beside the TPS
+    // `(hanji, span)` pass inside `assemble_candidates`: a pass there never
+    // sees the literal and the strip would show two identical `tâi` cells.
+    // First-seen wins, so the survivor is the top-ranked sorted row, or the
+    // literal when it is in the group. TL/POJ only — TPS is hanji-first and
+    // ignores the setting by construction.
+    // 中文: 羅馬字模式顯示去重 — (roman, span) 為鍵,放在 §34 prepend 之後才看得到 literal;
+    // 中文:   first-seen 留最高排名(或 literal);TPS 不受設定影響。
+    if config.is_roman_only_display()
+        && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
+    {
+        dedupe_display_roman(&mut candidates);
+    }
     with_continuous(
         snapshot,
         ContinuousResponse {
             candidates: candidates.into_iter().map(raw_to_proto_candidate).collect(),
         },
     )
+}
+
+/// 羅馬字-mode display dedupe — key `(rendered roman, consumed_span)`,
+/// first-seen wins. The span is part of the key on purpose: the same
+/// romanization consuming a different slice of the buffer (partial-prefix
+/// row vs full-buffer row) is a different action, not a duplicate. Mirrors
+/// `continuous::dedupe_display_hanji_for_tps` for the other script, but runs
+/// post-literal (see the call site) and keys on the roman the user actually
+/// sees — the POJ presentation pass has already rewritten it.
+// 中文: (roman, consumed_span) 去重;span 入鍵避免誤併 partial-prefix 候選;鍵是已渲染的 roman。
+fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
+    use std::collections::HashSet;
+    let mut seen: HashSet<(String, ConsumedSpan)> = HashSet::with_capacity(candidates.len());
+    candidates.retain(|c| seen.insert((c.roman.clone(), c.consumed_span)));
 }
 
 /// Build the literal-roman candidate for 漢羅 fast input
@@ -614,6 +644,7 @@ mod tests {
             is_association_recording_enabled: false,
             platform_id: 0,
             output_both_scripts: false,
+            candidate_display_mode: 0,
         }
     }
 

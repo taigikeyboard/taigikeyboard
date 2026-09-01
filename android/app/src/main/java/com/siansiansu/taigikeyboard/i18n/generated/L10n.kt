@@ -372,6 +372,12 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_TPS_MODE)
     val settingsTypingSectionTitle: String
         @Composable get() = stringRes(StringKey.SETTINGS_TYPING_SECTION_TITLE)
+    val settingsCandidateDisplayMode: String
+        @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE)
+    val settingsCandidateDisplayModeSideBySide: String
+        @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE)
+    val settingsCandidateDisplayModeRomanOnly: String
+        @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_ROMAN_ONLY)
     val settingsOutputBothScripts: String
         @Composable get() = stringRes(StringKey.SETTINGS_OUTPUT_BOTH_SCRIPTS)
     val settingsLiteralRomanCandidate: String

@@ -1,21 +1,17 @@
-//! TPS visual-dedup integration test — covers the bug where TPS input
-//! `ㄨㄢ` returned two `灣` candidates because two `dict.bin` rows
-//! (`灣/uan` and `灣/uân`) share the toneless TPS key `tps:ㄨㄢ` and the
-//! pre-sort `(roman, hanji, consumed_span)` dedupe legitimately keeps
-//! both for TL/POJ. TPS mode hides romanization (hanji-only UI), so
-//! `composing::continuous::dedupe_display_hanji_for_tps` collapses the
-//! visible duplicate. TL/POJ paths must NOT collapse — distinct
-//! romanizations are distinct rows in their UI.
+//! 候選詞顯示 = 羅馬字 display-dedup integration test (§44 /
+//! `INVARIANT_ROMAN_ONLY_CELLS_COLLAPSE_SAME_ROMAN`). Roman-only cells hide
+//! the hanji, so rows that differ only in hanji — 同音異字 `食/tsia̍h` +
+//! `𤆬/tsia̍h`, and the §34 literal `tsiah` beside dict `隻/tsiah` — are
+//! visible duplicates. `composing::dispatch` collapses them by
+//! `(rendered roman, consumed_span)` AFTER the literal prepend; first-seen
+//! wins (top-ranked sorted row, or the literal). Side-by-side (explicit,
+//! proto default `0`, or an unknown value) keeps every row; TPS ignores the
+//! setting.
 //!
-//! Hermetic install of `LexiconHandle` mirrors `golden_fetch_at_pos.rs`
-//! (this binary is its own process with its own singleton; the lock
-//! guards in-binary `#[test]` parallelism). Fixture builders copy the
-//! same TKDB v3 / dictionary.fst / syllables.fst byte layout — composing
-//! tests cannot import `lexicon/tests/common/mod.rs` (test-private).
+//! Hermetic `LexiconHandle` install mirrors `tps_display_dedup.rs`.
 
-// 中文: TPS 視覺去重整合測試 — 對齊使用者回報的 ㄨㄢ → 重複兩個 灣 bug。
-// 中文:   兩列 (灣/uan tone1 + 灣/uân tone5) 共用 tps:ㄨㄢ;TL/POJ 顯示羅馬字,
-// 中文:   保留兩列合法;TPS 隱藏羅馬字,須去重。TL/POJ regression 同檢查不誤收。
+// 中文: 羅馬字模式顯示去重整合測試 — 同音異字與 §34 literal 對上同 roman 的字典列要收成一格;
+// 中文:   漢羅並排 / 預設 0 / 未知值全部保留;TPS 不受影響。
 
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
@@ -26,7 +22,9 @@ use fst::SetBuilder;
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use phonetics::canonicalize_syllable;
 use protos::engine::composing_request::Method;
-use protos::engine::{AppConfig, ComposingRequest, EnterContinuous, FetchAtPos, Start};
+use protos::engine::{
+    AppConfig, CandidateDisplayMode, ComposingRequest, EnterContinuous, FetchAtPos, Start,
+};
 
 const SEPARATOR: u8 = 0xFF;
 const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
@@ -49,7 +47,7 @@ struct Row {
 
 fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
     let pid = std::process::id();
-    let path = std::env::temp_dir().join(format!("composing-tps-dedup-{pid}-{name}"));
+    let path = std::env::temp_dir().join(format!("composing-roman-only-dedup-{pid}-{name}"));
     std::fs::write(&path, bytes).expect("write temp fixture");
     path
 }
@@ -207,32 +205,30 @@ fn empty_association_bin() -> Vec<u8> {
 }
 
 fn fixture_rows() -> Vec<Row> {
-    // The reported bug: two 灣 rows differ only on tone (and hence
-    // romanization), share toneless TPS key `tps:ㄨㄢ`. Mirrors production
-    // `dictionary.csv:lines 灣,uan` + `灣,uân`.
+    // Toneless key `tsiah` carries three production-shaped rows: two 同音異字
+    // readings `tsia̍h` (食 high-freq, 𤆬 low-freq) and the tone-4 `tsiah`
+    // (隻) whose roman equals the §34 literal for raw input `tsiah`.
     vec![
         Row {
-            toneless_key: "uan",
-            hanzi: "灣",
-            tl: "uan",
+            toneless_key: "tsiah",
+            hanzi: "食",
+            tl: "tsia̍h",
             syll: 1,
-            freq: 9981,
+            freq: 9000,
         },
         Row {
-            toneless_key: "uan",
-            hanzi: "灣",
-            tl: "uân",
+            toneless_key: "tsiah",
+            hanzi: "𤆬",
+            tl: "tsia̍h",
             syll: 1,
-            freq: 7984,
+            freq: 3000,
         },
-        // Sanity row to prove the dedupe is hanji-keyed and not roman-keyed:
-        // distinct hanji on the same toneless key — must always survive.
         Row {
-            toneless_key: "uan",
-            hanzi: "彎",
-            tl: "uan",
+            toneless_key: "tsiah",
+            hanzi: "隻",
+            tl: "tsiah",
             syll: 1,
-            freq: 100,
+            freq: 5000,
         },
     ]
 }
@@ -242,7 +238,7 @@ fn install_fixture() {
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst(&rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["uan1", "uan5"]);
+    let syllables_path = build_syllables_fst(&["tsiah8", "tsiah4"]);
     let paths = LexiconPaths::validated(
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
@@ -254,7 +250,10 @@ fn install_fixture() {
     LexiconHandle::install(paths).expect("EngineHandle::install");
 }
 
-fn config(input_mode: &str) -> AppConfig {
+const SIDE_BY_SIDE: i32 = CandidateDisplayMode::SideBySide as i32;
+const ROMAN_ONLY: i32 = CandidateDisplayMode::RomanOnly as i32;
+
+fn config(input_mode: &str, candidate_display_mode: i32) -> AppConfig {
     AppConfig {
         tone_mode: String::new(),
         input_mode: input_mode.to_string(),
@@ -264,7 +263,7 @@ fn config(input_mode: &str) -> AppConfig {
         is_association_recording_enabled: false,
         platform_id: 0,
         output_both_scripts: false,
-        candidate_display_mode: 0,
+        candidate_display_mode,
     }
 }
 
@@ -274,8 +273,13 @@ fn req(method: Method) -> ComposingRequest {
     }
 }
 
-fn fetch(raw: &str, input_mode: &str) -> Vec<(Option<String>, String)> {
-    let cfg = config(input_mode);
+/// `(hanji, roman)` per candidate, strip order.
+fn fetch(
+    raw: &str,
+    input_mode: &str,
+    candidate_display_mode: i32,
+) -> Vec<(Option<String>, String)> {
+    let cfg = config(input_mode, candidate_display_mode);
     let mut engine = Engine::new();
     dispatch::handle(
         &req(Method::Start(Start { text: raw.into() })),
@@ -312,74 +316,124 @@ fn fetch(raw: &str, input_mode: &str) -> Vec<(Option<String>, String)> {
         .unwrap_or_default()
 }
 
+fn rows_with_roman<'a>(
+    candidates: &'a [(Option<String>, String)],
+    roman: &str,
+) -> Vec<&'a (Option<String>, String)> {
+    candidates.iter().filter(|(_, r)| r == roman).collect()
+}
+
 #[test]
-fn tps_input_collapses_duplicate_hanji() {
+fn roman_only_collapses_same_roman_rows_keeping_the_top_ranked_one() {
     let _lock = engine_install_lock();
     install_fixture();
-    // Raw `ㄨㄢ` (3+3=6 bytes UTF-8). `dispatch::handle` upgrades mode to
-    // InputMode::Tps via `contains_tps`, so the `input_mode` string only
-    // pins the non-Bopomofo path — we still pass "tl" to exercise the
-    // production auto-detect.
-    let candidates = fetch("\u{3128}\u{3122}", "tl");
-    let wan_count = candidates
-        .iter()
-        .filter(|(h, _)| h.as_deref() == Some("灣"))
-        .count();
-    let wan2_count = candidates
-        .iter()
-        .filter(|(h, _)| h.as_deref() == Some("彎"))
-        .count();
+    let candidates = fetch("tsiah", "tl", ROMAN_ONLY);
+
+    // 食 (freq 9000) outranks 𤆬 (freq 3000) → 食 is the survivor.
+    let tsiah8 = rows_with_roman(&candidates, "tsia̍h");
     assert_eq!(
-        wan_count, 1,
-        "TPS mode must collapse the two 灣 rows (uan + uân) to one visible \
-         candidate; got {candidates:?}"
+        tsiah8.len(),
+        1,
+        "羅馬字 must collapse 食/𤆬 `tsia̍h` to one cell; got {candidates:?}"
     );
     assert_eq!(
-        wan2_count, 1,
-        "distinct hanji 彎 must always survive the TPS dedupe; got {candidates:?}"
+        tsiah8[0].0.as_deref(),
+        Some("食"),
+        "survivor = top-ranked row"
+    );
+
+    // The §34 literal `tsiah` is inserted first, so it absorbs dict 隻/tsiah.
+    let literal = rows_with_roman(&candidates, "tsiah");
+    assert_eq!(
+        literal.len(),
+        1,
+        "literal `tsiah` and dict 隻/tsiah must be one cell; got {candidates:?}"
+    );
+    assert_eq!(
+        literal[0].0, None,
+        "the literal keeps slot 0 and wins the collapse"
+    );
+    assert_eq!(candidates[0].1, "tsiah", "literal stays at index 0");
+    assert_eq!(
+        candidates.len(),
+        2,
+        "exactly two visible cells; got {candidates:?}"
     );
 }
 
 #[test]
-fn tl_input_keeps_both_uan_and_uan_diacritic_rows() {
+fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
     let _lock = engine_install_lock();
     install_fixture();
-    // Same fixture, TL toneless input `uan` — both 灣 rows differ on the
-    // displayed `roman` (`uan` vs `uân`) so the TL UI shows distinct rows
-    // and must NOT collapse. Exact-count + roman-set pin guards against a
-    // duplicate explosion or a roman-render regression sneaking past.
-    let candidates = fetch("uan", "tl");
-    let mut wan_romans: Vec<&str> = candidates
-        .iter()
-        .filter(|(h, _)| h.as_deref() == Some("灣"))
-        .map(|(_, r)| r.as_str())
-        .collect();
-    wan_romans.sort();
+    let explicit = fetch("tsiah", "tl", SIDE_BY_SIDE);
+
+    // Today's list: literal + 隻 + 食 + 𤆬, hanji-bearing rows all distinct.
     assert_eq!(
-        wan_romans,
-        vec!["uan", "uân"],
-        "TL mode must keep exactly the two 灣 rows with romans {{uan, uân}}; \
-         got {candidates:?}"
+        explicit.len(),
+        4,
+        "side-by-side keeps all rows; got {explicit:?}"
+    );
+    assert_eq!(rows_with_roman(&explicit, "tsia̍h").len(), 2);
+    assert_eq!(rows_with_roman(&explicit, "tsiah").len(), 2);
+
+    // proto3 default (un-wired builds) and an unknown value from a newer
+    // platform both normalise to side-by-side — one fallback, one place.
+    assert_eq!(
+        fetch("tsiah", "tl", 0),
+        explicit,
+        "UNSPECIFIED = side-by-side"
+    );
+    assert_eq!(
+        fetch("tsiah", "tl", 99),
+        explicit,
+        "unknown value = side-by-side"
     );
 }
 
 #[test]
-fn poj_input_keeps_both_oan_and_oan_diacritic_rows() {
+fn poj_roman_only_collapses_on_the_rendered_poj_roman() {
     let _lock = engine_install_lock();
     install_fixture();
-    // POJ input `oan` — same fixture, two 灣 rows derive POJ display
-    // `oan` / `oân`. POJ UI shows romanization so both must survive.
-    let candidates = fetch("oan", "poj");
-    let mut wan_romans: Vec<&str> = candidates
-        .iter()
-        .filter(|(h, _)| h.as_deref() == Some("灣"))
-        .map(|(_, r)| r.as_str())
-        .collect();
-    wan_romans.sort();
+    // POJ renders `tsia̍h` as `chia̍h`; the dedupe keys on what the user sees.
+    let candidates = fetch("chiah", "poj", ROMAN_ONLY);
+    let chiah8 = rows_with_roman(&candidates, "chia̍h");
     assert_eq!(
-        wan_romans,
-        vec!["oan", "oân"],
-        "POJ mode must keep exactly the two 灣 rows with romans {{oan, oân}}; \
-         got {candidates:?}"
+        chiah8.len(),
+        1,
+        "POJ 羅馬字 collapses 食/𤆬 `chia̍h`; got {candidates:?}"
+    );
+    assert_eq!(chiah8[0].0.as_deref(), Some("食"));
+    assert_eq!(
+        rows_with_roman(&candidates, "chiah").len(),
+        1,
+        "literal absorbs 隻/chiah"
+    );
+}
+
+#[test]
+fn tps_ignores_the_roman_only_setting() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    // Toneless Bopomofo for `tsiah`: `ㄐㄧㄚㆷ` (dispatch promotes the mode to
+    // TPS from the buffer, so the "tl" string is irrelevant). TPS cells are
+    // hanji-first, so 食 and 𤆬 stay distinct whatever the picker says.
+    let tps: String = phonetics::tl_numeric_token_to_tps("tsiah4", false, true)
+        .chars()
+        .filter(|&c| !c.is_whitespace() && c != '-' && !phonetics::is_tps_tone_mark(c))
+        .collect();
+    assert!(!tps.is_empty());
+    let roman_only = fetch(&tps, "tl", ROMAN_ONLY);
+    let side_by_side = fetch(&tps, "tl", SIDE_BY_SIDE);
+    assert_eq!(
+        roman_only, side_by_side,
+        "TPS output must not depend on 候選詞顯示"
+    );
+    let hanji: Vec<&str> = roman_only
+        .iter()
+        .filter_map(|(h, _)| h.as_deref())
+        .collect();
+    assert!(
+        hanji.contains(&"食") && hanji.contains(&"𤆬"),
+        "both 同音異字 stay in TPS; got {roman_only:?}"
     );
 }

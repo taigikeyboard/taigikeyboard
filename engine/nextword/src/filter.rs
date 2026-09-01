@@ -126,6 +126,20 @@ pub(crate) fn filter(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
+    // 3b. 候選詞顯示 = 羅馬字 (§44): the prediction cell hides `subtitle`
+    //     (the hanji), so 同音異字 predictions (`食/tsia̍h` + `𤆬/tsia̍h`,
+    //     distinct after the `(hanzi, tl)` merge) read as duplicates.
+    //     Collapse by the rendered `text` — under 羅馬字 the platform sends
+    //     `is_translate_swapped = false`, so `shape_prediction` already
+    //     dropped roman-empty rows and `text` is always the romanization.
+    //     After the score sort so first-seen = best-scored; before the
+    //     truncation so the limit is filled with distinct cells.
+    // 中文: 羅馬字模式的 prediction 顯示去重 — 以 text(= roman)為鍵,排序後、截斷前。
+    if config.is_roman_only_display() {
+        let mut seen = std::collections::HashSet::with_capacity(shaped.len());
+        shaped.retain(|p| seen.insert(p.text.clone()));
+    }
+
     // 4. limit truncation.
     shaped.truncate(effective_limit);
 
@@ -211,7 +225,10 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
 // 中文:   無分隔符列只能是 fused raw。全無分隔符 → 回 None(不折,守 #7 單音節
 // 中文:   tone-1 與 raw 無法區分);多個帶分隔符卻不同讀音 → 回 None(歧義)。
 fn select_canonical_row(rows: &[MergedRow], indices: &[usize]) -> Option<usize> {
-    let mut separator_rows = indices.iter().copied().filter(|&i| has_separator(&rows[i].tl));
+    let mut separator_rows = indices
+        .iter()
+        .copied()
+        .filter(|&i| has_separator(&rows[i].tl));
     let canonical = separator_rows.next()?;
     // All separator-bearing rows must be the same reading (separators
     // stripped, tones kept). Two distinct multi-syllable readings sharing
@@ -267,7 +284,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::Platform;
+    use protos::engine::{CandidateDisplayMode, Platform};
 
     fn config_tl_mode_translate_swapped(swapped: bool) -> AppConfig {
         AppConfig {
@@ -279,6 +296,7 @@ mod tests {
             is_association_recording_enabled: true,
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
+            candidate_display_mode: 0,
         }
     }
 
@@ -292,6 +310,14 @@ mod tests {
             is_association_recording_enabled: true,
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
+            candidate_display_mode: 0,
+        }
+    }
+
+    fn config_roman_only_display() -> AppConfig {
+        AppConfig {
+            candidate_display_mode: CandidateDisplayMode::RomanOnly as i32,
+            ..config_tl_mode_translate_swapped(false)
         }
     }
 
@@ -799,7 +825,11 @@ mod tests {
             &config_tl_mode_translate_swapped(false),
         )
         .unwrap();
-        assert_eq!(result.predictions.len(), 1, "fused raw folds into separator canonical");
+        assert_eq!(
+            result.predictions.len(),
+            1,
+            "fused raw folds into separator canonical"
+        );
         let p = &result.predictions[0];
         assert_eq!(p.hanzi, "台語");
         assert_eq!(p.tl, "tâi-gí", "separator-bearing canonical is kept");
@@ -817,7 +847,10 @@ mod tests {
         let state = PersistedState::default();
         let result = filter(
             &state,
-            vec![dict_row("空安", "khong-an", 4), dict_row("空安", "khongan", 2)],
+            vec![
+                dict_row("空安", "khong-an", 4),
+                dict_row("空安", "khongan", 2),
+            ],
             0,
             1_000,
             10,
@@ -825,7 +858,10 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
-        assert_eq!(result.predictions[0].tl, "khong-an", "separator form is canonical");
+        assert_eq!(
+            result.predictions[0].tl, "khong-an",
+            "separator form is canonical"
+        );
     }
 
     // trace: separator-form variants of the SAME reading collapse — dict
@@ -849,7 +885,11 @@ mod tests {
             &config_tl_mode_translate_swapped(false),
         )
         .unwrap();
-        assert_eq!(result.predictions.len(), 1, "separator + raw variants of one reading collapse");
+        assert_eq!(
+            result.predictions.len(),
+            1,
+            "separator + raw variants of one reading collapse"
+        );
         assert_eq!(result.predictions[0].hanzi, "予我");
     }
 
@@ -917,7 +957,11 @@ mod tests {
             &config_tl_mode_translate_swapped(false),
         )
         .unwrap();
-        assert_eq!(result.predictions.len(), 2, "distinct multi-syllable readings not collapsed");
+        assert_eq!(
+            result.predictions.len(),
+            2,
+            "distinct multi-syllable readings not collapsed"
+        );
     }
 
     // trace: collapse runs BEFORE truncate. 5 words each with separator
@@ -930,16 +974,78 @@ mod tests {
         let mut raw = Vec::new();
         for i in 0..5 {
             let hanzi = format!("詞{}", i);
-            raw.push(dict_row(&hanzi, &format!("ts\u{00e1}-{}", i), (i + 1) as i64)); // separator canonical
+            raw.push(dict_row(
+                &hanzi,
+                &format!("ts\u{00e1}-{}", i),
+                (i + 1) as i64,
+            )); // separator canonical
             raw.push(dict_row(&hanzi, &format!("tsa{}", i), 1)); // fused raw variant
         }
-        let result = filter(&state, raw, 0, 1_000, 3, &config_tl_mode_translate_swapped(false)).unwrap();
-        assert_eq!(result.predictions.len(), 3, "collapse then truncate to limit");
+        let result = filter(
+            &state,
+            raw,
+            0,
+            1_000,
+            3,
+            &config_tl_mode_translate_swapped(false),
+        )
+        .unwrap();
+        assert_eq!(
+            result.predictions.len(),
+            3,
+            "collapse then truncate to limit"
+        );
         for p in &result.predictions {
             assert!(
                 has_separator(&p.tl),
                 "survivors are separator-bearing canonicals, not fused raw variants",
             );
         }
+    }
+
+    /// §44 — 羅馬字 cells hide the hanji, so 同音異字 predictions (distinct
+    /// after the `(hanzi, tl)` merge) collapse to the best-scored one;
+    /// side-by-side keeps both.
+    #[test]
+    fn roman_only_display_collapses_same_roman_predictions_keeping_the_best() {
+        let state = PersistedState::default();
+        let rows = || vec![dict_row("食", "tsia̍h", 9), dict_row("𤆬", "tsia̍h", 3)];
+        let collapsed = filter(&state, rows(), 0, 0, 10, &config_roman_only_display()).unwrap();
+        assert_eq!(collapsed.predictions.len(), 1);
+        assert_eq!(
+            collapsed.predictions[0].hanzi, "食",
+            "first-seen after the score sort"
+        );
+        assert_eq!(collapsed.predictions[0].text, "tsia̍h");
+
+        let kept = filter(
+            &state,
+            rows(),
+            0,
+            0,
+            10,
+            &config_tl_mode_translate_swapped(false),
+        )
+        .unwrap();
+        assert_eq!(
+            kept.predictions.len(),
+            2,
+            "side-by-side keeps 同音異字 apart"
+        );
+    }
+
+    /// The collapse runs before the limit so the strip is filled with
+    /// distinct cells, not with a duplicate that then hides the next word.
+    #[test]
+    fn roman_only_display_dedupe_runs_before_limit_truncation() {
+        let state = PersistedState::default();
+        let rows = vec![
+            dict_row("食", "tsia̍h", 9),
+            dict_row("𤆬", "tsia̍h", 8),
+            dict_row("好", "hó", 1),
+        ];
+        let result = filter(&state, rows, 0, 0, 2, &config_roman_only_display()).unwrap();
+        let texts: Vec<&str> = result.predictions.iter().map(|p| p.text.as_str()).collect();
+        assert_eq!(texts, vec!["tsia̍h", "hó"]);
     }
 }
