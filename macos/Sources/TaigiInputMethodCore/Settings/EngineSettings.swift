@@ -11,6 +11,21 @@ enum InputMode: String, CaseIterable, Sendable {
     case poj
 }
 
+/// How a candidate cell renders the `(漢字, 羅馬字)` pair: both scripts side by
+/// side (the swap setting decides which leads), or the romanization alone.
+///
+/// Raw values are the storage contract every platform shares
+/// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
+/// convention `isTranslateSwapped` / `outputBothScripts` follow, so a future
+/// settings transfer carries one vocabulary.
+/// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SettingsModels.swift
+/// `CandidateDisplayMode` and the Android `CandidateDisplayMode.storageValue`.
+/// Drift changes which mode a transferred setting resolves to.
+enum CandidateDisplayMode: String, CaseIterable, Sendable {
+    case sideBySide
+    case romanOnly
+}
+
 /// Immutable snapshot of everything the engine needs to render a composition.
 ///
 /// A snapshot rather than a set of getters because a single user intent can
@@ -29,8 +44,31 @@ struct EngineSettings: Equatable, Sendable {
     /// `isOutputBothScripts` is what separates hanji-first (no inter-segment
     /// space) from both-scripts (`hit (彼)` — space wanted); the swap flag is
     /// `true` for both, so one flag cannot express it.
+    ///
+    /// EFFECTIVE, not stored: under `candidateDisplayMode == .romanOnly` both
+    /// read `false` whatever the user has stored, because a mode that shows
+    /// and commits only romanization has no Hanji to lead with or to bracket.
+    /// The stored values live on in `UserDefaults`
+    /// (`SettingsStore.storedIsTranslateSwapped` / `storedIsOutputBothScripts`)
+    /// and come back the moment the mode returns to `.sideBySide`. Every
+    /// reader of "swap" — engine `AppConfig`, cell, document text, auto-space,
+    /// full-width punctuation — reads THIS pair, never the stored one.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
+    /// `isTranslateSwapped` / `isOutputBothScripts` (derived the same way) and
+    /// the Windows `document.rs engine_settings()`. Drift changes what a
+    /// romanization-only install commits.
     let isTranslateSwapped: Bool
     let isOutputBothScripts: Bool
+
+    /// Whether the candidate window shows both scripts or the romanization
+    /// alone. Sent to the engine as `AppConfig.candidate_display_mode`, which
+    /// is what collapses same-romanization rows under `.romanOnly`
+    /// (`engine/composing/src/dispatch.rs`, `engine/nextword/src/filter.rs`);
+    /// on this side it selects the cell arm and derives the pair above.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
+    /// `candidateDisplayMode`, which defaults it to side-by-side. Drift changes
+    /// what a fresh install's candidate cells show.
+    let candidateDisplayMode: CandidateDisplayMode
 
     /// §34/S22 — when on, TL/POJ composing surfaces the preedit literal as the
     /// index-0 candidate so 漢羅 commits the romanization in one keystroke. The
@@ -80,6 +118,7 @@ struct EngineSettings: Equatable, Sendable {
         inputMode: .tl,
         isTranslateSwapped: false,
         isOutputBothScripts: false,
+        candidateDisplayMode: .sideBySide,
         isLiteralRomanCandidateEnabled: false,
         isFrequencyRecordingEnabled: true,
         isAssociationRecordingEnabled: true,

@@ -171,6 +171,13 @@ enum RustEngineBridge {
         config.ooDoubletapEnabled = true
         config.nnDoubletapEnabled = true
         config.platformID = .macos
+        // On the base config, not only `continuousAppConfig`: the next-word
+        // filter reads it too (`engine/nextword/src/filter.rs`), and both
+        // derived configs start from this one.
+        config.candidateDisplayMode = switch settings.candidateDisplayMode {
+        case .sideBySide: .sideBySide
+        case .romanOnly: .romanOnly
+        }
         return config
     }
 

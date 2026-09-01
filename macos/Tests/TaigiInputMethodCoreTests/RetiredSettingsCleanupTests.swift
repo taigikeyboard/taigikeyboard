@@ -34,7 +34,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
             userDefaults.object(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name),
         )
         let settings = SettingsStore(userDefaults: userDefaults)
-        XCTAssertFalse(settings.isOutputBothScripts)
+        XCTAssertFalse(settings.storedIsOutputBothScripts)
         XCTAssertFalse(settings.isLiteralRomanCandidateEnabled)
     }
 

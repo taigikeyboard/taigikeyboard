@@ -55,7 +55,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
 
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertEqual(controller.settings.isTranslateSwapped, !defaults.isTranslateSwapped)
+        XCTAssertEqual(controller.settings.storedIsTranslateSwapped, !defaults.isTranslateSwapped)
     }
 
     /// What happens to the bar follows what the setting invalidates: the
@@ -101,6 +101,27 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.performShortcutAction(.toggleTranslateSwapped)
 
         XCTAssertEqual(flashes, [])
+    }
+
+    /// Under the romanization-only display the swap has nothing to swap, so
+    /// the chord is inert — silently (USER 2026-09-01, Q11): the STORED value
+    /// is untouched, so leaving the mode gives the user their swap back, the
+    /// presenter is not disturbed, and no flash pretends something happened.
+    func testTheTranslateSwap_underRomanOnly_isSilentlyInert() {
+        controller.settings.storedIsTranslateSwapped = true
+        controller.settings.candidateDisplayMode = .romanOnly
+        let callsBefore = presenter.calls.count
+
+        controller.performShortcutAction(.toggleTranslateSwapped)
+
+        XCTAssertTrue(controller.settings.storedIsTranslateSwapped, "the chord flipped a stored value it must not touch")
+        XCTAssertFalse(controller.settings.current.isTranslateSwapped, "the effective swap stays off under romanization-only")
+        XCTAssertEqual(presenter.calls.count, callsBefore)
+        XCTAssertEqual(flashes, [])
+
+        controller.settings.candidateDisplayMode = .sideBySide
+
+        XCTAssertTrue(controller.settings.current.isTranslateSwapped, "leaving the mode must give the stored swap back")
     }
 
     /// The settings doorway is handled before any session is consulted, so

@@ -138,8 +138,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "the same candidate, the two scripts",
         )
         XCTAssertEqual(
-            viaSpace.controller.settings.isTranslateSwapped,
-            viaReturn.controller.settings.isTranslateSwapped,
+            viaSpace.controller.settings.storedIsTranslateSwapped,
+            viaReturn.controller.settings.storedIsTranslateSwapped,
             "neither key moves the output setting — that is the point",
         )
     }
@@ -148,13 +148,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// per-word choice, not a toggle wearing a different hat.
     func testSpace_leavesTheOutputSettingAlone() throws {
         let session = try composedSession()
-        let before = session.controller.settings.isTranslateSwapped
+        let before = session.controller.settings.storedIsTranslateSwapped
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
 
-        XCTAssertEqual(session.controller.settings.isTranslateSwapped, before)
+        XCTAssertEqual(session.controller.settings.storedIsTranslateSwapped, before)
     }
 
     /// The mirror image, in 漢字 mode — the direction the `我ê名` example is
@@ -704,12 +704,12 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         _ = try session.controller.handle(Self.arrowEvent(.rightArrow), client: session.client)
         let before = try XCTUnwrap(session.presenter.shownContent).cells
         let keptIndex = session.presenter.selectedIndex
-        let swappedBefore = session.controller.settings.isTranslateSwapped
+        let swappedBefore = session.controller.settings.storedIsTranslateSwapped
         let callsBefore = session.presenter.calls.count
 
         session.controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertEqual(session.controller.settings.isTranslateSwapped, !swappedBefore)
+        XCTAssertEqual(session.controller.settings.storedIsTranslateSwapped, !swappedBefore)
         XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-only flip")
         XCTAssertFalse(
             session.presenter.calls.dropFirst(callsBefore)
@@ -742,6 +742,48 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
                 "a hotkey with no bar on screen must not touch the presenter",
             )
         }
+    }
+
+    /// The 外觀 pane's display-mode row writes `UserDefaults` straight through
+    /// `@AppStorage`, so unlike the swap chord no controller code runs the
+    /// write — the open bar has to notice on its own. Written to the domain
+    /// the way the pane writes it, then awaited: the observation hops to the
+    /// main actor before re-reading, so the re-render is one turn away.
+    func testChangingTheDisplayMode_rerendersTheOpenBarInPlace() async throws {
+        let key = SettingsStore.Keys.candidateDisplayMode.name
+        // Both keys start from "never touched" and go back to whatever they
+        // held — `withSetting` is synchronous, and this case has to await.
+        for name in [key, SettingsStore.Keys.isTranslateSwapped.name] {
+            let saved = UserDefaults.standard.object(forKey: name)
+            addTeardownBlock {
+                if let saved {
+                    UserDefaults.standard.set(saved, forKey: name)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: name)
+                }
+            }
+            UserDefaults.standard.removeObject(forKey: name)
+        }
+        let session = try composedSession()
+        let before = try XCTUnwrap(session.presenter.shownContent).cells
+        XCTAssertTrue(before.contains { $0.annotation != nil }, "side by side shows both scripts")
+        let callsBefore = session.presenter.calls.count
+
+        UserDefaults.standard.set(CandidateDisplayMode.romanOnly.rawValue, forKey: key)
+        for _ in 0..<50 where session.presenter.calls.count == callsBefore {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-only change")
+        XCTAssertFalse(
+            session.presenter.calls.dropFirst(callsBefore)
+                .contains { if case .hide = $0 { true } else { false } },
+            "a display-mode change must not route through dismissal",
+        )
+        let after = try XCTUnwrap(session.presenter.shownContent).cells
+        XCTAssertEqual(after.count, before.count)
+        XCTAssertEqual(after.map(\.text), before.map(\.text), "romanization-only keeps the romanization that led")
+        XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "romanization-only cells carry no Hanji")
     }
 
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {

@@ -20,4 +20,20 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
     func testAppConfig_identifiesThePlatformAsMacOS() {
         XCTAssertEqual(RustEngineBridge.appConfig(.defaults).platformID, .macos)
     }
+
+    /// The display mode rides the BASE config, which every request family
+    /// starts from — the composing dispatcher collapses same-romanization rows
+    /// on it and the next-word filter reads it too. `.unspecified` is the
+    /// wire default and means side-by-side, so a dropped assignment would
+    /// silently leave a romanization-only install with duplicate cells; both
+    /// derived configs are checked so neither can lose it on the way.
+    func testAppConfig_carriesTheCandidateDisplayMode_onEveryDerivedConfig() {
+        let sideBySide = TestFixtures.settings(candidateDisplayMode: .sideBySide)
+        let romanOnly = TestFixtures.settings(candidateDisplayMode: .romanOnly)
+
+        XCTAssertEqual(RustEngineBridge.appConfig(sideBySide).candidateDisplayMode, .sideBySide)
+        XCTAssertEqual(RustEngineBridge.appConfig(romanOnly).candidateDisplayMode, .romanOnly)
+        XCTAssertEqual(RustEngineBridge.continuousAppConfig(romanOnly).candidateDisplayMode, .romanOnly)
+        XCTAssertNotEqual(RustEngineBridge.appConfig(.defaults).candidateDisplayMode, .unspecified)
+    }
 }

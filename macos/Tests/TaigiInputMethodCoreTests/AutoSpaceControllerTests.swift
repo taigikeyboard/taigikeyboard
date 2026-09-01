@@ -44,7 +44,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     func testSwappedMode_disablesTheSpace() throws {
-        let session = try composedSession(configure: { $0.isTranslateSwapped = true })
+        let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
 
@@ -236,7 +236,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testAlternateCommitOfARomanization_earnsItsSpace() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = true
-            $0.isTranslateSwapped = true
+            $0.storedIsTranslateSwapped = true
         }
         session.client.clearWrites()
 
@@ -252,7 +252,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testAlternateCommitOfAHanji_takesNoSpace() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = true
-            $0.isTranslateSwapped = false
+            $0.storedIsTranslateSwapped = false
         }
         session.client.clearWrites()
 
@@ -268,7 +268,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testAlternateCommit_withTheToggleOff_takesNoSpace() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = false
-            $0.isTranslateSwapped = true
+            $0.storedIsTranslateSwapped = true
         }
         session.client.clearWrites()
 
@@ -287,7 +287,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = true
-            $0.isTranslateSwapped = true
+            $0.storedIsTranslateSwapped = true
         }
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
@@ -313,7 +313,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testTheSwapDeclinesWhenTheModeFlipsUnderAnAlternateArmedSpace() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = true
-            $0.isTranslateSwapped = true
+            $0.storedIsTranslateSwapped = true
         }
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
@@ -321,7 +321,7 @@ final class AutoSpaceControllerTests: XCTestCase {
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
         session.client.clearWrites()
-        session.store.isTranslateSwapped = false
+        session.store.storedIsTranslateSwapped = false
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "?"), client: session.client,
@@ -339,7 +339,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testTheSwapOutranksTheFullWidthMap_afterAnAlternateCommit() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = true
-            $0.isTranslateSwapped = true
+            $0.storedIsTranslateSwapped = true
         }
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)

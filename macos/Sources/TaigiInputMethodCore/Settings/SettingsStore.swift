@@ -51,6 +51,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "outputBothScripts",
             defaultValue: EngineSettings.defaults.isOutputBothScripts,
         )
+        /// Both scripts side by side, or the romanization alone. Stored as the
+        /// enum's raw value like `inputMode`; the two keys above are left
+        /// untouched by it — switching back restores whatever they hold.
+        static let candidateDisplayMode = SettingsKey(
+            name: "candidateDisplayMode",
+            defaultValue: EngineSettings.defaults.candidateDisplayMode,
+        )
         static let isLiteralRomanCandidateEnabled = SettingsKey(
             name: "literalRomanCandidateEnabled",
             defaultValue: EngineSettings.defaults.isLiteralRomanCandidateEnabled,
@@ -310,10 +317,17 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     }
 
     var current: EngineSettings {
-        EngineSettings(
+        // The ONE place the stored swap pair becomes the effective one: a
+        // romanization-only display has no Hanji to lead with or to bracket,
+        // so both read `false` under it while the stored values stay put for
+        // the way back (`EngineSettings.isTranslateSwapped`).
+        let displayMode = candidateDisplayMode
+        let isSideBySide = displayMode != .romanOnly
+        return EngineSettings(
             inputMode: inputMode,
-            isTranslateSwapped: bool(Keys.isTranslateSwapped),
-            isOutputBothScripts: bool(Keys.isOutputBothScripts),
+            isTranslateSwapped: storedIsTranslateSwapped && isSideBySide,
+            isOutputBothScripts: storedIsOutputBothScripts && isSideBySide,
+            candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
@@ -458,6 +472,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         removeStoredValues(
             Keys.appearanceMode.name,
             Keys.candidateLayout.name,
+            Keys.candidateDisplayMode.name,
             Keys.candidateWindowSize.name,
             Keys.candidateTextSize.name,
             Keys.fontType.name,
@@ -554,15 +569,29 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue, forKey: Keys.hasOfferedUpdateNotifications.name) }
     }
 
+    /// How the candidate window renders each `(漢字, 羅馬字)` pair. Written by
+    /// the 外觀 pane through `@AppStorage`; the setter is here so a test can
+    /// drive the mode the way it drives `inputMode`.
+    var candidateDisplayMode: CandidateDisplayMode {
+        get { choice(Keys.candidateDisplayMode) }
+        set { userDefaults.set(newValue.rawValue, forKey: Keys.candidateDisplayMode.name) }
+    }
+
     /// The candidate settings a shortcut can flip. Typed properties rather than
     /// a raw key write at the call site, so a toggle always goes through the
     /// same never-written-reads-as-default rule its readers use.
-    var isTranslateSwapped: Bool {
+    ///
+    /// `stored` in the name because these are the raw values and NOT what the
+    /// engine composes under: `current` derives the effective pair from them
+    /// and `candidateDisplayMode`. A gate that read these directly would apply
+    /// a swap the romanization-only display has switched off, which is why the
+    /// only callers are the writers — the shortcut toggle and the tests.
+    var storedIsTranslateSwapped: Bool {
         get { bool(Keys.isTranslateSwapped) }
         set { userDefaults.set(newValue, forKey: Keys.isTranslateSwapped.name) }
     }
 
-    var isOutputBothScripts: Bool {
+    var storedIsOutputBothScripts: Bool {
         get { bool(Keys.isOutputBothScripts) }
         set { userDefaults.set(newValue, forKey: Keys.isOutputBothScripts.name) }
     }

@@ -124,6 +124,19 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private weak var lastClient: (any IMKTextInput)?
 
+    /// Re-renders the open bar when the 外觀 pane changes what a cell shows.
+    ///
+    /// The pane writes `UserDefaults` straight through `@AppStorage`, so unlike
+    /// the swap shortcut nothing here runs the write — this is how the write
+    /// reaches the bar already on screen; the next bar reads the setting live
+    /// like every other. Held per session and armed at activation, the same
+    /// lifetime as the shortcut target: the re-render already refuses a
+    /// session that does not own the engine, so an observation that outlives
+    /// its focus is harmless, but dropping it at deactivation keeps one
+    /// observer per live session rather than one per session ever activated.
+    @MainActor
+    private var displayModeObservation: AnyObject?
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -163,6 +176,16 @@ public final class TaigiInputController: IMKInputController {
             ComposingSessionCoordinator.shared.registerShortcutTarget(
                 controller, for: controller.sessionToken,
             )
+            // Key-scoped KVO through the store rather than a notification, so
+            // a `defaults write` from outside the process re-renders too.
+            // Fires on whichever thread wrote the value and carries none —
+            // hop, then re-read (`SettingsStore.observeChanges`).
+            let observed = WeakControllerBox(controller)
+            controller.displayModeObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.candidateDisplayMode,
+            ) {
+                Task { @MainActor in observed.controller?.rerenderCandidatesForDisplayChange() }
+            }
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
             // decide here.
             // Takes the bar down before this session starts typing, and takes
@@ -419,11 +442,16 @@ public final class TaigiInputController: IMKInputController {
         case .toggleRomanization:
             switchInputMode(to: settings.inputMode == .tl ? .poj : .tl)
         case .toggleTranslateSwapped:
+            // Inert under the romanization-only display — silently, no flash
+            // (USER 2026-09-01, Q11): there is no Hanji on screen for the
+            // swap to lead with, and flipping the STORED value blind would
+            // change what the user gets back on returning to side-by-side.
+            guard settings.candidateDisplayMode != .romanOnly else { return }
             // The bar STAYS: the swap changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing
             // here read as the window vanishing (real device, 2026-08-21).
-            settings.isTranslateSwapped.toggle()
+            settings.storedIsTranslateSwapped.toggle()
             rerenderCandidatesForDisplayChange()
         }
     }
@@ -745,9 +773,12 @@ public final class TaigiInputController: IMKInputController {
     /// when the output is roman-first or the key is not one the policy maps —
     /// the mode is read live, like the auto-space gate below, so a swap
     /// applies to the very next key.
+    ///
+    /// The EFFECTIVE swap (`current`), not the stored one: a romanization-only
+    /// display writes romanization, and romanization takes half-width marks.
     @MainActor
     private func fullWidthMapped(_ text: String) -> String? {
-        guard settings.isTranslateSwapped else { return nil }
+        guard settings.current.isTranslateSwapped else { return nil }
         return FullWidthPunctuation.mapped(text)
     }
 
@@ -761,14 +792,20 @@ public final class TaigiInputController: IMKInputController {
     /// because every site but the 漢羅 key writes what the settings lead with —
     /// the mid-composition punctuation path included, which commits the preedit
     /// as rendered.
+    ///
+    /// The swap pair is the EFFECTIVE one (`current`), read once so both
+    /// halves come from the same instant: under the romanization-only display
+    /// it is `(false, false)` whatever is stored, and the commit that just ran
+    /// wrote romanization.
     @MainActor
     private func isAutoSpaceGateActive(for script: CandidateScript = .primary) -> Bool {
-        AutoSpacePolicy.isGateActive(
+        let effective = settings.current
+        return AutoSpacePolicy.isGateActive(
             isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
             wroteRomanization: AutoSpacePolicy.writesRomanization(
                 script: script,
-                isTranslateSwapped: settings.isTranslateSwapped,
-                isOutputBothScripts: settings.isOutputBothScripts,
+                isTranslateSwapped: effective.isTranslateSwapped,
+                isOutputBothScripts: effective.isOutputBothScripts,
             ),
         )
     }
@@ -907,6 +944,7 @@ public final class TaigiInputController: IMKInputController {
     private func endSession(_ client: IMKTextInput?) {
         finishComposition(into: client)
         ComposingSessionCoordinator.shared.release(sessionToken)
+        displayModeObservation = nil
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked
@@ -981,3 +1019,16 @@ public final class TaigiInputController: IMKInputController {
 /// The method lives in the class body (it needs the private candidate state);
 /// the conformance is stated here where it reads as the contract it is.
 extension TaigiInputController: ShortcutActionTarget {}
+
+/// The one thing a settings observation may capture: the callback is
+/// `@Sendable` and fires on whichever thread wrote the value, while the
+/// controller is main-actor state. The box crosses the hop; the controller is
+/// touched only after it. `@unchecked` because `weak var` cannot be proven
+/// `Sendable` by the compiler — the same reasoning as `SettingsStore`.
+private final class WeakControllerBox: @unchecked Sendable {
+    weak var controller: TaigiInputController?
+
+    init(_ controller: TaigiInputController) {
+        self.controller = controller
+    }
+}

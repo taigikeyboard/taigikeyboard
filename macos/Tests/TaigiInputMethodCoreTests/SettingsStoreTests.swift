@@ -50,6 +50,7 @@ final class SettingsStoreTests: XCTestCase {
                 inputMode: .poj,
                 isTranslateSwapped: true,
                 isOutputBothScripts: true,
+                candidateDisplayMode: .sideBySide,
                 isLiteralRomanCandidateEnabled: true,
                 isFrequencyRecordingEnabled: false,
                 isAssociationRecordingEnabled: false,
@@ -57,6 +58,66 @@ final class SettingsStoreTests: XCTestCase {
                 dictionarySources: EngineSettings.defaults.dictionarySources,
             ),
         )
+    }
+
+    // MARK: - Candidate display mode
+
+    /// The one platform-side rule of the romanization-only display: the
+    /// engine and every gate read a swap pair that is `(false, false)` under
+    /// it — there is no Hanji to lead with or to bracket — while what the user
+    /// STORED stays put, so leaving the mode gives their swap straight back.
+    func testCurrent_underRomanOnly_derivesTheSwapPairFalse_andLeavesTheStoredValuesAlone() {
+        let store = makeStore()
+        store.storedIsTranslateSwapped = true
+        store.storedIsOutputBothScripts = true
+
+        store.candidateDisplayMode = .romanOnly
+
+        XCTAssertEqual(store.current.candidateDisplayMode, .romanOnly)
+        XCTAssertFalse(store.current.isTranslateSwapped)
+        XCTAssertFalse(store.current.isOutputBothScripts)
+        XCTAssertTrue(store.storedIsTranslateSwapped, "the stored swap must survive the mode")
+        XCTAssertTrue(store.storedIsOutputBothScripts, "the stored bracket setting must survive the mode")
+        XCTAssertEqual(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name) as? Bool, true)
+        XCTAssertEqual(userDefaults.object(forKey: SettingsStore.Keys.isOutputBothScripts.name) as? Bool, true)
+
+        store.candidateDisplayMode = .sideBySide
+
+        XCTAssertTrue(store.current.isTranslateSwapped, "side by side must read the stored swap again")
+        XCTAssertTrue(store.current.isOutputBothScripts)
+    }
+
+    func testCandidateDisplayMode_withNothingStored_isSideBySide() {
+        XCTAssertEqual(makeStore().candidateDisplayMode, .sideBySide)
+        XCTAssertEqual(makeStore().current.candidateDisplayMode, .sideBySide)
+    }
+
+    func testCandidateDisplayMode_readsWhatTheSettingsFormWrites() {
+        // The form writes through `@AppStorage`, which stores the raw string.
+        userDefaults.set(
+            CandidateDisplayMode.romanOnly.rawValue,
+            forKey: SettingsStore.Keys.candidateDisplayMode.name,
+        )
+
+        XCTAssertEqual(makeStore().candidateDisplayMode, .romanOnly)
+    }
+
+    /// A hand-edited `defaults write`, or a mode a later version adds and an
+    /// older build reads, must not leave the window with cells it cannot draw.
+    func testCandidateDisplayMode_withAnUnknownStoredValue_fallsBackToSideBySide() {
+        userDefaults.set("combined", forKey: SettingsStore.Keys.candidateDisplayMode.name)
+
+        XCTAssertEqual(makeStore().candidateDisplayMode, .sideBySide)
+        XCTAssertEqual(makeStore().current.candidateDisplayMode, .sideBySide)
+    }
+
+    /// Storage contract shared by all four platforms (research doc §12): the
+    /// key and both raw values are spelled the same everywhere, so a future
+    /// settings transfer carries one vocabulary.
+    func testCandidateDisplayMode_storageSpellings_matchTheOtherPlatforms() {
+        XCTAssertEqual(SettingsStore.Keys.candidateDisplayMode.name, "candidateDisplayMode")
+        XCTAssertEqual(CandidateDisplayMode.sideBySide.rawValue, "sideBySide")
+        XCTAssertEqual(CandidateDisplayMode.romanOnly.rawValue, "romanOnly")
     }
 
     /// The store is read on every operation rather than snapshotted, so a mode
@@ -173,11 +234,16 @@ final class SettingsStoreTests: XCTestCase {
         )
         userDefaults.set(CandidateTextSizeChoice.small.rawValue, forKey: SettingsStore.Keys.candidateTextSize.name)
         userDefaults.set(CandidateFontChoice.allCases.last?.rawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set(
+            CandidateDisplayMode.romanOnly.rawValue,
+            forKey: SettingsStore.Keys.candidateDisplayMode.name,
+        )
 
         store.resetAppearanceSettings()
 
         XCTAssertEqual(store.appearanceMode, SettingsStore.Keys.appearanceMode.defaultValue)
         XCTAssertEqual(store.candidateLayout, SettingsStore.Keys.candidateLayout.defaultValue)
+        XCTAssertEqual(store.candidateDisplayMode, SettingsStore.Keys.candidateDisplayMode.defaultValue)
         XCTAssertEqual(store.candidateWindowSize, SettingsStore.Keys.candidateWindowSize.defaultValue)
         XCTAssertEqual(store.candidateTextSize, SettingsStore.Keys.candidateTextSize.defaultValue)
         XCTAssertEqual(store.candidateFontChoice, SettingsStore.Keys.fontType.defaultValue)
