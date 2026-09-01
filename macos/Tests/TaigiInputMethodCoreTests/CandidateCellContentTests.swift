@@ -179,6 +179,72 @@ final class CandidateCellContentTests: XCTestCase {
         }
     }
 
+    // MARK: - Combined display
+
+    /// The combined display is ONE label — Hanji, a single space, the
+    /// romanization — with no annotation, whatever direction the swap points.
+    /// The arm sits before the swap arm, which is what makes the forced swap
+    /// flag here the thing under test. The single space is the separator on
+    /// every platform (CROSS-PLATFORM INVARIANT on the arm).
+    func testCombined_isOneHanjiLedLabel_withNoAnnotation_inEitherSwapDirection() {
+        for swapped in [false, true] {
+            let cell = CandidateCellContent.cell(
+                for: candidate(roman: "tâi-gí", hanji: "台語"),
+                settings: settings(swapped: swapped, displayMode: .combined),
+            )
+
+            XCTAssertEqual(cell.text, "台語 tâi-gí", "swapped=\(swapped)")
+            XCTAssertNil(cell.annotation, "swapped=\(swapped) gave a one-label cell an annotation")
+        }
+    }
+
+    /// A one-label cell has no second script for Space to commit, so Space on
+    /// it resolves to nothing to write — the same path a romanization-only
+    /// cell takes — rather than committing a script the label already shows.
+    func testCombined_offersNoAlternateScriptToSpace() {
+        for swapped in [false, true] {
+            XCTAssertNil(
+                CandidateDocumentText.alternateText(
+                    for: candidate(roman: "tâi-gí", hanji: "台語"),
+                    settings: settings(swapped: swapped, displayMode: .combined),
+                ),
+                "swapped=\(swapped)",
+            )
+        }
+    }
+
+    /// No Hanji, no label to lead with: a romanization-only candidate is the
+    /// romanization alone under this display too — never `" guá"`.
+    func testCombined_hanjiLessCandidate_isTheRomanizationAlone() {
+        for hanji in [nil, ""] {
+            let cell = CandidateCellContent.cell(
+                for: candidate(roman: "guá", hanji: hanji),
+                settings: settings(swapped: false, displayMode: .combined),
+            )
+
+            XCTAssertEqual(cell, CandidateCellContent(text: "guá", annotation: nil), "hanji=\(String(describing: hanji))")
+        }
+    }
+
+    /// Under the derived pair `SettingsStore` hands the engine for this mode
+    /// (swap forced on, bracket as stored) the document gets the Hanji the
+    /// label leads with — bare, or with the romanization bracketed when
+    /// 括號標註 is on — so the label always leads with what a commit writes.
+    func testCombined_cellLeadsWithWhatTheDocumentCommits_underTheDerivedPair() {
+        let word = candidate(roman: "tâi-gí", hanji: "台語")
+
+        for bothScripts in [false, true] {
+            let settings = settings(swapped: true, bothScripts: bothScripts, displayMode: .combined)
+            let document = CandidateDocumentText.text(for: word, settings: settings)
+
+            XCTAssertEqual(document, bothScripts ? "台語 (tâi-gí)" : "台語", "bothScripts=\(bothScripts)")
+            XCTAssertTrue(
+                CandidateCellContent.cell(for: word, settings: settings).text.hasPrefix("台語"),
+                "bothScripts=\(bothScripts): the label does not lead with the Hanji the document gets",
+            )
+        }
+    }
+
     // MARK: - Cell reconfiguration
 
     /// Cells are recycled across pages and across the vertical layout's

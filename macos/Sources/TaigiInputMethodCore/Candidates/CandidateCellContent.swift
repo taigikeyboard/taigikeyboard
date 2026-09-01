@@ -3,8 +3,9 @@
 import Foundation
 
 /// One candidate as the window renders it — both scripts, in the order the
-/// user's swap setting puts them, or the romanization alone under the
-/// romanization-only display.
+/// user's swap setting puts them; both in one Hanji-led label under the
+/// combined display; or the romanization alone under the romanization-only
+/// display.
 ///
 /// A Taigi candidate is a `(漢字, 羅馬字)` pair (Core Principle #7), and showing
 /// only one of them makes several candidates read identically: two Hanji with
@@ -54,6 +55,17 @@ struct CandidateCellContent: Equatable, Sendable {
         // Hanji the user never saw.
         if settings.candidateDisplayMode == .romanOnly {
             return Self(text: candidate.roman, annotation: nil)
+        }
+        // One label, Hanji first, one ASCII space between: the Hanji is the
+        // value and the romanization its hint, so the commit writes the Hanji
+        // (the effective swap is `true` under this mode) and Space, with no
+        // annotation to write, falls to `.ignored` as it does above. Before
+        // the swap arm for the same reason the arm above is.
+        // CROSS-PLATFORM INVARIANT — mirrors iOS `CandidateCellHelper.displayTitle`
+        // and Windows `document_text.rs` (`CandidateCellContent::cell`), which
+        // join with the same single space. Drift changes what 合用 shows.
+        if settings.candidateDisplayMode == .combined {
+            return Self(text: "\(hanji) \(candidate.roman)", annotation: nil)
         }
         return settings.isTranslateSwapped
             ? Self(text: hanji, annotation: candidate.roman)

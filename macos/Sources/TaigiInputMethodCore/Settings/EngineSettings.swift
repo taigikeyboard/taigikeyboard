@@ -12,7 +12,8 @@ enum InputMode: String, CaseIterable, Sendable {
 }
 
 /// How a candidate cell renders the `(漢字, 羅馬字)` pair: both scripts side by
-/// side (the swap setting decides which leads), or the romanization alone.
+/// side (the swap setting decides which leads), both in ONE Hanji-led label
+/// (`漢字 羅馬字`), or the romanization alone.
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
@@ -23,6 +24,7 @@ enum InputMode: String, CaseIterable, Sendable {
 /// Drift changes which mode a transferred setting resolves to.
 enum CandidateDisplayMode: String, CaseIterable, Sendable {
     case sideBySide
+    case combined
     case romanOnly
 }
 
@@ -50,7 +52,10 @@ struct EngineSettings: Equatable, Sendable {
     /// and commits only romanization has no Hanji to lead with or to bracket.
     /// The stored values live on in `UserDefaults`
     /// (`SettingsStore.storedIsTranslateSwapped` / `storedIsOutputBothScripts`)
-    /// and come back the moment the mode returns to `.sideBySide`. Every
+    /// and come back the moment the mode returns to `.sideBySide`. Under
+    /// `.combined` the swap reads `true` whatever is stored — the one-label
+    /// cell leads with the Hanji and a commit writes it — while the bracket
+    /// setting is read as stored (`SettingsStore.current` has the why). Every
     /// reader of "swap" — engine `AppConfig`, cell, document text, auto-space,
     /// full-width punctuation — reads THIS pair, never the stored one.
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift

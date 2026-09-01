@@ -52,13 +52,15 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
                 }
                 // What each cell shows, beside how the cells are arranged: both
-                // scripts side by side (today's rendering) or the romanization
-                // alone. Bound like the rows around it — the open bar re-renders
-                // on the write (`TaigiInputController`), the next one reads it
-                // live.
+                // scripts side by side (today's rendering), both in one Hanji-led
+                // label, or the romanization alone. Bound like the rows around
+                // it — the open bar re-renders on the write
+                // (`TaigiInputController`), the next one reads it live.
                 Picker(language.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
                     Text(language.string(.settingsCandidateDisplayModeSideBySide))
                         .tag(CandidateDisplayMode.sideBySide)
+                    Text(language.string(.settingsCandidateDisplayModeCombined))
+                        .tag(CandidateDisplayMode.combined)
                     Text(language.string(.settingsCandidateDisplayModeRomanOnly))
                         .tag(CandidateDisplayMode.romanOnly)
                 }
