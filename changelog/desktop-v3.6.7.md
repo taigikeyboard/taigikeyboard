@@ -21,8 +21,9 @@ both take the 台 tile icon.
 
 - **候選詞顯示 — how a candidate cell shows the word.** A picker in 外觀, three
   values. **漢羅並排** is today's cell: 漢字 and 羅馬字 side by side, the swap
-  shortcut deciding which leads. **漢羅合用** shows both in one label,
-  `漢字 羅馬字`, and commits the 漢字 — no swap needed to see the reading.
+  shortcut deciding which leads. **漢羅合用** lists both as candidates — a 漢字
+  cell and, next to it, its 羅馬字 cell, no subtitles — so either script is one
+  pick away and no swap is needed; Space on either commits the other.
   **羅馬字** shows the romanization alone and commits it: rows that would now
   read the same (食 and 𤆬 are both `tsia̍h`) are collapsed by the engine, so
   the window never offers two identical cells, and next-word predictions
@@ -60,8 +61,9 @@ same user-data schemas as macOS.
   system high-contrast setting and the Windows accent colour, and hides itself
   when the host application draws candidates itself.
 - **候選詞顯示** in 外觀 — 漢羅並排 / 漢羅合用 / 羅馬字, the same three cells as
-  macOS (one label `漢字 羅馬字` under 合用; romanization alone, same-reading
-  rows collapsed, under 羅馬字). The `` ` `` swap is inert outside 並排;
+  macOS (漢字 and 羅馬字 as adjacent one-script cells under 合用; romanization
+  alone, same-reading rows collapsed, under 羅馬字; a list with no second
+  script is one line tall). The `` ` `` swap is inert outside 並排;
   **Ctrl+Alt+H** cycles the three from the keyboard (the new mode flashes, an
   open list re-fetches in place) and is re-recordable in 快捷鍵. A change made
   in the settings window applies from the next keystroke, like the candidate
