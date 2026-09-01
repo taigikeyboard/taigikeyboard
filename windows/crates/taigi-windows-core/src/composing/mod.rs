@@ -14,6 +14,7 @@ mod document_text;
 mod learner;
 mod manager;
 mod outcomes;
+mod presentation;
 mod stores;
 
 pub use coordinator::{ComposingSessionCoordinator, ContextToken};
@@ -21,6 +22,7 @@ pub use document_text::{CandidateCellContent, CandidateScript};
 pub use learner::NextWordLearner;
 pub use manager::{ComposingEffectExecutor, ComposingManager};
 pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome, CandidateListChange};
+pub use presentation::{CandidateSource, PresentedCandidate};
 pub use stores::{
     AssociationSink, Clock, CustomDictionarySource, FrequencySource, NoStores, SystemClock,
 };

@@ -260,7 +260,8 @@ impl CandidateWindow {
             settings.choice::<CandidateFontChoice>(&keys::FONT_TYPE),
             layout.cell_arrangement(),
             &measurer,
-        );
+        )
+        .for_content(self.content_has_annotations());
         self.stacked_line_heights = (
             measurer.line_height(metrics.candidate_font()),
             measurer.line_height(metrics.annotation_font()),
@@ -279,6 +280,14 @@ impl CandidateWindow {
         cells.truncate(MAX_DISPLAY_CANDIDATES);
         self.cells = cells;
         self.layouts.borrow_mut().clear();
+    }
+
+    /// Whether any cell of the list carries an annotation — what decides a
+    /// stacked cell's height (`CandidateMetrics::for_content`). The one
+    /// place the content-derived metrics are resolved from; every consumer
+    /// reads `self.metrics` and follows.
+    fn content_has_annotations(&self) -> bool {
+        self.cells.iter().any(|cell| cell.annotation.is_some())
     }
 
     /// The per-cell text widths, measured once per list.
@@ -310,8 +319,9 @@ impl CandidateWindow {
         self.theme = Theme::resolve(self.appearance_mode, &system);
     }
 
-    /// Same list, new rendering (the 漢羅 flip): re-packed, selection kept
-    /// on its absolute index.
+    /// New cells in place (the 漢羅 flip, a display-mode change): re-packed
+    /// and re-measured, the height reflowed for content that gained or lost
+    /// its annotations, selection kept on its absolute index.
     pub fn update_cells(
         &mut self,
         cells: Vec<CandidateCellContent>,
@@ -324,7 +334,11 @@ impl CandidateWindow {
         let expanded = matches!(&self.layout, Some(LayoutModel::Expandable(model)) if model.mode() == ExpandableDisplayMode::Expanded);
         self.replace_cells(cells);
         let layout: CandidateLayout = settings.choice(&keys::CANDIDATE_LAYOUT);
-        let metrics = self.metrics.clone()?;
+        let metrics = self
+            .metrics
+            .clone()?
+            .for_content(self.content_has_annotations());
+        self.metrics = Some(metrics.clone());
         self.measure_cells(&metrics);
         let mut model = self.build_layout(layout, &metrics);
         match &mut model {
@@ -983,7 +997,14 @@ impl CandidateWindow {
             }
             CandidateCellArrangement::Stacked => {
                 let (line1, line2) = self.stacked_line_heights;
-                let block = line1 + metrics.stacked_line_gap() + line2;
+                // The block is the content's, not the cell's: an unannotated
+                // cell in annotated content keeps its candidate on the upper
+                // line so the rows line up; one-line content centres it.
+                let block = if metrics.content_has_annotations() {
+                    line1 + metrics.stacked_line_gap() + line2
+                } else {
+                    line1
+                };
                 let top = rect.y + (rect.height - block) / 2.0;
                 let centre = text_x + available / 2.0;
                 let primary_width = self.primary_widths[index].min(available);

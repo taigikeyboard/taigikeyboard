@@ -13,8 +13,7 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use taigi_windows_core::composing::{CandidateScript, ContextToken};
-use taigi_windows_core::engine::ContinuousCandidate;
+use taigi_windows_core::composing::{CandidateScript, CandidateSource, ContextToken};
 use windows::core::{IUnknown, Interface};
 use windows::Win32::UI::TextServices::{ITfComposition, ITfContext, ITfRange};
 
@@ -25,8 +24,9 @@ use windows::Win32::UI::TextServices::{ITfComposition, ITfContext, ITfRange};
 #[derive(Default)]
 pub struct ContextState {
     pub composition: Option<ITfComposition>,
-    /// The list the last fetch produced; empty = no candidates showing.
-    pub candidates: Vec<ContinuousCandidate>,
+    /// The list the last fetch produced with the cells shown for it; empty
+    /// = no candidates showing.
+    pub candidates: CandidateSource,
     /// The highlighted candidate (PR5b: a headless list; PR6's window
     /// Which script's commit left an auto space in front of the caret, so
     /// the next attaching punctuation may swap with it (§23), together

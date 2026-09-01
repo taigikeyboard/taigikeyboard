@@ -11,9 +11,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::document_text::{alternate_text, document_text, CandidateCellContent, CandidateScript};
+use super::document_text::{alternate_text, document_text, CandidateScript};
 use super::learner::NextWordLearner;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
+use super::presentation::{presentation, PresentedCandidate};
 use super::stores::{Clock, CustomDictionarySource, FrequencySource};
 use crate::engine::{
     self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry, Effect,
@@ -290,10 +291,11 @@ impl ComposingManager {
         document_text(candidate, &self.current_settings())
     }
 
-    /// How the window renders `candidate` — both scripts, under the settings
-    /// in force right now.
-    pub fn cell_content(&self, candidate: &ContinuousCandidate) -> CandidateCellContent {
-        CandidateCellContent::cell(candidate, &self.current_settings())
+    /// The cells the window shows for `candidates`, under one snapshot of the
+    /// settings in force right now — 合用 splits a candidate into two, so the
+    /// window's indices are cell indices (`CandidateSource::resolve`).
+    pub fn presentation(&self, candidates: &[ContinuousCandidate]) -> Vec<PresentedCandidate> {
+        presentation(candidates, &self.current_settings())
     }
 
     /// Commits `candidate`, which must come from the `fetch_candidates` call
