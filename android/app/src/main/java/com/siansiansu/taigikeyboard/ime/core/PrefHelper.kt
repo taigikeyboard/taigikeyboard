@@ -319,13 +319,14 @@ class PrefHelper(
     // STORED script flags — the only read-write API (settings UI, 文/A toggle,
     // reset). Engine / commit / layout readers use the EFFECTIVE derived
     // overrides `isTranslateSwapped` / `isOutputBothScripts` below, which
-    // read `false` under CandidateDisplayMode.ROMAN_ONLY without touching
-    // storage (so leaving roman-only restores the user's choice).
+    // read `false` under CandidateDisplayMode.ROMAN_ONLY (and `true` for the
+    // swap under COMBINED) without touching storage, so leaving either mode
+    // restores the user's choice.
     var storedIsTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
 
     var storedOutputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
-    // Candidate cell rendering mode (漢羅並排 / 羅馬字). String-backed like
+    // Candidate cell rendering mode (漢羅並排 / 羅馬字 / 漢羅合用). String-backed like
     // `inputMode`; unknown stored values coerce to SIDE_BY_SIDE.
     override var candidateDisplayMode: CandidateDisplayMode
         get() =
@@ -585,16 +586,17 @@ class PrefHelper(
     override val isAutoCap: Boolean
         get() = autoCapitalizationEnabled
 
-    // EFFECTIVE script pair — stored flag AND mode != ROMAN_ONLY. Every
-    // engine / commit / layout / auto-space reader goes through these two;
-    // only the settings UI and the 文/A toggle touch the `stored*` vars.
+    // EFFECTIVE script pair — the mode projects the stored flags (rules on
+    // CandidateDisplayMode). Every engine / commit / layout / auto-space
+    // reader goes through these two; only the settings UI and the 文/A
+    // toggle touch the `stored*` vars.
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped / isOutputBothScripts.
     // Drift causes silent divergence (hanji-first commits or spurious spaces under roman-only).
     override val isTranslateSwapped: Boolean
-        get() = candidateDisplayMode.effectiveScriptFlag(storedIsTranslateSwapped)
+        get() = candidateDisplayMode.effectiveTranslateSwapped(storedIsTranslateSwapped)
 
     override val isOutputBothScripts: Boolean
-        get() = candidateDisplayMode.effectiveScriptFlag(storedOutputBothScripts)
+        get() = candidateDisplayMode.effectiveOutputBothScripts(storedOutputBothScripts)
 
     // §34/S22: engine-facing alias for the Android `literalRomanCandidateEnabled`
     // pref (kept un-renamed because the settings UI reads it directly).

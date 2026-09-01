@@ -59,11 +59,13 @@ data class CandidateCellText(
 
 /**
  * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
- * ROMAN_ONLY so TPS ignores the setting; swap decides the lead otherwise.
- * `displayRoman` is already TPS-converted by the caller when relevant.
+ * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED is one label
+ * `漢字 羅馬字` (single ASCII space, no subtitle); swap decides the lead
+ * otherwise. `displayRoman` is already TPS-converted by the caller when
+ * relevant.
  */
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle.
-// Drift causes silent divergence (one platform shows a subtitle under roman-only).
+// Drift causes silent divergence (one platform shows a subtitle under roman-only, or a different 漢羅合用 separator).
 fun candidateCellText(
     hanzi: String?,
     displayRoman: String,
@@ -75,6 +77,7 @@ fun candidateCellText(
         hanzi.isNullOrEmpty() -> CandidateCellText(displayRoman, null)
         isTPSLayout -> CandidateCellText(hanzi, null)
         candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY -> CandidateCellText(displayRoman, null)
+        candidateDisplayMode == CandidateDisplayMode.COMBINED -> CandidateCellText("$hanzi $displayRoman", null)
         isTranslateSwapped -> CandidateCellText(hanzi, displayRoman)
         else -> CandidateCellText(displayRoman, hanzi)
     }

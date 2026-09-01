@@ -523,12 +523,13 @@ class SmartbarManager(
     fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
 
     /**
-     * 文/A key + overlay control button. Inert under ROMAN_ONLY (the key
-     * stays visible, its active state reads the derived `false`); the
-     * stored flag is what flips, the cache re-derives from it.
+     * 文/A key + overlay control button. Only SIDE_BY_SIDE toggles; ROMAN_ONLY
+     * and COMBINED are inert (the key stays visible, its active state reads
+     * the derived value — `false` / `true`); the stored flag is what flips,
+     * the cache re-derives from it.
      */
     fun toggleTranslateSwapped() {
-        if (prefs.candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY) return
+        if (prefs.candidateDisplayMode != CandidateDisplayMode.SIDE_BY_SIDE) return
         prefs.storedIsTranslateSwapped = !prefs.storedIsTranslateSwapped
         refreshScriptFlagCache()
         refreshSurfacesForScriptFlags()

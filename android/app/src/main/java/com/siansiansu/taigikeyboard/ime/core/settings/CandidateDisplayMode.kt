@@ -1,4 +1,4 @@
-// 中文: 候選詞顯示模式 — 漢羅並排(預設)/ 羅馬字。羅馬字模式下 isTranslateSwapped / outputBothScripts 的有效值強制為 false。
+// 中文: 候選詞顯示模式 — 漢羅並排(預設)/ 羅馬字 / 漢羅合用。羅馬字模式下 isTranslateSwapped / outputBothScripts 的有效值強制為 false;漢羅合用下 isTranslateSwapped 強制為 true。
 
 package com.siansiansu.taigikeyboard.ime.core.settings
 
@@ -18,17 +18,30 @@ enum class CandidateDisplayMode(
 
     /** Roman-only cell: the engine `roman` field alone, commit = roman. */
     ROMAN_ONLY("romanOnly"),
+
+    /** One-label cell `漢字 羅馬字` (single space), commit = hanji; 文/A inert. */
+    COMBINED("combined"),
     ;
 
     /**
-     * Effective value of a stored script flag (`isTranslateSwapped` /
-     * `outputBothScripts`) under this mode. Roman-only suppresses both
-     * without touching storage, so switching back restores the user's
-     * stored choice.
+     * Effective `isTranslateSwapped` under this mode. COMBINED forces `true`
+     * — the pair is a compatibility projection of "cell leads with hanji,
+     * commit writes hanji" (spec §1), not a claim about the stored flag.
+     * ROMAN_ONLY forces `false`. Neither touches storage, so returning to
+     * SIDE_BY_SIDE restores the user's stored choice.
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped / isOutputBothScripts derivation.
-    // Drift causes silent divergence (one platform keeps hanji-first commits under roman-only).
-    fun effectiveScriptFlag(stored: Boolean): Boolean = stored && this != ROMAN_ONLY
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
+    // Drift causes silent divergence (one platform commits roman under 漢羅合用, or hanji under roman-only).
+    fun effectiveTranslateSwapped(stored: Boolean): Boolean = if (this == COMBINED) true else stored && this != ROMAN_ONLY
+
+    /**
+     * Effective `outputBothScripts` under this mode. Only ROMAN_ONLY
+     * suppresses it; COMBINED keeps the stored value (bracket form becomes
+     * `漢字 (羅馬字)`, same as today's swapped mode).
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isOutputBothScripts derivation.
+    // Drift causes silent divergence (spurious bracket annotation under roman-only).
+    fun effectiveOutputBothScripts(stored: Boolean): Boolean = stored && this != ROMAN_ONLY
 
     companion object {
         /** Coerce a stored raw string into a mode; unknown / absent values fall back to [SIDE_BY_SIDE]. */
