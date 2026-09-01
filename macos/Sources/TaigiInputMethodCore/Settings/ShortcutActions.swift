@@ -67,6 +67,25 @@ extension KeyboardShortcuts.Name {
         "toggleTranslateSwapped",
         initial: .init(.backtick),
     )
+
+    /// The way round the 候選詞顯示 picker from the keyboard (USER 2026-09-02):
+    /// the backtick above is inert outside 並排, so a user in 合用 or 羅馬字
+    /// had no key that led back. H for Hàn-Lô, the thing being switched — a
+    /// command reached for now and then, where a mnemonic pays. ⌃⌘ is the
+    /// family the two switches above live in. McBopomofo's ⌃⌘H is its 半形標點
+    /// — another input method's roster, not a system chord — and Apple's own
+    /// list keeps ⌃⌘D (查字典), not H.
+    ///
+    /// This chord WAS the swap's default until 2026-08-21.
+    /// `ShortcutDefaultMigration` moved those installs onto the backtick, and
+    /// it runs before `ShortcutConflicts.resolveDefaultsShadowedByRecordings`,
+    /// so an install that had not yet migrated is moved before this default
+    /// could collide with it; one that recorded ⌃⌘H by hand keeps it, and this
+    /// row empties — recording beats default, the standing rule.
+    static let cycleCandidateDisplayMode = Self(
+        "cycleCandidateDisplayMode",
+        initial: .init(.h, modifiers: [.control, .command]),
+    )
 }
 
 /// One user-assignable action. The list is the single source for the recorder
@@ -77,12 +96,15 @@ enum ShortcutAction: CaseIterable, Sendable {
     case openLastSettingsPane
     case toggleRomanization
     case toggleTranslateSwapped
+    /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
+    case cycleCandidateDisplayMode
 
     var name: KeyboardShortcuts.Name {
         switch self {
         case .openLastSettingsPane: .openLastSettingsPane
         case .toggleRomanization: .toggleRomanization
         case .toggleTranslateSwapped: .toggleTranslateSwapped
+        case .cycleCandidateDisplayMode: .cycleCandidateDisplayMode
         }
     }
 
@@ -112,6 +134,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .openLastSettingsPane: language.string(.desktopShortcutOpenSettings)
         case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
         case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
+        case .cycleCandidateDisplayMode: language.string(.desktopShortcutCycleCandidateDisplayMode)
         }
     }
 }
@@ -172,7 +195,7 @@ enum ShortcutHotkeys {
             // pane that is belongs to the settings window, not to a chord —
             // the named panes are reached from the menu bar now.
             openSettings(on: nil, in: SettingsStore())
-        case .toggleRomanization, .toggleTranslateSwapped:
+        case .toggleRomanization, .toggleTranslateSwapped, .cycleCandidateDisplayMode:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
         }
     }
@@ -469,7 +492,7 @@ enum ShortcutConflicts {
         // `defaultsShadowedByRecordings` states above, and for the same
         // reason: every read goes to `UserDefaults`, and every bridged chord
         // goes to the keyboard layout. Both passes below ask about the same
-        // seven actions.
+        // actions.
         let recorded = ShortcutAction.allCases.compactMap { action in
             KeyboardShortcuts.getShortcut(for: action.name).map { (action: action, shortcut: $0) }
         }

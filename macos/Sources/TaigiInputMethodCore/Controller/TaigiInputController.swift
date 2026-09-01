@@ -419,7 +419,9 @@ public final class TaigiInputController: IMKInputController {
     /// happens to the candidate bar follows what the setting invalidates: a
     /// romanization switch changes what a fetch would return, so its bar comes
     /// down (same rule as `switchInputMode(to:)`); the 漢羅 swap changes only
-    /// how the same candidates display, so its bar stays and re-renders.
+    /// how the same candidates display, so its bar stays and re-renders; the
+    /// 候選詞顯示 cycle changes which candidates exist, so its bar stays and is
+    /// fetched again.
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
         switch action {
@@ -447,6 +449,20 @@ public final class TaigiInputController: IMKInputController {
             // candidates exist — see `refetchCandidatesForDisplayModeChange`.)
             settings.storedIsTranslateSwapped.toggle()
             rerenderCandidatesForDisplayChange()
+        case .cycleCandidateDisplayMode:
+            // Never inert: every mode has a next one. Only the setting is
+            // written here — the open bar is re-fetched by the observation
+            // `activateServer` armed on this key, which is the one path the
+            // 外觀 pane's write already takes (`refetchCandidatesForDisplayModeChange`).
+            // That observation hops to the main actor, so the flash below
+            // lands one turn BEFORE the bar changes shape; a second, in-line
+            // re-fetch would run the same fetch twice.
+            // Flashed, unlike the swap: the strip changes shape, and a strip
+            // that did so with no notice reads as breakage — the same rule as
+            // the romanization switch.
+            let next = settings.candidateDisplayMode.next
+            settings.candidateDisplayMode = next
+            flash(next.displayNameKey)
         }
     }
 
@@ -610,11 +626,11 @@ public final class TaigiInputController: IMKInputController {
     /// Announces a mode the user just switched into, through the injected
     /// recorder in tests and the shared HUD in production.
     ///
-    /// One caller since 2026-08-26: the 英數 toggle raised this too, until
-    /// this input method stopped having an English mode (USER). Switching
-    /// input sources is the system's business and it draws its own indicator;
-    /// a second one of ours over it would be announcing a mode nothing here
-    /// owns.
+    /// The romanization switch and the 候選詞顯示 cycle. The 英數 toggle raised
+    /// this too, until this input method stopped having an English mode
+    /// (USER 2026-08-26). Switching input sources is the system's business
+    /// and it draws its own indicator; a second one of ours over it would be
+    /// announcing a mode nothing here owns.
     @MainActor
     private func flash(_ mode: StringKey) {
         let language = displayLanguageOverride ?? DisplayLanguageStore.shared

@@ -30,6 +30,25 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     /// Whether the cell shows any Hanji — `false` only under `.romanOnly`.
     var showsHanji: Bool { self != .romanOnly }
 
+    /// The mode after this one, in the order the 外觀 picker lists them, and
+    /// round again from the end — what the cycle shortcut steps through, so
+    /// the key and the picker agree on what "next" is.
+    var next: CandidateDisplayMode {
+        let all = Self.allCases
+        let index = all.firstIndex(of: self) ?? all.startIndex
+        return all[(index + 1) % all.count]
+    }
+
+    /// The picker row's label for this mode — also what the cycle shortcut
+    /// flashes, so the HUD names the mode in the words the pane uses.
+    var displayNameKey: StringKey {
+        switch self {
+        case .sideBySide: .settingsCandidateDisplayModeSideBySide
+        case .combined: .settingsCandidateDisplayModeCombined
+        case .romanOnly: .settingsCandidateDisplayModeRomanOnly
+        }
+    }
+
     /// Only side-by-side has a lead script the swap shortcut can flip; the
     /// other two fix it, so the shortcut is inert and the stored swap waits
     /// for the way back.

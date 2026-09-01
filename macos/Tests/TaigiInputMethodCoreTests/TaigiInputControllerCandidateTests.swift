@@ -794,6 +794,48 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "romanization-only cells carry no Hanji")
     }
 
+    /// The ⌃⌘H chord takes the same road as the pane: the handler writes the
+    /// setting and nothing else, and the observation armed at activation is
+    /// what re-fetches the open bar — one mechanism, one turn later. Pinned
+    /// through the chord so a handler that stopped writing the observed key,
+    /// or an activation that stopped arming it, fails here rather than on a
+    /// real device. One press, side by side → 合用: the cells become one label
+    /// each, the bar stays up.
+    func testCycleCandidateDisplayShortcut_refetchesTheOpenBar() async throws {
+        let key = SettingsStore.Keys.candidateDisplayMode.name
+        for name in [key, SettingsStore.Keys.isTranslateSwapped.name] {
+            let saved = UserDefaults.standard.object(forKey: name)
+            addTeardownBlock {
+                if let saved {
+                    UserDefaults.standard.set(saved, forKey: name)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: name)
+                }
+            }
+            UserDefaults.standard.removeObject(forKey: name)
+        }
+        let session = try composedSession()
+        let before = try XCTUnwrap(session.presenter.shownContent).cells
+        XCTAssertTrue(before.contains { $0.annotation != nil }, "side by side shows both scripts")
+        let callsBefore = session.presenter.calls.count
+
+        session.controller.performShortcutAction(.cycleCandidateDisplayMode)
+        for _ in 0..<50 where session.presenter.calls.count == callsBefore {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(session.controller.settings.candidateDisplayMode, .combined)
+        XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-mode change")
+        XCTAssertFalse(
+            session.presenter.calls.dropFirst(callsBefore)
+                .contains { if case .hide = $0 { true } else { false } },
+            "a display-mode change must not route through dismissal",
+        )
+        let after = try XCTUnwrap(session.presenter.shownContent).cells
+        XCTAssertFalse(after.isEmpty)
+        XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "合用 cells carry the pair in one label")
+    }
+
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {
         let session = try composedSession()
 

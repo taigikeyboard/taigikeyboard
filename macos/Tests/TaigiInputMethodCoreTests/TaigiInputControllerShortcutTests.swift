@@ -145,6 +145,31 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertFalse(controller.settings.current.isTranslateSwapped, "leaving the mode must give the stored swap back")
     }
 
+    /// The cycle walks the 外觀 picker's order and comes back round, so three
+    /// presses return the user where they started; each press names the mode
+    /// switched INTO, in the picker's own words — the strip changes shape,
+    /// and a strip that did so with no notice reads as breakage. The STORED
+    /// swap is not the cycle's to touch: it is what the user gets back on
+    /// returning to side by side.
+    func testCycleCandidateDisplayShortcut_advancesThePickerOrder_andAnnouncesIt() {
+        controller.settings.storedIsTranslateSwapped = true
+        XCTAssertEqual(controller.settings.candidateDisplayMode, .sideBySide, "the cycle starts from the default")
+
+        controller.performShortcutAction(.cycleCandidateDisplayMode)
+        XCTAssertEqual(controller.settings.candidateDisplayMode, .combined)
+        XCTAssertEqual(flashes, ["漢羅合用"])
+
+        controller.performShortcutAction(.cycleCandidateDisplayMode)
+        XCTAssertEqual(controller.settings.candidateDisplayMode, .romanOnly)
+        XCTAssertEqual(flashes, ["漢羅合用", "羅馬字"])
+
+        controller.performShortcutAction(.cycleCandidateDisplayMode)
+        XCTAssertEqual(controller.settings.candidateDisplayMode, .sideBySide)
+        XCTAssertEqual(flashes, ["漢羅合用", "羅馬字", "漢羅並排"])
+
+        XCTAssertTrue(controller.settings.storedIsTranslateSwapped, "the cycle flipped a stored swap it must not touch")
+    }
+
     /// The settings doorway is handled before any session is consulted, so
     /// reaching a session with it must do nothing at all — not change a
     /// setting, and not disturb the composition on screen.

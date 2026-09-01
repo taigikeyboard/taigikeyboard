@@ -45,7 +45,7 @@ struct ShortcutSettingsView: View {
                 // user is typing — until the five pane chords were retired
                 // (USER: five chords for panes visited about once a day, which
                 // the menu bar already lists by name). What is left is one
-                // doorway and two switches, which is not two groups' worth.
+                // doorway and three switches, which is not two groups' worth.
                 ForEach(ShortcutAction.allCases, id: \.self) { action in
                     globalRecorderRow(action)
                 }
