@@ -2,8 +2,9 @@
 
 The first Windows release: Taigi Keyboard is now a Text Services Framework input
 method for Windows 11 and Windows 10 1809+, on the same Rust engine and the same
-dictionaries as macOS. macOS gets the POJ tone-mark fix for `au` before a coda,
-and both desktop apps take the 台 tile icon.
+dictionaries as macOS. Both desktop apps gain the 候選詞顯示 picker (漢羅並排 /
+漢羅合用 / 羅馬字); macOS gets the POJ tone-mark fix for `au` before a coda, and
+both take the 台 tile icon.
 
 ### macOS
 
@@ -15,6 +16,22 @@ and both desktop apps take the 台 tile icon.
   marking the leading vowel (`e̍re`, `i̍ri`) instead of the trailing one, which
   is what the MOE manual and canonical taigi-converter do. A full initial ×
   final × tone sweep is now byte-identical to canonical. (#622)
+
+#### Candidates
+
+- **候選詞顯示 — how a candidate cell shows the word.** A picker in 外觀, three
+  values. **漢羅並排** is today's cell: 漢字 and 羅馬字 side by side, the swap
+  shortcut deciding which leads. **漢羅合用** shows both in one label,
+  `漢字 羅馬字`, and commits the 漢字 — no swap needed to see the reading.
+  **羅馬字** shows the romanization alone and commits it: rows that would now
+  read the same (食 and 𤆬 are both `tsia̍h`) are collapsed by the engine, so
+  the window never offers two identical cells, and next-word predictions
+  collapse the same way. Under 合用 and 羅馬字 the swap shortcut is inert and
+  the stored swap waits for 並排; 括號標註 still applies under 合用
+  (`漢字 (羅馬字)`) and has nothing to bracket under 羅馬字. Space on a
+  one-label cell has no other script to commit and does nothing, as it already
+  does on a romanization-only candidate. 方音齒盤 is unaffected. Changing the
+  picker re-fetches an open candidate bar in place. (#662, #664)
 
 #### Appearance
 
@@ -40,6 +57,11 @@ same user-data schemas as macOS.
   slot-key labels, the unfold timer and the scroller macOS has. It follows the
   system high-contrast setting and the Windows accent colour, and hides itself
   when the host application draws candidates itself.
+- **候選詞顯示** in 外觀 — 漢羅並排 / 漢羅合用 / 羅馬字, the same three cells as
+  macOS (one label `漢字 羅馬字` under 合用; romanization alone, same-reading
+  rows collapsed, under 羅馬字). The `` ` `` swap is inert outside 並排. A
+  change made in the settings window applies from the next keystroke, like
+  the candidate layout. (#662, #664)
 - **Shortcuts.** `Ctrl+Alt+S` opens the settings window, `Ctrl+Alt+C` switches
   Tâi-lô / POJ, `` ` `` swaps 漢字 / 羅馬字 — the macOS roster with ⌘ read as
   Ctrl and ⌃ as Alt. Every shortcut is re-recordable in 快捷鍵.
