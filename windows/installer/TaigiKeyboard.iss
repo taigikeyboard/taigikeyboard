@@ -63,6 +63,16 @@ DisableDirPage=yes
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
+; No "Select Setup Language" page: the system already says which language the
+; user reads, and every other page is disabled anyway, so a picker would be
+; the only thing standing between the user and the install. `uilanguage` reads
+; GetUserDefaultUILanguage() — the UI language, NOT the region — which is the
+; same distinction the app itself draws (`system_locale` reads
+; GetUserPreferredUILanguages, roadmap parity audit #640). A UI language that
+; matches no entry falls back to the FIRST one listed, Hanji, which is also
+; what the app falls back to. `/LANG=english` on the command line still wins.
+ShowLanguageDialog=no
+LanguageDetectionMethod=uilanguage
 ; `x64os`, not `x64compatible`: the latter also matches Arm64 Windows 11,
 ; which runs x64 binaries under emulation. A text service is loaded in the
 ; host process's own architecture and no Arm64 service is built, so on an
@@ -91,6 +101,9 @@ WizardStyle=modern
 ; The DLL is unregistered and lock-checked by [Code] before files are copied;
 ; Inno's own "close applications" dialog would name every host process.
 CloseApplications=no
+; A log in %TEMP% on every run. It is what turned the first real install
+; failure into a one-line diagnosis: the screen showed only a step name,
+; while the log had `schtasks /Create -> 1` next to `regsvr32 -> 0`.
 SetupLogging=yes
 
 ; The macOS bundle's system localizations (App/*.lproj: Hanji, English,
@@ -129,7 +142,12 @@ Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#SettingsExe}"; AppUserMode
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#SettingsExe} /F"; Flags: runhidden waituntilterminated; RunOnceId: "StopSettings"
-Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden waituntilterminated runasoriginaluser; RunOnceId: "DeleteTask"
+; No runasoriginaluser: that flag is [Run]-only, and ISCC refuses the script
+; with it here. The uninstaller is elevated and the task sits in the root
+; folder, so an administrator's schtasks deletes it whoever registered it —
+; the install side needs ExecAsOriginalUser only because a task CREATED while
+; elevated would run as the wrong principal.
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteTask"
 Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\x86\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"; Check: FileExists(ExpandConstant('{app}\x86\{#ServiceDll}'))
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX64"
 

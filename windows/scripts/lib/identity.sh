@@ -37,6 +37,25 @@ windows_path() {
     cygpath -w "$1" 2>/dev/null || printf '%s' "$1"
 }
 
+# Runs a native Windows tool with MSYS argument conversion switched off.
+#
+# Git Bash rewrites any argument that looks like an absolute POSIX path before
+# a native binary sees it, and a Windows `/switch` is indistinguishable from a
+# one-component path: `dumpbin /nologo` reached dumpbin as
+# `C:\Program Files\Git\nologo`, which it opened as an input file and failed
+# on with LNK1181 — silently, because a `$(...)` under `set -e` prints nothing
+# (observed 2026-09-01, the first time this script ran on a real machine).
+#
+# Tools whose switches take a `-` need nothing and do not go through here.
+# This is for the ones whose switches are documented only with `/`.
+#
+# CONTRACT: conversion is off for EVERY argument, so a caller must hand this
+# any filesystem path in native Windows form (`windows_path`) — the conversion
+# it would otherwise have got is gone too.
+run_windows_tool() {
+    MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 "$@"
+}
+
 # What the updater pins a downloaded package against
 # (taigi-windows-update::verify): the VERSIONINFO ProductName and
 # ProductVersion, and the signer. Read back from the built files through
@@ -44,9 +63,14 @@ windows_path() {
 # block through Win32.
 
 # `ProductName<TAB>ProductVersion` of a PE file.
+#
+# Trimmed, because the two producers pad differently: rustc writes the string
+# and stops, Inno Setup patches its stub's placeholder in place and pads to
+# its width with spaces. The updater trims for the same reason
+# (`taigi-windows-update::verify::product_name_from_versioninfo`).
 version_info_of() {
     powershell.exe -NoProfile -NonInteractive -Command \
-        "\$info = (Get-Item -LiteralPath '$(windows_path "$1")').VersionInfo; Write-Output (\$info.ProductName + [char]9 + \$info.ProductVersion)" |
+        "\$info = (Get-Item -LiteralPath '$(windows_path "$1")').VersionInfo; Write-Output (\$info.ProductName.Trim() + [char]9 + \$info.ProductVersion.Trim())" |
         tr -d '\r'
 }
 

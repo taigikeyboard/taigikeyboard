@@ -47,6 +47,25 @@ pub enum Rejection {
     Unavailable,
 }
 
+/// The `ProductName` a VERSIONINFO string block holds, as text.
+///
+/// The block is a fixed-size buffer, so what `VerQueryValueW` hands back is
+/// the name plus whatever fills the rest. Two producers write the packages
+/// this crate compares, and they fill it differently: rustc emits exactly
+/// the name (NUL-terminated), while Inno Setup patches its stub's
+/// placeholder in place and pads to the placeholder's width with SPACES. So
+/// a downloaded installer reads `"Taigi Keyboard          "` where the
+/// running settings exe reads `"Taigi Keyboard"`, and comparing the two raw
+/// rejects every genuine package (observed 2026-09-01, the first time the
+/// installer was ever compiled).
+#[cfg(any(windows, test))]
+fn product_name_from_versioninfo(units: &[u16]) -> String {
+    String::from_utf16_lossy(units)
+        .trim_end_matches('\0')
+        .trim()
+        .to_owned()
+}
+
 /// The running executable's identity, or `None` when it carries no
 /// trusted signature — then nothing is ever installed in-app.
 #[cfg(windows)]
@@ -365,10 +384,41 @@ mod win {
             let units: Vec<u16> = (0..name_length as usize)
                 .map(|index| std::ptr::read_unaligned((name as *const u16).add(index)))
                 .collect();
-            let product_name = String::from_utf16_lossy(&units)
-                .trim_end_matches('\0')
-                .to_owned();
+            let product_name = super::product_name_from_versioninfo(&units);
             Ok((product_name, version))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn utf16(text: &str) -> Vec<u16> {
+        text.encode_utf16().collect()
+    }
+
+    #[test]
+    fn the_two_producers_of_a_package_name_read_as_the_same_name() {
+        // What rustc writes for the settings exe, and what Inno Setup writes
+        // for the installer: the same product, one NUL-terminated, one padded
+        // to its placeholder's width.
+        let from_rustc = product_name_from_versioninfo(&utf16("Taigi Keyboard\0"));
+        let from_inno = product_name_from_versioninfo(&utf16(
+            "Taigi Keyboard                                             \0\0",
+        ));
+        assert_eq!(from_rustc, "Taigi Keyboard");
+        assert_eq!(
+            from_rustc, from_inno,
+            "a padded name must not reject a genuine package"
+        );
+    }
+
+    #[test]
+    fn a_different_product_still_reads_as_a_different_name() {
+        assert_ne!(
+            product_name_from_versioninfo(&utf16("Taigi Keyboard\0")),
+            product_name_from_versioninfo(&utf16("Taigi Keyboard Setup    \0")),
+        );
     }
 }

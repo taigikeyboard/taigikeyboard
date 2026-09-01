@@ -74,7 +74,7 @@ echo "==> Verifying the installer is publishable"
 for tool in curl base64 python3 powershell.exe signtool; do
     command -v "$tool" > /dev/null || fail "$tool is not on PATH"
 done
-signtool verify /pa /q "$installer_path" > /dev/null ||
+run_windows_tool signtool verify /pa /q "$(windows_path "$installer_path")" > /dev/null ||
     fail "$INSTALLER_NAME carries no Authenticode signature Windows trusts — the in-app updater would refuse it"
 # What every installed copy checks the download against
 # (taigi-windows-update::verify): this product, this version, and — when the

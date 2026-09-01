@@ -115,3 +115,8 @@ ios/build/
 client_secret.json
 # === Windows input method (windows/ Cargo workspace) ===
 windows/target/
+# `.build/` holds the staged install layout and the installer that
+# windows/scripts/release-app.sh produces — the macOS side's `macos/.build/`,
+# and it must be ignored for the same reason: the script refuses a dirty tree,
+# so its own output would make the next release un-cuttable.
+windows/.build/

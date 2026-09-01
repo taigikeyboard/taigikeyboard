@@ -100,12 +100,16 @@ if [[ "$publish" == true ]]; then
     gh auth status > /dev/null 2>&1 || fail "gh is not authenticated — run 'gh auth login'"
 fi
 
+# signtool's switches exist only in `/` form, so it runs through
+# `run_windows_tool` — which means the file it signs must be handed over
+# already converted, since it was the MSYS conversion that used to do that.
 sign_file() {
-    local file="$1"
+    local file="$1" windows_file
     [[ "$skip_sign" == false ]] || return 0
-    signtool sign /fd SHA256 /td SHA256 /tr "$TIMESTAMP_URL" /sha1 "$SIGN_THUMBPRINT" "$file" > /dev/null ||
+    windows_file="$(windows_path "$file")"
+    run_windows_tool signtool sign /fd SHA256 /td SHA256 /tr "$TIMESTAMP_URL" /sha1 "$SIGN_THUMBPRINT" "$windows_file" > /dev/null ||
         fail "signing $file failed"
-    signtool verify /pa /q "$file" > /dev/null || fail "$file does not verify after signing"
+    run_windows_tool signtool verify /pa /q "$windows_file" > /dev/null || fail "$file does not verify after signing"
 }
 
 echo "==> Building the release binaries ($RELEASE_TARGET)"
@@ -123,7 +127,7 @@ echo "==> Reading back what the binaries declare"
 require_version_info "$TARGET_DIR/$SERVICE_DLL"
 require_version_info "$TARGET_DIR/$SETTINGS_EXE"
 for binary in "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE"; do
-    imports="$(dumpbin /nologo /dependents "$(windows_path "$binary")" | tr -d '\r')"
+    imports="$(dumpbin -nologo -dependents "$(windows_path "$binary")" | tr -d '\r')"
     if grep -iqE 'vcruntime[0-9]*(d)?\.dll|msvcp[0-9]*(d)?\.dll|msvcr[0-9]*(d)?\.dll|msvcrt\.dll|ucrtbase(d)?\.dll|api-ms-win-crt-' <<< "$imports"; then
         echo "$imports" >&2
         fail "$(basename "$binary") imports the C runtime — the release must be statically linked (+crt-static)"
@@ -131,7 +135,7 @@ for binary in "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE"; do
 done
 # The four entry points regsvr32 looks for: an export table that lost one
 # registers nothing, and the failure surfaces on the user's machine.
-exports="$(dumpbin /nologo /exports "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
+exports="$(dumpbin -nologo -exports "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
 for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
     grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
         fail "$SERVICE_DLL does not export $symbol"
@@ -139,7 +143,7 @@ done
 # W17: the text service is loaded into every host process and must never
 # pull WinUI / the Windows App Runtime in with it — only the settings exe
 # links them.
-dll_imports="$(dumpbin /nologo /dependents "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
+dll_imports="$(dumpbin -nologo -dependents "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
 if grep -iqE 'microsoft\.ui\.|windowsappruntime|microsoft\.internal\.frameworkudk' <<< "$dll_imports"; then
     echo "$dll_imports" >&2
     fail "$SERVICE_DLL imports WinUI / the Windows App Runtime — the text service must not (roadmap W17)"
@@ -199,7 +203,7 @@ sign_file "$STAGING_DIR/$SETTINGS_EXE"
 echo "==> Compiling the installer"
 STAGING_WIN="$(windows_path "$STAGING_DIR")"
 OUTPUT_WIN="$(windows_path "$DISTRIBUTION_DIR")"
-"$ISCC_BIN" /Q "/DAppVersion=$SHORT_VERSION" "/DDist=$STAGING_WIN" "/O$OUTPUT_WIN" "$(windows_path "$INSTALLER_SCRIPT")" ||
+"$ISCC_BIN" -Q "-DAppVersion=$SHORT_VERSION" "-DDist=$STAGING_WIN" "-O$OUTPUT_WIN" "$(windows_path "$INSTALLER_SCRIPT")" ||
     fail "iscc failed"
 BUILT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION-Setup.exe"
 [[ -f "$BUILT_EXE" ]] || fail "iscc produced no $BUILT_EXE"
