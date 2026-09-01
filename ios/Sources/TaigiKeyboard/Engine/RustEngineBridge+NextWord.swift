@@ -135,6 +135,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_UpdateLastSelectedWord()
@@ -145,7 +146,12 @@ public extension RustEngineBridge {
             method: .updateLastSelectedWord(payload),
             op: "nextwordUpdateLastSelectedWord",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -158,6 +164,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_WordSelected()
@@ -170,7 +177,12 @@ public extension RustEngineBridge {
             method: .wordSelected(payload),
             op: "nextwordWordSelected",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -180,6 +192,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_Backspace()
@@ -189,7 +202,12 @@ public extension RustEngineBridge {
             method: .backspace(payload),
             op: "nextwordBackspace",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -198,6 +216,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ContextTimeoutFired()
@@ -206,7 +225,12 @@ public extension RustEngineBridge {
             method: .contextTimeoutFired(payload),
             op: "nextwordContextTimeoutFired",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -215,6 +239,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ClearForNewComposing()
@@ -225,7 +250,12 @@ public extension RustEngineBridge {
             method: .clearForNewComposing_p(payload),
             op: "nextwordClearForNewComposing",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -234,6 +264,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ResetFull()
@@ -242,7 +273,12 @@ public extension RustEngineBridge {
             method: .resetFull(payload),
             op: "nextwordResetFull",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -258,6 +294,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_SetIsShowing()
@@ -266,7 +303,12 @@ public extension RustEngineBridge {
             method: .setIsShowing(payload),
             op: "nextwordSetIsShowing",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         )
     }
 
@@ -280,6 +322,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordFilterResult {
         var payload = Taigi_Engine_FilterPredictions()
@@ -300,7 +343,12 @@ public extension RustEngineBridge {
             method: .filterPredictions(payload),
             op: "nextwordFilter",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         ) else {
             return NextWordFilterResult(predictions: [], wasStale: false)
         }
@@ -326,6 +374,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> [String] {
         var payload = Taigi_Engine_BoostCandidates()
@@ -336,7 +385,12 @@ public extension RustEngineBridge {
             method: .boostCandidates(payload),
             op: "nextwordBoostCandidates",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         ) else {
             return words
         }
@@ -351,6 +405,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> NextWordStateSnapshot {
         let payload = Taigi_Engine_NextWordQueryState()
@@ -358,7 +413,12 @@ public extension RustEngineBridge {
             method: .queryState(payload),
             op: "nextwordQueryState",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+            config: nextwordConfig(
+                mode: mode,
+                translateSwapped: translateSwapped,
+                associationRecordingEnabled: associationRecordingEnabled,
+                candidateDisplayMode: candidateDisplayMode,
+            ),
         ) else {
             return NextWordStateSnapshot(lastSelectedWord: nil, isShowing: false, currentGeneration: 0)
         }
@@ -388,12 +448,17 @@ public extension RustEngineBridge {
     /// NextWord engine does not read them, but the field is required).
     // 中文: 為 NextWord engine 組 AppConfig。iOS bridge 一律 platform_id = .ios,
     // 中文: tone toggles 預設關閉(NextWord engine 不讀,但欄位必填)。
+    // `candidateDisplayMode` defaults to `.sideBySide` on the public entry points (test fixtures);
+    // production callers (`NextWordController`) MUST pass the live setting.
     private static func nextwordConfig(
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
     ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
+        // Proto field 9 — the nextword filter collapses same-roman predictions under 羅馬字.
+        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
         switch mode {
         case .poj: cfg.inputMode = "poj"
         case .tl: cfg.inputMode = "tl"

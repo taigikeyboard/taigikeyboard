@@ -98,6 +98,9 @@ struct TaigiKeyboardView: View {
             inputMode: p.settings.inputMode,
         )
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
+        // Read beside the swap on the same live path: both come from SharedSettings via the
+        // KeyboardContext extension, so a mode change re-renders exactly like a swap does.
+        let candidateDisplayMode = keyboardContext.candidateDisplayMode
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
         let theme = CandidateTheme.resolved(
             candidateTextSizeScale: p.settings.candidateTextSizeScale,
@@ -123,6 +126,7 @@ struct TaigiKeyboardView: View {
             suggestions: suggestions,
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
+            candidateDisplayMode: candidateDisplayMode,
             candidateStyle: candidateStyle,
             candidateTheme: theme,
             isTPSLayout: isTPSLayout,
@@ -202,6 +206,7 @@ struct TaigiKeyboardView: View {
         suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
         candidateStyle: CandidateView.Style,
         candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
@@ -212,6 +217,7 @@ struct TaigiKeyboardView: View {
             suggestions: suggestions,
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
+            candidateDisplayMode: candidateDisplayMode,
             candidateStyle: candidateStyle,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
@@ -223,7 +229,11 @@ struct TaigiKeyboardView: View {
             selectedCandidateIndex: selectedCandidateIndex,
             onSuggestionTap: onSuggestionTap,
             isTranslateSwapped: isTranslateSwapped,
+            candidateDisplayMode: candidateDisplayMode,
             onTranslateToggle: onTranslateToggle,
+            onCandidateDisplayModeChange: { [keyboardContext] mode in
+                keyboardContext.candidateDisplayMode = mode
+            },
             candidateStyle: candidateStyle,
             candidateTheme: candidateTheme,
             isTPSLayout: isTPSLayout,
@@ -257,6 +267,7 @@ struct TaigiKeyboardView: View {
         suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
         candidateStyle: CandidateView.Style,
         isTPSLayout: Bool,
         orMapsToER: Bool,
@@ -318,6 +329,7 @@ struct TaigiKeyboardView: View {
                     selectedCandidateIndex: selectedCandidateIndex,
                     onSuggestionTap: onSuggestionTap,
                     isTranslateSwapped: isTranslateSwapped,
+                    candidateDisplayMode: candidateDisplayMode,
                     onSettingsTap: {
                         let wasOpen = panels.isSettingsExpanded
                         panels.closeAll()

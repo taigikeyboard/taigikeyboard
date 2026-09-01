@@ -12,6 +12,7 @@ struct CandidateSuggestionsRow: View {
     let selectedCandidateIndex: Int
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
     let isTranslateSwapped: Bool
+    let candidateDisplayMode: CandidateDisplayMode
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let currentInputMode: InputMode
@@ -75,6 +76,7 @@ struct CandidateSuggestionsRow: View {
                         CandidateButtonView(
                             suggestion: suggestion,
                             isTranslateSwapped: isTranslateSwapped,
+                            candidateDisplayMode: candidateDisplayMode,
                             isTPSLayout: isTPSLayout,
                             orMapsToER: orMapsToER,
                             isSelected: selectedCandidateIndex == index,

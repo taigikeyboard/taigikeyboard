@@ -8,6 +8,7 @@ import SwiftUI
 struct CandidateButtonView: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
+    let candidateDisplayMode: CandidateDisplayMode
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
@@ -26,6 +27,7 @@ struct CandidateButtonView: View {
             isTranslateSwapped: isTranslateSwapped,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
+            candidateDisplayMode: candidateDisplayMode,
         )
     }
 
@@ -34,6 +36,7 @@ struct CandidateButtonView: View {
             for: suggestion,
             isTranslateSwapped: isTranslateSwapped,
             isTPSLayout: isTPSLayout,
+            candidateDisplayMode: candidateDisplayMode,
         )
     }
 

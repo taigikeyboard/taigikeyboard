@@ -17,6 +17,8 @@ struct CandidateView: View {
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
     /// 是否交換漢字與羅馬字顯示位置
     let isTranslateSwapped: Bool
+    /// 候選詞顯示模式（漢羅並排 / 羅馬字）
+    let candidateDisplayMode: CandidateDisplayMode
     /// 點擊設定按鈕的回調
     let onSettingsTap: () -> Void
     /// 點擊佈局選擇按鈕的回調
@@ -74,6 +76,7 @@ struct CandidateView: View {
                     selectedCandidateIndex: selectedCandidateIndex,
                     onSuggestionTap: onSuggestionTap,
                     isTranslateSwapped: isTranslateSwapped,
+                    candidateDisplayMode: candidateDisplayMode,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,
                     currentInputMode: currentInputMode,

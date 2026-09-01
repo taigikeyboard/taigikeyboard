@@ -1,5 +1,5 @@
 // 中文: 候選詞 cell 的純函式工具 — 顯示文字 / commit 文字 / 寬度量測都集中在這裡。
-// 中文: TPS 模式與 isTranslateSwapped 由呼叫端傳入,不直接讀 SharedSettings,方便測試。
+// 中文: TPS 模式、isTranslateSwapped 與 candidateDisplayMode 由呼叫端傳入,不直接讀 SharedSettings,方便測試。
 
 import KeyboardKit
 import SwiftUI
@@ -19,19 +19,27 @@ enum CandidateCellHelper {
 
     /// 計算顯示的主標題
     ///
-    /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）
+    /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）— TPS 不理會 candidateDisplayMode
+    /// - 羅馬字模式：主標題永遠是 engine `roman`（`text`）
     /// - 一般模式：`isTranslateSwapped` 決定羅馬字 / 漢字順序
+    // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
+    // TPS → romanOnly → swapped → default.
     static func displayTitle(
         for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
     ) -> String {
         if isTPSLayout {
             if let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle
             }
             return tpsFallback(for: suggestion, orMapsToER: orMapsToER)
+        }
+
+        if candidateDisplayMode == .romanOnly {
+            return suggestion.text
         }
 
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
@@ -44,13 +52,15 @@ enum CandidateCellHelper {
     /// 計算顯示的副標題
     ///
     /// - TPS 模式：無副標題
+    /// - 羅馬字模式：無副標題（漢字不顯示）
     /// - 一般模式：`isTranslateSwapped` 決定副標題是羅馬字或漢字
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
         isTPSLayout: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
     ) -> String? {
-        if isTPSLayout {
+        if isTPSLayout || candidateDisplayMode == .romanOnly {
             return nil
         }
         return isTranslateSwapped ? suggestion.text : suggestion.subtitle

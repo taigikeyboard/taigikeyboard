@@ -167,10 +167,23 @@ public enum RustEngineBridge {
     /// envelopes on top of it. Continuous-rendering callers wrap this
     /// with `continuousAppConfig` (private to `+Composing.swift`) to
     /// add the §10.2 word-boundary spacing flags.
+    ///
+    /// `candidateDisplayMode` rides the base config as proto field 9. The
+    /// engine reads it in exactly two places — continuous `FetchAtPos`
+    /// (same-roman display collapse) and the nextword filter — so the
+    /// continuous + nextword families MUST pass the live setting; the
+    /// default `.sideBySide` (= legacy behaviour) covers the phonetics /
+    /// case / plain-composing requests that never read the field.
     // 中文: 跨切片共用的 AppConfig builder。internal 因 +Phonetics / +Composing /
     // 中文: +CaseTransform 都會在其上組裝 envelope。連續輸入渲染用 continuousAppConfig 包裹。
-    static func appConfig(mode: InputMode, toggles: ToneToggles) -> Taigi_Engine_AppConfig {
+    // 中文: candidateDisplayMode 只有 FetchAtPos 與 nextword filter 會讀;其餘請求走預設 sideBySide。
+    static func appConfig(
+        mode: InputMode,
+        toggles: ToneToggles,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
+    ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
+        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
         switch mode {
         case .poj: cfg.inputMode = "poj"
         case .tl: cfg.inputMode = "tl"
@@ -180,5 +193,17 @@ public enum RustEngineBridge {
         cfg.ooDoubletapEnabled = toggles.isDoubleTapOOEnabled
         cfg.nnDoubletapEnabled = toggles.isDoubleTapNNEnabled
         return cfg
+    }
+}
+
+// Shared by `appConfig` and `nextwordConfig` (`+NextWord.swift`) — one mapping, never two.
+extension CandidateDisplayMode {
+    /// Explicit proto enum (never `.unspecified`) so the engine's single
+    /// normalization helper sees the platform's actual choice.
+    var engineValue: Taigi_Engine_CandidateDisplayMode {
+        switch self {
+        case .sideBySide: .sideBySide
+        case .romanOnly: .romanOnly
+        }
     }
 }

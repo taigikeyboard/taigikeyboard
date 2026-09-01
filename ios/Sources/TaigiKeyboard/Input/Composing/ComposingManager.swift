@@ -307,6 +307,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: generation,
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
@@ -345,6 +346,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: generation,
             frequencyEntries: entries,
             nowMs: nowMs,
@@ -529,6 +531,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: currentGeneration,
         )
         // Inspect transition BEFORE dispatching effects so we can return an
@@ -616,6 +619,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: currentGeneration,
         ))
     }
@@ -641,6 +645,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: currentGeneration,
         ))
     }
@@ -659,6 +664,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: currentGeneration,
         ))
     }
@@ -674,6 +680,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             toggles: settings.toneToggles,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: currentGeneration,
         ))
     }
