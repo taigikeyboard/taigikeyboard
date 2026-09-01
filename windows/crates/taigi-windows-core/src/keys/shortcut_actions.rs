@@ -29,13 +29,16 @@ pub enum ShortcutAction {
     OpenLastSettingsPane,
     ToggleRomanization,
     ToggleTranslateSwapped,
+    /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
+    CycleCandidateDisplayMode,
 }
 
 impl ShortcutAction {
-    pub const ALL: [ShortcutAction; 3] = [
+    pub const ALL: [ShortcutAction; 4] = [
         Self::OpenLastSettingsPane,
         Self::ToggleRomanization,
         Self::ToggleTranslateSwapped,
+        Self::CycleCandidateDisplayMode,
     ];
 
     pub fn raw(self) -> &'static str {
@@ -43,6 +46,7 @@ impl ShortcutAction {
             Self::OpenLastSettingsPane => "openLastSettingsPane",
             Self::ToggleRomanization => "toggleRomanization",
             Self::ToggleTranslateSwapped => "toggleTranslateSwapped",
+            Self::CycleCandidateDisplayMode => "cycleCandidateDisplayMode",
         }
     }
 
@@ -59,10 +63,11 @@ impl ShortcutAction {
     /// Ctrl+Alt is the Mac's ⌃⌘ under this platform's modifier mapping
     /// (`windows-guidelines.md`: ⌘→Ctrl, ⌃→Alt), so the two desktops keep one
     /// roster: ⌃⌘S → Ctrl+Alt+S for 設定, ⌃⌘C → Ctrl+Alt+C for the
-    /// romanization switch. The letters are the Mac's reasons, unchanged — S
-    /// for Settings / siat-tīng / settei, and C for the bottom row a key
-    /// pressed all day should sit on (`ShortcutActions.swift:31-52`). USER
-    /// 2026-08-31: the chord logic has to match macOS's.
+    /// romanization switch, ⌃⌘H → Ctrl+Alt+H for the display-mode cycle. The
+    /// letters are the Mac's reasons, unchanged — S for Settings / siat-tīng /
+    /// settei, C for the bottom row a key pressed all day should sit on
+    /// (`ShortcutActions.swift:31-52`), and H for Hàn-Lô / 漢羅, the thing the
+    /// cycle switches. USER 2026-08-31: the chord logic has to match macOS's.
     ///
     /// Ctrl+Shift is NOT that family and its S and C are both taken —
     /// Ctrl+Shift+S is 另存新檔 in Word / Excel / LibreOffice / GIMP / Inkscape
@@ -84,6 +89,7 @@ impl ShortcutAction {
             Self::OpenLastSettingsPane => ("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleRomanization => ("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleTranslateSwapped => ("`", KeyModifiers::NONE),
+            Self::CycleCandidateDisplayMode => ("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
         };
         ComposingKeyChord::make(Some(key), modifiers).unwrap_or_else(|rejection| {
             panic!("default chord for {self:?} is not bindable: {rejection:?}")
@@ -101,6 +107,7 @@ impl ShortcutAction {
             Self::OpenLastSettingsPane => StringKey::DesktopShortcutOpenSettings,
             Self::ToggleRomanization => StringKey::DesktopShortcutToggleRomanization,
             Self::ToggleTranslateSwapped => StringKey::DesktopShortcutToggleTranslateSwapped,
+            Self::CycleCandidateDisplayMode => StringKey::DesktopShortcutCycleCandidateDisplayMode,
         }
     }
 
@@ -341,7 +348,7 @@ mod tests {
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(names.len(), 3);
+        assert_eq!(names.len(), 4);
         assert_eq!(
             ShortcutAction::OpenLastSettingsPane.default_chord(),
             chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
@@ -354,13 +361,17 @@ mod tests {
             ShortcutAction::ToggleTranslateSwapped.default_chord(),
             chord("`", KeyModifiers::NONE)
         );
+        assert_eq!(
+            ShortcutAction::CycleCandidateDisplayMode.default_chord(),
+            chord("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
+        );
         let mut defaults: Vec<_> = ShortcutAction::ALL
             .iter()
             .map(|a| a.default_chord())
             .collect();
         defaults.sort();
         defaults.dedup();
-        assert_eq!(defaults.len(), 3, "the defaults are all different");
+        assert_eq!(defaults.len(), 4, "the defaults are all different");
         assert_eq!(
             ShortcutAction::ALL
                 .iter()
@@ -396,6 +407,30 @@ mod tests {
                 "{action:?} collides with a composing default"
             );
         }
+    }
+
+    #[test]
+    fn roster_order_is_the_pane_order() {
+        // `ALL` is the recorder rows top to bottom (`pages/shortcuts.rs`)
+        // and the Mac's `allCases`; the display-mode cycle is the fourth row.
+        assert_eq!(
+            ShortcutAction::ALL,
+            [
+                ShortcutAction::OpenLastSettingsPane,
+                ShortcutAction::ToggleRomanization,
+                ShortcutAction::ToggleTranslateSwapped,
+                ShortcutAction::CycleCandidateDisplayMode,
+            ]
+        );
+        assert_eq!(
+            ShortcutAction::CycleCandidateDisplayMode.raw(),
+            "cycleCandidateDisplayMode"
+        );
+        assert_eq!(
+            ShortcutAction::CycleCandidateDisplayMode.label_key(),
+            StringKey::DesktopShortcutCycleCandidateDisplayMode
+        );
+        assert!(!ShortcutAction::CycleCandidateDisplayMode.opens_settings());
     }
 
     #[test]

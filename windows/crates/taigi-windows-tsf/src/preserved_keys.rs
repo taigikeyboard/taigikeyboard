@@ -10,7 +10,10 @@
 
 // 中文: 全域快捷鍵 = TSF preserved key,從設定的 chord 註冊;裸鍵 ` 不註冊,由 key sink 比對。
 
-use crate::guids::{GUID_PRESERVED_KEY_ROMANIZATION, GUID_PRESERVED_KEY_SETTINGS};
+use crate::guids::{
+    GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE, GUID_PRESERVED_KEY_ROMANIZATION,
+    GUID_PRESERVED_KEY_SETTINGS,
+};
 use crate::wide::to_wide_nul;
 use taigi_windows_core::keys::{ComposingKeyChord, ShortcutAction};
 use taigi_windows_core::settings::SettingsDocument;
@@ -21,7 +24,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::TextServices::{ITfKeystrokeMgr, TF_PRESERVEDKEY};
 
 /// The actions that ARE preserved keys, with their GUIDs.
-const PRESERVED: [(ShortcutAction, GUID); 2] = [
+const PRESERVED: [(ShortcutAction, GUID); 3] = [
     (
         ShortcutAction::OpenLastSettingsPane,
         GUID_PRESERVED_KEY_SETTINGS,
@@ -29,6 +32,10 @@ const PRESERVED: [(ShortcutAction, GUID); 2] = [
     (
         ShortcutAction::ToggleRomanization,
         GUID_PRESERVED_KEY_ROMANIZATION,
+    ),
+    (
+        ShortcutAction::CycleCandidateDisplayMode,
+        GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE,
     ),
 ];
 
@@ -143,5 +150,29 @@ impl PreservedKeys {
             unsafe { keystroke_mgr.UnpreserveKey(&guid, &key).ok() };
         }
         self.revision = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_preserved_key_has_its_own_guid_and_names_its_action() {
+        // Two entries on one GUID would make `OnPreservedKey` fire the wrong
+        // action for one of them; the roster is every global action but the
+        // bare backtick (key-sink only).
+        for (index, (action, guid)) in PRESERVED.iter().enumerate() {
+            assert_eq!(action_for_guid(guid), Some(*action));
+            for (other_action, other) in &PRESERVED[index + 1..] {
+                assert_ne!(guid, other, "{action:?} and {other_action:?} share a GUID");
+            }
+        }
+        let preserved: Vec<_> = PRESERVED.iter().map(|(action, _)| *action).collect();
+        let expected: Vec<_> = ShortcutAction::ALL
+            .into_iter()
+            .filter(|action| *action != ShortcutAction::ToggleTranslateSwapped)
+            .collect();
+        assert_eq!(preserved, expected);
     }
 }
