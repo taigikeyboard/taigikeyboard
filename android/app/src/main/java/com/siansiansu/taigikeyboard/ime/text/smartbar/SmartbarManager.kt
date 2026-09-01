@@ -84,8 +84,6 @@ class SmartbarManager(
     // overlay / click / layout reader goes through these, never the stored prefs.
     private var cachedIsTranslateSwapped: Boolean = false
     private var cachedOutputBothScripts: Boolean = false
-    private var cachedCandidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE
-
     // Compose-side render state. Subsystems that read `currentSuggestions` /
     // `hasCandidates` continue to do so directly; this flow drives only the
     // candidate strip + English 3-col rendering.
@@ -385,9 +383,7 @@ class SmartbarManager(
             // EngineSettingsProvider.current — no manual refresh needed.
         }
 
-        overlayView.onCandidateDisplayModeChanged = {
-            onCandidateDisplayModeChanged()
-        }
+        overlayView.onCandidateDisplayModeChanged = ::onCandidateDisplayModeChanged
 
         overlayView.onOpenApp = {
             val context = overlayView.context
@@ -526,8 +522,6 @@ class SmartbarManager(
 
     fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
 
-    fun getCachedCandidateDisplayMode(): CandidateDisplayMode = cachedCandidateDisplayMode
-
     /**
      * 文/A key + overlay control button. Inert under ROMAN_ONLY (the key
      * stays visible, its active state reads the derived `false`); the
@@ -555,13 +549,12 @@ class SmartbarManager(
         // composition is fetched again and the repaint is overwritten.
         textInputManager.refetchCandidatesForDisplayModeChange()
 
-        logger.debug(TAG) { "[DISPLAY_MODE] candidateDisplayMode=$cachedCandidateDisplayMode" }
+        logger.debug(TAG) { "[DISPLAY_MODE] candidateDisplayMode=${prefs.candidateDisplayMode}" }
     }
 
     private fun refreshScriptFlagCache() {
         cachedIsTranslateSwapped = prefs.isTranslateSwapped
         cachedOutputBothScripts = prefs.isOutputBothScripts
-        cachedCandidateDisplayMode = prefs.candidateDisplayMode
     }
 
     private fun refreshSurfacesForScriptFlags() {
@@ -704,7 +697,7 @@ class SmartbarManager(
         val gradientTop = colorSettings.gradientStops()?.firstOrNull()
         return CandidateDisplayParams(
             isTranslateSwapped = cachedIsTranslateSwapped,
-            candidateDisplayMode = cachedCandidateDisplayMode,
+            candidateDisplayMode = prefs.candidateDisplayMode,
             fontType = prefs.fontType,
             layoutType = prefs.keyboardLayoutType,
             orMapsToER = prefs.tpsOrMapsToER,

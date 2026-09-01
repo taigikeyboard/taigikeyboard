@@ -62,7 +62,7 @@ data class CandidateCellText(
  * ROMAN_ONLY so TPS ignores the setting; swap decides the lead otherwise.
  * `displayRoman` is already TPS-converted by the caller when relevant.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/CandidateCellHelper.swift displayTitle / displaySubtitle.
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle.
 // Drift causes silent divergence (one platform shows a subtitle under roman-only).
 fun candidateCellText(
     hanzi: String?,

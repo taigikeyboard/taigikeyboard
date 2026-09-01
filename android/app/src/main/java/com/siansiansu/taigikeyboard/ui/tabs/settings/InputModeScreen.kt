@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ui.components.SelectionListScreen
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -59,74 +60,4 @@ fun InputModeScreen(
         onSelected = onModeSelected,
         onBack = onBack,
     )
-}
-
-// Single-choice sub-screen: one card of label rows, checkmark on the selected value.
-// Shared by the input-mode and candidate-display-mode pickers.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun <T> SelectionListScreen(
-    title: String,
-    options: List<Pair<T, StringKey>>,
-    selected: T,
-    onSelected: (T) -> Unit,
-    onBack: () -> Unit,
-) {
-    BackHandler(onBack = onBack)
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = L10n.commonBack,
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-        ) {
-            SettingsCard {
-                options.forEachIndexed { index, (value, labelKey) ->
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .clickable { onSelected(value) }
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringRes(labelKey),
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        if (selected == value) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(AppStyle.selectionIconSize),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                    if (index < options.lastIndex) {
-                        SettingsDivider()
-                    }
-                }
-            }
-        }
-    }
 }

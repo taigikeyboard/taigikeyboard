@@ -123,7 +123,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -138,7 +137,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -152,7 +150,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -166,7 +163,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -195,7 +191,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -324,7 +319,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         cachedIsShowing = synced.isShowing
@@ -380,7 +374,6 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         applyDecideResult(result)

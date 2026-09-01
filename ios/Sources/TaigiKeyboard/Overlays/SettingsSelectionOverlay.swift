@@ -163,10 +163,7 @@ struct SettingsSelectionOverlay: View {
     // 中文: 候選詞顯示模式列 — 與 toggle 同排版,右側為兩段式 segmented control。
     private var candidateDisplayModeRow: some View {
         HStack(spacing: 8) {
-            Image(latinSystemName: SettingsIcons.candidateDisplayMode)
-                .font(.system(size: 16))
-                .frame(width: 20)
-            Text(lang.string(.settingsCandidateDisplayMode))
+            settingsRowLabel(lang.string(.settingsCandidateDisplayMode), icon: SettingsIcons.candidateDisplayMode)
             Spacer()
             Picker(lang.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
                 ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
@@ -186,6 +183,21 @@ struct SettingsSelectionOverlay: View {
         }
     }
 
+    /// Icon + label leading block shared by the toggles and the segmented row.
+    @ViewBuilder
+    private func settingsRowLabel(_ label: String, icon: String?) -> some View {
+        if let icon {
+            HStack(spacing: 8) {
+                Image(latinSystemName: icon)
+                    .font(.system(size: 16))
+                    .frame(width: 20)
+                Text(label)
+            }
+        } else {
+            Text(label)
+        }
+    }
+
     private func settingsToggle(
         _ label: String,
         isOn: Binding<Bool>,
@@ -193,16 +205,7 @@ struct SettingsSelectionOverlay: View {
         onChange: @escaping (Bool) -> Void,
     ) -> some View {
         Toggle(isOn: isOn) {
-            if let icon {
-                HStack(spacing: 8) {
-                    Image(latinSystemName: icon)
-                        .font(.system(size: 16))
-                        .frame(width: 20)
-                    Text(label)
-                }
-            } else {
-                Text(label)
-            }
+            settingsRowLabel(label, icon: icon)
         }
         .font(KeyboardFonts.globalFont(size: 15))
         .foregroundColor(theme.primaryTextColor)

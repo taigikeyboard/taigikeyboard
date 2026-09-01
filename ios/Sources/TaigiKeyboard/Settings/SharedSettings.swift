@@ -759,13 +759,18 @@ extension SharedSettings: EngineSettings {
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/PrefHelper.kt isTranslateSwapped (derived).
     // Drift causes silent divergence (羅馬字 mode still swapping scripts on one platform).
     var isTranslateSwapped: Bool {
-        storedIsTranslateSwapped && candidateDisplayMode != .romanOnly
+        storedIsTranslateSwapped && isTwoScriptDisplay
     }
 
     /// Effective 括號標註: stored flag AND not `.romanOnly` (same rule as above).
     // 中文: 推導值 = stored && 非羅馬字模式。唯讀;寫入走 storedIsOutputBothScripts。
     var isOutputBothScripts: Bool {
-        storedIsOutputBothScripts && candidateDisplayMode != .romanOnly
+        storedIsOutputBothScripts && isTwoScriptDisplay
+    }
+
+    /// The one place the picker gates the script pair.
+    private var isTwoScriptDisplay: Bool {
+        candidateDisplayMode != .romanOnly
     }
 }
 

@@ -646,7 +646,8 @@ public extension RustEngineBridge {
         outputBothScripts: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> Taigi_Engine_AppConfig {
-        var cfg = appConfig(mode: mode, toggles: toggles, candidateDisplayMode: candidateDisplayMode)
+        var cfg = appConfig(mode: mode, toggles: toggles)
+        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
         cfg.isTranslateSwapped = effectiveSwapped
         cfg.outputBothScripts = outputBothScripts
         return cfg

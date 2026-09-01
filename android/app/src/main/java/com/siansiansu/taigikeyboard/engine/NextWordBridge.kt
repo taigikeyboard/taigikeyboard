@@ -213,11 +213,7 @@ internal object NextWordBridge {
             generation = generation,
             // Field 9 rides only the filter request — the sole nextword reader
             // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY).
-            config =
-                nextwordConfig(mode, translateSwapped, associationRecordingEnabled)
-                    .toBuilder()
-                    .setCandidateDisplayMode(candidateDisplayMode.toProto())
-                    .build(),
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled, candidateDisplayMode),
         ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
         if (!resp.hasFilter()) {
             RustEngineBridge.recordFailure("nextwordFilter", "missing filter result")
@@ -302,6 +298,7 @@ internal object NextWordBridge {
         mode: InputMode,
         translateSwapped: Boolean,
         associationRecordingEnabled: Boolean,
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     ): AppConfig =
         AppConfig
             .newBuilder()
@@ -313,6 +310,7 @@ internal object NextWordBridge {
                 },
             ).setOoDoubletapEnabled(false)
             .setNnDoubletapEnabled(false)
+            .setCandidateDisplayMode(candidateDisplayMode.toProto())
             .setIsTranslateSwapped(translateSwapped)
             .setIsAssociationRecordingEnabled(associationRecordingEnabled)
             .setPlatformId(Platform.PLATFORM_ANDROID)

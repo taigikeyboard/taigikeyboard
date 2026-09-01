@@ -661,10 +661,8 @@ impl TextService_Impl {
                 // Roman-only cells have no hanji to lead with: the key is
                 // inert — no write, no flash — and the stored swap waits for
                 // side-by-side to come back (Q11, every platform).
-                let display_mode: CandidateDisplayMode = runtime
-                    .settings
-                    .current()
-                    .choice(&keys::CANDIDATE_DISPLAY_MODE);
+                // Read off the same snapshot every other consumer uses.
+                let display_mode = runtime.settings.current().engine_settings().candidate_display_mode;
                 if display_mode == CandidateDisplayMode::RomanOnly {
                     return;
                 }

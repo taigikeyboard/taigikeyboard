@@ -292,10 +292,22 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 // 中文:   TPS 走 dedupe_display_hanji_for_tps,因 TPS UI 只顯示漢字,純羅馬字差異(灣/uan vs 灣/uân
 // 中文:   同 tps:ㄨㄢ)無法被 pre-render (roman,hanji,span) 去重攔下。
 fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
-    use std::collections::HashSet;
-    let mut seen: HashSet<(String, Option<String>, ConsumedSpan)> =
-        HashSet::with_capacity(candidates.len());
-    candidates.retain(|c| seen.insert((c.roman.clone(), c.hanji.clone(), c.consumed_span)));
+    retain_first_by_key(candidates, |c| {
+        Some((c.roman.clone(), c.hanji.clone(), c.consumed_span))
+    });
+}
+
+/// Keeps the first candidate seen per `key`; a candidate whose key is `None`
+/// is always kept. The one body behind every post-sort "first-seen wins"
+/// pass (rendered / TPS-hanji / 羅馬字-roman), so their survivor rule cannot
+/// drift.
+// 中文: 排序後「first-seen 留下」的共用本體;key 為 None 者一律保留。
+pub(crate) fn retain_first_by_key<K: std::hash::Hash + Eq>(
+    candidates: &mut Vec<RawCandidate>,
+    key: impl Fn(&RawCandidate) -> Option<K>,
+) {
+    let mut seen = std::collections::HashSet::with_capacity(candidates.len());
+    candidates.retain(|c| key(c).is_none_or(|k| seen.insert(k)));
 }
 
 /// Two romanizations are the **same reading** when they differ only in
@@ -358,11 +370,11 @@ fn roman_reading_eq(a: &str, b: &str) -> bool {
 // 中文:   保留 span 讓「同 hanji 不同 span」(partial vs full-buffer)合法候選不被誤併;
 // 中文:   hanji 為 None 或空字串者一律保留(顯示為 TPS/羅馬字,以 roman 區隔)。
 fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
-    use std::collections::HashSet;
-    let mut seen: HashSet<(String, ConsumedSpan)> = HashSet::with_capacity(candidates.len());
-    candidates.retain(|c| match c.hanji.as_deref() {
-        Some(h) if !h.is_empty() => seen.insert((h.to_owned(), c.consumed_span)),
-        _ => true,
+    retain_first_by_key(candidates, |c| {
+        c.hanji
+            .as_deref()
+            .filter(|h| !h.is_empty())
+            .map(|h| (h.to_owned(), c.consumed_span))
     });
 }
 

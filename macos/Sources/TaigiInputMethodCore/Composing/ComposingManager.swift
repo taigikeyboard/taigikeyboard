@@ -336,6 +336,14 @@ final class ComposingManager {
         CandidateCellContent.cell(for: candidate, settings: settingsProvider.current)
     }
 
+    /// `cellContent(for:)` over a whole list under ONE settings snapshot — the
+    /// snapshot is a few dozen defaults reads, and a bar is rebuilt per
+    /// keystroke.
+    func cellContents(for candidates: [ContinuousCandidate]) -> [CandidateCellContent] {
+        let settings = settingsProvider.current
+        return candidates.map { CandidateCellContent.cell(for: $0, settings: settings) }
+    }
+
     /// Commits `candidate`, which must come from the `fetchCandidates()` call
     /// that produced the list the user is looking at.
     ///

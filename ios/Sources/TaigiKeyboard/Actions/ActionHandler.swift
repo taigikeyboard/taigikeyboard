@@ -58,16 +58,6 @@ public class ActionHandler: StandardKeyboardActionHandler {
         }
     }
 
-    /// Re-runs the autocomplete pass for the composition as it stands. The
-    /// 候選詞顯示 picker is not a pure cell-rendering switch: the engine
-    /// collapses same-roman rows under 羅馬字 (§44), so the list itself
-    /// changes and a repaint of the old suggestions would keep the
-    /// duplicates on screen until the next keystroke.
-    // 中文: 候選詞顯示切換後重跑 autocomplete — 引擎在羅馬字會收合同音列,只重畫舊 list 不夠。
-    func refetchCandidatesForDisplayModeChange() {
-        keyboardController?.performAutocomplete()
-    }
-
     // MARK: - KeyboardKit Override
 
     // 中文: KeyboardKit 手勢覆寫入口。先處理 spacebar 拖曳手勢結束 → 過濾 release / repeatPress → 派送給 Taigi handler,

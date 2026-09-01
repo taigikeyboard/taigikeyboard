@@ -160,7 +160,7 @@ class CandidateOverlayView : FrameLayout {
 
         suggestionsState.value = suggestions
         translateSwappedState.value = smartbarManager.getCachedIsTranslateSwapped()
-        candidateDisplayModeState.value = smartbarManager.getCachedCandidateDisplayMode()
+        candidateDisplayModeState.value = prefs.candidateDisplayMode
         backgroundGradientState.value = backgroundGradient
         candidateTextColorState.value = candidateTextColor
 
@@ -203,7 +203,7 @@ class CandidateOverlayView : FrameLayout {
         }
         suggestionsState.value = suggestions
         translateSwappedState.value = smartbarManager.getCachedIsTranslateSwapped()
-        candidateDisplayModeState.value = smartbarManager.getCachedCandidateDisplayMode()
+        candidateDisplayModeState.value = prefs.candidateDisplayMode
     }
 
     fun isVisible(): Boolean = isShowing

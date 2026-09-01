@@ -27,7 +27,7 @@ impl engine::AppConfig {
     /// `SIDE_BY_SIDE` all answer `false` (legacy behaviour), so the two
     /// engine readers can never drift on the fallback.
     pub fn is_roman_only_display(&self) -> bool {
-        engine::CandidateDisplayMode::try_from(self.candidate_display_mode)
-            .is_ok_and(|mode| mode == engine::CandidateDisplayMode::RomanOnly)
+        // prost's accessor already maps an unknown value to `Unspecified`.
+        self.candidate_display_mode() == engine::CandidateDisplayMode::RomanOnly
     }
 }

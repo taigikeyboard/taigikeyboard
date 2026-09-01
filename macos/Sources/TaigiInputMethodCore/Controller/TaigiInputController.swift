@@ -124,16 +124,9 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private weak var lastClient: (any IMKTextInput)?
 
-    /// Re-renders the open bar when the 外觀 pane changes what a cell shows.
-    ///
-    /// The pane writes `UserDefaults` straight through `@AppStorage`, so unlike
-    /// the swap shortcut nothing here runs the write — this is how the write
-    /// reaches the bar already on screen; the next bar reads the setting live
-    /// like every other. Held per session and armed at activation, the same
-    /// lifetime as the shortcut target: the re-render already refuses a
-    /// session that does not own the engine, so an observation that outlives
-    /// its focus is harmless, but dropping it at deactivation keeps one
-    /// observer per live session rather than one per session ever activated.
+    /// KVO on the 候選詞顯示 key so an open bar is fetched again when the 外觀
+    /// pane (or `defaults write`) changes it; armed in `activateServer`,
+    /// released in `endSession` — the shortcut target's lifetime.
     @MainActor
     private var displayModeObservation: AnyObject?
 
@@ -177,15 +170,13 @@ public final class TaigiInputController: IMKInputController {
                 controller, for: controller.sessionToken,
             )
             // Key-scoped KVO through the store rather than a notification, so
-            // a `defaults write` from outside the process re-renders too.
-            // Fires on whichever thread wrote the value and carries none —
-            // hop, then re-read (`SettingsStore.observeChanges`).
-            let observed = WeakControllerBox(controller)
+            // a `defaults write` from outside the process reaches the bar too.
             controller.displayModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.candidateDisplayMode,
-            ) {
-                Task { @MainActor in observed.controller?.refetchCandidatesForDisplayModeChange() }
-            }
+                onMainActor: { [weak controller] in
+                    controller?.refetchCandidatesForDisplayModeChange()
+                },
+            )
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
             // decide here.
             // Takes the bar down before this session starts typing, and takes
@@ -446,7 +437,7 @@ public final class TaigiInputController: IMKInputController {
             // (USER 2026-09-01, Q11): there is no Hanji on screen for the
             // swap to lead with, and flipping the STORED value blind would
             // change what the user gets back on returning to side-by-side.
-            guard settings.candidateDisplayMode != .romanOnly else { return }
+            guard settings.current.candidateDisplayMode != .romanOnly else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing
@@ -471,7 +462,7 @@ public final class TaigiInputController: IMKInputController {
               let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
         else { return }
         candidatePresenter.updateCells(
-            fetchedCandidates.map(manager.cellContent(for:)),
+            manager.cellContents(for: fetchedCandidates),
             ownedBy: sessionToken,
         )
     }
@@ -746,7 +737,7 @@ public final class TaigiInputController: IMKInputController {
 
         candidatePresenter.show(
             CandidateWindowContent(
-                cells: fetchedCandidates.map(manager.cellContent(for:)),
+                cells: manager.cellContents(for: fetchedCandidates),
                 // The set the user chose — the only keys that pick. A rebind
                 // cannot strand a stale hint: reaching the shortcut pane moves
                 // focus off the client, and `finishComposition` takes the bar
@@ -781,10 +772,7 @@ public final class TaigiInputController: IMKInputController {
             return
         }
         fetchedCandidates = fetched
-        candidatePresenter.updateCells(
-            fetched.map(manager.cellContent(for:)),
-            ownedBy: sessionToken,
-        )
+        rerenderCandidatesForDisplayChange()
     }
 
     @MainActor
@@ -1045,16 +1033,3 @@ public final class TaigiInputController: IMKInputController {
 /// The method lives in the class body (it needs the private candidate state);
 /// the conformance is stated here where it reads as the contract it is.
 extension TaigiInputController: ShortcutActionTarget {}
-
-/// The one thing a settings observation may capture: the callback is
-/// `@Sendable` and fires on whichever thread wrote the value, while the
-/// controller is main-actor state. The box crosses the hop; the controller is
-/// touched only after it. `@unchecked` because `weak var` cannot be proven
-/// `Sendable` by the compiler — the same reasoning as `SettingsStore`.
-private final class WeakControllerBox: @unchecked Sendable {
-    weak var controller: TaigiInputController?
-
-    init(_ controller: TaigiInputController) {
-        self.controller = controller
-    }
-}

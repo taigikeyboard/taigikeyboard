@@ -631,6 +631,18 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         DefaultsKeyObserver(userDefaults: userDefaults, key: key.name, onChange: onChange)
     }
 
+    /// `observeChanges(of:onChange:)` for a main-actor consumer. The hop is
+    /// made here, so the caller's closure can capture main-actor state (a
+    /// controller, a view) directly — a `@MainActor` closure is `Sendable` by
+    /// its isolation, where a plain `[weak self]` in the `@Sendable` form is
+    /// not once `self` is a non-`Sendable` class.
+    func observeChanges(
+        of key: SettingsKey<some Any>,
+        onMainActor onChange: @escaping @MainActor () -> Void,
+    ) -> AnyObject {
+        observeChanges(of: key) { Task { @MainActor in onChange() } }
+    }
+
     /// `object(forKey:)` rather than `bool(forKey:)`: the latter answers `false`
     /// for a key that was never written, which would silently turn every
     /// default-on setting off on a fresh install.

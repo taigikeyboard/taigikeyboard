@@ -18,6 +18,7 @@ struct TaigiKeyboardView: View {
 
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
     let onTranslateToggle: () -> Void
+    let onCandidateDisplayModeChange: (CandidateDisplayMode) -> Void
     var initialInputMode: InputMode?
 
     @StateObject private var expandState = CandidateExpandState()
@@ -41,6 +42,7 @@ struct TaigiKeyboardView: View {
         composingManager: ComposingManager,
         onSuggestionTap: @escaping (AutocompleteSuggestion) -> Void,
         onTranslateToggle: @escaping () -> Void,
+        onCandidateDisplayModeChange: @escaping (CandidateDisplayMode) -> Void,
         initialInputMode: InputMode? = nil,
     ) {
         self.settings = settings
@@ -53,6 +55,7 @@ struct TaigiKeyboardView: View {
         self.composingManager = composingManager
         self.onSuggestionTap = onSuggestionTap
         self.onTranslateToggle = onTranslateToggle
+        self.onCandidateDisplayModeChange = onCandidateDisplayModeChange
         self.initialInputMode = initialInputMode
         _currentInputMode = State(initialValue: settings.inputMode)
     }
@@ -231,13 +234,7 @@ struct TaigiKeyboardView: View {
             isTranslateSwapped: isTranslateSwapped,
             candidateDisplayMode: candidateDisplayMode,
             onTranslateToggle: onTranslateToggle,
-            onCandidateDisplayModeChange: { [keyboardContext, unowned services] mode in
-                keyboardContext.candidateDisplayMode = mode
-                // Not display-only: under 羅馬字 the ENGINE collapses same-roman
-                // rows (§44), so the list on screen must be fetched again, not
-                // just repainted — same as any keystroke.
-                (services.actionHandler as? ActionHandler)?.refetchCandidatesForDisplayModeChange()
-            },
+            onCandidateDisplayModeChange: onCandidateDisplayModeChange,
             candidateStyle: candidateStyle,
             candidateTheme: candidateTheme,
             isTPSLayout: isTPSLayout,

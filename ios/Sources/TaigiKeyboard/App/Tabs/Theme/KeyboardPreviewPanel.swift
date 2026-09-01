@@ -43,6 +43,7 @@ struct KeyboardPreviewPanel: View {
             composingManager: composingManager,
             onSuggestionTap: { _ in },
             onTranslateToggle: {},
+            onCandidateDisplayModeChange: { _ in },
             initialInputMode: settings.inputMode == .english ? .tl : nil,
         )
         .keyboardState(previewState)
