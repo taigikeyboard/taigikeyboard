@@ -41,6 +41,9 @@ class SettingsSelectionOverlayView : FrameLayout {
     var onOpenApp: (() -> Unit)? = null
     var onHide: (() -> Unit)? = null
 
+    // Fired on a 候選詞顯示 change so SmartbarManager can re-render the live surfaces at once.
+    var onCandidateDisplayModeChanged: (() -> Unit)? = null
+
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
@@ -87,6 +90,7 @@ class SettingsSelectionOverlayView : FrameLayout {
                         refreshTrigger = trigger,
                         onDismiss = { hide() },
                         onOpenApp = { onOpenApp?.invoke() },
+                        onCandidateDisplayModeChanged = { onCandidateDisplayModeChanged?.invoke() },
                     )
                 }
             }

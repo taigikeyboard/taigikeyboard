@@ -75,6 +75,7 @@ class EngineSettingsLiveReadTest {
     private class MutableBacking(
         var inputMode: String = "tl",
         var isAutoCap: Boolean = false,
+        var candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
         var isTranslateSwapped: Boolean = false,
         var isOutputBothScripts: Boolean = false,
         var isLiteralRomanCandidateEnabled: Boolean = true,
@@ -119,6 +120,7 @@ class EngineSettingsLiveReadTest {
     ) : EngineSettings {
         override val inputMode: String get() = backing.inputMode
         override val isAutoCap: Boolean get() = backing.isAutoCap
+        override val candidateDisplayMode: CandidateDisplayMode get() = backing.candidateDisplayMode
         override val isTranslateSwapped: Boolean get() = backing.isTranslateSwapped
         override val isOutputBothScripts: Boolean get() = backing.isOutputBothScripts
         override val isLiteralRomanCandidateEnabled: Boolean get() = backing.isLiteralRomanCandidateEnabled

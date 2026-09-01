@@ -14,6 +14,7 @@ import com.siansiansu.taigikeyboard.engine.proto.NextWordResponse
 import com.siansiansu.taigikeyboard.engine.proto.Platform
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Source
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 /**
@@ -183,6 +184,7 @@ internal object NextWordBridge {
         translateSwapped: Boolean,
         associationRecordingEnabled: Boolean,
         generation: Long,
+        candidateDisplayMode: CandidateDisplayMode,
     ): RustEngineBridge.NextWordFilterResult {
         val builder = com.siansiansu.taigikeyboard.engine.proto.FilterPredictions
             .newBuilder()
@@ -209,7 +211,13 @@ internal object NextWordBridge {
             methodSetter = { it.filterPredictions = builder.build() },
             op = "nextwordFilter",
             generation = generation,
-            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+            // Field 9 rides only the filter request — the sole nextword reader
+            // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY).
+            config =
+                nextwordConfig(mode, translateSwapped, associationRecordingEnabled)
+                    .toBuilder()
+                    .setCandidateDisplayMode(candidateDisplayMode.toProto())
+                    .build(),
         ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
         if (!resp.hasFilter()) {
             RustEngineBridge.recordFailure("nextwordFilter", "missing filter result")

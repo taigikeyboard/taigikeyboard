@@ -32,7 +32,10 @@ fun SwitchRow(
     labelColor: Color = MaterialTheme.colorScheme.onSurface,
     fontFamily: FontFamily? = null,
     infoText: String? = null,
+    enabled: Boolean = true,
 ) {
+    // Disabled rows dim label + icon (M3 disabled-content alpha) and drop the row's toggle target.
+    val contentAlpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
     // Whole row is the toggle target (standard Android Settings / Material3 + iOS Form parity).
     // `toggleable` placed before `padding` so the ripple + touch target fill the full row, and it
     // merges descendants into one TalkBack node; `role = Role.Switch` makes that node read as a
@@ -44,6 +47,7 @@ fun SwitchRow(
                 .heightIn(min = 48.dp)
                 .toggleable(
                     value = checked,
+                    enabled = enabled,
                     onValueChange = onCheckedChange,
                     role = Role.Switch,
                 ).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -54,7 +58,7 @@ fun SwitchRow(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = iconTint,
+                tint = iconTint.copy(alpha = iconTint.alpha * contentAlpha),
             )
             Spacer(Modifier.width(12.dp))
         }
@@ -66,7 +70,7 @@ fun SwitchRow(
             Text(
                 text = label,
                 modifier = Modifier.weight(1f, fill = false),
-                color = labelColor,
+                color = labelColor.copy(alpha = labelColor.alpha * contentAlpha),
                 fontFamily = fontFamily,
                 style = MaterialTheme.typography.bodyLarge,
             )
@@ -80,6 +84,9 @@ fun SwitchRow(
         Switch(
             checked = checked,
             onCheckedChange = null,
+            enabled = enabled,
         )
     }
 }
+
+private const val DISABLED_CONTENT_ALPHA = 0.38f

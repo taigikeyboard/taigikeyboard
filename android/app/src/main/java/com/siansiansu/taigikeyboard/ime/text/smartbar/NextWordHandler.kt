@@ -424,6 +424,7 @@ class NextWordHandler(
             translateSwapped = settings.isTranslateSwapped,
             associationRecordingEnabled = settings.isAssociationRecordingEnabled,
             generation = envelopeGen,
+            candidateDisplayMode = settings.candidateDisplayMode,
         )
         if (filterResult.wasStale) {
             logger.debug(TAG) { "[NEXTWORD] Drop stale result gen=$queryGeneration" }

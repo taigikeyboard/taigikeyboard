@@ -63,6 +63,7 @@ import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR
 import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_PRESSED_DEEPEN_FACTOR
 import com.siansiansu.taigikeyboard.ime.core.deepenedArgb
 import com.siansiansu.taigikeyboard.ime.core.lightenedArgb
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import kotlinx.coroutines.delay
@@ -111,6 +112,7 @@ fun CandidateOverlayContent(
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
     isTranslateSwapped: Boolean,
+    candidateDisplayMode: CandidateDisplayMode,
     resetKey: Int,
     backgroundGradient: List<Int>?,
     candidateTextColor: Int?,
@@ -192,6 +194,7 @@ fun CandidateOverlayContent(
                     isTPSLayout = isTPSLayout,
                     orMapsToER = orMapsToER,
                     isTranslateSwapped = isTranslateSwapped,
+                    candidateDisplayMode = candidateDisplayMode,
                     isClickEnabled = isClickEnabled,
                     onCellClick = { word, index ->
                         onSuggestionSelected(word, index)
@@ -250,6 +253,7 @@ private fun CandidateRow(
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
     isTranslateSwapped: Boolean,
+    candidateDisplayMode: CandidateDisplayMode,
     isClickEnabled: Boolean,
     onCellClick: (TaigiWord, Int) -> Unit,
 ) {
@@ -283,6 +287,7 @@ private fun CandidateRow(
                     isTPSLayout = isTPSLayout,
                     orMapsToER = orMapsToER,
                     isTranslateSwapped = isTranslateSwapped,
+                    candidateDisplayMode = candidateDisplayMode,
                     onClick = { if (isClickEnabled) onCellClick(item.word, item.originalIndex) },
                 )
             }
@@ -309,6 +314,7 @@ private fun CandidateCell(
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
     isTranslateSwapped: Boolean,
+    candidateDisplayMode: CandidateDisplayMode,
     onClick: () -> Unit,
 ) {
     val word = item.word
@@ -356,12 +362,13 @@ private fun CandidateCell(
                     if (isTPSLayout) RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER) else word.roman
                 }
             val (primary, subtitle) =
-                when {
-                    word.hanzi.isNullOrEmpty() -> displayRoman to null
-                    isTPSLayout -> word.hanzi to null
-                    isTranslateSwapped -> word.hanzi to displayRoman
-                    else -> displayRoman to word.hanzi
-                }
+                candidateCellText(
+                    hanzi = word.hanzi,
+                    displayRoman = displayRoman,
+                    isTPSLayout = isTPSLayout,
+                    candidateDisplayMode = candidateDisplayMode,
+                    isTranslateSwapped = isTranslateSwapped,
+                )
 
             Text(
                 text = primary,

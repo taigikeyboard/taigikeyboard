@@ -1,12 +1,22 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -17,14 +27,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
+import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -40,6 +56,7 @@ fun SettingsOverlayContent(
     refreshTrigger: Int,
     onDismiss: () -> Unit,
     onOpenApp: () -> Unit,
+    onCandidateDisplayModeChanged: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -55,7 +72,9 @@ fun SettingsOverlayContent(
         }
 
     // Toggle states — refreshTrigger as key ensures re-read from prefs on each show()
-    var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.outputBothScripts) }
+    var candidateDisplayMode by remember(refreshTrigger) { mutableStateOf(prefs.candidateDisplayMode) }
+    // 括號標註 binds the STORED flag; it is only disabled (not cleared) while roman-only.
+    var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.storedOutputBothScripts) }
     var literalRomanCandidate by remember(refreshTrigger) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(refreshTrigger) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(refreshTrigger) { mutableStateOf(prefs.isAutoSpaceEnabled) }
@@ -94,14 +113,30 @@ fun SettingsOverlayContent(
                 .padding(top = 4.dp, bottom = 8.dp),
     ) {
         // General settings
+        CandidateDisplayModeRow(
+            selected = candidateDisplayMode,
+            onSelected = {
+                if (it != candidateDisplayMode) {
+                    candidateDisplayMode = it
+                    prefs.candidateDisplayMode = it
+                    onCandidateDisplayModeChanged()
+                    autoDismissIfNeeded()
+                }
+            },
+            iconTint = iconTint,
+            labelColor = labelColor,
+            accent = appearance.accent,
+            fontFamily = fontFamily,
+        )
         SwitchRow(
             label = L10n.settingsOutputBothScripts,
             checked = outputBoth,
             icon = SettingsIcons.outputBothScripts,
             iconTint = iconTint,
+            enabled = candidateDisplayMode != CandidateDisplayMode.ROMAN_ONLY,
             onCheckedChange = {
                 outputBoth = it
-                prefs.outputBothScripts = it
+                prefs.storedOutputBothScripts = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,
@@ -256,3 +291,70 @@ fun SettingsOverlayContent(
         }
     }
 }
+
+// 候選詞顯示 two-option row — same icon / label / padding shape as the SwitchRow siblings, with a
+// compact M3 segmented control in the trailing slot instead of a switch.
+@Composable
+private fun CandidateDisplayModeRow(
+    selected: CandidateDisplayMode,
+    onSelected: (CandidateDisplayMode) -> Unit,
+    iconTint: Color,
+    labelColor: Color,
+    accent: Color,
+    fontFamily: FontFamily,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = SettingsIcons.candidateDisplayMode,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = iconTint,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = L10n.settingsCandidateDisplayMode,
+            modifier = Modifier.weight(1f),
+            color = labelColor,
+            fontFamily = fontFamily,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(Modifier.width(12.dp))
+        SingleChoiceSegmentedButtonRow {
+            candidateDisplayModeOptions.forEachIndexed { index, (mode, labelKey) ->
+                SegmentedButton(
+                    selected = selected == mode,
+                    onClick = { onSelected(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index, candidateDisplayModeOptions.size),
+                    colors =
+                        SegmentedButtonDefaults.colors(
+                            activeContainerColor = accent.copy(alpha = SEGMENT_ACTIVE_CONTAINER_ALPHA),
+                            activeContentColor = labelColor,
+                            activeBorderColor = labelColor.copy(alpha = SEGMENT_BORDER_ALPHA),
+                            inactiveContainerColor = Color.Transparent,
+                            inactiveContentColor = labelColor,
+                            inactiveBorderColor = labelColor.copy(alpha = SEGMENT_BORDER_ALPHA),
+                        ),
+                    icon = {},
+                ) {
+                    Text(
+                        text = stringRes(labelKey),
+                        fontSize = 13.sp,
+                        fontFamily = fontFamily,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val SEGMENT_ACTIVE_CONTAINER_ALPHA = 0.25f
+private const val SEGMENT_BORDER_ALPHA = 0.4f

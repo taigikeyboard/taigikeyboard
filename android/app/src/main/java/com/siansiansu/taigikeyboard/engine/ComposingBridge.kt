@@ -12,6 +12,7 @@ import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 
 /**
  * Impl object backing `RustEngineBridge` composing / continuous-input facade
@@ -129,6 +130,7 @@ internal object ComposingBridge {
         generation: Long,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
+        candidateDisplayMode: CandidateDisplayMode,
     ): RustEngineBridge.ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
             .newBuilder()
@@ -137,7 +139,7 @@ internal object ComposingBridge {
             methodSetter = { it.commitRaw = payload },
             op = "composingCommitRaw",
             generation = generation,
-            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
+            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode),
         )
     }
 
@@ -148,6 +150,7 @@ internal object ComposingBridge {
         generation: Long,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
+        candidateDisplayMode: CandidateDisplayMode,
     ): RustEngineBridge.ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion
             .newBuilder()
@@ -157,7 +160,7 @@ internal object ComposingBridge {
             methodSetter = { it.selectSuggestion = payload },
             op = "composingSelectSuggestion",
             generation = generation,
-            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
+            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode),
         )
     }
 
@@ -168,6 +171,7 @@ internal object ComposingBridge {
         generation: Long,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
+        candidateDisplayMode: CandidateDisplayMode,
     ): RustEngineBridge.ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto
             .CommitPreeditThenInsertExternal
@@ -178,7 +182,7 @@ internal object ComposingBridge {
             methodSetter = { it.commitPreeditThenInsertExternal = payload },
             op = "composingCommitPreeditThenInsertExternal",
             generation = generation,
-            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
+            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode),
         )
     }
 
@@ -253,6 +257,7 @@ internal object ComposingBridge {
         outputBothScripts: Boolean,
         enabledSourcesBitmask: UInt,
         literalRomanCandidateDisabled: Boolean,
+        candidateDisplayMode: CandidateDisplayMode,
     ): RustEngineBridge.ContinuousFetchResult {
         val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
             .newBuilder()
@@ -267,7 +272,7 @@ internal object ComposingBridge {
             methodSetter = { it.fetchAtPos = payload },
             op = "composingFetchAtPos",
             generation = generation,
-            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
+            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode),
         )
     }
 
@@ -282,6 +287,7 @@ internal object ComposingBridge {
         generation: Long,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
+        candidateDisplayMode: CandidateDisplayMode,
     ): RustEngineBridge.ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
             .newBuilder()
@@ -297,7 +303,7 @@ internal object ComposingBridge {
             methodSetter = { it.commitContinuous = payload },
             op = "composingCommitContinuous",
             generation = generation,
-            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
+            config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode),
         )
     }
 

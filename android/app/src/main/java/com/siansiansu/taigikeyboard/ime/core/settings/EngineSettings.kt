@@ -41,13 +41,29 @@ interface EngineSettings {
      */
     val isAutoCap: Boolean
 
+    /**
+     * Candidate cell rendering mode (漢羅並排 / 羅馬字). Under
+     * [CandidateDisplayMode.ROMAN_ONLY] the two script flags below read
+     * `false` regardless of their stored values.
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:candidateDisplayMode.
+    // Drift causes silent divergence (one platform collapses same-roman candidates, the other does not).
+    val candidateDisplayMode: CandidateDisplayMode
+
+    /**
+     * EFFECTIVE translate-swap: stored flag AND mode != roman-only. The
+     * stored read-write flag lives on the concrete implementation
+     * (`PrefHelper.storedIsTranslateSwapped`); engine / commit / layout
+     * readers must use this derived view.
+     */
     val isTranslateSwapped: Boolean
 
     /**
-     * Output both hanji + roman ("both-scripts"). The continuous-input
-     * §10.2 word-boundary-spacing predicate needs this to tell
-     * hanji-first (no inter-segment space) from both-scripts (`hit (彼)`
-     * — space wanted); [isTranslateSwapped] is `true` for both.
+     * EFFECTIVE output-both-scripts ("both-scripts"): stored flag AND mode
+     * != roman-only. The continuous-input §10.2 word-boundary-spacing
+     * predicate needs this to tell hanji-first (no inter-segment space)
+     * from both-scripts (`hit (彼)` — space wanted); [isTranslateSwapped]
+     * is `true` for both.
      */
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isOutputBothScripts.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).

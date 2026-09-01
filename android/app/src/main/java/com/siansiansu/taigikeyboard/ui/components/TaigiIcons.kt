@@ -17,11 +17,11 @@
 // Icon definitions extracted from androidx.compose.material:material-icons-extended
 // to eliminate the large transitive dependency. Path data is identical to the originals.
 //
-// Icons in this file (21 total):
+// Icons in this file (22 total):
 //   Filled: EmojiEmotions, EmojiEvents, EmojiFlags, EmojiFoodBeverage, EmojiNature,
 //           EmojiObjects, EmojiPeople, EmojiSymbols, EmojiTransportation
 //   Outlined: ContentCopy, FileDownload, FileUpload, FormatSize, Language,
-//             SpaceBar, Translate, Vibration, ViewStream
+//             ShortText, SpaceBar, Translate, Vibration, ViewStream
 //   AutoMirrored.Outlined: MenuBook, OpenInNew, VolumeUp
 
 package com.siansiansu.taigikeyboard.ui.components
@@ -918,6 +918,33 @@ public val Icons.Outlined.Language: ImageVector
     }
 
 private var _language: ImageVector? = null
+
+public val Icons.Outlined.ShortText: ImageVector
+    get() {
+        if (_shortText != null) {
+            return _shortText!!
+        }
+        _shortText =
+            materialIcon(name = "Outlined.ShortText") {
+                materialPath {
+                    moveTo(4.0f, 9.0f)
+                    horizontalLineToRelative(16.0f)
+                    verticalLineToRelative(2.0f)
+                    horizontalLineTo(4.0f)
+                    verticalLineTo(9.0f)
+                    close()
+                    moveTo(4.0f, 13.0f)
+                    horizontalLineToRelative(10.0f)
+                    verticalLineToRelative(2.0f)
+                    horizontalLineTo(4.0f)
+                    verticalLineToRelative(-2.0f)
+                    close()
+                }
+            }
+        return _shortText!!
+    }
+
+private var _shortText: ImageVector? = null
 
 public val Icons.Outlined.SpaceBar: ImageVector
     get() {

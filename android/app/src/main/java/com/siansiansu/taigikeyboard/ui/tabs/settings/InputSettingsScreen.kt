@@ -41,6 +41,7 @@ import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
@@ -71,6 +72,7 @@ fun InputSettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showDisplayLanguagePicker by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
+    var showCandidateDisplayModePicker by remember { mutableStateOf(false) }
     var showFontPicker by remember { mutableStateOf(false) }
     // Authoritative SELECTED display language (may be SYSTEM) — driven by the Activity-root
     // ProvideDisplayLanguage(prefs) Flow, so it stays correct across reset/live-switch without a local
@@ -80,7 +82,9 @@ fun InputSettingsScreen(
     // Each state re-reads from prefs when resetCounter changes (after settings reset)
     var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
     var fontType by remember(resetCounter) { mutableStateOf(prefs.fontType) }
-    var outputBoth by remember(resetCounter) { mutableStateOf(prefs.outputBothScripts) }
+    var candidateDisplayMode by remember(resetCounter) { mutableStateOf(prefs.candidateDisplayMode) }
+    // 括號標註 binds the STORED flag; it is only disabled (not cleared) while roman-only.
+    var outputBoth by remember(resetCounter) { mutableStateOf(prefs.storedOutputBothScripts) }
     var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
@@ -112,6 +116,15 @@ fun InputSettingsScreen(
                 prefs.inputMode = it
             },
             onBack = { showInputModePicker = false },
+        )
+    } else if (showCandidateDisplayModePicker) {
+        CandidateDisplayModeScreen(
+            selectedMode = candidateDisplayMode,
+            onModeSelected = {
+                candidateDisplayMode = it
+                prefs.candidateDisplayMode = it
+            },
+            onBack = { showCandidateDisplayModePicker = false },
         )
     } else if (showFontPicker) {
         FontPickerContent(
@@ -191,13 +204,20 @@ fun InputSettingsScreen(
 
                 SectionHeader(L10n.settingsTypingSectionTitle)
                 SettingsCard {
+                    SettingNavigationRow(
+                        label = L10n.settingsCandidateDisplayMode,
+                        value = candidateDisplayModeDisplayName(candidateDisplayMode),
+                        onClick = { showCandidateDisplayModePicker = true },
+                    )
+                    SettingsDivider()
                     SwitchRow(
                         label = L10n.settingsOutputBothScripts,
                         checked = outputBoth,
                         infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
+                        enabled = candidateDisplayMode != CandidateDisplayMode.ROMAN_ONLY,
                         onCheckedChange = {
                             outputBoth = it
-                            prefs.outputBothScripts = it
+                            prefs.storedOutputBothScripts = it
                         },
                     )
                     SettingsDivider()

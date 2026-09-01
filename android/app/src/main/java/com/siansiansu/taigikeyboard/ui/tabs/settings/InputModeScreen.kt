@@ -46,11 +46,30 @@ val inputModeOptions: List<Pair<String, StringKey>> =
 fun inputModeDisplayName(mode: String): String =
     stringRes(inputModeOptions.firstOrNull { it.first == mode }?.second ?: StringKey.SETTINGS_TL_MODE)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputModeScreen(
     selectedMode: String,
     onModeSelected: (String) -> Unit,
+    onBack: () -> Unit,
+) {
+    SelectionListScreen(
+        title = L10n.settingsInputMode,
+        options = inputModeOptions,
+        selected = selectedMode,
+        onSelected = onModeSelected,
+        onBack = onBack,
+    )
+}
+
+// Single-choice sub-screen: one card of label rows, checkmark on the selected value.
+// Shared by the input-mode and candidate-display-mode pickers.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> SelectionListScreen(
+    title: String,
+    options: List<Pair<T, StringKey>>,
+    selected: T,
+    onSelected: (T) -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -58,7 +77,7 @@ fun InputModeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(L10n.settingsInputMode) },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -78,13 +97,13 @@ fun InputModeScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             SettingsCard {
-                inputModeOptions.forEachIndexed { index, (value, labelKey) ->
+                options.forEachIndexed { index, (value, labelKey) ->
                     Row(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp)
-                                .clickable { onModeSelected(value) }
+                                .clickable { onSelected(value) }
                                 .padding(horizontal = 20.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -94,7 +113,7 @@ fun InputModeScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                         )
-                        if (selectedMode == value) {
+                        if (selected == value) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
@@ -103,7 +122,7 @@ fun InputModeScreen(
                             )
                         }
                     }
-                    if (index < inputModeOptions.lastIndex) {
+                    if (index < options.lastIndex) {
                         SettingsDivider()
                     }
                 }

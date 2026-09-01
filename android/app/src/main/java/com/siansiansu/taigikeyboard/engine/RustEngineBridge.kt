@@ -12,12 +12,14 @@ import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.engine.proto.Response
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyRow
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
+import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
 
 /**
  * Thin Kotlin wrapper around the Rust shared-core FFI exposed by
@@ -625,7 +627,16 @@ object RustEngineBridge {
         generation: Long,
         effectiveSwapped: Boolean = false,
         outputBothScripts: Boolean = false,
-    ): ComposingTransition = ComposingBridge.composingCommitRaw(mode, toggles, generation, effectiveSwapped, outputBothScripts)
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
+    ): ComposingTransition =
+        ComposingBridge.composingCommitRaw(
+            mode,
+            toggles,
+            generation,
+            effectiveSwapped,
+            outputBothScripts,
+            candidateDisplayMode,
+        )
 
     // 中文: 從候選列表選定一筆 suggestion — commit 該 suggestion 並重置 composing。
     // v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
@@ -645,7 +656,17 @@ object RustEngineBridge {
         generation: Long,
         effectiveSwapped: Boolean = false,
         outputBothScripts: Boolean = false,
-    ): ComposingTransition = ComposingBridge.composingSelectSuggestion(text, mode, toggles, generation, effectiveSwapped, outputBothScripts)
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
+    ): ComposingTransition =
+        ComposingBridge.composingSelectSuggestion(
+            text,
+            mode,
+            toggles,
+            generation,
+            effectiveSwapped,
+            outputBothScripts,
+            candidateDisplayMode,
+        )
 
     // 中文: 先 commit 當前 preedit、再插入外部字串(空白 / Enter / 標點等),原子操作避免閃爍。
     // v3.5.8 §10.2 platform pass: under `Phase::Continuous` (e.g. emoji
@@ -666,6 +687,7 @@ object RustEngineBridge {
         generation: Long,
         effectiveSwapped: Boolean = false,
         outputBothScripts: Boolean = false,
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     ): ComposingTransition =
         ComposingBridge.composingCommitPreeditThenInsertExternal(
             text,
@@ -674,6 +696,7 @@ object RustEngineBridge {
             generation,
             effectiveSwapped,
             outputBothScripts,
+            candidateDisplayMode,
         )
 
     // 中文: 清空 composing buffer 不 commit — 用於切 input mode、切焦點欄位、退出 composing 等狀況。
@@ -763,6 +786,8 @@ object RustEngineBridge {
         // (proto3-absent sentinel → engine prepends the literal-roman
         // candidate, the pre-toggle always-on behaviour for callers/tests).
         literalRomanCandidateDisabled: Boolean = false,
+        // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     ): ContinuousFetchResult =
         ComposingBridge.composingFetchAtPos(
             mode,
@@ -775,6 +800,7 @@ object RustEngineBridge {
             outputBothScripts,
             enabledSourcesBitmask,
             literalRomanCandidateDisabled,
+            candidateDisplayMode,
         )
 
     /**
@@ -807,6 +833,7 @@ object RustEngineBridge {
         generation: Long,
         effectiveSwapped: Boolean = false,
         outputBothScripts: Boolean = false,
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     ): ComposingTransition =
         ComposingBridge.composingCommitContinuous(
             displayText,
@@ -819,6 +846,7 @@ object RustEngineBridge {
             generation,
             effectiveSwapped,
             outputBothScripts,
+            candidateDisplayMode,
         )
 
     /**
@@ -1124,6 +1152,7 @@ object RustEngineBridge {
         translateSwapped: Boolean,
         associationRecordingEnabled: Boolean,
         generation: Long,
+        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     ): NextWordFilterResult =
         NextWordBridge.filter(
             raw,
@@ -1134,6 +1163,7 @@ object RustEngineBridge {
             translateSwapped,
             associationRecordingEnabled,
             generation,
+            candidateDisplayMode,
         )
 
     // 中文: 用 NextWord 預測首字集合對 autocomplete 候選做重排 — 首字命中者上浮(autocomplete context booster)。
@@ -1369,11 +1399,13 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
+        candidateDisplayMode: CandidateDisplayMode,
     ): AppConfig =
         appConfig(mode, toggles)
             .toBuilder()
             .setIsTranslateSwapped(effectiveSwapped)
             .setOutputBothScripts(outputBothScripts)
+            .setCandidateDisplayMode(candidateDisplayMode.toProto())
             .build()
 
     private const val LEVEL_ERROR = 0
@@ -1401,6 +1433,17 @@ data class ToneTogglesCarrier(
     val isDoubleTapOoEnabled: Boolean,
     val isDoubleTapNnEnabled: Boolean,
 )
+
+/**
+ * `AppConfig.candidate_display_mode` (field 9). The engine collapses
+ * same-roman candidate rows itself under ROMAN_ONLY (`handle_fetch_at_pos`
+ * + nextword `filter`); every other request family ignores the field.
+ */
+internal fun CandidateDisplayMode.toProto(): ProtoCandidateDisplayMode =
+    when (this) {
+        CandidateDisplayMode.SIDE_BY_SIDE -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE
+        CandidateDisplayMode.ROMAN_ONLY -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_ROMAN_ONLY
+    }
 
 /** Result of `Method::StripTone`. */
 data class StripToneOutcome(
