@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.settings
 
-// Sub-screen for selecting the candidate display mode (漢羅並排 / 羅馬字).
+// Sub-screen for selecting the candidate display mode (漢羅並排 / 羅馬字 / 漢羅合用).
 
 import androidx.compose.runtime.Composable
 import com.siansiansu.taigikeyboard.ui.components.SelectionListScreen
@@ -14,6 +14,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 val candidateDisplayModeOptions: List<Pair<CandidateDisplayMode, StringKey>> =
     listOf(
         CandidateDisplayMode.SIDE_BY_SIDE to StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE,
+        CandidateDisplayMode.COMBINED to StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_COMBINED,
         CandidateDisplayMode.ROMAN_ONLY to StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_ROMAN_ONLY,
     )
 

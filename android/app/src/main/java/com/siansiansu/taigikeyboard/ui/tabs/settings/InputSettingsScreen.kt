@@ -214,7 +214,7 @@ fun InputSettingsScreen(
                         label = L10n.settingsOutputBothScripts,
                         checked = outputBoth,
                         infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
-                        enabled = candidateDisplayMode != CandidateDisplayMode.ROMAN_ONLY,
+                        enabled = candidateDisplayMode.showsHanji,
                         onCheckedChange = {
                             outputBoth = it
                             prefs.storedOutputBothScripts = it

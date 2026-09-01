@@ -76,14 +76,43 @@ enum FontType: String, CaseIterable, Codable {
 /// `sideBySide` = today's title/subtitle pair (the swap flag decides which
 /// script leads). `romanOnly` = the cell shows only the romanization and the
 /// derived swap / both-scripts pair reads `false` (see `SharedSettings`).
+/// `combined` = one label `漢字 羅馬字` and a commit writes the hanji; the
+/// derived swap projects that as `true` (see `SharedSettings`).
 /// TPS ignores the mode. Raw values are the cross-platform storage contract
 /// (Android `CandidateDisplayMode.storageValue`, desktop `SettingsStore`).
-// 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字。raw value 四平台一致,勿改。
+// 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字 / 漢羅合用。raw value 四平台一致,勿改。
 // `public` like `InputMode`: the `RustEngineBridge` NextWord entry points are
 // public and take it as a defaulted parameter.
 public enum CandidateDisplayMode: String, CaseIterable, Codable {
     case sideBySide
+    case combined
     case romanOnly
+
+    /// Whether the cell shows any Hanji — `false` only under `.romanOnly`. Gates
+    /// the effective 括號標註 flag and that setting's enabled state.
+    var showsHanji: Bool { self != .romanOnly }
+
+    /// Only side-by-side has a lead script the 文/A key can flip; the other two
+    /// fix it, so the key is inert and the stored swap waits for the way back.
+    var allowsSwapToggle: Bool { self == .sideBySide }
+
+    /// Effective swap for a stored flag. `.combined` leads with — and commits —
+    /// the Hanji: forcing the pair on is a compatibility projection of that,
+    /// so every reader of the pair behaves as today's hanji-first mode
+    /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
+    // 中文: 推導 swap — 合用恆 true(投影到既有 pair)、羅馬字恆 false、並排照 stored。
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/CandidateDisplayMode.kt effectiveTranslateSwapped,
+    // macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift, windows/crates/taigi-windows-core/src/settings/engine_settings.rs.
+    // Drift causes silent divergence (one platform commits roman under 合用, or hanji under 羅馬字).
+    func effectiveTranslateSwapped(stored: Bool) -> Bool {
+        self == .combined || (stored && showsHanji)
+    }
+
+    /// Effective 括號標註 for a stored flag — off only where there is no Hanji
+    /// to bracket; `.combined` keeps it (`漢字 (羅馬字)`, today's swapped output).
+    func effectiveOutputBothScripts(stored: Bool) -> Bool {
+        stored && showsHanji
+    }
 
     // Resolved at the call site via the environment store (same reactive
     // pattern as `FontType.displayNameKey`).
@@ -91,6 +120,7 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
         switch self {
         case .sideBySide: .settingsCandidateDisplayModeSideBySide
         case .romanOnly: .settingsCandidateDisplayModeRomanOnly
+        case .combined: .settingsCandidateDisplayModeCombined
         }
     }
 }

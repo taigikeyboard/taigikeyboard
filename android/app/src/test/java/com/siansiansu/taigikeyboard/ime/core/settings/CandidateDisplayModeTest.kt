@@ -6,10 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins the 候選詞顯示 storage coercion + the ONE platform-side derivation
- * rule (`effective = stored && mode != ROMAN_ONLY`). `PrefHelper` itself
- * needs a real Android `Context` (DataStore), so the rule is tested at
- * the enum seam it delegates to — same rationale as
+ * Pins the 候選詞顯示 storage coercion + the two platform-side derivation
+ * rules (`effectiveTranslateSwapped` / `effectiveOutputBothScripts`).
+ * `PrefHelper` itself needs a real Android `Context` (DataStore), so the
+ * rules are tested at the enum seam it delegates to — same rationale as
  * `EngineSettingsLiveReadTest`.
  */
 class CandidateDisplayModeTest {
@@ -31,6 +31,8 @@ class CandidateDisplayModeTest {
     fun storageValues_matchCrossPlatformRawStrings() {
         assertEquals("sideBySide", CandidateDisplayMode.SIDE_BY_SIDE.storageValue)
         assertEquals("romanOnly", CandidateDisplayMode.ROMAN_ONLY.storageValue)
+        assertEquals("combined", CandidateDisplayMode.COMBINED.storageValue)
+        assertEquals(CandidateDisplayMode.COMBINED, CandidateDisplayMode.fromStorage("combined"))
     }
 
     /**
@@ -42,15 +44,44 @@ class CandidateDisplayModeTest {
         val storedIsTranslateSwapped = true
         val storedOutputBothScripts = true
 
-        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveScriptFlag(storedIsTranslateSwapped))
-        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveScriptFlag(storedOutputBothScripts))
+        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveTranslateSwapped(storedIsTranslateSwapped))
+        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveOutputBothScripts(storedOutputBothScripts))
 
         // Leaving roman-only restores the stored choice.
-        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveScriptFlag(storedIsTranslateSwapped))
-        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveScriptFlag(storedOutputBothScripts))
+        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveTranslateSwapped(storedIsTranslateSwapped))
+        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveOutputBothScripts(storedOutputBothScripts))
 
-        // A stored `false` stays false in every mode.
-        assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveScriptFlag(false))
-        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveScriptFlag(false))
+        // A stored `false` stays false in every mode but COMBINED's swap (pinned below).
+        assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveTranslateSwapped(false))
+        assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveOutputBothScripts(false))
+        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveTranslateSwapped(false))
+        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveOutputBothScripts(false))
+    }
+
+    /**
+     * COMBINED projects to "cell leads with hanji, commit writes hanji":
+     * swap reads `true` whatever is stored, 括號標註 keeps the stored value.
+     * Storage is untouched, so SIDE_BY_SIDE restores the user's choice.
+     */
+    @Test
+    fun test_INVARIANT_combined_forces_swap_true_and_passes_output_both_through() {
+        // stored (swap=false, both=false) → effective (true, false)
+        assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(false))
+        assertFalse(CandidateDisplayMode.COMBINED.effectiveOutputBothScripts(false))
+
+        // stored (swap=false, both=true) → effective (true, true)
+        assertTrue(CandidateDisplayMode.COMBINED.effectiveOutputBothScripts(true))
+
+        // stored swap=true is also true (idempotent projection).
+        assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(true))
+
+        // Back to SIDE_BY_SIDE: the stored `false` swap is what the user sees again.
+    }
+
+    /** The rules PrefHelper and the UI gates read live on the enum — pinned once. */
+    @Test
+    fun rules_perMode() {
+        assertEquals(listOf(CandidateDisplayMode.SIDE_BY_SIDE), CandidateDisplayMode.entries.filter { it.allowsSwapToggle })
+        assertEquals(listOf(CandidateDisplayMode.ROMAN_ONLY), CandidateDisplayMode.entries.filterNot { it.showsHanji })
     }
 }

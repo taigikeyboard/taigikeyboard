@@ -58,6 +58,7 @@ struct ExpandedCandidateOverlay: View {
                     for: suggestion,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,
+                    candidateDisplayMode: candidateDisplayMode,
                     titleFontSize: theme.primaryFontSize,
                     subtitleFontSize: theme.secondaryFontSize,
                 )

@@ -162,6 +162,27 @@ mod tests {
     }
 
     #[test]
+    fn combined_reaches_the_wire_with_the_derived_swap() {
+        // trace: the derivation is pinned in `document.rs`; here only the
+        // forwarding — the bridge carries the mode and the swap it was handed,
+        // and the engine's only normaliser still reads it as "not roman-only".
+        let settings = EngineSettings {
+            is_translate_swapped: true,
+            candidate_display_mode: CandidateDisplayMode::Combined,
+            ..EngineSettings::default()
+        };
+        let continuous = continuous_app_config(&settings);
+        assert_eq!(
+            continuous.candidate_display_mode,
+            WireDisplayMode::Combined as i32
+        );
+        assert!(continuous.is_translate_swapped);
+        assert!(!continuous.output_both_scripts);
+        assert!(!continuous.is_roman_only_display());
+        assert!(nextword_config(&settings).is_translate_swapped);
+    }
+
+    #[test]
     fn roman_only_reaches_every_config_through_the_base_one() {
         let settings = EngineSettings {
             candidate_display_mode: CandidateDisplayMode::RomanOnly,

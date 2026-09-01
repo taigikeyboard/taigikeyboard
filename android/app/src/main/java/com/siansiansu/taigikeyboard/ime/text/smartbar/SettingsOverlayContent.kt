@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,9 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.stringRes
@@ -40,7 +42,9 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
+import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeDisplayName
 import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeOptions
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -133,7 +137,7 @@ fun SettingsOverlayContent(
             checked = outputBoth,
             icon = SettingsIcons.outputBothScripts,
             iconTint = iconTint,
-            enabled = candidateDisplayMode != CandidateDisplayMode.ROMAN_ONLY,
+            enabled = candidateDisplayMode.showsHanji,
             onCheckedChange = {
                 outputBoth = it
                 prefs.storedOutputBothScripts = it
@@ -292,8 +296,9 @@ fun SettingsOverlayContent(
     }
 }
 
-// 候選詞顯示 two-option row — same icon / label / padding shape as the SwitchRow siblings, with a
-// compact M3 segmented control in the trailing slot instead of a switch.
+// 候選詞顯示 dropdown row — same icon / label / padding shape as the SwitchRow siblings; the trailing
+// slot shows the current value + a drop-down arrow and opens a DropdownMenu of the three modes
+// (three segments no longer fit beside the label at keyboard width with en / ja strings).
 @Composable
 private fun CandidateDisplayModeRow(
     selected: CandidateDisplayMode,
@@ -303,6 +308,7 @@ private fun CandidateDisplayModeRow(
     accent: Color,
     fontFamily: FontFamily,
 ) {
+    var expanded by remember { mutableStateOf(false) }
     Row(
         modifier =
             Modifier
@@ -326,35 +332,52 @@ private fun CandidateDisplayModeRow(
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.width(12.dp))
-        SingleChoiceSegmentedButtonRow {
-            candidateDisplayModeOptions.forEachIndexed { index, (mode, labelKey) ->
-                SegmentedButton(
-                    selected = selected == mode,
-                    onClick = { onSelected(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, candidateDisplayModeOptions.size),
-                    colors =
-                        SegmentedButtonDefaults.colors(
-                            activeContainerColor = accent.copy(alpha = SEGMENT_ACTIVE_CONTAINER_ALPHA),
-                            activeContentColor = labelColor,
-                            activeBorderColor = labelColor.copy(alpha = SEGMENT_BORDER_ALPHA),
-                            inactiveContainerColor = Color.Transparent,
-                            inactiveContentColor = labelColor,
-                            inactiveBorderColor = labelColor.copy(alpha = SEGMENT_BORDER_ALPHA),
-                        ),
-                    icon = {},
-                ) {
-                    Text(
-                        text = stringRes(labelKey),
-                        fontSize = 13.sp,
-                        fontFamily = fontFamily,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+        Box {
+            Row(
+                modifier = Modifier.clickable { expanded = true },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = candidateDisplayModeDisplayName(selected),
+                    color = labelColor,
+                    fontFamily = fontFamily,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = labelColor,
+                )
+            }
+            // The menu is an M3 surface popup, not part of the gradient backdrop — default item colours apply.
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                candidateDisplayModeOptions.forEach { (mode, labelKey) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringRes(labelKey),
+                                fontFamily = fontFamily,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        // Always-present slot keeps the three labels left-aligned; only the current mode draws the check.
+                        trailingIcon = {
+                            if (mode == selected) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(AppStyle.selectionIconSize),
+                                    tint = accent,
+                                )
+                            }
+                        },
+                        onClick = {
+                            expanded = false
+                            onSelected(mode)
+                        },
                     )
                 }
             }
         }
     }
 }
-
-private const val SEGMENT_ACTIVE_CONTAINER_ALPHA = 0.25f
-private const val SEGMENT_BORDER_ALPHA = 0.4f

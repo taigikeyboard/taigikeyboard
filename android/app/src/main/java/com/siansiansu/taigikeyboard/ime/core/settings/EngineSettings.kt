@@ -42,16 +42,17 @@ interface EngineSettings {
     val isAutoCap: Boolean
 
     /**
-     * Candidate cell rendering mode (漢羅並排 / 羅馬字). Under
+     * Candidate cell rendering mode (漢羅並排 / 羅馬字 / 漢羅合用). Under
      * [CandidateDisplayMode.ROMAN_ONLY] the two script flags below read
-     * `false` regardless of their stored values.
+     * `false` regardless of their stored values; under
+     * [CandidateDisplayMode.COMBINED] `isTranslateSwapped` reads `true`.
      */
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:candidateDisplayMode.
     // Drift causes silent divergence (one platform collapses same-roman candidates, the other does not).
     val candidateDisplayMode: CandidateDisplayMode
 
     /**
-     * EFFECTIVE translate-swap: stored flag AND mode != roman-only. The
+     * EFFECTIVE translate-swap: `true` under 漢羅合用, else stored AND mode != roman-only. The
      * stored read-write flag lives on the concrete implementation
      * (`PrefHelper.storedIsTranslateSwapped`); engine / commit / layout
      * readers must use this derived view.

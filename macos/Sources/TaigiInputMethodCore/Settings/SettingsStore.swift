@@ -317,16 +317,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     }
 
     var current: EngineSettings {
-        // The ONE place the stored swap pair becomes the effective one: a
-        // romanization-only display has no Hanji to lead with or to bracket,
-        // so both read `false` under it while the stored values stay put for
-        // the way back (`EngineSettings.isTranslateSwapped`).
+        // The ONE place the stored swap pair becomes the effective one; the
+        // rules live on `CandidateDisplayMode` (§42). The stored values stay
+        // put for the way back to side-by-side.
         let displayMode = candidateDisplayMode
-        let isSideBySide = displayMode != .romanOnly
         return EngineSettings(
             inputMode: inputMode,
-            isTranslateSwapped: storedIsTranslateSwapped && isSideBySide,
-            isOutputBothScripts: storedIsOutputBothScripts && isSideBySide,
+            isTranslateSwapped: displayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped),
+            isOutputBothScripts: displayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts),
             candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),

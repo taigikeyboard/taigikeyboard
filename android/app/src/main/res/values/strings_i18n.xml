@@ -188,6 +188,7 @@
     <string name="i18n_settings_typingSectionTitle">拍字設定</string>
     <string name="i18n_settings_candidateDisplayMode">候選詞顯示</string>
     <string name="i18n_settings_candidateDisplayModeSideBySide">漢羅並排</string>
+    <string name="i18n_settings_candidateDisplayModeCombined">漢羅合用</string>
     <string name="i18n_settings_candidateDisplayModeRomanOnly">羅馬字</string>
     <string name="i18n_settings_outputBothScripts">括號標註</string>
     <string name="i18n_settings_literalRomanCandidate">顯示原本羅馬字候選</string>

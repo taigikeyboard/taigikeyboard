@@ -34,12 +34,13 @@ public extension KeyboardContext {
 
     /// 切換顯示模式
     ///
-    /// Inert under 羅馬字: there is no hanji to lead with, and toggling the
-    /// derived-false getter would overwrite a stored `true`. The key stays
-    /// visible; its active state reads the derived value (`false`).
-    // 中文: 羅馬字模式下為 no-op(§3 Q11)— 鍵仍顯示,但不改 stored 值。
+    /// Inert unless 候選詞顯示 = 漢羅並排: under 羅馬字 there is no hanji to
+    /// lead with, under 漢羅合用 the cell already leads with it, and toggling
+    /// the derived getter would overwrite the stored flag. The key stays
+    /// visible; its active state reads the derived value.
+    // 中文: 只有 漢羅並排 才切換;羅馬字 / 漢羅合用 為 no-op — 鍵仍顯示,但不改 stored 值。
     func toggleTranslateSwapped() {
-        guard candidateDisplayMode != .romanOnly else { return }
+        guard candidateDisplayMode.allowsSwapToggle else { return }
         isTranslateSwapped.toggle()
     }
 

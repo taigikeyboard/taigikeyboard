@@ -195,6 +195,7 @@ enum class StringKey(
     SETTINGS_TYPING_SECTION_TITLE(R.string.i18n_settings_typingSectionTitle),
     SETTINGS_CANDIDATE_DISPLAY_MODE(R.string.i18n_settings_candidateDisplayMode),
     SETTINGS_CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE(R.string.i18n_settings_candidateDisplayModeSideBySide),
+    SETTINGS_CANDIDATE_DISPLAY_MODE_COMBINED(R.string.i18n_settings_candidateDisplayModeCombined),
     SETTINGS_CANDIDATE_DISPLAY_MODE_ROMAN_ONLY(R.string.i18n_settings_candidateDisplayModeRomanOnly),
     SETTINGS_OUTPUT_BOTH_SCRIPTS(R.string.i18n_settings_outputBothScripts),
     SETTINGS_LITERAL_ROMAN_CANDIDATE(R.string.i18n_settings_literalRomanCandidate),

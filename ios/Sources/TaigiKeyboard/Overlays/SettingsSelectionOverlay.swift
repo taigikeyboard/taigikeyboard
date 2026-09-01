@@ -91,7 +91,7 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
                     // 括號標註 is meaningless without hanji; stored value stays untouched.
-                    .disabled(candidateDisplayMode == .romanOnly)
+                    .disabled(!candidateDisplayMode.showsHanji)
                     settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
                         SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
                     }
@@ -159,8 +159,9 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Components
 
-    /// Two-option segmented row shaped like the toggles (icon + label left, control right).
-    // 中文: 候選詞顯示模式列 — 與 toggle 同排版,右側為兩段式 segmented control。
+    /// Menu-picker row shaped like the toggles (icon + label left, current value right).
+    /// Three values do not fit as segments beside the label at keyboard width.
+    // 中文: 候選詞顯示模式列 — 與 toggle 同排版,右側為下拉選單(三個值排不進 segmented)。
     private var candidateDisplayModeRow: some View {
         HStack(spacing: 8) {
             settingsRowLabel(lang.string(.settingsCandidateDisplayMode), icon: SettingsIcons.candidateDisplayMode)
@@ -170,7 +171,7 @@ struct SettingsSelectionOverlay: View {
                     Text(lang.string(mode.displayNameKey)).tag(mode)
                 }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
             .labelsHidden()
             .fixedSize()
         }
@@ -183,7 +184,7 @@ struct SettingsSelectionOverlay: View {
         }
     }
 
-    /// Icon + label leading block shared by the toggles and the segmented row.
+    /// Icon + label leading block shared by the toggles and the picker row.
     @ViewBuilder
     private func settingsRowLabel(_ label: String, icon: String?) -> some View {
         if let icon {

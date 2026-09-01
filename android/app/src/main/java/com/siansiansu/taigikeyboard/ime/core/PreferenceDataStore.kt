@@ -46,7 +46,7 @@ object PreferenceKeys {
     val IS_TRANSLATE_SWAPPED = booleanPreferencesKey("keyboard__is_translate_swapped")
     val OUTPUT_BOTH_SCRIPTS = booleanPreferencesKey("keyboard__output_both_scripts")
 
-    // Raw value = CandidateDisplayMode.storageValue ("sideBySide" / "romanOnly").
+    // Raw value = CandidateDisplayMode.storageValue ("sideBySide" / "romanOnly" / "combined").
     val CANDIDATE_DISPLAY_MODE = stringPreferencesKey("keyboard__candidate_display_mode")
     val LITERAL_ROMAN_CANDIDATE = booleanPreferencesKey("keyboard__literal_roman_candidate")
     val PHAH_TAIGI_LAYOUT_ENABLED = booleanPreferencesKey("keyboard__phah_taigi_layout_enabled")

@@ -1443,6 +1443,7 @@ internal fun CandidateDisplayMode.toProto(): ProtoCandidateDisplayMode =
     when (this) {
         CandidateDisplayMode.SIDE_BY_SIDE -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE
         CandidateDisplayMode.ROMAN_ONLY -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_ROMAN_ONLY
+        CandidateDisplayMode.COMBINED -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_COMBINED
     }
 
 /** Result of `Method::StripTone`. */

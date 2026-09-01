@@ -325,18 +325,56 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertFalse(settings.snapshot(for: .light).isTranslateSwapped)
     }
 
+    /// `.combined` projects the pair as swapped (cell leads with hanji, commit
+    /// writes hanji) without writing the stored flag; 括號標註 keeps its stored
+    /// value; leaving the mode restores the stored pair.
+    func test_candidateDisplayMode_combined_projectsSwappedWithoutOverwritingStoredFlags() {
+        settings.storedIsTranslateSwapped = false
+        settings.storedIsOutputBothScripts = false
+
+        settings.candidateDisplayMode = .combined
+
+        XCTAssertTrue(settings.isTranslateSwapped, "derived swap must read true under combined")
+        XCTAssertFalse(settings.isOutputBothScripts, "derived both-scripts follows the stored false")
+        XCTAssertFalse(settings.storedIsTranslateSwapped, "stored swap must survive the mode")
+        XCTAssertEqual(defaults.object(forKey: "isTranslateSwapped") as? Bool, false, "raw key untouched")
+
+        // 括號標註 stays as stored: the bracket form `漢字 (羅馬字)` applies under 合用.
+        settings.storedIsOutputBothScripts = true
+        XCTAssertTrue(settings.isOutputBothScripts, "stored both-scripts survives the projection")
+
+        settings.candidateDisplayMode = .sideBySide
+
+        XCTAssertFalse(settings.isTranslateSwapped, "leaving combined restores the stored swap")
+        XCTAssertTrue(settings.isOutputBothScripts, "leaving combined restores stored both-scripts")
+    }
+
+    /// The rules the derived pair and the UI gates read live on the enum, so
+    /// they are pinned once here rather than through every consumer.
+    func test_candidateDisplayMode_rules_perMode() {
+        XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide])
+        XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveTranslateSwapped(stored: false))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
+    }
+
     func test_candidateDisplayMode_storageContract_keyAndRawValues() {
         XCTAssertEqual(settings.candidateDisplayMode, .sideBySide, "descriptor default")
 
         settings.candidateDisplayMode = .romanOnly
-
         XCTAssertEqual(defaults.string(forKey: "candidateDisplayMode"), "romanOnly", "cross-platform raw value")
+
+        settings.candidateDisplayMode = .combined
+        XCTAssertEqual(defaults.string(forKey: "candidateDisplayMode"), "combined", "cross-platform raw value")
+        XCTAssertEqual(SharedSettings(userDefaults: defaults).candidateDisplayMode, .combined, "fresh reader decodes it")
     }
 
     /// An unknown / malformed stored raw string (a newer build's value, a
     /// hand-edited plist) falls back to `.sideBySide` — today's behaviour.
     func test_candidateDisplayMode_unknownRawString_fallsBackToSideBySide() {
-        defaults.set("combined", forKey: "candidateDisplayMode")
+        defaults.set("hanjiOnly", forKey: "candidateDisplayMode")
 
         XCTAssertEqual(settings.candidateDisplayMode, .sideBySide)
     }

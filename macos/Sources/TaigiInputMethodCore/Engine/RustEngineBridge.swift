@@ -176,6 +176,7 @@ enum RustEngineBridge {
         // derived configs start from this one.
         config.candidateDisplayMode = switch settings.candidateDisplayMode {
         case .sideBySide: .sideBySide
+        case .combined: .combined
         case .romanOnly: .romanOnly
         }
         return config

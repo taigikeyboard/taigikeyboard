@@ -124,6 +124,27 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertTrue(controller.settings.current.isTranslateSwapped, "leaving the mode must give the stored swap back")
     }
 
+    /// Under the combined display the one label always leads with the Hanji,
+    /// so the swap has nothing to swap either: the chord is inert the same
+    /// silent way — the STORED value is untouched while the effective swap
+    /// reads `true`, and leaving the mode gives the user their own swap back.
+    func testTheTranslateSwap_underCombined_isSilentlyInert() {
+        controller.settings.storedIsTranslateSwapped = false
+        controller.settings.candidateDisplayMode = .combined
+        let callsBefore = presenter.calls.count
+
+        controller.performShortcutAction(.toggleTranslateSwapped)
+
+        XCTAssertFalse(controller.settings.storedIsTranslateSwapped, "the chord flipped a stored value it must not touch")
+        XCTAssertTrue(controller.settings.current.isTranslateSwapped, "the effective swap stays on under combined")
+        XCTAssertEqual(presenter.calls.count, callsBefore)
+        XCTAssertEqual(flashes, [])
+
+        controller.settings.candidateDisplayMode = .sideBySide
+
+        XCTAssertFalse(controller.settings.current.isTranslateSwapped, "leaving the mode must give the stored swap back")
+    }
+
     /// The settings doorway is handled before any session is consulted, so
     /// reaching a session with it must do nothing at all — not change a
     /// setting, and not disturb the composition on screen.

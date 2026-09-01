@@ -3151,6 +3151,24 @@
         }
       }
     },
+    "i18n_settings_candidateDisplayModeCombined": {
+      "comment": "Picker value: cell shows hanji and romanization as ONE label (漢字 羅馬字); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanji with Romanization"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢字＋ローマ字"
+          }
+        }
+      }
+    },
     "i18n_settings_candidateDisplayModeRomanOnly": {
       "comment": "Picker value: cell shows the romanization only; committing writes the romanization; TL/POJ only.",
       "extractionState": "manual",

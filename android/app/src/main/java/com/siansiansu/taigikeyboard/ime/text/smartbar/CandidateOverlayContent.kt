@@ -147,10 +147,20 @@ fun CandidateOverlayContent(
     val subtitlePaint = remember(typeface, fontScale) { measurementPaint(typeface, SUBTITLE_TEXT_SIZE_SP, displayMetrics) }
 
     // Rows do NOT depend on isTranslateSwapped: cell width is max(roman, hanzi) so a swap never reflows.
+    // They DO depend on candidateDisplayMode: COMBINED measures the one-label `漢字 羅馬字` string.
     val rows =
-        remember(suggestions, isTPSLayout, orMapsToER, typeface) {
+        remember(suggestions, isTPSLayout, orMapsToER, candidateDisplayMode, typeface) {
             CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->
-                measureCellWidth(word, isTPSLayout, orMapsToER, primaryPaint, subtitlePaint, minCellWidthPx, cellPaddingPx)
+                measureCellWidth(
+                    word,
+                    isTPSLayout,
+                    orMapsToER,
+                    candidateDisplayMode,
+                    primaryPaint,
+                    subtitlePaint,
+                    minCellWidthPx,
+                    cellPaddingPx,
+                )
             }
         }
 
@@ -543,6 +553,7 @@ private fun measureCellWidth(
     word: TaigiWord,
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
+    candidateDisplayMode: CandidateDisplayMode,
     primaryPaint: Paint,
     subtitlePaint: Paint,
     minCellWidthPx: Int,
@@ -553,6 +564,12 @@ private fun measureCellWidth(
             if (!word.hanzi.isNullOrEmpty()) word.hanzi else RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER)
         val titleWidth = primaryPaint.measureText(title)
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
+    }
+    if (candidateDisplayMode == CandidateDisplayMode.COMBINED) {
+        // One label at the primary size; hanji-less rows are roman alone.
+        val label = if (!word.hanzi.isNullOrEmpty()) combinedCellLabel(word.hanzi, word.roman) else word.roman
+        val labelWidth = primaryPaint.measureText(label)
+        return maxOf(minCellWidthPx, (labelWidth + cellPaddingPx + 0.5f).toInt())
     }
     val romanWidth = primaryPaint.measureText(word.roman)
     val hanziWidth = if (!word.hanzi.isNullOrEmpty()) subtitlePaint.measureText(word.hanzi) else 0f

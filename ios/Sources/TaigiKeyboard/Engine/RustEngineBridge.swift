@@ -195,6 +195,7 @@ extension CandidateDisplayMode {
         switch self {
         case .sideBySide: .sideBySide
         case .romanOnly: .romanOnly
+        case .combined: .combined
         }
     }
 }

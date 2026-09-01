@@ -12,7 +12,8 @@ enum InputMode: String, CaseIterable, Sendable {
 }
 
 /// How a candidate cell renders the `(漢字, 羅馬字)` pair: both scripts side by
-/// side (the swap setting decides which leads), or the romanization alone.
+/// side (the swap setting decides which leads), both in ONE Hanji-led label
+/// (`漢字 羅馬字`), or the romanization alone.
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
@@ -23,7 +24,35 @@ enum InputMode: String, CaseIterable, Sendable {
 /// Drift changes which mode a transferred setting resolves to.
 enum CandidateDisplayMode: String, CaseIterable, Sendable {
     case sideBySide
+    case combined
     case romanOnly
+
+    /// Whether the cell shows any Hanji — `false` only under `.romanOnly`.
+    var showsHanji: Bool { self != .romanOnly }
+
+    /// Only side-by-side has a lead script the swap shortcut can flip; the
+    /// other two fix it, so the shortcut is inert and the stored swap waits
+    /// for the way back.
+    var allowsSwapToggle: Bool { self == .sideBySide }
+
+    /// Effective swap for a stored flag. `.combined` leads with — and commits —
+    /// the Hanji: forcing the pair on is a compatibility projection of that,
+    /// so every reader of the pair (auto-space, full-width punctuation, the
+    /// nextword gates) behaves as today's hanji-first mode
+    /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios `SettingsModels.swift`
+    /// `CandidateDisplayMode.effectiveTranslateSwapped`, android
+    /// `CandidateDisplayMode.kt`, windows `engine_settings.rs`. Drift causes
+    /// silent divergence.
+    func effectiveTranslateSwapped(stored: Bool) -> Bool {
+        self == .combined || (stored && showsHanji)
+    }
+
+    /// Effective 括號標註 for a stored flag — off only where there is no Hanji
+    /// to bracket; `.combined` keeps it (`漢字 (羅馬字)`).
+    func effectiveOutputBothScripts(stored: Bool) -> Bool {
+        stored && showsHanji
+    }
 }
 
 /// Immutable snapshot of everything the engine needs to render a composition.
@@ -50,7 +79,10 @@ struct EngineSettings: Equatable, Sendable {
     /// and commits only romanization has no Hanji to lead with or to bracket.
     /// The stored values live on in `UserDefaults`
     /// (`SettingsStore.storedIsTranslateSwapped` / `storedIsOutputBothScripts`)
-    /// and come back the moment the mode returns to `.sideBySide`. Every
+    /// and come back the moment the mode returns to `.sideBySide`. Under
+    /// `.combined` the swap reads `true` whatever is stored — the one-label
+    /// cell leads with the Hanji and a commit writes it — while the bracket
+    /// setting is read as stored (`SettingsStore.current` has the why). Every
     /// reader of "swap" — engine `AppConfig`, cell, document text, auto-space,
     /// full-width punctuation — reads THIS pair, never the stored one.
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift

@@ -87,6 +87,39 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.current.isOutputBothScripts)
     }
 
+    /// The one platform-side rule of the combined display: the swap reads
+    /// `true` whatever is stored — the one-label cell leads with the Hanji and
+    /// a commit writes it — while the bracket setting is read as stored, so
+    /// 括號標註 still commits `漢字 (羅馬字)`. The stored swap survives the
+    /// mode, so leaving it gives the user their own swap straight back.
+    func testCurrent_underCombined_forcesTheSwapOn_readsTheBracketAsStored_andLeavesTheStoredValuesAlone() {
+        let store = makeStore()
+        store.storedIsTranslateSwapped = false
+        store.storedIsOutputBothScripts = false
+
+        store.candidateDisplayMode = .combined
+
+        XCTAssertEqual(store.current.candidateDisplayMode, .combined)
+        XCTAssertTrue(store.current.isTranslateSwapped, "combined must lead with — and commit — the Hanji")
+        XCTAssertFalse(store.current.isOutputBothScripts, "combined must not invent a bracket setting")
+        XCTAssertFalse(store.storedIsTranslateSwapped, "the stored swap must survive the mode")
+
+        store.storedIsOutputBothScripts = true
+
+        XCTAssertTrue(store.current.isTranslateSwapped)
+        XCTAssertTrue(store.current.isOutputBothScripts, "括號標註 stays in force under combined")
+
+        store.candidateDisplayMode = .romanOnly
+
+        XCTAssertFalse(store.current.isTranslateSwapped, "romanization-only is unchanged by the third mode")
+        XCTAssertFalse(store.current.isOutputBothScripts)
+
+        store.candidateDisplayMode = .sideBySide
+
+        XCTAssertFalse(store.current.isTranslateSwapped, "side by side must read the stored swap again")
+        XCTAssertTrue(store.current.isOutputBothScripts)
+    }
+
     func testCandidateDisplayMode_withNothingStored_isSideBySide() {
         XCTAssertEqual(makeStore().candidateDisplayMode, .sideBySide)
         XCTAssertEqual(makeStore().current.candidateDisplayMode, .sideBySide)
@@ -100,23 +133,32 @@ final class SettingsStoreTests: XCTestCase {
         )
 
         XCTAssertEqual(makeStore().candidateDisplayMode, .romanOnly)
+
+        userDefaults.set(
+            CandidateDisplayMode.combined.rawValue,
+            forKey: SettingsStore.Keys.candidateDisplayMode.name,
+        )
+
+        XCTAssertEqual(makeStore().candidateDisplayMode, .combined)
+        XCTAssertEqual(makeStore().current.candidateDisplayMode, .combined)
     }
 
     /// A hand-edited `defaults write`, or a mode a later version adds and an
     /// older build reads, must not leave the window with cells it cannot draw.
     func testCandidateDisplayMode_withAnUnknownStoredValue_fallsBackToSideBySide() {
-        userDefaults.set("combined", forKey: SettingsStore.Keys.candidateDisplayMode.name)
+        userDefaults.set("stacked", forKey: SettingsStore.Keys.candidateDisplayMode.name)
 
         XCTAssertEqual(makeStore().candidateDisplayMode, .sideBySide)
         XCTAssertEqual(makeStore().current.candidateDisplayMode, .sideBySide)
     }
 
     /// Storage contract shared by all four platforms (research doc §12): the
-    /// key and both raw values are spelled the same everywhere, so a future
+    /// key and all three raw values are spelled the same everywhere, so a future
     /// settings transfer carries one vocabulary.
     func testCandidateDisplayMode_storageSpellings_matchTheOtherPlatforms() {
         XCTAssertEqual(SettingsStore.Keys.candidateDisplayMode.name, "candidateDisplayMode")
         XCTAssertEqual(CandidateDisplayMode.sideBySide.rawValue, "sideBySide")
+        XCTAssertEqual(CandidateDisplayMode.combined.rawValue, "combined")
         XCTAssertEqual(CandidateDisplayMode.romanOnly.rawValue, "romanOnly")
     }
 
@@ -440,4 +482,15 @@ final class SettingsStoreTests: XCTestCase {
 
         XCTAssertEqual(makeStore().composingKeyBindings.slotKeySet, .bareKeys)
     }
+
+    /// The rules `current` and the swap shortcut read live on the enum — pinned once.
+    func testCandidateDisplayMode_rules_perMode() {
+        XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide])
+        XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveTranslateSwapped(stored: false))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
+    }
+
 }

@@ -36,8 +36,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
  * un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
  * normalise through `AppConfig::is_roman_only_display`, never compare the raw
- * i32 at a call site. 漢羅合用 (one label hanji+roman) is a later value.
- * 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排。
+ * i32 at a call site. COMBINED (漢羅合用: one label `漢字 羅馬字`, hanji
+ * commits) has NO engine reader — a combined cell is still distinct by
+ * (hanji, roman); the platforms send `is_translate_swapped = true` for it.
+ * 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排;
+ * 中文:   COMBINED 引擎不讀(平台送 swapped=true)。
  * </pre>
  *
  * Protobuf enum {@code taigi.engine.CandidateDisplayMode}
@@ -57,6 +60,10 @@ public enum CandidateDisplayMode
    * <code>CANDIDATE_DISPLAY_MODE_ROMAN_ONLY = 2;</code>
    */
   CANDIDATE_DISPLAY_MODE_ROMAN_ONLY(2),
+  /**
+   * <code>CANDIDATE_DISPLAY_MODE_COMBINED = 3;</code>
+   */
+  CANDIDATE_DISPLAY_MODE_COMBINED(3),
   UNRECOGNIZED(-1),
   ;
 
@@ -72,6 +79,10 @@ public enum CandidateDisplayMode
    * <code>CANDIDATE_DISPLAY_MODE_ROMAN_ONLY = 2;</code>
    */
   public static final int CANDIDATE_DISPLAY_MODE_ROMAN_ONLY_VALUE = 2;
+  /**
+   * <code>CANDIDATE_DISPLAY_MODE_COMBINED = 3;</code>
+   */
+  public static final int CANDIDATE_DISPLAY_MODE_COMBINED_VALUE = 3;
 
 
   @java.lang.Override
@@ -97,6 +108,7 @@ public enum CandidateDisplayMode
       case 0: return CANDIDATE_DISPLAY_MODE_UNSPECIFIED;
       case 1: return CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE;
       case 2: return CANDIDATE_DISPLAY_MODE_ROMAN_ONLY;
+      case 3: return CANDIDATE_DISPLAY_MODE_COMBINED;
       default: return null;
     }
   }

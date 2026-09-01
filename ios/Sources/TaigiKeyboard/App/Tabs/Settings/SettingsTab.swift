@@ -147,7 +147,7 @@ struct SettingsTab: View {
                         }
                     }
                     // 括號標註 is meaningless without hanji; stored value stays untouched.
-                    .disabled(candidateDisplayMode == .romanOnly)
+                    .disabled(!candidateDisplayMode.showsHanji)
                     .onChange(of: isOutputBothScripts) { _, newValue in
                         settings.storedIsOutputBothScripts = newValue
                     }

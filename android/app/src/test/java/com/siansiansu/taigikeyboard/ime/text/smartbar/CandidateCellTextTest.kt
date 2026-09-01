@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * Pins the candidate-cell arm order shared by the strip and the expanded
- * overlay: `hanji empty → TPS → ROMAN_ONLY → swapped → else`.
+ * overlay: `hanji empty → TPS → ROMAN_ONLY → COMBINED → swapped → else`.
  * Mirrors iOS `CandidateCellHelperTests`.
  */
 class CandidateCellTextTest {
@@ -38,12 +38,27 @@ class CandidateCellTextTest {
         )
     }
 
+    /** One label `漢字 羅馬字` (single ASCII space), no subtitle, whatever the swap flag says. */
+    @Test
+    fun test_INVARIANT_combined_cells_are_one_hanji_space_roman_label() {
+        assertEquals(CandidateCellText("台語 tâi-gí", null), cell(mode = CandidateDisplayMode.COMBINED))
+        // The derived swap flag is true under 漢羅合用; a stale `false` must render identically.
+        assertEquals(
+            CandidateCellText("台語 tâi-gí", null),
+            cell(mode = CandidateDisplayMode.COMBINED, isTranslateSwapped = true),
+        )
+    }
+
     @Test
     fun tps_ignoresDisplayMode_hanjiOnly() {
         assertEquals(CandidateCellText("台語", null), cell(isTPSLayout = true))
         assertEquals(
             CandidateCellText("台語", null),
             cell(isTPSLayout = true, mode = CandidateDisplayMode.ROMAN_ONLY),
+        )
+        assertEquals(
+            CandidateCellText("台語", null),
+            cell(isTPSLayout = true, mode = CandidateDisplayMode.COMBINED),
         )
     }
 

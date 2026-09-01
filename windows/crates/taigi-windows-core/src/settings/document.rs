@@ -198,21 +198,21 @@ impl SettingsDocument {
 
     /// The engine-facing snapshot as of this document.
     ///
-    /// The swap and 括號標註 pair comes out DERIVED: the stored toggle AND-ed
-    /// with "not roman-only". Roman-only cells show one script, so a hanji
-    /// lead or a bracketed pair has nothing to apply to — but the stored
-    /// bools are left alone, so switching back to side-by-side restores them
-    /// (`SettingsStore.swift` `engineSettings`). Every consumer of the pair
-    /// reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)` directly;
-    /// the raw read is for the panes and the toggle shortcut that write it.
+    /// The swap and 括號標註 pair comes out DERIVED — the rules live on
+    /// `CandidateDisplayMode` (invariants §42). The stored bools are left
+    /// alone, so switching back to side-by-side restores them. Every consumer
+    /// of the pair reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)`
+    /// directly; the raw read is for the panes and the toggle shortcut that
+    /// write it.
     pub fn engine_settings(&self) -> EngineSettings {
         let candidate_display_mode: CandidateDisplayMode =
             self.choice(&keys::CANDIDATE_DISPLAY_MODE);
-        let is_two_script = candidate_display_mode != CandidateDisplayMode::RomanOnly;
         EngineSettings {
             input_mode: self.choice(&keys::INPUT_MODE),
-            is_translate_swapped: self.bool(&keys::IS_TRANSLATE_SWAPPED) && is_two_script,
-            is_output_both_scripts: self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS) && is_two_script,
+            is_translate_swapped: candidate_display_mode
+                .effective_translate_swapped(self.bool(&keys::IS_TRANSLATE_SWAPPED)),
+            is_output_both_scripts: candidate_display_mode
+                .effective_output_both_scripts(self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS)),
             candidate_display_mode,
             is_literal_roman_candidate_enabled: self
                 .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
@@ -372,9 +372,70 @@ mod tests {
     }
 
     #[test]
+    fn combined_forces_the_swap_and_leaves_the_bracket_toggle_alone() {
+        // trace: stored swap=false, both=false; mode=combined → (true, false):
+        // the one-label cell leads with the hanji and a commit writes it, the
+        // projection of that onto the pair is a forced swap. Stored both=true
+        // → (true, true), so 括號標註 still yields `漢字 (羅馬字)`. Roman-only
+        // still masks to (false, false); back to sideBySide reads the stored
+        // (false, true) again with no bool written in between.
+        let mut doc = SettingsDocument::default();
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::Combined,
+        );
+        let snapshot = doc.engine_settings();
+        assert_eq!(
+            snapshot.candidate_display_mode,
+            CandidateDisplayMode::Combined
+        );
+        assert!(snapshot.is_translate_swapped && !snapshot.is_output_both_scripts);
+        assert!(
+            !doc.bool(&keys::IS_TRANSLATE_SWAPPED),
+            "stored value untouched"
+        );
+
+        doc.set_bool(&keys::IS_OUTPUT_BOTH_SCRIPTS, true);
+        let with_brackets = doc.engine_settings();
+        assert!(with_brackets.is_translate_swapped && with_brackets.is_output_both_scripts);
+
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        let roman_only = doc.engine_settings();
+        assert!(!roman_only.is_translate_swapped && !roman_only.is_output_both_scripts);
+
+        let revision = doc.revision;
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::SideBySide,
+        );
+        let restored = doc.engine_settings();
+        assert!(!restored.is_translate_swapped && restored.is_output_both_scripts);
+        assert_eq!(doc.revision, revision + 1, "only the mode was written");
+    }
+
+    /// The rules `engine_settings()` and the swap shortcut read live on the enum — pinned once.
+    #[test]
+    fn candidate_display_mode_rules_per_mode() {
+        use CandidateDisplayMode::{Combined, RomanOnly, SideBySide};
+        assert!(
+            SideBySide.allows_swap_toggle()
+                && !Combined.allows_swap_toggle()
+                && !RomanOnly.allows_swap_toggle()
+        );
+        assert!(SideBySide.shows_hanji() && Combined.shows_hanji() && !RomanOnly.shows_hanji());
+        assert!(Combined.effective_translate_swapped(false));
+        assert!(!RomanOnly.effective_translate_swapped(true));
+        assert!(!RomanOnly.effective_output_both_scripts(true));
+        assert!(Combined.effective_output_both_scripts(true));
+    }
+
+    #[test]
     fn unknown_candidate_display_mode_reads_as_side_by_side() {
         let doc = SettingsDocument::from_json(
-            r#"{"revision": 1, "values": {"candidateDisplayMode": "combined", "isTranslateSwapped": true}}"#,
+            r#"{"revision": 1, "values": {"candidateDisplayMode": "hanlo", "isTranslateSwapped": true}}"#,
         )
         .unwrap();
         assert_eq!(

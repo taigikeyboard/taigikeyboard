@@ -30,10 +30,13 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
     func testAppConfig_carriesTheCandidateDisplayMode_onEveryDerivedConfig() {
         let sideBySide = TestFixtures.settings(candidateDisplayMode: .sideBySide)
         let romanOnly = TestFixtures.settings(candidateDisplayMode: .romanOnly)
+        let combined = TestFixtures.settings(candidateDisplayMode: .combined)
 
         XCTAssertEqual(RustEngineBridge.appConfig(sideBySide).candidateDisplayMode, .sideBySide)
         XCTAssertEqual(RustEngineBridge.appConfig(romanOnly).candidateDisplayMode, .romanOnly)
+        XCTAssertEqual(RustEngineBridge.appConfig(combined).candidateDisplayMode, .combined)
         XCTAssertEqual(RustEngineBridge.continuousAppConfig(romanOnly).candidateDisplayMode, .romanOnly)
+        XCTAssertEqual(RustEngineBridge.continuousAppConfig(combined).candidateDisplayMode, .combined)
         XCTAssertNotEqual(RustEngineBridge.appConfig(.defaults).candidateDisplayMode, .unspecified)
     }
 }
