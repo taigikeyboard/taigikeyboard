@@ -351,8 +351,8 @@ mod tests {
             CandidateDisplayMode::ALL,
             &[
                 CandidateDisplayMode::SideBySide,
-                CandidateDisplayMode::RomanOnly,
                 CandidateDisplayMode::Combined,
+                CandidateDisplayMode::RomanOnly,
             ]
         );
         assert_eq!(

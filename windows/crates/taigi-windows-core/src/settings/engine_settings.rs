@@ -81,7 +81,7 @@ impl CandidateDisplayMode {
 }
 
 impl SettingChoice for CandidateDisplayMode {
-    const ALL: &'static [Self] = &[Self::SideBySide, Self::RomanOnly, Self::Combined];
+    const ALL: &'static [Self] = &[Self::SideBySide, Self::Combined, Self::RomanOnly];
     /// Today's behaviour, byte for byte.
     const DEFAULT: Self = Self::SideBySide;
     fn raw(self) -> &'static str {

@@ -85,8 +85,8 @@ enum FontType: String, CaseIterable, Codable {
 // public and take it as a defaulted parameter.
 public enum CandidateDisplayMode: String, CaseIterable, Codable {
     case sideBySide
-    case romanOnly
     case combined
+    case romanOnly
 
     // Resolved at the call site via the environment store (same reactive
     // pattern as `FontType.displayNameKey`).
