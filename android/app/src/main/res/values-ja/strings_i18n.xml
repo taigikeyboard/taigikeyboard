@@ -188,6 +188,7 @@
     <string name="i18n_settings_typingSectionTitle">入力</string>
     <string name="i18n_settings_candidateDisplayMode">候補の表示</string>
     <string name="i18n_settings_candidateDisplayModeSideBySide">漢字とローマ字</string>
+    <string name="i18n_settings_candidateDisplayModeCombined">漢字＋ローマ字</string>
     <string name="i18n_settings_candidateDisplayModeRomanOnly">ローマ字のみ</string>
     <string name="i18n_settings_outputBothScripts">括弧で併記</string>
     <string name="i18n_settings_literalRomanCandidate">入力したローマ字候補を表示</string>

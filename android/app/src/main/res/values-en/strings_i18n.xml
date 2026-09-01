@@ -188,6 +188,7 @@
     <string name="i18n_settings_typingSectionTitle">Typing</string>
     <string name="i18n_settings_candidateDisplayMode">Candidate Display</string>
     <string name="i18n_settings_candidateDisplayModeSideBySide">Hanji and Romanization</string>
+    <string name="i18n_settings_candidateDisplayModeCombined">Hanji with Romanization</string>
     <string name="i18n_settings_candidateDisplayModeRomanOnly">Romanization Only</string>
     <string name="i18n_settings_outputBothScripts">Annotate in Brackets</string>
     <string name="i18n_settings_literalRomanCandidate">Show Typed Romanization Candidate</string>

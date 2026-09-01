@@ -154,6 +154,7 @@ enum StringKey: String {
     case settingsTlMode = "i18n_settings_tlMode"
     case settingsCandidateDisplayMode = "i18n_settings_candidateDisplayMode"
     case settingsCandidateDisplayModeSideBySide = "i18n_settings_candidateDisplayModeSideBySide"
+    case settingsCandidateDisplayModeCombined = "i18n_settings_candidateDisplayModeCombined"
     case settingsCandidateDisplayModeRomanOnly = "i18n_settings_candidateDisplayModeRomanOnly"
     case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
     case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"

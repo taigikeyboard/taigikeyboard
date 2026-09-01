@@ -376,6 +376,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE)
     val settingsCandidateDisplayModeSideBySide: String
         @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE)
+    val settingsCandidateDisplayModeCombined: String
+        @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_COMBINED)
     val settingsCandidateDisplayModeRomanOnly: String
         @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_ROMAN_ONLY)
     val settingsOutputBothScripts: String

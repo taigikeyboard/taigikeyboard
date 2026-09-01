@@ -203,13 +203,17 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
 /// un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
 /// normalise through `AppConfig::is_roman_only_display`, never compare the raw
-/// i32 at a call site. 漢羅合用 (one label hanji+roman) is a later value.
-/// 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排。
+/// i32 at a call site. COMBINED (漢羅合用: one label `漢字 羅馬字`, hanji
+/// commits) has NO engine reader — a combined cell is still distinct by
+/// (hanji, roman); the platforms send `is_translate_swapped = true` for it.
+/// 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排;
+/// 中文:   COMBINED 引擎不讀(平台送 swapped=true)。
 public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case sideBySide // = 1
   case romanOnly // = 2
+  case combined // = 3
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -221,6 +225,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
     case 0: self = .unspecified
     case 1: self = .sideBySide
     case 2: self = .romanOnly
+    case 3: self = .combined
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -230,6 +235,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
     case .unspecified: return 0
     case .sideBySide: return 1
     case .romanOnly: return 2
+    case .combined: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -239,6 +245,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
     .unspecified,
     .sideBySide,
     .romanOnly,
+    .combined,
   ]
 
 }
@@ -483,7 +490,7 @@ nonisolated extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
 }
 
 nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_DISPLAY_MODE_UNSPECIFIED\0\u{1}CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE\0\u{1}CANDIDATE_DISPLAY_MODE_ROMAN_ONLY\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_DISPLAY_MODE_UNSPECIFIED\0\u{1}CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE\0\u{1}CANDIDATE_DISPLAY_MODE_ROMAN_ONLY\0\u{1}CANDIDATE_DISPLAY_MODE_COMBINED\0")
 }
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

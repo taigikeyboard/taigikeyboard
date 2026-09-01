@@ -388,6 +388,12 @@ fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
         explicit,
         "unknown value = side-by-side"
     );
+    // 漢羅合用 keeps every row too — a one-label cell is distinct by (hanji, roman).
+    assert_eq!(
+        fetch("tsiah", "tl", CandidateDisplayMode::Combined as i32),
+        explicit,
+        "COMBINED = no engine collapse"
+    );
 }
 
 #[test]
