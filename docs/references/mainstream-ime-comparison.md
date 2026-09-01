@@ -3,6 +3,7 @@
 > **Type**: Reference index
 > **Purpose**: Centralised cross-reference of every mainstream IME / keyboard repo cloned under `references/`, plus a few external projects worth knowing. Read this **before** writing a `最佳實踐對齊` section in a plan, before designing a new engine slice, or before asserting "Project X already does Y".
 > **Status**: Authoritative as of 2026-08-20. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
+> **Getting the clones**: `references/` is gitignored — run `scripts/sync-references.sh` to clone the whole roster (taigikeyboard-org forks preferred, upstream otherwise; `mozc` shallow, `keyboardkit9.9.0` tag-pinned) and fast-forward existing clones. Keep that script's roster in sync with this file.
 > **Related deep-dives**:
 > - [`azookey-reference.md`](./azookey-reference.md) — azooKey iOS UI / CustardKit / action model
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
@@ -458,11 +459,16 @@ If you are working on… → read these in order.
 
 ### Cloned but out-of-engine-scope (not IME engines)
 
-Three repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
+Four repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
 
 - **`ISEmojiView/`** (`fec2d03`, 2025-11-27, MIT) — an iOS **emoji-keyboard UI component** (categories, skin-tone variants, recently-used, system-style bottom bar). Not an IME. Relevance: **UI-only** reference for our emoji palette (`EmojiPaletteView`), if we revisit emoji-picker layout. `Sources/ISEmojiView/`.
 - **`KeSi/`** (`826e787`, 2025-12-16, MIT) — `i3thuan5/KeSi`, a **Tâi-bûn NLP toolkit** (Python) by 意傳科技: 斷詞, 輕聲標註, Unicode NFC + 教育部造字碼 normalisation, 漢羅↔全羅. Not an IME. Relevance: **phonetics / dictionary** tooling (see `memory/project_kesi_deprecated.md`), not the engine comparison — read `knowledge/taigi-phonetics-reference.md` + `taigi-converter/` first per CLAUDE.md Core Principle #3.
+- **`azooKey_emoji_dictionary_storage/`** (`467c33a`, 2026-04-25) — azooKey's **emoji dictionary data** repo (Python generators + `EmojiDictionary` tables, per-Unicode-version regeneration). Data, not an engine. Relevance: emoji-palette entry sourcing, sibling of card #1.
 - **`Taigi-Input-method-dictionary-supplement/`** (`ada348a`, 2026-01-14) — 建中's CSV supplement tables for the MOE 教育部臺灣台語輸入法 (一府五院 / 行政區 / 數字·時間·日期 / 台·臺 / 菜市仔名 / …). **Dictionary data, not an engine** — the dev-supplement source behind PR #368/#369 (see `memory/project_dev_supplement_dict.md`). Relevance: **dictionary entries** to fold into our build, gated by CLAUDE.md Core Principle #3 + #7 `(漢字, 羅馬字)` identity — not an algorithm reference.
+
+### Cloned, not yet catalogued
+
+- **`KeyKey41-Eten-Tribute/`** (`82a721e`, 2026-08-28, MIT) — `whyren0324/KeyKey41-Eten-Tribute`, a Traditional-Chinese **Bopomofo IME for Windows 11 built on TSF** (Eten 41-key + standard layouts, C++/CMake, MSI installer). In engine scope and directly comparable to our own Windows TSF text service — it has no card or matrix row yet; write one before citing it in a 最佳實踐對齊 section.
 
 ---
 
