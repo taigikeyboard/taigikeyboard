@@ -63,14 +63,14 @@ anonymous_status() {
     fail "version '$SHORT_VERSION' is not dotted integers — the update manifest rejects suffixes"
 command -v gh > /dev/null || fail "the GitHub CLI (gh) is not installed"
 gh auth status > /dev/null 2>&1 || fail "gh is not authenticated — run 'gh auth login'"
-[[ -n "$installer_path" ]] || installer_path="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION-Setup.exe"
+[[ -n "$installer_path" ]] || installer_path="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION.exe"
 [[ -f "$installer_path" ]] || fail "no installer at $installer_path — run 'make windows-release' first"
 INSTALLER_NAME="$(basename "$installer_path")"
 installer_path="$(cd "$(dirname "$installer_path")" && pwd)/$INSTALLER_NAME"
 
 echo "==> Verifying the installer is publishable"
-[[ "$INSTALLER_NAME" == "$APP_NAME-$SHORT_VERSION-Setup.exe" ]] ||
-    fail "$INSTALLER_NAME is not the release name for $SHORT_VERSION (a -dirty / -unsigned build is a throwaway)"
+[[ "$INSTALLER_NAME" == "$APP_NAME-$SHORT_VERSION.exe" ]] ||
+    fail "$INSTALLER_NAME is not the release name for $SHORT_VERSION (a -dirty / -throwaway build is not publishable)"
 for tool in curl base64 python3 powershell.exe signtool; do
     command -v "$tool" > /dev/null || fail "$tool is not on PATH"
 done

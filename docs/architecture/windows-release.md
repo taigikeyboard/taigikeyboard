@@ -128,13 +128,13 @@ What `windows/scripts/release-app.sh` does, in order:
 5. **Sign the binaries** — `signtool sign /fd SHA256 /td SHA256 /tr <timestamp>
    /sha1 <thumbprint>`, then `signtool verify /pa`.
 6. **Package** — `iscc /DAppVersion /DDist /O … windows/installer/TaigiKeyboard.iss`
-   → `TaigiKeyboard-<version>-Setup.exe`, with the same `ProductName` /
+   → `TaigiKeyboard-<version>.exe`, with the same `ProductName` /
    `ProductVersion` in its own VERSIONINFO (`VersionInfo*` directives) —
    read back and compared the same way.
 7. **Sign the installer** — same certificate, then verify.
-8. **Name the output** — `windows/.build/distribution/TaigiKeyboard-<version>-Setup.exe`
+8. **Name the output** — `windows/.build/distribution/TaigiKeyboard-<version>.exe`
    and its SHA-256. A dirty tree or `--skip-sign` stamps `-dirty` /
-   `-unsigned` into the name, so a throwaway cannot be mistaken for a release.
+   `-throwaway` into the name, so a throwaway cannot be mistaken for a release.
 9. **Publish** — `windows/scripts/publish-release.sh` (below).
 
 Flags: `make windows-release` passes `--force --publish`. `--publish` refuses to
@@ -209,7 +209,7 @@ reading its own payload.
 
 `windows/scripts/publish-release.sh` (run by `--publish`):
 
-1. Refuses a `-dirty` / `-unsigned` name, an installer `signtool verify`
+1. Refuses a `-dirty` / `-throwaway` name, an installer `signtool verify`
    does not trust, an installer whose VERSIONINFO is not
    `Taigi Keyboard` / the checkout's version, and — when
    `WINDOWS_SIGNING_THUMBPRINT` is set — a signer other than that certificate

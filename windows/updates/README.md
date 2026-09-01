@@ -23,7 +23,7 @@ VERSIONINFO naming this product at the manifest's version.
 |---|---|
 | `version` | Newest downloadable version, dotted integers only (`3.7.0`). No suffixes — the checker rejects them. |
 | `downloadPageURL` | Page the user lands on, `https` only. Required. |
-| `packageURL` | The signed `TaigiKeyboard-<version>-Setup.exe`, `https` only. Optional; an invalid one is dropped on its own. |
+| `packageURL` | The signed `TaigiKeyboard-<version>.exe`, `https` only. Optional; an invalid one is dropped on its own. |
 
 Unknown extra fields are ignored. Before the first release the manifest reads
 `0.0.0`, which notifies nobody.
@@ -43,7 +43,7 @@ repository, and never before the installer is anonymously reachable.
 {
   "version": "3.7.0",
   "tag": "windows-v3.7.0",
-  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/windows-v3.7.0/TaigiKeyboard-3.7.0-Setup.exe",
+  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/windows-v3.7.0/TaigiKeyboard-3.7.0.exe",
   "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/tag/windows-v3.7.0"
 }
 ```

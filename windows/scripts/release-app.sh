@@ -61,8 +61,8 @@ fi
 HEAD_COMMIT="$(git -C "$REPOSITORY_DIR" rev-parse --short HEAD)"
 QUALIFIER=""
 [[ -z "$TREE_STATUS" ]] || QUALIFIER="$QUALIFIER-dirty"
-[[ "$skip_sign" == false ]] || QUALIFIER="$QUALIFIER-unsigned"
-OUTPUT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION$QUALIFIER-Setup.exe"
+[[ "$skip_sign" == false ]] || QUALIFIER="$QUALIFIER-throwaway"
+OUTPUT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION$QUALIFIER.exe"
 if [[ -e "$OUTPUT_EXE" && "$force_overwrite" == false ]]; then
     fail "$OUTPUT_EXE already exists — bump the version, or pass --force"
 fi
@@ -205,7 +205,7 @@ STAGING_WIN="$(windows_path "$STAGING_DIR")"
 OUTPUT_WIN="$(windows_path "$DISTRIBUTION_DIR")"
 "$ISCC_BIN" -Q "-DAppVersion=$SHORT_VERSION" "-DDist=$STAGING_WIN" "-O$OUTPUT_WIN" "$(windows_path "$INSTALLER_SCRIPT")" ||
     fail "iscc failed"
-BUILT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION-Setup.exe"
+BUILT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION.exe"
 [[ -f "$BUILT_EXE" ]] || fail "iscc produced no $BUILT_EXE"
 # The installer's own VERSIONINFO (the .iss VersionInfo* directives) is what
 # an installed copy verifies a downloaded package by.
