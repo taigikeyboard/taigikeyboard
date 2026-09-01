@@ -21,12 +21,17 @@ final class CandidateCellContentTests: XCTestCase {
         )
     }
 
-    private func settings(swapped: Bool, bothScripts: Bool = false) -> EngineSettings {
+    private func settings(
+        swapped: Bool,
+        bothScripts: Bool = false,
+        displayMode: CandidateDisplayMode = .sideBySide,
+    ) -> EngineSettings {
         let defaults = EngineSettings.defaults
         return EngineSettings(
             inputMode: defaults.inputMode,
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
+            candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: defaults.isLiteralRomanCandidateEnabled,
             isFrequencyRecordingEnabled: defaults.isFrequencyRecordingEnabled,
             isAssociationRecordingEnabled: defaults.isAssociationRecordingEnabled,
@@ -89,6 +94,52 @@ final class CandidateCellContentTests: XCTestCase {
 
     func testEmptyAnnotationString_normalizesToNil() {
         XCTAssertNil(CandidateCellContent(text: "guá", annotation: "").annotation)
+    }
+
+    // MARK: - Romanization-only display
+
+    /// The romanization-only display shows ONE script whatever direction the
+    /// swap points: the arm sits before the swap so a swapped install cannot
+    /// put Hanji back into a cell this mode says shows none. The swap flag is
+    /// forced here rather than left derived-false by `SettingsStore`, which
+    /// is exactly what makes the arm order the thing under test.
+    func testRomanOnly_leadsWithRomanization_andHasNoAnnotation_inEitherSwapDirection() {
+        for swapped in [false, true] {
+            let cell = CandidateCellContent.cell(
+                for: candidate(roman: "tâi-gí", hanji: "台語"),
+                settings: settings(swapped: swapped, displayMode: .romanOnly),
+            )
+
+            XCTAssertEqual(cell.text, "tâi-gí", "swapped=\(swapped)")
+            XCTAssertNil(cell.annotation, "swapped=\(swapped) put Hanji into a romanization-only cell")
+        }
+    }
+
+    /// Space commits the annotation (#610), and a romanization-only cell has
+    /// none — so Space on it must resolve to nothing to write, the same
+    /// one-script path the §34 literal candidate already takes, rather than
+    /// committing Hanji the user never saw.
+    func testRomanOnly_offersNoAlternateScriptToSpace() {
+        for swapped in [false, true] {
+            XCTAssertNil(
+                CandidateDocumentText.alternateText(
+                    for: candidate(roman: "tâi-gí", hanji: "台語"),
+                    settings: settings(swapped: swapped, displayMode: .romanOnly),
+                ),
+                "swapped=\(swapped)",
+            )
+        }
+    }
+
+    /// The cell and the commit agree under this display as under the others:
+    /// with the derived pair `(false, false)` — what `SettingsStore` hands
+    /// the engine — the document gets exactly the romanization the cell shows.
+    func testRomanOnly_cellIsExactlyTheDocumentText_underTheDerivedPair() {
+        let word = candidate(roman: "tâi-gí", hanji: "台語")
+        let settings = settings(swapped: false, bothScripts: false, displayMode: .romanOnly)
+
+        XCTAssertEqual(CandidateCellContent.cell(for: word, settings: settings).text, "tâi-gí")
+        XCTAssertEqual(CandidateDocumentText.text(for: word, settings: settings), "tâi-gí")
     }
 
     /// The cell and the commit resolve the same settings snapshot, so the cell

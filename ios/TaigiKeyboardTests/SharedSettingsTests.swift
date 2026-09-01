@@ -292,4 +292,60 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertNotNil(snap.keyShadowIntensity)
         XCTAssertEqual(snap.keyShadowIntensity, 0)
     }
+
+    // MARK: - Candidate display mode (漢羅並排 / 羅馬字) — stored vs derived split
+
+    /// Under `.romanOnly` the derived swap / both-scripts pair reads `false`
+    /// while the stored flags keep the user's `true`; leaving the mode
+    /// restores the derived values without any write.
+    func test_candidateDisplayMode_romanOnly_derivesFalseWithoutOverwritingStoredFlags() {
+        settings.storedIsTranslateSwapped = true
+        settings.storedIsOutputBothScripts = true
+
+        settings.candidateDisplayMode = .romanOnly
+
+        XCTAssertFalse(settings.isTranslateSwapped, "derived swap must read false under romanOnly")
+        XCTAssertFalse(settings.isOutputBothScripts, "derived both-scripts must read false under romanOnly")
+        XCTAssertTrue(settings.storedIsTranslateSwapped, "stored swap must survive the mode")
+        XCTAssertTrue(settings.storedIsOutputBothScripts, "stored both-scripts must survive the mode")
+        XCTAssertEqual(defaults.object(forKey: "isTranslateSwapped") as? Bool, true, "raw key untouched")
+
+        settings.candidateDisplayMode = .sideBySide
+
+        XCTAssertTrue(settings.isTranslateSwapped, "leaving romanOnly restores the derived swap")
+        XCTAssertTrue(settings.isOutputBothScripts, "leaving romanOnly restores derived both-scripts")
+    }
+
+    /// The `snapshot(for:)` render path carries the DERIVED swap, so keycaps
+    /// go half-width and the 文/A key reads inactive under `.romanOnly`.
+    func test_snapshot_underRomanOnly_carriesDerivedSwap() {
+        settings.storedIsTranslateSwapped = true
+        settings.candidateDisplayMode = .romanOnly
+
+        XCTAssertFalse(settings.snapshot(for: .light).isTranslateSwapped)
+    }
+
+    func test_candidateDisplayMode_storageContract_keyAndRawValues() {
+        XCTAssertEqual(settings.candidateDisplayMode, .sideBySide, "descriptor default")
+
+        settings.candidateDisplayMode = .romanOnly
+
+        XCTAssertEqual(defaults.string(forKey: "candidateDisplayMode"), "romanOnly", "cross-platform raw value")
+    }
+
+    /// An unknown / malformed stored raw string (a newer build's value, a
+    /// hand-edited plist) falls back to `.sideBySide` — today's behaviour.
+    func test_candidateDisplayMode_unknownRawString_fallsBackToSideBySide() {
+        defaults.set("combined", forKey: "candidateDisplayMode")
+
+        XCTAssertEqual(settings.candidateDisplayMode, .sideBySide)
+    }
+
+    func test_resetToDefaults_restoresCandidateDisplayMode() {
+        settings.candidateDisplayMode = .romanOnly
+
+        settings.resetToDefaults()
+
+        XCTAssertEqual(settings.candidateDisplayMode, .sideBySide)
+    }
 }

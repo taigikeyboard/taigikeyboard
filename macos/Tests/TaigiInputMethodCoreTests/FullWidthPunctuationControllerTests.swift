@@ -19,7 +19,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     // MARK: - Outside a composition (the consumed pass-through)
 
     func testPunctuationOutsideAComposition_insertsTheFullWidthForm() throws {
-        let session = try makeSession(configure: { $0.isTranslateSwapped = true })
+        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = true })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -32,7 +32,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     func testAHostChord_isNeverMapped() throws {
         // ⌘. is a host command that inserts nothing; consuming it would eat
         // the shortcut.
-        let session = try makeSession(configure: { $0.isTranslateSwapped = true })
+        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = true })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ".", modifiers: .command), client: session.client,
@@ -55,7 +55,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
 
     func testAnUnmappedCharacter_passesThroughEvenWhenActive() throws {
         // Digits are tone markers and must reach the host as themselves.
-        let session = try makeSession(configure: { $0.isTranslateSwapped = true })
+        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = true })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "5"), client: session.client,
@@ -77,7 +77,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
         session.client.clearWrites()
-        session.store.isTranslateSwapped = true
+        session.store.storedIsTranslateSwapped = true
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -90,7 +90,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     // MARK: - Mid-composition (one mutation with the commit)
 
     func testPunctuationMidComposition_commitsWithTheFullWidthForm_inOneMutation() throws {
-        let session = try composedSession(configure: { $0.isTranslateSwapped = true })
+        let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "?"), client: session.client)
 

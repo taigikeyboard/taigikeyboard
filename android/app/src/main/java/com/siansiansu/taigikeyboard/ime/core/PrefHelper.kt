@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
@@ -315,9 +316,23 @@ class PrefHelper(
         get() = cached(PreferenceKeys.INPUT_MODE, "tl")
         set(value) = applyInputMode(value)
 
-    override var isTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
+    // STORED script flags — the only read-write API (settings UI, 文/A toggle,
+    // reset). Engine / commit / layout readers use the EFFECTIVE derived
+    // overrides `isTranslateSwapped` / `isOutputBothScripts` below, which
+    // read `false` under CandidateDisplayMode.ROMAN_ONLY without touching
+    // storage (so leaving roman-only restores the user's choice).
+    var storedIsTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
 
-    var outputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
+    var storedOutputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
+
+    // Candidate cell rendering mode (漢羅並排 / 羅馬字). String-backed like
+    // `inputMode`; unknown stored values coerce to SIDE_BY_SIDE.
+    override var candidateDisplayMode: CandidateDisplayMode
+        get() =
+            CandidateDisplayMode.fromStorage(
+                cached(PreferenceKeys.CANDIDATE_DISPLAY_MODE, CandidateDisplayMode.SIDE_BY_SIDE.storageValue),
+            )
+        set(value) = updateCacheAndPersist(PreferenceKeys.CANDIDATE_DISPLAY_MODE, value.storageValue)
 
     // App UI display language tag (i18n). Default = system (Automatic) — fresh install follows device OS locale.
     var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
@@ -570,12 +585,16 @@ class PrefHelper(
     override val isAutoCap: Boolean
         get() = autoCapitalizationEnabled
 
-    // v3.5.8 §10.2: engine-facing alias for the Android `outputBothScripts`
-    // pref (kept un-renamed because the settings UI / smartbar read it
-    // directly). The continuous word-boundary-spacing predicate consumes
-    // this via EngineSettings.
+    // EFFECTIVE script pair — stored flag AND mode != ROMAN_ONLY. Every
+    // engine / commit / layout / auto-space reader goes through these two;
+    // only the settings UI and the 文/A toggle touch the `stored*` vars.
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped / isOutputBothScripts.
+    // Drift causes silent divergence (hanji-first commits or spurious spaces under roman-only).
+    override val isTranslateSwapped: Boolean
+        get() = candidateDisplayMode.effectiveScriptFlag(storedIsTranslateSwapped)
+
     override val isOutputBothScripts: Boolean
-        get() = outputBothScripts
+        get() = candidateDisplayMode.effectiveScriptFlag(storedOutputBothScripts)
 
     // §34/S22: engine-facing alias for the Android `literalRomanCandidateEnabled`
     // pref (kept un-renamed because the settings UI reads it directly).
@@ -835,6 +854,7 @@ class PrefHelper(
             prefs[PreferenceKeys.INPUT_MODE] = "tl"
             prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = false
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
+            prefs[PreferenceKeys.CANDIDATE_DISPLAY_MODE] = CandidateDisplayMode.SIDE_BY_SIDE.storageValue
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = true
             prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = true

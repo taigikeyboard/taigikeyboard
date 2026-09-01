@@ -43,6 +43,51 @@ impl SettingChoice for InputMode {
     }
 }
 
+/// What a candidate cell shows: both scripts (the swap decides which leads)
+/// or the romanization alone. Stored spellings and the roman-only rule are
+/// the same on every platform (`SettingsModels.swift` `CandidateDisplayMode`).
+/// 漢羅合用 (combined) is not a variant yet; the enum leaves room for it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CandidateDisplayMode {
+    SideBySide,
+    RomanOnly,
+}
+
+impl CandidateDisplayMode {
+    /// The `AppConfig.candidate_display_mode` wire value. The engine reads
+    /// it through `AppConfig::is_roman_only_display`, so only `RomanOnly`
+    /// has to be exact; `SideBySide` is spelled out rather than left
+    /// `Unspecified` so a build that sets the field is telling apart from
+    /// one that never did.
+    pub fn wire(self) -> protos::engine::CandidateDisplayMode {
+        match self {
+            Self::SideBySide => protos::engine::CandidateDisplayMode::SideBySide,
+            Self::RomanOnly => protos::engine::CandidateDisplayMode::RomanOnly,
+        }
+    }
+
+    /// The picker row's i18n key.
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::SideBySide => StringKey::SettingsCandidateDisplayModeSideBySide,
+            Self::RomanOnly => StringKey::SettingsCandidateDisplayModeRomanOnly,
+        }
+    }
+}
+
+impl SettingChoice for CandidateDisplayMode {
+    const ALL: &'static [Self] = &[Self::SideBySide, Self::RomanOnly];
+    /// Today's behaviour, byte for byte.
+    const DEFAULT: Self = Self::SideBySide;
+    fn raw(self) -> &'static str {
+        match self {
+            Self::SideBySide => "sideBySide",
+            Self::RomanOnly => "romanOnly",
+        }
+    }
+}
+
 /// Immutable snapshot of everything the engine needs to render a composition.
 ///
 /// A snapshot rather than a set of getters because a single user intent can
@@ -53,9 +98,18 @@ impl SettingChoice for InputMode {
 pub struct EngineSettings {
     pub input_mode: InputMode,
     /// Word-boundary spacing inputs for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2).
+    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Both are
+    /// the EFFECTIVE values: the stored toggles AND-ed with `candidate_display_mode
+    /// != RomanOnly` (`SettingsDocument::engine_settings`), never the raw
+    /// document bools — the raw ones stay untouched so leaving roman-only
+    /// restores them.
     pub is_translate_swapped: bool,
     pub is_output_both_scripts: bool,
+    /// What a candidate cell shows; `AppConfig.candidate_display_mode`.
+    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// `macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift`
+    /// `candidateDisplayMode`; every platform defaults to side-by-side.
+    pub candidate_display_mode: CandidateDisplayMode,
     /// §34/S22 — inverted onto `FetchAtPos.literal_roman_candidate_disabled`.
     /// CROSS-PLATFORM INVARIANT — mirrors `ios/.../SharedSettings.swift:50`
     /// and `android/.../PrefHelper.kt:326`, both default OFF.
@@ -82,6 +136,7 @@ impl Default for EngineSettings {
             input_mode: InputMode::Tl,
             is_translate_swapped: false,
             is_output_both_scripts: false,
+            candidate_display_mode: CandidateDisplayMode::SideBySide,
             is_literal_roman_candidate_enabled: false,
             is_frequency_recording_enabled: true,
             is_association_recording_enabled: true,

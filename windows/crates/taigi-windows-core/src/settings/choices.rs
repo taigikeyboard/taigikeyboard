@@ -346,6 +346,7 @@ mod tests {
     #[test]
     fn every_choice_round_trips_and_has_a_listed_default() {
         round_trips::<CandidateLayout>();
+        round_trips::<crate::settings::CandidateDisplayMode>();
         round_trips::<AppearanceMode>();
         round_trips::<CandidateTextSizeChoice>();
         round_trips::<CandidateWindowSizeChoice>();

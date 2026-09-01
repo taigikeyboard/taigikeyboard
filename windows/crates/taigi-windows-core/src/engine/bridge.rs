@@ -93,6 +93,10 @@ pub(super) fn record_failure(op: &str, message: &str) {
 /// they are user settings: their on-screen keyboards have dedicated `o͘` and
 /// `ⁿ` keys, a hardware keyboard has not, so switching the fold off would
 /// leave both graphemes untypable in POJ (`RustEngineBridge.swift:161-175`).
+///
+/// `candidate_display_mode` rides on the BASE config: the engine collapses
+/// same-roman rows under roman-only in both the candidate fetch and the
+/// next-word filter, and the two derived configs below inherit it.
 // 中文: 每個請求都帶的 AppConfig;oo/nn 雙擊摺疊在硬體鍵盤上永遠開。
 pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
@@ -100,6 +104,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         oo_doubletap_enabled: true,
         nn_doubletap_enabled: true,
         platform_id: Platform::Windows as i32,
+        candidate_display_mode: settings.candidate_display_mode.wire() as i32,
         ..Default::default()
     }
 }
@@ -130,7 +135,8 @@ pub(super) fn nextword_config(settings: &EngineSettings) -> AppConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::InputMode;
+    use crate::settings::{CandidateDisplayMode, InputMode};
+    use protos::engine::CandidateDisplayMode as WireDisplayMode;
 
     #[test]
     fn app_config_carries_platform_and_unconditional_doubletaps() {
@@ -147,6 +153,23 @@ mod tests {
             !config.is_translate_swapped,
             "swap flag stays off on the plain path"
         );
+        assert_eq!(
+            config.candidate_display_mode,
+            WireDisplayMode::SideBySide as i32,
+            "the default is spelled out, not left Unspecified"
+        );
+        assert!(!config.is_roman_only_display());
+    }
+
+    #[test]
+    fn roman_only_reaches_every_config_through_the_base_one() {
+        let settings = EngineSettings {
+            candidate_display_mode: CandidateDisplayMode::RomanOnly,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&settings).is_roman_only_display());
+        assert!(continuous_app_config(&settings).is_roman_only_display());
+        assert!(nextword_config(&settings).is_roman_only_display());
     }
 
     #[test]

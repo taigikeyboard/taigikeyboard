@@ -14,7 +14,11 @@ struct SettingsSelectionOverlay: View {
     let isExpanded: Bool
     let onDismiss: () -> Void
     let onOpenApp: () -> Void
+    /// Routed through `KeyboardContext.candidateDisplayMode` by the host view so the strip +
+    /// expanded overlay re-render immediately (same path as the 文/A toggle).
+    let onCandidateDisplayModeChange: (CandidateDisplayMode) -> Void
 
+    @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
     @State private var literalRomanCandidateEnabled: Bool
     @State private var autoCapitalizationEnabled: Bool
@@ -39,12 +43,20 @@ struct SettingsSelectionOverlay: View {
     private static let audioFeedbackKey = "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled"
     private static let hapticFeedbackKey = "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled"
 
-    init(isExpanded: Bool, onDismiss: @escaping () -> Void, onOpenApp: @escaping () -> Void) {
+    init(
+        isExpanded: Bool,
+        onDismiss: @escaping () -> Void,
+        onOpenApp: @escaping () -> Void,
+        onCandidateDisplayModeChange: @escaping (CandidateDisplayMode) -> Void,
+    ) {
         self.isExpanded = isExpanded
         self.onDismiss = onDismiss
         self.onOpenApp = onOpenApp
+        self.onCandidateDisplayModeChange = onCandidateDisplayModeChange
         let s = SharedSettings.shared
-        _isOutputBothScripts = State(initialValue: s.isOutputBothScripts)
+        _candidateDisplayMode = State(initialValue: s.candidateDisplayMode)
+        // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under 羅馬字.
+        _isOutputBothScripts = State(initialValue: s.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: s.isLiteralRomanCandidateEnabled)
         _autoCapitalizationEnabled = State(
             initialValue: KeyboardSettings.store.bool(forKey: Self.autoCapKey),
@@ -74,9 +86,12 @@ struct SettingsSelectionOverlay: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     // General settings
+                    candidateDisplayModeRow
                     settingsToggle(lang.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
-                        SharedSettings.shared.isOutputBothScripts = $0
+                        SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
+                    // 括號標註 is meaningless without hanji; stored value stays untouched.
+                    .disabled(candidateDisplayMode == .romanOnly)
                     settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
                         SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
                     }
@@ -126,7 +141,8 @@ struct SettingsSelectionOverlay: View {
             // 中文: 開啟 overlay 時重讀 App-Group 顯示語言 tag — 跨程序(host 改語言)可靠的重讀點。
             lang.syncFromSettings()
             let s = SharedSettings.shared
-            isOutputBothScripts = s.isOutputBothScripts
+            candidateDisplayMode = s.candidateDisplayMode
+            isOutputBothScripts = s.storedIsOutputBothScripts
             literalRomanCandidateEnabled = s.isLiteralRomanCandidateEnabled
             autoCapitalizationEnabled = KeyboardSettings.store.bool(forKey: Self.autoCapKey)
             autoSpaceEnabled = s.isAutoSpaceEnabled
@@ -143,6 +159,45 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Components
 
+    /// Two-option segmented row shaped like the toggles (icon + label left, control right).
+    // 中文: 候選詞顯示模式列 — 與 toggle 同排版,右側為兩段式 segmented control。
+    private var candidateDisplayModeRow: some View {
+        HStack(spacing: 8) {
+            settingsRowLabel(lang.string(.settingsCandidateDisplayMode), icon: SettingsIcons.candidateDisplayMode)
+            Spacer()
+            Picker(lang.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
+                ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
+                    Text(lang.string(mode.displayNameKey)).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+        }
+        .font(KeyboardFonts.globalFont(size: 15))
+        .foregroundColor(theme.primaryTextColor)
+        .frame(height: 44)
+        .onChange(of: candidateDisplayMode) { _, newValue in
+            onCandidateDisplayModeChange(newValue)
+            autoDismissIfNeeded()
+        }
+    }
+
+    /// Icon + label leading block shared by the toggles and the segmented row.
+    @ViewBuilder
+    private func settingsRowLabel(_ label: String, icon: String?) -> some View {
+        if let icon {
+            HStack(spacing: 8) {
+                Image(latinSystemName: icon)
+                    .font(.system(size: 16))
+                    .frame(width: 20)
+                Text(label)
+            }
+        } else {
+            Text(label)
+        }
+    }
+
     private func settingsToggle(
         _ label: String,
         isOn: Binding<Bool>,
@@ -150,16 +205,7 @@ struct SettingsSelectionOverlay: View {
         onChange: @escaping (Bool) -> Void,
     ) -> some View {
         Toggle(isOn: isOn) {
-            if let icon {
-                HStack(spacing: 8) {
-                    Image(latinSystemName: icon)
-                        .font(.system(size: 16))
-                        .frame(width: 20)
-                    Text(label)
-                }
-            } else {
-                Text(label)
-            }
+            settingsRowLabel(label, icon: icon)
         }
         .font(KeyboardFonts.globalFont(size: 15))
         .foregroundColor(theme.primaryTextColor)

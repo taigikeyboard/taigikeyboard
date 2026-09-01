@@ -4,8 +4,8 @@ import SwiftUI
 
 /// The 外觀 pane of the settings window, shaped like System Settings'
 /// Appearance pane: an 外觀 row of light/dark/auto thumbnails, then the
-/// candidate window's own pickers — layout, the two size steps, and the
-/// typeface.
+/// candidate window's own pickers — layout, what each cell shows, the two
+/// size steps, and the typeface.
 ///
 /// Two rows are deliberately absent, each argued where its own type lives: no
 /// accent-colour swatch (see `CandidateAccentColor`) and no chrome-generation
@@ -32,6 +32,9 @@ struct AppearanceSettingsView: View {
     @AppStorage(SettingsStore.Keys.fontType.name)
     private var fontType = SettingsStore.Keys.fontType.defaultValue
 
+    @AppStorage(SettingsStore.Keys.candidateDisplayMode.name)
+    private var candidateDisplayMode = SettingsStore.Keys.candidateDisplayMode.defaultValue
+
     var body: some View {
         Form {
             // The System Settings shape: the mode selector leads its own
@@ -47,6 +50,17 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.desktopCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
                     Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
+                }
+                // What each cell shows, beside how the cells are arranged: both
+                // scripts side by side (today's rendering) or the romanization
+                // alone. Bound like the rows around it — the open bar re-renders
+                // on the write (`TaigiInputController`), the next one reads it
+                // live.
+                Picker(language.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
+                    Text(language.string(.settingsCandidateDisplayModeSideBySide))
+                        .tag(CandidateDisplayMode.sideBySide)
+                    Text(language.string(.settingsCandidateDisplayModeRomanOnly))
+                        .tag(CandidateDisplayMode.romanOnly)
                 }
                 // The two size rows are named steps, not continuous values, so
                 // they are pop-up menus like the rows above rather than

@@ -320,6 +320,7 @@ public extension RustEngineBridge {
         toggles: ToneToggles,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
@@ -331,6 +332,7 @@ public extension RustEngineBridge {
                 toggles: toggles,
                 effectiveSwapped: effectiveSwapped,
                 outputBothScripts: outputBothScripts,
+                candidateDisplayMode: candidateDisplayMode,
             ),
         )
     }
@@ -350,6 +352,7 @@ public extension RustEngineBridge {
         toggles: ToneToggles,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_SelectSuggestion()
@@ -363,6 +366,7 @@ public extension RustEngineBridge {
                 toggles: toggles,
                 effectiveSwapped: effectiveSwapped,
                 outputBothScripts: outputBothScripts,
+                candidateDisplayMode: candidateDisplayMode,
             ),
         )
     }
@@ -385,6 +389,7 @@ public extension RustEngineBridge {
         toggles: ToneToggles,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitPreeditThenInsertExternal()
@@ -398,6 +403,7 @@ public extension RustEngineBridge {
                 toggles: toggles,
                 effectiveSwapped: effectiveSwapped,
                 outputBothScripts: outputBothScripts,
+                candidateDisplayMode: candidateDisplayMode,
             ),
         )
     }
@@ -502,6 +508,7 @@ public extension RustEngineBridge {
         toggles: ToneToggles,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
         frequencyEntries: [Taigi_Engine_FrequencyEntry] = [],
         nowMs: Int64 = 0,
@@ -531,6 +538,7 @@ public extension RustEngineBridge {
                 toggles: toggles,
                 effectiveSwapped: effectiveSwapped,
                 outputBothScripts: outputBothScripts,
+                candidateDisplayMode: candidateDisplayMode,
             ),
         )
     }
@@ -560,6 +568,7 @@ public extension RustEngineBridge {
         // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitContinuous()
@@ -579,6 +588,7 @@ public extension RustEngineBridge {
                 toggles: toggles,
                 effectiveSwapped: effectiveSwapped,
                 outputBothScripts: outputBothScripts,
+                candidateDisplayMode: candidateDisplayMode,
             ),
         )
     }
@@ -625,6 +635,8 @@ public extension RustEngineBridge {
     // 中文: effectiveSwapped(翻譯反轉 OR TPS,平台端合併,因雙平台 TPS→"tl" 故引擎 input_mode=="tps" 永不觸發)
     // 中文: 走 is_translate_swapped;outputBothScripts 區分漢字優先(無空格)vs 雙腳本(要空格)。
     // 中文: 只用在會渲染 nailed prefix 的 Continuous 進入點,縮小 hanji-first 退化面。
+    // `candidateDisplayMode` (proto field 9) travels with the pair: under 羅馬字 the callers already
+    // pass the DERIVED `(false, false)` pair, and FetchAtPos uses the mode to collapse same-roman rows.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt continuousAppConfig.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     private static func continuousAppConfig(
@@ -632,8 +644,10 @@ public extension RustEngineBridge {
         toggles: ToneToggles,
         effectiveSwapped: Bool,
         outputBothScripts: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
     ) -> Taigi_Engine_AppConfig {
         var cfg = appConfig(mode: mode, toggles: toggles)
+        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
         cfg.isTranslateSwapped = effectiveSwapped
         cfg.outputBothScripts = outputBothScripts
         return cfg

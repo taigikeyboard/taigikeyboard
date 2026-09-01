@@ -7,6 +7,8 @@ import Foundation
 // 對應 Android SettingsIcons.kt
 
 enum SettingsIcons {
+    // 中文: 候選詞顯示模式 (漢羅並排 / 羅馬字) 選擇列圖示。
+    static let candidateDisplayMode = "character.textbox"
     // 中文: 「同時輸出漢羅雙寫」開關圖示。
     static let isOutputBothScripts = "character.book.closed"
     // 中文: 顯示羅馬字 (§34/S22) 開關圖示。

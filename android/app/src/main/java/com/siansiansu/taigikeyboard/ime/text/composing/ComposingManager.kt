@@ -305,6 +305,7 @@ class ComposingManager(
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
+                candidateDisplayMode = settings.candidateDisplayMode,
             ),
             ic,
         )
@@ -331,6 +332,7 @@ class ComposingManager(
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
+                candidateDisplayMode = settings.candidateDisplayMode,
             ),
             ic,
         )
@@ -354,6 +356,7 @@ class ComposingManager(
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
+                candidateDisplayMode = settings.candidateDisplayMode,
             ),
             ic,
         )
@@ -374,6 +377,7 @@ class ComposingManager(
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
+                candidateDisplayMode = settings.candidateDisplayMode,
             ),
             ic,
         )
@@ -521,6 +525,9 @@ class ComposingManager(
         // shared by both fetch phases so a mid-fetch settings change cannot
         // make the two phases disagree (mirrors `enabledSourcesBitmask`).
         val literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
+        // Same single-snapshot rule for the display mode (engine collapses
+        // same-roman rows under ROMAN_ONLY in both fetch phases).
+        val candidateDisplayMode = settings.candidateDisplayMode
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
@@ -532,6 +539,7 @@ class ComposingManager(
             outputBothScripts = spacing.outputBothScripts,
             enabledSourcesBitmask = enabledSourcesBitmask,
             literalRomanCandidateDisabled = literalRomanCandidateDisabled,
+            candidateDisplayMode = candidateDisplayMode,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `NOOP` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -575,6 +583,7 @@ class ComposingManager(
             outputBothScripts = spacing.outputBothScripts,
             enabledSourcesBitmask = enabledSourcesBitmask,
             literalRomanCandidateDisabled = literalRomanCandidateDisabled,
+            candidateDisplayMode = candidateDisplayMode,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition
@@ -763,6 +772,7 @@ class ComposingManager(
             generation = currentGeneration,
             effectiveSwapped = spacing.effectiveSwapped,
             outputBothScripts = spacing.outputBothScripts,
+            candidateDisplayMode = settings.candidateDisplayMode,
         )
         // Inspect transition BEFORE dispatching effects so we return an
         // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)

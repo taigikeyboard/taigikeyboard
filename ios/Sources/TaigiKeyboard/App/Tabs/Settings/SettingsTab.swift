@@ -20,6 +20,7 @@ struct SettingsTab: View {
     @State private var autoSpaceEnabled: Bool
     @State private var isDoubleTapOOEnabled: Bool
     @State private var isDoubleTapNNEnabled: Bool
+    @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
     @State private var literalRomanCandidateEnabled: Bool
     @State private var isTpsOrMappedToER: Bool
@@ -57,7 +58,9 @@ struct SettingsTab: View {
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
         _isDoubleTapOOEnabled = State(initialValue: settings.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)
-        _isOutputBothScripts = State(initialValue: settings.isOutputBothScripts)
+        _candidateDisplayMode = State(initialValue: settings.candidateDisplayMode)
+        // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under 羅馬字.
+        _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
         _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
         _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
@@ -123,14 +126,30 @@ struct SettingsTab: View {
 
                 // Typing options
                 Section {
+                    // Default Form picker style = navigation-link row + selection subpage, the same
+                    // shape as the 輸入模式 / 字型 rows above without a bespoke subpage view.
+                    // 中文: 候選詞顯示模式(漢羅並排 / 羅馬字),放 括號標註 上方。
+                    Picker(selection: $candidateDisplayMode) {
+                        ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
+                            Text(lang.string(mode.displayNameKey)).tag(mode)
+                        }
+                    } label: {
+                        Text(lang.string(.settingsCandidateDisplayMode))
+                    }
+                    .onChange(of: candidateDisplayMode) { _, newValue in
+                        settings.candidateDisplayMode = newValue
+                    }
+
                     Toggle(isOn: $isOutputBothScripts) {
                         HStack {
                             Text(lang.string(.settingsOutputBothScripts))
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
+                    // 括號標註 is meaningless without hanji; stored value stays untouched.
+                    .disabled(candidateDisplayMode == .romanOnly)
                     .onChange(of: isOutputBothScripts) { _, newValue in
-                        settings.isOutputBothScripts = newValue
+                        settings.storedIsOutputBothScripts = newValue
                     }
 
                     Toggle(isOn: $literalRomanCandidateEnabled) {
@@ -341,7 +360,8 @@ struct SettingsTab: View {
         autoSpaceEnabled = settings.isAutoSpaceEnabled
         isDoubleTapOOEnabled = settings.isDoubleTapOOEnabled
         isDoubleTapNNEnabled = settings.isDoubleTapNNEnabled
-        isOutputBothScripts = settings.isOutputBothScripts
+        candidateDisplayMode = settings.candidateDisplayMode
+        isOutputBothScripts = settings.storedIsOutputBothScripts
         isTpsOrMappedToER = settings.isTpsOrMappedToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled

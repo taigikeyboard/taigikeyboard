@@ -19,6 +19,7 @@ import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
@@ -43,9 +44,11 @@ class CandidateOverlayView : FrameLayout {
     private var isShowing: Boolean = false
     private var composeView: ComposeView? = null
 
-    // Live suggestions + translate-swap snapshot fed into the composition.
+    // Live suggestions + EFFECTIVE translate-swap / display-mode snapshots fed into the
+    // composition (both read off the SmartbarManager cache on show/update).
     private val suggestionsState = mutableStateOf<List<TaigiWord>>(emptyList())
     private val translateSwappedState = mutableStateOf(false)
+    private val candidateDisplayModeState = mutableStateOf(CandidateDisplayMode.SIDE_BY_SIDE)
 
     // Resolved theme background gradient stops (ARGB), or null for a flat/default theme.
     // Set on show() from the theme SmartbarManager already resolved, so the overlay
@@ -97,6 +100,7 @@ class CandidateOverlayView : FrameLayout {
                 val resetKey by resetTrigger
                 val suggestions = suggestionsState.value
                 val isTranslateSwapped = translateSwappedState.value
+                val candidateDisplayMode = candidateDisplayModeState.value
                 // Read live each recomposition; recompose is driven by the states above (show/update),
                 // matching the legacy re-measure cadence on submitRows().
                 val isTPSLayout = prefs.isTpsLayout
@@ -115,6 +119,7 @@ class CandidateOverlayView : FrameLayout {
                         isTPSLayout = isTPSLayout,
                         orMapsToER = prefs.tpsOrMapsToER,
                         isTranslateSwapped = isTranslateSwapped,
+                        candidateDisplayMode = candidateDisplayMode,
                         resetKey = resetKey,
                         backgroundGradient = backgroundGradientState.value,
                         candidateTextColor = candidateTextColorState.value,
@@ -154,7 +159,8 @@ class CandidateOverlayView : FrameLayout {
         if (suggestions.isEmpty()) return
 
         suggestionsState.value = suggestions
-        translateSwappedState.value = cachedTranslateSwapped()
+        translateSwappedState.value = smartbarManager.getCachedIsTranslateSwapped()
+        candidateDisplayModeState.value = prefs.candidateDisplayMode
         backgroundGradientState.value = backgroundGradient
         candidateTextColorState.value = candidateTextColor
 
@@ -196,11 +202,11 @@ class CandidateOverlayView : FrameLayout {
             return
         }
         suggestionsState.value = suggestions
-        translateSwappedState.value = cachedTranslateSwapped()
+        translateSwappedState.value = smartbarManager.getCachedIsTranslateSwapped()
+        candidateDisplayModeState.value = prefs.candidateDisplayMode
     }
 
     fun isVisible(): Boolean = isShowing
 
-    private fun cachedTranslateSwapped(): Boolean =
-        (context as TaigiKeyboard).smartbarManager.getCachedIsTranslateSwapped()
+    private val smartbarManager: SmartbarManager get() = (context as TaigiKeyboard).smartbarManager
 }

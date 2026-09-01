@@ -43,6 +43,8 @@ final class SharedSettings {
     private static let isDoubleTapNNEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapNN", default: true)
     private static let isTranslateSwappedKey: SettingsKey<Bool> = .bool("isTranslateSwapped", default: false)
     private static let isOutputBothScriptsKey: SettingsKey<Bool> = .bool("outputBothScripts", default: false)
+    // Raw string key shared by all four platforms; unknown / malformed → `.sideBySide`.
+    private static let candidateDisplayModeKey: SettingsKey<CandidateDisplayMode> = .rawRep("candidateDisplayMode", default: .sideBySide)
     private static let isFullAccessEnabledKey: SettingsKey<Bool> = .bool("fullAccessEnabled", default: false)
     private static let isAutoSpaceEnabledKey: SettingsKey<Bool> = .bool("autoSpaceEnabled", default: false)
     private static let isFrequencyRecordingEnabledKey: SettingsKey<Bool> = .bool("frequencyRecordingEnabled", default: true)
@@ -161,10 +163,22 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isDoubleTapNNEnabledKey) }
     }
 
-    // 中文: 翻譯方向是否反轉 (台↔英)。預設 false。
-    var isTranslateSwapped: Bool {
+    /// Raw stored swap flag — the ONLY read-write API. Settings UI, the 文/A
+    /// toggle (after its `romanOnly` guard) and `resetToDefaults` use this.
+    /// Everything that *consumes* the swap reads the derived
+    /// `isTranslateSwapped` (`EngineSettings` conformance below).
+    // 中文: 翻譯方向反轉的儲存值 (台↔英)。預設 false。消費端一律讀推導後的 isTranslateSwapped。
+    var storedIsTranslateSwapped: Bool {
         get { userDefaults.value(for: Self.isTranslateSwappedKey) }
         set { userDefaults.set(newValue, for: Self.isTranslateSwappedKey) }
+    }
+
+    /// Candidate cell rendering mode. Switching to `.romanOnly` leaves the
+    /// stored swap / both-scripts flags untouched; switching back restores them.
+    // 中文: 候選詞顯示模式。切到羅馬字不動 stored 旗標,切回即還原。
+    var candidateDisplayMode: CandidateDisplayMode {
+        get { userDefaults.value(for: Self.candidateDisplayModeKey) }
+        set { userDefaults.set(newValue, for: Self.candidateDisplayModeKey) }
     }
 
     // 中文: 鍵盤字體選擇(全域設定,非每主題)。預設見 FontType.keyboardDefault。
@@ -266,8 +280,10 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.layoutBeforeTpsKey) }
     }
 
-    // 中文: 「同時輸出漢字 + 羅馬字」開關。預設 false。
-    var isOutputBothScripts: Bool {
+    /// Raw stored 括號標註 flag — read-write counterpart of the derived
+    /// `isOutputBothScripts`; same split as `storedIsTranslateSwapped`.
+    // 中文: 「同時輸出漢字 + 羅馬字」的儲存值。預設 false。消費端讀推導後的 isOutputBothScripts。
+    var storedIsOutputBothScripts: Bool {
         get { userDefaults.value(for: Self.isOutputBothScriptsKey) }
         set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
     }
@@ -648,8 +664,9 @@ final class SharedSettings {
         inputMode = .tl
         isDoubleTapOOEnabled = true
         isDoubleTapNNEnabled = true
-        isTranslateSwapped = false
-        isOutputBothScripts = false
+        storedIsTranslateSwapped = false
+        storedIsOutputBothScripts = false
+        candidateDisplayMode = .sideBySide
         isLiteralRomanCandidateEnabled = false
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false
@@ -733,6 +750,27 @@ extension SharedSettings: EngineSettings {
             isDoubleTapOOEnabled: isDoubleTapOOEnabled,
             isDoubleTapNNEnabled: isDoubleTapNNEnabled,
         )
+    }
+
+    /// Effective swap: stored flag AND not `.romanOnly`. Read-only by design —
+    /// a `.toggle()` on a derived-false getter would overwrite a stored `true`,
+    /// so writers go through `storedIsTranslateSwapped`.
+    // 中文: 推導值 = stored && 非羅馬字模式。唯讀;寫入走 storedIsTranslateSwapped。
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/PrefHelper.kt isTranslateSwapped (derived).
+    // Drift causes silent divergence (羅馬字 mode still swapping scripts on one platform).
+    var isTranslateSwapped: Bool {
+        storedIsTranslateSwapped && isTwoScriptDisplay
+    }
+
+    /// Effective 括號標註: stored flag AND not `.romanOnly` (same rule as above).
+    // 中文: 推導值 = stored && 非羅馬字模式。唯讀;寫入走 storedIsOutputBothScripts。
+    var isOutputBothScripts: Bool {
+        storedIsOutputBothScripts && isTwoScriptDisplay
+    }
+
+    /// The one place the picker gates the script pair.
+    private var isTwoScriptDisplay: Bool {
+        candidateDisplayMode != .romanOnly
     }
 }
 

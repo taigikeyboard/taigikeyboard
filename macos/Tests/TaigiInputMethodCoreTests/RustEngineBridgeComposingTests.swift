@@ -233,6 +233,7 @@ private extension EngineSettings {
             inputMode: inputMode,
             isTranslateSwapped: isTranslateSwapped,
             isOutputBothScripts: isOutputBothScripts,
+            candidateDisplayMode: candidateDisplayMode,
             isLiteralRomanCandidateEnabled: enabled,
             isFrequencyRecordingEnabled: isFrequencyRecordingEnabled,
             isAssociationRecordingEnabled: isAssociationRecordingEnabled,

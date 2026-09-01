@@ -201,8 +201,8 @@ final class SettingsKeyTests: XCTestCase {
         // Flip every Bool to the opposite of its descriptor default.
         settings.isDoubleTapOOEnabled = false
         settings.isDoubleTapNNEnabled = false
-        settings.isTranslateSwapped = true
-        settings.isOutputBothScripts = true
+        settings.storedIsTranslateSwapped = true
+        settings.storedIsOutputBothScripts = true
         settings.isAutoSpaceEnabled = true
         settings.isMoeDictEnabled = false
         settings.isNewwordDictEnabled = false

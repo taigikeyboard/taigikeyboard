@@ -34,7 +34,9 @@ use taigi_windows_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot, ShortcutAction,
 };
 use taigi_windows_core::policies;
-use taigi_windows_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
+use taigi_windows_core::settings::{
+    keys, AppearanceMode, CandidateDisplayMode, InputMode, SettingsDocument,
+};
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows::core::{Interface, BOOL};
 use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
@@ -656,6 +658,14 @@ impl TextService_Impl {
                     log::warn!("shortcut.no_settings_store");
                     return;
                 };
+                // Roman-only cells have no hanji to lead with: the key is
+                // inert — no write, no flash — and the stored swap waits for
+                // side-by-side to come back (Q11, every platform).
+                // Read off the same snapshot every other consumer uses.
+                let display_mode = runtime.settings.current().engine_settings().candidate_display_mode;
+                if display_mode == CandidateDisplayMode::RomanOnly {
+                    return;
+                }
                 if let Err(error) = store.update(|document| {
                     let swapped = document.bool(&keys::IS_TRANSLATE_SWAPPED);
                     document.set_bool(&keys::IS_TRANSLATE_SWAPPED, !swapped);
@@ -994,13 +1004,16 @@ fn commit_candidate(
 }
 
 /// The gate every auto-space site reads — live (`isAutoSpaceGateActive`).
+/// The swap pair is the DERIVED one (`engine_settings`), so roman-only
+/// commits count as romanization whatever the stored swap says.
 fn auto_space_gate(settings: &SettingsDocument, script: CandidateScript) -> bool {
+    let engine = settings.engine_settings();
     policies::is_gate_active(
         settings.bool(&keys::IS_AUTO_SPACE_ENABLED),
         policies::writes_romanization(
             script,
-            settings.bool(&keys::IS_TRANSLATE_SWAPPED),
-            settings.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS),
+            engine.is_translate_swapped,
+            engine.is_output_both_scripts,
         ),
     )
 }
@@ -1023,9 +1036,10 @@ fn append_auto_space(
     }
 }
 
-/// The full-width form of a typed character in hanji-first mode.
+/// The full-width form of a typed character in hanji-first mode — the
+/// DERIVED swap, so roman-only stays half-width.
 fn full_width_mapped(settings: &SettingsDocument, text: &str) -> Option<String> {
-    if !settings.bool(&keys::IS_TRANSLATE_SWAPPED) {
+    if !settings.engine_settings().is_translate_swapped {
         return None;
     }
     policies::full_width_mapped(text)

@@ -167,6 +167,10 @@ public enum RustEngineBridge {
     /// envelopes on top of it. Continuous-rendering callers wrap this
     /// with `continuousAppConfig` (private to `+Composing.swift`) to
     /// add the §10.2 word-boundary spacing flags.
+    ///
+    /// Proto field 9 (`candidateDisplayMode`) is set by the two builders whose
+    /// requests the engine reads it on — `continuousAppConfig` and
+    /// `nextwordConfig` — not here (mirrors Android).
     // 中文: 跨切片共用的 AppConfig builder。internal 因 +Phonetics / +Composing /
     // 中文: +CaseTransform 都會在其上組裝 envelope。連續輸入渲染用 continuousAppConfig 包裹。
     static func appConfig(mode: InputMode, toggles: ToneToggles) -> Taigi_Engine_AppConfig {
@@ -180,5 +184,17 @@ public enum RustEngineBridge {
         cfg.ooDoubletapEnabled = toggles.isDoubleTapOOEnabled
         cfg.nnDoubletapEnabled = toggles.isDoubleTapNNEnabled
         return cfg
+    }
+}
+
+// Shared by `appConfig` and `nextwordConfig` (`+NextWord.swift`) — one mapping, never two.
+extension CandidateDisplayMode {
+    /// Explicit proto enum (never `.unspecified`) so the engine's single
+    /// normalization helper sees the platform's actual choice.
+    var engineValue: Taigi_Engine_CandidateDisplayMode {
+        switch self {
+        case .sideBySide: .sideBySide
+        case .romanOnly: .romanOnly
+        }
     }
 }

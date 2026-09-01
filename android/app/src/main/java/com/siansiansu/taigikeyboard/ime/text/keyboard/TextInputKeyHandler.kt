@@ -610,7 +610,7 @@ internal class TextInputKeyHandler(
             prefs.keyboardLayoutType == "tps" ||
                 prefs.inputMode == "tps" ||
                 prefs.isTranslateSwapped
-        return !effectiveSwapped || prefs.outputBothScripts
+        return !effectiveSwapped || prefs.isOutputBothScripts
     }
 }
 

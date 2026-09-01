@@ -3133,6 +3133,60 @@
         }
       }
     },
+    "i18n_settings_candidateDisplayMode": {
+      "comment": "Picker label: how a candidate cell renders the (漢字, 羅馬字) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate Display"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補の表示"
+          }
+        }
+      }
+    },
+    "i18n_settings_candidateDisplayModeRomanOnly": {
+      "comment": "Picker value: cell shows the romanization only; committing writes the romanization; TL/POJ only.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romanization Only"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローマ字のみ"
+          }
+        }
+      }
+    },
+    "i18n_settings_candidateDisplayModeSideBySide": {
+      "comment": "Picker value (default): cell shows hanji and romanization as primary + secondary; the 文/A key decides which leads.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanji and Romanization"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢字とローマ字"
+          }
+        }
+      }
+    },
     "i18n_settings_diagnosticCopied": {
       "comment": "Toast confirming diagnostic info was copied.",
       "extractionState": "manual",

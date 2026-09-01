@@ -75,6 +75,27 @@ enum Platform {
 // (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
 // the separator predicate needs this second flag (continuous-input-ranking
 // §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
+// 候選詞顯示 — how a candidate cell renders the (漢字, 羅馬字) pair. Read by
+// exactly two engine sites, both display-tier dedupes: the continuous
+// `FetchAtPos` post-literal pass (`composing::dispatch`) and the NextWord
+// prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
+// un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
+// normalise through `AppConfig::is_roman_only_display`, never compare the raw
+// i32 at a call site. 漢羅合用 (one label hanji+roman) is a later value.
+// 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排。
+enum CandidateDisplayMode {
+  CANDIDATE_DISPLAY_MODE_UNSPECIFIED  = 0;
+  CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE = 1;
+  CANDIDATE_DISPLAY_MODE_ROMAN_ONLY   = 2;
+}
+
+// 2026-09-01 added `candidate_display_mode`: 羅馬字 cells hide the hanji, so
+// rows that differ only in hanji (同音異字 食/𤆬 tsia̍h) become visible
+// duplicates that only the engine can collapse consistently for four
+// platforms. Set on the BASE config (every request) — composing AND nextword
+// read it; the other request families ignore it. Platforms keep sending the
+// derived `is_translate_swapped` / `output_both_scripts` pair (both `false`
+// under 羅馬字) so spacing / recording semantics need no new reader.
 message AppConfig {
   string tone_mode = 1;
   string input_mode = 2;
@@ -84,6 +105,7 @@ message AppConfig {
   bool is_association_recording_enabled = 6;
   Platform platform_id = 7;
   bool output_both_scripts = 8;
+  CandidateDisplayMode candidate_display_mode = 9;
 }
 
 message Request {

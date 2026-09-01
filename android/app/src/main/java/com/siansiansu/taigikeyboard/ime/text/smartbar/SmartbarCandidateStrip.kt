@@ -206,26 +206,14 @@ private fun CandidateCell(
                 word.roman
             }
         }
-    val titleText: String
-    val subtitleText: String?
-    when {
-        word.hanzi.isNullOrEmpty() -> {
-            titleText = displayRoman
-            subtitleText = null
-        }
-        isTPSLayout -> {
-            titleText = word.hanzi
-            subtitleText = null
-        }
-        display.isTranslateSwapped -> {
-            titleText = word.hanzi
-            subtitleText = displayRoman
-        }
-        else -> {
-            titleText = displayRoman
-            subtitleText = word.hanzi
-        }
-    }
+    val (titleText, subtitleText) =
+        candidateCellText(
+            hanzi = word.hanzi,
+            displayRoman = displayRoman,
+            isTPSLayout = isTPSLayout,
+            candidateDisplayMode = display.candidateDisplayMode,
+            isTranslateSwapped = display.isTranslateSwapped,
+        )
     val showSubtitle = !subtitleText.isNullOrEmpty() && subtitleText != titleText
 
     val (titleSp, subtitleSp) =

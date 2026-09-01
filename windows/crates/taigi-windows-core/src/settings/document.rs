@@ -19,7 +19,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::choices::SettingChoice;
-use super::engine_settings::{DictionarySourceToggles, EngineSettings, KautianSubcollections};
+use super::engine_settings::{
+    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, KautianSubcollections,
+};
 use super::keys;
 
 /// The name of one setting, paired with the value used when the user has
@@ -195,11 +197,23 @@ impl SettingsDocument {
     }
 
     /// The engine-facing snapshot as of this document.
+    ///
+    /// The swap and 括號標註 pair comes out DERIVED: the stored toggle AND-ed
+    /// with "not roman-only". Roman-only cells show one script, so a hanji
+    /// lead or a bracketed pair has nothing to apply to — but the stored
+    /// bools are left alone, so switching back to side-by-side restores them
+    /// (`SettingsStore.swift` `engineSettings`). Every consumer of the pair
+    /// reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)` directly;
+    /// the raw read is for the panes and the toggle shortcut that write it.
     pub fn engine_settings(&self) -> EngineSettings {
+        let candidate_display_mode: CandidateDisplayMode =
+            self.choice(&keys::CANDIDATE_DISPLAY_MODE);
+        let is_two_script = candidate_display_mode != CandidateDisplayMode::RomanOnly;
         EngineSettings {
             input_mode: self.choice(&keys::INPUT_MODE),
-            is_translate_swapped: self.bool(&keys::IS_TRANSLATE_SWAPPED),
-            is_output_both_scripts: self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS),
+            is_translate_swapped: self.bool(&keys::IS_TRANSLATE_SWAPPED) && is_two_script,
+            is_output_both_scripts: self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS) && is_two_script,
+            candidate_display_mode,
             is_literal_roman_candidate_enabled: self
                 .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
@@ -319,6 +333,59 @@ mod tests {
             "not an appearance or source key"
         );
         assert!(doc.engine_settings().dictionary_sources.kautian);
+    }
+
+    #[test]
+    fn roman_only_masks_the_swap_pair_without_touching_what_is_stored() {
+        // trace: stored swap=true, both=true; mode=romanOnly → the snapshot
+        // reads (false, false) while `bool(&key)` still answers true; back to
+        // sideBySide → (true, true) again with no write in between.
+        let mut doc = SettingsDocument::default();
+        doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true);
+        doc.set_bool(&keys::IS_OUTPUT_BOTH_SCRIPTS, true);
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        let snapshot = doc.engine_settings();
+        assert_eq!(
+            snapshot.candidate_display_mode,
+            CandidateDisplayMode::RomanOnly
+        );
+        assert!(!snapshot.is_translate_swapped && !snapshot.is_output_both_scripts);
+        assert!(
+            doc.bool(&keys::IS_TRANSLATE_SWAPPED),
+            "stored value untouched"
+        );
+        assert!(
+            doc.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS),
+            "stored value untouched"
+        );
+        let revision = doc.revision;
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::SideBySide,
+        );
+        let restored = doc.engine_settings();
+        assert!(restored.is_translate_swapped && restored.is_output_both_scripts);
+        assert_eq!(doc.revision, revision + 1, "only the mode was written");
+    }
+
+    #[test]
+    fn unknown_candidate_display_mode_reads_as_side_by_side() {
+        let doc = SettingsDocument::from_json(
+            r#"{"revision": 1, "values": {"candidateDisplayMode": "combined", "isTranslateSwapped": true}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            doc.choice(&keys::CANDIDATE_DISPLAY_MODE),
+            CandidateDisplayMode::SideBySide
+        );
+        assert!(doc.engine_settings().is_translate_swapped);
+        assert_eq!(
+            SettingsDocument::default().choice(&keys::CANDIDATE_DISPLAY_MODE),
+            CandidateDisplayMode::SideBySide
+        );
     }
 
     #[test]

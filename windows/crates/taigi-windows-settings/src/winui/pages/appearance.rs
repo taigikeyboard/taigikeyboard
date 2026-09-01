@@ -14,8 +14,8 @@ use super::choice_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_windows_core::settings::{
-    keys, AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,
-    CandidateWindowSizeChoice, SettingChoice,
+    keys, AppearanceMode, CandidateDisplayMode, CandidateFontChoice, CandidateLayout,
+    CandidateTextSizeChoice, CandidateWindowSizeChoice, SettingChoice,
 };
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -43,6 +43,15 @@ pub fn view(
             document.choice(&keys::CANDIDATE_LAYOUT),
             |choice: CandidateLayout| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::CANDIDATE_LAYOUT),
+            context,
+        ),
+        // What each cell shows: both scripts, or the romanization alone.
+        choice_row(
+            strings.resolve(StringKey::SettingsCandidateDisplayMode),
+            CandidateDisplayMode::ALL,
+            document.choice(&keys::CANDIDATE_DISPLAY_MODE),
+            |choice: CandidateDisplayMode| strings.resolve(choice.label_key()).to_owned(),
+            |choice| Message::set_choice(choice, &keys::CANDIDATE_DISPLAY_MODE),
             context,
         ),
         // The two size rows are named steps, not continuous values: pop-ups

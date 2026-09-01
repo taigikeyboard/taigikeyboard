@@ -107,6 +107,7 @@ fn tl_config() -> AppConfig {
         is_association_recording_enabled: false,
         platform_id: 0,
         output_both_scripts: false,
+        candidate_display_mode: 0,
     }
 }
 
@@ -120,6 +121,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         is_association_recording_enabled: false,
         platform_id: 0,
         output_both_scripts: false,
+        candidate_display_mode: 0,
     }
 }
 

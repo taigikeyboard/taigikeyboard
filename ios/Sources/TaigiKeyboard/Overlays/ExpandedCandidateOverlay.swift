@@ -12,6 +12,7 @@ struct ExpandedCandidateOverlay: View {
     let selectedCandidateIndex: Int
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
     let isTranslateSwapped: Bool
+    let candidateDisplayMode: CandidateDisplayMode
     let onTranslateToggle: () -> Void
     let onCollapse: () -> Void
     /// 是否為 TPS 佈局模式
@@ -115,6 +116,7 @@ struct ExpandedCandidateOverlay: View {
                 ExpandedCandidateGridCell(
                     suggestion: item.suggestion,
                     isTranslateSwapped: isTranslateSwapped,
+                    candidateDisplayMode: candidateDisplayMode,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,
                     isSelected: selectedCandidateIndex == item.originalIndex,

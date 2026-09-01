@@ -297,6 +297,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            candidateDisplayMode: settings.candidateDisplayMode,
             generation: envelopeGen,
         )
         if filterResult.wasStale {

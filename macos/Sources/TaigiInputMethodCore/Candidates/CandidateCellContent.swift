@@ -3,7 +3,8 @@
 import Foundation
 
 /// One candidate as the window renders it — both scripts, in the order the
-/// user's swap setting puts them.
+/// user's swap setting puts them, or the romanization alone under the
+/// romanization-only display.
 ///
 /// A Taigi candidate is a `(漢字, 羅馬字)` pair (Core Principle #7), and showing
 /// only one of them makes several candidates read identically: two Hanji with
@@ -44,6 +45,14 @@ struct CandidateCellContent: Equatable, Sendable {
             // Romanization-only candidate: there is no second script to show,
             // in either direction — the same case `CandidateDocumentText`
             // answers with the bare romanization.
+            return Self(text: candidate.roman, annotation: nil)
+        }
+        // Before the swap arm, so the swap cannot put Hanji into a cell this
+        // mode says shows none. No annotation on purpose: Space commits the
+        // annotation (`CandidateDocumentText.alternateText`), and with no
+        // other script on offer it must fall to `.ignored` rather than write
+        // Hanji the user never saw.
+        if settings.candidateDisplayMode == .romanOnly {
             return Self(text: candidate.roman, annotation: nil)
         }
         return settings.isTranslateSwapped

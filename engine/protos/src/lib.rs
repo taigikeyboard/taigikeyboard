@@ -17,3 +17,17 @@
 pub mod engine {
     include!(concat!(env!("OUT_DIR"), "/taigi.engine.rs"));
 }
+
+// 中文: 候選詞顯示 wire 值的唯一正規化點 — 0 / 未知 / SIDE_BY_SIDE 都是漢羅並排。
+impl engine::AppConfig {
+    /// Whether candidate cells render romanization only (候選詞顯示 = 羅馬字).
+    ///
+    /// The single normalisation point for `candidate_display_mode`: the
+    /// proto3 default `0`, an unknown value from a newer platform, and
+    /// `SIDE_BY_SIDE` all answer `false` (legacy behaviour), so the two
+    /// engine readers can never drift on the fallback.
+    pub fn is_roman_only_display(&self) -> bool {
+        // prost's accessor already maps an unknown value to `Unspecified`.
+        self.candidate_display_mode() == engine::CandidateDisplayMode::RomanOnly
+    }
+}

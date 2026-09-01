@@ -301,11 +301,13 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             isTranslateSwapped: true,
             isTPSLayout: false,
             orMapsToER: false,
+            candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: suggestion,
             isTranslateSwapped: true,
             isTPSLayout: false,
+            candidateDisplayMode: .sideBySide,
         )
         XCTAssertEqual(title, "臺灣", "swap: title = hanji")
         XCTAssertEqual(subtitle, "tâi-uân", "swap: subtitle = roman")
@@ -331,11 +333,13 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             isTranslateSwapped: false,
             isTPSLayout: true,
             orMapsToER: false,
+            candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: suggestion,
             isTranslateSwapped: false,
             isTPSLayout: true,
+            candidateDisplayMode: .sideBySide,
         )
         XCTAssertEqual(title, "臺灣", "TPS: title = hanji (subtitle present)")
         XCTAssertNil(subtitle, "TPS never shows a subtitle")

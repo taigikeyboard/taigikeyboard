@@ -18,7 +18,9 @@ extension View {
         selectedCandidateIndex: Int,
         onSuggestionTap: @escaping (AutocompleteSuggestion) -> Void,
         isTranslateSwapped: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
         onTranslateToggle: @escaping () -> Void,
+        onCandidateDisplayModeChange: @escaping (CandidateDisplayMode) -> Void,
         candidateStyle: CandidateView.Style,
         candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
@@ -34,6 +36,7 @@ extension View {
                         selectedCandidateIndex: selectedCandidateIndex,
                         onSuggestionTap: onSuggestionTap,
                         isTranslateSwapped: isTranslateSwapped,
+                        candidateDisplayMode: candidateDisplayMode,
                         onTranslateToggle: onTranslateToggle,
                         onCollapse: { expandState.collapse() },
                         isTPSLayout: isTPSLayout,
@@ -81,6 +84,7 @@ extension View {
                         isExpanded: true,
                         onDismiss: { panels.wrappedValue.isSettingsExpanded = false },
                         onOpenApp: onOpenSettingsApp,
+                        onCandidateDisplayModeChange: onCandidateDisplayModeChange,
                     )
                     .offset(y: candidateTheme.height)
                 }

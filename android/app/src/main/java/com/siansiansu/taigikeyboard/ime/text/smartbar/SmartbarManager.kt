@@ -20,6 +20,7 @@ import com.siansiansu.taigikeyboard.ime.core.lightenedArgb
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -78,10 +79,11 @@ class SmartbarManager(
     // Keyboard total height (smartbar + keyboard)
     private var keyboardHeight: Int = 0
 
-    // isTranslateSwapped local cache (avoid DataStore async write timing issues)
+    // EFFECTIVE script-flag cache (avoid DataStore async write timing issues). Holds the
+    // derived pair (stored AND mode != ROMAN_ONLY) plus the mode itself; every strip /
+    // overlay / click / layout reader goes through these, never the stored prefs.
     private var cachedIsTranslateSwapped: Boolean = false
     private var cachedOutputBothScripts: Boolean = false
-
     // Compose-side render state. Subsystems that read `currentSuggestions` /
     // `hasCandidates` continue to do so directly; this flow drives only the
     // candidate strip + English 3-col rendering.
@@ -294,6 +296,7 @@ class SmartbarManager(
         private val INITIAL_DISPLAY_PARAMS =
             CandidateDisplayParams(
                 isTranslateSwapped = false,
+                candidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
                 fontType = "",
                 layoutType = "",
                 orMapsToER = false,
@@ -375,10 +378,12 @@ class SmartbarManager(
         this.settingsSelectionOverlayView = overlayView
 
         overlayView.onHide = {
-            cachedOutputBothScripts = prefs.outputBothScripts
+            refreshScriptFlagCache()
             // Double-tap toggles are live-read by ComposingManager via
             // EngineSettingsProvider.current — no manual refresh needed.
         }
+
+        overlayView.onCandidateDisplayModeChanged = ::onCandidateDisplayModeChanged
 
         overlayView.onOpenApp = {
             val context = overlayView.context
@@ -438,8 +443,7 @@ class SmartbarManager(
         nextWordHandler.resetContext()
 
         // Initialize cache
-        cachedIsTranslateSwapped = prefs.isTranslateSwapped
-        cachedOutputBothScripts = prefs.outputBothScripts
+        refreshScriptFlagCache()
 
         when {
             keyboardMode == KeyboardMode.NUMERIC ||
@@ -518,11 +522,42 @@ class SmartbarManager(
 
     fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
 
+    /**
+     * 文/A key + overlay control button. Inert under ROMAN_ONLY (the key
+     * stays visible, its active state reads the derived `false`); the
+     * stored flag is what flips, the cache re-derives from it.
+     */
     fun toggleTranslateSwapped() {
-        cachedIsTranslateSwapped = !cachedIsTranslateSwapped
-        prefs.isTranslateSwapped = cachedIsTranslateSwapped
-        cachedOutputBothScripts = prefs.outputBothScripts
+        if (prefs.candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY) return
+        prefs.storedIsTranslateSwapped = !prefs.storedIsTranslateSwapped
+        refreshScriptFlagCache()
+        refreshSurfacesForScriptFlags()
 
+        logger.debug(TAG) { "[TRANSLATE] isTranslateSwapped 切換為: $cachedIsTranslateSwapped" }
+    }
+
+    /**
+     * 候選詞顯示 changed from the in-keyboard settings overlay: the derived
+     * pair flips without any stored flag moving, so the same live surfaces
+     * the 文/A toggle touches must re-render now, not on the next event.
+     */
+    fun onCandidateDisplayModeChanged() {
+        refreshScriptFlagCache()
+        refreshSurfacesForScriptFlags()
+        // The repaint above reuses `currentSuggestions`; under 羅馬字 the engine
+        // returns a DIFFERENT list (same-roman rows collapsed, §44), so the
+        // composition is fetched again and the repaint is overwritten.
+        textInputManager.refetchCandidatesForDisplayModeChange()
+
+        logger.debug(TAG) { "[DISPLAY_MODE] candidateDisplayMode=${prefs.candidateDisplayMode}" }
+    }
+
+    private fun refreshScriptFlagCache() {
+        cachedIsTranslateSwapped = prefs.isTranslateSwapped
+        cachedOutputBothScripts = prefs.isOutputBothScripts
+    }
+
+    private fun refreshSurfacesForScriptFlags() {
         if (currentSuggestions.isNotEmpty()) {
             updateCandidates(currentSuggestions)
 
@@ -537,8 +572,6 @@ class SmartbarManager(
             com.siansiansu.taigikeyboard.ime.text.key.KeyCode.TRANSLATE,
             com.siansiansu.taigikeyboard.ime.text.key.KeyCode.VIEW_NUMERIC_ADVANCED,
         )
-
-        logger.debug(TAG) { "[TRANSLATE] isTranslateSwapped 切換為: $cachedIsTranslateSwapped" }
     }
 
     fun clearCandidates() {
@@ -664,6 +697,7 @@ class SmartbarManager(
         val gradientTop = colorSettings.gradientStops()?.firstOrNull()
         return CandidateDisplayParams(
             isTranslateSwapped = cachedIsTranslateSwapped,
+            candidateDisplayMode = prefs.candidateDisplayMode,
             fontType = prefs.fontType,
             layoutType = prefs.keyboardLayoutType,
             orMapsToER = prefs.tpsOrMapsToER,

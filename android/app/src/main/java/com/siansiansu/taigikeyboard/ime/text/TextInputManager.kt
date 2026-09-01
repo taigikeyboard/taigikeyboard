@@ -422,6 +422,21 @@ class TextInputManager(
         uiCoordinator.reloadForInputMode(newInputMode)
     }
 
+    /**
+     * Re-fetches the Taigi candidates for the composition as it stands. The
+     * 候選詞顯示 picker is not a pure cell-rendering switch: the engine
+     * collapses same-roman rows under 羅馬字 (§44), so the list itself
+     * changes; repainting the cached suggestions would keep the duplicates
+     * on screen until the next keystroke. No-op when nothing is composing —
+     * the coordinator would otherwise clear a prediction strip.
+     */
+    // 中文: 候選詞顯示切換後重抓候選 — 引擎在羅馬字會收合同音列;非組字中不動(避免清掉預測列)。
+    fun refetchCandidatesForDisplayModeChange() {
+        if (composingManager?.isComposing() == true) {
+            candidateCoordinator.updateTaigiCandidatesDebounced()
+        }
+    }
+
     override fun onKeyboardLayoutTypeChanged(newLayoutType: String) {
         if (logger.isDebugEnabled) logger.i(TAG, "onKeyboardLayoutTypeChanged($newLayoutType)")
 

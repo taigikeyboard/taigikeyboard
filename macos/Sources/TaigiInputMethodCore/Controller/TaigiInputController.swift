@@ -124,6 +124,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private weak var lastClient: (any IMKTextInput)?
 
+    /// KVO on the 候選詞顯示 key so an open bar is fetched again when the 外觀
+    /// pane (or `defaults write`) changes it; armed in `activateServer`,
+    /// released in `endSession` — the shortcut target's lifetime.
+    @MainActor
+    private var displayModeObservation: AnyObject?
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -162,6 +168,14 @@ public final class TaigiInputController: IMKInputController {
             // now act through, and registering is what turns them on.
             ComposingSessionCoordinator.shared.registerShortcutTarget(
                 controller, for: controller.sessionToken,
+            )
+            // Key-scoped KVO through the store rather than a notification, so
+            // a `defaults write` from outside the process reaches the bar too.
+            controller.displayModeObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.candidateDisplayMode,
+                onMainActor: { [weak controller] in
+                    controller?.refetchCandidatesForDisplayModeChange()
+                },
             )
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
             // decide here.
@@ -419,11 +433,18 @@ public final class TaigiInputController: IMKInputController {
         case .toggleRomanization:
             switchInputMode(to: settings.inputMode == .tl ? .poj : .tl)
         case .toggleTranslateSwapped:
-            // The bar STAYS: the swap changes how a candidate displays and
+            // Inert under the romanization-only display — silently, no flash
+            // (USER 2026-09-01, Q11): there is no Hanji on screen for the
+            // swap to lead with, and flipping the STORED value blind would
+            // change what the user gets back on returning to side-by-side.
+            guard settings.current.candidateDisplayMode != .romanOnly else { return }
+            // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing
             // here read as the window vanishing (real device, 2026-08-21).
-            settings.isTranslateSwapped.toggle()
+            // (The 候選詞顯示 picker is the setting that DOES change which
+            // candidates exist — see `refetchCandidatesForDisplayModeChange`.)
+            settings.storedIsTranslateSwapped.toggle()
             rerenderCandidatesForDisplayChange()
         }
     }
@@ -441,7 +462,7 @@ public final class TaigiInputController: IMKInputController {
               let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
         else { return }
         candidatePresenter.updateCells(
-            fetchedCandidates.map(manager.cellContent(for:)),
+            manager.cellContents(for: fetchedCandidates),
             ownedBy: sessionToken,
         )
     }
@@ -716,7 +737,7 @@ public final class TaigiInputController: IMKInputController {
 
         candidatePresenter.show(
             CandidateWindowContent(
-                cells: fetchedCandidates.map(manager.cellContent(for:)),
+                cells: manager.cellContents(for: fetchedCandidates),
                 // The set the user chose — the only keys that pick. A rebind
                 // cannot strand a stale hint: reaching the shortcut pane moves
                 // focus off the client, and `finishComposition` takes the bar
@@ -733,6 +754,27 @@ public final class TaigiInputController: IMKInputController {
         )
     }
 
+    /// Fetches the candidates again after a 候選詞顯示 change and repaints the
+    /// bar in place. Unlike the swap, this setting changes WHICH candidates
+    /// exist — under 羅馬字 the engine collapses same-roman rows (§44) — so a
+    /// repaint of `fetchedCandidates` would keep the duplicates on screen.
+    /// Through `updateCells`, like the swap: the KVO path has no client to ask
+    /// for a caret rectangle, and the window is already anchored. The bar goes
+    /// down only when the composition is gone or the new list is empty.
+    // 中文: 候選詞顯示切換後重抓候選 — 引擎在羅馬字會收合同音列;無 client 可問 caret,故 updateCells 原地換。
+    @MainActor
+    private func refetchCandidatesForDisplayModeChange() {
+        guard !fetchedCandidates.isEmpty,
+              let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
+        else { return }
+        guard case let .found(fetched) = manager.fetchCandidates(), !fetched.isEmpty else {
+            dismissCandidates()
+            return
+        }
+        fetchedCandidates = fetched
+        rerenderCandidatesForDisplayChange()
+    }
+
     @MainActor
     private func dismissCandidates() {
         fetchedCandidates = []
@@ -745,9 +787,12 @@ public final class TaigiInputController: IMKInputController {
     /// when the output is roman-first or the key is not one the policy maps —
     /// the mode is read live, like the auto-space gate below, so a swap
     /// applies to the very next key.
+    ///
+    /// The EFFECTIVE swap (`current`), not the stored one: a romanization-only
+    /// display writes romanization, and romanization takes half-width marks.
     @MainActor
     private func fullWidthMapped(_ text: String) -> String? {
-        guard settings.isTranslateSwapped else { return nil }
+        guard settings.current.isTranslateSwapped else { return nil }
         return FullWidthPunctuation.mapped(text)
     }
 
@@ -761,14 +806,20 @@ public final class TaigiInputController: IMKInputController {
     /// because every site but the 漢羅 key writes what the settings lead with —
     /// the mid-composition punctuation path included, which commits the preedit
     /// as rendered.
+    ///
+    /// The swap pair is the EFFECTIVE one (`current`), read once so both
+    /// halves come from the same instant: under the romanization-only display
+    /// it is `(false, false)` whatever is stored, and the commit that just ran
+    /// wrote romanization.
     @MainActor
     private func isAutoSpaceGateActive(for script: CandidateScript = .primary) -> Bool {
-        AutoSpacePolicy.isGateActive(
+        let effective = settings.current
+        return AutoSpacePolicy.isGateActive(
             isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
             wroteRomanization: AutoSpacePolicy.writesRomanization(
                 script: script,
-                isTranslateSwapped: settings.isTranslateSwapped,
-                isOutputBothScripts: settings.isOutputBothScripts,
+                isTranslateSwapped: effective.isTranslateSwapped,
+                isOutputBothScripts: effective.isOutputBothScripts,
             ),
         )
     }
@@ -907,6 +958,7 @@ public final class TaigiInputController: IMKInputController {
     private func endSession(_ client: IMKTextInput?) {
         finishComposition(into: client)
         ComposingSessionCoordinator.shared.release(sessionToken)
+        displayModeObservation = nil
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked

@@ -29,7 +29,7 @@
 // 中文:   dispatch 只剩 phase/hanzi/position guard + proto→domain hoist + wire encode。
 
 use crate::api::{ComposingError, Engine, Intent, Phase};
-use crate::continuous::assemble_candidates;
+use crate::continuous::{assemble_candidates, retain_first_by_key};
 use crate::shadow::{build_shadow_lattice, left_anchored_keys_from_lattice};
 use lexicon::{
     classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, RawCandidate,
@@ -295,12 +295,32 @@ fn handle_fetch_at_pos(
             candidates.insert(0, literal);
         }
     }
+    // §44 羅馬字 display dedupe — must run AFTER the literal prepend (a pass
+    // inside `assemble_candidates` never sees the literal → two `tâi` cells).
+    // 中文: §44 羅馬字顯示去重,必須在 §34 prepend 之後。
+    if config.is_roman_only_display()
+        && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
+    {
+        dedupe_display_roman(&mut candidates);
+    }
     with_continuous(
         snapshot,
         ContinuousResponse {
             candidates: candidates.into_iter().map(raw_to_proto_candidate).collect(),
         },
     )
+}
+
+/// 羅馬字-mode display dedupe (§44) — key `(rendered roman, consumed_span)`,
+/// first-seen wins (top-ranked sorted row, or the §34 literal when it is in
+/// the group). The span is part of the key on purpose: the same romanization
+/// consuming a different slice of the buffer (partial-prefix row vs
+/// full-buffer row) is a different action, not a duplicate. Mirror of
+/// `continuous::dedupe_display_hanji_for_tps` for the other script; keys on
+/// the roman the user actually sees — the POJ presentation pass already ran.
+// 中文: (roman, consumed_span) 去重;span 入鍵避免誤併 partial-prefix 候選;鍵是已渲染的 roman。
+fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
+    retain_first_by_key(candidates, |c| Some((c.roman.clone(), c.consumed_span)));
 }
 
 /// Build the literal-roman candidate for 漢羅 fast input
@@ -614,6 +634,7 @@ mod tests {
             is_association_recording_enabled: false,
             platform_id: 0,
             output_both_scripts: false,
+            candidate_display_mode: 0,
         }
     }
 

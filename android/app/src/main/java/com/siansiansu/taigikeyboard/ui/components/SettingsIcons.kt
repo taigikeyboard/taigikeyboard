@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.siansiansu.taigikeyboard.ui.components.Abc
 import com.siansiansu.taigikeyboard.ui.components.FormatSize
 import com.siansiansu.taigikeyboard.ui.components.Language
+import com.siansiansu.taigikeyboard.ui.components.ShortText
 import com.siansiansu.taigikeyboard.ui.components.SpaceBar
 import com.siansiansu.taigikeyboard.ui.components.Translate
 import com.siansiansu.taigikeyboard.ui.components.Vibration
@@ -18,6 +19,7 @@ import com.siansiansu.taigikeyboard.ui.components.VolumeUp
  * to keep icons in sync across the app and keyboard.
  */
 object SettingsIcons {
+    val candidateDisplayMode: ImageVector get() = Icons.Outlined.ShortText
     val outputBothScripts: ImageVector get() = Icons.Outlined.Translate
     val literalRomanCandidate: ImageVector get() = Icons.Outlined.Abc
     val autoCapitalization: ImageVector get() = Icons.Outlined.FormatSize

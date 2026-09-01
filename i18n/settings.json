@@ -46,6 +46,21 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "拍字設定", "tailo": "phah-jī siat-tīng", "poj": "phah-jī siat-tēng", "en": "Typing", "ja": "入力" }
     },
+    "candidateDisplayMode": {
+      "comment": "Picker label: how a candidate cell renders the (漢字, 羅馬字) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "候選詞顯示", "tailo": "hāu-suán-sû hián-sī", "poj": "hāu-soán-sû hián-sī", "en": "Candidate Display", "ja": "候補の表示" }
+    },
+    "candidateDisplayModeSideBySide": {
+      "comment": "Picker value (default): cell shows hanji and romanization as primary + secondary; the 文/A key decides which leads.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "漢羅並排", "tailo": "Hàn-Lô pīng-pâi", "poj": "Hàn-Lô pēng-pâi", "en": "Hanji and Romanization", "ja": "漢字とローマ字" }
+    },
+    "candidateDisplayModeRomanOnly": {
+      "comment": "Picker value: cell shows the romanization only; committing writes the romanization; TL/POJ only.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization Only", "ja": "ローマ字のみ" }
+    },
     "outputBothScripts": {
       "comment": "Toggle label: annotate committed text with the other script in brackets.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },

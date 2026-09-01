@@ -31,6 +31,17 @@ protocol EngineSettings {
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isOutputBothScripts.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     var isOutputBothScripts: Bool { get }
+
+    /// Candidate cell rendering mode (漢羅並排 / 羅馬字). Under `.romanOnly`
+    /// the two flags above read `false` regardless of their stored values —
+    /// they are derived, never overwritten — so auto-space, the commit
+    /// formatter, and the engine `AppConfig` all take the roman-first arms.
+    /// The bridge forwards this as `AppConfig.candidate_display_mode` so the
+    /// engine collapses same-roman rows for display.
+    // 中文: 候選詞顯示模式。羅馬字模式下 isTranslateSwapped / isOutputBothScripts 讀成 false(推導,不覆寫儲存值)。
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:candidateDisplayMode.
+    // Drift causes silent divergence (one platform still shows hanji / swaps scripts under 羅馬字).
+    var candidateDisplayMode: CandidateDisplayMode { get }
     // 中文: 是否記錄使用者選字的關聯資料,供 NextWord 推薦使用。
     var isAssociationRecordingEnabled: Bool { get }
 

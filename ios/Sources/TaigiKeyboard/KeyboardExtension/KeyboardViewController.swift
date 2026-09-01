@@ -150,6 +150,12 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             onTranslateToggle: { [unowned self] in
                 state.keyboardContext.toggleTranslateSwapped()
             },
+            onCandidateDisplayModeChange: { [unowned self] mode in
+                state.keyboardContext.candidateDisplayMode = mode
+                // Not display-only: under 羅馬字 the ENGINE collapses same-roman
+                // rows (§44), so the open list is fetched again, not repainted.
+                performAutocomplete()
+            },
         )
     }
 

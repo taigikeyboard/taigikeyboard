@@ -197,6 +197,59 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
 /// the separator predicate needs this second flag (continuous-input-ranking
 /// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
+/// 候選詞顯示 — how a candidate cell renders the (漢字, 羅馬字) pair. Read by
+/// exactly two engine sites, both display-tier dedupes: the continuous
+/// `FetchAtPos` post-literal pass (`composing::dispatch`) and the NextWord
+/// prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
+/// un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
+/// normalise through `AppConfig::is_roman_only_display`, never compare the raw
+/// i32 at a call site. 漢羅合用 (one label hanji+roman) is a later value.
+/// 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排。
+public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case sideBySide // = 1
+  case romanOnly // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .sideBySide
+    case 2: self = .romanOnly
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .sideBySide: return 1
+    case .romanOnly: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_CandidateDisplayMode] = [
+    .unspecified,
+    .sideBySide,
+    .romanOnly,
+  ]
+
+}
+
+/// 2026-09-01 added `candidate_display_mode`: 羅馬字 cells hide the hanji, so
+/// rows that differ only in hanji (同音異字 食/𤆬 tsia̍h) become visible
+/// duplicates that only the engine can collapse consistently for four
+/// platforms. Set on the BASE config (every request) — composing AND nextword
+/// read it; the other request families ignore it. Platforms keep sending the
+/// derived `is_translate_swapped` / `output_both_scripts` pair (both `false`
+/// under 羅馬字) so spacing / recording semantics need no new reader.
 public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -217,6 +270,8 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   public var platformID: Taigi_Engine_Platform = .unspecified
 
   public var outputBothScripts: Bool = false
+
+  public var candidateDisplayMode: Taigi_Engine_CandidateDisplayMode = .unspecified
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -427,9 +482,13 @@ nonisolated extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLATFORM_UNSPECIFIED\0\u{1}PLATFORM_IOS\0\u{1}PLATFORM_ANDROID\0\u{1}PLATFORM_MACOS\0\u{1}PLATFORM_WINDOWS\0")
 }
 
+nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_DISPLAY_MODE_UNSPECIFIED\0\u{1}CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE\0\u{1}CANDIDATE_DISPLAY_MODE_ROMAN_ONLY\0")
+}
+
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{3}is_association_recording_enabled\0\u{3}platform_id\0\u{3}output_both_scripts\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{3}is_association_recording_enabled\0\u{3}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -445,6 +504,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 6: try { try decoder.decodeSingularBoolField(value: &self.isAssociationRecordingEnabled) }()
       case 7: try { try decoder.decodeSingularEnumField(value: &self.platformID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.outputBothScripts) }()
+      case 9: try { try decoder.decodeSingularEnumField(value: &self.candidateDisplayMode) }()
       default: break
       }
     }
@@ -475,6 +535,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.outputBothScripts != false {
       try visitor.visitSingularBoolField(value: self.outputBothScripts, fieldNumber: 8)
     }
+    if self.candidateDisplayMode != .unspecified {
+      try visitor.visitSingularEnumField(value: self.candidateDisplayMode, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -487,6 +550,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.isAssociationRecordingEnabled != rhs.isAssociationRecordingEnabled {return false}
     if lhs.platformID != rhs.platformID {return false}
     if lhs.outputBothScripts != rhs.outputBothScripts {return false}
+    if lhs.candidateDisplayMode != rhs.candidateDisplayMode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
