@@ -99,8 +99,9 @@ struct EngineSettings: Equatable, Sendable {
     /// The stored values live on in `UserDefaults`
     /// (`SettingsStore.storedIsTranslateSwapped` / `storedIsOutputBothScripts`)
     /// and come back the moment the mode returns to `.sideBySide`. Under
-    /// `.combined` the swap reads `true` whatever is stored — the one-label
-    /// cell leads with the Hanji and a commit writes it — while the bracket
+    /// `.combined` the swap reads `true` whatever is stored — the Hanji cell
+    /// comes first and is the `.primary` commit, the romanization cell beside
+    /// it the `.alternate` one (`PresentedCandidate`) — while the bracket
     /// setting is read as stored (`SettingsStore.current` has the why). Every
     /// reader of "swap" — engine `AppConfig`, cell, document text, auto-space,
     /// full-width punctuation — reads THIS pair, never the stored one.

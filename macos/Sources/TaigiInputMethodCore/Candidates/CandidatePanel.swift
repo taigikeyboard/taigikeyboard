@@ -79,7 +79,7 @@ final class CandidatePanel: CandidatePresenter {
     }
 
     func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
-        livePanel(ownedBy: owner)?.rerenderCandidates(cells)
+        livePanel(ownedBy: owner)?.rerender(cells)
     }
 
     /// The panel `owner` may repaint in place, or nil.
@@ -140,7 +140,7 @@ final class CandidatePanel: CandidatePresenter {
         // both are settled before the cache below is asked for one.
         let metrics = settings.candidateMetrics.arranged(layout.cellArrangement)
         var target = panels[layout]
-        if let cached = target, cached.metrics != metrics {
+        if let cached = target, cached.configuredMetrics != metrics {
             cached.clear()
             target = nil
         }

@@ -227,6 +227,77 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
+    // MARK: - 漢羅合用: two cells per candidate
+
+    /// Under 合用 a candidate is two adjacent one-script cells — the Hanji, then
+    /// its romanization — not one formatted label (USER 2026-09-02). Pinned
+    /// against the 並排 bar for the same composition, so the assertion follows
+    /// whatever the dictionary ranks first rather than naming it.
+    func testCombined_showsTheHanjiAndItsRomanizationAsAdjacentCells() throws {
+        let sideBySide = try composedSession()
+        let leading = try XCTUnwrap(sideBySide.presenter.shownContent).cells[0]
+        let hanji = try XCTUnwrap(leading.annotation, "the leading candidate carries both scripts")
+
+        try withDisplayMode(.combined) {
+            let cells = try XCTUnwrap(composedSession().presenter.shownContent).cells
+
+            XCTAssertEqual(cells[0].text, hanji, "the Hanji cell first")
+            XCTAssertEqual(cells[1].text, leading.text, "its romanization right after it")
+            XCTAssertTrue(cells.allSatisfy { $0.annotation == nil }, "one script per cell, no annotation")
+            XCTAssertFalse(cells.contains { $0.text == "\(hanji) \(leading.text)" }, "no formatted label")
+        }
+    }
+
+    /// Each cell commits its own script: the first slot key writes the Hanji,
+    /// the second the romanization of the same candidate.
+    func testCombined_slotKeysCommitTheCellsOwnScript() throws {
+        try withDisplayMode(.combined) {
+            for (slot, description) in [(0, "the Hanji cell"), (1, "the romanization cell")] {
+                let session = try composedSession()
+                let cell = try XCTUnwrap(session.presenter.shownContent).cells[slot]
+                session.client.clearWrites()
+
+                _ = try session.controller.handle(
+                    TestFixtures.keyDownEvent(characters: CandidateSlotKeySet.bareKeyRow[slot]),
+                    client: session.client,
+                )
+
+                XCTAssertEqual(session.client.insertedTexts.last, cell.text, description)
+            }
+        }
+    }
+
+    /// Space is still the other script of the SAME candidate, read relative to
+    /// the cell: on the Hanji cell it writes the romanization, on the
+    /// romanization cell it writes the Hanji.
+    func testCombined_SpaceWritesTheOtherScriptOfTheHighlightedCell() throws {
+        try withDisplayMode(.combined) {
+            let onHanji = try composedSession()
+            let cells = try XCTUnwrap(onHanji.presenter.shownContent).cells
+            onHanji.client.clearWrites()
+            _ = try onHanji.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: onHanji.client,
+            )
+            XCTAssertEqual(onHanji.client.insertedTexts.last, cells[1].text, "Space on the Hanji cell: the romanization")
+
+            let onRoman = try composedSession()
+            onRoman.press(.rightArrow)
+            XCTAssertEqual(onRoman.presenter.selectedIndex, 1)
+            onRoman.client.clearWrites()
+            _ = try onRoman.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: onRoman.client,
+            )
+            XCTAssertEqual(onRoman.client.insertedTexts.last, cells[0].text, "Space on the romanization cell: the Hanji")
+        }
+    }
+
+    /// `.standard` rather than a scratch suite, like `withRestoredSwapSetting`:
+    /// the manager builds the presentation from the domain the shared
+    /// coordinator's settings provider reads.
+    private func withDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.candidateDisplayMode.name, to: mode.rawValue, body)
+    }
+
     // MARK: - No selection mode
 
     /// `↓` walks into the list and nothing more (USER 2026-08-28, retiring the
@@ -280,7 +351,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// snapshot. A bar showing the romanization while the document gets the
     /// hanji is a visible defect, and what keeps them together is that the cell
     /// and the commit resolve the swap setting from the same snapshot
-    /// (`ComposingManager.cellContent(for:)` / `documentText(for:)`).
+    /// (`ComposingManager.presentation(for:)` / `commitCandidate`).
     ///
     /// Under the shipped defaults the two are the same string; the general
     /// rule — the cell leads with the script the commit leads with, whatever
@@ -799,8 +870,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// what re-fetches the open bar — one mechanism, one turn later. Pinned
     /// through the chord so a handler that stopped writing the observed key,
     /// or an activation that stopped arming it, fails here rather than on a
-    /// real device. One press, side by side → 合用: the cells become one label
-    /// each, the bar stays up.
+    /// real device. One press, side by side → 合用: every two-script cell
+    /// becomes two adjacent one-script cells, the bar stays up.
     func testCycleCandidateDisplayShortcut_refetchesTheOpenBar() async throws {
         let key = SettingsStore.Keys.candidateDisplayMode.name
         for name in [key, SettingsStore.Keys.isTranslateSwapped.name] {
@@ -833,7 +904,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
         let after = try XCTUnwrap(session.presenter.shownContent).cells
         XCTAssertFalse(after.isEmpty)
-        XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "合用 cells carry the pair in one label")
+        XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "合用 cells carry one script each")
+        let leading = before[0]
+        let hanjiCell = try XCTUnwrap(after.firstIndex { $0.text == leading.annotation }, "the Hanji is a cell of its own")
+        XCTAssertEqual(after[hanjiCell + 1].text, leading.text, "with its romanization right after it")
     }
 
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {

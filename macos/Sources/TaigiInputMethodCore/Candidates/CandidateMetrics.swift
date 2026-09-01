@@ -99,6 +99,9 @@ struct CandidateMetrics: Equatable, Sendable {
     /// How tall one cell renders. An inline cell is one line of candidate; a
     /// stacked one is two line boxes plus the air between them — and keeps
     /// that height for a cell with no annotation, so a page's rows line up.
+    /// A whole LIST with no annotation is a different case: it has nothing to
+    /// stack, and the panel renders it at the one-line height instead
+    /// (`forContent(hasAnnotations:)`).
     ///
     /// Resolved at construction rather than per read: the fonts it measures
     /// are fixed here, and the layouts read this once per cell they place.
@@ -250,6 +253,25 @@ struct CandidateMetrics: Equatable, Sendable {
             fontChoice: fontChoice,
             cellArrangement: arrangement,
         )
+    }
+
+    /// The same sizes, resolved for the content a panel is about to show.
+    ///
+    /// A stacked layout showing a list in which NO cell carries an annotation
+    /// — 羅馬字, or 漢羅合用 where every cell is one script — has nothing to
+    /// put on a second line, and a two-line cell around one line of text is
+    /// air the user asked not to pay for (USER 2026-09-02, desktop dogfood).
+    /// Such a list renders as inline cells: one line tall, the capsule a
+    /// one-line window rounds to, the hairline highlight inset. With even one
+    /// annotated cell in the list the stacked height stays, so 漢羅並排's mixed
+    /// lists (a §34 literal beside Hanji rows) keep lining up.
+    ///
+    /// Content-level rather than per cell, and re-resolved on every show and
+    /// every in-place update: a page's rows must share one height, and a mode
+    /// change under an open window has to reflow it.
+    func forContent(hasAnnotations: Bool) -> CandidateMetrics {
+        guard cellArrangement == .stacked, !hasAnnotations else { return self }
+        return arranged(.inline)
     }
 
     /// The line box `font` draws in — AppKit's own answer rather than

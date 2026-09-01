@@ -122,6 +122,39 @@ final class CandidateMetricsTests: XCTestCase {
         }
     }
 
+    // MARK: - Content-resolved height
+
+    /// A stacked layout showing a list with no annotated cell — 羅馬字, or
+    /// 漢羅合用 where every cell is one script — has nothing to stack, and
+    /// renders one line tall: the inline height, and the inline capsule and
+    /// inset with it (USER 2026-09-02: no second-line air under 羅馬字).
+    ///
+    /// trace: 中/中 → inline itemHeight 20+10=30; stacked 57.
+    func testStackedMetrics_withNoAnnotatedCell_resolveToTheOneLineHeight() {
+        let stacked = defaultMetrics.arranged(.stacked)
+
+        let resolved = stacked.forContent(hasAnnotations: false)
+
+        XCTAssertEqual(resolved.itemHeight, defaultMetrics.candidateFontSize + defaultMetrics.verticalPadding)
+        XCTAssertEqual(resolved, defaultMetrics.arranged(.inline))
+        XCTAssertLessThan(resolved.itemHeight, stacked.itemHeight)
+    }
+
+    /// One annotated cell in the list keeps the two-line height for the whole
+    /// list — 並排's mixed lists (a §34 literal beside Hanji rows) line up.
+    func testStackedMetrics_withAnAnnotatedCell_keepTheTwoLineHeight() {
+        let stacked = defaultMetrics.arranged(.stacked)
+
+        XCTAssertEqual(stacked.forContent(hasAnnotations: true), stacked)
+    }
+
+    /// The inline arrangement is already one line either way.
+    func testInlineMetrics_areUnchangedByTheContent() {
+        for hasAnnotations in [false, true] {
+            XCTAssertEqual(defaultMetrics.forContent(hasAnnotations: hasAnnotations), defaultMetrics)
+        }
+    }
+
     // MARK: - Tahoe shape policy
 
     /// A window of one-line cells keeps upstream's capsule: at 24-35pt those

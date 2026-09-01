@@ -53,23 +53,28 @@ enum CandidateDocumentText {
     /// romanized half's own hyphen. Stripping either would be this layer
     /// second-guessing the dictionary.
     ///
-    /// Read off the cell rather than resolved again here, which makes it
-    /// structural that Space writes exactly the script the user can already see
-    /// under the primary one — the bar's secondary column IS the offer. The
-    /// swap rule then has one owner instead of a third copy in this directory.
+    /// Read off the same settings the cell was built from — the effective swap
+    /// — so Space writes exactly the script the user can see offered beside
+    /// (漢羅並排's annotation) or next to (漢羅合用's adjacent cell) the one the
+    /// highlight is on. Under 合用 a romanization cell is itself `.alternate`,
+    /// and Space on it flips back to `.primary` (`PresentedCandidate`), which
+    /// is how the same rule gives Space the Hanji there.
     ///
-    /// That also settles `isOutputBothScripts` without reading it: the cell
-    /// keeps the two scripts in separate columns whatever that setting says,
-    /// because it describes how to write a candidate carrying BOTH, and this is
-    /// the request for the other one BY ITSELF.
+    /// `isOutputBothScripts` is not read: it describes how to write a candidate
+    /// carrying BOTH scripts, and this is the request for the other one BY
+    /// ITSELF.
     ///
     /// nil when the candidate has one script — the §34 literal candidate, an
-    /// out-of-vocabulary name. Answering with the romanization again would make
-    /// Space a slower Return.
+    /// out-of-vocabulary name — or when the display shows no Hanji at all
+    /// (羅馬字): answering with the romanization again would make Space a
+    /// slower Return, and writing Hanji the user never saw would be worse.
     static func alternateText(
         for candidate: ContinuousCandidate,
         settings: EngineSettings,
     ) -> String? {
-        CandidateCellContent.cell(for: candidate, settings: settings).annotation
+        guard let hanji = candidate.hanji, !hanji.isEmpty,
+              settings.candidateDisplayMode.showsHanji
+        else { return nil }
+        return settings.isTranslateSwapped ? candidate.roman : hanji
     }
 }
