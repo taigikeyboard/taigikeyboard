@@ -658,12 +658,14 @@ impl TextService_Impl {
                     log::warn!("shortcut.no_settings_store");
                     return;
                 };
-                // Roman-only cells have no hanji to lead with: the key is
-                // inert — no write, no flash — and the stored swap waits for
-                // side-by-side to come back (Q11, every platform).
+                // Only side-by-side has a lead script to flip. Roman-only
+                // cells have no hanji to lead with and a combined cell is one
+                // fixed `漢字 羅馬字` label: under either the key is inert —
+                // no write, no flash — and the stored swap waits for
+                // side-by-side to come back (every platform).
                 // Read off the same snapshot every other consumer uses.
                 let display_mode = runtime.settings.current().engine_settings().candidate_display_mode;
-                if display_mode == CandidateDisplayMode::RomanOnly {
+                if display_mode != CandidateDisplayMode::SideBySide {
                     return;
                 }
                 if let Err(error) = store.update(|document| {

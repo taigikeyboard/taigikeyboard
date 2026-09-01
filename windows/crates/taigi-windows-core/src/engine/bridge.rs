@@ -162,6 +162,30 @@ mod tests {
     }
 
     #[test]
+    fn combined_reaches_the_wire_with_the_derived_swap() {
+        // trace: the document derives swap=true under combined
+        // (`SettingsDocument::engine_settings`); the bridge forwards both the
+        // mode and that swap on the continuous config, and the engine's only
+        // normaliser still reads it as "not roman-only".
+        use crate::settings::{keys, SettingsDocument};
+        let mut doc = SettingsDocument::default();
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::Combined,
+        );
+        let settings = doc.engine_settings();
+        let continuous = continuous_app_config(&settings);
+        assert_eq!(
+            continuous.candidate_display_mode,
+            WireDisplayMode::Combined as i32
+        );
+        assert!(continuous.is_translate_swapped);
+        assert!(!continuous.output_both_scripts);
+        assert!(!continuous.is_roman_only_display());
+        assert!(nextword_config(&settings).is_translate_swapped);
+    }
+
+    #[test]
     fn roman_only_reaches_every_config_through_the_base_one() {
         let settings = EngineSettings {
             candidate_display_mode: CandidateDisplayMode::RomanOnly,

@@ -344,6 +344,24 @@ mod tests {
     }
 
     #[test]
+    fn candidate_display_mode_roster_carries_all_three_values() {
+        use crate::settings::CandidateDisplayMode;
+        // The picker rows come straight off `ALL`, so the roster IS the UI.
+        assert_eq!(
+            CandidateDisplayMode::ALL,
+            &[
+                CandidateDisplayMode::SideBySide,
+                CandidateDisplayMode::RomanOnly,
+                CandidateDisplayMode::Combined,
+            ]
+        );
+        assert_eq!(
+            CandidateDisplayMode::from_raw("combined"),
+            Some(CandidateDisplayMode::Combined)
+        );
+    }
+
+    #[test]
     fn every_choice_round_trips_and_has_a_listed_default() {
         round_trips::<CandidateLayout>();
         round_trips::<crate::settings::CandidateDisplayMode>();

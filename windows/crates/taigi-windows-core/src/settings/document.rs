@@ -205,13 +205,25 @@ impl SettingsDocument {
     /// (`SettingsStore.swift` `engineSettings`). Every consumer of the pair
     /// reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)` directly;
     /// the raw read is for the panes and the toggle shortcut that write it.
+    ///
+    /// 漢羅合用 (`Combined`) means two things only: the cell leads with the
+    /// hanji in one label, and a commit writes the hanji. A forced
+    /// `is_translate_swapped = true` is the compatibility PROJECTION of that
+    /// onto the existing pair (invariants §42), not a claim that 合用 is
+    /// hanji-first in any deeper sense — so auto-space, full-width punctuation,
+    /// `continuous_word_space` and the nextword gates behave exactly as today's
+    /// hanji-first mode, deliberately. 括號標註 keeps its stored value and
+    /// yields `漢字 (羅馬字)`. The side-by-side and roman-only results are
+    /// unchanged byte for byte.
     pub fn engine_settings(&self) -> EngineSettings {
         let candidate_display_mode: CandidateDisplayMode =
             self.choice(&keys::CANDIDATE_DISPLAY_MODE);
         let is_two_script = candidate_display_mode != CandidateDisplayMode::RomanOnly;
+        let is_translate_swapped = candidate_display_mode == CandidateDisplayMode::Combined
+            || (self.bool(&keys::IS_TRANSLATE_SWAPPED) && is_two_script);
         EngineSettings {
             input_mode: self.choice(&keys::INPUT_MODE),
-            is_translate_swapped: self.bool(&keys::IS_TRANSLATE_SWAPPED) && is_two_script,
+            is_translate_swapped,
             is_output_both_scripts: self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS) && is_two_script,
             candidate_display_mode,
             is_literal_roman_candidate_enabled: self
@@ -372,9 +384,67 @@ mod tests {
     }
 
     #[test]
+    fn combined_forces_the_swap_and_leaves_the_bracket_toggle_alone() {
+        // trace: stored swap=false, both=false; mode=combined → (true, false):
+        // the one-label cell leads with the hanji and a commit writes it, the
+        // projection of that onto the pair is a forced swap. Stored both=true
+        // → (true, true), so 括號標註 still yields `漢字 (羅馬字)`. Roman-only
+        // still masks to (false, false); back to sideBySide reads the stored
+        // (false, true) again with no bool written in between.
+        let mut doc = SettingsDocument::default();
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::Combined,
+        );
+        let snapshot = doc.engine_settings();
+        assert_eq!(
+            snapshot.candidate_display_mode,
+            CandidateDisplayMode::Combined
+        );
+        assert!(snapshot.is_translate_swapped && !snapshot.is_output_both_scripts);
+        assert!(
+            !doc.bool(&keys::IS_TRANSLATE_SWAPPED),
+            "stored value untouched"
+        );
+
+        doc.set_bool(&keys::IS_OUTPUT_BOTH_SCRIPTS, true);
+        let with_brackets = doc.engine_settings();
+        assert!(with_brackets.is_translate_swapped && with_brackets.is_output_both_scripts);
+
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        let roman_only = doc.engine_settings();
+        assert!(!roman_only.is_translate_swapped && !roman_only.is_output_both_scripts);
+
+        let revision = doc.revision;
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::SideBySide,
+        );
+        let restored = doc.engine_settings();
+        assert!(!restored.is_translate_swapped && restored.is_output_both_scripts);
+        assert_eq!(doc.revision, revision + 1, "only the mode was written");
+    }
+
+    #[test]
+    fn combined_parses_from_its_stored_spelling() {
+        let doc = SettingsDocument::from_json(
+            r#"{"revision": 1, "values": {"candidateDisplayMode": "combined"}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            doc.choice(&keys::CANDIDATE_DISPLAY_MODE),
+            CandidateDisplayMode::Combined
+        );
+        assert!(doc.engine_settings().is_translate_swapped);
+    }
+
+    #[test]
     fn unknown_candidate_display_mode_reads_as_side_by_side() {
         let doc = SettingsDocument::from_json(
-            r#"{"revision": 1, "values": {"candidateDisplayMode": "combined", "isTranslateSwapped": true}}"#,
+            r#"{"revision": 1, "values": {"candidateDisplayMode": "hanlo", "isTranslateSwapped": true}}"#,
         )
         .unwrap();
         assert_eq!(

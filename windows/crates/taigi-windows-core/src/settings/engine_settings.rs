@@ -43,14 +43,15 @@ impl SettingChoice for InputMode {
     }
 }
 
-/// What a candidate cell shows: both scripts (the swap decides which leads)
-/// or the romanization alone. Stored spellings and the roman-only rule are
-/// the same on every platform (`SettingsModels.swift` `CandidateDisplayMode`).
-/// 漢羅合用 (combined) is not a variant yet; the enum leaves room for it.
+/// What a candidate cell shows: both scripts (the swap decides which leads),
+/// the romanization alone, or both in ONE label led by the hanji (漢羅合用,
+/// `Combined`). Stored spellings and the per-mode rules are the same on every
+/// platform (`SettingsModels.swift` `CandidateDisplayMode`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateDisplayMode {
     SideBySide,
     RomanOnly,
+    Combined,
 }
 
 impl CandidateDisplayMode {
@@ -58,11 +59,13 @@ impl CandidateDisplayMode {
     /// it through `AppConfig::is_roman_only_display`, so only `RomanOnly`
     /// has to be exact; `SideBySide` is spelled out rather than left
     /// `Unspecified` so a build that sets the field is telling apart from
-    /// one that never did.
+    /// one that never did. `Combined` has no engine reader either: a combined
+    /// cell is distinct by its `(漢字, 羅馬字)` pair, so nothing collapses.
     pub fn wire(self) -> protos::engine::CandidateDisplayMode {
         match self {
             Self::SideBySide => protos::engine::CandidateDisplayMode::SideBySide,
             Self::RomanOnly => protos::engine::CandidateDisplayMode::RomanOnly,
+            Self::Combined => protos::engine::CandidateDisplayMode::Combined,
         }
     }
 
@@ -72,18 +75,20 @@ impl CandidateDisplayMode {
         match self {
             Self::SideBySide => StringKey::SettingsCandidateDisplayModeSideBySide,
             Self::RomanOnly => StringKey::SettingsCandidateDisplayModeRomanOnly,
+            Self::Combined => StringKey::SettingsCandidateDisplayModeCombined,
         }
     }
 }
 
 impl SettingChoice for CandidateDisplayMode {
-    const ALL: &'static [Self] = &[Self::SideBySide, Self::RomanOnly];
+    const ALL: &'static [Self] = &[Self::SideBySide, Self::RomanOnly, Self::Combined];
     /// Today's behaviour, byte for byte.
     const DEFAULT: Self = Self::SideBySide;
     fn raw(self) -> &'static str {
         match self {
             Self::SideBySide => "sideBySide",
             Self::RomanOnly => "romanOnly",
+            Self::Combined => "combined",
         }
     }
 }
@@ -100,9 +105,9 @@ pub struct EngineSettings {
     /// Word-boundary spacing inputs for the engine's `continuous_word_space`
     /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Both are
     /// the EFFECTIVE values: the stored toggles AND-ed with `candidate_display_mode
-    /// != RomanOnly` (`SettingsDocument::engine_settings`), never the raw
-    /// document bools — the raw ones stay untouched so leaving roman-only
-    /// restores them.
+    /// != RomanOnly`, and the swap forced true under `Combined`
+    /// (`SettingsDocument::engine_settings`), never the raw document bools —
+    /// the raw ones stay untouched so leaving either mode restores them.
     pub is_translate_swapped: bool,
     pub is_output_both_scripts: bool,
     /// What a candidate cell shows; `AppConfig.candidate_display_mode`.

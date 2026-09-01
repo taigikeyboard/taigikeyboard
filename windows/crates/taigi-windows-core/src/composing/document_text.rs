@@ -41,14 +41,22 @@ impl CandidateCellContent {
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// `ios/.../TaigiAutocompleteService.swift:150-162` (primary =
     /// romanization, secondary = Hanji) and the swap flip. Arm order is the
-    /// same on every platform: hanji-less → roman-only mode → swap. A
-    /// roman-only cell carries no annotation, which is what makes Space
-    /// answer `Ignored` on it (`alternate_text`).
+    /// same on every platform: hanji-less → roman-only mode → combined →
+    /// swap. A roman-only or combined cell carries no annotation, which is
+    /// what makes Space answer `Ignored` on it (`alternate_text`).
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {
         match candidate.hanji.as_deref().filter(|hanji| !hanji.is_empty()) {
             None => Self::new(candidate.roman.clone(), None),
             Some(_) if settings.candidate_display_mode == CandidateDisplayMode::RomanOnly => {
                 Self::new(candidate.roman.clone(), None)
+            }
+            // 漢羅合用: one label, hanji then roman, joined by a single ASCII
+            // space. CROSS-PLATFORM INVARIANT — mirrors
+            // `macos/.../CandidateCellContent.swift` and
+            // `ios/.../CandidateCellHelper.displayTitle`; the separator is the
+            // same on every platform. Drift causes silent divergence.
+            Some(hanji) if settings.candidate_display_mode == CandidateDisplayMode::Combined => {
+                Self::new(format!("{hanji} {}", candidate.roman), None)
             }
             Some(hanji) => {
                 if settings.is_translate_swapped {
@@ -170,6 +178,52 @@ mod tests {
         assert_eq!(document_text(&c, &derived), "tâi-gí");
         // Side-by-side is untouched by the new arm.
         let cell = CandidateCellContent::cell(&c, &settings(false, false));
+        assert_eq!(cell.annotation.as_deref(), Some("台語"));
+    }
+
+    #[test]
+    fn combined_mode_shows_one_label_and_writes_the_hanji() {
+        // trace: hanji present, mode=Combined → cell = "漢字 羅馬字" with no
+        // annotation whichever way the swap points, so `alternate_text` is
+        // `None` (Space → `Ignored`). A hanji-less row stays roman alone.
+        // Enter writes the hanji through the unchanged `document_text` arms
+        // because the snapshot's swap is DERIVED true under combined
+        // (`SettingsDocument::engine_settings`), and `漢字 (羅馬字)` when
+        // 括號標註 is on.
+        let c = candidate("tâi-gí", Some("台語"));
+        for swapped in [false, true] {
+            let settings = EngineSettings {
+                is_translate_swapped: swapped,
+                candidate_display_mode: CandidateDisplayMode::Combined,
+                ..EngineSettings::default()
+            };
+            let cell = CandidateCellContent::cell(&c, &settings);
+            assert_eq!(cell.text, "台語 tâi-gí");
+            assert_eq!(cell.annotation, None);
+            assert_eq!(alternate_text(&c, &settings), None);
+        }
+        let combined = EngineSettings {
+            candidate_display_mode: CandidateDisplayMode::Combined,
+            ..EngineSettings::default()
+        };
+        let roman_only_row = candidate("guá", None);
+        let cell = CandidateCellContent::cell(&roman_only_row, &combined);
+        assert_eq!(cell.text, "guá");
+        assert_eq!(cell.annotation, None);
+
+        let derived = EngineSettings {
+            is_translate_swapped: true,
+            ..combined.clone()
+        };
+        assert_eq!(document_text(&c, &derived), "台語");
+        let derived_with_brackets = EngineSettings {
+            is_output_both_scripts: true,
+            ..derived
+        };
+        assert_eq!(document_text(&c, &derived_with_brackets), "台語 (tâi-gí)");
+        // Side-by-side is untouched by the new arm.
+        let cell = CandidateCellContent::cell(&c, &settings(false, false));
+        assert_eq!(cell.text, "tâi-gí");
         assert_eq!(cell.annotation.as_deref(), Some("台語"));
     }
 
