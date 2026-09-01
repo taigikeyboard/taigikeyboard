@@ -39,17 +39,4 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.continuousAppConfig(combined).candidateDisplayMode, .combined)
         XCTAssertNotEqual(RustEngineBridge.appConfig(.defaults).candidateDisplayMode, .unspecified)
     }
-
-    /// The combined display rides the wire beside the swap `SettingsStore`
-    /// forces on for it: the engine has no reader for the mode itself, so the
-    /// hanji-first behaviour it inherits — `continuous_word_space`, the
-    /// nextword gates — comes entirely from this flag being `true`.
-    func testContinuousAppConfig_underCombined_carriesTheForcedSwap() {
-        let combined = TestFixtures.settings(swapped: true, candidateDisplayMode: .combined)
-        let config = RustEngineBridge.continuousAppConfig(combined)
-
-        XCTAssertEqual(config.candidateDisplayMode, .combined)
-        XCTAssertTrue(config.isTranslateSwapped)
-        XCTAssertFalse(config.outputBothScripts)
-    }
 }

@@ -317,25 +317,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     }
 
     var current: EngineSettings {
-        // The ONE place the stored swap pair becomes the effective one: a
-        // romanization-only display has no Hanji to lead with or to bracket,
-        // so both read `false` under it while the stored values stay put for
-        // the way back (`EngineSettings.isTranslateSwapped`).
+        // The ONE place the stored swap pair becomes the effective one; the
+        // rules live on `CandidateDisplayMode` (§42). The stored values stay
+        // put for the way back to side-by-side.
         let displayMode = candidateDisplayMode
-        let isTwoScript = displayMode != .romanOnly
-        // `.combined` means exactly two things: the cell leads with the Hanji
-        // (one label) and a commit writes the Hanji. Forcing the swap on is
-        // the compatibility projection of that onto the pair every reader
-        // already consults — not a claim that the mode "is" hanji-first — so
-        // under it full-width punctuation, auto-space, the 文/A active glyph,
-        // `continuous_word_space` and the nextword gates (an Enter-raw commit
-        // is not recorded) all behave exactly as today's hanji-first mode,
-        // deliberately. The bracket setting stays as stored: 括號標註 under
-        // 合用 commits `漢字 (羅馬字)`, as the swapped mode does today.
         return EngineSettings(
             inputMode: inputMode,
-            isTranslateSwapped: displayMode == .combined ? true : (storedIsTranslateSwapped && isTwoScript),
-            isOutputBothScripts: storedIsOutputBothScripts && isTwoScript,
+            isTranslateSwapped: displayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped),
+            isOutputBothScripts: displayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts),
             candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),

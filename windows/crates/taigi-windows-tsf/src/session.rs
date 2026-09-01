@@ -34,9 +34,7 @@ use taigi_windows_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot, ShortcutAction,
 };
 use taigi_windows_core::policies;
-use taigi_windows_core::settings::{
-    keys, AppearanceMode, CandidateDisplayMode, InputMode, SettingsDocument,
-};
+use taigi_windows_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows::core::{Interface, BOOL};
 use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
@@ -658,14 +656,15 @@ impl TextService_Impl {
                     log::warn!("shortcut.no_settings_store");
                     return;
                 };
-                // Only side-by-side has a lead script to flip. Roman-only
-                // cells have no hanji to lead with and a combined cell is one
-                // fixed `漢字 羅馬字` label: under either the key is inert —
-                // no write, no flash — and the stored swap waits for
-                // side-by-side to come back (every platform).
-                // Read off the same snapshot every other consumer uses.
-                let display_mode = runtime.settings.current().engine_settings().candidate_display_mode;
-                if display_mode != CandidateDisplayMode::SideBySide {
+                // Inert unless side-by-side (`allows_swap_toggle`): no write,
+                // no flash, the stored swap waits for the way back. Read off
+                // the same snapshot every other consumer uses.
+                let display_mode = runtime
+                    .settings
+                    .current()
+                    .engine_settings()
+                    .candidate_display_mode;
+                if !display_mode.allows_swap_toggle() {
                     return;
                 }
                 if let Err(error) = store.update(|document| {

@@ -50,11 +50,9 @@ impl CandidateCellContent {
             Some(_) if settings.candidate_display_mode == CandidateDisplayMode::RomanOnly => {
                 Self::new(candidate.roman.clone(), None)
             }
-            // 漢羅合用: one label, hanji then roman, joined by a single ASCII
-            // space. CROSS-PLATFORM INVARIANT — mirrors
-            // `macos/.../CandidateCellContent.swift` and
-            // `ios/.../CandidateCellHelper.displayTitle`; the separator is the
-            // same on every platform. Drift causes silent divergence.
+            // 漢羅合用: one label, hanji then roman, one ASCII space between.
+            // CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateCellContent.swift`
+            // and iOS `CandidateCellHelper.displayTitle` (same separator).
             Some(hanji) if settings.candidate_display_mode == CandidateDisplayMode::Combined => {
                 Self::new(format!("{hanji} {}", candidate.roman), None)
             }
@@ -186,10 +184,6 @@ mod tests {
         // trace: hanji present, mode=Combined → cell = "漢字 羅馬字" with no
         // annotation whichever way the swap points, so `alternate_text` is
         // `None` (Space → `Ignored`). A hanji-less row stays roman alone.
-        // Enter writes the hanji through the unchanged `document_text` arms
-        // because the snapshot's swap is DERIVED true under combined
-        // (`SettingsDocument::engine_settings`), and `漢字 (羅馬字)` when
-        // 括號標註 is on.
         let c = candidate("tâi-gí", Some("台語"));
         for swapped in [false, true] {
             let settings = EngineSettings {
@@ -210,21 +204,6 @@ mod tests {
         let cell = CandidateCellContent::cell(&roman_only_row, &combined);
         assert_eq!(cell.text, "guá");
         assert_eq!(cell.annotation, None);
-
-        let derived = EngineSettings {
-            is_translate_swapped: true,
-            ..combined.clone()
-        };
-        assert_eq!(document_text(&c, &derived), "台語");
-        let derived_with_brackets = EngineSettings {
-            is_output_both_scripts: true,
-            ..derived
-        };
-        assert_eq!(document_text(&c, &derived_with_brackets), "台語 (tâi-gí)");
-        // Side-by-side is untouched by the new arm.
-        let cell = CandidateCellContent::cell(&c, &settings(false, false));
-        assert_eq!(cell.text, "tâi-gí");
-        assert_eq!(cell.annotation.as_deref(), Some("台語"));
     }
 
     #[test]

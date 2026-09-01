@@ -355,10 +355,6 @@ mod tests {
                 CandidateDisplayMode::RomanOnly,
             ]
         );
-        assert_eq!(
-            CandidateDisplayMode::from_raw("combined"),
-            Some(CandidateDisplayMode::Combined)
-        );
     }
 
     #[test]

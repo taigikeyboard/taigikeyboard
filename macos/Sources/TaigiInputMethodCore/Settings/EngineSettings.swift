@@ -26,6 +26,33 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     case sideBySide
     case combined
     case romanOnly
+
+    /// Whether the cell shows any Hanji — `false` only under `.romanOnly`.
+    var showsHanji: Bool { self != .romanOnly }
+
+    /// Only side-by-side has a lead script the swap shortcut can flip; the
+    /// other two fix it, so the shortcut is inert and the stored swap waits
+    /// for the way back.
+    var allowsSwapToggle: Bool { self == .sideBySide }
+
+    /// Effective swap for a stored flag. `.combined` leads with — and commits —
+    /// the Hanji: forcing the pair on is a compatibility projection of that,
+    /// so every reader of the pair (auto-space, full-width punctuation, the
+    /// nextword gates) behaves as today's hanji-first mode
+    /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios `SettingsModels.swift`
+    /// `CandidateDisplayMode.effectiveTranslateSwapped`, android
+    /// `CandidateDisplayMode.kt`, windows `engine_settings.rs`. Drift causes
+    /// silent divergence.
+    func effectiveTranslateSwapped(stored: Bool) -> Bool {
+        self == .combined || (stored && showsHanji)
+    }
+
+    /// Effective 括號標註 for a stored flag — off only where there is no Hanji
+    /// to bracket; `.combined` keeps it (`漢字 (羅馬字)`).
+    func effectiveOutputBothScripts(stored: Bool) -> Bool {
+        stored && showsHanji
+    }
 }
 
 /// Immutable snapshot of everything the engine needs to render a composition.

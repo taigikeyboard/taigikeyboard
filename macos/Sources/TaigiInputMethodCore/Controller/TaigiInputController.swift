@@ -438,7 +438,7 @@ public final class TaigiInputController: IMKInputController {
             // Hanji on screen for the swap to lead with, under 合用 the one
             // label always leads with it, and flipping the STORED value blind
             // would change what the user gets back on returning to side-by-side.
-            guard settings.current.candidateDisplayMode == .sideBySide else { return }
+            guard settings.current.candidateDisplayMode.allowsSwapToggle else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing

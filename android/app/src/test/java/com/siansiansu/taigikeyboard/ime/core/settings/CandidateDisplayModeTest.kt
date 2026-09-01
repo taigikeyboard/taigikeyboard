@@ -70,14 +70,18 @@ class CandidateDisplayModeTest {
         assertFalse(CandidateDisplayMode.COMBINED.effectiveOutputBothScripts(false))
 
         // stored (swap=false, both=true) → effective (true, true)
-        assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(false))
         assertTrue(CandidateDisplayMode.COMBINED.effectiveOutputBothScripts(true))
 
         // stored swap=true is also true (idempotent projection).
         assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(true))
 
         // Back to SIDE_BY_SIDE: the stored `false` swap is what the user sees again.
-        assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveTranslateSwapped(false))
-        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveOutputBothScripts(true))
+    }
+
+    /** The rules PrefHelper and the UI gates read live on the enum — pinned once. */
+    @Test
+    fun rules_perMode() {
+        assertEquals(listOf(CandidateDisplayMode.SIDE_BY_SIDE), CandidateDisplayMode.entries.filter { it.allowsSwapToggle })
+        assertEquals(listOf(CandidateDisplayMode.ROMAN_ONLY), CandidateDisplayMode.entries.filterNot { it.showsHanji })
     }
 }

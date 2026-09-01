@@ -40,7 +40,7 @@ public extension KeyboardContext {
     /// visible; its active state reads the derived value.
     // 中文: 只有 漢羅並排 才切換;羅馬字 / 漢羅合用 為 no-op — 鍵仍顯示,但不改 stored 值。
     func toggleTranslateSwapped() {
-        guard candidateDisplayMode == .sideBySide else { return }
+        guard candidateDisplayMode.allowsSwapToggle else { return }
         isTranslateSwapped.toggle()
     }
 

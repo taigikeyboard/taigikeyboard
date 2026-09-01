@@ -69,7 +69,8 @@ enum CandidateCellHelper {
         isTPSLayout: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> String? {
-        if isTPSLayout || candidateDisplayMode == .romanOnly || candidateDisplayMode == .combined {
+        // Only side-by-side splits the two scripts into a title and a subtitle.
+        if isTPSLayout || candidateDisplayMode != .sideBySide {
             return nil
         }
         return isTranslateSwapped ? suggestion.text : suggestion.subtitle

@@ -163,17 +163,14 @@ mod tests {
 
     #[test]
     fn combined_reaches_the_wire_with_the_derived_swap() {
-        // trace: the document derives swap=true under combined
-        // (`SettingsDocument::engine_settings`); the bridge forwards both the
-        // mode and that swap on the continuous config, and the engine's only
-        // normaliser still reads it as "not roman-only".
-        use crate::settings::{keys, SettingsDocument};
-        let mut doc = SettingsDocument::default();
-        doc.set_choice(
-            &keys::CANDIDATE_DISPLAY_MODE,
-            CandidateDisplayMode::Combined,
-        );
-        let settings = doc.engine_settings();
+        // trace: the derivation is pinned in `document.rs`; here only the
+        // forwarding — the bridge carries the mode and the swap it was handed,
+        // and the engine's only normaliser still reads it as "not roman-only".
+        let settings = EngineSettings {
+            is_translate_swapped: true,
+            candidate_display_mode: CandidateDisplayMode::Combined,
+            ..EngineSettings::default()
+        };
         let continuous = continuous_app_config(&settings);
         assert_eq!(
             continuous.candidate_display_mode,

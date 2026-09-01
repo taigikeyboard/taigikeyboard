@@ -529,7 +529,7 @@ class SmartbarManager(
      * the cache re-derives from it.
      */
     fun toggleTranslateSwapped() {
-        if (prefs.candidateDisplayMode != CandidateDisplayMode.SIDE_BY_SIDE) return
+        if (!prefs.candidateDisplayMode.allowsSwapToggle) return
         prefs.storedIsTranslateSwapped = !prefs.storedIsTranslateSwapped
         refreshScriptFlagCache()
         refreshSurfacesForScriptFlags()

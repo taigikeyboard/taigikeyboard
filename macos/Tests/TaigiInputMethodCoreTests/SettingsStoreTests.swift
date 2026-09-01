@@ -482,4 +482,15 @@ final class SettingsStoreTests: XCTestCase {
 
         XCTAssertEqual(makeStore().composingKeyBindings.slotKeySet, .bareKeys)
     }
+
+    /// The rules `current` and the swap shortcut read live on the enum — pinned once.
+    func testCandidateDisplayMode_rules_perMode() {
+        XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide])
+        XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveTranslateSwapped(stored: false))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
+    }
+
 }

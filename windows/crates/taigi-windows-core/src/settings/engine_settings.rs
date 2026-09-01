@@ -55,6 +55,37 @@ pub enum CandidateDisplayMode {
 }
 
 impl CandidateDisplayMode {
+    /// Whether the cell shows any hanji — `false` only for `RomanOnly`.
+    pub fn shows_hanji(self) -> bool {
+        self != Self::RomanOnly
+    }
+
+    /// Only side-by-side has a lead script the swap shortcut can flip; the
+    /// other two fix it, so the shortcut is inert and the stored swap waits
+    /// for the way back.
+    pub fn allows_swap_toggle(self) -> bool {
+        self == Self::SideBySide
+    }
+
+    /// Effective swap for a stored flag. `Combined` leads with — and commits —
+    /// the hanji: forcing the pair on is a compatibility projection of that,
+    /// so every reader of the pair (auto-space, full-width, the nextword
+    /// gates) behaves as today's hanji-first mode (invariants §42).
+    /// `RomanOnly` has no hanji to lead with.
+    /// CROSS-PLATFORM INVARIANT — mirrors macOS `EngineSettings.swift`
+    /// `CandidateDisplayMode.effectiveTranslateSwapped`, iOS
+    /// `SettingsModels.swift`, Android `CandidateDisplayMode.kt`.
+    // 中文: 推導 swap — 合用恆 true(投影到既有 pair)、羅馬字恆 false、並排照 stored。
+    pub fn effective_translate_swapped(self, stored: bool) -> bool {
+        self == Self::Combined || (stored && self.shows_hanji())
+    }
+
+    /// Effective 括號標註 for a stored flag — off only where there is no hanji
+    /// to bracket; `Combined` keeps it (`漢字 (羅馬字)`).
+    pub fn effective_output_both_scripts(self, stored: bool) -> bool {
+        stored && self.shows_hanji()
+    }
+
     /// The `AppConfig.candidate_display_mode` wire value. The engine reads
     /// it through `AppConfig::is_roman_only_display`, so only `RomanOnly`
     /// has to be exact; `SideBySide` is spelled out rather than left

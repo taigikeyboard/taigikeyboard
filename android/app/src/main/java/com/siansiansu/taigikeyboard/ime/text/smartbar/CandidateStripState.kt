@@ -58,6 +58,16 @@ data class CandidateCellText(
 )
 
 /**
+ * The 漢羅合用 label: hanji, one ASCII space, romanization. The one place the
+ * separator is spelled — the cell arm and the overlay width measure both use it.
+ */
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift combinedLabel.
+fun combinedCellLabel(
+    hanzi: String,
+    roman: String,
+): String = "$hanzi $roman"
+
+/**
  * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
  * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED is one label
  * `漢字 羅馬字` (single ASCII space, no subtitle); swap decides the lead
@@ -77,7 +87,7 @@ fun candidateCellText(
         hanzi.isNullOrEmpty() -> CandidateCellText(displayRoman, null)
         isTPSLayout -> CandidateCellText(hanzi, null)
         candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY -> CandidateCellText(displayRoman, null)
-        candidateDisplayMode == CandidateDisplayMode.COMBINED -> CandidateCellText("$hanzi $displayRoman", null)
+        candidateDisplayMode == CandidateDisplayMode.COMBINED -> CandidateCellText(combinedCellLabel(hanzi, displayRoman), null)
         isTranslateSwapped -> CandidateCellText(hanzi, displayRoman)
         else -> CandidateCellText(displayRoman, hanzi)
     }

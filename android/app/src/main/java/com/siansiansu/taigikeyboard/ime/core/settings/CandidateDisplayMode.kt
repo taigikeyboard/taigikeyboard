@@ -32,7 +32,7 @@ enum class CandidateDisplayMode(
      */
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
     // Drift causes silent divergence (one platform commits roman under 漢羅合用, or hanji under roman-only).
-    fun effectiveTranslateSwapped(stored: Boolean): Boolean = if (this == COMBINED) true else stored && this != ROMAN_ONLY
+    fun effectiveTranslateSwapped(stored: Boolean): Boolean = this == COMBINED || (stored && showsHanji)
 
     /**
      * Effective `outputBothScripts` under this mode. Only ROMAN_ONLY
@@ -41,7 +41,13 @@ enum class CandidateDisplayMode(
      */
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isOutputBothScripts derivation.
     // Drift causes silent divergence (spurious bracket annotation under roman-only).
-    fun effectiveOutputBothScripts(stored: Boolean): Boolean = stored && this != ROMAN_ONLY
+    fun effectiveOutputBothScripts(stored: Boolean): Boolean = stored && showsHanji
+
+    /** Whether the cell shows any hanji — false only for [ROMAN_ONLY]; also gates the 括號標註 toggle's enabled state. */
+    val showsHanji: Boolean get() = this != ROMAN_ONLY
+
+    /** Only side-by-side has a lead script the 文/A key can flip; the other two fix it, so the key is inert. */
+    val allowsSwapToggle: Boolean get() = this == SIDE_BY_SIDE
 
     companion object {
         /** Coerce a stored raw string into a mode; unknown / absent values fall back to [SIDE_BY_SIDE]. */

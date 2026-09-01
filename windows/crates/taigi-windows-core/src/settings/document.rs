@@ -198,33 +198,21 @@ impl SettingsDocument {
 
     /// The engine-facing snapshot as of this document.
     ///
-    /// The swap and 括號標註 pair comes out DERIVED: the stored toggle AND-ed
-    /// with "not roman-only". Roman-only cells show one script, so a hanji
-    /// lead or a bracketed pair has nothing to apply to — but the stored
-    /// bools are left alone, so switching back to side-by-side restores them
-    /// (`SettingsStore.swift` `engineSettings`). Every consumer of the pair
-    /// reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)` directly;
-    /// the raw read is for the panes and the toggle shortcut that write it.
-    ///
-    /// 漢羅合用 (`Combined`) means two things only: the cell leads with the
-    /// hanji in one label, and a commit writes the hanji. A forced
-    /// `is_translate_swapped = true` is the compatibility PROJECTION of that
-    /// onto the existing pair (invariants §42), not a claim that 合用 is
-    /// hanji-first in any deeper sense — so auto-space, full-width punctuation,
-    /// `continuous_word_space` and the nextword gates behave exactly as today's
-    /// hanji-first mode, deliberately. 括號標註 keeps its stored value and
-    /// yields `漢字 (羅馬字)`. The side-by-side and roman-only results are
-    /// unchanged byte for byte.
+    /// The swap and 括號標註 pair comes out DERIVED — the rules live on
+    /// `CandidateDisplayMode` (invariants §42). The stored bools are left
+    /// alone, so switching back to side-by-side restores them. Every consumer
+    /// of the pair reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)`
+    /// directly; the raw read is for the panes and the toggle shortcut that
+    /// write it.
     pub fn engine_settings(&self) -> EngineSettings {
         let candidate_display_mode: CandidateDisplayMode =
             self.choice(&keys::CANDIDATE_DISPLAY_MODE);
-        let is_two_script = candidate_display_mode != CandidateDisplayMode::RomanOnly;
-        let is_translate_swapped = candidate_display_mode == CandidateDisplayMode::Combined
-            || (self.bool(&keys::IS_TRANSLATE_SWAPPED) && is_two_script);
         EngineSettings {
             input_mode: self.choice(&keys::INPUT_MODE),
-            is_translate_swapped,
-            is_output_both_scripts: self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS) && is_two_script,
+            is_translate_swapped: candidate_display_mode
+                .effective_translate_swapped(self.bool(&keys::IS_TRANSLATE_SWAPPED)),
+            is_output_both_scripts: candidate_display_mode
+                .effective_output_both_scripts(self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS)),
             candidate_display_mode,
             is_literal_roman_candidate_enabled: self
                 .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
@@ -428,17 +416,20 @@ mod tests {
         assert_eq!(doc.revision, revision + 1, "only the mode was written");
     }
 
+    /// The rules `engine_settings()` and the swap shortcut read live on the enum — pinned once.
     #[test]
-    fn combined_parses_from_its_stored_spelling() {
-        let doc = SettingsDocument::from_json(
-            r#"{"revision": 1, "values": {"candidateDisplayMode": "combined"}}"#,
-        )
-        .unwrap();
-        assert_eq!(
-            doc.choice(&keys::CANDIDATE_DISPLAY_MODE),
-            CandidateDisplayMode::Combined
+    fn candidate_display_mode_rules_per_mode() {
+        use CandidateDisplayMode::{Combined, RomanOnly, SideBySide};
+        assert!(
+            SideBySide.allows_swap_toggle()
+                && !Combined.allows_swap_toggle()
+                && !RomanOnly.allows_swap_toggle()
         );
-        assert!(doc.engine_settings().is_translate_swapped);
+        assert!(SideBySide.shows_hanji() && Combined.shows_hanji() && !RomanOnly.shows_hanji());
+        assert!(Combined.effective_translate_swapped(false));
+        assert!(!RomanOnly.effective_translate_swapped(true));
+        assert!(!RomanOnly.effective_output_both_scripts(true));
+        assert!(Combined.effective_output_both_scripts(true));
     }
 
     #[test]

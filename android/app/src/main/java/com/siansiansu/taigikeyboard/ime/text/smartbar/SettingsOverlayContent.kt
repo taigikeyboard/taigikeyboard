@@ -137,7 +137,7 @@ fun SettingsOverlayContent(
             checked = outputBoth,
             icon = SettingsIcons.outputBothScripts,
             iconTint = iconTint,
-            enabled = candidateDisplayMode != CandidateDisplayMode.ROMAN_ONLY,
+            enabled = candidateDisplayMode.showsHanji,
             onCheckedChange = {
                 outputBoth = it
                 prefs.storedOutputBothScripts = it
@@ -332,7 +332,6 @@ private fun CandidateDisplayModeRow(
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.width(12.dp))
-        // Box anchors the DropdownMenu to the trailing value.
         Box {
             Row(
                 modifier = Modifier.clickable { expanded = true },
@@ -347,7 +346,6 @@ private fun CandidateDisplayModeRow(
                 Icon(
                     imageVector = Icons.Filled.ArrowDropDown,
                     contentDescription = null,
-                    modifier = Modifier.size(AppStyle.trailingChevronSize),
                     tint = labelColor,
                 )
             }

@@ -91,7 +91,7 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
                     // 括號標註 is meaningless without hanji; stored value stays untouched.
-                    .disabled(candidateDisplayMode == .romanOnly)
+                    .disabled(!candidateDisplayMode.showsHanji)
                     settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
                         SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
                     }

@@ -56,14 +56,10 @@ struct CandidateCellContent: Equatable, Sendable {
         if settings.candidateDisplayMode == .romanOnly {
             return Self(text: candidate.roman, annotation: nil)
         }
-        // One label, Hanji first, one ASCII space between: the Hanji is the
-        // value and the romanization its hint, so the commit writes the Hanji
-        // (the effective swap is `true` under this mode) and Space, with no
-        // annotation to write, falls to `.ignored` as it does above. Before
-        // the swap arm for the same reason the arm above is.
+        // 漢羅合用: one label, Hanji then romanization, one ASCII space between;
+        // no annotation, so Space falls to `.ignored` as above.
         // CROSS-PLATFORM INVARIANT — mirrors iOS `CandidateCellHelper.displayTitle`
-        // and Windows `document_text.rs` (`CandidateCellContent::cell`), which
-        // join with the same single space. Drift changes what 合用 shows.
+        // and Windows `document_text.rs` `CandidateCellContent::cell` (same separator).
         if settings.candidateDisplayMode == .combined {
             return Self(text: "\(hanji) \(candidate.roman)", annotation: nil)
         }

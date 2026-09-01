@@ -566,8 +566,8 @@ private fun measureCellWidth(
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
     }
     if (candidateDisplayMode == CandidateDisplayMode.COMBINED) {
-        // One label at the primary size (same string candidateCellText() builds); hanji-less rows are roman alone.
-        val label = if (!word.hanzi.isNullOrEmpty()) "${word.hanzi} ${word.roman}" else word.roman
+        // One label at the primary size; hanji-less rows are roman alone.
+        val label = if (!word.hanzi.isNullOrEmpty()) combinedCellLabel(word.hanzi, word.roman) else word.roman
         val labelWidth = primaryPaint.measureText(label)
         return maxOf(minCellWidthPx, (labelWidth + cellPaddingPx + 0.5f).toInt())
     }

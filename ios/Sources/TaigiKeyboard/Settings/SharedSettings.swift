@@ -752,31 +752,18 @@ extension SharedSettings: EngineSettings {
         )
     }
 
-    /// Effective swap: `true` under `.combined`, else stored flag AND not
-    /// `.romanOnly`. Read-only by design — a `.toggle()` on a derived getter
-    /// would overwrite the stored flag, so writers go through
-    /// `storedIsTranslateSwapped`.
-    ///
-    /// `.combined` means exactly "the cell leads with the hanji and a commit
-    /// writes the hanji"; forcing the pair to swapped is a compatibility
-    /// projection of that, so every reader behaves as today's hanji-first mode.
-    // 中文: 合用 = true;否則 stored && 非羅馬字模式。唯讀;寫入走 storedIsTranslateSwapped。
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/PrefHelper.kt isTranslateSwapped (derived).
-    // Drift causes silent divergence (羅馬字 mode still swapping scripts on one platform).
+    /// Effective swap — the rule lives on `CandidateDisplayMode`. Read-only by
+    /// design: a `.toggle()` on a derived getter would overwrite the stored
+    /// flag, so writers go through `storedIsTranslateSwapped`.
+    // 中文: 推導值;規則在 CandidateDisplayMode。唯讀;寫入走 storedIsTranslateSwapped。
     var isTranslateSwapped: Bool {
-        candidateDisplayMode == .combined ? true : (storedIsTranslateSwapped && isTwoScriptDisplay)
+        candidateDisplayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped)
     }
 
-    /// Effective 括號標註: stored flag AND not `.romanOnly`. No `.combined`
-    /// override — the bracket form there is `漢字 (羅馬字)`, today's swapped output.
-    // 中文: 推導值 = stored && 非羅馬字模式。唯讀;寫入走 storedIsOutputBothScripts。
+    /// Effective 括號標註 — same seam, same rule owner.
+    // 中文: 推導值;寫入走 storedIsOutputBothScripts。
     var isOutputBothScripts: Bool {
-        storedIsOutputBothScripts && isTwoScriptDisplay
-    }
-
-    /// The one place the picker gates the script pair.
-    private var isTwoScriptDisplay: Bool {
-        candidateDisplayMode != .romanOnly
+        candidateDisplayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts)
     }
 }
 
