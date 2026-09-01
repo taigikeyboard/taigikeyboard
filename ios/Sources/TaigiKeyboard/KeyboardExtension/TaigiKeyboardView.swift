@@ -231,8 +231,12 @@ struct TaigiKeyboardView: View {
             isTranslateSwapped: isTranslateSwapped,
             candidateDisplayMode: candidateDisplayMode,
             onTranslateToggle: onTranslateToggle,
-            onCandidateDisplayModeChange: { [keyboardContext] mode in
+            onCandidateDisplayModeChange: { [keyboardContext, unowned services] mode in
                 keyboardContext.candidateDisplayMode = mode
+                // Not display-only: under 羅馬字 the ENGINE collapses same-roman
+                // rows (§44), so the list on screen must be fetched again, not
+                // just repainted — same as any keystroke.
+                (services.actionHandler as? ActionHandler)?.refetchCandidatesForDisplayModeChange()
             },
             candidateStyle: candidateStyle,
             candidateTheme: candidateTheme,

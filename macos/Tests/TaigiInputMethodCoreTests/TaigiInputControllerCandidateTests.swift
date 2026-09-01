@@ -749,7 +749,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// write — the open bar has to notice on its own. Written to the domain
     /// the way the pane writes it, then awaited: the observation hops to the
     /// main actor before re-reading, so the re-render is one turn away.
-    func testChangingTheDisplayMode_rerendersTheOpenBarInPlace() async throws {
+    func testChangingTheDisplayMode_refetchesTheOpenBarInPlace() async throws {
         let key = SettingsStore.Keys.candidateDisplayMode.name
         // Both keys start from "never touched" and go back to whatever they
         // held — `withSetting` is synchronous, and this case has to await.
@@ -781,8 +781,16 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "a display-mode change must not route through dismissal",
         )
         let after = try XCTUnwrap(session.presenter.shownContent).cells
-        XCTAssertEqual(after.count, before.count)
-        XCTAssertEqual(after.map(\.text), before.map(\.text), "romanization-only keeps the romanization that led")
+        // Fetched again, not repainted: the engine may have collapsed
+        // same-roman rows (§44), so the list can only shrink, and every
+        // surviving romanization was already on screen.
+        XCTAssertFalse(after.isEmpty)
+        XCTAssertLessThanOrEqual(after.count, before.count)
+        XCTAssertTrue(
+            Set(after.map(\.text)).isSubset(of: Set(before.map(\.text))),
+            "romanization-only keeps only romanizations that were already listed",
+        )
+        XCTAssertEqual(Set(after.map(\.text)).count, after.count, "no two cells read the same")
         XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "romanization-only cells carry no Hanji")
     }
 

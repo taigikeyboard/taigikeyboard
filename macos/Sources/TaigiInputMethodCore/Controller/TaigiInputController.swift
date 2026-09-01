@@ -184,7 +184,7 @@ public final class TaigiInputController: IMKInputController {
             controller.displayModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.candidateDisplayMode,
             ) {
-                Task { @MainActor in observed.controller?.rerenderCandidatesForDisplayChange() }
+                Task { @MainActor in observed.controller?.refetchCandidatesForDisplayModeChange() }
             }
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
             // decide here.
@@ -447,10 +447,12 @@ public final class TaigiInputController: IMKInputController {
             // swap to lead with, and flipping the STORED value blind would
             // change what the user gets back on returning to side-by-side.
             guard settings.candidateDisplayMode != .romanOnly else { return }
-            // The bar STAYS: the swap changes how a candidate displays and
+            // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing
             // here read as the window vanishing (real device, 2026-08-21).
+            // (The 候選詞顯示 picker is the setting that DOES change which
+            // candidates exist — see `refetchCandidatesForDisplayModeChange`.)
             settings.storedIsTranslateSwapped.toggle()
             rerenderCandidatesForDisplayChange()
         }
@@ -757,6 +759,30 @@ public final class TaigiInputController: IMKInputController {
             // fixed accent, the highlight takes the host app's own. Safe to ask
             // here — this runs inside a key event, like every client query.
             hostBundleIdentifier: client.bundleIdentifier(),
+            ownedBy: sessionToken,
+        )
+    }
+
+    /// Fetches the candidates again after a 候選詞顯示 change and repaints the
+    /// bar in place. Unlike the swap, this setting changes WHICH candidates
+    /// exist — under 羅馬字 the engine collapses same-roman rows (§44) — so a
+    /// repaint of `fetchedCandidates` would keep the duplicates on screen.
+    /// Through `updateCells`, like the swap: the KVO path has no client to ask
+    /// for a caret rectangle, and the window is already anchored. The bar goes
+    /// down only when the composition is gone or the new list is empty.
+    // 中文: 候選詞顯示切換後重抓候選 — 引擎在羅馬字會收合同音列;無 client 可問 caret,故 updateCells 原地換。
+    @MainActor
+    private func refetchCandidatesForDisplayModeChange() {
+        guard !fetchedCandidates.isEmpty,
+              let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
+        else { return }
+        guard case let .found(fetched) = manager.fetchCandidates(), !fetched.isEmpty else {
+            dismissCandidates()
+            return
+        }
+        fetchedCandidates = fetched
+        candidatePresenter.updateCells(
+            fetched.map(manager.cellContent(for:)),
             ownedBy: sessionToken,
         )
     }

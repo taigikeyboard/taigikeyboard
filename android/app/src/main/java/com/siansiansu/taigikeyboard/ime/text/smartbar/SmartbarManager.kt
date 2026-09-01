@@ -550,6 +550,10 @@ class SmartbarManager(
     fun onCandidateDisplayModeChanged() {
         refreshScriptFlagCache()
         refreshSurfacesForScriptFlags()
+        // The repaint above reuses `currentSuggestions`; under 羅馬字 the engine
+        // returns a DIFFERENT list (same-roman rows collapsed, §44), so the
+        // composition is fetched again and the repaint is overwritten.
+        textInputManager.refetchCandidatesForDisplayModeChange()
 
         logger.debug(TAG) { "[DISPLAY_MODE] candidateDisplayMode=$cachedCandidateDisplayMode" }
     }
