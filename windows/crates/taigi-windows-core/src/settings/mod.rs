@@ -23,7 +23,7 @@ pub use choices::{
 };
 pub use document::{SettingsDocument, SettingsKey};
 pub use engine_settings::{
-    DictionarySourceToggles, EngineSettings, InputMode, KautianSubcollections,
+    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, KautianSubcollections,
 };
 
 /// Live-read access to the current settings document.

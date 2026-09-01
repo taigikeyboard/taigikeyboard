@@ -23,7 +23,9 @@ use super::choices::{
     CandidateWindowSizeChoice, SettingsPane,
 };
 use super::document::SettingsKey;
-use super::engine_settings::{DictionarySourceToggles, EngineSettings, InputMode};
+use super::engine_settings::{
+    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode,
+};
 use crate::strings::DisplayLanguage;
 
 const fn engine_defaults() -> EngineSettings {
@@ -33,6 +35,7 @@ const fn engine_defaults() -> EngineSettings {
         input_mode: InputMode::Tl,
         is_translate_swapped: false,
         is_output_both_scripts: false,
+        candidate_display_mode: CandidateDisplayMode::SideBySide,
         is_literal_roman_candidate_enabled: false,
         is_frequency_recording_enabled: true,
         is_association_recording_enabled: true,
@@ -76,6 +79,14 @@ pub const IS_TRANSLATE_SWAPPED: SettingsKey<bool> =
     SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_translate_swapped);
 pub const IS_OUTPUT_BOTH_SCRIPTS: SettingsKey<bool> =
     SettingsKey::new("outputBothScripts", ENGINE_DEFAULTS.is_output_both_scripts);
+/// What a candidate cell shows. Same key and raw strings on every platform
+/// (`SharedSettings.swift` `candidateDisplayMode`). The two toggles above
+/// keep their own storage while this is `romanOnly`; the derived pair lives
+/// in `SettingsDocument::engine_settings`.
+pub const CANDIDATE_DISPLAY_MODE: SettingsKey<CandidateDisplayMode> = SettingsKey::new(
+    "candidateDisplayMode",
+    ENGINE_DEFAULTS.candidate_display_mode,
+);
 pub const IS_LITERAL_ROMAN_CANDIDATE_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "literalRomanCandidateEnabled",
     ENGINE_DEFAULTS.is_literal_roman_candidate_enabled,
@@ -201,9 +212,10 @@ pub const CANDIDATE_SLOT_MODIFIER: SettingsKey<crate::keys::CandidateSlotKeySet>
 pub const CLEARED_COMPOSING_CHORD: &str = "";
 
 /// The keys the 外觀 pane's reset removes (`SettingsStore.swift:457-465`).
-pub const APPEARANCE_KEYS: [&str; 5] = [
+pub const APPEARANCE_KEYS: [&str; 6] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
+    CANDIDATE_DISPLAY_MODE.name,
     CANDIDATE_WINDOW_SIZE.name,
     CANDIDATE_TEXT_SIZE.name,
     FONT_TYPE.name,
@@ -257,6 +269,11 @@ mod tests {
         assert_eq!(IS_KAUTIAN_ENABLED.name, "moeDictEnabled");
         assert_eq!(IS_TRANSLATE_SWAPPED.name, "isTranslateSwapped");
         assert_eq!(IS_OUTPUT_BOTH_SCRIPTS.name, "outputBothScripts");
+        assert_eq!(CANDIDATE_DISPLAY_MODE.name, "candidateDisplayMode");
+        assert_eq!(
+            CANDIDATE_DISPLAY_MODE.default,
+            CandidateDisplayMode::SideBySide
+        );
     }
 
     #[test]
