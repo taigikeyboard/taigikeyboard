@@ -26,7 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_windows_core::composing::{
-    CandidateCellContent, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript,
+    CandidateCellContent, CandidateCommitOutcome, CandidateListChange, CandidateScript,
     ComposingManager, ComposingSessionCoordinator, ContextToken,
 };
 use taigi_windows_core::engine::ContinuousCandidate;
@@ -699,6 +699,70 @@ impl TextService_Impl {
                     }
                 }
             }
+            ShortcutAction::CycleCandidateDisplayMode => {
+                let Some(store) = runtime.settings_store() else {
+                    log::warn!("shortcut.no_settings_store");
+                    return;
+                };
+                if let Err(error) = store.update(|document| {
+                    let next = document.choice(&keys::CANDIDATE_DISPLAY_MODE).next();
+                    document.set_choice(&keys::CANDIDATE_DISPLAY_MODE, next);
+                }) {
+                    log::error!("shortcut.cycle_candidate_display_mode_failed error={error}");
+                }
+                // The mode changes which candidates exist (invariants §44),
+                // not only how they draw — so the open list is re-fetched
+                // under the new mode and re-rendered in place, the pane's own
+                // behaviour; an empty answer takes the window down. Never
+                // hidden first: from mid-composition that reads as the window
+                // vanishing. Then the HUD with the new mode's name, as the
+                // romanization switch does — the chord fires from anywhere.
+                let (token, presenter, flash) = {
+                    let mut state = self.state.borrow_mut();
+                    let token = state.contexts.entry_mut(identity).map(|entry| entry.token);
+                    (token, state.presenter.clone(), state.mode_flash.clone())
+                };
+                let settings = runtime.settings.current();
+                if let (Some(token), Some(presenter), Some(mutex)) =
+                    (token, presenter, runtime.coordinator_if_built())
+                {
+                    if let Ok(mut coordinator) = mutex.try_lock() {
+                        if let Some(manager) = coordinator.manager(token) {
+                            match manager.fetch_candidates().list_change() {
+                                CandidateListChange::Replace(candidates) => {
+                                    let cells: Vec<_> = candidates
+                                        .iter()
+                                        .map(|c| manager.cell_content(c))
+                                        .collect();
+                                    if let Some(entry) =
+                                        self.state.borrow_mut().contexts.entry_mut(identity)
+                                    {
+                                        entry.state.candidates = candidates;
+                                    }
+                                    presenter.borrow_mut().update_cells(cells, &settings, token);
+                                }
+                                CandidateListChange::Clear => {
+                                    if let Some(entry) =
+                                        self.state.borrow_mut().contexts.entry_mut(identity)
+                                    {
+                                        entry.state.candidates.clear();
+                                    }
+                                    presenter.borrow_mut().hide(token);
+                                }
+                            }
+                        }
+                    }
+                }
+                let mode = settings.engine_settings().candidate_display_mode;
+                let text = StringResolver::new(runtime.display_language())
+                    .resolve(mode.label_key())
+                    .to_owned();
+                if let Some(flash) = flash {
+                    let anchor = self.state.borrow().focused_caret;
+                    let appearance: AppearanceMode = settings.choice(&keys::APPEARANCE_MODE);
+                    flash.borrow_mut().flash(&text, anchor, appearance);
+                }
+            }
         }
         runtime.settings.current();
     }
@@ -966,9 +1030,9 @@ fn perform_intent(
 }
 
 fn refresh_candidates(manager: &mut ComposingManager, list: &mut CandidateSource) {
-    match manager.fetch_candidates() {
-        CandidateFetchOutcome::Unavailable | CandidateFetchOutcome::NotComposing => list.clear(),
-        CandidateFetchOutcome::Found(candidates) => list.candidates = candidates,
+    match manager.fetch_candidates().list_change() {
+        CandidateListChange::Replace(candidates) => list.candidates = candidates,
+        CandidateListChange::Clear => list.clear(),
     }
 }
 

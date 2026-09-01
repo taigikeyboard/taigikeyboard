@@ -24,6 +24,9 @@ pub const GUID_PRESERVED_KEY_SETTINGS: GUID =
 #[allow(dead_code)] // `ITfKeystrokeMgr::PreserveKey`, PR5b
 pub const GUID_PRESERVED_KEY_ROMANIZATION: GUID =
     GUID::from_u128(0x566EAAED_32AC_422E_9ACE_2A2A30EBC413);
+/// Preserved key: cycle 候選詞顯示 (allocated 2026-09-02 for the shortcut).
+pub const GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE: GUID =
+    GUID::from_u128(0xD9F5E060_8D5F_4A05_86AF_CF6B2F5F9EB6);
 
 /// Traditional Chinese (Taiwan). The ONLY profile language (roadmap W7,
 /// Codex F5): no duplicate under en-US.

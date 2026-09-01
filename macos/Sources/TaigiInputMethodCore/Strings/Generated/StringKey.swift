@@ -26,6 +26,7 @@ enum StringKey: String {
     case desktopShortcutOpenSettings = "i18n_desktop_shortcutOpenSettings"
     case desktopShortcutToggleRomanization = "i18n_desktop_shortcutToggleRomanization"
     case desktopShortcutToggleTranslateSwapped = "i18n_desktop_shortcutToggleTranslateSwapped"
+    case desktopShortcutCycleCandidateDisplayMode = "i18n_desktop_shortcutCycleCandidateDisplayMode"
     case desktopMenuFile = "i18n_desktop_menuFile"
     case desktopMenuClose = "i18n_desktop_menuClose"
     case desktopMenuEdit = "i18n_desktop_menuEdit"

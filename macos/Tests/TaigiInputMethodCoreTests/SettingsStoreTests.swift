@@ -162,6 +162,15 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(CandidateDisplayMode.romanOnly.rawValue, "romanOnly")
     }
 
+    /// What the cycle shortcut steps through: the picker's order, and back to
+    /// the start after as many presses as there are modes.
+    func testCandidateDisplayMode_next_walksThePickerOrderAndComesBackRound() {
+        XCTAssertEqual(CandidateDisplayMode.sideBySide.next, .combined)
+        XCTAssertEqual(CandidateDisplayMode.combined.next, .romanOnly)
+        XCTAssertEqual(CandidateDisplayMode.romanOnly.next, .sideBySide)
+        XCTAssertEqual(CandidateDisplayMode.sideBySide.next.next.next, .sideBySide)
+    }
+
     /// The store is read on every operation rather than snapshotted, so a mode
     /// changed from the menu applies to the next keystroke. A cached read would
     /// pass every other case in this file and fail only here.

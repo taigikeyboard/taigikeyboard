@@ -109,6 +109,17 @@ impl CandidateDisplayMode {
             Self::Combined => StringKey::SettingsCandidateDisplayModeCombined,
         }
     }
+
+    /// The mode after this one in picker order — what the
+    /// `CycleCandidateDisplayMode` shortcut steps to: 並排 → 合用 → 羅馬字 →
+    /// 並排. CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateDisplayMode.next`.
+    pub fn next(self) -> Self {
+        match self {
+            Self::SideBySide => Self::Combined,
+            Self::Combined => Self::RomanOnly,
+            Self::RomanOnly => Self::SideBySide,
+        }
+    }
 }
 
 impl SettingChoice for CandidateDisplayMode {
@@ -276,6 +287,32 @@ impl Default for KautianSubcollections {
             accent_sintik: true,
             accent_taichung: true,
             name_appendix: true,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_mode_cycle_follows_the_picker_and_returns_in_three_steps() {
+        // trace: `SettingChoice::ALL` = [SideBySide, Combined, RomanOnly];
+        // `next` walks that ring, so the third step is back at the start.
+        let start = CandidateDisplayMode::SideBySide;
+        let one = start.next();
+        let two = one.next();
+        assert_eq!(one, CandidateDisplayMode::Combined);
+        assert_eq!(two, CandidateDisplayMode::RomanOnly);
+        assert_eq!(two.next(), start);
+        for (index, mode) in CandidateDisplayMode::ALL.iter().enumerate() {
+            let successor =
+                CandidateDisplayMode::ALL[(index + 1) % CandidateDisplayMode::ALL.len()];
+            assert_eq!(
+                mode.next(),
+                successor,
+                "{mode:?} steps off the picker order"
+            );
         }
     }
 }

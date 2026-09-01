@@ -19,6 +19,31 @@ pub enum CandidateFetchOutcome {
     Found(Vec<ContinuousCandidate>),
 }
 
+/// What a fetch does to the list already on screen. The three kinds of
+/// nothing and an empty `Found` all clear it: an empty list always takes the
+/// window down, whichever way it came to be empty.
+#[derive(Clone, Debug, PartialEq)]
+pub enum CandidateListChange {
+    /// A non-empty answer: show these in place of the old list.
+    Replace(Vec<ContinuousCandidate>),
+    /// Nothing to show: drop the list and the window with it.
+    Clear,
+}
+
+impl CandidateFetchOutcome {
+    /// Folds the outcome into the one decision every re-fetch of an open
+    /// list makes — a key, a nail, or the display-mode cycle re-querying
+    /// under the new mode (`ShortcutAction::CycleCandidateDisplayMode`).
+    pub fn list_change(self) -> CandidateListChange {
+        match self {
+            Self::Found(candidates) if !candidates.is_empty() => {
+                CandidateListChange::Replace(candidates)
+            }
+            Self::Found(_) | Self::Unavailable | Self::NotComposing => CandidateListChange::Clear,
+        }
+    }
+}
+
 /// What committing a candidate did, read from the engine's effects rather
 /// than from the composing mirror: a generation mismatch silently resets the
 /// engine to Idle before the intent runs, which turns the commit into a noop
@@ -69,6 +94,44 @@ impl CandidateCommitOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::CandidateMode;
+
+    fn candidate(roman: &str) -> ContinuousCandidate {
+        ContinuousCandidate {
+            consumed_span_start: 0,
+            consumed_span_end: 0,
+            syllable_count: 1,
+            display_text: roman.to_owned(),
+            score: 0.0,
+            form: 1,
+            mode: CandidateMode::Unspecified,
+            roman: roman.to_owned(),
+            hanji: None,
+            canonical_tl: roman.to_owned(),
+        }
+    }
+
+    #[test]
+    fn a_refetch_replaces_only_on_a_non_empty_answer() {
+        let found = vec![candidate("tâi")];
+        assert_eq!(
+            CandidateFetchOutcome::Found(found.clone()).list_change(),
+            CandidateListChange::Replace(found)
+        );
+        assert_eq!(
+            CandidateFetchOutcome::Found(Vec::new()).list_change(),
+            CandidateListChange::Clear,
+            "an empty answer takes the window down like the two kinds of nothing"
+        );
+        assert_eq!(
+            CandidateFetchOutcome::Unavailable.list_change(),
+            CandidateListChange::Clear
+        );
+        assert_eq!(
+            CandidateFetchOutcome::NotComposing.list_change(),
+            CandidateListChange::Clear
+        );
+    }
 
     fn transition(effects: Vec<Effect>, is_composing: bool) -> ComposingTransition {
         ComposingTransition {

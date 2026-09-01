@@ -77,6 +77,25 @@
         "ja": "漢字／ローマ字を先に"
       }
     },
+    "shortcutCycleCandidateDisplayMode": {
+      "comment": "Shortcut-recorder row: the hotkey that cycles 候選詞顯示 through 漢羅並排 → 漢羅合用 → 羅馬字 (the picker order). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "切換候選詞顯示",
+        "tailo": "tshiat-uānn hāu-suán-sû hián-sī",
+        "poj": "chhiat-oāⁿ hāu-soán-sû hián-sī",
+        "en": "Switch Candidate Display",
+        "ja": "候補の表示を切り替え"
+      }
+    },
     "menuFile": {
       "comment": "Menu-bar File menu title. An LSUIElement process builds its own menu bar so the settings window keeps the standard editing shortcuts.",
       "scope": {

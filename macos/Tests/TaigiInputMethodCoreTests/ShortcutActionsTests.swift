@@ -45,7 +45,7 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["拍開設定選單", "切換輸入模式", "漢字/羅馬字代先"],
+            ["拍開設定選單", "切換輸入模式", "漢字/羅馬字代先", "切換候選詞顯示"],
         )
         XCTAssertEqual(
             labels(.japanese),
@@ -53,6 +53,7 @@ final class ShortcutActionsTests: XCTestCase {
                 "設定メニューを開く",
                 "入力モードを切り替える",
                 "漢字／ローマ字を先に",
+                "候補の表示を切り替え",
             ],
         )
         XCTAssertEqual(labels(.english).first, "Open Settings Menu")
@@ -69,7 +70,10 @@ final class ShortcutActionsTests: XCTestCase {
     /// up with the pinky still anchored. The 漢羅 swap sits on the bare
     /// backtick, the classic Taiwanese-IME function key — no TL or POJ
     /// syllable is spelled with it, and the hotkey is armed only while a Taigi
-    /// session holds the engine (USER 2026-08-21).
+    /// session holds the engine (USER 2026-08-21). The 候選詞顯示 cycle is
+    /// ⌃⌘H — H for Hàn-Lô, in the same ⌃⌘ family; the chord the swap gave up
+    /// on 2026-08-21, free again once `ShortcutDefaultMigration` moved those
+    /// installs (USER 2026-09-02).
     func testTheSwitches_startOnTheirConventionKeys() {
         XCTAssertEqual(
             ShortcutAction.toggleRomanization.defaultShortcut,
@@ -78,6 +82,10 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(
             ShortcutAction.toggleTranslateSwapped.defaultShortcut,
             KeyboardShortcuts.Shortcut(.backtick),
+        )
+        XCTAssertEqual(
+            ShortcutAction.cycleCandidateDisplayMode.defaultShortcut,
+            KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
         )
     }
 
@@ -132,14 +140,17 @@ final class ShortcutActionsTests: XCTestCase {
     /// panes the menu bar already lists by name).
     /// One ⌃⌘S doorway replaced them — a command reached for rarely, so a
     /// mnemonic pays — and the switch moved to ⌃⌘C, where a command reached
-    /// for all day wants the hand to stay on the bottom row.
-    func testTheGlobalRoster_isOneDoorwayAndTwoSwitches() {
+    /// for all day wants the hand to stay on the bottom row. The 候選詞顯示
+    /// cycle joined on ⌃⌘H (USER 2026-09-02), last: the order here is the
+    /// order of the rows in the pane.
+    func testTheGlobalRoster_isOneDoorwayAndThreeSwitches() {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
             [
                 KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.backtick),
+                KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
             ],
         )
     }

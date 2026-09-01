@@ -31,7 +31,9 @@ both take the 台 tile icon.
   (`漢字 (羅馬字)`) and has nothing to bracket under 羅馬字. Space on a
   one-label cell has no other script to commit and does nothing, as it already
   does on a romanization-only candidate. 方音齒盤 is unaffected. Changing the
-  picker re-fetches an open candidate bar in place. (#662, #664)
+  picker re-fetches an open candidate bar in place. **⌃⌘H** cycles the three
+  from the keyboard — the new mode flashes, the bar re-fetches — and is
+  re-recordable in 快捷鍵. (#662, #664)
 
 #### Appearance
 
@@ -59,9 +61,11 @@ same user-data schemas as macOS.
   when the host application draws candidates itself.
 - **候選詞顯示** in 外觀 — 漢羅並排 / 漢羅合用 / 羅馬字, the same three cells as
   macOS (one label `漢字 羅馬字` under 合用; romanization alone, same-reading
-  rows collapsed, under 羅馬字). The `` ` `` swap is inert outside 並排. A
-  change made in the settings window applies from the next keystroke, like
-  the candidate layout. (#662, #664)
+  rows collapsed, under 羅馬字). The `` ` `` swap is inert outside 並排;
+  **Ctrl+Alt+H** cycles the three from the keyboard (the new mode flashes, an
+  open list re-fetches in place) and is re-recordable in 快捷鍵. A change made
+  in the settings window applies from the next keystroke, like the candidate
+  layout. (#662, #664)
 - **Shortcuts.** `Ctrl+Alt+S` opens the settings window, `Ctrl+Alt+C` switches
   Tâi-lô / POJ, `` ` `` swaps 漢字 / 羅馬字 — the macOS roster with ⌘ read as
   Ctrl and ⌃ as Alt. Every shortcut is re-recordable in 快捷鍵.
