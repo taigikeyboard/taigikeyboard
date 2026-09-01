@@ -1,12 +1,12 @@
 //! The 快捷鍵 pane: every key the user can put an action on, in one list
-//! (`ShortcutSettingsView.swift`) — the three global chords, the keys that
+//! (`ShortcutSettingsView.swift`) — the four global chords, the keys that
 //! move through the candidates, the slot-key set, the keys that end the
 //! composition, and the reset card. Every row is the same recorder; which
 //! registry it writes to and what it refuses on top of the shared gate is
 //! the tier's. Last writer wins across both registries
 //! (`ShortcutConflicts`), and the loser's row visibly empties.
 
-// 中文: 快捷鍵 pane — 全域三顆 + 組字動作 + 選字鍵組 + 恢復預設;後寫者贏。
+// 中文: 快捷鍵 pane — 全域四顆 + 組字動作 + 選字鍵組 + 恢復預設;後寫者贏。
 
 use super::choice_row;
 use crate::winui::cards;
@@ -34,7 +34,7 @@ pub fn view(
     let bindings = ComposingKeyBindings::from_document(document);
     let slot_key_set = bindings.slot_key_set;
     View::fragment((
-        // One group (2026-08-25): one doorway and two switches.
+        // One group (2026-08-25, +1 on 2026-09-02): one doorway and three switches.
         View::keyed_fragment(ShortcutAction::ALL.map(|action| {
             (
                 action.raw(),
