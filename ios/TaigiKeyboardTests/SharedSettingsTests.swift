@@ -325,6 +325,38 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertFalse(settings.snapshot(for: .light).isTranslateSwapped)
     }
 
+    /// `.combined` projects the pair as swapped (cell leads with hanji, commit
+    /// writes hanji) without writing the stored flag; 括號標註 keeps its stored
+    /// value; leaving the mode restores the stored pair.
+    func test_candidateDisplayMode_combined_projectsSwappedWithoutOverwritingStoredFlags() {
+        settings.storedIsTranslateSwapped = false
+        settings.storedIsOutputBothScripts = false
+
+        settings.candidateDisplayMode = .combined
+
+        XCTAssertTrue(settings.isTranslateSwapped, "derived swap must read true under combined")
+        XCTAssertFalse(settings.isOutputBothScripts, "derived both-scripts follows the stored false")
+        XCTAssertFalse(settings.storedIsTranslateSwapped, "stored swap must survive the mode")
+        XCTAssertEqual(defaults.object(forKey: "isTranslateSwapped") as? Bool, false, "raw key untouched")
+
+        settings.candidateDisplayMode = .sideBySide
+
+        XCTAssertFalse(settings.isTranslateSwapped, "leaving combined restores the stored swap")
+        XCTAssertFalse(settings.isOutputBothScripts, "leaving combined restores stored both-scripts")
+    }
+
+    /// Stored (false, true) + combined → (true, true): the bracket form
+    /// `漢字 (羅馬字)` still applies under 合用.
+    func test_candidateDisplayMode_combined_keepsStoredOutputBothScripts() {
+        settings.storedIsTranslateSwapped = false
+        settings.storedIsOutputBothScripts = true
+
+        settings.candidateDisplayMode = .combined
+
+        XCTAssertTrue(settings.isTranslateSwapped)
+        XCTAssertTrue(settings.isOutputBothScripts)
+    }
+
     func test_candidateDisplayMode_storageContract_keyAndRawValues() {
         XCTAssertEqual(settings.candidateDisplayMode, .sideBySide, "descriptor default")
 
@@ -333,10 +365,17 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "candidateDisplayMode"), "romanOnly", "cross-platform raw value")
     }
 
+    func test_candidateDisplayMode_combined_rawStringRoundTrips() {
+        settings.candidateDisplayMode = .combined
+
+        XCTAssertEqual(defaults.string(forKey: "candidateDisplayMode"), "combined", "cross-platform raw value")
+        XCTAssertEqual(SharedSettings(userDefaults: defaults).candidateDisplayMode, .combined, "fresh reader decodes it")
+    }
+
     /// An unknown / malformed stored raw string (a newer build's value, a
     /// hand-edited plist) falls back to `.sideBySide` — today's behaviour.
     func test_candidateDisplayMode_unknownRawString_fallsBackToSideBySide() {
-        defaults.set("combined", forKey: "candidateDisplayMode")
+        defaults.set("hanjiOnly", forKey: "candidateDisplayMode")
 
         XCTAssertEqual(settings.candidateDisplayMode, .sideBySide)
     }

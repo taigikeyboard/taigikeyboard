@@ -76,14 +76,17 @@ enum FontType: String, CaseIterable, Codable {
 /// `sideBySide` = today's title/subtitle pair (the swap flag decides which
 /// script leads). `romanOnly` = the cell shows only the romanization and the
 /// derived swap / both-scripts pair reads `false` (see `SharedSettings`).
+/// `combined` = one label `漢字 羅馬字` and a commit writes the hanji; the
+/// derived swap projects that as `true` (see `SharedSettings`).
 /// TPS ignores the mode. Raw values are the cross-platform storage contract
 /// (Android `CandidateDisplayMode.storageValue`, desktop `SettingsStore`).
-// 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字。raw value 四平台一致,勿改。
+// 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字 / 漢羅合用。raw value 四平台一致,勿改。
 // `public` like `InputMode`: the `RustEngineBridge` NextWord entry points are
 // public and take it as a defaulted parameter.
 public enum CandidateDisplayMode: String, CaseIterable, Codable {
     case sideBySide
     case romanOnly
+    case combined
 
     // Resolved at the call site via the environment store (same reactive
     // pattern as `FontType.displayNameKey`).
@@ -91,6 +94,7 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
         switch self {
         case .sideBySide: .settingsCandidateDisplayModeSideBySide
         case .romanOnly: .settingsCandidateDisplayModeRomanOnly
+        case .combined: .settingsCandidateDisplayModeCombined
         }
     }
 }
