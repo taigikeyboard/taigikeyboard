@@ -109,7 +109,7 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
 | `reports/2026-06-24-i18n-migration-audit.md` | i18n remaining-migration coverage audit (G1-G6 scope) | Historical |
-| `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅合用 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
+| `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅濫 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
 | `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
 | `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
 

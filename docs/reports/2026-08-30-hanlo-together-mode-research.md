@@ -1,15 +1,16 @@
-# 候選詞顯示 (candidate display) modes — research: 漢羅並排 · 漢羅合用 · 羅馬字
+# 候選詞顯示 (candidate display) modes — research: 漢羅並排 · 漢羅濫 · 羅馬字
 
 > **Type**: Report (dated snapshot) — research only, **nothing implemented**
 > **Keywords**: `候選詞顯示`, `漢羅並排`, `漢羅合用`, `羅馬字模式`, `漢羅齊出` (former name), `台語拼音校正`, `hanlo`, `isTranslateSwapped`, `outputBothScripts`, `CandidateCellContent`, `CandidateCellHelper`, `SmartbarCandidateStrip`, `EnglishCandidateStrip`, `§42`, `§34`, `dedupe_by_roman_hanji_span`, `corrector`, `Levenshtein`
 > **Date**: 2026-08-30 (Part I) / 2026-09-01 (Part II)
 > **Platforms named by USER**: Part I (漢羅合用): iOS, Android, macOS (Windows not named — Q8). Part II (羅馬字): **iOS, Android, macOS, Windows** (USER 2026-09-01; candidate window kept on all platforms per the final decision — §12).
 > **Status**: USER 2026-08-30 — 「目前還不打算 implement，先做 research 撰寫文件，供未來參考」; **revived USER 2026-09-01 (「go feature round」)** — Round 1 = picker (漢羅並排 / 羅馬字) implemented on this PR (#662): engine `AppConfig.candidate_display_mode` + two display dedupes (`behavioral-invariants.md` §44, dogfood S26), four platform settings/cell arms. 漢羅合用 = Round 2 on `feat/hanlo-combined-mode` (Part I Q1-Q8 resolved by their recommended options under auto mode, USER 2026-09-01 「依照你的建議…go next round直到實作結束」: Q1 hanji-only commit · Q2 fixed `漢字 羅馬字` · Q3 inert · Q4 no conflict, 括號標註 stays enabled · Q5 Space ignored · Q6 literal stays · Q7 `candidateDisplayModeCombined` · Q8 Windows included; §42 second exception, dogfood S27). No release / version assigned.
+> **Renamed again (USER 2026-09-02)**: 漢羅合用 → **漢羅濫** (label only; storage raw value `combined` unchanged). Prose below uses the new name; verbatim quotes and the dated header notes keep their original wording.
 > **Amended 2026-09-01 (USER)**: (a) feature renamed **漢羅齊出 → 漢羅合用**; (b) setting reframed from a boolean toggle to a mode picker **候選詞顯示** — **漢羅並排** (today's title/subtitle rendering, default) / **漢羅合用** (Part I's researched mode); (c) later the same day a **third mode 羅馬字** was added (Part II, §12-§21). 羅馬字 went through two design iterations the same day: first proposed as an English-keyboard-style fixed 3-column strip + 台語拼音校正, then **finalized as: today's candidate UI everywhere (all four platforms, candidate window kept), cells roman-only, no 拼音校正** (§12 decision chain). The 3-column + correction research is retained in §13-§16 as reference for a possible future standalone 拼音校正 proposal.
 
 ---
 
-# Part I — 漢羅合用 (one-label hanji+roman) mode
+# Part I — 漢羅濫 (one-label hanji+roman) mode
 
 ## 1. Feature statement (USER, 2026-08-30, verbatim)
 
@@ -31,17 +32,17 @@ Read as four requirements plus two risk flags:
 | F1 | 可能會有重複字 | Analysed in §6. |
 | F2 | 可能影響 自訂詞 / 詞關聯 / 詞頻 | Analysed in §7. |
 
-Setting surface (USER 2026-09-01): a mode picker named **候選詞顯示** — **漢羅並排** (default; the current title/subtitle rendering, swap key still decides which script leads) / **漢羅合用** (this mode) / **羅馬字** (Part II, §12). Supersedes the original "boolean, default OFF, named 漢羅齊出" framing; "default 漢羅並排" preserves the original default-OFF intent.
+Setting surface (USER 2026-09-01): a mode picker named **候選詞顯示** — **漢羅並排** (default; the current title/subtitle rendering, swap key still decides which script leads) / **漢羅濫** (this mode) / **羅馬字** (Part II, §12). Supersedes the original "boolean, default OFF, named 漢羅齊出" framing; "default 漢羅並排" preserves the original default-OFF intent.
 
 ## 2. Terminology — three things already called "漢羅" / "both scripts"
 
 The codebase and the reference IMEs use "漢羅" for three different mechanisms. The new mode is a **fourth**; naming it precisely avoids re-implementing one of the others.
 
-| Term | Mechanism | Where | Relation to 漢羅合用 |
+| Term | Mechanism | Where | Relation to 漢羅濫 |
 |---|---|---|---|
-| **§42 cell shows both scripts** (`INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS`) | Every cell already renders hanji AND roman, as **primary + secondary** visual roles; swap decides which leads. `behavioral-invariants.md:1026-1040` | all three platforms | 漢羅合用 changes the *arrangement* (one label, R3) — the invariant's "never a formatted string" clause (`:1033`) would need an explicit carve-out. |
-| **括號標註** (`outputBothScripts`, "Annotate in Brackets") | **Commit-side** rendering: document gets `hit (彼)` / `彼 (hit)`. `i18n/settings.json:49-53`. Cell untouched. | iOS + Android live; macOS setting exists but UI retired, value wiped each launch (`RetiredSettingsCleanup.swift:111`, pinned false per `AutoSpacePolicy.swift:13`). | Sibling. If 漢羅合用 also commits both scripts, the two overlap — §8 Q1/Q4. |
-| **§34 literal-roman candidate** (顯示原本羅馬字候選, "漢羅 fast input") | Index-0 roman-only candidate so 漢羅 *mixed-script writers* commit romanization in one tap even in hanji-first mode. `behavioral-invariants.md:843-866`. | engine, TL/POJ | Orthogonal; stays. Under 漢羅合用 its cell reads `tâi` (one script) next to `台 tâi` — see §6 (b). |
+| **§42 cell shows both scripts** (`INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS`) | Every cell already renders hanji AND roman, as **primary + secondary** visual roles; swap decides which leads. `behavioral-invariants.md:1026-1040` | all three platforms | 漢羅濫 changes the *arrangement* (one label, R3) — the invariant's "never a formatted string" clause (`:1033`) would need an explicit carve-out. |
+| **括號標註** (`outputBothScripts`, "Annotate in Brackets") | **Commit-side** rendering: document gets `hit (彼)` / `彼 (hit)`. `i18n/settings.json:49-53`. Cell untouched. | iOS + Android live; macOS setting exists but UI retired, value wiped each launch (`RetiredSettingsCleanup.swift:111`, pinned false per `AutoSpacePolicy.swift:13`). | Sibling. If 漢羅濫 also commits both scripts, the two overlap — §8 Q1/Q4. |
+| **§34 literal-roman candidate** (顯示原本羅馬字候選, "漢羅 fast input") | Index-0 roman-only candidate so 漢羅 *mixed-script writers* commit romanization in one tap even in hanji-first mode. `behavioral-invariants.md:843-866`. | engine, TL/POJ | Orthogonal; stays. Under 漢羅濫 its cell reads `tâi` (one script) next to `台 tâi` — see §6 (b). |
 | **漢羅混寫** (per-word Han-vs-Lo choice by LKK rules) | Output text mixes hanji words and roman words by rule — `我 beh 去 tshit-thô`. `references/rime-phah-taibun/lua/phah_taibun_filter.lua:79-215`. | reference IME only | **Different feature** (automatic script selection per word). Not what USER asked. Listed in §9 as deliberately not adopted. |
 
 ## 3. Current state — per platform (grounded in code)
@@ -55,7 +56,7 @@ The codebase and the reference IMEs use "漢羅" for three different mechanisms.
 | Side effects of the flag | Full-width char keys `LayoutConverter.swift:43`; confirm-key label 選 vs suán `ButtonTextProvider.swift:194-215` | Full/half-width layout variant `LayoutManager.kt:265-300,323`; `invalidateKeysByCode(TRANSLATE, VIEW_NUMERIC_ADVANCED)` | Full-width punctuation gate `TaigiInputController.swift:749-751`; auto-space gate `:762-772` |
 | `effectiveSwapped` | `ComposingManager.swift:181-188` (`isTranslateSwapped \|\| inputMode == .tps`) for engine; commit path recomputes from **layout type** `ActionHandler+Suggestions.swift:81-82,140-141`; auto-space `ActionHandler+KeyActions.swift:150-156` | `CandidateClickHandler.kt:86-89, 225-228, 342-345` (`isTpsLayout \|\| cached`), 4th copy `TextInputKeyHandler.kt:608-613` | No TPS → `settings.isTranslateSwapped` **is** effective |
 
-Every one of those `effectiveSwapped` sites is a place 漢羅合用 must take a position on (§5).
+Every one of those `effectiveSwapped` sites is a place 漢羅濫 must take a position on (§5).
 
 ### 3.2 Candidate cell rendering (title / subtitle)
 
@@ -111,7 +112,7 @@ Predicate everywhere is `!effectiveSwapped || outputBothScripts` (= "the documen
 | Engine | `RustEngineBridge+Composing.swift:631-641` `continuousAppConfig` | `RustEngineBridge.kt:1368-1377`, `ComposingManager.kt:923-928` spacing struct | `RustEngineBridge.swift:170-187` |
 | Proto | `envelope.proto:70-87` `AppConfig.output_both_scripts = 8` | | |
 
-Note: `featureSummary("hanloDesign")` / `FEATURE_ID_HANLO_DESIGN` — the in-app feature explainer already uses "hanlo" for 括號標註. A new 漢羅合用 entry in `content/` must not collide with that id.
+Note: `featureSummary("hanloDesign")` / `FEATURE_ID_HANLO_DESIGN` — the in-app feature explainer already uses "hanlo" for 括號標註. A new 漢羅濫 entry in `content/` must not collide with that id.
 
 ## 4. Engine facts that bound the design
 
@@ -122,11 +123,11 @@ Note: `featureSummary("hanloDesign")` / `FEATURE_ID_HANLO_DESIGN` — the in-app
 - **No engine "hanji + roman in one string" exists** — `combined_display` (`api.rs:334-345`) is nailed-prefix + tail; the bracket form is platform-only (§3.3).
 - **Custom dictionary**: SQL `roman NOT NULL, hanzi NOT NULL` (`custom-dictionary.md:39-51`) but empty hanzi allowed → sent as proto-absent `hanji` (iOS `ComposingManager.swift:442-460`, Android `:663-706`, macOS `:309-317`) → `custom_entry_to_candidate` `lexicon/src/continuous.rs:2147-2190` renders TAILO with `display_text = canonical TL`.
 
-## 5. What 漢羅合用 ON has to decide, site by site
+## 5. What 漢羅濫 ON has to decide, site by site
 
-Because `effectiveSwapped` is read in ~15 places, the cleanest framing is: **漢羅合用 is a third value of "which script leads", not a fourth boolean beside `isTranslateSwapped`.** Today the state space is `{roman-first, hanji-first} × {plain, 括號標註}`; the new mode adds a display arrangement AND removes the swap axis from the user's reach (R2). USER 2026-09-01 confirmed this shape at the settings surface: 候選詞顯示 is a **picker** (漢羅並排 / 漢羅合用), not a toggle. Note the split: the *setting* is the two-value picker; the *effective* script-lead state stays derived (漢羅並排 × swap = roman-first / hanji-first; 漢羅合用 = the third value). `isTranslateSwapped` keeps its own storage so switching back to 漢羅並排 restores the previous swap state.
+Because `effectiveSwapped` is read in ~15 places, the cleanest framing is: **漢羅濫 is a third value of "which script leads", not a fourth boolean beside `isTranslateSwapped`.** Today the state space is `{roman-first, hanji-first} × {plain, 括號標註}`; the new mode adds a display arrangement AND removes the swap axis from the user's reach (R2). USER 2026-09-01 confirmed this shape at the settings surface: 候選詞顯示 is a **picker** (漢羅並排 / 漢羅濫), not a toggle. Note the split: the *setting* is the two-value picker; the *effective* script-lead state stays derived (漢羅並排 × swap = roman-first / hanji-first; 漢羅濫 = the third value). `isTranslateSwapped` keeps its own storage so switching back to 漢羅並排 restores the previous swap state.
 
-| Site | Today (swapped / not) | Under 候選詞顯示 = 漢羅合用 — forced position |
+| Site | Today (swapped / not) | Under 候選詞顯示 = 漢羅濫 — forced position |
 |---|---|---|
 | Cell chooser (§3.2) | title/subtitle | one label. Order (`漢字 羅馬字` vs `羅馬字 漢字`) → §8 Q2 |
 | Cell width | max(scripts) | sum + gap; overlay packers (`CandidateRowLayout`, `ExpandedCandidateRowLayout`, `CandidateMetrics`) re-measure. iOS/Android comment "swap never reflows" no longer the only invariant to keep. |
@@ -138,19 +139,19 @@ Because `effectiveSwapped` is read in ~15 places, the cleanest framing is: **漢
 | macOS Space = alternate script (#610) | annotation → alternate text | there is no annotation any more. Space → ? (§8 Q5) |
 | macOS full-width punctuation (#600) | hanji output only | depends on Q1. |
 | nextword `shape_prediction` (`filter.rs:238-260`) | `text`/`subtitle` | prediction cells are rendered by the same cell code → same one-label form; `filter.rs:245` drop-rule reads swapped — decide what `is_translate_swapped` is sent as. |
-| nextword `decide.rs:93` Enter-commits-raw | skipped when swapped | if 漢羅合用 maps to swapped=true, Enter raw-commit is lost → likely want swapped=false semantics here. |
+| nextword `decide.rs:93` Enter-commits-raw | skipped when swapped | if 漢羅濫 maps to swapped=true, Enter raw-commit is lost → likely want swapped=false semantics here. |
 | Full-width keycaps (iOS `LayoutConverter.swift:43`, Android `LayoutManager.kt:265-300`) | follow swap | pick one (probably half-width — roman is being written). |
 | 選 vs suán confirm label (iOS `ButtonTextProvider.swift:194-215`) | follow swap | pick one. |
-| TPS layout while 漢羅合用 selected (R1) | — | setting ignored; TPS path unchanged (all TPS branches already precede the swap arms). |
+| TPS layout while 漢羅濫 selected (R1) | — | setting ignored; TPS path unchanged (all TPS branches already precede the swap arms). |
 | Settings preview (iOS mock candidates) | title/subtitle | must render one-label too; Android preview has no strip. |
 
 ## 6. F1 — "可能會有重複字": where duplicates can and cannot come from
 
-| Case | Today | Under 漢羅合用 | Verdict |
+| Case | Today | Under 漢羅濫 | Verdict |
 |---|---|---|---|
 | (a) same roman, different hanji (`tsia̍h` → 食 / 𤆬 / …) | separate rows, differ by subtitle | separate rows `食 tsia̍h` / `𤆬 tsia̍h` — **more** distinguishable | not a duplicate; improved |
 | (b) §34 literal `tâi` vs dict `台 tâi` | `tâi` (single line) next to `tâi / 台` | `tâi` next to `台 tâi` | not a duplicate; engine keeps both on purpose (`dispatch.rs:288-296`). Visual proximity is higher because the roman now sits in the same label — cosmetic only. |
-| (c) same hanji, different roman (重 tîng / 重 tāng) | two rows both titled 重 in swapped mode | `重 tîng` / `重 tāng` | not a duplicate; **this is the case 漢羅合用 fixes** — today hanji-first mode shows two identical primaries. |
+| (c) same hanji, different roman (重 tîng / 重 tāng) | two rows both titled 重 in swapped mode | `重 tîng` / `重 tāng` | not a duplicate; **this is the case 漢羅濫 fixes** — today hanji-first mode shows two identical primaries. |
 | (d) custom entry == dict row `(roman, hanji)` | engine dedupe, custom wins (`continuous.rs:855-905`) | unchanged | none |
 | (e) custom POJ-form entry rendering same as dict row | `dedupe_rendered_continuous` | unchanged | none |
 | (f) MIXED rows (`台BAR`-style, hanji field already contains roman letters) | `台BAR / tâi-bà` | `台BAR tâi-bà` — roman letters appear twice in one label | **real visual doubling**, dictionary-inherent; count how many MIXED rows exist before deciding (`derive_mode` MIXED) |
@@ -173,7 +174,7 @@ Every store is keyed on the **canonical** pair, never on the document rendering 
 
 Conclusion: **no schema or key change is required**, on condition that the new commit arm keeps sending `canonical_text` / `association_tl` exactly as the existing arms do (it is the same call). Two residual points:
 
-1. `is_translate_swapped` also gates *whether* NextWord records / offers (`decide.rs:93`, `filter.rs:245`, macOS `RustEngineBridge+NextWord.swift:117-124` "swap suppresses recording for raw-romanization commits"). Whatever value 漢羅合用 sends there changes learning behaviour for Enter-raw commits — decide deliberately (§5 rows nextword).
+1. `is_translate_swapped` also gates *whether* NextWord records / offers (`decide.rs:93`, `filter.rs:245`, macOS `RustEngineBridge+NextWord.swift:117-124` "swap suppresses recording for raw-romanization commits"). Whatever value 漢羅濫 sends there changes learning behaviour for Enter-raw commits — decide deliberately (§5 rows nextword).
 2. Roman-only custom entries (empty hanzi) render as one-script cells (`tâi` alone) — same as §34 literal; fine, but the S13 dogfood row should include one.
 
 ## 8. Open questions for USER (batched — answer once)
@@ -183,10 +184,10 @@ Conclusion: **no schema or key change is required**, on condition that the new c
 | Q1 | **What does a tap commit?** | Drives `continuous_word_space`, auto-space, S10, macOS #600/#610, 括號標註 precedence, and whether an engine `AppConfig` field is needed at all. | (a) hanji only (cell is the annotation, document stays clean; = today's swapped) · (b) `漢字 羅馬字` space-joined (the label as typed) · (c) reuse 括號標註 form `漢字 (羅馬字)` · (d) roman only |
 | Q2 | Label order in the cell: `漢字 羅馬字` or `羅馬字 漢字`? Fixed or follows the now-hidden `isTranslateSwapped`? | Cell code; §42 carve-out wording; PhahTaigi / khiin both put hanji as the value and roman as hint when in hanji output mode. | fixed hanji-first · fixed roman-first · inherit swap |
 | Q3 | 文/A key: **hidden** (layout filter, like TPS) or **inert** (visible, does nothing)? | iOS layouts hardcode the key in 9 rows; hidden = layout-level change + width redistribution; inert = one-line guard. | hidden · inert |
-| Q4 | Precedence with 括號標註 when both ON | Avoid `彼 hit (彼)`. | 漢羅合用 disables 括號標註 UI · 括號標註 wins · mutually exclusive picker |
-| Q5 | macOS Space (= commit alternate script, #610) under 漢羅合用 | No annotation exists to read; today `.ignored` for one-script cells. | Space inert · Space commits "the other" per Q1 · Space = plain commit |
+| Q4 | Precedence with 括號標註 when both ON | Avoid `彼 hit (彼)`. | 漢羅濫 disables 括號標註 UI · 括號標註 wins · mutually exclusive picker |
+| Q5 | macOS Space (= commit alternate script, #610) under 漢羅濫 | No annotation exists to read; today `.ignored` for one-script cells. | Space inert · Space commits "the other" per Q1 · Space = plain commit |
 | Q6 | Should §34 literal candidate stay at index 0? | Its one-script cell now sits beside two-script cells; strip may look uneven. | keep (default) · unchanged but user can already toggle it off |
-| Q7 | Setting placement + copy — **partially decided 2026-09-01**: picker 候選詞顯示, values 漢羅並排 (default) / 漢羅合用 / 羅馬字 (Part II) | Still open: i18n key names + the other 4 locale values (tailo / poj / en / ja) — USER 拍板 文案 per project rule; in-keyboard overlay on iOS/Android too? | `settings.json` new key; naming candidates for the picker `candidateDisplayMode` with values e.g. `hanloSideBySide` / `hanloCombined` / `romanOnly` |
+| Q7 | Setting placement + copy — **partially decided 2026-09-01**: picker 候選詞顯示, values 漢羅並排 (default) / 漢羅濫 / 羅馬字 (Part II) | Still open: i18n key names + the other 4 locale values (tailo / poj / en / ja) — USER 拍板 文案 per project rule; in-keyboard overlay on iOS/Android too? | `settings.json` new key; naming candidates for the picker `candidateDisplayMode` with values e.g. `hanloSideBySide` / `hanloCombined` / `romanOnly` |
 | Q8 | Windows | USER listed iOS / Android / macOS only. Windows candidate window is a separate blind-written surface. | state explicitly whether it is in or out — not decided here |
 
 ## 9. Best-practices alignment (reference IMEs)
@@ -194,7 +195,7 @@ Conclusion: **no schema or key change is required**, on condition that the new c
 | Mainstream practice | Source `file:line` | Relevance |
 |---|---|---|
 | Hint / annotation as a **separate field**, renderer decides arrangement | khiin `protos/src/command.proto:118-137` `Candidate { value, key, annotation }` | Matches our `roman` / `hanji` sidechannels; supports "one label" as a renderer choice without touching the wire. |
-| Global **output mode** switch Lomaji / Hanji, no third mode | khiin `khiin/src/config/conf.rs:17-20` `OutputMode { Lomaji, Hanji }` | Same two-state model as our swap; khiin has no "both" — 漢羅合用 would be novel relative to it. |
+| Global **output mode** switch Lomaji / Hanji, no third mode | khiin `khiin/src/config/conf.rs:17-20` `OutputMode { Lomaji, Hanji }` | Same two-state model as our swap; khiin has no "both" — 漢羅濫 would be novel relative to it. |
 | Two-line cell, `hanloStatus` flips top/bottom | PhahTaigi `CandidateWordView.swift:107-131`, `HanloStatus.swift` | Exactly our §42 primary/secondary; lomaji-only candidates listed **first** (`:82-96`) = our §34. |
 | Candidate `text` + `comment` column; RIME `comment_format` puts reading next to candidate (「注音顯示」) | rime-moetaigi `moetaigi-tsuim.schema.yaml:94-110` (`spelling_hints: 6`, `comment_format`) | RIME frontends render `text comment` on **one line** in horizontal mode — the closest existing precedent for the one-label look. |
 | `text` = 漢羅 mixed word, `comment` = `[roman]`; commit derived from the comment in 全羅 mode | rime-phah-taibun `lua/phah_taibun_filter.lua:223-300` | Shows the split "display one thing, commit another" done in a filter layer = our `formatOutputText` seam. |
@@ -221,14 +222,14 @@ Cross-platform parity rule applies (`cross-platform-alignment.md`): define the i
 ## 11. Dogfood acceptance draft (to become an **Sn** row once implemented)
 
 - TL `taigi` → strip cell reads `台語 tâi-gí` (single label, order per Q2); no smaller secondary line; index-0 keycap highlight unchanged (S6).
-- 文/A key hidden / inert (Q3); `isTranslateSwapped` value irrelevant while 漢羅合用 selected; switching back to 漢羅並排 restores the previous swap state and the key.
+- 文/A key hidden / inert (Q3); `isTranslateSwapped` value irrelevant while 漢羅濫 selected; switching back to 漢羅並排 restores the previous swap state and the key.
 - Tap → document receives exactly the Q1 string; auto-space / S10 behave per the roman-ish predicate; POJ mode shows POJ roman (`goá`), `tsiah`/`chiah` identity unchanged (S13).
 - 重 tîng / 重 tāng show as two distinguishable cells; `tsia̍h` homophones likewise (#7).
 - §34 literal `tâi` still index 0, one-script cell; toggling 顯示原本羅馬字候選 OFF removes it.
 - 括號標註 precedence per Q4 — never `彼 hit (彼)`.
-- 詞頻 / 詞關聯 rows written with canonical `(hanji, tl)` — verify with the Tab3 viewers after committing in 漢羅合用 and after switching back to 漢羅並排 (same rows climb).
+- 詞頻 / 詞關聯 rows written with canonical `(hanji, tl)` — verify with the Tab3 viewers after committing in 漢羅濫 and after switching back to 漢羅並排 (same rows climb).
 - Custom entry with empty hanzi → one-script cell; custom entry equal to a dict word → one cell (custom wins).
-- Switch layout to TPS with 漢羅合用 selected → TPS unchanged (hanji-only cells, S23/S24/S25 unaffected); back to TL → mode resumes.
+- Switch layout to TPS with 漢羅濫 selected → TPS unchanged (hanji-only cells, S23/S24/S25 unaffected); back to TL → mode resumes.
 - macOS: vertical / horizontal / expandable layouts all render one label; Space per Q5; full-width punctuation per Q1.
 - Expanded overlays (iOS / Android) pack correctly with wider cells; no truncation of the roman half at default font scale.
 
@@ -341,7 +342,7 @@ Structural takeaways: (a) Android already owns the exact UI the USER described, 
 ## 18. Duplicates / store impact (Part I §6/§7 rerun for 羅馬字)
 
 - Same-roman different-hanji rows (`tsia̍h` 食/𤆬) become **visually identical roman-only cells** — the one new duplicate class this mode creates. Engine identity dedupe `(roman, hanji, span)` correctly keeps both (#7 — different words); the fix is a **display-tier** `(rendered roman, span)` dedupe like TPS's `(hanji, span)` one, but placed after the §34 prepend in `dispatch` (§17 "Same-roman rows"). **Two collapse sites, not one**: continuous candidates (dispatch, post-literal) and nextword predictions (`filter.rs`, §17 nextword row) — both engine-side. Same-roman different-**tone** rows (tîng vs tāng) render differently and correctly stay separate.
-- Stores: no schema/key change. Commit in this mode = today's roman-first commit path verbatim (same `display_text` / `canonical_tl` / `association_tl` sidechannels), so 詞頻/詞關聯 behave exactly as roman-first mode does today. The only nuance: **who learns when a collapsed group is tapped** — the tap has no hanji intent, and the learned pair's boost is cross-mode shared. Three options + a hybrid analysed in Q9′ (survivor-pair recommended). 漢羅合用 has no such nuance: one cell = exactly one pair — tapping is *more* precise than today's hanji-first mode (§6(c)).
+- Stores: no schema/key change. Commit in this mode = today's roman-first commit path verbatim (same `display_text` / `canonical_tl` / `association_tl` sidechannels), so 詞頻/詞關聯 behave exactly as roman-first mode does today. The only nuance: **who learns when a collapsed group is tapped** — the tap has no hanji intent, and the learned pair's boost is cross-mode shared. Three options + a hybrid analysed in Q9′ (survivor-pair recommended). 漢羅濫 has no such nuance: one cell = exactly one pair — tapping is *more* precise than today's hanji-first mode (§6(c)).
 - 自訂詞: identity and storage untouched. **But visibility is not guaranteed**: custom rank-0 wins only the identical-`(roman, hanji, span)` collision (`lexicon/src/continuous.rs:2237-2249`), not the same-roman display group — `source_rank` is the second-to-last `SortKey` dimension (`:2362-2380`), so a custom `tsia̍h/X` with lower freq/score than dict 食 collapses **behind** it and disappears from the strip in this mode. If a user's own entry must stay reachable, the display dedupe needs a custom-first survivor rule inside the group (folded into Q9′). Roman-only custom entries (empty hanzi) are already one-script cells and collapse with any same-roman dict row exactly like the §34 literal does.
 
 ## 19. Open questions for USER (Part II batch — pruned to the final shape)
@@ -354,8 +355,8 @@ Resolved 2026-09-01 by the §12 decision chain: cells roman-only + commit roman 
 | Q11 | 文/A key while 合用/羅馬字 selected — mobile: hidden or inert (Part I Q3 rerun; iOS layouts hardcode the key in 9 rows)? Desktop (macOS + Windows, both shortcut-only, both default bare `` ` `` — §17 survey): shortcut no-op; flash a "no effect in this mode" hint or stay silent? | same trade-offs as Part I Q3; desktop surveyed 2026-09-01, macOS/Windows deliberately isomorphic | mobile hidden · mobile inert; desktop silent no-op · desktop hint flash |
 | Q12 | Mode scope: TL/POJ only (TPS/English excluded)? | mirrors Part I R1 | confirm |
 | Q17 | 括號標註 while 羅馬字 selected: disable its UI (recommended — commit is roman-only, the bracket form is unreachable) or leave visible-but-inert? | settings coherence; Part I Q4 family | disable UI (recommended) · inert |
-| Q18 | Part I Q8 tension: 羅馬字 on Windows puts the 候選詞顯示 picker on Windows — does 漢羅合用 also ship there, or is the Windows picker 並排/羅馬字 only? | Windows settings surface | — |
-| Q19 | **Mode-signal carrier for the engine display dedupe.** The engine needs the mode only for the two display dedupes (§17); spacing / nextword readers are satisfied by the platform sending the derived `swapped=false, both=false` pair. | `AppConfig` enum = one explicit contract across every request (and reusable if 漢羅合用 ever needs the engine); a `FetchAtPos` sentinel is narrower and matches the field's actual responsibility (precedent: field 6 `literal_roman_candidate_disabled`, `composing.proto:205`) but does not reach nextword. Codex 2026-09-01: AppConfig enum defensible as a mode contract, "engine spacing needs it" is not a valid reason. | `AppConfig` field 9 enum (`candidate_display_mode`) · `FetchAtPos` field 7 + a nextword request flag · decide at Codex pre-impl |
+| Q18 | Part I Q8 tension: 羅馬字 on Windows puts the 候選詞顯示 picker on Windows — does 漢羅濫 also ship there, or is the Windows picker 並排/羅馬字 only? | Windows settings surface | — |
+| Q19 | **Mode-signal carrier for the engine display dedupe.** The engine needs the mode only for the two display dedupes (§17); spacing / nextword readers are satisfied by the platform sending the derived `swapped=false, both=false` pair. | `AppConfig` enum = one explicit contract across every request (and reusable if 漢羅濫 ever needs the engine); a `FetchAtPos` sentinel is narrower and matches the field's actual responsibility (precedent: field 6 `literal_roman_candidate_disabled`, `composing.proto:205`) but does not reach nextword. Codex 2026-09-01: AppConfig enum defensible as a mode contract, "engine spacing needs it" is not a valid reason. | `AppConfig` field 9 enum (`candidate_display_mode`) · `FetchAtPos` field 7 + a nextword request flag · decide at Codex pre-impl |
 | Q20 | **NextWord prediction collapse** — engine-side `(text)` display dedupe in `nextword/src/filter.rs` after sort (mode-aware, mirrors the continuous one), or a platform presentation policy? | Predictions bypass the continuous pipeline; without it the roman-only prediction strip repeats `tsia̍h` once per learned homophone. Engine-side keeps 4 platforms + iOS/Android/macOS/Windows prediction renderers identical. | engine `filter.rs` (recommended) · platform-side |
 
 ## 20. Rough touch list (sizing only — final shape)

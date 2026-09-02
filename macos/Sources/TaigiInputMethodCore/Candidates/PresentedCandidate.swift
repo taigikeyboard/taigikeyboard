@@ -6,7 +6,7 @@ import Foundation
 /// script its own commit writes.
 ///
 /// Under 漢羅並排 and 羅馬字 a candidate is one cell, so the window's list IS the
-/// fetched list and a cell's position is the candidate's index. 漢羅合用 breaks
+/// fetched list and a cell's position is the candidate's index. 漢羅濫 breaks
 /// that: a candidate carrying both scripts is TWO adjacent cells — the Hanji,
 /// then the romanization — each committing its own script (USER 2026-09-02:
 /// 「漢字單獨做一個候選詞、羅馬字也當作候選詞」, not one formatted label). So the

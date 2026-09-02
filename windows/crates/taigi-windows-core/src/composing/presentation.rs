@@ -1,6 +1,6 @@
 //! The cells the window shows for a fetched list, each knowing which
 //! candidate it stands for and which of that candidate's scripts it commits.
-//! Under 漢羅合用 one candidate is TWO adjacent one-script cells (hanji, then
+//! Under 漢羅濫 one candidate is TWO adjacent one-script cells (hanji, then
 //! roman), so a window index is a CELL index and never indexes the fetched
 //! list directly. Port of macOS `ComposingManager.presentation(for:)`
 //! (invariants §42).

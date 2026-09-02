@@ -59,7 +59,7 @@
     "candidateDisplayModeCombined": {
       "comment": "Picker value: cell shows hanji and romanization as ONE label (漢字 羅馬字); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "漢羅合用", "tailo": "Hàn-Lô ha̍p-iōng", "poj": "Hàn-Lô ha̍p-iōng", "en": "Hanji with Romanization", "ja": "漢字＋ローマ字" }
+      "values": { "hanji": "漢羅濫", "tailo": "Hàn-Lô lām", "poj": "Hàn-Lô lām", "en": "Hanji with Romanization", "ja": "漢字＋ローマ字" }
     },
     "candidateDisplayModeRomanOnly": {
       "comment": "Picker value: cell shows the romanization only; committing writes the romanization; TL/POJ only.",

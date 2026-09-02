@@ -13,7 +13,7 @@ enum InputMode: String, CaseIterable, Sendable {
 
 /// How the candidate window renders the `(漢字, 羅馬字)` pair: both scripts
 /// side by side (the swap setting decides which leads), each script as its own
-/// adjacent cell (漢羅合用, `PresentedCandidate`), or the romanization alone.
+/// adjacent cell (漢羅濫, `PresentedCandidate`), or the romanization alone.
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same

@@ -58,7 +58,7 @@ data class CandidateCellText(
 )
 
 /**
- * The 漢羅合用 label: hanji, one ASCII space, romanization. The one place the
+ * The 漢羅濫 label: hanji, one ASCII space, romanization. The one place the
  * separator is spelled — the cell arm and the overlay width measure both use it.
  */
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift combinedLabel.
@@ -75,7 +75,7 @@ fun combinedCellLabel(
  * relevant.
  */
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle.
-// Drift causes silent divergence (one platform shows a subtitle under roman-only, or a different 漢羅合用 separator).
+// Drift causes silent divergence (one platform shows a subtitle under roman-only, or a different 漢羅濫 separator).
 fun candidateCellText(
     hanzi: String?,
     displayRoman: String,

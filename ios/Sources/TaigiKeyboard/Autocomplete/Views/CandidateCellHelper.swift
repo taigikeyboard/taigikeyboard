@@ -21,7 +21,7 @@ enum CandidateCellHelper {
     ///
     /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）— TPS 不理會 candidateDisplayMode
     /// - 羅馬字模式：主標題永遠是 engine `roman`（`text`）
-    /// - 漢羅合用：一個標籤 `漢字 羅馬字`（無漢字時只剩羅馬字）
+    /// - 漢羅濫：一個標籤 `漢字 羅馬字`（無漢字時只剩羅馬字）
     /// - 一般模式：`isTranslateSwapped` 決定羅馬字 / 漢字順序
     // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
@@ -61,7 +61,7 @@ enum CandidateCellHelper {
     ///
     /// - TPS 模式：無副標題
     /// - 羅馬字模式：無副標題（漢字不顯示）
-    /// - 漢羅合用：無副標題（漢羅併入主標題）
+    /// - 漢羅濫：無副標題（漢羅併入主標題）
     /// - 一般模式：`isTranslateSwapped` 決定副標題是羅馬字或漢字
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
@@ -114,7 +114,7 @@ enum CandidateCellHelper {
 
     /// 量測 title 與 subtitle 於對應字體大小的寬度，回傳 max + padding
     /// 一律兩者都量，避免 translate toggle 時佈局 reflow。
-    /// 漢羅合用：量測合併後的單一標籤（title 字體），比兩者各自都寬。
+    /// 漢羅濫：量測合併後的單一標籤（title 字體），比兩者各自都寬。
     ///
     /// 字體大小由呼叫端從 `CandidateTheme` 環境傳入，避免這裡依賴 `SharedSettings`。
     static func measuredCellWidth(
@@ -154,7 +154,7 @@ enum CandidateCellHelper {
 
     // MARK: - Private
 
-    /// 漢羅合用的單一標籤：漢字在前，單一半形空白分隔。displayTitle 與寬度量測共用。
+    /// 漢羅濫的單一標籤：漢字在前，單一半形空白分隔。displayTitle 與寬度量測共用。
     private static func combinedLabel(hanji: String, roman: String) -> String {
         "\(hanji) \(roman)"
     }

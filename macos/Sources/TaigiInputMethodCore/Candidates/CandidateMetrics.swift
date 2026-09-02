@@ -257,7 +257,7 @@ struct CandidateMetrics: Equatable, Sendable {
 
     /// The same sizes, resolved for the content a panel is about to show: a
     /// stacked list in which NO cell carries an annotation — 羅馬字, or
-    /// 漢羅合用's one-script cells — has nothing to put on a second line, and
+    /// 漢羅濫's one-script cells — has nothing to put on a second line, and
     /// renders as inline cells (USER 2026-09-02: no second-line air). One
     /// annotated cell keeps the stacked height for the whole list. Re-resolved
     /// per show and per in-place update — `CandidateBasePanel.metrics` has when.
