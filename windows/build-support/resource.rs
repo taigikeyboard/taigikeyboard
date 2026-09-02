@@ -33,8 +33,8 @@ const PRODUCT_NAME: &str = "Taigi Keyboard";
 /// Exported to the crate as `TAIGI_PRODUCT_NAME_STRING_ID` so the registration
 /// code names the same resource this script wrote (`@<dll>,-<id>`).
 pub const PRODUCT_NAME_STRING_ID: u16 = 100;
-const COMPANY_NAME: &str = "Taigi Keyboard";
-const COPYRIGHT: &str = "MIT License";
+const COMPANY_NAME: &str = "Soo Bîn-hiân 蘇民弦 <info@taigikeyboard.tw>";
+const COPYRIGHT: &str = "Copyright (c) 2026 Soo Bîn-hiân 蘇民弦. MIT License.";
 /// `lang_bar::ICON_RESOURCE_ID` and `RegisterProfile`'s icon index 0 both
 /// name the first (only) icon resource.
 const ICON_RESOURCE_ID: u16 = 1;

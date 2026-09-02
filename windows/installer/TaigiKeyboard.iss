@@ -1,4 +1,4 @@
-; Taigi Keyboard for Windows — Inno Setup 6.5+ script (roadmap W8; `x64compatible`
+﻿; Taigi Keyboard for Windows — Inno Setup 6.5+ script (roadmap W8; `x64compatible`
 ; is 6.3 syntax, the official ChineseTraditional.isl 6.5).
 ;
 ; Compiled by windows/scripts/release-app.sh:
@@ -31,7 +31,8 @@
 #endif
 
 #define AppName "Taigi Keyboard"
-#define AppPublisher "Taigi Keyboard"
+#define AppPublisher "Soo Bîn-hiân 蘇民弦"
+#define AppContactMail "info@taigikeyboard.tw"
 #define AppURL "https://taigikeyboard.tw"
 #define AppUserModelID "TaigiKeyboard.Settings"
 #define TaskName "TaigiKeyboard Update Check"
@@ -47,6 +48,7 @@ AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}
+AppContact={#AppContactMail}
 AppUpdatesURL={#AppURL}
 ; The updater pins these against the running settings exe's own VERSIONINFO
 ; (taigi-windows-update::verify): ProductName identical, ProductVersion = the
@@ -56,6 +58,7 @@ VersionInfoProductVersion={#AppVersion}
 VersionInfoProductName={#AppName}
 VersionInfoDescription={#AppName} Setup
 VersionInfoCompany={#AppPublisher}
+VersionInfoCopyright=Copyright (c) 2026 Soo Bîn-hiân 蘇民弦. MIT License.
 ; Machine-wide, under Program Files: a text service is loaded into every
 ; process of every user, and regsvr32 needs HKLM (W8).
 DefaultDirName={autopf}\TaigiKeyboard
