@@ -35,6 +35,13 @@ class TaigiAutocompleteService(
      * `applyTransition` writes to InputConnection.
      */
     private val continuousFetcher: suspend () -> List<RustEngineBridge.ContinuousCandidate>,
+    /**
+     * Live-read: `true` iff the strip renders 漢羅濫 split cells (mode ==
+     * COMBINED and the layout is not TPS — TPS ignores the picker). Read
+     * per fetch, never snapshotted, so a settings change takes effect on
+     * the next keystroke (android-guidelines §6 live-read rule).
+     */
+    private val splitCombinedCellsProvider: () -> Boolean = { false },
 ) {
     companion object {
         private const val TAG = "TaigiAutocompleteService"
@@ -51,7 +58,7 @@ class TaigiAutocompleteService(
         logger.debug(TAG) { "[INPUT] rawInput='$rawInput', displayText='$displayText'" }
 
         return try {
-            buildContinuousSuggestionsForCandidates(continuousFetcher())
+            buildContinuousSuggestionsForCandidates(continuousFetcher(), splitCombinedCellsProvider())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -106,30 +113,91 @@ class TaigiAutocompleteService(
  * Top-level so the contract is unit-testable without instantiating
  * collaborators.
  */
+/**
+ * 漢羅濫 split (`behavioral-invariants.md` §42 second exception, desktop
+ * shipped first in #666): when [splitCombinedCells] is `true`, a
+ * hanji-bearing candidate emits TWO adjacent one-script cells — a 漢字 cell
+ * then a 羅馬字 cell — each carrying the SAME identity sidechannels and a
+ * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker saying what the cell shows
+ * and commits. The roman cell KEEPS `hanzi` so `TaigiWord.displayText` and
+ * the 詞頻 `(displayText, canonicalTl)` pair-key stay marker-independent.
+ * Hanji-less candidates emit their roman cell alone. Roman cells that read
+ * the same — same rendered roman, same consumed span — are listed once,
+ * first-seen (fetched order) wins; 漢字 cells are never deduped. Every other
+ * mode ([splitCombinedCells] `false`, the default) emits exactly the
+ * pre-split shape.
+ */
 // 中文: Item 6 — roman 用 c.roman、hanzi 用 c.hanji,候選列 dual-line render;
 // 中文: Bug 1 後 DISPLAY_TEXT sidechannel = canonical key,走 canonicalText
 // 中文: (freq/NextWord);文件 commit 字串由 roman/hanzi 經 legacy formatter 產生。
+// 中文: §42 漢羅濫 — 有漢字的候選拆成相鄰的 漢字 cell + 羅馬字 cell(各帶
+// 中文: CELL_SCRIPT 標記,sidechannel 原樣複製兩份);羅馬字 cell 以
+// 中文: (roman, consumedBytes) 去重、先到先贏;漢字 cell 永不去重。
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
+// and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label 濫 cell).
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
-): List<TaigiWord> =
-    candidates.mapIndexed { index, candidate ->
-        TaigiWord(
-            // Synthetic id ≥ 1 keeps Continuous candidates outside English
-            // (id ≤ -100) and NextWord (-99..-1) sentinel ranges, and clear
-            // of the lexicon-path slot-0 composing-text cell (id == 0).
-            // Routing keys off additionalInfo — id is defense-in-depth.
-            id = index + 1,
-            roman = candidate.roman,
-            hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
-            lengthScore = null,
-            additionalInfo = mapOf(
-                TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",
-                TaigiWord.MetadataKeys.CONSUMED_BYTES to candidate.consumedSpanEnd.toString(),
-                TaigiWord.MetadataKeys.SYLLABLE_COUNT to candidate.syllableCount.toString(),
-                TaigiWord.MetadataKeys.DISPLAY_TEXT to candidate.displayText,
-                // R2: canonical TL identity → round-trips to
-                // commitContinuous(associationTl) for the NextWord write.
-                TaigiWord.MetadataKeys.CANONICAL_TL to candidate.canonicalTl,
-            ),
-        )
+    splitCombinedCells: Boolean = false,
+): List<TaigiWord> {
+    if (!splitCombinedCells) {
+        return candidates.mapIndexed { index, candidate ->
+            TaigiWord(
+                // Synthetic id ≥ 1 keeps Continuous candidates outside English
+                // (id ≤ -100) and NextWord (-99..-1) sentinel ranges, and clear
+                // of the lexicon-path slot-0 composing-text cell (id == 0).
+                // Routing keys off additionalInfo — id is defense-in-depth.
+                id = index + 1,
+                roman = candidate.roman,
+                hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
+                lengthScore = null,
+                additionalInfo = continuousSidechannels(candidate),
+            )
+        }
     }
+
+    val result = ArrayList<TaigiWord>(candidates.size * 2)
+    // Roman-cell dedupe key: (rendered roman, consumed span end). The §34
+    // literal, being hanji-less and fetched first, absorbs a later
+    // same-span roman (e.g. 台's `tâi`); 食/𤆬 share one `tsia̍h` cell.
+    val seenRomanCells = HashSet<Pair<String, Int>>()
+    for (candidate in candidates) {
+        val sidechannels = continuousSidechannels(candidate)
+        val hanzi = candidate.hanji?.takeIf { it.isNotEmpty() }
+        if (hanzi != null) {
+            result += TaigiWord(
+                // Same synthetic id ≥ 1 contract as the unsplit path.
+                id = result.size + 1,
+                roman = candidate.roman,
+                hanzi = hanzi,
+                lengthScore = null,
+                additionalInfo = sidechannels +
+                    (TaigiWord.MetadataKeys.CELL_SCRIPT to TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI),
+            )
+        }
+        if (seenRomanCells.add(candidate.roman to candidate.consumedSpanEnd)) {
+            result += TaigiWord(
+                id = result.size + 1,
+                roman = candidate.roman,
+                // The roman cell keeps its candidate's hanji: displayText and
+                // the 詞頻 pair-key must not move (§42 — identity is shared,
+                // only the marker decides the shown/committed script).
+                hanzi = hanzi,
+                lengthScore = null,
+                additionalInfo = sidechannels +
+                    (TaigiWord.MetadataKeys.CELL_SCRIPT to TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
+            )
+        }
+    }
+    return result
+}
+
+private fun continuousSidechannels(candidate: RustEngineBridge.ContinuousCandidate): Map<String, String> =
+    mapOf(
+        TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",
+        TaigiWord.MetadataKeys.CONSUMED_BYTES to candidate.consumedSpanEnd.toString(),
+        TaigiWord.MetadataKeys.SYLLABLE_COUNT to candidate.syllableCount.toString(),
+        TaigiWord.MetadataKeys.DISPLAY_TEXT to candidate.displayText,
+        // R2: canonical TL identity → round-trips to
+        // commitContinuous(associationTl) for the NextWord write.
+        TaigiWord.MetadataKeys.CANONICAL_TL to candidate.canonicalTl,
+    )

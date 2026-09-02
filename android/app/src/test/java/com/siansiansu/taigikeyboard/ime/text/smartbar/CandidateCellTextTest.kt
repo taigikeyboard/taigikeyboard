@@ -1,13 +1,17 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
  * Pins the candidate-cell arm order shared by the strip and the expanded
  * overlay: `hanji empty → TPS → ROMAN_ONLY → COMBINED → swapped → else`.
- * Mirrors iOS `CandidateCellHelperTests`.
+ * COMBINED cells are one-script (§42 second exception): the CELL_SCRIPT
+ * marker picks the script; an unmarked COMBINED row (a NextWord
+ * prediction — not split) renders hanji-led. Mirrors iOS
+ * `CandidateCellHelperTests`.
  */
 class CandidateCellTextTest {
     private fun cell(
@@ -16,7 +20,8 @@ class CandidateCellTextTest {
         isTPSLayout: Boolean = false,
         mode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
         isTranslateSwapped: Boolean = false,
-    ) = candidateCellText(hanzi, displayRoman, isTPSLayout, mode, isTranslateSwapped)
+        cellScript: String? = null,
+    ) = candidateCellText(hanzi, displayRoman, isTPSLayout, mode, isTranslateSwapped, cellScript)
 
     @Test
     fun sideBySide_romanLeads_hanjiSubtitle() {
@@ -38,13 +43,46 @@ class CandidateCellTextTest {
         )
     }
 
-    /** One label `漢字 羅馬字` (single ASCII space), no subtitle, whatever the swap flag says. */
+    /**
+     * §42 second exception: a marked 濫 cell renders ONE script, no
+     * subtitle — the split already happened at the builder. The roman cell
+     * keeps its `hanzi` field (identity) but renders roman alone.
+     */
     @Test
-    fun test_INVARIANT_combined_cells_are_one_hanji_space_roman_label() {
-        assertEquals(CandidateCellText("台語 tâi-gí", null), cell(mode = CandidateDisplayMode.COMBINED))
-        // The derived swap flag is true under 漢羅合用; a stale `false` must render identically.
+    fun test_INVARIANT_combined_marked_cells_are_single_script() {
         assertEquals(
-            CandidateCellText("台語 tâi-gí", null),
+            CandidateCellText("台語", null),
+            cell(mode = CandidateDisplayMode.COMBINED, cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI),
+        )
+        assertEquals(
+            CandidateCellText("tâi-gí", null),
+            cell(mode = CandidateDisplayMode.COMBINED, cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
+        )
+        // The swap flag (projected true under 濫) must not change either render.
+        assertEquals(
+            CandidateCellText("tâi-gí", null),
+            cell(
+                mode = CandidateDisplayMode.COMBINED,
+                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
+                isTranslateSwapped = true,
+            ),
+        )
+        assertEquals(
+            CandidateCellText("台語", null),
+            cell(
+                mode = CandidateDisplayMode.COMBINED,
+                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
+                isTranslateSwapped = true,
+            ),
+        )
+    }
+
+    /** NextWord prediction rows are not split — unmarked 濫 rows render hanji-led single-script. */
+    @Test
+    fun combined_unmarkedRow_rendersHanjiLedSingleScript() {
+        assertEquals(CandidateCellText("台語", null), cell(mode = CandidateDisplayMode.COMBINED))
+        assertEquals(
+            CandidateCellText("台語", null),
             cell(mode = CandidateDisplayMode.COMBINED, isTranslateSwapped = true),
         )
     }
@@ -68,5 +106,10 @@ class CandidateCellTextTest {
             assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = null, mode = mode))
             assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = "", mode = mode, isTranslateSwapped = true))
         }
+        // A hanji-less roman cell (§34 literal) resolves through the same first arm.
+        assertEquals(
+            CandidateCellText("tâi-gí", null),
+            cell(hanzi = null, mode = CandidateDisplayMode.COMBINED, cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
+        )
     }
 }

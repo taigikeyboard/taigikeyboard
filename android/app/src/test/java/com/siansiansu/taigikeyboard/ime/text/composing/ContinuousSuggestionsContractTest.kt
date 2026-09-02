@@ -463,4 +463,116 @@ class ContinuousSuggestionsContractTest {
         assertTrue(decodedHant.hasHanji())
         assertEquals("臺灣", decodedHant.hanji)
     }
+
+    // --- §42 second exception (S27) — 漢羅濫 split cells ---
+
+    @Test
+    fun `S27 combined split - hanji cell then roman cell with marker, sidechannels copied verbatim`() {
+        val candidates = listOf(
+            cand(
+                consumedSpanEnd = 7,
+                syllableCount = 2,
+                displayText = "台語",
+                roman = "tâi-gí",
+                hanji = "台語",
+                canonicalTl = "tâi-gí",
+            ),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates, splitCombinedCells = true)
+
+        assertEquals("one hanji-bearing candidate → 漢字 cell + 羅馬字 cell", 2, result.size)
+        val hanjiCell = result[0]
+        val romanCell = result[1]
+        assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, hanjiCell.additionalInfo[MetadataKeys.CELL_SCRIPT])
+        assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, romanCell.additionalInfo[MetadataKeys.CELL_SCRIPT])
+        // The roman cell KEEPS hanzi so displayText / 詞頻 pair-key stay put (#7).
+        assertEquals("台語", hanjiCell.hanzi)
+        assertEquals("台語", romanCell.hanzi)
+        assertEquals("台語", romanCell.displayText)
+        // Identity sidechannels copied verbatim to BOTH cells.
+        for (cellInfo in listOf(hanjiCell.additionalInfo, romanCell.additionalInfo)) {
+            assertEquals("true", cellInfo[MetadataKeys.IS_CONTINUOUS])
+            assertEquals("7", cellInfo[MetadataKeys.CONSUMED_BYTES])
+            assertEquals("2", cellInfo[MetadataKeys.SYLLABLE_COUNT])
+            assertEquals("台語", cellInfo[MetadataKeys.DISPLAY_TEXT])
+            assertEquals("tâi-gí", cellInfo[MetadataKeys.CANONICAL_TL])
+        }
+        // Synthetic ids stay >= 1 (sentinel ranges untouched by the split).
+        assertEquals(1, hanjiCell.id)
+        assertEquals(2, romanCell.id)
+    }
+
+    @Test
+    fun `S27 combined split - hanji-less candidate emits one roman cell`() {
+        val candidates = listOf(cand(consumedSpanEnd = 3, displayText = "tāi", roman = "tāi", hanji = null))
+        val result = buildContinuousSuggestionsForCandidates(candidates, splitCombinedCells = true)
+
+        assertEquals(1, result.size)
+        assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, result[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
+        assertNull(result[0].hanzi)
+    }
+
+    @Test
+    fun `S27 combined split - roman cells dedupe by roman and consumed span, first seen wins`() {
+        // The §34 literal (hanji-less, fetched first HERE — the seen-set does
+        // not assume it) absorbs 台's and 臺's roman cells: one `tâi` cell,
+        // sidechannels from the FETCHED-ORDER winner.
+        val candidates = listOf(
+            cand(consumedSpanEnd = 3, displayText = "tâi", roman = "tâi", hanji = null, canonicalTl = "tâi"),
+            cand(consumedSpanEnd = 3, displayText = "台", roman = "tâi", hanji = "台", canonicalTl = "tâi"),
+            cand(consumedSpanEnd = 3, displayText = "臺", roman = "tâi", hanji = "臺", canonicalTl = "tâi"),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates, splitCombinedCells = true)
+
+        // literal roman cell + 台 hanji cell + 臺 hanji cell = 3 cells.
+        assertEquals(3, result.size)
+        assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, result[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
+        // First-seen winner carries the FIRST candidate's sidechannels.
+        assertEquals("tâi", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
+        assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, result[1].additionalInfo[MetadataKeys.CELL_SCRIPT])
+        assertEquals("台", result[1].hanzi)
+        assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, result[2].additionalInfo[MetadataKeys.CELL_SCRIPT])
+        assertEquals("臺", result[2].hanzi)
+    }
+
+    @Test
+    fun `S27 combined split - hanji cells never dedupe, different span keeps its roman cell`() {
+        // 一字多音 adjacency (#7): 重/tîng and 重/tāng both keep their 漢字
+        // cells; their romans differ so both roman cells stay. The same roman
+        // at a DIFFERENT consumed span is a different word — not deduped.
+        val candidates = listOf(
+            cand(consumedSpanEnd = 5, displayText = "重", roman = "tîng", hanji = "重", canonicalTl = "tîng"),
+            cand(consumedSpanEnd = 5, displayText = "重", roman = "tāng", hanji = "重", canonicalTl = "tāng"),
+            cand(consumedSpanEnd = 9, displayText = "重", roman = "tîng", hanji = "重", canonicalTl = "tîng"),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates, splitCombinedCells = true)
+
+        assertEquals(6, result.size)
+        val hanjiCells = result.filter {
+            it.additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_HANJI
+        }
+        assertEquals("漢字 cells never dedupe", 3, hanjiCells.size)
+        val romanCells = result.filter {
+            it.additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_ROMAN
+        }
+        assertEquals("(roman, span) keys tîng@5 / tāng@5 / tîng@9 all distinct", 3, romanCells.size)
+    }
+
+    @Test
+    fun `S27 combined split OFF - default path byte-identical to the pre-split shape`() {
+        // 並排 / 羅馬字 / TPS all resolve to splitCombinedCells = false at the
+        // provider — one carrier per candidate, no CELL_SCRIPT marker.
+        val candidates = listOf(
+            cand(consumedSpanEnd = 7, syllableCount = 2, displayText = "台語", roman = "tâi-gí", hanji = "台語"),
+            cand(consumedSpanEnd = 3, displayText = "tāi", roman = "tāi", hanji = null),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates)
+
+        assertEquals(2, result.size)
+        result.forEachIndexed { index, word ->
+            assertEquals(index + 1, word.id)
+            assertNull("unsplit path must not carry a CELL_SCRIPT marker", word.additionalInfo[MetadataKeys.CELL_SCRIPT])
+        }
+        assertEquals(result, buildContinuousSuggestionsForCandidates(candidates, splitCombinedCells = false))
+    }
 }

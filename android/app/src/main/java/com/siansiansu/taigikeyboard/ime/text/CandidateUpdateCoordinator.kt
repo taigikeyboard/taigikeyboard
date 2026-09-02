@@ -160,6 +160,16 @@ class CandidateUpdateCoordinator(
                             }
                         }
                     },
+                    // 漢羅濫 split cells (§42 second exception). Live-read per
+                    // fetch — the cached service must see a settings change on
+                    // the next keystroke. TPS ignores the picker, so the split
+                    // never fires under the TPS layout.
+                    splitCombinedCellsProvider = {
+                        val prefs = taigikeyboard.prefs
+                        prefs.candidateDisplayMode ==
+                            com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode.COMBINED &&
+                            !prefs.isTpsLayout
+                    },
                 ).also { taigiAutocompleteService = it }
             }
 

@@ -147,15 +147,15 @@ fun CandidateOverlayContent(
     val subtitlePaint = remember(typeface, fontScale) { measurementPaint(typeface, SUBTITLE_TEXT_SIZE_SP, displayMetrics) }
 
     // Rows do NOT depend on isTranslateSwapped: cell width is max(roman, hanzi) so a swap never reflows.
-    // They DO depend on candidateDisplayMode: COMBINED measures the one-label `漢字 羅馬字` string.
+    // Nor on candidateDisplayMode: 濫 split cells arrive as one-script suggestions carrying a
+    // CELL_SCRIPT marker (§42 second exception), so the measure keys off the word alone.
     val rows =
-        remember(suggestions, isTPSLayout, orMapsToER, candidateDisplayMode, typeface) {
+        remember(suggestions, isTPSLayout, orMapsToER, typeface) {
             CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->
                 measureCellWidth(
                     word,
                     isTPSLayout,
                     orMapsToER,
-                    candidateDisplayMode,
                     primaryPaint,
                     subtitlePaint,
                     minCellWidthPx,
@@ -378,6 +378,7 @@ private fun CandidateCell(
                     isTPSLayout = isTPSLayout,
                     candidateDisplayMode = candidateDisplayMode,
                     isTranslateSwapped = isTranslateSwapped,
+                    cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
                 )
 
             Text(
@@ -553,7 +554,6 @@ private fun measureCellWidth(
     word: TaigiWord,
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
-    candidateDisplayMode: CandidateDisplayMode,
     primaryPaint: Paint,
     subtitlePaint: Paint,
     minCellWidthPx: Int,
@@ -565,11 +565,11 @@ private fun measureCellWidth(
         val titleWidth = primaryPaint.measureText(title)
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
     }
-    if (candidateDisplayMode == CandidateDisplayMode.COMBINED) {
-        // One label at the primary size; hanji-less rows are roman alone.
-        val label = if (!word.hanzi.isNullOrEmpty()) combinedCellLabel(word.hanzi, word.roman) else word.roman
-        val labelWidth = primaryPaint.measureText(label)
-        return maxOf(minCellWidthPx, (labelWidth + cellPaddingPx + 0.5f).toInt())
+    // §42 濫 split cell — one script at the title font, like any single-line cell.
+    val cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT]
+    if (cellScript != null) {
+        val title = if (cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI) word.hanzi.orEmpty() else word.roman
+        return maxOf(minCellWidthPx, (primaryPaint.measureText(title) + cellPaddingPx + 0.5f).toInt())
     }
     val romanWidth = primaryPaint.measureText(word.roman)
     val hanziWidth = if (!word.hanzi.isNullOrEmpty()) subtitlePaint.measureText(word.hanzi) else 0f

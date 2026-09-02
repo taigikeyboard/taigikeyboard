@@ -84,5 +84,23 @@ data class TaigiWord(
          * (POJ-rendered in POJ mode).
          */
         const val CANONICAL_TL = "canonicalTl"
+
+        /**
+         * 漢羅濫 split-cell commit-script marker ([CELL_SCRIPT_HANJI] or
+         * [CELL_SCRIPT_ROMAN]). Present only on the split cells the builder
+         * emits under 漢羅濫 (`behavioral-invariants.md` §42 second
+         * exception); says what the cell SHOWS and COMMITS. Identity fields
+         * (`hanzi`, [DISPLAY_TEXT], [CANONICAL_TL]) stay on both cells so
+         * 詞頻 / NextWord keys are marker-independent.
+         */
+        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift additionalInfo["cellScript"].
+        // Drift causes silent divergence (one platform's tap commits the other script).
+        const val CELL_SCRIPT = "cellScript"
+
+        /** [CELL_SCRIPT] value: the cell shows and commits the 漢字. */
+        const val CELL_SCRIPT_HANJI = "hanji"
+
+        /** [CELL_SCRIPT] value: the cell shows and commits the bare 羅馬字. */
+        const val CELL_SCRIPT_ROMAN = "roman"
     }
 }
