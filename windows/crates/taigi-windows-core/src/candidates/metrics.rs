@@ -75,12 +75,13 @@ pub struct CandidateMetrics {
     /// annotated content so a page's rows line up — and one line when NO
     /// cell in the content carries an annotation (`for_content`).
     item_height: f32,
-    /// The two-line stacked box `resolve` measured, kept so `for_content`
-    /// can go back to it from a single-line variant.
+    /// The two-line stacked box, kept so `for_content` can go back to it
+    /// from a single-line variant. Mirrors `item_height` under Inline.
     stacked_item_height: f32,
-    /// Whether the content these metrics lay out has an annotated cell.
-    /// `resolve` assumes it does (the two-line default).
-    content_has_annotations: bool,
+    /// The stacked candidate and annotation line boxes as measured, `None`
+    /// under Inline (never measured there) — what a stacked cell's paint
+    /// centres by.
+    stacked_line_heights: Option<(f32, f32)>,
     /// The slot the key is centred in — wide enough for every form it can
     /// take, so the column keeps one width as the live key set changes.
     index_width: f32,
@@ -118,14 +119,18 @@ impl CandidateMetrics {
             choice: CandidateFontChoice::System,
             size: index_font_size,
         };
-        let stacked_item_height = (measurer.line_height(candidate_font)
-            + measurer.line_height(annotation_font)
-            + stacked_line_gap
-            + vertical_padding)
-            .ceil();
-        let item_height = match cell_arrangement {
-            CandidateCellArrangement::Inline => candidate_font_size + vertical_padding,
-            CandidateCellArrangement::Stacked => stacked_item_height,
+        let stacked_line_heights = matches!(cell_arrangement, CandidateCellArrangement::Stacked)
+            .then(|| {
+                (
+                    measurer.line_height(candidate_font),
+                    measurer.line_height(annotation_font),
+                )
+            });
+        let item_height = match stacked_line_heights {
+            None => candidate_font_size + vertical_padding,
+            Some((candidate_line, annotation_line)) => {
+                (candidate_line + annotation_line + stacked_line_gap + vertical_padding).ceil()
+            }
         };
         let index_width = CandidateIndexLabel::widest_label_forms()
             .iter()
@@ -149,8 +154,8 @@ impl CandidateMetrics {
             stacked_line_gap,
             tahoe_separator_inset: (BASE_TAHOE_SEPARATOR_INSET * chrome_scale).round(),
             item_height,
-            stacked_item_height,
-            content_has_annotations: true,
+            stacked_item_height: item_height,
+            stacked_line_heights,
             index_width,
             primary_column_floor,
         }
@@ -171,15 +176,14 @@ impl CandidateMetrics {
         };
         Self {
             item_height,
-            content_has_annotations: has_annotations,
             ..self.clone()
         }
     }
 
-    /// Whether a stacked cell centres a two-line block (annotated content)
-    /// or its candidate line alone.
-    pub fn content_has_annotations(&self) -> bool {
-        self.content_has_annotations
+    /// The two stacked line boxes `resolve` measured, `None` under Inline —
+    /// what a stacked cell's paint centres by.
+    pub fn stacked_line_heights(&self) -> Option<(f32, f32)> {
+        self.stacked_line_heights
     }
 
     // Read-only: a size change rebuilds the window (`resolve`), so no two
@@ -535,7 +539,8 @@ mod tests {
         // trace: Medium/Medium — inline item 20+9=29; stacked resolve =
         // ceil(24+22+3+9)=58 (gap 2*1.25=2.5→3). No annotated cell → 29
         // (the inline height); any annotated cell → 58; Inline is 29 either
-        // way; the variant round-trips back to the resolved box.
+        // way and measures no stacked lines; the variant round-trips back
+        // to the resolved box.
         for text in T::ALL {
             for window in W::ALL {
                 let stacked = metrics(*text, *window, Stacked);
@@ -546,9 +551,13 @@ mod tests {
                     inline.item_height(),
                     "{text:?}/{window:?}"
                 );
-                assert!(!single.content_has_annotations());
+                assert_eq!(
+                    single.stacked_line_heights(),
+                    stacked.stacked_line_heights()
+                );
+                assert!(stacked.stacked_line_heights().is_some());
+                assert!(inline.stacked_line_heights().is_none());
                 assert_eq!(stacked.for_content(true), stacked);
-                assert!(stacked.content_has_annotations());
                 assert_eq!(single.for_content(true), stacked, "round-trips");
                 assert_eq!(single.for_content(false), single, "idempotent");
                 assert_eq!(

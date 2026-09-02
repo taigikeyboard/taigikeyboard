@@ -374,8 +374,9 @@ mod tests {
     #[test]
     fn combined_forces_the_swap_and_leaves_the_bracket_toggle_alone() {
         // trace: stored swap=false, both=false; mode=combined → (true, false):
-        // the one-label cell leads with the hanji and a commit writes it, the
-        // projection of that onto the pair is a forced swap. Stored both=true
+        // each script is its own adjacent cell, hanji first, and a commit
+        // writes the hanji — the projection of that onto the pair is a forced
+        // swap. Stored both=true
         // → (true, true), so 括號標註 still yields `漢字 (羅馬字)`. Roman-only
         // still masks to (false, false); back to sideBySide reads the stored
         // (false, true) again with no bool written in between.

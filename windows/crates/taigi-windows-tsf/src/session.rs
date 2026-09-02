@@ -674,33 +674,7 @@ impl TextService_Impl {
                 // The list STAYS: the swap changes how a candidate displays,
                 // never which exist — re-presented in place, selection kept
                 // (dismissing read as the window vanishing, 2026-08-21).
-                let (token, mut source, presenter) = {
-                    let mut state = self.state.borrow_mut();
-                    let presenter = state.presenter.clone();
-                    match state.contexts.entry_mut(identity) {
-                        Some(entry) => {
-                            (Some(entry.token), entry.state.candidates.clone(), presenter)
-                        }
-                        None => (None, CandidateSource::default(), presenter),
-                    }
-                };
-                if let (Some(token), Some(presenter), Some(mutex)) =
-                    (token, presenter, runtime.coordinator_if_built())
-                {
-                    if let Ok(coordinator) = mutex.try_lock() {
-                        if let Some(manager) = coordinator.manager_ref(token) {
-                            let settings = runtime.settings.current();
-                            source.refresh_presentation(manager);
-                            let cells = source.cells();
-                            if let Some(entry) =
-                                self.state.borrow_mut().contexts.entry_mut(identity)
-                            {
-                                entry.state.candidates = source;
-                            }
-                            presenter.borrow_mut().update_cells(cells, &settings, token);
-                        }
-                    }
-                }
+                self.represent_open_list(identity, runtime, false);
             }
             ShortcutAction::CycleCandidateDisplayMode => {
                 let Some(store) = runtime.settings_store() else {
@@ -716,45 +690,11 @@ impl TextService_Impl {
                 // The mode changes which candidates exist (invariants §44),
                 // not only how they draw — so the open list is re-fetched
                 // under the new mode and re-rendered in place, the pane's own
-                // behaviour; an empty answer takes the window down. Never
-                // hidden first: from mid-composition that reads as the window
-                // vanishing. Then the HUD with the new mode's name, as the
+                // behaviour. Then the HUD with the new mode's name, as the
                 // romanization switch does — the chord fires from anywhere.
-                let (token, presenter, flash) = {
-                    let mut state = self.state.borrow_mut();
-                    let token = state.contexts.entry_mut(identity).map(|entry| entry.token);
-                    (token, state.presenter.clone(), state.mode_flash.clone())
-                };
+                self.represent_open_list(identity, runtime, true);
+                let flash = self.state.borrow().mode_flash.clone();
                 let settings = runtime.settings.current();
-                if let (Some(token), Some(presenter), Some(mutex)) =
-                    (token, presenter, runtime.coordinator_if_built())
-                {
-                    if let Ok(mut coordinator) = mutex.try_lock() {
-                        if let Some(manager) = coordinator.manager(token) {
-                            match manager.fetch_candidates().list_change() {
-                                CandidateListChange::Replace(candidates) => {
-                                    let mut source = CandidateSource::default();
-                                    source.set(candidates, manager);
-                                    let cells = source.cells();
-                                    if let Some(entry) =
-                                        self.state.borrow_mut().contexts.entry_mut(identity)
-                                    {
-                                        entry.state.candidates = source;
-                                    }
-                                    presenter.borrow_mut().update_cells(cells, &settings, token);
-                                }
-                                CandidateListChange::Clear => {
-                                    if let Some(entry) =
-                                        self.state.borrow_mut().contexts.entry_mut(identity)
-                                    {
-                                        entry.state.candidates.clear();
-                                    }
-                                    presenter.borrow_mut().hide(token);
-                                }
-                            }
-                        }
-                    }
-                }
                 let mode = settings.engine_settings().candidate_display_mode;
                 let text = StringResolver::new(runtime.display_language())
                     .resolve(mode.label_key())
@@ -766,7 +706,57 @@ impl TextService_Impl {
                 }
             }
         }
-        runtime.settings.current();
+    }
+
+    /// Re-presents the open list for `identity` under the settings in force
+    /// right now: re-fetched first when the change alters which candidates
+    /// exist (`refetch`), where an empty answer takes the window down —
+    /// otherwise the same list re-rendered in place. Never hidden first:
+    /// from mid-composition that reads as the window vanishing.
+    fn represent_open_list(&self, identity: usize, runtime: &Runtime, refetch: bool) {
+        let (token, presenter) = {
+            let mut state = self.state.borrow_mut();
+            let token = state.contexts.entry_mut(identity).map(|entry| entry.token);
+            (token, state.presenter.clone())
+        };
+        let (Some(token), Some(presenter), Some(mutex)) =
+            (token, presenter, runtime.coordinator_if_built())
+        else {
+            return;
+        };
+        let Ok(mut coordinator) = mutex.try_lock() else {
+            return;
+        };
+        let Some(manager) = coordinator.manager(token) else {
+            return;
+        };
+        let settings = runtime.settings.current();
+        let cells = {
+            let mut state = self.state.borrow_mut();
+            let Some(entry) = state.contexts.entry_mut(identity) else {
+                return;
+            };
+            let source = &mut entry.state.candidates;
+            if !refetch {
+                source.refresh_presentation(manager);
+                Some(source.cells())
+            } else {
+                match manager.fetch_candidates().list_change() {
+                    CandidateListChange::Replace(candidates) => {
+                        source.set(candidates, manager);
+                        Some(source.cells())
+                    }
+                    CandidateListChange::Clear => {
+                        source.clear();
+                        None
+                    }
+                }
+            }
+        };
+        match cells {
+            Some(cells) => presenter.borrow_mut().update_cells(cells, &settings, token),
+            None => presenter.borrow_mut().hide(token),
+        }
     }
 }
 

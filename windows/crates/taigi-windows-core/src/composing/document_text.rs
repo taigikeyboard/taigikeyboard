@@ -50,13 +50,11 @@ impl CandidateCellContent {
 
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// `ios/.../TaigiAutocompleteService.swift:150-162` (primary =
-    /// romanization, secondary = Hanji) and the swap flip. Arm order is the
-    /// same on every platform: hanji-less → roman-only mode → swap. Serves
-    /// 並排 and 羅馬字; 漢羅合用 shows two one-script cells per candidate,
-    /// built by [`super::presentation`] rather than here. A roman-only cell
-    /// carries no annotation.
+    /// romanization, secondary = Hanji) and the swap flip; arm order is the
+    /// same on every platform. Serves 並排 and 羅馬字; 合用's split cells
+    /// are built by [`super::presentation`].
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {
-        match candidate.hanji.as_deref().filter(|hanji| !hanji.is_empty()) {
+        match candidate.nonempty_hanji() {
             None => Self::new(candidate.roman.clone(), None),
             Some(_) if settings.candidate_display_mode == CandidateDisplayMode::RomanOnly => {
                 Self::new(candidate.roman.clone(), None)
@@ -77,10 +75,9 @@ impl CandidateCellContent {
 /// `ios/.../ActionHandler+Suggestions.swift:218`; the TPS branch is absent
 /// because the desktop ships TL and POJ only.
 pub fn document_text(candidate: &ContinuousCandidate, settings: &EngineSettings) -> String {
-    // A romanization-only candidate is marked by an absent hanji, but a
-    // producer that emitted "" means the same thing — rendering "guá ()"
-    // for it would be a visible defect.
-    let Some(hanji) = candidate.hanji.as_deref().filter(|hanji| !hanji.is_empty()) else {
+    // An empty-string hanji folds to roman-only — "guá ()" would be a
+    // visible defect.
+    let Some(hanji) = candidate.nonempty_hanji() else {
         return candidate.roman.clone();
     };
     if settings.is_output_both_scripts {
@@ -96,21 +93,16 @@ pub fn document_text(candidate: &ContinuousCandidate, settings: &EngineSettings)
     }
 }
 
-/// The script `document_text` does NOT lead with, or `None` when the
-/// candidate has only one or the mode shows no hanji (羅馬字 — Space stays
-/// ignored). What Space commits — read off the same settings the cell was
-/// built from, never the cell: under 並排 this is the annotation's string;
-/// under 合用 it is the roman, which the flip in `CandidateSource::resolve`
-/// turns into "the other cell's script" for both cells of a pair.
+/// What Space commits — the script `document_text` does NOT lead with, or
+/// `None` when the candidate has one script or the mode shows no hanji.
+/// Read off the settings, never the cell: under 合用 the flip in
+/// `CandidateSource::resolve` turns this into "the other cell's script".
 /// `is_output_both_scripts` is not consulted — Space writes one script.
 pub fn alternate_text(
     candidate: &ContinuousCandidate,
     settings: &EngineSettings,
 ) -> Option<String> {
-    let hanji = candidate
-        .hanji
-        .as_deref()
-        .filter(|hanji| !hanji.is_empty())?;
+    let hanji = candidate.nonempty_hanji()?;
     if !settings.candidate_display_mode.shows_hanji() {
         return None;
     }
@@ -124,22 +116,7 @@ pub fn alternate_text(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::CandidateMode;
-
-    fn candidate(roman: &str, hanji: Option<&str>) -> ContinuousCandidate {
-        ContinuousCandidate {
-            consumed_span_start: 0,
-            consumed_span_end: 0,
-            syllable_count: 1,
-            display_text: hanji.unwrap_or(roman).to_owned(),
-            score: 0.0,
-            form: 1,
-            mode: CandidateMode::Unspecified,
-            roman: roman.to_owned(),
-            hanji: hanji.map(str::to_owned),
-            canonical_tl: roman.to_owned(),
-        }
-    }
+    use crate::engine::test_support::candidate;
 
     fn settings(swapped: bool, both: bool) -> EngineSettings {
         EngineSettings {
@@ -152,7 +129,7 @@ mod tests {
     #[test]
     fn document_text_follows_the_output_settings() {
         // trace: CandidateDocumentTextTests.swift:9-47.
-        let c = candidate("tâi-gí", Some("台語"));
+        let c = candidate("tâi-gí", Some("台語"), 0);
         assert_eq!(document_text(&c, &settings(false, false)), "tâi-gí");
         assert_eq!(document_text(&c, &settings(true, false)), "台語");
         assert_eq!(document_text(&c, &settings(false, true)), "tâi-gí (台語)");
@@ -161,7 +138,7 @@ mod tests {
 
     #[test]
     fn roman_only_and_empty_hanji_write_the_romanization_everywhere() {
-        for c in [candidate("guá", None), candidate("guá", Some(""))] {
+        for c in [candidate("guá", None, 0), candidate("guá", Some(""), 0)] {
             for (swapped, both) in [(false, false), (true, false), (false, true), (true, true)] {
                 assert_eq!(document_text(&c, &settings(swapped, both)), "guá");
                 assert_eq!(alternate_text(&c, &settings(swapped, both)), None);
@@ -176,7 +153,7 @@ mod tests {
         // `None` (Space → `Ignored`). Enter writes the roman through the
         // unchanged `document_text` arms because the snapshot's pair is
         // DERIVED false under roman-only (`SettingsDocument::engine_settings`).
-        let c = candidate("tâi-gí", Some("台語"));
+        let c = candidate("tâi-gí", Some("台語"), 0);
         for swapped in [false, true] {
             let settings = EngineSettings {
                 is_translate_swapped: swapped,
@@ -203,7 +180,7 @@ mod tests {
         // trace: hanji present → SideBySide both swaps = the annotation the
         // cell carries today; Combined (derived swap = true) = roman; RomanOnly
         // = None; hanji-less = None; 括號標註 ignored (one script).
-        let c = candidate("tâi-gí", Some("台語"));
+        let c = candidate("tâi-gí", Some("台語"), 0);
         for both in [false, true] {
             let side_by_side = |swapped| EngineSettings {
                 is_translate_swapped: swapped,
@@ -231,27 +208,18 @@ mod tests {
                 ..EngineSettings::default()
             };
             assert_eq!(alternate_text(&c, &roman_only), None);
-            assert_eq!(alternate_text(&candidate("guá", None), &combined), None);
-            assert_eq!(alternate_text(&candidate("guá", Some("")), &combined), None);
+            assert_eq!(alternate_text(&candidate("guá", None, 0), &combined), None);
+            assert_eq!(
+                alternate_text(&candidate("guá", Some(""), 0), &combined),
+                None
+            );
         }
-    }
-
-    #[test]
-    fn script_flip_is_an_involution() {
-        assert_eq!(
-            CandidateScript::Primary.flipped(),
-            CandidateScript::Alternate
-        );
-        assert_eq!(
-            CandidateScript::Alternate.flipped(),
-            CandidateScript::Primary
-        );
     }
 
     #[test]
     fn alternate_is_whichever_script_the_primary_is_not_and_ignores_brackets() {
         // trace: CandidateDocumentTextTests.swift:85-160.
-        let c = candidate("tâi-gí", Some("台語"));
+        let c = candidate("tâi-gí", Some("台語"), 0);
         assert_eq!(
             alternate_text(&c, &settings(false, false)).as_deref(),
             Some("台語")
@@ -267,7 +235,7 @@ mod tests {
         let cell = CandidateCellContent::cell(&c, &settings(true, false));
         assert_eq!(cell.text, "台語");
         assert_eq!(cell.annotation.as_deref(), Some("tâi-gí"));
-        let hyphenated = candidate("kau--lâng", Some("交--人"));
+        let hyphenated = candidate("kau--lâng", Some("交--人"), 0);
         assert_eq!(
             alternate_text(&hyphenated, &settings(false, false)).as_deref(),
             Some("交--人"),

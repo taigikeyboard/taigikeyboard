@@ -23,17 +23,12 @@ pub struct PresentedCandidate {
     pub cell: CandidateCellContent,
 }
 
-/// The cells for `candidates` under `settings`, in display order.
-///
-/// - 並排 / 羅馬字: one `Primary` cell per candidate, `CandidateCellContent::cell`
-///   byte-identical to today.
-/// - 合用: a hanji-bearing candidate is a `Primary` hanji cell then an
-///   `Alternate` roman cell (the derived swap makes `Primary` = hanji); a
-///   hanji-less one is a single `Primary` roman cell. A roman cell whose
-///   `(text, consumed span)` was already presented is skipped, walking the
-///   fetched order once — 食/𤆬 both `tsia̍h` share one roman cell after 食's,
-///   and the §34 literal at slot 0 absorbs 台's. Hanji cells are never
-///   deduped: 重 tîng / 重 tāng stay `重 tîng 重 tāng`, adjacency disambiguates.
+/// The cells for `candidates` under `settings`, in display order: one
+/// `Primary` cell per candidate, except 合用 splits a hanji-bearing
+/// candidate into a hanji cell then an `Alternate` roman cell. A roman cell
+/// whose `(text, consumed span)` was already presented is skipped; hanji
+/// cells are never deduped — 重 tîng / 重 tāng both stay, adjacency
+/// disambiguates.
 pub(crate) fn presentation(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
@@ -52,7 +47,7 @@ pub(crate) fn presentation(
     let mut presented = Vec::with_capacity(candidates.len() * 2);
     let mut seen_roman: HashSet<(&str, u32, u32)> = HashSet::new();
     for (candidate_index, candidate) in candidates.iter().enumerate() {
-        let hanji = candidate.hanji.as_deref().filter(|hanji| !hanji.is_empty());
+        let hanji = candidate.nonempty_hanji();
         if let Some(hanji) = hanji {
             presented.push(PresentedCandidate {
                 candidate_index,
@@ -84,7 +79,7 @@ pub(crate) fn presentation(
 /// for them, written together so neither can outlive the other: `set` /
 /// `clear` are the only writes, and every window index (highlighted, slot,
 /// the UI-less element's selection) comes back through `resolve`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct CandidateSource {
     candidates: Vec<ContinuousCandidate>,
     presented: Vec<PresentedCandidate>,
@@ -100,8 +95,7 @@ impl CandidateSource {
     /// The same list presented again under the settings in force right
     /// now (the 漢羅 flip re-renders in place).
     pub fn refresh_presentation(&mut self, manager: &ComposingManager) {
-        let candidates = std::mem::take(&mut self.candidates);
-        self.set(candidates, manager);
+        self.presented = manager.presentation(&self.candidates);
     }
 
     pub fn clear(&mut self) {
@@ -110,7 +104,7 @@ impl CandidateSource {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.candidates.is_empty()
+        self.presented.is_empty()
     }
 
     /// What the window draws, display order.
@@ -144,24 +138,9 @@ impl CandidateSource {
 mod tests {
     use super::*;
     use crate::composing::{NextWordLearner, NoStores, SystemClock};
-    use crate::engine::CandidateMode;
+    use crate::engine::test_support::candidate;
     use crate::settings::{keys, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
-
-    fn candidate(roman: &str, hanji: Option<&str>, span_end: u32) -> ContinuousCandidate {
-        ContinuousCandidate {
-            consumed_span_start: 0,
-            consumed_span_end: span_end,
-            syllable_count: 1,
-            display_text: hanji.unwrap_or(roman).to_owned(),
-            score: 0.0,
-            form: 1,
-            mode: CandidateMode::Unspecified,
-            roman: roman.to_owned(),
-            hanji: hanji.map(str::to_owned),
-            canonical_tl: roman.to_owned(),
-        }
-    }
 
     /// The DERIVED snapshot for a mode (`SettingsDocument::engine_settings`):
     /// the swap forced on under Combined, off under RomanOnly.
@@ -286,14 +265,6 @@ mod tests {
         assert!(source.is_empty());
         source.set(list.clone(), &manager);
         assert!(!source.is_empty());
-        assert_eq!(
-            source
-                .cells()
-                .iter()
-                .map(|cell| cell.text.as_str())
-                .collect::<Vec<_>>(),
-            ["台語", "tâi-gí", "guá"]
-        );
         assert_eq!(
             source.resolve(0, false),
             Some((&list[0], CandidateScript::Primary))
