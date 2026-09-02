@@ -146,12 +146,12 @@ mod tests {
     }
 
     #[test]
-    fn a_fresh_install_has_the_gate_on_for_romanization() {
-        // trace: AutoSpacePolicyTests — the shipped default is ON (macOS; iOS
-        // and Android ship OFF, `keys::IS_AUTO_SPACE_ENABLED` says why).
+    fn a_fresh_install_has_the_gate_off_for_romanization() {
+        // trace: AutoSpacePolicyTests — the shipped default is OFF on every
+        // platform (`keys::IS_AUTO_SPACE_ENABLED` says why).
         let document = crate::settings::SettingsDocument::default();
         let enabled = document.bool(&crate::settings::keys::IS_AUTO_SPACE_ENABLED);
-        assert!(is_gate_active(
+        assert!(!is_gate_active(
             enabled,
             writes_romanization(CandidateScript::Primary, false, false)
         ));

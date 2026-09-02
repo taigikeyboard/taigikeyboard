@@ -102,8 +102,9 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
 
     func testPunctuationMidComposition_inRomanFirstMode_staysHalfWidth() throws {
         // The auto-space contract of this site is pinned by
-        // `AutoSpaceControllerTests`; here only the character itself matters.
-        let session = try composedSession()
+        // `AutoSpaceControllerTests`; here only the character itself matters,
+        // and auto-space (OFF by default) is turned on to reach that site.
+        let session = try composedSession(configure: { $0.isAutoSpaceEnabled = true })
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "?"), client: session.client)
 

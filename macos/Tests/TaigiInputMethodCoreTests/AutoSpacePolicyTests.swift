@@ -142,12 +142,12 @@ final class AutoSpacePolicyTests: XCTestCase {
     // MARK: - Stored default
 
     @MainActor
-    func testAFreshInstall_startsWithAutoSpaceOn() throws {
-        // macOS's own default (USER 2026-08-23) — iOS and Android start OFF.
+    func testAFreshInstall_startsWithAutoSpaceOff() throws {
+        // OFF on every platform (USER 2026-09-02).
         let store = try makeScratchSettingsStore()
-        XCTAssertTrue(store.isAutoSpaceEnabled)
+        XCTAssertFalse(store.isAutoSpaceEnabled)
 
-        store.isAutoSpaceEnabled = false
-        XCTAssertFalse(store.isAutoSpaceEnabled, "an explicit OFF must stick")
+        store.isAutoSpaceEnabled = true
+        XCTAssertTrue(store.isAutoSpaceEnabled, "an explicit ON must stick")
     }
 }

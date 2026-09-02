@@ -264,7 +264,7 @@ mod tests {
     fn empty_document_reads_every_default() {
         let doc = SettingsDocument::default();
         assert_eq!(doc.engine_settings(), EngineSettings::default());
-        assert!(doc.bool(&keys::IS_AUTO_SPACE_ENABLED));
+        assert!(!doc.bool(&keys::IS_AUTO_SPACE_ENABLED));
         assert_eq!(doc.string(&keys::DISPLAY_LANGUAGE), "system");
         assert_eq!(
             doc.choice(&keys::CANDIDATE_LAYOUT),
@@ -291,7 +291,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(doc.choice(&keys::INPUT_MODE), InputMode::Tl);
-        assert!(doc.bool(&keys::IS_AUTO_SPACE_ENABLED));
+        assert!(!doc.bool(&keys::IS_AUTO_SPACE_ENABLED));
         assert_eq!(doc.choice(&keys::APPEARANCE_MODE), AppearanceMode::Dark);
         assert_eq!(doc.revision, 3);
     }

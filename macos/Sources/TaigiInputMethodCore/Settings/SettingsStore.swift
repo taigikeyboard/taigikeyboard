@@ -75,13 +75,12 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         /// on every platform — the engine never reads it — so like
         /// `displayLanguage` the default is owned here rather than by
         /// `EngineSettings.defaults`. The key spelling is iOS's
-        /// (`SharedSettings.swift:47`); the DEFAULT is macOS's own: a Mac
-        /// starts with auto-space ON (USER 2026-08-23) where the phones start
-        /// OFF, so a future settings transfer must carry only values a user
-        /// explicitly stored.
+        /// (`SharedSettings.swift:47`). Starts OFF, matching iOS and Android
+        /// (USER 2026-09-02; was ON from 2026-08-23), so a future settings
+        /// transfer must carry only values a user explicitly stored.
         static let isAutoSpaceEnabled = SettingsKey(
             name: "autoSpaceEnabled",
-            defaultValue: true,
+            defaultValue: false,
         )
 
         // The dictionary sources. Key spellings are the iOS ones verbatim

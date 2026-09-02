@@ -98,12 +98,13 @@ pub const IS_CUSTOM_DICT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("customDictEnabled", ENGINE_DEFAULTS.is_custom_dict_enabled);
 
 /// Auto-insert a trailing space after committing a word. Platform-side on
-/// every platform — the engine never reads it. The key spelling is iOS's; the
-/// DEFAULT is the desktop's own: ON (USER 2026-08-23) where the phones start
-/// OFF, so a settings transfer must carry only explicitly stored values.
-pub const IS_AUTO_SPACE_ENABLED: SettingsKey<bool> = SettingsKey::new("autoSpaceEnabled", true);
-// The desktop default is ON — pinned at compile time so a "match the phones" edit is loud.
-const _: () = assert!(IS_AUTO_SPACE_ENABLED.default);
+/// every platform — the engine never reads it. The key spelling is iOS's, and
+/// so is the default: OFF on every platform (USER 2026-09-02; the desktop ran
+/// ON from 2026-08-23), so a settings transfer must carry only explicitly
+/// stored values.
+pub const IS_AUTO_SPACE_ENABLED: SettingsKey<bool> = SettingsKey::new("autoSpaceEnabled", false);
+// Pinned at compile time so a silent flip back to ON is loud.
+const _: () = assert!(!IS_AUTO_SPACE_ENABLED.default);
 
 // Dictionary sources. Spellings are iOS's verbatim (`SharedSettings.swift:53-66`)
 // — including `khiin`, the one key with no `Enabled` suffix. The constant name

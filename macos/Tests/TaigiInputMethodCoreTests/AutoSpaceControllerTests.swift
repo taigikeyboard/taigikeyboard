@@ -5,9 +5,10 @@ import InputMethodKit
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Drives the real controller and engine under the shipped auto-space default
-/// (ON). The sibling controller suites pin their stores OFF, so this one owns
-/// the feature's whole observable surface.
+/// Drives the real controller and engine with auto-space turned ON — the
+/// feature ships OFF, so every session here opts in explicitly. The sibling
+/// controller suites leave it off, so this one owns the feature's whole
+/// observable surface.
 @MainActor
 final class AutoSpaceControllerTests: XCTestCase {
     override func setUp() {
@@ -475,6 +476,8 @@ final class AutoSpaceControllerTests: XCTestCase {
         let presenter = RecordingCandidatePresenter()
         controller.candidatePresenter = presenter
         let store = try makeScratchSettingsStore()
+        // The shipped default is OFF; this suite is about the feature ON.
+        store.isAutoSpaceEnabled = true
         configure?(store)
         controller.settings = store
         controller.activateServer(client)
