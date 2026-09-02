@@ -44,20 +44,6 @@ struct ExpandedCandidateOverlay: View {
 
     // MARK: - Row Layout
 
-    /// §42: whether any cell in the grid renders a subtitle — computed once per
-    /// list and passed down so single-line cells only reserve the second line
-    /// when the content actually has one (mixed 並排 lists keep rows aligned;
-    /// 羅馬字 / 漢羅濫 / TPS content is one line tall).
-    private var contentHasSubtitles: Bool {
-        CandidateCellHelper.contentHasSubtitles(
-            suggestions,
-            isTranslateSwapped: isTranslateSwapped,
-            isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
-            candidateDisplayMode: candidateDisplayMode,
-        )
-    }
-
     private var arrangedRows: [[ExpandedCandidateRowLayout.RowItem]] {
         let controlPanelWidth: CGFloat = 60
         let horizontalPadding: CGFloat = 16 // 8 left + 8 right
@@ -104,11 +90,23 @@ struct ExpandedCandidateOverlay: View {
 
     private var candidateScrollContent: some View {
         let rows = arrangedRows
+        // §42: whether any cell in the grid renders a subtitle — computed ONCE
+        // per render here (not per cell) and passed down so single-line cells
+        // only reserve the second line when the content actually has one
+        // (mixed 並排 lists keep rows aligned; 羅馬字 / 漢羅濫 / TPS content
+        // is one line tall).
+        let contentHasSubtitles = CandidateCellHelper.contentHasSubtitles(
+            suggestions,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
+            candidateDisplayMode: candidateDisplayMode,
+        )
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
                     VStack(spacing: 0) {
-                        candidateRow(rowItems: rowItems)
+                        candidateRow(rowItems: rowItems, contentHasSubtitles: contentHasSubtitles)
 
                         if rowIndex < rows.count - 1 {
                             Divider()
@@ -125,7 +123,10 @@ struct ExpandedCandidateOverlay: View {
         }
     }
 
-    private func candidateRow(rowItems: [ExpandedCandidateRowLayout.RowItem]) -> some View {
+    private func candidateRow(
+        rowItems: [ExpandedCandidateRowLayout.RowItem],
+        contentHasSubtitles: Bool,
+    ) -> some View {
         HStack(spacing: CandidateViewModels.UI.expandedItemSpacing) {
             ForEach(rowItems, id: \.originalIndex) { item in
                 ExpandedCandidateGridCell(

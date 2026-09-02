@@ -9,6 +9,7 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import kotlinx.coroutines.CancellationException
 
@@ -67,6 +68,21 @@ class TaigiAutocompleteService(
         }
     }
 }
+
+/**
+ * Whether the candidate strip renders 漢羅濫 split cells: the picker is set to
+ * [CandidateDisplayMode.COMBINED] and the layout is not TPS (TPS is hanji-first
+ * by construction and ignores the picker). Read per fetch, never snapshotted,
+ * so a settings change takes effect on the next keystroke
+ * (android-guidelines §6 live-read rule).
+ */
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
+// `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still splitting
+// under TPS, or not splitting under 漢羅濫).
+internal fun shouldSplitCombinedCells(
+    candidateDisplayMode: CandidateDisplayMode,
+    isTpsLayout: Boolean,
+): Boolean = candidateDisplayMode == CandidateDisplayMode.COMBINED && !isTpsLayout
 
 /**
  * Wrap a list of engine [RustEngineBridge.ContinuousCandidate] into the
@@ -141,16 +157,11 @@ internal fun buildContinuousSuggestionsForCandidates(
 ): List<TaigiWord> {
     if (!splitCombinedCells) {
         return candidates.mapIndexed { index, candidate ->
-            TaigiWord(
-                // Synthetic id ≥ 1 keeps Continuous candidates outside English
-                // (id ≤ -100) and NextWord (-99..-1) sentinel ranges, and clear
-                // of the lexicon-path slot-0 composing-text cell (id == 0).
-                // Routing keys off additionalInfo — id is defense-in-depth.
+            continuousWord(
                 id = index + 1,
-                roman = candidate.roman,
+                candidate = candidate,
                 hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
-                lengthScore = null,
-                additionalInfo = continuousSidechannels(candidate),
+                cellScript = null,
             )
         }
     }
@@ -161,35 +172,57 @@ internal fun buildContinuousSuggestionsForCandidates(
     // same-span roman (e.g. 台's `tâi`); 食/𤆬 share one `tsia̍h` cell.
     val seenRomanCells = HashSet<Pair<String, Int>>()
     for (candidate in candidates) {
-        val sidechannels = continuousSidechannels(candidate)
         val hanzi = candidate.hanji?.takeIf { it.isNotEmpty() }
         if (hanzi != null) {
-            result += TaigiWord(
-                // Same synthetic id ≥ 1 contract as the unsplit path.
+            result += continuousWord(
                 id = result.size + 1,
-                roman = candidate.roman,
+                candidate = candidate,
                 hanzi = hanzi,
-                lengthScore = null,
-                additionalInfo = sidechannels +
-                    (TaigiWord.MetadataKeys.CELL_SCRIPT to TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI),
+                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
             )
         }
         if (seenRomanCells.add(candidate.roman to candidate.consumedSpanEnd)) {
-            result += TaigiWord(
+            // The roman cell keeps its candidate's hanji: displayText and
+            // the 詞頻 pair-key must not move (§42 — identity is shared,
+            // only the marker decides the shown/committed script).
+            result += continuousWord(
                 id = result.size + 1,
-                roman = candidate.roman,
-                // The roman cell keeps its candidate's hanji: displayText and
-                // the 詞頻 pair-key must not move (§42 — identity is shared,
-                // only the marker decides the shown/committed script).
+                candidate = candidate,
                 hanzi = hanzi,
-                lengthScore = null,
-                additionalInfo = sidechannels +
-                    (TaigiWord.MetadataKeys.CELL_SCRIPT to TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
+                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
             )
         }
     }
     return result
 }
+
+/**
+ * One continuous-candidate [TaigiWord]. The marker-less form ([cellScript]
+ * `null`) is the unsplit carrier; a 濫 split cell adds its
+ * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker on top of the same
+ * sidechannels. Synthetic [id] ≥ 1 keeps Continuous candidates outside
+ * English (id ≤ -100) and NextWord (-99..-1) sentinel ranges, and clear of
+ * the lexicon-path slot-0 composing-text cell (id == 0) — routing keys off
+ * additionalInfo; id is defense-in-depth.
+ */
+private fun continuousWord(
+    id: Int,
+    candidate: RustEngineBridge.ContinuousCandidate,
+    hanzi: String?,
+    cellScript: String?,
+): TaigiWord =
+    TaigiWord(
+        id = id,
+        roman = candidate.roman,
+        hanzi = hanzi,
+        lengthScore = null,
+        additionalInfo =
+            if (cellScript == null) {
+                continuousSidechannels(candidate)
+            } else {
+                continuousSidechannels(candidate) + (TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript)
+            },
+    )
 
 private fun continuousSidechannels(candidate: RustEngineBridge.ContinuousCandidate): Map<String, String> =
     mapOf(

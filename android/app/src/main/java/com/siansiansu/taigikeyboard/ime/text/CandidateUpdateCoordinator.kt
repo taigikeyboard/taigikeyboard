@@ -9,6 +9,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -166,9 +167,7 @@ class CandidateUpdateCoordinator(
                     // never fires under the TPS layout.
                     splitCombinedCellsProvider = {
                         val prefs = taigikeyboard.prefs
-                        prefs.candidateDisplayMode ==
-                            com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode.COMBINED &&
-                            !prefs.isTpsLayout
+                        shouldSplitCombinedCells(prefs.candidateDisplayMode, prefs.isTpsLayout)
                     },
                 ).also { taigiAutocompleteService = it }
             }

@@ -2,7 +2,9 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -63,6 +65,20 @@ class MarkedCellCommitResolverTest {
         )
     }
 
+    /** 括號標註 ON without a roman to bracket commits the bare 漢字 — never `台語 ()`. */
+    @Test
+    fun hanjiCell_bracketsOn_missingRoman_commitsHanjiAlone() {
+        assertEquals(
+            MarkedCellCommit("台語", wroteRomanization = false),
+            resolveMarkedCellCommit(
+                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
+                roman = "",
+                hanzi = "台語",
+                outputBothScripts = true,
+            ),
+        )
+    }
+
     @Test
     fun defectiveMarkers_failOpenToTheUnmarkedPath() {
         assertNull(
@@ -71,8 +87,49 @@ class MarkedCellCommitResolverTest {
         )
         assertNull(resolveMarkedCellCommit(TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI, "tâi-gí", "", true))
         assertNull(
+            "roman marker without roman is a wire defect — resolver declines",
+            resolveMarkedCellCommit(TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN, "", "台語", false),
+        )
+        assertNull(
             "unknown marker value — resolver declines",
             resolveMarkedCellCommit("both", "tâi-gí", "台語", false),
+        )
+    }
+
+    /**
+     * The auto-space verdict for an UNMARKED commit — the derivation the three
+     * unmarked commit sites shared inline before the §42 round hoisted it.
+     * Mirrors iOS `ActionHandlerAutoSpaceVerdictTests`.
+     */
+    @Test
+    fun unmarkedCommitWroteRomanization_falseOnlyForPureHanjiCommit() {
+        // roman-led output (not swapped) always writes romanization
+        assertTrue(unmarkedCommitWroteRomanization(effectiveSwapped = false, outputBothScripts = false))
+        assertTrue(unmarkedCommitWroteRomanization(effectiveSwapped = false, outputBothScripts = true))
+        // swapped/TPS + 括號標註 ON = the `漢字 (羅馬字)` form, which DID write it
+        assertTrue(unmarkedCommitWroteRomanization(effectiveSwapped = true, outputBothScripts = true))
+        // swapped/TPS without brackets = a pure 漢字 commit — no auto-space
+        assertFalse(unmarkedCommitWroteRomanization(effectiveSwapped = true, outputBothScripts = false))
+    }
+
+    /**
+     * The auto-space predicate itself: setting ON + romanization written +
+     * the committed DOCUMENT string not ending in a hyphen continuation.
+     */
+    @Test
+    fun shouldAppendAutoSpace_requiresSettingRomanizationAndNoHyphenTail() {
+        assertTrue(shouldAppendAutoSpace(isAutoSpaceEnabled = true, wroteRomanization = true, committedText = "tâi-gí"))
+        assertFalse(
+            "setting off",
+            shouldAppendAutoSpace(isAutoSpaceEnabled = false, wroteRomanization = true, committedText = "tâi-gí"),
+        )
+        assertFalse(
+            "pure hanji commit wrote no romanization",
+            shouldAppendAutoSpace(isAutoSpaceEnabled = true, wroteRomanization = false, committedText = "台語"),
+        )
+        assertFalse(
+            "trailing hyphen = 連字 continuation, keep composing",
+            shouldAppendAutoSpace(isAutoSpaceEnabled = true, wroteRomanization = true, committedText = "tâi-"),
         )
     }
 }

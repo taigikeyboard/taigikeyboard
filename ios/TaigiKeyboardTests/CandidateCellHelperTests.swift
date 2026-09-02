@@ -19,13 +19,17 @@ final class CandidateCellHelperTests: XCTestCase {
         text: "台語",
         title: "台語",
         subtitle: nil,
-        additionalInfo: ["isContinuous": "true", "cellScript": "hanji", "roman": "tâi-gí"],
+        additionalInfo: [
+            "isContinuous": "true",
+            CandidateCellScript.infoKey: CandidateCellScript.hanji,
+            CandidateCellScript.bracketRomanKey: "tâi-gí",
+        ],
     )
     private let markedRomanCell = AutocompleteSuggestion(
         text: "tâi-gí",
         title: "tâi-gí",
         subtitle: nil,
-        additionalInfo: ["isContinuous": "true", "cellScript": "roman", "hanji": "台語"],
+        additionalInfo: ["isContinuous": "true", CandidateCellScript.infoKey: CandidateCellScript.roman],
     )
 
     // MARK: - romanOnly arm
@@ -68,27 +72,6 @@ final class CandidateCellHelperTests: XCTestCase {
 
     // MARK: - combined arm (漢羅濫 §42 split cells)
 
-    func testDisplayTitle_combined_markedCells_renderOwnScriptAlone() {
-        for swapped in [false, true] {
-            let hanjiTitle = CandidateCellHelper.displayTitle(
-                for: markedHanjiCell,
-                isTranslateSwapped: swapped,
-                isTPSLayout: false,
-                orMapsToER: false,
-                candidateDisplayMode: .combined,
-            )
-            let romanTitle = CandidateCellHelper.displayTitle(
-                for: markedRomanCell,
-                isTranslateSwapped: swapped,
-                isTPSLayout: false,
-                orMapsToER: false,
-                candidateDisplayMode: .combined,
-            )
-            XCTAssertEqual(hanjiTitle, "台語", "hanji cell = its own script (swapped=\(swapped))")
-            XCTAssertEqual(romanTitle, "tâi-gí", "roman cell = its own script (swapped=\(swapped))")
-        }
-    }
-
     func testDisplaySubtitle_combined_isNil() {
         for suggestion in [markedHanjiCell, markedRomanCell, dual] {
             let subtitle = CandidateCellHelper.displaySubtitle(
@@ -112,6 +95,35 @@ final class CandidateCellHelperTests: XCTestCase {
             candidateDisplayMode: .combined,
         )
         XCTAssertEqual(title, "台語", "un-split row under 濫 leads with the hanji")
+    }
+
+    /// The 濫 arm ignores the swap flag for EVERY row shape — marked split
+    /// cells render their own script, un-split rows stay hanji-led. Mirrors
+    /// Android `test_INVARIANT_combined_marked_cells_are_single_script` +
+    /// `combined_unmarkedRow_rendersHanjiLedSingleScript`, and is the property
+    /// `measuredCellWidth`'s combined arm relies on when it measures the title
+    /// with a literal `isTranslateSwapped: false`.
+    func testDisplayTitle_combined_ignoresSwapFlag() {
+        for swapped in [false, true] {
+            let cases: [(AutocompleteSuggestion, String)] = [
+                (markedHanjiCell, "台語"),
+                (markedRomanCell, "tâi-gí"),
+                (dual, "台語"),
+            ]
+            for (suggestion, expected) in cases {
+                XCTAssertEqual(
+                    CandidateCellHelper.displayTitle(
+                        for: suggestion,
+                        isTranslateSwapped: swapped,
+                        isTPSLayout: false,
+                        orMapsToER: false,
+                        candidateDisplayMode: .combined,
+                    ),
+                    expected,
+                    "濫 title is swap-invariant (swapped=\(swapped))",
+                )
+            }
+        }
     }
 
     func testDisplayTitle_combined_hanjiLessRow_showsRomanAlone() {
@@ -159,6 +171,30 @@ final class CandidateCellHelperTests: XCTestCase {
         )
     }
 
+    /// An un-split 濫 row (NextWord prediction) renders hanji-led single-line
+    /// at the TITLE font — width measures the rendered title, not the two-line
+    /// `max(text@title, subtitle@subtitle)` rule.
+    func testMeasuredCellWidth_combined_unsplitRow_measuresHanjiLedTitleFont() {
+        let titleFontSize: CGFloat = 17
+        let width = CandidateCellHelper.measuredCellWidth(
+            for: dual,
+            isTPSLayout: false,
+            orMapsToER: false,
+            candidateDisplayMode: .combined,
+            titleFontSize: titleFontSize,
+            subtitleFontSize: 13,
+        )
+        let titleWidth = ("台語" as NSString)
+            .size(withAttributes: [.font: KeyboardFonts.globalUIFont(size: titleFontSize)])
+            .width
+        XCTAssertEqual(
+            width,
+            max(CandidateCellHelper.minimumCellWidth, titleWidth + 20),
+            accuracy: 0.5,
+            "un-split 濫 row width = rendered hanji-led title at title font",
+        )
+    }
+
     // MARK: - suggestionToHandle marked no-op (§42)
 
     /// A marked cell already carries exactly the script it commits: the swap
@@ -169,7 +205,11 @@ final class CandidateCellHelperTests: XCTestCase {
             text: "台語",
             title: "台語",
             subtitle: "tâi-gí",
-            additionalInfo: ["isContinuous": "true", "cellScript": "hanji", "roman": "tâi-gí"],
+            additionalInfo: [
+                "isContinuous": "true",
+                CandidateCellScript.infoKey: CandidateCellScript.hanji,
+                CandidateCellScript.bracketRomanKey: "tâi-gí",
+            ],
         )
         let handled = CandidateCellHelper.suggestionToHandle(
             for: hostile,
@@ -179,7 +219,7 @@ final class CandidateCellHelperTests: XCTestCase {
         )
         XCTAssertEqual(handled.text, "台語", "marked cell text must survive the swap rewrite")
         XCTAssertEqual(handled.subtitle, "tâi-gí", "marked cell passes through unmodified")
-        XCTAssertEqual(handled.additionalInfo["cellScript"], "hanji")
+        XCTAssertEqual(handled.additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.hanji)
     }
 
     /// The guard also precedes the TPS fallback rewrite (defensive — TPS never

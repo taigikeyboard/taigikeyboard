@@ -89,8 +89,27 @@ fun TaigiCandidateStrip(
                         isTranslateSwapped = display.isTranslateSwapped,
                         cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
                     )
-                !cell.subtitle.isNullOrEmpty() && cell.subtitle != cell.title
+                cell.showsSubtitle
             }
+        }
+
+    // Cell-invariant font sizing (content-level, §42): computed once per strip
+    // instead of one identical remember slot per cell.
+    val res = LocalResources.current
+    val configuration = LocalConfiguration.current
+    val paddingPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_padding) }
+    val marginPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_margin) }
+    val candidateFontSizes =
+        remember(display.smartbarHeightPx, display.textSizeScale, paddingPx, marginPx, contentHasSubtitles) {
+            computeCandidateFontSizes(
+                smartbarHeightPx = display.smartbarHeightPx,
+                paddingPx = paddingPx,
+                marginPx = marginPx,
+                density = res.displayMetrics.density,
+                fontScale = configuration.fontScale,
+                textSizeScale = display.textSizeScale,
+                contentHasSubtitles = contentHasSubtitles,
+            )
         }
 
     val backgroundModifier =
@@ -118,7 +137,7 @@ fun TaigiCandidateStrip(
                 index = index,
                 display = display,
                 fontFamily = fontFamily,
-                contentHasSubtitles = contentHasSubtitles,
+                fontSizes = candidateFontSizes,
                 onClick = { onCandidateClick(word, index) },
             )
         }
@@ -189,7 +208,7 @@ private fun CandidateCell(
     index: Int,
     display: CandidateDisplayParams,
     fontFamily: FontFamily,
-    contentHasSubtitles: Boolean,
+    fontSizes: Pair<Float, Float>,
     onClick: () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -228,7 +247,7 @@ private fun CandidateCell(
                 word.roman
             }
         }
-    val (titleText, subtitleText) =
+    val cell =
         candidateCellText(
             hanzi = word.hanzi,
             displayRoman = displayRoman,
@@ -237,20 +256,11 @@ private fun CandidateCell(
             isTranslateSwapped = display.isTranslateSwapped,
             cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
         )
-    val showSubtitle = !subtitleText.isNullOrEmpty() && subtitleText != titleText
+    val (titleText, subtitleText) = cell
+    val showSubtitle = cell.showsSubtitle
 
-    val (titleSp, subtitleSp) =
-        remember(display.smartbarHeightPx, display.textSizeScale, paddingPx, marginPx, contentHasSubtitles) {
-            computeCandidateFontSizes(
-                smartbarHeightPx = display.smartbarHeightPx,
-                paddingPx = paddingPx,
-                marginPx = marginPx,
-                density = res.displayMetrics.density,
-                fontScale = configuration.fontScale,
-                textSizeScale = display.textSizeScale,
-                contentHasSubtitles = contentHasSubtitles,
-            )
-        }
+    // Hoisted by TaigiCandidateStrip — the sizes are cell-invariant (content-level sizing).
+    val (titleSp, subtitleSp) = fontSizes
 
     val titleColor = display.candidateTextColor?.let { Color(it) } ?: Color(display.themeTitleColor)
     val subtitleColor = display.candidateTextColor?.let { Color(it) } ?: Color(display.themeSubtitleColor)

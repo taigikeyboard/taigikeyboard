@@ -58,6 +58,14 @@ data class CandidateCellText(
 )
 
 /**
+ * True when the cell renders a second line — a non-empty subtitle distinct
+ * from the title. Single spelling shared by the strip's content-level sizing
+ * scan and the per-cell render gate.
+ */
+val CandidateCellText.showsSubtitle: Boolean
+    get() = !subtitle.isNullOrEmpty() && subtitle != title
+
+/**
  * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
  * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED renders ONE
  * script per cell, no subtitle (the builder already split each candidate

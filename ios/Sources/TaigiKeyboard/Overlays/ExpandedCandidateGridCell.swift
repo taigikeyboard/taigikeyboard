@@ -44,6 +44,19 @@ struct ExpandedCandidateGridCell: View {
         )
     }
 
+    /// The subtitle this cell actually renders — single-sourced in
+    /// `CandidateCellHelper.renderedSubtitle` (same predicate
+    /// `contentHasSubtitles` scans with).
+    private var renderedSubtitle: String? {
+        CandidateCellHelper.renderedSubtitle(
+            for: suggestion,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
+            candidateDisplayMode: candidateDisplayMode,
+        )
+    }
+
     private var backgroundColor: Color {
         style.itemStyle.resolvedBackgroundColor(
             for: colorScheme,
@@ -73,19 +86,14 @@ struct ExpandedCandidateGridCell: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
+                if let subtitle = renderedSubtitle {
                     Text(subtitle)
                         .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
                         .foregroundColor(theme.secondaryTextColor)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } else if contentHasSubtitles {
-                    // Invisible subtitle spacer — keeps a one-line cell's title aligned
-                    // with its two-line neighbors in a mixed list. Skipped when NO cell
-                    // renders a subtitle (§42: one-script content is one line tall).
-                    Text(" ")
-                        .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
-                        .opacity(0)
+                    SubtitleSpacer(fontSize: theme.secondaryFontSize)
                 }
             }
             .padding(.vertical, CandidateViewModels.UI.expandedButtonVerticalPadding)

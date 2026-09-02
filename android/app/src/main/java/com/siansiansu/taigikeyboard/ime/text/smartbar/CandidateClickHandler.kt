@@ -104,7 +104,7 @@ class CandidateClickHandler(
 
                     cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
                         if (effectiveSwapped) {
-                            "${selectedWord.hanzi} ($bracketRoman)"
+                            bracketedCommit(selectedWord.hanzi, bracketRoman)
                         } else {
                             "$bracketRoman (${selectedWord.hanzi})"
                         }
@@ -152,7 +152,11 @@ class CandidateClickHandler(
                 composingManager?.selectSuggestion(textToCommit, ic)
             }
 
-            appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
+            appendAutoSpaceIfApplicable(
+                ic,
+                textToCommit,
+                wroteRomanization = unmarkedCommitWroteRomanization(effectiveSwapped, cachedOutputBothScripts),
+            )
 
             // Record usage frequency. R5 pair-key (#7): the candidate's
             // canonical-TL reading from the metadata sidechannel keeps
@@ -239,7 +243,7 @@ class CandidateClickHandler(
             when {
                 cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
                     if (effectiveSwapped) {
-                        "${word.hanzi} ($bracketRoman)"
+                        bracketedCommit(word.hanzi, bracketRoman)
                     } else {
                         "$bracketRoman (${word.hanzi})"
                     }
@@ -262,7 +266,11 @@ class CandidateClickHandler(
             composingManager?.selectSuggestion(textToCommit, ic)
         }
 
-        appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
+        appendAutoSpaceIfApplicable(
+            ic,
+            textToCommit,
+            wroteRomanization = unmarkedCommitWroteRomanization(effectiveSwapped, cachedOutputBothScripts),
+        )
 
         // Record usage frequency. R5 pair-key (#7): canonical-TL reading
         // from the metadata sidechannel; "" only on wire skew / TPS-OOV.
@@ -378,14 +386,14 @@ class CandidateClickHandler(
                 when {
                     cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
                         if (effectiveSwapped) {
-                            "${selectedWord.hanzi} ($bracketRoman)"
+                            bracketedCommit(selectedWord.hanzi, bracketRoman)
                         } else {
                             "$bracketRoman (${selectedWord.hanzi})"
                         }
                     }
 
                     effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> {
-                        selectedWord.hanzi!!
+                        selectedWord.hanzi
                     }
 
                     else -> {
@@ -438,17 +446,16 @@ class CandidateClickHandler(
         // Mid-commits leave the buffer non-empty so a stray space would split
         // the word mid-syllable.
         if (result.didFinalCommit) {
-            // Reuse the hoisted swap/output flags. Suffix check runs on the
-            // actual committed document string (`textToCommit`), not the
-            // canonical key (Codex post-impl: auto-space suffix check must use
-            // the document string). A marked 濫 commit passes its resolved
-            // wrote-romanization verdict; unmarked commits keep the derivation.
+            // Suffix check runs on the actual committed document string
+            // (`textToCommit`), not the canonical key (Codex post-impl:
+            // auto-space suffix check must use the document string). A marked
+            // 濫 commit passes its resolved wrote-romanization verdict;
+            // unmarked commits use the same derivation as the lexicon paths.
             appendAutoSpaceIfApplicable(
                 ic,
                 textToCommit,
-                effectiveSwapped,
-                cachedOutputBothScripts,
-                wroteRomanizationOverride = markedCommit?.wroteRomanization,
+                wroteRomanization = markedCommit?.wroteRomanization
+                    ?: unmarkedCommitWroteRomanization(effectiveSwapped, cachedOutputBothScripts),
             )
         }
     }
@@ -457,26 +464,20 @@ class CandidateClickHandler(
      * Insert a single trailing space when auto-space is enabled, the commit
      * wrote romanization, and the committed text doesn't already end in a
      * hyphen continuation. Shared by [handleCandidateClick],
-     * [handleOverlaySuggestionSelected], and
-     * [handleContinuousCandidateClick] so the four-clause predicate stays
-     * single-sourced. A 漢羅濫 marked commit supplies
-     * [wroteRomanizationOverride] — the resolved "did this commit write
-     * romanization" verdict — instead of the mode-derived rule (§42:
-     * auto-space follows the script actually committed).
+     * [handleOverlaySuggestionSelected], and [handleContinuousCandidateClick].
+     * Callers resolve [wroteRomanization] themselves: unmarked commits derive
+     * `!effectiveSwapped || outputBothScripts` (a commit writes romanization
+     * unless it is a pure-hanji commit — effectively swapped without the
+     * bracket form); a 漢羅濫 marked commit passes
+     * [MarkedCellCommit.wroteRomanization] instead (§42: auto-space follows
+     * the script actually committed).
      */
     private fun appendAutoSpaceIfApplicable(
         ic: android.view.inputmethod.InputConnection,
         committedText: String,
-        effectiveSwapped: Boolean,
-        outputBothScripts: Boolean,
-        wroteRomanizationOverride: Boolean? = null,
+        wroteRomanization: Boolean,
     ) {
-        if (!prefs.isAutoSpaceEnabled) return
-        // Unmarked derivation: a commit writes romanization unless it is a
-        // pure-hanji commit (effectively swapped without the bracket form).
-        val wroteRomanization = wroteRomanizationOverride ?: (!effectiveSwapped || outputBothScripts)
-        if (!wroteRomanization) return
-        if (committedText.endsWith("-")) return
+        if (!shouldAppendAutoSpace(prefs.isAutoSpaceEnabled, wroteRomanization, committedText)) return
         ic.commitText(" ", 1)
     }
 
@@ -486,12 +487,51 @@ class CandidateClickHandler(
 }
 
 /**
+ * 括號標註 / both-scripts commit form when 漢字 leads — the romanization
+ * rides in trailing brackets. Single spelling for the four hanji-first
+ * commit sites; the roman-first inverse (`roman (hanzi)`) stays inline.
+ */
+private fun bracketedCommit(
+    hanzi: String,
+    roman: String,
+): String = "$hanzi ($roman)"
+
+/**
+ * Whether an UNMARKED commit wrote romanization into the document: it did
+ * unless it was a pure-hanji commit — effectively swapped (漢字-led or TPS)
+ * without the 括號標註 bracket form. Single spelling shared by the three
+ * unmarked commit sites.
+ */
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
+// `unmarkedCommitWroteRomanization`. Drift causes silent divergence (a missing or stray
+// auto-space after a swapped-mode commit).
+internal fun unmarkedCommitWroteRomanization(
+    effectiveSwapped: Boolean,
+    outputBothScripts: Boolean,
+): Boolean = !effectiveSwapped || outputBothScripts
+
+/**
+ * Whether to insert the trailing auto-space: the setting is on, the commit
+ * wrote romanization, and the committed DOCUMENT string does not end in a
+ * hyphen continuation (a mid-word 連字 keeps composing). The Continuous
+ * caller still owns the final-commit gate.
+ */
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
+// `shouldAppendAutoSpace`. Drift causes silent divergence (one platform spacing after a
+// hyphen continuation).
+internal fun shouldAppendAutoSpace(
+    isAutoSpaceEnabled: Boolean,
+    wroteRomanization: Boolean,
+    committedText: String,
+): Boolean = isAutoSpaceEnabled && wroteRomanization && !committedText.endsWith("-")
+
+/**
  * Document text + auto-space verdict for a 漢羅濫
  * [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell (§42 second exception).
  * Hanji cell → the 漢字, or `漢字 (羅馬字)` when 括號標註 is on (only then
  * did the commit write romanization); roman cell → the BARE roman, brackets
  * IGNORED (desktop `.alternate` parity), always romanization. Returns
- * `null` for an unknown marker or a hanji marker without hanji (wire
+ * `null` for an unknown marker or a marker whose payload is missing (wire
  * defect) — the caller falls back to the unmarked mode-derived path.
  * Top-level pure function so the contract is unit-testable without
  * collaborators.
@@ -505,14 +545,16 @@ internal fun resolveMarkedCellCommit(
     outputBothScripts: Boolean,
 ): MarkedCellCommit? =
     when {
-        cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN ->
+        cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN && roman.isNotEmpty() ->
             MarkedCellCommit(documentText = roman, wroteRomanization = true)
 
         cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI && !hanzi.isNullOrEmpty() ->
-            MarkedCellCommit(
-                documentText = if (outputBothScripts) "$hanzi ($roman)" else hanzi,
-                wroteRomanization = outputBothScripts,
-            )
+            if (outputBothScripts && roman.isNotEmpty()) {
+                MarkedCellCommit(documentText = bracketedCommit(hanzi, roman), wroteRomanization = true)
+            } else {
+                // No roman to bracket → the bare 漢字, never empty brackets.
+                MarkedCellCommit(documentText = hanzi, wroteRomanization = false)
+            }
 
         else -> null
     }

@@ -364,7 +364,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
-            candidateDisplayMode: .combined,
+            splitCombinedCells: true,
         )
         XCTAssertEqual(result.count, 2, "one candidate → hanji cell + roman cell")
 
@@ -372,15 +372,18 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(hanjiCell.text, "台語")
         XCTAssertEqual(hanjiCell.title, "台語")
         XCTAssertNil(hanjiCell.subtitle, "split cells carry no subtitle")
-        XCTAssertEqual(hanjiCell.additionalInfo["cellScript"], "hanji")
-        XCTAssertEqual(hanjiCell.additionalInfo["roman"], "tâi-gí", "bracket-form carrier")
+        XCTAssertEqual(hanjiCell.additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.hanji)
+        XCTAssertEqual(
+            hanjiCell.additionalInfo[CandidateCellScript.bracketRomanKey],
+            "tâi-gí",
+            "bracket-form carrier",
+        )
 
         let romanCell = result[1]
         XCTAssertEqual(romanCell.text, "tâi-gí")
         XCTAssertEqual(romanCell.title, "tâi-gí")
         XCTAssertNil(romanCell.subtitle, "split cells carry no subtitle")
-        XCTAssertEqual(romanCell.additionalInfo["cellScript"], "roman")
-        XCTAssertEqual(romanCell.additionalInfo["hanji"], "台語")
+        XCTAssertEqual(romanCell.additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.roman)
 
         for cell in result {
             XCTAssertEqual(cell.additionalInfo["isContinuous"], "true")
@@ -397,13 +400,12 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
-            candidateDisplayMode: .combined,
+            splitCombinedCells: true,
         )
         XCTAssertEqual(result.count, 1, "no hanji → roman cell alone")
         XCTAssertEqual(result[0].text, "tāi")
         XCTAssertNil(result[0].subtitle)
-        XCTAssertEqual(result[0].additionalInfo["cellScript"], "roman")
-        XCTAssertNil(result[0].additionalInfo["hanji"], "no hanji sidechannel to carry")
+        XCTAssertEqual(result[0].additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.roman)
     }
 
     /// Roman cells dedupe on `(roman, consumedBytes)` in FETCHED order —
@@ -417,10 +419,10 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
-            candidateDisplayMode: .combined,
+            splitCombinedCells: true,
         )
         XCTAssertEqual(result.map(\.text), ["食", "tsia̍h", "𤆬"], "roman cell rides beside the FIRST candidate; 𤆬's duplicate roman is skipped")
-        XCTAssertEqual(result[1].additionalInfo["hanji"], "食", "surviving roman cell is the first-seen one")
+        XCTAssertEqual(result[1].additionalInfo["displayText"], "食", "surviving roman cell is the first-seen one")
     }
 
     /// The §34 literal (hanji-less and first in fetched order) absorbs a
@@ -432,10 +434,10 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
-            candidateDisplayMode: .combined,
+            splitCombinedCells: true,
         )
         XCTAssertEqual(result.map(\.text), ["tâi", "台"], "literal's roman cell absorbs 台's; 台 keeps its hanji cell")
-        XCTAssertNil(result[0].additionalInfo["hanji"], "surviving roman cell is the literal's")
+        XCTAssertEqual(result[0].additionalInfo["displayText"], "tâi", "surviving roman cell is the literal's")
     }
 
     func testCombined_SameRomanDifferentSpan_BothRomanCellsStay() {
@@ -445,14 +447,16 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
-            candidateDisplayMode: .combined,
+            splitCombinedCells: true,
         )
         XCTAssertEqual(result.count, 2, "dedupe key is (roman, consumedBytes) — a different span is a different cell")
     }
 
-    /// Every other mode emits today's un-split shape byte-identically — the
-    /// default parameter, explicit 並排, and 羅馬字 all agree field-for-field.
-    func testNonCombinedModes_EmitUnsplitShapeByteIdentically() {
+    /// Split OFF (並排 / 羅馬字 / TPS all resolve to `splitCombinedCells =
+    /// false` at the provider) emits today's un-split shape byte-identically —
+    /// the default parameter and explicit `false` agree field-for-field, with
+    /// no `cellScript` marker. Mirrors Android's "S27 combined split OFF" pin.
+    func testSplitOff_EmitsUnsplitShapeByteIdentically() {
         let candidates = [
             makeCandidate(
                 consumedSpanEnd: 7,
@@ -464,14 +468,36 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             ),
         ]
         let baseline = service.buildContinuousSuggestions(from: candidates)
+        let result = service.buildContinuousSuggestions(from: candidates, splitCombinedCells: false)
+        XCTAssertEqual(result.count, baseline.count)
+        XCTAssertEqual(result[0].text, baseline[0].text)
+        XCTAssertEqual(result[0].title, baseline[0].title)
+        XCTAssertEqual(result[0].subtitle, baseline[0].subtitle)
+        XCTAssertEqual(result[0].additionalInfo, baseline[0].additionalInfo)
+        XCTAssertNil(result[0].additionalInfo[CandidateCellScript.infoKey], "no marker on the un-split path")
+    }
+
+    // MARK: - Split gate (which mode / layout splits at all)
+
+    /// §42 濫 split gate: 漢羅濫 + non-TPS splits, everything else does not.
+    /// Pins the polarity of the TPS clause (an inverted condition would split
+    /// under TPS and stop splitting under 漢羅濫). Mirrors Android
+    /// `split gate is combined mode outside TPS only`.
+    func testSplitGate_isCombinedModeOutsideTPSOnly() {
+        XCTAssertTrue(shouldSplitCombinedCells(keyboardLayoutType: .phahTaigi, candidateDisplayMode: .combined))
+        XCTAssertFalse(
+            shouldSplitCombinedCells(keyboardLayoutType: .tps, candidateDisplayMode: .combined),
+            "TPS ignores the picker — hanji-first by construction",
+        )
         for mode in [CandidateDisplayMode.sideBySide, .romanOnly] {
-            let result = service.buildContinuousSuggestions(from: candidates, candidateDisplayMode: mode)
-            XCTAssertEqual(result.count, baseline.count, "\(mode)")
-            XCTAssertEqual(result[0].text, baseline[0].text, "\(mode)")
-            XCTAssertEqual(result[0].title, baseline[0].title, "\(mode)")
-            XCTAssertEqual(result[0].subtitle, baseline[0].subtitle, "\(mode)")
-            XCTAssertEqual(result[0].additionalInfo, baseline[0].additionalInfo, "\(mode)")
-            XCTAssertNil(result[0].additionalInfo["cellScript"], "no marker outside 濫 (\(mode))")
+            XCTAssertFalse(
+                shouldSplitCombinedCells(keyboardLayoutType: .phahTaigi, candidateDisplayMode: mode),
+                "\(mode) never splits",
+            )
+            XCTAssertFalse(
+                shouldSplitCombinedCells(keyboardLayoutType: .tps, candidateDisplayMode: mode),
+                "\(mode) never splits under TPS",
+            )
         }
     }
 

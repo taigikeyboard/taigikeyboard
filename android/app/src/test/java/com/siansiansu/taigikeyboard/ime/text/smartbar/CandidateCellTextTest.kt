@@ -3,6 +3,8 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -26,6 +28,15 @@ class CandidateCellTextTest {
     @Test
     fun sideBySide_romanLeads_hanjiSubtitle() {
         assertEquals(CandidateCellText("tâi-gí", "台語"), cell())
+    }
+
+    /** The strip's content-level sizing scan and the per-cell render gate share this predicate. */
+    @Test
+    fun showsSubtitle_trueOnlyForDistinctNonEmptySubtitle() {
+        assertTrue(CandidateCellText("tâi-gí", "台語").showsSubtitle)
+        assertFalse(CandidateCellText("tâi-gí", null).showsSubtitle)
+        assertFalse(CandidateCellText("tâi-gí", "").showsSubtitle)
+        assertFalse(CandidateCellText("tâi-gí", "tâi-gí").showsSubtitle)
     }
 
     @Test
