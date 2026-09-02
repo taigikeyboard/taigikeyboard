@@ -55,6 +55,7 @@ class CandidateClickHandler(
     ) {
         TraceContext.withTrace(TraceId.next()) {
             logger.debug(TAG) { "[INPUT] fn=handleCandidateClick gesture=candidate-tap" }
+            taigikeyboard.beginInputEvent()
 
             if (logger.isDebugEnabled) {
                 val isNextWord = getCurrentSuggestions().firstOrNull()?.id?.let { it < 0 } ?: false
@@ -96,28 +97,20 @@ class CandidateClickHandler(
                     selectedWord.roman
                 }
 
-            val textToCommit =
-                when {
-                    isEnglishSuggestion -> {
-                        selectedWord.roman
-                    }
-
-                    cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
-                        if (effectiveSwapped) {
-                            bracketedCommit(selectedWord.hanzi, bracketRoman)
-                        } else {
-                            "$bracketRoman (${selectedWord.hanzi})"
-                        }
-                    }
-
-                    effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> {
-                        selectedWord.hanzi
-                    }
-
-                    else -> {
-                        selectedWord.roman
-                    }
+            val resolved =
+                if (isEnglishSuggestion) {
+                    // An English word IS Latin text, so it takes the spacing.
+                    ResolvedCommit(selectedWord.roman, wroteRomanization = true)
+                } else {
+                    resolveUnmarkedCommit(
+                        roman = selectedWord.roman,
+                        bracketRoman = bracketRoman,
+                        hanzi = selectedWord.hanzi,
+                        effectiveSwapped = effectiveSwapped,
+                        outputBothScripts = cachedOutputBothScripts,
+                    )
                 }
+            val textToCommit = resolved.text
 
             if (logger.isDebugEnabled) {
                 logger.d(
@@ -152,11 +145,7 @@ class CandidateClickHandler(
                 composingManager?.selectSuggestion(textToCommit, ic)
             }
 
-            appendAutoSpaceIfApplicable(
-                ic,
-                textToCommit,
-                wroteRomanization = unmarkedCommitWroteRomanization(effectiveSwapped, cachedOutputBothScripts),
-            )
+            appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
 
             // Record usage frequency. R5 pair-key (#7): the candidate's
             // canonical-TL reading from the metadata sidechannel keeps
@@ -212,6 +201,7 @@ class CandidateClickHandler(
         word: TaigiWord,
         index: Int,
     ) {
+        taigikeyboard.beginInputEvent()
         val ic = taigikeyboard.currentInputConnection ?: return
         val composingManager = getComposingManager()
 
@@ -239,24 +229,15 @@ class CandidateClickHandler(
                 word.roman
             }
 
-        val textToCommit =
-            when {
-                cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
-                    if (effectiveSwapped) {
-                        bracketedCommit(word.hanzi, bracketRoman)
-                    } else {
-                        "$bracketRoman (${word.hanzi})"
-                    }
-                }
-
-                effectiveSwapped && !word.hanzi.isNullOrEmpty() -> {
-                    word.hanzi
-                }
-
-                else -> {
-                    word.roman
-                }
-            }
+        val resolved =
+            resolveUnmarkedCommit(
+                roman = word.roman,
+                bracketRoman = bracketRoman,
+                hanzi = word.hanzi,
+                effectiveSwapped = effectiveSwapped,
+                outputBothScripts = cachedOutputBothScripts,
+            )
+        val textToCommit = resolved.text
 
         if (isNextWordPred) {
             ic.commitText(textToCommit, 1)
@@ -266,11 +247,7 @@ class CandidateClickHandler(
             composingManager?.selectSuggestion(textToCommit, ic)
         }
 
-        appendAutoSpaceIfApplicable(
-            ic,
-            textToCommit,
-            wroteRomanization = unmarkedCommitWroteRomanization(effectiveSwapped, cachedOutputBothScripts),
-        )
+        appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
 
         // Record usage frequency. R5 pair-key (#7): canonical-TL reading
         // from the metadata sidechannel; "" only on wire skew / TPS-OOV.
@@ -325,7 +302,7 @@ class CandidateClickHandler(
      * §42 漢羅濫 split cells: a [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked
      * cell resolves its document string via [resolveMarkedCellCommit]
      * (the marker is authoritative; the mode-derived when-expr is bypassed)
-     * and its auto-space verdict rides [MarkedCellCommit.wroteRomanization].
+     * and its auto-space verdict rides [ResolvedCommit.wroteRomanization].
      * Identity (`commitContinuous` canonicalText/associationTl, 詞頻
      * pair-key) is marker-independent — both cells commit the same
      * candidate.
@@ -375,32 +352,23 @@ class CandidateClickHandler(
                     outputBothScripts = cachedOutputBothScripts,
                 )
             }
-        val textToCommit =
-            markedCommit?.documentText ?: run {
+        val resolved =
+            markedCommit ?: run {
                 val bracketRoman =
                     if (isTPSLayout) {
                         RustEngineBridge.tlDisplayToTps(selectedWord.roman, prefs.tpsOrMapsToER)
                     } else {
                         selectedWord.roman
                     }
-                when {
-                    cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
-                        if (effectiveSwapped) {
-                            bracketedCommit(selectedWord.hanzi, bracketRoman)
-                        } else {
-                            "$bracketRoman (${selectedWord.hanzi})"
-                        }
-                    }
-
-                    effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> {
-                        selectedWord.hanzi
-                    }
-
-                    else -> {
-                        selectedWord.roman
-                    }
-                }
+                resolveUnmarkedCommit(
+                    roman = selectedWord.roman,
+                    bracketRoman = bracketRoman,
+                    hanzi = selectedWord.hanzi,
+                    effectiveSwapped = effectiveSwapped,
+                    outputBothScripts = cachedOutputBothScripts,
+                )
             }
+        val textToCommit = resolved.text
 
         // R2: canonical TL identity sidechannel — forwarded as
         // `associationTl` so NextWord learns the same next_tl/prev_tl a
@@ -444,41 +412,12 @@ class CandidateClickHandler(
 
         // Auto-space only on final-commit (engine returned to Idle this call).
         // Mid-commits leave the buffer non-empty so a stray space would split
-        // the word mid-syllable.
+        // the word mid-syllable. Suffix check runs on the actual committed
+        // document string (`textToCommit`), not the canonical key (Codex
+        // post-impl: auto-space suffix check must use the document string).
         if (result.didFinalCommit) {
-            // Suffix check runs on the actual committed document string
-            // (`textToCommit`), not the canonical key (Codex post-impl:
-            // auto-space suffix check must use the document string). A marked
-            // 濫 commit passes its resolved wrote-romanization verdict;
-            // unmarked commits use the same derivation as the lexicon paths.
-            appendAutoSpaceIfApplicable(
-                ic,
-                textToCommit,
-                wroteRomanization = markedCommit?.wroteRomanization
-                    ?: unmarkedCommitWroteRomanization(effectiveSwapped, cachedOutputBothScripts),
-            )
+            appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
         }
-    }
-
-    /**
-     * Insert a single trailing space when auto-space is enabled, the commit
-     * wrote romanization, and the committed text doesn't already end in a
-     * hyphen continuation. Shared by [handleCandidateClick],
-     * [handleOverlaySuggestionSelected], and [handleContinuousCandidateClick].
-     * Callers resolve [wroteRomanization] themselves: unmarked commits derive
-     * `!effectiveSwapped || outputBothScripts` (a commit writes romanization
-     * unless it is a pure-hanji commit — effectively swapped without the
-     * bracket form); a 漢羅濫 marked commit passes
-     * [MarkedCellCommit.wroteRomanization] instead (§42: auto-space follows
-     * the script actually committed).
-     */
-    private fun appendAutoSpaceIfApplicable(
-        ic: android.view.inputmethod.InputConnection,
-        committedText: String,
-        wroteRomanization: Boolean,
-    ) {
-        if (!shouldAppendAutoSpace(prefs.isAutoSpaceEnabled, wroteRomanization, committedText)) return
-        ic.commitText(" ", 1)
     }
 
     companion object {
@@ -497,18 +436,84 @@ private fun bracketedCommit(
 ): String = "$hanzi ($roman)"
 
 /**
- * Whether an UNMARKED commit wrote romanization into the document: it did
- * unless it was a pure-hanji commit — effectively swapped (漢字-led or TPS)
- * without the 括號標註 bracket form. Single spelling shared by the three
- * unmarked commit sites.
+ * Document text + auto-space verdict for an UNMARKED commit — the three
+ * sites that build the string from the candidate's own `(roman, hanzi)`
+ * pair rather than from a §42 cell marker.
+ *
+ * The verdict is resolved by the SAME arm that picks the string, never from
+ * the output mode afterwards. Auto-space is a property of ROMANIZATION
+ * (`guá beh khì` needs the gaps, 我欲去 does not), and a candidate with no
+ * Hanji — the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+ * romanization-only custom entry — falls to the last arm and writes its
+ * romanization whatever the mode leads with.
+ *
+ * `bracketRoman` is the 括號標註 rendering of `roman` (TPS-converted in a
+ * TPS layout); the bare `roman` is what a roman-led commit writes.
  */
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
-// `unmarkedCommitWroteRomanization`. Drift causes silent divergence (a missing or stray
-// auto-space after a swapped-mode commit).
-internal fun unmarkedCommitWroteRomanization(
+// `formatOutputText` and macos/.../CandidateDocumentText.swift `resolved`. Drift causes
+// silent divergence (a missing or stray auto-space after a swapped-mode commit).
+internal fun resolveUnmarkedCommit(
+    roman: String,
+    bracketRoman: String,
+    hanzi: String?,
     effectiveSwapped: Boolean,
     outputBothScripts: Boolean,
-): Boolean = !effectiveSwapped || outputBothScripts
+): ResolvedCommit =
+    when {
+        // 括號標註 writes the pair, so the romanization IS in the document
+        // whichever half leads.
+        outputBothScripts && !hanzi.isNullOrEmpty() ->
+            ResolvedCommit(
+                text =
+                    if (effectiveSwapped) {
+                        bracketedCommit(hanzi, bracketRoman)
+                    } else {
+                        "$bracketRoman ($hanzi)"
+                    },
+                wroteRomanization = true,
+            )
+
+        effectiveSwapped && !hanzi.isNullOrEmpty() ->
+            ResolvedCommit(text = hanzi, wroteRomanization = false)
+
+        else -> ResolvedCommit(text = roman, wroteRomanization = true)
+    }
+
+/**
+ * Insert a single trailing space when auto-space is enabled, the commit wrote
+ * romanization, and the committed text does not already end in a hyphen
+ * continuation — and arm the punctuation swap on it.
+ *
+ * The ONE place a space and the knowledge that it is ours are set together, so
+ * they can never come apart: a commit that earns nothing arms nothing, and the
+ * event already consumed the previous arm ([TaigiKeyboard.beginInputEvent]).
+ * Callers resolve [wroteRomanization] from the arm that picked the document
+ * string — [resolveUnmarkedCommit], [resolveMarkedCellCommit], or
+ * [rawPreeditWritesRomanization] — never from the output mode.
+ */
+internal fun appendAutoSpaceIfEarned(
+    taigikeyboard: TaigiKeyboard,
+    ic: android.view.inputmethod.InputConnection,
+    committedText: String,
+    wroteRomanization: Boolean,
+) {
+    if (!shouldAppendAutoSpace(taigikeyboard.prefs.isAutoSpaceEnabled, wroteRomanization, committedText)) return
+    ic.commitText(" ", 1)
+    taigikeyboard.armAutoSpaceSwap()
+}
+
+/**
+ * Whether the layout in use composes romanization — TL and POJ do, TPS
+ * composes Bopomofo, which takes no word spacing. The verdict for every commit
+ * that writes the composition AS TYPED (Enter on the raw input), which does
+ * not go through a candidate's rendering.
+ */
+// CROSS-PLATFORM INVARIANT — one name on all four platforms: ios
+// `ActionHandler.rawPreeditWritesRomanization`, macOS/Windows
+// `AutoSpacePolicy.rawPreeditWritesRomanization(inputMode:)` /
+// `policies::raw_preedit_writes_romanization`.
+internal fun rawPreeditWritesRomanization(isTPSLayout: Boolean): Boolean = !isTPSLayout
 
 /**
  * Whether to insert the trailing auto-space: the setting is on, the commit
@@ -543,24 +548,30 @@ internal fun resolveMarkedCellCommit(
     roman: String,
     hanzi: String?,
     outputBothScripts: Boolean,
-): MarkedCellCommit? =
+): ResolvedCommit? =
     when {
         cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN && roman.isNotEmpty() ->
-            MarkedCellCommit(documentText = roman, wroteRomanization = true)
+            ResolvedCommit(text = roman, wroteRomanization = true)
 
         cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI && !hanzi.isNullOrEmpty() ->
             if (outputBothScripts && roman.isNotEmpty()) {
-                MarkedCellCommit(documentText = bracketedCommit(hanzi, roman), wroteRomanization = true)
+                ResolvedCommit(text = bracketedCommit(hanzi, roman), wroteRomanization = true)
             } else {
                 // No roman to bracket → the bare 漢字, never empty brackets.
-                MarkedCellCommit(documentText = hanzi, wroteRomanization = false)
+                ResolvedCommit(text = hanzi, wroteRomanization = false)
             }
 
         else -> null
     }
 
-/** Resolved document commit for one marked 濫 cell. */
-internal data class MarkedCellCommit(
-    val documentText: String,
+/**
+ * What one commit writes into the document, and whether that string carries
+ * romanization — the single input the auto-space gate reads.
+ */
+// CROSS-PLATFORM INVARIANT — mirrors ios `ActionHandler.ResolvedCommit`,
+// macos `CandidateDocumentText.ResolvedCommit`, windows
+// `composing::document_text::ResolvedCommit`.
+internal data class ResolvedCommit(
+    val text: String,
     val wroteRomanization: Boolean,
 )

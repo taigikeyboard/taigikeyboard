@@ -31,6 +31,8 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+import com.siansiansu.taigikeyboard.ime.text.smartbar.appendAutoSpaceIfEarned
+import com.siansiansu.taigikeyboard.ime.text.smartbar.rawPreeditWritesRomanization
 import java.text.BreakIterator
 import java.util.Locale
 
@@ -89,6 +91,10 @@ internal class TextInputKeyHandler(
         taigikeyboard.compositionRoot.logger.tdebug(TAG) {
             "[SEND] fn=sendKeyPress code=${keyData.code} label='${keyData.label}' type=${keyData.type}"
         }
+        // Every key gets exactly one chance at the punctuation swap: the arm
+        // is consumed here, before any dispatch or early return, and only the
+        // auto-space paths put it back.
+        taigikeyboard.beginInputEvent()
         val ic = taigikeyboard.currentInputConnection
 
         when (keyData.code) {
@@ -355,11 +361,18 @@ internal class TextInputKeyHandler(
                 return
             }
 
-            if (prefs.isAutoSpaceEnabled && !prefs.isTranslateSwapped) {
-                if (!committedText.endsWith("-")) {
-                    ic.commitText(" ", 1)
-                }
-            }
+            // Auto-space follows what the commit WROTE, not the output mode:
+            // Enter writes the composition as typed, so the layout is the
+            // whole question — TL and POJ compose romanization, TPS composes
+            // Bopomofo, which takes no word spacing. Recorded either way, so
+            // the punctuation swap below knows what the space (if any) was
+            // written for.
+            appendAutoSpaceIfEarned(
+                taigikeyboard,
+                ic,
+                committedText,
+                rawPreeditWritesRomanization(prefs.isTpsLayout),
+            )
             // Model B §10.3: NO manual handleNextWordPrediction. The engine's
             // terminal NextWordWordSelected (from commitComposition→CommitRaw
             // above, dispatched via dispatchComposingNextWordEffect) is the
@@ -587,31 +600,21 @@ internal class TextInputKeyHandler(
         // No-selection guard: with an active selection the preceding space is
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
-        if (isAutoSpaceModeActive() &&
+        if (taigikeyboard.isAutoSpaceSwapArmed &&
             AutoSpacePunctuation.isAttaching(char) &&
             ic.getSelectedText(0).isNullOrEmpty() &&
             ic.getTextBeforeCursor(1, 0)?.toString() == " "
         ) {
             ic.deleteSurroundingText(1, 0)
             ic.commitText("$char ", 1)
+            // Re-armed on the space the swap just wrote, so `?!` chains keep
+            // swapping (`guá? ` + `!` → `guá?! `).
+            taigikeyboard.armAutoSpaceSwap()
             return
         }
         ic.commitText(char, 1)
     }
 
-    /**
-     * True when the current mode would have auto-inserted a trailing space —
-     * the same gate [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
-     * uses. Outside this gate the swap must not touch a user-typed space.
-     */
-    private fun isAutoSpaceModeActive(): Boolean {
-        if (!prefs.isAutoSpaceEnabled) return false
-        val effectiveSwapped =
-            prefs.keyboardLayoutType == "tps" ||
-                prefs.inputMode == "tps" ||
-                prefs.isTranslateSwapped
-        return !effectiveSwapped || prefs.isOutputBothScripts
-    }
 }
 
 /**

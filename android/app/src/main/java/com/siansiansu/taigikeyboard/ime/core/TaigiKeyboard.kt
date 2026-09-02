@@ -86,6 +86,57 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         private set
     private var popupRecomposerJob: Job? = null
 
+    /**
+     * Set when this IME has just written an auto space, so the space now in
+     * front of the caret is known to be OURS — the question the punctuation
+     * swap has to answer before it deletes anything
+     * ([com.siansiansu.taigikeyboard.ime.text.keyboard.TextInputKeyHandler]).
+     *
+     * Provenance, not a mode: neither a display mode changed since the commit
+     * nor "the output mode would space a word like that" may authorize eating
+     * a space the USER typed. Service-scoped because the two collaborators
+     * that arm and read it — `CandidateClickHandler` and `TextInputKeyHandler`
+     * — are built separately. Mirrors the desktop's `armedAutoSpaceCaret`,
+     * minus the caret verification Android has no equivalent query for.
+     */
+    private var isAutoSpaceArmed = false
+
+    /**
+     * The arm as it stood when the current event began. Every event consumes
+     * the arm before dispatching ([beginInputEvent]), so a keystroke that
+     * writes anything else to the document leaves nothing for the next
+     * punctuation key to swap with.
+     */
+    private var wasAutoSpaceArmedAtEventStart = false
+
+    /** Consumes the auto-space arm for one user event — a key, or a candidate tap. */
+    internal fun beginInputEvent() {
+        wasAutoSpaceArmedAtEventStart = isAutoSpaceArmed
+        isAutoSpaceArmed = false
+    }
+
+    /**
+     * Re-arms after this IME has written a space the next attaching
+     * punctuation may swap with — the auto space itself, and the swap's own
+     * re-inserted space so `?!` chains keep swapping.
+     */
+    internal fun armAutoSpaceSwap() {
+        isAutoSpaceArmed = true
+    }
+
+    /**
+     * Whether the space in front of the caret is one this IME wrote and
+     * 自動空白 is still on. The setting is read live so switching the feature
+     * off stops the swap; the provenance is the consumed arm.
+     */
+    internal val isAutoSpaceSwapArmed: Boolean
+        get() = wasAutoSpaceArmedAtEventStart && prefs.isAutoSpaceEnabled
+
+    /** Forgets any armed space — a new editor's document is not ours to rewrite. */
+    internal fun clearAutoSpaceArm() {
+        isAutoSpaceArmed = false
+    }
+
     lateinit var subtypeManager: SubtypeManager
     lateinit var activeSubtype: Subtype
 
@@ -307,6 +358,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         currentInputConnection?.requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR)
 
         super.onStartInputView(info, restarting)
+        clearAutoSpaceArm()
         textInputManager.onStartInputView(info, restarting)
         mediaInputManager.onStartInputView(info, restarting)
     }

@@ -239,7 +239,8 @@ struct TaigiKeyboardView: View {
             candidateTheme: candidateTheme,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
-            onSymbolInsert: { [keyboardContext] symbol in
+            onSymbolInsert: { [keyboardContext, unowned services] symbol in
+                (services.actionHandler as? ActionHandler)?.beginInputEvent()
                 keyboardContext.textDocumentProxy.insertText(symbol)
             },
             onOpenSettingsApp: { [unowned services] in

@@ -11,7 +11,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::document_text::{alternate_text, document_text, CandidateScript};
+use super::document_text::{
+    document_text, resolved_alternate, resolved_commit, CandidateScript, ResolvedCommit,
+};
 use super::learner::NextWordLearner;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{presentation, PresentedCandidate};
@@ -302,28 +304,31 @@ impl ComposingManager {
     /// that produced the list the user is looking at. `script` picks WHICH of
     /// the candidate's two renderings the document gets; `Alternate` on a
     /// single-script candidate answers `Ignored` without reaching the engine.
-    /// Returns the outcome and the text written, if any.
+    /// Returns the outcome and, for a commit that wrote something, the text
+    /// written together with whether it carried romanization — the auto-space
+    /// verdict, which only the arm that picked the rendering knows
+    /// (`policies::is_gate_active`).
     pub fn commit_candidate(
         &mut self,
         candidate: &ContinuousCandidate,
         script: CandidateScript,
         executor: &mut dyn ComposingEffectExecutor,
-    ) -> (CandidateCommitOutcome, Option<String>) {
+    ) -> (CandidateCommitOutcome, Option<ResolvedCommit>) {
         let settings = self.current_settings();
         log::debug!(
             "commitCandidate consumedBytes={}",
             candidate.consumed_span_end
         );
-        let text = match script {
-            CandidateScript::Primary => document_text(candidate, &settings),
-            CandidateScript::Alternate => match alternate_text(candidate, &settings) {
+        let resolved = match script {
+            CandidateScript::Primary => resolved_commit(candidate, &settings),
+            CandidateScript::Alternate => match resolved_alternate(candidate, &settings) {
                 Some(alternate) => alternate,
                 None => return (CandidateCommitOutcome::Ignored, None),
             },
         };
         let Some(transition) = engine::commit_continuous(
             &CommitContinuousArgs {
-                document_text: &text,
+                document_text: &resolved.text,
                 canonical_text: &candidate.display_text,
                 association_tl: &candidate.canonical_tl,
                 consumed_bytes: candidate.consumed_span_end,
@@ -335,7 +340,12 @@ impl ComposingManager {
             return (CandidateCommitOutcome::Unavailable, None);
         };
         let outcome = CandidateCommitOutcome::from_transition(&transition);
-        let committed = Self::committed_text(Some(&transition));
+        // The ENGINE's text with OUR verdict: the engine decides what actually
+        // reached the document, this arm decided which script that is.
+        let committed = Self::committed_text(Some(&transition)).map(|text| ResolvedCommit {
+            text,
+            wrote_romanization: resolved.wrote_romanization,
+        });
         self.apply(Some(transition), executor);
         self.record_usage(candidate, outcome, &settings);
         (outcome, committed)

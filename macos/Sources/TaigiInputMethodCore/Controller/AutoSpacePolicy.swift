@@ -22,35 +22,27 @@ enum AutoSpacePolicy {
     /// of romanization — `guá beh khì` needs the gaps, 我欲去 does not — and
     /// until the 漢羅 key existed the mode was an exact proxy for it, because
     /// the mode was the only thing deciding what got written. Space commits the
-    /// script the mode does NOT lead with, so the proxy now disagrees with the
-    /// document in both directions; asking the real question keeps ONE rule
-    /// rather than a special case at the call site.
-    /// See `writesRomanization(script:isTranslateSwapped:)`.
+    /// script the mode does NOT lead with, and a candidate with no Hanji (the
+    /// §34 字面羅馬字, an out-of-vocabulary name) writes its romanization under
+    /// every mode, so the proxy disagrees with the document in both
+    /// directions. The verdict comes from whatever resolved the string:
+    /// `CandidateDocumentText.resolved` for a candidate,
+    /// `rawPreeditWritesRomanization(inputMode:)` for the preedit itself.
     static func isGateActive(isAutoSpaceEnabled: Bool, wroteRomanization: Bool) -> Bool {
         isAutoSpaceEnabled && wroteRomanization
     }
 
-    /// Whether committing `script` under these settings puts romanization in
-    /// the document.
+    /// Whether committing the preedit AS TYPED writes romanization — the ⇧Enter
+    /// literal commit and the mid-composition punctuation commit, neither of
+    /// which goes through a candidate.
     ///
-    /// The one place the 漢羅 key's inversion is written down, and the one
-    /// place 括號標註 is read for this purpose: a `.primary` commit under it
-    /// writes `tâi-gí (台語)`, which HAS the romanization in it, while
-    /// `.alternate` writes one script and never the bracketed pair — so the
-    /// exception belongs to the primary rendering alone.
-    ///
-    /// Answers from the settings rather than from the committed string. A
-    /// candidate with no hanji writes its romanization whatever the mode says,
-    /// and this will call that a hanji commit — the same answer the mode proxy
-    /// gave before the 漢羅 key existed, kept rather than quietly changed.
-    static func writesRomanization(
-        script: CandidateScript,
-        isTranslateSwapped: Bool,
-        isOutputBothScripts: Bool,
-    ) -> Bool {
-        switch script {
-        case .primary: !isTranslateSwapped || isOutputBothScripts
-        case .alternate: isTranslateSwapped
+    /// A `switch` over a two-case enum rather than `true`, so that adding a
+    /// non-romanized layout (TPS composes Bopomofo, which takes no spacing —
+    /// see the iOS `keyboardLayoutType` gate) fails to compile here instead of
+    /// silently spacing 注音.
+    static func rawPreeditWritesRomanization(inputMode: InputMode) -> Bool {
+        switch inputMode {
+        case .tl, .poj: true
         }
     }
 

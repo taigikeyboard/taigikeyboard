@@ -9,7 +9,7 @@ mod auto_space;
 mod full_width;
 
 pub use auto_space::{
-    augment_insert, is_attaching_punctuation, is_gate_active, should_append_space,
-    writes_romanization, AugmentedInsert,
+    augment_insert, is_attaching_punctuation, is_gate_active, raw_preedit_writes_romanization,
+    should_append_space, AugmentedInsert,
 };
 pub use full_width::full_width_mapped;

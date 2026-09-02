@@ -360,25 +360,29 @@ final class ComposingManager {
     /// and nothing is learnt. Deciding it here rather than behind a caller-side
     /// pre-check keeps one decision point — a guard at the call site plus a
     /// fallback here would be two rules for one case, free to disagree.
+    /// The verdict comes back WITH the text because only the branch that
+    /// picked the rendering knows it — the auto-space gate must not re-derive
+    /// it from the output mode (`AutoSpacePolicy.isGateActive`). `nil` for a
+    /// commit that wrote nothing, which earns nothing either way.
     func commitCandidate(
         _ candidate: ContinuousCandidate,
         script: CandidateScript = .primary,
         executing executor: ComposingEffectExecutor,
-    ) -> (outcome: CandidateCommitOutcome, committedText: String?) {
+    ) -> (outcome: CandidateCommitOutcome, commit: ResolvedCommit?) {
         let settings = settingsProvider.current
         Self.logger.debug("commitCandidate consumedBytes=\(candidate.consumedSpanEnd)")
-        let documentText: String
+        let resolved: ResolvedCommit
         switch script {
         case .primary:
-            documentText = CandidateDocumentText.text(for: candidate, settings: settings)
+            resolved = CandidateDocumentText.resolved(for: candidate, settings: settings)
         case .alternate:
-            guard let alternate = CandidateDocumentText.alternateText(
+            guard let alternate = CandidateDocumentText.resolvedAlternate(
                 for: candidate, settings: settings,
             ) else { return (.ignored, nil) }
-            documentText = alternate
+            resolved = alternate
         }
         guard let transition = RustEngineBridge.composingCommitContinuous(
-            documentText: documentText,
+            documentText: resolved.text,
             canonicalText: candidate.displayText,
             associationTl: candidate.canonicalTl,
             consumedBytes: candidate.consumedSpanEnd,
@@ -390,7 +394,11 @@ final class ComposingManager {
         let outcome = CandidateCommitOutcome(transition)
         apply(transition, executing: executor)
         recordUsage(of: candidate, after: outcome, settings: settings)
-        return (outcome, Self.committedText(of: transition))
+        // The ENGINE's text with OUR verdict: the engine decides what actually
+        // reached the document, this branch decided which script that is.
+        return (outcome, Self.committedText(of: transition).map {
+            ResolvedCommit(text: $0, wroteRomanization: resolved.wroteRomanization)
+        })
     }
 
     /// The text `transition` wrote to the document, when it committed one.

@@ -17,7 +17,7 @@ final class ActionHandlerMarkedCellCommitTests: XCTestCase {
             roman: "tâi-gí",
             isOutputBothScripts: false,
         )
-        XCTAssertEqual(result.docText, "台語")
+        XCTAssertEqual(result.text, "台語")
         XCTAssertFalse(result.wroteRomanization, "pure hanji commit must not trigger auto-space")
     }
 
@@ -28,7 +28,7 @@ final class ActionHandlerMarkedCellCommitTests: XCTestCase {
             roman: "tâi-gí",
             isOutputBothScripts: true,
         )
-        XCTAssertEqual(result.docText, "台語 (tâi-gí)", "括號標註 ON = today's swapped output")
+        XCTAssertEqual(result.text, "台語 (tâi-gí)", "括號標註 ON = today's swapped output")
         XCTAssertTrue(result.wroteRomanization, "the bracket form DID write romanization → auto-space fires")
     }
 
@@ -40,7 +40,7 @@ final class ActionHandlerMarkedCellCommitTests: XCTestCase {
             isOutputBothScripts: true,
         )
         XCTAssertEqual(
-            result.docText,
+            result.text,
             "tâi-gí",
             "roman cell commits the bare roman even with 括號標註 ON (desktop .alternate parity)",
         )
@@ -57,7 +57,7 @@ final class ActionHandlerMarkedCellCommitTests: XCTestCase {
                 roman: roman,
                 isOutputBothScripts: true,
             )
-            XCTAssertEqual(result.docText, "台語", "no roman sidechannel → no empty brackets")
+            XCTAssertEqual(result.text, "台語", "no roman sidechannel → no empty brackets")
             XCTAssertFalse(result.wroteRomanization)
         }
     }
@@ -94,17 +94,12 @@ final class ActionHandlerMarkedCellCommitTests: XCTestCase {
 
     // MARK: - Auto-space verdict (the §42 refactor's shared predicate)
 
-    /// The verdict an UNMARKED commit derives — the rule the Continuous path and
-    /// the lexicon / NextWord path shared inline before this round hoisted it.
-    /// Mirrors Android `unmarkedCommitWroteRomanization_falseOnlyForPureHanjiCommit`.
-    func testUnmarkedCommitWroteRomanization_falseOnlyForPureHanjiCommit() {
-        // roman-led output (not swapped) always writes romanization
-        XCTAssertTrue(ActionHandler.unmarkedCommitWroteRomanization(effectiveSwapped: false, isOutputBothScripts: false))
-        XCTAssertTrue(ActionHandler.unmarkedCommitWroteRomanization(effectiveSwapped: false, isOutputBothScripts: true))
-        // swapped/TPS + 括號標註 ON = the `漢字 (羅馬字)` form, which DID write it
-        XCTAssertTrue(ActionHandler.unmarkedCommitWroteRomanization(effectiveSwapped: true, isOutputBothScripts: true))
-        // swapped/TPS without brackets = a pure 漢字 commit — no auto-space
-        XCTAssertFalse(ActionHandler.unmarkedCommitWroteRomanization(effectiveSwapped: true, isOutputBothScripts: false))
+    /// trace: `ActionHandler.rawPreeditWritesRomanization` — the layout is the
+    /// whole question for a commit that writes the composition as typed.
+    /// Mirrors Android `rawPreedit_writesRomanizationUnlessTheLayoutComposesBopomofo`.
+    func testRawPreeditWritesRomanization_followsTheLayoutNotTheMode() {
+        XCTAssertTrue(ActionHandler.rawPreeditWritesRomanization(isTPSLayout: false))
+        XCTAssertFalse(ActionHandler.rawPreeditWritesRomanization(isTPSLayout: true))
     }
 
     /// Mirrors Android `shouldAppendAutoSpace_requiresSettingRomanizationAndNoHyphenTail`.

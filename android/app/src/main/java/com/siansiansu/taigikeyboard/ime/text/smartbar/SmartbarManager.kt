@@ -368,6 +368,7 @@ class SmartbarManager(
         this.symbolSelectionOverlayView = overlayView
 
         overlayView.onSymbolSelected = { symbol ->
+            taigikeyboard.beginInputEvent()
             taigikeyboard.currentInputConnection?.commitText(symbol, 1)
         }
     }

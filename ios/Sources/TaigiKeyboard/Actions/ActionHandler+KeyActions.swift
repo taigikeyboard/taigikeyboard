@@ -134,25 +134,19 @@ extension ActionHandler {
         // No-selection guard: with an active selection the preceding space is
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
-        if isAutoSpaceModeActive,
+        if isAutoSpaceSwapArmed,
            AutoSpacePunctuation.isAttaching(char),
            (proxy.selectedText ?? "").isEmpty,
            proxy.documentContextBeforeInput?.last == " "
         {
             proxy.deleteBackward()
             proxy.insertText(char + " ")
+            // Re-armed on the space the swap just wrote, so `?!` chains keep
+            // swapping (`guá? ` + `!` → `guá?! `).
+            armAutoSpaceSwap()
             return
         }
         proxy.insertText(char)
-    }
-
-    /// True when the current mode would have auto-inserted a trailing space —
-    /// the same gate the auto-space insertion sites use. Outside this gate the
-    /// swap must not touch a user-typed space.
-    private var isAutoSpaceModeActive: Bool {
-        guard settings.isAutoSpaceEnabled else { return false }
-        let effectiveSwapped = settings.keyboardLayoutType == .tps || settings.isTranslateSwapped
-        return !effectiveSwapped || settings.isOutputBothScripts
     }
 
     // MARK: - Space
@@ -258,10 +252,19 @@ extension ActionHandler {
 
         // Taigi mode
         if composingManager.isComposing {
-            // Capture rawInput before commit clears it
+            // Captured before the commit clears them: the raw input, the
+            // highlighted index, and the suggestion that index names.
             let capturedRawInput = composingManager.rawInput
+            let selectedIndex = composingManager.selectedCandidateIndex
+            let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
 
-            if composingManager.selectedCandidateIndex == 0 {
+            // The document string each arm writes, and whether it is
+            // romanization — resolved per arm, because the two arms write
+            // different things: index 0 commits the composition verbatim,
+            // any other index commits that candidate's own display text.
+            let committedText: String
+            let wroteRomanization: Bool
+            if selectedIndex == 0 {
                 // Enter at index 0: commit raw input (literal keystrokes)
                 // This allows English words to pass through without tone conversion
                 // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
@@ -281,19 +284,29 @@ extension ActionHandler {
                 // 中文: Model B — commitRawInput 由引擎發終端 NextWord;Enter 保留引擎
                 // 中文: 預測;移除冗餘手動 process(swapped 時本就 no-op,否則雙記關聯)。
                 composingManager.commitRawInput()
+                committedText = capturedRawInput
+                wroteRomanization = Self.rawPreeditWritesRomanization(isTPSLayout: isTPSLayout)
             } else {
-                // Non-zero index: confirm selected candidate.
+                // Non-zero index: confirm selected candidate. This commits the
+                // suggestion's own `text` verbatim, so THAT string — not the
+                // raw input, and not a mode-derived rendering — is what the
+                // auto space answers for.
                 // Strip KK type at the boundary; ComposingManager is engine-pure.
-                let texts = (keyboardController?.state.autocompleteContext.suggestions ?? []).map(\.text)
-                _ = composingManager.confirmSelectedCandidate(availableTexts: texts)
+                _ = composingManager.confirmSelectedCandidate(availableTexts: suggestions.map(\.text))
+                let selected = suggestions.indices.contains(selectedIndex) ? suggestions[selectedIndex] : nil
+                committedText = selected?.text ?? ""
+                wroteRomanization = selected.map(highlightedCandidateWroteRomanization) ?? false
             }
 
-            // Romanization mode: auto-space (unless trailing hyphen)
-            if settings.isAutoSpaceEnabled, !settings.isTranslateSwapped {
-                if !capturedRawInput.hasSuffix("-") {
-                    keyboardContext.textDocumentProxy.insertText(" ")
-                }
-            }
+            // Auto-space follows what the commit WROTE, not the output mode:
+            // a raw commit is romanization in TL/POJ and Bopomofo in TPS,
+            // while a confirmed candidate can be the 漢字 itself. The hyphen
+            // check runs on the committed string, so a 連字 the user is
+            // continuing suppresses the space on either arm.
+            appendAutoSpaceIfEarned(
+                documentText: committedText,
+                wroteRomanization: wroteRomanization,
+            )
             return true
         } else {
             keyboardContext.textDocumentProxy.insertText("\n")

@@ -18,7 +18,7 @@ mod presentation;
 mod stores;
 
 pub use coordinator::{ComposingSessionCoordinator, ContextToken};
-pub use document_text::{CandidateCellContent, CandidateScript};
+pub use document_text::{CandidateCellContent, CandidateScript, ResolvedCommit};
 pub use learner::NextWordLearner;
 pub use manager::{ComposingEffectExecutor, ComposingManager};
 pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome, CandidateListChange};

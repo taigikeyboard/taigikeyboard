@@ -46,31 +46,33 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     func testSwappedMode_disablesTheSpace() throws {
-        let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
-        try session.walkToFirstTwoScriptCell()
-
-        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
-
-        XCTAssertEqual(session.client.insertedTexts.count, 1, "swapped 漢字 mode commits without a space")
-        XCTAssertNotEqual(session.client.insertedTexts.last, " ")
-    }
-
-    /// ⚠ Characterization, not a spec (§34 desktop policy, Codex pre-impl
-    /// 2026-09-02): Return on a fresh bar commits the one-script literal — a
-    /// romanization — which roman-first mode spaces, yet 漢字 mode does NOT
-    /// today: `AutoSpacePolicy` reads the cell's script through the swap and
-    /// the literal is presented `.primary`. Pinned so a later fix reads as a
-    /// deliberate change rather than a regression.
-    func testReturnOnTheLiteral_isSpacedRomanFirst_butNotUnderTheSwapToday() throws {
-        for swapped in [false, true] {
-            let session = try composedSession(configure: { $0.storedIsTranslateSwapped = swapped })
+        try withTranslateSwapped(true) {
+            let session = try composedSession()
+            try session.walkToFirstTwoScriptCell()
 
             _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
 
-            XCTAssertEqual(
-                session.client.insertedTexts, swapped ? [Self.composition] : [Self.composition, " "],
-                "swapped=\(swapped)",
-            )
+            XCTAssertEqual(session.client.insertedTexts.count, 1, "swapped 漢字 mode commits without a space")
+            XCTAssertNotEqual(session.client.insertedTexts.last, " ")
+        }
+    }
+
+    /// Return on a fresh bar commits the §34 one-script literal, which is a
+    /// romanization under EVERY mode — there is no Hanji on that candidate to
+    /// lead with. So it is spaced in 漢字優先 too: the gate follows the
+    /// document, not the mode (the direction the old mode proxy refused).
+    func testReturnOnTheLiteral_isSpacedUnderEveryMode() throws {
+        for swapped in [false, true] {
+            try withTranslateSwapped(swapped) {
+                let session = try composedSession()
+
+                _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+
+                XCTAssertEqual(
+                    session.client.insertedTexts, [Self.composition, " "],
+                    "swapped=\(swapped)",
+                )
+            }
         }
     }
 
@@ -257,18 +259,17 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// mode. So 漢字 mode writing a romanization is spaced — the direction the
     /// old mode-read would have refused (USER 2026-08-25).
     func testAlternateCommitOfARomanization_earnsItsSpace() throws {
-        let session = try composedSession {
-            $0.isAutoSpaceEnabled = true
-            $0.storedIsTranslateSwapped = true
+        try withTranslateSwapped(true) {
+            let session = try composedSession { $0.isAutoSpaceEnabled = true }
+            let cell = try session.walkToFirstTwoScriptCell()
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [cell.annotation, " "], "the romanization, spaced")
         }
-        let cell = try session.walkToFirstTwoScriptCell()
-        session.client.clearWrites()
-
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: " "), client: session.client,
-        )
-
-        XCTAssertEqual(session.client.insertedTexts, [cell.annotation, " "], "the romanization, spaced")
     }
 
     /// And the other direction takes none: a hanji written while the settings
@@ -311,52 +312,40 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// no commit earns a space, and the one that just did would be denied its
     /// own. What the armed script is stored for.
     func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
-        let session = try composedSession {
-            $0.isAutoSpaceEnabled = true
-            $0.storedIsTranslateSwapped = true
+        try withTranslateSwapped(true) {
+            let session = try composedSession { $0.isAutoSpaceEnabled = true }
+            session.client.documentTextForReads = ""
+            session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+            try session.walkToFirstTwoScriptCell()
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+            session.client.clearWrites()
+
+            let handled = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "?"), client: session.client,
+            )
+
+            XCTAssertTrue(handled)
+            XCTAssertEqual(session.client.insertedTexts, ["? "])
         }
-        session.client.documentTextForReads = ""
-        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
-        try session.walkToFirstTwoScriptCell()
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: " "), client: session.client,
-        )
-        session.client.clearWrites()
-
-        let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "?"), client: session.client,
-        )
-
-        XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts, ["? "])
     }
 
-    /// The flip rule cuts both ways: a space armed by the 漢羅 key is
-    /// invalidated by a mode change too, exactly as a `.primary`-armed one is
-    /// (`FullWidthPunctuationControllerTests.testSwappingModesAfterAnArmed…`).
-    /// The gate is re-read for the ARMED script under the CURRENT settings, so
-    /// flipping to romanization-lead makes that alternate commit read as a
-    /// hanji — and its space stops being ours to swap.
-    func testTheSwapDeclinesWhenTheModeFlipsUnderAnAlternateArmedSpace() throws {
-        let session = try composedSession {
-            $0.isAutoSpaceEnabled = true
-            $0.storedIsTranslateSwapped = true
-        }
-        session.client.documentTextForReads = ""
-        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
-        try session.walkToFirstTwoScriptCell()
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: " "), client: session.client,
-        )
-        session.client.clearWrites()
+    /// A mode change does NOT invalidate an armed space, deliberately: what
+    /// the previous commit put in front of the caret is a fact, and a
+    /// romanization does not become Hanji because the user switched displays
+    /// afterwards. Only 自動空白 itself is re-read live
+    /// (`testTheToggleFlippedOffAfterTheCommit_declinesTheSwap`).
+    func testTheSwapSurvivesAModeFlipUnderAnAlternateArmedSpace() throws {
+        let session = try withTranslateSwappedSession()
         session.store.storedIsTranslateSwapped = false
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "?"), client: session.client,
         )
 
-        XCTAssertFalse(handled, "the space is no longer ours under the settings as they stand")
-        XCTAssertTrue(session.client.writes.isEmpty)
+        XCTAssertTrue(handled, "the space this controller wrote is still ours to swap")
+        XCTAssertEqual(session.client.insertedTexts, ["? "])
     }
 
     /// And the precedence the 漢羅 key newly makes reachable: in 漢字 mode a
@@ -365,17 +354,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// punctuation stays half-width — the word in front of the caret is
     /// romanization, which reads as Latin text.
     func testTheSwapOutranksTheFullWidthMap_afterAnAlternateCommit() throws {
-        let session = try composedSession {
-            $0.isAutoSpaceEnabled = true
-            $0.storedIsTranslateSwapped = true
-        }
-        session.client.documentTextForReads = ""
-        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
-        try session.walkToFirstTwoScriptCell()
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: " "), client: session.client,
-        )
-        session.client.clearWrites()
+        let session = try withTranslateSwappedSession()
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -454,6 +433,26 @@ final class AutoSpaceControllerTests: XCTestCase {
         }
     }
 
+    /// 漢羅濫 forces the swap on, so the mode proxy called every `.primary`
+    /// cell a hanji commit — including §34's literal, which has no hanji to
+    /// commit. Both romanization cells of one list must agree: the literal at
+    /// slot 0 and the dictionary candidate's own romanization cell write the
+    /// same kind of string, so both earn the space.
+    func testCombined_ReturnOnTheLiteral_earnsItsSpace() throws {
+        try withDisplayMode(.combined) {
+            let session = try composedSession {
+                $0.isAutoSpaceEnabled = true
+                $0.candidateDisplayMode = .combined
+            }
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "\r"), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [Self.composition, " "])
+        }
+    }
+
     // MARK: - Helpers
 
 
@@ -493,6 +492,29 @@ final class AutoSpaceControllerTests: XCTestCase {
             )
         }
         return session
+    }
+
+    /// A 漢字優先 session where Space has committed the romanization and its
+    /// auto space is armed — the state both armed-alternate cases start from.
+    ///
+    /// The swap flag has to outlive the returned session, so it is written
+    /// through `withTranslateSwapped` around the setup only: the assertions
+    /// that follow are about what was ALREADY committed, and one of them
+    /// flips the mode back on purpose.
+    private func withTranslateSwappedSession() throws -> Session {
+        var made: Session?
+        try withTranslateSwapped(true) {
+            let session = try composedSession { $0.isAutoSpaceEnabled = true }
+            session.client.documentTextForReads = ""
+            session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+            try session.walkToFirstTwoScriptCell()
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+            session.client.clearWrites()
+            made = session
+        }
+        return try XCTUnwrap(made)
     }
 
     /// A session whose commit has landed with the auto space armed for the

@@ -13,7 +13,7 @@
 use crate::edit_session::EditCookie;
 use crate::wide::to_wide;
 use std::mem::ManuallyDrop;
-use taigi_windows_core::composing::{CandidateScript, ComposingEffectExecutor};
+use taigi_windows_core::composing::ComposingEffectExecutor;
 use taigi_windows_core::engine::Effect;
 use windows::core::{IUnknown, Interface, Result, BOOL};
 use windows::Win32::System::Com::CoTaskMemFree;
@@ -135,9 +135,10 @@ pub struct CompositionEditor<'a> {
     /// The first TSF error the session hit — the executor's trait has no
     /// error channel, so it is read back after the effects ran.
     pub failure: Option<windows::core::Error>,
-    /// Set by `arm_swap`: the script whose commit left the auto space, and
-    /// the caret's range at that moment.
-    pub armed: Option<(CandidateScript, ITfRange)>,
+    /// Set by `arm_swap`: the caret's range when this IME wrote an auto space.
+    /// Its existence is the verdict — a display mode changed afterwards does
+    /// not rewrite what is already in the document.
+    pub armed: Option<ITfRange>,
 }
 
 impl<'a> CompositionEditor<'a> {
@@ -257,10 +258,10 @@ impl<'a> CompositionEditor<'a> {
     /// Remembers where the caret sits now that an auto space is in front
     /// of it — the position the swap re-checks. A host that cannot answer
     /// never arms (the swap degrades to pass-through, as on the Mac).
-    pub fn arm_swap(&mut self, script: CandidateScript) {
+    pub fn arm_swap(&mut self) {
         // SAFETY: a selection read under the live cookie.
         if let Some(caret) = unsafe { caret_range(self.context, self.ec) } {
-            self.armed = Some((script, caret));
+            self.armed = Some(caret);
         }
     }
 

@@ -65,13 +65,14 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts, [])
     }
 
-    func testSwappingModesAfterAnArmedAutoSpace_mapsInsteadOfSwapping() throws {
-        // The transient the two complementary gates leave behind: a commit in
-        // roman-first mode arms the auto-space swap, then the user flips to
-        // hanji-first before typing the punctuation. The old space must NOT
-        // swap — its gate is off now — and the key maps instead, so the
-        // document reads `guá ，`. Pinned so a future reordering of the
-        // pass-through branches cannot quietly resolve the race the other way.
+    func testSwappingModesAfterAnArmedAutoSpace_stillSwaps() throws {
+        // A commit in roman-first mode arms the auto-space swap, then the user
+        // flips to hanji-first before typing the punctuation. The swap still
+        // wins: the word in front of the caret is the romanization that commit
+        // wrote, and a display mode changed afterwards does not rewrite it.
+        // The full-width map serves the NEXT 漢字 word, not this one — so the
+        // document reads `taigi, `, half-width, exactly as it would have
+        // without the flip.
         let session = try composedSession()
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
@@ -84,20 +85,32 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         )
 
         XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts, ["，"], "the stale armed space must not swap")
+        XCTAssertEqual(session.client.insertedTexts, [", "], "the armed space is still ours")
     }
 
     // MARK: - Mid-composition (one mutation with the commit)
 
+    /// ⚠ Both rewrites fire here, and they answer to different questions: the
+    /// auto space follows what this commit WROTE — the preedit as typed, which
+    /// is romanization on a platform shipping TL and POJ only — while the
+    /// full-width map still follows the output MODE. So 漢字優先 gets
+    /// `taigi？ `. The map reading the mode rather than the committed string is
+    /// the same approximation this round removed from the auto-space gate,
+    /// left standing because which marks 漢字 mode types is a 全形標點 policy
+    /// question, not an auto-space one.
     func testPunctuationMidComposition_commitsWithTheFullWidthForm_inOneMutation() throws {
-        let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
+        // BOTH domains: `withTranslateSwapped` moves the one the shared
+        // coordinator's `ComposingManager` reads (which resolves the commit),
+        // `configure` the controller's own store (which the full-width map
+        // reads). A case about "the user is in 漢字 mode" needs them to agree.
+        try withTranslateSwapped(true) {
+            let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
 
-        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "?"), client: session.client)
+            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "?"), client: session.client)
 
-        XCTAssertEqual(session.client.insertedTexts.count, 1, "commit and punctuation stay one mutation")
-        let inserted = try XCTUnwrap(session.client.insertedTexts.last)
-        XCTAssertTrue(inserted.hasSuffix("？"), "got \(session.client.insertedTexts)")
-        XCTAssertFalse(inserted.contains("? "), "the swapped mode earns no auto space")
+            XCTAssertEqual(session.client.insertedTexts.count, 1, "commit and punctuation stay one mutation")
+            XCTAssertEqual(session.client.insertedTexts.last, "taigi？ ")
+        }
     }
 
     func testPunctuationMidComposition_inRomanFirstMode_staysHalfWidth() throws {

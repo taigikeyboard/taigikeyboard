@@ -155,6 +155,7 @@ class MediaInputManager(
      * edges).
      */
     fun sendEmojiKeyPress(emojiKeyData: EmojiKeyData) {
+        taigikeyboard.beginInputEvent()
         val ic = taigikeyboard.currentInputConnection ?: return
         val emoji = emojiKeyData.getCodePointsAsString()
         val composingManager = taigikeyboard.textInputManager.getComposingManager()

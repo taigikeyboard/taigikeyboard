@@ -27,6 +27,52 @@ public class ActionHandler: StandardKeyboardActionHandler {
     public let composingManager = ComposingManager()
     let nextWordController = NextWordController()
 
+    /// Set when this handler has just written an auto space, so the space now
+    /// in front of the caret is known to be OURS — the question the
+    /// punctuation swap has to answer before it deletes anything
+    /// (`isAutoSpaceSwapArmed`).
+    ///
+    /// Provenance, not a mode: the space was written for a commit that has
+    /// already happened, so neither a display mode changed since then nor
+    /// "the output mode would space a word like that" may authorize eating a
+    /// space the USER typed. Mirrors the desktop's `armedAutoSpaceCaret`,
+    /// minus the caret verification iOS has no client query for.
+    private var isAutoSpaceArmed = false
+
+    /// The arm as it stood when the current event began. Every event consumes
+    /// the arm before dispatching (`beginInputEvent`), so a keystroke that
+    /// writes anything else to the document leaves nothing for the next
+    /// punctuation key to swap with — exactly the desktop's rule that the arm
+    /// is taken before any early return and only the auto-space paths put it
+    /// back.
+    private var wasAutoSpaceArmedAtEventStart = false
+
+    /// Consumes the auto-space arm for one user event.
+    ///
+    /// Called at the top of every dispatch — keys, backspace repeats, and
+    /// candidate taps — so an action that does not re-arm disarms by doing
+    /// nothing.
+    func beginInputEvent() {
+        wasAutoSpaceArmedAtEventStart = isAutoSpaceArmed
+        isAutoSpaceArmed = false
+    }
+
+    /// Re-arms after this handler has written a space the next attaching
+    /// punctuation may swap with — the auto space itself, and the swap's own
+    /// re-inserted space so `?!` chains keep swapping.
+    func armAutoSpaceSwap() {
+        isAutoSpaceArmed = true
+    }
+
+    /// True when the space in front of the caret is one this handler wrote and
+    /// 自動空白 is still on. The setting is read live so switching the feature
+    /// off stops the swap; the provenance is the consumed arm.
+    /// The stored flag is read first: it is false for almost every keystroke,
+    /// which keeps the App-Group defaults read off the common path.
+    var isAutoSpaceSwapArmed: Bool {
+        wasAutoSpaceArmedAtEventStart && settings.isAutoSpaceEnabled
+    }
+
     // MARK: - Action Dispatch
 
     /// - Returns: true if handled (skip KeyboardKit default)
@@ -85,6 +131,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
                 if gesture == .repeatPress {
                     TraceContext.with(TraceId.next()) {
                         logger.debug("[INPUT] fn=handle gesture=repeatPress action=\(String(describing: action))")
+                        beginInputEvent()
                         _ = handleBackspaceAction()
                     }
                 }
@@ -98,6 +145,11 @@ public class ActionHandler: StandardKeyboardActionHandler {
         var handled = false
         TraceContext.with(TraceId.next()) {
             logger.debug("[INPUT] fn=handle gesture=release action=\(String(describing: action))")
+            // Every release gets exactly one chance at the swap: the arm is
+            // consumed here, before any dispatch — including the ones that
+            // fall through to KeyboardKit below, which write to the document
+            // without telling us. Only the auto-space paths put it back.
+            beginInputEvent()
             handled = handleTaigiSpecificAction(action)
             if handled, !shouldSkipAutocomplete(for: action) {
                 keyboardController?.performAutocomplete()
@@ -142,6 +194,9 @@ public class ActionHandler: StandardKeyboardActionHandler {
 
     // 中文: 候選詞點選的 KeyboardKit 入口。English 模式走 KK 預設,Taigi 模式走自家路徑。
     override public func handle(_ suggestion: AutocompleteSuggestion) {
+        // A tap is an event like any key: consume the arm first, so a commit
+        // that writes no auto space leaves none for the next punctuation key.
+        beginInputEvent()
         // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
         if settings.inputMode == .english {
             super.handle(suggestion)

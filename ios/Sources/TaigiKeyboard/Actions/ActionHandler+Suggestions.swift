@@ -4,6 +4,16 @@
 import Foundation
 import KeyboardKit
 
+/// What one commit writes into the document, and whether that string carries
+/// romanization — the single input the auto-space gate reads.
+// CROSS-PLATFORM INVARIANT — mirrors android `ResolvedCommit`, macos
+// `CandidateDocumentText.ResolvedCommit`, windows
+// `composing::document_text::ResolvedCommit`.
+struct ResolvedCommit {
+    let text: String
+    let wroteRomanization: Bool
+}
+
 extension ActionHandler {
     // MARK: - Suggestion Selection
 
@@ -12,9 +22,15 @@ extension ActionHandler {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
             composingManager.commitRawInput()
-            if settings.isAutoSpaceEnabled, !settings.isTranslateSwapped {
-                keyboardContext.textDocumentProxy.insertText(" ")
-            }
+            // The literal keystrokes go into the document, so the verdict is
+            // what the layout composes — romanization in TL/POJ, Bopomofo in
+            // TPS, which takes no spacing. The output mode does not enter into
+            // it: a raw commit writes the same string whichever script the
+            // candidates would have led with.
+            appendAutoSpaceIfEarned(
+                documentText: suggestion.text,
+                wroteRomanization: Self.rawPreeditWritesRomanization(isTPSLayout: isTPSLayout),
+            )
             return
         }
 
@@ -90,15 +106,16 @@ extension ActionHandler {
             let docText: String
             // Whether this commit wrote romanization into the document — the
             // SINGLE auto-space verdict read by the gate below (§42: the space
-            // follows the script actually committed, not the mode). Truth
-            // table, net behavior unchanged from the pre-single-source gate
-            // (`wroteRomanization || isOutputBothScripts`):
+            // follows the script actually committed, not the mode). Both arms
+            // resolve it beside the string, never from the mode afterwards:
             //   marked roman cell          → true  (bare roman)
             //   marked hanji, 括號標註 OFF → false (pure 漢字)
             //   marked hanji, 括號標註 ON  → true  (`漢字 (羅馬字)` DID write
             //                                       the romanization)
-            //   unmarked                   → !effectiveSwapped || isOutputBothScripts
-            //                                (roman-led output, or the bracket form)
+            //   unmarked, no hanji         → true  (§34 literal, an OOV name:
+            //                                       romanization under every mode)
+            //   unmarked, hanji + swapped  → false (pure 漢字)
+            //   unmarked, otherwise        → true  (roman-led, or the bracket form)
             let wroteRomanization: Bool
             if let cellScript = CandidateCellScript.marker(for: suggestion) {
                 let resolved = Self.markedCellCommit(
@@ -107,30 +124,27 @@ extension ActionHandler {
                     roman: suggestion.additionalInfo[CandidateCellScript.bracketRomanKey],
                     isOutputBothScripts: settings.isOutputBothScripts,
                 )
-                docText = resolved.docText
+                docText = resolved.text
                 wroteRomanization = resolved.wroteRomanization
             } else {
                 // Unmarked commit — or a wire-defective marker, which
                 // `CandidateCellScript.marker` already declined for the render
                 // guard too, so this suggestion still carries the un-split
                 // dual-script shape this path expects.
-                let isTPSLayout = settings.keyboardLayoutType == .tps
                 let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
                 let (roman, hanzi) = parseRomanAndHanzi(
                     from: suggestion,
                     isNextWord: false,
                     effectiveSwapped: effectiveSwapped,
                 )
-                docText = formatOutputText(
+                let resolved = formatOutputText(
                     roman: roman,
                     hanzi: hanzi,
                     isTPSLayout: isTPSLayout,
                     effectiveSwapped: effectiveSwapped,
                 )
-                wroteRomanization = Self.unmarkedCommitWroteRomanization(
-                    effectiveSwapped: effectiveSwapped,
-                    isOutputBothScripts: settings.isOutputBothScripts,
-                )
+                docText = resolved.text
+                wroteRomanization = resolved.wroteRomanization
             }
             // R2: canonical TL identity sidechannel — forwarded as
             // `associationTl` so NextWord learns the same `next_tl`/`prev_tl`
@@ -162,21 +176,14 @@ extension ActionHandler {
             // exits Continuous → Idle). Mid-commits keep composing more
             // syllables and must NOT insert a space.
             // 中文: 只有 final-commit 才補空白(整個 buffer 被消化、engine 退到 Idle)。
-            // Keys on the RESOLVED committed script — the single-sourced
-            // `wroteRomanization` verdict above: a marked §42 roman cell spaces,
-            // a plain hanji cell does not, hanji + 括號標註 spaces because the
-            // bracket form wrote the roman, and an unmarked commit carries
-            // today's mode-derived rule. Suffix check is on the actual committed
-            // document string (`docText`) so a trailing hyphen continuation
-            // suppresses the space — mirrors the legacy lexicon path (Codex
-            // post-impl: auto-space suffix check must use the document string,
-            // not the canonical key).
-            if didFinalCommit, Self.shouldAppendAutoSpace(
-                isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
-                wroteRomanization: wroteRomanization,
-                documentText: docText,
-            ) {
-                keyboardContext.textDocumentProxy.insertText(" ")
+            // Keys on the RESOLVED committed script — the `wroteRomanization`
+            // verdict resolved above beside the string itself. Suffix check is
+            // on the actual committed document string (`docText`) so a trailing
+            // hyphen continuation suppresses the space — mirrors the legacy
+            // lexicon path (Codex post-impl: auto-space suffix check must use
+            // the document string, not the canonical key).
+            if didFinalCommit {
+                appendAutoSpaceIfEarned(documentText: docText, wroteRomanization: wroteRomanization)
             }
             return
         }
@@ -184,11 +191,11 @@ extension ActionHandler {
         let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
 
         if composingManager.isComposing || isNextWordPrediction {
-            let isTPSLayout = settings.keyboardLayoutType == .tps
             let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
 
             let (roman, hanzi) = parseRomanAndHanzi(from: suggestion, isNextWord: isNextWordPrediction, effectiveSwapped: effectiveSwapped)
-            let textToCommit = formatOutputText(roman: roman, hanzi: hanzi, isTPSLayout: isTPSLayout, effectiveSwapped: effectiveSwapped)
+            let resolved = formatOutputText(roman: roman, hanzi: hanzi, isTPSLayout: isTPSLayout, effectiveSwapped: effectiveSwapped)
+            let textToCommit = resolved.text
 
             commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
 
@@ -206,16 +213,10 @@ extension ActionHandler {
 
             // Romanization mode: auto-space (unless trailing hyphen).
             // TPS mode disables auto-space (effectiveSwapped is true for TPS).
-            if Self.shouldAppendAutoSpace(
-                isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
-                wroteRomanization: Self.unmarkedCommitWroteRomanization(
-                    effectiveSwapped: effectiveSwapped,
-                    isOutputBothScripts: settings.isOutputBothScripts,
-                ),
+            appendAutoSpaceIfEarned(
                 documentText: textToCommit,
-            ) {
-                keyboardContext.textDocumentProxy.insertText(" ")
-            }
+                wroteRomanization: resolved.wroteRomanization,
+            )
 
             // Fork: `roman` is the commit string (may be POJ/Hanji); the engine
             // expects raw TL (it calls `pojToTL` on it). Next-word candidates
@@ -251,10 +252,9 @@ extension ActionHandler {
     /// rather than empty brackets.
     ///
     /// Returns the document string plus whether the commit wrote romanization
-    /// (the auto-space gate follows the committed script; the bracket form
-    /// DID write it, so the hanji arm's verdict is `isOutputBothScripts`).
-    /// Static with the settings flag injected so tests pin it without a
-    /// keyboard context.
+    /// (the bracket form DID write it, so the hanji arm's verdict is
+    /// `isOutputBothScripts`). Static with the settings flag injected so tests
+    /// pin it without a keyboard context.
     // 中文: 漢字 cell 出漢字(括號標註 ON 補 `(羅馬字)`);羅馬字 cell 恆出裸羅馬字、
     // 中文: 無視括號標註;回傳是否寫出羅馬字供自動空白判斷。壞掉的標記在
     // 中文: CandidateCellScript.marker 就被擋掉,render 與 commit 一起退回未標記路徑。
@@ -263,28 +263,17 @@ extension ActionHandler {
         cellText: String,
         roman: String?,
         isOutputBothScripts: Bool,
-    ) -> (docText: String, wroteRomanization: Bool) {
+    ) -> ResolvedCommit {
         guard cellScript == CandidateCellScript.hanji else {
-            return (cellText, true)
+            return ResolvedCommit(text: cellText, wroteRomanization: true)
         }
         guard isOutputBothScripts, let roman, !roman.isEmpty else {
-            return (cellText, false)
+            return ResolvedCommit(text: cellText, wroteRomanization: false)
         }
-        return (Self.bracketedHanjiCommit(hanzi: cellText, roman: roman), true)
-    }
-
-    /// Whether an UNMARKED commit wrote romanization into the document: it did
-    /// unless it was a pure-hanji commit — effectively swapped (漢字-led or TPS)
-    /// without the 括號標註 bracket form. Single spelling shared by the
-    /// Continuous path and the lexicon / NextWord path.
-    // CROSS-PLATFORM INVARIANT — mirrors android/.../smartbar/CandidateClickHandler.kt
-    // `unmarkedCommitWroteRomanization`. Drift causes silent divergence (a missing or
-    // stray auto-space after a swapped-mode commit).
-    static func unmarkedCommitWroteRomanization(
-        effectiveSwapped: Bool,
-        isOutputBothScripts: Bool,
-    ) -> Bool {
-        !effectiveSwapped || isOutputBothScripts
+        return ResolvedCommit(
+            text: Self.bracketedHanjiCommit(hanzi: cellText, roman: roman),
+            wroteRomanization: true,
+        )
     }
 
     /// Whether to insert the trailing auto-space: the setting is on, the commit
@@ -343,20 +332,98 @@ extension ActionHandler {
 
     /// Format output text based on display mode (roman, Hanji, or both scripts)
     // 中文: 依顯示模式組出最終輸出字串(純羅馬字 / 純漢字 / 兩種並陳)。TPS layout 時用 TPS bracket 顯示。
-    private func formatOutputText(roman: String, hanzi: String?, isTPSLayout: Bool, effectiveSwapped: Bool) -> String {
+    /// The document string AND whether writing it puts romanization in the
+    /// document — resolved together, by the one branch that picks the string.
+    ///
+    /// Auto-space is a property of ROMANIZATION (`guá beh khì` needs the gaps,
+    /// 我欲去 does not), so its gate has to answer for the string this commit
+    /// actually writes. Deriving the verdict from the output mode instead is
+    /// only ever an approximation, and it is wrong for a candidate with no
+    /// Hanji: the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+    /// romanization-only custom entry all fall to the last arm and write
+    /// romanization whatever the mode leads with.
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../CandidateClickHandler.kt
+    // `unmarkedCommit` and macos/.../CandidateDocumentText.swift `resolved`.
+    // Drift changes which commits earn a space.
+    private func formatOutputText(
+        roman: String,
+        hanzi: String?,
+        isTPSLayout: Bool,
+        effectiveSwapped: Bool,
+    ) -> ResolvedCommit {
         let bracketRoman = isTPSLayout
             ? RustEngineBridge.tlDisplayToTPS(roman, orMapsToER: settings.isTpsOrMappedToER)
             : roman
 
+        // 括號標註 writes the pair, so the romanization IS in the document
+        // whichever half leads.
         if settings.isOutputBothScripts, let hanzi, !hanzi.isEmpty {
-            return effectiveSwapped
+            let text = effectiveSwapped
                 ? Self.bracketedHanjiCommit(hanzi: hanzi, roman: bracketRoman)
                 : "\(bracketRoman) (\(hanzi))"
+            return ResolvedCommit(text: text, wroteRomanization: true)
         } else if effectiveSwapped, let hanzi, !hanzi.isEmpty {
-            return hanzi
+            return ResolvedCommit(text: hanzi, wroteRomanization: false)
         } else {
-            return roman
+            return ResolvedCommit(text: roman, wroteRomanization: true)
         }
+    }
+
+    /// Inserts the trailing auto space when this commit earned it, and arms
+    /// the punctuation swap on it — the ONE insertion site, so the space and
+    /// the knowledge that it is ours can never come apart.
+    ///
+    /// A commit that earns nothing arms nothing: the event already consumed
+    /// the previous arm (`beginInputEvent`), so the next punctuation key sees
+    /// no space of ours to swap.
+    func appendAutoSpaceIfEarned(documentText: String, wroteRomanization: Bool) {
+        guard Self.shouldAppendAutoSpace(
+            isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
+            wroteRomanization: wroteRomanization,
+            documentText: documentText,
+        ) else { return }
+        keyboardContext.textDocumentProxy.insertText(" ")
+        armAutoSpaceSwap()
+    }
+
+    /// The auto-space verdict for Return on a HIGHLIGHTED candidate, which
+    /// commits the suggestion's own `text` verbatim rather than the
+    /// mode-formatted document string the tap path builds
+    /// (`ComposingManager.confirmSelectedCandidate`). So the question is which
+    /// script that one string is, and the candidate's own fields answer it —
+    /// never the output mode, which would space a 漢字 commit in a
+    /// romanization-led list and refuse one in a 漢字-led list.
+    func highlightedCandidateWroteRomanization(_ suggestion: AutocompleteSuggestion) -> Bool {
+        // A §42 split cell says which script it is outright.
+        if let cellScript = CandidateCellScript.marker(for: suggestion) {
+            return cellScript != CandidateCellScript.hanji
+        }
+        let (_, hanzi) = parseRomanAndHanzi(
+            from: suggestion,
+            isNextWord: false,
+            effectiveSwapped: isTPSLayout || settings.isTranslateSwapped,
+        )
+        guard let hanzi, !hanzi.isEmpty else { return true }
+        return suggestion.text != hanzi
+    }
+
+    /// Whether the layout in use composes romanization — TL and POJ do, TPS
+    /// composes Bopomofo, which takes no word spacing. The verdict for every
+    /// commit that writes the composition AS TYPED (the raw-input candidate,
+    /// Return on the first slot), none of which goes through a candidate's
+    /// rendering.
+    // CROSS-PLATFORM INVARIANT — one name on all four platforms: android
+    // `rawPreeditWritesRomanization`, macOS/Windows
+    // `AutoSpacePolicy.rawPreeditWritesRomanization(inputMode:)` /
+    // `policies::raw_preedit_writes_romanization`.
+    static func rawPreeditWritesRomanization(isTPSLayout: Bool) -> Bool {
+        !isTPSLayout
+    }
+
+    /// The layout composes Bopomofo rather than romanization. Named once —
+    /// four call sites in this file alone read it (Android: `prefs.isTpsLayout`).
+    var isTPSLayout: Bool {
+        settings.keyboardLayoutType == .tps
     }
 
     /// Commit text via proxy (NextWord) or composing manager (regular candidate).

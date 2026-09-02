@@ -121,10 +121,10 @@ final class CandidateCellContentTests: XCTestCase {
     func testRomanOnly_offersNoAlternateScriptToSpace() {
         for swapped in [false, true] {
             XCTAssertNil(
-                CandidateDocumentText.alternateText(
+                CandidateDocumentText.resolvedAlternate(
                     for: candidate(roman: "tâi-gí", hanji: "台語"),
                     settings: settings(swapped: swapped, displayMode: .romanOnly),
-                ),
+                )?.text,
                 "swapped=\(swapped)",
             )
         }

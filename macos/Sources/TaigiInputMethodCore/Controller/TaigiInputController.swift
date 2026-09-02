@@ -95,20 +95,18 @@ public final class TaigiInputController: IMKInputController {
     /// caret is re-checked against the client before any rewrite, so a caret
     /// moved by a mouse click this keydown-only controller never saw degrades
     /// to no swap rather than to deleting a character that was not our space.
-    @MainActor
-    private var armedAutoSpace: ArmedAutoSpace?
-
-    /// A trailing auto space this controller wrote, and what it wrote it for.
+    /// Where the caret sat when this controller wrote a trailing auto space —
+    /// the position the swap re-verifies against the client before it rewrites
+    /// anything.
     ///
-    /// The two travel together because the swap needs both: `caretLocation` to
-    /// verify the space is still where it was measured, and `script` to re-read
-    /// the gate the way the commit that armed it read it. Since the 漢羅 key
-    /// those differ — a romanization committed in 漢字 mode earns a space that
-    /// the OUTPUT MODE alone would say was never earned.
-    private struct ArmedAutoSpace {
-        let caretLocation: Int
-        let script: CandidateScript
-    }
+    /// Its EXISTENCE is the verdict: the arm is only ever set after a commit
+    /// that wrote romanization earned its space, so the swap does not re-ask
+    /// what the space was for. That is a FACT about a commit that already
+    /// happened — the word in front of the caret does not become Hanji because
+    /// the user changed the display mode afterwards. Only 自動空白 itself is
+    /// re-read live at swap time, because turning the feature off should stop
+    /// it.
+    private var armedAutoSpaceCaret: Int?
 
     /// Where the mode flash goes. `nil` means the shared HUD panel; a test injects a
     /// recorder, for the same reason `candidatePresenter` is injectable — the
@@ -189,7 +187,7 @@ public final class TaigiInputController: IMKInputController {
             controller.source = .empty
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
-            controller.armedAutoSpace = nil
+            controller.armedAutoSpaceCaret = nil
         }
     }
 
@@ -498,8 +496,8 @@ public final class TaigiInputController: IMKInputController {
         // switch below re-arm it. A key that went anywhere else changed the
         // document or the caret, and a swap after that would be rewriting text
         // it never measured.
-        let armedSwap = armedAutoSpace
-        armedAutoSpace = nil
+        let armedSwap = armedAutoSpaceCaret
+        armedAutoSpaceCaret = nil
 
         guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken),
               let client
@@ -525,22 +523,31 @@ public final class TaigiInputController: IMKInputController {
         case .commit:
             let committedText = manager.commitComposition(executing: executor)
             dismissCandidates()
-            appendAutoSpace(afterCommit: committedText, client: client)
+            appendAutoSpace(
+                afterCommit: committedText,
+                wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(inputMode: settings.inputMode),
+                client: client,
+            )
         case .cancel:
             manager.cancelComposition(executing: executor)
             dismissCandidates()
         case let .commitThenInsert(text):
             // Mapped before the auto-space augmentation so the full-width
-            // character rides the same single mutation as the commit. On THIS
-            // path the two policies still cannot both fire — full-width serves
-            // the swapped mode, and a `.primary` commit there earns no space —
-            // so the order
-            // only keeps the contract uniform, it never composes the rewrites.
+            // character rides the same single mutation as the commit. Both
+            // rewrites CAN fire here: this path commits the preedit as typed,
+            // which is romanization under every mode, while the full-width map
+            // still answers to the output mode — so 漢字 mode + 自動空白 gets
+            // `taigi？ `. The full-width map reading the mode rather than the
+            // committed string is a separate approximation, untouched here.
             let documentText = fullWidthMapped(text) ?? text
             let insert = AutoSpacePolicy.augmentInsert(
                 documentText,
                 afterComposition: manager.displayText,
-                isGateActive: isAutoSpaceGateActive(),
+                isGateActive: isAutoSpaceGateActive(
+                    wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(
+                        inputMode: settings.inputMode,
+                    ),
+                ),
             )
             let committedText = manager.commitComposition(thenInsert: insert.text, executing: executor)
             dismissCandidates()
@@ -682,7 +689,7 @@ public final class TaigiInputController: IMKInputController {
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let (outcome, committedText) = manager.commitCandidate(
+        let (outcome, commit) = manager.commitCandidate(
             candidate, script: script, executing: executor,
         )
         Self.logger.debug("candidate commit \(String(describing: outcome))")
@@ -693,14 +700,19 @@ public final class TaigiInputController: IMKInputController {
             // a nailed segment keeps composing more syllables — and writes
             // nothing to the document under Model B anyway.
             //
-            // `script` is carried into the gate rather than short-circuiting
-            // it here: spacing is a property of ROMANIZATION, and the 漢羅 key
-            // is the one commit whose script disagrees with the output mode the
-            // gate used to read (`AutoSpacePolicy.isGateActive`). So the answer
-            // follows the document — a romanization written in 漢字 mode is
-            // spaced, a hanji written in 羅馬字 mode is not — and 自動空白 OFF
-            // still means no space anywhere (USER 2026-08-25).
-            appendAutoSpace(afterCommit: committedText, script: script, client: client)
+            // The commit's own verdict is carried into the gate rather than
+            // re-derived here: spacing is a property of ROMANIZATION, and both
+            // the 漢羅 key and a candidate with no Hanji write a script the
+            // output mode alone would name wrong (`AutoSpacePolicy
+            // .isGateActive`). So the answer follows the document — a
+            // romanization written in 漢字 mode is spaced, a hanji written in
+            // 羅馬字 mode is not — and 自動空白 OFF still means no space
+            // anywhere (USER 2026-08-25).
+            appendAutoSpace(
+                afterCommit: commit?.text,
+                wroteRomanization: commit?.wroteRomanization ?? false,
+                client: client,
+            )
         case .nailed, .ignored, .unavailable:
             // Anything short of a finished composition is answered by asking the
             // engine what it is holding NOW rather than by reading the outcome:
@@ -821,29 +833,19 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Auto-space
 
-    /// The gate every auto-space site reads — live, so a toggle flipped in the
-    /// settings window applies to the very next commit.
+    /// The gate every auto-space site reads — 自動空白 live, so a toggle
+    /// flipped in the settings window applies to the very next commit, and
+    /// `wroteRomanization` from whatever resolved the string this commit wrote.
     ///
-    /// `script` says which of the candidate's two renderings the commit wrote,
-    /// which is what the gate actually turns on. It defaults to `.primary`
-    /// because every site but the 漢羅 key writes what the settings lead with —
-    /// the mid-composition punctuation path included, which commits the preedit
-    /// as rendered.
-    ///
-    /// The swap pair is the EFFECTIVE one (`current`), read once so both
-    /// halves come from the same instant: under the romanization-only display
-    /// it is `(false, false)` whatever is stored, and the commit that just ran
-    /// wrote romanization.
+    /// The verdict is never derived from the output mode here. A candidate
+    /// commit gets it from `CandidateDocumentText.resolved`, a preedit commit
+    /// from `rawPreeditWritesRomanization`, and the swap from the armed record
+    /// of the commit that wrote the space.
     @MainActor
-    private func isAutoSpaceGateActive(for script: CandidateScript = .primary) -> Bool {
-        let effective = settings.current
-        return AutoSpacePolicy.isGateActive(
+    private func isAutoSpaceGateActive(wroteRomanization: Bool) -> Bool {
+        AutoSpacePolicy.isGateActive(
             isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
-            wroteRomanization: AutoSpacePolicy.writesRomanization(
-                script: script,
-                isTranslateSwapped: effective.isTranslateSwapped,
-                isOutputBothScripts: effective.isOutputBothScripts,
-            ),
+            wroteRomanization: wroteRomanization,
         )
     }
 
@@ -862,15 +864,15 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func appendAutoSpace(
         afterCommit committedText: String?,
-        script: CandidateScript = .primary,
+        wroteRomanization: Bool,
         client: IMKTextInput,
     ) {
         guard let committedText,
-              isAutoSpaceGateActive(for: script),
+              isAutoSpaceGateActive(wroteRomanization: wroteRomanization),
               AutoSpacePolicy.shouldAppendSpace(afterCommitting: committedText)
         else { return }
         client.insertText(" ", replacementRange: ClientEffectExecutor.atInsertionPoint)
-        armAutoSpaceSwap(client, script: script)
+        armAutoSpaceSwap(client)
     }
 
     /// Remembers where the caret sits now that the auto space is in front of
@@ -882,10 +884,10 @@ public final class TaigiInputController: IMKInputController {
     /// not our space. Asking here is safe — this runs inside a key event, like
     /// every client query (see `caretRect`'s activation-only deadlock rule).
     @MainActor
-    private func armAutoSpaceSwap(_ client: IMKTextInput, script: CandidateScript = .primary) {
+    private func armAutoSpaceSwap(_ client: IMKTextInput) {
         let caret = client.selectedRange()
         guard caret.location != NSNotFound, caret.length == 0, caret.location > 0 else { return }
-        armedAutoSpace = ArmedAutoSpace(caretLocation: caret.location, script: script)
+        armedAutoSpaceCaret = caret.location
     }
 
     /// Replaces the auto space before the caret with `?` + space — the
@@ -902,27 +904,27 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private func swapAutoSpace(
         with key: KeyEventSnapshot,
-        armedAt armed: ArmedAutoSpace,
+        armedAt armedCaret: Int,
         client: IMKTextInput,
         manager: ComposingManager,
     ) -> Bool {
-        // Re-read against the settings as they stand NOW, deliberately: a
-        // toggle switched off or a 漢羅 flip since the commit invalidates the
-        // space it left behind, and the key maps or passes through instead
-        // (`AutoSpaceControllerTests.testTheToggleFlippedOffAfterTheCommit…`,
-        // `FullWidthPunctuationControllerTests.testSwappingModesAfterAnArmed…`).
-        // Read for the script that ARMED it, though, not for `.primary`: a
-        // romanization committed in 漢字 mode by the 漢羅 key really did earn
-        // its space, and asking under the output mode would refuse to swap a
-        // space this controller had just written.
+        // 自動空白 is re-read against the setting as it stands NOW,
+        // deliberately: switching the feature off invalidates the space it
+        // left behind, and the key maps or passes through instead
+        // (`AutoSpaceControllerTests.testTheToggleFlippedOffAfterTheCommit…`).
+        // The COMMIT's verdict is not re-derived, though — it is the armed
+        // record's. What is in front of the caret is romanization or Hanji as
+        // a matter of history, and a display mode changed since then does not
+        // rewrite it; asking the mode again would refuse to swap a space this
+        // controller had just written.
         guard ComposingKeyIntent.isDocumentText(key),
               let characters = key.characters,
               AutoSpacePunctuation.isAttaching(characters),
-              isAutoSpaceGateActive(for: armed.script)
+              settings.isAutoSpaceEnabled
         else { return false }
         let caret = client.selectedRange()
-        guard caret.length == 0, caret.location == armed.caretLocation else { return false }
-        let spaceRange = NSRange(location: armed.caretLocation - 1, length: 1)
+        guard caret.length == 0, caret.location == armedCaret else { return false }
+        let spaceRange = NSRange(location: armedCaret - 1, length: 1)
         guard let preceding = client.attributedSubstring(from: spaceRange),
               preceding.string == " "
         else { return false }
@@ -934,10 +936,7 @@ public final class TaigiInputController: IMKInputController {
         // the rewrite's end is fully determined by the range just replaced,
         // and the next swap re-verifies the position against the client
         // anyway — a client that moved the caret degrades to no swap.
-        armedAutoSpace = ArmedAutoSpace(
-            caretLocation: armed.caretLocation + (characters as NSString).length,
-            script: armed.script,
-        )
+        armedAutoSpaceCaret = armedCaret + (characters as NSString).length
         return true
     }
 
@@ -1004,7 +1003,7 @@ public final class TaigiInputController: IMKInputController {
         // Focus is moving or the user clicked — either way the caret the swap
         // was measured against is gone. (No auto space is appended here
         // either: lifecycle commits are not a finished word.)
-        armedAutoSpace = nil
+        armedAutoSpaceCaret = nil
         guard let client else { return }
         defer { isMarkedTextVisible = false }
 

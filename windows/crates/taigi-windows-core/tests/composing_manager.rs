@@ -22,7 +22,9 @@ use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{
     self, AssociationPair, ContinuousCandidate, CustomEntry, Effect, FrequencyRow,
 };
-use taigi_windows_core::settings::{keys, SettingsDocument, SettingsProvider};
+use taigi_windows_core::settings::{
+    keys, CandidateDisplayMode, SettingsDocument, SettingsProvider,
+};
 
 // MARK: - Fixtures
 
@@ -230,8 +232,20 @@ impl Rig {
         candidate: &ContinuousCandidate,
         script: CandidateScript,
     ) -> (CandidateCommitOutcome, Option<String>) {
+        let (outcome, committed) =
+            self.manager
+                .commit_candidate(candidate, script, &mut self.recorder);
+        (outcome, committed.map(|commit| commit.text))
+    }
+
+    /// The auto-space verdict the same commit resolves — asserted apart from
+    /// the text because the two travel together through one return.
+    fn commit_verdict(&mut self, candidate: &ContinuousCandidate, script: CandidateScript) -> bool {
         self.manager
             .commit_candidate(candidate, script, &mut self.recorder)
+            .1
+            .expect("a finalized commit carries its text and verdict")
+            .wrote_romanization
     }
 
     fn advance_clock(&self, ms: i64) {
@@ -378,6 +392,51 @@ fn commit_candidate_swapped_output_writes_the_hanji_and_alternate_writes_the_oth
         Some("tâi-gí"),
         "Space writes the other script"
     );
+}
+
+/// trace: `resolved_commit` — the hanji-absent arm, through the real engine.
+/// §34's literal is a one-script candidate, so it earns the auto space under
+/// every mode; the old gate read `(script, swap)` and called it a hanji
+/// commit in 漢字優先 and 漢羅濫, the two modes that force the swap on.
+#[test]
+fn commit_candidate_with_no_hanji_wrote_romanization_under_every_mode() {
+    let _lock = engine_lock();
+    for (swapped, display_mode) in [
+        (false, CandidateDisplayMode::SideBySide),
+        (true, CandidateDisplayMode::SideBySide),
+        (true, CandidateDisplayMode::Combined),
+    ] {
+        let mut rig = rig();
+        rig.settings.edit(|doc| {
+            doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, swapped);
+            doc.set_choice(&keys::CANDIDATE_DISPLAY_MODE, display_mode);
+        });
+        rig.type_text("taigi");
+        let literal = rig
+            .candidates()
+            .into_iter()
+            .find(|candidate| candidate.nonempty_hanji().is_none())
+            .expect("§34 literal leads the desktop list");
+        assert_eq!(literal.roman, "taigi");
+
+        assert!(
+            rig.commit_verdict(&literal, CandidateScript::Primary),
+            "swapped={swapped} mode={display_mode:?}"
+        );
+    }
+}
+
+/// And the other direction is untouched: a 漢字 commit earns nothing.
+#[test]
+fn commit_candidate_of_a_hanji_wrote_no_romanization_when_the_mode_leads_with_it() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.settings
+        .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true));
+    rig.type_text("taigi");
+    let taigi = rig.candidate("台語");
+
+    assert!(!rig.commit_verdict(&taigi, CandidateScript::Primary));
 }
 
 #[test]

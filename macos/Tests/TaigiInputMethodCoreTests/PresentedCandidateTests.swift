@@ -166,7 +166,7 @@ final class PresentedCandidateTests: XCTestCase {
         func written(_ script: CandidateScript) -> String? {
             switch script {
             case .primary: CandidateDocumentText.text(for: taigi, settings: combined)
-            case .alternate: CandidateDocumentText.alternateText(for: taigi, settings: combined)
+            case .alternate: CandidateDocumentText.resolvedAlternate(for: taigi, settings: combined)?.text
             }
         }
 

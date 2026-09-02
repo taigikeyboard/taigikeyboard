@@ -13,6 +13,7 @@ extension KeyboardViewController: EmojiServiceDelegate {
     // 中文: 點選 emoji 時走 ComposingManager.commitPreeditThenInsertExternal,
     // 中文: 讓正在組字的 preedit 與 emoji 一起 atomic 送出,避免靜默清掉 preedit。
     func emojiDidSelect(_ emoji: String) {
+        actionHandler?.beginInputEvent()
         if let manager = actionHandler?.composingManager {
             manager.commitPreeditThenInsertExternal(emoji)
         } else {
@@ -36,6 +37,7 @@ extension KeyboardViewController: EmojiServiceDelegate {
     // 中文: emoji 鍵盤的退格走標準退格路徑,讓組字 / 閒置兩種分支與一般鍵盤一致。
     func emojiKeyboardShouldDeleteBackward() {
         if let handler = actionHandler {
+            handler.beginInputEvent()
             _ = handler.handleBackspaceAction()
         } else {
             textDocumentProxy.deleteBackward()

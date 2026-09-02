@@ -189,12 +189,12 @@ final class ComposingManagerLearningTests: XCTestCase {
             syllableCount: candidate.syllableCount,
         )
 
-        let (outcome, committedText) = manager.commitCandidate(
+        let (outcome, commit) = manager.commitCandidate(
             romanOnly, script: .alternate, executing: executor,
         )
 
         XCTAssertEqual(outcome, .ignored)
-        XCTAssertNil(committedText)
+        XCTAssertNil(commit, "a commit that wrote nothing earns no auto space")
         XCTAssertEqual(
             try XCTUnwrap(stores.frequency.rows(forWords: [romanOnly.displayText])), [],
             "a commit that wrote nothing teaches nothing",

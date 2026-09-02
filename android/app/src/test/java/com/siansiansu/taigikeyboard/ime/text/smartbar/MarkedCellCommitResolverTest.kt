@@ -19,7 +19,7 @@ class MarkedCellCommitResolverTest {
     @Test
     fun hanjiCell_bracketsOff_commitsHanjiAlone_noRomanizationWritten() {
         assertEquals(
-            MarkedCellCommit("台語", wroteRomanization = false),
+            ResolvedCommit("台語", wroteRomanization = false),
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
                 roman = "tâi-gí",
@@ -32,7 +32,7 @@ class MarkedCellCommitResolverTest {
     @Test
     fun hanjiCell_bracketsOn_commitsHanjiBracketRoman_romanizationWritten() {
         assertEquals(
-            MarkedCellCommit("台語 (tâi-gí)", wroteRomanization = true),
+            ResolvedCommit("台語 (tâi-gí)", wroteRomanization = true),
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
                 roman = "tâi-gí",
@@ -46,7 +46,7 @@ class MarkedCellCommitResolverTest {
     @Test
     fun test_INVARIANT_roman_cell_commits_bare_roman_even_with_brackets_on() {
         assertEquals(
-            MarkedCellCommit("tâi-gí", wroteRomanization = true),
+            ResolvedCommit("tâi-gí", wroteRomanization = true),
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
                 roman = "tâi-gí",
@@ -55,7 +55,7 @@ class MarkedCellCommitResolverTest {
             ),
         )
         assertEquals(
-            MarkedCellCommit("tâi-gí", wroteRomanization = true),
+            ResolvedCommit("tâi-gí", wroteRomanization = true),
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
                 roman = "tâi-gí",
@@ -69,7 +69,7 @@ class MarkedCellCommitResolverTest {
     @Test
     fun hanjiCell_bracketsOn_missingRoman_commitsHanjiAlone() {
         assertEquals(
-            MarkedCellCommit("台語", wroteRomanization = false),
+            ResolvedCommit("台語", wroteRomanization = false),
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
                 roman = "",
@@ -94,22 +94,6 @@ class MarkedCellCommitResolverTest {
             "unknown marker value — resolver declines",
             resolveMarkedCellCommit("both", "tâi-gí", "台語", false),
         )
-    }
-
-    /**
-     * The auto-space verdict for an UNMARKED commit — the derivation the three
-     * unmarked commit sites shared inline before the §42 round hoisted it.
-     * Mirrors iOS `ActionHandlerAutoSpaceVerdictTests`.
-     */
-    @Test
-    fun unmarkedCommitWroteRomanization_falseOnlyForPureHanjiCommit() {
-        // roman-led output (not swapped) always writes romanization
-        assertTrue(unmarkedCommitWroteRomanization(effectiveSwapped = false, outputBothScripts = false))
-        assertTrue(unmarkedCommitWroteRomanization(effectiveSwapped = false, outputBothScripts = true))
-        // swapped/TPS + 括號標註 ON = the `漢字 (羅馬字)` form, which DID write it
-        assertTrue(unmarkedCommitWroteRomanization(effectiveSwapped = true, outputBothScripts = true))
-        // swapped/TPS without brackets = a pure 漢字 commit — no auto-space
-        assertFalse(unmarkedCommitWroteRomanization(effectiveSwapped = true, outputBothScripts = false))
     }
 
     /**

@@ -70,26 +70,71 @@ impl CandidateCellContent {
     }
 }
 
-/// What committing `candidate` writes into the document under `settings`.
+/// One commit's document string, and whether writing it puts romanization
+/// in the document — the single input the auto-space gate reads
+/// (`policies::is_gate_active`). Port of `ResolvedCommit` (Swift).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResolvedCommit {
+    pub text: String,
+    pub wrote_romanization: bool,
+}
+
+/// What committing `candidate` writes into the document under `settings` —
+/// the string alone, for the window's cell label.
 /// CROSS-PLATFORM INVARIANT — mirrors
 /// `ios/.../ActionHandler+Suggestions.swift:218`; the TPS branch is absent
 /// because the desktop ships TL and POJ only.
 pub fn document_text(candidate: &ContinuousCandidate, settings: &EngineSettings) -> String {
+    resolved_commit(candidate, settings).text
+}
+
+/// [`document_text`] with the auto-space verdict resolved by the SAME arm
+/// that picks the string.
+///
+/// Auto-space is a property of ROMANIZATION (`guá beh khì` needs the gaps,
+/// 我欲去 does not), so its gate has to answer for the string this commit
+/// actually writes. Deriving the verdict from the output mode instead is
+/// only ever an approximation, and it is wrong for a candidate with no
+/// Hanji: the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+/// romanization-only custom entry all write their romanization whatever the
+/// mode leads with.
+/// CROSS-PLATFORM INVARIANT — mirrors `macos/.../CandidateDocumentText.swift`
+/// `resolved(for:settings:)`. Drift changes which commits earn a space.
+pub fn resolved_commit(
+    candidate: &ContinuousCandidate,
+    settings: &EngineSettings,
+) -> ResolvedCommit {
     // An empty-string hanji folds to roman-only — "guá ()" would be a
-    // visible defect.
+    // visible defect — and romanization is what the document gets whichever
+    // script the mode leads with.
     let Some(hanji) = candidate.nonempty_hanji() else {
-        return candidate.roman.clone();
+        return ResolvedCommit {
+            text: candidate.roman.clone(),
+            wrote_romanization: true,
+        };
     };
     if settings.is_output_both_scripts {
-        if settings.is_translate_swapped {
+        // 括號標註 writes the pair, so the romanization IS in the document
+        // whichever half leads.
+        let text = if settings.is_translate_swapped {
             format!("{hanji} ({})", candidate.roman)
         } else {
             format!("{} ({hanji})", candidate.roman)
+        };
+        ResolvedCommit {
+            text,
+            wrote_romanization: true,
         }
     } else if settings.is_translate_swapped {
-        hanji.to_owned()
+        ResolvedCommit {
+            text: hanji.to_owned(),
+            wrote_romanization: false,
+        }
     } else {
-        candidate.roman.clone()
+        ResolvedCommit {
+            text: candidate.roman.clone(),
+            wrote_romanization: true,
+        }
     }
 }
 
@@ -97,20 +142,33 @@ pub fn document_text(candidate: &ContinuousCandidate, settings: &EngineSettings)
 /// `None` when the candidate has one script or the mode shows no hanji.
 /// Read off the settings, never the cell: under 合用 the flip in
 /// `CandidateSource::resolve` turns this into "the other cell's script".
-/// `is_output_both_scripts` is not consulted — Space writes one script.
-pub fn alternate_text(
+/// `is_output_both_scripts` is not consulted — Space writes one script, so
+/// its verdict is simply which script that is.
+pub fn resolved_alternate(
     candidate: &ContinuousCandidate,
     settings: &EngineSettings,
-) -> Option<String> {
+) -> Option<ResolvedCommit> {
     let hanji = candidate.nonempty_hanji()?;
     if !settings.candidate_display_mode.shows_hanji() {
         return None;
     }
     Some(if settings.is_translate_swapped {
-        candidate.roman.clone()
+        ResolvedCommit {
+            text: candidate.roman.clone(),
+            wrote_romanization: true,
+        }
     } else {
-        hanji.to_owned()
+        ResolvedCommit {
+            text: hanji.to_owned(),
+            wrote_romanization: false,
+        }
     })
+}
+
+/// The alternate's text alone, for tests and callers that only render.
+#[cfg(test)]
+fn alternate_text(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Option<String> {
+    resolved_alternate(candidate, settings).map(|resolved| resolved.text)
 }
 
 #[cfg(test)]
@@ -212,6 +270,54 @@ mod tests {
             assert_eq!(
                 alternate_text(&candidate("guá", Some(""), 0), &combined),
                 None
+            );
+        }
+    }
+
+    #[test]
+    fn the_verdict_follows_the_string_the_arm_picked() {
+        // trace: CandidateDocumentTextTests.swift
+        // `testResolved_saysWhetherTheStringItPickedCarriesRomanization`.
+        let c = candidate("tâi-gí", Some("台語"), 0);
+        assert!(resolved_commit(&c, &settings(false, false)).wrote_romanization);
+        assert!(
+            !resolved_commit(&c, &settings(true, false)).wrote_romanization,
+            "a pure 漢字 commit earns no space"
+        );
+        for swapped in [false, true] {
+            assert!(
+                resolved_commit(&c, &settings(swapped, true)).wrote_romanization,
+                "括號標註 writes the pair either way round (swapped={swapped})"
+            );
+        }
+    }
+
+    #[test]
+    fn a_candidate_with_no_hanji_always_carries_romanization() {
+        // trace: `resolved_commit` — the hanji-absent arm. Romanization
+        // under EVERY mode, including the two the old mode proxy called a
+        // hanji commit (漢字優先 and 漢羅濫).
+        for c in [candidate("taigi", None, 0), candidate("taigi", Some(""), 0)] {
+            for (swapped, both) in [(false, false), (true, false), (false, true), (true, true)] {
+                let resolved = resolved_commit(&c, &settings(swapped, both));
+                assert_eq!(resolved.text, "taigi");
+                assert!(resolved.wrote_romanization, "swapped={swapped} both={both}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_alternate_verdict_inverts_the_mode_and_ignores_brackets() {
+        let c = candidate("tâi-gí", Some("台語"), 0);
+        for both in [false, true] {
+            let swapped = resolved_alternate(&c, &settings(true, both)).unwrap();
+            assert_eq!(swapped.text, "tâi-gí");
+            assert!(swapped.wrote_romanization, "both={both}");
+            let roman_first = resolved_alternate(&c, &settings(false, both)).unwrap();
+            assert_eq!(roman_first.text, "台語");
+            assert!(
+                !roman_first.wrote_romanization,
+                "Space wrote the hanji, not the pair (both={both})"
             );
         }
     }

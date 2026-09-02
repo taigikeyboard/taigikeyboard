@@ -4,7 +4,7 @@
 
 // 中文: 自動空白規則 — 閘門、連字號、附著標點交換、一次寫入的插入增補。
 
-use crate::composing::CandidateScript;
+use crate::settings::InputMode;
 
 /// Sentence-end + clause separators + CLOSING brackets/quotes. OPENING
 /// brackets/quotes are deliberately excluded (they need a LEADING space),
@@ -26,23 +26,25 @@ pub fn is_attaching_punctuation(text: &str) -> bool {
 }
 
 /// True when this commit earns a trailing space at all — the same gate every
-/// insertion site and the punctuation swap read.
+/// insertion site and the punctuation swap read. `wrote_romanization` comes
+/// from whatever resolved the string: `composing::resolved_commit` for a
+/// candidate, [`raw_preedit_writes_romanization`] for the preedit itself.
 pub fn is_gate_active(is_auto_space_enabled: bool, wrote_romanization: bool) -> bool {
     is_auto_space_enabled && wrote_romanization
 }
 
-/// Whether committing `script` under these settings puts romanization in
-/// the document. The one place the 漢羅 key's inversion is written down: a
-/// `Primary` commit under 括號標註 writes `tâi-gí (台語)`, which HAS the
-/// romanization, while `Alternate` writes one script and never the pair.
-pub fn writes_romanization(
-    script: CandidateScript,
-    is_translate_swapped: bool,
-    is_output_both_scripts: bool,
-) -> bool {
-    match script {
-        CandidateScript::Primary => !is_translate_swapped || is_output_both_scripts,
-        CandidateScript::Alternate => is_translate_swapped,
+/// Whether committing the preedit AS TYPED writes romanization — the
+/// literal-commit chord and the mid-composition punctuation commit, neither
+/// of which goes through a candidate.
+///
+/// A `match` over a two-variant enum rather than `true`, so that adding a
+/// non-romanized layout (TPS composes Bopomofo, which takes no spacing)
+/// fails to compile here instead of silently spacing 注音.
+/// CROSS-PLATFORM INVARIANT — mirrors `macos/.../AutoSpacePolicy.swift`
+/// `rawPreeditWritesRomanization(inputMode:)`.
+pub fn raw_preedit_writes_romanization(input_mode: InputMode) -> bool {
+    match input_mode {
+        InputMode::Tl | InputMode::Poj => true,
     }
 }
 
@@ -127,22 +129,12 @@ mod tests {
     }
 
     #[test]
-    fn gate_and_writes_romanization_follow_the_output_mode() {
-        // trace: AutoSpacePolicyTests.swift:32-85.
+    fn the_gate_follows_whether_the_commit_wrote_romanization() {
+        // trace: AutoSpacePolicyTests.swift:32-48.
         assert!(!is_gate_active(false, true));
         assert!(!is_gate_active(false, false));
         assert!(is_gate_active(true, true));
         assert!(!is_gate_active(true, false));
-        assert!(writes_romanization(CandidateScript::Primary, false, false));
-        assert!(!writes_romanization(CandidateScript::Primary, true, false));
-        assert!(writes_romanization(CandidateScript::Primary, true, true));
-        assert!(writes_romanization(CandidateScript::Alternate, true, false));
-        for both in [false, true] {
-            assert!(
-                !writes_romanization(CandidateScript::Alternate, false, both),
-                "both={both}"
-            );
-        }
     }
 
     #[test]
@@ -153,7 +145,7 @@ mod tests {
         let enabled = document.bool(&crate::settings::keys::IS_AUTO_SPACE_ENABLED);
         assert!(!is_gate_active(
             enabled,
-            writes_romanization(CandidateScript::Primary, false, false)
+            raw_preedit_writes_romanization(InputMode::Tl)
         ));
     }
 

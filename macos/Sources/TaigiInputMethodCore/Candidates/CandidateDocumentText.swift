@@ -24,16 +24,42 @@ enum CandidateDocumentText {
         for candidate: ContinuousCandidate,
         settings: EngineSettings,
     ) -> String {
+        resolved(for: candidate, settings: settings).text
+    }
+
+    /// The document string AND whether writing it puts romanization in the
+    /// document — resolved together, by the one branch that picks the string.
+    ///
+    /// Auto-space is a property of ROMANIZATION (`guá beh khì` needs the gaps,
+    /// 我欲去 does not), so its gate has to answer for the string this commit
+    /// actually writes. Deriving that verdict from the output mode instead is
+    /// only ever an approximation, and it is wrong for a candidate with no
+    /// Hanji: the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+    /// romanization-only custom entry all write their romanization whatever
+    /// the mode leads with. Asking the branch that built the string is how the
+    /// two cannot disagree.
+    static func resolved(
+        for candidate: ContinuousCandidate,
+        settings: EngineSettings,
+    ) -> ResolvedCommit {
         // No presentable Hanji: the romanization alone — rendering "guá ()"
-        // for it would be a visible defect.
-        guard let hanji = candidate.presentableHanji else { return candidate.roman }
+        // for it would be a visible defect — and romanization is what the
+        // document gets whichever script the mode leads with.
+        guard let hanji = candidate.presentableHanji else {
+            return ResolvedCommit(text: candidate.roman, wroteRomanization: true)
+        }
 
         if settings.isOutputBothScripts {
-            return settings.isTranslateSwapped
+            // 括號標註 writes the pair, so the romanization IS in the document
+            // whichever half leads.
+            let text = settings.isTranslateSwapped
                 ? "\(hanji) (\(candidate.roman))"
                 : "\(candidate.roman) (\(hanji))"
+            return ResolvedCommit(text: text, wroteRomanization: true)
         }
-        return settings.isTranslateSwapped ? hanji : candidate.roman
+        return settings.isTranslateSwapped
+            ? ResolvedCommit(text: hanji, wroteRomanization: false)
+            : ResolvedCommit(text: candidate.roman, wroteRomanization: true)
     }
 
     /// The script `text(for:settings:)` does NOT lead with — what Space
@@ -54,13 +80,25 @@ enum CandidateDocumentText {
     /// name) and under a display with no Hanji on screen (羅馬字): the
     /// romanization again would make Space a slower Return, and Hanji the
     /// user never saw would be worse.
-    static func alternateText(
+    /// The alternate is one script by itself, never the bracketed pair, so
+    /// the verdict it carries is simply which script that is.
+    static func resolvedAlternate(
         for candidate: ContinuousCandidate,
         settings: EngineSettings,
-    ) -> String? {
+    ) -> ResolvedCommit? {
         guard let hanji = candidate.presentableHanji,
               settings.candidateDisplayMode.showsHanji
         else { return nil }
-        return settings.isTranslateSwapped ? candidate.roman : hanji
+        return settings.isTranslateSwapped
+            ? ResolvedCommit(text: candidate.roman, wroteRomanization: true)
+            : ResolvedCommit(text: hanji, wroteRomanization: false)
     }
+}
+
+/// What one commit writes into the document, and whether that string carries
+/// romanization — the single input the auto-space gate reads
+/// (`AutoSpacePolicy.isGateActive`).
+struct ResolvedCommit: Equatable, Sendable {
+    let text: String
+    let wroteRomanization: Bool
 }

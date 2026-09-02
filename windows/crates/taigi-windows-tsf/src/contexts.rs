@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use taigi_windows_core::composing::{CandidateScript, CandidateSource, ContextToken};
+use taigi_windows_core::composing::{CandidateSource, ContextToken};
 use windows::core::{IUnknown, Interface};
 use windows::Win32::UI::TextServices::{ITfComposition, ITfContext, ITfRange};
 
@@ -28,11 +28,11 @@ pub struct ContextState {
     /// = no candidates showing.
     pub candidates: CandidateSource,
     /// The highlighted candidate (PR5b: a headless list; PR6's window
-    /// Which script's commit left an auto space in front of the caret, so
-    /// the next attaching punctuation may swap with it (§23), together
-    /// with the caret's range at that moment — the position the swap
-    /// re-checks before it rewrites anything (the Mac's `caretLocation`).
-    pub armed_auto_space: Option<(CandidateScript, ITfRange)>,
+    /// The caret's range when this IME left an auto space in front of it —
+    /// the position the swap re-checks before it rewrites anything (the Mac's
+    /// `armedAutoSpaceCaret`). Its EXISTENCE is the verdict: the arm is only
+    /// ever set after a commit that wrote romanization earned its space (§23).
+    pub armed_auto_space: Option<ITfRange>,
     /// The host ended this context's composition while the engine could not
     /// be reached (a callback re-entering a running session): the engine is
     /// reset at the next key instead of silently drifting.

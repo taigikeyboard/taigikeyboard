@@ -397,6 +397,19 @@ extension XCTestCase {
     func withDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
         try withSetting(SettingsStore.Keys.candidateDisplayMode.name, to: mode.rawValue, body)
     }
+
+    /// Runs `body` with 漢字優先 on or off.
+    ///
+    /// Through `withSetting` rather than a scratch store, for the reason
+    /// spelled out there: the controller reads its own `SettingsStore` while
+    /// the shared coordinator's `ComposingManager` reads another, so a swap
+    /// written to a scratch suite renders the bar one way and gates the commit
+    /// the other. A case that means "the user is in 漢字 mode" has to move the
+    /// domain BOTH of them read.
+    @MainActor
+    func withTranslateSwapped(_ swapped: Bool, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: swapped, body)
+    }
 }
 
 /// A case's session with a candidate bar up — what the bar-walking helpers

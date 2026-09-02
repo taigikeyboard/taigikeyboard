@@ -26,8 +26,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_windows_core::composing::{
-    CandidateCellContent, CandidateCommitOutcome, CandidateListChange, CandidateScript,
-    CandidateSource, ComposingManager, ComposingSessionCoordinator, ContextToken,
+    CandidateCellContent, CandidateCommitOutcome, CandidateListChange, CandidateSource,
+    ComposingManager, ComposingSessionCoordinator, ContextToken, ResolvedCommit,
 };
 use taigi_windows_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot, ShortcutAction,
@@ -188,22 +188,17 @@ impl TextService_Impl {
         let Some(characters) = snapshot.characters.as_deref() else {
             return false;
         };
-        let armed = self
+        let is_armed = self
             .state
             .borrow_mut()
             .contexts
             .entry_mut(identity)
-            .and_then(|entry| {
-                entry
-                    .state
-                    .armed_auto_space
-                    .as_ref()
-                    .map(|(script, _)| *script)
-            });
-        if let Some(script) = armed {
-            if policies::is_attaching_punctuation(characters) && auto_space_gate(settings, script) {
-                return true;
-            }
+            .is_some_and(|entry| entry.state.armed_auto_space.is_some());
+        if is_armed
+            && policies::is_attaching_punctuation(characters)
+            && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        {
+            return true;
         }
         full_width_mapped(settings, characters).is_some()
     }
@@ -272,7 +267,7 @@ impl TextService_Impl {
                 None => (None, None, CandidateSource::default(), presenter),
             }
         };
-        let mut armed_after: Option<(CandidateScript, ITfRange)> = None;
+        let mut armed_after: Option<ITfRange> = None;
         let surface = Surface {
             presenter,
             token,
@@ -880,7 +875,7 @@ fn perform_intent(
     editor: &mut CompositionEditor<'_>,
     list: &mut CandidateSource,
     surface: &Surface,
-    armed_swap: Option<&(CandidateScript, ITfRange)>,
+    armed_swap: Option<&ITfRange>,
 ) -> KeyOutcome {
     match intent {
         ComposingKeyIntent::Input(text) => {
@@ -896,15 +891,17 @@ fn perform_intent(
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::Commit => {
-            let committed = manager.commit_composition(editor);
+            // The preedit AS TYPED: romanization on a platform shipping TL and
+            // POJ only, whichever script the candidate list led with.
+            let committed = manager
+                .commit_composition(editor)
+                .map(|text| ResolvedCommit {
+                    text,
+                    wrote_romanization: raw_preedit_wrote_romanization(settings),
+                });
             list.clear();
             surface.hide();
-            append_auto_space(
-                committed.as_deref(),
-                CandidateScript::Primary,
-                settings,
-                editor,
-            );
+            append_auto_space(committed.as_ref(), settings, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::Cancel => {
@@ -915,15 +912,20 @@ fn perform_intent(
         }
         ComposingKeyIntent::CommitThenInsert(text) => {
             // Mapped before the auto-space augmentation so the full-width
-            // character rides the same single mutation as the commit.
+            // character rides the same single mutation as the commit. Both
+            // rewrites CAN fire: this path commits the preedit as typed,
+            // which is romanization under every mode, while the full-width
+            // map still answers to the output MODE — so 漢字優先 gets
+            // `taigi？ `. That approximation is a 全形標點 policy question,
+            // left standing (macOS pins the same pair).
             let document_text = full_width_mapped(settings, text).unwrap_or_else(|| text.clone());
-            let gate = auto_space_gate(settings, CandidateScript::Primary);
+            let gate = auto_space_gate(settings, raw_preedit_wrote_romanization(settings));
             let insert = policies::augment_insert(&document_text, manager.display_text(), gate);
             let committed = manager.commit_composition_then_insert(&insert.text, editor);
             list.clear();
             surface.hide();
             if insert.leaves_trailing_auto_space && committed.is_some() {
-                editor.arm_swap(CandidateScript::Primary);
+                editor.arm_swap();
             }
             KeyOutcome::Consumed
         }
@@ -937,16 +939,19 @@ fn perform_intent(
             let Some(characters) = snapshot.characters.as_deref() else {
                 return KeyOutcome::ToHost;
             };
-            if let Some((script, anchor)) = armed_swap {
+            if let Some(anchor) = armed_swap {
+                // The arm's EXISTENCE is the verdict — it is only ever set
+                // after a commit that wrote romanization earned its space — so
+                // only 自動空白 itself is re-read live here.
                 if ComposingKeyIntent::is_document_text(snapshot)
                     && policies::is_attaching_punctuation(characters)
-                    && auto_space_gate(settings, *script)
+                    && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
                     && editor.swap_preceding_space(&format!("{characters} "), anchor)
                 {
                     manager.note_character_typed_outside_composition(characters);
                     // Re-armed at the caret the rewrite left, re-verified
                     // against the document on the next key (`?!` chains).
-                    editor.arm_swap(*script);
+                    editor.arm_swap();
                     return KeyOutcome::Consumed;
                 }
             }
@@ -1038,7 +1043,7 @@ fn commit_candidate(
         CandidateCommitOutcome::Finalized => {
             list.clear();
             surface.hide();
-            append_auto_space(committed.as_deref(), script, settings, editor);
+            append_auto_space(committed.as_ref(), settings, editor);
         }
         CandidateCommitOutcome::Nailed
         | CandidateCommitOutcome::Ignored
@@ -1049,36 +1054,42 @@ fn commit_candidate(
     }
 }
 
-/// The gate every auto-space site reads — live (`isAutoSpaceGateActive`).
-/// The swap pair is the DERIVED one (`engine_settings`), so roman-only
-/// commits count as romanization whatever the stored swap says.
-fn auto_space_gate(settings: &SettingsDocument, script: CandidateScript) -> bool {
-    let engine = settings.engine_settings();
+/// The gate every auto-space site reads — 自動空白 live
+/// (`isAutoSpaceGateActive`), and `wrote_romanization` from whatever
+/// resolved the string this commit wrote. Never re-derived from the output
+/// mode here: a candidate commit gets it from `composing::resolved_commit`,
+/// a preedit commit from [`raw_preedit_wrote_romanization`], and the swap
+/// from the armed record of the commit that wrote the space.
+fn auto_space_gate(settings: &SettingsDocument, wrote_romanization: bool) -> bool {
     policies::is_gate_active(
         settings.bool(&keys::IS_AUTO_SPACE_ENABLED),
-        policies::writes_romanization(
-            script,
-            engine.is_translate_swapped,
-            engine.is_output_both_scripts,
-        ),
+        wrote_romanization,
     )
+}
+
+/// Whether committing the preedit AS TYPED writes romanization — the
+/// literal-commit chord and the mid-composition punctuation key. One key read,
+/// not a whole `engine_settings()` snapshot: this runs per keystroke.
+fn raw_preedit_wrote_romanization(settings: &SettingsDocument) -> bool {
+    policies::raw_preedit_writes_romanization(settings.choice(&keys::INPUT_MODE))
 }
 
 /// The trailing auto space after an explicit commit, and the swap armed on
 /// it. Lifecycle commits never come here.
 fn append_auto_space(
-    committed: Option<&str>,
-    script: CandidateScript,
+    committed: Option<&ResolvedCommit>,
     settings: &SettingsDocument,
     editor: &mut CompositionEditor<'_>,
 ) {
     let Some(committed) = committed else { return };
-    if !auto_space_gate(settings, script) || !policies::should_append_space(committed) {
+    if !auto_space_gate(settings, committed.wrote_romanization)
+        || !policies::should_append_space(&committed.text)
+    {
         return;
     }
     editor.insert_external(" ");
     if editor.failure.is_none() {
-        editor.arm_swap(script);
+        editor.arm_swap();
     }
 }
 
