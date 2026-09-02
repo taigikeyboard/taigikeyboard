@@ -72,8 +72,10 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         // wrote, and a display mode changed afterwards does not rewrite it.
         // The full-width map serves the NEXT 漢字 word, not this one — so the
         // document reads `taigi, `, half-width, exactly as it would have
-        // without the flip.
-        let session = try composedSession()
+        // without the flip. Auto-space (OFF by default) is turned on because
+        // an armed space is what this case is about: the arm exists only where
+        // the commit earned one.
+        let session = try composedSession(configure: { $0.isAutoSpaceEnabled = true })
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
@@ -103,8 +105,13 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         // coordinator's `ComposingManager` reads (which resolves the commit),
         // `configure` the controller's own store (which the full-width map
         // reads). A case about "the user is in 漢字 mode" needs them to agree.
+        // Auto-space is OFF by default and is what puts the trailing space in
+        // `taigi？ `, so this case turns it on to reach that site.
         try withTranslateSwapped(true) {
-            let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
+            let session = try composedSession(configure: {
+                $0.storedIsTranslateSwapped = true
+                $0.isAutoSpaceEnabled = true
+            })
 
             _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "?"), client: session.client)
 
