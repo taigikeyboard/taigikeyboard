@@ -4,9 +4,9 @@
 //! read live by the DLL's window on every show, so a change here applies
 //! from the next keystroke.
 //!
-//! Named divergence: the Mac's three drawn light / dark / auto thumbnails
-//! are a native pop-up here, the shape Windows 11 Settings itself uses for
-//! "Choose your mode".
+//! The light / dark / auto row is a native pop-up, the shape Windows 11
+//! Settings itself uses for "Choose your mode" — and, since 2026-09-02, what
+//! the Mac draws too.
 
 // 中文: 外觀 pane — 亮暗模式、候選窗版面/大小/字型 picker、恢復預設。
 
@@ -27,7 +27,7 @@ pub fn view(
 ) -> View {
     let document = window.document();
     View::fragment((
-        // The System Settings shape: the mode selector leads its own group.
+        // The mode selector leads the pane's one group of rows.
         choice_row(
             strings.resolve(StringKey::DesktopAppearanceTab),
             AppearanceMode::ALL,
@@ -36,7 +36,6 @@ pub fn view(
             |mode| Message::set_choice(mode, &keys::APPEARANCE_MODE),
             context,
         ),
-        cards::section_gap(),
         choice_row(
             strings.resolve(StringKey::DesktopCandidateWindowLayout),
             CandidateLayout::ALL,

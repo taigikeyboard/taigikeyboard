@@ -31,7 +31,7 @@ enum AppearanceMode: String, CaseIterable, Sendable {
         }
     }
 
-    /// What the thumbnail's caption, tooltip and accessibility label say.
+    /// What this mode's pop-up menu item reads as.
     var labelKey: StringKey {
         switch self {
         case .auto: .settingsDisplayLanguageAutomatic

@@ -45,14 +45,14 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["拍開設定選單", "切換輸入模式", "漢字/羅馬字代先", "切換候選詞顯示"],
+            ["拍開設定選單", "切換輸入模式", "輸出漢字/羅馬字", "切換候選詞顯示"],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
                 "設定メニューを開く",
                 "入力モードを切り替える",
-                "漢字／ローマ字を先に",
+                "漢字／ローマ字を出力",
                 "候補の表示を切り替え",
             ],
         )

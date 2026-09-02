@@ -2,10 +2,11 @@
 
 import SwiftUI
 
-/// The 外觀 pane of the settings window, shaped like System Settings'
-/// Appearance pane: an 外觀 row of light/dark/auto thumbnails, then the
-/// candidate window's own pickers — layout, what each cell shows, the two
-/// size steps, and the typeface.
+/// The 外觀 pane of the settings window: an 外觀 pop-up of light/dark/auto,
+/// then the candidate window's own pickers — layout, what each cell shows,
+/// the two size steps, and the typeface. Every row is the same pop-up menu in
+/// one group, so the pane reads as one list rather than a drawn selector
+/// fenced off above a stack of menus (USER 2026-09-02).
 ///
 /// Two rows are deliberately absent, each argued where its own type lives: no
 /// accent-colour swatch (see `CandidateAccentColor`) and no chrome-generation
@@ -37,15 +38,15 @@ struct AppearanceSettingsView: View {
 
     var body: some View {
         Form {
-            // The System Settings shape: the mode selector leads its own
-            // group, label leading like every other row.
+            // The mode selector leads the pane's one group, drawn like every
+            // row under it: three named, mutually exclusive choices are a
+            // pop-up menu (Apple HIG, Pop-up Buttons).
             Section {
-                LabeledContent(language.string(.desktopAppearanceTab)) {
-                    AppearanceModeRow(selection: $appearanceMode)
+                Picker(language.string(.desktopAppearanceTab), selection: $appearanceMode) {
+                    Text(language.string(AppearanceMode.light.labelKey)).tag(AppearanceMode.light)
+                    Text(language.string(AppearanceMode.dark.labelKey)).tag(AppearanceMode.dark)
+                    Text(language.string(AppearanceMode.auto.labelKey)).tag(AppearanceMode.auto)
                 }
-            }
-
-            Section {
                 Picker(language.string(.desktopCandidateWindowLayout), selection: $candidateLayout) {
                     Text(language.string(.desktopCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
                     Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
@@ -105,115 +106,5 @@ struct AppearanceSettingsView: View {
     /// to the default it was declared with.
     private func restoreDefaults() {
         SettingsStore().resetAppearanceSettings()
-    }
-}
-
-/// The 淺色 / 深色 / 自動 selector, drawn the way System Settings draws its
-/// Appearance row: a thumbnail per mode with a caption under it, the selected
-/// one ringed in the accent colour. The thumbnails are miniature candidate
-/// windows rather than Apple's desktop artwork — they depict the thing this
-/// setting changes.
-private struct AppearanceModeRow: View {
-    @Binding var selection: AppearanceMode
-
-    @Environment(DisplayLanguageStore.self) private var language
-
-    /// System Settings' order: light, dark, then auto.
-    private static let modes: [AppearanceMode] = [.light, .dark, .auto]
-
-    /// The highlight capsule's colour, fixed for the same reason the
-    /// thumbnails' backgrounds are: each depicts ONE mode, so nothing in it may
-    /// resolve against whatever appearance the form happens to render in. It
-    /// stands for a highlight rather than previewing the resolved accent — the
-    /// real one follows the system and the frontmost app (`CandidateAccentColor`).
-    private static let thumbnailHighlightColor = Color(
-        .sRGB, red: 0x00 / 255, green: 0x7A / 255, blue: 0xFF / 255,
-    )
-
-    private static let thumbnailSize = CGSize(width: 62, height: 40)
-    private static let thumbnailCornerRadius: CGFloat = 8
-    private static let thumbnailSpacing: CGFloat = 14
-    private static let selectionRingPadding: CGFloat = 2
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Self.thumbnailSpacing) {
-            ForEach(Self.modes, id: \.self) { mode in
-                thumbnailButton(for: mode)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func thumbnailButton(for mode: AppearanceMode) -> some View {
-        let name = language.string(mode.labelKey)
-        return Button {
-            selection = mode
-        } label: {
-            VStack(spacing: 5) {
-                thumbnail(for: mode)
-                    .frame(width: Self.thumbnailSize.width, height: Self.thumbnailSize.height)
-                    .clipShape(RoundedRectangle(cornerRadius: Self.thumbnailCornerRadius))
-                    .overlay(
-                        // A hairline so the light thumbnail keeps an edge on a
-                        // light form background.
-                        RoundedRectangle(cornerRadius: Self.thumbnailCornerRadius)
-                            .strokeBorder(.separator, lineWidth: 1),
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Self.thumbnailCornerRadius + Self.selectionRingPadding)
-                            .strokeBorder(Color.accentColor, lineWidth: 2)
-                            .padding(-Self.selectionRingPadding)
-                            .opacity(selection == mode ? 1 : 0),
-                    )
-                Text(name)
-                    .font(.subheadline)
-                    .foregroundStyle(selection == mode ? .primary : .secondary)
-            }
-        }
-        .buttonStyle(.plain)
-        .help(name)
-        .accessibilityLabel(name)
-        .accessibilityAddTraits(selection == mode ? .isSelected : [])
-    }
-
-    /// 自動 is the two fixed thumbnails split down the middle — light on the
-    /// left, dark on the right — which is how System Settings depicts it.
-    @ViewBuilder
-    private func thumbnail(for mode: AppearanceMode) -> some View {
-        switch mode {
-        case .light:
-            miniCandidateWindow(dark: false)
-        case .dark:
-            miniCandidateWindow(dark: true)
-        case .auto:
-            ZStack {
-                miniCandidateWindow(dark: false)
-                miniCandidateWindow(dark: true)
-                    .mask(alignment: .trailing) {
-                        Rectangle().frame(width: Self.thumbnailSize.width / 2)
-                    }
-            }
-        }
-    }
-
-    /// A miniature of what the setting controls: a candidate bar — three
-    /// cells, the first highlighted — on the mode's background. Fixed colours
-    /// on purpose: each thumbnail depicts ONE mode, so it must not follow the
-    /// appearance the form happens to render in.
-    private func miniCandidateWindow(dark: Bool) -> some View {
-        ZStack {
-            (dark ? Color(white: 0.16) : Color(white: 0.94))
-            HStack(spacing: 2.5) {
-                Capsule()
-                    .fill(Self.thumbnailHighlightColor)
-                    .frame(width: 12, height: 7)
-                Capsule()
-                    .fill(dark ? Color(white: 0.38) : Color(white: 0.74))
-                    .frame(width: 9, height: 7)
-                Capsule()
-                    .fill(dark ? Color(white: 0.38) : Color(white: 0.74))
-                    .frame(width: 9, height: 7)
-            }
-        }
     }
 }

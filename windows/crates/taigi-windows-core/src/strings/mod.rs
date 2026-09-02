@@ -107,7 +107,7 @@ impl DisplayLanguage {
     pub fn endonym(self) -> Option<&'static str> {
         match self {
             DisplayLanguage::System => None,
-            DisplayLanguage::Hanji => Some("漢字"),
+            DisplayLanguage::Hanji => Some("台漢"),
             DisplayLanguage::Tailo => Some("Tâi-lô"),
             DisplayLanguage::Poj => Some("Pe̍h-ōe-jī"),
             DisplayLanguage::Japanese => Some("日本語"),

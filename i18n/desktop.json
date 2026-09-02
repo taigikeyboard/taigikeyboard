@@ -70,11 +70,11 @@
         ]
       },
       "values": {
-        "hanji": "漢字/羅馬字代先",
-        "tailo": "hàn-jī / lô-má-jī tāi-sing",
-        "poj": "hàn-jī / lô-má-jī tāi-seng",
-        "en": "Hanji or Romanization First",
-        "ja": "漢字／ローマ字を先に"
+        "hanji": "輸出漢字/羅馬字",
+        "tailo": "su-tshut hàn-jī / lô-má-jī",
+        "poj": "su-chhut hàn-jī / lô-má-jī",
+        "en": "Output Hanji or Romanization",
+        "ja": "漢字／ローマ字を出力"
       }
     },
     "shortcutCycleCandidateDisplayMode": {

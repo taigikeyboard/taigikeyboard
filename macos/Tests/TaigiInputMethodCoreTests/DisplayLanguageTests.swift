@@ -62,7 +62,7 @@ final class DisplayLanguageTests: XCTestCase {
 
     func testEndonym_isTheLanguagesOwnName() {
         // Language-invariant strings, so they are not i18n keys — and they MUST match iOS/Android.
-        XCTAssertEqual(DisplayLanguage.hanji.endonym, "漢字")
+        XCTAssertEqual(DisplayLanguage.hanji.endonym, "台漢")
         XCTAssertEqual(DisplayLanguage.tailo.endonym, "Tâi-lô")
         XCTAssertEqual(DisplayLanguage.poj.endonym, "Pe̍h-ōe-jī")
         XCTAssertEqual(DisplayLanguage.japanese.endonym, "日本語")
