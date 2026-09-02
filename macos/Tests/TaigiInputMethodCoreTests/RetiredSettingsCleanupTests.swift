@@ -25,17 +25,16 @@ final class RetiredSettingsCleanupTests: XCTestCase {
 
     func testStoredTrueValuesOfRetiredToggles_areRemoved() {
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        // 顯示羅馬字候選 has no key any more; the raw name is what an older
+        // build persisted.
+        userDefaults.set(true, forKey: "literalRomanCandidateEnabled")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isOutputBothScripts.name))
-        XCTAssertNil(
-            userDefaults.object(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name),
-        )
+        XCTAssertNil(userDefaults.object(forKey: "literalRomanCandidateEnabled"))
         let settings = SettingsStore(userDefaults: userDefaults)
         XCTAssertFalse(settings.storedIsOutputBothScripts)
-        XCTAssertFalse(settings.isLiteralRomanCandidateEnabled)
     }
 
     /// The first shape of the composing-key settings. Nothing reads them any

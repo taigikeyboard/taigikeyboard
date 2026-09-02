@@ -158,7 +158,6 @@ enum StringKey: String {
     case settingsCandidateDisplayModeCombined = "i18n_settings_candidateDisplayModeCombined"
     case settingsCandidateDisplayModeRomanOnly = "i18n_settings_candidateDisplayModeRomanOnly"
     case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
-    case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"
     case settingsAutoSpace = "i18n_settings_autoSpace"
     case themeCustomFont = "i18n_theme_customFont"
     case themeCandidateTextSize = "i18n_theme_candidateTextSize"

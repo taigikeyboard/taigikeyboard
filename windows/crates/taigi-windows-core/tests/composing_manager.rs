@@ -430,12 +430,50 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     );
 }
 
+/// §34 on the desktop has no setting: a fresh bar has the typed literal in
+/// slot 0 — one script — so the highlighted-candidate commit that Enter routes
+/// to (`keys/intent.rs` `return_commits_the_candidate_and_shift_return_the_literal`;
+/// the window opens on slot 0) writes exactly what was typed in either output
+/// mode, and learns it under its canonical reading. The dictionary's first
+/// candidate is one slot along. ⇧Enter's raw path is
+/// `commit_composition_writes_the_composition_and_ends_it`.
+#[test]
+fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
+    let _lock = engine_lock();
+    for swapped in [false, true] {
+        let mut rig = rig();
+        rig.settings
+            .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, swapped));
+        rig.type_text("taigi");
+        let candidates = rig.candidates();
+        assert_eq!(candidates[0].display_text, "taigi", "swapped={swapped}");
+        assert!(candidates[0].is_roman_only(), "swapped={swapped}");
+        assert!(
+            candidates[1].hanji.is_some(),
+            "the dictionary's first candidate is next — swapped={swapped}"
+        );
+        let (outcome, committed) = rig.commit(&candidates[0], CandidateScript::Primary);
+        assert_eq!(
+            outcome,
+            CandidateCommitOutcome::Finalized,
+            "swapped={swapped}"
+        );
+        assert_eq!(committed.as_deref(), Some("taigi"), "swapped={swapped}");
+        assert!(!rig.manager.is_composing(), "swapped={swapped}");
+        assert_eq!(rig.recorder.committed(), ["taigi"], "swapped={swapped}");
+        let learned = rig.memory.frequency.lock().unwrap().clone();
+        assert_eq!(
+            learned.keys().collect::<Vec<_>>(),
+            [&("taigi".to_string(), candidates[0].canonical_tl.clone())],
+            "learned under the literal's canonical reading — swapped={swapped}"
+        );
+    }
+}
+
 #[test]
 fn alternate_on_a_single_script_candidate_commits_nothing() {
     let _lock = engine_lock();
     let mut rig = rig();
-    rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true));
     rig.type_text("tai");
     let candidates = rig.candidates();
     let literal = candidates[0].clone();

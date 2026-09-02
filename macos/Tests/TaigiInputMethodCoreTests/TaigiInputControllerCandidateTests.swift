@@ -104,10 +104,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// trip through the output setting.
     func testSpace_commitsTheOtherScript() throws {
         let session = try composedSession()
-        let shown = try XCTUnwrap(session.presenter.shownContent)
         // Default output leads with the romanization, so the cell's annotation
         // IS the other script — the one on screen under the primary.
-        let otherScript = try XCTUnwrap(shown.cells[0].annotation)
+        let otherScript = try XCTUnwrap(session.walkToFirstTwoScriptCell().annotation)
         session.client.clearWrites()
 
         _ = try session.controller.handle(
@@ -121,12 +120,14 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// keys are the two scripts, and neither moves the output setting.
     func testReturnAndSpace_writeTheTwoScriptsOfTheSameCandidate() throws {
         let viaReturn = try composedSession()
+        try viaReturn.walkToFirstTwoScriptCell()
         viaReturn.client.clearWrites()
         _ = try viaReturn.controller.handle(
             TestFixtures.keyDownEvent(characters: "\r"), client: viaReturn.client,
         )
 
         let viaSpace = try composedSession()
+        try viaSpace.walkToFirstTwoScriptCell()
         viaSpace.client.clearWrites()
         _ = try viaSpace.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: viaSpace.client,
@@ -165,13 +166,14 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
 
             let viaReturn = try composedSession()
-            let cell = try XCTUnwrap(viaReturn.presenter.shownContent).cells[0]
+            let cell = try viaReturn.walkToFirstTwoScriptCell()
             viaReturn.client.clearWrites()
             _ = try viaReturn.controller.handle(
                 TestFixtures.keyDownEvent(characters: "\r"), client: viaReturn.client,
             )
 
             let viaSpace = try composedSession()
+            try viaSpace.walkToFirstTwoScriptCell()
             viaSpace.client.clearWrites()
             _ = try viaSpace.controller.handle(
                 TestFixtures.keyDownEvent(characters: " "), client: viaSpace.client,
@@ -191,7 +193,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testBothScriptsMode_SpaceStillWritesASingleScript() throws {
         try withSetting(SettingsStore.Keys.isOutputBothScripts.name, to: true) {
             let session = try composedSession()
-            let cell = try XCTUnwrap(session.presenter.shownContent).cells[0]
+            let cell = try session.walkToFirstTwoScriptCell()
             session.client.clearWrites()
 
             _ = try session.controller.handle(
@@ -211,20 +213,18 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     ///
     /// Driven through the real production source of a hanji-less candidate: the
     /// §34 literal-romanization candidate, which the engine prepends at index 0
-    /// when the setting is on, and which the bar opens highlighted.
+    /// on the desktop unconditionally, and which the bar opens highlighted.
     func testSpace_onASingleScriptCandidate_writesNothing() throws {
-        try withSetting(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true) {
-            let session = try composedSession()
-            let leading = try XCTUnwrap(session.presenter.shownContent).cells[0]
-            XCTAssertNil(leading.annotation, "the literal candidate has no second script to offer")
-            session.client.clearWrites()
+        let session = try composedSession()
+        let leading = try XCTUnwrap(session.presenter.shownContent).cells[0]
+        XCTAssertNil(leading.annotation, "the literal candidate has no second script to offer")
+        session.client.clearWrites()
 
-            _ = try session.controller.handle(
-                TestFixtures.keyDownEvent(characters: " "), client: session.client,
-            )
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: session.client,
+        )
 
-            XCTAssertTrue(session.client.insertedTexts.isEmpty)
-        }
+        XCTAssertTrue(session.client.insertedTexts.isEmpty)
     }
 
     // MARK: - 漢羅合用: two cells per candidate
@@ -234,15 +234,15 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// against the 並排 bar for the same composition, so the assertion follows
     /// whatever the dictionary ranks first rather than naming it.
     func testCombined_showsTheHanjiAndItsRomanizationAsAdjacentCells() throws {
-        let sideBySide = try composedSession()
-        let leading = try XCTUnwrap(sideBySide.presenter.shownContent).cells[0]
-        let hanji = try XCTUnwrap(leading.annotation, "the leading candidate carries both scripts")
+        let sideBySide = try XCTUnwrap(composedSession().presenter.shownContent).cells
+        let leading = try XCTUnwrap(sideBySide.firstTwoScriptCell, "taigi has a candidate carrying both scripts")
+        let hanji = try XCTUnwrap(leading.annotation)
 
         try withDisplayMode(.combined) {
             let cells = try XCTUnwrap(composedSession().presenter.shownContent).cells
 
-            XCTAssertEqual(cells[0].text, hanji, "the Hanji cell first")
-            XCTAssertEqual(cells[1].text, leading.text, "its romanization right after it")
+            XCTAssertEqual(cells[0].text, Self.composition, "§34's literal still leads, one script")
+            try assertRomanizationFollowsHanji(in: cells, hanji: hanji, romanization: leading.text)
             XCTAssertTrue(cells.allSatisfy { $0.annotation == nil }, "one script per cell, no annotation")
             XCTAssertFalse(cells.contains { $0.text == "\(hanji) \(leading.text)" }, "no formatted label")
         }
@@ -576,6 +576,47 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
+    // MARK: - §34 literal leads, no setting on the desktop
+
+    /// The bar opens on the typed letters — the §34 literal, one script, with
+    /// no setting behind it on the desktop (USER 2026-09-02) — so Return
+    /// writes exactly what was typed in either output mode; the dictionary's
+    /// first candidate is one cell along.
+    func testReturn_onAFreshBar_writesTheTypedLiteral_inEitherMode() throws {
+        for swapped in [false, true] {
+            try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: swapped) {
+                let session = try composedSession()
+                let cells = try XCTUnwrap(session.presenter.shownContent).cells
+                XCTAssertEqual(cells[0].text, Self.composition, "swapped=\(swapped)")
+                XCTAssertNil(cells[0].annotation, "one script — swapped=\(swapped)")
+                XCTAssertNotNil(cells[1].annotation, "the dictionary's first candidate is next — swapped=\(swapped)")
+                session.client.clearWrites()
+
+                _ = try session.controller.handle(
+                    TestFixtures.keyDownEvent(characters: "\r"), client: session.client,
+                )
+
+                XCTAssertEqual(session.client.insertedTexts.last, Self.composition, "swapped=\(swapped)")
+                XCTAssertFalse(session.presenter.isShowing, "swapped=\(swapped)")
+            }
+        }
+    }
+
+    /// Off the literal the two commit keys part ways: Return takes the
+    /// highlighted candidate (`testReturn_commitsTheHighlightedCandidate`),
+    /// ⇧Return still the letters that were typed.
+    func testShiftReturn_afterWalking_stillWritesTheLiteral() throws {
+        let session = try composedSession()
+        try session.walkToFirstTwoScriptCell()
+        session.client.clearWrites()
+
+        _ = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\r", modifiers: .shift), client: session.client,
+        )
+
+        XCTAssertEqual(session.client.insertedTexts.last, Self.composition)
+    }
+
     func testShiftReturn_commitsTheLiteralAndTakesTheBarDown() throws {
         let session = try composedSession()
         session.client.clearWrites()
@@ -686,6 +727,18 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// `savedShortcuts` pattern).
     private func withRestoredSwapSetting(_ body: () throws -> Void) rethrows {
         try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: nil, body)
+    }
+
+    /// 合用's adjacency: the Hanji is a cell of its own, its romanization the
+    /// very next one.
+    private func assertRomanizationFollowsHanji(
+        in cells: [CandidateCellContent], hanji: String, romanization: String,
+        file: StaticString = #filePath, line: UInt = #line,
+    ) throws {
+        let hanjiCell = try XCTUnwrap(
+            cells.firstIndex { $0.text == hanji }, "the Hanji is a cell of its own", file: file, line: line,
+        )
+        XCTAssertEqual(cells[hanjiCell + 1].text, romanization, "its romanization right after it", file: file, line: line)
     }
 
     /// The slot key set the sessions inside `body` read, put back afterwards.
@@ -832,9 +885,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let after = try XCTUnwrap(session.presenter.shownContent).cells
         XCTAssertFalse(after.isEmpty)
         XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "合用 cells carry one script each")
-        let leading = before[0]
-        let hanjiCell = try XCTUnwrap(after.firstIndex { $0.text == leading.annotation }, "the Hanji is a cell of its own")
-        XCTAssertEqual(after[hanjiCell + 1].text, leading.text, "with its romanization right after it")
+        let leading = try XCTUnwrap(before.firstTwoScriptCell)
+        try assertRomanizationFollowsHanji(in: after, hanji: XCTUnwrap(leading.annotation), romanization: leading.text)
     }
 
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {
@@ -895,7 +947,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
-    private struct Session {
+    private struct Session: CandidateBarSession {
         let controller: TaigiInputController
         let client: RecordingTextInputClient
         let presenter: RecordingCandidatePresenter
@@ -906,6 +958,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             _ = controller.handle(event, client: client)
         }
     }
+
+
 
     /// An activated session that has typed nothing yet.
     private func makeSession(

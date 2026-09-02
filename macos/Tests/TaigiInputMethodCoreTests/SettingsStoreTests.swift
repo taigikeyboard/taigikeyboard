@@ -40,7 +40,6 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
 
@@ -51,7 +50,6 @@ final class SettingsStoreTests: XCTestCase {
                 isTranslateSwapped: true,
                 isOutputBothScripts: true,
                 candidateDisplayMode: .sideBySide,
-                isLiteralRomanCandidateEnabled: true,
                 isFrequencyRecordingEnabled: false,
                 isAssociationRecordingEnabled: false,
                 isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,
@@ -227,10 +225,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(SettingsStore.Keys.inputMode.name, "inputMode")
         XCTAssertEqual(SettingsStore.Keys.isTranslateSwapped.name, "isTranslateSwapped")
         XCTAssertEqual(SettingsStore.Keys.isOutputBothScripts.name, "outputBothScripts")
-        XCTAssertEqual(
-            SettingsStore.Keys.isLiteralRomanCandidateEnabled.name,
-            "literalRomanCandidateEnabled",
-        )
         XCTAssertEqual(SettingsStore.Keys.displayLanguage.name, "displayLanguage")
     }
 

@@ -200,45 +200,20 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertNil(result.candidates, "no continuous phase must read as nil, not as an empty list")
     }
 
-    func testFetchAtPos_literalRomanCandidateToggle_gatesTheIndexZeroLiteral() throws {
+    /// §34 on the desktop has no setting: with TL/POJ text composed, the
+    /// preedit literal leads the list under the shipped defaults, so Return
+    /// commits what was typed (USER 2026-09-02). Mobile gates the same row
+    /// behind 顯示羅馬字.
+    func testFetchAtPos_literalRomanCandidateAlwaysLeads_onTheDesktop() throws {
         _ = try compose("taigi")
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
-        // Off by default, matching iOS and Android: a dictionary candidate leads.
-        let hidden = try XCTUnwrap(
+        let shown = try XCTUnwrap(
             RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),
         )
-        let hiddenFirst = try XCTUnwrap(XCTUnwrap(hidden.candidates).first)
-        XCTAssertNotEqual(
-            hiddenFirst.displayText,
-            "taigi",
-            "with the setting off, the typed literal must not be forced to the front",
-        )
+        let leading = try XCTUnwrap(XCTUnwrap(shown.candidates).first)
 
-        let shown = try XCTUnwrap(RustEngineBridge.composingFetchAtPos(
-            settings: settings.withLiteralRomanCandidate(enabled: true),
-            generation: generation,
-        ))
-        XCTAssertEqual(
-            shown.candidates?.first?.displayText,
-            "taigi",
-            "with the setting on, the preedit literal leads the list so 漢羅 commits in one keystroke",
-        )
-    }
-}
-
-private extension EngineSettings {
-    func withLiteralRomanCandidate(enabled: Bool) -> EngineSettings {
-        EngineSettings(
-            inputMode: inputMode,
-            isTranslateSwapped: isTranslateSwapped,
-            isOutputBothScripts: isOutputBothScripts,
-            candidateDisplayMode: candidateDisplayMode,
-            isLiteralRomanCandidateEnabled: enabled,
-            isFrequencyRecordingEnabled: isFrequencyRecordingEnabled,
-            isAssociationRecordingEnabled: isAssociationRecordingEnabled,
-            isCustomDictEnabled: isCustomDictEnabled,
-            dictionarySources: dictionarySources,
-        )
+        XCTAssertEqual(leading.displayText, "taigi", "the preedit literal leads the list")
+        XCTAssertNil(leading.hanji, "the literal carries one script — a commit writes the romanization")
     }
 }

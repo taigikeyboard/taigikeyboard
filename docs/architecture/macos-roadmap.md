@@ -283,7 +283,7 @@ Goals: (a) 詞庫 settings page with FULL iOS/Android Tab3 parity — 資料管�
 with external lookup; (b) native macOS preferences style — NSTabViewController toolbar
 tabs ([⚙ 一般] [📖 詞庫]), resizable window; (c) Magnet-style configurable shortcuts
 (sindresorhus/KeyboardShortcuts lib — first non-Apple dependency, USER-approved) for
-開啟設定視窗 (default `Ctrl+Shift+,`) / TL↔POJ 切換 / 候選開關 (漢羅對調·漢羅並列·顯示羅馬字候選).
+開啟設定視窗 (default `Ctrl+Shift+,`) / TL↔POJ 切換 / 候選開關 (漢羅對調·漢羅並列; 顯示羅馬字候選 retired 2026-09-02 — desktop always-on, §34).
 Strings stay Traditional-Chinese literals (PR5 convention). Zero new FFI — all ops already
 in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger PRs
 2026-08-17 over the 200-500 default; session-per-PR overhead).

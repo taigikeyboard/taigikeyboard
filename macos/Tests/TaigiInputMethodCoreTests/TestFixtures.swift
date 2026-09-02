@@ -182,7 +182,6 @@ enum TestFixtures {
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
             candidateDisplayMode: candidateDisplayMode,
-            isLiteralRomanCandidateEnabled: false,
             isFrequencyRecordingEnabled: frequencyRecording,
             isAssociationRecordingEnabled: associationRecording,
             isCustomDictEnabled: customDict,
@@ -398,6 +397,43 @@ extension XCTestCase {
     func withDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
         try withSetting(SettingsStore.Keys.candidateDisplayMode.name, to: mode.rawValue, body)
     }
+}
+
+/// A case's session with a candidate bar up — what the bar-walking helpers
+/// below need of it. Each test file keeps its own `Session` and conforms.
+@MainActor
+protocol CandidateBarSession {
+    var controller: TaigiInputController { get }
+    var client: RecordingTextInputClient { get }
+    var presenter: RecordingCandidatePresenter { get }
+}
+
+extension CandidateBarSession {
+    /// §34 opens the bar on the one-script literal — always on for the desktop
+    /// (USER 2026-09-02) — so a case about a candidate that carries both
+    /// scripts walks ⇥ onto the first one and hands it back.
+    @discardableResult
+    func walkToFirstTwoScriptCell() throws -> CandidateCellContent {
+        let cells = try XCTUnwrap(presenter.shownContent).cells
+        let index = try XCTUnwrap(cells.firstTwoScriptIndex, "taigi has hanji candidates")
+        try walk(cells: index)
+        return cells[index]
+    }
+
+    /// ⇥ `count` cells along a freshly opened bar.
+    func walk(cells count: Int) throws {
+        for _ in 0..<count {
+            _ = try controller.handle(TestFixtures.keyDownEvent(characters: "\t"), client: client)
+        }
+        XCTAssertEqual(presenter.selectedIndex, count)
+    }
+}
+
+extension [CandidateCellContent] {
+    /// The first cell carrying both scripts — under 並排 the one an annotation
+    /// sits on; the §34 literal ahead of it has one.
+    var firstTwoScriptIndex: Int? { firstIndex { $0.annotation != nil } }
+    var firstTwoScriptCell: CandidateCellContent? { firstTwoScriptIndex.map { self[$0] } }
 }
 
 extension DictionarySourceToggles {
