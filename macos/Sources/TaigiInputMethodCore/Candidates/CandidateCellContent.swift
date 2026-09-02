@@ -44,7 +44,7 @@ struct CandidateCellContent: Equatable, Sendable {
     /// (primary = romanization, secondary = Hanji) and the swap flip in
     /// `CandidateCellHelper`. Drift changes which script a candidate leads with.
     static func cell(for candidate: ContinuousCandidate, settings: EngineSettings) -> Self {
-        guard let hanji = candidate.hanji, !hanji.isEmpty else {
+        guard let hanji = candidate.presentableHanji else {
             // Romanization-only candidate: there is no second script to show,
             // in either direction — the same case `CandidateDocumentText`
             // answers with the bare romanization.
@@ -61,5 +61,15 @@ struct CandidateCellContent: Equatable, Sendable {
         return settings.isTranslateSwapped
             ? Self(text: hanji, annotation: candidate.roman)
             : Self(text: candidate.roman, annotation: hanji)
+    }
+}
+
+extension ContinuousCandidate {
+    /// The Hanji when this candidate really carries one to show or commit. A
+    /// producer that emitted `""` for "no Hanji" means the same thing as
+    /// omitting it, and no reader may treat the two differently.
+    var presentableHanji: String? {
+        guard let hanji, !hanji.isEmpty else { return nil }
+        return hanji
     }
 }

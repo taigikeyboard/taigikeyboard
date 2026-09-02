@@ -24,11 +24,10 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// (`CandidatePanel.panel(for:)` compares against this one).
     let configuredMetrics: CandidateMetrics
     /// The size metrics every cell and layout in this window renders at:
-    /// `configuredMetrics`, resolved for the list on screen — a stacked layout
-    /// showing a list with no annotated cell renders it one line tall
-    /// (`CandidateMetrics.forContent(hasAnnotations:)`). Re-resolved by the two
-    /// entry points that hand the panel cells, `layout(_:forCaret:)` and
-    /// `rerender(_:)`, BEFORE the layout reads it, so every row of one list
+    /// `configuredMetrics` resolved for the list on screen
+    /// (`CandidateMetrics.forContent(hasAnnotations:)` has the why).
+    /// Re-resolved by both cell entry points — `layout(_:forCaret:)` and
+    /// `rerender(_:)` — BEFORE any layout reads it, so every row of one list
     /// shares one height and a mode change under an open window reflows it.
     private(set) var metrics: CandidateMetrics
     private(set) var backdrop: CandidateBackdrop

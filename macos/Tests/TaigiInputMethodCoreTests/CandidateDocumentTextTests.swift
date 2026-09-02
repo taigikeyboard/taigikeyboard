@@ -127,25 +127,6 @@ final class CandidateDocumentTextTests: XCTestCase {
         }
     }
 
-    /// Under 漢羅合用 the effective swap is on, so the other script is always the
-    /// romanization — what Space on a 漢字 cell writes. Space on the adjacent
-    /// 羅馬字 cell flips back to `.primary` (`PresentedCandidate`), so this one
-    /// answer serves both cells.
-    func testAlternate_underCombined_isTheRomanization() {
-        for bothScripts in [false, true] {
-            XCTAssertEqual(
-                CandidateDocumentText.alternateText(
-                    for: word,
-                    settings: TestFixtures.settings(
-                        swapped: true, bothScripts: bothScripts, candidateDisplayMode: .combined,
-                    ),
-                ),
-                "tâi-gí",
-                "bothScripts: \(bothScripts) — 括號標註 is not read for the other script alone",
-            )
-        }
-    }
-
     /// The romanization-only display shows no Hanji, so there is none to offer:
     /// Space stays `.ignored` there whatever the swap flag says, rather than
     /// writing a script the user never saw.

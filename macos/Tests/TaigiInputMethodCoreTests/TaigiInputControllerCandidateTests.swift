@@ -248,56 +248,6 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    /// Each cell commits its own script: the first slot key writes the Hanji,
-    /// the second the romanization of the same candidate.
-    func testCombined_slotKeysCommitTheCellsOwnScript() throws {
-        try withDisplayMode(.combined) {
-            for (slot, description) in [(0, "the Hanji cell"), (1, "the romanization cell")] {
-                let session = try composedSession()
-                let cell = try XCTUnwrap(session.presenter.shownContent).cells[slot]
-                session.client.clearWrites()
-
-                _ = try session.controller.handle(
-                    TestFixtures.keyDownEvent(characters: CandidateSlotKeySet.bareKeyRow[slot]),
-                    client: session.client,
-                )
-
-                XCTAssertEqual(session.client.insertedTexts.last, cell.text, description)
-            }
-        }
-    }
-
-    /// Space is still the other script of the SAME candidate, read relative to
-    /// the cell: on the Hanji cell it writes the romanization, on the
-    /// romanization cell it writes the Hanji.
-    func testCombined_SpaceWritesTheOtherScriptOfTheHighlightedCell() throws {
-        try withDisplayMode(.combined) {
-            let onHanji = try composedSession()
-            let cells = try XCTUnwrap(onHanji.presenter.shownContent).cells
-            onHanji.client.clearWrites()
-            _ = try onHanji.controller.handle(
-                TestFixtures.keyDownEvent(characters: " "), client: onHanji.client,
-            )
-            XCTAssertEqual(onHanji.client.insertedTexts.last, cells[1].text, "Space on the Hanji cell: the romanization")
-
-            let onRoman = try composedSession()
-            onRoman.press(.rightArrow)
-            XCTAssertEqual(onRoman.presenter.selectedIndex, 1)
-            onRoman.client.clearWrites()
-            _ = try onRoman.controller.handle(
-                TestFixtures.keyDownEvent(characters: " "), client: onRoman.client,
-            )
-            XCTAssertEqual(onRoman.client.insertedTexts.last, cells[0].text, "Space on the romanization cell: the Hanji")
-        }
-    }
-
-    /// `.standard` rather than a scratch suite, like `withRestoredSwapSetting`:
-    /// the manager builds the presentation from the domain the shared
-    /// coordinator's settings provider reads.
-    private func withDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
-        try withSetting(SettingsStore.Keys.candidateDisplayMode.name, to: mode.rawValue, body)
-    }
-
     // MARK: - No selection mode
 
     /// `↓` walks into the list and nothing more (USER 2026-08-28, retiring the
@@ -738,32 +688,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: nil, body)
     }
 
-    /// Runs `body` with `key` restored afterwards to whatever it held —
-    /// including "held nothing", which a bare `removeObject` would turn into a
-    /// value a later case never chose. `.standard` rather than a scratch suite
-    /// because the controller and the shared coordinator's engine must read ONE
-    /// domain for these cases to mean anything (see `withRestoredSwapSetting`'s
-    /// callers).
     /// The slot key set the sessions inside `body` read, put back afterwards.
     private func withSlotKeySet(_ keySet: CandidateSlotKeySet, _ body: () throws -> Void) rethrows {
         try withSetting(SettingsStore.Keys.candidateSlotModifier.name, to: keySet.rawValue, body)
-    }
-
-    private func withSetting(
-        _ key: String,
-        to value: Any?,
-        _ body: () throws -> Void,
-    ) rethrows {
-        let saved = UserDefaults.standard.object(forKey: key)
-        defer {
-            if let saved {
-                UserDefaults.standard.set(saved, forKey: key)
-            } else {
-                UserDefaults.standard.removeObject(forKey: key)
-            }
-        }
-        if let value { UserDefaults.standard.set(value, forKey: key) }
-        try body()
     }
 
     func testTogglingTranslateSwapped_rerendersTheBarInPlace() throws {

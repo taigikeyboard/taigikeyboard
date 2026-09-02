@@ -148,7 +148,9 @@ final class CandidateStackedCellTests: XCTestCase {
     /// come back to two lines the moment one does (USER 2026-09-02). Through
     /// the two entry points the shared panel hands cells over by, `layout`
     /// and `rerender`, so a mode change under an open window reflows it. The
-    /// vertical layout is inline already and is left as it was.
+    /// vertical layout is inline already and is left as it was. The configured
+    /// metrics — the panel cache's key — must never move with the content, or
+    /// a one-script list would rebuild the window on the next keystroke.
     func testStackedPanels_renderAListWithNoAnnotationOneLineTall_andReflowOnRerender() {
         let caret = CGRect(x: 120, y: 400, width: 1, height: 18)
         for panel in TestFixtures.candidatePanels() {
@@ -176,23 +178,12 @@ final class CandidateStackedCellTests: XCTestCase {
             panel.rerender(Self.oneScriptCells)
 
             XCTAssertEqual(panel.metrics.itemHeight, oneLine, "\(label): and a one-script list drops it again")
+            XCTAssertEqual(
+                panel.configuredMetrics, configured,
+                "\(label): the cache key `CandidatePanel.panel(for:)` compares never moves with the content",
+            )
             panel.clear()
         }
-    }
-
-    /// The configured metrics — what the panel cache compares against — never
-    /// move with the content: a one-script list must not make
-    /// `CandidatePanel.panel(for:)` rebuild the window on the next keystroke.
-    func testContentResolution_leavesTheConfiguredMetricsAlone() {
-        let panel = HorizontalCandidatePanel(
-            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics.arranged(.stacked),
-        )
-
-        _ = panel.layout(Self.oneScriptCells, forCaret: .zero)
-
-        XCTAssertEqual(panel.configuredMetrics, TestFixtures.defaultCandidateMetrics.arranged(.stacked))
-        XCTAssertNotEqual(panel.metrics, panel.configuredMetrics)
-        panel.clear()
     }
 
     /// The empty-annotation case renders a blank second line rather than

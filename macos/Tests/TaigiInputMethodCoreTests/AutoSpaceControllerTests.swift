@@ -365,7 +365,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// value the commit and this gate both read. Space on the Hanji cell
     /// writes the romanization, which is spaced.
     func testCombined_SpaceOnTheHanjiCell_writesTheRomanizationAndEarnsItsSpace() throws {
-        try withStandardDisplayMode(.combined) {
+        try withDisplayMode(.combined) {
             let session = try composedSession {
                 $0.isAutoSpaceEnabled = true
                 $0.candidateDisplayMode = .combined
@@ -384,7 +384,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// And Space on the romanization cell comes back round to the Hanji, which
     /// takes no space — the flip is relative to the cell, not to the mode.
     func testCombined_SpaceOnTheRomanizationCell_writesTheHanjiAndTakesNoSpace() throws {
-        try withStandardDisplayMode(.combined) {
+        try withDisplayMode(.combined) {
             let session = try composedSession {
                 $0.isAutoSpaceEnabled = true
                 $0.candidateDisplayMode = .combined
@@ -406,7 +406,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// Return on the romanization cell is a romanization commit too, whatever
     /// the mode leads with: the space follows the document.
     func testCombined_ReturnOnTheRomanizationCell_earnsItsSpace() throws {
-        try withStandardDisplayMode(.combined) {
+        try withDisplayMode(.combined) {
             let session = try composedSession {
                 $0.isAutoSpaceEnabled = true
                 $0.candidateDisplayMode = .combined
@@ -421,24 +421,6 @@ final class AutoSpaceControllerTests: XCTestCase {
 
             XCTAssertEqual(session.client.insertedTexts, [cells[1].text, " "])
         }
-    }
-
-    /// The manager presents the list from the domain the shared coordinator's
-    /// settings provider reads — `.standard` — while the controller's gate
-    /// reads the scratch store; a 合用 case has to say so to both. Put back to
-    /// whatever it held, including "held nothing".
-    private func withStandardDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
-        let key = SettingsStore.Keys.candidateDisplayMode.name
-        let saved = UserDefaults.standard.object(forKey: key)
-        defer {
-            if let saved {
-                UserDefaults.standard.set(saved, forKey: key)
-            } else {
-                UserDefaults.standard.removeObject(forKey: key)
-            }
-        }
-        UserDefaults.standard.set(mode.rawValue, forKey: key)
-        try body()
     }
 
     // MARK: - Helpers

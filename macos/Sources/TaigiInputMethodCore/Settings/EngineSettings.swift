@@ -11,9 +11,9 @@ enum InputMode: String, CaseIterable, Sendable {
     case poj
 }
 
-/// How a candidate cell renders the `(漢字, 羅馬字)` pair: both scripts side by
-/// side (the swap setting decides which leads), both in ONE Hanji-led label
-/// (`漢字 羅馬字`), or the romanization alone.
+/// How the candidate window renders the `(漢字, 羅馬字)` pair: both scripts
+/// side by side (the swap setting decides which leads), each script as its own
+/// adjacent cell (漢羅合用, `PresentedCandidate`), or the romanization alone.
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same

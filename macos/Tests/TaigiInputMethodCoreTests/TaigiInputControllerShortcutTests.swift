@@ -124,9 +124,10 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertTrue(controller.settings.current.isTranslateSwapped, "leaving the mode must give the stored swap back")
     }
 
-    /// Under the combined display the one label always leads with the Hanji,
-    /// so the swap has nothing to swap either: the chord is inert the same
-    /// silent way — the STORED value is untouched while the effective swap
+    /// Under the combined display each script is its own adjacent cell and
+    /// the Hanji cell always comes first, so the swap has nothing to swap
+    /// either: the chord is inert the same silent way — the STORED value is
+    /// untouched while the effective swap
     /// reads `true`, and leaving the mode gives the user their own swap back.
     func testTheTranslateSwap_underCombined_isSilentlyInert() {
         controller.settings.storedIsTranslateSwapped = false

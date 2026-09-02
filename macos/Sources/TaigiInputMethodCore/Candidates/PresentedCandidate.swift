@@ -23,28 +23,12 @@ struct PresentedCandidate: Equatable, Sendable {
     let script: CandidateScript
     let cell: CandidateCellContent
 
-    /// The window's list for `candidates` under `settings`.
-    ///
-    /// One settings snapshot for the whole list, because the cells and the
-    /// scripts have to be resolved under the same rules the commit will read.
-    ///
-    /// - 漢羅並排 / 羅馬字: one `.primary` cell per candidate, exactly the cell
-    ///   `CandidateCellContent.cell(for:settings:)` has always built.
-    /// - 漢羅合用: a candidate with Hanji becomes `[漢字 (.primary), 羅馬字
-    ///   (.alternate)]`, neither annotated; a candidate without becomes its
-    ///   romanization alone (`.primary`, which writes the romanization for a
-    ///   Hanji-less candidate). The effective swap is `true` under this mode
-    ///   (`CandidateDisplayMode.effectiveTranslateSwapped`), which is what
-    ///   makes `.primary` the Hanji and `.alternate` the romanization.
-    ///
-    ///   Romanization cells are deduplicated by `(text, consumed span)`, in
-    ///   fetched order: 食 and 𤆬 are both `tsia̍h` for the same span, and a
-    ///   second `tsia̍h` cell would commit the same document text as the first
-    ///   — likewise the §34 literal `tâi` at slot 0 absorbs 台's romanization
-    ///   cell. Hanji cells are never deduplicated: 重 tîng and 重 tāng are two
-    ///   morphemes (Core Principle #7), and their adjacent romanizations are
-    ///   what tells them apart. A single walk over the fetched order, so the
-    ///   slot mapping keeps that order.
+    /// The window's list for `candidates`, under ONE settings snapshot — the
+    /// same rules the commit reads. 並排/羅馬字: one `.primary` cell per
+    /// candidate, exactly `CandidateCellContent.cell`. 合用: a Hanji candidate
+    /// is `[漢字 (.primary), 羅馬字 (.alternate)]` under the mode's forced
+    /// swap; romanization cells dedupe by `(text, consumed span)` — a duplicate
+    /// would commit what the first does — Hanji cells never (Core Principle #7).
     static func presentation(
         of candidates: [ContinuousCandidate],
         settings: EngineSettings,
@@ -62,7 +46,7 @@ struct PresentedCandidate: Equatable, Sendable {
         var presented: [PresentedCandidate] = []
         var presentedRomanCells = Set<RomanCellKey>()
         for (index, candidate) in candidates.enumerated() {
-            let hanji = candidate.hanji.flatMap { $0.isEmpty ? nil : $0 }
+            let hanji = candidate.presentableHanji
             if let hanji {
                 presented.append(PresentedCandidate(
                     candidateIndex: index,

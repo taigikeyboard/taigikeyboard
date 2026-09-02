@@ -126,18 +126,12 @@ final class CandidateMetricsTests: XCTestCase {
 
     /// A stacked layout showing a list with no annotated cell — 羅馬字, or
     /// 漢羅合用 where every cell is one script — has nothing to stack, and
-    /// renders one line tall: the inline height, and the inline capsule and
-    /// inset with it (USER 2026-09-02: no second-line air under 羅馬字).
-    ///
-    /// trace: 中/中 → inline itemHeight 20+10=30; stacked 57.
+    /// renders one line tall: the inline metrics, capsule and inset included
+    /// (USER 2026-09-02: no second-line air under 羅馬字).
     func testStackedMetrics_withNoAnnotatedCell_resolveToTheOneLineHeight() {
         let stacked = defaultMetrics.arranged(.stacked)
 
-        let resolved = stacked.forContent(hasAnnotations: false)
-
-        XCTAssertEqual(resolved.itemHeight, defaultMetrics.candidateFontSize + defaultMetrics.verticalPadding)
-        XCTAssertEqual(resolved, defaultMetrics.arranged(.inline))
-        XCTAssertLessThan(resolved.itemHeight, stacked.itemHeight)
+        XCTAssertEqual(stacked.forContent(hasAnnotations: false), defaultMetrics.arranged(.inline))
     }
 
     /// One annotated cell in the list keeps the two-line height for the whole
