@@ -520,7 +520,7 @@ class ComposingManager(
             LexiconBridge.DictionaryToggles.from(settings),
         ).dictionaryFilterBitmask
 
-        // §34/S22 — invert the 顯示羅馬字 setting into the engine's
+        // §34/S22 — invert the 顯示當咧拍的字 setting into the engine's
         // `disabled` wire flag. Computed once from the same snapshot and
         // shared by both fetch phases so a mid-fetch settings change cannot
         // make the two phases disagree (mirrors `enabledSourcesBitmask`).

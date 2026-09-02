@@ -338,8 +338,8 @@ class PrefHelper(
     // App UI display language tag (i18n). Default = system (Automatic) — fresh install follows device OS locale.
     var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
 
-    // §34/S22 — 顯示羅馬字 toggle. Default false (off; user opts in).
-    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, false)
+    // §34/S22 — 顯示當咧拍的字 toggle. Default true (on; USER 2026-09-03).
+    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, true)
 
     // Taigi-specific settings
     var enableDoubleTapOO: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)

@@ -276,7 +276,7 @@ fn handle_fetch_at_pos(
     // 中文:   roman-only 候選放 index 0,漢羅一鍵上屏免切 文/A,加調時候選列不跳動。
     // 中文:   display 層 prepend,不碰 assemble_candidates 切詞/cost primitive;不跑 Step 5 POJ recase。
     //
-    // §34 / S22 toggle (顯示羅馬字): when the user turns the setting OFF
+    // §34 / S22 toggle (顯示當咧拍的字): when the user turns the setting OFF
     // the platform sends `literal_roman_candidate_disabled = true` and the
     // forced prepend is skipped — the dedupe `retain` lives inside this
     // block so it is skipped too. This suppresses ONLY the §34 WYSIWYG

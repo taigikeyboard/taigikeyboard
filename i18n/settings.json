@@ -72,12 +72,12 @@
       "values": { "hanji": "括號標註", "tailo": "kuat-hō phiau-tsù", "poj": "koat-hō phiau-chù", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "literalRomanCandidate": {
-      "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip. Mobile only — the desktop shows it unconditionally (§34).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "顯示原本羅馬字候選", "tailo": "hián-sī guân-pún lô-má-jī hāu-suán", "poj": "hián-sī goân-pún lô-má-jī hāu-soán", "en": "Show Typed Romanization Candidate", "ja": "入力したローマ字候補を表示" }
+      "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All four platforms.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "顯示當咧拍的字", "tailo": "hián-sī tng-teh phah ê jī", "poj": "hián-sī tng-teh phah ê jī", "en": "Show What You Are Typing", "ja": "入力中の文字を表示" }
     },
     "literalRomanCandidateInfo": {
-      "comment": "Help text for the show-romanization toggle.",
+      "comment": "Help text for the 顯示當咧拍的字 toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "佇候選詞列第一格顯示你拍 ê 羅馬字，會當點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。", "tailo": "tī hāu-suán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, ē-tàng tiám-tshi̍h ah-sī tshi̍h Enter sàng-tshut. kuainn--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-tshut.", "poj": "tī hāu-soán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, ē-tàng tiám-chhi̍h ah-sī chhi̍h Enter sàng-chhut. koaiⁿ--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-chhut.", "en": "Shows what you typed in the first slot of the candidate bar. Tap it or press Enter to commit it. When off, only Enter can commit it.", "ja": "入力したローマ字を候補バーの先頭に表示します。タップするか Enter で確定できます。オフの場合は Enter でのみ確定できます。" }
     },

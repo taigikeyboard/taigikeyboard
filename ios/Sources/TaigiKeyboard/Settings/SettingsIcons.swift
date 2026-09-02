@@ -11,7 +11,7 @@ enum SettingsIcons {
     static let candidateDisplayMode = "character.textbox"
     // 中文: 「同時輸出漢羅雙寫」開關圖示。
     static let isOutputBothScripts = "character.book.closed"
-    // 中文: 顯示羅馬字 (§34/S22) 開關圖示。
+    // 中文: 顯示當咧拍的字 (§34/S22) 開關圖示。
     static let literalRomanCandidate = "abc"
     // 中文: 自動大寫開關圖示。
     static let autoCapitalization = "textformat.size"

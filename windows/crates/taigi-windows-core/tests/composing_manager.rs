@@ -489,9 +489,9 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     );
 }
 
-/// §34 on the desktop has no setting: a fresh bar has the typed literal in
-/// slot 0 — one script — so the highlighted-candidate commit that Enter routes
-/// to (`keys/intent.rs` `return_commits_the_candidate_and_shift_return_the_literal`;
+/// §34 under the shipped defaults (顯示當咧拍的字 ON): a fresh bar has the
+/// typed literal in slot 0 — one script — so the highlighted-candidate commit
+/// that Enter routes to (`keys/intent.rs` `return_commits_the_candidate_and_shift_return_the_literal`;
 /// the window opens on slot 0) writes exactly what was typed in either output
 /// mode, and learns it under its canonical reading. The dictionary's first
 /// candidate is one slot along. ⇧Enter's raw path is
@@ -527,6 +527,34 @@ fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
             "learned under the literal's canonical reading — swapped={swapped}"
         );
     }
+}
+
+/// 顯示當咧拍的字 OFF, read through the real settings document: the forced §34
+/// row is gone, so the bar opens on a two-script dictionary candidate and Enter
+/// writes that word rather than the typed letters. Asserted against the cell the
+/// bar actually offered, not against a fixed dictionary word — which reading
+/// ranks first is the lattice's business, not this switch's.
+#[test]
+fn enter_on_a_fresh_bar_commits_the_dictionary_word_when_the_literal_row_is_off() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.settings
+        .edit(|doc| doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, false));
+    rig.type_text("taigi");
+    let candidates = rig.candidates();
+    assert!(
+        candidates[0].hanji.is_some(),
+        "nothing forces a one-script row to the front: {:?}",
+        candidates[0]
+    );
+    let (outcome, committed) = rig.commit(&candidates[0], CandidateScript::Primary);
+    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
+    assert_eq!(committed.as_deref(), Some(candidates[0].roman.as_str()));
+    assert_ne!(
+        committed.as_deref(),
+        Some("taigi"),
+        "the dictionary word, not the typed literal"
+    );
 }
 
 #[test]

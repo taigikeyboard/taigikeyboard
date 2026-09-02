@@ -182,12 +182,12 @@ extension RustEngineBridge {
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         fetch.position = 0
-        // §34/S22 — the desktop pins the disable gate open: the preedit
-        // literal always leads the list so Return commits what was typed (USER
-        // 2026-09-02). Mobile keeps a 顯示羅馬字 toggle behind the same field.
+        // §34/S22 — positive platform setting → inverted proto disable gate
+        // (the field's own comment carries why), so 顯示當咧拍的字 ON leaves the
+        // preedit literal leading the list and Return commits what was typed.
         // CROSS-PLATFORM INVARIANT — mirrors windows/crates/taigi-windows-core/src/engine/composing.rs
-        // `fetch_at_pos`, which pins the same field to `false`.
-        fetch.literalRomanCandidateDisabled = false
+        // `fetch_at_pos`, which inverts the same setting onto the same field.
+        fetch.literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
         fetch.frequencyEntries = frequencyRows.map(frequencyEntry)
         fetch.nowMs = nowMs
         fetch.enabledSourcesBitmask = enabledSourcesBitmask

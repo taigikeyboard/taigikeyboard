@@ -200,11 +200,12 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertNil(result.candidates, "no continuous phase must read as nil, not as an empty list")
     }
 
-    /// §34 on the desktop has no setting: with TL/POJ text composed, the
-    /// preedit literal leads the list under the shipped defaults, so Return
-    /// commits what was typed (USER 2026-09-02). Mobile gates the same row
-    /// behind 顯示羅馬字.
-    func testFetchAtPos_literalRomanCandidateAlwaysLeads_onTheDesktop() throws {
+    /// §34 under the shipped defaults: 顯示當咧拍的字 is ON out of the box on
+    /// all four platforms (USER 2026-09-03), so with TL/POJ text composed the
+    /// preedit literal leads the list and Return commits what was typed. The OFF
+    /// half is `TaigiInputControllerCandidateTests`, which drives the same
+    /// invert through the settings the shipped provider reads.
+    func testFetchAtPos_literalRomanCandidateLeads_underTheShippedDefaults() throws {
         _ = try compose("taigi")
         _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
@@ -216,4 +217,5 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertEqual(leading.displayText, "taigi", "the preedit literal leads the list")
         XCTAssertNil(leading.hanji, "the literal carries one script — a commit writes the romanization")
     }
+
 }

@@ -191,7 +191,7 @@
     <string name="i18n_settings_candidateDisplayModeCombined">漢字＋ローマ字</string>
     <string name="i18n_settings_candidateDisplayModeRomanOnly">ローマ字のみ</string>
     <string name="i18n_settings_outputBothScripts">括弧で併記</string>
-    <string name="i18n_settings_literalRomanCandidate">入力したローマ字候補を表示</string>
+    <string name="i18n_settings_literalRomanCandidate">入力中の文字を表示</string>
     <string name="i18n_settings_literalRomanCandidateInfo">入力したローマ字を候補バーの先頭に表示します。タップするか Enter で確定できます。オフの場合は Enter でのみ確定できます。</string>
     <string name="i18n_settings_autoCapitalization">自動大文字化</string>
     <string name="i18n_settings_autoSpace">自動スペース</string>

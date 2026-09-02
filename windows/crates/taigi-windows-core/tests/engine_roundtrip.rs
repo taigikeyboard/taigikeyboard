@@ -180,13 +180,14 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
     engine::reset(generation);
 }
 
-/// §34 on the desktop has no setting: the bridge pins the disable flag open,
-/// so with TL/POJ text composed the preedit literal leads the list under the
-/// shipped defaults (USER 2026-09-02). Mobile gates the same row behind
-/// 顯示羅馬字. What a commit of that slot writes is `composing_manager.rs`'s
-/// `enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode`.
+/// §34 leads the list under the shipped defaults: 顯示當咧拍的字 is ON out of
+/// the box on all four platforms (USER 2026-09-03), so with TL/POJ text
+/// composed the preedit literal is slot 0. What a commit of that slot writes,
+/// and the OFF half of the switch, are `composing_manager.rs`'s
+/// `enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode` /
+/// `…_commits_the_dictionary_word_when_the_literal_row_is_off`.
 #[test]
-fn literal_roman_candidate_always_leads_on_the_desktop() {
+fn literal_roman_candidate_leads_the_list_under_the_shipped_defaults() {
     let _engine = engine();
     let generation = fresh_generation();
     let settings = EngineSettings::default();

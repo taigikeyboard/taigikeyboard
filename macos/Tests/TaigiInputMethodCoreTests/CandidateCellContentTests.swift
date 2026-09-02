@@ -26,16 +26,10 @@ final class CandidateCellContentTests: XCTestCase {
         bothScripts: Bool = false,
         displayMode: CandidateDisplayMode = .sideBySide,
     ) -> EngineSettings {
-        let defaults = EngineSettings.defaults
-        return EngineSettings(
-            inputMode: defaults.inputMode,
-            isTranslateSwapped: swapped,
-            isOutputBothScripts: bothScripts,
+        TestFixtures.settings(
+            swapped: swapped,
+            bothScripts: bothScripts,
             candidateDisplayMode: displayMode,
-            isFrequencyRecordingEnabled: defaults.isFrequencyRecordingEnabled,
-            isAssociationRecordingEnabled: defaults.isAssociationRecordingEnabled,
-            isCustomDictEnabled: defaults.isCustomDictEnabled,
-            dictionarySources: defaults.dictionarySources,
         )
     }
 

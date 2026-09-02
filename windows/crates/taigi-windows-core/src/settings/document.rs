@@ -214,6 +214,8 @@ impl SettingsDocument {
             is_output_both_scripts: candidate_display_mode
                 .effective_output_both_scripts(self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS)),
             candidate_display_mode,
+            is_literal_roman_candidate_enabled: self
+                .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
             is_association_recording_enabled: self.bool(&keys::IS_ASSOCIATION_RECORDING_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
@@ -446,6 +448,18 @@ mod tests {
             SettingsDocument::default().choice(&keys::CANDIDATE_DISPLAY_MODE),
             CandidateDisplayMode::SideBySide
         );
+    }
+
+    /// §34/S22 — the ON default is covered by `empty_document_reads_every_default`;
+    /// what only this pins is that `engine_settings()` maps THIS key, so a user
+    /// who turned 顯示當咧拍的字 off keeps it off across the 2026-09-03 flip.
+    #[test]
+    fn literal_roman_candidate_honours_a_stored_false() {
+        let mut doc = SettingsDocument::default();
+
+        doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, false);
+
+        assert!(!doc.engine_settings().is_literal_roman_candidate_enabled);
     }
 
     #[test]

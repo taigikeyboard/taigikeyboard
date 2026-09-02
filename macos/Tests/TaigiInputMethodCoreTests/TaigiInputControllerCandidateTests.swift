@@ -213,7 +213,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     ///
     /// Driven through the real production source of a hanji-less candidate: the
     /// §34 literal-romanization candidate, which the engine prepends at index 0
-    /// on the desktop unconditionally, and which the bar opens highlighted.
+    /// under the shipped 顯示當咧拍的字 default, and which the bar opens
+    /// highlighted.
     func testSpace_onASingleScriptCandidate_writesNothing() throws {
         let session = try composedSession()
         let leading = try XCTUnwrap(session.presenter.shownContent).cells[0]
@@ -576,12 +577,12 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
-    // MARK: - §34 literal leads, no setting on the desktop
+    // MARK: - §34 literal leads under 顯示當咧拍的字
 
     /// The bar opens on the typed letters — the §34 literal, one script, with
-    /// no setting behind it on the desktop (USER 2026-09-02) — so Return
-    /// writes exactly what was typed in either output mode; the dictionary's
-    /// first candidate is one cell along.
+    /// 顯示當咧拍的字 at its shipped ON (USER 2026-09-03) — so Return writes
+    /// exactly what was typed in either output mode; the dictionary's first
+    /// candidate is one cell along.
     func testReturn_onAFreshBar_writesTheTypedLiteral_inEitherMode() throws {
         for swapped in [false, true] {
             try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: swapped) {
@@ -599,6 +600,27 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
                 XCTAssertEqual(session.client.insertedTexts.last, Self.composition, "swapped=\(swapped)")
                 XCTAssertFalse(session.presenter.isShowing, "swapped=\(swapped)")
             }
+        }
+    }
+
+    /// 顯示當咧拍的字 OFF, driven through the real `UserDefaults` the shipped
+    /// settings provider reads: the forced §34 row is gone, so the bar opens on
+    /// a dictionary candidate that carries both scripts and Return writes that
+    /// word rather than the typed letters.
+    func testReturn_onAFreshBar_withTheLiteralRowOff_writesTheDictionaryWord() throws {
+        try withSetting(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: false) {
+            let session = try composedSession()
+            let cells = try XCTUnwrap(session.presenter.shownContent).cells
+            XCTAssertNotNil(cells[0].annotation, "nothing forces a one-script row to the front")
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "\r"), client: session.client,
+            )
+
+            let written = try XCTUnwrap(session.client.insertedTexts.last)
+            XCTAssertNotEqual(written, Self.composition, "the dictionary word, not the typed letters")
+            XCTAssertEqual(written, cells[0].text)
         }
     }
 

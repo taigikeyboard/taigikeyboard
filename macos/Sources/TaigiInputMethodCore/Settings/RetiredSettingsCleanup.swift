@@ -85,11 +85,6 @@ enum RetiredSettingsCleanup {
         // its type, `CandidateAccentColor` and `CandidateWindowStyle`.
         "candidateAccentColor",
         "candidateWindowStyle",
-        // 顯示羅馬字候選. Its pane row went in #558; the setting itself went
-        // when the desktop made the §34 literal candidate always-on (USER
-        // 2026-09-02) — nothing reads the key any more, so this is hygiene
-        // only. Mobile keeps the toggle under the same name.
-        "literalRomanCandidateEnabled",
         // 全形標點 and Shift 切換英數, retired 2026-08-24. 全形標點 is always
         // on now; the Shift toggle's whole feature went on 2026-08-26, when
         // this input method stopped having an English mode. Either way the

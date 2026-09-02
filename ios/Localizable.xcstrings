@@ -3476,25 +3476,25 @@
       }
     },
     "i18n_settings_literalRomanCandidate": {
-      "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip. Mobile only — the desktop shows it unconditionally (§34).",
+      "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All four platforms.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show Typed Romanization Candidate"
+            "value": "Show What You Are Typing"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "入力したローマ字候補を表示"
+            "value": "入力中の文字を表示"
           }
         }
       }
     },
     "i18n_settings_literalRomanCandidateInfo": {
-      "comment": "Help text for the show-romanization toggle.",
+      "comment": "Help text for the 顯示當咧拍的字 toggle.",
       "extractionState": "manual",
       "localizations": {
         "en": {

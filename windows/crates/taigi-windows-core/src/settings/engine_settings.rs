@@ -157,6 +157,11 @@ pub struct EngineSettings {
     /// `macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift`
     /// `candidateDisplayMode`; every platform defaults to side-by-side.
     pub candidate_display_mode: CandidateDisplayMode,
+    /// §34/S22 — inverted onto `FetchAtPos.literal_roman_candidate_disabled`.
+    /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled`
+    /// (`ios/.../SharedSettings.swift`) and `literalRomanCandidateEnabled`
+    /// (`android/.../PrefHelper.kt`), both default ON.
+    pub is_literal_roman_candidate_enabled: bool,
     /// Read on the write path only; the boost always applies to whatever was
     /// learned. CROSS-PLATFORM INVARIANT — `SharedSettings.swift:48` (ON).
     pub is_frequency_recording_enabled: bool,
@@ -180,6 +185,7 @@ impl Default for EngineSettings {
             is_translate_swapped: false,
             is_output_both_scripts: false,
             candidate_display_mode: CandidateDisplayMode::SideBySide,
+            is_literal_roman_candidate_enabled: true,
             is_frequency_recording_enabled: true,
             is_association_recording_enabled: true,
             is_custom_dict_enabled: true,

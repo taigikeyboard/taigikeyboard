@@ -58,6 +58,10 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "candidateDisplayMode",
             defaultValue: EngineSettings.defaults.candidateDisplayMode,
         )
+        static let isLiteralRomanCandidateEnabled = SettingsKey(
+            name: "literalRomanCandidateEnabled",
+            defaultValue: EngineSettings.defaults.isLiteralRomanCandidateEnabled,
+        )
         static let isFrequencyRecordingEnabled = SettingsKey(
             name: "frequencyRecordingEnabled",
             defaultValue: EngineSettings.defaults.isFrequencyRecordingEnabled,
@@ -321,6 +325,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             isTranslateSwapped: displayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped),
             isOutputBothScripts: displayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts),
             candidateDisplayMode: displayMode,
+            isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
             isCustomDictEnabled: bool(Keys.isCustomDictEnabled),

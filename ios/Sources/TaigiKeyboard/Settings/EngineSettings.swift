@@ -45,7 +45,7 @@ protocol EngineSettings {
     // 中文: 是否記錄使用者選字的關聯資料,供 NextWord 推薦使用。
     var isAssociationRecordingEnabled: Bool { get }
 
-    // 中文: 顯示羅馬字開關 (§34/S22)。TL/POJ 組字時是否在候選列首位顯示字面 roman
+    // 中文: 顯示當咧拍的字開關 (§34/S22)。TL/POJ 組字時是否在候選列首位顯示字面 roman
     // 中文: 候選 (= preedit WYSIWYG),讓漢羅一鍵上屏免切 文/A。預設 true。只關 §34
     // 中文: 強制 prepend,不影響 assemble_candidates 自然產生的 roman 候選。
     /// Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ

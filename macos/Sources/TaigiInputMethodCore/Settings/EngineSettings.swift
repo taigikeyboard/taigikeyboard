@@ -122,6 +122,17 @@ struct EngineSettings: Equatable, Sendable {
     /// what a fresh install's candidate cells show.
     let candidateDisplayMode: CandidateDisplayMode
 
+    /// §34/S22 — when on, TL/POJ composing surfaces the preedit literal as the
+    /// index-0 candidate so 漢羅 commits the romanization in one keystroke, and
+    /// Return on a fresh bar writes what was typed. The bridge inverts it into
+    /// `FetchAtPos.literal_roman_candidate_disabled`.
+    /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled` in
+    /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
+    /// `literalRomanCandidateEnabled` in android/…/ime/core/PrefHelper.kt,
+    /// both of which default it ON.
+    /// Drift changes which candidate leads the list on a fresh install.
+    let isLiteralRomanCandidateEnabled: Bool
+
     /// Whether committing a candidate counts towards its ranking next time.
     /// Read on the write path only — the boost itself is always applied to
     /// whatever counts have been learned, so turning this off freezes the
@@ -163,6 +174,7 @@ struct EngineSettings: Equatable, Sendable {
         isTranslateSwapped: false,
         isOutputBothScripts: false,
         candidateDisplayMode: .sideBySide,
+        isLiteralRomanCandidateEnabled: true,
         isFrequencyRecordingEnabled: true,
         isAssociationRecordingEnabled: true,
         isCustomDictEnabled: true,

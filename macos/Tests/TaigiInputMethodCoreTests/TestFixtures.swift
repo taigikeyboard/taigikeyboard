@@ -182,6 +182,9 @@ enum TestFixtures {
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
             candidateDisplayMode: candidateDisplayMode,
+            // §34/S22 ships ON; a case that wants it off writes the real
+            // setting with `withSetting`, which is the path production reads.
+            isLiteralRomanCandidateEnabled: true,
             isFrequencyRecordingEnabled: frequencyRecording,
             isAssociationRecordingEnabled: associationRecording,
             isCustomDictEnabled: customDict,
@@ -422,9 +425,9 @@ protocol CandidateBarSession {
 }
 
 extension CandidateBarSession {
-    /// §34 opens the bar on the one-script literal — always on for the desktop
-    /// (USER 2026-09-02) — so a case about a candidate that carries both
-    /// scripts walks ⇥ onto the first one and hands it back.
+    /// §34 opens the bar on the one-script literal — 顯示當咧拍的字 ships ON —
+    /// so a case about a candidate that carries both scripts walks ⇥ onto the
+    /// first one and hands it back.
     @discardableResult
     func walkToFirstTwoScriptCell() throws -> CandidateCellContent {
         let cells = try XCTUnwrap(presenter.shownContent).cells

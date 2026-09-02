@@ -155,13 +155,13 @@ pub fn fetch_at_pos(
         now_ms: args.now_ms,
         custom_entries: args.custom_entries.iter().map(custom_dict_entry).collect(),
         enabled_sources_bitmask: args.enabled_sources_bitmask,
-        // §34/S22 — the desktop pins the disable gate open: the preedit
-        // literal always leads the list so Enter commits what was typed (USER
-        // 2026-09-02). Mobile keeps a 顯示羅馬字 toggle behind the same field.
+        // §34/S22 — positive platform setting → inverted proto disable gate
+        // (the field's own comment carries why), so 顯示當咧拍的字 ON leaves the
+        // preedit literal leading the list and Enter commits what was typed.
         // CROSS-PLATFORM INVARIANT — mirrors
         // `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Composing.swift`
-        // `composingFetchAtPos`, which pins the same field to `false`.
-        literal_roman_candidate_disabled: false,
+        // `composingFetchAtPos`, which inverts the same setting onto the same field.
+        literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),

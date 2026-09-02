@@ -767,7 +767,7 @@ public val Icons.Outlined.FormatSize: ImageVector
 
 private var _formatSize: ImageVector? = null
 
-// §34/S22 — 顯示羅馬字 toggle icon. Classic Material "abc" glyph,
+// §34/S22 — 顯示當咧拍的字 toggle icon. Classic Material "abc" glyph,
 // transcribed verbatim from materialiconsoutlined/abc/24px.svg (viewBox
 // 0 0 24 24) so winding matches the source exactly. Mirrors iOS SF Symbol "abc".
 public val Icons.Outlined.Abc: ImageVector

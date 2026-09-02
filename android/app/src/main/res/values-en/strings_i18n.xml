@@ -191,7 +191,7 @@
     <string name="i18n_settings_candidateDisplayModeCombined">Hanji with Romanization</string>
     <string name="i18n_settings_candidateDisplayModeRomanOnly">Romanization Only</string>
     <string name="i18n_settings_outputBothScripts">Annotate in Brackets</string>
-    <string name="i18n_settings_literalRomanCandidate">Show Typed Romanization Candidate</string>
+    <string name="i18n_settings_literalRomanCandidate">Show What You Are Typing</string>
     <string name="i18n_settings_literalRomanCandidateInfo">Shows what you typed in the first slot of the candidate bar. Tap it or press Enter to commit it. When off, only Enter can commit it.</string>
     <string name="i18n_settings_autoCapitalization">Auto-Capitalization</string>
     <string name="i18n_settings_autoSpace">Auto-Space</string>

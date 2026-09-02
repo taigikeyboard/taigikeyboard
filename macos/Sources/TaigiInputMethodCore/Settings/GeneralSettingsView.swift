@@ -36,6 +36,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.isAutoSpaceEnabled.name)
     private var isAutoSpaceEnabled = SettingsStore.Keys.isAutoSpaceEnabled.defaultValue
 
+    @AppStorage(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+    private var isLiteralRomanCandidateEnabled = SettingsStore.Keys.isLiteralRomanCandidateEnabled.defaultValue
+
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
     /// setting changes, and changing it means a trip to System Settings and back.
@@ -77,6 +80,11 @@ struct GeneralSettingsView: View {
                 }
 
                 Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
+
+                // §34/S22, under 自動空白 where the USER placed it
+                // (2026-09-03). On means candidate slot 0 is the preedit
+                // literal, so Return writes the typed romanization.
+                Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
             }
 
             // The update rows. No toggle and no explanatory text (USER

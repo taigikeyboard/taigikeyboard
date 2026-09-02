@@ -83,9 +83,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
  * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
  * candidate. The platform sends `true` only when the user turns the
- * 顯示羅馬字 setting OFF. Platform settings stay positive
- * (`isLiteralRomanCandidateEnabled` iOS / `literalRomanCandidateEnabled`
- * Android); the bridge sets `disabled = !enabled`.
+ * 顯示當咧拍的字 setting OFF. Platform settings stay positive and ship ON on
+ * all four platforms (`isLiteralRomanCandidateEnabled` iOS / macOS,
+ * `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
+ * Windows); the platform sets `disabled = !enabled` — mobile in
+ * `ComposingManager`, desktop in the engine bridge.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -553,9 +555,11 @@ public  final class FetchAtPos extends
    * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
    * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
    * candidate. The platform sends `true` only when the user turns the
-   * 顯示羅馬字 setting OFF. Platform settings stay positive
-   * (`isLiteralRomanCandidateEnabled` iOS / `literalRomanCandidateEnabled`
-   * Android); the bridge sets `disabled = !enabled`.
+   * 顯示當咧拍的字 setting OFF. Platform settings stay positive and ship ON on
+   * all four platforms (`isLiteralRomanCandidateEnabled` iOS / macOS,
+   * `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
+   * Windows); the platform sets `disabled = !enabled` — mobile in
+   * `ComposingManager`, desktop in the engine bridge.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FetchAtPos}

@@ -1,8 +1,8 @@
 //! The 一般 pane: romanization system, display language, auto-space, the
-//! update row, and the attribution footer. Port of
+//! typed-text candidate, the update row, and the attribution footer. Port of
 //! `GeneralSettingsView.swift`.
 
-// 中文: 一般 pane — 輸入模式、介面語言、自動空白、更新列、頁尾。
+// 中文: 一般 pane — 輸入模式、介面語言、自動空白、顯示當咧拍的字、更新列、頁尾。
 
 use super::choice_row;
 use crate::presentation::{display_language_label, SPONSOR_URL};
@@ -54,6 +54,17 @@ pub fn view(
             document.bool(&keys::IS_AUTO_SPACE_ENABLED),
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_AUTO_SPACE_ENABLED, is_on)),
+        ),
+        // §34/S22, under 自動空白 where the USER placed it (2026-09-03). On
+        // means candidate slot 0 is the preedit literal, so Enter writes the
+        // typed romanization.
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsLiteralRomanCandidate),
+            document.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
+            true,
+            context.callback(|is_on| {
+                Message::SetSwitch(keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, is_on)
+            }),
         ),
         cards::section_gap(),
         update_row(window, strings, context),

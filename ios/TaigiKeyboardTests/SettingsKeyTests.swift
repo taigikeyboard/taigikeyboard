@@ -134,6 +134,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.keyCornerRadius, 6.0)
         XCTAssertEqual(settings.keyBorderWidth, 0)
         XCTAssertEqual(settings.colorSettings, .default)
+        XCTAssertTrue(settings.isLiteralRomanCandidateEnabled, "§34/S22 顯示當咧拍的字 ships ON")
     }
 
     func test_isFullAccessEnabled_absentReturnsFalse_andStoredTrueReturnsTrue() {
@@ -218,6 +219,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isLkkDictEnabled = false
         settings.isToolbarAutoCollapse = false
         settings.isTpsOrMappedToER = false
+        settings.isLiteralRomanCandidateEnabled = false
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
 
         // RawRep enums + font.
@@ -251,6 +253,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isTranslateSwapped)
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertFalse(settings.isAutoSpaceEnabled)
+        XCTAssertTrue(settings.isLiteralRomanCandidateEnabled)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertTrue(settings.isNewwordDictEnabled)
         XCTAssertTrue(settings.isKunggeDictEnabled)

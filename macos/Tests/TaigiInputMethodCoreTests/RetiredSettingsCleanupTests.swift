@@ -25,16 +25,26 @@ final class RetiredSettingsCleanupTests: XCTestCase {
 
     func testStoredTrueValuesOfRetiredToggles_areRemoved() {
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        // 顯示羅馬字候選 has no key any more; the raw name is what an older
-        // build persisted.
-        userDefaults.set(true, forKey: "literalRomanCandidateEnabled")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isOutputBothScripts.name))
-        XCTAssertNil(userDefaults.object(forKey: "literalRomanCandidateEnabled"))
         let settings = SettingsStore(userDefaults: userDefaults)
         XCTAssertFalse(settings.storedIsOutputBothScripts)
+    }
+
+    /// A tombstone for 顯示當咧拍的字 is what left its earlier pane row dead —
+    /// the sweep cleared what the row wrote, every launch (`behavioral-invariants.md`
+    /// §34 desktop notes). The row is back, so the sweep must leave the key alone.
+    func testTheLiteralRomanCandidateSetting_survivesTheSweep() {
+        userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+
+        XCTAssertFalse(
+            SettingsStore(userDefaults: userDefaults).current.isLiteralRomanCandidateEnabled,
+            "the sweep must not take a setting the 一般 pane still writes",
+        )
     }
 
     /// The first shape of the composing-key settings. Nothing reads them any
