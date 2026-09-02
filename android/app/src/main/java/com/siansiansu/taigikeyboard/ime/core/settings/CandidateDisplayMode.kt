@@ -1,4 +1,4 @@
-// 中文: 候選詞顯示模式 — 漢羅並排(預設)/ 羅馬字 / 漢羅合用。羅馬字模式下 isTranslateSwapped / outputBothScripts 的有效值強制為 false;漢羅合用下 isTranslateSwapped 強制為 true。
+// 中文: 候選詞顯示模式 — 漢羅並排(預設)/ 羅馬字 / 漢羅濫。羅馬字模式下 isTranslateSwapped / outputBothScripts 的有效值強制為 false;漢羅濫下 isTranslateSwapped 強制為 true。
 
 package com.siansiansu.taigikeyboard.ime.core.settings
 
@@ -31,7 +31,7 @@ enum class CandidateDisplayMode(
      * SIDE_BY_SIDE restores the user's stored choice.
      */
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
-    // Drift causes silent divergence (one platform commits roman under 漢羅合用, or hanji under roman-only).
+    // Drift causes silent divergence (one platform commits roman under 漢羅濫, or hanji under roman-only).
     fun effectiveTranslateSwapped(stored: Boolean): Boolean = this == COMBINED || (stored && showsHanji)
 
     /**

@@ -80,7 +80,7 @@ enum FontType: String, CaseIterable, Codable {
 /// derived swap projects that as `true` (see `SharedSettings`).
 /// TPS ignores the mode. Raw values are the cross-platform storage contract
 /// (Android `CandidateDisplayMode.storageValue`, desktop `SettingsStore`).
-// 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字 / 漢羅合用。raw value 四平台一致,勿改。
+// 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字 / 漢羅濫。raw value 四平台一致,勿改。
 // `public` like `InputMode`: the `RustEngineBridge` NextWord entry points are
 // public and take it as a defaulted parameter.
 public enum CandidateDisplayMode: String, CaseIterable, Codable {

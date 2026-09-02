@@ -593,7 +593,7 @@ public final class TaigiInputController: IMKInputController {
             return false
         case .commitHighlightedCandidate:
             // The window is authoritative for which absolute index its selection
-            // is on. The cell's own script: under 漢羅合用 that is the Hanji for
+            // is on. The cell's own script: under 漢羅濫 that is the Hanji for
             // a 漢字 cell and the romanization for a 羅馬字 cell.
             commitPresented(
                 at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),

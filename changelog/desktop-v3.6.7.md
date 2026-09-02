@@ -3,7 +3,7 @@
 The first Windows release: Taigi Keyboard is now a Text Services Framework input
 method for Windows 11 and Windows 10 1809+, on the same Rust engine and the same
 dictionaries as macOS. Both desktop apps gain the 候選詞顯示 picker (漢羅並排 /
-漢羅合用 / 羅馬字); macOS gets the POJ tone-mark fix for `au` before a coda, and
+漢羅濫 / 羅馬字); macOS gets the POJ tone-mark fix for `au` before a coda, and
 both take the 台 tile icon.
 
 ### macOS
@@ -21,7 +21,7 @@ both take the 台 tile icon.
 
 - **候選詞顯示 — how a candidate cell shows the word.** A picker in 外觀, three
   values. **漢羅並排** is today's cell: 漢字 and 羅馬字 side by side, the swap
-  shortcut deciding which leads. **漢羅合用** lists both as candidates — a 漢字
+  shortcut deciding which leads. **漢羅濫** lists both as candidates — a 漢字
   cell and, next to it, its 羅馬字 cell, no subtitles — so either script is one
   pick away and no swap is needed; Space on either commits the other.
   **羅馬字** shows the romanization alone and commits it: rows that would now
@@ -60,7 +60,7 @@ same user-data schemas as macOS.
   slot-key labels, the unfold timer and the scroller macOS has. It follows the
   system high-contrast setting and the Windows accent colour, and hides itself
   when the host application draws candidates itself.
-- **候選詞顯示** in 外觀 — 漢羅並排 / 漢羅合用 / 羅馬字, the same three cells as
+- **候選詞顯示** in 外觀 — 漢羅並排 / 漢羅濫 / 羅馬字, the same three cells as
   macOS (漢字 and 羅馬字 as adjacent one-script cells under 合用; romanization
   alone, same-reading rows collapsed, under 羅馬字; a list with no second
   script is one line tall). The `` ` `` swap is inert outside 並排;

@@ -44,7 +44,7 @@ impl SettingChoice for InputMode {
 }
 
 /// What a candidate cell shows: both scripts (the swap decides which leads),
-/// the romanization alone, or both in ONE label led by the hanji (漢羅合用,
+/// the romanization alone, or both in ONE label led by the hanji (漢羅濫,
 /// `Combined`). Stored spellings and the per-mode rules are the same on every
 /// platform (`SettingsModels.swift` `CandidateDisplayMode`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
