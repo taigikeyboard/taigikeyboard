@@ -27,9 +27,8 @@ use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_windows_core::composing::{
     CandidateCellContent, CandidateCommitOutcome, CandidateListChange, CandidateScript,
-    ComposingManager, ComposingSessionCoordinator, ContextToken,
+    CandidateSource, ComposingManager, ComposingSessionCoordinator, ContextToken,
 };
-use taigi_windows_core::engine::ContinuousCandidate;
 use taigi_windows_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot, ShortcutAction,
 };
@@ -260,7 +259,7 @@ impl TextService_Impl {
         // Every key gets exactly one chance at the swap: the arm is consumed
         // here, before any early return, and only the auto-space paths below
         // re-arm it.
-        let (composition, armed_swap, candidates, presenter) = {
+        let (composition, armed_swap, mut list, presenter) = {
             let mut state = self.state.borrow_mut();
             let presenter = state.presenter.clone();
             match state.contexts.entry_mut(identity) {
@@ -270,10 +269,9 @@ impl TextService_Impl {
                     std::mem::take(&mut entry.state.candidates),
                     presenter,
                 ),
-                None => (None, None, Vec::new(), presenter),
+                None => (None, None, CandidateSource::default(), presenter),
             }
         };
-        let mut list = CandidateSource { candidates };
         let mut armed_after: Option<(CandidateScript, ITfRange)> = None;
         let surface = Surface {
             presenter,
@@ -334,7 +332,7 @@ impl TextService_Impl {
             let mut state = self.state.borrow_mut();
             state.contexts.entry_mut(identity).map(|entry| {
                 let previous = std::mem::replace(&mut entry.state.composition, composition_after);
-                entry.state.candidates = list.candidates;
+                entry.state.candidates = list;
                 let previous_arm =
                     std::mem::replace(&mut entry.state.armed_auto_space, armed_after);
                 (previous, previous_arm)
@@ -674,30 +672,9 @@ impl TextService_Impl {
                     log::error!("shortcut.toggle_translate_swapped_failed error={error}");
                 }
                 // The list STAYS: the swap changes how a candidate displays,
-                // never which exist — re-rendered in place, selection kept
+                // never which exist — re-presented in place, selection kept
                 // (dismissing read as the window vanishing, 2026-08-21).
-                let (token, candidates, presenter) = {
-                    let mut state = self.state.borrow_mut();
-                    let presenter = state.presenter.clone();
-                    match state.contexts.entry_mut(identity) {
-                        Some(entry) => {
-                            (Some(entry.token), entry.state.candidates.clone(), presenter)
-                        }
-                        None => (None, Vec::new(), presenter),
-                    }
-                };
-                if let (Some(token), Some(presenter), Some(mutex)) =
-                    (token, presenter, runtime.coordinator_if_built())
-                {
-                    if let Ok(coordinator) = mutex.try_lock() {
-                        if let Some(manager) = coordinator.manager_ref(token) {
-                            let settings = runtime.settings.current();
-                            let cells: Vec<_> =
-                                candidates.iter().map(|c| manager.cell_content(c)).collect();
-                            presenter.borrow_mut().update_cells(cells, &settings, token);
-                        }
-                    }
-                }
+                self.represent_open_list(identity, runtime, false);
             }
             ShortcutAction::CycleCandidateDisplayMode => {
                 let Some(store) = runtime.settings_store() else {
@@ -713,46 +690,11 @@ impl TextService_Impl {
                 // The mode changes which candidates exist (invariants §44),
                 // not only how they draw — so the open list is re-fetched
                 // under the new mode and re-rendered in place, the pane's own
-                // behaviour; an empty answer takes the window down. Never
-                // hidden first: from mid-composition that reads as the window
-                // vanishing. Then the HUD with the new mode's name, as the
+                // behaviour. Then the HUD with the new mode's name, as the
                 // romanization switch does — the chord fires from anywhere.
-                let (token, presenter, flash) = {
-                    let mut state = self.state.borrow_mut();
-                    let token = state.contexts.entry_mut(identity).map(|entry| entry.token);
-                    (token, state.presenter.clone(), state.mode_flash.clone())
-                };
+                self.represent_open_list(identity, runtime, true);
+                let flash = self.state.borrow().mode_flash.clone();
                 let settings = runtime.settings.current();
-                if let (Some(token), Some(presenter), Some(mutex)) =
-                    (token, presenter, runtime.coordinator_if_built())
-                {
-                    if let Ok(mut coordinator) = mutex.try_lock() {
-                        if let Some(manager) = coordinator.manager(token) {
-                            match manager.fetch_candidates().list_change() {
-                                CandidateListChange::Replace(candidates) => {
-                                    let cells: Vec<_> = candidates
-                                        .iter()
-                                        .map(|c| manager.cell_content(c))
-                                        .collect();
-                                    if let Some(entry) =
-                                        self.state.borrow_mut().contexts.entry_mut(identity)
-                                    {
-                                        entry.state.candidates = candidates;
-                                    }
-                                    presenter.borrow_mut().update_cells(cells, &settings, token);
-                                }
-                                CandidateListChange::Clear => {
-                                    if let Some(entry) =
-                                        self.state.borrow_mut().contexts.entry_mut(identity)
-                                    {
-                                        entry.state.candidates.clear();
-                                    }
-                                    presenter.borrow_mut().hide(token);
-                                }
-                            }
-                        }
-                    }
-                }
                 let mode = settings.engine_settings().candidate_display_mode;
                 let text = StringResolver::new(runtime.display_language())
                     .resolve(mode.label_key())
@@ -764,19 +706,57 @@ impl TextService_Impl {
                 }
             }
         }
-        runtime.settings.current();
     }
-}
 
-/// The candidates the engine offered for one context — the list the
-/// window's absolute indices point into.
-struct CandidateSource {
-    candidates: Vec<ContinuousCandidate>,
-}
-
-impl CandidateSource {
-    fn clear(&mut self) {
-        self.candidates.clear();
+    /// Re-presents the open list for `identity` under the settings in force
+    /// right now: re-fetched first when the change alters which candidates
+    /// exist (`refetch`), where an empty answer takes the window down —
+    /// otherwise the same list re-rendered in place. Never hidden first:
+    /// from mid-composition that reads as the window vanishing.
+    fn represent_open_list(&self, identity: usize, runtime: &Runtime, refetch: bool) {
+        let (token, presenter) = {
+            let mut state = self.state.borrow_mut();
+            let token = state.contexts.entry_mut(identity).map(|entry| entry.token);
+            (token, state.presenter.clone())
+        };
+        let (Some(token), Some(presenter), Some(mutex)) =
+            (token, presenter, runtime.coordinator_if_built())
+        else {
+            return;
+        };
+        let Ok(mut coordinator) = mutex.try_lock() else {
+            return;
+        };
+        let Some(manager) = coordinator.manager(token) else {
+            return;
+        };
+        let settings = runtime.settings.current();
+        let cells = {
+            let mut state = self.state.borrow_mut();
+            let Some(entry) = state.contexts.entry_mut(identity) else {
+                return;
+            };
+            let source = &mut entry.state.candidates;
+            if !refetch {
+                source.refresh_presentation(manager);
+                Some(source.cells())
+            } else {
+                match manager.fetch_candidates().list_change() {
+                    CandidateListChange::Replace(candidates) => {
+                        source.set(candidates, manager);
+                        Some(source.cells())
+                    }
+                    CandidateListChange::Clear => {
+                        source.clear();
+                        None
+                    }
+                }
+            }
+        };
+        match cells {
+            Some(cells) => presenter.borrow_mut().update_cells(cells, &settings, token),
+            None => presenter.borrow_mut().hide(token),
+        }
     }
 }
 
@@ -808,17 +788,12 @@ impl Surface {
     /// Queues the list for the screen anchored to the caret; a host that
     /// cannot say where its caret is gets no window and no list (as on the
     /// Mac). The caret is read HERE, under the session's cookie.
-    fn present(
-        &self,
-        source: &mut CandidateSource,
-        manager: &ComposingManager,
-        editor: &CompositionEditor<'_>,
-    ) {
+    fn present(&self, source: &mut CandidateSource, editor: &CompositionEditor<'_>) {
         if self.presenter.is_none() {
             source.clear();
             return;
         }
-        if source.candidates.is_empty() {
+        if source.is_empty() {
             self.hide();
             return;
         }
@@ -828,11 +803,7 @@ impl Surface {
             self.hide();
             return;
         };
-        let cells: Vec<_> = source
-            .candidates
-            .iter()
-            .map(|c| manager.cell_content(c))
-            .collect();
+        let cells = source.cells();
         let document = editor.document();
         self.actions.borrow_mut().push(SurfaceAction::Show {
             cells,
@@ -882,6 +853,10 @@ impl Surface {
         shown_at
     }
 
+    // Both answer the window's absolute index, which is a CELL index into
+    // the source's presentation (合用 shows two cells per candidate) — the
+    // commit resolves it through `CandidateSource::resolve`, never by
+    // indexing the fetched list.
     fn selected_index(&self) -> Option<usize> {
         self.presenter.as_ref()?.borrow().selected_index(self.token)
     }
@@ -911,13 +886,13 @@ fn perform_intent(
         ComposingKeyIntent::Input(text) => {
             manager.append(text, editor);
             refresh_candidates(manager, list);
-            surface.present(list, manager, editor);
+            surface.present(list, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::DeleteBackward => {
             manager.delete_backward(editor);
             refresh_candidates(manager, list);
-            surface.present(list, manager, editor);
+            surface.present(list, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::Commit => {
@@ -988,7 +963,7 @@ fn perform_intent(
         ComposingKeyIntent::CommitHighlightedCandidate => {
             commit_candidate(
                 surface.selected_index(),
-                CandidateScript::Primary,
+                false,
                 settings,
                 manager,
                 editor,
@@ -997,10 +972,11 @@ fn perform_intent(
             );
             KeyOutcome::Consumed
         }
+        // Space: the highlighted cell's OTHER script.
         ComposingKeyIntent::CommitAlternateScript => {
             commit_candidate(
                 surface.selected_index(),
-                CandidateScript::Alternate,
+                true,
                 settings,
                 manager,
                 editor,
@@ -1013,7 +989,7 @@ fn perform_intent(
             // A chord aimed at an empty slot is consumed all the same.
             commit_candidate(
                 surface.candidate_index_for_slot(*slot),
-                CandidateScript::Primary,
+                false,
                 settings,
                 manager,
                 editor,
@@ -1031,15 +1007,19 @@ fn perform_intent(
 
 fn refresh_candidates(manager: &mut ComposingManager, list: &mut CandidateSource) {
     match manager.fetch_candidates().list_change() {
-        CandidateListChange::Replace(candidates) => list.candidates = candidates,
+        CandidateListChange::Replace(candidates) => list.set(candidates, manager),
         CandidateListChange::Clear => list.clear(),
     }
 }
 
+/// Commits the candidate behind window cell `cell_index`, in the cell's own
+/// script or (`flip`, Space) the other one. The script is resolved BEFORE the
+/// commit and the same one decides the auto space, so a 合用 roman cell earns
+/// it as `Alternate` under the derived swap.
 #[allow(clippy::too_many_arguments)]
 fn commit_candidate(
-    index: Option<usize>,
-    script: CandidateScript,
+    cell_index: Option<usize>,
+    flip: bool,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     editor: &mut CompositionEditor<'_>,
@@ -1048,9 +1028,10 @@ fn commit_candidate(
 ) {
     // Nil (no window) and an index past the list both mean nothing to
     // commit; the key is consumed either way.
-    let Some(candidate) = index.and_then(|index| list.candidates.get(index).cloned()) else {
+    let Some((candidate, script)) = cell_index.and_then(|index| list.resolve(index, flip)) else {
         return;
     };
+    let candidate = candidate.clone();
     let (outcome, committed) = manager.commit_candidate(&candidate, script, editor);
     log::debug!("candidate.commit {outcome:?}");
     match outcome {
@@ -1063,7 +1044,7 @@ fn commit_candidate(
         | CandidateCommitOutcome::Ignored
         | CandidateCommitOutcome::Unavailable => {
             refresh_candidates(manager, list);
-            surface.present(list, manager, editor);
+            surface.present(list, editor);
         }
     }
 }

@@ -370,6 +370,34 @@ extension XCTestCase {
         addTeardownBlock { userDefaults.removePersistentDomain(forName: suiteName) }
         return SettingsStore(userDefaults: userDefaults)
     }
+
+    /// Runs `body` with `key` in `UserDefaults.standard` set to `value` (nil
+    /// writes nothing), restored afterwards to whatever it held — including
+    /// "held nothing", which a bare `removeObject` would turn into a value a
+    /// later case never chose. `.standard` rather than a scratch suite because
+    /// the controller and the shared coordinator's engine must read ONE domain
+    /// for these cases to mean anything.
+    @MainActor
+    func withSetting(_ key: String, to value: Any?, _ body: () throws -> Void) rethrows {
+        let saved = UserDefaults.standard.object(forKey: key)
+        defer {
+            if let saved {
+                UserDefaults.standard.set(saved, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+        if let value { UserDefaults.standard.set(value, forKey: key) }
+        try body()
+    }
+
+    /// The 候選詞顯示 mode, written to the `.standard` domain the shared
+    /// coordinator's settings provider reads — a 合用 case has to say so to
+    /// the manager, not only to a controller's scratch store.
+    @MainActor
+    func withDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.candidateDisplayMode.name, to: mode.rawValue, body)
+    }
 }
 
 extension DictionarySourceToggles {
@@ -455,6 +483,7 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
         inputMode: InputMode = .tl,
         swapped: Bool = false,
         bothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         frequencyRecording: Bool = true,
         associationRecording: Bool = true,
         customDict: Bool = true,
@@ -464,6 +493,7 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
             inputMode: inputMode,
             swapped: swapped,
             bothScripts: bothScripts,
+            candidateDisplayMode: candidateDisplayMode,
             frequencyRecording: frequencyRecording,
             associationRecording: associationRecording,
             customDict: customDict,

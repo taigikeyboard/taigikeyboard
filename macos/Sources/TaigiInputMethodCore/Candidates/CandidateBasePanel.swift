@@ -19,10 +19,17 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// `.sequoia` and assert fixed numbers whatever OS they run on; production
     /// has one caller and it passes the system's (`CandidatePanel`).
     let style: CandidateWindowStyle
-    /// The size metrics every cell and layout in this window renders at.
-    /// Fixed at construction, and settings-driven, so a change rebuilds the
-    /// panel (`CandidatePanel.panel(for:)`).
-    let metrics: CandidateMetrics
+    /// The size metrics this window was built for. Fixed at construction, and
+    /// settings-driven, so a change rebuilds the panel
+    /// (`CandidatePanel.panel(for:)` compares against this one).
+    let configuredMetrics: CandidateMetrics
+    /// The size metrics every cell and layout in this window renders at:
+    /// `configuredMetrics` resolved for the list on screen
+    /// (`CandidateMetrics.forContent(hasAnnotations:)` has the why).
+    /// Re-resolved by both cell entry points — `layout(_:forCaret:)` and
+    /// `rerender(_:)` — BEFORE any layout reads it, so every row of one list
+    /// shares one height and a mode change under an open window reflows it.
+    private(set) var metrics: CandidateMetrics
     private(set) var backdrop: CandidateBackdrop
     /// The layouts' canvas, origin at the top-left like the layouts think.
     let contentContainer = FlippedContainerView()
@@ -79,6 +86,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
 
     init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
+        configuredMetrics = metrics
         self.metrics = metrics
         backdrop = CandidateBackdrop.make(style: style)
         super.init(
@@ -156,6 +164,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// out, not once they are placed. `final` so no layout can spend a budget
     /// that was never resolved.
     final func layout(_ cells: [CandidateCellContent], forCaret caretRect: CGRect) -> CGSize {
+        resolveMetrics(for: cells)
         if let screen = ScreenLookup.screen(containing: caretRect.origin) {
             maximumWindowWidth = max(
                 metrics.baseWidth,
@@ -163,6 +172,19 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
             )
         }
         return updateCandidates(cells)
+    }
+
+    /// The in-place counterpart of `layout(_:forCaret:)`: the same list under
+    /// a new rendering, through `rerenderCandidates`. `final` for the same
+    /// reason — the metrics the new cells render at are resolved here, before
+    /// any layout reads them.
+    final func rerender(_ cells: [CandidateCellContent]) {
+        resolveMetrics(for: cells)
+        rerenderCandidates(cells)
+    }
+
+    private func resolveMetrics(for cells: [CandidateCellContent]) {
+        metrics = configuredMetrics.forContent(hasAnnotations: cells.contains { $0.annotation != nil })
     }
 
     /// Places the window sized `panelSize` near `caretRect` and brings it on
@@ -291,7 +313,8 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// rendering — keeping the selection on the same absolute index, and
     /// re-places its own frame for the new measured widths (`replace` keeps a
     /// same-size drag where it is). NOT `updateCandidates`: that is the
-    /// fresh-list contract and resets the selection and the page.
+    /// fresh-list contract and resets the selection and the page. Reached
+    /// through `rerender(_:)`, which resolves `metrics` first.
     func rerenderCandidates(_: [CandidateCellContent]) {
         preconditionFailure("layout subclasses must override rerenderCandidates")
     }

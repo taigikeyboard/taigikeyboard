@@ -170,6 +170,12 @@ impl ContinuousCandidate {
     pub fn is_roman_only(&self) -> bool {
         self.hanji.is_none()
     }
+
+    /// The hanji with a producer's empty string treated as absent — a
+    /// romanization-only candidate either way.
+    pub fn nonempty_hanji(&self) -> Option<&str> {
+        self.hanji.as_deref().filter(|hanji| !hanji.is_empty())
+    }
 }
 
 /// Result of the read-only candidate query.
@@ -183,6 +189,29 @@ impl ContinuousCandidate {
 pub struct ContinuousFetchResult {
     pub transition: ComposingTransition,
     pub candidates: Option<Vec<ContinuousCandidate>>,
+}
+
+/// Builders shared by sibling modules' tests (the `metrics.rs` precedent).
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::*;
+
+    /// A candidate whose scripts and consumed span the test chooses; every
+    /// other field defaulted.
+    pub fn candidate(roman: &str, hanji: Option<&str>, span_end: u32) -> ContinuousCandidate {
+        ContinuousCandidate {
+            consumed_span_start: 0,
+            consumed_span_end: span_end,
+            syllable_count: 1,
+            display_text: hanji.unwrap_or(roman).to_owned(),
+            score: 0.0,
+            form: 1,
+            mode: CandidateMode::Unspecified,
+            roman: roman.to_owned(),
+            hanji: hanji.map(str::to_owned),
+            canonical_tl: roman.to_owned(),
+        }
+    }
 }
 
 #[cfg(test)]

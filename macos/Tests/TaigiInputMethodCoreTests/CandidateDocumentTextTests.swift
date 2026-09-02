@@ -127,10 +127,24 @@ final class CandidateDocumentTextTests: XCTestCase {
         }
     }
 
+    /// The romanization-only display shows no Hanji, so there is none to offer:
+    /// Space stays `.ignored` there whatever the swap flag says, rather than
+    /// writing a script the user never saw.
+    func testAlternate_underRomanOnly_isAbsent() {
+        for swapped in [false, true] {
+            XCTAssertNil(
+                CandidateDocumentText.alternateText(
+                    for: word,
+                    settings: TestFixtures.settings(swapped: swapped, candidateDisplayMode: .romanOnly),
+                ),
+                "swapped: \(swapped)",
+            )
+        }
+    }
+
     /// Space writes exactly the script the bar shows under the primary one.
-    /// The user is looking at the offer before they take it, and after the
-    /// derivation through `CandidateCellContent` that is structural rather than
-    /// two rules that happen to agree.
+    /// The user is looking at the offer before they take it; the two are
+    /// resolved from the same settings, and this pins that they agree.
     func testAlternate_isTheScriptTheCellShowsBesideThePrimary() {
         for swapped in [false, true] {
             let settings = TestFixtures.settings(swapped: swapped, bothScripts: false)

@@ -135,6 +135,57 @@ final class CandidateStackedCellTests: XCTestCase {
         )
     }
 
+    // MARK: - One-script lists render one line tall
+
+    private static let oneScriptCells = [
+        CandidateCellContent(text: "候選", annotation: nil),
+        CandidateCellContent(text: "hāu-suán", annotation: nil),
+    ]
+    private static let twoScriptCells = [cell, CandidateCellContent(text: "候", annotation: nil)]
+
+    /// The row-shaped layouts drop to the one-line height when no cell in the
+    /// list carries an annotation — 羅馬字, or 漢羅合用's one-script cells — and
+    /// come back to two lines the moment one does (USER 2026-09-02). Through
+    /// the two entry points the shared panel hands cells over by, `layout`
+    /// and `rerender`, so a mode change under an open window reflows it. The
+    /// vertical layout is inline already and is left as it was. The configured
+    /// metrics — the panel cache's key — must never move with the content, or
+    /// a one-script list would rebuild the window on the next keystroke.
+    func testStackedPanels_renderAListWithNoAnnotationOneLineTall_andReflowOnRerender() {
+        let caret = CGRect(x: 120, y: 400, width: 1, height: 18)
+        for panel in TestFixtures.candidatePanels() {
+            let configured = panel.configuredMetrics
+            let oneLine = configured.arranged(.inline).itemHeight
+            let label = String(describing: type(of: panel))
+
+            let size = panel.layout(Self.oneScriptCells, forCaret: caret)
+
+            XCTAssertEqual(panel.metrics.itemHeight, oneLine, label)
+            if configured.cellArrangement == .stacked {
+                XCTAssertEqual(size.height, oneLine, "\(label): the window is one row of one-line cells")
+            }
+            for cell in TestFixtures.candidateCells(in: panel) {
+                XCTAssertEqual(cell.frame.height, oneLine, label)
+            }
+
+            panel.rerender(Self.twoScriptCells)
+
+            XCTAssertEqual(panel.metrics, configured, "\(label): an annotated cell brings the configured height back")
+            for cell in TestFixtures.candidateCells(in: panel) {
+                XCTAssertEqual(cell.frame.height, configured.itemHeight, label)
+            }
+
+            panel.rerender(Self.oneScriptCells)
+
+            XCTAssertEqual(panel.metrics.itemHeight, oneLine, "\(label): and a one-script list drops it again")
+            XCTAssertEqual(
+                panel.configuredMetrics, configured,
+                "\(label): the cache key `CandidatePanel.panel(for:)` compares never moves with the content",
+            )
+            panel.clear()
+        }
+    }
+
     /// The empty-annotation case renders a blank second line rather than
     /// collapsing: a page of cells of two different heights would not line up.
     func testStackedCell_keepsBothLinesInsideItsFrameAtEverySize() {

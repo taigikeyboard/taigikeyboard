@@ -2,10 +2,10 @@
 
 import Foundation
 
-/// One candidate as the window renders it — both scripts, in the order the
-/// user's swap setting puts them; both in one Hanji-led label under the
-/// combined display; or the romanization alone under the romanization-only
-/// display.
+/// One cell as the window renders it — both scripts, in the order the user's
+/// swap setting puts them; or one script alone: the romanization under the
+/// romanization-only display, and either script by itself under 漢羅合用,
+/// where a candidate is two adjacent cells (`PresentedCandidate`).
 ///
 /// A Taigi candidate is a `(漢字, 羅馬字)` pair (Core Principle #7), and showing
 /// only one of them makes several candidates read identically: two Hanji with
@@ -35,14 +35,16 @@ struct CandidateCellContent: Equatable, Sendable {
         self.annotation = (annotation?.isEmpty == false) ? annotation : nil
     }
 
-    /// The cell for `candidate` under `settings`.
+    /// The cell for `candidate` under `settings` — the one-cell-per-candidate
+    /// displays. 漢羅合用 splits a candidate into two cells instead, which
+    /// `PresentedCandidate.presentation(of:settings:)` builds itself.
     ///
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift:150-162
     /// (primary = romanization, secondary = Hanji) and the swap flip in
     /// `CandidateCellHelper`. Drift changes which script a candidate leads with.
     static func cell(for candidate: ContinuousCandidate, settings: EngineSettings) -> Self {
-        guard let hanji = candidate.hanji, !hanji.isEmpty else {
+        guard let hanji = candidate.presentableHanji else {
             // Romanization-only candidate: there is no second script to show,
             // in either direction — the same case `CandidateDocumentText`
             // answers with the bare romanization.
@@ -56,15 +58,18 @@ struct CandidateCellContent: Equatable, Sendable {
         if settings.candidateDisplayMode == .romanOnly {
             return Self(text: candidate.roman, annotation: nil)
         }
-        // 漢羅合用: one label, Hanji then romanization, one ASCII space between;
-        // no annotation, so Space falls to `.ignored` as above.
-        // CROSS-PLATFORM INVARIANT — mirrors iOS `CandidateCellHelper.displayTitle`
-        // and Windows `document_text.rs` `CandidateCellContent::cell` (same separator).
-        if settings.candidateDisplayMode == .combined {
-            return Self(text: "\(hanji) \(candidate.roman)", annotation: nil)
-        }
         return settings.isTranslateSwapped
             ? Self(text: hanji, annotation: candidate.roman)
             : Self(text: candidate.roman, annotation: hanji)
+    }
+}
+
+extension ContinuousCandidate {
+    /// The Hanji when this candidate really carries one to show or commit. A
+    /// producer that emitted `""` for "no Hanji" means the same thing as
+    /// omitting it, and no reader may treat the two differently.
+    var presentableHanji: String? {
+        guard let hanji, !hanji.isEmpty else { return nil }
+        return hanji
     }
 }

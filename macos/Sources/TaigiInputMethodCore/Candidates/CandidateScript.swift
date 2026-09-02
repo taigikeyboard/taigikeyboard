@@ -13,4 +13,15 @@ enum CandidateScript: Equatable, Sendable {
     case primary
     /// The other one — what Space writes (`CandidateDocumentText.alternateText`).
     case alternate
+
+    /// The other script of the same candidate. Space on a presented cell
+    /// commits this relative to the CELL's own script (`PresentedCandidate`):
+    /// under 漢羅合用 a romanization cell is already `.alternate`, so Space on
+    /// it comes back round to the Hanji.
+    var flipped: CandidateScript {
+        switch self {
+        case .primary: .alternate
+        case .alternate: .primary
+        }
+    }
 }

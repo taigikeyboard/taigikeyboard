@@ -39,3 +39,6 @@ pub use phonetics::{
 pub use transition::{
     CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,
 };
+
+#[cfg(test)]
+pub(crate) use transition::test_support;

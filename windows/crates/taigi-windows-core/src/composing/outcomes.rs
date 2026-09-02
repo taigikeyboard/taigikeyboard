@@ -94,26 +94,11 @@ impl CandidateCommitOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::CandidateMode;
-
-    fn candidate(roman: &str) -> ContinuousCandidate {
-        ContinuousCandidate {
-            consumed_span_start: 0,
-            consumed_span_end: 0,
-            syllable_count: 1,
-            display_text: roman.to_owned(),
-            score: 0.0,
-            form: 1,
-            mode: CandidateMode::Unspecified,
-            roman: roman.to_owned(),
-            hanji: None,
-            canonical_tl: roman.to_owned(),
-        }
-    }
+    use crate::engine::test_support::candidate;
 
     #[test]
     fn a_refetch_replaces_only_on_a_non_empty_answer() {
-        let found = vec![candidate("tâi")];
+        let found = vec![candidate("tâi", None, 0)];
         assert_eq!(
             CandidateFetchOutcome::Found(found.clone()).list_change(),
             CandidateListChange::Replace(found)

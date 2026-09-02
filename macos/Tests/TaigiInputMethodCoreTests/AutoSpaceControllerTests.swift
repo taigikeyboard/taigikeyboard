@@ -358,12 +358,78 @@ final class AutoSpaceControllerTests: XCTestCase {
         )
     }
 
+    // MARK: - 漢羅合用: the gate follows the cell's script
+
+    /// Under 合用 a candidate is a Hanji cell and a romanization cell, and the
+    /// script a commit resolves to is the CELL's, flipped for Space — the one
+    /// value the commit and this gate both read. Space on the Hanji cell
+    /// writes the romanization, which is spaced.
+    func testCombined_SpaceOnTheHanjiCell_writesTheRomanizationAndEarnsItsSpace() throws {
+        try withDisplayMode(.combined) {
+            let session = try composedSession {
+                $0.isAutoSpaceEnabled = true
+                $0.candidateDisplayMode = .combined
+            }
+            let cells = try XCTUnwrap(session.presenter.shownContent).cells
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [cells[1].text, " "])
+        }
+    }
+
+    /// And Space on the romanization cell comes back round to the Hanji, which
+    /// takes no space — the flip is relative to the cell, not to the mode.
+    func testCombined_SpaceOnTheRomanizationCell_writesTheHanjiAndTakesNoSpace() throws {
+        try withDisplayMode(.combined) {
+            let session = try composedSession {
+                $0.isAutoSpaceEnabled = true
+                $0.candidateDisplayMode = .combined
+            }
+            let cells = try XCTUnwrap(session.presenter.shownContent).cells
+            // ⇥ walks one cell along: onto the romanization cell.
+            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\t"), client: session.client)
+            XCTAssertEqual(session.presenter.selectedIndex, 1)
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [cells[0].text])
+        }
+    }
+
+    /// Return on the romanization cell is a romanization commit too, whatever
+    /// the mode leads with: the space follows the document.
+    func testCombined_ReturnOnTheRomanizationCell_earnsItsSpace() throws {
+        try withDisplayMode(.combined) {
+            let session = try composedSession {
+                $0.isAutoSpaceEnabled = true
+                $0.candidateDisplayMode = .combined
+            }
+            let cells = try XCTUnwrap(session.presenter.shownContent).cells
+            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\t"), client: session.client)
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "\r"), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [cells[1].text, " "])
+        }
+    }
+
     // MARK: - Helpers
 
     private struct Session {
         let controller: TaigiInputController
         let client: RecordingTextInputClient
         let store: SettingsStore
+        let presenter: RecordingCandidatePresenter
     }
 
     private static let composition = "taigi"
@@ -375,12 +441,13 @@ final class AutoSpaceControllerTests: XCTestCase {
         let client = RecordingTextInputClient()
         client.caretRects = [Self.caretIndex: CGRect(x: 120, y: 400, width: 1, height: 18)]
         let controller = try TestFixtures.makeInputController()
-        controller.candidatePresenter = RecordingCandidatePresenter()
+        let presenter = RecordingCandidatePresenter()
+        controller.candidatePresenter = presenter
         let store = try makeScratchSettingsStore()
         configure?(store)
         controller.settings = store
         controller.activateServer(client)
-        return Session(controller: controller, client: client, store: store)
+        return Session(controller: controller, client: client, store: store, presenter: presenter)
     }
 
     /// A session that has typed `taigi`, so a commit is one Return away.

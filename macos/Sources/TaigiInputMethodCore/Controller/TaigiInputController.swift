@@ -29,12 +29,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var isMarkedTextVisible = false
 
-    /// The candidates the last fetch returned, in the display order the window
-    /// shows them — the absolute indices the `CandidatePresenter` seam answers
-    /// with are positions in this array. The selection itself lives in the
-    /// window, which owns the measured page geometry the selection moves
-    /// through; this array is what maps an answered index back to the
-    /// `ContinuousCandidate` a commit needs.
+    /// The candidates the last fetch returned and the cells the window shows
+    /// for them (`CandidateSource`). The absolute indices the
+    /// `CandidatePresenter` seam answers with name PRESENTED cells, so a
+    /// commit resolves them through `source.resolve`; the selection itself
+    /// lives in the window, which owns the measured page geometry the
+    /// selection moves through.
     ///
     /// Per controller rather than process-wide, even though the composition it
     /// describes is not: a session that is not focused cannot reach the engine
@@ -42,7 +42,7 @@ public final class TaigiInputController: IMKInputController {
     /// is never read again, and a shared one would need the same ownership guard
     /// the coordinator already provides.
     @MainActor
-    private var fetchedCandidates: [ContinuousCandidate] = []
+    private var source = CandidateSource.empty
 
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
@@ -186,7 +186,7 @@ public final class TaigiInputController: IMKInputController {
             // whether this session's bar survives. Hiding our own window is not
             // a client query, so the activation rule above still holds.
             controller.candidatePresenter.hideForHandover()
-            controller.fetchedCandidates = []
+            controller.source = .empty
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
             controller.armedAutoSpace = nil
@@ -437,8 +437,9 @@ public final class TaigiInputController: IMKInputController {
         case .toggleTranslateSwapped:
             // Inert unless the display is side by side — silently, no flash
             // (USER 2026-09-01, Q11): under romanization-only there is no
-            // Hanji on screen for the swap to lead with, under 合用 the one
-            // label always leads with it, and flipping the STORED value blind
+            // Hanji on screen for the swap to lead with, under 合用 each script
+            // is its own cell and the Hanji cell always comes first, and
+            // flipping the STORED value blind
             // would change what the user gets back on returning to side-by-side.
             guard settings.current.candidateDisplayMode.allowsSwapToggle else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
@@ -470,18 +471,21 @@ public final class TaigiInputController: IMKInputController {
     ///
     /// Through `updateCells`, not `presentCandidates`: this runs from the
     /// Carbon hotkey path, which has no client to ask for a caret rectangle —
-    /// and needs none, because the window is already anchored. The cells are
-    /// rebuilt through the manager, whose `cellContent(for:)` reads the live
-    /// settings the toggle just wrote.
+    /// and needs none, because the window is already anchored. The presented
+    /// list is rebuilt through the manager, whose `presentation(for:)` reads
+    /// the live settings the toggle just wrote.
     @MainActor
     private func rerenderCandidatesForDisplayChange() {
-        guard !fetchedCandidates.isEmpty,
+        guard !source.isEmpty,
               let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
         else { return }
-        candidatePresenter.updateCells(
-            manager.cellContents(for: fetchedCandidates),
-            ownedBy: sessionToken,
-        )
+        source = CandidateSource(candidates: source.candidates, manager: manager)
+        updateCellsInPlace()
+    }
+
+    @MainActor
+    private func updateCellsInPlace() {
+        candidatePresenter.updateCells(source.cells, ownedBy: sessionToken)
     }
 
     // MARK: - Main-actor work
@@ -504,7 +508,7 @@ public final class TaigiInputController: IMKInputController {
         let intent = ComposingKeyIntent.intent(
             for: key,
             isComposing: manager.isComposing,
-            isShowingCandidates: !fetchedCandidates.isEmpty,
+            isShowingCandidates: !source.isEmpty,
             bindings: settings.composingKeyBindings,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
@@ -589,19 +593,22 @@ public final class TaigiInputController: IMKInputController {
             return false
         case .commitHighlightedCandidate:
             // The window is authoritative for which absolute index its selection
-            // is on.
-            commitCandidate(
+            // is on. The cell's own script: under 漢羅合用 that is the Hanji for
+            // a 漢字 cell and the romanization for a 羅馬字 cell.
+            commitPresented(
                 at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
+                flip: false,
                 from: manager, client: client, executing: executor,
             )
         case .commitAlternateScript:
             // The 漢羅 key: same candidate the highlight is on, written in the
-            // other script. A candidate that has only one answers `.ignored`
-            // inside the commit, so the key is consumed and nothing happens —
-            // the same answer `⌃7` gets on a page with no seventh slot.
-            commitCandidate(
+            // script the cell does NOT stand for. A candidate that has only one
+            // answers `.ignored` inside the commit, so the key is consumed and
+            // nothing happens — the same answer `⌃7` gets on a page with no
+            // seventh slot.
+            commitPresented(
                 at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                script: .alternate,
+                flip: true,
                 from: manager, client: client, executing: executor,
             )
         case let .selectCandidateSlot(slot):
@@ -610,8 +617,9 @@ public final class TaigiInputController: IMKInputController {
             // candidate chord while the bar is up, and handing it to the host
             // only when the page happens to be short would make it fire a host
             // shortcut at random.
-            commitCandidate(
+            commitPresented(
                 at: candidatePresenter.candidateIndex(forSlot: slot, ownedBy: sessionToken),
+                flip: false,
                 from: manager, client: client, executing: executor,
             )
         case let .navigate(direction):
@@ -644,34 +652,32 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Candidates
 
-    /// Commits the candidate at `index`, or nothing when there is none to
-    /// commit.
-    ///
-    /// Nil — a window that failed to reach a screen, or state torn down between
-    /// the fetch and the key — and an index past the list both mean "nothing to
-    /// commit", and the key is consumed either way: letting a Space through
+    /// Commits the cell the window shows at `index` — in the cell's own
+    /// script, or with `flip` the other script of the same candidate (what
+    /// Space asks for). A nil index and one past the list both mean "nothing
+    /// to commit", and the key is consumed either way: letting a Space through
     /// would drop a stray space into a document whose composition is still
     /// running, and committing would write a candidate the user cannot see.
     @MainActor
-    private func commitCandidate(
+    private func commitPresented(
         at index: Int?,
-        script: CandidateScript = .primary,
+        flip: Bool,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        guard let index, fetchedCandidates.indices.contains(index) else { return }
-        commit(
-            fetchedCandidates[index], script: script,
-            from: manager, client: client, executing: executor,
-        )
+        guard let index, let (candidate, script) = source.resolve(cellIndex: index, flip: flip)
+        else { return }
+        commit(candidate, script: script, from: manager, client: client, executing: executor)
     }
 
-    /// Commits one candidate and shows whatever the composition became.
+    /// Commits one candidate in `script` — already resolved by the caller, so
+    /// the commit and the auto-space gate below read the same value — and
+    /// shows whatever the composition became.
     @MainActor
     private func commit(
         _ candidate: ContinuousCandidate,
-        script: CandidateScript = .primary,
+        script: CandidateScript,
         from manager: ComposingManager,
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
@@ -723,7 +729,7 @@ public final class TaigiInputController: IMKInputController {
         case .notComposing:
             dismissCandidates()
         case let .found(fetched):
-            fetchedCandidates = fetched
+            source = CandidateSource(candidates: fetched, manager: manager)
             if fetched.isEmpty {
                 dismissCandidates()
             } else {
@@ -754,7 +760,7 @@ public final class TaigiInputController: IMKInputController {
 
         candidatePresenter.show(
             CandidateWindowContent(
-                cells: manager.cellContents(for: fetchedCandidates),
+                cells: source.cells,
                 // The set the user chose — the only keys that pick. A rebind
                 // cannot strand a stale hint: reaching the shortcut pane moves
                 // focus off the client, and `finishComposition` takes the bar
@@ -774,27 +780,27 @@ public final class TaigiInputController: IMKInputController {
     /// Fetches the candidates again after a 候選詞顯示 change and repaints the
     /// bar in place. Unlike the swap, this setting changes WHICH candidates
     /// exist — under 羅馬字 the engine collapses same-roman rows (§44) — so a
-    /// repaint of `fetchedCandidates` would keep the duplicates on screen.
+    /// repaint of the old fetch would keep the duplicates on screen.
     /// Through `updateCells`, like the swap: the KVO path has no client to ask
     /// for a caret rectangle, and the window is already anchored. The bar goes
     /// down only when the composition is gone or the new list is empty.
     // 中文: 候選詞顯示切換後重抓候選 — 引擎在羅馬字會收合同音列;無 client 可問 caret,故 updateCells 原地換。
     @MainActor
     private func refetchCandidatesForDisplayModeChange() {
-        guard !fetchedCandidates.isEmpty,
+        guard !source.isEmpty,
               let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
         else { return }
         guard case let .found(fetched) = manager.fetchCandidates(), !fetched.isEmpty else {
             dismissCandidates()
             return
         }
-        fetchedCandidates = fetched
-        rerenderCandidatesForDisplayChange()
+        source = CandidateSource(candidates: fetched, manager: manager)
+        updateCellsInPlace()
     }
 
     @MainActor
     private func dismissCandidates() {
-        fetchedCandidates = []
+        source = .empty
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 

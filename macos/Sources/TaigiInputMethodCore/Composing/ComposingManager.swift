@@ -326,22 +326,17 @@ final class ComposingManager {
         CandidateDocumentText.text(for: candidate, settings: settingsProvider.current)
     }
 
-    /// How the candidate bar renders `candidate` — both scripts, under the
-    /// settings in force right now.
+    /// How the candidate window presents `candidates` under the settings in
+    /// force right now — the cells, and which candidate and script each one
+    /// commits (`PresentedCandidate`).
     ///
-    /// Alongside `documentText` rather than derived from it: the cell splits
-    /// the two scripts into columns while the document string may bracket them
-    /// into one, so they share the settings snapshot, not the formatting.
-    func cellContent(for candidate: ContinuousCandidate) -> CandidateCellContent {
-        CandidateCellContent.cell(for: candidate, settings: settingsProvider.current)
-    }
-
-    /// `cellContent(for:)` over a whole list under ONE settings snapshot — the
-    /// snapshot is a few dozen defaults reads, and a bar is rebuilt per
-    /// keystroke.
-    func cellContents(for candidates: [ContinuousCandidate]) -> [CandidateCellContent] {
-        let settings = settingsProvider.current
-        return candidates.map { CandidateCellContent.cell(for: $0, settings: settings) }
+    /// Alongside `documentText` rather than derived from it: a cell shows one
+    /// script or splits the two into columns while the document string may
+    /// bracket them into one, so they share the settings snapshot, not the
+    /// formatting. ONE snapshot for the whole list — it is a few dozen
+    /// defaults reads, and a bar is rebuilt per keystroke.
+    func presentation(for candidates: [ContinuousCandidate]) -> [PresentedCandidate] {
+        PresentedCandidate.presentation(of: candidates, settings: settingsProvider.current)
     }
 
     /// Commits `candidate`, which must come from the `fetchCandidates()` call

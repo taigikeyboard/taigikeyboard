@@ -88,8 +88,8 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     /// The one platform-side rule of the combined display: the swap reads
-    /// `true` whatever is stored — the one-label cell leads with the Hanji and
-    /// a commit writes it — while the bracket setting is read as stored, so
+    /// `true` whatever is stored — the Hanji cell comes first and its commit
+    /// writes the Hanji — while the bracket setting is read as stored, so
     /// 括號標註 still commits `漢字 (羅馬字)`. The stored swap survives the
     /// mode, so leaving it gives the user their own swap straight back.
     func testCurrent_underCombined_forcesTheSwapOn_readsTheBracketAsStored_andLeavesTheStoredValuesAlone() {

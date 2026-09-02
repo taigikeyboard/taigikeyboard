@@ -24,7 +24,7 @@ use std::time::Instant;
 use taigi_windows_core::candidates::{
     panel_frame, CandidateCellArrangement, CandidateIndexLabel, CandidateMetrics,
     ExpandableDisplayMode, ExpandableGeometryInput, ExpandableListModel, ExpandableModeChange,
-    HorizontalListModel, HorizontalPageLayout, Point, Rect, ScrollerStyle, Size, TextMeasurer,
+    HorizontalListModel, HorizontalPageLayout, Point, Rect, ScrollerStyle, Size,
     VerticalLayoutInput, VerticalListModel, MAX_DISPLAY_CANDIDATES,
 };
 use taigi_windows_core::composing::CandidateCellContent;
@@ -141,9 +141,6 @@ pub struct CandidateWindow {
     /// Per-cell measurements taken once per list (a paint never measures).
     primary_widths: Vec<f32>,
     annotation_widths: Vec<f32>,
-    /// The two line heights a stacked cell is composed of, for this list's
-    /// fonts.
-    stacked_line_heights: (f32, f32),
     /// DirectWrite layouts by cell and box, for this list; cleared with it.
     layouts: RefCell<HashMap<LayoutKey, IDWriteTextLayout>>,
     slot_key_set: CandidateSlotKeySet,
@@ -173,7 +170,6 @@ impl CandidateWindow {
             cells: Vec::new(),
             primary_widths: Vec::new(),
             annotation_widths: Vec::new(),
-            stacked_line_heights: (0.0, 0.0),
             layouts: RefCell::new(HashMap::new()),
             slot_key_set: CandidateSlotKeySet::BareKeys,
             caret: RECT::default(),
@@ -260,11 +256,8 @@ impl CandidateWindow {
             settings.choice::<CandidateFontChoice>(&keys::FONT_TYPE),
             layout.cell_arrangement(),
             &measurer,
-        );
-        self.stacked_line_heights = (
-            measurer.line_height(metrics.candidate_font()),
-            measurer.line_height(metrics.annotation_font()),
-        );
+        )
+        .for_content(self.content_has_annotations());
         self.metrics = Some(metrics.clone());
         self.measure_cells(&metrics);
         self.layout = Some(self.build_layout(layout, &metrics));
@@ -279,6 +272,13 @@ impl CandidateWindow {
         cells.truncate(MAX_DISPLAY_CANDIDATES);
         self.cells = cells;
         self.layouts.borrow_mut().clear();
+    }
+
+    /// Whether any cell of the list carries an annotation — what decides a
+    /// stacked cell's height (`CandidateMetrics::for_content`) and whether
+    /// its paint centres one line or two.
+    fn content_has_annotations(&self) -> bool {
+        self.cells.iter().any(|cell| cell.annotation.is_some())
     }
 
     /// The per-cell text widths, measured once per list.
@@ -310,8 +310,9 @@ impl CandidateWindow {
         self.theme = Theme::resolve(self.appearance_mode, &system);
     }
 
-    /// Same list, new rendering (the 漢羅 flip): re-packed, selection kept
-    /// on its absolute index.
+    /// New cells in place (the 漢羅 flip, a display-mode change): re-packed
+    /// and re-measured, the height reflowed for content that gained or lost
+    /// its annotations, selection kept on its absolute index.
     pub fn update_cells(
         &mut self,
         cells: Vec<CandidateCellContent>,
@@ -324,7 +325,11 @@ impl CandidateWindow {
         let expanded = matches!(&self.layout, Some(LayoutModel::Expandable(model)) if model.mode() == ExpandableDisplayMode::Expanded);
         self.replace_cells(cells);
         let layout: CandidateLayout = settings.choice(&keys::CANDIDATE_LAYOUT);
-        let metrics = self.metrics.clone()?;
+        let metrics = self
+            .metrics
+            .clone()?
+            .for_content(self.content_has_annotations());
+        self.metrics = Some(metrics.clone());
         self.measure_cells(&metrics);
         let mut model = self.build_layout(layout, &metrics);
         match &mut model {
@@ -982,8 +987,17 @@ impl CandidateWindow {
                 }
             }
             CandidateCellArrangement::Stacked => {
-                let (line1, line2) = self.stacked_line_heights;
-                let block = line1 + metrics.stacked_line_gap() + line2;
+                // Measured at resolve; always present when the arrangement
+                // stacks.
+                let (line1, line2) = metrics.stacked_line_heights().unwrap_or_default();
+                // The block is the content's, not the cell's: an unannotated
+                // cell in annotated content keeps its candidate on the upper
+                // line so the rows line up; one-line content centres it.
+                let block = if self.content_has_annotations() {
+                    line1 + metrics.stacked_line_gap() + line2
+                } else {
+                    line1
+                };
                 let top = rect.y + (rect.height - block) / 2.0;
                 let centre = text_x + available / 2.0;
                 let primary_width = self.primary_widths[index].min(available);

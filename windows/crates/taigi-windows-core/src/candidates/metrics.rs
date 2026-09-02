@@ -71,9 +71,17 @@ pub struct CandidateMetrics {
     stacked_line_gap: f32,
     tahoe_separator_inset: f32,
     /// How tall one cell renders: inline = one line of candidate; stacked =
-    /// two line boxes plus the air between, kept even for a cell with no
-    /// annotation so a page's rows line up.
+    /// two line boxes plus the air between, kept for an unannotated cell in
+    /// annotated content so a page's rows line up — and one line when NO
+    /// cell in the content carries an annotation (`for_content`).
     item_height: f32,
+    /// The two-line stacked box, kept so `for_content` can go back to it
+    /// from a single-line variant. Mirrors `item_height` under Inline.
+    stacked_item_height: f32,
+    /// The stacked candidate and annotation line boxes as measured, `None`
+    /// under Inline (never measured there) — what a stacked cell's paint
+    /// centres by.
+    stacked_line_heights: Option<(f32, f32)>,
     /// The slot the key is centred in — wide enough for every form it can
     /// take, so the column keeps one width as the live key set changes.
     index_width: f32,
@@ -111,13 +119,18 @@ impl CandidateMetrics {
             choice: CandidateFontChoice::System,
             size: index_font_size,
         };
-        let item_height = match cell_arrangement {
-            CandidateCellArrangement::Inline => candidate_font_size + vertical_padding,
-            CandidateCellArrangement::Stacked => (measurer.line_height(candidate_font)
-                + measurer.line_height(annotation_font)
-                + stacked_line_gap
-                + vertical_padding)
-                .ceil(),
+        let stacked_line_heights = matches!(cell_arrangement, CandidateCellArrangement::Stacked)
+            .then(|| {
+                (
+                    measurer.line_height(candidate_font),
+                    measurer.line_height(annotation_font),
+                )
+            });
+        let item_height = match stacked_line_heights {
+            None => candidate_font_size + vertical_padding,
+            Some((candidate_line, annotation_line)) => {
+                (candidate_line + annotation_line + stacked_line_gap + vertical_padding).ceil()
+            }
         };
         let index_width = CandidateIndexLabel::widest_label_forms()
             .iter()
@@ -141,9 +154,36 @@ impl CandidateMetrics {
             stacked_line_gap,
             tahoe_separator_inset: (BASE_TAHOE_SEPARATOR_INSET * chrome_scale).round(),
             item_height,
+            stacked_item_height: item_height,
+            stacked_line_heights,
             index_width,
             primary_column_floor,
         }
+    }
+
+    /// These metrics for content that does or does not carry an annotated
+    /// cell: a stacked cell is one line tall (the inline height) when nothing
+    /// in the list has an annotation — 羅馬字, or 合用's one-script cells —
+    /// and the two-line box otherwise, so 並排's mixed lists keep lining up.
+    /// Inline is one line either way. Idempotent: resolved once per list,
+    /// on `show` and on `update_cells`.
+    // 中文: 依內容決定格高 — 整份清單無副標時只留一行。
+    pub fn for_content(&self, has_annotations: bool) -> Self {
+        let item_height = match self.cell_arrangement {
+            CandidateCellArrangement::Inline => self.item_height,
+            CandidateCellArrangement::Stacked if has_annotations => self.stacked_item_height,
+            CandidateCellArrangement::Stacked => self.candidate_font_size + self.vertical_padding,
+        };
+        Self {
+            item_height,
+            ..self.clone()
+        }
+    }
+
+    /// The two stacked line boxes `resolve` measured, `None` under Inline —
+    /// what a stacked cell's paint centres by.
+    pub fn stacked_line_heights(&self) -> Option<(f32, f32)> {
+        self.stacked_line_heights
     }
 
     // Read-only: a size change rebuilds the window (`resolve`), so no two
@@ -492,6 +532,44 @@ mod tests {
         assert_eq!(CandidateMetrics::corner_radius(16.0, 200.0, 57.0), 16.0);
         assert_eq!(CandidateMetrics::corner_radius(16.0, 10.0, 57.0), 5.0);
         assert_eq!(CandidateMetrics::corner_radius(16.0, 200.0, 24.0), 12.0);
+    }
+
+    #[test]
+    fn stacked_content_without_annotations_is_one_line_tall() {
+        // trace: Medium/Medium — inline item 20+9=29; stacked resolve =
+        // ceil(24+22+3+9)=58 (gap 2*1.25=2.5→3). No annotated cell → 29
+        // (the inline height); any annotated cell → 58; Inline is 29 either
+        // way and measures no stacked lines; the variant round-trips back
+        // to the resolved box.
+        for text in T::ALL {
+            for window in W::ALL {
+                let stacked = metrics(*text, *window, Stacked);
+                let inline = metrics(*text, *window, Inline);
+                let single = stacked.for_content(false);
+                assert_eq!(
+                    single.item_height(),
+                    inline.item_height(),
+                    "{text:?}/{window:?}"
+                );
+                assert_eq!(
+                    single.stacked_line_heights(),
+                    stacked.stacked_line_heights()
+                );
+                assert!(stacked.stacked_line_heights().is_some());
+                assert!(inline.stacked_line_heights().is_none());
+                assert_eq!(stacked.for_content(true), stacked);
+                assert_eq!(single.for_content(true), stacked, "round-trips");
+                assert_eq!(single.for_content(false), single, "idempotent");
+                assert_eq!(
+                    inline.for_content(false).item_height(),
+                    inline.item_height()
+                );
+                assert_eq!(inline.for_content(true).item_height(), inline.item_height());
+            }
+        }
+        let stacked = metrics(T::Medium, W::Medium, Stacked);
+        assert_eq!(stacked.item_height(), 58.0);
+        assert_eq!(stacked.for_content(false).item_height(), 29.0);
     }
 
     #[test]
