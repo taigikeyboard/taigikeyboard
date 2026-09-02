@@ -3,8 +3,10 @@
 The first Windows release: Taigi Keyboard is now a Text Services Framework input
 method for Windows 11 and Windows 10 1809+, on the same Rust engine and the same
 dictionaries as macOS. Both desktop apps gain the 候選詞顯示 picker (漢羅並排 /
-漢羅濫 / 羅馬字); macOS gets the POJ tone-mark fix for `au` before a coda, and
-both take the 台 tile icon.
+漢羅濫 / 羅馬字), and 顯示當咧拍的字, which puts the romanization being typed at
+the head of the candidate list and is on by default. 自動空白 now ships off,
+matching iOS and Android. macOS gets the POJ tone-mark fix for `au` before a
+coda, and both take the 台 tile icon.
 
 ### macOS
 
@@ -17,6 +19,18 @@ both take the 台 tile icon.
   is what the MOE manual and canonical taigi-converter do. A full initial ×
   final × tone sweep is now byte-identical to canonical. (#622)
 
+- **自動空白 ships off, and follows what a commit actually wrote.** The toggle
+  in 一般 starts off on a fresh install, matching iOS and Android; a Mac that
+  turned it on keeps it on. When it is on, the space is decided by the string
+  that reached the document rather than by the output mode. A candidate with no
+  漢字 — the 字面羅馬字 below, an out-of-vocabulary name — writes romanization
+  under every mode and now earns its space, where `taigi` and Return used to
+  lose it under 漢字優先 and 漢羅濫, while the same list's dictionary
+  romanization cell kept one. Committing 漢字 still takes no space, and
+  括號標註's `台語 (tâi-gí)` counts as romanization. The swap that moves a
+  trailing space after `?` / `!` / `,` now moves only a space this input method
+  wrote, never one typed by hand. (#670)
+
 #### Candidates
 
 - **候選詞顯示 — how a candidate cell shows the word.** A picker in 外觀, three
@@ -27,8 +41,8 @@ both take the 台 tile icon.
   **羅馬字** shows the romanization alone and commits it: rows that would now
   read the same (食 and 𤆬 are both `tsia̍h`) are collapsed by the engine, so
   the window never offers two identical cells, and next-word predictions
-  collapse the same way. Under 合用 and 羅馬字 the swap shortcut is inert and
-  the stored swap waits for 並排; 括號標註 still applies under 合用
+  collapse the same way. Under 漢羅濫 and 羅馬字 the swap shortcut is inert and
+  the stored swap waits for 並排; 括號標註 still applies under 漢羅濫
   (`漢字 (羅馬字)`) and has nothing to bracket under 羅馬字. Space on a
   one-label cell has no other script to commit and does nothing, as it already
   does on a romanization-only candidate. 方音齒盤 is unaffected. Changing the
@@ -36,12 +50,37 @@ both take the 台 tile icon.
   from the keyboard — the new mode flashes, the bar re-fetches — and is
   re-recordable in 快捷鍵. (#662, #664)
 
+- **顯示當咧拍的字 — the romanization being typed, as the first candidate.** A
+  toggle in 一般, below 自動空白, on by default. While composing in Tâi-lô or
+  POJ the candidate window leads with the preedit itself — `taigi` while typing
+  `taigi`, `nn̄g` while typing `nng7` — so 漢羅 commits the romanization in one
+  pick, and Return on a fresh bar writes what was typed. The dictionary's best
+  candidate moves one place along; Space on the literal cell does nothing.
+  Turn the toggle off and the bar leads with the dictionary candidate again.
+  (#669, #673)
+
+- **No cell appears twice under 漢羅濫 or 羅馬字.** A single-script cell hides
+  what tells two entries apart, so a cell reading exactly like an earlier one
+  is de-duplicated by the text it shows, first one wins: the 字面羅馬字 cell
+  and a dictionary cell spelling the same romanization collapse into one, and
+  重/tîng and 重/tāng draw one 重 cell — both romanization cells stay, so the
+  losing reading is still one pick away. 漢羅並排 is untouched, its subtitle
+  telling the pair apart. (#674)
+
 #### Appearance
 
 - **台 tile app icon.** The Mac app wore the mobile "Tâi" wordmark — its
   `AppIcon.icns` was the iOS asset catalogue re-packed by hand. It now wears the
   台 rounded square the menu bar already uses. iOS and Android keep the
   wordmark. (#643)
+
+- **外觀 is one list of pop-up menus.** The light / dark / auto row was a set of
+  drawn thumbnails in a section of its own; it is a pop-up menu like every
+  other row in the pane now, with no divider fencing it off. (#671)
+
+- **Two names.** The `` ` `` shortcut is called 輸出漢字/羅馬字 in 快捷鍵, where
+  it read 漢字/羅馬字代先; the 漢字 interface language is listed by its own
+  name, 台漢. Both changed on every platform. (#671)
 
 ### Windows
 
@@ -61,7 +100,7 @@ same user-data schemas as macOS.
   system high-contrast setting and the Windows accent colour, and hides itself
   when the host application draws candidates itself.
 - **候選詞顯示** in 外觀 — 漢羅並排 / 漢羅濫 / 羅馬字, the same three cells as
-  macOS (漢字 and 羅馬字 as adjacent one-script cells under 合用; romanization
+  macOS (漢字 and 羅馬字 as adjacent one-script cells under 漢羅濫; romanization
   alone, same-reading rows collapsed, under 羅馬字; a list with no second
   script is one line tall). The `` ` `` swap is inert outside 並排;
   **Ctrl+Alt+H** cycles the three from the keyboard (the new mode flashes, an
