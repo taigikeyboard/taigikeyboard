@@ -6,6 +6,60 @@
 import Foundation
 import KeyboardKit
 
+/// §42 漢羅濫 split-cell wire vocabulary — shared by the builder
+/// (`buildContinuousSuggestions`), the render/commit guard
+/// (`CandidateCellHelper.suggestionToHandle`), and the commit resolver
+/// (`ActionHandler.markedCellCommit`). Values mirror Android
+/// `TaigiWord.MetadataKeys.CELL_SCRIPT*`; wire strings must not drift.
+// 中文: 漢羅濫 split cell 的 wire 字串單一出處 — builder / render guard / commit
+// 中文: resolver 三處共用,與 Android MetadataKeys 常數一字不差。
+enum CandidateCellScript {
+    /// `additionalInfo` key carrying the cell's script marker.
+    static let infoKey = "cellScript"
+    /// Marker value: the cell shows and commits the 漢字.
+    static let hanji = "hanji"
+    /// Marker value: the cell shows and commits the bare roman.
+    static let roman = "roman"
+    /// `additionalInfo` key on a hanji cell carrying the roman it appends
+    /// under 括號標註 (`漢字 (羅馬字)`).
+    static let bracketRomanKey = "roman"
+
+    /// The §42 marker this suggestion commits by, or `nil` when it is not a
+    /// split cell. A marker is honoured only when it is one this build knows
+    /// AND the cell carries a payload to commit — a wire defect (unknown
+    /// value, empty `text`) resolves to `nil` so BOTH the render guard
+    /// (`CandidateCellHelper.suggestionToHandle`) and the commit resolver
+    /// (`ActionHandler.markedCellCommit`) fall back to the unmarked
+    /// mode-derived path together. Splitting that predicate is what let a
+    /// defective marker skip the swap rewrite and then be re-parsed as an
+    /// un-split dual-script suggestion.
+    // 中文: 這格是不是 §42 split cell — render guard 與 commit resolver 共用同一
+    // 中文: 判斷,壞掉的標記兩邊一起退回未標記路徑,不會半標記半改寫。
+    static func marker(for suggestion: AutocompleteSuggestion) -> String? {
+        guard let marker = suggestion.additionalInfo[infoKey],
+              marker == hanji || marker == roman,
+              !suggestion.text.isEmpty
+        else {
+            return nil
+        }
+        return marker
+    }
+}
+
+/// Whether the candidate strip renders 漢羅濫 split cells: the picker is set
+/// to 漢羅濫 and the layout is not TPS (TPS is hanji-first by construction and
+/// ignores the picker). Read per fetch, never snapshotted, so a settings change
+/// takes effect on the next keystroke.
+// CROSS-PLATFORM INVARIANT — mirrors android/.../composing/TaigiAutocompleteService.kt
+// `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still
+// splitting under TPS, or not splitting under 漢羅濫).
+func shouldSplitCombinedCells(
+    keyboardLayoutType: KeyboardLayoutType,
+    candidateDisplayMode: CandidateDisplayMode,
+) -> Bool {
+    keyboardLayoutType != .tps && candidateDisplayMode == .combined
+}
+
 /// 自動完成服務
 ///
 /// 處理台語連續輸入候選詞。`autocomplete(_:)` 把 `ComposingManager`
@@ -84,7 +138,20 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
             return AutocompleteResult(inputText: text, suggestions: [])
         }
         let candidates = continuousFetcher?.fetchContinuousCandidates() ?? []
-        let suggestions = buildContinuousSuggestions(from: candidates)
+        // §42 漢羅濫 splits cells at the builder below; TPS ignores the picker
+        // (hanji-first by construction), so a TPS layout never splits
+        // regardless of the stored mode. Mirrors Android's
+        // `splitCombinedCellsProvider`.
+        // 中文: TPS 佈局不理會候選詞顯示模式,恆走未拆分的並排 shape。
+        let settings = SharedSettings.shared
+        let splitCombinedCells = shouldSplitCombinedCells(
+            keyboardLayoutType: settings.keyboardLayoutType,
+            candidateDisplayMode: settings.candidateDisplayMode,
+        )
+        let suggestions = buildContinuousSuggestions(
+            from: candidates,
+            splitCombinedCells: splitCombinedCells,
+        )
         return AutocompleteResult(inputText: text, suggestions: suggestions)
     }
 
@@ -147,29 +214,102 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// layer defends the inverse case (empty `c.roman` → falls back to
     /// `displayText`), so the builder trusts both fields as
     /// non-empty-when-meaningful.
+    ///
+    /// §42 漢羅濫 (`splitCombinedCells == true`): each hanji-bearing
+    /// candidate is emitted as TWO adjacent single-script suggestions — a
+    /// 漢字 cell then its 羅馬字 cell, neither with a subtitle. The
+    /// `additionalInfo["cellScript"]` marker ("hanji" | "roman") says what the
+    /// cell shows and commits; the SEMANTIC sidechannels (`displayText`,
+    /// `canonicalTl`, spans) are copied verbatim onto BOTH cells so 詞頻 /
+    /// NextWord identity never moves. Roman cells are deduped on
+    /// `(c.roman, consumedBytes)` in fetched order — first seen wins (the §34
+    /// literal absorbs 台's roman; 食/𤆬 share one `tsia̍h`); 漢字 cells are
+    /// never deduped. Split OFF (the default — 並排 / 羅馬字 / TPS all resolve
+    /// to `false` at the caller) emits the un-split shape byte-identically.
     // 中文: text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
     // 中文: Bug 1 後 displayText sidechannel = canonical key,走 canonicalText
     // 中文: (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
+    // 中文: 漢羅濫 = 拆成相鄰的 漢字 cell + 羅馬字 cell(無副標題),cellScript 標記
+    // 中文: 該 cell 顯示/送出的 script;semantic sidechannel 兩個 cell 皆原樣複製。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
+        splitCombinedCells: Bool = false,
     ) -> [AutocompleteSuggestion] {
-        candidates.map { c in
-            let hanji = c.hanji
-            let subtitle = (hanji?.isEmpty == false) ? hanji : nil
-            return AutocompleteSuggestion(
+        guard splitCombinedCells else {
+            return candidates.map { dualScriptSuggestion(for: $0) }
+        }
+
+        // CROSS-PLATFORM INVARIANT — mirrors the desktop split (§42 second
+        // exception, #666) and Android buildContinuousSuggestionsForCandidates:
+        // hanji cell before its roman cell; roman-cell dedupe key = (rendered
+        // roman, consumed span), first-seen wins. Drift causes silent divergence
+        // (cell order or dedupe survivor differs on one platform).
+        var suggestions: [AutocompleteSuggestion] = []
+        var seenRomanCells = Set<RomanCellKey>()
+        for c in candidates {
+            let sidechannels = continuousSidechannels(for: c)
+            let hanji = (c.hanji?.isEmpty == false) ? c.hanji : nil
+            if let hanji {
+                var hanjiInfo = sidechannels
+                hanjiInfo[CandidateCellScript.infoKey] = CandidateCellScript.hanji
+                // Bracket form carrier: 括號標註 ON commits `漢字 (羅馬字)`.
+                hanjiInfo[CandidateCellScript.bracketRomanKey] = c.roman
+                suggestions.append(AutocompleteSuggestion(
+                    text: hanji,
+                    title: hanji,
+                    subtitle: nil,
+                    additionalInfo: hanjiInfo,
+                ))
+            }
+            let romanKey = RomanCellKey(roman: c.roman, consumedBytes: c.consumedSpanEnd)
+            guard seenRomanCells.insert(romanKey).inserted else { continue }
+            var romanInfo = sidechannels
+            romanInfo[CandidateCellScript.infoKey] = CandidateCellScript.roman
+            suggestions.append(AutocompleteSuggestion(
                 text: c.roman,
                 title: c.roman,
-                subtitle: subtitle,
-                additionalInfo: [
-                    "isContinuous": "true",
-                    "consumedBytes": String(c.consumedSpanEnd),
-                    "syllableCount": String(c.syllableCount),
-                    "displayText": c.displayText,
-                    // R2: canonical TL identity → round-trips to
-                    // commitContinuous(associationTl:) for the NextWord write.
-                    "canonicalTl": c.canonicalTl,
-                ],
-            )
+                subtitle: nil,
+                additionalInfo: romanInfo,
+            ))
         }
+        return suggestions
+    }
+
+    /// 濫 roman-cell dedupe key: same rendered roman over the same consumed
+    /// span reads identically, so only the first (fetched order) is listed.
+    private struct RomanCellKey: Hashable {
+        let roman: String
+        let consumedBytes: UInt32
+    }
+
+    /// The un-split dual-script suggestion every non-濫 mode emits (today's shape).
+    private func dualScriptSuggestion(
+        for c: RustEngineBridge.ContinuousCandidate,
+    ) -> AutocompleteSuggestion {
+        let hanji = c.hanji
+        let subtitle = (hanji?.isEmpty == false) ? hanji : nil
+        return AutocompleteSuggestion(
+            text: c.roman,
+            title: c.roman,
+            subtitle: subtitle,
+            additionalInfo: continuousSidechannels(for: c),
+        )
+    }
+
+    /// Semantic sidechannels shared by every emitted cell of a candidate —
+    /// identity (`displayText`, `canonicalTl`) and engine byte offsets never
+    /// vary with the display split.
+    private func continuousSidechannels(
+        for c: RustEngineBridge.ContinuousCandidate,
+    ) -> [String: String] {
+        [
+            "isContinuous": "true",
+            "consumedBytes": String(c.consumedSpanEnd),
+            "syllableCount": String(c.syllableCount),
+            "displayText": c.displayText,
+            // R2: canonical TL identity → round-trips to
+            // commitContinuous(associationTl:) for the NextWord write.
+            "canonicalTl": c.canonicalTl,
+        ]
     }
 }

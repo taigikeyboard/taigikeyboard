@@ -100,8 +100,9 @@ private val PageButtonSize = 45.dp
  * Expanded candidate grid + right control panel.
  *
  * Row breaks are computed by [CandidateRowLayout.arrangeRows] from android [Paint] pixel
- * measurement — kept identical to the legacy View so wrapping does not shift. Cell widths are
- * measured as max(roman, hanzi) so toggling translate swaps text without reflowing the grid.
+ * measurement — kept identical to the legacy View so wrapping does not shift. Two-line cell
+ * widths are measured as max(roman, hanzi) so toggling translate swaps text without reflowing
+ * the grid; single-line 濫/COMBINED cells measure their rendered title (see [measureCellWidth]).
  *
  * @param resetKey bumped on each overlay show(); re-arms click protection and resets scroll/page.
  */
@@ -146,10 +147,12 @@ fun CandidateOverlayContent(
     val primaryPaint = remember(typeface, fontScale) { measurementPaint(typeface, PRIMARY_TEXT_SIZE_SP, displayMetrics) }
     val subtitlePaint = remember(typeface, fontScale) { measurementPaint(typeface, SUBTITLE_TEXT_SIZE_SP, displayMetrics) }
 
-    // Rows do NOT depend on isTranslateSwapped: cell width is max(roman, hanzi) so a swap never reflows.
-    // They DO depend on candidateDisplayMode: COMBINED measures the one-label `漢字 羅馬字` string.
+    // Rows do NOT depend on isTranslateSwapped: two-line cell width is max(roman, hanzi) and
+    // COMBINED single-line titles are swap-invariant, so a swap never reflows. They DO depend
+    // on candidateDisplayMode: a 濫 cell — marked split cell or the unmarked hanji-led
+    // NextWord row (§42 second exception) — measures its rendered single-line title.
     val rows =
-        remember(suggestions, isTPSLayout, orMapsToER, candidateDisplayMode, typeface) {
+        remember(suggestions, isTPSLayout, orMapsToER, typeface, candidateDisplayMode) {
             CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->
                 measureCellWidth(
                     word,
@@ -378,6 +381,7 @@ private fun CandidateCell(
                     isTPSLayout = isTPSLayout,
                     candidateDisplayMode = candidateDisplayMode,
                     isTranslateSwapped = isTranslateSwapped,
+                    cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
                 )
 
             Text(
@@ -565,11 +569,23 @@ private fun measureCellWidth(
         val titleWidth = primaryPaint.measureText(title)
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
     }
+    // §42 濫 cells — marked split cells AND the unmarked COMBINED row (a NextWord
+    // prediction, hanji-led) — render ONE script at the title font. Derive the
+    // measured string from the same [candidateCellText] source the render uses
+    // so measure and render cannot drift. COMBINED titles are swap-invariant
+    // (the marker or the hanji-led rule picks the script — pinned by
+    // CandidateCellTextTest), so a literal `false` swap flag is safe here.
     if (candidateDisplayMode == CandidateDisplayMode.COMBINED) {
-        // One label at the primary size; hanji-less rows are roman alone.
-        val label = if (!word.hanzi.isNullOrEmpty()) combinedCellLabel(word.hanzi, word.roman) else word.roman
-        val labelWidth = primaryPaint.measureText(label)
-        return maxOf(minCellWidthPx, (labelWidth + cellPaddingPx + 0.5f).toInt())
+        val title =
+            candidateCellText(
+                hanzi = word.hanzi,
+                displayRoman = word.roman,
+                isTPSLayout = false,
+                candidateDisplayMode = candidateDisplayMode,
+                isTranslateSwapped = false,
+                cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
+            ).title
+        return maxOf(minCellWidthPx, (primaryPaint.measureText(title) + cellPaddingPx + 0.5f).toInt())
     }
     val romanWidth = primaryPaint.measureText(word.roman)
     val hanziWidth = if (!word.hanzi.isNullOrEmpty()) subtitlePaint.measureText(word.hanzi) else 0f

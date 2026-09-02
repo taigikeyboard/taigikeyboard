@@ -19,7 +19,11 @@ enum class CandidateDisplayMode(
     /** Roman-only cell: the engine `roman` field alone, commit = roman. */
     ROMAN_ONLY("romanOnly"),
 
-    /** One-label cell `漢字 羅馬字` (single space), commit = hanji; 文/A inert. */
+    /**
+     * 漢羅濫 (§42 second exception): each hanji-bearing candidate lists
+     * adjacent one-script 漢字 + 羅馬字 cells, no subtitle; a tap commits
+     * that cell's script. 文/A inert.
+     */
     COMBINED("combined"),
     ;
 

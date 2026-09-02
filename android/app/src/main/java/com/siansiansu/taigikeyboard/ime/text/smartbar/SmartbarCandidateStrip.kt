@@ -73,6 +73,45 @@ fun TaigiCandidateStrip(
             FontFamily(ComposeTypeface(TypefaceLoader.getTypefaceByType(display.fontType, context)))
         }
 
+    // §42: content-level sizing — when NO shown cell carries a subtitle
+    // (羅馬字 mode; 濫 split cells; an all-roman list) the title is sized for
+    // one line instead of reserving the 58/42 split. Subtitle presence never
+    // depends on the TPS re-render of `roman`, so `word.roman` suffices here.
+    val contentHasSubtitles =
+        remember(items, display.candidateDisplayMode, display.isTranslateSwapped, display.layoutType) {
+            items.any { word ->
+                val cell =
+                    candidateCellText(
+                        hanzi = word.hanzi,
+                        displayRoman = word.roman,
+                        isTPSLayout = display.layoutType == "tps",
+                        candidateDisplayMode = display.candidateDisplayMode,
+                        isTranslateSwapped = display.isTranslateSwapped,
+                        cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
+                    )
+                cell.showsSubtitle
+            }
+        }
+
+    // Cell-invariant font sizing (content-level, §42): computed once per strip
+    // instead of one identical remember slot per cell.
+    val res = LocalResources.current
+    val configuration = LocalConfiguration.current
+    val paddingPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_padding) }
+    val marginPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_margin) }
+    val candidateFontSizes =
+        remember(display.smartbarHeightPx, display.textSizeScale, paddingPx, marginPx, contentHasSubtitles) {
+            computeCandidateFontSizes(
+                smartbarHeightPx = display.smartbarHeightPx,
+                paddingPx = paddingPx,
+                marginPx = marginPx,
+                density = res.displayMetrics.density,
+                fontScale = configuration.fontScale,
+                textSizeScale = display.textSizeScale,
+                contentHasSubtitles = contentHasSubtitles,
+            )
+        }
+
     val backgroundModifier =
         if (display.candidateBackgroundColor != null) {
             Modifier.background(Color(display.candidateBackgroundColor))
@@ -98,6 +137,7 @@ fun TaigiCandidateStrip(
                 index = index,
                 display = display,
                 fontFamily = fontFamily,
+                fontSizes = candidateFontSizes,
                 onClick = { onCandidateClick(word, index) },
             )
         }
@@ -168,6 +208,7 @@ private fun CandidateCell(
     index: Int,
     display: CandidateDisplayParams,
     fontFamily: FontFamily,
+    fontSizes: Pair<Float, Float>,
     onClick: () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -206,27 +247,20 @@ private fun CandidateCell(
                 word.roman
             }
         }
-    val (titleText, subtitleText) =
+    val cell =
         candidateCellText(
             hanzi = word.hanzi,
             displayRoman = displayRoman,
             isTPSLayout = isTPSLayout,
             candidateDisplayMode = display.candidateDisplayMode,
             isTranslateSwapped = display.isTranslateSwapped,
+            cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
         )
-    val showSubtitle = !subtitleText.isNullOrEmpty() && subtitleText != titleText
+    val (titleText, subtitleText) = cell
+    val showSubtitle = cell.showsSubtitle
 
-    val (titleSp, subtitleSp) =
-        remember(display.smartbarHeightPx, display.textSizeScale, paddingPx, marginPx) {
-            computeCandidateFontSizes(
-                smartbarHeightPx = display.smartbarHeightPx,
-                paddingPx = paddingPx,
-                marginPx = marginPx,
-                density = res.displayMetrics.density,
-                fontScale = configuration.fontScale,
-                textSizeScale = display.textSizeScale,
-            )
-        }
+    // Hoisted by TaigiCandidateStrip — the sizes are cell-invariant (content-level sizing).
+    val (titleSp, subtitleSp) = fontSizes
 
     val titleColor = display.candidateTextColor?.let { Color(it) } ?: Color(display.themeTitleColor)
     val subtitleColor = display.candidateTextColor?.let { Color(it) } ?: Color(display.themeSubtitleColor)
@@ -345,13 +379,14 @@ private fun EnglishDivider(color: Color) {
     )
 }
 
-private fun computeCandidateFontSizes(
+internal fun computeCandidateFontSizes(
     smartbarHeightPx: Int,
     paddingPx: Int,
     marginPx: Int,
     density: Float,
     fontScale: Float,
     textSizeScale: Float,
+    contentHasSubtitles: Boolean,
 ): Pair<Float, Float> {
     val scaledDensity = density * fontScale
     val verticalPaddingPx = paddingPx * 2 / 3
@@ -361,7 +396,10 @@ private fun computeCandidateFontSizes(
         (smartbarHeightPx - verticalPaddingPx - verticalMarginPx - subtitleGapPx)
             .coerceAtLeast(20f * density)
     val lineHeightFactor = 1.15f
-    val titlePx = availablePx * 0.58f * textSizeScale / lineHeightFactor
+    // §42: subtitle-free content sizes the title for ONE line — the full
+    // available height, same clamps; mixed lists keep the 58/42 split.
+    val titleShare = if (contentHasSubtitles) 0.58f else 1.0f
+    val titlePx = availablePx * titleShare * textSizeScale / lineHeightFactor
     val subtitlePx = availablePx * 0.42f * textSizeScale / lineHeightFactor
     val titleSp = (titlePx / scaledDensity).coerceIn(10f, 21f)
     val subtitleSp = (subtitlePx / scaledDensity).coerceIn(8f, 16f)

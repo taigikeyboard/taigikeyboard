@@ -21,7 +21,8 @@ enum CandidateCellHelper {
     ///
     /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）— TPS 不理會 candidateDisplayMode
     /// - 羅馬字模式：主標題永遠是 engine `roman`（`text`）
-    /// - 漢羅濫：一個標籤 `漢字 羅馬字`（無漢字時只剩羅馬字）
+    /// - 漢羅濫：單一 script — split cell 直接顯示 `text`（上游已拆分）；
+    ///   未拆分的 NextWord 列漢字為主（無漢字時羅馬字）
     /// - 一般模式：`isTranslateSwapped` 決定羅馬字 / 漢字順序
     // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
@@ -43,11 +44,17 @@ enum CandidateCellHelper {
             return suggestion.text
         }
 
-        // CROSS-PLATFORM INVARIANT — mirrors Android candidateCellText / macOS + Windows
-        // CandidateCellContent.cell: hanji first, single ASCII space. Drift causes silent
-        // divergence (a different order or separator on one platform).
-        if candidateDisplayMode == .combined, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-            return combinedLabel(hanji: subtitle, roman: suggestion.text)
+        // CROSS-PLATFORM INVARIANT — mirrors the desktop split cells (§42 second
+        // exception: macOS/Windows PresentedCandidate) and Android candidateCellText:
+        // under 濫 every cell is single-script. Split cells (marked upstream in
+        // TaigiAutocompleteService.buildContinuousSuggestions) carry their script in
+        // `text`; un-split rows (NextWord predictions) render hanji-led. Drift causes
+        // silent divergence (one platform re-joining the two scripts into one label).
+        if candidateDisplayMode == .combined {
+            if let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+                return subtitle
+            }
+            return suggestion.text
         }
 
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
@@ -61,7 +68,7 @@ enum CandidateCellHelper {
     ///
     /// - TPS 模式：無副標題
     /// - 羅馬字模式：無副標題（漢字不顯示）
-    /// - 漢羅濫：無副標題（漢羅併入主標題）
+    /// - 漢羅濫：無副標題（split cell 上游已拆為單一 script）
     /// - 一般模式：`isTranslateSwapped` 決定副標題是羅馬字或漢字
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
@@ -88,6 +95,15 @@ enum CandidateCellHelper {
         isTPSLayout: Bool,
         orMapsToER: Bool,
     ) -> AutocompleteSuggestion {
+        // §42 漢羅濫 split cell: the `cellScript` marker is authoritative — the
+        // cell already carries exactly the script it commits, so the swap / TPS
+        // rewrites below must not touch it (a swapped rewrite would replace a
+        // marked cell's text; the TPS fallback would re-render its roman).
+        // 中文: 帶 cellScript 標記的 split cell 原樣送出,不做 swap / TPS 改寫。
+        if CandidateCellScript.marker(for: suggestion) != nil {
+            return suggestion
+        }
+
         if isTPSLayout,
            let subtitle = suggestion.subtitle,
            !subtitle.isEmpty
@@ -114,7 +130,8 @@ enum CandidateCellHelper {
 
     /// 量測 title 與 subtitle 於對應字體大小的寬度，回傳 max + padding
     /// 一律兩者都量，避免 translate toggle 時佈局 reflow。
-    /// 漢羅濫：量測合併後的單一標籤（title 字體），比兩者各自都寬。
+    /// 漢羅濫：每格單行，量測 rendered title 於 title 字體（split cell = 自身
+    /// `text`；未拆分 NextWord 列 = 漢字為主 title）— 量測與 render 同一來源。
     ///
     /// 字體大小由呼叫端從 `CandidateTheme` 環境傳入，避免這裡依賴 `SharedSettings`。
     static func measuredCellWidth(
@@ -139,9 +156,20 @@ enum CandidateCellHelper {
             return max(minimumCellWidth, width + cellHorizontalPadding)
         }
 
-        if candidateDisplayMode == .combined, !subtitle.isEmpty {
-            let label = combinedLabel(hanji: subtitle, roman: text)
-            let width = (label as NSString).size(withAttributes: [.font: titleFont]).width
+        // §42 漢羅濫: every cell renders single-line at the TITLE font — a
+        // marked split cell shows its own `text`, an un-split row (NextWord
+        // prediction) shows the hanji-led title. Measure the rendered title so
+        // measure and render share the source (`displayTitle`'s combined arm
+        // ignores the swap flag, so `false` is safe here).
+        if candidateDisplayMode == .combined {
+            let titleText = displayTitle(
+                for: suggestion,
+                isTranslateSwapped: false,
+                isTPSLayout: false,
+                orMapsToER: orMapsToER,
+                candidateDisplayMode: .combined,
+            )
+            let width = (titleText as NSString).size(withAttributes: [.font: titleFont]).width
             return max(minimumCellWidth, width + cellHorizontalPadding)
         }
 
@@ -152,12 +180,73 @@ enum CandidateCellHelper {
         return max(minimumCellWidth, max(textWidth, subtitleWidth) + cellHorizontalPadding)
     }
 
-    // MARK: - Private
+    // MARK: - Rendered subtitle (single spelling of the render predicate)
 
-    /// 漢羅濫的單一標籤：漢字在前，單一半形空白分隔。displayTitle 與寬度量測共用。
-    private static func combinedLabel(hanji: String, roman: String) -> String {
-        "\(hanji) \(roman)"
+    /// The subtitle a cell will actually RENDER, or `nil`.
+    ///
+    /// Single spelling of the render predicate shared by `CandidateButtonView`,
+    /// `ExpandedCandidateGridCell`, and `contentHasSubtitles`: a cell draws a
+    /// subtitle line only when `displaySubtitle` is non-empty and differs from
+    /// its `displayTitle` (a swapped hanji-less row's subtitle would repeat
+    /// the title).
+    // 中文: cell 實際會畫出的副標題 — render 條件的唯一出處,view 與
+    // 中文: contentHasSubtitles 皆從這裡取。
+    static func renderedSubtitle(
+        for suggestion: AutocompleteSuggestion,
+        isTranslateSwapped: Bool,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
+    ) -> String? {
+        guard let subtitle = displaySubtitle(
+            for: suggestion,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            candidateDisplayMode: candidateDisplayMode,
+        ), !subtitle.isEmpty else {
+            return nil
+        }
+        let title = displayTitle(
+            for: suggestion,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
+            candidateDisplayMode: candidateDisplayMode,
+        )
+        return subtitle == title ? nil : subtitle
     }
+
+    // MARK: - Content-level subtitle presence
+
+    /// Whether ANY cell in `suggestions` will actually render a subtitle line.
+    ///
+    /// Mirrors desktop §42 "one-script content is one line tall": the invisible
+    /// subtitle spacer in `CandidateButtonView` / `ExpandedCandidateGridCell`
+    /// renders only when the CONTENT has a subtitle somewhere — a mixed 並排
+    /// list (one hanji-less literal among two-line cells) keeps the spacer so
+    /// rows line up, while an all-single-line list (羅馬字 / 漢羅濫 / TPS)
+    /// reserves nothing. Reads the cells' own render source
+    /// (`renderedSubtitle`) so the two predicates cannot drift.
+    // 中文: 整份候選內容是否有任何 cell 會畫副標題 — 決定單行 cell 是否保留隱形副標空間。
+    static func contentHasSubtitles(
+        _ suggestions: [AutocompleteSuggestion],
+        isTranslateSwapped: Bool,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
+        candidateDisplayMode: CandidateDisplayMode,
+    ) -> Bool {
+        suggestions.contains { suggestion in
+            renderedSubtitle(
+                for: suggestion,
+                isTranslateSwapped: isTranslateSwapped,
+                isTPSLayout: isTPSLayout,
+                orMapsToER: orMapsToER,
+                candidateDisplayMode: candidateDisplayMode,
+            ) != nil
+        }
+    }
+
+    // MARK: - Private
 
     /// TPS fallback：把羅馬字轉為方音符號顯示。
     private static func tpsFallback(
@@ -183,5 +272,21 @@ enum CandidateCellHelper {
             additionalDeleteCount: additionalDeleteCount,
             additionalInfo: suggestion.additionalInfo,
         )
+    }
+}
+
+/// Invisible subtitle spacer — keeps a one-line cell's title aligned with its
+/// two-line neighbors in a mixed list. The caller renders it only when the
+/// surrounding content has a subtitle somewhere (§42: one-script content is
+/// one line tall). Shared by `CandidateButtonView` and
+/// `ExpandedCandidateGridCell`.
+// 中文: 隱形副標 spacer — 單行 cell 與雙行鄰居對齊用,兩個候選 view 共用。
+struct SubtitleSpacer: View {
+    let fontSize: CGFloat
+
+    var body: some View {
+        Text(" ")
+            .font(KeyboardFonts.globalFont(size: fontSize))
+            .opacity(0)
     }
 }

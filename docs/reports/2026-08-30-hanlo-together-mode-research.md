@@ -27,7 +27,7 @@ Read as four requirements plus two risk flags:
 |---|---|---|
 | R1 | TL / POJ only, never TPS | TPS stays hanji-only (`effectiveSwapped` forced, §5 display-dedupe by hanji). |
 | R2 | 文/A swap key becomes unnecessary | Either hidden or inert while the mode is on. |
-| R3 | No title / subtitle split | ~~Cell shows ONE label carrying both scripts, e.g. `台語 tâi-gí`~~ — **misread; corrected by USER 2026-09-02 after desktop dogfood: 「漢字單獨做一個候選詞、羅馬字也當作候選詞,也沒有 subtitle」** — the 漢字 and the 羅馬字 are each their OWN candidate cell, adjacent, no subtitle. The one-label version shipped in #664 on all four platforms; desktop corrected in #666, mobile OPEN. |
+| R3 | No title / subtitle split | ~~Cell shows ONE label carrying both scripts, e.g. `台語 tâi-gí`~~ — **misread; corrected by USER 2026-09-02 after desktop dogfood: 「漢字單獨做一個候選詞、羅馬字也當作候選詞,也沒有 subtitle」** — the 漢字 and the 羅馬字 are each their OWN candidate cell, adjacent, no subtitle. The one-label version shipped in #664 on all four platforms; desktop corrected in #666, mobile in #668. |
 | R4 | Both scripts "appear together" | Certain for the **cell**. Whether the **committed document text** also carries both is not stated — see §8 Q1. |
 | F1 | 可能會有重複字 | Analysed in §6. |
 | F2 | 可能影響 自訂詞 / 詞關聯 / 詞頻 | Analysed in §7. |

@@ -10,6 +10,9 @@ struct ExpandedCandidateGridCell: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
     let candidateDisplayMode: CandidateDisplayMode
+    /// §42: whether ANY cell in the current content renders a subtitle — gates
+    /// the invisible subtitle spacer below (computed once per list by the caller).
+    let contentHasSubtitles: Bool
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
@@ -37,6 +40,19 @@ struct ExpandedCandidateGridCell: View {
             for: suggestion,
             isTranslateSwapped: isTranslateSwapped,
             isTPSLayout: isTPSLayout,
+            candidateDisplayMode: candidateDisplayMode,
+        )
+    }
+
+    /// The subtitle this cell actually renders — single-sourced in
+    /// `CandidateCellHelper.renderedSubtitle` (same predicate
+    /// `contentHasSubtitles` scans with).
+    private var renderedSubtitle: String? {
+        CandidateCellHelper.renderedSubtitle(
+            for: suggestion,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
     }
@@ -70,16 +86,14 @@ struct ExpandedCandidateGridCell: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
+                if let subtitle = renderedSubtitle {
                     Text(subtitle)
                         .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
                         .foregroundColor(theme.secondaryTextColor)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                } else {
-                    Text(" ")
-                        .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
-                        .opacity(0)
+                } else if contentHasSubtitles {
+                    SubtitleSpacer(fontSize: theme.secondaryFontSize)
                 }
             }
             .padding(.vertical, CandidateViewModels.UI.expandedButtonVerticalPadding)

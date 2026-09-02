@@ -9,6 +9,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -159,6 +160,14 @@ class CandidateUpdateCoordinator(
                                 emptyList()
                             }
                         }
+                    },
+                    // 漢羅濫 split cells (§42 second exception). Live-read per
+                    // fetch — the cached service must see a settings change on
+                    // the next keystroke. TPS ignores the picker, so the split
+                    // never fires under the TPS layout.
+                    splitCombinedCellsProvider = {
+                        val prefs = taigikeyboard.prefs
+                        shouldSplitCombinedCells(prefs.candidateDisplayMode, prefs.isTpsLayout)
                     },
                 ).also { taigiAutocompleteService = it }
             }

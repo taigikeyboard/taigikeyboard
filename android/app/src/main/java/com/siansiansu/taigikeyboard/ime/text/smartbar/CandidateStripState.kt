@@ -58,36 +58,44 @@ data class CandidateCellText(
 )
 
 /**
- * The 漢羅濫 label: hanji, one ASCII space, romanization. The one place the
- * separator is spelled — the cell arm and the overlay width measure both use it.
+ * True when the cell renders a second line — a non-empty subtitle distinct
+ * from the title. Single spelling shared by the strip's content-level sizing
+ * scan and the per-cell render gate.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift combinedLabel.
-fun combinedCellLabel(
-    hanzi: String,
-    roman: String,
-): String = "$hanzi $roman"
+val CandidateCellText.showsSubtitle: Boolean
+    get() = !subtitle.isNullOrEmpty() && subtitle != title
 
 /**
  * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
- * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED is one label
- * `漢字 羅馬字` (single ASCII space, no subtitle); swap decides the lead
- * otherwise. `displayRoman` is already TPS-converted by the caller when
- * relevant.
+ * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED renders ONE
+ * script per cell, no subtitle (the builder already split each candidate
+ * into adjacent 漢字 + 羅馬字 cells — §42 second exception): the
+ * [cellScript] marker says which script this cell shows, and an unmarked
+ * COMBINED row (a NextWord prediction — not split) renders hanji-led;
+ * swap decides the lead otherwise. `displayRoman` is already TPS-converted
+ * by the caller when relevant.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle.
-// Drift causes silent divergence (one platform shows a subtitle under roman-only, or a different 漢羅濫 separator).
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
+// and the desktop PresentedCandidate one-script cells. Drift causes silent divergence
+// (one platform shows a subtitle under roman-only, or still renders the superseded one-label 濫 cell).
 fun candidateCellText(
     hanzi: String?,
     displayRoman: String,
     isTPSLayout: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
     isTranslateSwapped: Boolean,
+    cellScript: String?,
 ): CandidateCellText =
     when {
         hanzi.isNullOrEmpty() -> CandidateCellText(displayRoman, null)
         isTPSLayout -> CandidateCellText(hanzi, null)
         candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY -> CandidateCellText(displayRoman, null)
-        candidateDisplayMode == CandidateDisplayMode.COMBINED -> CandidateCellText(combinedCellLabel(hanzi, displayRoman), null)
+        candidateDisplayMode == CandidateDisplayMode.COMBINED ->
+            if (cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN) {
+                CandidateCellText(displayRoman, null)
+            } else {
+                CandidateCellText(hanzi, null)
+            }
         isTranslateSwapped -> CandidateCellText(hanzi, displayRoman)
         else -> CandidateCellText(displayRoman, hanzi)
     }

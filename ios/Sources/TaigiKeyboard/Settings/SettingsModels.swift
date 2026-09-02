@@ -76,8 +76,9 @@ enum FontType: String, CaseIterable, Codable {
 /// `sideBySide` = today's title/subtitle pair (the swap flag decides which
 /// script leads). `romanOnly` = the cell shows only the romanization and the
 /// derived swap / both-scripts pair reads `false` (see `SharedSettings`).
-/// `combined` = one label `漢字 羅馬字` and a commit writes the hanji; the
-/// derived swap projects that as `true` (see `SharedSettings`).
+/// `combined` = each hanji-bearing candidate splits into adjacent single-script
+/// 漢字 / 羅馬字 cells (no subtitle) and a tap commits that cell's script; the
+/// derived swap projects `true` as a compatibility projection (see `SharedSettings`).
 /// TPS ignores the mode. Raw values are the cross-platform storage contract
 /// (Android `CandidateDisplayMode.storageValue`, desktop `SettingsStore`).
 // 中文: 候選詞顯示模式 — 漢羅並排 (預設) / 羅馬字 / 漢羅濫。raw value 四平台一致,勿改。
@@ -96,10 +97,12 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// fix it, so the key is inert and the stored swap waits for the way back.
     var allowsSwapToggle: Bool { self == .sideBySide }
 
-    /// Effective swap for a stored flag. `.combined` leads with — and commits —
-    /// the Hanji: forcing the pair on is a compatibility projection of that,
-    /// so every reader of the pair behaves as today's hanji-first mode
-    /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
+    /// Effective swap for a stored flag. `.combined` lists the pair hanji-first
+    /// as split single-script cells: forcing the pair on is a compatibility
+    /// projection, so every reader of the pair behaves as today's hanji-first
+    /// mode (`behavioral-invariants.md` §42) while the committed script comes
+    /// from each cell's `cellScript` marker, not the pair. `.romanOnly` has no
+    /// Hanji to lead with.
     // 中文: 推導 swap — 合用恆 true(投影到既有 pair)、羅馬字恆 false、並排照 stored。
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/CandidateDisplayMode.kt effectiveTranslateSwapped,
     // macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift, windows/crates/taigi-windows-core/src/settings/engine_settings.rs.
@@ -109,7 +112,8 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     }
 
     /// Effective 括號標註 for a stored flag — off only where there is no Hanji
-    /// to bracket; `.combined` keeps it (`漢字 (羅馬字)`, today's swapped output).
+    /// to bracket; `.combined` keeps it for 漢字-cell commits (`漢字 (羅馬字)`,
+    /// today's swapped output) — a 羅馬字 cell ignores it.
     func effectiveOutputBothScripts(stored: Bool) -> Bool {
         stored && showsHanji
     }
