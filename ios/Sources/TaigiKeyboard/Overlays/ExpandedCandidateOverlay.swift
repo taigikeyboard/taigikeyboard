@@ -44,6 +44,20 @@ struct ExpandedCandidateOverlay: View {
 
     // MARK: - Row Layout
 
+    /// §42: whether any cell in the grid renders a subtitle — computed once per
+    /// list and passed down so single-line cells only reserve the second line
+    /// when the content actually has one (mixed 並排 lists keep rows aligned;
+    /// 羅馬字 / 漢羅濫 / TPS content is one line tall).
+    private var contentHasSubtitles: Bool {
+        CandidateCellHelper.contentHasSubtitles(
+            suggestions,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
+            candidateDisplayMode: candidateDisplayMode,
+        )
+    }
+
     private var arrangedRows: [[ExpandedCandidateRowLayout.RowItem]] {
         let controlPanelWidth: CGFloat = 60
         let horizontalPadding: CGFloat = 16 // 8 left + 8 right
@@ -118,6 +132,7 @@ struct ExpandedCandidateOverlay: View {
                     suggestion: item.suggestion,
                     isTranslateSwapped: isTranslateSwapped,
                     candidateDisplayMode: candidateDisplayMode,
+                    contentHasSubtitles: contentHasSubtitles,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,
                     isSelected: selectedCandidateIndex == item.originalIndex,

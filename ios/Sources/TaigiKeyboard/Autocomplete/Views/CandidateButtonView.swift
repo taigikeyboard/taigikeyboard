@@ -9,6 +9,9 @@ struct CandidateButtonView: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
     let candidateDisplayMode: CandidateDisplayMode
+    /// §42: whether ANY cell in the current content renders a subtitle — gates
+    /// the invisible subtitle spacer below (computed once per list by the caller).
+    let contentHasSubtitles: Bool
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
@@ -77,6 +80,13 @@ struct CandidateButtonView: View {
                         .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
                         .foregroundColor(theme.secondaryTextColor)
                         .lineLimit(1)
+                } else if contentHasSubtitles {
+                    // Invisible subtitle spacer — keeps a one-line cell's title aligned
+                    // with its two-line neighbors in a mixed list. Skipped when NO cell
+                    // renders a subtitle (§42: one-script content is one line tall).
+                    Text(" ")
+                        .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
+                        .opacity(0)
                 }
             }
             .padding(.horizontal, style.itemStyle.horizontalPadding)

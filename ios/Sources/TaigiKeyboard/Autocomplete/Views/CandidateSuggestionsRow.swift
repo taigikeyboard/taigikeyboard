@@ -20,6 +20,20 @@ struct CandidateSuggestionsRow: View {
 
     @EnvironmentObject private var expandState: CandidateExpandState
     @Environment(\.candidateTheme) private var theme
+
+    /// §42: whether any cell in the strip renders a subtitle — computed once per
+    /// list and passed down so single-line cells only reserve the second line
+    /// when the content actually has one (mixed 並排 lists keep rows aligned;
+    /// 羅馬字 / 漢羅濫 / TPS content is one line tall).
+    private var contentHasSubtitles: Bool {
+        CandidateCellHelper.contentHasSubtitles(
+            suggestions,
+            isTranslateSwapped: isTranslateSwapped,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
+            candidateDisplayMode: candidateDisplayMode,
+        )
+    }
     // Resolves the expand-chevron a11y label under the display-language picker (live-switch on read).
     @Environment(DisplayLanguageStore.self) private var lang
 
@@ -77,6 +91,7 @@ struct CandidateSuggestionsRow: View {
                             suggestion: suggestion,
                             isTranslateSwapped: isTranslateSwapped,
                             candidateDisplayMode: candidateDisplayMode,
+                            contentHasSubtitles: contentHasSubtitles,
                             isTPSLayout: isTPSLayout,
                             orMapsToER: orMapsToER,
                             isSelected: selectedCandidateIndex == index,

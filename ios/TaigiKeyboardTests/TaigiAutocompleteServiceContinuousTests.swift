@@ -345,6 +345,136 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertNil(subtitle, "TPS never shows a subtitle")
     }
 
+    // MARK: - §42 漢羅濫 split cells
+
+    /// Under 濫 a hanji-bearing candidate becomes TWO adjacent single-script
+    /// cells — 漢字 then 羅馬字, neither with a subtitle — and the SEMANTIC
+    /// sidechannels (identity + engine offsets) are copied verbatim onto both.
+    func testCombined_HanjiBearingCandidate_SplitsIntoHanjiThenRomanCell() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 7,
+                syllableCount: 2,
+                displayText: "台語",
+                mode: .hant,
+                roman: "tâi-gí",
+                hanji: "台語",
+                canonicalTl: "tâi-gí",
+            ),
+        ]
+        let result = service.buildContinuousSuggestions(
+            from: candidates,
+            candidateDisplayMode: .combined,
+        )
+        XCTAssertEqual(result.count, 2, "one candidate → hanji cell + roman cell")
+
+        let hanjiCell = result[0]
+        XCTAssertEqual(hanjiCell.text, "台語")
+        XCTAssertEqual(hanjiCell.title, "台語")
+        XCTAssertNil(hanjiCell.subtitle, "split cells carry no subtitle")
+        XCTAssertEqual(hanjiCell.additionalInfo["cellScript"], "hanji")
+        XCTAssertEqual(hanjiCell.additionalInfo["roman"], "tâi-gí", "bracket-form carrier")
+
+        let romanCell = result[1]
+        XCTAssertEqual(romanCell.text, "tâi-gí")
+        XCTAssertEqual(romanCell.title, "tâi-gí")
+        XCTAssertNil(romanCell.subtitle, "split cells carry no subtitle")
+        XCTAssertEqual(romanCell.additionalInfo["cellScript"], "roman")
+        XCTAssertEqual(romanCell.additionalInfo["hanji"], "台語")
+
+        for cell in result {
+            XCTAssertEqual(cell.additionalInfo["isContinuous"], "true")
+            XCTAssertEqual(cell.additionalInfo["consumedBytes"], "7")
+            XCTAssertEqual(cell.additionalInfo["syllableCount"], "2")
+            XCTAssertEqual(cell.additionalInfo["displayText"], "台語", "identity never moves")
+            XCTAssertEqual(cell.additionalInfo["canonicalTl"], "tâi-gí", "identity never moves")
+        }
+    }
+
+    func testCombined_HanjiLessCandidate_EmitsSingleRomanCell() {
+        let candidates = [
+            makeCandidate(consumedSpanEnd: 4, displayText: "tāi", mode: .tailo, roman: "tāi", hanji: nil),
+        ]
+        let result = service.buildContinuousSuggestions(
+            from: candidates,
+            candidateDisplayMode: .combined,
+        )
+        XCTAssertEqual(result.count, 1, "no hanji → roman cell alone")
+        XCTAssertEqual(result[0].text, "tāi")
+        XCTAssertNil(result[0].subtitle)
+        XCTAssertEqual(result[0].additionalInfo["cellScript"], "roman")
+        XCTAssertNil(result[0].additionalInfo["hanji"], "no hanji sidechannel to carry")
+    }
+
+    /// Roman cells dedupe on `(roman, consumedBytes)` in FETCHED order —
+    /// first seen wins (do not assume the §34 literal is first). 漢字 cells
+    /// are never deduped: 食/𤆬 both keep their hanji cell and share one
+    /// `tsia̍h` roman cell beside the first.
+    func testCombined_RomanCellDedupe_FirstSeenWins_HanjiCellsNeverDeduped() {
+        let candidates = [
+            makeCandidate(consumedSpanEnd: 5, displayText: "食", mode: .hant, roman: "tsia̍h", hanji: "食"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "𤆬", mode: .hant, roman: "tsia̍h", hanji: "𤆬"),
+        ]
+        let result = service.buildContinuousSuggestions(
+            from: candidates,
+            candidateDisplayMode: .combined,
+        )
+        XCTAssertEqual(result.map(\.text), ["食", "tsia̍h", "𤆬"], "roman cell rides beside the FIRST candidate; 𤆬's duplicate roman is skipped")
+        XCTAssertEqual(result[1].additionalInfo["hanji"], "食", "surviving roman cell is the first-seen one")
+    }
+
+    /// The §34 literal (hanji-less and first in fetched order) absorbs a
+    /// same-`(roman, span)` dict row's roman cell.
+    func testCombined_LiteralAbsorbsSameSpanRoman() {
+        let candidates = [
+            makeCandidate(consumedSpanEnd: 3, displayText: "tâi", mode: .tailo, roman: "tâi", hanji: nil),
+            makeCandidate(consumedSpanEnd: 3, displayText: "台", mode: .hant, roman: "tâi", hanji: "台"),
+        ]
+        let result = service.buildContinuousSuggestions(
+            from: candidates,
+            candidateDisplayMode: .combined,
+        )
+        XCTAssertEqual(result.map(\.text), ["tâi", "台"], "literal's roman cell absorbs 台's; 台 keeps its hanji cell")
+        XCTAssertNil(result[0].additionalInfo["hanji"], "surviving roman cell is the literal's")
+    }
+
+    func testCombined_SameRomanDifferentSpan_BothRomanCellsStay() {
+        let candidates = [
+            makeCandidate(consumedSpanEnd: 3, displayText: "tâi", mode: .tailo, roman: "tâi", hanji: nil),
+            makeCandidate(consumedSpanEnd: 7, displayText: "tâi", mode: .tailo, roman: "tâi", hanji: nil),
+        ]
+        let result = service.buildContinuousSuggestions(
+            from: candidates,
+            candidateDisplayMode: .combined,
+        )
+        XCTAssertEqual(result.count, 2, "dedupe key is (roman, consumedBytes) — a different span is a different cell")
+    }
+
+    /// Every other mode emits today's un-split shape byte-identically — the
+    /// default parameter, explicit 並排, and 羅馬字 all agree field-for-field.
+    func testNonCombinedModes_EmitUnsplitShapeByteIdentically() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 7,
+                syllableCount: 2,
+                displayText: "臺灣",
+                mode: .hant,
+                roman: "tâi-uân",
+                hanji: "臺灣",
+            ),
+        ]
+        let baseline = service.buildContinuousSuggestions(from: candidates)
+        for mode in [CandidateDisplayMode.sideBySide, .romanOnly] {
+            let result = service.buildContinuousSuggestions(from: candidates, candidateDisplayMode: mode)
+            XCTAssertEqual(result.count, baseline.count, "\(mode)")
+            XCTAssertEqual(result[0].text, baseline[0].text, "\(mode)")
+            XCTAssertEqual(result[0].title, baseline[0].title, "\(mode)")
+            XCTAssertEqual(result[0].subtitle, baseline[0].subtitle, "\(mode)")
+            XCTAssertEqual(result[0].additionalInfo, baseline[0].additionalInfo, "\(mode)")
+            XCTAssertNil(result[0].additionalInfo["cellScript"], "no marker outside 濫 (\(mode))")
+        }
+    }
+
     // MARK: - Misc
 
     func testEmptyCandidateList_EmitsEmptyList() {

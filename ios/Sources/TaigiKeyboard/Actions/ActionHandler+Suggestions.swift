@@ -78,19 +78,45 @@ extension ActionHandler {
             // `user_frequency.db` + NextWord keys stay mode-independent
             // (user decision b). Frequency recording below already keys on
             // the canonical sidechannel and is unchanged.
-            let isTPSLayout = settings.keyboardLayoutType == .tps
-            let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
-            let (roman, hanzi) = parseRomanAndHanzi(
-                from: suggestion,
-                isNextWord: false,
-                effectiveSwapped: effectiveSwapped,
-            )
-            let docText = formatOutputText(
-                roman: roman,
-                hanzi: hanzi,
-                isTPSLayout: isTPSLayout,
-                effectiveSwapped: effectiveSwapped,
-            )
+            //
+            // §42 漢羅濫 split cells arrive with an `additionalInfo["cellScript"]`
+            // marker and resolve the document text DIRECTLY from the marker +
+            // info fields (`markedCellCommit` below), bypassing the swap
+            // reconstruction — the identity sidechannels are shared by both
+            // cells, so 詞頻 / NextWord recording is unchanged whichever cell
+            // of the same candidate is tapped.
+            // 中文: 帶 cellScript 標記的 split cell 直接由標記解出 commit 字串;
+            // 中文: 兩個 cell 共用同一組 identity sidechannel,學習路徑不變。
+            let docText: String
+            // Whether this commit wrote romanization into the document — drives
+            // the auto-space gate below (§42: the space follows the script
+            // actually committed, not the mode).
+            let wroteRomanization: Bool
+            if let cellScript = suggestion.additionalInfo["cellScript"] {
+                let resolved = Self.markedCellCommit(
+                    cellScript: cellScript,
+                    cellText: suggestion.text,
+                    roman: suggestion.additionalInfo["roman"],
+                    isOutputBothScripts: settings.isOutputBothScripts,
+                )
+                docText = resolved.docText
+                wroteRomanization = resolved.wroteRomanization
+            } else {
+                let isTPSLayout = settings.keyboardLayoutType == .tps
+                let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
+                let (roman, hanzi) = parseRomanAndHanzi(
+                    from: suggestion,
+                    isNextWord: false,
+                    effectiveSwapped: effectiveSwapped,
+                )
+                docText = formatOutputText(
+                    roman: roman,
+                    hanzi: hanzi,
+                    isTPSLayout: isTPSLayout,
+                    effectiveSwapped: effectiveSwapped,
+                )
+                wroteRomanization = !effectiveSwapped
+            }
             // R2: canonical TL identity sidechannel — forwarded as
             // `associationTl` so NextWord learns the same `next_tl`/`prev_tl`
             // a normal candidate commit records. Absent (wire skew / older
@@ -121,13 +147,17 @@ extension ActionHandler {
             // exits Continuous → Idle). Mid-commits keep composing more
             // syllables and must NOT insert a space.
             // 中文: 只有 final-commit 才補空白(整個 buffer 被消化、engine 退到 Idle)。
-            // Reuses the branch-hoisted `effectiveSwapped`. Suffix check is on
-            // the actual committed document string (`docText`) so a trailing
-            // hyphen continuation suppresses the space — mirrors the legacy
-            // lexicon path (Codex post-impl: auto-space suffix check must use
-            // the document string, not the canonical key).
+            // Keys on the RESOLVED committed script (`wroteRomanization`), not the
+            // mode: a marked §42 roman cell spaces, a plain hanji cell does not,
+            // and hanji + 括號標註 keeps today's swapped-commit spacing via
+            // `isOutputBothScripts`; an unmarked commit derives
+            // `wroteRomanization = !effectiveSwapped`, so its gate is unchanged.
+            // Suffix check is on the actual committed document string (`docText`)
+            // so a trailing hyphen continuation suppresses the space — mirrors
+            // the legacy lexicon path (Codex post-impl: auto-space suffix check
+            // must use the document string, not the canonical key).
             if didFinalCommit, settings.isAutoSpaceEnabled,
-               !effectiveSwapped || settings.isOutputBothScripts,
+               wroteRomanization || settings.isOutputBothScripts,
                !docText.hasSuffix("-") {
                 keyboardContext.textDocumentProxy.insertText(" ")
             }
@@ -179,6 +209,38 @@ extension ActionHandler {
     }
 
     // MARK: - Suggestion Helpers
+
+    /// §42 漢羅濫 marked-cell document text.
+    ///
+    /// A split cell's `cellScript` marker is authoritative, so the document
+    /// string resolves directly from the marker + info fields — never through
+    /// `parseRomanAndHanzi` (whose contract is "derive from the UI-shaped
+    /// suggestion") and never through a new `formatOutputText` arm:
+    /// - `"hanji"` cell commits the hanji; 括號標註 ON appends the roman
+    ///   sidechannel as `漢字 (羅馬字)` — today's swapped output. TPS never
+    ///   applies (濫 is TL/POJ only), so the bracket roman is never TPS-rendered.
+    /// - `"roman"` cell commits the BARE roman; 括號標註 is ignored (desktop
+    ///   `.alternate` parity).
+    ///
+    /// Returns the document string plus whether the commit wrote romanization
+    /// (the auto-space gate follows the committed script). Static with the
+    /// settings flag injected so tests pin it without a keyboard context.
+    // 中文: 漢字 cell 出漢字(括號標註 ON 補 `(羅馬字)`);羅馬字 cell 恆出裸羅馬字、
+    // 中文: 無視括號標註;回傳是否寫出羅馬字供自動空白判斷。
+    static func markedCellCommit(
+        cellScript: String,
+        cellText: String,
+        roman: String?,
+        isOutputBothScripts: Bool,
+    ) -> (docText: String, wroteRomanization: Bool) {
+        guard cellScript == "hanji" else {
+            return (cellText, true)
+        }
+        if isOutputBothScripts, let roman, !roman.isEmpty {
+            return ("\(cellText) (\(roman))", false)
+        }
+        return (cellText, false)
+    }
 
     /// Extract romanization and Hanji from suggestion based on display mode
     // 中文: 依顯示模式從候選建議中拆出羅馬字 + 漢字。NextWord 路徑要把先前 swap 過的欄位還原。
