@@ -4,8 +4,8 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The presentation rules per display mode, and the 合用 pair order and
-/// romanization dedupe that give the window its cells.
+/// The presentation rules per display mode, and the 漢羅濫 pair order and
+/// per-script dedupe that give the window its cells.
 final class PresentedCandidateTests: XCTestCase {
     private let taigi = TestFixtures.candidate(roman: "tâi-gí", hanji: "台語", consumedSpanEnd: 5)
     private let literal = TestFixtures.candidate(roman: "tâi-gí", hanji: nil, consumedSpanEnd: 5)
@@ -131,29 +131,32 @@ final class PresentedCandidateTests: XCTestCase {
         XCTAssertEqual(presented.map(\.script), [.primary, .primary])
     }
 
-    /// The same text over a DIFFERENT span is a different commit — it consumes
-    /// a different stretch of the buffer — so both cells stay.
-    func testCombined_keepsSameTextRomanizationCellsOverDifferentSpans() {
+    /// A cell reading exactly like an earlier one is never listed, whatever
+    /// stretch of the buffer it would commit: the span is not on screen, so
+    /// the user has nothing to choose between (USER 2026-09-03).
+    func testCombined_dedupesSameTextCellsOverDifferentSpans() {
         let short = TestFixtures.candidate(roman: "tâi", hanji: "台", consumedSpanEnd: 3)
         let long = TestFixtures.candidate(roman: "tâi", hanji: "臺", consumedSpanEnd: 4)
 
         let presented = PresentedCandidate.presentation(of: [short, long], settings: combined)
 
-        XCTAssertEqual(presented.map(\.cell.text), ["台", "tâi", "臺", "tâi"])
-        XCTAssertEqual(presented.map(\.candidateIndex), [0, 0, 1, 1])
+        XCTAssertEqual(presented.map(\.cell.text), ["台", "tâi", "臺"])
+        XCTAssertEqual(presented.map(\.candidateIndex), [0, 0, 1])
     }
 
-    /// Hanji cells are never deduplicated: 重 tîng and 重 tāng are two
-    /// morphemes (Core Principle #7), and the adjacent romanization is what
-    /// tells the two 重 apart.
-    func testCombined_neverDedupesHanjiCells() {
+    /// 重 tîng and 重 tāng are two morphemes (Core Principle #7) but draw the
+    /// SAME Hanji cell, so it is listed once — for the first reading — and each
+    /// reading keeps its own romanization cell, which is how the second stays
+    /// reachable.
+    func testCombined_dedupesHanjiCellsSharedByTwoReadings() {
         let repeat_ = TestFixtures.candidate(roman: "tîng", hanji: "重", consumedSpanEnd: 5)
         let heavy = TestFixtures.candidate(roman: "tāng", hanji: "重", consumedSpanEnd: 5)
 
         let presented = PresentedCandidate.presentation(of: [repeat_, heavy], settings: combined)
 
-        XCTAssertEqual(presented.map(\.cell.text), ["重", "tîng", "重", "tāng"])
-        XCTAssertEqual(presented.map(\.candidateIndex), [0, 0, 1, 1])
+        XCTAssertEqual(presented.map(\.cell.text), ["重", "tîng", "tāng"])
+        XCTAssertEqual(presented.map(\.candidateIndex), [0, 0, 1])
+        XCTAssertEqual(presented.map(\.script), [.primary, .alternate, .alternate])
     }
 
     /// The commit each cell resolves to, end to end through the document

@@ -408,11 +408,11 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result[0].additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.roman)
     }
 
-    /// Roman cells dedupe on `(roman, consumedBytes)` in FETCHED order —
-    /// first seen wins (do not assume the §34 literal is first). 漢字 cells
-    /// are never deduped: 食/𤆬 both keep their hanji cell and share one
-    /// `tsia̍h` roman cell beside the first.
-    func testCombined_RomanCellDedupe_FirstSeenWins_HanjiCellsNeverDeduped() {
+    /// Each script dedupes on the text the cell shows, in FETCHED order —
+    /// first seen wins (do not assume the §34 literal is first). 食/𤆬 are
+    /// different Hanji, so both keep their hanji cell and share one `tsia̍h`
+    /// roman cell beside the first.
+    func testCombined_RomanCellDedupe_FirstSeenWins_DistinctHanjiCellsStay() {
         let candidates = [
             makeCandidate(consumedSpanEnd: 5, displayText: "食", mode: .hant, roman: "tsia̍h", hanji: "食"),
             makeCandidate(consumedSpanEnd: 5, displayText: "𤆬", mode: .hant, roman: "tsia̍h", hanji: "𤆬"),
@@ -426,8 +426,8 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     }
 
     /// The §34 literal (hanji-less and first in fetched order) absorbs a
-    /// same-`(roman, span)` dict row's roman cell.
-    func testCombined_LiteralAbsorbsSameSpanRoman() {
+    /// same-roman dict row's roman cell.
+    func testCombined_LiteralAbsorbsSameRoman() {
         let candidates = [
             makeCandidate(consumedSpanEnd: 3, displayText: "tâi", mode: .tailo, roman: "tâi", hanji: nil),
             makeCandidate(consumedSpanEnd: 3, displayText: "台", mode: .hant, roman: "tâi", hanji: "台"),
@@ -440,7 +440,10 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result[0].additionalInfo["displayText"], "tâi", "surviving roman cell is the literal's")
     }
 
-    func testCombined_SameRomanDifferentSpan_BothRomanCellsStay() {
+    /// A cell reading exactly like an earlier one is never listed, whatever
+    /// slice of the buffer it would commit — the user cannot tell the two
+    /// apart on screen (USER 2026-09-03).
+    func testCombined_SameTextDifferentSpan_IsOneCell() {
         let candidates = [
             makeCandidate(consumedSpanEnd: 3, displayText: "tâi", mode: .tailo, roman: "tâi", hanji: nil),
             makeCandidate(consumedSpanEnd: 7, displayText: "tâi", mode: .tailo, roman: "tâi", hanji: nil),
@@ -449,7 +452,32 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             from: candidates,
             splitCombinedCells: true,
         )
-        XCTAssertEqual(result.count, 2, "dedupe key is (roman, consumedBytes) — a different span is a different cell")
+        XCTAssertEqual(result.count, 1, "same rendered roman → one cell, span is not part of the key")
+
+        let hanji = [
+            makeCandidate(consumedSpanEnd: 5, displayText: "食", mode: .hant, roman: "tsia̍h", hanji: "食"),
+            makeCandidate(consumedSpanEnd: 6, displayText: "食", mode: .hant, roman: "tsia̍h8", hanji: "食"),
+        ]
+        let hanjiResult = service.buildContinuousSuggestions(from: hanji, splitCombinedCells: true)
+        XCTAssertEqual(hanjiResult.map(\.text), ["食", "tsia̍h", "tsia̍h8"], "one 食 cell; the second roman still differs")
+    }
+
+    /// 重/tîng and 重/tāng are two words (Core Principle #7) but draw the SAME
+    /// 漢字 cell, so 濫 lists 重 once and keeps both roman cells — the losing
+    /// reading stays reachable through its own romanization.
+    func testCombined_SameHanjiTwoReadings_IsOneHanjiCellTwoRomanCells() {
+        let candidates = [
+            makeCandidate(consumedSpanEnd: 5, displayText: "重", mode: .hant, roman: "tîng", hanji: "重", canonicalTl: "tîng"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "重", mode: .hant, roman: "tāng", hanji: "重", canonicalTl: "tāng"),
+        ]
+        let result = service.buildContinuousSuggestions(
+            from: candidates,
+            splitCombinedCells: true,
+        )
+        XCTAssertEqual(result.map(\.text), ["重", "tîng", "tāng"])
+        XCTAssertEqual(result[0].additionalInfo["canonicalTl"], "tîng", "surviving 漢字 cell is the first-seen reading")
+        XCTAssertEqual(result[2].additionalInfo["canonicalTl"], "tāng", "the losing reading keeps its own roman cell")
+        XCTAssertEqual(result[2].additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.roman)
     }
 
     /// Split OFF (並排 / 羅馬字 / TPS all resolve to `splitCombinedCells =

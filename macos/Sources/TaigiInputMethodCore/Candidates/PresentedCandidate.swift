@@ -25,10 +25,18 @@ struct PresentedCandidate: Equatable, Sendable {
 
     /// The window's list for `candidates`, under ONE settings snapshot — the
     /// same rules the commit reads. 並排/羅馬字: one `.primary` cell per
-    /// candidate, exactly `CandidateCellContent.cell`. 合用: a Hanji candidate
-    /// is `[漢字 (.primary), 羅馬字 (.alternate)]` under the mode's forced
-    /// swap; romanization cells dedupe by `(text, consumed span)` — a duplicate
-    /// would commit what the first does — Hanji cells never (Core Principle #7).
+    /// candidate, exactly `CandidateCellContent.cell`. 漢羅濫: a Hanji candidate
+    /// is `[漢字 (.primary), 羅馬字 (.alternate)]` under the mode's forced swap.
+    ///
+    /// Both scripts dedupe on the TEXT THE CELL SHOWS, first-seen wins: a
+    /// one-script cell carries nothing that could tell it from an earlier cell
+    /// reading the same, so a second one is a defect, not a second offer
+    /// (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」). The two scripts keep
+    /// separate keys — a 漢字 cell never collides with a 羅馬字 one. Hanji cells
+    /// were exempt until 2026-09-03 on Core Principle #7 grounds: 重/tîng and
+    /// 重/tāng ARE two words, but under 漢羅濫 they draw two identical 重 cells,
+    /// and the losing reading stays reachable through its own romanization
+    /// cell. 漢羅並排 is untouched — its subtitle tells the pair apart.
     static func presentation(
         of candidates: [ContinuousCandidate],
         settings: EngineSettings,
@@ -44,17 +52,18 @@ struct PresentedCandidate: Equatable, Sendable {
         }
 
         var presented: [PresentedCandidate] = []
-        var presentedRomanCells = Set<RomanCellKey>()
+        var presentedHanjiCells = Set<String>()
+        var presentedRomanCells = Set<String>()
         for (index, candidate) in candidates.enumerated() {
             let hanji = candidate.presentableHanji
-            if let hanji {
+            if let hanji, presentedHanjiCells.insert(hanji).inserted {
                 presented.append(PresentedCandidate(
                     candidateIndex: index,
                     script: .primary,
                     cell: CandidateCellContent(text: hanji, annotation: nil),
                 ))
             }
-            guard presentedRomanCells.insert(RomanCellKey(candidate)).inserted else { continue }
+            guard presentedRomanCells.insert(candidate.roman).inserted else { continue }
             presented.append(PresentedCandidate(
                 candidateIndex: index,
                 script: hanji == nil ? .primary : .alternate,
@@ -62,20 +71,5 @@ struct PresentedCandidate: Equatable, Sendable {
             ))
         }
         return presented
-    }
-
-    /// What makes two romanization cells the same offer: the same text for the
-    /// same stretch of the buffer. The span matters because `tâi` consuming
-    /// three bytes and `tâi` consuming five are different commits.
-    private struct RomanCellKey: Hashable {
-        let text: String
-        let consumedSpanStart: UInt32
-        let consumedSpanEnd: UInt32
-
-        init(_ candidate: ContinuousCandidate) {
-            text = candidate.roman
-            consumedSpanStart = candidate.consumedSpanStart
-            consumedSpanEnd = candidate.consumedSpanEnd
-        }
     }
 }

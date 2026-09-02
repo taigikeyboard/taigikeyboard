@@ -2,11 +2,19 @@
 //! `INVARIANT_ROMAN_ONLY_CELLS_COLLAPSE_SAME_ROMAN`). Roman-only cells hide
 //! the hanji, so rows that differ only in hanji — 同音異字 `食/tsia̍h` +
 //! `𤆬/tsia̍h`, and the §34 literal `tsiah` beside dict `隻/tsiah` — are
-//! visible duplicates. `composing::dispatch` collapses them by
-//! `(rendered roman, consumed_span)` AFTER the literal prepend; first-seen
-//! wins (top-ranked sorted row, or the literal). Side-by-side (explicit,
-//! proto default `0`, or an unknown value) keeps every row; TPS ignores the
-//! setting.
+//! visible duplicates. `composing::dispatch` collapses them by the RENDERED
+//! ROMAN alone AFTER the literal prepend; first-seen wins (top-ranked sorted
+//! row, or the literal). Side-by-side (explicit, proto default `0`, or an
+//! unknown value) keeps every row; TPS ignores the setting.
+//!
+//! The consumed span left the key on 2026-09-03 (§44). No fixture here can
+//! produce the case it used to separate — two rows rendering the SAME roman
+//! over DIFFERENT spans — because a row's toneless FST key is derived from
+//! its own reading, so equal romans mean equal keys and equal consumed
+//! slices; an attempt to install a hand-built row with a longer key and a
+//! shorter reading does not surface at all. The span-agnostic key is pinned
+//! on the helper instead
+//! (`composing::dispatch::tests::dedupe_display_roman_collapses_same_roman_across_spans`).
 //!
 //! Hermetic `LexiconHandle` install mirrors `tps_display_dedup.rs`.
 

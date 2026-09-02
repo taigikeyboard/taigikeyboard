@@ -137,18 +137,23 @@ internal fun shouldSplitCombinedCells(
  * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker saying what the cell shows
  * and commits. The roman cell KEEPS `hanzi` so `TaigiWord.displayText` and
  * the 詞頻 `(displayText, canonicalTl)` pair-key stay marker-independent.
- * Hanji-less candidates emit their roman cell alone. Roman cells that read
- * the same — same rendered roman, same consumed span — are listed once,
- * first-seen (fetched order) wins; 漢字 cells are never deduped. Every other
+ * Hanji-less candidates emit their roman cell alone.
+ *
+ * BOTH scripts dedupe on the TEXT THE CELL SHOWS, first-seen (fetched order)
+ * wins: a one-script cell carries nothing that could tell it from an earlier
+ * cell reading the same, so a second one is a defect, not a second offer
+ * (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」) — 重/tîng and 重/tāng draw
+ * ONE 重 cell and keep both roman cells. 漢字 cells were exempt until then on
+ * Core Principle #7 grounds. The two scripts keep separate keys. Every other
  * mode ([splitCombinedCells] `false`, the default) emits exactly the
- * pre-split shape.
+ * pre-split shape — 並排's subtitle tells 重/tîng from 重/tāng.
  */
 // 中文: Item 6 — roman 用 c.roman、hanzi 用 c.hanji,候選列 dual-line render;
 // 中文: Bug 1 後 DISPLAY_TEXT sidechannel = canonical key,走 canonicalText
 // 中文: (freq/NextWord);文件 commit 字串由 roman/hanzi 經 legacy formatter 產生。
 // 中文: §42 漢羅濫 — 有漢字的候選拆成相鄰的 漢字 cell + 羅馬字 cell(各帶
-// 中文: CELL_SCRIPT 標記,sidechannel 原樣複製兩份);羅馬字 cell 以
-// 中文: (roman, consumedBytes) 去重、先到先贏;漢字 cell 永不去重。
+// 中文: CELL_SCRIPT 標記,sidechannel 原樣複製兩份);兩種 script 各自以
+// 中文: 「格子上顯示的文字」去重、先到先贏。
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
 // and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label 濫 cell).
 internal fun buildContinuousSuggestionsForCandidates(
@@ -167,13 +172,14 @@ internal fun buildContinuousSuggestionsForCandidates(
     }
 
     val result = ArrayList<TaigiWord>(candidates.size * 2)
-    // Roman-cell dedupe key: (rendered roman, consumed span end). The §34
-    // literal, being hanji-less and fetched first, absorbs a later
-    // same-span roman (e.g. 台's `tâi`); 食/𤆬 share one `tsia̍h` cell.
-    val seenRomanCells = HashSet<Pair<String, Int>>()
+    // Dedupe keys = the text each cell shows. The §34 literal, being
+    // hanji-less and fetched first, absorbs a later same roman (e.g. 台's
+    // `tâi`); 食/𤆬 share one `tsia̍h` cell; 重/tîng and 重/tāng share one 重.
+    val seenHanjiCells = HashSet<String>()
+    val seenRomanCells = HashSet<String>()
     for (candidate in candidates) {
         val hanzi = candidate.hanji?.takeIf { it.isNotEmpty() }
-        if (hanzi != null) {
+        if (hanzi != null && seenHanjiCells.add(hanzi)) {
             result += continuousWord(
                 id = result.size + 1,
                 candidate = candidate,
@@ -181,7 +187,7 @@ internal fun buildContinuousSuggestionsForCandidates(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
             )
         }
-        if (seenRomanCells.add(candidate.roman to candidate.consumedSpanEnd)) {
+        if (seenRomanCells.add(candidate.roman)) {
             // The roman cell keeps its candidate's hanji: displayText and
             // the 詞頻 pair-key must not move (§42 — identity is shared,
             // only the marker decides the shown/committed script).

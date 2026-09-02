@@ -311,16 +311,22 @@ fn handle_fetch_at_pos(
     )
 }
 
-/// 羅馬字-mode display dedupe (§44) — key `(rendered roman, consumed_span)`,
+/// 羅馬字-mode display dedupe (§44) — key = the **rendered roman alone**,
 /// first-seen wins (top-ranked sorted row, or the §34 literal when it is in
-/// the group). The span is part of the key on purpose: the same romanization
-/// consuming a different slice of the buffer (partial-prefix row vs
-/// full-buffer row) is a different action, not a duplicate. Mirror of
-/// `continuous::dedupe_display_hanji_for_tps` for the other script; keys on
-/// the roman the user actually sees — the POJ presentation pass already ran.
-// 中文: (roman, consumed_span) 去重;span 入鍵避免誤併 partial-prefix 候選;鍵是已渲染的 roman。
+/// the group). Mirror of `continuous::dedupe_display_hanji_for_tps` for the
+/// other script; keys on the roman the user actually sees — the POJ
+/// presentation pass already ran.
+///
+/// The consumed span was part of the key until 2026-09-03, on the reasoning
+/// that a partial-prefix row and a full-buffer row are different actions.
+/// They are — but under a single-script display they render as the same
+/// string, so the user has no way to tell which cell commits which slice and
+/// the second cell reads as a defect (USER: 「相同的漢字 or 羅馬字不能重複出現」).
+/// A cell that reads exactly like an earlier one is never listed.
+// 中文: 以「畫面上的 roman」為唯一鍵去重;2026-09-03 拿掉 span —— 單腳本顯示時
+// 中文:   同字串的兩格使用者分不出差別,重複格即缺陷。
 fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
-    retain_first_by_key(candidates, |c| Some((c.roman.clone(), c.consumed_span)));
+    retain_first_by_key(candidates, |c| Some(c.roman.clone()));
 }
 
 /// Build the literal-roman candidate for 漢羅 fast input
@@ -615,6 +621,48 @@ mod tests {
         assert_eq!(proto.roman, "tāi");
         assert!(proto.hanji.is_none());
         assert_eq!(proto.display_text, "tāi");
+    }
+
+    /// §44 羅馬字 display dedupe keys on the rendered roman ALONE: two rows
+    /// reading `tâi` collapse even when they consume different slices of the
+    /// buffer, because a single-script cell shows the user nothing that tells
+    /// the two apart (USER 2026-09-03). First-seen — the top-ranked row, or
+    /// the §34 literal — wins; a different roman is never touched.
+    // 中文: 同 roman 不同 span 也要收成一格;先到先贏,不同 roman 不動。
+    #[test]
+    fn dedupe_display_roman_collapses_same_roman_across_spans() {
+        fn row(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
+            RawCandidate {
+                consumed_span: span,
+                syllable_count: 1,
+                display_text: hanji.unwrap_or(roman).to_owned(),
+                roman: roman.to_owned(),
+                hanji: hanji.map(str::to_owned),
+                canonical_tl: roman.to_owned(),
+                score: 1.0,
+                form: FORM_NOTONE,
+                frequency: 1,
+                bitmask: 0,
+                mode: lexicon::CandidateMode::Hant,
+                recency_rank: 1,
+                coverage_kind: lexicon::COVERAGE_KIND_FULL,
+                is_custom: false,
+            }
+        }
+        let mut candidates = vec![
+            row("tâi", None, (0, 4)),
+            row("tâi", Some("台"), (0, 4)),
+            row("tâi", Some("臺"), (0, 3)),
+            row("tâi-gí", Some("台語"), (0, 6)),
+        ];
+        dedupe_display_roman(&mut candidates);
+        assert_eq!(
+            candidates
+                .iter()
+                .map(|c| (c.roman.as_str(), c.hanji.as_deref()))
+                .collect::<Vec<_>>(),
+            vec![("tâi", None), ("tâi-gí", Some("台語"))],
+        );
     }
 
     // ----- INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34) -----

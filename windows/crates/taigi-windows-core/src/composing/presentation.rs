@@ -24,11 +24,17 @@ pub struct PresentedCandidate {
 }
 
 /// The cells for `candidates` under `settings`, in display order: one
-/// `Primary` cell per candidate, except 合用 splits a hanji-bearing
-/// candidate into a hanji cell then an `Alternate` roman cell. A roman cell
-/// whose `(text, consumed span)` was already presented is skipped; hanji
-/// cells are never deduped — 重 tîng / 重 tāng both stay, adjacency
-/// disambiguates.
+/// `Primary` cell per candidate, except 漢羅濫 splits a hanji-bearing
+/// candidate into a hanji cell then an `Alternate` roman cell.
+///
+/// Both scripts dedupe on the TEXT THE CELL SHOWS, first-seen wins: a
+/// one-script cell carries nothing that could tell it from an earlier cell
+/// reading the same, so a second one is a defect, not a second offer
+/// (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」). The scripts keep separate
+/// keys. Hanji cells were exempt until 2026-09-03 on Core Principle #7
+/// grounds: 重 tîng / 重 tāng ARE two words, but under 漢羅濫 they draw two
+/// identical 重 cells, and the losing reading stays reachable through its own
+/// roman cell. 漢羅並排 is untouched — its annotation tells the pair apart.
 pub(crate) fn presentation(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
@@ -45,21 +51,20 @@ pub(crate) fn presentation(
             .collect();
     }
     let mut presented = Vec::with_capacity(candidates.len() * 2);
-    let mut seen_roman: HashSet<(&str, u32, u32)> = HashSet::new();
+    let mut seen_hanji: HashSet<&str> = HashSet::new();
+    let mut seen_roman: HashSet<&str> = HashSet::new();
     for (candidate_index, candidate) in candidates.iter().enumerate() {
         let hanji = candidate.nonempty_hanji();
         if let Some(hanji) = hanji {
-            presented.push(PresentedCandidate {
-                candidate_index,
-                script: CandidateScript::Primary,
-                cell: CandidateCellContent::new(hanji, None),
-            });
+            if seen_hanji.insert(hanji) {
+                presented.push(PresentedCandidate {
+                    candidate_index,
+                    script: CandidateScript::Primary,
+                    cell: CandidateCellContent::new(hanji, None),
+                });
+            }
         }
-        let roman_is_new = seen_roman.insert((
-            candidate.roman.as_str(),
-            candidate.consumed_span_start,
-            candidate.consumed_span_end,
-        ));
+        let roman_is_new = seen_roman.insert(candidate.roman.as_str());
         if roman_is_new {
             presented.push(PresentedCandidate {
                 candidate_index,
@@ -206,10 +211,11 @@ mod tests {
     }
 
     #[test]
-    fn combined_dedupes_roman_cells_by_text_and_span_but_never_hanji_cells() {
+    fn combined_dedupes_both_scripts_on_the_text_the_cell_shows() {
         // trace: literal tâi (slot 0, hanji-less) absorbs 台's roman; 重 tîng /
-        // 重 tāng both keep their hanji cell; the same roman over a DIFFERENT
-        // span is a different cell.
+        // 重 tāng draw ONE 重 cell (first-seen) and keep both roman cells; 食 /
+        // 𤆬 keep both hanji cells and share one tsia̍h; the repeated 食 over a
+        // different span adds nothing — a cell reading the same is not listed.
         let list = [
             candidate("tâi", None, 3),
             candidate("tâi", Some("台"), 3),
@@ -227,13 +233,10 @@ mod tests {
                 (1, CandidateScript::Primary, "台"),
                 (2, CandidateScript::Primary, "重"),
                 (2, CandidateScript::Alternate, "tîng"),
-                (3, CandidateScript::Primary, "重"),
                 (3, CandidateScript::Alternate, "tāng"),
                 (4, CandidateScript::Primary, "食"),
                 (4, CandidateScript::Alternate, "tsia̍h"),
                 (5, CandidateScript::Primary, "𤆬"),
-                (6, CandidateScript::Primary, "食"),
-                (6, CandidateScript::Alternate, "tsia̍h"),
             ]
         );
     }

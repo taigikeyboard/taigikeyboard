@@ -221,11 +221,18 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// `additionalInfo["cellScript"]` marker ("hanji" | "roman") says what the
     /// cell shows and commits; the SEMANTIC sidechannels (`displayText`,
     /// `canonicalTl`, spans) are copied verbatim onto BOTH cells so 詞頻 /
-    /// NextWord identity never moves. Roman cells are deduped on
-    /// `(c.roman, consumedBytes)` in fetched order — first seen wins (the §34
-    /// literal absorbs 台's roman; 食/𤆬 share one `tsia̍h`); 漢字 cells are
-    /// never deduped. Split OFF (the default — 並排 / 羅馬字 / TPS all resolve
-    /// to `false` at the caller) emits the un-split shape byte-identically.
+    /// NextWord identity never moves.
+    ///
+    /// BOTH scripts dedupe on the TEXT THE CELL SHOWS, in fetched order,
+    /// first-seen wins (the §34 literal absorbs 台's roman; 食/𤆬 share one
+    /// `tsia̍h`; 重/tîng and 重/tāng draw ONE 重 cell and keep both roman
+    /// cells). A one-script cell carries nothing that could tell it from an
+    /// earlier cell reading the same, so a second one is a defect, not a
+    /// second offer (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」); 漢字
+    /// cells were exempt until then on Core Principle #7 grounds. The two
+    /// scripts keep separate keys. Split OFF (the default — 並排 / 羅馬字 / TPS
+    /// all resolve to `false` at the caller) emits the un-split shape
+    /// byte-identically — 並排's subtitle tells 重/tîng from 重/tāng.
     // 中文: text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
     // 中文: Bug 1 後 displayText sidechannel = canonical key,走 canonicalText
     // 中文: (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
@@ -241,15 +248,16 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
 
         // CROSS-PLATFORM INVARIANT — mirrors the desktop split (§42 second
         // exception, #666) and Android buildContinuousSuggestionsForCandidates:
-        // hanji cell before its roman cell; roman-cell dedupe key = (rendered
-        // roman, consumed span), first-seen wins. Drift causes silent divergence
-        // (cell order or dedupe survivor differs on one platform).
+        // hanji cell before its roman cell; each script deduped on the rendered
+        // cell text, first-seen wins. Drift causes silent divergence (cell order
+        // or dedupe survivor differs on one platform).
         var suggestions: [AutocompleteSuggestion] = []
-        var seenRomanCells = Set<RomanCellKey>()
+        var seenHanjiCells = Set<String>()
+        var seenRomanCells = Set<String>()
         for c in candidates {
             let sidechannels = continuousSidechannels(for: c)
             let hanji = (c.hanji?.isEmpty == false) ? c.hanji : nil
-            if let hanji {
+            if let hanji, seenHanjiCells.insert(hanji).inserted {
                 var hanjiInfo = sidechannels
                 hanjiInfo[CandidateCellScript.infoKey] = CandidateCellScript.hanji
                 // Bracket form carrier: 括號標註 ON commits `漢字 (羅馬字)`.
@@ -261,8 +269,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
                     additionalInfo: hanjiInfo,
                 ))
             }
-            let romanKey = RomanCellKey(roman: c.roman, consumedBytes: c.consumedSpanEnd)
-            guard seenRomanCells.insert(romanKey).inserted else { continue }
+            guard seenRomanCells.insert(c.roman).inserted else { continue }
             var romanInfo = sidechannels
             romanInfo[CandidateCellScript.infoKey] = CandidateCellScript.roman
             suggestions.append(AutocompleteSuggestion(
@@ -273,13 +280,6 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
             ))
         }
         return suggestions
-    }
-
-    /// 濫 roman-cell dedupe key: same rendered roman over the same consumed
-    /// span reads identically, so only the first (fetched order) is listed.
-    private struct RomanCellKey: Hashable {
-        let roman: String
-        let consumedBytes: UInt32
     }
 
     /// The un-split dual-script suggestion every non-濫 mode emits (today's shape).

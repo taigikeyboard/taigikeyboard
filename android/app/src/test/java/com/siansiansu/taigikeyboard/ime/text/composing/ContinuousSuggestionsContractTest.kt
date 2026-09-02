@@ -513,7 +513,7 @@ class ContinuousSuggestionsContractTest {
     }
 
     @Test
-    fun `S27 combined split - roman cells dedupe by roman and consumed span, first seen wins`() {
+    fun `S27 combined split - roman cells dedupe by the shown roman, first seen wins`() {
         // The §34 literal (hanji-less, fetched first HERE — the seen-set does
         // not assume it) absorbs 台's and 臺's roman cells: one `tâi` cell,
         // sidechannels from the FETCHED-ORDER winner.
@@ -536,10 +536,12 @@ class ContinuousSuggestionsContractTest {
     }
 
     @Test
-    fun `S27 combined split - hanji cells never dedupe, different span keeps its roman cell`() {
-        // 一字多音 adjacency (#7): 重/tîng and 重/tāng both keep their 漢字
-        // cells; their romans differ so both roman cells stay. The same roman
-        // at a DIFFERENT consumed span is a different word — not deduped.
+    fun `S27 combined split - one hanji cell per shown 漢字, both readings keep their roman cell`() {
+        // 一字多音 (#7): 重/tîng and 重/tāng are two words but draw the SAME
+        // 漢字 cell, so 濫 lists 重 once (first-seen reading) and keeps both
+        // roman cells — the losing reading stays reachable through its own
+        // romanization. A repeat at a different consumed span reads the same
+        // on screen, so it adds nothing (USER 2026-09-03).
         val candidates = listOf(
             cand(consumedSpanEnd = 5, displayText = "重", roman = "tîng", hanji = "重", canonicalTl = "tîng"),
             cand(consumedSpanEnd = 5, displayText = "重", roman = "tāng", hanji = "重", canonicalTl = "tāng"),
@@ -547,15 +549,18 @@ class ContinuousSuggestionsContractTest {
         )
         val result = buildContinuousSuggestionsForCandidates(candidates, splitCombinedCells = true)
 
-        assertEquals(6, result.size)
-        val hanjiCells = result.filter {
-            it.additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_HANJI
-        }
-        assertEquals("漢字 cells never dedupe", 3, hanjiCells.size)
-        val romanCells = result.filter {
-            it.additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_ROMAN
-        }
-        assertEquals("(roman, span) keys tîng@5 / tāng@5 / tîng@9 all distinct", 3, romanCells.size)
+        assertEquals(3, result.size)
+        assertEquals(
+            listOf(
+                MetadataKeys.CELL_SCRIPT_HANJI,
+                MetadataKeys.CELL_SCRIPT_ROMAN,
+                MetadataKeys.CELL_SCRIPT_ROMAN,
+            ),
+            result.map { it.additionalInfo[MetadataKeys.CELL_SCRIPT] },
+        )
+        assertEquals("重", result[0].hanzi)
+        assertEquals("surviving 漢字 cell is the first-seen reading", "tîng", result[0].additionalInfo[MetadataKeys.CANONICAL_TL])
+        assertEquals("the losing reading keeps its own roman cell", listOf("tîng", "tāng"), result.drop(1).map { it.roman })
     }
 
     @Test
