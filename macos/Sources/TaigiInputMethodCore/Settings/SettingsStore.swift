@@ -58,10 +58,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "candidateDisplayMode",
             defaultValue: EngineSettings.defaults.candidateDisplayMode,
         )
-        static let isLiteralRomanCandidateEnabled = SettingsKey(
-            name: "literalRomanCandidateEnabled",
-            defaultValue: EngineSettings.defaults.isLiteralRomanCandidateEnabled,
-        )
         static let isFrequencyRecordingEnabled = SettingsKey(
             name: "frequencyRecordingEnabled",
             defaultValue: EngineSettings.defaults.isFrequencyRecordingEnabled,
@@ -326,7 +322,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             isTranslateSwapped: displayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped),
             isOutputBothScripts: displayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts),
             candidateDisplayMode: displayMode,
-            isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
             isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
@@ -592,11 +587,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var storedIsOutputBothScripts: Bool {
         get { bool(Keys.isOutputBothScripts) }
         set { userDefaults.set(newValue, forKey: Keys.isOutputBothScripts.name) }
-    }
-
-    var isLiteralRomanCandidateEnabled: Bool {
-        get { bool(Keys.isLiteralRomanCandidateEnabled) }
-        set { userDefaults.set(newValue, forKey: Keys.isLiteralRomanCandidateEnabled.name) }
     }
 
     /// Whether committing a word auto-inserts a trailing space. Read by the

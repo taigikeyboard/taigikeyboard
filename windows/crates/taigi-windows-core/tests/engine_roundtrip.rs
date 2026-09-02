@@ -180,30 +180,29 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
     engine::reset(generation);
 }
 
+/// §34 on the desktop has no setting: the bridge pins the disable flag open,
+/// so with TL/POJ text composed the preedit literal leads the list under the
+/// shipped defaults (USER 2026-09-02). Mobile gates the same row behind
+/// 顯示羅馬字. What a commit of that slot writes is `composing_manager.rs`'s
+/// `enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode`.
 #[test]
-fn literal_roman_candidate_is_gated_by_the_inverted_flag() {
+fn literal_roman_candidate_always_leads_on_the_desktop() {
     let _engine = engine();
     let generation = fresh_generation();
-    let enabled = EngineSettings {
-        is_literal_roman_candidate_enabled: true,
-        ..EngineSettings::default()
-    };
-    compose("tai", &enabled, generation);
-    let with_literal = engine::fetch_at_pos(&enabled, generation, &FetchArgs::default())
+    let settings = EngineSettings::default();
+    compose("tai", &settings, generation);
+    let candidates = engine::fetch_at_pos(&settings, generation, &FetchArgs::default())
         .expect("fetch")
         .candidates
         .expect("continuous");
     assert_eq!(
-        with_literal[0].display_text, "tai",
+        candidates[0].display_text, "tai",
         "§34: the preedit literal leads the list"
     );
-
-    let disabled = EngineSettings::default();
-    let without = engine::fetch_at_pos(&disabled, generation, &FetchArgs::default())
-        .expect("fetch")
-        .candidates
-        .expect("continuous");
-    assert_ne!(without[0].display_text, "tai");
+    assert!(
+        candidates[0].hanji.is_none(),
+        "the literal carries one script — a commit writes the romanization"
+    );
     engine::reset(generation);
 }
 

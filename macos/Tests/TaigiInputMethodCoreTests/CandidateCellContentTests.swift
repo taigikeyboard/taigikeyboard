@@ -32,7 +32,6 @@ final class CandidateCellContentTests: XCTestCase {
             isTranslateSwapped: swapped,
             isOutputBothScripts: bothScripts,
             candidateDisplayMode: displayMode,
-            isLiteralRomanCandidateEnabled: defaults.isLiteralRomanCandidateEnabled,
             isFrequencyRecordingEnabled: defaults.isFrequencyRecordingEnabled,
             isAssociationRecordingEnabled: defaults.isAssociationRecordingEnabled,
             isCustomDictEnabled: defaults.isCustomDictEnabled,

@@ -366,8 +366,12 @@ final class ComposingManagerLearningTests: XCTestCase {
         _ romanization: String = "taigi",
     ) throws -> ContinuousCandidate {
         let candidates = try compose(romanization, manager, executing: executor)
+        // Two scripts, so `.alternate` has something to write: §34 puts the
+        // one-script literal first on the desktop, and it declines the flip.
         return try XCTUnwrap(
-            candidates.first { $0.consumedSpanEnd >= UInt32(manager.rawInput.utf8.count) },
+            candidates.first {
+                $0.hanji != nil && $0.consumedSpanEnd >= UInt32(manager.rawInput.utf8.count)
+            },
             "no candidate consumes the whole buffer, so nothing here would be a final commit",
         )
     }

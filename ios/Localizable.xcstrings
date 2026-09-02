@@ -3476,7 +3476,7 @@
       }
     },
     "i18n_settings_literalRomanCandidate": {
-      "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip.",
+      "comment": "Toggle label: show the typed/literal romanization as the first candidate in the strip. Mobile only — the desktop shows it unconditionally (§34).",
       "extractionState": "manual",
       "localizations": {
         "en": {

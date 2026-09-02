@@ -36,7 +36,6 @@ const fn engine_defaults() -> EngineSettings {
         is_translate_swapped: false,
         is_output_both_scripts: false,
         candidate_display_mode: CandidateDisplayMode::SideBySide,
-        is_literal_roman_candidate_enabled: false,
         is_frequency_recording_enabled: true,
         is_association_recording_enabled: true,
         is_custom_dict_enabled: true,
@@ -86,10 +85,6 @@ pub const IS_OUTPUT_BOTH_SCRIPTS: SettingsKey<bool> =
 pub const CANDIDATE_DISPLAY_MODE: SettingsKey<CandidateDisplayMode> = SettingsKey::new(
     "candidateDisplayMode",
     ENGINE_DEFAULTS.candidate_display_mode,
-);
-pub const IS_LITERAL_ROMAN_CANDIDATE_ENABLED: SettingsKey<bool> = SettingsKey::new(
-    "literalRomanCandidateEnabled",
-    ENGINE_DEFAULTS.is_literal_roman_candidate_enabled,
 );
 pub const IS_FREQUENCY_RECORDING_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "frequencyRecordingEnabled",

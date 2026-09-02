@@ -214,8 +214,6 @@ impl SettingsDocument {
             is_output_both_scripts: candidate_display_mode
                 .effective_output_both_scripts(self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS)),
             candidate_display_mode,
-            is_literal_roman_candidate_enabled: self
-                .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
             is_association_recording_enabled: self.bool(&keys::IS_ASSOCIATION_RECORDING_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),

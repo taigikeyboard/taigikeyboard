@@ -19,6 +19,7 @@ final class AutoSpaceControllerTests: XCTestCase {
 
     func testCommittingACandidate_appendsTheTrailingSpace() throws {
         let session = try composedSession()
+        try session.walkToFirstTwoScriptCell()
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
 
@@ -45,6 +46,7 @@ final class AutoSpaceControllerTests: XCTestCase {
 
     func testSwappedMode_disablesTheSpace() throws {
         let session = try composedSession(configure: { $0.storedIsTranslateSwapped = true })
+        try session.walkToFirstTwoScriptCell()
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
 
@@ -52,8 +54,28 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertNotEqual(session.client.insertedTexts.last, " ")
     }
 
+    /// ⚠ Characterization, not a spec (§34 desktop policy, Codex pre-impl
+    /// 2026-09-02): Return on a fresh bar commits the one-script literal — a
+    /// romanization — which roman-first mode spaces, yet 漢字 mode does NOT
+    /// today: `AutoSpacePolicy` reads the cell's script through the swap and
+    /// the literal is presented `.primary`. Pinned so a later fix reads as a
+    /// deliberate change rather than a regression.
+    func testReturnOnTheLiteral_isSpacedRomanFirst_butNotUnderTheSwapToday() throws {
+        for swapped in [false, true] {
+            let session = try composedSession(configure: { $0.storedIsTranslateSwapped = swapped })
+
+            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+
+            XCTAssertEqual(
+                session.client.insertedTexts, swapped ? [Self.composition] : [Self.composition, " "],
+                "swapped=\(swapped)",
+            )
+        }
+    }
+
     func testTheToggleOff_disablesTheSpace() throws {
         let session = try composedSession(configure: { $0.isAutoSpaceEnabled = false })
+        try session.walkToFirstTwoScriptCell()
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
 
@@ -238,13 +260,14 @@ final class AutoSpaceControllerTests: XCTestCase {
             $0.isAutoSpaceEnabled = true
             $0.storedIsTranslateSwapped = true
         }
+        let cell = try session.walkToFirstTwoScriptCell()
         session.client.clearWrites()
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
 
-        XCTAssertEqual(session.client.insertedTexts.last, " ")
+        XCTAssertEqual(session.client.insertedTexts, [cell.annotation, " "], "the romanization, spaced")
     }
 
     /// And the other direction takes none: a hanji written while the settings
@@ -254,13 +277,14 @@ final class AutoSpaceControllerTests: XCTestCase {
             $0.isAutoSpaceEnabled = true
             $0.storedIsTranslateSwapped = false
         }
+        let cell = try session.walkToFirstTwoScriptCell()
         session.client.clearWrites()
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
 
-        XCTAssertFalse(session.client.insertedTexts.contains(" "))
+        XCTAssertEqual(session.client.insertedTexts, [cell.annotation], "the hanji, unspaced")
     }
 
     /// The toggle still outranks everything: OFF means no space from the 漢羅
@@ -270,13 +294,14 @@ final class AutoSpaceControllerTests: XCTestCase {
             $0.isAutoSpaceEnabled = false
             $0.storedIsTranslateSwapped = true
         }
+        let cell = try session.walkToFirstTwoScriptCell()
         session.client.clearWrites()
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
 
-        XCTAssertFalse(session.client.insertedTexts.contains(" "))
+        XCTAssertEqual(session.client.insertedTexts, [cell.annotation], "the romanization, unspaced")
     }
 
     /// The punctuation swap has to follow it. The space the 漢羅 key wrote is
@@ -291,6 +316,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         }
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        try session.walkToFirstTwoScriptCell()
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
@@ -317,6 +343,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         }
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        try session.walkToFirstTwoScriptCell()
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
@@ -343,6 +370,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         }
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        try session.walkToFirstTwoScriptCell()
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
@@ -371,13 +399,16 @@ final class AutoSpaceControllerTests: XCTestCase {
                 $0.candidateDisplayMode = .combined
             }
             let cells = try XCTUnwrap(session.presenter.shownContent).cells
+            // §34's literal leads; the Hanji cell is one along, its
+            // romanization right after (S27).
+            try session.walk(cells: 1)
             session.client.clearWrites()
 
             _ = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: " "), client: session.client,
             )
 
-            XCTAssertEqual(session.client.insertedTexts, [cells[1].text, " "])
+            XCTAssertEqual(session.client.insertedTexts, [cells[2].text, " "])
         }
     }
 
@@ -390,16 +421,15 @@ final class AutoSpaceControllerTests: XCTestCase {
                 $0.candidateDisplayMode = .combined
             }
             let cells = try XCTUnwrap(session.presenter.shownContent).cells
-            // ⇥ walks one cell along: onto the romanization cell.
-            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\t"), client: session.client)
-            XCTAssertEqual(session.presenter.selectedIndex, 1)
+            // Past §34's literal and the Hanji cell: onto the romanization cell.
+            try session.walk(cells: 2)
             session.client.clearWrites()
 
             _ = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: " "), client: session.client,
             )
 
-            XCTAssertEqual(session.client.insertedTexts, [cells[0].text])
+            XCTAssertEqual(session.client.insertedTexts, [cells[1].text])
         }
     }
 
@@ -412,20 +442,21 @@ final class AutoSpaceControllerTests: XCTestCase {
                 $0.candidateDisplayMode = .combined
             }
             let cells = try XCTUnwrap(session.presenter.shownContent).cells
-            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\t"), client: session.client)
+            try session.walk(cells: 2)
             session.client.clearWrites()
 
             _ = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: "\r"), client: session.client,
             )
 
-            XCTAssertEqual(session.client.insertedTexts, [cells[1].text, " "])
+            XCTAssertEqual(session.client.insertedTexts, [cells[2].text, " "])
         }
     }
 
     // MARK: - Helpers
 
-    private struct Session {
+
+    private struct Session: CandidateBarSession {
         let controller: TaigiInputController
         let client: RecordingTextInputClient
         let store: SettingsStore

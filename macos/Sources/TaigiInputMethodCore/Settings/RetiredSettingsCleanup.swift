@@ -9,11 +9,11 @@ import KeyboardShortcuts
 /// is free, and re-clearing also catches a manual `defaults write` that would
 /// otherwise resurrect hidden state.
 ///
-/// The engine still reads the four recording/output settings keys — they are
+/// The engine still reads three recording/output settings keys — they are
 /// cross-platform contract, and the composing carrier encodes them either way —
 /// so a value stored by a build that HAD the toggle would silently outlive the
 /// UI that set it. Removing the stored values returns each to its default:
-/// 括號標注 and 顯示羅馬字候選 back off, 詞頻紀錄 and 詞關聯紀錄 back on.
+/// 括號標注 back off, 詞頻紀錄 and 詞關聯紀錄 back on.
 @MainActor
 enum RetiredSettingsCleanup {
     /// Raw `KeyboardShortcuts.Name`s of the retired hotkey actions, kept so a
@@ -85,6 +85,11 @@ enum RetiredSettingsCleanup {
         // its type, `CandidateAccentColor` and `CandidateWindowStyle`.
         "candidateAccentColor",
         "candidateWindowStyle",
+        // 顯示羅馬字候選. Its pane row went in #558; the setting itself went
+        // when the desktop made the §34 literal candidate always-on (USER
+        // 2026-09-02) — nothing reads the key any more, so this is hygiene
+        // only. Mobile keeps the toggle under the same name.
+        "literalRomanCandidateEnabled",
         // 全形標點 and Shift 切換英數, retired 2026-08-24. 全形標點 is always
         // on now; the Shift toggle's whole feature went on 2026-08-26, when
         // this input method stopped having an English mode. Either way the
@@ -109,7 +114,6 @@ enum RetiredSettingsCleanup {
 
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        userDefaults.removeObject(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         // The 詞頻紀錄 / 詞關聯紀錄 toggles went with the panes that carried
         // them. Unlike the retired names below this changes BEHAVIOUR rather
         // than only tidying: `SettingsStore.current` still reads both keys, so
@@ -121,9 +125,9 @@ enum RetiredSettingsCleanup {
         // per launch rather than making the key unreachable — a deliberate
         // `defaults write` still takes effect for the rest of that session.
         // Closing that would mean not reading these from defaults at all, which
-        // is a wider change than this round: the two keys beside them
-        // (`isOutputBothScripts`, `isLiteralRomanCandidateEnabled`) are read
-        // live on purpose — see `CandidateDocumentText`.
+        // is a wider change than this round: the key beside them
+        // (`isOutputBothScripts`) is read live on purpose — see
+        // `CandidateDocumentText`.
         userDefaults.removeObject(forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
         userDefaults.removeObject(forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
         for name in retiredDefaultsNames {
