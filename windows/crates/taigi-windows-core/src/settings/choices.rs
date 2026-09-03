@@ -90,9 +90,12 @@ impl SettingChoice for AppearanceMode {
     }
 }
 
-/// How big the candidate text renders. The point sizes are the macOS ladder
-/// (`CandidateMetrics.swift:21-27`); medium is one step above the size the
-/// window originally rendered at (USER 2026-08-21).
+/// How big the candidate text renders. NAMED DIVERGENCE from the macOS ladder
+/// (`CandidateMetrics.swift:21-27`, `16 / 20 / 23`): every step of the Windows
+/// ladder is one notch tighter (USER 2026-09-03, real-Windows dogfood — all
+/// three steps read too big). The numbers are points on the Mac and DIPs here,
+/// so the same value lands larger against Windows chrome once the shell's own
+/// scaling is applied.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateTextSizeChoice {
     Small,
@@ -112,12 +115,11 @@ impl CandidateTextSizeChoice {
     }
 
     /// Candidate font size in points.
-    /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift:21-27`.
     pub fn font_size(self) -> f32 {
         match self {
-            Self::Small => 16.0,
-            Self::Medium => 20.0,
-            Self::Large => 23.0,
+            Self::Small => 13.0,
+            Self::Medium => 16.0,
+            Self::Large => 19.0,
         }
     }
 }
@@ -155,17 +157,18 @@ impl CandidateWindowSizeChoice {
     }
 
     /// NAMED DIVERGENCE from `macos/.../Candidates/CandidateMetrics.swift:42-48`
-    /// (USER 2026-09-01, first real-Windows dogfood): every step of the Windows
-    /// ladder is one notch tighter than the Mac's `0.7 / 0.85 / 1.0`. The point
-    /// values are read as DIPs here and as points on the Mac, so the same
-    /// number lands differently against the platform's own chrome; the window
-    /// carried too much air on Windows. The text ladder is untouched — this is
-    /// the chrome knob, and the two stay independent.
+    /// (USER 2026-09-01, first real-Windows dogfood; tightened again
+    /// 2026-09-03): every step of the Windows ladder sits well under the Mac's
+    /// `0.7 / 0.85 / 1.0`. The point values are read as DIPs here and as points
+    /// on the Mac, so the same number lands differently against the platform's
+    /// own chrome; the window carried too much air on Windows. This is the
+    /// chrome knob — it stays independent of the text ladder, which carries its
+    /// own divergence.
     pub fn scale(self) -> f32 {
         match self {
-            Self::Small => 0.6,
-            Self::Medium => 0.72,
-            Self::Large => 0.85,
+            Self::Small => 0.45,
+            Self::Medium => 0.55,
+            Self::Large => 0.65,
         }
     }
 }
@@ -369,24 +372,40 @@ mod tests {
     }
 
     #[test]
-    fn the_text_ladder_matches_macos_and_the_chrome_ladder_is_a_notch_tighter() {
-        // trace: CandidateMetricsTests.swift:55-58 pins [16, 20, 23] and
-        // [0.7, 0.85, 1.0]. The text ladder is shared; the chrome ladder is the
-        // named divergence (USER 2026-09-01) — each step one notch tighter, and
-        // the whole ladder still under the Mac's, never over it.
+    fn both_ladders_climb_and_sit_under_the_macos_ones() {
+        // trace: CandidateMetricsTests.swift:55-58 pins the Mac at [16, 20, 23]
+        // and [0.7, 0.85, 1.0]. Both Windows ladders are named divergences
+        // (chrome USER 2026-09-01, text USER 2026-09-03) — every step lands
+        // under the Mac's, never over it, and each ladder still climbs.
         let sizes: Vec<f32> = CandidateTextSizeChoice::ALL
             .iter()
             .map(|c| c.font_size())
             .collect();
-        assert_eq!(sizes, [16.0, 20.0, 23.0]);
+        assert_eq!(sizes, [13.0, 16.0, 19.0]);
         let scales: Vec<f32> = CandidateWindowSizeChoice::ALL
             .iter()
             .map(|c| c.scale())
             .collect();
-        assert_eq!(scales, [0.6, 0.72, 0.85]);
+        assert_eq!(scales, [0.45, 0.55, 0.65]);
+        for (windows, macos) in sizes.iter().zip([16.0, 20.0, 23.0]) {
+            assert!(
+                *windows < macos,
+                "text step {windows} must sit under {macos}"
+            );
+        }
+        for (windows, macos) in scales.iter().zip([0.7, 0.85, 1.0]) {
+            assert!(
+                *windows < macos,
+                "chrome step {windows} must sit under {macos}"
+            );
+        }
+        assert!(
+            sizes.windows(2).all(|pair| pair[0] < pair[1]),
+            "the text ladder still climbs"
+        );
         assert!(
             scales.windows(2).all(|pair| pair[0] < pair[1]),
-            "the ladder still climbs"
+            "the chrome ladder still climbs"
         );
     }
 

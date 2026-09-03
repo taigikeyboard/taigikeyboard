@@ -235,8 +235,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn dictionary_version_matches_the_macos_bundle_version_shape() {
-        assert_eq!(dictionary_version() % 100, 6);
-        assert!(dictionary_version() >= 30_606);
+    fn the_stamp_is_this_crate_version_in_the_macos_bundle_shape() {
+        // trace: 3.6.7 -> 3*10_000 + 6*100 + 7 = 30_607. Recomputed from the
+        // crate version, never pinned to a literal patch: the literal was `6`,
+        // so the 3.6.7 bump failed a test of the version number instead of the
+        // encoding (same trap already fixed in
+        // `dictionary_artifacts.rs::the_stamp_has_the_macos_bundle_version_shape`).
+        let mut parts = env!("CARGO_PKG_VERSION")
+            .split('.')
+            .map(|part| part.parse::<u32>().expect("version components are numeric"));
+        let (major, minor, patch) = (
+            parts.next().expect("major"),
+            parts.next().expect("minor"),
+            parts.next().expect("patch"),
+        );
+        assert_eq!(dictionary_version(), major * 10_000 + minor * 100 + patch);
+        assert!(
+            dictionary_version() >= 30_606,
+            "the stamp never goes back past the first shipped desktop version"
+        );
     }
 }
