@@ -367,16 +367,14 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         guard let language else { return "" }
         guard let rejection else { return language.string(.desktopShortcutUnbound) }
         switch rejection {
-        case .typesRomanization: return language.string(.desktopShortcutRejectedTypingKey)
-        case .reservedKey: return language.string(.desktopShortcutRejectedReservedKey)
         case .noKey: return language.string(.desktopShortcutRejectedNoKey)
-        case .candidateSlotChord: return language.string(.desktopShortcutRejectedSlotChord)
-        case .takenBySystem: return language.string(.desktopShortcutRejectedSystemShortcut)
-        // The same words a reserved key is refused with: to the reader both
-        // mean "not this key", and a press the Carbon registry cannot name is
-        // not a distinction worth a sentence of its own.
-        case .notAGlobalKey: return language.string(.desktopShortcutRejectedReservedKey)
-        case .belongsToHost: return language.string(.desktopShortcutRejectedHostShortcut)
+        // Every other refusal means the chord already belongs to something —
+        // typing, the input method, a candidate slot, the system, or the host
+        // app. To the reader they all mean "not this key", so naming the owner
+        // is not a distinction worth a message of its own.
+        case .typesRomanization, .reservedKey, .candidateSlotChord, .takenBySystem,
+             .notAGlobalKey, .belongsToHost:
+            return language.string(.desktopShortcutRejectedTaken)
         }
     }
 

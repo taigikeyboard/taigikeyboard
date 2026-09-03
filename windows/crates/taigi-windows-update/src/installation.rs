@@ -60,9 +60,9 @@ impl Offer {
     /// explanation cannot be paired wrongly.
     pub fn note_key(&self) -> Option<StringKey> {
         match self {
-            Self::DownloadFailed => Some(StringKey::DesktopUpdateDownloadFailedNote),
-            Self::PackageRejected => Some(StringKey::DesktopUpdatePackageRejectedNote),
-            Self::InstallerOpenFailed(_) => Some(StringKey::DesktopUpdateInstallerOpenFailedNote),
+            Self::DownloadFailed | Self::PackageRejected | Self::InstallerOpenFailed(_) => {
+                Some(StringKey::DesktopUpdateInstallFailedNote)
+            }
             Self::DownloadPage | Self::StartDownload | Self::Downloading | Self::Install(_) => None,
         }
     }
@@ -400,7 +400,7 @@ mod tests {
         assert_eq!(installation.offer(&manifest), Offer::DownloadFailed);
         assert_eq!(
             Offer::DownloadFailed.note_key(),
-            Some(StringKey::DesktopUpdateDownloadFailedNote)
+            Some(StringKey::DesktopUpdateInstallFailedNote)
         );
         // The staged folder is gone with the failure.
         assert_eq!(

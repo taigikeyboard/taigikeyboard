@@ -121,19 +121,19 @@ final class CustomDictionaryPageModel {
     }
 
     func save(_ row: CustomDictionaryRow) async {
-        await perform(.desktopProgressSaving) { try await self.store.upsert(row) }
+        await perform(.desktopProgressWorking) { try await self.store.upsert(row) }
     }
 
     func delete(_ row: CustomDictionaryRow) async {
-        await perform(.desktopProgressDeleting) { _ = try await self.store.delete(id: row.id) }
+        await perform(.desktopProgressWorking) { _ = try await self.store.delete(id: row.id) }
     }
 
     func deleteAll() async {
-        await perform(.desktopProgressDeleting) { _ = try await self.store.deleteAll() }
+        await perform(.desktopProgressWorking) { _ = try await self.store.deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
-        guard beginWork(.desktopProgressExporting) else { return }
+        guard beginWork(.desktopProgressWorking) else { return }
         defer { activity = .idle }
         do {
             let csv = try await CustomDictionaryCSV.encode(store.allRows())
@@ -156,7 +156,7 @@ final class CustomDictionaryPageModel {
         // modal to the window, but the moment it closes the parse and the
         // batched writes are still running, and that is exactly the window a
         // second import could start in.
-        guard beginWork(.desktopProgressImporting) else { return }
+        guard beginWork(.desktopProgressWorking) else { return }
         defer { activity = .idle }
         guard let url = await UserDataFilePanels.chooseFileToOpen(
             contentTypes: [.commaSeparatedText, .plainText],

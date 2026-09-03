@@ -352,7 +352,7 @@ pub fn update(
             write(
                 model,
                 context,
-                StringKey::DesktopProgressDeleting,
+                StringKey::DesktopProgressWorking,
                 move || {
                     store
                         .delete(&id)
@@ -392,7 +392,7 @@ pub fn update(
             write(
                 model,
                 context,
-                StringKey::DesktopProgressSaving,
+                StringKey::DesktopProgressWorking,
                 move || store.upsert(&row).map_err(|error| error.to_string()),
             );
         }
@@ -422,7 +422,7 @@ pub fn update(
             write(
                 model,
                 context,
-                StringKey::DesktopProgressDeleting,
+                StringKey::DesktopProgressWorking,
                 move || {
                     store
                         .delete_all()
@@ -593,7 +593,7 @@ fn export(
     begin_job(
         model,
         context,
-        StringKey::DesktopProgressExporting,
+        StringKey::DesktopProgressWorking,
         move || {
             let outcome = store
                 .all_rows()
@@ -624,7 +624,7 @@ fn import(
     begin_job(
         model,
         context,
-        StringKey::DesktopProgressImporting,
+        StringKey::DesktopProgressWorking,
         move || {
             let decoded =
                 CustomDictionaryCSV::decode_file(&path, CustomDictionaryStore::MAX_ENTRIES);
@@ -660,7 +660,7 @@ fn clear_learning_records(
     begin_job(
         model,
         context,
-        StringKey::DesktopProgressDeleting,
+        StringKey::DesktopProgressWorking,
         move || {
             let mut failures = Vec::new();
             if let Err(error) = frequency.delete_all() {

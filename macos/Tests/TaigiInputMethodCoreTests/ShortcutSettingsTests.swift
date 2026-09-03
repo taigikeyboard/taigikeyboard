@@ -134,9 +134,7 @@ final class ShortcutSettingsTests: XCTestCase {
         .desktopBindingSlotModifier,
         .desktopShortcutUnbound,
         .desktopShortcutRecording,
-        .desktopShortcutRejectedTypingKey,
-        .desktopShortcutRejectedReservedKey,
+        .desktopShortcutRejectedTaken,
         .desktopShortcutRejectedNoKey,
-        .desktopShortcutRejectedSlotChord,
     ]
 }

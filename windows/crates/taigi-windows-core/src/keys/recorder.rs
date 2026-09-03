@@ -95,19 +95,19 @@ pub fn evaluate_press(
     RecorderOutcome::Recorded(chord)
 }
 
-/// The prompt a refusal replaces (`ShortcutKeyRecorder.swift:366-381`). A
-/// press the global registry cannot name reads as a reserved key: to the
-/// reader both mean "not this key".
+/// The prompt a refusal replaces (`ShortcutKeyRecorder.swift:366-377`). Every
+/// refusal but `NoKey` means the chord already belongs to something — typing,
+/// the input method, a candidate slot, the system, or the host app — and to
+/// the reader they all mean "not this key", so one message covers them.
 pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
     match rejection {
-        ChordRejection::TypesRomanization => StringKey::DesktopShortcutRejectedTypingKey,
-        ChordRejection::ReservedKey | ChordRejection::NotAGlobalKey => {
-            StringKey::DesktopShortcutRejectedReservedKey
-        }
         ChordRejection::NoKey => StringKey::DesktopShortcutRejectedNoKey,
-        ChordRejection::CandidateSlotChord => StringKey::DesktopShortcutRejectedSlotChord,
-        ChordRejection::TakenBySystem => StringKey::DesktopShortcutRejectedSystemShortcut,
-        ChordRejection::BelongsToHost => StringKey::DesktopShortcutRejectedHostShortcut,
+        ChordRejection::TypesRomanization
+        | ChordRejection::ReservedKey
+        | ChordRejection::NotAGlobalKey
+        | ChordRejection::CandidateSlotChord
+        | ChordRejection::TakenBySystem
+        | ChordRejection::BelongsToHost => StringKey::DesktopShortcutRejectedTaken,
     }
 }
 
@@ -240,18 +240,23 @@ mod tests {
     }
 
     #[test]
-    fn every_rejection_has_a_prompt_and_the_unnameable_key_reads_as_reserved() {
+    fn every_taken_rejection_shares_one_prompt_and_no_key_keeps_its_own() {
+        for rejection in [
+            ChordRejection::NotAGlobalKey,
+            ChordRejection::ReservedKey,
+            ChordRejection::BelongsToHost,
+            ChordRejection::TypesRomanization,
+            ChordRejection::CandidateSlotChord,
+            ChordRejection::TakenBySystem,
+        ] {
+            assert_eq!(
+                rejection_message_key(rejection),
+                StringKey::DesktopShortcutRejectedTaken
+            );
+        }
         assert_eq!(
-            rejection_message_key(ChordRejection::NotAGlobalKey),
-            StringKey::DesktopShortcutRejectedReservedKey
-        );
-        assert_eq!(
-            rejection_message_key(ChordRejection::ReservedKey),
-            StringKey::DesktopShortcutRejectedReservedKey
-        );
-        assert_eq!(
-            rejection_message_key(ChordRejection::BelongsToHost),
-            StringKey::DesktopShortcutRejectedHostShortcut
+            rejection_message_key(ChordRejection::NoKey),
+            StringKey::DesktopShortcutRejectedNoKey
         );
     }
 

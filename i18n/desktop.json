@@ -362,8 +362,8 @@
         "ja": "設定を保存できませんでした"
       }
     },
-    "progressSaving": {
-      "comment": "Label under the spinner while a 詞庫 page saves. macOS-only: the mobile apps have no blocking overlay.",
+    "progressWorking": {
+      "comment": "Label under the spinner while a 詞庫 page runs any blocking job (save, delete, export, import). Desktop-only: the mobile apps have no blocking overlay.",
       "scope": {
         "platforms": [
           "macos",
@@ -374,68 +374,11 @@
         ]
       },
       "values": {
-        "hanji": "咧存…",
-        "tailo": "teh tsûn…",
-        "poj": "teh chûn…",
-        "en": "Saving…",
-        "ja": "保存中…"
-      }
-    },
-    "progressDeleting": {
-      "comment": "Label under the spinner while a 詞庫 page deletes.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "咧刪…",
-        "tailo": "teh san…",
-        "poj": "teh san…",
-        "en": "Deleting…",
-        "ja": "削除中…"
-      }
-    },
-    "progressExporting": {
-      "comment": "Label under the spinner while a 詞庫 page writes a CSV.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "咧匯出…",
-        "tailo": "teh huē-tshut…",
-        "poj": "teh hōe-chhut…",
-        "en": "Exporting…",
-        "ja": "書き出し中…"
-      }
-    },
-    "progressImporting": {
-      "comment": "Label under the spinner while a 詞庫 page reads a CSV.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "咧匯入…",
-        "tailo": "teh huē-ji̍p…",
-        "poj": "teh hōe-ji̍p…",
-        "en": "Importing…",
-        "ja": "読み込み中…"
+        "hanji": "咧處理…",
+        "tailo": "teh tshú-lí…",
+        "poj": "teh chhú-lí…",
+        "en": "Working…",
+        "ja": "処理中…"
       }
     },
     "importComplete": {
@@ -906,15 +849,15 @@
         ]
       },
       "values": {
-        "hanji": "撳一个鍵…",
-        "tailo": "khian tsi̍t ê kiān…",
-        "poj": "khian chi̍t ê kiān…",
+        "hanji": "揤一个鍵…",
+        "tailo": "tshi̍h tsi̍t ê kiān…",
+        "poj": "chhi̍h chi̍t ê kiān…",
         "en": "Press a key…",
         "ja": "キーを押してください…"
       }
     },
-    "shortcutRejectedTypingKey": {
-      "comment": "Recorder error: the key pressed is one that types romanization, so it cannot be bound.",
+    "shortcutRejectedTaken": {
+      "comment": "Recorder error: the chord cannot be bound because something else already owns it — a romanization key, a key the input method reserves, a candidate-slot chord, a system shortcut, or the host app. One message covers every taken case; the recorder does not name the owner.",
       "scope": {
         "platforms": [
           "macos",
@@ -925,30 +868,11 @@
         ]
       },
       "values": {
-        "hanji": "這个鍵是拍字用的",
-        "tailo": "tsit ê kiān sī phah-jī iōng ê",
-        "poj": "chit ê kiān sī phah-jī ēng ê",
-        "en": "That key types romanization",
-        "ja": "そのキーは入力に使います"
-      }
-    },
-    "shortcutRejectedReservedKey": {
-      "comment": "Recorder error: the key pressed is reserved by the input method (arrows, paging, Esc, Delete).",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "這个鍵輸入法留咧用",
-        "tailo": "tsit ê kiān su-ji̍p-huat lâu teh iōng",
-        "poj": "chit ê kiān su-ji̍p-hoat lâu teh ēng",
-        "en": "That key is reserved",
-        "ja": "そのキーは予約済みです"
+        "hanji": "已經予佔用",
+        "tailo": "í-king hōo tsiàm-iōng",
+        "poj": "í-keng hō͘ chiàm-ēng",
+        "en": "That key is already taken",
+        "ja": "そのキーは使用済みです"
       }
     },
     "shortcutRejectedNoKey": {
@@ -968,63 +892,6 @@
         "poj": "kéng bē tio̍h kiān",
         "en": "No key to record",
         "ja": "記録できるキーがありません"
-      }
-    },
-    "shortcutRejectedSlotChord": {
-      "comment": "Recorder error: the chord pressed is one of the candidate-slot chords, which are classified before bound actions.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "這是選字鍵",
-        "tailo": "tse sī suán-jī kiān",
-        "poj": "che sī soán-jī kiān",
-        "en": "That is a candidate number key",
-        "ja": "それは候補選択キーです"
-      }
-    },
-    "shortcutRejectedSystemShortcut": {
-      "comment": "Shortcut recorder refusal: the chord is already a system-wide keyboard shortcut, so recording it would give the user a key that never fires.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "這是系統的快速齒",
-        "tailo": "tse sī hē-thóng ê khuài-sok khí",
-        "poj": "che sī hē-thóng ê khoài-sok khí",
-        "en": "That is a system shortcut",
-        "ja": "それはシステムのショートカットです"
-      }
-    },
-    "shortcutRejectedHostShortcut": {
-      "comment": "Shortcut recorder refusal: the chord is a bare Command combination, which belongs to the menus of whatever application the user is typing into.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "這是應用程式的快速齒",
-        "tailo": "tse sī ìng-iōng-tîng-sik ê khuài-sok khí",
-        "poj": "che sī èng-iōng-thêng-sek ê khoài-sok khí",
-        "en": "That belongs to the app you are typing in",
-        "ja": "それは入力先のアプリのショートカットです"
       }
     },
     "copyrightLine": {
@@ -1416,8 +1283,8 @@
         "ja": "もう一度"
       }
     },
-    "updateDownloadFailedNote": {
-      "comment": "Settings 一般 pane: the update package did not finish downloading. Retryable — the package itself may be fine. Kept to the failure alone; the retry button says what to do, and updateCheckFailedMessage already carries the network advice.",
+    "updateInstallFailedNote": {
+      "comment": "Settings 一般 pane: the update could not be installed — download, package verification, or launching the installer failed. Retryable; the retry button says what to do, and updateCheckFailedMessage already carries the network advice.",
       "scope": {
         "platforms": [
           "macos",
@@ -1428,49 +1295,11 @@
         ]
       },
       "values": {
-        "hanji": "下載失敗",
-        "tailo": "Hā-tsài sit-pāi",
-        "poj": "Hā-chài sit-pāi",
-        "en": "The download did not finish",
-        "ja": "ダウンロードが完了しませんでした"
-      }
-    },
-    "updatePackageRejectedNote": {
-      "comment": "Settings 一般 pane: the downloaded package is not this project's signed installer, so it is never offered for installation. Kept to the fact alone — the 去下載 button beside it is what says where to go instead.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "安裝檔案確認無過",
-        "tailo": "An-tsong tóng-àn khak-jīn bô kuè",
-        "poj": "An-chong tóng-àn khak-jīn bô kòe",
-        "en": "This download could not be verified",
-        "ja": "このダウンロードを検証できませんでした"
-      }
-    },
-    "updateInstallerOpenFailedNote": {
-      "comment": "Settings 一般 pane: the verified package is staged but Installer.app would not open. Retryable; wording mirrors openURLFailed.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "拍袂開安裝程式",
-        "tailo": "phah bē khui an-tsong tîng-sik",
-        "poj": "phah bē khui an-chong thêng-sek",
-        "en": "Could not open the installer",
-        "ja": "インストーラを開けませんでした"
+        "hanji": "安裝失敗",
+        "tailo": "an-tsong sit-pāi",
+        "poj": "an-chong sit-pāi",
+        "en": "The update could not be installed",
+        "ja": "アップデートをインストールできませんでした"
       }
     },
     "clearLearningRecords": {

@@ -14,9 +14,9 @@ final class UserDataPageChromeTests: XCTestCase {
     private let english = StringResolver(.english)
 
     func testActivity_carriesAKeyRatherThanAResolvedLabel() {
-        XCTAssertEqual(UserDataPageActivity.working(.desktopProgressImporting).labelKey, .desktopProgressImporting)
+        XCTAssertEqual(UserDataPageActivity.working(.desktopProgressWorking).labelKey, .desktopProgressWorking)
         XCTAssertNil(UserDataPageActivity.idle.labelKey)
-        XCTAssertTrue(UserDataPageActivity.working(.desktopProgressImporting).isWorking)
+        XCTAssertTrue(UserDataPageActivity.working(.desktopProgressWorking).isWorking)
         XCTAssertFalse(UserDataPageActivity.idle.isWorking)
     }
 
@@ -107,12 +107,12 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     func testBeginWork_refusesASecondClaimWhileTheFirstIsHeld() throws {
         let model = try makeModel()
 
-        XCTAssertTrue(model.beginWork(.desktopProgressImporting))
+        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
         XCTAssertFalse(
-            model.beginWork(.desktopProgressDeleting),
+            model.beginWork(.desktopProgressWorking),
             "a second action must not start while one is running",
         )
-        XCTAssertEqual(model.activity, .working(.desktopProgressImporting), "the first action keeps the slot")
+        XCTAssertEqual(model.activity, .working(.desktopProgressWorking), "the first action keeps the slot")
     }
 
     /// A real action, start to finish: it takes the slot on the way in and
@@ -123,18 +123,18 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
         await model.deleteAll()
 
         XCTAssertEqual(model.activity, .idle)
-        XCTAssertTrue(model.beginWork(.desktopProgressSaving))
+        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
     }
 
     /// And an action that arrives while the slot is held does not run at all.
     func testAnAction_doesNothingWhileAnotherHoldsTheSlot() async throws {
         let model = try makeModel()
-        XCTAssertTrue(model.beginWork(.desktopProgressImporting))
+        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
 
         await model.deleteAll()
 
         XCTAssertEqual(
-            model.activity, .working(.desktopProgressImporting),
+            model.activity, .working(.desktopProgressWorking),
             "the refused action must not release the slot it never took",
         )
     }
