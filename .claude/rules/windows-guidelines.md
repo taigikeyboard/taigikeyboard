@@ -76,7 +76,20 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 - Every `unsafe` block carries a `// SAFETY:` comment (`rust-ffi-safety.md` §3).
 - Verify any Win32/TSF API shape against the `windows` crate metadata (`cargo doc` / the crate
   source under `~/.cargo/registry`) before use — parameter shapes (`Ref<T>`, `BOOL`, `PCWSTR`)
-  differ between crate versions. `doc-lookup.md` applies: TSF is a framework API.
+  differ between crate versions. `doc-lookup.md` applies: TSF is a framework API. The generated
+  SIGNATURE is not the contract: read the wrapper's BODY too (see the next bullet).
+- **A Win32 or COM call that FILLS a buffer we read back goes through
+  `taigi_windows_platform::os_out_buffer` (free functions) or `taigi-windows-tsf`'s
+  `com_out_buffer` (COM methods) — never the `windows` crate's `&mut [T]` wrapper.** Those
+  wrappers hand the OS `core::mem::transmute(slice.as_ptr())`, a READ-ONLY provenance; writing
+  through it is UB, and an optimized build folds the caller's reads of the buffer back to its
+  initializer. That is how every keyboard modifier came to read as "not held" in release builds
+  (2026-09-04, real device — `os_out_buffer`'s module doc carries the measurement, and the two
+  found earlier by reasoning, `ToUnicodeEx`'s output buffer and `IEnumGUID::Next`, had not
+  misbehaved yet). Invisible to every gate the project runs: it does not reproduce in debug,
+  `check-gnu` / `check-msvc` are compile gates, and the host tests cannot reach a Win32 handle.
+  `windows/clippy.toml` denies the wrappers already wrapped; add the next one there as it is
+  wrapped (the enabled feature set holds ~138 more of the same shape).
 
 ## Data + settings
 

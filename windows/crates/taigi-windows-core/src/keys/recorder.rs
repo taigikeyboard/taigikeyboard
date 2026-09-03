@@ -78,15 +78,15 @@ pub fn evaluate_press(
     if chord.is_candidate_slot_chord(slot_key_set) {
         return RecorderOutcome::Refused(ChordRejection::CandidateSlotChord);
     }
-    // Ctrl+Alt IS AltGr on most non-US layouts, and Windows reports AltGr as
-    // exactly that: a COMPOSING binding on it would take the glyph that
-    // layout types with it, for as long as the binding stands. The global
-    // tier is different and decides for itself (`global_rejection`) — its
-    // chords are TSF preserved keys, live only while this TIP is selected —
-    // and that is the family the Mac's ⌃⌘ roster maps onto (USER 2026-08-31).
-    if tier == RecorderTier::Composing && chord.modifiers.control && chord.modifiers.alt {
-        return RecorderOutcome::Refused(ChordRejection::TakenBySystem);
-    }
+    // Ctrl+Alt is recordable on BOTH tiers, as ⌃⌘ is on the Mac (which
+    // refuses it on neither). It is what Windows reports AltGr as, but a
+    // binding of ours only answers while this Taiwanese TIP is the selected
+    // profile — a layout whose AltGr types a glyph is a different profile —
+    // and the composing tier's bindings live exactly as long as the global
+    // tier's preserved keys do. Refusing the whole family on one tier while
+    // the other ships three defaults on it (`ShortcutAction::default_chord`)
+    // was a rule with no line to draw (USER 2026-09-04, real device: 打開設定
+    // 選單 could not take Ctrl+Alt+A).
     if tier == RecorderTier::Global {
         if let Some(reason) = global_rejection(&chord) {
             return RecorderOutcome::Refused(reason);
@@ -256,30 +256,27 @@ mod tests {
     }
 
     #[test]
-    fn an_alt_gr_shaped_chord_is_refused_on_the_composing_tier_and_taken_on_the_global_one() {
-        // trace: Ctrl+Alt+Q → make Ok (host chord) → not a slot → AltGr gate.
-        // A composing binding on AltGr would take that layout's glyph for as
-        // long as it stands; a global one is a preserved key that lives only
-        // while this TIP is selected, and it is the family the Mac's ⌃⌘
-        // roster maps onto.
-        let alt_gr = KeyModifiers::CONTROL.with(KeyModifiers::ALT);
-        assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                CandidateSlotKeySet::BareKeys,
-                &press("q", alt_gr)
-            ),
-            RecorderOutcome::Refused(ChordRejection::TakenBySystem)
-        );
-        assert_eq!(
-            evaluate_press(
-                RecorderTier::Global,
-                CandidateSlotKeySet::BareKeys,
-                &press("q", alt_gr)
-            ),
-            RecorderOutcome::Recorded(
-                ComposingKeyChord::make(Some("q"), alt_gr).expect("bindable")
-            )
-        );
+    fn a_chord_records_on_both_tiers_once_a_host_modifier_is_held() {
+        // The shape the USER hit on the real device (2026-09-04): `a` is a
+        // syllable letter, so the shared gate refuses it bare — but Ctrl+Alt
+        // and Ctrl+Shift make it a chord, on EITHER tier. It only ever read as
+        // "this key types" because the modifiers arrived empty
+        // (`os_out_buffer`). Ctrl+Alt is the family the Mac's ⌃⌘ roster maps
+        // onto and the one the shipped globals are on, so neither tier may
+        // refuse it: `q` (no syllable uses it) rides along to pin that the
+        // rule is about the modifiers, not about the key.
+        let ctrl_alt = KeyModifiers::CONTROL.with(KeyModifiers::ALT);
+        let ctrl_shift = KeyModifiers::CONTROL.with(KeyModifiers::SHIFT);
+        for (key, modifiers) in [("a", ctrl_alt), ("a", ctrl_shift), ("q", ctrl_alt)] {
+            for tier in [RecorderTier::Composing, RecorderTier::Global] {
+                assert_eq!(
+                    evaluate_press(tier, CandidateSlotKeySet::BareKeys, &press(key, modifiers)),
+                    RecorderOutcome::Recorded(
+                        ComposingKeyChord::make(Some(key), modifiers).expect("bindable")
+                    ),
+                    "{tier:?} {key} {modifiers:?}"
+                );
+            }
+        }
     }
 }

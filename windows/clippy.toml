@@ -1,0 +1,24 @@
+# The `windows` crate's out-buffer wrappers take the buffer as `&mut [T]` but
+# hand the OS `core::mem::transmute(slice.as_ptr())` — a READ-ONLY provenance.
+# Writing through it is undefined behaviour, and an optimized build acts on it:
+# the caller's reads of the buffer fold back to its initializer. That is how
+# every keyboard modifier came to read as "not held" in release builds
+# (measured 2026-09-04; the story is in `os_out_buffer`'s module doc).
+#
+# The signature is not the contract, so this list is the gate: a Win32 or COM
+# call that FILLS a buffer we read back goes through
+# `taigi_windows_platform::os_out_buffer` (free functions) or
+# `taigi_windows_tsf::com_out_buffer` (COM methods), never the wrapper. Add the
+# next one here as it is wrapped — the crate has ~138 more of this shape in the
+# feature set this workspace enables.
+disallowed-methods = [
+    { path = "windows::Win32::UI::Input::KeyboardAndMouse::GetKeyboardState", reason = "read-only provenance: use taigi_windows_platform::os_out_buffer::keyboard_state" },
+    { path = "windows::Win32::UI::Input::KeyboardAndMouse::ToUnicodeEx", reason = "read-only provenance on the output buffer: use taigi_windows_platform::os_out_buffer::to_unicode" },
+    { path = "windows::Win32::Globalization::GetUserDefaultLocaleName", reason = "read-only provenance: use taigi_windows_platform::os_out_buffer::user_default_locale_name" },
+    { path = "windows::Win32::System::LibraryLoader::GetModuleFileNameW", reason = "read-only provenance: use taigi_windows_platform::os_out_buffer::module_file_name" },
+    { path = "windows::Win32::UI::TextServices::ITfContext::GetSelection", reason = "read-only provenance: use crate::com_out_buffer::context_selection" },
+    { path = "windows::Win32::UI::TextServices::ITfRange::GetText", reason = "read-only provenance: use crate::com_out_buffer::range_text" },
+    { path = "windows::Win32::Graphics::DirectWrite::IDWriteTextLayout::GetLineMetrics", reason = "read-only provenance: use crate::com_out_buffer::line_metrics" },
+    { path = "windows::Win32::UI::TextServices::IEnumTfInputProcessorProfiles::Next", reason = "read-only provenance: use crate::com_out_buffer::next_input_processor_profiles" },
+    { path = "windows::Win32::System::Com::IEnumGUID::Next", reason = "read-only provenance: use crate::com_out_buffer::next_guids" },
+]

@@ -4,9 +4,14 @@
 //! drifts under autorepeat and re-entrancy); the characters come from
 //! `ToUnicodeEx` with flag `0x4` ("do not change keyboard state", Windows
 //! 10 1607+) so a dead key is not consumed by the probe; the unmodified
-//! characters from a state copy with the Ctrl bits cleared (khiin
-//! `key_event.rs:39-74`) — Ctrl+3 must read as `3`, not as Escape. AltGr
-//! (Ctrl+Alt) is left intact so international layouts keep their glyphs.
+//! characters from a state copy with the Ctrl AND Alt bits cleared (khiin
+//! `key_event.rs:39-74`) — Ctrl+3 must read as `3`, not as Escape, and
+//! Ctrl+Alt+A as `a` rather than as nothing at all.
+//!
+//! Both calls go through [`crate::os_out_buffer`], never through the
+//! `windows` crate's `&mut [T]` wrappers: those hand the OS a read-only
+//! pointer, and an optimized build then reads every modifier as "not held"
+//! (that module carries the measurement).
 //!
 //! Shared: the DLL's key sink reads it through
 //! `taigi-windows-tsf/src/key_translation.rs`, and the settings window's
@@ -16,18 +21,28 @@
 
 // 中文: 一個按鍵按下轉成分類器要的快照(以及錄製欄要的 RecordedPress);修飾鍵只取樣一次,字元用 ToUnicodeEx(0x4)。DLL 與設定視窗共用同一份規則。
 
+use crate::os_out_buffer;
 use taigi_windows_core::keys::{KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyboardLayout, GetKeyboardState, ToUnicodeEx, HKL, VK_BACK, VK_CAPITAL, VK_CONTROL,
-    VK_DELETE, VK_DOWN, VK_END, VK_ESCAPE, VK_F1, VK_F24, VK_HOME, VK_INSERT, VK_LCONTROL, VK_LEFT,
-    VK_LMENU, VK_LWIN, VK_MENU, VK_NEXT, VK_NUMLOCK, VK_PACKET, VK_PRIOR, VK_PROCESSKEY,
-    VK_RCONTROL, VK_RETURN, VK_RIGHT, VK_RMENU, VK_RWIN, VK_SHIFT, VK_TAB, VK_UP,
+    GetKeyboardLayout, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END,
+    VK_ESCAPE, VK_F1, VK_F24, VK_HOME, VK_INSERT, VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LWIN, VK_MENU,
+    VK_NEXT, VK_NUMLOCK, VK_PACKET, VK_PRIOR, VK_PROCESSKEY, VK_RCONTROL, VK_RETURN, VK_RIGHT,
+    VK_RMENU, VK_RWIN, VK_SHIFT, VK_TAB, VK_UP,
 };
 
-/// `ToUnicodeEx` flag: do not change the keyboard state (no dead-key
-/// consumption). Windows 10 1607+.
-const TO_UNICODE_DO_NOT_CHANGE_STATE: u32 = 0x4;
 const KEY_IS_DOWN: u8 = 0x80;
+
+/// The keyboard-state entries a chord is made of, generic and side-specific.
+/// Cleared to read what a key TYPES (`unmodified_state`), and read to tell
+/// whether that clearing would change anything at all.
+const CHORDING_MODIFIER_KEYS: [VIRTUAL_KEY; 6] = [
+    VK_CONTROL,
+    VK_LCONTROL,
+    VK_RCONTROL,
+    VK_MENU,
+    VK_LMENU,
+    VK_RMENU,
+];
 
 /// Keys that are modifiers themselves: never a composing key, and the key
 /// sink answers them without building a snapshot.
@@ -102,12 +117,12 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
     if is_modifier_key(virtual_key) || is_synthetic_key(virtual_key) {
         return None;
     }
-    let mut state = [0u8; 256];
-    // SAFETY: a 256-byte buffer, the size the API requires; a failed read
-    // leaves it zeroed, which reads as "no modifier held".
-    if unsafe { GetKeyboardState(&mut state) }.is_err() {
+    let state = os_out_buffer::keyboard_state().unwrap_or_else(|| {
         log::debug!("key.state_unavailable");
-    }
+        // Zeroed reads as "no modifier held" — the same answer the failed
+        // read used to leave behind.
+        [0u8; 256]
+    });
     let is_down = |key: u16| state[key as usize] & KEY_IS_DOWN != 0;
     let modifiers = KeyModifiers {
         shift: is_down(VK_SHIFT.0),
@@ -115,27 +130,26 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
         alt: is_down(VK_MENU.0),
         win: is_down(VK_LWIN.0) || is_down(VK_RWIN.0),
     };
+    let is_chorded = CHORDING_MODIFIER_KEYS.iter().any(|key| is_down(key.0));
     // SAFETY: thread id 0 = the calling thread's layout, which is the
     // focused thread inside a key sink.
     let layout = unsafe { GetKeyboardLayout(0) };
 
-    let characters = fixed_control_character(virtual_key)
-        .map(str::to_owned)
-        .or_else(|| translate(virtual_key, scan_code, &state, layout));
-    let characters_ignoring_modifiers = fixed_control_character(virtual_key)
-        .map(str::to_owned)
-        .or_else(|| {
-            // Ctrl is cleared so Ctrl+3 reads as `3` — EXCEPT under AltGr,
-            // whose synthetic Ctrl is part of the glyph on many layouts
-            // (`Right Alt` = Ctrl+Alt): there the state is left whole.
-            let mut unmodified = state;
-            if !modifiers.alt {
-                for key in [VK_CONTROL, VK_LCONTROL, VK_RCONTROL] {
-                    unmodified[key.0 as usize] = 0;
-                }
-            }
-            translate(virtual_key, scan_code, &unmodified, layout)
-        });
+    let fixed = fixed_control_character(virtual_key).map(str::to_owned);
+    let characters = fixed
+        .clone()
+        .or_else(|| os_out_buffer::to_unicode(virtual_key, scan_code, &state, layout));
+    // With no chording modifier held the cleared state IS this state, so the
+    // second translation would ask the layout the same question twice — on
+    // every key of ordinary typing, and twice over since `OnTestKeyDown` and
+    // `OnKeyDown` both classify.
+    let characters_ignoring_modifiers = if is_chorded {
+        fixed.or_else(|| {
+            os_out_buffer::to_unicode(virtual_key, scan_code, &unmodified_state(state), layout)
+        })
+    } else {
+        characters.clone()
+    };
     Some(KeyEventSnapshot {
         characters,
         characters_ignoring_modifiers,
@@ -146,28 +160,28 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
     })
 }
 
-/// What the key types under `state`, or `None` for a key that types
-/// nothing (a dead key's negative return included: nothing to compose with
-/// until the next key completes it).
-fn translate(virtual_key: u16, scan_code: u32, state: &[u8; 256], layout: HKL) -> Option<String> {
-    let mut buffer = [0u16; 8];
-    // SAFETY: buffer and state are valid for the lengths passed; the flag
-    // keeps the call from mutating the thread's keyboard state.
-    let written = unsafe {
-        ToUnicodeEx(
-            u32::from(virtual_key),
-            scan_code,
-            state,
-            &mut buffer,
-            TO_UNICODE_DO_NOT_CHANGE_STATE,
-            Some(layout),
-        )
-    };
-    if written <= 0 {
-        return None;
+/// `state` as it would be with no chording modifier but Shift held: what a
+/// key TYPES is the key's name, and a name has to survive the chord it was
+/// pressed in.
+///
+/// Ctrl is cleared so Ctrl+3 reads as `3` rather than as Escape (khiin
+/// `key_event.rs:39-74`), and Alt with it: Windows spells AltGr as Ctrl+Alt,
+/// so a layout that types no glyph there answers `ToUnicodeEx` with nothing
+/// at all — measured on the box, Ctrl+Alt+A returns 0 characters on both the
+/// live layout and US. Leaving Alt held cost every Ctrl+Alt chord its name:
+/// unrecordable in the settings window, and unmatchable at runtime, which is
+/// why the shipped Ctrl+Alt globals only ever fired as preserved keys.
+///
+/// Shift stays: a chord is stored on the key's unshifted character, and the
+/// slot tier reads the digits Shift is held with (`shifted_digit_slot`).
+/// The glyph an AltGr layout would have typed is still in `characters`,
+/// which is read from the live state.
+fn unmodified_state(state: [u8; 256]) -> [u8; 256] {
+    let mut unmodified = state;
+    for key in CHORDING_MODIFIER_KEYS {
+        unmodified[key.0 as usize] = 0;
     }
-    let text = String::from_utf16_lossy(&buffer[..written as usize]);
-    (!text.is_empty()).then_some(text)
+    unmodified
 }
 
 /// The AppKit private-use scalar for a key that types nothing — the
@@ -232,6 +246,40 @@ mod tests {
         let key = named_key_scalar(virtual_key).map(String::from);
         ComposingKeyChord::make(key.as_deref(), KeyModifiers::default())
             == Err(ChordRejection::ReservedKey)
+    }
+
+    #[test]
+    fn the_unmodified_state_drops_every_ctrl_and_alt_bit_and_keeps_shift() {
+        // trace: a state with Ctrl (generic + left), Alt (generic + right),
+        // Shift and Caps Lock held. Ctrl+Alt is how Windows spells AltGr, so
+        // leaving either behind costs the key its own character — and Shift
+        // has to stay, since a chord is stored on the unshifted key while the
+        // slot tier still reads Shift+digit.
+        let mut state = [0u8; 256];
+        for key in [
+            VK_CONTROL,
+            VK_LCONTROL,
+            VK_RCONTROL,
+            VK_MENU,
+            VK_LMENU,
+            VK_RMENU,
+            VK_SHIFT,
+        ] {
+            state[key.0 as usize] = KEY_IS_DOWN;
+        }
+        // The setup list stays spelled out so the roster is pinned by hand,
+        // not by the constant the code under test reads.
+        // Held AND toggled, so both bits are asked about.
+        state[VK_CAPITAL.0 as usize] = KEY_IS_DOWN | 0x01;
+        let untouched_key = VK_TAB.0 as usize;
+        state[untouched_key] = KEY_IS_DOWN;
+        let unmodified = unmodified_state(state);
+        for key in CHORDING_MODIFIER_KEYS {
+            assert_eq!(unmodified[key.0 as usize], 0, "{key:?} must be cleared");
+        }
+        assert_eq!(unmodified[VK_SHIFT.0 as usize], KEY_IS_DOWN);
+        assert_eq!(unmodified[VK_CAPITAL.0 as usize], KEY_IS_DOWN | 0x01);
+        assert_eq!(unmodified[untouched_key], KEY_IS_DOWN);
     }
 
     #[test]

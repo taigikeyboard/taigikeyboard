@@ -6,6 +6,7 @@
 
 // 中文: D2D/DWrite 工廠、私有字型集、文字格式、量測器、視窗 render target(裝置遺失重建)。
 
+use crate::com_out_buffer;
 use crate::module::install_directory;
 use crate::wide::{to_wide, to_wide_nul};
 use std::cell::RefCell;
@@ -346,8 +347,9 @@ impl TextMeasurer for DWriteMeasurer<'_> {
         };
         let mut lines = [DWRITE_LINE_METRICS::default()];
         let mut count = 0u32;
-        // SAFETY: a one-line buffer plus its count out-pointer.
-        let outcome = unsafe { layout.GetLineMetrics(Some(&mut lines), &mut count) };
+        // SAFETY: a one-line buffer plus its count out-pointer, through
+        // `com_out_buffer` — the generated wrapper's pointer is read-only.
+        let outcome = unsafe { com_out_buffer::line_metrics(&layout, &mut lines, &mut count) };
         if outcome.is_err() && count == 0 {
             return font.size * 1.3;
         }

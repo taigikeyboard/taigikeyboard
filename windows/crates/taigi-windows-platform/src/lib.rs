@@ -14,6 +14,10 @@
 #[cfg(windows)]
 pub mod key_translation;
 pub mod keyboard_hook;
+/// Windows-only, and the reason it exists is a `windows` crate wrapper that
+/// cannot be used for a buffer we read back — see the module.
+#[cfg(windows)]
+pub mod os_out_buffer;
 
 // 中文: DLL 與設定視窗共用的少量 Win32 呼叫;非 Windows 主機給中性值,讓呼叫端在 macOS 上可測。
 
@@ -29,9 +33,7 @@ pub mod keyboard_hook;
 #[cfg(windows)]
 pub fn system_locale() -> String {
     use windows::core::PWSTR;
-    use windows::Win32::Globalization::{
-        GetUserDefaultLocaleName, GetUserPreferredUILanguages, MUI_LANGUAGE_NAME,
-    };
+    use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
     let mut count = 0u32;
     let mut length = 0u32;
     // SAFETY: the documented size query — no buffer, the required length
@@ -57,14 +59,7 @@ pub fn system_locale() -> String {
             }
         }
     }
-    let mut buffer = [0u16; 85];
-    // SAFETY: `buffer` is a valid writable UTF-16 buffer of the passed
-    // length (LOCALE_NAME_MAX_LENGTH is 85).
-    let length = unsafe { GetUserDefaultLocaleName(&mut buffer) };
-    if length <= 1 {
-        return String::new();
-    }
-    String::from_utf16_lossy(&buffer[..(length as usize).saturating_sub(1)])
+    crate::os_out_buffer::user_default_locale_name().unwrap_or_default()
 }
 
 #[cfg(not(windows))]

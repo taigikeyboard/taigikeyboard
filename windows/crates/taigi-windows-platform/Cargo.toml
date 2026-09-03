@@ -30,11 +30,19 @@ windows = { workspace = true, features = [
     "Win32_System_Diagnostics_Debug",
     "Win32_System_Registry",
     "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_UI_Accessibility",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
+] }
+# The raw bindings behind `os_out_buffer` — see that module for why the
+# ergonomic `&mut [T]` wrappers cannot be used for a buffer we read back.
+windows-sys = { workspace = true, features = [
+    "Win32_Globalization",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Input_KeyboardAndMouse",
 ] }
 
 [lints.rust]

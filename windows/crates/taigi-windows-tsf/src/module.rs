@@ -7,8 +7,8 @@
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicIsize, Ordering};
-use windows::Win32::Foundation::{HINSTANCE, HMODULE, MAX_PATH};
-use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
+use taigi_windows_platform::os_out_buffer;
+use windows::Win32::Foundation::{HINSTANCE, HMODULE};
 
 static INSTANCE: AtomicIsize = AtomicIsize::new(0);
 
@@ -26,16 +26,10 @@ pub fn module_path() -> Option<PathBuf> {
     if module.is_invalid() {
         return None;
     }
-    // MAX_PATH is enough for an install under Program Files; a longer path
-    // is truncated and reads as "no module path" via the length check.
-    let mut buffer = [0u16; MAX_PATH as usize];
-    // SAFETY: `buffer` is a valid, writable UTF-16 buffer of the length
-    // passed; the module handle is this DLL's own, stored by DllMain.
-    let length = unsafe { GetModuleFileNameW(Some(module), &mut buffer) } as usize;
-    if length == 0 || length >= buffer.len() {
-        return None;
-    }
-    Some(PathBuf::from(String::from_utf16_lossy(&buffer[..length])))
+    // The handle is this DLL's own, stored by DllMain. `MAX_PATH` is enough
+    // for an install under Program Files; a longer path reads as "no module
+    // path" rather than as a truncated one (`os_out_buffer`).
+    os_out_buffer::module_file_name(module).map(PathBuf::from)
 }
 
 /// The directory the DLL was loaded from.

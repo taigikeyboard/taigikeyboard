@@ -9,14 +9,13 @@
 
 // 中文: 游標矩形(實體螢幕像素)— 組字尾→組字頭→選取;clipped/空/失敗 = 沒有錨點就不顯示;宿主非 DPI-aware 時做座標對映。
 
+use crate::com_out_buffer;
 use crate::edit_session::EditCookie;
-use std::mem::ManuallyDrop;
 use windows::core::BOOL;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::HiDpi::LogicalToPhysicalPointForPerMonitorDPI;
 use windows::Win32::UI::TextServices::{
     ITfComposition, ITfContext, ITfContextView, ITfRange, TfAnchor, TF_ANCHOR_END, TF_ANCHOR_START,
-    TF_DEFAULT_SELECTION, TF_SELECTION,
 };
 
 fn is_empty(rect: &RECT) -> bool {
@@ -94,21 +93,10 @@ pub fn caret_rect(
                 }
             }
         }
-        let mut selections = [TF_SELECTION {
-            range: ManuallyDrop::new(None),
-            style: Default::default(),
-        }];
-        let mut fetched = 0u32;
-        if context
-            .GetSelection(ec, TF_DEFAULT_SELECTION, &mut selections, &mut fetched)
-            .is_ok()
-            && fetched > 0
-        {
-            if let Some(range) = ManuallyDrop::take(&mut selections[0].range) {
-                if let Some(probe) = collapsed(&range, ec, TF_ANCHOR_END) {
-                    if let Some(rect) = text_extent(&view, ec, &probe) {
-                        return Some(to_physical(rect, host));
-                    }
+        if let Some(range) = com_out_buffer::default_selection_range(context, ec) {
+            if let Some(probe) = collapsed(&range, ec, TF_ANCHOR_END) {
+                if let Some(rect) = text_extent(&view, ec, &probe) {
+                    return Some(to_physical(rect, host));
                 }
             }
         }

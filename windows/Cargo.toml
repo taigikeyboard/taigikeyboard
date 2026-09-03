@@ -49,6 +49,11 @@ tempfile = "3"
 # names it.
 windows = "0.62"
 windows-core = "0.62"
+# The RAW bindings, for the handful of Win32 calls that write into a buffer we
+# then read: the `windows` crate's `&mut [T]` wrappers hand the OS a pointer
+# derived from `as_ptr()`, which is UB and, optimized, folds the caller's reads
+# back to the buffer's initializer (`taigi-windows-platform`'s `os_out_buffer`).
+windows-sys = "0.61"
 # `Vector2` for Direct2D draw origins (the `windows` crate takes it by this type).
 windows-numerics = "0.3"
 

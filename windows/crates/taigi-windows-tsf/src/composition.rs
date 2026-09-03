@@ -10,6 +10,7 @@
 
 // 中文: TSF 組字區操作 — 每個 context 一個 ITfComposition,只在同步 edit session 內改;效果→TSF 呼叫的對照。
 
+use crate::com_out_buffer;
 use crate::edit_session::EditCookie;
 use crate::wide::to_wide;
 use std::mem::ManuallyDrop;
@@ -21,8 +22,8 @@ use windows::Win32::System::Variant::{VariantClear, VARIANT, VT_I4, VT_UNKNOWN};
 use windows::Win32::UI::TextServices::{
     ITfComposition, ITfCompositionSink, ITfContext, ITfContextComposition, ITfInputScope,
     ITfInsertAtSelection, ITfRange, TfActiveSelEnd, GUID_PROP_ATTRIBUTE, GUID_PROP_INPUTSCOPE,
-    INSERT_TEXT_AT_SELECTION_FLAGS, IS_PASSWORD, TF_AE_NONE, TF_ANCHOR_END, TF_DEFAULT_SELECTION,
-    TF_IAS_QUERYONLY, TF_SELECTION, TF_SELECTIONSTYLE, TS_SD_READONLY,
+    INSERT_TEXT_AT_SELECTION_FLAGS, IS_PASSWORD, TF_AE_NONE, TF_ANCHOR_END, TF_IAS_QUERYONLY,
+    TF_SELECTION, TF_SELECTIONSTYLE, TS_SD_READONLY,
 };
 
 /// A `TF_SELECTION` collapsed on `range` — how every edit here leaves the
@@ -51,19 +52,7 @@ unsafe fn select_end_of(context: &ITfContext, ec: EditCookie, range: &ITfRange) 
 /// The caret's own range (a clone of the selection, collapsed at its end),
 /// or `None` when the host reports no selection.
 unsafe fn caret_range(context: &ITfContext, ec: EditCookie) -> Option<ITfRange> {
-    let mut selections = [TF_SELECTION {
-        range: ManuallyDrop::new(None),
-        style: TF_SELECTIONSTYLE::default(),
-    }];
-    let mut fetched = 0u32;
-    context
-        .GetSelection(ec, TF_DEFAULT_SELECTION, &mut selections, &mut fetched)
-        .ok()?;
-    if fetched == 0 {
-        return None;
-    }
-    let owned = ManuallyDrop::take(&mut selections[0].range);
-    let range = owned?;
+    let range = com_out_buffer::default_selection_range(context, ec)?;
     let caret = range.Clone().ok()?;
     caret.Collapse(ec, TF_ANCHOR_END).ok()?;
     drop(range);
@@ -321,7 +310,7 @@ impl<'a> CompositionEditor<'a> {
             }
             let mut text = [0u16; 2];
             let mut length = 0u32;
-            if probe.GetText(self.ec, 0, &mut text, &mut length).is_err()
+            if com_out_buffer::range_text(&probe, self.ec, 0, &mut text, &mut length).is_err()
                 || length != 1
                 || text[0] != u16::from(b' ')
             {

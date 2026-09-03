@@ -966,6 +966,7 @@ dependencies = [
  "raw-window-handle",
  "taigi-windows-core",
  "windows",
+ "windows-sys",
 ]
 
 [[package]]

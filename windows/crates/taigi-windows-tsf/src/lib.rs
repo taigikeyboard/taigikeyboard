@@ -15,6 +15,7 @@
 
 mod class_factory;
 mod com_guard;
+mod com_out_buffer;
 mod composition;
 mod contexts;
 mod display_attribute;

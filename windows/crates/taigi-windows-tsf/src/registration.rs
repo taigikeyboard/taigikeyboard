@@ -7,6 +7,7 @@
 
 // 中文: 註冊/解除註冊 — CLSID、語言 profile、四個真實類別;解除逐項對稱。
 
+use crate::com_out_buffer;
 use crate::guids::{CLSID_TEXT_SERVICE, GUID_PROFILE, LANGID_ZH_TW};
 use crate::module::module_path;
 use crate::registry::{delete_tree, Key};
@@ -172,11 +173,12 @@ fn profile_is_registered() -> Result<bool> {
         loop {
             let mut batch = [TF_INPUTPROCESSORPROFILE::default(); 8];
             let mut fetched = 0u32;
-            // This binding returns `Result<()>`, so `S_FALSE` and `S_OK` are
+            // This call answers `Result<()>`, so `S_FALSE` and `S_OK` are
             // both `Ok` and only the count says whether the enumeration is
             // done. A failure still propagates — an enumeration that broke is
-            // not an enumeration that ended.
-            enumerator.Next(&mut batch, &mut fetched)?;
+            // not an enumeration that ended. Through `com_out_buffer`, since
+            // `batch` is read back.
+            com_out_buffer::next_input_processor_profiles(&enumerator, &mut batch, &mut fetched)?;
             let fetched = usize::try_from(fetched).unwrap_or(0);
             if batch[..fetched].iter().any(|profile| {
                 profile.clsid == CLSID_TEXT_SERVICE && profile.guidProfile == GUID_PROFILE
@@ -209,7 +211,9 @@ fn enumerated_guids(enumerator: &IEnumGUID) -> Result<Vec<GUID>> {
         let mut batch = [GUID::zeroed(); 8];
         let mut fetched = 0u32;
         // SAFETY: `batch` is written for as many entries as `fetched` reports.
-        let status = unsafe { enumerator.Next(&mut batch, Some(&mut fetched)) };
+        // Through `com_out_buffer` — the generated wrapper hands the
+        // enumerator a read-only pointer for a batch we read back.
+        let status = unsafe { com_out_buffer::next_guids(enumerator, &mut batch, &mut fetched) };
         let fetched = usize::try_from(fetched).unwrap_or(0);
         all.extend_from_slice(&batch[..fetched]);
         if !enumeration_continues(status, fetched)? {
