@@ -1,6 +1,9 @@
-//! The few Win32 calls both the DLL and the settings window need — the
+//! The few Win32 calls the DLL and the settings window reach for — the
 //! user's locale, opening a URL, the alert sound, what the system says about
-//! appearance — behind plain functions.
+//! appearance — behind plain functions. Most are wanted by both; a couple
+//! belong to one caller and live here because it cannot hold them
+//! ([`preload_library`] is the settings exe's, which is `unsafe_code =
+//! forbid`, and the DLL must never load what it maps).
 //! On a non-Windows host (the macOS build gate, `make check`) each answers
 //! the neutral value, so the callers compile and test natively.
 //!
@@ -189,36 +192,75 @@ pub fn beep() {
 #[cfg(not(windows))]
 pub fn beep() {}
 
-/// Claims the named per-session mutex for this process's lifetime; answers
-/// `false` when another process of ours already holds it (the handle is
-/// deliberately never closed — it IS the claim). The host stub always
+/// Claims the named mutex for this process's lifetime; answers `false`
+/// when another process of ours already holds it. The host stub always
 /// answers `true`.
+///
+/// The claim lives as long as the process that WON it: the winner's handle
+/// is deliberately leaked (it IS the claim) and a loser closes its own
+/// right away, so the name frees when the winner exits and not before. It
+/// is an atomic "am I first" across the processes alive right now, NOT a
+/// mark that survives the logon session — callers that want once-per-session
+/// must say what a second run costs.
 #[cfg(windows)]
-pub fn acquire_single_instance(name: &str) -> bool {
+pub fn acquire_named_claim(name: &str) -> bool {
     use windows::core::PCWSTR;
-    use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
+    use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS};
     use windows::Win32::System::Threading::CreateMutexW;
     let wide: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
-    // SAFETY: a NUL-terminated name alive for the call; the returned handle
-    // is intentionally leaked so the mutex outlives every scope.
+    // SAFETY: a NUL-terminated name alive for the call.
     let created = unsafe { CreateMutexW(None, false, PCWSTR(wide.as_ptr())) };
     match created {
-        Ok(_) => {
+        Ok(handle) => {
             // SAFETY: the last-error read right after the call that set it.
-            let last_error = unsafe { GetLastError() };
-            last_error != ERROR_ALREADY_EXISTS
+            let already_existed = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
+            if already_existed {
+                // A loser's handle is not the claim, and holding it would
+                // keep the name alive past the winner's exit — closing it
+                // is what makes the claim end with the process that won.
+                // SAFETY: a handle this call just returned, used nowhere else.
+                let _ = unsafe { CloseHandle(handle) };
+            }
+            !already_existed
         }
         Err(error) => {
-            log::warn!("platform.single_instance_failed error={error}");
+            log::warn!("platform.named_claim_failed error={error}");
             true
         }
     }
 }
 
 #[cfg(not(windows))]
-pub fn acquire_single_instance(_name: &str) -> bool {
+pub fn acquire_named_claim(_name: &str) -> bool {
     true
 }
+
+/// Maps `path` as an executable image, the way the loader would, and keeps
+/// it mapped for this process's life — see `taigi-windows-settings`'s
+/// `prewarm` module for why keeping it is the point.
+#[cfg(windows)]
+pub fn preload_library(path: &std::path::Path) {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::PCWSTR;
+    use windows::Win32::System::LibraryLoader::LoadLibraryW;
+    let wide: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    // SAFETY: a NUL-terminated absolute path alive for the call. The
+    // returned handle is intentionally leaked: the mapping is the point,
+    // and the process exits moments later.
+    if let Err(error) = unsafe { LoadLibraryW(PCWSTR(wide.as_ptr())) } {
+        log::warn!(
+            "platform.preload_library_failed path={} error={error}",
+            path.display()
+        );
+    }
+}
+
+#[cfg(not(windows))]
+pub fn preload_library(_path: &std::path::Path) {}
 
 /// A debug-build logger to the debugger's output window
 /// (`OutputDebugStringW`; DebugView shows it). Release builds install

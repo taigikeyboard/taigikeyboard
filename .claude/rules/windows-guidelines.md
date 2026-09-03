@@ -25,7 +25,11 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   bump PR must add `[InstallDelete]` entries for every name in the PREVIOUS
   `build-support/windows-app-runtime-files.txt` that the new list drops (Inno never removes files
   a newer `[Files]` wildcard stops covering), and `build-support/resource.rs` must never emit an
-  `RT_MANIFEST` (the linker embeds the runtime's).
+  `RT_MANIFEST` (the linker embeds the runtime's). It also changes which runtime images the window
+  actually maps: the bump round must re-dump a running settings window's install-directory modules
+  ON THE BOX and update `taigi-windows-settings::prewarm`'s `RUNTIME_IMAGES` + its snapshot
+  revision (`the_snapshot_belongs_to_the_pinned_reactor` goes red until it does). A name that
+  starts loading without being listed costs nothing visible — the window just opens slowly again.
   Reactor exposes no keyboard events: the shortcut recorder uses a THREAD-scoped `WH_KEYBOARD`
   hook in `taigi-windows-platform` (RAII, `catch_unwind`, swallow down+up while recording,
   pass-through otherwise) — never a global hook, never a raw XAML object mutation.

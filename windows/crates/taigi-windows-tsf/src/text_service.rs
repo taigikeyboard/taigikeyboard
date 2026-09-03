@@ -140,6 +140,13 @@ impl TextService_Impl {
             "tsf.activate client_id={client_id} flags={flags:#x} learning={}",
             runtime.capability.learning
         );
+        // The user has this input method selected somewhere, so the
+        // settings window is one shortcut away: map its WinUI runtime now,
+        // in a process that exits as soon as it has. Claimed across hosts,
+        // spawned off this thread, and every failure inside it is logged
+        // rather than returned — activation must not fail over a prewarm,
+        // and a failed activation rolls the whole service back.
+        settings_launcher::prewarm_once();
 
         let source: ITfSource = thread_mgr.cast()?;
         let object = self.to_object();
