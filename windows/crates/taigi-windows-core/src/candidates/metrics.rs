@@ -433,13 +433,11 @@ mod tests {
 
     #[test]
     fn small_small_and_medium_medium_resolve_the_traced_values() {
-        // Both ladders are the tighter Windows ones (`CandidateTextSizeChoice::font_size`,
-        // `CandidateWindowSizeChoice::scale`), so the shapes follow the macOS trace
-        // (CandidateMetricsTests.swift:23-50) but not its numbers.
-        // trace: small — text 13/16=0.8125, so 14*0.8125=11.375→11, 7*0.8125=5.6875→6;
-        // chrome 0.45, so 9*0.45=4.05→4, 12*0.45=5.4→5, 8*0.45=3.6→4; item 13+5=18.
-        // medium — text 16/16=1, so 14, 7; chrome 0.55, so 9*0.55=4.95→5,
-        // 12*0.55=6.6→7; item 16+7=23.
+        // The text values follow the macOS trace (CandidateMetricsTests.swift:23-50);
+        // the chrome values follow the tighter Windows ladder (`CandidateWindowSizeChoice::scale`).
+        // trace: small — 9*0.6=5.4→5, 12*0.6=7.2→7, 8*0.6=4.8→5, item 16+7=23;
+        // medium — 14*1.25=17.5→18, 7*1.25=8.75→9, 9*0.72=6.48→6, 12*0.72=8.64→9,
+        // item 20+9=29.
         let m = metrics(T::Small, W::Small, Inline);
         assert_eq!(
             (
@@ -451,11 +449,10 @@ mod tests {
                 m.tahoe_separator_inset(),
                 m.item_height()
             ),
-            (13.0, 11.0, 6.0, 4.0, 5.0, 4.0, 18.0)
+            (16.0, 14.0, 7.0, 5.0, 7.0, 5.0, 23.0)
         );
-        // trace: 11*0.8125=8.9375→9, 8*0.8125=6.5→7 (Rust rounds half away from zero).
-        assert_eq!(m.scaled_symbol_metric(11.0), 9.0);
-        assert_eq!(m.scaled_symbol_metric(8.0), 7.0);
+        assert_eq!(m.scaled_symbol_metric(11.0), 11.0);
+        assert_eq!(m.scaled_symbol_metric(8.0), 8.0);
         let m = metrics(T::Medium, W::Medium, Inline);
         assert_eq!(
             (
@@ -466,7 +463,7 @@ mod tests {
                 m.vertical_padding(),
                 m.item_height()
             ),
-            (16.0, 14.0, 7.0, 5.0, 7.0, 23.0)
+            (20.0, 18.0, 9.0, 6.0, 9.0, 29.0)
         );
     }
 
@@ -539,12 +536,11 @@ mod tests {
 
     #[test]
     fn stacked_content_without_annotations_is_one_line_tall() {
-        // trace: Medium/Medium — inline item 16+7=23; stacked resolve =
-        // ceil(20+17+2+7)=46 (candidate line ceil(16*1.2)=20, annotation line
-        // ceil(14*1.2)=17, gap 2*1=2). No annotated cell → 23 (the inline
-        // height); any annotated cell → 46; Inline is 23 either way and
-        // measures no stacked lines; the variant round-trips back to the
-        // resolved box.
+        // trace: Medium/Medium — inline item 20+9=29; stacked resolve =
+        // ceil(24+22+3+9)=58 (gap 2*1.25=2.5→3). No annotated cell → 29
+        // (the inline height); any annotated cell → 58; Inline is 29 either
+        // way and measures no stacked lines; the variant round-trips back
+        // to the resolved box.
         for text in T::ALL {
             for window in W::ALL {
                 let stacked = metrics(*text, *window, Stacked);
@@ -572,8 +568,8 @@ mod tests {
             }
         }
         let stacked = metrics(T::Medium, W::Medium, Stacked);
-        assert_eq!(stacked.item_height(), 46.0);
-        assert_eq!(stacked.for_content(false).item_height(), 23.0);
+        assert_eq!(stacked.item_height(), 58.0);
+        assert_eq!(stacked.for_content(false).item_height(), 29.0);
     }
 
     #[test]
