@@ -133,14 +133,24 @@ same user-data schemas as macOS.
 - **Tap Shift to switch 中/英**, the convention every Windows CJK input method
   follows: one Shift on its own, under half a second, with no other key in
   between. In 英 every keystroke goes straight to the document and the language
-  bar reads 英; another tap returns to 台. On by default, and switchable off in
-  一般. Ctrl+Alt shortcuts keep working in both modes. (#680)
+  bar reads 英; another tap returns to 台. Always on, with no switch to find:
+  the language bar letter and the mode flash are what announce it, and 一般 is
+  a row-for-row mirror of the Mac's. Ctrl+Alt shortcuts keep working in both
+  modes. (#680, #692)
 - **Shortcuts.** `Ctrl+Alt+S` opens the settings window, `Ctrl+Alt+C` switches
   Tâi-lô / POJ, `` ` `` swaps 漢字 / 羅馬字 — the macOS roster with ⌘ read as
   Ctrl and ⌃ as Alt. Every shortcut is re-recordable in 快捷鍵.
 - **Learning.** 詞頻, 詞關聯 and 自訂詞庫 are stored per user under
   `%APPDATA%\TaigiKeyboard`, in the same SQLite schemas macOS uses. 自訂詞庫
   imports and exports CSV.
+
+- **Types in modern apps too.** Text boxes built on the current Windows text
+  input stack — WinUI 3 and Store apps, this input method's own settings window
+  among them — took English letters only, with no candidate list, while classic
+  desktop applications were fine. Windows admits an input method to those
+  controls only once it says so, and this one had not: it now declares
+  `GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT`. 自訂詞庫's search box and its
+  add/edit fields accept Taigi. (#691)
 
 #### Settings window
 
