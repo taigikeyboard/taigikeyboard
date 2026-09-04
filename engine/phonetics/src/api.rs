@@ -103,11 +103,50 @@ pub(crate) fn preprocess_for_normalize_tone(
         s = convert_nasal_double_n(&s);
     }
     if config.oo_doubletap_enabled {
-        s = s.replace("oo", "o\u{0358}");
-        s = s.replace("Oo", "O\u{0358}");
-        s = s.replace("OO", "O\u{0358}");
+        s = fold_double_o(&s);
     }
     s
+}
+
+/// Double-tapped `o` → `o\u{0358}`, case-insensitive on both taps, with the
+/// FIRST tap's case deciding the letter (`Oo` and `OO` both give `O\u{0358}`,
+/// `oo` and `oO` both give `o\u{0358}`).
+///
+/// A single left-to-right scan, pairing non-greedily — the same shape as
+/// [`convert_nasal_double_n`]. It replaces three sequential `String::replace`
+/// passes (`oo`, `Oo`, `OO`) that had two defects between them:
+///
+/// - `oO` matched no pass at all, so a shift between the two taps silently
+///   produced nothing;
+/// - the passes ate each other's output. `OOoo` folded to `O\u{0358}o\u{0358}`
+///   in pass 1, whose `Oo` seam pass 2 then matched, and whose `OO` seam pass 3
+///   matched again — three combining dots on one letter (`O\u{0358}\u{0358}\u{0358}`).
+///
+/// Scanning once cannot re-read what it just wrote, so both are structural
+/// rather than patched case by case.
+// 中文: 雙擊 o → o͘,兩下都不分大小寫,由「第一下」決定字母大小寫
+// 中文:   (Oo/OO → O͘,oo/oO → o͘)。單次左到右掃描、非貪婪配對,與 convert_nasal_double_n 同形狀。
+// 中文: 取代原本三次依序的 String::replace(oo / Oo / OO),那組有兩個缺陷:
+// 中文:   (1) oO 三個 pass 都不match,兩次點擊間按了 shift 就完全沒反應;
+// 中文:   (2) 各 pass 會吃掉前一個 pass 的輸出 —— OOoo 第一趟折成 O͘o͘,
+// 中文:       第二趟又match到接縫的 Oo、第三趟再match到 OO,同一個字母上疊出三個結合點。
+// 中文: 掃描一次就讀不到自己剛寫下的內容,兩個缺陷都是結構性解掉,不是逐case補丁。
+fn fold_double_o(input: &str) -> String {
+    let chars: Vec<char> = input.chars().collect();
+    let mut result = String::with_capacity(input.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if i + 1 < chars.len() && matches!(chars[i], 'o' | 'O') && matches!(chars[i + 1], 'o' | 'O')
+        {
+            result.push(chars[i]);
+            result.push('\u{0358}');
+            i += 2;
+        } else {
+            result.push(chars[i]);
+            i += 1;
+        }
+    }
+    result
 }
 
 /// Mirrors iOS ToneConverter `convertNasalDoubleN`: vowel + "nn" → vowel + "ⁿ".

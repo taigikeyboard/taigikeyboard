@@ -243,22 +243,55 @@ fn normalize_tone_poj_doubletap_folds_uppercase() {
         );
         assert_eq!(string_result(&resp), expected, "input {input:?}");
     }
-    // Pins EXISTING behaviour, deliberately not changed here: the `oo` fold has
-    // `oo` / `Oo` / `OO` arms and no `oO` arm, so a shift-between-taps buffer
-    // is left alone. Pre-existing case-coverage gap, orthogonal to the ordering
-    // fix; changing it would be a contract decision about what a double tap is.
-    // 中文: 釘住既有行為(本輪刻意不改):oo 折疊只有 oo/Oo/OO 三個 arm,沒有 oO,
-    // 中文:   所以兩次點擊之間按了 shift 的 buffer 不會被折。這是既有的大小寫覆蓋缺口,
-    // 中文:   與本次排序修正無關;要改屬於「雙擊的契約是什麼」的產品決定。
-    // trace: "hoOnn" -> nn fold -> "hoOⁿ" -> oo fold finds no `oO` arm -> case
-    //        pass sees `O` as the nearest preceding letter -> "hoOᴺ"
+    // A shift between the two taps still folds: the pair is matched
+    // case-insensitively and the FIRST tap decides the letter's case.
+    // 中文: 雙擊不分大小寫,且由「第一下」決定字母大小寫。
+    // trace: "hoOnn" -> nn fold -> "hoOⁿ" -> oo fold pairs o+O, first tap
+    //        lowercase -> "ho͘ⁿ" -> case pass sees `o` -> "ho͘ⁿ"
     let resp = run(
         Method::NormalizeTone(NormalizeTone {
             input: "hoOnn".to_string(),
         }),
         poj_config(true, true),
     );
-    assert_eq!(string_result(&resp), "hoO\u{1d3a}");
+    assert_eq!(string_result(&resp), "ho\u{0358}\u{207f}");
+}
+
+#[test]
+fn normalize_tone_poj_oo_doubletap_pairs_in_one_pass() {
+    // The fold pairs taps left to right in a single scan, so it can neither
+    // miss a case combination nor re-read what it just wrote.
+    //
+    // Both were real: the previous three sequential `String::replace` passes
+    // (`oo`, `Oo`, `OO`) had no `oO` arm, and they ate each other's output —
+    // `OOoo` folded to `O͘o͘`, whose `Oo` seam the second pass matched and whose
+    // `OO` seam the third matched again, stacking THREE combining dots on one
+    // letter.
+    // 中文: 單次左到右配對,既不會漏掉某個大小寫組合,也讀不到自己剛寫下的內容。
+    // 中文:   兩者都真的發生過:舊的三次 String::replace 沒有 oO arm,而且會互相吃 ——
+    // 中文:   OOoo 折成 O͘o͘ 後,第二趟match到接縫的 Oo、第三趟又match到 OO,
+    // 中文:   同一個字母疊出三個結合點。
+    for (input, expected) in [
+        // First tap decides the case of the letter.
+        ("hoo", "ho\u{0358}"),
+        ("hoO", "ho\u{0358}"),
+        ("hOo", "hO\u{0358}"),
+        ("hOO", "hO\u{0358}"),
+        // Adjacent pairs stay independent — exactly one dot each.
+        ("OOoo", "O\u{0358}o\u{0358}"),
+        ("ooOO", "o\u{0358}O\u{0358}"),
+        ("oooo", "o\u{0358}o\u{0358}"),
+        // Odd run: the trailing unpaired `o` is left alone.
+        ("hooo", "ho\u{0358}o"),
+    ] {
+        let resp = run(
+            Method::NormalizeTone(NormalizeTone {
+                input: input.to_string(),
+            }),
+            poj_config(true, false),
+        );
+        assert_eq!(string_result(&resp), expected, "input {input:?}");
+    }
 }
 
 #[test]
