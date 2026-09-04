@@ -19,19 +19,19 @@ UI 需延續目前設定頁風格，不另外引入新的視覺語言。
 
 ### Android
 
-- 字型選單在 [android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/layout/FontPickerContent.kt](/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/layout/FontPickerContent.kt)
-- 字型解析集中在 [android/app/src/main/java/com/siansiansu/taigikeyboard/util/FontUtils.kt](/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/java/com/siansiansu/taigikeyboard/util/FontUtils.kt)
+- 字型選單在 [android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/layout/FontPickerContent.kt](android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/layout/FontPickerContent.kt)
+- 字型解析集中在 [android/app/src/main/java/com/siansiansu/taigikeyboard/util/FontUtils.kt](android/app/src/main/java/com/siansiansu/taigikeyboard/util/FontUtils.kt)
 - 設定值存於 `PrefHelper.fontType`
 - 目前 `iansui`、`genYoMin`、`genYoGothic` 都直接從 `res/font` 載入
 - 鍵盤本體、候選詞列、預覽、popup、overlay 都直接依賴 `FontUtils.getTypefaceByType(...)`
 
 ### iOS
 
-- 字型設定頁在 [ios/Sources/TaigiKeyboard/App/Tabs/Layout/AppearanceSettingsView.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/App/Tabs/Layout/AppearanceSettingsView.swift)
-- 字型型別定義在 [ios/Sources/TaigiKeyboard/Settings/SettingsTypes.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/Settings/SettingsTypes.swift)
-- 使用者設定存於 [ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift)
-- 主 app 透過 `UIAppFonts` 預載字型，定義於 [ios/Sources/TaigiKeyboard-Info.plist](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard-Info.plist)
-- keyboard extension 透過 [ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift) 從 containing app bundle 註冊字型
+- 字型設定頁在 [ios/Sources/TaigiKeyboard/App/Tabs/Layout/AppearanceSettingsView.swift](ios/Sources/TaigiKeyboard/App/Tabs/Layout/AppearanceSettingsView.swift)
+- 字型型別定義在 [ios/Sources/TaigiKeyboard/Settings/SettingsTypes.swift](ios/Sources/TaigiKeyboard/Settings/SettingsTypes.swift)
+- 使用者設定存於 [ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift](ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift)
+- 主 app 透過 `UIAppFonts` 預載字型，定義於 [ios/Sources/TaigiKeyboard-Info.plist](ios/Sources/TaigiKeyboard-Info.plist)
+- keyboard extension 透過 [ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift](ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift) 從 containing app bundle 註冊字型
 - `KeyboardFonts`、`ButtonFontProvider`、candidate UI、preview 都假設字型已經在 bundle 或 process 內可用
 
 ## Key Finding
@@ -283,7 +283,7 @@ keyboard extension 在下次啟動或喚醒時，重新從 App Group 字型目�
 
 ### Font Registration Refactor
 
-目前的 [ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift) 是從 containing app bundle 找字型，這在動態下載後不夠用。
+目前的 [ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift](ios/Sources/TaigiKeyboard/_Keyboard/FontRegistration.swift) 是從 containing app bundle 找字型，這在動態下載後不夠用。
 
 建議改成兩段：
 

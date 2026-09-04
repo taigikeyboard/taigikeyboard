@@ -59,7 +59,7 @@ VersionInfoProductVersion={#AppVersion}
 VersionInfoProductName={#AppName}
 VersionInfoDescription={#AppName} Setup
 VersionInfoCompany={#AppPublisher}
-VersionInfoCopyright=Copyright (c) 2026 Soo Bîn-hiân 蘇民弦. MIT License.
+VersionInfoCopyright=Copyright (c) 2025-2026 Soo Bîn-hiân 蘇民弦. Apache License 2.0.
 ; Machine-wide, under Program Files: a text service is loaded into every
 ; process of every user, and regsvr32 needs HKLM (W8).
 DefaultDirName={autopf}\TaigiKeyboard

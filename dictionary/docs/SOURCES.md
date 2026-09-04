@@ -12,7 +12,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Format**: ODS (OpenDocument Spreadsheet, 18 sheets)
 - **Captured**: `data/raw/kautian.ods` (file committed 2026-04-23; actual
   MoE release date TBD)
-- **Licence**: 創用 CC 姓名標示-非商業性 4.0 國際 / CC BY-NC 4.0 (per sutian.moe.edu.tw)
+- **Licence**: **CC BY-ND 3.0 TW** (創用CC 姓名標示-禁止改作 3.0 臺灣) — verified 2026-09-05 against the publisher's 版權聲明, <https://sutian.moe.edu.tw/zh-hant/piantsip/pankhuan-singbing/>. Covers 文字、音檔內容. **Commercial use permitted; no NonCommercial term.** This file previously recorded CC BY-NC 4.0, which was wrong. Only 漢字 + 羅馬字 are taken — see `dictionary/LICENSE` for why CC BY-ND permits that.
 - **Notes**: Multi-sheet; pipeline `select`/`expand`/`merge` stages
   handle the pivoting. Largest single source (~49k rows).
 
@@ -21,7 +21,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: TBD
 - **Format**: JSON (scraped; filename encodes capture timestamp)
 - **Captured**: `data/raw/scrape-20260319T144906Z.json` → 2026-03-19 14:49 UTC
-- **Licence**: TBD (public-service broadcast content; consult 公視 usage terms)
+- **Licence**: **CC BY 4.0** — verified 2026-09-05 against the publisher (公視台語台 台語新詞辭庫, <https://www.taigitv.org.tw/taigi-words>).
 - **Notes**: Supplement dictionary for neologisms; ~2.1k rows.
 
 ### itaigi — iTaigi 華台對照典
@@ -29,7 +29,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - **Format**: CSV (ChhoeTaigi canonical export)
 - **Captured**: `data/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv` — capture date TBD
-- **Licence**: CC BY-SA 4.0 (per ChhoeTaigi)
+- **Licence**: **CC0** (per the ChhoeTaigi database README; verified 2026-09-05)
 - **Notes**: Original source iTaigi (<https://itaigi.tw>); ~15k rows.
 
 ### sitbut — 台灣植物名彙
@@ -53,7 +53,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - **Format**: CSV
 - **Captured**: `data/raw/ChhoeTaigi_TaijitToaSutian.csv` — capture date TBD
-- **Licence**: public-domain primary source, digitisation terms CC BY-SA 4.0 (per ChhoeTaigi)
+- **Licence**: primary source public domain; **digitisation CC BY-NC-SA 3.0 TW** (per the ChhoeTaigi database README; verified 2026-09-05) — **non-commercial**
 - **Notes**: Largest community source (~64k rows); historic Taigi-Japanese dictionary.
 
 ### kungge — 台語工藝詞庫
@@ -61,7 +61,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: TBD
 - **Format**: JSON (scraped; filename encodes capture date)
 - **Captured**: `data/raw/scrape-20251210.json` → 2025-12-10
-- **Licence**: TBD (MoE-derived)
+- **Licence**: **CC BY-NC 4.0** per the in-app credits screen — **non-commercial**. Publisher statement not located; treat as the working record, not as verified.
 - **Notes**: Specialised craft/industry terminology; ~1k rows.
 
 ### stti — 學科術語辭典
@@ -69,7 +69,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: TBD
 - **Format**: CSV
 - **Captured**: `data/raw/stti.csv` — capture date TBD
-- **Licence**: TBD (government-released; likely 開放政府資料授權條款 1.0 / Open Government Data Licence)
+- **Licence**: **開放政府資料授權條款 1.0** (Open Government Data Licence, Taiwan) per the in-app credits screen — permits commercial use and derivatives. Publisher statement not re-confirmed.
 - **Notes**: Academic-discipline terminology; ~4.9k rows. Extract stage
   runs a bespoke `expand_variant_readings` (see `common/stages/extract.py`).
 
@@ -78,7 +78,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: TBD
 - **Format**: CSV (no header)
 - **Captured**: `data/raw/khpoo.csv` — capture date TBD
-- **Licence**: TBD
+- **Licence**: **Unverified** — origin and rights holder not established.
 - **Notes**: Pre-processed data — pipeline uses `cleanup.minimal: true`
   (normalize_roman only). ~4.2k rows.
 
@@ -90,7 +90,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Format**: CSV (`data/variants.csv`)
 - **Captured**: derived at pipeline `select` stage of kautian; the snapshot at
   `supplementary/variants/data/` was frozen from an earlier MoE release (TBD).
-- **Licence**: inherits from kautian (CC BY-NC 4.0)
+- **Licence**: inherits from kautian (CC BY-ND 3.0 TW)
 - **Notes**: ~3k variant rows. Applied by the `variants` stage of each
   source to set `is_variant` bit on matching (hanzi, tl) rows.
 
@@ -107,7 +107,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: TBD
 - **Format**: CSV (`data/lkk.csv`)
 - **Captured**: TBD
-- **Licence**: TBD
+- **Licence**: **Unverified** — origin and rights holder not established.
 - **Notes**: Style/convention guide merged into the main dictionary as
   supplementary hints (bit 11).
 

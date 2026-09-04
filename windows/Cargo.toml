@@ -24,8 +24,8 @@ members = [
 version = "3.6.7"
 edition = "2021"
 rust-version = "1.95"  # windows-reactor's floor (W17); the box runs 1.98
-license = "MIT"
-repository = "https://github.com/siansiansu/taigikeyboard"
+license = "Apache-2.0"
+repository = "https://github.com/taigikeyboard/taigikeyboard"
 publish = false
 
 [workspace.dependencies]

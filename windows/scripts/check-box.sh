@@ -12,7 +12,7 @@
 #
 #   TAIGI_WINDOWS_BOX       ssh host (default: win)
 #   TAIGI_WINDOWS_BOX_REPO  the gate clone on the box
-#                           (default: C:/Users/minsi/Workspace/taigikeyboard-gate)
+#                           (default: C:/Workspace/taigikeyboard-gate)
 
 set -euo pipefail
 
@@ -22,7 +22,7 @@ fail() {
 }
 
 BOX="${TAIGI_WINDOWS_BOX:-win}"
-BOX_REPO="${TAIGI_WINDOWS_BOX_REPO:-C:/Users/minsi/Workspace/taigikeyboard-gate}"
+BOX_REPO="${TAIGI_WINDOWS_BOX_REPO:-C:/Workspace/taigikeyboard-gate}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 sha="$(git -C "$REPO_DIR" rev-parse HEAD)"

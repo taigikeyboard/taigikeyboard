@@ -56,9 +56,17 @@ chat summary MUST carry enough to find the mail without re-running the CLI. Reco
 (`from:<address> subject:"<subject>"`) is a useful sixth field for backlog tables — it survives
 a message id changing hands better than the link does.
 
-Reference shape: the mail-index table at the top of `docs/reports/user-bug-backlog-2026-08-18.md`.
+Reference shape for a backlog's mail-index table — one row per report:
+
+| Item | Reporter | Subject | Received | Gmail id | Search |
+| --- | --- | --- | --- | --- | --- |
+
 Never write a bug item as "zw, 2026-04-21" alone — the sender address and message id are what
 make it findable.
+
+⚠ **A backlog table like that is reporter PII** (name, address, device model). This repository is
+public: keep such a table out of `docs/`, in the scratchpad or in project memory, and refer to
+reporters by initials in anything committed.
 
 **Also cross-check the reported version against the changelog** before calling an item "already
 fixed": if the fix PR shipped in a release **older than** the reported version, the reporter

@@ -159,7 +159,7 @@ Codifying `.claude/rules/cross-platform-alignment.md` §5.1 in Rust terms:
 
 - `.claude/rules/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
 - `.claude/rules/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
-- khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in plan `/Users/alexsu/.claude/plans/cozy-dancing-nova.md` and `references/khiin-rs/`.
+- khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in `references/khiin-rs/`.
 - `.claude/rules/cross-platform-alignment.md` §4a — Phase II.5 prerequisite docs.
 - `.claude/rules/cross-platform-alignment.md` §5.1 — Rust shared-core non-goals.
 - `.claude/rules/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.

@@ -117,7 +117,7 @@ Passing both gates does not mandate extraction. User retains judgment on whether
 
 Before any D9 FFI POC work begins, two Phase II.5 artifacts must exist and be Codex-reviewed:
 
-- **`docs/engine/ffi-safety.md`** — mandatory rules for any Rust FFI entry: `std::panic::catch_unwind` at every boundary, `Mutex<Engine>` (engine `!Sync` but `Send`), explicit `shutdown(handle)` + `Drop` impl, error sentinels (`Response.ErrorCode` in protobuf, out-of-band null only for "engine is sick, restart"), logging bridge (`log` crate routed to `OSLog` / `android.util.Log` via a platform-side adapter — candidate code never touches platform log APIs). Informed by khiin-rs reference (`references/khiin-rs/`) failure modes: see plan `/Users/alexsu/.claude/plans/cozy-dancing-nova.md` §"Lessons from khiin-rs" for citations.
+- **`docs/engine/ffi-safety.md`** — mandatory rules for any Rust FFI entry: `std::panic::catch_unwind` at every boundary, `Mutex<Engine>` (engine `!Sync` but `Send`), explicit `shutdown(handle)` + `Drop` impl, error sentinels (`Response.ErrorCode` in protobuf, out-of-band null only for "engine is sick, restart"), logging bridge (`log` crate routed to `OSLog` / `android.util.Log` via a platform-side adapter — candidate code never touches platform log APIs). Informed by khiin-rs reference (`references/khiin-rs/`) failure modes: see `references/khiin-rs/` for the failure modes cited.
 - **`docs/engine/rust-core-proto.md`** — thin Request/Response schema draft covering only the first two slices (Phonetics + Composing). Includes request-id correlation, generation-counter semantics for stale-response discard, `CMD_SET_CONFIG`-equivalent settings-snapshot push (engine must not cache settings — live-read per `behavioral-invariants.md` §11). Full Lexicon / NextWord / SQLite proto design is deferred to Phase III.
 
 Both docs must comply with `.claude/rules/rust-best-practices.md` (workspace layout §1, error handling §2, crate choices §3, non-goals §8) and `.claude/rules/rust-ffi-safety.md` (FFI boundary discipline §1, `unsafe` discipline §3, opaque handle pattern §4). Rule deviations require `// JUSTIFICATION:` prose in the spec.
@@ -134,7 +134,7 @@ These docs land in the post-v3.5.0 round per the approved roadmap revision plan.
 
 ### 5.1 Rust shared-core non-goals (codified)
 
-The Rust shared-core, when it eventually exists, will **not** own any of the following — they stay in Swift (iOS) / Kotlin (Android) forever. Informed by the khiin-rs reference study (2026-04-22); see plan `/Users/alexsu/.claude/plans/cozy-dancing-nova.md` §R6 for the derivation:
+The Rust shared-core, when it eventually exists, will **not** own any of the following — they stay in Swift (iOS) / Kotlin (Android) forever. Informed by the khiin-rs reference study (2026-04-22); derived from that study:
 
 - **Candidate UI navigation, layout semantics, or styling**. The engine returns neutral candidate values + preedit segments; navigation ownership (focus, page scroll, selection) is platform-side. Matches `khiin-rs/protos/src/command.proto:114`, which leaves candidate display to the client app.
 - **Platform text-region types**. The engine never sees `NSRange`, `ExtractedText`, `TextPosition`, `UITextDocumentProxy`, `InputConnection`, `EditorInfo`, or any SwiftUI / UIKit / Compose view type. Proto message envelopes carry only `String`, numeric types, and engine-defined value types.

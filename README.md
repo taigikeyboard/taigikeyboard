@@ -1,11 +1,11 @@
 # Taigi Keyboard
 
-A Taiwanese (Tâi-gí / 台語) input method for iOS and Android. Romanization input (POJ, TL, TPS), Hanji (漢字), tone marks, autocomplete, and cross-system Romanization conversion.
+A Taiwanese (Tâi-gí / 台語) input method for iOS, Android, macOS, and Windows. Romanization input (POJ, TL, TPS), Hanji (漢字), tone marks, autocomplete, and cross-system Romanization conversion.
 
 [![Security](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml)
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-lightgrey)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
 ## Features
 
@@ -18,13 +18,15 @@ A Taiwanese (Tâi-gí / 台語) input method for iOS and Android. Romanization i
 
 ## Architecture
 
-Both platforms share a Rust core. Algorithms (phonetics, composing, lexicon, ranking, next-word, dispatch) live in `engine/`. Platform code is thin glue: Swift on iOS via swift-bridge, Kotlin on Android via JNI. Protobuf carries payloads across the FFI boundary.
+All four platforms share a Rust core. Algorithms (phonetics, composing, lexicon, ranking, next-word, dispatch) live in `engine/`. Platform code is thin glue: Swift on iOS and macOS via swift-bridge, Kotlin on Android via JNI, Rust all the way down on Windows. Protobuf carries payloads across the FFI boundary.
 
 | Path | Stack |
 | --- | --- |
 | `engine/` | Rust workspace; xcframework for iOS, JNI `.so` for Android (arm64-v8a + armeabi-v7a) |
 | `ios/` | Swift + KeyboardKit |
 | `android/` | Kotlin + Jetpack Compose UI; FlorisBoard-derived view hierarchy |
+| `macos/` | Swift + InputMethodKit; SwiftPM |
+| `windows/` | Rust + Text Services Framework; Inno Setup installer |
 | `dictionary/` | Source data + FST/mmap build pipeline |
 | `taigi-converter/` | Canonical TL/POJ/TPS converter (git submodule) |
 
@@ -37,4 +39,19 @@ Both platforms share a Rust core. Algorithms (phonetics, composing, lexicon, ran
 
 ## License
 
-Released under [CC BY-NC-SA 4.0](LICENSE) — non-commercial use only; derivative works must be shared under the same license.
+Source code is released under the [Apache License, Version 2.0](LICENSE).
+
+**The dictionary data is not.** Each of the fourteen sources keeps its own
+terms — CC0, CC BY, CC BY-SA, CC BY-ND, CC BY-NC-SA, 開放政府資料授權條款, and
+a few still unverified. Two carry NonCommercial terms, and because the compiled
+dictionary shipped inside every application package merges all sources into one
+inseparable index, **that compiled dictionary must be treated as
+non-commercial**. See [`dictionary/LICENSE`](dictionary/LICENSE) for the
+per-source table and the attribution every build owes.
+
+Fonts, vendored code, and bundled third-party data are inventoried in
+[`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to build, test, and submit changes
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting and what this software does with user data
+- [`docs/CODE_SIGNING_POLICY.md`](docs/CODE_SIGNING_POLICY.md) — who may release a signed binary, and how to verify one

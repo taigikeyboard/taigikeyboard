@@ -1,0 +1,105 @@
+# Dictionary data licences
+
+**The dictionary data in this directory is NOT covered by the repository's
+Apache License, Version 2.0.** Each source keeps its original terms. The
+compiled artifacts built from it — `dictionary/output/dictionary.bin`,
+`dictionary.fst`, `association.bin`, `syllables.fst`, and the copies staged
+into every application package — merge all of these sources into one index and
+are **not separable** back into per-source rows.
+
+Anyone redistributing this repository, or any application package built from
+it, must satisfy every row below. `dictionary/docs/SOURCES.md` carries
+publisher, origin URL, capture date, and pipeline notes per source.
+
+## Status
+
+Row counts are from `dictionary/output/dictionary.csv` (168,351 rows total).
+"Exclusive" counts rows that no other source also supplies.
+
+| Source | Rows | Exclusive | Licence | Verified |
+| --- | --- | --- | --- | --- |
+| `kautian` 教育部臺灣台語常用詞辭典 | 57,334 | 32,641 | **CC BY-ND 3.0 TW** | ✅ 2026-09-05, publisher's own 版權聲明 |
+| `variants` 異用字 | — | — | inherits `kautian` | ✅ derived from `kautian`'s 異用字 sheet |
+| `taijit` 台日大辭典 | 64,250 | 39,390 | **CC BY-NC-SA 3.0 TW** — non-commercial | ✅ 2026-09-05, ChhoeTaigi database README |
+| `taihoa` 台華線頂對照典 | 57,477 | 28,873 | CC BY-SA 4.0 | ✅ 2026-09-05, ChhoeTaigi |
+| `itaigi` 華台對照典 | 15,927 | 10,568 | **CC0** | ✅ 2026-09-05, ChhoeTaigi |
+| `sitbut` 台灣植物名彙 | 1,351 | 540 | CC BY-SA 4.0 | ✅ 2026-09-05, ChhoeTaigi |
+| `taigitv` 公視台語新詞辭庫 | 2,114 | 1,482 | CC BY 4.0 | ✅ 2026-09-05, publisher |
+| `stti` 學科術語辭典 | 4,901 | 2,411 | 開放政府資料授權條款 1.0 | in-app credits screen; publisher statement not re-confirmed |
+| `kungge` 台語工藝詞庫 | 994 | 668 | CC BY-NC 4.0 | in-app credits screen; publisher statement not located |
+| `khiin` frequency data | 8,086 | 8,086 | **Unverified** | Khiin project (<https://github.com/khiin-pjh/khiin>); the specific file's terms not confirmed |
+| `khpoo` 齒盤補充辭典 | 4,198 | 3,579 | **Unverified** | origin and rights holder not established |
+| `lkk` 漢羅合用建議用字 | 58 | 58 | **Unverified** | origin and rights holder not established |
+| `char_freq_merged.txt` | — | — | **Unverified** | corpus provenance not established |
+| `dev` 開發者補充辭典 | 3,449 | 2,563 | Apache-2.0 | written by this project's maintainers |
+
+The in-app credits screen (Home tab → 著作權) has carried the correct values
+for these sources all along; it, not this pipeline's own notes, was the
+accurate record. Keep the two in sync — `dictionary/LICENSE` is now the single
+place the record lives.
+
+## `kautian` — what is taken, and why CC BY-ND permits it
+
+教育部's 版權聲明 (<https://sutian.moe.edu.tw/zh-hant/piantsip/pankhuan-singbing/>,
+read 2026-09-05) releases the dictionary's 文字、音檔內容 under
+**創用CC 姓名標示-禁止改作 3.0 臺灣 (CC BY-ND 3.0 TW)**.
+
+There is **no NonCommercial term** — commercial use is permitted. What the
+licence withholds is the right to distribute Adaptations.
+
+What this project actually takes from that source is narrow. The pipeline's
+`select` stage (`dictionary/sources/official/kautian/config.yaml`) reads
+exactly two columns — **漢字 and 羅馬字** — from eight sheets, plus the
+accent-difference sheet. It takes no 釋義, no 例句, no 華語對照, and no audio.
+The shipped `dictionary.csv` has no definition or example column at all: every
+other field is either a mechanical romanization transform this project computes
+(`poj`, `tl_num`, `tps_num`, `*_notone`, `*_abbrev`), a frequency drawn from a
+separate corpus, or a source bit.
+
+That matters twice over:
+
+- A pairing of a word with its pronunciation is a **fact about the language**,
+  not 教育部's original expression. 著作權法 §10-1 extends protection to
+  expression, not to the ideas, discoveries, or facts expressed.
+- CC BY-ND 3.0 §3 expressly permits reproducing the Work, incorporating it
+  into **Collections**, and making "such modifications as are technically
+  necessary to exercise the rights in other media and formats". Assembling
+  entries alongside eight other sources into a lookup index, and re-encoding
+  that index as an FST, reads naturally as a Collection plus a format change
+  rather than an Adaptation.
+
+Attribution is required, and the application provides it on the Home tab →
+著作權 screen.
+
+This is the maintainer's reading, recorded so that it can be checked rather
+than re-derived. It is not legal advice.
+
+## Non-commercial and share-alike obligations
+
+`taijit` (CC BY-NC-SA 3.0 TW, 64,250 rows) and `kungge` (CC BY-NC 4.0) carry
+**NonCommercial** terms. Because the compiled artifacts merge every source into
+one inseparable index, **the compiled dictionary as shipped must be treated as
+non-commercial**, regardless of the Apache-2.0 licence on this repository's
+source code. `kautian` is not the reason for that; `taijit` is.
+
+`taihoa` and `sitbut` (CC BY-SA 4.0) and `taijit` (CC BY-NC-SA 3.0 TW) each
+carry ShareAlike obligations. Whether one merged index can satisfy the
+ShareAlike terms of two different licence versions at once has not been
+analysed.
+
+## What "Unverified" means here
+
+Exactly what it says: **no redistribution licence has been identified for that
+source.** It is not a claim that the data is public domain, open data, freely
+reusable, or usable with attribution. A file being downloadable, or a dataset
+being published by a government body, does not by itself grant a right to
+reproduce, adapt, or redistribute it.
+
+## Attribution
+
+Applications built from this repository must credit at minimum:
+
+- 中華民國教育部《臺灣台語常用詞辭典》 — <https://sutian.moe.edu.tw/>
+- ChhoeTaigi 找台語 — <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
+- 公共電視文化事業基金會 / 公視台語台 — <https://www.taigitv.org.tw/taigi-words>
+- 國家教育研究院
