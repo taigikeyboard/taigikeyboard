@@ -9,8 +9,16 @@ read by `windows/crates/taigi-windows-update`. `version` is compared against
 the running settings exe's version (the workspace's); when the manifest is
 strictly newer, the 一般 pane offers the update: a signed copy downloads
 `packageURL` itself, verifies it, and — on a second press — opens the
-installer; everywhere else (the toast, an unsigned development build, a
-manifest without `packageURL`) the browser opens `downloadPageURL`.
+installer; everywhere else (the toast, an unsigned copy, a manifest without
+`packageURL`) the browser opens `downloadPageURL`.
+
+⚠ **Today every copy is on the second route.** Releases are published
+unsigned (`docs/architecture/windows-release.md` § Signing status — no
+certificate for the next year or two), and an unsigned running copy has no
+signature identity to verify a package against, so it never fetches or stages
+`packageURL`: the row's action is 去下載. `packageURL` is published anyway —
+it costs nothing to a copy that ignores it, and one published fact is easier
+to keep true than two.
 
 The file is unsigned, deliberately: what stops a substituted package being
 installed is its own Authenticode signature, pinned against the certificate
@@ -23,7 +31,7 @@ VERSIONINFO naming this product at the manifest's version.
 |---|---|
 | `version` | Newest downloadable version, dotted integers only (`3.7.0`). No suffixes — the checker rejects them. |
 | `downloadPageURL` | Page the user lands on, `https` only. Required. |
-| `packageURL` | The signed `TaigiKeyboard-<version>.exe`, `https` only. Optional; an invalid one is dropped on its own. |
+| `packageURL` | The `TaigiKeyboard-<version>.exe` an in-app install would fetch, `https` only — read only by a signed running copy, which verifies its Authenticode signature before installing it. Optional; an invalid one is dropped on its own. |
 
 Unknown extra fields are ignored. Before the first release the manifest reads
 `0.0.0`, which notifies nobody.
@@ -54,8 +62,8 @@ carries the version, and deliberately not `/releases/latest/download/...`,
 since `latest` resolves across a repository that is a website rather than
 this input method's release channel. Whether the button is shown at all is
 the site's `enable_windows_download` flag, not this file: the release flow
-fills the file the moment any installer is published, a throwaway test
-publish included.
+fills the file the moment any installer is published, a test publish
+included.
 
 The manifest is **rendered** from it by the site's own build:
 `appcast/windows.json` over there is a Jekyll template reading

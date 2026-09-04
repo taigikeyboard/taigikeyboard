@@ -1,10 +1,49 @@
-# Windows release — signed, installed by Inno Setup, web-distributed
+# Windows release — installed by Inno Setup, web-distributed
 
 The operator procedure for cutting a Windows release (roadmap
 `windows-roadmap.md` W8 / W9). Mirror of `macos-release.md`: the same order,
 the same website repository, the same manifest contract — with Authenticode
 in place of Developer ID + notarization, and an Inno Setup installer in place
 of a product archive.
+
+## Signing status — UNSIGNED is the current channel
+
+There is no code-signing certificate for this project and none is expected for
+the next year or two (owner's decision, 2026-09-04). Releases are cut and
+published with `--skip-sign`, and the published artifact carries the plain
+release name — `TaigiKeyboard-<version>.exe`, the same shape macOS publishes.
+
+What that costs, and what it does not (SmartScreen behaviour per
+[Microsoft's own account](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation),
+read 2026-09-04):
+
+| | Unsigned (today) | Signed (when a certificate exists) |
+|---|---|---|
+| Download | "Windows protected your PC" — 其他資訊 → 仍要執行. Reputation restarts from zero **every version**: an unsigned file cannot inherit any. Enterprise policy can remove the "run anyway" choice | Also warns while the file is new — an OV or EV certificate does NOT buy a bypass, and has not for years — but reputation can then carry across versions on the same certificate |
+| Win11 Smart App Control | Blocks execution outright unless the file has positive reputation | Same rule, but signing is how reputation accrues |
+| Install | Works; a TSF text service needs no signature | Same |
+| Update check, toast, 一般 pane row | Work | Work |
+| Update action | Always 去下載 → browser | 下載安裝 → 安裝, in-app |
+
+The in-app install is gated by the RUNNING copy's own signature:
+`taigi-windows-update::verify::running_identity` answers `None` for an
+unsigned executable, so `UpdateInstallation::can_install_in_app` is false —
+it also wants a `packageURL` and a `%LOCALAPPDATA%` staging folder — and
+`start_download` re-checks all three, so an unsigned copy never fetches or
+stages a package. Checking, recording, the toast and the pending row care
+about none of it.
+
+⚠ Everyone who installs during the unsigned era must download once by hand to
+reach the first signed release — their copy has no identity to verify a
+package against. Say so in that release's notes.
+
+Returning to signed: set `WINDOWS_SIGNING_THUMBPRINT`, stop passing
+`--skip-sign`. No code changes; the two flags are the whole switch.
+
+**Named divergence from macOS**: `macos/scripts/release-app.sh` still refuses
+`--publish --skip-notarize` and stamps `-unnotarized` into a name, because
+macOS HAS a Developer ID certificate. Windows deliberately no longer mirrors
+that half.
 
 ## Architectures
 
@@ -79,14 +118,19 @@ not ship it, and every `make` target below needs it), and:
    `ChineseTraditional.isl` ships from 6.5) — `ISCC.exe` on `PATH`, in its
    default folder, or named by `ISCC=<path>`.
 3. **Windows SDK + Visual Studio Build Tools** — `rc.exe` (the resource
-   compiler the crates' build scripts use for the icon + VERSIONINFO),
-   `signtool.exe`, and `dumpbin.exe` (beside `link.exe`; the import-table
-   check) on `PATH`; a Developer Command Prompt puts all three there.
-4. **A code-signing certificate** in the current user's certificate store,
-   named by its SHA-1 thumbprint: `export WINDOWS_SIGNING_THUMBPRINT=<40 hex>`.
-   The updater pins THIS certificate: every installed copy accepts an in-app
-   update only from an installer signed with the same leaf (see *Notes*).
-   `TIMESTAMP_URL` overrides the RFC 3161 server (default DigiCert).
+   compiler the crates' build scripts use for the icon + VERSIONINFO) and
+   `dumpbin.exe` (beside `link.exe`; the import-table check) on `PATH`, plus
+   `signtool.exe` **on the signed path only** (neither script asks for it
+   under `--skip-sign` / `--allow-unsigned`); a Developer Command Prompt puts
+   all three there.
+4. **A code-signing certificate** — *not held today; skip this item and pass
+   `--skip-sign`* (§ Signing status). When one exists: in the current user's
+   certificate store, named by its SHA-1 thumbprint,
+   `export WINDOWS_SIGNING_THUMBPRINT=<40 hex>`. The updater pins THIS
+   certificate: every installed copy accepts an in-app update only from an
+   installer signed with the same leaf (see *Notes*). `TIMESTAMP_URL`
+   overrides the RFC 3161 server (default DigiCert). `signtool.exe` in item 3
+   is needed only on this path.
 5. **`gh`** authenticated to an account that can write the website repository
    (`taigikeyboard/taigikeyboard.github.io`).
 
@@ -105,7 +149,8 @@ gate), and a release from a clean tree ships exactly what is committed.
 What `windows/scripts/release-app.sh` does, in order:
 
 1. **Preflight** — `MAJOR.MINOR.PATCH` in `windows/Cargo.toml`, clean working
-   tree, the tools above present, a thumbprint named (or `--skip-sign`).
+   tree, the tools above present, a thumbprint named (or `--skip-sign`, which
+   is what today's releases pass).
 2. **Build** — `TAIGI_REQUIRE_RESOURCES=1 cargo build --release --target
    x86_64-pc-windows-msvc` for the DLL and the settings exe; each crate's
    `build.rs` compiles its icon and VERSIONINFO (`ProductName` = `Taigi
@@ -126,22 +171,28 @@ What `windows/scripts/release-app.sh` does, in order:
    non-empty), `Fonts\` (every face in `ios/Resources/Fonts`), and the
    scheduled task's definition.
 5. **Sign the binaries** — `signtool sign /fd SHA256 /td SHA256 /tr <timestamp>
-   /sha1 <thumbprint>`, then `signtool verify /pa`.
+   /sha1 <thumbprint>`, then `signtool verify /pa`. Skipped entirely under
+   `--skip-sign`.
 6. **Package** — `iscc /DAppVersion /DDist /O … windows/installer/TaigiKeyboard.iss`
    → `TaigiKeyboard-<version>.exe`, with the same `ProductName` /
    `ProductVersion` in its own VERSIONINFO (`VersionInfo*` directives) —
    read back and compared the same way.
-7. **Sign the installer** — same certificate, then verify.
+7. **Sign the installer** — same certificate, then verify. Skipped entirely
+   under `--skip-sign`.
 8. **Name the output** — `windows/.build/distribution/TaigiKeyboard-<version>.exe`
-   and its SHA-256. A dirty tree or `--skip-sign` stamps `-dirty` /
-   `-throwaway` into the name, so a throwaway cannot be mistaken for a release.
-9. **Publish** — `windows/scripts/publish-release.sh` (below).
+   and its SHA-256. Only a DIRTY tree stamps a qualifier (`-dirty`) into the
+   name, so a throwaway cannot be mistaken for a release; an unsigned
+   installer is publishable and keeps the plain name.
+9. **Publish** — `windows/scripts/publish-release.sh` (below), with
+   `--allow-unsigned` passed down when the build was `--skip-sign`.
 
-Flags: `make windows-release` passes `--force --publish`. `--publish` refuses to
-run with `--skip-sign` or `--allow-dirty`; those builds call the script directly:
+Flags: `make windows-release` passes `--force --publish`. `--publish` still
+refuses `--allow-dirty` (a published installer must be reproducible from a
+commit). Today's release adds `--skip-sign`:
 
 ```sh
-bash windows/scripts/release-app.sh --skip-sign      # packaging only, unshippable
+make windows-release RELEASE_FLAGS=--skip-sign       # the unsigned release channel
+bash windows/scripts/release-app.sh --skip-sign      # package only, no publish
 bash windows/scripts/release-app.sh --allow-dirty    # build from a dirty tree
 ```
 
@@ -217,11 +268,14 @@ reading its own payload.
 
 `windows/scripts/publish-release.sh` (run by `--publish`):
 
-1. Refuses a `-dirty` / `-throwaway` name, an installer `signtool verify`
-   does not trust, an installer whose VERSIONINFO is not
+1. Refuses a `-dirty` name, an installer whose VERSIONINFO is not
    `TaigiKeyboard` / the checkout's version, and — when
    `WINDOWS_SIGNING_THUMBPRINT` is set — a signer other than that certificate
-   (what every installed copy pins).
+   (what every installed copy pins). The Authenticode gate (`signtool verify`
+   must trust the installer) stands unless `--allow-unsigned` is passed, which
+   is what `release-app.sh --skip-sign --publish` passes down; naming a
+   certificate AND `--allow-unsigned` is a contradiction and fails. A direct
+   invocation without the flag therefore cannot publish unsigned by accident.
 2. Creates (or reuses) the GitHub release `windows-v<version>` on the
    website repository with the `### Windows` section of
    `changelog/desktop-v<version>.md` (the desktop train's record), and
@@ -248,10 +302,10 @@ reachable. The site advertises the download only once its
   Plan that release as a download-page release (the manifest's
   `downloadPageURL` route, which every copy has); the copies it installs pin
   the new certificate and in-app updates resume.
-- **Unsigned builds** (`--skip-sign`) run — SmartScreen warns — but the
-  running settings exe has no signature identity, so it never offers an
-  in-app install: the 一般 pane offers the download page instead, as an
-  ad-hoc macOS build does.
+- **Unsigned releases** (`--skip-sign`, today's channel — § Signing status)
+  run and install — SmartScreen warns — but the running settings exe has no
+  signature identity, so it never offers an in-app install: the 一般 pane
+  offers the download page instead, as an ad-hoc macOS build does.
 - **`rc.exe` absent** — a development build compiles, with a warning, without
   its icon and VERSIONINFO; the release script sets `TAIGI_REQUIRE_RESOURCES=1`,
   under which the build fails instead, and reads the VERSIONINFO back

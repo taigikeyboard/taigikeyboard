@@ -264,8 +264,9 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `macos/scripts/release-app.sh`): clean-tree preflight → cargo release builds → `iscc`
   → optional `signtool` (env-gated) → SHA-256 → `windows/scripts/publish-release.sh`
   (mirror of the macOS publisher: GitHub release on the website repo tagged
-  `windows-v<version>`, anonymous 200/206 checks, then `appcast/windows.json` +
-  `_data/windows_release.json`, poll live). Root `make windows-release`,
+  `windows-v<version>`, anonymous 200/206 checks, then the ONE committed file
+  `_data/windows_release.json` — the site renders `appcast/windows.json` from it —
+  poll live). Root `make windows-release`,
   `make windows-check`. Version source of truth = `windows/Cargo.toml`
   `[workspace.package] version`; `tools/release_notes.py` `set-versions` /
   `check-versions` extended so `make version-desktop x.y.z` moves macOS + Windows together
@@ -487,7 +488,10 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   code** (Codex): sign `TaigiKeyboardSettings.exe` and every installer with the SAME
   Authenticode leaf; VERSIONINFO on both with an identical non-empty `ProductName` and
   the installer's `ProductVersion` = the workspace version; `packageURL` names the
-  signed final `.exe`; a Start-menu shortcut to the settings exe with
+  final `.exe` (⚠ 2026-09-04: releases ship UNSIGNED until a certificate exists, so
+  the signing half of this contract is dormant and every copy takes the
+  `downloadPageURL` route — `docs/architecture/windows-release.md` § Signing status);
+  a Start-menu shortcut to the settings exe with
   `System.AppUserModel.ID = TaigiKeyboard.Settings`; a per-user scheduled task running
   the installed exe with exactly `--check-updates`, `MultipleInstances=IgnoreNew`;
   `Dictionaries\` and `Fonts\` beside the exe (never the working directory) — and,

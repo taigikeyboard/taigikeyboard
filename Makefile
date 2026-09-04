@@ -104,7 +104,11 @@ windows-check:
 # Cut a Windows release — on a Windows machine, from Git Bash: release
 # builds, signing, the Inno Setup installer, publish to the website repo
 # (windows/scripts/release-app.sh; procedure and one-time setup in
-# docs/architecture/windows-release.md). Same flag policy as macos-release.
+# docs/architecture/windows-release.md). There is no certificate, so today the
+# operator types `make windows-release RELEASE_FLAGS=--skip-sign` — unsigned is
+# the Windows release channel (that doc's § Signing status), and the flag stays
+# explicit rather than defaulted so nothing publishes unsigned by accident.
+# Unlike macos-release, --publish therefore does NOT refuse the skip flag.
 windows-release:
 	bash windows/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
@@ -176,7 +180,8 @@ help:
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
-	@echo "  make windows-release    Cut a Windows release (on Windows): build, sign, package, publish"
+	@echo "  make windows-release    Cut a Windows release (on Windows): build, package, publish"
+	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"
 	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
 	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"

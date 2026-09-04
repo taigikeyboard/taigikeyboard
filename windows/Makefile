@@ -41,7 +41,8 @@ help:
 	@echo "  make install     - (Windows, elevated) build and register the text service from this checkout"
 	@echo "  make uninstall   - (Windows, elevated) unregister it"
 	@echo "  make reload      - (Windows, elevated) re-register without rebuilding"
-	@echo "  make release     - (Windows) build, sign, package with Inno Setup and publish (scripts/release-app.sh)"
+	@echo "  make release     - (Windows) build, package with Inno Setup and publish (scripts/release-app.sh);"
+	@echo "                     pass RELEASE_FLAGS=--skip-sign — no certificate, unsigned is the channel"
 
 # The Rust under crates/taigi-windows-core/src/strings/generated.rs is written
 # by the repo-root `make i18n`; a stale copy would compile strings that no

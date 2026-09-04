@@ -13,9 +13,17 @@
 #
 # Signing is by thumbprint: WINDOWS_SIGNING_THUMBPRINT names the Authenticode
 # certificate in the current user's store; TIMESTAMP_URL the RFC 3161 server.
-# Without a thumbprint the build is refused unless --skip-sign, and an
-# unsigned build is never published: the updater pins the signer
-# (docs/architecture/windows-release.md).
+# Without a thumbprint the build is refused unless --skip-sign.
+#
+# UNSIGNED IS A RELEASE CHANNEL, not a throwaway: `--skip-sign --publish`
+# ships, and the installer carries the same plain name a signed one would.
+# Why, what it costs the user, and when it ends are one fact in one place —
+# docs/architecture/windows-release.md § Signing status.
+#
+# NAMED DIVERGENCE from macOS: macos/scripts/release-app.sh keeps its
+# --publish x --skip-notarize contradiction and its `-unnotarized` qualifier,
+# because macOS HAS a Developer ID certificate. Windows deliberately no longer
+# mirrors that half.
 
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/identity.sh"
@@ -40,8 +48,6 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 if [[ "$publish" == true ]]; then
-    [[ "$skip_sign" == false ]] ||
-        fail "--publish and --skip-sign contradict: the updater refuses an unsigned installer"
     [[ "$allow_dirty" == false ]] ||
         fail "--publish and --allow-dirty contradict: a published installer must be reproducible from a commit"
 fi
@@ -59,9 +65,12 @@ if [[ -n "$TREE_STATUS" ]]; then
     echo "  ⚠ dirty tree — this installer is a throwaway, do not publish it"
 fi
 HEAD_COMMIT="$(git -C "$REPOSITORY_DIR" rev-parse --short HEAD)"
+# Only what makes an installer UNPUBLISHABLE is spelled out in its name, so a
+# throwaway can never be mistaken for the file people are told to download. An
+# unsigned installer is publishable, so it carries the plain release name —
+# the same one macOS publishes (`TaigiKeyboard-<version>.pkg`).
 QUALIFIER=""
 [[ -z "$TREE_STATUS" ]] || QUALIFIER="$QUALIFIER-dirty"
-[[ "$skip_sign" == false ]] || QUALIFIER="$QUALIFIER-throwaway"
 OUTPUT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION$QUALIFIER.exe"
 if [[ -e "$OUTPUT_EXE" && "$force_overwrite" == false ]]; then
     fail "$OUTPUT_EXE already exists — bump the version, or pass --force"
@@ -92,7 +101,7 @@ command -v dumpbin > /dev/null ||
 SIGN_THUMBPRINT="${WINDOWS_SIGNING_THUMBPRINT:-}"
 if [[ "$skip_sign" == false ]]; then
     [[ -n "$SIGN_THUMBPRINT" ]] ||
-        fail "WINDOWS_SIGNING_THUMBPRINT is not set — see docs/architecture/windows-release.md, or pass --skip-sign for a throwaway build"
+        fail "WINDOWS_SIGNING_THUMBPRINT is not set — see docs/architecture/windows-release.md, or pass --skip-sign for the unsigned release channel"
     command -v signtool > /dev/null || fail "signtool (Windows SDK) is not on PATH"
 fi
 if [[ "$publish" == true ]]; then
@@ -196,7 +205,7 @@ while IFS= read -r name; do
 done < "$RUNTIME_LIST"
 [[ $runtime_count -gt 0 ]] || fail "no Windows App Runtime entries in $RUNTIME_LIST"
 
-echo "==> Signing the binaries"
+[[ "$skip_sign" == true ]] || echo "==> Signing the binaries"
 sign_file "$STAGING_DIR/$SERVICE_DLL"
 sign_file "$STAGING_DIR/$SETTINGS_EXE"
 
@@ -211,7 +220,7 @@ BUILT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION.exe"
 # an installed copy verifies a downloaded package by.
 require_version_info "$BUILT_EXE"
 
-echo "==> Signing the installer"
+[[ "$skip_sign" == true ]] || echo "==> Signing the installer"
 sign_file "$BUILT_EXE"
 
 if [[ "$BUILT_EXE" != "$OUTPUT_EXE" ]]; then
@@ -223,9 +232,13 @@ echo "  version   $SHORT_VERSION"
 echo "  commit    $HEAD_COMMIT"
 echo "  installs  %ProgramFiles%\\TaigiKeyboard (administrator prompt)"
 echo "  sha256    $(sha256sum "$OUTPUT_EXE" | cut -d' ' -f1)"
+declare -a PUBLISH_ARGS=(--installer "$OUTPUT_EXE")
 if [[ "$skip_sign" == true ]]; then
+    PUBLISH_ARGS+=(--allow-unsigned)
     echo ""
-    echo "  ⚠ unsigned — SmartScreen warns on every machine, and the in-app updater will never install it."
+    echo "  ⚠ unsigned — the current release channel. SmartScreen typically warns (an unsigned file"
+    echo "    inherits no reputation, so every version starts over), Win11 Smart App Control can refuse"
+    echo "    it outright, and every installed copy stays on the download-page route (no in-app install)."
 fi
 
 if [[ "$publish" == true ]]; then
@@ -233,8 +246,10 @@ if [[ "$publish" == true ]]; then
         -z "$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)" ]] ||
         fail "the working tree changed during the build — this installer no longer matches $HEAD_COMMIT, rebuild before publishing"
     echo ""
-    bash "$WINDOWS_DIR/scripts/publish-release.sh" --installer "$OUTPUT_EXE"
+    bash "$WINDOWS_DIR/scripts/publish-release.sh" "${PUBLISH_ARGS[@]}"
 else
     echo ""
-    echo "  Publish it with: bash windows/scripts/publish-release.sh"
+    # %q per argument: the distribution path can hold a space, and a command
+    # printed for pasting has to survive being pasted.
+    echo "  Publish it with: bash windows/scripts/publish-release.sh $(printf '%q ' "${PUBLISH_ARGS[@]}")"
 fi
