@@ -5,8 +5,9 @@ method for Windows 11 and Windows 10 1809+, on the same Rust engine and the same
 dictionaries as macOS. Both desktop apps gain the 候選詞顯示 picker (漢羅並排 /
 漢羅濫 / 羅馬字), and 顯示當咧拍的字, which puts the romanization being typed at
 the head of the candidate list and is on by default. 自動空白 now ships off,
-matching iOS and Android. macOS gets the POJ tone-mark fix for `au` before a
-coda, and both take the 台 tile icon.
+matching iOS and Android. Both learn the `o͘ⁿ` spelling of the POJ nasal final
+and take the 台 tile icon; macOS gets the POJ tone-mark fix for `au` before a
+coda.
 
 ### macOS
 
@@ -30,6 +31,22 @@ coda, and both take the 台 tile icon.
   括號標註's `台語 (tâi-gí)` counts as romanization. The swap that moves a
   trailing space after `?` / `!` / `,` now moves only a space this input method
   wrote, never one typed by hand. (#670)
+
+- **`o͘ⁿ` finds the nasal final.** POJ writes the nasal /ɔ̃/ as `oⁿ`, but some
+  writers spell it `o͘ⁿ` — the `o͘` key followed by `nn` on the POJ layout. That
+  spelling now reaches the dictionary: 好, 否, 呼, 齁, 乎, 歟 and the words built
+  on them. The rule that used to attempt this folded across the whole buffer and
+  so fired over a syllable seam, losing real keys — 滷卵 (`lo͘nng`) and 可惡
+  (`khooⁿ`) both went missing. The alias is indexed when the dictionary is
+  built, where syllable boundaries still exist. (#685)
+
+- **The `oo` and `nn` double taps stop cancelling each other.** In POJ, typing
+  `hoonn` wrote `ho͘nn`: the `oo` folded and the `nn` did not, because the dot
+  the first fold inserted was exactly what the nasal rule looked for in front of
+  `nn`. The nasal folds first now — the order the canonical converter has always
+  used. `oo` also folds in a single left-to-right pass, so a shift between the
+  two taps (`hoO`) folds like the rest and `OOoo` no longer stacks three dots on
+  one letter. (#686, #687)
 
 #### Candidates
 
@@ -82,6 +99,12 @@ coda, and both take the 台 tile icon.
   it read 漢字/羅馬字代先; the 漢字 interface language is listed by its own
   name, 台漢. Both changed on every platform. (#671)
 
+- **One message per outcome.** A shortcut that cannot be recorded says
+  已經予佔用 whatever holds it, instead of one message per kind of holder;
+  saving, deleting, importing and exporting share 咧處理…; an update that does
+  not go in says 安裝失敗. The recording prompt now uses 揤, the verb every
+  other string uses. Both desktop platforms. (#678)
+
 ### Windows
 
 Taigi Keyboard for Windows is a TSF text service (`TaigiKeyboard.dll`) plus a
@@ -107,6 +130,11 @@ same user-data schemas as macOS.
   open list re-fetches in place) and is re-recordable in 快捷鍵. A change made
   in the settings window applies from the next keystroke, like the candidate
   layout. (#662, #664)
+- **Tap Shift to switch 中/英**, the convention every Windows CJK input method
+  follows: one Shift on its own, under half a second, with no other key in
+  between. In 英 every keystroke goes straight to the document and the language
+  bar reads 英; another tap returns to 台. On by default, and switchable off in
+  一般. Ctrl+Alt shortcuts keep working in both modes. (#680)
 - **Shortcuts.** `Ctrl+Alt+S` opens the settings window, `Ctrl+Alt+C` switches
   Tâi-lô / POJ, `` ` `` swaps 漢字 / 羅馬字 — the macOS roster with ⌘ read as
   Ctrl and ⌃ as Alt. Every shortcut is re-recordable in 快捷鍵.
@@ -128,12 +156,18 @@ same user-data schemas as macOS.
 #### Updates
 
 - The window checks for a new version on launch when a check is overdue, and a
-  per-user scheduled task checks daily. An update is downloaded and staged only
-  when the installer is signed by the same certificate as the running copy;
-  otherwise the download page is offered.
+  per-user scheduled task checks daily. An update downloads and installs from
+  the window itself: the published manifest carries the installer's SHA-256, and
+  a download that does not match it is refused. A copy that carries an
+  Authenticode signature of its own also requires the new installer to be signed
+  by the same certificate — the digest is checked either way, never instead.
+  (#684)
 
 #### Install
 
+- **Not code-signed.** There is no Authenticode certificate yet, so SmartScreen
+  warns on first run: choose 其他資訊 → 仍要執行. Every release publishes the
+  installer's SHA-256, which is also what the in-app updater checks. (#682)
 - Administrator, `%ProgramFiles%\TaigiKeyboard`, x64. If a running application
   still holds the previous DLL, the installer says so and asks for a sign-out
   and sign-in — no restart. Uninstalling leaves `%APPDATA%\TaigiKeyboard`
