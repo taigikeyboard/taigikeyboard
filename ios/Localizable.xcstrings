@@ -3368,7 +3368,7 @@
       }
     },
     "i18n_settings_englishMode": {
-      "comment": "Input-mode option: English keyboard. Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "comment": "Input-mode option: English keyboard. Also the iOS smartbar input-mode button a11y label (extension surface), and the Windows mode-flash label when a Shift tap switches to English input.",
       "extractionState": "manual",
       "localizations": {
         "en": {

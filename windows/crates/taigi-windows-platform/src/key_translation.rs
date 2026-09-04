@@ -22,12 +22,15 @@
 // 中文: 一個按鍵按下轉成分類器要的快照(以及錄製欄要的 RecordedPress);修飾鍵只取樣一次,字元用 ToUnicodeEx(0x4)。DLL 與設定視窗共用同一份規則。
 
 use crate::os_out_buffer;
-use taigi_windows_core::keys::{KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress};
+use taigi_windows_core::keys::{
+    KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress, LEFT_SHIFT_SCAN_CODE,
+    RIGHT_SHIFT_SCAN_CODE,
+};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyboardLayout, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END,
-    VK_ESCAPE, VK_F1, VK_F24, VK_HOME, VK_INSERT, VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LWIN, VK_MENU,
-    VK_NEXT, VK_NUMLOCK, VK_PACKET, VK_PRIOR, VK_PROCESSKEY, VK_RCONTROL, VK_RETURN, VK_RIGHT,
-    VK_RMENU, VK_RWIN, VK_SHIFT, VK_TAB, VK_UP,
+    VK_ESCAPE, VK_F1, VK_F24, VK_HOME, VK_INSERT, VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT,
+    VK_LWIN, VK_MENU, VK_NEXT, VK_NUMLOCK, VK_PACKET, VK_PRIOR, VK_PROCESSKEY, VK_RCONTROL,
+    VK_RETURN, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT, VK_TAB, VK_UP,
 };
 
 const KEY_IS_DOWN: u8 = 0x80;
@@ -62,6 +65,47 @@ pub fn is_modifier_key(virtual_key: u16) -> bool {
     ]
     .iter()
     .any(|key| key.0 == virtual_key)
+}
+
+/// Whether a modifier OTHER than the Shift key identified by `scan_code` is
+/// already held. Asked as a Shift press could arm the 中/英 tap
+/// ([`taigi_windows_core::keys::ShiftTapTracker`]): Ctrl+Shift is the OS's own
+/// keyboard-layout switch, and holding one Shift while tapping the other is a
+/// chord too — neither may switch our mode.
+///
+/// The pressed key's own bit is already set in the state by the time the sink
+/// runs, which is why the sides are asked about individually rather than
+/// through the generic `VK_SHIFT`. Read from the same keyboard-state snapshot
+/// [`snapshot`] uses; a failed read reports nothing held, and the tracker's
+/// own record of an armed press still catches the common case.
+pub fn is_other_modifier_held_at_shift_press(scan_code: u32) -> bool {
+    let state = keyboard_state_or_empty();
+    // A scan code that is neither side (a remapped or injected Shift) asks
+    // about no other Shift at all: the pressed key's own bit is set, and
+    // reading the generic `VK_SHIFT` there would disqualify every press. The
+    // tracker's own record of an armed press still covers that keyboard.
+    let other_shift = match scan_code {
+        LEFT_SHIFT_SCAN_CODE => Some(VK_RSHIFT),
+        RIGHT_SHIFT_SCAN_CODE => Some(VK_LSHIFT),
+        _ => None,
+    };
+    [VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN]
+        .into_iter()
+        .chain(other_shift)
+        .any(|key| is_down(&state, key))
+}
+
+/// The keyboard state, or a zeroed one — which reads as "no modifier held",
+/// the same answer a failed read has always left behind.
+fn keyboard_state_or_empty() -> [u8; 256] {
+    os_out_buffer::keyboard_state().unwrap_or_else(|| {
+        log::debug!("key.state_unavailable");
+        [0u8; 256]
+    })
+}
+
+fn is_down(state: &[u8; 256], key: VIRTUAL_KEY) -> bool {
+    state[key.0 as usize] & KEY_IS_DOWN != 0
 }
 
 fn navigation_key(virtual_key: u16) -> Option<NavigationKey> {
@@ -117,20 +161,15 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
     if is_modifier_key(virtual_key) || is_synthetic_key(virtual_key) {
         return None;
     }
-    let state = os_out_buffer::keyboard_state().unwrap_or_else(|| {
-        log::debug!("key.state_unavailable");
-        // Zeroed reads as "no modifier held" — the same answer the failed
-        // read used to leave behind.
-        [0u8; 256]
-    });
-    let is_down = |key: u16| state[key as usize] & KEY_IS_DOWN != 0;
+    let state = keyboard_state_or_empty();
+    let held = |key: VIRTUAL_KEY| is_down(&state, key);
     let modifiers = KeyModifiers {
-        shift: is_down(VK_SHIFT.0),
-        control: is_down(VK_CONTROL.0),
-        alt: is_down(VK_MENU.0),
-        win: is_down(VK_LWIN.0) || is_down(VK_RWIN.0),
+        shift: held(VK_SHIFT),
+        control: held(VK_CONTROL),
+        alt: held(VK_MENU),
+        win: held(VK_LWIN) || held(VK_RWIN),
     };
-    let is_chorded = CHORDING_MODIFIER_KEYS.iter().any(|key| is_down(key.0));
+    let is_chorded = CHORDING_MODIFIER_KEYS.iter().copied().any(held);
     // SAFETY: thread id 0 = the calling thread's layout, which is the
     // focused thread inside a key sink.
     let layout = unsafe { GetKeyboardLayout(0) };

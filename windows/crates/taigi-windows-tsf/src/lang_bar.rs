@@ -23,7 +23,7 @@ use crate::module::instance;
 use crate::registration::{PRODUCT_NAME_STRING_ID, SERVICE_DESCRIPTION};
 use crate::ui::window;
 use crate::wide::{fill_fixed, to_wide_nul};
-use taigi_windows_core::keys::ShortcutAction;
+use taigi_windows_core::keys::{LanguageMode, ShortcutAction};
 use taigi_windows_core::settings::SettingsDocument;
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows::core::{Result, PCWSTR, PWSTR};
@@ -48,8 +48,16 @@ const _: () = assert!(MENU_OPEN_SETTINGS != 0 && MENU_CHECK_FOR_UPDATES != 0);
 pub const LANG_BAR_SINK_COOKIE: u32 = 0x5461_6967;
 /// The DLL icon resource the installer build adds (PR10); index 1.
 const ICON_RESOURCE_ID: u16 = 1;
-/// What the tray shows when it draws text instead of the icon.
-pub const TRAY_TEXT: &str = "台";
+/// What the tray shows when it draws text instead of the icon: the script
+/// being typed, in one character, as 微軟注音 spells its own 中/英 state.
+/// Not an i18n string — it names the script, so it reads the same in every UI
+/// language.
+pub fn tray_text(mode: LanguageMode) -> &'static str {
+    match mode {
+        LanguageMode::Taigi => "台",
+        LanguageMode::English => "英",
+    }
+}
 
 /// The product name in the user's UI language — the DLL's own STRINGTABLE
 /// (`build-support/resource.rs`), resolved by `LoadString` with Windows'

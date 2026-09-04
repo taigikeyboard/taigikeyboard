@@ -200,6 +200,25 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   Shift / Ctrl / Alt + 1–9; the stored value stays `option` (portable settings shape)
   and is rendered as Alt. Chords are registered with `ITfKeystrokeMgr::PreserveKey`
   from the stored settings and re-registered on reload.
+- **W5b 中/英 Shift tap (2026-09-04)** — Windows-only, because macOS reaches English through
+  the system's Caps Lock input-source switch (#617) and has no mode of its own. Tap Shift with
+  no other key in between and under 500 ms and the service switches between Taigi and English;
+  in English every key goes to the document, including the ones this TIP consumes outside a
+  composition (the auto-space swap, full-width punctuation, the bare 漢羅 key), while the global
+  Ctrl+Alt chords keep working. Ported from 新酷音 (`references/PIME/python/input_methods/
+  chewing/chewing_ime.py:701-737`, default on at `chewing_config.py:70`); recognition is pure
+  (`taigi-windows-core` `keys/shift_tap.rs`), auto-repeat is rejected by `lParam` bit 30, and the
+  clock is `GetTickCount64` — NOT `GetMessageTime`, whose value is the last message this thread
+  pulled off its queue and need not be the key a COM sink was handed (Codex F3). `OnTestKeyUp`
+  answers TRUE for the eligible release, which is what asks TSF for the delivery; `OnKeyUp` runs
+  the switch and answers FALSE, so the host still sees the release and its own Shift state stays
+  honest. Switching commits whatever is half-typed, spends the auto-space arm and starts a new
+  next-word session (Codex F8: an arm left standing would swap a space typed in the other mode),
+  then publishes the mode three ways — the conversion-mode compartment (W6), the tray letter
+  台/英, and the mode flash. Mode is per activation (per application), never persisted. The
+  setting is `shiftTogglesEnglishEnabled`, default ON (USER 2026-09-04). ⚠ DOGFOOD ORACLE OPEN:
+  mid-composition the switch commits; 微軟注音 may cancel an incomplete one instead, and nothing
+  in the references settles it (Codex F6).
 - **W6 Lang bar / menu** — one `ITfLangBarItemButton` (`GUID_LBI_INPUTMODE`,
   `TF_LBI_STYLE_BTN_MENU | TF_LBI_STYLE_SHOWNINTRAY`; rakukan `language_bar.rs:21-23`)
   whose `InitMenu` mirrors the macOS input-source menu exactly: 設定 / separator /
@@ -208,9 +227,13 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER`, `GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT` (rakukan
   `registration.rs:118`), `GUID_TFCAT_TIPCAP_UIELEMENTENABLED` (W4). NOT `COMLESS`
   (means COM-less activation support, which this TIP does not implement), NOT
-  `IMMERSIVESUPPORT` (contradicts the W2 AppContainer degradation), NOT
-  `INPUTMODECOMPARTMENT` (no 中/英 mode; macOS has no ABC mode either — the OS switches
-  input sources, `TaigiInputController.swift:132-138`).
+  `IMMERSIVESUPPORT` (contradicts the W2 AppContainer degradation). **`INPUTMODECOMPARTMENT`
+  became true 2026-09-04** and is now declared: the Shift tap gave this TIP a 中/英 mode, so it
+  keeps `GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION` current (`conversion_mode.rs`, only the
+  `TF_CONVERSIONMODE_NATIVE` bit; other flags are read back and preserved). It was refused while
+  there was no mode to publish — the category says what is TRUE, and the answer changed with the
+  feature, not with the policy. macOS still has no ABC mode of its own; there the OS switches
+  input sources (`TaigiInputController.swift:132-138`).
 - **W7 Registration** — LANGID `0x0404` only (Codex F5 CONFIRM: no duplicate profile
   under en-US; discoverability is the installer/onboarding's job). `ITfInputProcessorProfiles::Register`
   first, then `ITfInputProcessorProfileMgr::RegisterProfile` (rakukan
@@ -599,7 +622,7 @@ registration, desktop toast requirements).
 | HKLM → HKCU `CTF\TIP` registry copy | rakukan `rakukan_installer.iss:134-138` | Uninstall deletes the whole HKCU TIP key — other IMEs' settings. Dogfood decides if Windows 11 needs anything. |
 | `MessageBox` in `DllRegisterServer`, `panic!` in edit sessions, advising a second sink object | khiin `dll.rs:173-180`, `edit_session.rs:32`, `key_event_sink.rs:87-88` | Live bugs, not patterns. |
 | Threads spawned from `DllMain` | rakukan `lib.rs:127-130` | Loader lock. |
-| Shift-tap 中/英 toggle, Space-to-convert | Windows CJK convention | macOS has neither; USER asked for an identical experience. Codex F14: keep the macOS table as the default; Windows-native alternatives may be offered as settings later, never as a silent default change. |
+| ~~Shift-tap 中/英 toggle~~ — **ADOPTED 2026-09-04**, see below | Windows CJK convention | Was: macOS has neither, keep the macOS table as the default (Codex F14). USER dogfooded 微軟注音 on the box, confirmed Shift is the platform's switch, and asked for it. It is offered as a settings row (`shiftTogglesEnglishEnabled`) with a tray letter and a mode flash, so it is not the silent default change F14 refused; Space-to-convert stays unadopted. |
 | WiX / MSI-written registry | khiin `installer/Registry.wxs` | `DllRegisterServer` is the single source of registration truth; an MSI mirror drifts. |
 | Resident tray agent | rakukan `rakukan-tray` | Codex F8: a scheduled task + settings-exe overdue check covers the update trigger without a resident process. |
 

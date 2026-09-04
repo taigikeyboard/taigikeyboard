@@ -20,8 +20,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
 use windows::Win32::UI::TextServices::{
     CLSID_TF_CategoryMgr, CLSID_TF_InputProcessorProfiles, ITfCategoryMgr,
     ITfInputProcessorProfileMgr, ITfInputProcessorProfiles, GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
-    GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT, GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD,
-    TF_INPUTPROCESSORPROFILE,
+    GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT, GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
+    GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE,
 };
 
 /// What the CLSID key is named, and what the language bar falls back to when
@@ -50,11 +50,16 @@ pub fn profile_description(dll_path: &str) -> String {
 /// UI-less candidate list with PR6; this DLL is only installed as the
 /// complete train (PR10), so the two categories are declared here once
 /// rather than staged.
-const CATEGORIES: [GUID; 4] = [
+const CATEGORIES: [GUID; 5] = [
     GUID_TFCAT_TIP_KEYBOARD,
     GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
     GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
     GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
+    // True since the Shift tap gave this service a 中/英 mode: it keeps
+    // `GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION` current
+    // (`conversion_mode.rs`). Declared only because it IS true — the roadmap
+    // refused it while there was no mode to publish.
+    GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
 ];
 
 /// `{XXXXXXXX-XXXX-…}` as the registry spells a CLSID.
@@ -332,6 +337,6 @@ mod tests {
             guid_key(&CLSID_TEXT_SERVICE),
             "{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}"
         );
-        assert_eq!(CATEGORIES.len(), 4, "only the true categories (Codex W6)");
+        assert_eq!(CATEGORIES.len(), 5, "only the true categories (Codex W6)");
     }
 }

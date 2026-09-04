@@ -32,9 +32,14 @@
       "values": { "hanji": "台羅", "tailo": "tâi-lô", "poj": "tâi-lô", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
     "englishMode": {
-      "comment": "Input-mode option: English keyboard. Also the iOS smartbar input-mode button a11y label (extension surface).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "comment": "Input-mode option: English keyboard. Also the iOS smartbar input-mode button a11y label (extension surface), and the Windows mode-flash label when a Shift tap switches to English input.",
+      "scope": { "platforms": ["android", "ios", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "英文", "tailo": "ing-bûn", "poj": "eng-bûn", "en": "English", "ja": "英語" }
+    },
+    "taigiMode": {
+      "comment": "Windows mode-flash label when a Shift tap switches back from English to Taigi input. Pairs with englishMode.",
+      "scope": { "platforms": ["windows"], "surfaces": ["host"] },
+      "values": { "hanji": "台語", "tailo": "tâi-gí", "poj": "tâi-gí", "en": "Taigi", "ja": "台湾語" }
     },
     "tpsMode": {
       "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號). Also the iOS smartbar input-mode button a11y label (extension surface).",
@@ -90,6 +95,11 @@
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "自動空白", "tailo": "tsū-tōng khàng-pe̍h", "poj": "chū-tōng khàng-pe̍h", "en": "Auto-Space", "ja": "自動スペース" }
+    },
+    "shiftTogglesEnglish": {
+      "comment": "Toggle label: tap Shift on its own to switch between Taigi and English input (the Windows CJK convention). Windows only — macOS reaches English through the system Caps Lock input-source switch.",
+      "scope": { "platforms": ["windows"], "surfaces": ["host"] },
+      "values": { "hanji": "用 Shift 切換英文", "tailo": "iōng Shift tshiat-uānn ing-bûn", "poj": "iōng Shift chhiat-ōaⁿ eng-bûn", "en": "Switch to English with Shift", "ja": "Shift で英語に切り替え" }
     },
     "keyboardSectionTitle": {
       "comment": "Section header for keyboard-chrome settings.",

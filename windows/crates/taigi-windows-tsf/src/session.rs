@@ -101,6 +101,18 @@ impl TextService_Impl {
             return BOOL::from(true);
         }
 
+        // English mode: below the global chords, above everything that
+        // composes. Every key is the document's — including the ones this
+        // input method would otherwise consume outside a composition (the
+        // auto-space swap, full-width punctuation, the bare 漢羅 key), which
+        // is what makes the mode mean "type English here" rather than "stop
+        // composing". Nothing needs ending first: entering the mode already
+        // committed the composition and spent the arm
+        // (`toggle_language_mode`).
+        if self.state.borrow().language_mode.is_english() {
+            return BOOL::from(false);
+        }
+
         let bindings = ComposingKeyBindings::from_document(&settings);
         let (is_composing, is_showing_candidates) = self.composing_flags(runtime, token, identity);
         let intent =
@@ -594,6 +606,106 @@ impl TextService_Impl {
         }
     }
 
+    /// The mode HUD: the name of the mode just switched into, on the monitor
+    /// of the last caret this service anchored to. Every mode switch ends
+    /// this way — the chord or the tap fires from anywhere, and a mode that
+    /// changed with no notice reads as the keyboard breaking (USER
+    /// 2026-08-26).
+    fn flash_mode_label(&self, runtime: &Runtime, settings: &SettingsDocument, label: StringKey) {
+        let Some(flash) = self.state.borrow().mode_flash.clone() else {
+            return;
+        };
+        let text = StringResolver::new(runtime.display_language())
+            .resolve(label)
+            .to_owned();
+        let anchor = self.state.borrow().focused_caret;
+        let appearance: AppearanceMode = settings.choice(&keys::APPEARANCE_MODE);
+        flash.borrow_mut().flash(&text, anchor, appearance);
+    }
+
+    /// A Shift tap switched 中/英. Runs on the TIP thread from `OnKeyUp`,
+    /// outside any session of ours, and in this order: what is half-typed is
+    /// written to the document under the mode it was typed in, the state that
+    /// mode left behind is spent, and only then does the mode flip and the
+    /// three indicators (compartment, tray letter, flash) follow it.
+    ///
+    /// A busy engine means a host re-entered us from inside our own session;
+    /// the switch is skipped entirely rather than half-applied, and the next
+    /// tap does it.
+    pub(crate) fn toggle_language_mode(
+        &self,
+        context: &ITfContext,
+        token: ContextToken,
+        identity: usize,
+    ) {
+        let runtime = Runtime::shared();
+        // A host that re-entered us from inside our own session: the switch
+        // is skipped whole rather than half-applied, and the next tap does it.
+        // Same probe `run_from_ui_element` makes, same polarity.
+        let engine_free = runtime
+            .coordinator_if_built()
+            .is_some_and(|mutex| mutex.try_lock().is_ok());
+        if !engine_free {
+            log::warn!("language_mode.reentered — switch skipped");
+            return;
+        }
+        // One intent, one snapshot (`settings/mod.rs`): the commit and the
+        // flash must not straddle a settings change.
+        let settings = runtime.settings.current();
+        let next = self.state.borrow().language_mode.toggled();
+        let (is_composing, _) = self.composing_flags(runtime, token, identity);
+        if is_composing {
+            let outcome = self.run_key(
+                context,
+                token,
+                identity,
+                &KeyEventSnapshot::default(),
+                &ComposingKeyIntent::Commit,
+                &settings,
+            );
+            // The commit is the switch's precondition, not a courtesy: a
+            // refused edit session, a focus that moved under the handover or a
+            // password field all leave the composition standing, and flipping
+            // anyway would reset the engine under text the document still
+            // shows. Nothing has been touched yet at this point, so giving up
+            // here leaves the whole switch un-run — the next tap does it.
+            if outcome != KeyOutcome::Consumed {
+                log::warn!("language_mode.commit_refused — switch skipped");
+                return;
+            }
+        }
+        // The auto-space arm promises the NEXT key a swap; that key now
+        // belongs to the other mode, so the promise is spent here rather than
+        // left to move a space the user typed in English. The candidate list
+        // goes with the composition it described.
+        let presenter = {
+            let mut state = self.state.borrow_mut();
+            if let Some(entry) = state.contexts.entry_mut(identity) {
+                entry.state.armed_auto_space = None;
+                entry.state.candidates.clear();
+            }
+            state.presenter.clone()
+        };
+        if let Some(presenter) = presenter {
+            presenter.borrow_mut().hide(token);
+        }
+        // The next-word context is Taiwanese. English typed after the switch
+        // is not the predecessor of the word typed after the switch back, and
+        // the engine is what would otherwise keep believing it is.
+        if let Some(mut coordinator) = runtime
+            .coordinator_if_built()
+            .and_then(|mutex| mutex.try_lock().ok())
+        {
+            if let Some(manager) = coordinator.manager(token) {
+                manager.start_new_session();
+            }
+        }
+
+        self.set_language_mode(next);
+        self.flash_mode_label(runtime, &settings, next.flash_label_key());
+        log::info!("language_mode.switched mode={next:?}");
+    }
+
     /// A global shortcut fired (preserved key or the key sink's match).
     pub(crate) fn perform_global(&self, action: ShortcutAction, identity: usize) {
         let runtime = Runtime::shared();
@@ -618,31 +730,24 @@ impl TextService_Impl {
                 // then the HUD, because the chord fires from anywhere and a
                 // romanization that changed with no notice reads as the
                 // keyboard breaking (USER 2026-08-26).
-                let (token, presenter, flash) = {
+                let (token, presenter) = {
                     let mut state = self.state.borrow_mut();
                     let token = state.contexts.entry_mut(identity).map(|entry| {
                         entry.state.candidates.clear();
                         entry.token
                     });
-                    (token, state.presenter.clone(), state.mode_flash.clone())
+                    (token, state.presenter.clone())
                 };
                 if let (Some(token), Some(presenter)) = (token, presenter) {
                     presenter.borrow_mut().hide(token);
                 }
                 let settings = runtime.settings.current();
                 let mode: InputMode = settings.choice(&keys::INPUT_MODE);
-                let key = match mode {
+                let label = match mode {
                     InputMode::Poj => StringKey::SettingsPojMode,
                     _ => StringKey::SettingsTlMode,
                 };
-                let text = StringResolver::new(runtime.display_language())
-                    .resolve(key)
-                    .to_owned();
-                if let Some(flash) = flash {
-                    let anchor = self.state.borrow().focused_caret;
-                    let appearance: AppearanceMode = settings.choice(&keys::APPEARANCE_MODE);
-                    flash.borrow_mut().flash(&text, anchor, appearance);
-                }
+                self.flash_mode_label(runtime, &settings, label);
             }
             ShortcutAction::ToggleTranslateSwapped => {
                 let Some(store) = runtime.settings_store() else {
@@ -688,17 +793,9 @@ impl TextService_Impl {
                 // behaviour. Then the HUD with the new mode's name, as the
                 // romanization switch does — the chord fires from anywhere.
                 self.represent_open_list(identity, runtime, true);
-                let flash = self.state.borrow().mode_flash.clone();
                 let settings = runtime.settings.current();
                 let mode = settings.engine_settings().candidate_display_mode;
-                let text = StringResolver::new(runtime.display_language())
-                    .resolve(mode.label_key())
-                    .to_owned();
-                if let Some(flash) = flash {
-                    let anchor = self.state.borrow().focused_caret;
-                    let appearance: AppearanceMode = settings.choice(&keys::APPEARANCE_MODE);
-                    flash.borrow_mut().flash(&text, anchor, appearance);
-                }
+                self.flash_mode_label(runtime, &settings, mode.label_key());
             }
         }
     }

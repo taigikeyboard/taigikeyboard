@@ -15,7 +15,9 @@
 
 use crate::com_guard::guarded;
 use crate::contexts::ContextRegistry;
+use crate::conversion_mode;
 use crate::display_attribute::{self, DisplayAttributeEnumerator};
+use crate::key_translation;
 use crate::lang_bar::{self, LANG_BAR_SINK_COOKIE, MENU_CHECK_FOR_UPDATES, MENU_OPEN_SETTINGS};
 use crate::preserved_keys::{self, PreservedKeys};
 use crate::runtime::Runtime;
@@ -28,9 +30,12 @@ use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_windows_core::composing::ContextToken;
+use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, VK_SHIFT_CODE};
+use taigi_windows_core::settings::keys;
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
+use windows::Win32::System::SystemInformation::GetTickCount64;
 use windows::Win32::UI::TextServices::{
     IEnumTfDisplayAttributeInfo, ITfComposition, ITfCompositionSink, ITfCompositionSink_Impl,
     ITfContext, ITfDisplayAttributeInfo, ITfDisplayAttributeProvider,
@@ -44,6 +49,16 @@ use windows::Win32::UI::TextServices::{
 };
 use windows::Win32::UI::WindowsAndMessaging::HICON;
 use windows_core::{implement, IUnknownImpl};
+
+/// Milliseconds on a clock that only moves forward, for measuring how long a
+/// key was held. NOT `GetMessageTime`: that is the time of the last message
+/// this thread pulled off its queue with `GetMessage`, and a TSF key sink is
+/// a COM call, so the two need not be the same event (Codex F3, 2026-09-04).
+/// 64-bit, so there is no 49.7-day wrap to reason about.
+fn now_milliseconds() -> u64 {
+    // SAFETY: no parameters, no out-pointer; reads the system tick count.
+    unsafe { GetTickCount64() }
+}
 
 /// Everything `Activate` set up and `Deactivate` takes down.
 #[derive(Default)]
@@ -88,6 +103,15 @@ pub(crate) struct ServiceState {
     pub(crate) is_ui_hide_pending: bool,
     pub(crate) presenter: Option<Rc<RefCell<CandidatePresenter>>>,
     pub(crate) mode_flash: Option<Rc<RefCell<ModeFlash>>>,
+    /// Whether keys compose Taigi or go to the document as English. Per
+    /// activation — one text service instance is one thread manager, which is
+    /// one application, so switching to English in a terminal leaves the
+    /// browser next door composing. Never persisted: a transient mode, the
+    /// way Windows CJK input methods treat theirs.
+    pub(crate) language_mode: LanguageMode,
+    /// The Shift-tap recogniser behind that mode. Fed by all four key
+    /// callbacks; nothing else reads the keyboard.
+    pub(crate) shift_tap: ShiftTapTracker,
 }
 
 #[implement(
@@ -132,6 +156,14 @@ impl TextService_Impl {
             state.thread_mgr = Some(owned_thread_mgr);
             state.client_id = client_id;
             state.activate_flags = flags;
+            // The 中/英 mode is per ACTIVATION: TSF may deactivate and
+            // reactivate the same object, and a mode carried over would leave
+            // the tray letter, the compartment and the classifier disagreeing.
+            // The Shift press goes with it — the one that armed it belonged to
+            // the previous activation. The compartment is published at the end
+            // of this method, once the thread manager is wired.
+            state.language_mode = LanguageMode::default();
+            state.shift_tap.clear();
         }
         // Probes paths and reads the settings file once per process; the
         // engine and the stores stay untouched until a key is CONSUMED (PR5b).
@@ -228,6 +260,12 @@ impl TextService_Impl {
             }
             Err(error) => log::warn!("tsf.lang_bar_mgr_unavailable error={error}"),
         }
+
+        // A fresh activation composes Taigi, and the compartment says so from
+        // the start rather than from the first switch — an application that
+        // reads it before any key would otherwise see this service as
+        // alphanumeric.
+        conversion_mode::publish(thread_mgr, client_id, LanguageMode::default());
         Ok(())
     }
 
@@ -240,6 +278,12 @@ impl TextService_Impl {
         // need the contexts and the engine still wired.
         let (presenter, flash) = {
             let mut state = self.state.borrow_mut();
+            // The mode does not outlive the activation that switched it.
+            // `activate` sets it too; this end is what a teardown `GetText`
+            // between here and `RemoveItem` reads, so the tray never draws 英
+            // for a service that is going away.
+            state.language_mode = LanguageMode::default();
+            state.shift_tap.clear();
             (state.presenter.take(), state.mode_flash.take())
         };
         if let Some(presenter) = presenter {
@@ -361,6 +405,18 @@ impl TextService_Impl {
         }
         let settings = Runtime::shared().settings.current();
         self.sync_preserved_keys(&settings);
+        // The Shift tap is the only way back from English, so turning the
+        // switch off while the mode is on would strand the user there: the
+        // mode goes off with it. Here rather than in the key path because
+        // this is the hook for "a setting changed, derived state follows" —
+        // and the user has to leave and re-enter the window to reach the
+        // settings at all, which is what sets the pending flag.
+        if self.state.borrow().language_mode.is_english()
+            && !settings.bool(&keys::IS_SHIFT_TOGGLES_ENGLISH_ENABLED)
+        {
+            log::info!("language_mode.restored reason=switch_disabled");
+            self.set_language_mode(LanguageMode::Taigi);
+        }
     }
 
     fn request_settings_refresh(&self) {
@@ -417,7 +473,99 @@ impl TextService_Impl {
         state.keystroke_mgr = keystroke_mgr;
     }
 
-    fn notify_lang_bar(&self) {
+    /// Every key-down, before any of the reasons `key_down` gives up (no
+    /// context, read-only, a modifier that builds no snapshot): the Shift tap
+    /// is a key the classifier never sees, and the press it is made of has to
+    /// be recorded even in a document this input method will not compose in.
+    fn observe_key_down(&self, wparam: WPARAM, lparam: LPARAM) {
+        let virtual_key = key_translation::virtual_key(wparam);
+        let is_repeat = key_translation::is_repeat(lparam);
+        let scan_code = key_translation::scan_code(lparam);
+        // Asked only where the answer can change anything: a fresh Shift
+        // press. Every other key disarms regardless, and a repeat is not a
+        // press at all — both skip the keyboard-state read.
+        let is_other_modifier_held = virtual_key == VK_SHIFT_CODE
+            && !is_repeat
+            && key_translation::is_other_modifier_held_at_shift_press(scan_code);
+        self.state.borrow_mut().shift_tap.observe_key_down(
+            virtual_key,
+            scan_code,
+            is_repeat,
+            is_other_modifier_held,
+            now_milliseconds(),
+        );
+    }
+
+    /// Whether this release would switch 中/英 — the test callback's answer,
+    /// which leaves the press unspent. Answering TRUE is what asks TSF for
+    /// the delivery the switch itself runs in.
+    fn is_language_switch_release(&self, wparam: WPARAM, lparam: LPARAM) -> bool {
+        // The tracker first, the setting second: this runs for EVERY key
+        // release, and reading the settings snapshot costs a `stat` of the
+        // settings file, while the tracker is a borrow and a compare. Only an
+        // actual tap is worth asking about. (`take_language_switch_release`
+        // is ordered the same way.)
+        let is_tap = self.state.borrow().shift_tap.is_tap_on_release(
+            key_translation::virtual_key(wparam),
+            key_translation::scan_code(lparam),
+            now_milliseconds(),
+        );
+        is_tap && self.is_shift_toggle_enabled()
+    }
+
+    /// The delivered release. The press is spent whatever it was, so a
+    /// release can only ever switch the mode once.
+    fn take_language_switch_release(
+        &self,
+        context: Option<&ITfContext>,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) {
+        let is_tap = self.state.borrow_mut().shift_tap.take_tap_on_release(
+            key_translation::virtual_key(wparam),
+            key_translation::scan_code(lparam),
+            now_milliseconds(),
+        );
+        // The press is spent above whatever the setting says — a release
+        // always ends the press it belongs to — so the setting is read only
+        // once a tap has actually happened.
+        if !is_tap || !self.is_shift_toggle_enabled() {
+            return;
+        }
+        let Some(context) = context else {
+            return;
+        };
+        let Some((token, identity)) = self.token_for(context) else {
+            return;
+        };
+        self.toggle_language_mode(context, token, identity);
+    }
+
+    /// The ONE way the 中/英 mode changes. Three things say which mode is on —
+    /// the classifier's gate, the TSF conversion-mode compartment and the tray
+    /// letter — and a switch that moved only some of them is a mode the user
+    /// and the system disagree about. They move here, together, or not at all.
+    /// The mode flash is the caller's (a restore nobody asked for shows none).
+    pub(crate) fn set_language_mode(&self, mode: LanguageMode) {
+        self.state.borrow_mut().language_mode = mode;
+        let (thread_mgr, client_id) = {
+            let state = self.state.borrow();
+            (state.thread_mgr.clone(), state.client_id)
+        };
+        if let Some(thread_mgr) = thread_mgr {
+            conversion_mode::publish(&thread_mgr, client_id, mode);
+        }
+        self.notify_lang_bar();
+    }
+
+    fn is_shift_toggle_enabled(&self) -> bool {
+        Runtime::shared()
+            .settings
+            .current()
+            .bool(&keys::IS_SHIFT_TOGGLES_ENGLISH_ENABLED)
+    }
+
+    pub(crate) fn notify_lang_bar(&self) {
         // Moved out, called, moved back: no AddRef under the borrow.
         let sink = self.state.borrow_mut().lang_bar_sink.take();
         if let Some(sink) = sink {
@@ -567,7 +715,12 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
     /// through the same posted hide the document-focus callback uses.
     fn OnKillThreadFocus(&self) -> Result<()> {
         guarded("ITfThreadFocusSink::OnKillThreadFocus", || {
-            self.state.borrow_mut().focus_generation += 1;
+            let mut state = self.state.borrow_mut();
+            state.focus_generation += 1;
+            // A Shift still held belongs to whatever has the keyboard now;
+            // its release is not a tap of ours.
+            state.shift_tap.clear();
+            drop(state);
             self.request_ui_hide(None);
             Ok(())
         })
@@ -579,6 +732,9 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
 impl ITfKeyEventSink_Impl for TextService_Impl {
     fn OnSetFocus(&self, fforeground: BOOL) -> Result<()> {
         guarded("ITfKeyEventSink::OnSetFocus", || {
+            // Keyboard focus moved: a press recorded before the move was made
+            // in another document, and its release must not tap here.
+            self.state.borrow_mut().shift_tap.clear();
             if fforeground.as_bool() {
                 self.request_settings_refresh();
             }
@@ -588,22 +744,36 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
 
     fn OnTestKeyDown(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnTestKeyDown", || {
+            self.observe_key_down(wparam, lparam);
             Ok(self.key_down(pic.as_ref(), wparam, lparam, KeyPhase::Test))
         })
     }
 
-    fn OnTestKeyUp(&self, _pic: Ref<ITfContext>, _wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
-        guarded("ITfKeyEventSink::OnTestKeyUp", || Ok(BOOL::from(false)))
+    /// TRUE only for the release that would switch 中/英, and it switches
+    /// nothing here: a test callback answers whether the service WOULD handle
+    /// the key, and the answer is what asks TSF for the delivery below.
+    fn OnTestKeyUp(&self, _pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
+        guarded("ITfKeyEventSink::OnTestKeyUp", || {
+            Ok(BOOL::from(self.is_language_switch_release(wparam, lparam)))
+        })
     }
 
     fn OnKeyDown(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnKeyDown", || {
+            self.observe_key_down(wparam, lparam);
             Ok(self.key_down(pic.as_ref(), wparam, lparam, KeyPhase::Deliver))
         })
     }
 
-    fn OnKeyUp(&self, _pic: Ref<ITfContext>, _wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
-        guarded("ITfKeyEventSink::OnKeyUp", || Ok(BOOL::from(false)))
+    /// The Shift tap switches the mode here, and the release still goes to
+    /// the host: an application tracks its own Shift state, and a release it
+    /// never sees leaves that state stuck down (新酷音 answers the same
+    /// FALSE, `chewing_ime.py:736`).
+    fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
+        guarded("ITfKeyEventSink::OnKeyUp", || {
+            self.take_language_switch_release(pic.as_ref(), wparam, lparam);
+            Ok(BOOL::from(false))
+        })
     }
 
     fn OnPreservedKey(&self, pic: Ref<ITfContext>, rguid: *const GUID) -> Result<BOOL> {
@@ -733,9 +903,12 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
         guarded("ITfLangBarItemButton::GetIcon", lang_bar::owned_icon)
     }
 
+    /// Re-read after every switch (`notify_lang_bar` pushes the update), so
+    /// the taskbar letter names the mode the next key will be typed in.
     fn GetText(&self) -> Result<BSTR> {
         guarded("ITfLangBarItemButton::GetText", || {
-            Ok(BSTR::from(lang_bar::TRAY_TEXT))
+            let mode = self.state.borrow().language_mode;
+            Ok(BSTR::from(lang_bar::tray_text(mode)))
         })
     }
 }

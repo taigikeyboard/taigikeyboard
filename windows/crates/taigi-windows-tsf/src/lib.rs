@@ -18,6 +18,7 @@ mod com_guard;
 mod com_out_buffer;
 mod composition;
 mod contexts;
+mod conversion_mode;
 mod display_attribute;
 mod edit_session;
 mod guids;

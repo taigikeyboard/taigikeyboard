@@ -66,6 +66,17 @@ pub fn view(
                 Message::SetSwitch(keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, is_on)
             }),
         ),
+        // The Windows CJK convention: tap Shift on its own to switch between
+        // Taigi and English. Windows only — macOS reaches English through the
+        // system's Caps Lock input-source switch, which is not ours to offer.
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsShiftTogglesEnglish),
+            document.bool(&keys::IS_SHIFT_TOGGLES_ENGLISH_ENABLED),
+            true,
+            context.callback(|is_on| {
+                Message::SetSwitch(keys::IS_SHIFT_TOGGLES_ENGLISH_ENABLED, is_on)
+            }),
+        ),
         cards::section_gap(),
         update_row(window, strings, context),
         footer(strings, context),
