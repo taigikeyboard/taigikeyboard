@@ -139,7 +139,7 @@ mod tests {
         UpdateManifest {
             version: version.to_owned(),
             download_page_url: "https://taigikeyboard.tw/".to_owned(),
-            package_url: None,
+            package: None,
         }
     }
 

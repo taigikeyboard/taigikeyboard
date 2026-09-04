@@ -15,6 +15,7 @@ log.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 uuid.workspace = true
 # HTTPS through the system TLS stack (schannel on Windows; the macOS host's
 # Security framework for the native tests). `transport.rs` selects

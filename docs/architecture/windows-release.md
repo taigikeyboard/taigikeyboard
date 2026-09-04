@@ -23,19 +23,34 @@ read 2026-09-04):
 | Win11 Smart App Control | Blocks execution outright unless the file has positive reputation | Same rule, but signing is how reputation accrues |
 | Install | Works; a TSF text service needs no signature | Same |
 | Update check, toast, 一般 pane row | Work | Work |
-| Update action | Always 去下載 → browser | 下載安裝 → 安裝, in-app |
+| Update action | 下載安裝 → 安裝, in-app — admitted by the manifest's `packageSHA256` | Same, and the package's Authenticode signature is checked as well |
 
-The in-app install is gated by the RUNNING copy's own signature:
-`taigi-windows-update::verify::running_identity` answers `None` for an
-unsigned executable, so `UpdateInstallation::can_install_in_app` is false —
-it also wants a `packageURL` and a `%LOCALAPPDATA%` staging folder — and
-`start_download` re-checks all three, so an unsigned copy never fetches or
-stages a package. Checking, recording, the toast and the pending row care
-about none of it.
+The in-app install is NOT gated by the running copy's signature. What admits
+a package is `taigi-windows-update::verify::admit`: the published SHA-256
+always, plus — only when `running_identity` answers `Some` — the signer
+thumbprint and VERSIONINFO checks. `can_install_in_app` therefore wants a
+`packageURL`, a `packageSHA256` and a `%LOCALAPPDATA%` staging folder, and
+nothing else.
 
-⚠ Everyone who installs during the unsigned era must download once by hand to
-reach the first signed release — their copy has no identity to verify a
-package against. Say so in that release's notes.
+The digest is a publishing check, not a defence: the manifest and the asset
+are published from one account, so it catches a truncated download, a wrong
+or re-uploaded asset, or a URL pointing at another valid executable — not an
+adversary holding that account. That is the same security position as the
+user downloading the installer in a browser, which is what the alternative
+would be; what it buys is that nothing hands somebody an executable it never
+checked. Sole maintainer with 2FA, owner's judgement, 2026-09-04.
+
+⚠ A file this app downloads carries no Mark-of-the-Web (browsers write that;
+we do not), so launching it should not raise the browser-download SmartScreen
+prompt. Win11 Smart App Control still applies to any unsigned executable.
+Dogfood item, not an assertion.
+
+Going unsigned → signed is seamless: an unsigned copy installs the first
+SIGNED release in-app too, because the digest is what it checks and the digest
+is published either way. What that release's own copies gain is the extra
+Authenticode check on everything after it — which is also why the reverse is
+NOT seamless: a signed copy offered an unsigned package rejects it
+(`Untrusted`) and falls back to the download page.
 
 Returning to signed: set `WINDOWS_SIGNING_THUMBPRINT`, stop passing
 `--skip-sign`. No code changes; the two flags are the whole switch.
@@ -271,7 +286,7 @@ reading its own payload.
 1. Refuses a `-dirty` name, an installer whose VERSIONINFO is not
    `TaigiKeyboard` / the checkout's version, and — when
    `WINDOWS_SIGNING_THUMBPRINT` is set — a signer other than that certificate
-   (what every installed copy pins). The Authenticode gate (`signtool verify`
+   (what a signed installed copy pins). The Authenticode gate (`signtool verify`
    must trust the installer) stands unless `--allow-unsigned` is passed, which
    is what `release-app.sh --skip-sign --publish` passes down; naming a
    certificate AND `--allow-unsigned` is a contradiction and fails. A direct
@@ -281,10 +296,14 @@ reading its own payload.
    `changelog/desktop-v<version>.md` (the desktop train's record), and
    uploads the installer as its asset.
 3. Fetches the release page and one byte of the asset **anonymously** — the
-   page must answer `200`, the asset `206` (or `200`).
-4. Writes `_data/windows_release.json` — one file, one commit — then waits
-   until `https://taigikeyboard.tw/appcast/windows.json` serves the new
-   version **and** its installer URL. The manifest every installed copy
+   page must answer `200`, the asset `206` (or `200`) — then downloads the
+   whole asset anonymously and requires its SHA-256 to equal the local
+   installer's. The digest the manifest publishes is therefore one the URL was
+   observed serving, which is what catches a truncated upload or the wrong
+   file having been handed to `--installer`.
+4. Writes `_data/windows_release.json` — one file, one commit, now carrying
+   `sha256` — then waits until `https://taigikeyboard.tw/appcast/windows.json`
+   serves the new version, its installer URL **and** that digest. The manifest every installed copy
    polls is rendered from that data file by the site's own build
    (`windows/updates/README.md` § One published fact, one committed file),
    so the poll is also what proves the site built what was committed.
@@ -303,9 +322,11 @@ reachable. The site advertises the download only once its
   `downloadPageURL` route, which every copy has); the copies it installs pin
   the new certificate and in-app updates resume.
 - **Unsigned releases** (`--skip-sign`, today's channel — § Signing status)
-  run and install — SmartScreen warns — but the running settings exe has no
-  signature identity, so it never offers an in-app install: the 一般 pane
-  offers the download page instead, as an ad-hoc macOS build does.
+  run and install — SmartScreen warns — and DO offer the in-app install: the
+  running settings exe has no signature identity, so the manifest's
+  `packageSHA256` is what admits the download instead. This is where Windows
+  parts from the Mac, which has no digest field and sends an ad-hoc build to
+  the download page.
 - **`rc.exe` absent** — a development build compiles, with a warning, without
   its icon and VERSIONINFO; the release script sets `TAIGI_REQUIRE_RESOURCES=1`,
   under which the build fails instead, and reads the VERSIONINFO back

@@ -1,24 +1,27 @@
 //! What a downloaded package has to prove before the 安裝 button appears:
-//! an Authenticode signature Windows trusts (`WinVerifyTrust`), signed by
-//! the SAME certificate as the running copy (the leaf's thumbprint, not a
-//! subject string — Codex W9), and a VERSIONINFO that names this product at
-//! the manifest's version. Port of `UpdatePackageVerifier` +
-//! `UpdatePackageIdentity`: the Mac pins the Developer ID team and the
-//! package's bundle id + version; the Windows analogue is the signer's
-//! thumbprint and the executable's product name + version.
+//! the SHA-256 the manifest published, always — and, when the running copy
+//! carries a trusted Authenticode signature of its own, that the package is
+//! signed by the SAME certificate (the leaf's thumbprint) with a VERSIONINFO
+//! naming this product at the manifest's version. Both, never one instead of
+//! the other, and only through `Admission`.
+//!
+//! Why a digest at all, what it is and is not worth, and when the signed
+//! half starts applying: `docs/architecture/windows-release.md` § Signing
+//! status — the single source for that policy.
+//!
+//! Port of `UpdatePackageVerifier` + `UpdatePackageIdentity`: the Mac pins
+//! the Developer ID team and the package's bundle id + version; the Windows
+//! analogue is the signer's thumbprint and the executable's product name +
+//! version.
 //!
 //! Pinning the LEAF is the stronger, less continuous choice (PR9 Codex): a
-//! renewed signing certificate is not accepted by the copies signed with
-//! the old one, so the first release under a new certificate ships through
-//! the download page and in-app updates resume from there. Windows has no
-//! equivalent of Apple's team id to pin instead.
-//!
-//! An unsigned running copy (a development build) has no identity and
-//! therefore no in-app install — the download page, as ad-hoc builds on
-//! the Mac. On a non-Windows host every question answers "unavailable".
+//! renewed signing certificate is not accepted by the copies signed with the
+//! old one, so the first release under a new certificate is admitted on its
+//! digest alone. Windows has no equivalent of Apple's team id to pin instead.
 
-// 中文: 安裝檔驗證 — WinVerifyTrust + 簽章憑證指紋釘死為執行中程式的簽章 + VERSIONINFO 產品名/版本。
+// 中文: 安裝檔驗證 — SHA-256 必驗;執行中程式有簽章身分時,再加 WinVerifyTrust + 指紋 + VERSIONINFO。
 
+use sha2::{Digest, Sha256};
 use std::path::Path;
 
 /// What the running copy is signed as, and named: the bar a package must
@@ -42,9 +45,88 @@ pub enum Rejection {
         product_name: String,
         version: String,
     },
+    /// Not the file the manifest published.
+    HashMismatch,
     Unreadable,
     /// Not a Windows host: nothing can be verified here.
     Unavailable,
+}
+
+/// What this copy admits a package on: the requirements it can apply, held
+/// once. The running copy's signature is read at construction (once — a
+/// signature check is not free) and lives here rather than in the download
+/// state machine, which has no decision to make with it.
+#[derive(Clone, Debug)]
+pub struct Admission {
+    identity: Option<PackageIdentity>,
+}
+
+impl Default for Admission {
+    fn default() -> Self {
+        Self::of_running_copy()
+    }
+}
+
+impl Admission {
+    /// Reads the running executable's own signature. `None` — no signature,
+    /// or one that cannot be READ — leaves the digest as the whole bar.
+    /// Deliberately not fail-closed: refusing every update because one
+    /// CryptoAPI call failed strands the copy with no route but the browser,
+    /// and the digest still has to match either way.
+    pub fn of_running_copy() -> Self {
+        Self {
+            identity: running_identity(),
+        }
+    }
+
+    /// A copy with no signature of its own — what every unsigned release
+    /// runs as, and what the crate's tests admit packages through.
+    #[cfg(test)]
+    pub(crate) fn unsigned() -> Self {
+        Self { identity: None }
+    }
+
+    /// The identity a package must ALSO be signed with, for the test that
+    /// pins the "a signed copy cannot skip Authenticode" half.
+    #[cfg(test)]
+    fn pinned_to(identity: PackageIdentity) -> Self {
+        Self {
+            identity: Some(identity),
+        }
+    }
+
+    /// Every requirement this copy has, applied in one place so a caller can
+    /// neither choose between them nor let one stand in for the other. The
+    /// digest goes first: it is the cheap answer to "is this even the
+    /// published file".
+    pub fn admit(
+        &self,
+        package: &Path,
+        expected_sha256: &str,
+        version: &str,
+    ) -> Result<(), Rejection> {
+        let digest = file_sha256(package).map_err(|error| {
+            log::debug!("update.package_unreadable error={error}");
+            Rejection::Unreadable
+        })?;
+        // `normalized_sha256` owns what a published digest looks like (64
+        // hex, case-insensitive), so a malformed expectation cannot match.
+        if crate::manifest::normalized_sha256(expected_sha256) != Some(digest) {
+            return Err(Rejection::HashMismatch);
+        }
+        match &self.identity {
+            Some(identity) => verify(package, identity, version),
+            None => Ok(()),
+        }
+    }
+}
+
+/// The file's SHA-256 as lowercase hex. Streamed: a 48 MB installer is never
+/// held in memory.
+pub(crate) fn file_sha256(package: &Path) -> Result<String, std::io::Error> {
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut std::fs::File::open(package)?, &mut hasher)?;
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 /// The `ProductName` a VERSIONINFO string block holds, as text.
@@ -66,10 +148,10 @@ fn product_name_from_versioninfo(units: &[u16]) -> String {
         .to_owned()
 }
 
-/// The running executable's identity, or `None` when it carries no
-/// trusted signature — then nothing is ever installed in-app.
+/// The running executable's identity: no trusted signature, or one that
+/// cannot be read, answers `None` (`Admission::of_running_copy`).
 #[cfg(windows)]
-pub fn running_identity() -> Option<PackageIdentity> {
+fn running_identity() -> Option<PackageIdentity> {
     let exe = std::env::current_exe().ok()?;
     if win::verify_trust(&exe).is_err() {
         return None;
@@ -83,14 +165,15 @@ pub fn running_identity() -> Option<PackageIdentity> {
 }
 
 #[cfg(not(windows))]
-pub fn running_identity() -> Option<PackageIdentity> {
+fn running_identity() -> Option<PackageIdentity> {
     None
 }
 
 /// `package` is signed by `expected`'s certificate and declares
-/// `expected`'s product at `version`.
+/// `expected`'s product at `version`. Reached only through
+/// `Admission::admit`, which has already matched the published digest.
 #[cfg(windows)]
-pub fn verify(package: &Path, expected: &PackageIdentity, version: &str) -> Result<(), Rejection> {
+fn verify(package: &Path, expected: &PackageIdentity, version: &str) -> Result<(), Rejection> {
     win::verify_trust(package).map_err(|_| Rejection::Untrusted)?;
     let thumbprint = win::signer_thumbprint(package).map_err(|_| Rejection::Unreadable)?;
     if thumbprint != expected.signer_thumbprint {
@@ -115,11 +198,7 @@ pub fn verify(package: &Path, expected: &PackageIdentity, version: &str) -> Resu
 }
 
 #[cfg(not(windows))]
-pub fn verify(
-    _package: &Path,
-    _expected: &PackageIdentity,
-    _version: &str,
-) -> Result<(), Rejection> {
+fn verify(_package: &Path, _expected: &PackageIdentity, _version: &str) -> Result<(), Rejection> {
     Err(Rejection::Unavailable)
 }
 
@@ -411,6 +490,53 @@ mod tests {
         assert_eq!(
             from_rustc, from_inno,
             "a padded name must not reject a genuine package"
+        );
+    }
+
+    #[test]
+    fn the_digest_admits_a_package_and_an_identity_is_an_addition_not_an_alternative() {
+        // trace: Admission::admit hashes the staged file, compares it to the
+        // manifest's digest, and only then asks the Authenticode half. On
+        // this host that half answers `Unavailable` — which is the proof
+        // wanted: a matching digest did NOT let a copy with an identity
+        // return Ok on its own.
+        let staged = tempfile::NamedTempFile::new().expect("a temporary file");
+        std::fs::write(staged.path(), b"an installer").expect("write");
+        let digest = file_sha256(staged.path()).expect("hash");
+        let unsigned = Admission::unsigned();
+        assert_eq!(unsigned.admit(staged.path(), &digest, "3.7.0"), Ok(()));
+        assert_eq!(
+            unsigned.admit(staged.path(), &digest.to_ascii_uppercase(), "3.7.0"),
+            Ok(()),
+            "a digest published in upper case is the same digest"
+        );
+        assert_eq!(
+            unsigned.admit(staged.path(), &"a".repeat(64), "3.7.0"),
+            Err(Rejection::HashMismatch)
+        );
+        assert_eq!(
+            unsigned.admit(&staged.path().join("no-such-file"), &digest, "3.7.0"),
+            Err(Rejection::Unreadable)
+        );
+        let signed = Admission::pinned_to(PackageIdentity {
+            signer_thumbprint: vec![1, 2, 3],
+            product_name: "TaigiKeyboard".to_owned(),
+        });
+        assert_eq!(
+            signed.admit(staged.path(), &digest, "3.7.0"),
+            Err(Rejection::Unavailable)
+        );
+    }
+
+    #[test]
+    fn an_empty_file_hashes_to_the_published_sha256_of_nothing() {
+        // The one digest with an external oracle, so a wrong hex encoding
+        // (byte order, padding) cannot pass unnoticed: NIST's SHA-256 of the
+        // empty string.
+        let empty = tempfile::NamedTempFile::new().expect("a temporary file");
+        assert_eq!(
+            file_sha256(empty.path()).expect("hash"),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
     }
 

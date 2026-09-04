@@ -2,13 +2,15 @@
 //! into 安裝 rather than launching the installer on its own, so nothing
 //! takes the focus away from a document the user may have gone back to
 //! typing in. Port of `UpdateInstallation` + `UpdatePackageDownload`. The
-//! download and the verification run on a thread; the pane polls.
+//! download and the verification run on a thread; the pane polls. What a
+//! downloaded package has to prove is `verify::Admission`'s business, not
+//! this module's.
 
-// 中文: 兩段式安裝狀態機 — 下載+驗簽在背景,按鈕變成「安裝」後才由使用者啟動安裝程式。
+// 中文: 兩段式安裝狀態機 — 下載+驗證在背景,按鈕變成「安裝」後才由使用者啟動安裝程式。
 
-use crate::manifest::UpdateManifest;
+use crate::manifest::{PublishedPackage, UpdateManifest};
 use crate::transport::PackageDownloader;
-use crate::verify::{self, PackageIdentity};
+use crate::verify::Admission;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
 use taigi_windows_core::strings::StringKey;
@@ -19,8 +21,8 @@ const STAGING_FOLDER: &str = "Updates";
 /// What the pending-update row offers next (`UpdateInstallation.Offer`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Offer {
-    /// No in-app install (no `packageURL`, or an unsigned running copy):
-    /// the download page, in the browser.
+    /// No in-app install (the manifest names no package, or there is
+    /// nowhere to stage one): the download page, in the browser.
     DownloadPage,
     StartDownload,
     Downloading,
@@ -74,6 +76,19 @@ enum DownloadOutcome {
     Failed(Option<PathBuf>),
 }
 
+impl DownloadOutcome {
+    /// What this outcome left on disk, so no caller has to keep its own
+    /// list of which ones did.
+    fn staged_package(self) -> Option<PathBuf> {
+        match self {
+            Self::Verified(package) | Self::Rejected(package) | Self::Failed(Some(package)) => {
+                Some(package)
+            }
+            Self::Failed(None) => None,
+        }
+    }
+}
+
 pub struct UpdateInstallation {
     progress: Offer,
     target_version: Option<String>,
@@ -82,9 +97,9 @@ pub struct UpdateInstallation {
     current_download: u64,
     receiver: Option<mpsc::Receiver<(u64, DownloadOutcome)>>,
     downloader: Arc<dyn PackageDownloader>,
-    /// The running copy's own signature, read once: what a package must
-    /// be signed with. `None` = unsigned build ⇒ download page only.
-    running_identity: Option<PackageIdentity>,
+    /// Everything a staged package must clear, held opaque: this module
+    /// decides WHEN to verify, never what "verified" means.
+    admission: Arc<Admission>,
     /// Where packages are staged; `None` (no non-roaming per-user folder)
     /// ⇒ download page only, never a roaming stage.
     staging_directory: Option<PathBuf>,
@@ -93,7 +108,7 @@ pub struct UpdateInstallation {
 impl UpdateInstallation {
     pub fn new(
         downloader: Arc<dyn PackageDownloader>,
-        running_identity: Option<PackageIdentity>,
+        admission: Arc<Admission>,
         local_data_directory: Option<PathBuf>,
     ) -> Self {
         Self {
@@ -102,17 +117,22 @@ impl UpdateInstallation {
             current_download: 0,
             receiver: None,
             downloader,
-            running_identity,
+            admission,
             staging_directory: local_data_directory.map(|local| local.join(STAGING_FOLDER)),
         }
     }
 
-    /// Whether this copy can download and install by itself: a package to
-    /// fetch, a signature of its own to hold it against, somewhere to stage.
+    /// Whether this copy can download and install by itself: a package the
+    /// manifest named, and somewhere to stage it. Whether the running copy
+    /// is SIGNED is not among these — that decides which checks a staged
+    /// package faces, not whether one may be fetched.
     pub fn can_install_in_app(&self, manifest: &UpdateManifest) -> bool {
-        manifest.package_url.is_some()
-            && self.running_identity.is_some()
-            && self.staging_directory.is_some()
+        self.installable_parts(manifest).is_some()
+    }
+
+    /// The same question, answered with what a download needs.
+    fn installable_parts(&self, manifest: &UpdateManifest) -> Option<(PublishedPackage, PathBuf)> {
+        Some((manifest.package.clone()?, self.staging_directory.clone()?))
     }
 
     pub fn offer(&self, manifest: &UpdateManifest) -> Offer {
@@ -146,11 +166,7 @@ impl UpdateInstallation {
     }
 
     pub fn start_download(&mut self, manifest: &UpdateManifest) {
-        let (Some(package_url), Some(identity), Some(staging)) = (
-            manifest.package_url.clone(),
-            self.running_identity.clone(),
-            self.staging_directory.clone(),
-        ) else {
+        let Some((package, staging)) = self.installable_parts(manifest) else {
             return;
         };
         match self.offer(manifest) {
@@ -167,17 +183,16 @@ impl UpdateInstallation {
         let (sender, receiver) = mpsc::channel();
         self.receiver = Some(receiver);
         let downloader = Arc::clone(&self.downloader);
+        let admission = Arc::clone(&self.admission);
         let version = manifest.version.clone();
         std::thread::spawn(move || {
-            let outcome = run_download(&*downloader, &staging, &version, &package_url, &identity);
-            // Nobody listening (a re-check moved on): the package this
-            // download produced is the worker's to remove.
-            if let Err(mpsc::SendError((
-                _,
-                DownloadOutcome::Verified(package) | DownloadOutcome::Rejected(package),
-            ))) = sender.send((download, outcome))
-            {
-                discard(&package);
+            let outcome = run_download(&*downloader, &admission, &staging, &version, &package);
+            // Nobody listening (a re-check moved on): whatever this download
+            // left on disk is the worker's to remove.
+            if let Err(mpsc::SendError((_, outcome))) = sender.send((download, outcome)) {
+                if let Some(package) = outcome.staged_package() {
+                    discard(&package);
+                }
             }
         });
     }
@@ -196,8 +211,7 @@ impl UpdateInstallation {
         };
         self.receiver = None;
         if download != self.current_download {
-            if let DownloadOutcome::Verified(package) | DownloadOutcome::Rejected(package) = outcome
-            {
+            if let Some(package) = outcome.staged_package() {
                 discard(&package);
             }
             return false;
@@ -285,10 +299,10 @@ pub fn staging_directory(local_data_directory: &Path) -> PathBuf {
 
 fn run_download(
     downloader: &dyn PackageDownloader,
+    admission: &Admission,
     staging: &Path,
     version: &str,
-    package_url: &str,
-    identity: &PackageIdentity,
+    published: &PublishedPackage,
 ) -> DownloadOutcome {
     let package = match stage(staging, version) {
         Ok(package) => package,
@@ -297,11 +311,11 @@ fn run_download(
             return DownloadOutcome::Failed(None);
         }
     };
-    if let Err(error) = downloader.download(package_url, &package) {
+    if let Err(error) = downloader.download(&published.url, &package) {
         log::debug!("update.download_failed error={error}");
         return DownloadOutcome::Failed(Some(package));
     }
-    match verify::verify(&package, identity, version) {
+    match admission.admit(&package, &published.sha256, version) {
         Ok(()) => DownloadOutcome::Verified(package),
         Err(rejection) => {
             log::debug!("update.package_refused rejection={rejection:?}");
@@ -346,40 +360,117 @@ mod tests {
         }
     }
 
+    /// Writes `STAGED_BODY` wherever it is asked to stage.
+    struct Writing;
+
+    impl PackageDownloader for Writing {
+        fn download(&self, _url: &str, destination: &Path) -> Result<(), FetchError> {
+            std::fs::write(destination, STAGED_BODY)
+                .map_err(|error| FetchError::Transport(error.to_string()))
+        }
+    }
+
+    const STAGED_BODY: &str = "an installer";
+    /// `sha256sum` of `STAGED_BODY`, written down rather than computed so the
+    /// fixture states what it expects. The encoding it is written in is
+    /// pinned against an external oracle by
+    /// `verify::tests::an_empty_file_hashes_to_the_published_sha256_of_nothing`.
+    const STAGED_BODY_SHA256: &str =
+        "b2b3a11c02f14e36f2a5c148db1b5924fa96141da4b2fbfb262a469df53f6750";
+
     fn manifest(version: &str, package: Option<&str>) -> UpdateManifest {
+        manifest_with_digest(
+            version,
+            package,
+            package.map(|_| STAGED_BODY_SHA256.to_owned()),
+        )
+    }
+
+    fn manifest_with_digest(
+        version: &str,
+        package: Option<&str>,
+        digest: Option<String>,
+    ) -> UpdateManifest {
         UpdateManifest {
             version: version.to_owned(),
             download_page_url: "https://taigikeyboard.tw/".to_owned(),
-            package_url: package.map(str::to_owned),
+            package: package.zip(digest).map(|(url, sha256)| PublishedPackage {
+                url: url.to_owned(),
+                sha256,
+            }),
         }
     }
 
-    fn identity() -> PackageIdentity {
-        PackageIdentity {
-            signer_thumbprint: vec![1, 2, 3],
-            product_name: "TaigiKeyboard".to_owned(),
-        }
+    fn unsigned() -> Arc<Admission> {
+        Arc::new(Admission::unsigned())
     }
 
     #[test]
-    fn without_a_package_or_a_signed_running_copy_the_offer_is_the_download_page() {
-        // trace: canInstallInApp = packageURL != nil && expectedIdentity != nil.
+    fn a_published_package_and_somewhere_to_stage_it_admit_an_in_app_install() {
+        // trace: can_install_in_app = manifest.package && staging. The
+        // running copy's signature is deliberately NOT a term — an unsigned
+        // release has none and still installs in-app; what its absence
+        // changes is only which checks `Admission::admit` runs.
         let staging = tempfile::tempdir().unwrap();
-        let signed = UpdateInstallation::new(
+        let installation = UpdateInstallation::new(
             Arc::new(Refusing),
-            Some(identity()),
+            unsigned(),
             Some(staging.path().to_path_buf()),
         );
-        assert_eq!(signed.offer(&manifest("3.7.0", None)), Offer::DownloadPage);
         assert_eq!(
-            signed.offer(&manifest("3.7.0", Some("https://x/y.exe"))),
+            installation.offer(&manifest("3.7.0", Some("https://x/y.exe"))),
             Offer::StartDownload
         );
-        let unsigned =
-            UpdateInstallation::new(Arc::new(Refusing), None, Some(staging.path().to_path_buf()));
+        // Half a package is no package: either half missing is the download
+        // page, decided once at the wire boundary.
+        for incomplete in [
+            manifest("3.7.0", None),
+            manifest_with_digest("3.7.0", Some("https://x/y.exe"), None),
+        ] {
+            assert_eq!(installation.offer(&incomplete), Offer::DownloadPage);
+        }
+        let nowhere_to_stage = UpdateInstallation::new(Arc::new(Refusing), unsigned(), None);
         assert_eq!(
-            unsigned.offer(&manifest("3.7.0", Some("https://x/y.exe"))),
+            nowhere_to_stage.offer(&manifest("3.7.0", Some("https://x/y.exe"))),
             Offer::DownloadPage
+        );
+    }
+
+    #[test]
+    fn the_digest_of_the_staged_bytes_is_what_admits_it() {
+        // trace: run_download hashes the staged file and `Admission::admit`
+        // compares it to the manifest's; an unsigned host copy runs no
+        // Authenticode check, so this is the whole bar here.
+        let staging = tempfile::tempdir().unwrap();
+        let mut installation = UpdateInstallation::new(
+            Arc::new(Writing),
+            unsigned(),
+            Some(staging.path().to_path_buf()),
+        );
+        let matching = manifest("3.7.0", Some("https://x/y.exe"));
+        installation.start_download(&matching);
+        while !installation.poll() {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(
+            matches!(installation.offer(&matching), Offer::Install(_)),
+            "the published digest admits the package"
+        );
+
+        let wrong = manifest_with_digest("3.8.0", Some("https://x/y.exe"), Some("b".repeat(64)));
+        installation.start_download(&wrong);
+        while !installation.poll() {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert_eq!(
+            installation.offer(&wrong),
+            Offer::PackageRejected,
+            "another file than the one published is refused"
+        );
+        assert_eq!(
+            Offer::PackageRejected.action_key(),
+            Some(StringKey::DesktopUpdateDownloadAction),
+            "a refused package leaves the download page as the way out"
         );
     }
 
@@ -388,7 +479,7 @@ mod tests {
         let staging = tempfile::tempdir().unwrap();
         let mut installation = UpdateInstallation::new(
             Arc::new(Refusing),
-            Some(identity()),
+            unsigned(),
             Some(staging.path().to_path_buf()),
         );
         let manifest = manifest("3.7.0", Some("https://x/y.exe"));

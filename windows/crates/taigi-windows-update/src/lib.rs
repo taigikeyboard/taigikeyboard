@@ -22,6 +22,6 @@ pub mod verify;
 
 pub use checker::{Outcome, CHECK_INTERVAL_MS};
 pub use installation::{Offer, UpdateInstallation};
-pub use manifest::{DottedVersion, ManifestError, UpdateManifest, PUBLISHED_URL};
+pub use manifest::{DottedVersion, ManifestError, PublishedPackage, UpdateManifest, PUBLISHED_URL};
 pub use transport::{FetchError, HttpTransport, ManifestFetcher, PackageDownloader};
-pub use verify::{PackageIdentity, Rejection};
+pub use verify::{Admission, PackageIdentity, Rejection};

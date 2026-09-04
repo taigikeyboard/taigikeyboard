@@ -231,14 +231,15 @@ echo "✓ $OUTPUT_EXE"
 echo "  version   $SHORT_VERSION"
 echo "  commit    $HEAD_COMMIT"
 echo "  installs  %ProgramFiles%\\TaigiKeyboard (administrator prompt)"
-echo "  sha256    $(sha256sum "$OUTPUT_EXE" | cut -d' ' -f1)"
+echo "  sha256    $(sha256_of "$OUTPUT_EXE")"
 declare -a PUBLISH_ARGS=(--installer "$OUTPUT_EXE")
 if [[ "$skip_sign" == true ]]; then
     PUBLISH_ARGS+=(--allow-unsigned)
     echo ""
     echo "  ⚠ unsigned — the current release channel. SmartScreen typically warns (an unsigned file"
-    echo "    inherits no reputation, so every version starts over), Win11 Smart App Control can refuse"
-    echo "    it outright, and every installed copy stays on the download-page route (no in-app install)."
+    echo "    inherits no reputation, so every version starts over) and Win11 Smart App Control can"
+    echo "    refuse it outright. Installed copies DO still update in-app: with no signature to pin a"
+    echo "    package to, the manifest's SHA-256 is what admits the download."
 fi
 
 if [[ "$publish" == true ]]; then

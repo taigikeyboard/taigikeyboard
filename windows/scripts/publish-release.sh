@@ -4,7 +4,7 @@
 # credentials, then ONE committed file, `_data/windows_release.json` (the
 # site's download button; the site renders `appcast/windows.json` — what every
 # installed copy polls, windows/updates/README.md — from it), and a wait until
-# the live manifest serves the new version. Mirror of
+# the live manifest serves the new version, its URL and its SHA-256. Mirror of
 # macos/scripts/publish-release.sh; the order is the point — a manifest
 # published before its download is reachable points every checker at a 404.
 #
@@ -81,7 +81,7 @@ echo "==> Verifying the installer is publishable"
     fail "--allow-unsigned and WINDOWS_SIGNING_THUMBPRINT contradict: a certificate is named, so sign the installer instead of publishing it unsigned"
 [[ "$INSTALLER_NAME" == "$APP_NAME-$SHORT_VERSION.exe" ]] ||
     fail "$INSTALLER_NAME is not the release name for $SHORT_VERSION (a -dirty build is not publishable)"
-declare -a REQUIRED_TOOLS=(curl base64 python3 powershell.exe)
+declare -a REQUIRED_TOOLS=(curl base64 sha256sum python3 powershell.exe)
 [[ "$allow_unsigned" == true ]] || REQUIRED_TOOLS+=(signtool)
 for tool in "${REQUIRED_TOOLS[@]}"; do
     command -v "$tool" > /dev/null || fail "$tool is not on PATH"
@@ -93,9 +93,10 @@ else
         fail "$INSTALLER_NAME carries no Authenticode signature Windows trusts — the in-app updater would refuse it (pass --allow-unsigned to publish it anyway)"
 fi
 # What every installed copy checks the download against
-# (taigi-windows-update::verify): this product, this version, and — when the
-# release certificate is named — signed by exactly it. A renamed file signed
-# by anyone else never reaches the manifest.
+# (taigi-windows-update::verify::admit): the published digest (read back from
+# the asset below), this product, this version, and — when the release
+# certificate is named — signed by exactly it. A renamed file signed by anyone
+# else never reaches the manifest.
 require_version_info "$installer_path"
 if [[ -n "${WINDOWS_SIGNING_THUMBPRINT:-}" ]]; then
     signer="$(signer_thumbprint_of "$installer_path")"
@@ -107,7 +108,8 @@ fi
 
 NOTES_FILE="$REPOSITORY_DIR/changelog/desktop-v$SHORT_VERSION.md"
 WINDOWS_NOTES_FILE="$(mktemp)"
-trap 'rm -f "$WINDOWS_NOTES_FILE"' EXIT
+PUBLISHED_INSTALLER="$(mktemp)"
+trap 'rm -f "$WINDOWS_NOTES_FILE" "$PUBLISHED_INSTALLER"' EXIT
 if [[ -f "$NOTES_FILE" ]]; then
     awk '/^### Windows$/ { inside = 1; next } inside && /^### / { exit } inside' \
         "$NOTES_FILE" > "$WINDOWS_NOTES_FILE"
@@ -133,17 +135,30 @@ else
 fi
 ASSET_URL="https://github.com/$PUBLISH_REPOSITORY/releases/download/$TAG/$INSTALLER_NAME"
 
-echo "==> Checking the release is reachable without credentials"
+# Anonymously, because that is how every user and every installed copy will
+# reach it — and WHOLE, because the digest the manifest is about to publish
+# has to be the one this URL actually serves. Those are different facts the
+# moment an upload truncates, a `--clobber` replaces the file, or the wrong
+# build was handed to `--installer`, and this is the one step that catches
+# them before anybody's settings window downloads it. GitHub can take a
+# moment to make a fresh asset reachable, so it is the retried step.
+echo "==> Reading the release back without credentials"
+LOCAL_SHA256="$(sha256_of "$installer_path")"
 for attempt in 1 2 3 4 5; do
     page_status="$(anonymous_status "$RELEASE_PAGE_URL")"
-    asset_status="$(anonymous_status --range 0-0 "$ASSET_URL")"
-    [[ "$page_status" == "200" && ("$asset_status" == "206" || "$asset_status" == "200") ]] && break
+    if [[ "$page_status" == "200" ]] &&
+        anonymous_curl --output "$PUBLISHED_INSTALLER" "$ASSET_URL"; then
+        PUBLISHED_SHA256="$(sha256_of "$PUBLISHED_INSTALLER")"
+        [[ "$LOCAL_SHA256" == "$PUBLISHED_SHA256" ]] ||
+            fail "$ASSET_URL serves $PUBLISHED_SHA256, but $INSTALLER_NAME here is $LOCAL_SHA256 — the upload did not land whole"
+        break
+    fi
     [[ $attempt -eq 5 ]] &&
-        fail "release not anonymously reachable (page $page_status, asset $asset_status) — is $PUBLISH_REPOSITORY public?"
-    echo "  page $page_status, asset $asset_status — retrying in 5s"
+        fail "release not anonymously reachable (page $page_status) — is $PUBLISH_REPOSITORY public?"
+    echo "  page $page_status, asset unreadable — retrying in 5s"
     sleep 5
 done
-echo "  page 200, asset $asset_status"
+echo "  page 200, sha256 $PUBLISHED_SHA256"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. The file below names a download that has just been
@@ -152,17 +167,15 @@ echo "  page 200, asset $asset_status"
 # pointed at a 404.
 # ---------------------------------------------------------------------------
 
-# `downloadURL` reaches the input method as the manifest's `packageURL`, which
-# is what lets a SIGNED installed copy fetch the installer itself instead of
-# sending the user to a browser; it still verifies the installer's own
-# Authenticode signature against its own signer, so the URL is a convenience
-# rather than something trusted. An unsigned copy has no signer to pin against
-# (`taigi-windows-update::verify::running_identity` answers None), so it never
-# fetches or stages the package at all — it opens `downloadPageURL`. The field
-# is published either way: it costs nothing to a copy that ignores it, and
-# suppressing it would mean a second published fact to keep in step.
-SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
-    "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$RELEASE_PAGE_URL")"
+# `downloadURL` reaches the input method as the manifest's `packageURL` and
+# `sha256` as its `packageSHA256`: together they are what lets an installed
+# copy fetch and admit the installer itself instead of sending the user to a
+# browser. BOTH are required for that — a manifest naming a package with no
+# digest offers the download page, because an unsigned copy has nothing else
+# to hold the download against (`taigi-windows-update::verify::admit`). A
+# signed copy checks its Authenticode signature on top.
+SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "sha256": "%s",\n  "releasePageURL": "%s"\n}\n' \
+    "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$PUBLISHED_SHA256" "$RELEASE_PAGE_URL")"
 
 # Create or replace one file in the website repository.
 commit_site_file() {
@@ -197,24 +210,24 @@ echo "==> Waiting for $MANIFEST_URL to serve $SHORT_VERSION"
 # rendered the manifest from what was committed, which is the one step of the
 # announcement this script does not perform itself.
 #
-# Both published fields are checked, not just the version. `packageURL` is what
-# lets a signed installed copy fetch the installer itself, and a manifest
-# missing it still reads as a perfectly valid update — the user is sent to a
-# browser instead. So a render that dropped it would satisfy a version-only
-# poll and quietly cost every future signed install the in-app download; there
-# is no later signal that it happened. Checked while the releases are unsigned
-# too: the render is what breaks, and it breaks silently either way.
+# All three published fields are checked, not just the version. `packageURL`
+# and `packageSHA256` are what let an installed copy fetch and admit the
+# installer itself, and a manifest missing either still reads as a perfectly
+# valid update — the user is sent to a browser instead. So a render that
+# dropped one would satisfy a version-only poll and quietly cost every install
+# the in-app download; there is no later signal that it happened. The digest
+# is compared against what the published asset actually served, above.
 for attempt in $(seq 1 30); do
     live_manifest="$(anonymous_curl --header 'Cache-Control: no-cache' "$MANIFEST_URL" 2>/dev/null |
         python3 -c 'import json,sys
 try:
     manifest = json.load(sys.stdin)
-    print((manifest.get("version") or "") + " " + (manifest.get("packageURL") or ""))
+    print(" ".join((manifest.get(field) or "-") for field in ("version", "packageURL", "packageSHA256")))
 except Exception:
-    print(" ")' || true)"
-    [[ "$live_manifest" == "$SHORT_VERSION $ASSET_URL" ]] && break
+    print("-")' || true)"
+    [[ "$live_manifest" == "$SHORT_VERSION $ASSET_URL $PUBLISHED_SHA256" ]] && break
     [[ $attempt -eq 30 ]] &&
-        fail "manifest still serving '${live_manifest% *}' with package '${live_manifest#* }' after 5 minutes, wanted '$SHORT_VERSION' and '$ASSET_URL' — check the Pages deployment"
+        fail "manifest still serving '$live_manifest' after 5 minutes, wanted '$SHORT_VERSION $ASSET_URL $PUBLISHED_SHA256' — check the Pages deployment"
     sleep 10
 done
 
@@ -227,5 +240,5 @@ echo "  website   https://taigikeyboard.tw/#download"
 if [[ "$allow_unsigned" == true ]]; then
     echo ""
     echo "  ⚠ published UNSIGNED. SmartScreen typically warns (其他資訊 → 仍要執行) and Win11 Smart App"
-    echo "    Control can refuse it; every installed copy offers 去下載 rather than an in-app install."
+    echo "    Control can refuse it. Installed copies DO still update in-app, on the published SHA-256."
 fi

@@ -7,23 +7,21 @@ The Windows input method checks for updates by fetching one static JSON file:
 It is the macOS manifest's twin (`macos/updates/README.md`), same wire format,
 read by `windows/crates/taigi-windows-update`. `version` is compared against
 the running settings exe's version (the workspace's); when the manifest is
-strictly newer, the 一般 pane offers the update: a signed copy downloads
+strictly newer, the 一般 pane offers the update: the copy downloads
 `packageURL` itself, verifies it, and — on a second press — opens the
-installer; everywhere else (the toast, an unsigned copy, a manifest without
-`packageURL`) the browser opens `downloadPageURL`.
+installer. Where it cannot (a manifest without a `packageURL` or without its
+`packageSHA256`, nowhere to stage) and from the toast, the browser opens
+`downloadPageURL` instead.
 
-⚠ **Today every copy is on the second route.** Releases are published
-unsigned (`docs/architecture/windows-release.md` § Signing status — no
-certificate for the next year or two), and an unsigned running copy has no
-signature identity to verify a package against, so it never fetches or stages
-`packageURL`: the row's action is 去下載. `packageURL` is published anyway —
-it costs nothing to a copy that ignores it, and one published fact is easier
-to keep true than two.
+"Verifies it" is `packageSHA256` always, plus the package's Authenticode
+signature when the running copy carries one of its own. Releases are unsigned
+today, so for now the digest is the whole bar — what that is and is not worth
+is `docs/architecture/windows-release.md` § Signing status, which owns that
+policy.
 
-The file is unsigned, deliberately: what stops a substituted package being
-installed is its own Authenticode signature, pinned against the certificate
-the running copy was signed with (the signer's leaf thumbprint), plus its
-VERSIONINFO naming this product at the manifest's version.
+The manifest file itself carries no signature of its own, and does not need
+one: it is served over HTTPS from a domain the project controls, and what a
+copy checks is the package it names.
 
 ## Wire format
 
@@ -31,7 +29,8 @@ VERSIONINFO naming this product at the manifest's version.
 |---|---|
 | `version` | Newest downloadable version, dotted integers only (`3.7.0`). No suffixes — the checker rejects them. |
 | `downloadPageURL` | Page the user lands on, `https` only. Required. |
-| `packageURL` | The `TaigiKeyboard-<version>.exe` an in-app install would fetch, `https` only — read only by a signed running copy, which verifies its Authenticode signature before installing it. Optional; an invalid one is dropped on its own. |
+| `packageURL` | The `TaigiKeyboard-<version>.exe` an in-app install fetches, `https` only. Optional, and only usable with the digest below. |
+| `packageSHA256` | That file's SHA-256, 64 hex digits (case-insensitive). **`packageURL` and this are one fact**: either half missing or invalid reads as no package at all, so the update is announced with the download page as its action. **Windows only** — the macOS manifest has no such field, because it pins a downloaded package by its Developer ID signature instead. |
 
 Unknown extra fields are ignored. Before the first release the manifest reads
 `0.0.0`, which notifies nobody.
@@ -52,6 +51,7 @@ repository, and never before the installer is anonymously reachable.
   "version": "3.7.0",
   "tag": "windows-v3.7.0",
   "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/windows-v3.7.0/TaigiKeyboard-3.7.0.exe",
+  "sha256": "115b6d19c0a2f4e6ab8d7315f0c9e24d5b6a1f8309e7c4d25a0b3f6178e917d2",
   "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/tag/windows-v3.7.0"
 }
 ```
@@ -67,8 +67,11 @@ included.
 
 The manifest is **rendered** from it by the site's own build:
 `appcast/windows.json` over there is a Jekyll template reading
-`site.data.windows_release`, mapping `releasePageURL` → `downloadPageURL`
-and `downloadURL` → `packageURL`. Nothing writes it directly.
+`site.data.windows_release`, mapping `releasePageURL` → `downloadPageURL`,
+`downloadURL` → `packageURL` and `sha256` → `packageSHA256`. Nothing writes
+it directly. `sha256` is read back from the PUBLISHED asset by the release
+flow, not just computed locally, so the digest the manifest names is one the
+URL was serving.
 
 Same shape as macOS (`macos/updates/README.md` § One published fact, one
 committed file), for the reason recorded there: two literal files meant two

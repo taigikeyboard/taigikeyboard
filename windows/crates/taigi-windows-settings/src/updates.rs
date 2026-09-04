@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use taigi_windows_update::{
-    checker, toast, verify, HttpTransport, Outcome, UpdateInstallation, UpdateManifest,
+    checker, toast, Admission, HttpTransport, Outcome, UpdateInstallation, UpdateManifest,
 };
 
 /// The running build's version (`AppVersion.installed`).
@@ -28,8 +28,9 @@ pub const INSTALLED_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManualOutcome {
     pub outcome: Outcome,
-    /// Whether the first button downloads and installs in-app (a signed
-    /// copy with a `packageURL`) or opens the download page.
+    /// Whether the first button downloads and installs in-app (the manifest
+    /// named a package and there is somewhere to stage it) or opens the
+    /// download page.
     pub installs_in_app: bool,
 }
 
@@ -108,7 +109,7 @@ impl UpdateState {
         let transport = Arc::new(HttpTransport);
         let installation = UpdateInstallation::new(
             transport.clone(),
-            verify::running_identity(),
+            Arc::new(Admission::of_running_copy()),
             local_data_directory(),
         );
         // Stale staged packages from earlier runs go at launch (the window
@@ -286,7 +287,7 @@ mod tests {
         UpdateManifest {
             version: "9.9.9".to_owned(),
             download_page_url: "https://taigikeyboard.tw/download".to_owned(),
-            package_url: None,
+            package: None,
         }
     }
 

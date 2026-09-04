@@ -1,7 +1,9 @@
 //! The published manifest and the version it names. Port of
 //! `UpdateManifest` / `DottedVersion` (`UpdateChecker.swift:1-120`); the
-//! wire format is `macos/updates/README.md` § Wire format, unchanged —
-//! only the file name differs (`windows.json`).
+//! wire format is `windows/updates/README.md` § Wire format — the macOS
+//! manifest's twin but for the file name and ONE added field,
+//! `packageSHA256`, which the Mac has no use for: it pins a downloaded
+//! package by its Developer ID signature.
 
 // 中文: 更新 manifest 的解碼與版本比較 — 與 macOS 同一份線上格式。
 
@@ -28,9 +30,20 @@ pub struct UpdateManifest {
     /// The page the user lands on, `https` only. Required: the only route
     /// a notification, a development build or an old install has.
     pub download_page_url: String,
-    /// The installer itself, `https` only. Optional; an invalid one is
-    /// dropped on its own rather than failing the manifest.
-    pub package_url: Option<String>,
+    /// The installer to fetch and the digest it must hash to. One fact, so
+    /// one field: neither half is usable alone, and a manifest carrying only
+    /// one of them (or an invalid one) reads as no package at all — the
+    /// update is still announced, with the download page as its action.
+    pub package: Option<PublishedPackage>,
+}
+
+/// What an in-app install downloads, and what admits it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PublishedPackage {
+    /// `https` only.
+    pub url: String,
+    /// 64 lowercase hex.
+    pub sha256: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -45,6 +58,20 @@ struct Wire {
         skip_serializing_if = "Option::is_none"
     )]
     package_url: Option<String>,
+    #[serde(
+        rename = "packageSHA256",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    package_sha256: Option<String>,
+}
+
+/// A SHA-256 as it is published: 64 hex digits, taken case-insensitively and
+/// kept lowercase so a comparison is a string comparison.
+pub(crate) fn normalized_sha256(digest: &str) -> Option<String> {
+    let digest = digest.trim();
+    (digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .then(|| digest.to_ascii_lowercase())
 }
 
 /// A parseable absolute URL whose scheme is `https` and which names a
@@ -54,6 +81,15 @@ fn is_https(url: &str) -> bool {
         uri.scheme_str()
             .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https"))
             && uri.host().is_some_and(|host| !host.is_empty())
+    })
+}
+
+/// Both halves, both valid, or nothing.
+fn published_package(url: Option<String>, digest: Option<&str>) -> Option<PublishedPackage> {
+    let url = url.filter(|url| is_https(url))?;
+    Some(PublishedPackage {
+        url,
+        sha256: normalized_sha256(digest?)?,
     })
 }
 
@@ -67,7 +103,7 @@ impl UpdateManifest {
         Ok(Self {
             version: wire.version,
             download_page_url: wire.download_page_url,
-            package_url: wire.package_url.filter(|url| is_https(url)),
+            package: published_package(wire.package_url, wire.package_sha256.as_deref()),
         })
     }
 
@@ -76,9 +112,10 @@ impl UpdateManifest {
         serde_json::to_string(&Wire {
             version: self.version.clone(),
             download_page_url: self.download_page_url.clone(),
-            package_url: self.package_url.clone(),
+            package_url: self.package.as_ref().map(|package| package.url.clone()),
+            package_sha256: self.package.as_ref().map(|package| package.sha256.clone()),
         })
-        .expect("three plain strings always serialize")
+        .expect("plain strings always serialize")
     }
 }
 
@@ -147,22 +184,63 @@ impl Ord for DottedVersion {
 mod tests {
     use super::*;
 
+    fn wire(package: &str) -> String {
+        format!(
+            r#"{{"version":"3.7.0","downloadPageURL":"https://taigikeyboard.tw/",{package}"extra":1}}"#
+        )
+    }
+
+    const DIGEST: &str = "b2b3a11c02f14e36f2a5c148db1b5924fa96141da4b2fbfb262a469df53f6750";
+
     #[test]
-    fn a_documented_manifest_decodes_and_an_invalid_package_url_is_dropped_alone() {
-        // trace: macos/updates/README.md § Wire format.
-        let manifest = UpdateManifest::decode(
-            br#"{"version":"3.7.0","downloadPageURL":"https://taigikeyboard.tw/","packageURL":"http://x/y.exe","extra":1}"#,
+    fn a_package_is_both_halves_or_neither_and_the_digest_is_case_insensitive() {
+        // trace: published_package — a package is a URL AND its digest, so
+        // half of one is none of one. Either half being absent or invalid
+        // leaves the manifest itself valid (the update is still announced,
+        // with the download page as its action), the way an invalid
+        // packageURL alone already did.
+        let both = UpdateManifest::decode(
+            wire(&format!(
+                r#""packageURL":"https://x/y.exe","packageSHA256":"{}","#,
+                DIGEST.to_ascii_uppercase()
+            ))
+            .as_bytes(),
         )
         .unwrap();
-        assert_eq!(manifest.version, "3.7.0");
-        assert_eq!(manifest.package_url, None);
-        let with_package = UpdateManifest::decode(
-            br#"{"version":"3.7.0","downloadPageURL":"https://taigikeyboard.tw/","packageURL":"https://x/y.exe"}"#,
-        )
-        .unwrap();
-        assert_eq!(with_package.package_url.as_deref(), Some("https://x/y.exe"));
-        let again = UpdateManifest::decode(with_package.encode().as_bytes()).unwrap();
-        assert_eq!(again, with_package);
+        assert_eq!(both.version, "3.7.0");
+        assert_eq!(
+            both.package,
+            Some(PublishedPackage {
+                url: "https://x/y.exe".to_owned(),
+                sha256: DIGEST.to_owned(),
+            }),
+            "a digest published in upper case is kept lowercase"
+        );
+        assert_eq!(
+            UpdateManifest::decode(both.encode().as_bytes()).unwrap(),
+            both,
+            "the pending manifest in settings.json round trips both halves"
+        );
+
+        for half in [
+            String::new(),
+            r#""packageURL":"https://x/y.exe","#.to_owned(),
+            format!(r#""packageSHA256":"{DIGEST}","#),
+            format!(r#""packageURL":"http://x/y.exe","packageSHA256":"{DIGEST}","#),
+            r#""packageURL":"https://x/y.exe","packageSHA256":"abc","#.to_owned(),
+            format!(
+                r#""packageURL":"https://x/y.exe","packageSHA256":"{}","#,
+                "z".repeat(64)
+            ),
+            format!(
+                r#""packageURL":"https://x/y.exe","packageSHA256":"{}","#,
+                "a".repeat(63)
+            ),
+        ] {
+            let manifest = UpdateManifest::decode(wire(&half).as_bytes())
+                .unwrap_or_else(|_| panic!("half a package must not fail the manifest: {half}"));
+            assert_eq!(manifest.package, None, "{half}");
+        }
     }
 
     #[test]

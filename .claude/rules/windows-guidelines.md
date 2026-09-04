@@ -109,11 +109,19 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 - `make windows-release` runs on a Windows host (Git Bash); `windows/scripts/publish-release.sh`
   mirrors the macOS publisher and targets the same website repo. Never run it without USER's
   explicit release instruction (`diagnosis-discipline.md` § No unilateral release scope).
-- Signing is by thumbprint (`WINDOWS_SIGNING_THUMBPRINT`); the updater pins the signer's LEAF, so a
-  certificate rotation is a download-page release once (`windows-release.md` § Notes). Both
-  binaries and the installer carry VERSIONINFO `ProductName = TaigiKeyboard` +
-  `ProductVersion = <workspace version>` — the updater's package check reads them; keep the
-  `build-support/resource.rs` block and the `.iss` `VersionInfo*` directives in step.
+- **Releases ship UNSIGNED** (owner 2026-09-04, no certificate for a year or two):
+  `make windows-release RELEASE_FLAGS=--skip-sign`, which passes `--allow-unsigned` down to the
+  publisher; the artifact keeps the plain `TaigiKeyboard-<version>.exe` name. What admits a
+  downloaded package is `verify::admit` — the manifest's `packageSHA256` ALWAYS, plus the
+  Authenticode checks only when the running copy has a signature of its own, never one instead of
+  the other. `windows-release.md` § Signing status is the single source for this; do not restate
+  the policy elsewhere.
+- Signing, when a certificate exists, is by thumbprint (`WINDOWS_SIGNING_THUMBPRINT`); the updater
+  pins the signer's LEAF, so a certificate rotation costs the in-app Authenticode check for the
+  copies signed with the old one (`windows-release.md` § Notes). Both binaries and the installer
+  carry VERSIONINFO `ProductName = TaigiKeyboard` + `ProductVersion = <workspace version>` — the
+  updater's package check reads them; keep the `build-support/resource.rs` block and the `.iss`
+  `VersionInfo*` directives in step.
 - Version source of truth = `windows/Cargo.toml` `[workspace.package] version`, written only by
   `make version-desktop x.y.z` (the desktop train — macOS + Windows share one number;
   iOS + Android are the separately numbered mobile train).

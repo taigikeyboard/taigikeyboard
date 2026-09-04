@@ -77,6 +77,13 @@ version_info_of() {
         tr -d '\r'
 }
 
+# A file's SHA-256 as lowercase hex — what the manifest publishes and what
+# every installed copy hashes a download to
+# (`taigi-windows-update::verify::file_sha256`).
+sha256_of() {
+    sha256sum "$1" | cut -d' ' -f1
+}
+
 # The upper-case SHA-1 thumbprint of a PE file's Authenticode signer; empty
 # when unsigned or not trusted.
 signer_thumbprint_of() {
