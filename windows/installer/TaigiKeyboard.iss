@@ -205,22 +205,7 @@ Type: filesandordirs; Name: "{app}\x86"
 // distinction per file, and get it right again for every file a later release
 // adds. Renaming works on all of them, so nothing here has to know.
 const
-  MOVEFILE_DELAY_UNTIL_REBOOT = $00000004;
   StaleExtension = '.stale';
-
-// Deleting at the next restart is how a still-mapped stale copy finally goes
-// away. It does NOT make a restart part of installing: the new version is in
-// place and usable when Setup finishes; this only reclaims the old bytes
-// whenever the machine next reboots on its own. Passing 0 for the destination
-// is the documented "delete" form (lpNewFileName = NULL).
-//
-// Inno's own DelayDeleteFile is NOT this: it retries the delete a few times,
-// 250 msec apart, and then gives up (jrsoftware.org/ishelp, DelayDeleteFile).
-// Retrying cannot help against a file a live process has mapped — that holder
-// will not let go until it exits — so scheduling the delete is the only thing
-// that ever collects it.
-function MoveFileExW(lpExistingFileName: String; lpNewFileName: Cardinal; dwFlags: DWORD): BOOL;
-  external 'MoveFileExW@kernel32.dll stdcall';
 
 type
   TMovedFile = record
@@ -234,13 +219,27 @@ var
   UpdateTaskFailed: Boolean;
 
 // Delete, or fail that and have Windows delete it at the next restart.
+// Delete, or fail that and have Windows delete it at the next restart.
+//
+// Deleting at the next restart is how a copy a live process still has mapped
+// finally goes away. It does NOT make a restart part of installing: the new
+// version is in place and usable when Setup finishes; this only reclaims the
+// old bytes whenever the machine next reboots on its own.
+//
+// `RestartReplace(Path, '')` is the documented delete form — "if DestFile is ''
+// then TempFile will be deleted" — and raises rather than returning a result.
+// Inno's DelayDeleteFile is the wrong sibling and cannot substitute: it retries
+// the delete a few times, 250 msec apart, and gives up. Retrying cannot outlast
+// a live mapping, because the holder will not let go until it exits.
 procedure DiscardStale(const Path: String);
 begin
   if DeleteFile(Path) then Exit;
-  if MoveFileExW(Path, 0, MOVEFILE_DELAY_UNTIL_REBOOT) then
-    Log('stale: ' + Path + ' still held — deleting at next restart')
-  else
+  try
+    RestartReplace(Path, '');
+    Log('stale: ' + Path + ' still held — deleting at next restart');
+  except
     Log('stale: could not delete or schedule ' + Path);
+  end;
 end;
 
 // Where a file goes when it is moved aside. DERIVED from the file itself,
@@ -650,8 +649,12 @@ begin
   AppDir := ExpandConstant('{app}');
   DiscardStaleTree(AppDir);
   if DirExists(AppDir) and not RemoveDir(AppDir) then
-    if MoveFileExW(AppDir, 0, MOVEFILE_DELAY_UNTIL_REBOOT) then
+    try
+      RestartReplace(AppDir, '');
       Log('uninstall: ' + AppDir + ' still holds a mapped copy — removing it at next restart');
+    except
+      Log('uninstall: could not schedule ' + AppDir + ' for removal');
+    end;
 end;
 
 procedure CurPageChanged(CurPageID: Integer);

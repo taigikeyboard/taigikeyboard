@@ -110,9 +110,9 @@ function Get-DllHolders([string] $Path) {
 
 # Windows lets a LOADED dll be renamed even though it cannot be deleted, which
 # is how the linker gets to write a fresh one without asking anybody to close
-# anything. The installer plays the same trick (TaigiKeyboard.iss, the rename
-# lock probe). The stamp matters: an earlier set-aside copy can still be held,
-# and renaming onto its name fails.
+# anything. The installer plays the same trick (TaigiKeyboard.iss, MakeWay in
+# [Code]). The stamp matters: an earlier set-aside copy can still be held, and
+# renaming onto its name fails.
 function Clear-DllName([string] $Path) {
     # Copies an earlier run could not delete because something still had them
     # open. Whatever is holding one may have exited since.
