@@ -145,6 +145,44 @@ mod tests {
     }
 
     #[test]
+    fn raw_input_composing_poj_applies_both_doubletap_affordances() {
+        // The preedit is what the user sees AND what a commit writes to the
+        // document, so pin the fix on the real display path, not just on
+        // `normalize_tone` in isolation: with both toggles on, typing
+        // `h o o n n` must read `ho͘ⁿ`, not `ho͘nn`.
+        // 中文: 組字區既是使用者看到的、也是送出時寫進文件的內容,所以要釘在真正的
+        // 中文:   display path 上,而不是只測 normalize_tone:兩個開關都開時,
+        // 中文:   打 h-o-o-n-n 必須讀作 ho͘ⁿ,不是 ho͘nn。
+        let config = AppConfig {
+            oo_doubletap_enabled: true,
+            nn_doubletap_enabled: true,
+            ..config_poj()
+        };
+        assert_eq!(
+            Phase::Composing {
+                raw: "hoonn".to_string(),
+            }
+            .raw_input(&config),
+            "ho\u{0358}\u{207f}"
+        );
+        assert_eq!(
+            Phase::Composing {
+                raw: "hoonnh".to_string(),
+            }
+            .raw_input(&config),
+            "ho\u{0358}\u{207f}h"
+        );
+        // Canonical spelling unchanged.
+        assert_eq!(
+            Phase::Composing {
+                raw: "honn".to_string(),
+            }
+            .raw_input(&config),
+            "ho\u{207f}"
+        );
+    }
+
+    #[test]
     fn raw_input_composing_tl_preserves_unhyphenated_input_verbatim() {
         // §10.2 amendment 2026-05-13 — engine does NOT auto-insert syllable
         // boundaries; if the user typed no hyphens, derived display has no

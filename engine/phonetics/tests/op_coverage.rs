@@ -190,6 +190,108 @@ fn normalize_tone_poj_nn_doubletap_enabled() {
 }
 
 #[test]
+fn normalize_tone_poj_both_doubletaps_fold_independently() {
+    // The two toggles are independent per-key affordances, so a buffer holding
+    // BOTH `oo` and `nn` must get both rewrites. Reported on device: typing
+    // `h o o n n` showed `ho͘nn` — the `oo` folded, the `nn` did not.
+    //
+    // Root cause was ordering. `convert_nasal_double_n` only fires when the
+    // char immediately before `nn` is an ASCII vowel, and the `oo` fold puts a
+    // combining mark (U+0358) exactly there. Running `oo` first stranded the
+    // `nn`; `honn` (nothing to fold) converted fine, which is why the two
+    // single-toggle tests above never caught it.
+    // 中文: 兩個開關是各自獨立的按鍵 affordance,同時含 oo 與 nn 的 buffer 兩邊都要生效。
+    // 中文:   實機回報:打 h-o-o-n-n 顯示 ho͘nn,oo 折了、nn 沒折。根因是順序 ——
+    // 中文:   nn 折疊只認「前一字元是 ASCII 母音」,而 oo 折疊正好在那裡插入 U+0358。
+    // 中文:   honn(無 oo 可折)卻正常,所以上面兩個單開關測試抓不到。
+    for (input, expected) in [
+        ("hoonn", "ho\u{0358}\u{207f}"),
+        ("hoonnh", "ho\u{0358}\u{207f}h"),
+        // Unchanged by the reorder — no `oo` to fold.
+        ("honn", "ho\u{207f}"),
+        ("ann", "a\u{207f}"),
+    ] {
+        let resp = run(
+            Method::NormalizeTone(NormalizeTone {
+                input: input.to_string(),
+            }),
+            poj_config(true, true),
+        );
+        assert_eq!(string_result(&resp), expected, "input {input:?}");
+    }
+}
+
+#[test]
+fn normalize_tone_poj_doubletap_folds_uppercase() {
+    // Exercises the `OO` arm together with the reordered folds AND the
+    // `adjust_nasal_marker_case` pass that runs after them: the marker follows
+    // the case of the nearest preceding letter, so an all-caps buffer ends on
+    // `ᴺ` (U+1D3A) rather than `ⁿ`.
+    // trace: "HOONN" -> nn fold -> "HOOⁿ" -> oo fold -> "HO͘ⁿ" -> case -> "HO͘ᴺ"
+    // 中文: 同時驗證 OO arm、重排後的折疊順序,以及其後的 adjust_nasal_marker_case
+    // 中文:   (鼻化符號跟隨前一個字母的大小寫,全大寫收在 ᴺ 而非 ⁿ)。
+    for (input, expected) in [
+        ("HOONN", "HO\u{0358}\u{1d3a}"),
+        ("Hoonn", "Ho\u{0358}\u{207f}"),
+        ("hooNN", "ho\u{0358}\u{207f}"),
+    ] {
+        let resp = run(
+            Method::NormalizeTone(NormalizeTone {
+                input: input.to_string(),
+            }),
+            poj_config(true, true),
+        );
+        assert_eq!(string_result(&resp), expected, "input {input:?}");
+    }
+    // Pins EXISTING behaviour, deliberately not changed here: the `oo` fold has
+    // `oo` / `Oo` / `OO` arms and no `oO` arm, so a shift-between-taps buffer
+    // is left alone. Pre-existing case-coverage gap, orthogonal to the ordering
+    // fix; changing it would be a contract decision about what a double tap is.
+    // 中文: 釘住既有行為(本輪刻意不改):oo 折疊只有 oo/Oo/OO 三個 arm,沒有 oO,
+    // 中文:   所以兩次點擊之間按了 shift 的 buffer 不會被折。這是既有的大小寫覆蓋缺口,
+    // 中文:   與本次排序修正無關;要改屬於「雙擊的契約是什麼」的產品決定。
+    // trace: "hoOnn" -> nn fold -> "hoOⁿ" -> oo fold finds no `oO` arm -> case
+    //        pass sees `O` as the nearest preceding letter -> "hoOᴺ"
+    let resp = run(
+        Method::NormalizeTone(NormalizeTone {
+            input: "hoOnn".to_string(),
+        }),
+        poj_config(true, true),
+    );
+    assert_eq!(string_result(&resp), "hoO\u{1d3a}");
+}
+
+#[test]
+fn normalize_tone_poj_doubletap_toggles_stay_independent() {
+    // Each toggle alone still does exactly its own rewrite and nothing else —
+    // the reorder must not make one imply the other.
+    // 中文: 單獨開一個開關時只做自己那一項,重排順序不可讓其中一個牽動另一個。
+    let resp = run(
+        Method::NormalizeTone(NormalizeTone {
+            input: "hoonn".to_string(),
+        }),
+        poj_config(false, true),
+    );
+    assert_eq!(string_result(&resp), "hoo\u{207f}", "nn only");
+
+    let resp = run(
+        Method::NormalizeTone(NormalizeTone {
+            input: "hoonn".to_string(),
+        }),
+        poj_config(true, false),
+    );
+    assert_eq!(string_result(&resp), "ho\u{0358}nn", "oo only");
+
+    let resp = run(
+        Method::NormalizeTone(NormalizeTone {
+            input: "hoonn".to_string(),
+        }),
+        poj_config(false, false),
+    );
+    assert_eq!(string_result(&resp), "hoonn", "neither");
+}
+
+#[test]
 fn strip_tone_returns_bare_and_tone() {
     let resp = run(
         Method::StripTone(StripTone {

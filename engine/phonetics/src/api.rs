@@ -68,8 +68,28 @@ pub fn parse_input_mode(mode: &str) -> InputMode {
     }
 }
 
-/// POJ doubletap preprocessing: `oo`→`o\u{0358}` + `nn`→nasal marker, gated
+/// POJ doubletap preprocessing: `nn`→nasal marker + `oo`→`o\u{0358}`, gated
 /// by `AppConfig.{oo,nn}_doubletap_enabled`. No-op for non-POJ modes.
+///
+/// **The `nn` fold must run FIRST.** It only fires when the character
+/// immediately before `nn` is an ASCII vowel ([`convert_nasal_double_n`]), and
+/// the `oo` fold inserts a combining mark (`U+0358`) exactly there — so with
+/// `oo` first, `hoonn` became `ho͘nn` and the `nn` was stranded, while `honn`
+/// (no `oo` to fold) converted fine. The two affordances are independent
+/// per-key rewrites and both should fire: `hoonn` → `hooⁿ` → `ho͘ⁿ`.
+///
+/// The reverse ordering is safe in a way the old one was not: the `nn` fold
+/// only ever CONTRACTS `nn` to `ⁿ`, so it cannot manufacture an `oo` for the
+/// second pass to misread. It also matches the canonical converter, whose
+/// `POJ_FINAL_SUBS` has ordered `nn`→`ⁿ` ahead of `oo`→`o͘` all along
+/// (`taigi-converter/src/tables.js`, mirrored at `tables.rs`
+/// `POJ_FINAL_SUBSTITUTIONS`).
+// 中文: POJ 雙擊預處理 —— `nn` 折疊必須先跑。它只在 `nn` 前一個字元是 ASCII 母音時
+// 中文:   才觸發,而 `oo` 折疊正好會在那個位置插入結合符 U+0358:舊順序下 hoonn 變成
+// 中文:   ho͘nn,`nn` 被卡住,而 honn(沒有 oo 可折)卻正常。兩個 affordance 各自獨立,
+// 中文:   都該生效:hoonn → hooⁿ → ho͘ⁿ。
+// 中文: 反過來排是安全的:`nn` 折疊只會把 nn 縮成 ⁿ,造不出新的 oo 讓第二輪誤讀。
+// 中文:   這也與 canonical converter 一致 —— POJ_FINAL_SUBS 一直都是 nn→ⁿ 排在 oo→o͘ 前面。
 pub(crate) fn preprocess_for_normalize_tone(
     input: &str,
     mode: InputMode,
@@ -79,13 +99,13 @@ pub(crate) fn preprocess_for_normalize_tone(
         return input.to_string();
     }
     let mut s = input.to_string();
+    if config.nn_doubletap_enabled {
+        s = convert_nasal_double_n(&s);
+    }
     if config.oo_doubletap_enabled {
         s = s.replace("oo", "o\u{0358}");
         s = s.replace("Oo", "O\u{0358}");
         s = s.replace("OO", "O\u{0358}");
-    }
-    if config.nn_doubletap_enabled {
-        s = convert_nasal_double_n(&s);
     }
     s
 }
