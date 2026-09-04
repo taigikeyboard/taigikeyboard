@@ -1,4 +1,4 @@
-﻿; Taigi Keyboard for Windows — Inno Setup 6.5+ script (roadmap W8; `x64compatible`
+﻿; TaigiKeyboard for Windows — Inno Setup 6.5+ script (roadmap W8; `x64compatible`
 ; is 6.3 syntax, the official ChineseTraditional.isl 6.5).
 ;
 ; Compiled by windows/scripts/release-app.sh:
@@ -20,7 +20,7 @@
 ; architecture, stops the settings window and unregisters the old DLL before
 ; an upgrade, tells the user to switch input method + sign out when a host
 ; still holds the DLL, creates the Start-menu shortcut that carries the toast
-; AUMID, registers the per-user update-check task, and reverses every step on
+; AUMID, registers the daily update-check task, and reverses every step on
 ; uninstall — leaving %APPDATA%\TaigiKeyboard (the user's learning data) alone.
 
 #ifndef AppVersion
@@ -30,7 +30,7 @@
   #error Pass /DDist=<staging dir> (windows/scripts/release-app.sh does)
 #endif
 
-#define AppName "Taigi Keyboard"
+#define AppName "TaigiKeyboard"
 #define AppPublisher "Soo Bîn-hiân 蘇民弦"
 #define AppContactMail "info@taigikeyboard.tw"
 #define AppURL "https://taigikeyboard.tw"
@@ -133,23 +133,26 @@ Source: "{#Dist}\Dictionaries\*"; DestDir: "{app}\Dictionaries"; Flags: ignoreve
 Source: "{#Dist}\Fonts\*"; DestDir: "{app}\Fonts"; Flags: ignoreversion
 Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion
 
+; Inno's uninstall log is name-keyed, so the pre-rename "Taigi Keyboard"
+; shortcut would sit beside the new one on a machine that ran an older build.
+[InstallDelete]
+Type: files; Name: "{autoprograms}\Taigi Keyboard.lnk"
+
 [Icons]
 ; The AUMID is what lets an unpackaged desktop app post toasts (W9); the
 ; updater's toast is silently dropped without this shortcut.
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#SettingsExe}"; AppUserModelID: "{#AppUserModelID}"
 
 ; Registration and the scheduled task are NOT [Run] entries: Inno ignores a
-; [Run] entry's exit code, and a DLL that failed to register or a task that
-; failed to create must be an installation FAILURE (PR10 Codex) — see
-; RegisterEverything in [Code], which rolls back and raises.
+; [Run] entry's exit code, and a DLL that failed to register must be an
+; installation FAILURE (PR10 Codex) — see RegisterEverything in [Code], which
+; rolls back and raises. The task's own failure is reported, not fatal.
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#SettingsExe} /F"; Flags: runhidden waituntilterminated; RunOnceId: "StopSettings"
-; No runasoriginaluser: that flag is [Run]-only, and ISCC refuses the script
-; with it here. The uninstaller is elevated and the task sits in the root
-; folder, so an administrator's schtasks deletes it whoever registered it —
-; the install side needs ExecAsOriginalUser only because a task CREATED while
-; elevated would run as the wrong principal.
+; The uninstaller is elevated and the task sits in the Task Scheduler root
+; folder, which only an administrator can write — the same reason the install
+; side creates it elevated (RegisterUpdateTask).
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteTask"
 Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\x86\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"; Check: FileExists(ExpandConstant('{app}\x86\{#ServiceDll}'))
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX64"
@@ -165,6 +168,7 @@ Type: filesandordirs; Name: "{app}\x86"
 var
   BackupDll: String;
   FinishedNoteAdded: Boolean;
+  UpdateTaskFailed: Boolean;
 
 // The DLL cannot be replaced while a host process holds it. The old DLL is
 // unregistered first (so new processes stop loading it), then a rename
@@ -267,10 +271,15 @@ begin
   end;
 end;
 
-// The scheduled task is the ORIGINAL user's (roadmap W9: per-user), created
-// from the shipped definition with the installed exe's path filled in.
-// UTF-8 declared, ASCII content: Inno's string file functions are ANSI, and
-// the directory is fixed to Program Files (no dir page).
+// The daily update check (roadmap W9), created from the shipped definition
+// with the installed exe's path filled in. The definition stays ASCII: Inno's
+// string file functions are ANSI, and the directory is fixed to Program Files
+// (no dir page).
+//
+// Created from Setup's own ELEVATED context: the Task Scheduler ROOT folder
+// needs a high-integrity token, and an unelevated create answers `ERROR:
+// Access is denied.` The definition names no UserId, so the task binds to the
+// account Setup runs as. Both in docs/architecture/windows-release.md.
 function RegisterUpdateTask: Boolean;
 var
   Definition: AnsiString;
@@ -280,22 +289,26 @@ var
 begin
   Result := False;
   XmlPath := ExpandConstant('{app}\update-check-task.xml');
-  if not LoadStringFromFile(XmlPath, Definition) then Exit;
+  if not LoadStringFromFile(XmlPath, Definition) then begin
+    Log('update task: could not read ' + XmlPath);
+    Exit;
+  end;
   Text := String(Definition);
   StringChangeEx(Text, '@@COMMAND@@', ExpandConstant('{app}\{#SettingsExe}'), True);
-  if not SaveStringToFile(XmlPath, AnsiString(Text), False) then Exit;
-  Result := ExecAsOriginalUser(ExpandConstant('{sys}\schtasks.exe'),
+  if not SaveStringToFile(XmlPath, AnsiString(Text), False) then begin
+    Log('update task: could not write ' + XmlPath);
+    Exit;
+  end;
+  Result := Exec(ExpandConstant('{sys}\schtasks.exe'),
     '/Create /TN "{#TaskName}" /XML "' + XmlPath + '" /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
     and (ResultCode = 0);
   Log(Format('schtasks /Create -> %d', [ResultCode]));
 end;
 
 // Undo what this run did and put the previous version's registration back.
+// Only DLL registration reaches here, and it runs before the scheduled task.
 procedure RollBack;
-var
-  ResultCode: Integer;
 begin
-  ExecAsOriginalUser(ExpandConstant('{sys}\schtasks.exe'), '/Delete /TN "{#TaskName}" /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   if FileExists(X86Dll) then
     RegisterDll(X86Regsvr32, X86Dll, True);
   RegisterDll(X64Regsvr32, X64Dll, True);
@@ -310,8 +323,17 @@ begin
   end;
 end;
 
-// After the files are in place: register, create the task — and treat either
-// failing as THE installation failing.
+procedure FailStep(const Step: String);
+begin
+  RollBack;
+  RaiseException(FmtMessage(CustomMessage('installerStepFailed'), [Step]));
+end;
+
+// After the files are in place: register the service DLL — and treat THAT
+// failing as the installation failing. The scheduled task is deliberately not
+// in that tier: the input method works without it and the settings window
+// checks for updates on demand, so its failure is logged and carried to the
+// finished page instead.
 //
 // What "rolling back" can mean here is narrower than it looks. Setup
 // finalizes the uninstall log BEFORE ssPostInstall, and its own documentation
@@ -320,25 +342,16 @@ end;
 // So the new payload — the settings exe, the Windows App Runtime, the
 // dictionaries, the fonts — stays on disk whatever happens here. What
 // RollBack restores is the thing that makes the input method exist at all:
-// the previous version's service DLL and its registration, plus the
-// scheduled task. The exception then makes Setup report the failure, and the
-// user is left with a working previous input method and an installer to run
-// again.
+// the previous version's service DLL and its registration. The exception then
+// makes Setup report the failure, and the user is left with a working
+// previous input method and an installer to run again.
 procedure RegisterEverything;
-var
-  Failure: String;
 begin
-  Failure := '';
   if not RegisterDll(X64Regsvr32, X64Dll, False) then
-    Failure := 'regsvr32 ' + X64Dll
-  else if FileExists(X86Dll) and not RegisterDll(X86Regsvr32, X86Dll, False) then
-    Failure := 'regsvr32 ' + X86Dll
-  else if not RegisterUpdateTask then
-    Failure := 'schtasks /Create {#TaskName}';
-  if Failure <> '' then begin
-    RollBack;
-    RaiseException(FmtMessage(CustomMessage('installerStepFailed'), [Failure]));
-  end;
+    FailStep('regsvr32 ' + X64Dll);
+  if FileExists(X86Dll) and not RegisterDll(X86Regsvr32, X86Dll, False) then
+    FailStep('regsvr32 ' + X86Dll);
+  UpdateTaskFailed := not RegisterUpdateTask;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -352,9 +365,14 @@ begin
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
+var
+  Note: String;
 begin
   if (CurPageID = wpFinished) and not FinishedNoteAdded then begin
     FinishedNoteAdded := True;
-    WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 + CustomMessage('installerSignOutNote');
+    Note := CustomMessage('installerSignOutNote');
+    if UpdateTaskFailed then
+      Note := Note + #13#10#13#10 + CustomMessage('installerUpdateTaskSkippedNote');
+    WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 + Note;
   end;
 end;

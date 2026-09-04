@@ -1,6 +1,6 @@
 # Windows input method
 
-Taigi Keyboard for Windows: a Text Services Framework (TSF) text service written
+TaigiKeyboard for Windows: a Text Services Framework (TSF) text service written
 in Rust over the shared engine in `../engine`, with UX parity to the macOS
 input method. Design record and phase table:
 `docs/architecture/windows-roadmap.md`.

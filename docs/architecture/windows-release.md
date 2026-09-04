@@ -171,7 +171,8 @@ every process of every user and `regsvr32` writes HKLM. In order:
   fewer: Traditional Chinese (Hanji, listed first = the fallback when the
   user's UI language is none of them, the app's own default), English,
   Japanese. Inno picks the UI language automatically. Its own strings
-  (`installerDllLocked` / `installerStepFailed` / `installerSignOutNote`) are
+  (`installerDllLocked` / `installerStepFailed` / `installerSignOutNote` /
+  `installerUpdateTaskSkippedNote`) are
   `desktop.installer*` keys in `i18n/desktop.json`, emitted by `make i18n`
   into `windows/installer/Messages.iss` — the installer is never edited for
   wording. Tâi-lô / POJ have no Inno base language (the macOS Installer
@@ -182,24 +183,31 @@ every process of every user and `regsvr32` writes HKLM. In order:
 - **Registration** — `regsvr32 /s` on the DLL (the DLL's `DllRegisterServer`
   registers the CLSID, the `0x0404` profile, the categories and the
   display-attribute provider — roadmap W7). Run from `[Code]`, not `[Run]`:
-  Inno ignores a `[Run]` entry's exit code, so a registration or task
-  creation that fails is checked explicitly and treated as the install
-  failing — the previous DLL (backed up before it was unregistered) is put
-  back and re-registered, the task deleted, and Setup raises, which reports
-  the error and rolls back its file installation.
+  Inno ignores a `[Run]` entry's exit code, so a registration that fails is
+  checked explicitly and treated as the install failing — the previous DLL
+  (backed up before it was unregistered) is put back and re-registered, and
+  Setup raises, which reports the error and rolls back its file installation.
+  The scheduled task is deliberately NOT in that tier: see below.
 - **Start menu** — a shortcut to the settings exe carrying
   `System.AppUserModel.ID = TaigiKeyboard.Settings`, which is what lets the
   updater's toast be shown at all.
-- **Scheduled task** — `TaigiKeyboard Update Check`, per-user (created as the
-  original, non-elevated user from `update-check-task.xml` with the exe's
-  path filled in): five minutes after logon, then daily, running
-  `TaigiKeyboardSettings.exe --check-updates`; `IgnoreNew` for parallel
-  instances.
+- **Scheduled task** — `TaigiKeyboard Update Check`, created from
+  `update-check-task.xml` with the exe's path filled in: five minutes after
+  logon, then daily, running `TaigiKeyboardSettings.exe --check-updates`;
+  `IgnoreNew` for parallel instances. Created from Setup's own ELEVATED
+  context — the Task Scheduler root folder admits no other integrity level,
+  and an unelevated `schtasks /Create` answers `ERROR: Access is denied.`,
+  which is what failed every install before 2026-09-04. The definition names
+  no principal user, so the task binds to the account Setup runs as (ordinary
+  UAC consent keeps that the user's own) and `RunLevel` keeps it
+  least-privileged. Its creation failing is NOT an install failure: the input
+  method works without it and the settings window checks on demand, so the
+  failure is logged and the finished page carries
+  `installerUpdateTaskSkippedNote`.
 - **Uninstall** — the reverse, item by item; `%APPDATA%\TaigiKeyboard` (the
   settings, the learning data, the custom dictionary) stays. The scheduled
-  task is deleted as the original user of the *uninstall*: a machine where a
-  different administrator installed keeps that user's task until they remove
-  it (PR11 smoke item).
+  task is deleted by the elevated uninstaller, which reaches the root folder
+  whoever registered it.
 
 The installer never launches the settings window itself: the window removes
 stale staged update packages at launch, and the installer may still be
@@ -211,7 +219,7 @@ reading its own payload.
 
 1. Refuses a `-dirty` / `-throwaway` name, an installer `signtool verify`
    does not trust, an installer whose VERSIONINFO is not
-   `Taigi Keyboard` / the checkout's version, and — when
+   `TaigiKeyboard` / the checkout's version, and — when
    `WINDOWS_SIGNING_THUMBPRINT` is set — a signer other than that certificate
    (what every installed copy pins).
 2. Creates (or reuses) the GitHub release `windows-v<version>` on the
@@ -248,10 +256,11 @@ reachable. The site advertises the download only once its
   its icon and VERSIONINFO; the release script sets `TAIGI_REQUIRE_RESOURCES=1`,
   under which the build fails instead, and reads the VERSIONINFO back
   afterwards regardless — the updater's package check depends on it.
-- **First real-Windows run (PR11 smoke, none of this has executed yet)** —
-  `schtasks /Create /XML` as the original user without `/RU` on a
-  UAC-elevated install; an install with a host still holding the DLL
-  (expect the sign-out recipe, not a partial install); the rollback path
-  (make `regsvr32` fail on purpose: expect the old DLL back and Setup
-  reporting failure); the toast under the Start-menu AUMID; `dumpbin` and
-  PowerShell present in the Git Bash `PATH` on the release machine.
+- **First real-Windows run (PR11 smoke)** — `schtasks /Create /XML` from the
+  elevated install, then `schtasks /Query` for the task's "Run As User"; an
+  install with a host still holding the DLL (expect the sign-out recipe, not
+  a partial install); the rollback path (make `regsvr32` fail on purpose:
+  expect the old DLL back and Setup reporting failure); the toast under the
+  Start-menu AUMID; `dumpbin` and PowerShell present in the Git Bash `PATH`
+  on the release machine. The `schtasks` and PATH items ran 2026-09-01 through
+  2026-09-04; the rest is still unexercised.

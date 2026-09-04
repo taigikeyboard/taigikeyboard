@@ -7,7 +7,7 @@ mod resource;
 
 fn main() {
     resource::embed(resource::Resources {
-        file_description: "Taigi Keyboard settings",
+        file_description: "TaigiKeyboard settings",
         original_filename: "TaigiKeyboardSettings.exe",
         file_type: resource::FileType::Application,
         with_icon: true,

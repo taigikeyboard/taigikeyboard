@@ -111,7 +111,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   explicit release instruction (`diagnosis-discipline.md` § No unilateral release scope).
 - Signing is by thumbprint (`WINDOWS_SIGNING_THUMBPRINT`); the updater pins the signer's LEAF, so a
   certificate rotation is a download-page release once (`windows-release.md` § Notes). Both
-  binaries and the installer carry VERSIONINFO `ProductName = Taigi Keyboard` +
+  binaries and the installer carry VERSIONINFO `ProductName = TaigiKeyboard` +
   `ProductVersion = <workspace version>` — the updater's package check reads them; keep the
   `build-support/resource.rs` block and the `.iss` `VersionInfo*` directives in step.
 - Version source of truth = `windows/Cargo.toml` `[workspace.package] version`, written only by

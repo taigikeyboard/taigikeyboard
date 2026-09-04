@@ -13,7 +13,10 @@ WINDOWS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPOSITORY_DIR="$(cd "$WINDOWS_DIR/.." && pwd)"
 
 APP_NAME="TaigiKeyboard"
-PRODUCT_NAME="Taigi Keyboard"
+# The VERSIONINFO ProductName the binaries and the installer must all declare
+# (the updater compares them). Same string as the app name since the Windows
+# surfaces were aligned with the macOS bundle name.
+PRODUCT_NAME="$APP_NAME"
 SERVICE_DLL="TaigiKeyboard.dll"
 SETTINGS_EXE="TaigiKeyboardSettings.exe"
 RELEASE_TARGET="x86_64-pc-windows-msvc"

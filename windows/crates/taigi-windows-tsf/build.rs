@@ -6,7 +6,7 @@ mod resource;
 
 fn main() {
     resource::embed(resource::Resources {
-        file_description: "Taigi Keyboard text service",
+        file_description: "TaigiKeyboard text service",
         original_filename: "TaigiKeyboard.dll",
         file_type: resource::FileType::Library,
         with_icon: true,

@@ -357,7 +357,7 @@ mod tests {
     fn identity() -> PackageIdentity {
         PackageIdentity {
             signer_thumbprint: vec![1, 2, 3],
-            product_name: "Taigi Keyboard".to_owned(),
+            product_name: "TaigiKeyboard".to_owned(),
         }
     }
 

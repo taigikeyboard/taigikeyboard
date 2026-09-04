@@ -1,11 +1,13 @@
 <!--
-  The per-user scheduled task the installer registers (roadmap W9): the
-  headless daily update check, five minutes after logon and then once a day.
-  It runs `TaigiKeyboardSettings.exe` with the check-updates switch.
-  `@@COMMAND@@` is the installed exe's absolute path, filled in by the
-  installer's [Code] section before `schtasks /Create /XML`. No principal
-  user is named: schtasks registers the task for the user running it (the
-  original, non-elevated user).
+  The scheduled task the installer registers (roadmap W9): the headless daily
+  update check, five minutes after logon and then once a day. It runs
+  `TaigiKeyboardSettings.exe` with the check-updates switch. `@@COMMAND@@` is
+  the installed exe's absolute path, filled in by the installer's [Code]
+  section before `schtasks /Create /XML`.
+
+  No principal user is named: the task binds to the account Setup runs as, and
+  `RunLevel` keeps the task itself least-privileged. Why the installer creates
+  it elevated is in docs/architecture/windows-release.md.
 
   TWO THINGS THIS FILE MUST NOT HAVE, both learned by running the installer
   for the first time (2026-09-01):
@@ -25,7 +27,7 @@
 -->
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>Checks once a day whether a newer Taigi Keyboard is published.</Description>
+    <Description>Checks once a day whether a newer TaigiKeyboard is published.</Description>
     <URI>\TaigiKeyboard Update Check</URI>
   </RegistrationInfo>
   <Triggers>

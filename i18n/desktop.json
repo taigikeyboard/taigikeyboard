@@ -1373,8 +1373,8 @@
         "hanji": "台語齒盤猶閣予執行中的程式咧用，檔案無法度換掉。\n\n請先換做別个輸入法，登出 Windows 閣再登入，然後閣執行一擺這个安裝程式。免重新開機。",
         "tailo": "Tâi-gí khí-puânn iáu-koh hōo tsip-hîng-tiong ê thîng-sik teh iōng, tóng-àn bô-huat-tōo uānn-tiāu.\n\nTshiánn sing uānn-tsò pa̍t ê su-ji̍p-huat, ting-tshut Windows koh-tsài ting-ji̍p, jiân-āu koh tsip-hîng tsi̍t pái tsit ê an-tsong thîng-sik. Bián tîng-sin khui-ki.",
         "poj": "Tâi-gí khí-pôaⁿ iáu-koh hō͘ chip-hêng-tiong ê thêng-sek teh iōng, tóng-àn bô-hoat-tō͘ ōaⁿ-tiāu.\n\nChhiáⁿ seng ōaⁿ-chò pa̍t ê su-ji̍p-hoat, teng-chhut Windows koh-chài teng-ji̍p, jiân-āu koh chip-hêng chi̍t pái chit ê an-chong thêng-sek. Bián têng-sin khui-ki.",
-        "en": "Taigi Keyboard is still in use by a running application, so its files cannot be replaced.\n\nSwitch to another input method, sign out of Windows, sign in again, and run this installer once more. No restart is needed.",
-        "ja": "Taigi Keyboard は実行中のアプリケーションに使用されているため、ファイルを置き換えられません。\n\n別の入力方式に切り替えてから Windows からサインアウトし、再度サインインしてこのインストーラーを実行してください。再起動は不要です。"
+        "en": "TaigiKeyboard is still in use by a running application, so its files cannot be replaced.\n\nSwitch to another input method, sign out of Windows, sign in again, and run this installer once more. No restart is needed.",
+        "ja": "TaigiKeyboard は実行中のアプリケーションに使用されているため、ファイルを置き換えられません。\n\n別の入力方式に切り替えてから Windows からサインアウトし、再度サインインしてこのインストーラーを実行してください。再起動は不要です。"
       }
     },
     "installerStepFailed": {
@@ -1412,8 +1412,26 @@
         "hanji": "若是輸入法清單內底無看著台語齒盤，請登出 Windows 閣再登入。",
         "tailo": "Nā-sī su-ji̍p-huat tshing-tuann lāi-té bô khuànn-tio̍h Tâi-gí khí-puânn, tshiánn ting-tshut Windows koh-tsài ting-ji̍p.",
         "poj": "Nā-sī su-ji̍p-hoat chheng-toaⁿ lāi-té bô khòaⁿ-tio̍h Tâi-gí khí-pôaⁿ, chhiáⁿ teng-chhut Windows koh-chài teng-ji̍p.",
-        "en": "If Taigi Keyboard does not appear in the input-method list, sign out of Windows and sign in again.",
-        "ja": "入力方式の一覧に Taigi Keyboard が表示されない場合は、Windows からサインアウトして再度サインインしてください。"
+        "en": "If TaigiKeyboard does not appear in the input-method list, sign out of Windows and sign in again.",
+        "ja": "入力方式の一覧に TaigiKeyboard が表示されない場合は、Windows からサインアウトして再度サインインしてください。"
+      }
+    },
+    "installerUpdateTaskSkippedNote": {
+      "comment": "Windows installer: the line added to the finished page when the daily update-check task could not be created. The install itself succeeded; only the background check is missing.",
+      "scope": {
+        "platforms": [
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "無法度設定自動檢查更新。請佇設定內底檢查更新。",
+        "tailo": "Bô-huat-tōo siat-tīng tsū-tōng kiám-tsa king-sin. Tshiánn tī siat-tīng lāi-té kiám-tsa king-sin.",
+        "poj": "Bô-hoat-tō͘ siat-tēng chū-tōng kiám-cha keng-sin. Chhiáⁿ tī siat-tēng lāi-té kiám-cha keng-sin.",
+        "en": "Automatic update checks could not be set up. You can check for updates in the settings window.",
+        "ja": "更新の自動確認を設定できませんでした。設定ウィンドウから更新を確認できます。"
       }
     }
   }
