@@ -3,9 +3,9 @@
 //! item by item (roadmap W7; rakukan `registration.rs:80-143`, khiin
 //! `reg/registrar.rs`). Only the categories that are TRUE are declared
 //! (Codex W6): keyboard, display-attribute provider, tray support, UI-less
-//! candidate list. NOT COMLESS / IMMERSIVESUPPORT / INPUTMODECOMPARTMENT.
+//! candidate list, input-mode compartment, immersive support. NOT COMLESS.
 
-// 中文: 註冊/解除註冊 — CLSID、語言 profile、四個真實類別;解除逐項對稱。
+// 中文: 註冊/解除註冊 — CLSID、語言 profile、六個真實類別;解除逐項對稱。
 
 use crate::com_out_buffer;
 use crate::guids::{CLSID_TEXT_SERVICE, GUID_PROFILE, LANGID_ZH_TW};
@@ -20,8 +20,9 @@ use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
 use windows::Win32::UI::TextServices::{
     CLSID_TF_CategoryMgr, CLSID_TF_InputProcessorProfiles, ITfCategoryMgr,
     ITfInputProcessorProfileMgr, ITfInputProcessorProfiles, GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
-    GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT, GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
-    GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE,
+    GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT, GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
+    GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT, GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD,
+    TF_INPUTPROCESSORPROFILE,
 };
 
 /// What the CLSID key is named, and what the language bar falls back to when
@@ -50,7 +51,7 @@ pub fn profile_description(dll_path: &str) -> String {
 /// UI-less candidate list with PR6; this DLL is only installed as the
 /// complete train (PR10), so the two categories are declared here once
 /// rather than staged.
-const CATEGORIES: [GUID; 5] = [
+const CATEGORIES: [GUID; 6] = [
     GUID_TFCAT_TIP_KEYBOARD,
     GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
     GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
@@ -60,6 +61,23 @@ const CATEGORIES: [GUID; 5] = [
     // (`conversion_mode.rs`). Declared only because it IS true — the roadmap
     // refused it while there was no mode to publish.
     GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
+    // The declaration that makes this TIP eligible for the modern text-input
+    // path — "IMEs declare that they are compatible by registering the
+    // category GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT"
+    // (learn.microsoft.com/windows/apps/develop/input/input-method-editor-requirements,
+    // § Declaring compatibility; khiin `reg/registrar.rs:31` declares it too).
+    // Without it Windows keeps this service out of every WinUI 3 / UWP text
+    // control — including our OWN settings window, where the user could type
+    // English but never Taigi while 微軟注音 worked in the same box.
+    //
+    // The roadmap refused it for W2's AppContainer degradation, which reads
+    // the opposite way round: the TIP already degrades on purpose there
+    // (`DataCapability`, probed once per process), so it FUNCTIONS in an
+    // immersive host — without the user dictionary in a real AppContainer,
+    // with everything in a WinUI 3 desktop host, which is not one. Refusing
+    // the category did not protect anyone; it removed the IME from every
+    // modern text control on the system.
+    GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
 ];
 
 /// `{XXXXXXXX-XXXX-…}` as the registry spells a CLSID.
@@ -337,6 +355,19 @@ mod tests {
             guid_key(&CLSID_TEXT_SERVICE),
             "{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}"
         );
-        assert_eq!(CATEGORIES.len(), 5, "only the true categories (Codex W6)");
+        assert_eq!(CATEGORIES.len(), 6, "only the true categories (Codex W6)");
+    }
+
+    #[test]
+    fn immersive_support_is_declared_so_winui_and_uwp_hosts_admit_this_tip() {
+        // The one category whose absence is invisible: everything keeps
+        // working in classic Win32 controls, and the IME is simply missing
+        // from every modern text control. Named rather than counted so the
+        // count assertion above cannot be satisfied by the wrong six.
+        assert!(CATEGORIES.contains(&GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT));
+        assert!(
+            !CATEGORIES.contains(&windows::Win32::UI::TextServices::GUID_TFCAT_TIPCAP_COMLESS),
+            "COM-less activation is not implemented; declaring it would be a lie"
+        );
     }
 }

@@ -105,8 +105,10 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   (UWP) hosts cannot read `%APPDATA%`: the TIP holds an explicit per-process
   `DataCapability { settings, custom_dictionary, learning }` state, probed once and
   logged once, so it never re-opens files or re-logs per keystroke; classified
-  **unsupported host capability**, and `GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT` is
-  therefore NOT declared (see W6). Atomic settings replace = write temp + `rename`
+  **unsupported host capability**. **CORRECTED 2026-09-05**: that degradation was
+  originally read as a reason to withhold `GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT`. It is
+  the opposite — the TIP degrades *on purpose* there, so it FUNCTIONS in an immersive
+  host, and the category is now declared (see W6). Atomic settings replace = write temp + `rename`
   (Rust's Windows `rename` is `MoveFileExW(MOVEFILE_REPLACE_EXISTING)`) with a bounded
   retry, because a reader holding the file open without `FILE_SHARE_DELETE` blocks it.
 - **W3 Threading, ownership, lifetime** — TSF is STA. **Codex: REFUTE AS WRITTEN — one
@@ -226,8 +228,14 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   — declared categories are ONLY what is true: `GUID_TFCAT_TIP_KEYBOARD`,
   `GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER`, `GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT` (rakukan
   `registration.rs:118`), `GUID_TFCAT_TIPCAP_UIELEMENTENABLED` (W4). NOT `COMLESS`
-  (means COM-less activation support, which this TIP does not implement), NOT
-  `IMMERSIVESUPPORT` (contradicts the W2 AppContainer degradation). **`INPUTMODECOMPARTMENT`
+  (means COM-less activation support, which this TIP does not implement).
+  **`IMMERSIVESUPPORT` was refused here and is declared since 2026-09-05**: withholding it
+  is not a statement about AppContainer data access, it is what keeps the TIP out of the
+  modern text-input path altogether — Microsoft's IME requirements call the category the way
+  "IMEs declare that they are compatible". Real symptom that settled it: in our own WinUI 3
+  settings window the user could type English and 微軟注音 but never Taigi, and no candidate
+  window ever appeared. Classic Win32 controls were unaffected, which is why it went unseen
+  until the WinUI settings window shipped (W17). **`INPUTMODECOMPARTMENT`
   became true 2026-09-04** and is now declared: the Shift tap gave this TIP a 中/英 mode, so it
   keeps `GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION` current (`conversion_mode.rs`, only the
   `TF_CONVERSIONMODE_NATIVE` bit; other flags are read back and preserved). It was refused while
