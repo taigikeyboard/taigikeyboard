@@ -217,8 +217,12 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   honest. Switching commits whatever is half-typed, spends the auto-space arm and starts a new
   next-word session (Codex F8: an arm left standing would swap a space typed in the other mode),
   then publishes the mode three ways — the conversion-mode compartment (W6), the tray letter
-  台/英, and the mode flash. Mode is per activation (per application), never persisted. The
-  setting is `shiftTogglesEnglishEnabled`, default ON (USER 2026-09-04). ⚠ DOGFOOD ORACLE OPEN:
+  台/英, and the mode flash. Mode is per activation (per application), never persisted. **No
+  setting**: `shiftTogglesEnglishEnabled` was retired 2026-09-05 (USER) and the tap is
+  unconditional — the 一般 pane is a 1:1 mirror of the Mac's, which has no such row, and the tray
+  letter plus the mode flash already say which mode is on. The spelling stays reserved; a stored
+  `false` is inert in existing `settings.json` files (Windows has no retired-key sweep), so a
+  future configurable feature needs a NEW key. ⚠ DOGFOOD ORACLE OPEN:
   mid-composition the switch commits; 微軟注音 may cancel an incomplete one instead, and nothing
   in the references settles it (Codex F6).
 - **W6 Lang bar / menu** — one `ITfLangBarItemButton` (`GUID_LBI_INPUTMODE`,
@@ -638,7 +642,7 @@ registration, desktop toast requirements).
 | HKLM → HKCU `CTF\TIP` registry copy | rakukan `rakukan_installer.iss:134-138` | Uninstall deletes the whole HKCU TIP key — other IMEs' settings. Dogfood decides if Windows 11 needs anything. |
 | `MessageBox` in `DllRegisterServer`, `panic!` in edit sessions, advising a second sink object | khiin `dll.rs:173-180`, `edit_session.rs:32`, `key_event_sink.rs:87-88` | Live bugs, not patterns. |
 | Threads spawned from `DllMain` | rakukan `lib.rs:127-130` | Loader lock. |
-| ~~Shift-tap 中/英 toggle~~ — **ADOPTED 2026-09-04**, see below | Windows CJK convention | Was: macOS has neither, keep the macOS table as the default (Codex F14). USER dogfooded 微軟注音 on the box, confirmed Shift is the platform's switch, and asked for it. It is offered as a settings row (`shiftTogglesEnglishEnabled`) with a tray letter and a mode flash, so it is not the silent default change F14 refused; Space-to-convert stays unadopted. |
+| ~~Shift-tap 中/英 toggle~~ — **ADOPTED 2026-09-04**, see below | Windows CJK convention | Was: macOS has neither, keep the macOS table as the default (Codex F14). USER dogfooded 微軟注音 on the box, confirmed Shift is the platform's switch, and asked for it. It shipped as a settings row (`shiftTogglesEnglishEnabled`) with a tray letter and a mode flash; the row was retired 2026-09-05 (USER: the 一般 pane mirrors the Mac's 1:1, which has no such row) and the tap is unconditional — the tray letter and the flash are what keep it from being the silent default change F14 refused. Space-to-convert stays unadopted. |
 | WiX / MSI-written registry | khiin `installer/Registry.wxs` | `DllRegisterServer` is the single source of registration truth; an MSI mirror drifts. |
 | Resident tray agent | rakukan `rakukan-tray` | Codex F8: a scheduled task + settings-exe overdue check covers the update trigger without a resident process. |
 

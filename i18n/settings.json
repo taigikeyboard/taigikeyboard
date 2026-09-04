@@ -96,11 +96,6 @@
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "自動空白", "tailo": "tsū-tōng khàng-pe̍h", "poj": "chū-tōng khàng-pe̍h", "en": "Auto-Space", "ja": "自動スペース" }
     },
-    "shiftTogglesEnglish": {
-      "comment": "Toggle label: tap Shift on its own to switch between Taigi and English input (the Windows CJK convention). Windows only — macOS reaches English through the system Caps Lock input-source switch.",
-      "scope": { "platforms": ["windows"], "surfaces": ["host"] },
-      "values": { "hanji": "用 Shift 切換英文", "tailo": "iōng Shift tshiat-uānn ing-bûn", "poj": "iōng Shift chhiat-ōaⁿ eng-bûn", "en": "Switch to English with Shift", "ja": "Shift で英語に切り替え" }
-    },
     "keyboardSectionTitle": {
       "comment": "Section header for keyboard-chrome settings.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

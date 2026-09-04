@@ -111,17 +111,13 @@ pub const IS_AUTO_SPACE_ENABLED: SettingsKey<bool> = SettingsKey::new("autoSpace
 // Pinned at compile time so a silent flip back to ON is loud.
 const _: () = assert!(!IS_AUTO_SPACE_ENABLED.default);
 
-/// Tap Shift on its own to switch between Taigi and English input — a common
-/// Windows CJK convention. Two sources, and only two: the USER confirmed the
-/// behaviour on 微軟注音 (2026-09-04), and 新酷音 ships it on by default
-/// (`references/PIME/.../chewing_config.py:70`). WINDOWS ONLY: macOS reaches English through the
-/// system's Caps Lock input-source switch instead (`TICapsLockLanguageSwitchCapable`,
-/// PR #617), so there is nothing to mirror there. Default ON (USER 2026-09-04)
-/// — this is the behaviour a Windows user expects from the key, and the
-/// switch, the tray letter and the mode flash are what keep it from being
-/// silent (roadmap "never as a silent default change").
-pub const IS_SHIFT_TOGGLES_ENGLISH_ENABLED: SettingsKey<bool> =
-    SettingsKey::new("shiftTogglesEnglishEnabled", true);
+// RETIRED 2026-09-05 (USER): `shiftTogglesEnglishEnabled`. The Shift tap now
+// switches 中/英 unconditionally — the 一般 pane is a 1:1 mirror of the Mac's,
+// which has no such row, and the tray letter plus the mode flash already say
+// which mode is on. The spelling is permanently reserved: a stored `false`
+// still sits in existing `settings.json` files (Windows has no retired-key
+// sweep), so a future configurable feature must use a NEW key rather than
+// inherit those values.
 
 // Dictionary sources. Spellings are iOS's verbatim (`SharedSettings.swift:53-66`)
 // — including `khiin`, the one key with no `Enabled` suffix. The constant name

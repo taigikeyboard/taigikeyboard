@@ -31,7 +31,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_windows_core::composing::ContextToken;
 use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, VK_SHIFT_CODE};
-use taigi_windows_core::settings::keys;
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -405,18 +404,6 @@ impl TextService_Impl {
         }
         let settings = Runtime::shared().settings.current();
         self.sync_preserved_keys(&settings);
-        // The Shift tap is the only way back from English, so turning the
-        // switch off while the mode is on would strand the user there: the
-        // mode goes off with it. Here rather than in the key path because
-        // this is the hook for "a setting changed, derived state follows" —
-        // and the user has to leave and re-enter the window to reach the
-        // settings at all, which is what sets the pending flag.
-        if self.state.borrow().language_mode.is_english()
-            && !settings.bool(&keys::IS_SHIFT_TOGGLES_ENGLISH_ENABLED)
-        {
-            log::info!("language_mode.restored reason=switch_disabled");
-            self.set_language_mode(LanguageMode::Taigi);
-        }
     }
 
     fn request_settings_refresh(&self) {
@@ -500,17 +487,11 @@ impl TextService_Impl {
     /// which leaves the press unspent. Answering TRUE is what asks TSF for
     /// the delivery the switch itself runs in.
     fn is_language_switch_release(&self, wparam: WPARAM, lparam: LPARAM) -> bool {
-        // The tracker first, the setting second: this runs for EVERY key
-        // release, and reading the settings snapshot costs a `stat` of the
-        // settings file, while the tracker is a borrow and a compare. Only an
-        // actual tap is worth asking about. (`take_language_switch_release`
-        // is ordered the same way.)
-        let is_tap = self.state.borrow().shift_tap.is_tap_on_release(
+        self.state.borrow().shift_tap.is_tap_on_release(
             key_translation::virtual_key(wparam),
             key_translation::scan_code(lparam),
             now_milliseconds(),
-        );
-        is_tap && self.is_shift_toggle_enabled()
+        )
     }
 
     /// The delivered release. The press is spent whatever it was, so a
@@ -526,10 +507,9 @@ impl TextService_Impl {
             key_translation::scan_code(lparam),
             now_milliseconds(),
         );
-        // The press is spent above whatever the setting says — a release
-        // always ends the press it belongs to — so the setting is read only
-        // once a tap has actually happened.
-        if !is_tap || !self.is_shift_toggle_enabled() {
+        // The press is spent above whatever this release turns out to be — a
+        // release always ends the press it belongs to.
+        if !is_tap {
             return;
         }
         let Some(context) = context else {
@@ -556,13 +536,6 @@ impl TextService_Impl {
             conversion_mode::publish(&thread_mgr, client_id, mode);
         }
         self.notify_lang_bar();
-    }
-
-    fn is_shift_toggle_enabled(&self) -> bool {
-        Runtime::shared()
-            .settings
-            .current()
-            .bool(&keys::IS_SHIFT_TOGGLES_ENGLISH_ENABLED)
     }
 
     pub(crate) fn notify_lang_bar(&self) {
