@@ -27,6 +27,68 @@ if ! command -v protoc-gen-swift >/dev/null 2>&1; then
     exit 1
 fi
 
+# --- protoc version gate ------------------------------------------------------
+# The generated Java carries the compiler version in its header and must match
+# the runtime pinned in build.gradle.kts (javalite `4.X.Y` is emitted by
+# `libprotoc X.Y`). Nothing else enforced that, so a local protoc that differs
+# silently rewrote all ~260 .java files on the next `make build` — a downgrade
+# that no longer matches the pinned runtime, landing in whatever commit the
+# round happened to be making. Observed 2026-09-04: local libprotoc 27.5 vs
+# committed gencode 4.36.0.
+#
+# The pin lives in ONE place (build.gradle.kts); the committed gencode header is
+# cross-checked against it so the two cannot drift apart unnoticed either.
+GRADLE_FILE="$REPO_ROOT/android/app/build.gradle.kts"
+JAVA_PROTO_DIR="$JAVA_OUT/com/siansiansu/taigikeyboard/engine/proto"
+
+runtime_pin="$(sed -n 's/.*protobuf-javalite:\([0-9][0-9.]*\)".*/\1/p' "$GRADLE_FILE" | head -1)"
+if [[ -z "$runtime_pin" ]]; then
+    echo "error: could not read the protobuf-javalite pin from $GRADLE_FILE" >&2
+    exit 1
+fi
+required_protoc="${runtime_pin#4.}"
+actual_protoc="$(protoc --version | awk '{print $2}')"
+
+# The committed gencode must already agree with the pin; if it does not, the
+# repo is inconsistent and regenerating would hide it.
+sample_java="$JAVA_PROTO_DIR/Start.java"
+if [[ -f "$sample_java" ]]; then
+    committed_gencode="$(sed -n 's|^// Protobuf Java Version: \(.*\)$|\1|p' "$sample_java" | head -1)"
+    if [[ -n "$committed_gencode" && "$committed_gencode" != "$runtime_pin" ]]; then
+        echo "error: committed Java gencode is $committed_gencode but $GRADLE_FILE pins protobuf-javalite:$runtime_pin." >&2
+        echo "       Regenerate with the matching protoc, or fix the pin — do not paper over it." >&2
+        exit 1
+    fi
+fi
+
+if [[ "$actual_protoc" != "$required_protoc" && "${TAIGI_ALLOW_PROTOC_DRIFT:-0}" != "1" ]]; then
+    # Skip rather than abort. The committed output already matches the pin (the
+    # cross-check above proved it), so regenerating can only damage it, while
+    # the rest of `make build` — xcframework, jniLibs — is unaffected by protoc.
+    cat >&2 <<EOF
+
+!! protoc version drift — SKIPPING platform proto regeneration.
+
+   local protoc:  libprotoc $actual_protoc
+   required:      libprotoc $required_protoc   (protobuf-javalite:$runtime_pin, $GRADLE_FILE)
+
+   The committed bindings already match the pinned runtime and are left alone.
+   Regenerating with a mismatched protoc would rewrite every generated .java
+   with gencode the runtime does not match, and that churn is easy to commit by
+   accident (.claude/rules/rust-migration-policy.md section 4).
+
+   IF YOU CHANGED A .proto THIS ROUND, the bindings are now STALE — install the
+   matching compiler before trusting any platform build:
+     brew upgrade protobuf        # then re-check: protoc --version
+
+   To DELIBERATELY move to a different protoc, set TAIGI_ALLOW_PROTOC_DRIFT=1
+   and, in the SAME commit, bump protobuf-javalite in $GRADLE_FILE to
+   4.<your version> and re-run the Android debug / unit-test / release-R8 gates.
+
+EOF
+    exit 0
+fi
+
 mkdir -p "$SWIFT_OUT" "$JAVA_OUT"
 
 # Swift output: --swift_opt=Visibility=Public so the bridge module can import
@@ -60,7 +122,6 @@ protoc \
 # on every `make build`. There is no protoc flag to disable this. Strip in
 # place so consecutive rebuilds produce a clean diff. Swift output via
 # protoc-gen-swift does not have this issue, so only Java is processed.
-JAVA_PROTO_DIR="$JAVA_OUT/com/siansiansu/taigikeyboard/engine/proto"
 for f in "$JAVA_PROTO_DIR"/*.java; do
     perl -i -pe 's/[ \t]+$//' "$f"
     perl -i -e 'local $/; $_ = <>; s/\n+\z/\n/; print' "$f"

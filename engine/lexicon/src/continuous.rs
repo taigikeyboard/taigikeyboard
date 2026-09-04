@@ -1501,7 +1501,30 @@ fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
         .chars()
         .filter(|c| !c.is_ascii_digit())
         .collect();
-    toneless == body
+    face_eq_with_nasal_oo_alias(&toneless, body)
+}
+
+/// `face == body`, also accepting the nasal-`oo` alias respelling of the face.
+///
+/// The dictionary build indexes the `o͘ⁿ` rendering of the nasal final beside
+/// the canonical `onn`, so a row legitimately comes back under a key its own
+/// reconstructed face does not equal — 好 `hònn` reconstructs `honn` but was
+/// found under `tl:hoonn`. This is the same shape as the `er↔or` dialect
+/// alias two guards down ([`matches_continuous_tps_toneless_key`] →
+/// `tps_notone_or_variant`), and exists for the same reason: a build-time
+/// spelling alias needs its runtime counterpart in the face reconstruction, or
+/// every row it indexes is filtered back out.
+///
+/// Accepting the respelled face cannot admit a wrong row: `oonn` never occurs
+/// in a canonical key, so the respelling is disjoint from every canonical face
+/// and can only match a body the build itself emitted.
+// 中文: face == body,另接受 face 的鼻化 oo 別名寫法。字典建置期在正規 onn 旁索引
+// 中文:   o͘ⁿ 寫法,故一行可能以「自己重建的 face 不等於」的 key 命中(好 hònn 重建為
+// 中文:   honn,卻由 tl:hoonn 命中)。與兩個 guard 之下的 er↔or 方言別名同一形狀,
+// 中文:   理由相同:建置期拼法別名一定要有 runtime 的重建對照,否則索引出去的行會被濾回來。
+// 中文: 放行別名 face 不會放行錯的行:oonn 不出現在正規 key,與所有正規 face 互斥。
+fn face_eq_with_nasal_oo_alias(face: &str, body: &str) -> bool {
+    face == body || phonetics::nasal_oo_alias_spelling(face).is_some_and(|alias| alias == body)
 }
 
 /// v3.5.9 B-2 — POJ analog of [`matches_continuous_tl_toneless_key`].
@@ -1554,7 +1577,7 @@ fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
         return true;
     }
     let poj_display = phonetics::api::tl_display_to_poj_display(record_tl);
-    derive_poj_notone_for_match(&poj_display) == body
+    face_eq_with_nasal_oo_alias(&derive_poj_notone_for_match(&poj_display), body)
 }
 
 /// v3.5.9 B-2 — encoding-only POJ-notone derivation; helper for
@@ -1768,7 +1791,45 @@ fn matches_continuous_tl_toneless_prefix_key(key: &str, record_tl: &str) -> bool
         .chars()
         .filter(|c| !c.is_ascii_digit())
         .collect();
-    toneless.starts_with(body)
+    starts_with_face_or_nasal_oo_alias(&toneless, body)
+}
+
+/// `face.starts_with(body)`, also accepting the nasal-`oo` alias respelling of
+/// the face. The dictionary build indexes the `o͘ⁿ` rendering of the nasal
+/// final beside the canonical `onn`, so a row legitimately comes back under a
+/// key its own reconstructed face does not start with — 好 `hònn` reconstructs
+/// `honn` but was found under `tl:hoonn`. Exactly the shape the `er↔or`
+/// dialect alias already needs one guard down
+/// (`matches_continuous_tps_toneless_prefix_key` → `tps_notone_or_variant`).
+///
+/// Admitting the respelled face cannot admit a wrong row: `oonn` never occurs
+/// in a canonical key, so the respelling is disjoint from every canonical face
+/// and only ever matches a body the build itself emitted.
+// 中文: face.starts_with(body),另接受 face 的鼻化 oo 別名寫法。字典建置期會在正規 onn
+// 中文:   旁索引 o͘ⁿ 寫法,故一行可能以「自己重建出的 face 開不了頭」的 key 被找到
+// 中文:   (好 hònn 重建為 honn,卻是由 tl:hoonn 命中)。與下一個 guard 的 er↔or 方言別名
+// 中文:   (tps_notone_or_variant) 同一形狀。
+// 中文: 放行別名 face 不會放行錯的行:oonn 不會出現在正規 key,別名與所有正規 face 互斥,
+// 中文:   只可能對上建置期自己發出的 body。
+fn starts_with_face_or_nasal_oo_alias(face: &str, body: &str) -> bool {
+    if face.starts_with(body) {
+        return true;
+    }
+    // The alias arm requires the TYPED body to carry the alias spelling
+    // itself. A respelled face is a strict superstring of the canonical one,
+    // so without this gate every prefix of it would match too: `tl:hoo`
+    // (予/戶/雨, one of the most common buffers there is) would start matching
+    // 好/否/呼/齁 because their respelled face is `hoonn`. That is not a
+    // spelling the user has chosen yet, and the extension pool is capped, so
+    // the extra rows displace real ones (護欄 / 虎貓 / 好學 fell off `hoo`).
+    // Once `oonn` is actually typed the choice is unambiguous.
+    // 中文: 別名分支要求「輸入自己帶別名拼法」。改寫後的 face 是正規 face 的嚴格超字串,
+    // 中文:   沒這道閘的話它的每個前綴都會命中:打 tl:hoo(予/戶/雨,極常用)會開始撈出
+    // 中文:   好/否/呼/齁,因為它們改寫後的 face 是 hoonn。使用者那時還沒選定這個拼法,
+    // 中文:   而延伸候選池有上限,多出來的列會把真的候選擠掉(護欄/虎貓/好學 從 hoo 掉出去)。
+    // 中文:   等 oonn 真的打出來,意圖就沒有歧義了。
+    body.contains(phonetics::NASAL_OO_ALIAS_SPELLING)
+        && phonetics::nasal_oo_alias_spelling(face).is_some_and(|alias| alias.starts_with(body))
 }
 
 fn matches_continuous_poj_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
@@ -1779,7 +1840,7 @@ fn matches_continuous_poj_toneless_prefix_key(key: &str, record_tl: &str) -> boo
         return true;
     }
     let poj_display = phonetics::api::tl_display_to_poj_display(record_tl);
-    derive_poj_notone_for_match(&poj_display).starts_with(body)
+    starts_with_face_or_nasal_oo_alias(&derive_poj_notone_for_match(&poj_display), body)
 }
 
 fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
@@ -3453,5 +3514,102 @@ mod abbrev_face_guard_tests {
     #[test]
     fn ignores_non_acronym_bodies() {
         assert!(!is_tps_acronym_face_hit("ㆬㄒㄧ", "m̄-sī"));
+    }
+}
+
+#[cfg(test)]
+mod nasal_oo_alias_face_tests {
+    use super::{matches_continuous_toneless_key, matches_continuous_toneless_prefix_key};
+
+    // The dictionary build indexes the `o͘ⁿ` rendering of the nasal final
+    // beside the canonical `onn`, so a row comes back under a key its own
+    // reconstructed face does not equal. Without the alias arm in the face
+    // guards every such row is hydrated and then filtered straight back out —
+    // the failure mode that made the build-time keys look like no-ops.
+    // trace: 好 hònn → normalize_input → `honn3` → digits dropped → `honn`;
+    //        respelled `hoonn` == the matched body.
+    // 中文: 建置期在正規 onn 旁索引 o͘ⁿ 寫法 → 一行會以「自己重建的 face 不等於」的 key
+    // 中文:   命中;face guard 沒有別名分支的話,撈進來的行會被原地濾掉。
+    #[test]
+    fn equality_guard_admits_the_alias_key() {
+        assert!(matches_continuous_toneless_key("tl:honn", "hònn"));
+        assert!(matches_continuous_toneless_key("tl:hoonn", "hònn"));
+        assert!(matches_continuous_toneless_key("poj:honn", "hònn"));
+        assert!(matches_continuous_toneless_key("poj:hoonn", "hònn"));
+        assert!(matches_continuous_toneless_key("tl:honnhian", "hònn-hiân"));
+        assert!(matches_continuous_toneless_key("tl:hoonnhian", "hònn-hiân"));
+    }
+
+    #[test]
+    fn prefix_guard_admits_the_alias_key() {
+        assert!(matches_continuous_toneless_prefix_key(
+            "tl:hoonnh",
+            "hònn-hiân"
+        ));
+        assert!(matches_continuous_toneless_prefix_key(
+            "poj:hoonnh",
+            "hònn-hiân"
+        ));
+    }
+
+    // A respelled face is a strict superstring of the canonical one, so a
+    // prefix guard that consulted it unconditionally would match every prefix
+    // of it too: typing `hoo` (予/戶/雨) would start pulling in 好/否/呼/齁,
+    // whose respelled face is `hoonn`. Measured on production artifacts before
+    // this gate: `hoo` gained 20 rows, `khoo` 18, `tshioo` 30, and because the
+    // extension pool is capped the new rows displaced real ones — 護欄, 虎貓
+    // and 好學 fell off `hoo` / `hoon`. The alias only applies once the user
+    // has actually typed it.
+    // 中文: 改寫後的 face 是正規 face 的嚴格超字串,prefix guard 若無條件採用,它的每個前綴
+    // 中文:   都會命中:打 hoo(予/戶/雨)會開始撈 好/否/呼/齁(改寫後 face = hoonn)。
+    // 中文:   上這道閘前用 production artifact 量過:hoo 多 20 列、khoo 18、tshioo 30,
+    // 中文:   而延伸池有上限 → 擠掉真的候選(護欄/虎貓/好學 從 hoo / hoon 掉出去)。
+    #[test]
+    fn prefix_guard_does_not_leak_the_alias_into_a_canonical_prefix() {
+        // `hoo` is a prefix of the respelled `hoonn`, but not of `honn`.
+        assert!(!matches_continuous_toneless_prefix_key("tl:hoo", "hònn"));
+        assert!(!matches_continuous_toneless_prefix_key("poj:hoo", "hònn"));
+        assert!(!matches_continuous_toneless_prefix_key(
+            "tl:hoon",
+            "hònn-hiân"
+        ));
+        // Its own row is untouched: `hoo` still reaches 戶 `hōo`.
+        assert!(matches_continuous_toneless_prefix_key("tl:hoo", "hōo"));
+    }
+
+    // The alias arm must not turn the guard into a pass-through: a body that
+    // is neither the face nor its respelling is still rejected.
+    // 中文: 別名分支不可讓 guard 變成全放行 —— 既非 face 也非其別名寫法者仍要拒絕。
+    #[test]
+    fn still_rejects_an_unrelated_body() {
+        assert!(!matches_continuous_toneless_key("tl:tai", "hònn"));
+        assert!(!matches_continuous_toneless_key("tl:hooonn", "hònn"));
+        assert!(!matches_continuous_toneless_prefix_key(
+            "tl:hoonnx",
+            "hònn-hiân"
+        ));
+    }
+
+    // 滷卵 `lóo-nn̄g` reconstructs `loonng`, where the `onn` spans the
+    // `loo`|`nng` seam and is not a nasal final at all. Its own key still
+    // matches, and `lonng` — what the retired whole-buffer fold produced, and
+    // the spelling that made the word unreachable — is still rejected.
+    //
+    // The guard reconstructs a FUSED face, so it cannot see that seam and does
+    // respell it to `looonng`. That imprecision is unreachable rather than
+    // wrong: the dictionary build respells per syllable, so no key carries a
+    // cross-seam body, and this guard only ever runs on rows a key already
+    // hydrated. Tightening it would mean a fifth per-syllable face
+    // reconstruction, which `SyllableReach`'s doc explicitly rules out.
+    // 中文: 滷卵 重建為 loonng,其中的 onn 跨 loo|nng 接縫,根本不是鼻化韻。
+    // 中文:   自己的 key 照樣命中;舊的整段折疊產生的 lonng(讓這個詞查不到的那個拼法)仍被拒絕。
+    // 中文: guard 重建的是融合面,看不到接縫,故確實會把它改寫成 looonng —— 這是「撈不到」
+    // 中文:   而非「錯」:建置期逐音節改寫,沒有任何 key 帶跨接縫 body,而 guard 只跑在
+    // 中文:   已被 key 撈出來的行上。要收緊就得再寫第五份逐音節重建,SyllableReach 的
+    // 中文:   文件明令禁止。
+    #[test]
+    fn leaves_a_cross_seam_face_alone() {
+        assert!(matches_continuous_toneless_key("tl:loonng", "lóo-nn̄g"));
+        assert!(!matches_continuous_toneless_key("tl:lonng", "lóo-nn̄g"));
     }
 }

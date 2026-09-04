@@ -2083,16 +2083,22 @@ mod tests {
     }
 
     #[test]
-    fn canonicalize_poj_shadow_oonn_shrinks_with_offset_drain() {
-        // Synthetic regression: simulate Phase 1 emitting `oonn`
-        // (e.g. via `o\u{0358}\u{207f}` upstream). Phase 2 `oonn→onn`
-        // is the only 4→3 shrinking rule and must drain exactly one
-        // map entry. Input `o\u{0358}\u{207f}` itself: `o` (1) +
-        // `\u{0358}` (2) + `\u{207f}` (3) = 6 bytes.
+    fn canonicalize_poj_shadow_glyph_fold_keeps_oonn_and_drains_offsets() {
+        // `o\u{0358}\u{207f}` (`o͘ⁿ`) = `o` (1) + `\u{0358}` (2) +
+        // `\u{207f}` (3) = 6 raw bytes. Both glyph rules SHRINK
+        // (`o͘`→`oo` is 3→2, `ⁿ`→`nn` is 3→2), so the offset map still
+        // exercises the drain path in `offset_aware_replace`.
+        //
+        // The result stays `oonn`: the nasal fold is NOT applied at
+        // whole-buffer scope, where it fires across a syllable seam and
+        // destroys real keys (滷卵 `lo͘nng` → `loonng` → `lonng`). The
+        // `o͘ⁿ` spelling is served by the alias keys the dictionary build
+        // emits (`phonetics::nasal_oo_alias_spelling`), so this shadow can
+        // stay literal.
+        // 中文: 兩條字形規則都會縮短,offset drain 仍被覆蓋;結果保持 oonn ——
+        // 中文:   鼻化折疊不在整段 scope 做(會跨接縫毀掉 滷卵),改由建置期別名鍵服務。
         let (out, map) = canonicalize_poj_shadow("o\u{0358}\u{207f}", InputMode::Tl);
-        assert_eq!(out, "onn", "{out:?}");
-        // After `oonn→onn` collapse, the final byte's raw_end must
-        // equal the full input length (6).
+        assert_eq!(out, "oonn", "{out:?}");
         assert_eq!(*map.last().unwrap(), 6, "{map:?}");
     }
 

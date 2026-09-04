@@ -51,7 +51,10 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::path::Path;
 
-use phonetics::{canonicalize_poj_syllable, canonicalize_syllable, canonicalize_tps_syllable};
+use phonetics::{
+    canonicalize_poj_syllable, canonicalize_syllable, canonicalize_tps_syllable,
+    nasal_oo_alias_spelling,
+};
 
 const INVALID_SAMPLE_LIMIT: usize = 10;
 
@@ -239,11 +242,25 @@ fn ingest_family(
                 Some((canonical_toneless, tone)) => {
                     counts.valid_syllables += 1;
                     let prefix = family.prefix();
-                    if tone.is_empty() {
-                        keys.push(format!("{}{}", prefix, canonical_toneless));
-                    } else {
-                        keys.push(format!("{}{}{}", prefix, canonical_toneless, tone));
-                        keys.push(format!("{}{}", prefix, canonical_toneless));
+                    // Nasal-`oo` spelling alias — the `o͘ⁿ` rendering of the
+                    // nasal final, ASCII `oonn`, indexed beside the canonical
+                    // `onn` so a user who spells it that way still segments.
+                    // Emitted HERE, where `token` is one syllable, because
+                    // that is the only place the boundaries are still known
+                    // (see `phonetics::nasal_oo_alias_spelling`). TPS is
+                    // Bopomofo and never matches.
+                    // 中文: 鼻化 oo 別名 —— 鼻化韻的 o͘ⁿ 寫法 (ASCII oonn) 與正規 onn 並列入庫,
+                    // 中文:   以該拼法輸入的使用者才切得出音節。發在這裡是因為 token 就是一個音節,
+                    // 中文:   只有此處還握有邊界 (見 phonetics::nasal_oo_alias_spelling)。TPS 是注音,不會命中。
+                    let spellings = std::iter::once(canonical_toneless.clone())
+                        .chain(nasal_oo_alias_spelling(&canonical_toneless));
+                    for toneless in spellings {
+                        if tone.is_empty() {
+                            keys.push(format!("{}{}", prefix, toneless));
+                        } else {
+                            keys.push(format!("{}{}{}", prefix, toneless, tone));
+                            keys.push(format!("{}{}", prefix, toneless));
+                        }
                     }
                 }
                 None => {

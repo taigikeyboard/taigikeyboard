@@ -19,6 +19,9 @@ Key 格式（前綴式）：
 - tps:<tps_num_var>     C-3a er↔or 方言 always-on：TL `er`/`or` 兩種注音字形（ㄜ vs ㄛ）
 - tps:<tps_notone_var>  同上,僅當源 `tps_*` 含 ㄜ 時 emit;A always-on,取代 runtime
 - tps:<tps_abbrev_var>  `tps_or_mapped_to_er` toggle (per PR C-3a)。
+- tl:/poj: 鼻化 oo 別名：`onn` → `oonn` 逐音節展開後的 num + notone 鍵
+  （如 tl:hoonn3 / tl:hoonn），同 rowid。POJ `o͘ⁿ`（到引擎是 ASCII `oonn`）
+  是台日大辭典系的寫法,字典欄位一律正規 `onn`,故只在此多發一把輸入用鍵。
 - hanzi:<hanzi>：漢字前綴搜尋（如 hanzi:好無）
 
 Fused-toneless invariant — `tl_notone` / `poj_notone` are produced
@@ -43,6 +46,7 @@ key only when `tl_num` is non-empty AND `tl_num` syllable count <= 4.
 Hanzi keys come from dictionary records with non-NULL hanzi.
 """
 
+import re
 import shutil
 import subprocess
 import sys
@@ -101,6 +105,61 @@ def _tl_num_syllable_count(tl_num: str) -> int:
     return tl_num.count("-") + 1
 
 
+_NUM_SYLLABLE_RE = re.compile(r"[a-z]+[0-9]?")
+_NASAL_OO_CANONICAL = "onn"
+_NASAL_OO_ALIAS = "oonn"
+
+
+def _nasal_oo_alias_num(num_value: str) -> str:
+    """`onn` → `oonn`, applied per syllable of a `*_num` value.
+
+    The alternate spelling of the nasal final /ɔ̃/ — POJ `o͘ⁿ`, which reaches
+    the engine as ASCII `oonn`. Dictionary columns are always canonical
+    (`knowledge/taigi-phonetics-reference.md` §5 fixes `onn`/`oⁿ`), so this
+    exists only to index the input spelling.
+
+    Splitting on tone digits FIRST is load-bearing. Inside one syllable the
+    letters `onn` can only be the nasal final (`onn`, `onnh`, `ionn`, `ionnh`
+    are the only finals holding them; no initial does). Across a seam the same
+    letters are something else entirely — 滷卵 `loo2nng7` reads `loo`|`nng`,
+    and a whole-string replace would emit `loo2onng7`, a key nobody types.
+    Mirrors `phonetics::nasal_oo_alias_spelling`, which does the same job for
+    `syllables.fst` where the caller already holds one syllable per token.
+
+    Returns "" when there is nothing to respell, or when the value does not
+    partition cleanly into `[a-z]+[0-9]?` syllables (defensive: a dirty row
+    is skipped rather than mangled).
+    """
+    if _NASAL_OO_CANONICAL not in num_value:
+        return ""
+    syllables = _NUM_SYLLABLE_RE.findall(num_value)
+    if "".join(syllables) != num_value:
+        return ""
+    return "".join(
+        syllable.replace(_NASAL_OO_CANONICAL, _NASAL_OO_ALIAS) for syllable in syllables
+    )
+
+
+def _nasal_oo_alias_keys(num_value: str) -> tuple[str, ...]:
+    """Alias `(num, notone)` key bodies for a `tl_num` / `poj_num` value.
+
+    The toneless form is derived from the ALIAS num (digits stripped, mirroring
+    `dictionary/common/notone.py::remove_tone`) rather than from the stored
+    `*_notone` column: the stored column is already fused, so its syllable
+    boundaries are gone and 滷卵's `loonng` would respell across the seam.
+
+    `*_abbrev` carries initials only and can never hold `onn`, so it has no
+    alias form.
+    """
+    if not num_value:
+        return ()
+    alias_num = _nasal_oo_alias_num(num_value)
+    if not alias_num:
+        return ()
+    alias_notone = re.sub(r"[\d\-]", "", alias_num)
+    return (alias_num, alias_notone) if alias_notone else (alias_num,)
+
+
 def collect_pairs(logger) -> list[tuple[str, int]]:
     """Yield (key, rowid) pairs from dictionary records."""
     if not CSV_FILE.exists():
@@ -128,6 +187,8 @@ def collect_pairs(logger) -> list[tuple[str, int]]:
             for val in (record.tl_num, record.tl_notone, record.tl_abbrev):
                 if val:
                     add(f"tl:{val}", rowid)
+            for val in _nasal_oo_alias_keys(record.tl_num):
+                add(f"tl:{val}", rowid)
             # C-3a er↔or dual-emit: same rowid keyed by both ㄜ-form
             # (bridge default) and ㄛ-form (toggle-OFF variant) so a
             # TPS user typing either glyph hits the same dictionary
@@ -142,6 +203,8 @@ def collect_pairs(logger) -> list[tuple[str, int]]:
             for val in (record.poj_num, record.poj_notone, record.poj_abbrev):
                 if val:
                     add(f"poj:{val}", rowid)
+            for val in _nasal_oo_alias_keys(record.poj_num):
+                add(f"poj:{val}", rowid)
 
     romanization_count = len(pairs)
     logger.info(f"Romanization pairs: {romanization_count}")

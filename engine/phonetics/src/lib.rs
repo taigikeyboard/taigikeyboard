@@ -36,9 +36,9 @@ pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form
 pub use poj::to_poj;
 pub use syllable::{
     canonicalize_poj_syllable, canonicalize_syllable, is_roman_acronym_key, is_valid_syllable,
-    normalize_to_poj, normalize_to_tl, poj_num_syllable_ends_from_tl, strip_tone_mark,
-    tl_num_syllable_ends_from_tl, NORMALIZE_TO_POJ_GLYPH_RULES, NORMALIZE_TO_POJ_RULES,
-    NORMALIZE_TO_TL_RULES, TL_ENCODING_RULES,
+    nasal_oo_alias_spelling, normalize_to_poj, normalize_to_tl, poj_num_syllable_ends_from_tl,
+    strip_tone_mark, tl_num_syllable_ends_from_tl, NASAL_OO_ALIAS_SPELLING,
+    NORMALIZE_TO_POJ_GLYPH_RULES, NORMALIZE_TO_POJ_RULES, NORMALIZE_TO_TL_RULES, TL_ENCODING_RULES,
 };
 pub use tl::to_tl;
 pub use tps::{

@@ -196,8 +196,7 @@ pub fn normalize_to_tl(text: &str) -> String {
 }
 
 /// TL-literal **search-key** encoding normalization rules — POJ glyph → ASCII
-/// (`o͘`→`oo`, `ⁿ`/`ᴺ`→`nn`) plus the TL nasal-`oo` cleanup (`oonn`→`onn`, which
-/// yields the valid TL final `onn`). This is the encoding subset of
+/// (`o͘`→`oo`, `ⁿ`/`ᴺ`→`nn`) ONLY. This is the encoding subset of
 /// [`NORMALIZE_TO_TL_RULES`] with the POJ→TL **spelling** fold
 /// (`ch`/`oa`/`oe`/`eng`/`ek`) and the `ou→oo` alias deliberately removed, so
 /// TL search input is taken **literally**: a real TL special final like `eng`
@@ -207,17 +206,24 @@ pub fn normalize_to_tl(text: &str) -> String {
 /// `apply_normalize_with_offsets`. (The composing *display* path —
 /// `convert_syllable` — does no normalization at all; it places the tone mark
 /// directly on the typed letters via `tl::apply_tl_tone_literal` /
-/// `poj::apply_poj_tone_literal`.) Order matters: `oonn→onn` must follow the
-/// glyph folds that can produce `oonn` (e.g. `o͘ⁿ` → `oo`+`nn` → `oonn` → `onn`).
-// 中文: TL 字面「搜尋鍵」的編碼正規化 — 只做 POJ 字形→ASCII + TL 鼻化 oo 清理 (oonn→onn)。
+/// `poj::apply_poj_tone_literal`.)
+///
+/// The nasal-`oo` fold (`oonn`→`onn`) is deliberately **absent**. This list is
+/// applied whole-buffer, and at that scope the fold fires across a syllable
+/// seam where `oo` closes one syllable and `nn` opens the next: 滷卵 `lo͘nng`
+/// folds to `lonng` and the indexed key `loonng` is lost; 可惡 `khooⁿ` folds to
+/// `khonn`. The alternate `o͘ⁿ` / `oonn` spelling of the nasal final is instead
+/// handled where the syllable boundaries are still known — the dictionary
+/// build emits it as an extra key beside the canonical one, via
+/// [`nasal_oo_alias_spelling`].
+// 中文: TL 字面「搜尋鍵」的編碼正規化 — 只做 POJ 字形→ASCII。
 // 中文:   刻意不含 POJ→TL 拼寫摺疊與 ou→oo 別名,讓 TL 搜尋字面化(保留 eng[ɛŋ]、toui 不壞)。
 // 中文:   供 shadow 搜尋用;組字「顯示」path 完全不正規化,直接在字面音節放聲調符號。
-pub const TL_ENCODING_RULES: &[(&str, &str)] = &[
-    ("o\u{0358}", "oo"),
-    ("\u{207f}", "nn"),
-    ("\u{1d3a}", "nn"),
-    ("oonn", "onn"),
-];
+// 中文: 鼻化 oonn→onn 刻意不收:本表整段套用,該 scope 下會跨音節接縫誤折
+// 中文:   (滷卵 lo͘nng → lonng 查無、可惡 khooⁿ → khonn)。o͘ⁿ 別名拼法改在「音節邊界還在」
+// 中文:   的地方處理 —— 字典建置期在正規鍵旁多發一把別名鍵 (nasal_oo_alias_spelling)。
+pub const TL_ENCODING_RULES: &[(&str, &str)] =
+    &[("o\u{0358}", "oo"), ("\u{207f}", "nn"), ("\u{1d3a}", "nn")];
 
 /// Apply [`NORMALIZE_TO_TL_RULES`] EXCEPT the two rules that fold a valid TL
 /// final into a different valid TL final — `eng→ing` and `ek→ik`. Every other
@@ -373,6 +379,58 @@ pub fn canonicalize_syllable(token: &str) -> Option<(String, String)> {
 // 中文: 判斷音節 token 是否 phonotactically 合法 (POJ 形式會先正規化成 TL)。
 pub fn is_valid_syllable(token: &str) -> bool {
     canonicalize_syllable(token).is_some()
+}
+
+/// Canonical spelling of the nasal final /ɔ̃/ (TL `onn`, POJ `oⁿ`) and the
+/// alternate rendering some writers use for it — POJ `o͘ⁿ`, which reaches the
+/// engine as ASCII `oonn`. `knowledge/taigi-phonetics-reference.md:118` and
+/// `:304`, plus `taigi-converter/src/tables.js` `POJ_FINAL_SUBS`, fix
+/// `onn`/`oⁿ` as canonical, so `oonn` is an INPUT spelling only and never
+/// appears in a dictionary column.
+// 中文: 鼻化 /ɔ̃/ 的正規拼法 (TL onn / POJ oⁿ) 與另一種書寫傳統 (o͘ⁿ,到引擎是 ASCII oonn)。
+// 中文:   權威來源固定 onn/oⁿ 為正規,故 oonn 只可能是輸入拼法,字典欄位不會出現。
+const NASAL_OO_CANONICAL_SPELLING: &str = "onn";
+pub const NASAL_OO_ALIAS_SPELLING: &str = "oonn";
+
+/// Rewrite ONE canonical syllable into the alternate nasal-`oo` spelling
+/// (`honn` → `hoonn`, `honnh4` → `hoonnh4`, `sionn` → `sioonn`), or `None`
+/// when the syllable has no nasal final to respell.
+///
+/// **Per-syllable input only.** Expanding is unambiguous exactly because the
+/// caller still holds the syllable boundaries: inside one syllable the letters
+/// `onn` can only be the nasal final (`onn`, `onnh`, `ionn`, `ionnh` are the
+/// only finals containing them, and no initial does). Across a seam the same
+/// letters are an `o`-final meeting the next syllable's `nn`, or an `oo`-final
+/// meeting `nng` — 滷卵 `loo|nng`, 可惡 `kho|onn` — and respelling there would
+/// invent a key no one types. Callers therefore pass a single syllable, never
+/// a fused multi-syllable key.
+///
+/// This is the direction the dictionary build runs, and it is the reason the
+/// alias is handled at build time rather than at lookup time: the inverse fold
+/// (`oonn`→`onn`) has to re-derive boundaries that are already lost by then,
+/// which is what made the whole-buffer rule in [`TL_ENCODING_RULES`] destroy
+/// real keys.
+///
+/// **One looser caller class**: code building a LOOKUP key (never a stored
+/// one) may pass a fused multi-syllable body. Respelling is safe there for a
+/// different reason — `oonn` never occurs in a canonical key, so an alias key
+/// is disjoint from every stored key by construction. A respelling that lands
+/// across a seam therefore yields a key nothing is indexed under: a dead
+/// lookup, never a wrong hit. Two such callers exist — `composing::continuous`'s
+/// custom-dictionary map (user rows cannot be reached by the build) and
+/// `lexicon::continuous`'s face guards (they reconstruct a fused face to check
+/// a key against).
+// 中文: 把「一個」正規音節改寫成鼻化 oo 別名拼法 (honn → hoonn);無鼻化韻回 None。
+// 中文: **只吃單音節**。展開之所以無歧義,正是因為呼叫端手上還有音節邊界:
+// 中文:   單一音節內的 onn 只可能是鼻化韻 (onn/onnh/ionn/ionnh,聲母不含)。跨接縫的同樣字母
+// 中文:   是 o 韻碰下字 nn、或 oo 韻碰 nng (滷卵 loo|nng、可惡 kho|onn),在那裡改寫會造出
+// 中文:   沒人會打的鍵。故呼叫端一律傳單音節,不傳融合鍵。
+// 中文: 這也是別名做在建置期而非查詢期的理由:反向折疊 (oonn→onn) 得重推已經丟失的邊界,
+// 中文:   TL_ENCODING_RULES 那條整段套用的規則毀掉真實鍵,正是這個原因。
+pub fn nasal_oo_alias_spelling(syllable: &str) -> Option<String> {
+    syllable
+        .contains(NASAL_OO_CANONICAL_SPELLING)
+        .then(|| syllable.replace(NASAL_OO_CANONICAL_SPELLING, NASAL_OO_ALIAS_SPELLING))
 }
 
 /// `true` when a TL/POJ FST key body is an **acronym** key surface — one
@@ -701,6 +759,54 @@ mod tests {
                 "is_valid_syllable / canonicalize_syllable disagree on {input:?}",
             );
         }
+    }
+
+    #[test]
+    fn nasal_oo_alias_spelling_respells_the_nasal_final() {
+        // Every shape the dictionary build hands over: bare, stop coda,
+        // medial, and carrying an explicit tone digit (the digit must survive
+        // so the numeric-tone key family gets an alias too).
+        // trace: "honn" contains "onn" → replace → "hoonn"
+        for (canonical, alias) in [
+            ("honn", "hoonn"),
+            ("honnh", "hoonnh"),
+            ("sionn", "sioonn"),
+            ("onn", "oonn"),
+            ("honn3", "hoonn3"),
+            ("honnh4", "hoonnh4"),
+        ] {
+            assert_eq!(
+                nasal_oo_alias_spelling(canonical).as_deref(),
+                Some(alias),
+                "{canonical:?} should respell to {alias:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn nasal_oo_alias_spelling_is_none_without_a_nasal_final() {
+        for canonical in ["hoo", "tai", "nng", "loo", "tsiah", ""] {
+            assert_eq!(nasal_oo_alias_spelling(canonical), None, "{canonical:?}");
+        }
+    }
+
+    #[test]
+    fn tl_encoding_rules_carry_no_whole_buffer_nasal_fold() {
+        // Regression pin. `oonn→onn` is unsound at the whole-buffer scope this
+        // list is applied at: it fires across a syllable seam and loses real
+        // keys (滷卵 `lo͘nng` → `loonng` → `lonng`; 可惡 `khooⁿ` → `khonn`).
+        // The per-syllable list keeps it — `canonical_tl_form` relies on it to
+        // hold the cross-mode identity (Core Principle #7) together.
+        assert!(
+            !TL_ENCODING_RULES.iter().any(|(find, _)| *find == "oonn"),
+            "TL_ENCODING_RULES is applied whole-buffer and must not fold across a syllable seam",
+        );
+        assert!(
+            NORMALIZE_TO_TL_RULES
+                .iter()
+                .any(|(find, _)| *find == "oonn"),
+            "the per-syllable list keeps the fold",
+        );
     }
 
     #[test]

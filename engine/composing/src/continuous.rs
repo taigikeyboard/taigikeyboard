@@ -567,6 +567,21 @@ fn fetch_walker_slot0_inner(
         std::collections::HashMap::with_capacity(custom.len());
     for entry in custom {
         if let Some(k) = custom_toneless_key(&entry.roman, mode) {
+            // Nasal-`oo` spelling alias — the dictionary build indexes the
+            // `o͘ⁿ` rendering of the nasal final beside the canonical `onn`,
+            // but it cannot reach `custom_dictionary.db`, so a user row gets
+            // the same treatment here: typing 好玄 as `ho͘nnhian` produces the
+            // edge key `tl:hoonnhian`, which must still find a custom entry
+            // stored canonically. Safe on a fused body because an alias key is
+            // disjoint from every canonical key — see
+            // `phonetics::nasal_oo_alias_spelling`.
+            // 中文: 鼻化 oo 別名 —— 字典建置期會在正規 onn 旁索引 o͘ⁿ 寫法,但碰不到
+            // 中文:   custom_dictionary.db(使用者資料),所以自訂詞在這裡補同一件事:
+            // 中文:   以 ho͘nnhian 打 好玄 產生的 edge key 是 tl:hoonnhian,必須查得到
+            // 中文:   以正規拼法存的自訂詞。融合鍵上安全的理由見 nasal_oo_alias_spelling。
+            if let Some(alias) = phonetics::nasal_oo_alias_spelling(&k) {
+                custom_map.entry(alias).or_insert(entry);
+            }
             custom_map.entry(k).or_insert(entry);
         }
     }
