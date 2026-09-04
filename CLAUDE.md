@@ -72,7 +72,7 @@ Reference:
 | iOS | Xcode → keyboard extension | Xcode / `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,id=81ADB050-5242-460C-90DA-F3FAF3F6AAA5' test` (iPhone 17 / iOS 26.1; UDID-pinned for derived-data + sim-runtime cache reuse — project `IPHONEOS_DEPLOYMENT_TARGET = 26.1`, so iOS 26.1+ sim required) |
 | Android | `cd android && ./gradlew :app:assembleDebug` | `cd android && ./gradlew :app:testDebugUnitTest` |
 | engine | `cargo build --workspace` | `cargo test --workspace` |
-| taigi-converter | — | `node --test tests/` |
+| taigi-converter | — | `npm test` (from `taigi-converter/`; the bare `node --test tests/` form stopped working on Node 26 — a directory argument now resolves as a module and fails with `MODULE_NOT_FOUND`. `npm test` runs the `node --test tests/*.js` glob) |
 
 **Stale-binary gate (mandatory upstream of every iOS/Android build+test)**:
 
