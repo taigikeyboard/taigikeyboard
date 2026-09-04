@@ -4,7 +4,9 @@
 
 // 中文: 解析 DLL 傳來的命令列 — 開哪個 pane、要不要檢查更新。
 
-use taigi_windows_core::settings::launch::{CHECK_NOW_FLAG, CHECK_UPDATES_FLAG, PANE_FLAG};
+use taigi_windows_core::settings::launch::{
+    CHECK_NOW_FLAG, CHECK_UPDATES_FLAG, PANE_FLAG, PREWARM_FLAG,
+};
 use taigi_windows_core::settings::{SettingChoice, SettingsPane};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -15,6 +17,10 @@ pub struct LaunchOptions {
     pub check_now: bool,
     /// `--check-updates`: the scheduled task's check, no window (PR9).
     pub headless_check: bool,
+    /// `--prewarm`: map the WinUI runtime and exit, no window (`prewarm`).
+    /// `main` reads this before the other modes, so a launch carrying it
+    /// writes no settings, opens no store and reaches no network.
+    pub prewarm: bool,
 }
 
 impl LaunchOptions {
@@ -30,6 +36,7 @@ impl LaunchOptions {
                 }
                 CHECK_NOW_FLAG => options.check_now = true,
                 CHECK_UPDATES_FLAG => options.headless_check = true,
+                PREWARM_FLAG => options.prewarm = true,
                 other => log::warn!("cli.unknown_argument argument={other}"),
             }
         }
@@ -54,6 +61,21 @@ mod tests {
         assert!(options.check_now);
         assert!(!options.headless_check);
         assert_eq!(parse(&[]), LaunchOptions::default());
+    }
+
+    #[test]
+    fn a_prewarm_flag_sets_only_the_prewarm_field() {
+        // trace: settings_launcher::prewarm_once spawns `--prewarm` alone.
+        // Which mode wins when flags are mixed is `main`'s statement
+        // order, not this parser's — nothing here can assert it.
+        assert_eq!(
+            parse(&["--prewarm"]),
+            LaunchOptions {
+                prewarm: true,
+                ..LaunchOptions::default()
+            }
+        );
+        assert!(!parse(&["--pane", "general"]).prewarm);
     }
 
     #[test]

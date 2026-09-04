@@ -10,6 +10,7 @@
 
 mod cli;
 mod presentation;
+mod prewarm;
 mod search;
 mod settings_writer;
 mod updates;
@@ -30,13 +31,20 @@ const SINGLE_INSTANCE_NAME: &str = "Local\\TaigiKeyboardSettings";
 fn main() -> ExitCode {
     taigi_windows_platform::install_debug_logger();
     let launch = LaunchOptions::parse(std::env::args().skip(1));
+    // Before everything, including the single-instance claim: a prewarm
+    // maps the runtime and leaves, and it must be able to do that while
+    // the real window is open.
+    if launch.prewarm {
+        prewarm::run();
+        return ExitCode::SUCCESS;
+    }
     if launch.headless_check {
         headless_check();
         return ExitCode::SUCCESS;
     }
     // One window per user: a second launch (the menu row pressed twice)
     // exits — two windows would each own a download stage and a recorder.
-    if !taigi_windows_platform::acquire_single_instance(SINGLE_INSTANCE_NAME) {
+    if !taigi_windows_platform::acquire_named_claim(SINGLE_INSTANCE_NAME) {
         log::info!("settings.already_running");
         return ExitCode::SUCCESS;
     }
