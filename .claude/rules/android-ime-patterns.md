@@ -62,4 +62,4 @@ During the v3.5.0 release bug-fix window, every Android PR touching a shared-cor
 - `docs/architecture/composing-state-boundary.md` — composing/finishComposingText contract
 - `docs/architecture/behavioral-invariants.md` — `INVARIANT_*` labels
 - `~/.claude/rules/code-review-rules.md` — review checklist + §8 review-before-impl + §9 perf gate
-- `.claude/rules/taigi-incidents.md` — concrete Taigi dogfood sequences (S1/S2/S3) + PR #227 refactor-freeze incident
+- `docs/architecture/dogfood-checklist.md` — concrete Taigi dogfood sequences (S1–S28); `.claude/rules/taigi-incidents.md` — PR #227 refactor-freeze incident

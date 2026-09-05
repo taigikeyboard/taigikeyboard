@@ -43,6 +43,7 @@
 |------|-------------|--------|
 | `architecture/system-overview.md` | Mermaid architecture diagrams: system context, engine crate graph, build pipeline, keystroke flow | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
+| `architecture/dogfood-checklist.md` | Real-device acceptance items S1–S28 (type X → expect Y, pins `INVARIANT_*`) — read before a dogfood pass | Active |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (effect enum, race rules) — G4 design record; state machine since moved to Rust | Reference |
 | `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer) | Active |
 | `architecture/keyboard-body-invariants-android.md` | Android Compose keyboard-body geometry / touch-target invariants (refactor-freeze contract) | Active |
