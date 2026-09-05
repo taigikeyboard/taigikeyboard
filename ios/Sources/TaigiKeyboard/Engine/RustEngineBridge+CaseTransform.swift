@@ -12,11 +12,6 @@ import SwiftProtobuf
 /// `AppConfig.input_mode`; no `ToneToggles` needed (case-transform is
 /// independent of POJ doubletap preprocessing).
 ///
-/// Replaces the algorithm body of:
-/// - `Input/CaseTransformer.swift` (transformForInput, capitalizeCandidate)
-/// - `Input/ToneUtilities.swift` (uppercase/lowercase tone letter, nasal adjust)
-/// - `Autocomplete/Services/SuggestionCaseTransformer.swift` (per-word transform)
-///
 /// Suggestion skip rules (`additionalInfo["isComposingText"]` /
 /// `additionalInfo["isNextWord"]`) stay on the platform side — only
 /// transform-eligible items reach `transformSuggestionCase(...)`.
@@ -26,8 +21,7 @@ public extension RustEngineBridge {
     // MARK: - Synthesized enum
 
     /// Three-state shift / case indicator. Bridge-side mirror of the proto
-    /// `LetterCase` enum + the iOS `LetterCase` engine enum (which is
-    /// removed in commit 8 along with `Input/CaseTransformer.swift`).
+    /// `LetterCase` enum + the pre-Rust iOS `LetterCase` enum (removed).
     // 三態 shift / 大小寫指示。橋接層對應 proto LetterCase enum。
     enum CaseTransformLetterCase: Int32, Equatable {
         // 全小寫。

@@ -7,7 +7,7 @@ import SQLite3
 /// Capacity policy for the custom-dictionary table.
 ///
 /// Owns the row-count cap (`maxEntries`), aligned with Android's
-/// `MAX_ENTRY_COUNT`, and the helpers needed to enforce it inside a
+/// `MAX_ENTRIES`, and the helpers needed to enforce it inside a
 /// serialized `SQLiteConnectionManager.execute { db in ... }` block.
 /// Stateless — all methods operate on a caller-provided `OpaquePointer`.
 // 自訂詞庫的容量限制策略 — stateless,所有方法吃外部傳入的 OpaquePointer。

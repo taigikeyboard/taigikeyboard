@@ -26,22 +26,6 @@ protocol ContinuousCandidateFetcher: AnyObject {
     func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate]
 }
 
-/// NextWord selection-context abstraction (last-selected word + envelope
-/// generation). Its autocomplete context-boost consumer was retired in
-/// v3.5.8 Item 13 (engine is now the single candidate source); the
-/// protocol + `NextWordController` conformance are retained as the
-/// NextWord state-context model. A consumer-less protocol cleanup is a
-/// deferred follow-up, intentionally out of the Item 13 retire charter.
-// NextWord selection-context 抽象;autocomplete consumer 已 Item 13 退役,
-// protocol 與 NextWordController conformance 保留作 NextWord 狀態模型。
-protocol SelectionContextProvider: AnyObject {
-    var lastSelectedWord: String? { get }
-    /// Envelope generation owned by the NextWord platform executor
-    /// (`NextWordController`) so all NextWord bridge calls within the same
-    /// IME session share Rust-side state.
-    var nextwordEnvelopeGeneration: UInt64 { get }
-}
-
 /// Abstracts autocomplete context updates so NextWordController doesn't depend
 /// on KeyboardKit's controller hierarchy. The conforming adapter (`ActionHandler`)
 /// translates engine-layer `NextWordEnginePrediction` values into KeyboardKit

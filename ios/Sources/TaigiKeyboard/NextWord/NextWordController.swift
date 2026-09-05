@@ -11,8 +11,8 @@ import Foundation
 /// - serializes intents through `RustEngineBridge.nextword*`,
 /// - interprets the returned `NextWordDecideResult.Effect` list against
 ///   platform resources (Timer, SQLite service, main-thread UI callbacks),
-/// - caches `lastSelectedWord` / `isShowing` echoed back from the engine for
-///   sync read access by `ActionHandler` / `TaigiAutocompleteService`,
+/// - caches `isShowing` echoed back from the engine for
+///   sync read access by `ActionHandler`,
 /// - pushes UI visibility back into the engine via `nextwordSetIsShowing`
 ///   after async predict() results render.
 ///
@@ -23,9 +23,9 @@ import Foundation
 /// - `resetAndClearUI()`
 /// - `clearDisplay()`
 /// - `updateLastSelectedWord(text:roman:)` (v3.5.8 Phase 4 mid-commit handshake)
-/// - `isShowing`, `lastSelectedWord` (read-only)
+/// - `isShowing` (read-only)
 // 對外 API 與 Rust 化前完全相同(Phase 4 加 updateLastSelectedWord 給連續輸入 mid-commit 用)。
-final class NextWordController: SelectionContextProvider {
+final class NextWordController {
     let logger = DebugLogger(category: "NextWord")
 
     // MARK: - Dependencies
@@ -44,11 +44,6 @@ final class NextWordController: SelectionContextProvider {
 
     // MARK: - Cached state (echoed from Rust)
 
-    /// Mirrors `state.last_selected_word` returned by every decide call.
-    /// Synchronous read for `SelectionContextProvider`.
-    // 鏡射引擎回傳的 last_selected_word,給 SelectionContextProvider 同步讀取。
-    private var cachedLastSelectedWord: String?
-
     /// Mirrors `state.is_showing`. Set locally by `handleQueryResult` after
     /// rendering, then pushed to the engine via `nextwordSetIsShowing` so
     /// downstream clear / reset paths gate `clearPredictionsUI` correctly.
@@ -66,28 +61,10 @@ final class NextWordController: SelectionContextProvider {
     // 時會先重置狀態再處理請求,參考 ComposingManager.bumpGeneration 規範。
     private var envelopeGen: UInt64 = 1
 
-    /// `SelectionContextProvider` conformance. The autocomplete context-boost
-    /// consumer was retired in v3.5.8 Item 13; the property still mirrors the
-    /// engine's last-selected word for the NextWord pipeline.
-    // SelectionContextProvider 屬性;autocomplete context-boost consumer 已於
-    // Item 13 退役,此值仍鏡射引擎 last-selected word 供 NextWord 用。
-    var lastSelectedWord: String? {
-        cachedLastSelectedWord
-    }
-
     /// Whether NextWord predictions are currently displayed.
     // 目前 NextWord 預測是否顯示中。
     var isShowing: Bool {
         cachedIsShowing
-    }
-
-    /// `SelectionContextProvider` conformance. Its autocomplete consumer was
-    /// retired in v3.5.8 Item 13; `envelopeGen` is still owned and used by
-    /// the NextWord pipeline itself.
-    // SelectionContextProvider 屬性;autocomplete consumer 已 Item 13 退役,
-    // envelopeGen 仍由 NextWord pipeline 自身擁有與使用。
-    var nextwordEnvelopeGeneration: UInt64 {
-        envelopeGen
     }
 
     // 跨欄位切換 IME session 時呼叫 — 推進 generation 並強制清除快取與 UI,
@@ -106,7 +83,6 @@ final class NextWordController: SelectionContextProvider {
             contextUpdater?.resetNextWordSuggestions()
         }
         cachedIsShowing = false
-        cachedLastSelectedWord = nil
     }
 
     // MARK: - Public API (preserved from pre-Rust controller)
@@ -208,7 +184,6 @@ final class NextWordController: SelectionContextProvider {
     // 鏡射引擎回傳的 state,然後依 effects 順序逐一執行。
     // 執行緒不變式:呼叫端必須在主執行緒,快取狀態不另外加鎖。
     private func applyDecideResult(_ result: RustEngineBridge.NextWordDecideResult) {
-        cachedLastSelectedWord = result.lastSelectedWord
         cachedIsShowing = result.isShowing
         for effect in result.effects {
             execute(effect)
@@ -322,7 +297,6 @@ final class NextWordController: SelectionContextProvider {
             generation: envelopeGen,
         )
         cachedIsShowing = synced.isShowing
-        cachedLastSelectedWord = synced.lastSelectedWord
     }
 
     /// Clear is synchronous to match the pre-Rust controller's behavior:

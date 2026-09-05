@@ -59,16 +59,6 @@ class SetupGuideViewModel: ObservableObject {
         #endif
     }
 
-    /// System Settings URL.
-    // 系統設定頁的開啟 URL(非 iOS 平台回傳 nil)。
-    var settingsURL: URL? {
-        #if os(iOS)
-            return URL(string: UIApplication.openSettingsURLString)
-        #else
-            return nil
-        #endif
-    }
-
     /// Check keyboard status; show setup guide if not complete.
     // 啟動時呼叫 — 檢查鍵盤狀態,未完成時觸發 shouldShowSetupGuide=true。
     func checkKeyboardStatus() {

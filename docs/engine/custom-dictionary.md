@@ -174,7 +174,7 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 
 ## UI
 
-### iOS (`CustomDictionaryView` + `CustomDictionaryEditView`)
+### iOS (`CustomDictionaryView`)
 - List with swipe-to-delete, add/edit modal sheet
 - Import/Export buttons with help icon
 - Delete All with confirmation
@@ -193,5 +193,5 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 | Service | `CustomDictionaryRepository.swift` | `CustomDictionaryService.kt` |
 | Entry model | `CustomDictionaryEntry.swift` | nested `Entry` in `CustomDictionaryService.kt` |
 | List view | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` |
-| Edit view | `CustomDictionaryEditView.swift` | (inline dialog) |
+| Edit view | (inline alert in `CustomDictionaryView.swift`) | (inline dialog) |
 | Localization | `i18n/dictionary.json` → `StringKey.dictionary*` (resolver) | `i18n/dictionary.json` → `L10n` / `StringKey` |
