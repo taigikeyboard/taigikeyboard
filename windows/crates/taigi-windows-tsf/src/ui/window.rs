@@ -8,7 +8,7 @@
 //! `destroy` cannot free it twice. RULE: a window procedure never calls
 //! `RequestEditSession` (W3).
 
-// 中文: 不搶焦點的 popup 視窗 — DPI 範圍內建立、DWM 圓角、SW_SHOWNA;handler 由 PopupWindow 持有,HWND 只借指標;絕不從 wndproc 開 edit session。
+// 不搶焦點的 popup 視窗 — DPI 範圍內建立、DWM 圓角、SW_SHOWNA;handler 由 PopupWindow 持有,HWND 只借指標;絕不從 wndproc 開 edit session。
 
 use crate::module::instance;
 use crate::wide::to_wide_nul;

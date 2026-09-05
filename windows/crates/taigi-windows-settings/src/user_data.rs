@@ -3,7 +3,7 @@
 //! from roadmap W17 — so the launch-time side effects are one list, not
 //! one per toolkit.
 
-// 中文: 啟動時開三個使用者資料庫並跑遷移 — 兩種視窗共用同一份啟動副作用。
+// 啟動時開三個使用者資料庫並跑遷移 — 兩種視窗共用同一份啟動副作用。
 
 use std::path::PathBuf;
 use std::sync::Arc;

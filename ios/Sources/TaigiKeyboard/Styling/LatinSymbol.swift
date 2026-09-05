@@ -1,6 +1,6 @@
-// 中文: 強制以 Latin locale 渲染 SF Symbol 的 Image 擴充。
-// 中文: 預設 Image(systemName:) 會跟隨裝置語系產生 CJK / Arabic / Hebrew / Thai 變體字形,
-// 中文: 此 init 注入 Locale("en") 確保字形固定為拉丁版本。
+// 強制以 Latin locale 渲染 SF Symbol 的 Image 擴充。
+// 預設 Image(systemName:) 會跟隨裝置語系產生 CJK / Arabic / Hebrew / Thai 變體字形,
+// 此 init 注入 Locale("en") 確保字形固定為拉丁版本。
 
 import SwiftUI
 import UIKit
@@ -24,8 +24,8 @@ extension Image {
     /// from `Image(systemName:)`. This helper does not support palette,
     /// hierarchical, or multicolor rendering — use `Image(systemName:)`
     /// directly if a future call site needs those.
-    // 中文: 拉丁語系版本的 SF Symbol;UIImage 一律用 .alwaysTemplate,
-    // 中文: 不支援 palette / hierarchical / multicolor 渲染。
+    // 拉丁語系版本的 SF Symbol;UIImage 一律用 .alwaysTemplate,
+    // 不支援 palette / hierarchical / multicolor 渲染。
     init(latinSystemName name: String) {
         if let uiImage = UIImage(systemName: name, withConfiguration: Self.latinLocaleConfig) {
             self.init(uiImage: uiImage.withRenderingMode(.alwaysTemplate))

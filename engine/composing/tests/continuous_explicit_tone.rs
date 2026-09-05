@@ -20,10 +20,10 @@
 //! `dictionary/build/create_fst.py:127-130` — without the toned keys the
 //! tone filter would have nothing to hit.
 
-// 中文: 明確聲調過濾整合測試 — 對齊使用者回報的 tai5 → tai2/tai3 全聲調 bug。
-// 中文:   紙/tsuá(tone2) 與 蛇/tsuâ(tone5) 同音節不同調,共用去調鍵 tl:tsua。
-// 中文:   修復後 tsua2 保留數字 → 只出 紙;tsua(去調) → 兩調皆出(去調輸入行為不變)。
-// 中文:   fixture dict.fst 同發去調 + 含調家族(對齊 create_fst.py)。
+// 明確聲調過濾整合測試 — 對齊使用者回報的 tai5 → tai2/tai3 全聲調 bug。
+//   紙/tsuá(tone2) 與 蛇/tsuâ(tone5) 同音節不同調,共用去調鍵 tl:tsua。
+//   修復後 tsua2 保留數字 → 只出 紙;tsua(去調) → 兩調皆出(去調輸入行為不變)。
+//   fixture dict.fst 同發去調 + 含調家族(對齊 create_fst.py)。
 
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};

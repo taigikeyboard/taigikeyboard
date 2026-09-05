@@ -10,7 +10,7 @@
 //! tests verifying FFI plumbing, NOT algorithm correctness — that
 //! responsibility lives here.
 
-// 中文: case_transform 的整合測試 (golden cases),整併 iOS/Android 兩平台的表驅動測例。
+// case_transform 的整合測試 (golden cases),整併 iOS/Android 兩平台的表驅動測例。
 
 use phonetics::case_transform::{
     adjust_nasal_marker_case, capitalize_candidate, transform_input_case, transform_suggestion,

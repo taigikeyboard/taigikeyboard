@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 中文: 單一詞的使用者頻次值型別 —(count, lastUsedMillis)。
-// 中文: 從 UserFrequencyService 抽出以對齊 iOS Lexicon/Models/FrequencyData.swift。
+// 單一詞的使用者頻次值型別 —(count, lastUsedMillis)。
+// 從 UserFrequencyService 抽出以對齊 iOS Lexicon/Models/FrequencyData.swift。
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
@@ -29,7 +29,7 @@ data class FrequencyData(
  * `(display_text, canonical_tl)`-keyed `FrequencyMap` (Core Principle #7).
  * `tl == ""` is the legacy fallback bucket. Mirrors iOS `FrequencyRow`.
  */
-// 中文: R5 (word, tl) pair-key 的一列 — 顯示鍵 + canonical TL 讀音 + 快照;tl='' 為 legacy fallback 桶。
+// R5 (word, tl) pair-key 的一列 — 顯示鍵 + canonical TL 讀音 + 快照;tl='' 為 legacy fallback 桶。
 data class FrequencyRow(
     val word: String,
     val tl: String,

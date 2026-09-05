@@ -1,6 +1,6 @@
 //! Syllable parsing — ported from `taigi-converter/src/phonetics.js`.
 
-// 中文: 音節解析,把字串拆成 (聲母, 韻母, 聲調),並提供 POJ→TL 拼寫正規化、聲調符號剝離等基礎工具。
+// 音節解析,把字串拆成 (聲母, 韻母, 聲調),並提供 POJ→TL 拼寫正規化、聲調符號剝離等基礎工具。
 
 use crate::tables::{COMBINING_TO_TONE_NUM, TL_FINALS, TL_INITIALS};
 use unicode_normalization::UnicodeNormalization;
@@ -8,7 +8,7 @@ use unicode_normalization::UnicodeNormalization;
 /// Strip the tone mark from `text`, returning `(bare NFC text, tone digit)`.
 /// Recognises both NFD combining marks and trailing ASCII digits 1..=9.
 /// `tone` is the empty string when no mark is present.
-// 中文: 把聲調符號從字串裡剝出來,回傳 (去聲調 NFC 字串, 聲調數字);辨識 NFD 組合符號跟結尾 ASCII 數字 1..=9。
+// 把聲調符號從字串裡剝出來,回傳 (去聲調 NFC 字串, 聲調數字);辨識 NFD 組合符號跟結尾 ASCII 數字 1..=9。
 /// The `tl_num` face of a record reading — what `dictionary/build` writes into
 /// the `tl_num` column and `create_fst.py` emits as the `tl:<tl_num>` key
 /// family — plus the byte offset each syllable ENDS at in it.
@@ -21,11 +21,11 @@ use unicode_normalization::UnicodeNormalization;
 /// all-tone-1 reading like `kau-kuan` derives `kaukuan` while the column holds
 /// `kau1kuan1`. Verified against `dictionary/output/dictionary.csv`:
 /// 0 divergences over 168,467 rows.
-// 中文: record 讀法的 tl_num 面(建置端 tl_num 欄 / create_fst.py 的 tl:<tl_num> 家族)
-// 中文:   + 每個音節的結束位移。逐音節 = 去調號拼寫 + 聲調數字,未標調者塞音尾補 4、
-// 中文:   其餘補 1。這正是不能用 normalize_input 的原因:它只在「整串某處有調號」時
-// 中文:   才補預設調,故全第一調的 kau-kuan 會得到 kaukuan,而欄位是 kau1kuan1。
-// 中文:   對 dictionary.csv 168,467 列實測 0 筆不符。
+// record 讀法的 tl_num 面(建置端 tl_num 欄 / create_fst.py 的 tl:<tl_num> 家族)
+//   + 每個音節的結束位移。逐音節 = 去調號拼寫 + 聲調數字,未標調者塞音尾補 4、
+//   其餘補 1。這正是不能用 normalize_input 的原因:它只在「整串某處有調號」時
+//   才補預設調,故全第一調的 kau-kuan 會得到 kaukuan,而欄位是 kau1kuan1。
+//   對 dictionary.csv 168,467 列實測 0 筆不符。
 pub fn tl_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
     num_face(record_tl, SpellingForm::AsWritten)
 }
@@ -39,10 +39,10 @@ pub fn tl_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
 /// Folding TL or keeping POJ each costs tens of thousands of divergences;
 /// matching each column's own convention costs none. Verified against
 /// `dictionary/output/dictionary.csv`: 0 divergences over 168,467 rows.
-// 中文: record 讀法的 poj_num 面 + 每個音節的結束位移,形狀同 tl_num 版,差別只在拼寫形式:
-// 中文:   建置端 poj_num 欄是 ASCII 折疊的(ⁿ→nn、o͘→oo,khòaⁿ → khoann3),
-// 中文:   而 tl_num 欄保留原字(thò͘-sái → tho͘3sai2)。把 TL 折疊、或讓 POJ 不折疊,
-// 中文:   各自要付上萬筆不符;各自照該欄慣例則是 0 筆。對 dictionary.csv 168,467 列實測 0 筆不符。
+// record 讀法的 poj_num 面 + 每個音節的結束位移,形狀同 tl_num 版,差別只在拼寫形式:
+//   建置端 poj_num 欄是 ASCII 折疊的(ⁿ→nn、o͘→oo,khòaⁿ → khoann3),
+//   而 tl_num 欄保留原字(thò͘-sái → tho͘3sai2)。把 TL 折疊、或讓 POJ 不折疊,
+//   各自要付上萬筆不符;各自照該欄慣例則是 0 筆。對 dictionary.csv 168,467 列實測 0 筆不符。
 pub fn poj_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
     num_face(
         &crate::api::tl_display_to_poj_display(record_tl),
@@ -51,7 +51,7 @@ pub fn poj_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
 }
 
 /// Which spelling a `*_num` column carries for a syllable.
-// 中文: `*_num` 欄位對音節採用哪一種拼寫形式。
+// `*_num` 欄位對音節採用哪一種拼寫形式。
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SpellingForm {
     AsWritten,
@@ -78,8 +78,8 @@ fn num_face(reading: &str, form: SpellingForm) -> (String, Vec<u32>) {
             // ASCII-folded form either way: `koaihⁿ` is tone 1, not tone 4 —
             // the `h` is part of a nasal `hⁿ`, which folds to `hnn` and ends
             // in `n`.
-            // 中文: 未標調的調由韻尾決定,一律看 ASCII 折疊形:koaihⁿ 是第一調不是第四調,
-            // 中文:   其 h 屬鼻化 hⁿ,折疊為 hnn 以 n 結尾。
+            // 未標調的調由韻尾決定,一律看 ASCII 折疊形:koaihⁿ 是第一調不是第四調,
+            //   其 h 屬鼻化 hⁿ,折疊為 hnn 以 n 結尾。
             let coda = crate::taigi_unicode_base_form(&bare);
             out.push(match coda.chars().last() {
                 Some('p' | 't' | 'k' | 'h') => '4',
@@ -162,10 +162,10 @@ pub fn strip_tone_mark(text: &str) -> (String, String) {
 /// JS source. Scoped to `normalize_to_tl` only — `is_stop_tone`'s own
 /// `.replace("nn", "")` is a separate helper and is intentionally NOT
 /// folded in.
-// 中文: D2 — POJ→TL 取代規則的單一順序表;composing::shadow::apply_normalize_with_offsets
-// 中文:   套此 list 即 TL 模式 offset-aware 版本,兩端在 TL 軸不漂移。v3.5.9 B-2 PR #309
-// 中文:   後 POJ 模式 runtime shadow 改吃 NORMALIZE_TO_POJ_GLYPH_RULES,兩 list 不可換,本契約只守 TL 軸。
-// 中文:   順序有意義(oonn 必須在 oo 之後);is_stop_tone 的 .replace("nn","") 是另一個 helper,刻意不併入。
+// D2 — POJ→TL 取代規則的單一順序表;composing::shadow::apply_normalize_with_offsets
+//   套此 list 即 TL 模式 offset-aware 版本,兩端在 TL 軸不漂移。v3.5.9 B-2 PR #309
+//   後 POJ 模式 runtime shadow 改吃 NORMALIZE_TO_POJ_GLYPH_RULES,兩 list 不可換,本契約只守 TL 軸。
+//   順序有意義(oonn 必須在 oo 之後);is_stop_tone 的 .replace("nn","") 是另一個 helper,刻意不併入。
 pub const NORMALIZE_TO_TL_RULES: &[(&str, &str)] = &[
     ("ch", "ts"),
     ("ou", "oo"),
@@ -186,7 +186,7 @@ pub const NORMALIZE_TO_TL_RULES: &[(&str, &str)] = &[
 /// Apply the [`NORMALIZE_TO_TL_RULES`] chain in order, returning the POJ→TL
 /// normalized string. The byte-identical proof for the split-nn form lives in
 /// the const's doc-comment above.
-// 中文: 依 NORMALIZE_TO_TL_RULES 順序套用代換鏈;與舊版鏈式 .replace 行為位元相同。
+// 依 NORMALIZE_TO_TL_RULES 順序套用代換鏈;與舊版鏈式 .replace 行為位元相同。
 pub fn normalize_to_tl(text: &str) -> String {
     NORMALIZE_TO_TL_RULES
         .iter()
@@ -216,12 +216,12 @@ pub fn normalize_to_tl(text: &str) -> String {
 /// handled where the syllable boundaries are still known — the dictionary
 /// build emits it as an extra key beside the canonical one, via
 /// [`nasal_oo_alias_spelling`].
-// 中文: TL 字面「搜尋鍵」的編碼正規化 — 只做 POJ 字形→ASCII。
-// 中文:   刻意不含 POJ→TL 拼寫摺疊與 ou→oo 別名,讓 TL 搜尋字面化(保留 eng[ɛŋ]、toui 不壞)。
-// 中文:   供 shadow 搜尋用;組字「顯示」path 完全不正規化,直接在字面音節放聲調符號。
-// 中文: 鼻化 oonn→onn 刻意不收:本表整段套用,該 scope 下會跨音節接縫誤折
-// 中文:   (滷卵 lo͘nng → lonng 查無、可惡 khooⁿ → khonn)。o͘ⁿ 別名拼法改在「音節邊界還在」
-// 中文:   的地方處理 —— 字典建置期在正規鍵旁多發一把別名鍵 (nasal_oo_alias_spelling)。
+// TL 字面「搜尋鍵」的編碼正規化 — 只做 POJ 字形→ASCII。
+//   刻意不含 POJ→TL 拼寫摺疊與 ou→oo 別名,讓 TL 搜尋字面化(保留 eng[ɛŋ]、toui 不壞)。
+//   供 shadow 搜尋用;組字「顯示」path 完全不正規化,直接在字面音節放聲調符號。
+// 鼻化 oonn→onn 刻意不收:本表整段套用,該 scope 下會跨音節接縫誤折
+//   (滷卵 lo͘nng → lonng 查無、可惡 khooⁿ → khonn)。o͘ⁿ 別名拼法改在「音節邊界還在」
+//   的地方處理 —— 字典建置期在正規鍵旁多發一把別名鍵 (nasal_oo_alias_spelling)。
 pub const TL_ENCODING_RULES: &[(&str, &str)] =
     &[("o\u{0358}", "oo"), ("\u{207f}", "nn"), ("\u{1d3a}", "nn")];
 
@@ -240,9 +240,9 @@ pub const TL_ENCODING_RULES: &[(&str, &str)] =
 /// uses the full [`normalize_to_tl`] (POJ `eng` genuinely IS TL `ing`).
 /// Reuses [`NORMALIZE_TO_TL_RULES`] verbatim (filtered) so the two never drift;
 /// filter preserves order, so `oonn→onn` still runs last.
-// 中文: 套 NORMALIZE_TO_TL_RULES 但跳過 eng→ing / ek→ik(這兩條把合法 TL 特殊韻折成另一個
-// 中文:   合法 TL 韻);其餘規則皆 POJ-only→TL 無歧義。供 canonical_tl_form 的 TL 模式:
-// 中文:   仍折 POJ 形 custom roman (góa→guá) 保跨模式身分,但不壓 TL eng/ek。POJ 模式仍用全套。
+// 套 NORMALIZE_TO_TL_RULES 但跳過 eng→ing / ek→ik(這兩條把合法 TL 特殊韻折成另一個
+//   合法 TL 韻);其餘規則皆 POJ-only→TL 無歧義。供 canonical_tl_form 的 TL 模式:
+//   仍折 POJ 形 custom roman (góa→guá) 保跨模式身分,但不壓 TL eng/ek。POJ 模式仍用全套。
 pub(crate) fn normalize_to_tl_keep_tl_finals(text: &str) -> String {
     NORMALIZE_TO_TL_RULES
         .iter()
@@ -271,9 +271,9 @@ pub(crate) fn normalize_to_tl_keep_tl_finals(text: &str) -> String {
 /// [`NORMALIZE_TO_POJ_GLYPH_RULES`] (the glyph-only subset) instead.
 /// v3.5.9 B-2 PR #309 Codex P1 (`r3276402303`) caught that regression
 /// on hyphenless user typing `toui` (intended POJ `tó-uī`).
-// 中文: 逐音節 (per-syllable) 專用 — fold POJ 非-ASCII 字形 (o͘/ⁿ/ᴺ) 與 ou 別名為 ASCII (oo/nn),
-// 中文:   不跑 POJ→TL 拼寫鏈 (ch→ts 等)。`ou→oo` 在單音節下安全 (dirty `sou2` 等);
-// 中文:   全 buffer 套用會跨音節邊界誤觸發 → shadow pipeline 改用 NORMALIZE_TO_POJ_GLYPH_RULES。
+// 逐音節 (per-syllable) 專用 — fold POJ 非-ASCII 字形 (o͘/ⁿ/ᴺ) 與 ou 別名為 ASCII (oo/nn),
+//   不跑 POJ→TL 拼寫鏈 (ch→ts 等)。`ou→oo` 在單音節下安全 (dirty `sou2` 等);
+//   全 buffer 套用會跨音節邊界誤觸發 → shadow pipeline 改用 NORMALIZE_TO_POJ_GLYPH_RULES。
 pub const NORMALIZE_TO_POJ_RULES: &[(&str, &str)] = &[
     ("ou", "oo"),
     ("o\u{0358}", "oo"),
@@ -295,9 +295,9 @@ pub const NORMALIZE_TO_POJ_RULES: &[(&str, &str)] = &[
 /// `poj:ui`). Per-syllable callers should keep using
 /// [`NORMALIZE_TO_POJ_RULES`] — they get the dirty-row `ou` alias
 /// protection where it is structurally safe.
-// 中文: NORMALIZE_TO_POJ_RULES 的 glyph-only 子集,移除 `ou→oo` alias。
-// 中文:   全 buffer 套用安全 (每條規則 LHS 都在單一音節內);供 shadow pipeline 使用,
-// 中文:   不跨音節邊界誤觸發。逐音節呼叫端仍用完整 NORMALIZE_TO_POJ_RULES 保 dirty-row 防護。
+// NORMALIZE_TO_POJ_RULES 的 glyph-only 子集,移除 `ou→oo` alias。
+//   全 buffer 套用安全 (每條規則 LHS 都在單一音節內);供 shadow pipeline 使用,
+//   不跨音節邊界誤觸發。逐音節呼叫端仍用完整 NORMALIZE_TO_POJ_RULES 保 dirty-row 防護。
 pub const NORMALIZE_TO_POJ_GLYPH_RULES: &[(&str, &str)] =
     &[("o\u{0358}", "oo"), ("\u{207f}", "nn"), ("\u{1d3a}", "nn")];
 
@@ -308,8 +308,8 @@ pub const NORMALIZE_TO_POJ_GLYPH_RULES: &[(&str, &str)] =
 /// POJ-shaped spelling is otherwise preserved: `ch`, `oa`, `oe`,
 /// `eng`, `ek` chain rules belong to `NORMALIZE_TO_TL_RULES`, not this
 /// list.
-// 中文: 依 NORMALIZE_TO_POJ_RULES 順序套用;非-ASCII 規則對 ASCII POJ 是 no-op,
-// 中文:   但 `ou→oo` 在 ASCII 上會觸發 — 因此非嚴格 idempotent,只保證 POJ 拼寫不退到 TL。
+// 依 NORMALIZE_TO_POJ_RULES 順序套用;非-ASCII 規則對 ASCII POJ 是 no-op,
+//   但 `ou→oo` 在 ASCII 上會觸發 — 因此非嚴格 idempotent,只保證 POJ 拼寫不退到 TL。
 pub fn normalize_to_poj(text: &str) -> String {
     NORMALIZE_TO_POJ_RULES
         .iter()
@@ -320,7 +320,7 @@ pub fn normalize_to_poj(text: &str) -> String {
 
 /// True when the final ends with a stop consonant (p, t, k, h), ignoring trailing
 /// nasal `nn`. `kah4` → true; `kann2` → false.
-// 中文: 判斷韻母是否以入聲子音 (p/t/k/h) 結尾;結尾的鼻化 `nn` 不計入。
+// 判斷韻母是否以入聲子音 (p/t/k/h) 結尾;結尾的鼻化 `nn` 不計入。
 pub(crate) fn is_stop_tone(final_str: &str) -> bool {
     let cleaned = final_str.to_lowercase().replace("nn", "");
     cleaned.ends_with('p')
@@ -331,7 +331,7 @@ pub(crate) fn is_stop_tone(final_str: &str) -> bool {
 
 /// Split `text` into `(initial, final)` by iterating prefixes against the TL
 /// initial / final tables. `text` must already be lowercase + TL-normalised.
-// 中文: 把音節拆成 (聲母, 韻母);輸入必須先小寫化並正規化成 TL 拼寫。
+// 把音節拆成 (聲母, 韻母);輸入必須先小寫化並正規化成 TL 拼寫。
 pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
     for i in 0..=text.len() {
         if !text.is_char_boundary(i) {
@@ -363,8 +363,8 @@ pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
 /// inventory FST. Mainstream IMEs (khiin-rs `engine/src/data/`) use a
 /// PHF table for the same job; we lean on the existing TL initial/final
 /// tables to avoid table duplication.
-// 中文: 把單一音節 token 正規化為 TL 形式,回傳 (去聲調 canonical, 聲調數字)。
-// 中文: 失敗 = phonotactic 不合法 (聲母或韻母不在 TL 表)。供 Phase 2 syllables.fst 建置使用。
+// 把單一音節 token 正規化為 TL 形式,回傳 (去聲調 canonical, 聲調數字)。
+// 失敗 = phonotactic 不合法 (聲母或韻母不在 TL 表)。供 Phase 2 syllables.fst 建置使用。
 pub fn canonicalize_syllable(token: &str) -> Option<(String, String)> {
     let (bare, tone) = strip_tone_mark(token);
     let canonical = normalize_to_tl(&bare.to_lowercase());
@@ -376,7 +376,7 @@ pub fn canonicalize_syllable(token: &str) -> Option<(String, String)> {
 /// Equivalent to `canonicalize_syllable(token).is_some()`. Empty input,
 /// initial-without-final (`tsh`), and unknown letters (`xyz`, `tj`) all
 /// return false.
-// 中文: 判斷音節 token 是否 phonotactically 合法 (POJ 形式會先正規化成 TL)。
+// 判斷音節 token 是否 phonotactically 合法 (POJ 形式會先正規化成 TL)。
 pub fn is_valid_syllable(token: &str) -> bool {
     canonicalize_syllable(token).is_some()
 }
@@ -387,8 +387,8 @@ pub fn is_valid_syllable(token: &str) -> bool {
 /// `:304`, plus `taigi-converter/src/tables.js` `POJ_FINAL_SUBS`, fix
 /// `onn`/`oⁿ` as canonical, so `oonn` is an INPUT spelling only and never
 /// appears in a dictionary column.
-// 中文: 鼻化 /ɔ̃/ 的正規拼法 (TL onn / POJ oⁿ) 與另一種書寫傳統 (o͘ⁿ,到引擎是 ASCII oonn)。
-// 中文:   權威來源固定 onn/oⁿ 為正規,故 oonn 只可能是輸入拼法,字典欄位不會出現。
+// 鼻化 /ɔ̃/ 的正規拼法 (TL onn / POJ oⁿ) 與另一種書寫傳統 (o͘ⁿ,到引擎是 ASCII oonn)。
+//   權威來源固定 onn/oⁿ 為正規,故 oonn 只可能是輸入拼法,字典欄位不會出現。
 const NASAL_OO_CANONICAL_SPELLING: &str = "onn";
 pub const NASAL_OO_ALIAS_SPELLING: &str = "oonn";
 
@@ -420,13 +420,13 @@ pub const NASAL_OO_ALIAS_SPELLING: &str = "oonn";
 /// custom-dictionary map (user rows cannot be reached by the build) and
 /// `lexicon::continuous`'s face guards (they reconstruct a fused face to check
 /// a key against).
-// 中文: 把「一個」正規音節改寫成鼻化 oo 別名拼法 (honn → hoonn);無鼻化韻回 None。
-// 中文: **只吃單音節**。展開之所以無歧義,正是因為呼叫端手上還有音節邊界:
-// 中文:   單一音節內的 onn 只可能是鼻化韻 (onn/onnh/ionn/ionnh,聲母不含)。跨接縫的同樣字母
-// 中文:   是 o 韻碰下字 nn、或 oo 韻碰 nng (滷卵 loo|nng、可惡 kho|onn),在那裡改寫會造出
-// 中文:   沒人會打的鍵。故呼叫端一律傳單音節,不傳融合鍵。
-// 中文: 這也是別名做在建置期而非查詢期的理由:反向折疊 (oonn→onn) 得重推已經丟失的邊界,
-// 中文:   TL_ENCODING_RULES 那條整段套用的規則毀掉真實鍵,正是這個原因。
+// 把「一個」正規音節改寫成鼻化 oo 別名拼法 (honn → hoonn);無鼻化韻回 None。
+// **只吃單音節**。展開之所以無歧義,正是因為呼叫端手上還有音節邊界:
+//   單一音節內的 onn 只可能是鼻化韻 (onn/onnh/ionn/ionnh,聲母不含)。跨接縫的同樣字母
+//   是 o 韻碰下字 nn、或 oo 韻碰 nng (滷卵 loo|nng、可惡 kho|onn),在那裡改寫會造出
+//   沒人會打的鍵。故呼叫端一律傳單音節,不傳融合鍵。
+// 這也是別名做在建置期而非查詢期的理由:反向折疊 (oonn→onn) 得重推已經丟失的邊界,
+//   TL_ENCODING_RULES 那條整段套用的規則毀掉真實鍵,正是這個原因。
 pub fn nasal_oo_alias_spelling(syllable: &str) -> Option<String> {
     syllable
         .contains(NASAL_OO_CANONICAL_SPELLING)
@@ -463,18 +463,18 @@ pub fn nasal_oo_alias_spelling(syllable: &str) -> Option<String> {
 /// `lexicon::continuous::matches_continuous_toneless_prefix_key` still
 /// validates every surviving rowid, so the residual is a budget
 /// imperfection, not a correctness leak.
-// 中文: TL/POJ FST key body 是否為「縮寫」key surface (每音節留首字聲母、無母音,
-// 中文:   如 心愛/sim-ài → sb、戶外/hōo-guā → hs)。is_tps_initial_only 的 TL/POJ 對應;
-// 中文:   供連續 partial-prefix 在 hydrate cap 前剔除 *_abbrev 縮寫,避免單字讀音 (是/sī)
-// 中文:   被同長度桶內排在前面的縮寫吃光預算。
-// 中文: 判定 = 每字皆 ASCII 子音 且 無法切成合法音節序列。兩條件缺一不可:
-// 中文:   ASCII 子音閘保留帶母音 key (si/se/su、融合 simai) 與非 ASCII 母音材料 (方言 sṳ);
-// 中文:   !splits_into_syllables 閘保留全子音的真實讀音 — 自鳴鼻音單音節 (m/ng/mng/ngh)
-// 中文:   與全鼻音融合多音節詞 (tngtng=撞撞、ngng=向向、hmhhmh=含含、sngtng=損斷、
-// 中文:   mngkng=問卷);縮寫 (tt/sb/hs/mk) 無法切成音節 (t/s 單獨非音節) → 命中。
-// 中文: 刻意保守 (鏡 is_tps_initial_only):母音開頭次音節產生帶母音縮寫 (心愛→sa、
-// 中文:   需要→si),此處不剔除;完整分離縮寫家族需 FST family tag (本修法範圍外),
-// 中文:   record 層 guard 仍逐一驗證 → 殘留僅預算不精準,非正確性漏洞。
+// TL/POJ FST key body 是否為「縮寫」key surface (每音節留首字聲母、無母音,
+//   如 心愛/sim-ài → sb、戶外/hōo-guā → hs)。is_tps_initial_only 的 TL/POJ 對應;
+//   供連續 partial-prefix 在 hydrate cap 前剔除 *_abbrev 縮寫,避免單字讀音 (是/sī)
+//   被同長度桶內排在前面的縮寫吃光預算。
+// 判定 = 每字皆 ASCII 子音 且 無法切成合法音節序列。兩條件缺一不可:
+//   ASCII 子音閘保留帶母音 key (si/se/su、融合 simai) 與非 ASCII 母音材料 (方言 sṳ);
+//   !splits_into_syllables 閘保留全子音的真實讀音 — 自鳴鼻音單音節 (m/ng/mng/ngh)
+//   與全鼻音融合多音節詞 (tngtng=撞撞、ngng=向向、hmhhmh=含含、sngtng=損斷、
+//   mngkng=問卷);縮寫 (tt/sb/hs/mk) 無法切成音節 (t/s 單獨非音節) → 命中。
+// 刻意保守 (鏡 is_tps_initial_only):母音開頭次音節產生帶母音縮寫 (心愛→sa、
+//   需要→si),此處不剔除;完整分離縮寫家族需 FST family tag (本修法範圍外),
+//   record 層 guard 仍逐一驗證 → 殘留僅預算不精準,非正確性漏洞。
 pub fn is_roman_acronym_key(body: &str) -> bool {
     !body.is_empty()
         && body
@@ -491,8 +491,8 @@ pub fn is_roman_acronym_key(body: &str) -> bool {
 /// bodies, so the scan + bounded recursion is cheap. `end` ranges over byte
 /// indices guarded by `is_char_boundary`, so `&body[..end]` never panics on
 /// non-ASCII input.
-// 中文: body 能否由左至右完整切成合法音節序列 (試每個切點 + 回溯)。供
-// 中文:   is_roman_acronym_key 區分融合多音節讀音 (tngtng→tng+tng) 與縮寫 (tt 無法切)。
+// body 能否由左至右完整切成合法音節序列 (試每個切點 + 回溯)。供
+//   is_roman_acronym_key 區分融合多音節讀音 (tngtng→tng+tng) 與縮寫 (tt 無法切)。
 fn splits_into_syllables(body: &str) -> bool {
     if body.is_empty() {
         return true;
@@ -519,9 +519,9 @@ fn splits_into_syllables(body: &str) -> bool {
 /// the `poj:` family of the v3.5.9 B-1 tagged-single-FST syllable
 /// inventory (`syllables.fst`). See
 /// `docs/reports/2026-05-20-v359-b-plan.md` §B-1.
-// 中文: 把單一 POJ 音節 token 正規化為 POJ ASCII 形式 (而非 TL),回傳 (去聲調 canonical, 聲調數字)。
-// 中文:   Phonotactic 驗證仍走 TL 表 (避免複製 initials/finals 表),但 emit 的 key 保留 POJ ASCII。
-// 中文:   供 v3.5.9 B-1 syllables.fst `poj:` 家族使用。
+// 把單一 POJ 音節 token 正規化為 POJ ASCII 形式 (而非 TL),回傳 (去聲調 canonical, 聲調數字)。
+//   Phonotactic 驗證仍走 TL 表 (避免複製 initials/finals 表),但 emit 的 key 保留 POJ ASCII。
+//   供 v3.5.9 B-1 syllables.fst `poj:` 家族使用。
 pub fn canonicalize_poj_syllable(token: &str) -> Option<(String, String)> {
     let (bare, tone) = strip_tone_mark(token);
     let lowered = bare.to_lowercase();
@@ -537,7 +537,7 @@ pub fn canonicalize_poj_syllable(token: &str) -> Option<(String, String)> {
 /// Currently only used by this module's unit tests — the runtime
 /// `*_display_to_*_display` path uses `strip_tone_mark` + `split_initial_final`
 /// directly. Kept as a primitive for future callers.
-// 中文: 把音節解析成 (聲母, 韻母, 聲調);無聲調時依入聲韻母推 4、其他推 1。目前僅單元測試使用。
+// 把音節解析成 (聲母, 韻母, 聲調);無聲調時依入聲韻母推 4、其他推 1。目前僅單元測試使用。
 #[cfg(test)]
 fn parse_syllable(text: &str) -> Option<(String, String, String)> {
     let (bare, tone) = strip_tone_mark(text);

@@ -1,6 +1,6 @@
-// 中文: RustEngineBridge 的 Phonetics / Derivation / TPS 切片擴充。
-// 中文: 8 phonetics + 2 derivation + 5 TPS = 15 op,共用 dispatch / stringDispatch / boolDispatch。
-// 中文: TPS 是 layout 而非獨立 engine 模式,跟 phonetics 同生命週期,因此合併在同檔。
+// RustEngineBridge 的 Phonetics / Derivation / TPS 切片擴充。
+// 8 phonetics + 2 derivation + 5 TPS = 15 op,共用 dispatch / stringDispatch / boolDispatch。
+// TPS 是 layout 而非獨立 engine 模式,跟 phonetics 同生命週期,因此合併在同檔。
 
 import Foundation
 import SwiftProtobuf
@@ -18,15 +18,15 @@ import SwiftProtobuf
 /// independent lifecycle from phonetics — they share the same dispatch
 /// helpers, so colocation keeps those helpers `private` to one file
 /// instead of widening to `internal`.
-// 中文: Phonetics / Derivation / TPS bridge 擴充入口。15 op + toneVariations cache + 3 個私有 dispatch helper。
-// 中文: TPS 與 phonetics 共生命週期,合併保留 dispatch helper 的 private 範圍。
+// Phonetics / Derivation / TPS bridge 擴充入口。15 op + toneVariations cache + 3 個私有 dispatch helper。
+// TPS 與 phonetics 共生命週期,合併保留 dispatch helper 的 private 範圍。
 public extension RustEngineBridge {
     // MARK: Phonetics core (8 ops)
 
     /// `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
     /// tone-marked string. Caller MUST supply `ToneToggles`; engine reads
     /// them per request (live-read invariant).
-    // 中文: 把數字調 ASCII 輸入轉為帶調符字串。ToneToggles 必填,引擎每次呼叫時讀取。
+    // 把數字調 ASCII 輸入轉為帶調符字串。ToneToggles 必填,引擎每次呼叫時讀取。
     static func normalizeTone(
         _ input: String,
         mode: InputMode,
@@ -92,8 +92,8 @@ public extension RustEngineBridge {
     /// Distinct semantics from `normalizeInput` — this preserves tone
     /// diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
     /// `\u{0358}` → `o` are rewritten.
-    // 中文: 查詢用 NFD 前處理 — 保留調符,僅改寫鼻音標記與孤立 \u{0358}。
-    // 中文: 與 normalizeInput 語意不同,後者會脫掉調符。
+    // 查詢用 NFD 前處理 — 保留調符,僅改寫鼻音標記與孤立 \u{0358}。
+    // 與 normalizeInput 語意不同,後者會脫掉調符。
     static func nfdPreprocessForLookup(_ input: String) -> String {
         var payload = Taigi_Engine_NfdPreprocessForLookup()
         payload.input = input
@@ -118,8 +118,8 @@ public extension RustEngineBridge {
 
     /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
     /// initializer is dispatch_once-equivalent — thread-safe by construction.
-    // 中文: 調符變體表的延遲初始化快取 — 首次存取時才從 Rust 拉資料。
-    // 中文: Swift 的 static let 初始化等同 dispatch_once,天然 thread-safe。
+    // 調符變體表的延遲初始化快取 — 首次存取時才從 Rust 拉資料。
+    // Swift 的 static let 初始化等同 dispatch_once,天然 thread-safe。
     static let toneVariations: ToneVariationsCache = {
         let resp = dispatch(method: .getToneVariations(Taigi_Engine_GetToneVariations()),
                             op: "getToneVariations",
@@ -153,7 +153,7 @@ public extension RustEngineBridge {
     /// stored custom-dict roman. The platform materializes these into the
     /// `custom_search_key` side table so a query in any input mode finds the
     /// entry. Empty bundle on FFI failure / residue-only input.
-    // 中文: 自訂詞寫入端 — 把單一 roman 展成跨家族搜尋鍵 bundle,平台落地到 custom_search_key 側表。
+    // 自訂詞寫入端 — 把單一 roman 展成跨家族搜尋鍵 bundle,平台落地到 custom_search_key 側表。
     static func deriveCustomSearchKeys(_ roman: String) -> [CustomSearchKey] {
         var payload = Taigi_Engine_DeriveCustomSearchKeys()
         payload.roman = roman
@@ -165,7 +165,7 @@ public extension RustEngineBridge {
     /// upgraded to TPS by the engine when the raw input carries Bopomofo, so
     /// the caller passes its settings mode verbatim. `nil` for residue-only /
     /// empty input or FFI failure.
-    // 中文: 自訂詞查詢端 — 依當前 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    // 自訂詞查詢端 — 依當前 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
     static func deriveCustomQueryKey(_ input: String, mode: InputMode) -> CustomSearchKey? {
         var payload = Taigi_Engine_DeriveCustomQueryKey()
         payload.input = input
@@ -233,8 +233,8 @@ public extension RustEngineBridge {
     /// `PhoneticsResponse` payload. `config` is optional because most
     /// phonetics ops don't need an `AppConfig` snapshot; `NormalizeTone`
     /// is the live-read holdout that supplies one.
-    // 中文: phonetics envelope 的 dispatch — encode → FFI roundtrip → decode。
-    // 中文: config 為 optional 因絕大多數 phonetics op 不需 AppConfig;NormalizeTone 是唯一例外。
+    // phonetics envelope 的 dispatch — encode → FFI roundtrip → decode。
+    // config 為 optional 因絕大多數 phonetics op 不需 AppConfig;NormalizeTone 是唯一例外。
     private static func dispatch(
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
@@ -304,7 +304,7 @@ public extension RustEngineBridge {
 
     /// Shared decode for the two custom-dict search-key ops — both return a
     /// `CustomSearchKeysResult` (the write op a full bundle, the query op 0/1).
-    // 中文: 兩個自訂詞搜尋鍵 op 共用的 decode;皆回 CustomSearchKeysResult。
+    // 兩個自訂詞搜尋鍵 op 共用的 decode;皆回 CustomSearchKeysResult。
     private static func customSearchKeys(
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
@@ -321,7 +321,7 @@ public extension RustEngineBridge {
     /// to "tl" because TPS is a layout, not an engine mode — the engine upgrades
     /// to the TPS family via `contains_tps` on the raw input (mirrors
     /// `RustEngineBridge.appConfig`).
-    // 中文: InputMode → 引擎 input_mode 字串;TPS 走 "tl"(TPS 是 layout,引擎以 contains_tps 升家族)。
+    // InputMode → 引擎 input_mode 字串;TPS 走 "tl"(TPS 是 layout,引擎以 contains_tps 升家族)。
     private static func customSearchInputMode(_ mode: InputMode) -> String {
         switch mode {
         case .poj: "poj"
@@ -349,7 +349,7 @@ public struct CustomSearchKey: Equatable, Sendable {
 /// Init-bulk-pull cache for the callout tone variation tables. Loaded once
 /// at first access via `RustEngineBridge.toneVariations`; both POJ + TL
 /// maps live in a single payload to amortize FFI cost.
-// 中文: 長按 callout 用的調符變體表快取。首次存取時一次拉完 POJ + TL 兩張表,攤提 FFI 成本。
+// 長按 callout 用的調符變體表快取。首次存取時一次拉完 POJ + TL 兩張表,攤提 FFI 成本。
 public struct ToneVariationsCache {
     public let poj: [String: [String]]
     public let tl: [String: [String]]

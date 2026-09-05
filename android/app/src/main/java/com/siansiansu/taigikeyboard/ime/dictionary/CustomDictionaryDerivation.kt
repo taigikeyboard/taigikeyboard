@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 中文: 自訂字典欄位的衍生函式群 — 全為 Rust phonetics::derivation 的 thin wrapper。
-// 中文: 包含 generateNotone / generateAbbrev / generateRomanNum;iOS 對應 CustomDictionaryDerivation.swift。
+// 自訂字典欄位的衍生函式群 — 全為 Rust phonetics::derivation 的 thin wrapper。
+// 包含 generateNotone / generateAbbrev / generateRomanNum;iOS 對應 CustomDictionaryDerivation.swift。
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
@@ -40,7 +40,7 @@ object CustomDictionaryDerivation {
      * ANY input mode finds the entry. Rust `Method::DeriveCustomSearchKeys`.
      * Mirrors iOS `CustomDictionaryDerivation.deriveCustomSearchKeys`.
      */
-    // 中文: R3 寫入端 — 跨家族搜尋鍵 bundle,落地 custom_search_key 側表。
+    // R3 寫入端 — 跨家族搜尋鍵 bundle,落地 custom_search_key 側表。
     fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> = RustEngineBridge.deriveCustomSearchKeys(roman)
 
     /**
@@ -50,7 +50,7 @@ object CustomDictionaryDerivation {
      * for residue-only / empty input. Rust `Method::DeriveCustomQueryKey`.
      * Mirrors iOS `CustomDictionaryDerivation.deriveCustomQueryKey`.
      */
-    // 中文: R3 查詢端 — 依當前 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    // R3 查詢端 — 依當前 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
     fun deriveCustomQueryKey(
         input: String,
         mode: InputMode,

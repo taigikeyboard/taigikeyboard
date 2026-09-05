@@ -3,7 +3,7 @@
 //! (packing + navigation, MacishType-derived) and the selection half of
 //! `HorizontalCandidatePanel.swift`.
 
-// 中文: 橫式候選窗的分頁(寬度算術)與選取狀態機。
+// 橫式候選窗的分頁(寬度算術)與選取狀態機。
 
 use super::positioning::{Point, Rect};
 use super::MAX_DISPLAY_CANDIDATES;

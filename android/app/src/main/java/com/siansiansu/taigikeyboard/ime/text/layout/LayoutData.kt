@@ -1,5 +1,5 @@
-// 中文: 從 layout JSON 反序列化得到的純資料 — type / name / direction / arrangement(每列每鍵)。
-// 中文: getComputedLayoutDataArrangement() 把不可變列表轉成可變列表給 LayoutManager 後續注 popup。
+// 從 layout JSON 反序列化得到的純資料 — type / name / direction / arrangement(每列每鍵)。
+// getComputedLayoutDataArrangement() 把不可變列表轉成可變列表給 LayoutManager 後續注 popup。
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 

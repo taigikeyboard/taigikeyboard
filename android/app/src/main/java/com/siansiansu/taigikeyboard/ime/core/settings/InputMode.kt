@@ -1,6 +1,6 @@
-// 中文: 拼音輸入模式列舉 — POJ / TL / English 三種(對應 iOS 還多一個 TPS)。
-// 中文: fromPrefString 把 DataStore 字串("poj"/"tl"/"tps"/"english")轉成 enum;
-// 中文: "tps" 對應 TL(共用 TL 表)、未知值退回 POJ(對齊舊 KeyView / TextInputManager 預設)。
+// 拼音輸入模式列舉 — POJ / TL / English 三種(對應 iOS 還多一個 TPS)。
+// fromPrefString 把 DataStore 字串("poj"/"tl"/"tps"/"english")轉成 enum;
+// "tps" 對應 TL(共用 TL 表)、未知值退回 POJ(對齊舊 KeyView / TextInputManager 預設)。
 
 package com.siansiansu.taigikeyboard.ime.core.settings
 

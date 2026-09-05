@@ -1,6 +1,6 @@
-// 中文: RustEngineBridge 的 Lexicon 讀取路徑切片擴充。
-// 中文: 含 install / search / assoc lookup / classify-input / dictionary-filters / isHanzi。
-// 中文: 與 NextWord 切片同一套 "proto roundtrip + synthesized value type" 編排。
+// RustEngineBridge 的 Lexicon 讀取路徑切片擴充。
+// 含 install / search / assoc lookup / classify-input / dictionary-filters / isHanzi。
+// 與 NextWord 切片同一套 "proto roundtrip + synthesized value type" 編排。
 
 import Foundation
 import SwiftProtobuf
@@ -11,7 +11,7 @@ import SwiftProtobuf
 /// "proto roundtrip helpers + Swift-friendly synthesized value types
 /// co-located in one file" pattern used by the NextWord, composing, and
 /// phonetics extensions.
-// 中文: Lexicon 讀取路徑的 bridge 擴充入口 — 所有對 lexicon engine 的呼叫都從這個 extension 進。
+// Lexicon 讀取路徑的 bridge 擴充入口 — 所有對 lexicon engine 的呼叫都從這個 extension 進。
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
@@ -19,7 +19,7 @@ public extension RustEngineBridge {
     /// lexicon search responses. Optional fields surface as Swift
     /// `Optional` per proto3 `optional` semantics; consumer in
     /// `LexiconService` converts to the platform-side `TaigiWord`.
-    // 中文: lexicon 搜尋回傳的 TaigiWord 對應 Swift struct,Optional 欄位走 proto3 optional 語意。
+    // lexicon 搜尋回傳的 TaigiWord 對應 Swift struct,Optional 欄位走 proto3 optional 語意。
     struct LexiconRow: Equatable {
         public let id: Int64
         public let roman: String
@@ -30,7 +30,7 @@ public extension RustEngineBridge {
 
     /// Bridge-synthesized companion to proto `LexiconAssocEntry`. Consumed
     /// by iOS `NextWordService` for bundled bigram lookups.
-    // 中文: 內建詞組(bigram)查詢結果的對應 struct,給 iOS NextWordService 使用。
+    // 內建詞組(bigram)查詢結果的對應 struct,給 iOS NextWordService 使用。
     struct LexiconAssocEntry: Equatable {
         public let previousWord: String
         public let candidateWord: String
@@ -40,14 +40,14 @@ public extension RustEngineBridge {
 
     /// Engine install diagnostic counts, surfaced for dogfood-time
     /// inspection through `RustEngineBridge.diagnostics()` callers.
-    // 中文: lexicon engine 安裝後的診斷計數 — dogfood 時透過 diagnostics() 觀察。
+    // lexicon engine 安裝後的診斷計數 — dogfood 時透過 diagnostics() 觀察。
     struct LexiconInstallStats: Equatable {
         public let dictionaryRecordCount: UInt64
         public let prefixIndexEntryCount: UInt64
     }
 
     /// Lexicon engine `inputType` (mirrors proto `InputType`).
-    // 中文: lexicon engine 接收的 inputType enum,對應 proto InputType。
+    // lexicon engine 接收的 inputType enum,對應 proto InputType。
     enum LexiconInputType: Int32, Equatable {
         case unspecified = 0
         case romanNoTone = 1
@@ -56,7 +56,7 @@ public extension RustEngineBridge {
     }
 
     /// Lexicon engine `inputMode` (mirrors proto `InputMode`).
-    // 中文: lexicon engine 接收的 inputMode enum(TL/POJ/TPS),對應 proto InputMode。
+    // lexicon engine 接收的 inputMode enum(TL/POJ/TPS),對應 proto InputMode。
     enum LexiconInputMode: Int32, Equatable {
         case unspecified = 0
         case tl = 1
@@ -68,8 +68,8 @@ public extension RustEngineBridge {
     /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionaryToggles`.
     /// Build via `init(from settings: EngineSettings)`; never construct
     /// piecemeal at search call sites — that splits the snapshot.
-    // 中文: 使用者的 12 顆字典開關 snapshot,欄位順序與 proto DictionaryToggles 對齊。
-    // 中文: 一律透過 init(from: EngineSettings) 建立,搜尋呼叫端不可自行拼裝以免 snapshot 被切開。
+    // 使用者的 12 顆字典開關 snapshot,欄位順序與 proto DictionaryToggles 對齊。
+    // 一律透過 init(from: EngineSettings) 建立,搜尋呼叫端不可自行拼裝以免 snapshot 被切開。
     struct DictionaryToggles: Equatable, Sendable {
         public let kautian: Bool
         public let taigitv: Bool
@@ -89,7 +89,7 @@ public extension RustEngineBridge {
         /// `kautian_subcoll` proto message is always present and the engine
         /// always runs the subcollection gate. Field order mirrors
         /// config.yaml `dialect_columns` / `KautianSubcollToggles` proto.
-        // 中文: kautian subcollection 啟用狀態 (10 腔調 + 姓名附錄)。iOS 一律帶值,故 proto 子訊息恆存在,引擎恆執行 subcollection gate。
+        // kautian subcollection 啟用狀態 (10 腔調 + 姓名附錄)。iOS 一律帶值,故 proto 子訊息恆存在,引擎恆執行 subcollection gate。
         public let kautianSubcoll: KautianSubcoll
 
         public struct KautianSubcoll: Equatable, Sendable {
@@ -119,8 +119,8 @@ public extension RustEngineBridge {
     /// `internal` (not `public`) because `enabledSources` references the
     /// internal `DictionarySource` enum; matches `ClassificationResult`'s
     /// pattern below.
-    // 中文: lexiconDictionaryFilters 的輸出 — 含可直接送出的 bitmask 與 Tab3 retag 用的啟用 source 集合。
-    // 中文: 9 顆 assoc source 全開時 assocLookupBitmask 走 UInt32.max sentinel,保留 proto 的捷徑語意。
+    // lexiconDictionaryFilters 的輸出 — 含可直接送出的 bitmask 與 Tab3 retag 用的啟用 source 集合。
+    // 9 顆 assoc source 全開時 assocLookupBitmask 走 UInt32.max sentinel,保留 proto 的捷徑語意。
     internal struct DictionaryFilters: Equatable {
         let dictionaryFilterBitmask: UInt32
         let assocLookupBitmask: UInt32
@@ -138,9 +138,9 @@ public extension RustEngineBridge {
     /// FST). Required parameter — empty string means "skip inventory" and
     /// `FetchAtPos` then graceful-degrades to empty candidates. Pass an
     /// absolute Bundle path to enable continuous-input candidate fetch.
-    // 中文: 安裝或原子重灌 lexicon engine 狀態。鍵盤啟動時呼叫一次,冪等。
-    // 中文: syllableInventoryPath 必填 — 空字串 = 不載入 syllable inventory,FetchAtPos
-    // 中文: 會 graceful-degrade 為空候選;傳絕對路徑才能啟用連續輸入候選查詢。
+    // 安裝或原子重灌 lexicon engine 狀態。鍵盤啟動時呼叫一次,冪等。
+    // syllableInventoryPath 必填 — 空字串 = 不載入 syllable inventory,FetchAtPos
+    // 會 graceful-degrade 為空候選;傳絕對路徑才能啟用連續輸入候選查詢。
     @discardableResult
     static func lexiconInstall(
         triePath: String,
@@ -171,7 +171,7 @@ public extension RustEngineBridge {
     /// IME autocomplete entry. Hanzi `inputType` returns `[]` per D-8
     /// hard guard pinned by `INVARIANT_LEX_HANZI_GUARD` (commit 12 adds
     /// the platform parity test).
-    // 中文: IME 自動完成主入口。Hanzi inputType 一律回 [] — 由 D-8 硬性保證(INVARIANT_LEX_HANZI_GUARD)。
+    // IME 自動完成主入口。Hanzi inputType 一律回 [] — 由 D-8 硬性保證(INVARIANT_LEX_HANZI_GUARD)。
     static func lexiconSearch(
         input: String,
         inputType: LexiconInputType,
@@ -198,7 +198,7 @@ public extension RustEngineBridge {
     }
 
     /// Tab3 multi-source dictionary lookup.
-    // 中文: Tab3 多字典來源查詢入口。
+    // Tab3 多字典來源查詢入口。
     static func lexiconSearchWithSources(
         input: String,
         inputMode: LexiconInputMode,
@@ -221,7 +221,7 @@ public extension RustEngineBridge {
     }
 
     /// Tab3 hanzi-prefix dictionary lookup.
-    // 中文: Tab3 用漢字前綴查字典。
+    // Tab3 用漢字前綴查字典。
     static func lexiconSearchByHanzi(
         query: String,
         inputMode: LexiconInputMode,
@@ -245,7 +245,7 @@ public extension RustEngineBridge {
 
     /// Bundled-bigram lookup. Called by `NextWordService` after the
     /// commit 10 rewire (replaces direct `AssociationBinaryReader.lookup`).
-    // 中文: 內建詞組查詢 — NextWordService 從這裡取詞組關聯。
+    // 內建詞組查詢 — NextWordService 從這裡取詞組關聯。
     static func lexiconAssocLookup(
         previousWord: String,
         limit: UInt32,
@@ -279,7 +279,7 @@ public extension RustEngineBridge {
     /// pre-conversion; `searchKey` is now an identity passthrough of the
     /// raw input. The `tps:` FST family is queried directly via
     /// `SearchRequest{input_mode=.tps}`.
-    // 中文: classifyInput 的輸出 — InputType + searchKey;C-1 之後 searchKey = raw 原樣,TPS 改由 SearchRequest{input_mode=.tps} 直接命中 tps: 族群。
+    // classifyInput 的輸出 — InputType + searchKey;C-1 之後 searchKey = raw 原樣,TPS 改由 SearchRequest{input_mode=.tps} 直接命中 tps: 族群。
     internal struct ClassificationResult: Equatable {
         let inputType: InputType
         let searchKey: String
@@ -290,8 +290,8 @@ public extension RustEngineBridge {
     /// replacing the platform-side per-keystroke ladder that previously
     /// chained multiple phonetics ops per keypress. See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
-    // 中文: 判定 rawInput 屬於哪一種 InputType,並回傳要拿去查詢的 searchKey。
-    // 中文: 單一 FFI 呼叫,tone / TPS 偵測都留在 Rust 側,取代舊有平台端的多重 phonetics 串呼叫。
+    // 判定 rawInput 屬於哪一種 InputType,並回傳要拿去查詢的 searchKey。
+    // 單一 FFI 呼叫,tone / TPS 偵測都留在 Rust 側,取代舊有平台端的多重 phonetics 串呼叫。
     internal static func classifyInput(_ raw: String) -> ClassificationResult {
         var payload = Taigi_Engine_ClassifyInputRequest()
         payload.raw = raw
@@ -314,8 +314,8 @@ public extension RustEngineBridge {
     ///
     /// Call ONCE per query and pass the result down the search pipeline;
     /// re-resolving inside `fetchSystemResults` would split the snapshot.
-    // 中文: 把使用者的 12 顆字典開關轉成可直接送出的 filter bitmask + 啟用 source 集合。
-    // 中文: 每次查詢只能呼叫一次,結果向下游傳遞;在 fetchSystemResults 內重算會切開 snapshot。
+    // 把使用者的 12 顆字典開關轉成可直接送出的 filter bitmask + 啟用 source 集合。
+    // 每次查詢只能呼叫一次,結果向下游傳遞;在 fetchSystemResults 內重算會切開 snapshot。
     internal static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
         var togglesProto = Taigi_Engine_DictionaryToggles()
         togglesProto.kautian = toggles.kautian
@@ -371,7 +371,7 @@ public extension RustEngineBridge {
     /// Tab3 short-circuit predicate. True iff `text` contains any CJK
     /// codepoint (Unified + Extensions A-E). See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
-    // 中文: Tab3 漢字判斷捷徑 — text 含 CJK Unified + Ext A-E 任一字元就回 true。
+    // Tab3 漢字判斷捷徑 — text 含 CJK Unified + Ext A-E 任一字元就回 true。
     static func isHanzi(_ text: String) -> Bool {
         var payload = Taigi_Engine_IsHanziRequest()
         payload.text = text
@@ -402,8 +402,8 @@ public extension RustEngineBridge {
     /// (matches the safe-fallback contract of `lexiconDispatch` errors).
     /// Mirrors Android `LexiconBridge.platformInputType` —
     /// must drift together.
-    // 中文: 把 proto 端的 InputType 映射到平台端的 InputType,未知值走 .romanWithoutTone fallback。
-    // 中文: 必須與 Android LexiconBridge.platformInputType 同步漂移。
+    // 把 proto 端的 InputType 映射到平台端的 InputType,未知值走 .romanWithoutTone fallback。
+    // 必須與 Android LexiconBridge.platformInputType 同步漂移。
     private static func platformInputType(from proto: Taigi_Engine_InputType) -> InputType {
         switch proto {
         case .hanzi: .hanzi
@@ -419,8 +419,8 @@ public extension RustEngineBridge {
     /// authoritative; keep this bit layout in sync with
     /// `engine/protos/proto/lexicon.proto`. Bit positions pinned by the
     /// 6 inline Rust golden tests.
-    // 中文: 平台與 Rust binary skew 時的後備 — 當 method 18 缺席才會走到這。
-    // 中文: 真值來源是 Rust compute_filters,bit 配置與 lexicon.proto 須保持同步。
+    // 平台與 Rust binary skew 時的後備 — 當 method 18 缺席才會走到這。
+    // 真值來源是 Rust compute_filters,bit 配置與 lexicon.proto 須保持同步。
     private static func platformFallbackFilters(toggles: DictionaryToggles) -> DictionaryFilters {
         var dictMask: UInt32 = 0
         if toggles.kautian { dictMask |= 1 << 0 }
@@ -473,7 +473,7 @@ public extension RustEngineBridge {
     /// CROSS-PLATFORM INVARIANT — bit positions mirror
     /// `engine/lexicon/src/dictionary_reader.rs` (`WIRE_KAUTIAN_SUBCOLL_*` /
     /// `KAUTIAN_SUBTAG_*`). Drift causes silent subcollection-filter divergence.
-    // 中文: kautian subcollection wire ENCODE — 僅供 binary-skew fallback 的鏡像,對齊 Rust encode_kautian_subcoll_wire。
+    // kautian subcollection wire ENCODE — 僅供 binary-skew fallback 的鏡像,對齊 Rust encode_kautian_subcoll_wire。
     private static func encodeKautianSubcollWire(_ toggles: DictionaryToggles) -> UInt32 {
         guard toggles.kautian else { return 0 }
         let activeBit: UInt32 = 1 << 13
@@ -499,8 +499,8 @@ public extension RustEngineBridge {
     /// `DictionarySource` is `String`-backed; codes are wire-stable per
     /// `lexicon.proto::DictionarySourceCode`).
     /// Unspecified / unrecognised codes return `nil` and the caller drops them.
-    // 中文: 把 proto 的 DictionarySourceCode 顯式 switch 到平台 DictionarySource enum。
-    // 中文: 不依賴 rawValue / ordinal,因為 Swift DictionarySource 是 String-backed。未知碼回 nil,呼叫端丟棄。
+    // 把 proto 的 DictionarySourceCode 顯式 switch 到平台 DictionarySource enum。
+    // 不依賴 rawValue / ordinal,因為 Swift DictionarySource 是 String-backed。未知碼回 nil,呼叫端丟棄。
     private static func platformDictionarySource(from code: Taigi_Engine_DictionarySourceCode) -> DictionarySource? {
         switch code {
         case .dictSourceKautian: .kautian
@@ -525,7 +525,7 @@ public extension RustEngineBridge {
 
     /// Per-candidate score breakdown returned alongside `ranked` when the
     /// caller opts in. Six fields sum to the engine's sort key.
-    // 中文: 單一候選詞的分數細項。六個欄位加總即引擎的 sort key。
+    // 單一候選詞的分數細項。六個欄位加總即引擎的 sort key。
     struct ScoreBreakdown: Equatable {
         public let userFreqScore: Int
         public let recencyBonus: Int
@@ -542,7 +542,7 @@ public extension RustEngineBridge {
     /// Composite return for the lexicon ranking pipeline. Production
     /// callers typically just read `ranked`; tests inspect `breakdowns`
     /// to pin scoring math on the bridge boundary.
-    // 中文: 排序管線的複合回傳值。Production 通常只用 ranked,測試用 breakdowns 鎖住分數運算。
+    // 排序管線的複合回傳值。Production 通常只用 ranked,測試用 breakdowns 鎖住分數運算。
     struct CandidateRanking: Equatable {
         public let ranked: [TaigiWord]
         public let breakdowns: [ScoreBreakdown]
@@ -571,10 +571,10 @@ public extension RustEngineBridge {
     /// alongside the ranked list so dogfood traces include per-candidate
     /// score detail. Release builds skip the breakdown (zero
     /// serialization overhead).
-    // 中文: 候選詞排序管線 — dedup → score → sort → 可選 TPS display-dedup,全在 Rust 端 atomic 執行。
-    // 中文: tpsDedupEnabled 由平台決定(看是否為 TPS layout),不從 AppConfig 推導。
-    // 中文: nowMs 由 caller 提供,讓 recency 視窗運算在測試中可重現。
-    // 中文: DEBUG 模式會額外要求 ScoreBreakdown 並寫入 log,Release 跳過該欄位節省序列化成本。
+    // 候選詞排序管線 — dedup → score → sort → 可選 TPS display-dedup,全在 Rust 端 atomic 執行。
+    // tpsDedupEnabled 由平台決定(看是否為 TPS layout),不從 AppConfig 推導。
+    // nowMs 由 caller 提供,讓 recency 視窗運算在測試中可重現。
+    // DEBUG 模式會額外要求 ScoreBreakdown 並寫入 log,Release 跳過該欄位節省序列化成本。
     static func processCandidates(
         raw: [TaigiWord],
         normalizedInput: String,
@@ -620,8 +620,8 @@ public extension RustEngineBridge {
     /// engine's score arithmetic; production code stays on the public
     /// `processCandidates` method which discards the breakdown after
     /// debug logging.
-    // 中文: 測試專用接口 — 與 processCandidates 同一條 FFI 呼叫,但會回傳分數細項。
-    // 中文: 給 RustEngineBridgeRankingTests 鎖住引擎側的分數算法,Production 用上面那個版本。
+    // 測試專用接口 — 與 processCandidates 同一條 FFI 呼叫,但會回傳分數細項。
+    // 給 RustEngineBridgeRankingTests 鎖住引擎側的分數算法,Production 用上面那個版本。
     static func processCandidatesDetailed(
         raw: [TaigiWord],
         normalizedInput: String,
@@ -696,8 +696,8 @@ public extension RustEngineBridge {
     /// file (search / assoc / classify-input / dictionary-filters / isHanzi
     /// / processCandidates). No `AppConfig` snapshot needed — lexicon ops
     /// read no live config.
-    // 中文: lexicon envelope 的 dispatch — encode → FFI roundtrip → decode。
-    // 中文: 不需要 AppConfig 因為 lexicon op 不讀 live config。
+    // lexicon envelope 的 dispatch — encode → FFI roundtrip → decode。
+    // 不需要 AppConfig 因為 lexicon op 不讀 live config。
     private static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,
         op: String,
@@ -740,7 +740,7 @@ public extension RustEngineBridge {
 
 /// Build `DictionaryToggles` from an `EngineSettings` snapshot. Centralises
 /// the boolean assembly so search call sites can't accidentally diverge.
-// 中文: 從 EngineSettings snapshot 組出 DictionaryToggles 的集中點,避免搜尋呼叫端各自拼裝而漂移。
+// 從 EngineSettings snapshot 組出 DictionaryToggles 的集中點,避免搜尋呼叫端各自拼裝而漂移。
 extension RustEngineBridge.DictionaryToggles {
     init(from settings: EngineSettings) {
         self.init(

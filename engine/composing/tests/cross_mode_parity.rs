@@ -36,12 +36,12 @@
 //!   superset) and `tps_notone_var` (er↔or dialect) words to shrink the
 //!   TPS-superset noise, though the assertion tolerates supersets anyway.
 
-// 中文: 跨模式候選 parity — 同一台語詞用 TL/POJ/TPS 拍,Hanji 候選集須一致。
-// 中文:   詞庫每列已有三模式完整含調拼法 (tl_num/poj_num/tps_num);三者解到同 rowid,
-// 中文:   故轉換+建鍵+fetch+顯示正確時 Hanji 集相等。補 conversion-layer parity 沒覆蓋的
-// 中文:   fetch/ranking/display 分歧 (近期 TPS 單聲母 bug 的類別)。normalize 已知刻意差異:
-// 中文:   羅馬字[0] (TL/POJ 有 TPS 無) 關掉+丟 hanji=None;比 set 不比 order;只比完整單音節;
-// 中文:   抽樣排除第1聲 (TPS 無調號→超集) 與 er↔or var。
+// 跨模式候選 parity — 同一台語詞用 TL/POJ/TPS 拍,Hanji 候選集須一致。
+//   詞庫每列已有三模式完整含調拼法 (tl_num/poj_num/tps_num);三者解到同 rowid,
+//   故轉換+建鍵+fetch+顯示正確時 Hanji 集相等。補 conversion-layer parity 沒覆蓋的
+//   fetch/ranking/display 分歧 (近期 TPS 單聲母 bug 的類別)。normalize 已知刻意差異:
+//   羅馬字[0] (TL/POJ 有 TPS 無) 關掉+丟 hanji=None;比 set 不比 order;只比完整單音節;
+//   抽樣排除第1聲 (TPS 無調號→超集) 與 er↔or var。
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;

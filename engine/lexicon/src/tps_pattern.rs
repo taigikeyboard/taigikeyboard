@@ -30,17 +30,17 @@
 //! structure as the literal key; [`substitution_count`] is a plain
 //! charwise diff.
 
-// 中文: TPS 歧義感知 FST pattern — 單次索引走訪同時比對按鍵序列的所有讀法。
-// 中文: 雙形 glyph 展開成家族({ㄍㆻ}/{ㄇㆬ}/{ㄫㆭㄥ}),其餘 byte 固定;與 FST 交集即找到替代讀法,
-// 中文:   免枚舉最壞 82,944 條字串變體。分隔符/調號前一格限 Final 形;buffer 尾端不設限(延後裁決)。
-// 中文: 三種 wire 契約:Exact(inventory)、ExactWire(pattern||0xFF||4 rowid bytes)、StartsWith(partial)。
-// 中文: 家族成員皆 3-byte → 命中 key 與字面 key 同 byte 結構,substitution_count 為逐字 diff。
+// TPS 歧義感知 FST pattern — 單次索引走訪同時比對按鍵序列的所有讀法。
+// 雙形 glyph 展開成家族({ㄍㆻ}/{ㄇㆬ}/{ㄫㆭㄥ}),其餘 byte 固定;與 FST 交集即找到替代讀法,
+//   免枚舉最壞 82,944 條字串變體。分隔符/調號前一格限 Final 形;buffer 尾端不設限(延後裁決)。
+// 三種 wire 契約:Exact(inventory)、ExactWire(pattern||0xFF||4 rowid bytes)、StartsWith(partial)。
+// 家族成員皆 3-byte → 命中 key 與字面 key 同 byte 結構,substitution_count 為逐字 diff。
 
 use fst::Automaton;
 use phonetics::{tps_ambiguity_family, TpsGlyphRole};
 
 /// How the pattern terminates against the stored key bytes.
-// 中文: pattern 對儲存 key 的終止方式。
+// pattern 對儲存 key 的終止方式。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum WireMode {
     /// Key is exactly the pattern (syllable inventory entries).
@@ -55,14 +55,14 @@ pub enum WireMode {
 /// One pattern slot: the alternative byte sequences this position accepts.
 /// Fixed bytes are a single-alternative slot; an ambiguity family
 /// contributes one alternative per (positionally legal) member.
-// 中文: 一個 slot = 該位置接受的替代 byte 序列;固定 byte 為單一替代。
+// 一個 slot = 該位置接受的替代 byte 序列;固定 byte 為單一替代。
 #[derive(Clone, Debug)]
 struct Slot {
     alternatives: Vec<Vec<u8>>,
 }
 
 /// Ambiguity-aware pattern over a TPS FST key.
-// 中文: TPS FST key 的歧義感知 pattern。
+// TPS FST key 的歧義感知 pattern。
 pub struct TpsKeyPattern {
     slots: Vec<Slot>,
     wire: WireMode,
@@ -71,7 +71,7 @@ pub struct TpsKeyPattern {
 /// Automaton state. `slot`/`offset` walk the pattern; `viable` is the
 /// bitmask of alternatives still consistent with the bytes seen in the
 /// current slot (families have ≤3 members + the literal, so u8 suffices).
-// 中文: 自動機狀態 — slot/offset 走 pattern;viable 為當前 slot 仍一致的替代 bitmask。
+// 自動機狀態 — slot/offset 走 pattern;viable 為當前 slot 仍一致的替代 bitmask。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PatternState {
     Pattern {
@@ -101,8 +101,8 @@ impl TpsKeyPattern {
     /// Non-family chars are fixed single-alternative slots, so a TL/POJ
     /// key builds a degenerate pattern equal to a plain exact lookup —
     /// but callers gate by the `tps:` prefix and never pay for that.
-    // 中文: 由 key 建 pattern。final_only_offsets = 「緊鄰硬性音節收尾」char 的 byte 偏移
-    // 中文:   (分隔符 barrier 由 caller 提供 — 分隔符本身已被剝除;調號前一格在此函式內部推導)。
+    // 由 key 建 pattern。final_only_offsets = 「緊鄰硬性音節收尾」char 的 byte 偏移
+    //   (分隔符 barrier 由 caller 提供 — 分隔符本身已被剝除;調號前一格在此函式內部推導)。
     pub fn new(key: &str, wire: WireMode, final_only_offsets: &[usize]) -> Self {
         let chars: Vec<(usize, char)> = key.char_indices().collect();
         let mut slots: Vec<Slot> = Vec::with_capacity(chars.len());
@@ -269,7 +269,7 @@ impl Automaton for &TpsKeyPattern {
 /// a pattern over it could match anything beyond the literal bytes.
 /// Cheap pre-check that lets the hot paths (syllabifier probes, exact
 /// lookups) skip building an automaton for unambiguous keys entirely.
-// 中文: text 是否含任何歧義家族 glyph;無 → pattern 等同字面,熱路徑可直接跳過 automaton。
+// text 是否含任何歧義家族 glyph;無 → pattern 等同字面,熱路徑可直接跳過 automaton。
 pub fn has_ambiguous_glyph(text: &str) -> bool {
     text.chars().any(|c| tps_ambiguity_family(c).is_some())
 }
@@ -278,7 +278,7 @@ pub fn has_ambiguous_glyph(text: &str) -> bool {
 /// the pattern was built from. Both have identical byte structure (family
 /// members share the 3-byte glyph length), so a plain char zip suffices.
 /// `0` = the user's literal text.
-// 中文: 命中 key 與字面 key 的逐字替換數;byte 結構相同故 zip 即可。0 = 使用者字面。
+// 命中 key 與字面 key 的逐字替換數;byte 結構相同故 zip 即可。0 = 使用者字面。
 pub fn substitution_count(literal_key: &str, matched_key: &str) -> u32 {
     literal_key
         .chars()

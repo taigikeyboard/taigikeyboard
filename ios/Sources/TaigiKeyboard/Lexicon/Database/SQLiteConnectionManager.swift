@@ -1,5 +1,5 @@
-// 中文: 共用的 SQLite 連線管理器 — 提供連線、PRAGMA 設定、async-once 延遲初始化、
-// 中文: serialized queue 執行,以及 v3.4.8 的一次性 WAL → DELETE 遷移路徑。
+// 共用的 SQLite 連線管理器 — 提供連線、PRAGMA 設定、async-once 延遲初始化、
+// serialized queue 執行,以及 v3.4.8 的一次性 WAL → DELETE 遷移路徑。
 
 import Foundation
 import SQLite3
@@ -254,7 +254,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     // MARK: - Constants
 
     /// SQLITE_TRANSIENT equivalent — tells SQLite to copy the bound value immediately
-    // 中文: SQLITE_TRANSIENT 等價物 — 告訴 SQLite 立即複製綁定值,呼叫端 buffer 不需保留。
+    // SQLITE_TRANSIENT 等價物 — 告訴 SQLite 立即複製綁定值,呼叫端 buffer 不需保留。
     static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     // MARK: - Query Execution

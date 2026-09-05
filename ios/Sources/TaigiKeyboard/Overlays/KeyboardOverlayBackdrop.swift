@@ -1,5 +1,5 @@
-// 中文: 工具列 overlay(符號 / 版面 / 設定)的主題背景 — gradient 主題下重畫漸層,
-// 中文: 讓 panel 與 gradient-painted 鍵盤連續(panel 偏移在工具列下方,需切片對齊座標)。
+// 工具列 overlay(符號 / 版面 / 設定)的主題背景 — gradient 主題下重畫漸層,
+// 讓 panel 與 gradient-painted 鍵盤連續(panel 偏移在工具列下方,需切片對齊座標)。
 
 import SwiftUI
 

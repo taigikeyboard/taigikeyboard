@@ -1,4 +1,4 @@
-// 中文: 英打模式的 autocomplete service — 完全用 Apple UITextChecker,不走 Taigi 詞典與組字邏輯。
+// 英打模式的 autocomplete service — 完全用 Apple UITextChecker,不走 Taigi 詞典與組字邏輯。
 
 import Foundation
 import KeyboardKit
@@ -37,7 +37,7 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - KeyboardKit Protocol Methods
 
-    // 中文: KeyboardKit 入口 — 把 UITextChecker 的回傳包成 AutocompleteResult。
+    // KeyboardKit 入口 — 把 UITextChecker 的回傳包成 AutocompleteResult。
     func autocomplete(_ text: String) async throws -> AutocompleteResult {
         let suggestions = getSuggestions(for: text)
         return AutocompleteResult(
@@ -61,7 +61,7 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - Private Helpers
 
-    // 中文: 先用 UITextChecker 完成補全,沒結果再 fallback 拼字校正,各最多 3 個。
+    // 先用 UITextChecker 完成補全,沒結果再 fallback 拼字校正,各最多 3 個。
     private func getSuggestions(for text: String) -> [AutocompleteSuggestion] {
         let currentWord = extractCurrentWord(from: text)
         guard !currentWord.isEmpty else { return [] }

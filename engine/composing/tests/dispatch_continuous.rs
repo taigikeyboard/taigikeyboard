@@ -18,7 +18,7 @@
 //! the lexicon parity suite — composing-side tests stay focused on the
 //! dispatch wiring + decode contract.
 
-// 中文: Phase 6 dispatch 的 decode 與降級路徑測試;TL/TPS 的 lexicon 整合測試交給 lexicon 端的 hermetic install fixture。
+// Phase 6 dispatch 的 decode 與降級路徑測試;TL/TPS 的 lexicon 整合測試交給 lexicon 端的 hermetic install fixture。
 
 use composing::api::{Engine, Intent, Phase};
 use composing::dispatch;

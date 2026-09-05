@@ -1,5 +1,5 @@
 // Pure TPS sync state machine — computes the DataStore write batch for inputMode ↔ keyboardLayoutType cascade.
-// 中文: 純函式狀態機,計算 inputMode 與 keyboardLayoutType 之間 TPS 切換的連動寫入。
+// 純函式狀態機,計算 inputMode 與 keyboardLayoutType 之間 TPS 切換的連動寫入。
 
 package com.siansiansu.taigikeyboard.ime.core
 

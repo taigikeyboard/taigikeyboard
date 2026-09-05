@@ -8,7 +8,7 @@
 //! `SetText` + selection + `EndComposition`; the selection is placed BEFORE
 //! `EndComposition` (rakukan Fix3: after it the host resets the caret).
 
-// 中文: TSF 組字區操作 — 每個 context 一個 ITfComposition,只在同步 edit session 內改;效果→TSF 呼叫的對照。
+// TSF 組字區操作 — 每個 context 一個 ITfComposition,只在同步 edit session 內改;效果→TSF 呼叫的對照。
 
 use crate::com_out_buffer;
 use crate::edit_session::EditCookie;

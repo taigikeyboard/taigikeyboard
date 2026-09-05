@@ -6,7 +6,7 @@
 //! not be reinterpreted as Taigi). Also pins the bounded CapsLock
 //! non-idempotence for Tl/Poj modes (was POJ-only pre-r3278520895).
 
-// 中文: B-4 — display_text (user_frequency.db commit key) canonicalize 行為驗證。
+// B-4 — display_text (user_frequency.db commit key) canonicalize 行為驗證。
 
 use phonetics::api::{canonical_tl_form, InputMode};
 
@@ -15,7 +15,7 @@ fn poj_diacritic_folds_to_canonical_tl() {
     // Custom-entry-shaped POJ display form → canonical TL form. The
     // pe̍h-ōe-jī `ô` / `ⁿ` glyphs fold through `normalize_to_tl`
     // (`oa → ua`) + `to_tl` reassembly into TL `puânn`.
-    // 中文: POJ display 形(ô / ⁿ)折成 canonical TL(oa→ua),例 `pôaⁿ` → `puânn`。
+    // POJ display 形(ô / ⁿ)折成 canonical TL(oa→ua),例 `pôaⁿ` → `puânn`。
     assert_eq!(
         canonical_tl_form(
             "t\u{00e2}i-g\u{00ed}-kh\u{00ed}-p\u{00f4}a\u{207f}",
@@ -37,9 +37,9 @@ fn poj_ascii_folds_to_canonical_tl_ascii_toneless() {
     // for §9 #2 cross-mode parity: the TL-mode shadow ASCII goes
     // through the helper as identity, so both modes write the same
     // toneless commit key.
-    // 中文: OOV synth POJ ASCII 無調 → canonical TL ASCII 無調。
-    // 中文:   tone 1/4 在 tl_tone_mark 都是空字串,故組裝後無聲調符號,
-    // 中文:   與 TL mode 無調 ASCII identity 路徑 byte-identical(§9 #2 跨 mode 鍵合一)。
+    // OOV synth POJ ASCII 無調 → canonical TL ASCII 無調。
+    //   tone 1/4 在 tl_tone_mark 都是空字串,故組裝後無聲調符號,
+    //   與 TL mode 無調 ASCII identity 路徑 byte-identical(§9 #2 跨 mode 鍵合一)。
     assert_eq!(canonical_tl_form("chiah goa", InputMode::Poj), "tsiah gua");
 }
 
@@ -51,8 +51,8 @@ fn cross_mode_oov_shadow_writes_identical_freq_key() {
     // hanji-absent user-frequency split for the walker greedy-longest
     // OOV synth path (`composing::continuous::fetch_walker_slot0_inner`
     // OOV branch).
-    // 中文: §9 #2 跨 mode byte-identity 守門 — POJ shadow `chiah goa` /
-    // 中文:   TL shadow `tsiah gua` 須 canonicalize 到同一 key。
+    // §9 #2 跨 mode byte-identity 守門 — POJ shadow `chiah goa` /
+    //   TL shadow `tsiah gua` 須 canonicalize 到同一 key。
     let poj_oov = canonical_tl_form("chiah goa", InputMode::Poj);
     let tl_oov = canonical_tl_form("tsiah gua", InputMode::Tl);
     assert_eq!(poj_oov, tl_oov);
@@ -66,8 +66,8 @@ fn cross_mode_custom_display_form_writes_identical_freq_key() {
     // equivalent (`guá`) must fold to the same canonical key. Both
     // go through `lexicon::custom_entry_to_candidate` →
     // `canonical_tl_form(&roman, mode)`.
-    // 中文: §9 #2 跨 mode byte-identity 守門 — custom POJ display (góa) /
-    // 中文:   TL display (guá) canonicalize 到同一 key。
+    // §9 #2 跨 mode byte-identity 守門 — custom POJ display (góa) /
+    //   TL display (guá) canonicalize 到同一 key。
     let poj = canonical_tl_form("g\u{00f3}a", InputMode::Poj);
     let tl = canonical_tl_form("gu\u{00e1}", InputMode::Tl);
     assert_eq!(poj, tl);
@@ -78,7 +78,7 @@ fn cross_mode_custom_display_form_writes_identical_freq_key() {
 fn tl_form_is_idempotent_in_poj_mode() {
     // The function is the freq-key canonicalizer — a TL-shaped input
     // fed in POJ mode must return identically (no double-fold).
-    // 中文: TL 形在 POJ mode 下冪等(canonicalizer 不能對 TL input 二次折)。
+    // TL 形在 POJ mode 下冪等(canonicalizer 不能對 TL input 二次折)。
     let tl = "t\u{00e2}i-g\u{00ed}-kh\u{00ed}-pu\u{00e2}nn";
     assert_eq!(canonical_tl_form(tl, InputMode::Poj), tl);
 }
@@ -91,8 +91,8 @@ fn tl_mode_observable_identity_for_tl_and_non_taigi_inputs() {
     // byte-identity: TL form is idempotent through the rewrite
     // chain, and non-Taigi tokens fail `split_initial_final` and
     // pass through unchanged.
-    // 中文: r3278520895 後 Tl mode 走 fold,但 TL 形 / 非-Taigi 觀察上仍 byte-identity
-    // 中文:   (TL idempotent + 非 Taigi pass-through)。
+    // r3278520895 後 Tl mode 走 fold,但 TL 形 / 非-Taigi 觀察上仍 byte-identity
+    //   (TL idempotent + 非 Taigi pass-through)。
     assert_eq!(canonical_tl_form("anything", InputMode::Tl), "anything");
     assert_eq!(
         canonical_tl_form("ts\u{00e1}i", InputMode::Tl),
@@ -113,8 +113,8 @@ fn poj_form_in_tl_mode_folds_canonical_tl() {
     // from the same word coming through `dict.bin` (which writes
     // `record.tl` = canonical TL). Closes the cross-mode key-
     // collision contract for mixed-form custom data.
-    // 中文: r3278520895 — POJ form custom entry 在 Tl mode 下也要 fold,
-    // 中文:   否則 commit key 維持 POJ shape 與 dict.bin canonical TL 分裂。
+    // r3278520895 — POJ form custom entry 在 Tl mode 下也要 fold,
+    //   否則 commit key 維持 POJ shape 與 dict.bin canonical TL 分裂。
     assert_eq!(canonical_tl_form("g\u{00f3}a", InputMode::Tl), "gu\u{00e1}");
     assert_eq!(
         canonical_tl_form(
@@ -144,7 +144,7 @@ fn tl_mode_preserves_special_final_eng() {
 fn english_mode_is_identity_does_not_misinterpret() {
     // Critical: an English custom entry `hello` must not be re-parsed
     // as Taigi initial+final. English mode short-circuits to identity.
-    // 中文: English mode 必須 identity 不可把 `hello` 當 Taigi 重解。
+    // English mode 必須 identity 不可把 `hello` 當 Taigi 重解。
     assert_eq!(canonical_tl_form("hello", InputMode::English), "hello");
     assert_eq!(canonical_tl_form("World", InputMode::English), "World");
 }
@@ -154,8 +154,8 @@ fn non_taigi_passes_through_in_poj_mode() {
     // POJ mode but the token fails `split_initial_final` (no Taigi
     // initial+final) → `rewrite_token` returns the original. Numeric
     // tone-digit tokens also fail the split and pass through.
-    // 中文: POJ mode 下非 Taigi token 走 split fallback 原樣返回;
-    // 中文:   數字調 `tai5gi2` 內部 `5` 卡住 split → identity。
+    // POJ mode 下非 Taigi token 走 split fallback 原樣返回;
+    //   數字調 `tai5gi2` 內部 `5` 卡住 split → identity。
     assert_eq!(
         canonical_tl_form("hello world", InputMode::Poj),
         "hello world"
@@ -166,7 +166,7 @@ fn non_taigi_passes_through_in_poj_mode() {
 
 #[test]
 fn empty_input_returns_empty() {
-    // 中文: 空字串保 empty,所有 mode 一致。
+    // 空字串保 empty,所有 mode 一致。
     assert_eq!(canonical_tl_form("", InputMode::Tl), "");
     assert_eq!(canonical_tl_form("", InputMode::Poj), "");
     assert_eq!(canonical_tl_form("", InputMode::English), "");
@@ -188,8 +188,8 @@ fn capslock_taigi_is_known_non_idempotent() {
     // CapsLock identically via the identity branch. Pinned here so
     // a future symmetric fix in `rewrite_token` lands as an
     // intentional behavior change.
-    // 中文: CapsLock 已知非冪等,Tl/Poj 兩 mode 都會 title-case 每 hyphen sub-token;
-    // 中文:   `TÂI-GÍ` → `Tâi-Gí`(POJ) / `TSÁI-GÍ` → `Tsái-Gí`(TL)。English mode identity 保 CapsLock。
+    // CapsLock 已知非冪等,Tl/Poj 兩 mode 都會 title-case 每 hyphen sub-token;
+    //   `TÂI-GÍ` → `Tâi-Gí`(POJ) / `TSÁI-GÍ` → `Tsái-Gí`(TL)。English mode identity 保 CapsLock。
     let poj_capslock = "T\u{00c2}I-G\u{00cd}";
     assert_eq!(
         canonical_tl_form(poj_capslock, InputMode::Poj),

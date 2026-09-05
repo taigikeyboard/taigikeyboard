@@ -34,9 +34,9 @@
 //! The pre-fix TPS structural pre-scan ("next initial seen") could not
 //! split toneless `ㄉㄞ|ㄨㄢ` because medial `ㄨ` is not a TPS initial.
 
-// 中文: v3.5.8 連續輸入 Phase 3 的純函式音節邊界掃描器,TL / TPS 共用 inv-driven BFS 同型實作。
-// 中文: 修復前 TPS 是 structural pre-scan,無法切 ㄉㄞ|ㄨㄢ;改成 inv-driven 後對齊 TL,
-// 中文:   亦對齊 librime / khiin-rs / McBopomofo。
+// v3.5.8 連續輸入 Phase 3 的純函式音節邊界掃描器,TL / TPS 共用 inv-driven BFS 同型實作。
+// 修復前 TPS 是 structural pre-scan,無法切 ㄉㄞ|ㄨㄢ;改成 inv-driven 後對齊 TL,
+//   亦對齊 librime / khiin-rs / McBopomofo。
 
 pub mod tl;
 pub mod tps;
@@ -60,9 +60,9 @@ use phonetics::InputMode;
 /// that drives `composing::shadow::mode_key_prefix` and the emitted
 /// `<prefix>:<toneless>` FST key — one mode parameter, one family, no
 /// drift.
-// 中文: 統一 mode-aware syllabifier 入口。TL/POJ/English 與 TPS 共用 inv-driven BFS。
-// 中文: 所有 lattice 下游(BFS、walker greedy / min-syllable)都透過本入口路由,
-// 中文:   shadow::mode_key_prefix 與 FST 家族鍵共用同一 mode,單一參數不分歧。
+// 統一 mode-aware syllabifier 入口。TL/POJ/English 與 TPS 共用 inv-driven BFS。
+// 所有 lattice 下游(BFS、walker greedy / min-syllable)都透過本入口路由,
+//   shadow::mode_key_prefix 與 FST 家族鍵共用同一 mode,單一參數不分歧。
 pub(crate) fn valid_span_endings_lowered(
     lowered: &str,
     pos: usize,
@@ -80,8 +80,8 @@ pub(crate) fn valid_span_endings_lowered(
 /// separator, callers always pass an empty slice, and the TL primitive
 /// is untouched (§18 fix-location: the shared TL path stays
 /// byte-identical).
-// 中文: valid_span_endings_lowered + barrier(§35)。TPS 掃描器拒絕跨 barrier 的單音節
-// 中文:   並展開歧義家族;TL 端完全忽略(呼叫端恆傳空)且原函式一字不動(§18 教訓)。
+// valid_span_endings_lowered + barrier(§35)。TPS 掃描器拒絕跨 barrier 的單音節
+//   並展開歧義家族;TL 端完全忽略(呼叫端恆傳空)且原函式一字不動(§18 教訓)。
 pub(crate) fn valid_span_endings_lowered_with_barriers(
     lowered: &str,
     pos: usize,

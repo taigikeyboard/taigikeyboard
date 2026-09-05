@@ -1,8 +1,8 @@
-// 中文: PrefHelper — 同時實作 EngineSettings / EngineSettingsProvider 兩介面,作為 IME 設定的 single live-read entry。
-// 中文: 後端用 androidx.datastore.preferences,cache + collector 為 process-wide companion state;
-// 中文: Application.onCreate 呼叫 warmUp() 之後,後續任何 ctor (ViewModel / Activity) 都共用同一份已 warmed cache,
-// 中文: 不會再撞到 Main thread runBlocking fallback。
-// 中文: Engine 端永遠 live-read,不做快照(對齊 iOS SharedSettings.swift)。
+// PrefHelper — 同時實作 EngineSettings / EngineSettingsProvider 兩介面,作為 IME 設定的 single live-read entry。
+// 後端用 androidx.datastore.preferences,cache + collector 為 process-wide companion state;
+// Application.onCreate 呼叫 warmUp() 之後,後續任何 ctor (ViewModel / Activity) 都共用同一份已 warmed cache,
+// 不會再撞到 Main thread runBlocking fallback。
+// Engine 端永遠 live-read,不做快照(對齊 iOS SharedSettings.swift)。
 
 package com.siansiansu.taigikeyboard.ime.core
 

@@ -2,7 +2,7 @@
 //! profile keeps `panic = "unwind"` (so a panic is catchable at all); this
 //! is what catches it.
 
-// 中文: COM 進入點的 catch_unwind 邊界;panic 變成 E_FAIL,絕不穿越到宿主。
+// COM 進入點的 catch_unwind 邊界;panic 變成 E_FAIL,絕不穿越到宿主。
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use windows::core::HRESULT;

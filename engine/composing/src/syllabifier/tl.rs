@@ -10,8 +10,8 @@
 //! BFS with depth cap = canonical middle ground per `docs/releases/v3.5.8/plan.md`
 //! § Phase 3 — 純函數 syllabifier 設計裁定.
 
-// 中文: TL 音節切分器 — 從 pos 出發 BFS,深度上限 max_syllables,以 SyllableInventory 判斷音節合法性。
-// 中文: 之所以不用 longest-match,是因為使用者敲 tsua 時必須同時保留 「珠 (span=3)」與「紙/珠仔 (span=4)」兩條候選路徑。
+// TL 音節切分器 — 從 pos 出發 BFS,深度上限 max_syllables,以 SyllableInventory 判斷音節合法性。
+// 之所以不用 longest-match,是因為使用者敲 tsua 時必須同時保留 「珠 (span=3)」與「紙/珠仔 (span=4)」兩條候選路徑。
 
 use std::collections::{BTreeSet, VecDeque};
 
@@ -23,7 +23,7 @@ use phonetics::InputMode;
 /// digit (1) = 10 bytes. Sourced from `engine/phonetics/src/tables.rs:13`
 /// (TL_INITIALS) and `tables.rs:21-33` (TL_FINALS); revisit if either
 /// table grows.
-// 中文: 單一 TL 音節最大 byte 長度上限 — 聲母 tsh(3) + 韻母 uainnh/iaunnh(6) + 可選聲調數字(1) = 10。
+// 單一 TL 音節最大 byte 長度上限 — 聲母 tsh(3) + 韻母 uainnh/iaunnh(6) + 可選聲調數字(1) = 10。
 const MAX_SYLLABLE_BYTES: usize = 10;
 
 /// Return every byte offset `e > pos` reachable from `pos` by a chain
@@ -48,9 +48,9 @@ const MAX_SYLLABLE_BYTES: usize = 10;
 /// unit edge costs is also the minimum depth. Time: O(n × MAX_SYLLABLE_BYTES)
 /// FST lookups, each O(syllable_len). Allocation: one
 /// `to_ascii_lowercase` pass on `input`.
-// 中文: 從 pos 出發,以 1..=max_syllables 條音節鏈走訪,回傳所有可達 byte 位移 (遞增去重)。
-// 中文: v3.5.9 B-1 起 mode-aware — Tl/English 走 `tl:` 家族,Poj 走 `poj:` 家族。
-// 中文: 不在 UTF-8 邊界、超界、深度為 0 時都安全回傳空 Vec。
+// 從 pos 出發,以 1..=max_syllables 條音節鏈走訪,回傳所有可達 byte 位移 (遞增去重)。
+// v3.5.9 B-1 起 mode-aware — Tl/English 走 `tl:` 家族,Poj 走 `poj:` 家族。
+// 不在 UTF-8 邊界、超界、深度為 0 時都安全回傳空 Vec。
 pub fn valid_span_endings(
     input: &str,
     pos: usize,
@@ -78,9 +78,9 @@ pub fn valid_span_endings(
 /// input; the same early guard is repeated here because this is a
 /// `pub(crate)` entry point (BFS callers pass `pos == lowered.len()`
 /// at chain ends and rely on the guard to terminate).
-// 中文: valid_span_endings 的「已小寫」變體 — 呼叫端先 to_ascii_lowercase 一次,
-// 中文:   避免 lattice BFS 每個 start 都重抄整個 buffer (Codex PR #284 P1)。
-// 中文: v3.5.9 B-1 起新增 mode 參數,內部以 inv.contains_in(mode, …) 查家族對應的音節集合。
+// valid_span_endings 的「已小寫」變體 — 呼叫端先 to_ascii_lowercase 一次,
+//   避免 lattice BFS 每個 start 都重抄整個 buffer (Codex PR #284 P1)。
+// v3.5.9 B-1 起新增 mode 參數,內部以 inv.contains_in(mode, …) 查家族對應的音節集合。
 pub(crate) fn valid_span_endings_lowered(
     lowered: &str,
     pos: usize,
@@ -125,7 +125,7 @@ pub(crate) fn valid_span_endings_lowered(
 /// (e.g. `tai` followed by `5` is really `tai5`). Per
 /// `phonetics::syllable.rs:18-20` only digits 1..=9 carry tone
 /// meaning; '0' is not a tone marker.
-// 中文: 判斷 ..end 的命中是否為「toneless 後接 tone digit」假邊界;是的話該 ending 不算數,等下一輪匹配完整數字調 key。
+// 判斷 ..end 的命中是否為「toneless 後接 tone digit」假邊界;是的話該 ending 不算數,等下一輪匹配完整數字調 key。
 fn is_false_toneless_boundary(bytes: &[u8], end: usize) -> bool {
     let last_is_tone_digit =
         matches!(bytes.get(end - 1), Some(b) if b.is_ascii_digit() && *b != b'0');

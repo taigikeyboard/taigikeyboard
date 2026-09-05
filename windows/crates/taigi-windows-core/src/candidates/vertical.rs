@@ -3,7 +3,7 @@
 //! (`rebuildRows` `:194-320`, scrolling `:327-386`), with the scroll viewport
 //! modelled in points so the renderer only draws and reports scrolls back.
 
-// 中文: 直式候選窗 — 寬度模型 + 選取/捲動/槽位編號狀態機;捲動位移以點數模擬,渲染器回報外部捲動。
+// 直式候選窗 — 寬度模型 + 選取/捲動/槽位編號狀態機;捲動位移以點數模擬,渲染器回報外部捲動。
 
 use super::metrics::CandidateMetrics;
 use super::positioning::{Point, Rect};

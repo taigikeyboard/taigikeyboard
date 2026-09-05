@@ -1,5 +1,5 @@
-// 中文: 自訂詞庫的前向資料遷移 — 依 PRAGMA user_version 決定是否要補欄位 + 重新 derive 內容。
-// 中文: 與 CustomDictionarySchema(純 DDL)分離,讓 derivation 邏輯改動可以單獨 bump version。
+// 自訂詞庫的前向資料遷移 — 依 PRAGMA user_version 決定是否要補欄位 + 重新 derive 內容。
+// 與 CustomDictionarySchema(純 DDL)分離,讓 derivation 邏輯改動可以單獨 bump version。
 
 import Foundation
 import SQLite3
@@ -26,11 +26,11 @@ import SQLite3
 /// No-op once `PRAGMA user_version` matches `CustomDictionarySchema.schemaVersion`,
 /// so the O(N) backfill happens at most once per derivation-logic change
 /// instead of on every cold start.
-// 中文: 自訂詞庫前向遷移 — version 對齊後直接 no-op,backfill 一輩子最多跑一次。
+// 自訂詞庫前向遷移 — version 對齊後直接 no-op,backfill 一輩子最多跑一次。
 enum CustomDictionaryMigrator {
     /// Apply pending forward migrations. Safe to call repeatedly — fast-path
     /// returns immediately when `PRAGMA user_version` is already current.
-    // 中文: 套用前向遷移,版本符合就直接回。可重入。
+    // 套用前向遷移,版本符合就直接回。可重入。
     static func runIfNeeded(db: OpaquePointer, logger: DebugLogger) {
         let currentVersion = sqliteReadUserVersion(db: db)
         guard currentVersion < CustomDictionarySchema.schemaVersion else { return }
@@ -41,8 +41,8 @@ enum CustomDictionaryMigrator {
         // the derived VALUES are then rebuilt once, below. Every reachable
         // version is behind the current derivation (that is what a bump means),
         // so backfilling per branch would only repeat the same work.
-        // 中文: 版本分支只放各步驟新增的 DDL;衍生「值」統一在下面重建一次
-        // 中文:   (任何舊版都落後目前的衍生邏輯,逐分支回填只是重複做一樣的事)。
+        // 版本分支只放各步驟新增的 DDL;衍生「值」統一在下面重建一次
+        //   (任何舊版都落後目前的衍生邏輯,逐分支回填只是重複做一樣的事)。
         if currentVersion < 1 {
             addMissingDerivedColumns(db: db)
         }
@@ -64,8 +64,8 @@ enum CustomDictionaryMigrator {
 
     /// Add derived columns via `ALTER TABLE` when missing. The whitelist is
     /// required because SQLite DDL cannot parameterize column identifiers.
-    // 中文: 缺欄位才 ALTER TABLE 加上去。SQLite DDL 不接受參數化欄位名,
-    // 中文: 所以要靠 derivedColumns whitelist 防 SQL injection。
+    // 缺欄位才 ALTER TABLE 加上去。SQLite DDL 不接受參數化欄位名,
+    // 所以要靠 derivedColumns whitelist 防 SQL injection。
     private static func addMissingDerivedColumns(db: OpaquePointer) {
         for column in CustomDictionarySchema.derivedColumns
             where !CustomDictionarySchema.columnExists(db: db, column: column)
@@ -80,8 +80,8 @@ enum CustomDictionaryMigrator {
     /// Re-derive `notone` / `abbrev` / `roman_num` for every row. Reuses a
     /// single prepared UPDATE (reset + clear bindings per iteration) so the
     /// cost scales O(N) in rows rather than O(N) in prepared statements.
-    // 中文: 對所有 row 重新 derive 三個衍生欄位。重用一個 prepared statement,
-    // 中文: 成本隨 row 數線性,而不是 prepared statement 數。
+    // 對所有 row 重新 derive 三個衍生欄位。重用一個 prepared statement,
+    // 成本隨 row 數線性,而不是 prepared statement 數。
     private static func backfillDerivedColumns(db: OpaquePointer) {
         var selectStmt: OpaquePointer?
         guard sqlite3_prepare_v2(
@@ -119,8 +119,8 @@ enum CustomDictionaryMigrator {
     /// Delete-then-insert per entry so a re-run (after a derivation-logic
     /// change) replaces stale rows rather than duplicating them. Reuses three
     /// prepared statements across rows. Non-destructive to `custom_dictionary`.
-    // 中文: 為所有既有 entry 補建 custom_search_key 側表。每個 entry 先刪後插,
-    // 中文: 重跑時取代舊鍵而非重複。重用 prepared statement,不動 custom_dictionary 使用者資料。
+    // 為所有既有 entry 補建 custom_search_key 側表。每個 entry 先刪後插,
+    // 重跑時取代舊鍵而非重複。重用 prepared statement,不動 custom_dictionary 使用者資料。
     private static func backfillSearchKeys(db: OpaquePointer) {
         var selectStmt: OpaquePointer?
         guard sqlite3_prepare_v2(

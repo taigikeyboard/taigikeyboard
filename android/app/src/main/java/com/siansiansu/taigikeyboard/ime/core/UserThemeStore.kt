@@ -1,4 +1,4 @@
-// 中文: 使用者自訂主題儲存 — 純 JSON parse/write(read/write lambda 注入,免綁 DataStore),上限 5。對齊 iOS UserThemeStore。
+// 使用者自訂主題儲存 — 純 JSON parse/write(read/write lambda 注入,免綁 DataStore),上限 5。對齊 iOS UserThemeStore。
 
 package com.siansiansu.taigikeyboard.ime.core
 

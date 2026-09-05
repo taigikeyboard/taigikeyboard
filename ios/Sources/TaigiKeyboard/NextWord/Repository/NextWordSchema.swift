@@ -1,5 +1,5 @@
-// 中文: user_association.db 的 schema 與向前遷移。只負責 DDL,
-// 中文: 不處理 pruning / capacity / scoring。
+// user_association.db 的 schema 與向前遷移。只負責 DDL,
+// 不處理 pruning / capacity / scoring。
 
 import Foundation
 import SQLite3
@@ -9,12 +9,12 @@ import SQLite3
 /// Owns the `PRAGMA user_version` contract for `user_association.db`.
 /// DDL only — no pruning, capacity, or scoring policy.
 /// Callers must serialize access (typically via `SQLiteConnectionManager.execute`).
-// 中文: NextWord 使用者資料庫的建表與遷移工具。透過 PRAGMA user_version 控管版本。
+// NextWord 使用者資料庫的建表與遷移工具。透過 PRAGMA user_version 控管版本。
 enum NextWordSchema {
     /// Schema version for `user_association.db`. CROSS-PLATFORM INVARIANT —
     /// mirrors Android `NextWordService.DATABASE_VERSION` and macOS
     /// `UserAssociationStore.schemaVersion`. Drift causes silent divergence.
-    // 中文: schema 版本號,需與 Android DATABASE_VERSION、macOS schemaVersion 對齊。
+    // schema 版本號,需與 Android DATABASE_VERSION、macOS schemaVersion 對齊。
     static let schemaVersion = 6
 
     private static let tableName = "user_association"
@@ -29,8 +29,8 @@ enum NextWordSchema {
     ///
     /// Safe to call repeatedly. At `schemaVersion` it only re-asserts the
     /// `IF NOT EXISTS` DDL, which is a no-op.
-    // 中文: 把 DB 帶到目前版本,再確保終態 table/index 存在。升級全程單一交易 —
-    // 中文: rebuild、終態 DDL、版本號一起成敗,避免「標了 v6 但 schema 不完整」。
+    // 把 DB 帶到目前版本,再確保終態 table/index 存在。升級全程單一交易 —
+    // rebuild、終態 DDL、版本號一起成敗,避免「標了 v6 但 schema 不完整」。
     static func ensureTables(db: OpaquePointer, logger: DebugLogger) throws {
         let currentVersion = try sqliteQueryScalarInt(db: db, "PRAGMA user_version")
         guard currentVersion < schemaVersion else {
@@ -67,7 +67,7 @@ enum NextWordSchema {
     /// is the `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
     /// bigram's PREVIOUS side as well as its next: 重/tîng → 複 and 重/tāng → 複
     /// are two observations, not one. See `behavioral-invariants.md` §24.
-    // 中文: v6 主表 — UNIQUE 四欄含 prev_tl,因為前詞的身分同樣是 (漢字, canonical TL) 對。
+    // v6 主表 — UNIQUE 四欄含 prev_tl,因為前詞的身分同樣是 (漢字, canonical TL) 對。
     private static func createTables(db: OpaquePointer) throws {
         try sqliteExecChecked(db: db, tableDDL(named: tableName))
     }
@@ -91,7 +91,7 @@ enum NextWordSchema {
     /// `WHERE prev_word = ?` from its left prefix, and its `prev_tl` tier
     /// ordering from the second column. The single-column `idx_user_prev_word`
     /// is a strict subset and was dropped in v5.
-    // 中文: 單一讀取索引 (prev_word, prev_tl) — 左前綴服務 WHERE,第二欄服務 prev_tl 分層排序。
+    // 單一讀取索引 (prev_word, prev_tl) — 左前綴服務 WHERE,第二欄服務 prev_tl 分層排序。
     private static func createIndexes(db: OpaquePointer) throws {
         try sqliteExecChecked(
             db: db,
@@ -118,8 +118,8 @@ enum NextWordSchema {
     ///   a table-level UNIQUE, so widening the key means rebuilding the table
     ///   anyway, and a rebuild that reads the columns it finds subsumes every
     ///   intermediate step (v3's missing `prev_tl` included).
-    // 中文: 把 pre-v6 帶到 v6 形狀(在呼叫端的交易內)。v<3 沿用既有的直接重建;
-    // 中文: v3~v5 走單一收斂 rebuild(SQLite 無法 ALTER 表級 UNIQUE,本來就得重建)。
+    // 把 pre-v6 帶到 v6 形狀(在呼叫端的交易內)。v<3 沿用既有的直接重建;
+    // v3~v5 走單一收斂 rebuild(SQLite 無法 ALTER 表級 UNIQUE,本來就得重建)。
     private static func migrate(db: OpaquePointer, from currentVersion: Int) throws {
         if currentVersion < 3 {
             try sqliteExecChecked(db: db, "DROP TABLE IF EXISTS \(tableName);")
@@ -149,9 +149,9 @@ enum NextWordSchema {
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// android/…/ime/dictionary/NextWordService.kt `rebuildToV6`.
     /// Drift causes silent divergence.
-    // 中文: 以 v6 key 重建表並保留所有列。加寬 UNIQUE 不可能衝突(舊 key 是新 key 子集),
-    // 中文: 故不需去重。id 一併複製(它是讀取端挑列的最終 tiebreak,重編號會改變贏家)。
-    // 中文: 順序採 SQLite 官方寫法:建新→複製→丟舊→改名。
+    // 以 v6 key 重建表並保留所有列。加寬 UNIQUE 不可能衝突(舊 key 是新 key 子集),
+    // 故不需去重。id 一併複製(它是讀取端挑列的最終 tiebreak,重編號會改變贏家)。
+    // 順序採 SQLite 官方寫法:建新→複製→丟舊→改名。
     private static func rebuildToV6(db: OpaquePointer) throws {
         // A v3 table predates the `prev_tl` column, and an Android DB that came
         // up the v0/v1 ladder can be stamped v5 without it. Read what is there

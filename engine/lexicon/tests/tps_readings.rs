@@ -9,8 +9,8 @@
 //! ordering explicitly — reading recovery must be an ADDITION with the
 //! user's literal text first, never a replacement.
 
-// 中文: §35 hermetic — 以 wire 格式 in-memory FST 釘 TPS 歧義讀法解析:
-// 中文:   字面優先排序、barrier 方向限制、部分前綴讀法。
+// §35 hermetic — 以 wire 格式 in-memory FST 釘 TPS 歧義讀法解析:
+//   字面優先排序、barrier 方向限制、部分前綴讀法。
 
 use std::path::PathBuf;
 

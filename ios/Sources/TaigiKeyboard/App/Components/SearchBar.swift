@@ -1,4 +1,4 @@
-// 中文: 可重用的搜尋列元件,以 .safeAreaInset 釘在 List 底部。
+// 可重用的搜尋列元件,以 .safeAreaInset 釘在 List 底部。
 
 import SwiftUI
 
@@ -10,7 +10,7 @@ import SwiftUI
 ///     SearchBar(text: $filterText, placeholder: "Search")
 /// }
 /// ```
-// 中文: 底部固定式搜尋列。text 雙向綁定,placeholder 為空白時顯示的提示。
+// 底部固定式搜尋列。text 雙向綁定,placeholder 為空白時顯示的提示。
 struct SearchBar: View {
     @Binding var text: String
     let placeholder: String

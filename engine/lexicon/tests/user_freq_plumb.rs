@@ -23,7 +23,7 @@
 //! invariants (Tier 1 ordering, mode derive) are pinned in that file;
 //! this file scopes to 9.3a-specific axes.
 
-// 中文: Phase 9.3a — user-frequency plumb 契約測試;hermetic 鎖 boost / 飽和 / recency / cold-start / 防 clock skew。
+// Phase 9.3a — user-frequency plumb 契約測試;hermetic 鎖 boost / 飽和 / recency / cold-start / 防 clock skew。
 
 use std::path::PathBuf;
 
@@ -41,7 +41,7 @@ use ranking::{build_frequency_map, FrequencyMap, MAX_BOOST, RECENCY_WINDOW_MS};
 /// the custom field. `enabled_sources_bitmask = u32::MAX` matches
 /// every other 9.3a test (filter narrowing is covered in
 /// `span_local_fetch.rs`).
-// 中文: D7 — 把 ContinuousFetchCtx 收進 helper,call site 由 8 個位置參數縮到 4 個 + 1 個 ctx 引用。
+// D7 — 把 ContinuousFetchCtx 收進 helper,call site 由 8 個位置參數縮到 4 個 + 1 個 ctx 引用。
 fn ctx<'a>(
     freq_map: &'a FrequencyMap,
     now_ms: i64,
@@ -52,7 +52,7 @@ fn ctx<'a>(
     // plumbing and never hits the canonicalize path (`custom = &[]`
     // forces the only B-4-touched site, `custom_entry_to_candidate`,
     // unreachable).
-    // 中文: B-4 — TL 預設,此套件 custom 強制空,B-4 路徑不會觸發。
+    // B-4 — TL 預設,此套件 custom 強制空,B-4 路徑不會觸發。
     ContinuousFetchCtx {
         enabled_sources_bitmask: u32::MAX,
         freq_map,

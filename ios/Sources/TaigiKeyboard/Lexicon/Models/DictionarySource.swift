@@ -1,5 +1,5 @@
-// 中文: 辭典來源 enum — 對應 dictionary.csv 欄位,標示搜尋結果的來源歸屬。
-// 中文: bit 位置由 dictionary/common/source_bits.py 與 LexiconBitmask 共同擁有,allCases 順序非載入相依。
+// 辭典來源 enum — 對應 dictionary.csv 欄位,標示搜尋結果的來源歸屬。
+// bit 位置由 dictionary/common/source_bits.py 與 LexiconBitmask 共同擁有,allCases 順序非載入相依。
 
 import Foundation
 
@@ -19,7 +19,7 @@ import Foundation
 // MARK: - Shared-Core Candidate
 
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
-// 中文: 對應 dictionary.csv 欄位的辭典來源,custom 為 UI 標記用,沒有 dictionary.bin bit。
+// 對應 dictionary.csv 欄位的辭典來源,custom 為 UI 標記用,沒有 dictionary.bin bit。
 enum DictionarySource: String, CaseIterable {
     case kautian // 教育部臺灣台語常用詞辭典
     case taigitv // 台語新詞辭庫

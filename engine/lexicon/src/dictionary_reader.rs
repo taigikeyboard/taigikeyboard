@@ -15,8 +15,8 @@
 //! filter. dev (bit 10) is a normal toggleable source in the source-OR
 //! mask (詞庫增補檔案 toggle, default on), no longer an unconditional floor.
 
-// 中文: DictionaryReader — TKDB 詞庫二進位 mmap 讀取器。
-// 中文: 以 1-based rowid 索引;passes_filter 為 4 層過濾 (variant → khiin → kautian subcollection gate → 來源 OR)。dev (bit 10) 為一般可切換來源 (詞庫增補檔案開關,預設開)。
+// DictionaryReader — TKDB 詞庫二進位 mmap 讀取器。
+// 以 1-based rowid 索引;passes_filter 為 4 層過濾 (variant → khiin → kautian subcollection gate → 來源 OR)。dev (bit 10) 為一般可切換來源 (詞庫增補檔案開關,預設開)。
 
 use mmap_host::MmapHandle;
 
@@ -32,13 +32,13 @@ const RECORD_FIXED_PREFIX: usize = 11;
 /// Bit positions for the 12-source bitmask. Mirrors
 /// `dictionary/common/source_bits.py::SOURCE_BITS` (positions 0-11) +
 /// `IS_VARIANT_BIT` at bit 12. Drift causes silent filter divergence.
-// 中文: kautian 來源位元 (bit 0),subcollection gate 會在 OR 前清掉此位元。
+// kautian 來源位元 (bit 0),subcollection gate 會在 OR 前清掉此位元。
 pub const KAUTIAN_BIT: u16 = 1 << 0;
-// 中文: khiin 來源位元 (bit 9)。
+// khiin 來源位元 (bit 9)。
 pub const KHIIN_BIT: u16 = 1 << 9;
-// 中文: dev 來源位元 (bit 10),受詞庫增補檔案開關控制 (預設開,經 enabled_mask 過濾)。
+// dev 來源位元 (bit 10),受詞庫增補檔案開關控制 (預設開,經 enabled_mask 過濾)。
 pub const DEV_BIT: u16 = 1 << 10;
-// 中文: 異體字標記位元 (bit 12),由 variant 過濾邏輯使用。
+// 異體字標記位元 (bit 12),由 variant 過濾邏輯使用。
 pub const VARIANT_BIT: u16 = 1 << 12;
 
 /// kautian subcollection subtag (dictionary.bin v3) — a SEPARATE u16 per
@@ -48,12 +48,12 @@ pub const VARIANT_BIT: u16 = 1 << 12;
 /// bits 1..=10 = accent_mask (10 dialect columns), bit 11 = name; bits 12-15
 /// reserved. Reserved bits are masked off on read so a future writer cannot
 /// corrupt the filter AND.
-// 中文: kautian subcollection subtag (v3) — 與 bitmask 分離的 u16;bit0=主條目, bit1-10=腔調, bit11=姓名附錄, 12-15 保留。
+// kautian subcollection subtag (v3) — 與 bitmask 分離的 u16;bit0=主條目, bit1-10=腔調, bit11=姓名附錄, 12-15 保留。
 pub const KAUTIAN_SUBTAG_USED_MASK: u16 = 0x0FFF;
 /// Subtag bit positions (mirror `source_bits.py::KAUTIAN_SUBTAG_*`). The
 /// ENCODE side (`dictionary_filters::compute_filters`) packs the wire enable
 /// mask from these so the subcollection bit layout lives in Rust only.
-// 中文: subtag 位元位置 (鏡射 source_bits.py);ENCODE 端用這些打包 wire 啟用遮罩,佈局只存在 Rust。
+// subtag 位元位置 (鏡射 source_bits.py);ENCODE 端用這些打包 wire 啟用遮罩,佈局只存在 Rust。
 pub const KAUTIAN_SUBTAG_MAIN_BIT: u16 = 0;
 pub const KAUTIAN_SUBTAG_ACCENT_SHIFT: u16 = 1;
 pub const KAUTIAN_SUBTAG_ACCENT_COUNT: usize = 10;
@@ -67,29 +67,29 @@ pub const KAUTIAN_SUBTAG_NAME_BIT: u16 = 11;
 /// `u32::MAX` (the all-enabled sentinel) also carries bit 13 set; a real
 /// platform mask (Phase 3 `compute_filters`) sets bit 13 + the 12 bits
 /// explicitly and MUST never equal `u32::MAX`.
-// 中文: 線上格式 — 使用者的 kautian subcollection 啟用位元放在 enabled_sources_bitmask 高位;bit13=啟用旗標 (0=略過過濾=全開), bit14-25=啟用遮罩 (與 subtag 同佈局)。
+// 線上格式 — 使用者的 kautian subcollection 啟用位元放在 enabled_sources_bitmask 高位;bit13=啟用旗標 (0=略過過濾=全開), bit14-25=啟用遮罩 (與 subtag 同佈局)。
 pub const WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT: u32 = 1 << 13;
 pub const WIRE_KAUTIAN_SUBCOLL_SHIFT: u32 = 14;
 pub const WIRE_KAUTIAN_SUBCOLL_MASK: u32 = 0x0FFF;
 
-// 中文: 字典紀錄 — 來源 bitmask、出現頻率、漢字 (可選)、TL 羅馬字、音節數。
+// 字典紀錄 — 來源 bitmask、出現頻率、漢字 (可選)、TL 羅馬字、音節數。
 #[derive(Debug, Clone)]
 pub struct DictionaryRecord {
-    // 中文: 來源 + 異體字標記的 13 位元 bitmask。
+    // 來源 + 異體字標記的 13 位元 bitmask。
     pub bitmask: u16,
-    // 中文: 詞頻,用於候選詞排序 (DESC)。
+    // 詞頻,用於候選詞排序 (DESC)。
     pub frequency: u32,
-    // 中文: 漢字寫法 (可選,部分音節無對應漢字)。
+    // 漢字寫法 (可選,部分音節無對應漢字)。
     pub hanzi: Option<String>,
-    // 中文: TL 羅馬字寫法 (必填)。
+    // TL 羅馬字寫法 (必填)。
     pub tl: String,
-    // 中文: TL key 的音節數 (1..=4)。
+    // TL key 的音節數 (1..=4)。
     pub syllable_count: u8,
-    // 中文: kautian subcollection subtag (v3);非 kautian 列為 0。保留位元已遮除。
+    // kautian subcollection subtag (v3);非 kautian 列為 0。保留位元已遮除。
     pub kautian_subtag: u16,
 }
 
-// 中文: TKDB mmap 讀取器,持有 mmap handle 與紀錄數等 header 資訊。
+// TKDB mmap 讀取器,持有 mmap handle 與紀錄數等 header 資訊。
 pub struct DictionaryReader {
     handle: MmapHandle,
     record_count: u32,
@@ -105,28 +105,28 @@ impl std::fmt::Debug for DictionaryReader {
     }
 }
 
-// 中文: 3 層過濾條件 — variant、khiin、來源 mask 三段獨立控制。
+// 3 層過濾條件 — variant、khiin、來源 mask 三段獨立控制。
 #[derive(Debug, Clone, Copy)]
 pub struct Filter {
     /// All variant entries excluded when false.
-    // 中文: false 時排除所有異體字紀錄 (bit 12)。
+    // false 時排除所有異體字紀錄 (bit 12)。
     pub variant: bool,
     /// Khiin source excluded when false.
-    // 中文: false 時排除 khiin 來源紀錄 (bit 9)。
+    // false 時排除 khiin 來源紀錄 (bit 9)。
     pub khiin: bool,
     /// All sources enabled when true (skips per-source mask check).
-    // 中文: true 時略過 enabled_mask 比對,直接通過。
+    // true 時略過 enabled_mask 比對,直接通過。
     pub all_enabled: bool,
     /// Per-source enable bitmask (12 bits, low-order = source bit).
-    // 中文: 啟用來源的 12 位元 bitmask。
+    // 啟用來源的 12 位元 bitmask。
     pub enabled_mask: u16,
     /// kautian subcollection filtering active (wire bit 13). False ⇒ skip the
     /// subcollection gate entirely (legacy / all-on, zero behaviour change).
-    // 中文: kautian subcollection 過濾旗標 (wire bit 13);false ⇒ 略過過濾 (全開)。
+    // kautian subcollection 過濾旗標 (wire bit 13);false ⇒ 略過過濾 (全開)。
     pub kautian_subcoll_active: bool,
     /// Enabled kautian subcollections — 12-bit mask, SAME layout as the record
     /// subtag (main | accent[10] | name).
-    // 中文: 啟用的 kautian subcollection 12 位元遮罩,佈局與 record subtag 相同。
+    // 啟用的 kautian subcollection 12 位元遮罩,佈局與 record subtag 相同。
     pub kautian_subcoll_mask: u16,
 }
 
@@ -139,7 +139,7 @@ impl Filter {
     /// [`DictionaryReader::passes_filter`].
     /// Pinned by `INVARIANT_LEX_FILTER_BITMASK` (audit §4); the layout
     /// must stay byte-identical to the platform encoder.
-    // 中文: 把平台送過來的 32-bit enabled_sources_bitmask 解成 3 軸 Filter;bit 12 / 9 是 variant / khiin gate。
+    // 把平台送過來的 32-bit enabled_sources_bitmask 解成 3 軸 Filter;bit 12 / 9 是 variant / khiin gate。
     pub fn from_enabled_bitmask(enabled_sources_bitmask: u32) -> Self {
         Self {
             variant: (enabled_sources_bitmask & (1 << 12)) != 0,
@@ -155,7 +155,7 @@ impl Filter {
 }
 
 impl DictionaryReader {
-    // 中文: 開啟並驗證 dictionary.bin — 檢查 magic、版本與 offset 表大小。
+    // 開啟並驗證 dictionary.bin — 檢查 magic、版本與 offset 表大小。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
         let handle = MmapHandle::open_readonly(path).map_err(|source| LexiconError::Mmap {
             path: path.display().to_string(),
@@ -207,19 +207,19 @@ impl DictionaryReader {
         })
     }
 
-    // 中文: 回傳 dictionary.bin 中紀錄總數。
+    // 回傳 dictionary.bin 中紀錄總數。
     pub fn record_count(&self) -> u32 {
         self.record_count
     }
 
-    // 中文: 回傳 dictionary.bin 的 build timestamp (供版本對齊驗證使用)。
+    // 回傳 dictionary.bin 的 build timestamp (供版本對齊驗證使用)。
     pub fn build_timestamp(&self) -> u32 {
         self.build_timestamp
     }
 
     /// Read a record by 1-based rowid. Returns `None` if rowid is out of
     /// range or the record bytes are malformed.
-    // 中文: 以 1-based rowid 讀取單筆字典紀錄;rowid 越界或格式錯誤回傳 None。
+    // 以 1-based rowid 讀取單筆字典紀錄;rowid 越界或格式錯誤回傳 None。
     pub fn record(&self, rowid: u32) -> Option<DictionaryRecord> {
         if rowid == 0 || rowid > self.record_count {
             return None;
@@ -295,8 +295,8 @@ impl DictionaryReader {
     /// its other sources and inherits the other source's ranking tier. Rows
     /// without the kautian bit, and the legacy/all-on case (`!active`), pass
     /// through unchanged.
-    // 中文: kautian subcollection gate (DD6) — 過濾與排序 tier 共用的單一真實來源。
-    // 中文: 過濾啟用且為 kautian 列時,若無任何 subcollection 啟用則清掉 kautian 位元 (其他來源不動,保留 DD6 多來源)。
+    // kautian subcollection gate (DD6) — 過濾與排序 tier 共用的單一真實來源。
+    // 過濾啟用且為 kautian 列時,若無任何 subcollection 啟用則清掉 kautian 位元 (其他來源不動,保留 DD6 多來源)。
     pub fn effective_source_bitmask(
         record_bitmask: u16,
         record_subtag: u16,
@@ -318,7 +318,7 @@ impl DictionaryReader {
     /// [`Self::effective_source_bitmask`] so a fully-disabled kautian row drops
     /// only its kautian contribution. dev (bit 10) is carried in
     /// `enabled_mask` like any other source.
-    // 中文: 過濾 — variant 排除 → khiin 排除 → kautian subcollection gate → 來源 OR (dev 同一般來源,經 enabled_mask)。
+    // 過濾 — variant 排除 → khiin 排除 → kautian subcollection gate → 來源 OR (dev 同一般來源,經 enabled_mask)。
     pub fn passes_filter(record_bitmask: u16, record_subtag: u16, filter: &Filter) -> bool {
         if !filter.variant && (record_bitmask & VARIANT_BIT) != 0 {
             return false;

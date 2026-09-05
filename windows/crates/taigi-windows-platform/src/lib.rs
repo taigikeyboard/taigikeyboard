@@ -22,7 +22,7 @@ pub mod keyboard_hook;
 #[cfg(windows)]
 pub mod os_out_buffer;
 
-// 中文: DLL 與設定視窗共用的少量 Win32 呼叫;非 Windows 主機給中性值,讓呼叫端在 macOS 上可測。
+// DLL 與設定視窗共用的少量 Win32 呼叫;非 Windows 主機給中性值,讓呼叫端在 macOS 上可測。
 
 /// The user's preferred UI language, e.g. `zh-TW` / `ja-JP` / `en-US`, for
 /// the `system` display language. Empty when the platform cannot say.

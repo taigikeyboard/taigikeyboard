@@ -1,7 +1,7 @@
 // ActionHandler extension: per-key action handlers (character, space, backspace, return).
 // Each handler returns true if handled (skips KeyboardKit default).
-// 中文: ActionHandler 的核心鍵動作擴充 — 字元 / 空白 / 退格 / Return。
-// 中文: 每個 handler 回 true 代表已處理,呼叫端會跳過 KeyboardKit 預設行為。
+// ActionHandler 的核心鍵動作擴充 — 字元 / 空白 / 退格 / Return。
+// 每個 handler 回 true 代表已處理,呼叫端會跳過 KeyboardKit 預設行為。
 
 import Foundation
 import KeyboardKit
@@ -10,7 +10,7 @@ extension ActionHandler {
     // MARK: - Character Input
 
     /// Returns true if handled (skip KeyboardKit default)
-    // 中文: 字元鍵入口。會做大小寫轉換、TPS 鍵層調整,再依模式進入組字或直接送字。
+    // 字元鍵入口。會做大小寫轉換、TPS 鍵層調整,再依模式進入組字或直接送字。
     func handleCharacterInput(_ char: String) -> Bool {
         let currentCase = keyboardContext.keyboardCase
         let autoCap = keyboardContext.settings.isAutocapitalizationEnabled
@@ -107,8 +107,8 @@ extension ActionHandler {
             // were NOT composing (Codex pre-impl P1). clearDisplay() bumps the
             // NextWord generation so the in-flight prediction query is dropped
             // stale; it is a cheap no-op when nothing is showing.
-            // 中文: Model B — 標點抑制下詞顯示(與 Space 一致);無條件呼叫對齊
-            // 中文: Android,連非組字時的殘留 strip 也一併清掉。
+            // Model B — 標點抑制下詞顯示(與 Space 一致);無條件呼叫對齊
+            // Android,連非組字時的殘留 strip 也一併清掉。
             nextWordController.clearDisplay()
             insertNonComposingCharacter(finalChar)
             return true
@@ -151,9 +151,9 @@ extension ActionHandler {
 
     // MARK: - Space
 
-    // 中文: 空白鍵 — English 直接插入;TPS 模式視為音節邊界 / 調 1 標記;
-    // 中文: Taigi 模式組字中時送出當前 derived,並交給 NextWord 記錄關聯。
-    // 中文: 勿在此加拖曳判斷 — spacebar 拖曳手勢由 ActionHandler.handle 攔掉,不會走到這裡。
+    // 空白鍵 — English 直接插入;TPS 模式視為音節邊界 / 調 1 標記;
+    // Taigi 模式組字中時送出當前 derived,並交給 NextWord 記錄關聯。
+    // 勿在此加拖曳判斷 — spacebar 拖曳手勢由 ActionHandler.handle 攔掉,不會走到這裡。
     func handleSpaceAction() -> Bool {
         // English mode: insert space directly
         if settings.inputMode == .english {
@@ -183,8 +183,8 @@ extension ActionHandler {
             // SUPPRESSES the next-word *display*: clearDisplay() AFTER the
             // commit bumps the NextWord generation so the engine's in-flight
             // prediction query is dropped stale.
-            // 中文: Model B — 引擎 commit 已記關聯(唯一來源);Space 用 clearDisplay()
-            // 中文: 在 commit 後抑制下詞顯示(舊手動 process 會雙記關聯)。
+            // Model B — 引擎 commit 已記關聯(唯一來源);Space 用 clearDisplay()
+            // 在 commit 後抑制下詞顯示(舊手動 process 會雙記關聯)。
             composingManager.commitComposition()
             keyboardContext.textDocumentProxy.insertText(" ")
             nextWordController.clearDisplay()
@@ -196,8 +196,8 @@ extension ActionHandler {
 
     // MARK: - Backspace
 
-    // 中文: 退格鍵 — English 直接 deleteBackward;Taigi 組字中走引擎退格,
-    // 中文: 否則對輸入框退格並依剩餘上下文重新預測 NextWord。
+    // 退格鍵 — English 直接 deleteBackward;Taigi 組字中走引擎退格,
+    // 否則對輸入框退格並依剩餘上下文重新預測 NextWord。
     func handleBackspaceAction() -> Bool {
         let caseBefore = String(describing: keyboardContext.keyboardCase)
         logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore)")
@@ -225,7 +225,7 @@ extension ActionHandler {
 
     /// Re-predict NextWord after backspace based on last remaining character.
     /// Extracts context from text proxy, then delegates to NextWordController.
-    // 中文: 退格後依剩下的最後一個字元重新預測 NextWord(非候選詞選取,不記錄關聯)。
+    // 退格後依剩下的最後一個字元重新預測 NextWord(非候選詞選取,不記錄關聯)。
     private func handleBackspaceForNextWord() {
         let textBeforeCursor = keyboardContext.textDocumentProxy.documentContextBeforeInput ?? ""
         let trimmedText = textBeforeCursor.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -241,8 +241,8 @@ extension ActionHandler {
 
     // MARK: - Return
 
-    // 中文: Return 鍵 — English 直接插入換行;Taigi 組字中時 index 0 送 raw、其它送選中候選,
-    // 中文: 並依 isAutoSpaceEnabled 決定是否自動補空白。
+    // Return 鍵 — English 直接插入換行;Taigi 組字中時 index 0 送 raw、其它送選中候選,
+    // 並依 isAutoSpaceEnabled 決定是否自動補空白。
     func handleReturnAction() -> Bool {
         // English mode: insert newline directly
         if settings.inputMode == .english {
@@ -281,8 +281,8 @@ extension ActionHandler {
                 // double-recorded the association. Removing it is
                 // behavior-preserving and makes the engine effect the SOLE
                 // source (§10.3).
-                // 中文: Model B — commitRawInput 由引擎發終端 NextWord;Enter 保留引擎
-                // 中文: 預測;移除冗餘手動 process(swapped 時本就 no-op,否則雙記關聯)。
+                // Model B — commitRawInput 由引擎發終端 NextWord;Enter 保留引擎
+                // 預測;移除冗餘手動 process(swapped 時本就 no-op,否則雙記關聯)。
                 composingManager.commitRawInput()
                 committedText = capturedRawInput
                 wroteRomanization = Self.rawPreeditWritesRomanization(isTPSLayout: isTPSLayout)

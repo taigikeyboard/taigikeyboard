@@ -12,7 +12,7 @@
 //! the Mac against temporary directories. Only `directory::user_data_directory`
 //! reads `%APPDATA%`, and it is a pure environment lookup.
 
-// 中文: 使用者資料落地層 — 三個學習資料庫 + settings.json;SQL 與 macOS/iOS/Android 逐字相同。
+// 使用者資料落地層 — 三個學習資料庫 + settings.json;SQL 與 macOS/iOS/Android 逐字相同。
 
 mod association;
 mod capacity;

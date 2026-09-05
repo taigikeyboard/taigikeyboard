@@ -1,7 +1,7 @@
 //! What the two candidate operations answer: a query's three kinds of
 //! nothing, and what a commit actually did. Port of `CandidateOutcomes.swift`.
 
-// 中文: 候選查詢的三種「沒有」與候選送出的四種結果 — 從效果讀,不從鏡像讀。
+// 候選查詢的三種「沒有」與候選送出的四種結果 — 從效果讀,不從鏡像讀。
 
 use crate::engine::{ComposingTransition, ContinuousCandidate, Effect};
 

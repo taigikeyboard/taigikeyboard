@@ -2,7 +2,7 @@
 //! to the document as English — the Windows CJK 中/英 mode, toggled by a
 //! Shift tap (`ShiftTapTracker`).
 
-// 中文: 中/英 模式 —— 台語組字 或 英文直通。Windows 慣例,用 Shift 短按切換。
+// 中/英 模式 —— 台語組字 或 英文直通。Windows 慣例,用 Shift 短按切換。
 
 use crate::strings::StringKey;
 

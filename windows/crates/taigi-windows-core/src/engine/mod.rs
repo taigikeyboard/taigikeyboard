@@ -6,7 +6,7 @@
 //! every `file:line` in `docs/engine/` applies here too. Port of
 //! `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge*.swift`.
 
-// 中文: 引擎橋接 — 與其他三平台相同的 protobuf 信封,直接呼叫 dispatch,無 FFI。
+// 引擎橋接 — 與其他三平台相同的 protobuf 信封,直接呼叫 dispatch,無 FFI。
 
 mod bridge;
 mod composing;

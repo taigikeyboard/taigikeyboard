@@ -60,7 +60,7 @@ internal object DictionaryInfoData {
 // i18n key for a dictionary source's compact badge label, resolved at the call
 // site via the active display language. Kept here (UI layer) so the shared-core
 // `DictionarySource` enum stays free of app i18n types.
-// 中文: 來源 badge 短標籤的 i18n key — 放 UI 層映射,讓 shared-core enum 不依賴 i18n 型別。
+// 來源 badge 短標籤的 i18n key — 放 UI 層映射,讓 shared-core enum 不依賴 i18n 型別。
 private fun DictionarySource.tagKey(): StringKey =
     when (this) {
         DictionarySource.KAUTIAN -> StringKey.DICTIONARY_KAUTIAN_TAG

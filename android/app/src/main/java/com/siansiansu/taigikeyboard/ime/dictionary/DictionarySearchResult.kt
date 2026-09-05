@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 中文: Tab3 字典查詢結果值型別 — 額外帶 sources(顯示哪些字典有此詞)。
-// 中文: chhoeUrl()/moeUrl() 委派給 ExternalLookupURLBuilder。
+// Tab3 字典查詢結果值型別 — 額外帶 sources(顯示哪些字典有此詞)。
+// chhoeUrl()/moeUrl() 委派給 ExternalLookupURLBuilder。
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 

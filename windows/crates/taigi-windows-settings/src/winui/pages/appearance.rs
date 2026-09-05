@@ -8,7 +8,7 @@
 //! Settings itself uses for "Choose your mode" — and, since 2026-09-02, what
 //! the Mac draws too.
 
-// 中文: 外觀 pane — 亮暗模式、候選窗版面/大小/字型 picker、恢復預設。
+// 外觀 pane — 亮暗模式、候選窗版面/大小/字型 picker、恢復預設。
 
 use super::choice_row;
 use crate::winui::cards;

@@ -1,4 +1,4 @@
-// 中文: 候選詞 view 的樣式系統 — Style / ItemStyle 兩層,並支援 iOS 26 Liquid Glass。
+// 候選詞 view 的樣式系統 — Style / ItemStyle 兩層,並支援 iOS 26 Liquid Glass。
 
 import KeyboardKit
 import SwiftUI

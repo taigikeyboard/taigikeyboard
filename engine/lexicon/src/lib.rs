@@ -10,8 +10,8 @@
 //! Crate is `unsafe_code = "forbid"`. The mmap unsafe carve-out lives
 //! exclusively in `engine/mmap-host`.
 
-// 中文: lexicon crate — 詞庫讀取路徑的 Rust 實作。
-// 中文: 包含 FST 前綴索引、TKDB/TKWA 二進位讀取器與搜尋協調邏輯,服務 IME 候選詞、Tab3 字典查詢與 NextWord bigram 查詢。
+// lexicon crate — 詞庫讀取路徑的 Rust 實作。
+// 包含 FST 前綴索引、TKDB/TKWA 二進位讀取器與搜尋協調邏輯,服務 IME 候選詞、Tab3 字典查詢與 NextWord bigram 查詢。
 
 pub mod api;
 pub mod association_reader;
@@ -46,8 +46,8 @@ pub use continuous::{
 // goes through `composing::continuous::fetch_via_lexicon_inner` →
 // `fetch_candidates_for_keys` directly. Hide the re-export from
 // rustdoc so the crate's public API surface no longer advertises it.
-// 中文: D8 — fetch_candidates_for_endings 為 test-only;production 直呼 fetch_candidates_for_keys。
-// 中文:   re-export 標 doc(hidden) 把它從 rustdoc 公開面隱藏,但跨 crate 仍可見供整合測試使用。
+// D8 — fetch_candidates_for_endings 為 test-only;production 直呼 fetch_candidates_for_keys。
+//   re-export 標 doc(hidden) 把它從 rustdoc 公開面隱藏,但跨 crate 仍可見供整合測試使用。
 #[doc(hidden)]
 pub use continuous::fetch_candidates_for_endings;
 pub use error::LexiconError;

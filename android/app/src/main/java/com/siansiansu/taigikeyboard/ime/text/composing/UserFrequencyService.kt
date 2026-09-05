@@ -1,7 +1,7 @@
-// 中文: 使用者用詞頻次服務 — 紀錄每個 displayed word 被選用的次數,
-// 中文: 餵給 Rust ranking pipeline(RustEngineBridge.processCandidates)做頻率加權。
-// 中文: 屬 user_data SQLite,平台側保留(設計如此,不進 Rust;見 feedback_user_data_sqlite_stays_native)。
-// 中文: 由 CompositionRoot 持有。
+// 使用者用詞頻次服務 — 紀錄每個 displayed word 被選用的次數,
+// 餵給 Rust ranking pipeline(RustEngineBridge.processCandidates)做頻率加權。
+// 屬 user_data SQLite,平台側保留(設計如此,不進 Rust;見 feedback_user_data_sqlite_stays_native)。
+// 由 CompositionRoot 持有。
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -121,9 +121,9 @@ class UserFrequencyService(
      * catches + logs them so a transient DB I/O error never aborts the IME
      * boot path.
      */
-    // 中文: 強制打開 SQLite 連線並執行 schema 建立 — 公開後,IME Application onCreate 可提前 warm-up,
-    // 中文: 鏡射 iOS setupCoreServices 的 fire-and-forget pattern。
-    // 中文: 純 DatabaseHelper() 是 cheap 的,實際 DDL 必須觸發 readableDatabase 才會跑,所以這裡主動讀一次。
+    // 強制打開 SQLite 連線並執行 schema 建立 — 公開後,IME Application onCreate 可提前 warm-up,
+    // 鏡射 iOS setupCoreServices 的 fire-and-forget pattern。
+    // 純 DatabaseHelper() 是 cheap 的,實際 DDL 必須觸發 readableDatabase 才會跑,所以這裡主動讀一次。
     suspend fun ensureInitialized() {
         if (dbHelper != null) return
 
@@ -154,7 +154,7 @@ class UserFrequencyService(
      * any DB connection is open. Mirrors iOS
      * `UserFrequencyService.isConnected()`.
      */
-    // 中文: 同步探測 DB 是否已打開過(cold-start gate)。@Volatile 單讀,免鎖無 I/O。
+    // 同步探測 DB 是否已打開過(cold-start gate)。@Volatile 單讀,免鎖無 I/O。
     fun isConnected(): Boolean = dbHelper != null
 
     private fun logDatabaseInfo() {
@@ -434,7 +434,7 @@ class UserFrequencyService(
      * `tl == ''` row removes only the fallback bucket; re-learned exact rows
      * survive.
      */
-    // 中文: 刪除單一 (word, tl) 讀音 (#7);一字多音各自獨立刪。legacy '' 列只移除 fallback 桶。
+    // 刪除單一 (word, tl) 讀音 (#7);一字多音各自獨立刪。legacy '' 列只移除 fallback 桶。
     suspend fun deleteWord(
         word: String,
         tl: String,
@@ -625,8 +625,8 @@ class UserFrequencyService(
          * `count` / `last_used` / `created_at` are preserved exactly. Mirrors
          * iOS `UserFrequencySchema.migrateToPairKeyIfNeeded`.
          */
-        // 中文: R5 — 把舊表(inline word UNIQUE、無 tl)重建成 (word, tl) pair-key。
-        // 中文: inline UNIQUE 無法 ALTER 掉 → create-new/copy/drop/rename;onUpgrade 已在 transaction 內,throw 會回滾。
+        // R5 — 把舊表(inline word UNIQUE、無 tl)重建成 (word, tl) pair-key。
+        // inline UNIQUE 無法 ALTER 掉 → create-new/copy/drop/rename;onUpgrade 已在 transaction 內,throw 會回滾。
         private fun migrateToPairKey(db: SQLiteDatabase) {
             val newTable = "${Table.NAME}_pairkey_migrate"
             db.execSQL(

@@ -1,5 +1,5 @@
-// 中文: 從工具列叫出的「設定」overlay — 不必離開鍵盤就能切換常用設定。
-// 中文: 涵蓋通用 / 回饋 / POJ 雙擊 / TPS or→ㄜ 對應 / 開啟主 App。
+// 從工具列叫出的「設定」overlay — 不必離開鍵盤就能切換常用設定。
+// 涵蓋通用 / 回饋 / POJ 雙擊 / TPS or→ㄜ 對應 / 開啟主 App。
 
 import KeyboardKit
 import SwiftUI
@@ -9,7 +9,7 @@ import SwiftUI
 /// Displays keyboard behavior settings (toggles) directly from the keyboard toolbar,
 /// allowing the user to change settings without leaving the keyboard context.
 /// Follows the same overlay pattern as `LayoutSelectionOverlay`.
-// 中文: 鍵盤設定選擇面板 — 與 LayoutSelectionOverlay 採用相同的 overlay 樣式。
+// 鍵盤設定選擇面板 — 與 LayoutSelectionOverlay 採用相同的 overlay 樣式。
 struct SettingsSelectionOverlay: View {
     let isExpanded: Bool
     let onDismiss: () -> Void
@@ -32,7 +32,7 @@ struct SettingsSelectionOverlay: View {
     @State private var isGlobeKeyEnabled: Bool
 
     /// Prevents auto-dismiss during initial onAppear sync
-    // 中文: onAppear 同步狀態時暫時擋住 auto-dismiss,避免一開啟就被收合。
+    // onAppear 同步狀態時暫時擋住 auto-dismiss,避免一開啟就被收合。
     @State private var isReady = false
 
     @Environment(\.colorScheme) private var colorScheme
@@ -138,7 +138,7 @@ struct SettingsSelectionOverlay: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
-            // 中文: 開啟 overlay 時重讀 App-Group 顯示語言 tag — 跨程序(host 改語言)可靠的重讀點。
+            // 開啟 overlay 時重讀 App-Group 顯示語言 tag — 跨程序(host 改語言)可靠的重讀點。
             lang.syncFromSettings()
             let s = SharedSettings.shared
             candidateDisplayMode = s.candidateDisplayMode
@@ -161,7 +161,7 @@ struct SettingsSelectionOverlay: View {
 
     /// Menu-picker row shaped like the toggles (icon + label left, current value right).
     /// Three values do not fit as segments beside the label at keyboard width.
-    // 中文: 候選詞顯示模式列 — 與 toggle 同排版,右側為下拉選單(三個值排不進 segmented)。
+    // 候選詞顯示模式列 — 與 toggle 同排版,右側為下拉選單(三個值排不進 segmented)。
     private var candidateDisplayModeRow: some View {
         HStack(spacing: 8) {
             settingsRowLabel(lang.string(.settingsCandidateDisplayMode), icon: SettingsIcons.candidateDisplayMode)
@@ -235,7 +235,7 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Auto-dismiss
 
-    // 中文: 切換設定後若使用者啟用「自動收合工具列」則延遲 0.3 秒收合 overlay。
+    // 切換設定後若使用者啟用「自動收合工具列」則延遲 0.3 秒收合 overlay。
     private func autoDismissIfNeeded() {
         guard isReady, SharedSettings.shared.isToolbarAutoCollapse else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

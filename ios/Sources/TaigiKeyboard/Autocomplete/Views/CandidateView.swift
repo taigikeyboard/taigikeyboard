@@ -1,4 +1,4 @@
-// 中文: 候選詞列的容器 view。負責 toolbar 展開狀態與輸入模式 / 組字切換時的自動收合。
+// 候選詞列的容器 view。負責 toolbar 展開狀態與輸入模式 / 組字切換時的自動收合。
 
 import KeyboardKit
 import SwiftUI

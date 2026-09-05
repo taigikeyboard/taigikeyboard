@@ -10,8 +10,8 @@
 //! `Some(CaseResponse)` — the case ops are infallible by construction
 //! (table lookups + stdlib casing).
 
-// 中文: 大小寫轉換的分派處理器,將 CaseRequest 各 oneof 變體路由到 phonetics::case_transform 對應函式。
-// 中文: 模式從 envelope 的 AppConfig.input_mode 讀取,與 phonetics::dispatch::handle 規約一致。
+// 大小寫轉換的分派處理器,將 CaseRequest 各 oneof 變體路由到 phonetics::case_transform 對應函式。
+// 模式從 envelope 的 AppConfig.input_mode 讀取,與 phonetics::dispatch::handle 規約一致。
 
 use phonetics::api::parse_input_mode;
 use phonetics::case_transform::{
@@ -54,7 +54,7 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
 /// Unspecified / unrecognised → `Lowercased` (safe-fallback contract; the
 /// platform bridges always populate the field, an unset value indicates
 /// proto schema mismatch and we return the most conservative behavior).
-// 中文: 將 proto 的 LetterCase enum 轉成 Rust 端的 LetterCase,未指定值一律退回 Lowercased 採保守行為。
+// 將 proto 的 LetterCase enum 轉成 Rust 端的 LetterCase,未指定值一律退回 Lowercased 採保守行為。
 fn proto_to_letter_case(proto: protos::engine::LetterCase) -> LetterCase {
     use protos::engine::LetterCase as P;
     match proto {

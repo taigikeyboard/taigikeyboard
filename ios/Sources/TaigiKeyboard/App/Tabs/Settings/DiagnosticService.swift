@@ -1,5 +1,5 @@
-// 中文: 設定頁的「回報問題」用診斷資訊蒐集器。純本機讀取,不主動上傳,
-// 中文: 由使用者在 UI 上自行決定是否複製或分享。
+// 設定頁的「回報問題」用診斷資訊蒐集器。純本機讀取,不主動上傳,
+// 由使用者在 UI 上自行決定是否複製或分享。
 
 import Foundation
 import UIKit
@@ -8,7 +8,7 @@ import UIKit
 
 /// Snapshot of local device and app state for user-initiated bug reports.
 /// No data is transmitted — the user controls when and how to share.
-// 中文: 裝置與 App 版本快照,給使用者在回報 bug 時手動複製貼上。
+// 裝置與 App 版本快照,給使用者在回報 bug 時手動複製貼上。
 struct DiagnosticInfo {
     let appVersion: String
     let buildNumber: String
@@ -16,7 +16,7 @@ struct DiagnosticInfo {
     let deviceModel: String
 
     /// Formats the info as plain text suitable for copy/share in a bug report.
-    // 中文: 把欄位格式化為純文字,供使用者複製到 bug report。
+    // 把欄位格式化為純文字,供使用者複製到 bug report。
     func formatted() -> String {
         """
         App: v\(appVersion) (\(buildNumber))
@@ -30,9 +30,9 @@ struct DiagnosticInfo {
 
 /// Gathers local diagnostic information on demand.
 /// All methods are static — no instance state needed.
-// 中文: 診斷資訊蒐集器(static-only namespace enum),按需讀取版本與裝置資訊。
+// 診斷資訊蒐集器(static-only namespace enum),按需讀取版本與裝置資訊。
 enum DiagnosticService {
-    // 中文: 蒐集 App 版本、build 號、iOS 版本、機型 identifier 並組成 DiagnosticInfo。
+    // 蒐集 App 版本、build 號、iOS 版本、機型 identifier 並組成 DiagnosticInfo。
     @MainActor
     static func gather() -> DiagnosticInfo {
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
@@ -51,7 +51,7 @@ enum DiagnosticService {
     // MARK: - Private helpers
 
     /// Returns the hardware model identifier (e.g. "iPhone14,5") via utsname.
-    // 中文: 透過 uname(2) 取得硬體機型 identifier(如 "iPhone14,5"),不會回傳行銷名稱。
+    // 透過 uname(2) 取得硬體機型 identifier(如 "iPhone14,5"),不會回傳行銷名稱。
     private static func deviceModelIdentifier() -> String {
         var info = utsname()
         uname(&info)

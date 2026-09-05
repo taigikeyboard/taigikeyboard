@@ -19,7 +19,7 @@
 //! session on that context, and the COM method must not keep the pointer
 //! (none of these do — each writes and returns).
 
-// 中文: 會寫入我們 buffer 的 COM 方法,直接走 vtable 呼叫,把可寫指標交給系統。
+// 會寫入我們 buffer 的 COM 方法,直接走 vtable 呼叫,把可寫指標交給系統。
 // 與 os_out_buffer 同一個上游缺陷,只是出現在 COM 包裝。
 
 use std::mem::ManuallyDrop;

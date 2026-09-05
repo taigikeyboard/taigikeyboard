@@ -1,5 +1,5 @@
-// 中文: 主題解析器 — 把選定主題 id + colorScheme 解析成渲染端要用的完整外觀(ThemeAppearance)。
-// 中文: 處理 "default"(回既有全域外觀)、user-theme id、built-in id(依 colorScheme 取 light/dark)。
+// 主題解析器 — 把選定主題 id + colorScheme 解析成渲染端要用的完整外觀(ThemeAppearance)。
+// 處理 "default"(回既有全域外觀)、user-theme id、built-in id(依 colorScheme 取 light/dark)。
 
 import Foundation
 import SwiftUI
@@ -18,7 +18,7 @@ import SwiftUI
 /// Unknown ids — a deleted `UserTheme` still selected, or a stale/unknown
 /// built-in id — fall back to the full legacy appearance so the keyboard never
 /// renders an empty/broken theme.
-// 中文: 純函式主題解析。未知 id(已刪除的自訂主題、或未知 built-in)fallback 回完整 legacy 外觀,確保不渲染空主題。
+// 純函式主題解析。未知 id(已刪除的自訂主題、或未知 built-in)fallback 回完整 legacy 外觀,確保不渲染空主題。
 enum ThemeResolver {
     static func resolved(
         themeId: String,

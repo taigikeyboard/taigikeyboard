@@ -1,8 +1,8 @@
-// 中文: 內建主題靜態表 — 三個「按鍵風格」family(經典 / 框線 / 簡潔),共用同一組 7 色(預設 + 5 light 漸層 + 1 dark 暗眠山貓)。對齊 iOS BuiltInThemes。
-// 中文: 三 family 顏色完全相同,差別只在按鍵風格:經典 = 一般填色鍵;框線 = 透明鍵 + 邊框;簡潔 = 透明鍵無框。
-// 中文: 透明鍵 = normalKeyFill/specialKeyFill 設成透明(ARGB alpha 0)→ 鍵盤背景(平塗/漸層)從鍵面透出 = 「鍵=背景」。
-// 中文: 5 漸層 light-only(dark = null,深色模式仍顯 light);暗眠山貓 dark-only(light = null,淺色模式仍顯 dark);預設保持 adaptive(bg/text 留 null,render 端依 night-mode 解析)。
-// 中文: id 為非 UUID 字串。經典維持既有 id(default sentinel / standardPink…);框線 = framed*、簡潔 = clean*。
+// 內建主題靜態表 — 三個「按鍵風格」family(經典 / 框線 / 簡潔),共用同一組 7 色(預設 + 5 light 漸層 + 1 dark 暗眠山貓)。對齊 iOS BuiltInThemes。
+// 三 family 顏色完全相同,差別只在按鍵風格:經典 = 一般填色鍵;框線 = 透明鍵 + 邊框;簡潔 = 透明鍵無框。
+// 透明鍵 = normalKeyFill/specialKeyFill 設成透明(ARGB alpha 0)→ 鍵盤背景(平塗/漸層)從鍵面透出 = 「鍵=背景」。
+// 5 漸層 light-only(dark = null,深色模式仍顯 light);暗眠山貓 dark-only(light = null,淺色模式仍顯 dark);預設保持 adaptive(bg/text 留 null,render 端依 night-mode 解析)。
+// id 為非 UUID 字串。經典維持既有 id(default sentinel / standardPink…);框線 = framed*、簡潔 = clean*。
 
 package com.siansiansu.taigikeyboard.ime.core
 
@@ -18,7 +18,7 @@ data class BuiltInTheme(
     val id: String,
     // i18n key for the display name, resolved at the picker call site via the
     // active StringResolver so the name follows the user's chosen display language.
-    // 中文: 顯示名稱的 i18n key,在 picker call site 用 StringResolver 解析,跟隨使用者選的顯示語言。
+    // 顯示名稱的 i18n key,在 picker call site 用 StringResolver 解析,跟隨使用者選的顯示語言。
     val displayNameKey: StringKey,
     val light: KeyboardColorSettings?,
     val dark: KeyboardColorSettings?,
@@ -94,11 +94,11 @@ object BuiltInThemes {
         val key: String,
         val displayNameKey: StringKey,
         val gradient: Pair<Int, Int>?,
-        // 中文: dark 主題:深漸層配 light 字 + 深中性鍵色,放 dark slot(light=null),不隨系統明暗變。
+        // dark 主題:深漸層配 light 字 + 深中性鍵色,放 dark slot(light=null),不隨系統明暗變。
         val isDarkPalette: Boolean = false,
     )
 
-    // 中文: 7 色順序:預設(adaptive)→ 櫻花 → 金煌 → 海風 → 翠青 → 藤紫(以上 light)→ 暗眠山貓(dark)。漸層 hex 為視覺估值。
+    // 7 色順序:預設(adaptive)→ 櫻花 → 金煌 → 海風 → 翠青 → 藤紫(以上 light)→ 暗眠山貓(dark)。漸層 hex 為視覺估值。
     private val baseColors: List<BaseColor> =
         listOf(
             BaseColor("default", StringKey.THEME_PALETTE_DEFAULT, null),
@@ -111,7 +111,7 @@ object BuiltInThemes {
             BaseColor("catppuccin", StringKey.THEME_PALETTE_CATPPUCCIN, 0x1E1E2E to 0x181825, isDarkPalette = true),
         )
 
-    // 中文: 漸層中性鍵色 + 鍵字色 — light 主題(經典白鍵 / ≈經典黑字)與 dark 主題(暗眠山貓:Catppuccin Mocha Surface0 鍵 / Text 字)各一組。
+    // 漸層中性鍵色 + 鍵字色 — light 主題(經典白鍵 / ≈經典黑字)與 dark 主題(暗眠山貓:Catppuccin Mocha Surface0 鍵 / Text 字)各一組。
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift lightKeyFill/lightKeyText/darkKeyFill/darkKeyText.
     // Drift causes silent divergence (iOS/Android theme key colors differ).
     private const val LIGHT_KEY_FILL = 0xFFFFFF
@@ -119,7 +119,7 @@ object BuiltInThemes {
     private const val DARK_KEY_FILL = 0x313244 // Catppuccin Mocha Surface0
     private const val DARK_KEY_TEXT = 0xCDD6F4 // Catppuccin Mocha Text
 
-    // 中文: 透明鍵填色(ARGB alpha 0)— 框線/簡潔 用,鍵盤背景從鍵面透出。
+    // 透明鍵填色(ARGB alpha 0)— 框線/簡潔 用,鍵盤背景從鍵面透出。
     private const val TRANSPARENT_KEY_FILL = 0x00000000
 
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift outlinedKeyBorderWidth.

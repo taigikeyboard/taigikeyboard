@@ -1,6 +1,6 @@
 //! UTF-16 conversions for the Win32 calls that want them.
 
-// 中文: UTF-16 轉換小工具。
+// UTF-16 轉換小工具。
 
 /// `text` as NUL-terminated UTF-16 — what `RegisterProfile`, `PreserveKey`,
 /// `AppendMenuW` and the registry want.

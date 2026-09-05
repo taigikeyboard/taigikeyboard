@@ -4,7 +4,7 @@
 //! 半形); the caller reads the mode, and the auto-space swap is read first
 //! and wins.
 
-// 中文: 半形→全形標點對照(教育部表);只在漢字優先模式套用,呼叫端判斷模式。
+// 半形→全形標點對照(教育部表);只在漢字優先模式套用,呼叫端判斷模式。
 
 /// The MOE manual's 符號快捷鍵對照表, minus what this input method must keep
 /// half-width: digits (tone markers), the hyphen (syllable separator),

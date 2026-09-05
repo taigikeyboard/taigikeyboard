@@ -2,7 +2,7 @@
 //! Port of `CandidateDocumentText.swift`, `CandidateCellContent.swift`,
 //! `CandidateScript.swift`.
 
-// 中文: 候選送出時寫入文件的字串,與候選格顯示的兩種文字;身分鍵另有其人(漢字, canonical TL)。
+// 候選送出時寫入文件的字串,與候選格顯示的兩種文字;身分鍵另有其人(漢字, canonical TL)。
 
 use crate::engine::ContinuousCandidate;
 use crate::settings::{CandidateDisplayMode, EngineSettings};

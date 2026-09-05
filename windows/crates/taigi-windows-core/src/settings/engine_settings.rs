@@ -2,7 +2,7 @@
 //! `macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift` and
 //! `DictionarySourceToggles.swift`.
 
-// 中文: 引擎單次操作讀取的設定快照;所有預設值與 iOS/Android/macOS 對齊。
+// 引擎單次操作讀取的設定快照;所有預設值與 iOS/Android/macOS 對齊。
 
 use super::choices::SettingChoice;
 
@@ -75,7 +75,7 @@ impl CandidateDisplayMode {
     /// CROSS-PLATFORM INVARIANT — mirrors macOS `EngineSettings.swift`
     /// `CandidateDisplayMode.effectiveTranslateSwapped`, iOS
     /// `SettingsModels.swift`, Android `CandidateDisplayMode.kt`.
-    // 中文: 推導 swap — 合用恆 true(投影到既有 pair)、羅馬字恆 false、並排照 stored。
+    // 推導 swap — 合用恆 true(投影到既有 pair)、羅馬字恆 false、並排照 stored。
     pub fn effective_translate_swapped(self, stored: bool) -> bool {
         self == Self::Combined || (stored && self.shows_hanji())
     }
@@ -140,7 +140,7 @@ impl SettingChoice for CandidateDisplayMode {
 /// A snapshot rather than a set of getters because a single user intent can
 /// issue several engine calls (an `Append` is immediately followed by an
 /// `EnterContinuous`), and those calls must agree (`EngineSettings.swift:14-20`).
-// 中文: 引擎設定快照;一個意圖內多次呼叫共用同一份。
+// 引擎設定快照;一個意圖內多次呼叫共用同一份。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineSettings {
     pub input_mode: InputMode,
@@ -197,7 +197,7 @@ impl Default for EngineSettings {
 /// Which bundled dictionaries the user has switched on, in the shape the
 /// engine's `compute_filters` op reads them. Field order mirrors
 /// `engine/protos/proto/lexicon.proto::DictionaryToggles`.
-// 中文: 使用者開啟的辭典來源;欄位順序照 lexicon.proto。
+// 使用者開啟的辭典來源;欄位順序照 lexicon.proto。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DictionarySourceToggles {
     /// 教育部臺灣台語常用詞辭典 (settings key `moeDictEnabled`).

@@ -335,8 +335,8 @@ internal class TextInputKeyHandler(
             // render). clearCandidates() only touches the smartbar strip +
             // NextWord state, never the IC composing region (owned by
             // ComposingManager), so running it pre-commit is safe.
-            // 中文: Model B — clearCandidates 移到 commit 之前,讓引擎終端 NextWord
-            // 中文: 預測存活(Enter 保留預測);引擎 effect 為關聯唯一來源。
+            // Model B — clearCandidates 移到 commit 之前,讓引擎終端 NextWord
+            // 預測存活(Enter 保留預測);引擎 effect 為關聯唯一來源。
             smartbarManager.clearCandidates()
             composingManager?.commitComposition(ic)
 
@@ -454,8 +454,8 @@ internal class TextInputKeyHandler(
             // next-word *display*: clearCandidates() runs AFTER the commit
             // (kept order) → bumps the NextWord generation so the engine's
             // in-flight prediction query is dropped stale.
-            // 中文: Model B — 引擎 commit 已記關聯(唯一來源);Space 維持 commit 後
-            // 中文: clearCandidates 抑制下詞顯示(舊手動呼叫會雙記並重新顯示)。
+            // Model B — 引擎 commit 已記關聯(唯一來源);Space 維持 commit 後
+            // clearCandidates 抑制下詞顯示(舊手動呼叫會雙記並重新顯示)。
             composingManager?.commitComposition(ic)
             ic.commitText(" ", 1)
             smartbarManager.clearCandidates()

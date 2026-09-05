@@ -16,7 +16,7 @@
 //! `EngineSettings::default()`, the domain model's own statement of what a
 //! fresh install types with, so the cross-platform alignment has one home.
 
-// 中文: 所有持久化設定 key 與預設值;引擎相關預設值從 EngineSettings::default() 取,避免兩處漂移。
+// 所有持久化設定 key 與預設值;引擎相關預設值從 EngineSettings::default() 取,避免兩處漂移。
 
 use super::choices::{
     AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,

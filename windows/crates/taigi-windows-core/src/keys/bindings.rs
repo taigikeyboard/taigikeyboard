@@ -1,7 +1,7 @@
 //! The user's composing key contract, resolved and ready to classify against.
 //! Port of `ComposingKeyBindings` (`ComposingKeyBindings.swift:109-262`).
 
-// 中文: 使用者的組字鍵位契約,解析後交給分類器;三條解析規則:槽位遮蔽、去重、必綁還原。
+// 使用者的組字鍵位契約,解析後交給分類器;三條解析規則:槽位遮蔽、去重、必綁還原。
 
 use std::collections::BTreeMap;
 

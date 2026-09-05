@@ -1,11 +1,11 @@
-// 中文: 展開候選詞 overlay 內單一候選 cell 的 SwiftUI view。
-// 中文: 顯示主標題 + 副標題、按壓回饋、選中狀態,點選後送出 suggestion 並收合 overlay。
+// 展開候選詞 overlay 內單一候選 cell 的 SwiftUI view。
+// 顯示主標題 + 副標題、按壓回饋、選中狀態,點選後送出 suggestion 並收合 overlay。
 
 import KeyboardKit
 import SwiftUI
 
 /// Grid cell displaying a single candidate in the expanded overlay
-// 中文: 展開候選詞 overlay 中顯示單一候選的 grid cell。
+// 展開候選詞 overlay 中顯示單一候選的 grid cell。
 struct ExpandedCandidateGridCell: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool

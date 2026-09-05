@@ -3,8 +3,8 @@
 //! transitions lives in `transition.rs`; this module is the stable surface
 //! that `dispatch.rs` and external crates consume.
 
-// 中文: 組字 crate 的對外 API:Engine、EngineState、Phase、Intent、ComposingError。
-// 中文: 真正的狀態轉移實作在 transition.rs,本檔案只定義穩定的型別介面。
+// 組字 crate 的對外 API:Engine、EngineState、Phase、Intent、ComposingError。
+// 真正的狀態轉移實作在 transition.rs,本檔案只定義穩定的型別介面。
 
 use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
@@ -22,20 +22,20 @@ use thiserror::Error;
 /// A candidate tap *nails* a segment inside the composition; only a hard
 /// finalize writes literal text to the document. Reset/abort clears the
 /// whole region and drops all `nailed` (nothing was written).
-// 中文: 組字階段。Idle 無預編輯;Composing 單段數字調 raw;
-// 中文: Continuous 是 v3.5.8 連續輸入多段狀態。
-// 中文: Model B(對齊主流,§10):nailed 段**未**寫入文件;整段組字
-// 中文: (Σ nailed.display_text + pending raw 衍生形)留在單一 marked region,
-// 中文: 直到 hard finalize 才一次寫字面字。abort 清整段並丟棄所有 nailed。
+// 組字階段。Idle 無預編輯;Composing 單段數字調 raw;
+// Continuous 是 v3.5.8 連續輸入多段狀態。
+// Model B(對齊主流,§10):nailed 段**未**寫入文件;整段組字
+// (Σ nailed.display_text + pending raw 衍生形)留在單一 marked region,
+// 直到 hard finalize 才一次寫字面字。abort 清整段並丟棄所有 nailed。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
-    // 中文: 閒置狀態,無預編輯內容。
+    // 閒置狀態,無預編輯內容。
     Idle,
-    // 中文: 組字中,raw 為使用者尚未上屏的數字調原始輸入。
+    // 組字中,raw 為使用者尚未上屏的數字調原始輸入。
     Composing {
         raw: String,
     },
-    // 中文: 連續輸入中,nailed 為組字區內已釘的 segments(未寫入文件),raw 為 pending 尾段。
+    // 連續輸入中,nailed 為組字區內已釘的 segments(未寫入文件),raw 為 pending 尾段。
     Continuous {
         raw: String,
         nailed: Vec<NailedSegment>,
@@ -61,9 +61,9 @@ impl Phase {
     /// derived-display chain splits on `-` for tone-mark application); the
     /// engine does NOT validate whether each chunk is a real syllable, and
     /// does NOT auto-insert hyphens. See §10.2 amendment 2026-05-13.
-    // 中文: pending-tail 衍生顯示字串 (TPS 原樣 / POJ-TL 走 derived chain)。
-    // 中文: Model B:這已**不是**組字緩衝區本體,只是其一個內部組件;
-    // 中文: 組字緩衝區是 Phase::composing_display(Σ nailed.display_text + 本字串)。
+    // pending-tail 衍生顯示字串 (TPS 原樣 / POJ-TL 走 derived chain)。
+    // Model B:這已**不是**組字緩衝區本體,只是其一個內部組件;
+    // 組字緩衝區是 Phase::composing_display(Σ nailed.display_text + 本字串)。
     pub fn raw_input(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
@@ -92,9 +92,9 @@ impl Phase {
     /// [`continuous_word_space`] / [`nailed_prefix`]. This is the exact
     /// string a hard finalize (Enter / final-commit) writes to the
     /// document, so the separator policy applies identically there.
-    // 中文: §10.2 / I1 — host 在單一 marked region 渲染的組字緩衝區本體。
-    // 中文: Continuous = nailed_prefix(§10.2 詞界分隔)+ pending raw 衍生形;
-    // 中文: roman-ish 才加空格,漢字優先/TPS 不加;hard finalize 寫入文件的就是此字串。
+    // §10.2 / I1 — host 在單一 marked region 渲染的組字緩衝區本體。
+    // Continuous = nailed_prefix(§10.2 詞界分隔)+ pending raw 衍生形;
+    // roman-ish 才加空格,漢字優先/TPS 不加;hard finalize 寫入文件的就是此字串。
     pub fn composing_display(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
@@ -112,19 +112,19 @@ impl Phase {
 /// offsets in the original raw input the user typed (start = end of the
 /// previous segment, end = start + raw_text.len()). `syllable_count` lets
 /// span-local fetch distinguish e.g. `tsua` → 紙(1) vs 珠仔(2).
-// 中文: Continuous 階段「已釘」的單一 segment。Model B(§10):**未**寫入文件,
-// 中文: 留在 active marked region 內直到 hard finalize。raw_span 為原始 raw byte 區間,
-// 中文: syllable_count 區分同 toneless key 不同音節數的候選。
+// Continuous 階段「已釘」的單一 segment。Model B(§10):**未**寫入文件,
+// 留在 active marked region 內直到 hard finalize。raw_span 為原始 raw byte 區間,
+// syllable_count 區分同 toneless key 不同音節數的候選。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NailedSegment {
-    // 中文: 此段在組字區內的顯示文字 (e.g., "紙")。v3.5.8 Phase 9 Bug 1:
-    // 中文: swap/TPS/both-scripts 格式化字串;hard finalize 時併入整段一次寫入文件。
+    // 此段在組字區內的顯示文字 (e.g., "紙")。v3.5.8 Phase 9 Bug 1:
+    // swap/TPS/both-scripts 格式化字串;hard finalize 時併入整段一次寫入文件。
     pub display_text: String,
-    // 中文: 規範字典鍵 (`hanji.unwrap_or(roman)`)。v3.5.8 Phase 9 Bug 1 (Option A):
-    // 中文: backspace pop 時的 NextWord last-selected 修正用它,確保關聯學習
-    // 中文: 與顯示模式無關 (decision b)。非 swap 時等同 display_text。
+    // 規範字典鍵 (`hanji.unwrap_or(roman)`)。v3.5.8 Phase 9 Bug 1 (Option A):
+    // backspace pop 時的 NextWord last-selected 修正用它,確保關聯學習
+    // 與顯示模式無關 (decision b)。非 swap 時等同 display_text。
     pub canonical_text: String,
-    // 中文: 對應消耗的原始輸入 (e.g., "tsua")。
+    // 對應消耗的原始輸入 (e.g., "tsua")。
     pub raw_text: String,
     // v3.6.1 R2 — canonical TL romanization of the committed candidate
     // (the chosen `CandidateMessage.canonical_tl`). The NextWord
@@ -134,14 +134,14 @@ pub struct NailedSegment {
     // callers / TPS-OOV hanji-absent). Kept SEPARATE from `raw_text`,
     // which stays the authority for span / unnail mechanics (Codex
     // pre-impl 2026-06-03 SHOULD).
-    // 中文: R2 — 此候選的 canonical TL(選定的 CandidateMessage.canonical_tl)。
-    // 中文: NextWord WordSelected/UpdateLastSelectedWord 的 roman 引數由此構造
-    // 中文: (學到的 prev_tl/next_tl 與一般候選 commit 一致),空時 fallback raw_text。
-    // 中文: 與 raw_text 分開存 — raw_text 仍是 span / unnail 機制的唯一權威。
+    // R2 — 此候選的 canonical TL(選定的 CandidateMessage.canonical_tl)。
+    // NextWord WordSelected/UpdateLastSelectedWord 的 roman 引數由此構造
+    // (學到的 prev_tl/next_tl 與一般候選 commit 一致),空時 fallback raw_text。
+    // 與 raw_text 分開存 — raw_text 仍是 span / unnail 機制的唯一權威。
     pub association_tl: String,
-    // 中文: 在原 raw 輸入中的 byte 偏移 (start, end);用於 Phase 5 span-local 查詢。
+    // 在原 raw 輸入中的 byte 偏移 (start, end);用於 Phase 5 span-local 查詢。
     pub raw_span: (usize, usize),
-    // 中文: 此 segment 包含的音節數,1 為單音節、2+ 為複合詞。
+    // 此 segment 包含的音節數,1 為單音節、2+ 為複合詞。
     pub syllable_count: u8,
 }
 
@@ -158,9 +158,9 @@ pub struct NailedSegment {
 /// alone cannot distinguish hanji-first from both-scripts (both set it
 /// `true`) — hence the `output_both_scripts` AppConfig field
 /// (Codex pre-impl 2026-05-18).
-// 中文: §10.2 連續組字緩衝區的詞界空格策略 — 僅 roman-ish(羅馬字優先或雙腳本)
-// 中文:   才在 nailed 段間 / nailed↔pending 加單一 ASCII 空格;漢字優先 / TPS 不加。
-// 中文:   is_translate_swapped 無法區分漢字優先 vs 雙腳本(都為 true),故需 output_both_scripts。
+// §10.2 連續組字緩衝區的詞界空格策略 — 僅 roman-ish(羅馬字優先或雙腳本)
+//   才在 nailed 段間 / nailed↔pending 加單一 ASCII 空格;漢字優先 / TPS 不加。
+//   is_translate_swapped 無法區分漢字優先 vs 雙腳本(都為 true),故需 output_both_scripts。
 fn continuous_word_space(config: &AppConfig) -> bool {
     let effective_swapped = config.is_translate_swapped || config.input_mode == "tps";
     // De Morgan of the platform `appendAutoSpaceIfApplicable` guard
@@ -196,11 +196,11 @@ fn continuous_word_space(config: &AppConfig) -> bool {
 /// editable tail from `raw_text`, so segment data stays separator-free;
 /// the hyphen is derived fresh on every render from the segments' own
 /// `canonical_text` + `syllable_count`.
-// 中文: 純串接迴圈;唯一真相來源,勿內聯。分隔符屬 render/commit 呈現層,
-// 中文:   但對「詞庫已知 n 音節複合詞」用連字號;絕不寫入 NailedSegment
-// 中文:   (backspace 由 raw_text 還原,連字號每次 render 由 canonical_text
-// 中文:   + syllable_count 即時推導)。leftmost longest-match,
-// 中文:   trailing-`-` 視為已連字號,下一段不再 compound。
+// 純串接迴圈;唯一真相來源,勿內聯。分隔符屬 render/commit 呈現層,
+//   但對「詞庫已知 n 音節複合詞」用連字號;絕不寫入 NailedSegment
+//   (backspace 由 raw_text 還原,連字號每次 render 由 canonical_text
+//   + syllable_count 即時推導)。leftmost longest-match,
+//   trailing-`-` 視為已連字號,下一段不再 compound。
 fn nailed_prefix_with_oracle(
     nailed: &[NailedSegment],
     space: bool,
@@ -237,9 +237,9 @@ fn nailed_prefix_with_oracle(
 /// is wasted work. The cap also keeps the `n as u8` proto cast safely
 /// inside `u8` for any nail-history length (the dispatch-layer
 /// `clamp_syllable_count` already saturates platform input at `u8`).
-// 中文: 字典 builder 在 dictionary/build/dictionary_records.py:43
-// 中文:   把 syllable_count cap 在 4;此處 longest-match 沿用同上限,
-// 中文:   既避免無效 FST lookups 也讓 `n as u8` 不會溢位。
+// 字典 builder 在 dictionary/build/dictionary_records.py:43
+//   把 syllable_count cap 在 4;此處 longest-match 沿用同上限,
+//   既避免無效 FST lookups 也讓 `n as u8` 不會溢位。
 const MAX_COMPOUND_RUN: usize = 4;
 
 /// Largest `n` in `2..=MAX_COMPOUND_RUN` such that `segs[..n]` are all
@@ -254,10 +254,10 @@ const MAX_COMPOUND_RUN: usize = 4;
 /// Builds the full eligible-segment concatenation once, then truncates
 /// from the right per iteration — O(max_n) string ops instead of
 /// rebuilding each attempt.
-// 中文: 從 segs 起始找最長 n in 2..=MAX_COMPOUND_RUN 的 compound run;
-// 中文:   排除 syllable_count!=1 與 display_text 已含 user-typed trailing `-`
-// 中文:   的 segment(否則會把 `tai-` 渲成 `tai--uan`)。一次組好 concat,
-// 中文:   再從右側截斷每次嘗試。
+// 從 segs 起始找最長 n in 2..=MAX_COMPOUND_RUN 的 compound run;
+//   排除 syllable_count!=1 與 display_text 已含 user-typed trailing `-`
+//   的 segment(否則會把 `tai-` 渲成 `tai--uan`)。一次組好 concat,
+//   再從右側截斷每次嘗試。
 fn longest_compound_run<F: Fn(&str, u8) -> bool>(segs: &[NailedSegment], is_compound: &F) -> usize {
     let max_n = segs
         .iter()
@@ -297,10 +297,10 @@ fn longest_compound_run<F: Fn(&str, u8) -> bool>(segs: &[NailedSegment], is_comp
 /// no dictionary is installed (`with_state` → `Err`, e.g. unit tests)
 /// the join degrades to the pure space-join: byte-identical to the
 /// pre-Option-A behaviour.
-// 中文: §10.2 詞界分隔;相鄰連續單音節段若還原成詞庫已知 n 音節複合詞改用連字號。
-// 中文: 整段 join 只鎖一次 lexicon(R2);cheap 前置閘擋掉非 roman-ish / 無單音節對;
-// 中文: 未安裝詞庫(with_state Err,如單元測試)→ 退化為純空格 join(行為不變)。
-// 中文: v3.5.9 由 bigram-only 擴為 longest-match n>=2(紅尾冬→Âng-bóe-tang)。
+// §10.2 詞界分隔;相鄰連續單音節段若還原成詞庫已知 n 音節複合詞改用連字號。
+// 整段 join 只鎖一次 lexicon(R2);cheap 前置閘擋掉非 roman-ish / 無單音節對;
+// 未安裝詞庫(with_state Err,如單元測試)→ 退化為純空格 join(行為不變)。
+// v3.5.9 由 bigram-only 擴為 longest-match n>=2(紅尾冬→Âng-bóe-tang)。
 pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
     let space = continuous_word_space(config);
     let eligible = space
@@ -329,8 +329,8 @@ pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> Str
 /// [`Phase::composing_display`] and the `transition.rs` Continuous paths
 /// route through this so the rendered preedit and the hard-finalize commit
 /// can never diverge (Codex post-impl review point).
-// 中文: Model B 組字緩衝區本體 (nailed 前綴 + pending raw 衍生形) 的唯一真相來源;
-// 中文: Phase::composing_display 與 transition.rs 各 Continuous path 全走此,確保不漂移。
+// Model B 組字緩衝區本體 (nailed 前綴 + pending raw 衍生形) 的唯一真相來源;
+// Phase::composing_display 與 transition.rs 各 Continuous path 全走此,確保不漂移。
 pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &AppConfig) -> String {
     let mut s = nailed_prefix(nailed, config);
     let derived = crate::derived::derived_display(raw, config);
@@ -345,12 +345,12 @@ pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &App
 }
 
 /// Engine state — the platform no longer shadows this.
-// 中文: 引擎狀態,平台端不再額外複製一份。
+// 引擎狀態,平台端不再額外複製一份。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineState {
-    // 中文: 目前的組字階段 (Idle / Composing)。
+    // 目前的組字階段 (Idle / Composing)。
     pub phase: Phase,
-    // 中文: 目前選取的候選詞索引;Idle 時為 -1。
+    // 目前選取的候選詞索引;Idle 時為 -1。
     pub selected_candidate_index: i32,
 }
 
@@ -366,47 +366,47 @@ impl Default for EngineState {
 /// Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
 /// case set 1:1. Decoded from `protos::engine::ComposingRequest::method`
 /// inside `dispatch::handle`.
-// 中文: 與 iOS / Android 平台 ComposingState.Intent 一對一對應的意圖 enum。
-// 中文: 由 dispatch::handle 從 ComposingRequest::method 解碼產生。
+// 與 iOS / Android 平台 ComposingState.Intent 一對一對應的意圖 enum。
+// 由 dispatch::handle 從 ComposingRequest::method 解碼產生。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
-    // 中文: 以指定文字開始組字。
+    // 以指定文字開始組字。
     Start {
         text: String,
     },
-    // 中文: 在組字區尾端附加一個字元。
+    // 在組字區尾端附加一個字元。
     Append {
         ch: String,
     },
-    // 中文: 附加連字號 "-",內部轉為 Append 處理。
+    // 附加連字號 "-",內部轉為 Append 處理。
     AppendHyphen,
-    // 中文: 把組字區最後一個字元換成 replacement (TPS 自動修正用)。
+    // 把組字區最後一個字元換成 replacement (TPS 自動修正用)。
     ReplaceLast {
         replacement: String,
     },
-    // 中文: 退格刪除組字區尾端字元。
+    // 退格刪除組字區尾端字元。
     DeleteBackward,
-    // 中文: 上屏目前組字區的衍生顯示形 (加調號/正規化後)。
+    // 上屏目前組字區的衍生顯示形 (加調號/正規化後)。
     CommitDerived,
-    // 中文: 直接上屏原始 raw 輸入,不做衍生轉換。
+    // 直接上屏原始 raw 輸入,不做衍生轉換。
     CommitRaw,
-    // 中文: 採用候選/聯想詞 text 上屏。
+    // 採用候選/聯想詞 text 上屏。
     SelectSuggestion {
         text: String,
     },
-    // 中文: 先上屏目前組字區衍生形,再插入外部字串 text。
+    // 先上屏目前組字區衍生形,再插入外部字串 text。
     CommitPreeditThenInsertExternal {
         text: String,
     },
-    // 中文: 使用者主動重設,清空預編輯並重置候選。
+    // 使用者主動重設,清空預編輯並重置候選。
     Reset,
-    // 中文: 直接設定選取的候選詞索引。
+    // 直接設定選取的候選詞索引。
     SetSelectedCandidateIndex {
         index: i32,
     },
-    // 中文: 純讀取目前狀態,不變更狀態也不發出 Effect。
+    // 純讀取目前狀態,不變更狀態也不發出 Effect。
     QueryState,
-    // 中文: 從 Composing 進入 Continuous (連續輸入) 模式;nailed 起始為空。
+    // 從 Composing 進入 Continuous (連續輸入) 模式;nailed 起始為空。
     EnterContinuous,
     /// v3.5.8 Phase 6 — pure read of span-local continuous-input
     /// candidates for the current `Phase::Continuous { raw }` starting
@@ -450,10 +450,10 @@ pub enum Intent {
     /// `FetchAtPos.enabled_sources_bitmask`; the `0`-means-absent →
     /// `u32::MAX` sentinel is resolved in `handle_fetch_at_pos`. Full
     /// wire/sentinel contract: the `FetchAtPos` proto comment.
-    // 中文: Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
-    // 中文: Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
-    // 中文: Phase 9 Item 12 — 加帶平台 custom_dictionary.db 命中 (raw roman/hanji),供 engine 合成 + (roman,hanji) 去重。
-    // 中文: PR-9.6 — 加帶平台 source-toggle bitmask;0=未接線 sentinel 在 handle_fetch_at_pos 正規化為 u32::MAX。
+    // Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
+    // Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
+    // Phase 9 Item 12 — 加帶平台 custom_dictionary.db 命中 (raw roman/hanji),供 engine 合成 + (roman,hanji) 去重。
+    // PR-9.6 — 加帶平台 source-toggle bitmask;0=未接線 sentinel 在 handle_fetch_at_pos 正規化為 u32::MAX。
     /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
     /// preedit-literal roman candidate (index-0 `derived_display` WYSIWYG row
     /// for 漢羅 one-tap). Decoded verbatim from `FetchAtPos`; OFF suppresses
@@ -474,7 +474,7 @@ pub enum Intent {
     /// exits to Idle. Caller (Phase 6+ proto layer) is responsible for
     /// `consumed_bytes` aligning with both UTF-8 char boundaries and TL
     /// syllable boundaries returned by the syllabifier.
-    // 中文: 連續輸入下挑選候選 segment;consumed_bytes >= pending.len() 為 final commit。
+    // 連續輸入下挑選候選 segment;consumed_bytes >= pending.len() 為 final commit。
     CommitContinuous {
         display_text: String,
         // v3.5.8 Phase 9 Bug 1 (Option A): canonical key for freq/NextWord.
@@ -487,11 +487,11 @@ pub enum Intent {
         consumed_bytes: usize,
         syllable_count: u8,
     },
-    // 中文: 中途 abort 連續輸入,清掉整段組字 (nailed + pending),退回 Idle。
+    // 中途 abort 連續輸入,清掉整段組字 (nailed + pending),退回 Idle。
     ResetContinuous,
 }
 
-// 中文: 組字流程的錯誤型別,目前僅有 method 欄位缺漏一種。
+// 組字流程的錯誤型別,目前僅有 method 欄位缺漏一種。
 #[derive(Debug, Error)]
 pub enum ComposingError {
     #[error("composing request missing method")]
@@ -499,7 +499,7 @@ pub enum ComposingError {
 }
 
 /// State machine. Held inside `Mutex<Engine>` at the FFI boundary.
-// 中文: 組字狀態機本體,FFI 邊界以 Mutex<Engine> 包覆共享。
+// 組字狀態機本體,FFI 邊界以 Mutex<Engine> 包覆共享。
 #[derive(Clone, Debug, Default)]
 pub struct Engine {
     state: EngineState,
@@ -515,7 +515,7 @@ impl Engine {
     /// re-snapshot. `config` is the request's `AppConfig` so
     /// `Preedit.display_text` reflects the caller's actual mode/toggles
     /// (per Codex PR #197 r3169707395).
-    // 中文: 純讀取目前狀態的快照,不變更狀態也不發出 Effect。
+    // 純讀取目前狀態的快照,不變更狀態也不發出 Effect。
     pub fn snapshot(&self, config: &AppConfig) -> ComposingResponse {
         crate::transition::apply(&mut self.state.clone(), Intent::QueryState, config)
     }
@@ -524,7 +524,7 @@ impl Engine {
     /// resulting response (preedit + ordered effects + new index +
     /// is_composing). Delegates to the pure transition table in
     /// `transition.rs`.
-    // 中文: 套用 intent、更新狀態並回傳組字回應 (預編輯/Effect 序列/索引)。
+    // 套用 intent、更新狀態並回傳組字回應 (預編輯/Effect 序列/索引)。
     pub fn apply(&mut self, intent: Intent, config: &AppConfig) -> ComposingResponse {
         crate::transition::apply(&mut self.state, intent, config)
     }
@@ -537,8 +537,8 @@ impl Engine {
     /// because this is a Phase-4-internal escape hatch — production
     /// callers should reach state through `apply` / `snapshot`'s
     /// `ComposingResponse` carrier (Codex post-impl note 1).
-    // 中文: 回傳 EngineState 副本,讓測試可直接檢查 Phase::Continuous 內部結構。
-    // 中文: doc-hidden — 這是 Phase 4 暫時 escape hatch,Phase 6 加 proto 欄位後可移除。
+    // 回傳 EngineState 副本,讓測試可直接檢查 Phase::Continuous 內部結構。
+    // doc-hidden — 這是 Phase 4 暫時 escape hatch,Phase 6 加 proto 欄位後可移除。
     #[doc(hidden)]
     pub fn snapshot_state(&self) -> EngineState {
         self.state.clone()
@@ -551,7 +551,7 @@ impl Engine {
     /// `ClearPreeditWithoutCommit + ResetAutocomplete` effects when
     /// composing; this helper is silent (no effects) for the
     /// generation-mismatch drop. Call site is `EngineHandle::handle`.
-    // 中文: 靜默重設 (無 Effect),僅供 generation 不一致時的內部丟棄路徑使用。
+    // 靜默重設 (無 Effect),僅供 generation 不一致時的內部丟棄路徑使用。
     pub(crate) fn reset(&mut self) {
         self.state = EngineState::default();
     }

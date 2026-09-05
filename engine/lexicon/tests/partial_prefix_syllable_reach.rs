@@ -17,13 +17,13 @@
 //! `fetch_candidates_for_keys` — and the end-to-end candidate strip, which is
 //! pinned by `composing/tests/golden/fetch_at_pos.golden`.
 
-// 中文: 連續候選不得帶入使用者未打進的音節(PO 2026-08-21,三平台一致)。
-// 中文:   lookup_prefix 會撈出所有「key 以輸入開頭」的行,故修正前 tsuisi 撈出
-// 中文:   水社寮、kesithau 撈出 家私頭仔 —— 最後一個音節根本沒打到。
-// 中文: fixture 的 FST key 一律由該行的 tl 經 phonetics 衍生(與 create_fst.py 同鏈),
-// 中文:   不會與 production 儲存的 key 漂移。
-// 中文: 不涵蓋:exact 命中(阿姨仔 打 aia)走 lookup_exact 不經本 fetcher;
-// 中文:   端到端候選列由 golden/fetch_at_pos.golden 釘定。
+// 連續候選不得帶入使用者未打進的音節(PO 2026-08-21,三平台一致)。
+//   lookup_prefix 會撈出所有「key 以輸入開頭」的行,故修正前 tsuisi 撈出
+//   水社寮、kesithau 撈出 家私頭仔 —— 最後一個音節根本沒打到。
+// fixture 的 FST key 一律由該行的 tl 經 phonetics 衍生(與 create_fst.py 同鏈),
+//   不會與 production 儲存的 key 漂移。
+// 不涵蓋:exact 命中(阿姨仔 打 aia)走 lookup_exact 不經本 fetcher;
+//   端到端候選列由 golden/fetch_at_pos.golden 釘定。
 
 use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;

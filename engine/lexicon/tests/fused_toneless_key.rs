@@ -27,8 +27,8 @@
 //! `[\d\-]` must continue to strip BOTH digits AND hyphens for multi-syllable
 //! `tl_num` (e.g. `tsu1a2`) → fused `tl_notone` (`tsua`).
 
-// 中文: Phase 1b 引擎側合約測試 — 固定「fused toneless key 同時索引到單音節 + 多音節 entry」這個事實。
-// 中文: 上游 notone stage 已 fused;builder 不需 derive 新 key。若此 test 壞了,先看 dictionary/common/notone.py。
+// Phase 1b 引擎側合約測試 — 固定「fused toneless key 同時索引到單音節 + 多音節 entry」這個事實。
+// 上游 notone stage 已 fused;builder 不需 derive 新 key。若此 test 壞了,先看 dictionary/common/notone.py。
 
 use std::path::PathBuf;
 

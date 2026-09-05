@@ -5,7 +5,7 @@
 //! `packageSHA256`, which the Mac has no use for: it pins a downloaded
 //! package by its Developer ID signature.
 
-// 中文: 更新 manifest 的解碼與版本比較 — 與 macOS 同一份線上格式。
+// 更新 manifest 的解碼與版本比較 — 與 macOS 同一份線上格式。
 
 use serde::{Deserialize, Serialize};
 

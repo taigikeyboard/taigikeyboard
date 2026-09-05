@@ -1,16 +1,16 @@
-// 中文: Taigi Keyboard 主 App 進入點,負責 logger / Rust engine / KeyboardKit 設定 / 導覽列外觀。
+// Taigi Keyboard 主 App 進入點,負責 logger / Rust engine / KeyboardKit 設定 / 導覽列外觀。
 
 import KeyboardKit
 import SwiftUI
 
 /// Taigi Keyboard app entry point.
-// 中文: 主 App entry point。init 內依序安裝:
-// 中文: 1) LoggerFactory(共用 core 引擎走 DebugLogger)
-// 中文: 2) RustEngineBridge(Rust log sink,冪等)
-// 中文: 3) Lexicon engine(主 App 程序的 fst + 詞庫 binary)
-// 中文: 4) KeyboardKit App Group store(@AppStorage 前置條件)
-// 中文: 5) UINavigationBar 字型外觀(SwiftUI .environment 不影響此處)
-// 中文: 6) 自訂詞庫首次安裝 seed
+// 主 App entry point。init 內依序安裝:
+// 1) LoggerFactory(共用 core 引擎走 DebugLogger)
+// 2) RustEngineBridge(Rust log sink,冪等)
+// 3) Lexicon engine(主 App 程序的 fst + 詞庫 binary)
+// 4) KeyboardKit App Group store(@AppStorage 前置條件)
+// 5) UINavigationBar 字型外觀(SwiftUI .environment 不影響此處)
+// 6) 自訂詞庫首次安裝 seed
 @main
 struct TaigiKeyboardApp: App {
     @StateObject private var keyboardStatus = KeyboardStatusContext(
@@ -59,8 +59,8 @@ struct TaigiKeyboardApp: App {
     /// process (Dictionary tab uses the same fst + bundled binaries).
     /// Idempotent; the keyboard extension does its own install in
     /// `KeyboardViewController.viewDidLoad`.
-    // 中文: 為主 App 程序安裝 Rust shared-core lexicon 引擎(Dictionary tab 用)。
-    // 中文: 冪等;鍵盤擴充走自己 viewDidLoad 的安裝路徑。
+    // 為主 App 程序安裝 Rust shared-core lexicon 引擎(Dictionary tab 用)。
+    // 冪等;鍵盤擴充走自己 viewDidLoad 的安裝路徑。
     private func installLexiconEngineForMainApp() {
         let bundle = ResourceBundleResolver.dictionaryBundle
         guard
@@ -94,12 +94,12 @@ struct TaigiKeyboardApp: App {
 /// App root view.
 ///
 /// Manages deep links and setup guide flow.
-// 中文: App 根 View。處理 taigikeyboard:// deep link 與 setup guide 全螢幕流程。
+// App 根 View。處理 taigikeyboard:// deep link 與 setup guide 全螢幕流程。
 struct AppRootView: View {
     @ObservedObject var keyboardStatus: KeyboardStatusContext
     @StateObject private var viewModel: SetupGuideViewModel
-    // 中文: App UI 顯示語言 root state。注入在 AppRootView(ContentView + setup-guide cover 的共同祖先),
-    // 中文: 讓 TabView 與全螢幕 cover 兩處都繼承同一份 store(plan D7 live-switch)。
+    // App UI 顯示語言 root state。注入在 AppRootView(ContentView + setup-guide cover 的共同祖先),
+    // 讓 TabView 與全螢幕 cover 兩處都繼承同一份 store(plan D7 live-switch)。
     @State private var displayLanguageStore = DisplayLanguageStore()
     // Re-reads the persisted tag AND recomputes Automatic's effective language from the OS locale on
     // foreground, so a device-language change (while display = Automatic) takes effect without a relaunch.
@@ -134,7 +134,7 @@ struct AppRootView: View {
     }
 
     /// Handle deep link (e.g. taigikeyboard://settings).
-    // 中文: 處理 taigikeyboard:// 開頭的 deep link;目前僅支援 host=settings 切到設定 tab。
+    // 處理 taigikeyboard:// 開頭的 deep link;目前僅支援 host=settings 切到設定 tab。
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "taigikeyboard" else { return }
 
@@ -151,6 +151,6 @@ struct AppRootView: View {
 
 extension Notification.Name {
     /// Switch to Settings tab via deep link.
-    // 中文: deep link 觸發切換到設定 tab 的通知名稱。
+    // deep link 觸發切換到設定 tab 的通知名稱。
     static let switchToSettingsTab = Notification.Name("switchToSettingsTab")
 }

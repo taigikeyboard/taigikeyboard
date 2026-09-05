@@ -1,4 +1,4 @@
-// 中文: CandidateView.Style 的 SwiftUI environment 注入點與便利 modifier。
+// CandidateView.Style 的 SwiftUI environment 注入點與便利 modifier。
 
 import SwiftUI
 

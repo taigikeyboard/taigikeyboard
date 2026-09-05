@@ -8,18 +8,18 @@
 //! preserved through fst's deterministic byte-sorted iteration. Replaces
 //! both platforms' MARISA-trie + native-bridge stack.
 
-// 中文: PrefixIndex — 包裝 mmap 過的 dictionary.fst 提供前綴查詢。
-// 中文: 條目格式為 key_bytes || 0xFF || rowid_le_4;以 byte-range 掃描搭配 0xFF 分隔符即可決定前綴邊界。
+// PrefixIndex — 包裝 mmap 過的 dictionary.fst 提供前綴查詢。
+// 條目格式為 key_bytes || 0xFF || rowid_le_4;以 byte-range 掃描搭配 0xFF 分隔符即可決定前綴邊界。
 
 use fst::{IntoStreamer, Set, Streamer};
 use mmap_host::MmapHandle;
 
 use crate::error::LexiconError;
 
-// 中文: key 與 rowid 之間的分隔位元組;選用 0xFF 是因為它大於任何合法 UTF-8 byte,可保證掃描邊界正確。
+// key 與 rowid 之間的分隔位元組;選用 0xFF 是因為它大於任何合法 UTF-8 byte,可保證掃描邊界正確。
 const SEPARATOR: u8 = 0xFF;
 
-// 中文: 對外的前綴索引 — 持有 fst::Set 與條目數。
+// 對外的前綴索引 — 持有 fst::Set 與條目數。
 pub struct PrefixIndex {
     set: Set<MmappedSetData>,
     entry_count: u64,
@@ -40,7 +40,7 @@ impl AsRef<[u8]> for MmappedSetData {
 impl PrefixIndex {
     /// Open `dictionary.fst` mmap'd readonly. Validates that fst can parse
     /// the bytes; deeper format checks happen on first use.
-    // 中文: 以唯讀 mmap 開啟 dictionary.fst,並驗證 fst crate 能解析。
+    // 以唯讀 mmap 開啟 dictionary.fst,並驗證 fst crate 能解析。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
         let handle = MmapHandle::open_readonly(path).map_err(|source| LexiconError::Mmap {
             path: path.display().to_string(),
@@ -54,7 +54,7 @@ impl PrefixIndex {
         Ok(Self { set, entry_count })
     }
 
-    // 中文: 回傳前綴索引的條目總數。
+    // 回傳前綴索引的條目總數。
     pub fn entry_count(&self) -> u64 {
         self.entry_count
     }
@@ -67,7 +67,7 @@ impl PrefixIndex {
     /// next sibling prefix in lex order (last byte +1). All wire entries
     /// of the form `key + 0xFF + rowid_le_4` whose `key` starts with
     /// `prefix` fall in this range.
-    // 中文: 前綴查詢 — 回傳所有 key 以 prefix 開頭的 rowid,維持 fst byte-sort 的插入順序。
+    // 前綴查詢 — 回傳所有 key 以 prefix 開頭的 rowid,維持 fst byte-sort 的插入順序。
     pub fn lookup_prefix(&self, prefix: &str) -> Vec<u32> {
         let prefix_bytes = prefix.as_bytes();
         if prefix_bytes.is_empty() {
@@ -113,16 +113,16 @@ impl PrefixIndex {
     /// little-endian bytes may contain `0xFF`, so it is located by offset,
     /// never by searching for `0xFF`). `lookup_prefix` is unchanged so
     /// normal `search` keeps its byte-order acronym matching.
-    // 中文: 前綴查詢,但 hydration 預算 (cap) 優先給「最短 matched key」,並可用
-    // 中文:   skip(matched_key) 逐 key 排除。回傳至多 cap 個 rowid。
-    // 中文: 動機:wire = key||0xFF||rowid,0xFF 大於任何 UTF-8 byte,故短 exact key
-    // 中文:   (tps:ㄍㄚ) byte 序排在其所有長延伸 (tps:ㄍㄚㄅㄧ…) 之後。直接
-    // 中文:   lookup_prefix(..).take(cap) 會 front-load 最長最冷僻的詞、埋掉短讀音 →
-    // 中文:   裸聲母 (ㄍ) 連續查詢時高頻單音節候選進不了 ranker。依 matched key 長度
-    // 中文:   分桶、短鍵優先填 cap,即修正此預算偏差。
-    // 中文: 此為「hydration 預算政策」,非最終排序 — 畫面順序仍由 caller 的 SortKey 決定。
-    // 中文:   matched_key 由 wire entry 去尾端 0xFF||rowid_le_4 還原;separator 在固定偏移
-    // 中文:   entry.len()-5 (rowid bytes 可能含 0xFF,以偏移定位,絕不搜尋 0xFF)。
+    // 前綴查詢,但 hydration 預算 (cap) 優先給「最短 matched key」,並可用
+    //   skip(matched_key) 逐 key 排除。回傳至多 cap 個 rowid。
+    // 動機:wire = key||0xFF||rowid,0xFF 大於任何 UTF-8 byte,故短 exact key
+    //   (tps:ㄍㄚ) byte 序排在其所有長延伸 (tps:ㄍㄚㄅㄧ…) 之後。直接
+    //   lookup_prefix(..).take(cap) 會 front-load 最長最冷僻的詞、埋掉短讀音 →
+    //   裸聲母 (ㄍ) 連續查詢時高頻單音節候選進不了 ranker。依 matched key 長度
+    //   分桶、短鍵優先填 cap,即修正此預算偏差。
+    // 此為「hydration 預算政策」,非最終排序 — 畫面順序仍由 caller 的 SortKey 決定。
+    //   matched_key 由 wire entry 去尾端 0xFF||rowid_le_4 還原;separator 在固定偏移
+    //   entry.len()-5 (rowid bytes 可能含 0xFF,以偏移定位,絕不搜尋 0xFF)。
     pub fn lookup_prefix_shortest_first(
         &self,
         prefix: &str,
@@ -189,10 +189,10 @@ impl PrefixIndex {
     /// family prefix — NOT the literal key's own narrow range, because an
     /// alternate glyph may byte-sort far from the literal (Codex
     /// pre-impl Q5: a literal-key range would exclude it).
-    // 中文: TPS 歧義感知 exact 查詢 — 單次 automaton 走訪回傳 key 的所有讀法與其 rowids;
-    // 中文:   排序 = 替換數升冪(使用者字面優先)、同數依 byte 序。final_only_offsets = barrier
-    // 中文:   前一格的 byte 偏移(只許 Final 形);調號限制由 pattern builder 內部推導。
-    // 中文: 掃描範圍 = 整個 tps: 家族 range,不能用字面 key 的窄 range(替代 glyph byte 序可能落在外)。
+    // TPS 歧義感知 exact 查詢 — 單次 automaton 走訪回傳 key 的所有讀法與其 rowids;
+    //   排序 = 替換數升冪(使用者字面優先)、同數依 byte 序。final_only_offsets = barrier
+    //   前一格的 byte 偏移(只許 Final 形);調號限制由 pattern builder 內部推導。
+    // 掃描範圍 = 整個 tps: 家族 range,不能用字面 key 的窄 range(替代 glyph byte 序可能落在外)。
     pub fn lookup_exact_tps_readings(
         &self,
         key: &str,
@@ -201,7 +201,7 @@ impl PrefixIndex {
         use fst::{IntoStreamer, Streamer};
         // Unambiguous key (no family glyph): the pattern could only match
         // the literal — use the narrow-range exact lookup, zero automaton.
-        // 中文: 無歧義 glyph 的 key 只可能命中字面 → 走窄 range exact,免自動機。
+        // 無歧義 glyph 的 key 只可能命中字面 → 走窄 range exact,免自動機。
         if !crate::tps_pattern::has_ambiguous_glyph(key) {
             return self
                 .lookup_exact(key)
@@ -255,8 +255,8 @@ impl PrefixIndex {
     /// `ㄇ…` and `ㆬ…` words). Budget policy extends the existing
     /// contract: matched-key length ascending, then substitution count
     /// ascending, then byte order.
-    // 中文: lookup_prefix_shortest_first 的 TPS 歧義感知版 — 部分前綴也考慮所有讀法
-    // 中文:   (ㄇ 同時撈 ㄇ… 與 ㆬ… 詞)。預算排序:matched key 長度升冪 → 替換數升冪 → byte 序。
+    // lookup_prefix_shortest_first 的 TPS 歧義感知版 — 部分前綴也考慮所有讀法
+    //   (ㄇ 同時撈 ㄇ… 與 ㆬ… 詞)。預算排序:matched key 長度升冪 → 替換數升冪 → byte 序。
     pub fn lookup_prefix_shortest_first_tps_readings(
         &self,
         prefix_key: &str,
@@ -272,8 +272,8 @@ impl PrefixIndex {
         // it), and the pattern walk over an unambiguous prefix is already
         // pruned to the literal branch by `can_match` — same traversal cost
         // as the narrow range (Codex confirm 2026-08-19 finding 2).
-        // 中文: 不設無歧義捷徑 — matched-key 契約需要每筆命中的「儲存 key」;
-        // 中文:   無歧義 pattern 經 can_match 剪枝後本就只走字面分支,成本等同窄 range。
+        // 不設無歧義捷徑 — matched-key 契約需要每筆命中的「儲存 key」;
+        //   無歧義 pattern 經 can_match 剪枝後本就只走字面分支,成本等同窄 range。
         let pattern = crate::tps_pattern::TpsKeyPattern::new(
             prefix_key,
             crate::tps_pattern::WireMode::StartsWith,
@@ -335,7 +335,7 @@ impl PrefixIndex {
 
     /// Exact-match lookup — returns rowids whose key equals `key` exactly.
     /// Filters the prefix-scan output by entry-length parity.
-    // 中文: 完全比對查詢 — 僅回傳 key 完全相等的 rowid;以條目長度等於 key+1+4 過濾掉同前綴的較長條目。
+    // 完全比對查詢 — 僅回傳 key 完全相等的 rowid;以條目長度等於 key+1+4 過濾掉同前綴的較長條目。
     pub fn lookup_exact(&self, key: &str) -> Vec<u32> {
         let key_bytes = key.as_bytes();
         if key_bytes.is_empty() {
@@ -406,10 +406,10 @@ fn decode_rowids(
 /// may contain `0xFF`, so it is located by offset, never by searching for
 /// `0xFF`. A non-UTF-8 key (never produced by the build pipeline) is kept
 /// rather than dropped — the skip predicate is a filter, not a validator.
-// 中文: 解析單一 wire entry (key||0xFF||rowid),套 skip(matched_key)。存活回
-// 中文:   (matched_key_len, rowid),太短或被 skip 回 None。separator 在固定偏移
-// 中文:   entry.len()-5 (rowid bytes 可能含 0xFF,以偏移定位)。非 UTF-8 key (build
-// 中文:   pipeline 不會產生) 保留而非丟棄 — skip 是過濾器,不是驗證器。
+// 解析單一 wire entry (key||0xFF||rowid),套 skip(matched_key)。存活回
+//   (matched_key_len, rowid),太短或被 skip 回 None。separator 在固定偏移
+//   entry.len()-5 (rowid bytes 可能含 0xFF,以偏移定位)。非 UTF-8 key (build
+//   pipeline 不會產生) 保留而非丟棄 — skip 是過濾器,不是驗證器。
 fn decode_entry_filtered(
     entry: &[u8],
     min_key_len: usize,
@@ -431,7 +431,7 @@ fn decode_entry_filtered(
 
 /// [`decode_rowids`] variant that drops an entry when `skip(matched_key)`
 /// is `true`. Thin stream wrapper over [`decode_entry_filtered`].
-// 中文: decode_rowids 變體;skip 為真丟棄該 entry。為 decode_entry_filtered 的 stream 薄包裝。
+// decode_rowids 變體;skip 為真丟棄該 entry。為 decode_entry_filtered 的 stream 薄包裝。
 fn decode_rowids_filtered(
     stream: &mut fst::set::Stream<'_, fst::automaton::AlwaysMatch>,
     min_key_len: usize,

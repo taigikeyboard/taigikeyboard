@@ -6,7 +6,7 @@
 //! Same singleton discipline as `engine_roundtrip.rs`: one lock, one fresh
 //! generation block per test.
 
-// 中文: 組字管理者對真實引擎的整合測試;記憶體儲存 + 錄影執行器;與 macOS 測試逐案對應。
+// 組字管理者對真實引擎的整合測試;記憶體儲存 + 錄影執行器;與 macOS 測試逐案對應。
 
 use std::collections::HashMap;
 use std::path::PathBuf;

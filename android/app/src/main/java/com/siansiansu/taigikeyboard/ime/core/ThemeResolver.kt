@@ -1,4 +1,4 @@
-// 中文: 主題解析器 — 選定 themeId + isDark + legacyAppearance + userThemes -> 渲染端 ThemeAppearance。對齊 iOS ThemeResolver。
+// 主題解析器 — 選定 themeId + isDark + legacyAppearance + userThemes -> 渲染端 ThemeAppearance。對齊 iOS ThemeResolver。
 
 package com.siansiansu.taigikeyboard.ime.core
 

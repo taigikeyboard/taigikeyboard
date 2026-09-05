@@ -2,7 +2,7 @@
 //! 0); recorded in `memory/project_windows_ime.md`. Never reuse another
 //! IME's.
 
-// 中文: 本輸入法擁有的 GUID,2026-08-29 一次配發。
+// 本輸入法擁有的 GUID,2026-08-29 一次配發。
 
 use windows::core::GUID;
 

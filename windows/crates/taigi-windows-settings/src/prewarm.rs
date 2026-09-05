@@ -17,7 +17,7 @@
 //! `windows-reactor` cannot create a window without showing it — so this
 //! mode deliberately buys the loader half and nothing else.
 
-// 中文: --prewarm — 只把視窗要用的 WinUI runtime DLL 映射進來就結束,不開視窗、不寫設定。
+// --prewarm — 只把視窗要用的 WinUI runtime DLL 映射進來就結束,不開視窗、不寫設定。
 
 /// The runtime images the window maps from its own directory, spelled as
 /// the staging list spells them (dumped from a live settings process on the

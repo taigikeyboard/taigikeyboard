@@ -1,8 +1,8 @@
-// 中文: Phonetics + Derivation + TPS 橋 — 15 ops + toneVariations 快取。
-// 中文: 對應 iOS RustEngineBridge+Phonetics.swift(TPS 同檔合併 per simplify 結論)。
-// 中文: 走 RustEngineBridge.sendRawBytes(...) 做 JNI roundtrip — 保留 pre-split facade
-// 中文: dispatch 路徑的 parse-fail 行為(JNI exception 透傳、parseFrom 失敗回 null)。
-// 中文: 不要改成 dispatchRaw 包 try/Throwable,否則 op-name recordFailure 與例外語意都會偏。
+// Phonetics + Derivation + TPS 橋 — 15 ops + toneVariations 快取。
+// 對應 iOS RustEngineBridge+Phonetics.swift(TPS 同檔合併 per simplify 結論)。
+// 走 RustEngineBridge.sendRawBytes(...) 做 JNI roundtrip — 保留 pre-split facade
+// dispatch 路徑的 parse-fail 行為(JNI exception 透傳、parseFrom 失敗回 null)。
+// 不要改成 dispatchRaw 包 try/Throwable,否則 op-name recordFailure 與例外語意都會偏。
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -156,7 +156,7 @@ internal object PhoneticsBridge {
      * a stored custom-dict roman, materialized into the `custom_search_key`
      * side table. Empty on FFI failure / residue-only input.
      */
-    // 中文: 自訂詞寫入端 — 把 roman 展成跨家族搜尋鍵 bundle,落地到 custom_search_key 側表。
+    // 自訂詞寫入端 — 把 roman 展成跨家族搜尋鍵 bundle,落地到 custom_search_key 側表。
     fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> {
         val payload = DeriveCustomSearchKeys.newBuilder().setRoman(roman).build()
         return customSearchKeys({ it.deriveCustomSearchKeys = payload }, "deriveCustomSearchKeys")
@@ -169,7 +169,7 @@ internal object PhoneticsBridge {
      * so the caller passes its settings mode verbatim. `null` for residue-only
      * / empty input or FFI failure.
      */
-    // 中文: 自訂詞查詢端 — 依 input + inputMode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    // 自訂詞查詢端 — 依 input + inputMode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
     fun deriveCustomQueryKey(
         input: String,
         inputMode: String,
@@ -305,7 +305,7 @@ internal object PhoneticsBridge {
      * `CustomSearchKeysResult` (the write op a full bundle, the query op 0/1).
      * Mirrors iOS `RustEngineBridge+Phonetics.swift` `customSearchKeys`.
      */
-    // 中文: 兩個自訂詞搜尋鍵 op 共用的 decode;皆回 CustomSearchKeysResult。
+    // 兩個自訂詞搜尋鍵 op 共用的 decode;皆回 CustomSearchKeysResult。
     private inline fun customSearchKeys(
         methodSetter: (PhoneticsRequest.Builder) -> Unit,
         op: String,

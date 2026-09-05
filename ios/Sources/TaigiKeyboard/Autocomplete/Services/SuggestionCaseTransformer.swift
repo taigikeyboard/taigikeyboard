@@ -1,5 +1,5 @@
-// 中文: 候選詞大小寫轉換的 per-word bridge。skip 規則(組字文字 / NextWord 候選)
-// 中文: 留在平台端,真正轉換交給 RustEngineBridge.transformSuggestionCase。
+// 候選詞大小寫轉換的 per-word bridge。skip 規則(組字文字 / NextWord 候選)
+// 留在平台端,真正轉換交給 RustEngineBridge.transformSuggestionCase。
 
 import Foundation
 import KeyboardKit
@@ -29,8 +29,8 @@ enum SuggestionCaseTransformer {
         }
     }
 
-    // 中文: 對單一候選詞套用 case 轉換。先看 additionalInfo 跳過組字文字 / NextWord 候選,
-    // 中文: 其餘交給 Rust bridge 處理。
+    // 對單一候選詞套用 case 轉換。先看 additionalInfo 跳過組字文字 / NextWord 候選,
+    // 其餘交給 Rust bridge 處理。
     private static func transformSuggestion(
         _ suggestion: AutocompleteSuggestion,
         composingText: String,
@@ -51,8 +51,8 @@ enum SuggestionCaseTransformer {
         // typed-prefix transform is invalid under Model B and would
         // clobber that, so bypass it for Continuous-flagged suggestions
         // (flagged at TaigiAutocompleteService.swift `buildContinuousSuggestions`).
-        // 中文: §10.2 Opt 2A — Continuous 候選已由引擎依使用者 raw 逐段 case,
-        // 中文: legacy 全域大寫轉換在 Model B 下無效,故跳過不再覆寫。
+        // §10.2 Opt 2A — Continuous 候選已由引擎依使用者 raw 逐段 case,
+        // legacy 全域大寫轉換在 Model B 下無效,故跳過不再覆寫。
         // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/SuggestionCaseTransformer.kt IS_CONTINUOUS skip.
         // Drift causes silent divergence (continuous candidate re-cased away from raw).
         if suggestion.additionalInfo["isContinuous"] == "true" {

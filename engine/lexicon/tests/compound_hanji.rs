@@ -12,9 +12,9 @@
 //! parametric `syllable_count` so the caller's longest-match loop can
 //! ask "is `hanji` an n-syllable compound?" for any `n >= 2`.
 //
-// 中文: §10.2 — compound_hanji_exists 的 hermetic 回歸測試。
-// 中文:   合成 FST + dict.bin,鎖「漢字 exact-key + syllable_count 參數 + hanzi 再驗」契約。
-// 中文:   v3.5.9 由固定 n=2 擴為任意 n>=2(longest-match)。
+// §10.2 — compound_hanji_exists 的 hermetic 回歸測試。
+//   合成 FST + dict.bin,鎖「漢字 exact-key + syllable_count 參數 + hanzi 再驗」契約。
+//   v3.5.9 由固定 n=2 擴為任意 n>=2(longest-match)。
 
 mod common;
 

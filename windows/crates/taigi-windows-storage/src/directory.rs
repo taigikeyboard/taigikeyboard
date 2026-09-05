@@ -3,7 +3,7 @@
 //! profile — the one place Windows offers for per-user data that is not a
 //! cache). Port of `Storage/UserDataDirectory.swift`.
 
-// 中文: 使用者資料目錄 — %APPDATA%\TaigiKeyboard,不存在就建立。
+// 使用者資料目錄 — %APPDATA%\TaigiKeyboard,不存在就建立。
 
 use std::path::{Path, PathBuf};
 

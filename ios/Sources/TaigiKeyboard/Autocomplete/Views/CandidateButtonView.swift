@@ -1,10 +1,10 @@
-// 中文: 單一候選詞按鈕的 SwiftUI 視圖 — 處理顯示 / 副標題 / 按下狀態 / Liquid Glass 背景。
+// 單一候選詞按鈕的 SwiftUI 視圖 — 處理顯示 / 副標題 / 按下狀態 / Liquid Glass 背景。
 
 import KeyboardKit
 import SwiftUI
 
 /// 單個候選詞按鈕視圖
-// 中文: 候選詞按鈕。Tap 後透過 onTap 把 commit 用的 suggestion 回呼給 caller。
+// 候選詞按鈕。Tap 後透過 onTap 把 commit 用的 suggestion 回呼給 caller。
 struct CandidateButtonView: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool

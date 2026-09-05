@@ -1,7 +1,7 @@
-// 中文: Taigi 候選詞 autocomplete service — 連續輸入引擎為唯一候選來源。
-// 中文: v3.5.8 Item 13 後不再有 platform lexicon fallback;engine 內部處理所有
-// 中文: 切音節 / 前綴 / 自訂詞 / hanzi guard 邏輯,平台只負責把 engine 候選
-// 中文: 轉成 KeyboardKit Suggestion 列表(單向資料流,對齊 MOE tutgInputLine model)。
+// Taigi 候選詞 autocomplete service — 連續輸入引擎為唯一候選來源。
+// v3.5.8 Item 13 後不再有 platform lexicon fallback;engine 內部處理所有
+// 切音節 / 前綴 / 自訂詞 / hanzi guard 邏輯,平台只負責把 engine 候選
+// 轉成 KeyboardKit Suggestion 列表(單向資料流,對齊 MOE tutgInputLine model)。
 
 import Foundation
 import KeyboardKit
@@ -11,8 +11,8 @@ import KeyboardKit
 /// (`CandidateCellHelper.suggestionToHandle`), and the commit resolver
 /// (`ActionHandler.markedCellCommit`). Values mirror Android
 /// `TaigiWord.MetadataKeys.CELL_SCRIPT*`; wire strings must not drift.
-// 中文: 漢羅濫 split cell 的 wire 字串單一出處 — builder / render guard / commit
-// 中文: resolver 三處共用,與 Android MetadataKeys 常數一字不差。
+// 漢羅濫 split cell 的 wire 字串單一出處 — builder / render guard / commit
+// resolver 三處共用,與 Android MetadataKeys 常數一字不差。
 enum CandidateCellScript {
     /// `additionalInfo` key carrying the cell's script marker.
     static let infoKey = "cellScript"
@@ -33,8 +33,8 @@ enum CandidateCellScript {
     /// mode-derived path together. Splitting that predicate is what let a
     /// defective marker skip the swap rewrite and then be re-parsed as an
     /// un-split dual-script suggestion.
-    // 中文: 這格是不是 §42 split cell — render guard 與 commit resolver 共用同一
-    // 中文: 判斷,壞掉的標記兩邊一起退回未標記路徑,不會半標記半改寫。
+    // 這格是不是 §42 split cell — render guard 與 commit resolver 共用同一
+    // 判斷,壞掉的標記兩邊一起退回未標記路徑,不會半標記半改寫。
     static func marker(for suggestion: AutocompleteSuggestion) -> String? {
         guard let marker = suggestion.additionalInfo[infoKey],
               marker == hanji || marker == roman,
@@ -109,15 +109,15 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// Distinct protocol from `composingState` because the fetch surface is
     /// not Foundation-only (`RustEngineBridge.ContinuousCandidate`); same
     /// backing instance in practice (ComposingManager conforms to both).
-    // 中文: 連續輸入 fetcher protocol。實作端與 composingState 是同一個 ComposingManager。
+    // 連續輸入 fetcher protocol。實作端與 composingState 是同一個 ComposingManager。
     private weak var continuousFetcher: (any ContinuousCandidateFetcher)?
 
     let logger = DebugLogger(category: "TaigiAutocompleteService")
 
     // MARK: - 公開介面
 
-    // 中文: 注入組字狀態 provider(通常是 ComposingManager)。同一實例也供應
-    // 中文: 連續輸入 fetch surface(ComposingManager 同時 conform 兩個 protocol)。
+    // 注入組字狀態 provider(通常是 ComposingManager)。同一實例也供應
+    // 連續輸入 fetch surface(ComposingManager 同時 conform 兩個 protocol)。
     func setComposingManager(_ provider: any ComposingStateProvider) {
         composingState = provider
         continuousFetcher = provider as? any ContinuousCandidateFetcher
@@ -142,7 +142,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
         // (hanji-first by construction), so a TPS layout never splits
         // regardless of the stored mode. Mirrors Android's
         // `splitCombinedCellsProvider`.
-        // 中文: TPS 佈局不理會候選詞顯示模式,恆走未拆分的並排 shape。
+        // TPS 佈局不理會候選詞顯示模式,恆走未拆分的並排 shape。
         let settings = SharedSettings.shared
         let splitCombinedCells = shouldSplitCombinedCells(
             keyboardLayoutType: settings.keyboardLayoutType,
@@ -233,11 +233,11 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// scripts keep separate keys. Split OFF (the default — 並排 / 羅馬字 / TPS
     /// all resolve to `false` at the caller) emits the un-split shape
     /// byte-identically — 並排's subtitle tells 重/tîng from 重/tāng.
-    // 中文: text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
-    // 中文: Bug 1 後 displayText sidechannel = canonical key,走 canonicalText
-    // 中文: (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
-    // 中文: 漢羅濫 = 拆成相鄰的 漢字 cell + 羅馬字 cell(無副標題),cellScript 標記
-    // 中文: 該 cell 顯示/送出的 script;semantic sidechannel 兩個 cell 皆原樣複製。
+    // text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
+    // Bug 1 後 displayText sidechannel = canonical key,走 canonicalText
+    // (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
+    // 漢羅濫 = 拆成相鄰的 漢字 cell + 羅馬字 cell(無副標題),cellScript 標記
+    // 該 cell 顯示/送出的 script;semantic sidechannel 兩個 cell 皆原樣複製。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
         splitCombinedCells: Bool = false,

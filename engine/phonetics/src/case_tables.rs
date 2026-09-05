@@ -17,7 +17,7 @@
 //! divergence. See case-transform-slice-audit.md for the cross-platform
 //! resolution rationale.
 
-// 中文: POJ + TL 聲調字母大小寫對應表 (純資料)。stdlib 的 uppercase/lowercase 處理組合符號會掉字,所以這邊用顯式對應表來避免跨平台分歧。
+// POJ + TL 聲調字母大小寫對應表 (純資料)。stdlib 的 uppercase/lowercase 處理組合符號會掉字,所以這邊用顯式對應表來避免跨平台分歧。
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use crate::api::InputMode;
 
 /// POJ lowercase → uppercase tone-letter map.
-// 中文: POJ 小寫 → 大寫聲調字母對應 (含組合符號完整音節)。
+// POJ 小寫 → 大寫聲調字母對應 (含組合符號完整音節)。
 static POJ_LOWER_TO_UPPER: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let pairs: &[(&str, &str)] = &[
         // a
@@ -99,7 +99,7 @@ static POJ_LOWER_TO_UPPER: Lazy<HashMap<&'static str, &'static str>> = Lazy::new
 /// TL lowercase → uppercase tone-letter map. Differs from POJ on the
 /// 8th-tone diacritic (`̍` U+030D unchanged but tone-9 `̋` U+030B added)
 /// and on `oo` (TL doubles instead of POJ's `o͘`).
-// 中文: TL 小寫 → 大寫聲調字母對應;與 POJ 差在第 9 聲符號 (U+030B) 及 `oo` 雙寫 (POJ 用 `o͘`)。
+// TL 小寫 → 大寫聲調字母對應;與 POJ 差在第 9 聲符號 (U+030B) 及 `oo` 雙寫 (POJ 用 `o͘`)。
 static TL_LOWER_TO_UPPER: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let pairs: &[(&str, &str)] = &[
         // a
@@ -173,7 +173,7 @@ static TL_LOWER_TO_UPPER: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
 /// Reverse maps — populated by inverting the lowercase→uppercase map at
 /// first access. POJ and TL each have a 1:1 inverse since the entries are
 /// unique grapheme cluster strings.
-// 中文: 反向對應 (大寫 → 小寫),由正向表反轉而成;POJ/TL 各自為 1:1。
+// 反向對應 (大寫 → 小寫),由正向表反轉而成;POJ/TL 各自為 1:1。
 static POJ_UPPER_TO_LOWER: Lazy<HashMap<&'static str, &'static str>> =
     Lazy::new(|| POJ_LOWER_TO_UPPER.iter().map(|(k, v)| (*v, *k)).collect());
 
@@ -182,7 +182,7 @@ static TL_UPPER_TO_LOWER: Lazy<HashMap<&'static str, &'static str>> =
 
 /// Returns the mode-specific lowercase→uppercase map, or `None` for English /
 /// unsupported modes (in which case the caller falls back to stdlib casing).
-// 中文: 依模式取對應的小寫→大寫表;English 模式回 None,呼叫端就退回 stdlib 預設轉換。
+// 依模式取對應的小寫→大寫表;English 模式回 None,呼叫端就退回 stdlib 預設轉換。
 pub(crate) fn lower_to_upper(
     mode: InputMode,
 ) -> Option<&'static HashMap<&'static str, &'static str>> {
@@ -191,14 +191,14 @@ pub(crate) fn lower_to_upper(
         InputMode::Tl => Some(&TL_LOWER_TO_UPPER),
         // v3.5.9 D / C-3b — TPS Bopomofo has no upper/lower case axis;
         // table absent so callers fall through to identity (matches English).
-        // 中文: TPS 注音無大小寫之分,回 None 走 identity,與 English 同。
+        // TPS 注音無大小寫之分,回 None 走 identity,與 English 同。
         InputMode::Tps | InputMode::English => None,
     }
 }
 
 /// Returns the mode-specific uppercase→lowercase map, or `None` for English /
 /// unsupported modes (in which case the caller falls back to stdlib casing).
-// 中文: 依模式取對應的大寫→小寫表;English 模式回 None,呼叫端就退回 stdlib 預設轉換。
+// 依模式取對應的大寫→小寫表;English 模式回 None,呼叫端就退回 stdlib 預設轉換。
 pub(crate) fn upper_to_lower(
     mode: InputMode,
 ) -> Option<&'static HashMap<&'static str, &'static str>> {
@@ -206,7 +206,7 @@ pub(crate) fn upper_to_lower(
         InputMode::Poj => Some(&POJ_UPPER_TO_LOWER),
         InputMode::Tl => Some(&TL_UPPER_TO_LOWER),
         // v3.5.9 D / C-3b — TPS Bopomofo has no upper/lower case axis.
-        // 中文: TPS 注音無大小寫之分,回 None 走 identity,與 English 同。
+        // TPS 注音無大小寫之分,回 None 走 identity,與 English 同。
         InputMode::Tps | InputMode::English => None,
     }
 }

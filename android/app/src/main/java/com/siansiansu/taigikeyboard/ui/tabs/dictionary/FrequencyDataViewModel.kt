@@ -26,7 +26,7 @@ class FrequencyDataViewModel(
 
     // One displayed frequency row: a (word, tl) reading + its count. R5 (#7):
     // identity is the pair, so 一字多音 (重/tāng vs 重/tîng) are distinct rows.
-    // 中文: 詞頻列表一列 = (word, tl) 讀音 + 次數;word 不唯一,身分是配對 (#7)。
+    // 詞頻列表一列 = (word, tl) 讀音 + 次數;word 不唯一,身分是配對 (#7)。
     data class FrequencyListItem(
         val word: String,
         val tl: String,
@@ -81,7 +81,7 @@ class FrequencyDataViewModel(
         }
     }
 
-    // 中文: 匯出全部詞頻為 CSV(逐 (word, tl) 讀音,保留羅馬字 #7);每列 word,tl,count。
+    // 匯出全部詞頻為 CSV(逐 (word, tl) 讀音,保留羅馬字 #7);每列 word,tl,count。
     suspend fun exportCSV(): String =
         withContext(Dispatchers.IO) {
             DictionaryCsvCodec.encodeFrequencyCSV(userFreq.getAllFrequencyRows())

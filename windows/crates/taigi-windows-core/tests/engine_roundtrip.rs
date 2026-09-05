@@ -7,7 +7,7 @@
 //! same lock and its own generation: two tests interleaving `Append`s under
 //! different generations would reset each other mid-composition.
 
-// 中文: 用真實辭典檔做端到端往返;引擎組字狀態是全域單例,測試間以鎖串行 + 各自 generation。
+// 用真實辭典檔做端到端往返;引擎組字狀態是全域單例,測試間以鎖串行 + 各自 generation。
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};

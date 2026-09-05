@@ -1,4 +1,4 @@
-// 中文: 引擎層讀取設定的進入點。實作端必須回傳 live-reading EngineSettings (每次讀都是新值)。
+// 引擎層讀取設定的進入點。實作端必須回傳 live-reading EngineSettings (每次讀都是新值)。
 
 import Foundation
 
@@ -18,10 +18,10 @@ import Foundation
 ///
 /// Do NOT return a one-shot snapshot from `current`. If a caller needs
 /// consistency across multiple reads, it should capture a local copy.
-// 中文: 引擎側設定 provider。current 回傳值必須 live-read,而非快照。
-// 中文: 這是 keyboard extension 跨程序設定同步的核心契約 — host app 寫設定,extension 下一次讀就生效。
-// 中文: 若需多次讀取一致,呼叫端自行 capture 區域變數。
+// 引擎側設定 provider。current 回傳值必須 live-read,而非快照。
+// 這是 keyboard extension 跨程序設定同步的核心契約 — host app 寫設定,extension 下一次讀就生效。
+// 若需多次讀取一致,呼叫端自行 capture 區域變數。
 protocol EngineSettingsProvider: AnyObject {
-    // 中文: 取得當下設定。每次 access 都直接讀 UserDefaults,不可回傳一次性 snapshot。
+    // 取得當下設定。每次 access 都直接讀 UserDefaults,不可回傳一次性 snapshot。
     var current: EngineSettings { get }
 }

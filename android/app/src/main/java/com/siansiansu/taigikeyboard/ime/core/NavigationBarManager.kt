@@ -1,5 +1,5 @@
-// 中文: 導覽列圖示色管理 — 背景色已在 theme.xml 設透明,讓鍵盤底色直接延伸到 navbar 區。
-// 中文: 此檔只負責切換圖示前景色(深淺色 mode 對應)。設計參考 FlorisBoard。
+// 導覽列圖示色管理 — 背景色已在 theme.xml 設透明,讓鍵盤底色直接延伸到 navbar 區。
+// 此檔只負責切換圖示前景色(深淺色 mode 對應)。設計參考 FlorisBoard。
 
 package com.siansiansu.taigikeyboard.ime.core
 

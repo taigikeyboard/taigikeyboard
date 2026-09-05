@@ -1,5 +1,5 @@
-// 中文: TextInputManager 的 UI-state + layout-reload 協作器 — 擁有 _keyboardUi 寫入端、
-// 中文: layoutReloadJob 取消鏈、Dispatchers.IO fetchComputedLayout 包裝;TIM 透過 forwarder 維持公開 API。
+// TextInputManager 的 UI-state + layout-reload 協作器 — 擁有 _keyboardUi 寫入端、
+// layoutReloadJob 取消鏈、Dispatchers.IO fetchComputedLayout 包裝;TIM 透過 forwarder 維持公開 API。
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 

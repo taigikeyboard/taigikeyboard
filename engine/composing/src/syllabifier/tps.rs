@@ -22,10 +22,10 @@
 //! ReadingGrid unigram-backed spans
 //! (`references/McBopomofo/Source/Engine/gramambular2/reading_grid.cpp`).
 
-// 中文: TPS 音節切分器 — 對 SyllableInventory 跑 inv-driven BFS,回報深度 ≤ max_syllables 鏈可達的所有 span ending。
-// 中文: 修復前的 structural pre-scan (next-initial-seen) 無法切 ㄉㄞ|ㄨㄢ — ㄨ 是介音非聲母,無切點建議,
-// 中文:   inv probe 撞到融合 2 音節的 tps:ㄉㄞㄨㄢ 永遠 miss。改成 inv-driven BFS 直接以
-// 中文:   contains_in(Tps, slice) 作邊界判定;與 TL syllabifier 同型,亦對齊 librime / khiin-rs / McBopomofo。
+// TPS 音節切分器 — 對 SyllableInventory 跑 inv-driven BFS,回報深度 ≤ max_syllables 鏈可達的所有 span ending。
+// 修復前的 structural pre-scan (next-initial-seen) 無法切 ㄉㄞ|ㄨㄢ — ㄨ 是介音非聲母,無切點建議,
+//   inv probe 撞到融合 2 音節的 tps:ㄉㄞㄨㄢ 永遠 miss。改成 inv-driven BFS 直接以
+//   contains_in(Tps, slice) 作邊界判定;與 TL syllabifier 同型,亦對齊 librime / khiin-rs / McBopomofo。
 
 use std::collections::{BTreeSet, VecDeque};
 
@@ -41,8 +41,8 @@ use phonetics::InputMode;
 /// initial 2 chars × 3 + vowel chain 3 chars × 3 + entering coda 1 ×
 /// 3 + tone-8 dot 1 × 2 = 20 bytes. Set to 24 for a small headroom and
 /// to match the order-of-magnitude of TL's tight `MAX_SYLLABLE_BYTES`.
-// 中文: TPS 單音節最大 byte 上限 — Bopomofo / 擴展區 = 3 bytes,聲調符 = 2 bytes;
-// 中文:   結構最大 20 bytes;設 24 留小幅 headroom,與 TL 的 10 同量級。
+// TPS 單音節最大 byte 上限 — Bopomofo / 擴展區 = 3 bytes,聲調符 = 2 bytes;
+//   結構最大 20 bytes;設 24 留小幅 headroom,與 TL 的 10 同量級。
 const MAX_SYLLABLE_BYTES_TPS: usize = 24;
 
 /// Return every byte offset `e > pos` reachable from `pos` by a chain
@@ -77,11 +77,11 @@ const MAX_SYLLABLE_BYTES_TPS: usize = 24;
 /// `BTreeSet::insert` returns `true` only on first arrival, which
 /// under unit edge costs is also the minimum depth. Time:
 /// O(n × MAX_SYLLABLE_BYTES_TPS) FST lookups, each O(syllable_len).
-// 中文: 從 pos 出發,以 1..=max_syllables 條 tps: 家族音節鏈走訪,回傳所有可達 byte 位移 (遞增去重)。
-// 中文: false-toneless guard 壓掉「短的 toneless edge」當下一字是 TPS 聲調符 (含 U+02D9 / U+0307),
-// 中文:   讓 numeric-tone 長形 (例 tps:ㄉㄞˊ) 勝出,對齊 TL 的 is_false_toneless_boundary 行為。
-// 中文: BFS 前把鍵盤端 U+02D9 (encode-safe 第 8 聲點) 取代為 build pipeline 使用的 U+0307 (組合形),
-// 中文:   兩者皆 2 bytes UTF-8 → byte 偏移不變,回傳值仍以原始 lowered 為座標。
+// 從 pos 出發,以 1..=max_syllables 條 tps: 家族音節鏈走訪,回傳所有可達 byte 位移 (遞增去重)。
+// false-toneless guard 壓掉「短的 toneless edge」當下一字是 TPS 聲調符 (含 U+02D9 / U+0307),
+//   讓 numeric-tone 長形 (例 tps:ㄉㄞˊ) 勝出,對齊 TL 的 is_false_toneless_boundary 行為。
+// BFS 前把鍵盤端 U+02D9 (encode-safe 第 8 聲點) 取代為 build pipeline 使用的 U+0307 (組合形),
+//   兩者皆 2 bytes UTF-8 → byte 偏移不變,回傳值仍以原始 lowered 為座標。
 pub(crate) fn valid_span_endings_lowered(
     lowered: &str,
     pos: usize,
@@ -122,8 +122,8 @@ pub(crate) fn valid_span_endings_lowered(
             // it (`cur < barrier < end`). Chains may still span it link
             // by link, which is exactly the §31 soft-separator behavior
             // (`ㄍㄠ`␣`ㄉㄞ` → 交代 via two links meeting AT the barrier).
-            // 中文: §35 barrier (a) — 分隔符為強制切點,單一音節不可跨越(鏈可逐節跨,
-            // 中文:   即 §31 軟分隔符行為:交代 = 兩節在 barrier 相接)。
+            // §35 barrier (a) — 分隔符為強制切點,單一音節不可跨越(鏈可逐節跨,
+            //   即 §31 軟分隔符行為:交代 = 兩節在 barrier 相接)。
             if barriers.iter().any(|&b| cur < b && b < end) {
                 continue;
             }
@@ -131,8 +131,8 @@ pub(crate) fn valid_span_endings_lowered(
             // the span under the TPS ambiguity families. Part (b) of the
             // barrier contract: a syllable ENDING at a barrier has its
             // last glyph restricted to Final-role readings.
-            // 中文: §35 展開探測 — span 任一讀法命中即成 edge;結束於 barrier 的音節,
-            // 中文:   末 glyph 只許 Final 形(契約 (b))。
+            // §35 展開探測 — span 任一讀法命中即成 edge;結束於 barrier 的音節,
+            //   末 glyph 只許 Final 形(契約 (b))。
             let final_only = span_final_only_offsets(probe, cur, end, barriers);
             if inv.contains_in_tps_readings(&probe[cur..end], &final_only)
                 && !is_false_toneless_boundary_tps(probe, end)
@@ -159,17 +159,17 @@ pub(crate) fn valid_span_endings_lowered(
 /// stop codas are NOT stripped — they stay in `tps_notone` keys. So
 /// they are deliberately absent from the guard set; the inv probe of
 /// the longer slice that ends ON the coda is the correct match.
-// 中文: 把「toneless TPS 音節邊界後接聲調符」判為假邊界 — 較長的 numeric-tone 形是正解,
-// 中文:   FST 兩形都收。直接重用 phonetics::is_tps_tone_mark (含 U+02D9 + U+0307);
-// 中文:   入聲韻尾 ㆴㆵㆻㆷ 屬音節主體,不在 guard 內。
+// 把「toneless TPS 音節邊界後接聲調符」判為假邊界 — 較長的 numeric-tone 形是正解,
+//   FST 兩形都收。直接重用 phonetics::is_tps_tone_mark (含 U+02D9 + U+0307);
+//   入聲韻尾 ㆴㆵㆻㆷ 屬音節主體,不在 guard 內。
 /// Byte offsets (relative to the span `probe[cur..end]`) of glyphs whose
 /// pattern slot must be Final-only: the span's LAST glyph when the span
 /// ends exactly at a barrier or at a trailing barrier (= end of shadow
 /// where a separator was stripped). Interior glyphs are never
 /// barrier-adjacent here because part (a) already refuses crossing
 /// spans.
-// 中文: span 內須限 Final 形的 glyph 偏移(相對 span):span 恰結束於 barrier 時的末 glyph。
-// 中文:   內部 glyph 不會鄰接 barrier(契約 (a) 已拒絕跨越)。
+// span 內須限 Final 形的 glyph 偏移(相對 span):span 恰結束於 barrier 時的末 glyph。
+//   內部 glyph 不會鄰接 barrier(契約 (a) 已拒絕跨越)。
 fn span_final_only_offsets(probe: &str, cur: usize, end: usize, barriers: &[usize]) -> Vec<usize> {
     if !barriers.contains(&end) {
         return Vec::new();

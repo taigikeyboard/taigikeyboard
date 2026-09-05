@@ -16,10 +16,10 @@
 //! would otherwise win the shortest-first budget) via
 //! `phonetics::is_tps_initial_only`.
 
-// 中文: TPS 連續 partial-prefix 回歸 — 單一聲母 (ㄍ) 必須撈得到單字讀音,
-// 中文:   而非只有多音節詞。根因:wire 分隔符 0xFF 大於任何 UTF-8 byte,短 exact key
-// 中文:   (tps:ㄍㄚ) byte 序排在長延伸之後 → take(cap) 埋掉短讀音。修法 = hydrate
-// 中文:   預算優先給最短 matched key (三模式),再交 SortKey 照詞頻排;TPS 另剔除縮寫 key。
+// TPS 連續 partial-prefix 回歸 — 單一聲母 (ㄍ) 必須撈得到單字讀音,
+//   而非只有多音節詞。根因:wire 分隔符 0xFF 大於任何 UTF-8 byte,短 exact key
+//   (tps:ㄍㄚ) byte 序排在長延伸之後 → take(cap) 埋掉短讀音。修法 = hydrate
+//   預算優先給最短 matched key (三模式),再交 SortKey 照詞頻排;TPS 另剔除縮寫 key。
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};

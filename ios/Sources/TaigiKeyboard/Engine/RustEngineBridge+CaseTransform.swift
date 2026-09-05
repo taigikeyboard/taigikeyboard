@@ -1,6 +1,6 @@
-// 中文: RustEngineBridge 的 case-transform 切片擴充。
-// 中文: 每一個 per-char / per-word 大小寫轉換都是單次 FFI 呼叫,
-// 中文: 模式從 envelope AppConfig.input_mode 傳遞,不需要 ToneToggles。
+// RustEngineBridge 的 case-transform 切片擴充。
+// 每一個 per-char / per-word 大小寫轉換都是單次 FFI 呼叫,
+// 模式從 envelope AppConfig.input_mode 傳遞,不需要 ToneToggles。
 
 import Foundation
 import SwiftProtobuf
@@ -20,21 +20,21 @@ import SwiftProtobuf
 /// Suggestion skip rules (`additionalInfo["isComposingText"]` /
 /// `additionalInfo["isNextWord"]`) stay on the platform side — only
 /// transform-eligible items reach `transformSuggestionCase(...)`.
-// 中文: case-transform 對外接口。建議跳過規則(isComposingText / isNextWord)
-// 中文: 留在平台端判斷,只有真正要轉換的項目才送進這裡。
+// case-transform 對外接口。建議跳過規則(isComposingText / isNextWord)
+// 留在平台端判斷,只有真正要轉換的項目才送進這裡。
 public extension RustEngineBridge {
     // MARK: - Synthesized enum
 
     /// Three-state shift / case indicator. Bridge-side mirror of the proto
     /// `LetterCase` enum + the iOS `LetterCase` engine enum (which is
     /// removed in commit 8 along with `Input/CaseTransformer.swift`).
-    // 中文: 三態 shift / 大小寫指示。橋接層對應 proto LetterCase enum。
+    // 三態 shift / 大小寫指示。橋接層對應 proto LetterCase enum。
     enum CaseTransformLetterCase: Int32, Equatable {
-        // 中文: 全小寫。
+        // 全小寫。
         case lowercased = 1
-        // 中文: 一次性 shift — 首字母大寫,其餘小寫。
+        // 一次性 shift — 首字母大寫,其餘小寫。
         case uppercased = 2 // one-shot shift — first letter upper, rest lower
-        // 中文: Caps Lock 全部大寫。
+        // Caps Lock 全部大寫。
         case capsLocked = 3
     }
 
@@ -43,7 +43,7 @@ public extension RustEngineBridge {
     /// Uppercase a single char/grapheme using mode-aware tone tables. For
     /// multi-character inputs only the first letter is uppercased.
     /// Replaces `ToneUtilities.uppercaseToneLetter`.
-    // 中文: 單一 grapheme 的大寫轉換 — 走模式相關的調符表。多字元輸入只動首字母。
+    // 單一 grapheme 的大寫轉換 — 走模式相關的調符表。多字元輸入只動首字母。
     static func uppercaseToneChar(_ input: String, mode: InputMode) -> String {
         var payload = Taigi_Engine_UppercaseToneChar()
         payload.input = input
@@ -54,7 +54,7 @@ public extension RustEngineBridge {
     /// Used by Caps Lock paths. Replaces a separate Android API
     /// (`ToneUtilities.fullUppercaseToneLetter`) and the iOS pattern of
     /// passing a multi-char string into `uppercaseToneLetter`.
-    // 中文: 把整串輸入全部轉成大寫,Caps Lock 路徑使用。
+    // 把整串輸入全部轉成大寫,Caps Lock 路徑使用。
     static func fullUppercaseToneString(_ input: String, mode: InputMode) -> String {
         var payload = Taigi_Engine_FullUppercaseToneString()
         payload.input = input
@@ -63,7 +63,7 @@ public extension RustEngineBridge {
 
     /// Lowercase a single char/grapheme using mode-aware tone tables.
     /// Replaces `ToneUtilities.lowercaseToneLetter`.
-    // 中文: 單一 grapheme 的小寫轉換,走模式相關的調符表。
+    // 單一 grapheme 的小寫轉換,走模式相關的調符表。
     static func lowercaseToneChar(_ input: String, mode: InputMode) -> String {
         var payload = Taigi_Engine_LowercaseToneChar()
         payload.input = input
@@ -74,7 +74,7 @@ public extension RustEngineBridge {
 
     /// Apply `letterCase` to `text`. Replaces
     /// `CaseTransformer.transformForInput`.
-    // 中文: 依 letterCase 對整段 text 套用大小寫轉換(輸入區用)。
+    // 依 letterCase 對整段 text 套用大小寫轉換(輸入區用)。
     static func transformInputCase(
         _ text: String,
         letterCase: CaseTransformLetterCase,
@@ -89,7 +89,7 @@ public extension RustEngineBridge {
     /// Capitalize candidate first letter when `autoCapEnabled` and `input`
     /// starts with an uppercase letter. Replaces
     /// `CaseTransformer.capitalizeCandidate`.
-    // 中文: 當 autoCapEnabled 且輸入首字母為大寫時,把候選詞首字母也轉大寫。
+    // 當 autoCapEnabled 且輸入首字母為大寫時,把候選詞首字母也轉大寫。
     static func capitalizeCandidate(
         _ text: String,
         basedOn input: String,
@@ -106,8 +106,8 @@ public extension RustEngineBridge {
     /// Per-suggestion case transformation. Output is post-processed via
     /// engine-side `adjustNasalMarkerCase` (no separate FFI hop needed).
     /// Replaces the body of `SuggestionCaseTransformer.transform` per word.
-    // 中文: 對單一候選建議套用大小寫轉換。引擎端會自帶鼻音標記大小寫調整,
-    // 中文: 不需要額外 FFI 呼叫。
+    // 對單一候選建議套用大小寫轉換。引擎端會自帶鼻音標記大小寫調整,
+    // 不需要額外 FFI 呼叫。
     static func transformSuggestionCase(
         original: String,
         composing: String,

@@ -2,7 +2,7 @@
 //! function over the window's state — presentation only, no state of its
 //! own (the guide's rule for a stateless subtree).
 
-// 中文: 各 pane 的頁面 — 純呈現函式,狀態全在 SettingsWindow。
+// 各 pane 的頁面 — 純呈現函式,狀態全在 SettingsWindow。
 
 pub mod appearance;
 pub mod custom_dictionary;

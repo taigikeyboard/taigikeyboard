@@ -25,11 +25,11 @@
 //! key that is itself a production syllable is present as a control row
 //! (之/tsi under ㄐㄧㆵ) and asserted on.
 
-// 中文: A3 (§41) — TPS 空白釘定聲調整合測試。TPS 第 2/3/5/6/7/8/9 調有調號可過濾,
-// 中文:   第 1 調(開音節)與第 4 調(入聲尾 ㆴㆵㆻㆷ)無調號,唯一分界是鍵盤空白,而該空白在
-// 中文:   鍵選擇前已被剝為零寬(§31 跨空白整詞 edge)→ 全聲調都回來。修復後:span 結尾落在
-// 中文:   被剝空白上時,只留該邊界音節為無調號調(1/4)的讀法;span 內部的 barrier 仍是單純
-// 中文:   音節邊界,故 §31 的 ㄍㄠ␣ㄉㄞ˪ → 交代 不受影響(整詞 span 跨過空白而非停在其上)。
+// A3 (§41) — TPS 空白釘定聲調整合測試。TPS 第 2/3/5/6/7/8/9 調有調號可過濾,
+//   第 1 調(開音節)與第 4 調(入聲尾 ㆴㆵㆻㆷ)無調號,唯一分界是鍵盤空白,而該空白在
+//   鍵選擇前已被剝為零寬(§31 跨空白整詞 edge)→ 全聲調都回來。修復後:span 結尾落在
+//   被剝空白上時,只留該邊界音節為無調號調(1/4)的讀法;span 內部的 barrier 仍是單純
+//   音節邊界,故 §31 的 ㄍㄠ␣ㄉㄞ˪ → 交代 不受影響(整詞 span 跨過空白而非停在其上)。
 
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
@@ -99,8 +99,8 @@ fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
 /// tone-1 or tone-4 row the two are byte-identical (no mark to add) — that
 /// collision IS the bug's root cause, so the fixture must reproduce it
 /// rather than paper over it with a synthetic distinguishing key.
-// 中文: 逐列同發兩個 TPS 家族鍵(對齊 create_fst.py)。第 1/4 調兩者逐 byte 相同 —
-// 中文:   此碰撞正是本 bug 根因,fixture 必須忠實重現,不可用人造鍵繞過。
+// 逐列同發兩個 TPS 家族鍵(對齊 create_fst.py)。第 1/4 調兩者逐 byte 相同 —
+//   此碰撞正是本 bug 根因,fixture 必須忠實重現,不可用人造鍵繞過。
 fn build_dictionary_fst_tps(rows: &[Row]) -> PathBuf {
     let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len() * 2);
     for (idx, row) in rows.iter().enumerate() {
@@ -130,7 +130,7 @@ fn build_dictionary_fst_tps(rows: &[Row]) -> PathBuf {
 
 /// Per-syllable TPS inventory, toned + toneless, for every syllable of
 /// every fixture row (a phrase row contributes each of its syllables).
-// 中文: 逐音節 TPS inventory(含調 + 去調);詞列貢獻其每個音節。
+// 逐音節 TPS inventory(含調 + 去調);詞列貢獻其每個音節。
 fn build_syllables_fst_tps(rows: &[Row]) -> PathBuf {
     let mut keys: Vec<String> = Vec::new();
     for row in rows {
@@ -171,9 +171,9 @@ fn empty_association_bin() -> Vec<u8> {
 ///   the higher frequency). 之 (tsi1) is the strict-prefix control.
 /// - `ㄍㄠ` + `ㄉㄞ˪`: 交 (kau1) vs 到 (kau3) / 猴 (kau5) for the pinned
 ///   leading span, and 交代 (kau1-tài) for the §31 cross-space phrase.
-// 中文: 三組 fixture,各釘一個軸:ㄒㄧ 開音節(詩 si1 vs 死 si2/是 si7,錯調列頻率更高,
-// 中文:   即回報者看到的);ㄐㄧㆵ 入聲尾(這 tsit4 vs 一 tsit8 帶點且高頻,之 tsi1 為嚴格前綴對照);
-// 中文:   ㄍㄠ + ㄉㄞ˪(交 kau1 vs 到 kau3/猴 kau5 釘前導 span,交代 kau1-tài 驗 §31 跨空白整詞)。
+// 三組 fixture,各釘一個軸:ㄒㄧ 開音節(詩 si1 vs 死 si2/是 si7,錯調列頻率更高,
+//   即回報者看到的);ㄐㄧㆵ 入聲尾(這 tsit4 vs 一 tsit8 帶點且高頻,之 tsi1 為嚴格前綴對照);
+//   ㄍㄠ + ㄉㄞ˪(交 kau1 vs 到 kau3/猴 kau5 釘前導 span,交代 kau1-tài 驗 §31 跨空白整詞)。
 fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
@@ -288,9 +288,9 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
 /// `custom_toneless_key` rejects a non-Bopomofo body, and custom romans are
 /// TL / POJ. Its pin gate is symmetry for the day that changes; see the
 /// comment at that call site.)
-// 中文: fetch_hanji + 自訂詞條 — 咬的是 lexicon 整段合併(空清單版測不到)。
-// 中文:   walker 每 edge 的 custom override 在 TPS 走不到(custom_toneless_key 要求純注音 body,
-// 中文:   而 custom 羅馬字是 TL/POJ);那裡的 pin gate 是為未來對稱,見該處註解。
+// fetch_hanji + 自訂詞條 — 咬的是 lexicon 整段合併(空清單版測不到)。
+//   walker 每 edge 的 custom override 在 TPS 走不到(custom_toneless_key 要求純注音 body,
+//   而 custom 羅馬字是 TL/POJ);那裡的 pin gate 是為未來對稱,見該處註解。
 fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<String> {
     let cfg = config();
     let mut engine = Engine::new();
@@ -331,7 +331,7 @@ fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<Strin
 
 /// Candidate `(hanji, consumed_span_end)` pairs for `raw`, for the tests
 /// that care about how much of the buffer a commit would eat.
-// 中文: 回傳候選的 (漢字, consumed_span_end),供在意「commit 會吃掉多少 buffer」的測試。
+// 回傳候選的 (漢字, consumed_span_end),供在意「commit 會吃掉多少 buffer」的測試。
 fn fetch_spans(raw: &str) -> Vec<(String, u32)> {
     let cfg = config();
     let mut engine = Engine::new();

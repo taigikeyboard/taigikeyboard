@@ -11,8 +11,8 @@
 //! `UpdateLastSelectedWord` bumps `current_generation`. Wrapping add —
 //! `u64::MAX + 1 = 0` is a fresh value.
 
-// 中文: 純決策表;規則一律平台中立,只依書寫系統(TL/POJ/TPS)決定,不依 OS。
-// 中文: 世代規則:除 UpdateLastSelectedWord 外的狀態變更 intent 都會 +1 current_generation(wrapping_add)。
+// 純決策表;規則一律平台中立,只依書寫系統(TL/POJ/TPS)決定,不依 OS。
+// 世代規則:除 UpdateLastSelectedWord 外的狀態變更 intent 都會 +1 current_generation(wrapping_add)。
 
 use crate::api::{Intent, NextWordError, PersistedState};
 use protos::engine::{
@@ -22,17 +22,17 @@ use protos::engine::{
 };
 
 /// Strict-`<` association window (10 s).
-// 中文: association 紀錄時間窗,10 秒嚴格小於。
+// association 紀錄時間窗,10 秒嚴格小於。
 pub(crate) const ASSOCIATION_TIMEOUT_MS: i64 = 10_000;
 
 /// Context timeout (30 s) — wire field is u64 ms; iOS bridge converts to
 /// `TimeInterval` seconds, Android uses `delay(Long ms)`.
-// 中文: 上下文逾時 (30 秒),平台側依此重設預測排程。
+// 上下文逾時 (30 秒),平台側依此重設預測排程。
 const CONTEXT_TIMEOUT_MS: u64 = 30_000;
 
 /// Sentence-end punctuation. Common across both platforms (iOS
 /// `NextWordEngine.swift:33`; Android `NextWordEngine.kt:42`).
-// 中文: 句尾標點集合,iOS / Android 共用。
+// 句尾標點集合,iOS / Android 共用。
 const SENTENCE_END_PUNCTUATION: &[char] = &['。', '！', '？', '.', '!', '?'];
 
 /// Apply `intent` against `state`, returning the `DecideResult`.
@@ -41,7 +41,7 @@ const SENTENCE_END_PUNCTUATION: &[char] = &['。', '！', '？', '.', '!', '?'];
 /// future routing; no rule below reads it (§40). The `Unspecified` rejection
 /// is likewise legacy — it predates the convergence and is retained only so
 /// this round changes nothing a platform can observe.
-// 中文: 決策表入口;platform_id 為相容保留欄位,不影響任何決策,僅沿用既有的未指定平台拒絕。
+// 決策表入口;platform_id 為相容保留欄位,不影響任何決策,僅沿用既有的未指定平台拒絕。
 pub(crate) fn apply(
     state: &mut PersistedState,
     intent: Intent,
@@ -204,7 +204,7 @@ fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
 
 /// Shared reset path used by sentence-end punctuation, context timeout,
 /// and `ResetFull` intents.
-// 中文: 共用重置路徑;句尾標點、上下文逾時、ResetFull 都走這裡。
+// 共用重置路徑;句尾標點、上下文逾時、ResetFull 都走這裡。
 fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
     let was_showing = state.is_showing;
     let new_generation = state.current_generation.wrapping_add(1);
@@ -234,7 +234,7 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
 /// scheduling the timeout. Records compound associations only (no
 /// `prev → this` bigram). Audit §5 #5 / Codex v1 P1. Android's Space path is
 /// where this came from; iOS's continuous mid-commit and macOS use it too.
-// 中文: 提交中途的握手;只更新狀態,不增世代、不重排 timer,只記錄複合詞 association。
+// 提交中途的握手;只更新狀態,不增世代、不重排 timer,只記錄複合詞 association。
 fn decide_update_last_selected_word(
     state: &mut PersistedState,
     text: String,
@@ -281,7 +281,7 @@ fn decide_update_last_selected_word(
 /// the predict() round-trip whose render produced this update already
 /// completed; subsequent intents will bump as usual. Returns the current
 /// snapshot so the platform receives a consistent value echo.
-// 中文: 平台告知候選詞顯示狀態;只同步 is_showing,不發 effect 也不增世代,僅回傳最新快照。
+// 平台告知候選詞顯示狀態;只同步 is_showing,不發 effect 也不增世代,僅回傳最新快照。
 fn decide_set_is_showing(state: &mut PersistedState, is_showing: bool) -> DecideResult {
     state.is_showing = is_showing;
     snapshot_into_decide_result(state, Vec::new())
@@ -290,7 +290,7 @@ fn decide_set_is_showing(state: &mut PersistedState, is_showing: bool) -> Decide
 /// Strict-`<` window check; non-negative lower bound rejects clock-skew /
 /// wrapping. Mirrors iOS `shouldRecordAssociation` /
 /// Android `shouldRecordAssociation`.
-// 中文: 判斷是否落在 association 窗內;以嚴格小於 + 非負下限阻擋時鐘倒退或溢位。
+// 判斷是否落在 association 窗內;以嚴格小於 + 非負下限阻擋時鐘倒退或溢位。
 pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> bool {
     if state.last_selected_word.is_none() {
         return false;
@@ -304,7 +304,7 @@ pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> 
 /// engine-rendered output and in raw typed text alike
 /// (`engine/composing/src/transition.rs:481-483` passes the pending tail's
 /// literal keystroke buffer). See `behavioral-invariants.md` §40.
-// 中文: 拆成可學 bigram 的詞單位;空白是唯一詞界,`-` 一律是詞內連字/輕聲。
+// 拆成可學 bigram 的詞單位;空白是唯一詞界,`-` 一律是詞內連字/輕聲。
 pub(crate) fn split_compound(word: &str) -> Vec<&str> {
     word.split_whitespace().collect()
 }
@@ -312,7 +312,7 @@ pub(crate) fn split_compound(word: &str) -> Vec<&str> {
 /// Build sequential bigram pairs from a compound word; order preserved so
 /// the platform executor records sequentially (parallel writes race on
 /// the SQLite UNIQUE constraint).
-// 中文: 把複合詞拆成前後連續 bigram;保留順序避免平台側並行寫入撞 SQLite UNIQUE。
+// 把複合詞拆成前後連續 bigram;保留順序避免平台側並行寫入撞 SQLite UNIQUE。
 pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec<AssociationPair> {
     // No boundary, nothing to pair — and the cheapest question to ask, which
     // matters because a single-word commit is the common case.
@@ -371,8 +371,8 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
 /// carries a mark nobody added to it, the string reads as a word and gets
 /// learned. The property is the invariant such a table only approximates, and
 /// needs no maintenance to stay true.
-// 中文: 噪音判斷 — 整串找不到任何「可構成詞的字」才算噪音。用 Unicode 屬性而非標點表,
-// 中文: 因為表只涵蓋引擎「被告知過」的標點,漏一個就會把符號當詞學進去。
+// 噪音判斷 — 整串找不到任何「可構成詞的字」才算噪音。用 Unicode 屬性而非標點表,
+// 因為表只涵蓋引擎「被告知過」的標點,漏一個就會把符號當詞學進去。
 pub(crate) fn is_noise_text(text: &str) -> bool {
     !text.chars().any(phonetics::is_word_material)
 }
@@ -383,7 +383,7 @@ fn is_word(part: &&str) -> bool {
     part.chars().any(phonetics::is_word_material)
 }
 
-// 中文: 判斷首字是否為句尾標點(。!?.!?),用來觸發共用重置路徑。
+// 判斷首字是否為句尾標點(。!?.!?),用來觸發共用重置路徑。
 pub(crate) fn is_sentence_end_punctuation(text: &str) -> bool {
     text.chars()
         .next()

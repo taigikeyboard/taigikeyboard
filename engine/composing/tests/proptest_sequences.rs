@@ -7,7 +7,7 @@
 //!
 //! Coverage target: 256 sequences × len 1-12.
 
-// 中文: 對 append/delete/replace 隨機序列做 property 測試,確保階段不變式恆成立。
+// 對 append/delete/replace 隨機序列做 property 測試,確保階段不變式恆成立。
 
 use composing::{Engine, Intent};
 use proptest::prelude::*;

@@ -4,7 +4,7 @@
 //! (`TF_E_SYNCHRONOUS`, read-only, teardown) never ran it: the engine and
 //! the document stay untouched and the key goes back to the host.
 
-// 中文: 從 key sink 開的同步讀寫 edit session;閉包在 DoEditSession 內執行,失敗即引擎與文件皆未動。
+// 從 key sink 開的同步讀寫 edit session;閉包在 DoEditSession 內執行,失敗即引擎與文件皆未動。
 
 use crate::com_guard::guarded;
 use std::cell::RefCell;

@@ -11,7 +11,7 @@
 //! key-path hide does — one teardown, balanced `BeginUIElement` /
 //! `EndUIElement` on every route.
 
-// 中文: 候選窗的擁有權守門 — 哪個 context 可以藏它;藏 = 丟掉清單,不只是隱藏像素;所有藏窗路徑都走同一個 teardown。
+// 候選窗的擁有權守門 — 哪個 context 可以藏它;藏 = 丟掉清單,不只是隱藏像素;所有藏窗路徑都走同一個 teardown。
 
 use super::candidate_list_element::CandidateListElement;
 use super::candidate_window::{CandidateWindow, UNFOLD_TIMER};

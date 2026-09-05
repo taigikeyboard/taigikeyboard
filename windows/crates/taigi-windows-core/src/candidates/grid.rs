@@ -1,7 +1,7 @@
 //! The expanded grid's geometry: column-spanned rows, pure arithmetic. Port
 //! of `ExpandedGridLayout.swift` (MacishType-derived).
 
-// 中文: 展開式候選窗的格線幾何 — 以固定欄寬量化,列與列對齊。
+// 展開式候選窗的格線幾何 — 以固定欄寬量化,列與列對齊。
 
 /// One candidate's place in the grid.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

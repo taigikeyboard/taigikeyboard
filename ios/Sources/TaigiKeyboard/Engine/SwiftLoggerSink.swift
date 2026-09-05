@@ -1,4 +1,4 @@
-// 中文: Swift 端 log sink — 將 Rust `log!` / `warn!` / `error!` 巨集轉發到平台 LoggerBackend。
+// Swift 端 log sink — 將 Rust `log!` / `warn!` / `error!` 巨集轉發到平台 LoggerBackend。
 
 import Foundation
 
@@ -8,7 +8,7 @@ import Foundation
 /// `log::warn!` / `log::error!` / `log::info!` / `log::debug!` call into
 /// the platform `LoggerBackend`. Registered once by
 /// `RustEngineBridge.install()` via `install_logger_sink`.
-// 中文: 安裝在 Rust 端的 log sink Swift 實作。RustEngineBridge.install() 透過 install_logger_sink 註冊一次。
+// 安裝在 Rust 端的 log sink Swift 實作。RustEngineBridge.install() 透過 install_logger_sink 註冊一次。
 public final class SwiftLoggerSink {
     static let levelError: UInt8 = 0
     static let levelWarn: UInt8 = 1

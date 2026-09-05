@@ -23,11 +23,11 @@
 //! lean checkouts may omit the 24 MB output file) the test no-ops
 //! with a soft skip rather than blocking.
 
-// 中文: B-2 — runtime POJ-notone derive 與 build pipeline 平行性測試 (Codex post-impl SHOULD #1)。
-// 中文:   matches_continuous_poj_toneless_key 採 encoding-only 逐 token 規範化
-// 中文:   (NFD 去 8 個聲調符號 + 小寫 + normalize_to_poj + 去 ASCII 數字),
-// 中文:   須與 dictionary.csv 內 build pipeline 預算的 poj_notone 一致。
-// 中文:   非 ASCII `poj_notone` 為 build pipeline 上游異常 (用戶連續輸入觸不到),跳過。
+// B-2 — runtime POJ-notone derive 與 build pipeline 平行性測試 (Codex post-impl SHOULD #1)。
+//   matches_continuous_poj_toneless_key 採 encoding-only 逐 token 規範化
+//   (NFD 去 8 個聲調符號 + 小寫 + normalize_to_poj + 去 ASCII 數字),
+//   須與 dictionary.csv 內 build pipeline 預算的 poj_notone 一致。
+//   非 ASCII `poj_notone` 為 build pipeline 上游異常 (用戶連續輸入觸不到),跳過。
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -38,8 +38,8 @@ use std::path::PathBuf;
 /// in `engine/lexicon/src/continuous.rs`. Re-implemented here (not
 /// exposed via `pub`) so a refactor of the guard cannot quietly drift
 /// from the parity contract under test.
-// 中文: 與 matches_continuous_poj_toneless_key + derive_poj_notone_for_match 同步;
-// 中文:   不公開 pub,guard 重構不影響此處的平行性契約。
+// 與 matches_continuous_poj_toneless_key + derive_poj_notone_for_match 同步;
+//   不公開 pub,guard 重構不影響此處的平行性契約。
 fn derive_poj_notone_runtime(tl_display: &str) -> String {
     use unicode_normalization::UnicodeNormalization;
     let poj_display = phonetics::api::tl_display_to_poj_display(tl_display);

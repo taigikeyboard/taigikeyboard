@@ -15,8 +15,8 @@
 //! `docs/architecture/behavioral-invariants.md` under the umbrella label
 //! `INVARIANT_LEX_INPUT_CLASSIFICATION`.
 
-// 中文: IME 與 Tab3 共用的輸入分類純函式 — 判斷漢字 vs 有聲調 / 無聲調羅馬字。
-// 中文: C-1 後 search_key 維持原樣 (identity);TPS 查詢直接走 SearchRequest{input_mode=Tps},不再前置轉成 TL。
+// IME 與 Tab3 共用的輸入分類純函式 — 判斷漢字 vs 有聲調 / 無聲調羅馬字。
+// C-1 後 search_key 維持原樣 (identity);TPS 查詢直接走 SearchRequest{input_mode=Tps},不再前置轉成 TL。
 
 use phonetics::has_tone_marks;
 use protos::engine::InputType;
@@ -28,7 +28,7 @@ use protos::engine::InputType;
 /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`. Extensions F/G/H/I/J
 /// are intentionally excluded — including them would be a behavior
 /// expansion beyond the v3.5.7 parity correction scope.
-// 中文: 偵測文字是否含至少一個 CJK 漢字 (Unified + Extensions A-E,刻意不含 F-J)。
+// 偵測文字是否含至少一個 CJK 漢字 (Unified + Extensions A-E,刻意不含 F-J)。
 pub fn is_hanzi(text: &str) -> bool {
     text.chars().any(|c| {
         let cp = c as u32;
@@ -45,7 +45,7 @@ pub fn is_hanzi(text: &str) -> bool {
 ///
 /// ASCII digits 2, 3, 5, 6, 7, 8, 9 are numeric tone markers; 1, 4, and 0
 /// are not. See `INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET`.
-// 中文: 偵測文字是否含數字聲調 (2/3/5/6/7/8/9);0/1/4 不算聲調。
+// 偵測文字是否含數字聲調 (2/3/5/6/7/8/9);0/1/4 不算聲調。
 pub fn contains_numeric_tone(text: &str) -> bool {
     text.chars()
         .any(|c| c.is_ascii_digit() && !matches!(c, '0' | '1' | '4'))
@@ -53,11 +53,11 @@ pub fn contains_numeric_tone(text: &str) -> bool {
 
 /// Result of `classify_input`. `input_type` is the typed proto enum;
 /// callers at the proto boundary (`api::classify_input`) convert to `i32`.
-// 中文: classify_input 的結果 — 輸入類型 + 原樣 search_key (C-1 後 TPS 不再前置轉 TL)。
+// classify_input 的結果 — 輸入類型 + 原樣 search_key (C-1 後 TPS 不再前置轉 TL)。
 pub struct Classification {
-    // 中文: 偵測到的輸入類型 (漢字 / 有聲調羅馬字 / 無聲調羅馬字)。
+    // 偵測到的輸入類型 (漢字 / 有聲調羅馬字 / 無聲調羅馬字)。
     pub input_type: InputType,
-    // 中文: 用於詞庫查詢的字串 — 原樣傳遞;TPS 查詢由 SearchRequest{input_mode=Tps} 經 key_normalizer 直接命中 tps: 族群。
+    // 用於詞庫查詢的字串 — 原樣傳遞;TPS 查詢由 SearchRequest{input_mode=Tps} 經 key_normalizer 直接命中 tps: 族群。
     pub search_key: String,
 }
 
@@ -65,7 +65,7 @@ pub struct Classification {
 ///
 /// Precedence — see `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
 /// Search key — see `INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY`.
-// 中文: 將原始輸入分類為 (input_type, search_key) — 漢字優先、再判斷聲調;search_key 一律原樣回傳 (C-1)。
+// 將原始輸入分類為 (input_type, search_key) — 漢字優先、再判斷聲調;search_key 一律原樣回傳 (C-1)。
 pub fn classify_input(raw: &str) -> Classification {
     let input_type = if is_hanzi(raw) {
         InputType::Hanzi
