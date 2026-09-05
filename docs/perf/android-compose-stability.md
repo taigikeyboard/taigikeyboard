@@ -318,8 +318,8 @@ order:
 ### Step C — per-keystroke dogfood (USER)
 
 On a real Android device with the release build installed, exercise the
-candidate strip through the §9 qualitative gate (`.claude/rules/taigi-incidents.md`
-§ "Qualitative perf gate"):
+candidate strip through the §9 qualitative gate (`docs/architecture/dogfood-checklist.md`
+S1–S3):
 
 - **S1 POJ diacritics** — type a long POJ word with multiple tone marks
   (e.g. `kerngerngeh` → 砍砍下), scroll the candidate list, tap a
