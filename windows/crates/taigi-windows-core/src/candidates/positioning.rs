@@ -42,10 +42,6 @@ impl Rect {
     pub fn bottom(&self) -> f32 {
         self.y + self.height
     }
-    /// All-zero, which is how the shell reports "the host gave no caret".
-    pub fn is_zero(&self) -> bool {
-        self.x == 0.0 && self.y == 0.0 && self.width == 0.0 && self.height == 0.0
-    }
 }
 
 /// The gap between the window and the line of text it belongs to.

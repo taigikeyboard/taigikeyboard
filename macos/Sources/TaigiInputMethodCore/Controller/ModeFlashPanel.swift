@@ -8,7 +8,7 @@ import AppKit
 /// (spelling stops matching what the user typed), so the switch announces
 /// itself once,
 /// the way McBopomofo's toggles do
-/// (`references/McBopomofo/Source/NotifierController.swift`), and then gets
+/// (`references/McBopomofo/Packages/NotifierUI/Sources/NotifierUI/NotifierController.swift`), and then gets
 /// out of the way. Nothing persistent: no menu-bar variant, no status item.
 @MainActor
 final class ModeFlashPanel {

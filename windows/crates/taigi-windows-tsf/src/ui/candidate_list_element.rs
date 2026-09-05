@@ -20,10 +20,9 @@ use std::rc::{Rc, Weak};
 use windows::core::{Error, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_INVALIDARG, E_NOTIMPL, E_UNEXPECTED};
 use windows::Win32::UI::TextServices::{
-    ITfCandidateListUIElement, ITfCandidateListUIElementBehavior,
-    ITfCandidateListUIElementBehavior_Impl, ITfCandidateListUIElement_Impl, ITfDocumentMgr,
-    ITfUIElement, ITfUIElement_Impl, TF_CLUIE_COUNT, TF_CLUIE_CURRENTPAGE, TF_CLUIE_PAGEINDEX,
-    TF_CLUIE_SELECTION, TF_CLUIE_STRING,
+    ITfCandidateListUIElementBehavior, ITfCandidateListUIElementBehavior_Impl,
+    ITfCandidateListUIElement_Impl, ITfDocumentMgr, ITfUIElement, ITfUIElement_Impl,
+    TF_CLUIE_COUNT, TF_CLUIE_CURRENTPAGE, TF_CLUIE_PAGEINDEX, TF_CLUIE_SELECTION, TF_CLUIE_STRING,
 };
 use windows_core::{implement, AsImpl, ComObject};
 
@@ -205,9 +204,4 @@ impl ITfCandidateListUIElementBehavior_Impl for CandidateListElement_Impl {
             self.service.ui_element_abort()
         })
     }
-}
-
-#[allow(dead_code)]
-fn _behavior_chain(element: &ITfCandidateListUIElementBehavior) -> &ITfCandidateListUIElement {
-    element
 }

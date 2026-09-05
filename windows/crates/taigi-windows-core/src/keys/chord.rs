@@ -236,7 +236,7 @@ impl ComposingKeyChord {
         // A chord WITH modifiers keeps the uppercase keycap legend (`Ctrl+J`);
         // a bare key shows the character it types — an uppercase `Z` on a
         // modifier-less row reads as Shift+Z, a key the row does not hold
-        // (USER 2026-08-22; `ShortcutKeyDisplay.swift:509-513`).
+        // (USER 2026-08-22; `ShortcutKeyDisplay` in `ShortcutKeyRecorder.swift`).
         parts.push(match self.key.as_str() {
             "\r" => "Enter".to_owned(),
             "\t" => "Tab".to_owned(),

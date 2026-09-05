@@ -220,19 +220,6 @@ impl CandidateFontChoice {
             Self::GenYoGothic => Some("GenYoGothic2TW-R.otf"),
         }
     }
-
-    /// The PostScript name the face registers under, used to verify the
-    /// requested face actually activated (a substituted face counts as a
-    /// failure, `CandidateFontChoice.swift:81-89`).
-    pub fn postscript_name(self) -> Option<&'static str> {
-        match self {
-            Self::System => None,
-            Self::OpenHuninn => Some("jf-openhuninn-2.1"),
-            Self::Iansui => Some("Iansui-Regular"),
-            Self::GenYoMin => Some("GenYoMin2TW-R"),
-            Self::GenYoGothic => Some("GenYoGothic2TW-R"),
-        }
-    }
 }
 
 impl SettingChoice for CandidateFontChoice {
