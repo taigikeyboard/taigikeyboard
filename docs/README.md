@@ -24,9 +24,8 @@
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
 | `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw }`) — Rust `engine/composing` | Active |
 | `engine/continuous-input-ranking.md` | Continuous-input lexicographic SortKey + user_freq_boost + recency_rank spec (v3.5.8 Phase 9 source of truth) | Active |
-| `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) — detail extracted to `continuous-lexicon-fallback-retire.md` | Active |
+| `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) | Active |
 | `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
-| `engine/continuous-lexicon-fallback-retire.md` | Architectural extension — eliminate lexicon fallback (Item 13 capstone DONE) — extracted from `continuous-candidate-display.md` §15 | Active |
 | `engine/autocomplete.md` | Candidate search and suggestion pipeline | Active |
 | `engine/tone.md` | Tone conversion / restoration / nasal-marker — Rust `engine/phonetics` | Active |
 | `engine/sort.md` | Candidate ranking — Rust `engine/ranking` | Active |
@@ -58,7 +57,7 @@
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
 
-### `ui/` — Presentation & Layout (9)
+### `ui/` — Presentation & Layout (8)
 
 | File | Description | Status |
 |------|-------------|--------|
@@ -70,7 +69,6 @@
 | `ui/theme.md` | Theme & styling (colors, fonts, user customization) | Active |
 | `ui/emoji.md` | Emoji keyboard (ISEmojiView iOS / Compose Android, taigi-emojis data) | Active |
 | `ui/callouts.md` | Long-press callouts + tone-variation menus (engine map + platform popups) | Active |
-| `ui/theme-presets-brainstorm.md` | Theme presets / custom-theme brainstorm (v3.6.2, evolving) | Brainstorm |
 
 ### `references/` — External IME Research (7)
 
@@ -100,12 +98,6 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
 | `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅濫 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
-
-### `perf/` — Performance Methodology (1)
-
-| File | Description | Status |
-|------|-------------|--------|
-| `perf/android-compose-stability.md` | Android Compose stability report generation + decision rule | Reference |
 
 ### `releases/` — Per-Release Archives (1)
 

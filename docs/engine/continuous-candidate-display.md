@@ -614,5 +614,5 @@ This spec is **frozen** until Codex consult; updates after that should be tracke
 
 ## 15. Architectural Extension — Eliminate Lexicon Fallback
 
-**Moved 2026-05-26 →** [`continuous-lexicon-fallback-retire.md`](continuous-lexicon-fallback-retire.md). The architectural simplification — §15.1 motivation / §15.2 scope clarification / §15.3 engine coverage gaps A–E (Items 7–12) / §15.4 platform simplification (Item 13) / §15.5 partial-prefix ranking (`coverage_kind`) / §15.6 test matrix / §15.7 Codex Q15.1–Q15.7 (RESOLVED) / §15.8 risk register / §15.9 out-of-scope — lives in the dedicated file. §15.X numbering preserved so code, proto, and other-doc references resolve.
+§15 (eliminate the platform lexicon fallback) shipped as the v3.5.8 Item 13 capstone: the engine is the single candidate source on every platform. The design narrative was retired 2026-09-06; see git history for the archived section.
 
