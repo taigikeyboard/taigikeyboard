@@ -102,6 +102,7 @@ enum class StringKey(
     DICTIONARY_EXPORT_BACKUP(R.string.i18n_dictionary_exportBackup),
     DICTIONARY_IMPORT_BACKUP(R.string.i18n_dictionary_importBackup),
     DICTIONARY_EXPORT_BACKUP_SUCCESS(R.string.i18n_dictionary_exportBackupSuccess),
+    DICTIONARY_IMPORT_BACKUP_RESULT(R.string.i18n_dictionary_importBackupResult),
     DICTIONARY_BACKUP_PRIVACY_WARNING(R.string.i18n_dictionary_backupPrivacyWarning),
     DICTIONARY_MOE_DESCRIPTION(R.string.i18n_dictionary_moeDescription),
     DICTIONARY_NEWWORD_DESCRIPTION(R.string.i18n_dictionary_newwordDescription),

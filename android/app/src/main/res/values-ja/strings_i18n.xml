@@ -95,6 +95,7 @@
     <string name="i18n_dictionary_exportBackup">すべてを一括エクスポート</string>
     <string name="i18n_dictionary_importBackup">すべてを一括インポート</string>
     <string name="i18n_dictionary_exportBackupSuccess">バックアップをエクスポートしました</string>
+    <string name="i18n_dictionary_importBackupResult">%1$d 件のカスタム単語、%2$d 件の単語頻度、%3$d 件の単語連携をインポートしました</string>
     <string name="i18n_dictionary_backupPrivacyWarning">バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれます。iOS と Android のどちらでもインポートできます。個人的な内容が含まれる場合があるため、安全に保管してください。</string>
     <string name="i18n_dictionary_moeDescription">台湾語と中国語で検索でき、見出し語と例文の発音を聞いて学習できます。分類索引・部首画数索引・付録付き。</string>
     <string name="i18n_dictionary_newwordDescription">台語テレビ局が専門家・学者を招き、定期的に会議を開いて新語の適切な台湾語表現を検討し、一般向けの検索辞書を構築しています。</string>
