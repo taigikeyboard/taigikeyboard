@@ -350,7 +350,6 @@ Already decided (moved out of "deferred" after review cycle):
 - Composing counterpart (same pattern for SwiftUI-scheduled state): `composing-state-boundary.md`.
 - Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§7, 8, 11.
 - Engine implementation: Rust `engine/nextword` (since v3.5.5 / PR #198).
-- Original Codex strategic review: `codex-review-2026-04-19.md`.
 
 ---
 

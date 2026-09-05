@@ -398,7 +398,6 @@ Bit positions mirror `dictionary/build/create_dictionary_bin.py`. `stti` is in t
 
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Per-platform criteria + exclusions: `.claude/rules/ios-shared-core-candidates.md` §1, `.claude/rules/android-guidelines.md` §1.
-- Original strategic context: `docs/architecture/codex-review-2026-04-19.md` (Codex review findings C2 / I7).
 - Data-artifact portability (`dictionary.fst` / `.bin` / SQLite user data): `docs/architecture/data-artifacts-portability.md`.
 
 ---

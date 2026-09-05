@@ -57,7 +57,7 @@ The §1 sketch is the original khiin-rs-modeled target. The workspace has since 
 - **Cargo enforces acyclicity at build time** (a cycle fails to compile) — that is the hard backstop. This layering rule is the *soft* guide that stops the graph degrading into flat all-depends-on-all while still technically acyclic.
 - **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `~/.claude/rules/planning.md` § No redundant fallback — keep data flow one-direction).
 
-A visual copy of this graph plus the per-keystroke request lane lives in `docs/architecture/file-structure.md` § Engine crate layering.
+A visual copy of this graph plus the per-keystroke request lane lives in `docs/architecture/system-overview.md` § 2 Engine crate dependency graph.
 
 ## 2. Error handling `[R]` `[S]`
 

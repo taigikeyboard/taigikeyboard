@@ -2,7 +2,7 @@
 
 > **Type**: Feature
 > **Keywords**: `Layout`, `KeyDef`, `LayoutConverter`, `CustomLayoutService`
-> **Related**: ../architecture/file-structure.md
+> **Related**: ../architecture/system-overview.md
 
 ---
 
