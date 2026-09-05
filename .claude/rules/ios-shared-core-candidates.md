@@ -6,7 +6,7 @@ paths: ["ios/**/*.swift"]
 
 Marking criteria + roster for iOS files eligible for cross-platform extraction (iOS ↔ Android). Marking a file is a **contract** about its dependencies, not a promise to extract it. Split out from `.claude/rules/ios-architecture.md` for focus.
 
-**Phase context**: Phase IV-B (shared-core extraction) closed 2026-05-05. The criteria below remain live for any future candidate marking + the residual `native_pending` / `native_keep` roster.
+The criteria below apply to any new candidate marking and to the residual `native_pending` / `native_keep` roster in `docs/engine/migration-inventory.csv`.
 
 ## 1. Criteria — ALL must hold
 

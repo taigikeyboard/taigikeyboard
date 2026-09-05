@@ -155,7 +155,7 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   `SetSelectedCandidateIndex`: no engine code reads
   `state.selected_candidate_index` (it is stored, echoed, reset — `:576`,
   `:585`), and candidate navigation is a permanent platform-side non-goal
-  (`cross-platform-alignment.md §5.1`). Highlight CLAMPs at both ends
+  (`cross-platform-alignment.md §4.1`). Highlight CLAMPs at both ends
   (McBopomofo `HorizontalCandidateController.swift:509`; azooKey wraps — not
   adopted); paging moves the highlight to the first item of the new page, so
   page start / highlight / slot 1 always agree.

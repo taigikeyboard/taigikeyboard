@@ -8,7 +8,7 @@ paths:
 
 # Rust Migration Policy
 
-Mandatory rules before any platform impl → Rust engine swap, new Rust slice (in or after Phase IV-B which closed 2026-05-05), `.proto` addition, or platform-mirror delete. Companion to `.claude/rules/rust-best-practices.md` (how the Rust code itself should look).
+Mandatory rules before any platform impl → Rust engine swap, new Rust slice, `.proto` addition, or platform-mirror delete. Companion to `.claude/rules/rust-best-practices.md` (how the Rust code itself should look).
 
 ## 1. Four design goals per slice
 

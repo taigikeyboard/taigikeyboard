@@ -112,7 +112,7 @@ commit; per-client appearance if Apple ever documents a supported read.
 - `~/.claude/rules/planning.md` § Grounded in actual code — every citation read
   before writing; Codex ANALYSIS-ONLY pre-impl confirmed the seam direction and
   supplied the not-adopted list above.
-- `.claude/rules/cross-platform-alignment.md` §5.1 — candidate navigation stays
+- `.claude/rules/cross-platform-alignment.md` §4.1 — candidate navigation stays
   platform-side.
 - `.claude/rules/doc-lookup.md` — `NSGlassEffectView`, `NSVisualEffectView`,
   `NSScroller` checked against the Xcode 26 SDK headers; the two upstream

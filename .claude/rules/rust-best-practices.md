@@ -146,12 +146,12 @@ This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `~/
 
 ## 8. Explicit non-goals
 
-Codifying `.claude/rules/cross-platform-alignment.md` §5.1 in Rust terms:
+Codifying `.claude/rules/cross-platform-alignment.md` §4.1 in Rust terms:
 
 - **No async runtime** (`tokio`, `async-std`, `smol`). Engine is synchronous. Platform wrappers handle threading.
 - **No global state in Rust.** No `lazy_static!` / `once_cell::sync::Lazy` in engine or phonetics crates. Engine lifetime is platform-managed.
 - **No Rust-side UI.** No GTK / Tauri / egui. The Rust workspace ships engine + phonetics + CLI only — platform frontends stay in Swift / Kotlin.
-- **No web-target builds** (`wasm32-*`) in Phase IV-A. Future consideration, not a current deliverable.
+- **No web-target builds** (`wasm32-*`). Future consideration, not a current deliverable.
 - **No FFI-crossing types from `std::sync` beyond `Arc<Mutex<...>>`.** Channels, condvars, parking_lot stay Rust-internal.
 - **No `Send`-ing `Rc<...>` / `RefCell<...>`.** Interior mutability across FFI is rejected — use `Mutex` if shared, plain ownership if not.
 
@@ -160,8 +160,7 @@ Codifying `.claude/rules/cross-platform-alignment.md` §5.1 in Rust terms:
 - `.claude/rules/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
 - `.claude/rules/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
 - khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in `references/khiin-rs/`.
-- `.claude/rules/cross-platform-alignment.md` §4a — Phase II.5 prerequisite docs.
-- `.claude/rules/cross-platform-alignment.md` §5.1 — Rust shared-core non-goals.
+- `.claude/rules/cross-platform-alignment.md` §4.1 — Rust shared-core non-goals.
 - `.claude/rules/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
 - `.claude/rules/ios-shared-core-candidates.md` — the iOS-side equivalent of what counts as a candidate for Rust extraction.
 - `docs/architecture/behavioral-invariants.md` — invariant contracts the Rust implementation must preserve.

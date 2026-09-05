@@ -6,9 +6,7 @@ paths: ["ios/**/*.swift"]
 
 Mandatory architectural contract for the iOS target. Read before any non-trivial structural change.
 
-**Status**: iOS structure refactor Phase 0–11 closed 2026-04-19 (PRs #131–#133). iOS Phase I exemplar plan closed same day (PR #141). This doc is now a stable reference — Phase I tactical TODO blocks removed 2026-04-19.
-
-**Phase context**: shared-core extraction roadmap is tracked in Claude auto-memory (`project_shared_core_roadmap.md`, not in-repo); the per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`. iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. Phase I and Phase II audit docs (ios-exemplar-plan, android-state-audit) have been retired post-completion.
+iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. The per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`.
 
 **Split note**: Shared-core candidate criteria + marker live in `.claude/rules/ios-shared-core-candidates.md`. Settings-injection wiring lives in `.claude/rules/ios-settings-injection.md`.
 
@@ -55,25 +53,25 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Folder → Layer map (post-Phase 1)
+### Folder → Layer map
 
 | Folder                     | Layer    | Notes                                             |
 |----------------------------|----------|---------------------------------------------------|
 | `Phonetics/`               | Engine   | All files Foundation-only                         |
 | `Input/`                   | Engine   | Incl. `Composing/` — must be KK-free (see §3)     |
 | `Lexicon/`                 | Engine   | DB repos allowed (Foundation + SQLite3 C API). `LexiconService`, `NextWordService`, `DictionaryRepository` all inject `EngineSettingsProvider`. |
-| `NextWord/`                | Engine   | After Phase 5 restructure                         |
+| `NextWord/`                | Engine   |                                                   |
 | `Autocomplete/Services/`   | Mixed    | `TaigiAutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` and `AutocompleteContextBooster` (moved to `NextWord/`) are engine-pure. Treat subclass files as Platform-in-Engine-folder. |
 | `Settings/` (non-UI parts) | Engine   | `EngineSettings`, `EngineSettingsProvider`, etc.  |
 | `Settings/` (UI parts)     | Platform | `KeyboardColorSettings` (UIColor), `CodableColor` |
 | `Actions/`                 | Platform | Hosts KK adapters: `ActionHandler*`, `KeyboardCaseAdapter`, `KeyboardContext+Composing`, `KeyboardContext+Translate` |
-| `KeyboardExtension/`       | Platform | (renamed from `_Keyboard/` in Phase 1; extension target host: `KeyboardViewController`, `Info.plist`, `FontRegistration`, `zh-Hant.lproj`) |
+| `KeyboardExtension/`       | Platform | Extension target host: `KeyboardViewController`, `Info.plist`, `FontRegistration`, `zh-Hant.lproj` |
 | `Callouts/`                | Platform |                                                   |
 | `Emojis/`, `Layout/`       | Platform |                                                   |
 | `Overlays/`                | Platform | Except `CandidateRowLayoutEngine` (Engine)        |
 | `Styling/`                 | Platform |                                                   |
 | `App/`                     | App      | Host app, tabs, settings UI                       |
-| `Strings/`                 | App      | (renamed from `Localization/` in Phase 1)        |
+| `Strings/`                 | App      | Inline text, no `.strings` catalog               |
 
 ---
 
@@ -138,23 +136,8 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 - No ordering hacks (no leading `_`, no numeric prefixes like `Tab1-4`).
 - Folder names describe what is inside, not when it was added or its position in the UI.
 
-### Renames applied in Phase 1
-
-Folder names align with `TabType` enum cases and UI-visible titles, not sub-file names.
-
-| Before          | After                | Why                                                                 |
-|-----------------|----------------------|---------------------------------------------------------------------|
-| `_Keyboard/`    | `KeyboardExtension/` | `_` was a sort hack; folder hosts extension target bootstrap (`KeyboardViewController`, `Info.plist`, `FontRegistration`, `zh-Hant.lproj`). Not `Keyboard/` because the whole project is TaigiKeyboard (too vague) and that name collides with KeyboardKit's `Keyboard` namespace. Symmetric with `App/` (host app target). |
-| `Tab1/`         | `Home/`              | Matches `TabType.home` + title「頭頁」                              |
-| `Tab2/`         | `Layout/`            | Matches `TabType.layout` + title「齒盤佈局」(layout + font + color) |
-| `Tab3/`         | `Dictionary/`        | Matches `TabType.dictionary` + title「詞庫管理」                    |
-| `Tab4/`         | `Settings/`          | Matches `TabType.settings` + title「齒盤設定」                      |
-| `Localization/` | `Strings/`           | No `.strings` catalog, just inline text                             |
-
-**Important**:
-- Do **not** introduce a type named `Keyboard` or `KeyboardExtension` — KeyboardKit already owns `Keyboard` namespace.
-- Tab struct / Texts enum renames follow folder names: `Tab1 → HomeTab` (`Tab1Texts → HomeTexts`), `Tab2 → LayoutTab` (`LayoutTexts`), `Tab3 → DictionaryTab` (`DictionaryTexts`), `Tab4 → SettingsTab` (`SettingsTexts`).
-- `TabType` enum cases (`.home`, `.layout`, `.dictionary`, `.settings`) are already semantic — no rename needed.
+- App tab folders (`Home/`, `Layout/`, `Dictionary/`, `Settings/`) align with `TabType` enum cases and UI-visible titles; tab structs / Texts enums follow the folder name (`HomeTab` / `HomeTexts`).
+- Do **not** introduce a type named `Keyboard` or `KeyboardExtension` — KeyboardKit already owns the `Keyboard` namespace.
 
 ---
 
@@ -179,5 +162,5 @@ Apply to any non-trivial structural change:
 - `.claude/rules/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
 - `~/.claude/rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
 - `~/.claude/rules/code-review-rules.md` — review checklist
-- `docs/architecture/ios-exemplar.md` — Phase II alignment target for Android
+- `docs/architecture/ios-exemplar.md` — alignment target for Android
 - `docs/engine/migration-inventory.csv` — authoritative Rust slice inventory + native pending / keep / wont-migrate roster

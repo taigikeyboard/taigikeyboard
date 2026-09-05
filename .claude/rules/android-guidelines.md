@@ -8,7 +8,7 @@ Mandatory rules for Android development. Core architecture + Kotlin idioms + DI 
 
 **Three goals** every rule below serves at least one of:
 
-- **R — Rust-friendly**: reduce future friction when shared-core slices move to a Rust crate (Phase IV-B closed 2026-05-05; criteria still binding for residual `native_pending` / `native_keep` files)
+- **R — Rust-friendly**: reduce future friction when residual `native_pending` / `native_keep` files move to a Rust crate
 - **B — Best practice**: Kotlin / Android idiomatic code
 - **A — Anti-regression**: reduce "fix A, break B" outcomes during refactor rounds
 
@@ -56,8 +56,8 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
   // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordScorer.swift:<line>.
   // Drift causes silent divergence.
   ```
-- Surfaces currently carrying the marker on Android (from `docs/architecture/ios-exemplar.md` §5.3 — all landed as of Phase II code-close 2026-04-22): NextWord scoring constants (`NextWordScorer.kt` — extracted by A9 PR #158, marker present), CandidateProcessor recency window + score caps (`CandidateProcessor.kt` — markers expanded to 7/7 via A8-sweep PR #154), NextWord timing constants (`NextWordEngine.kt` — extracted by A5-impl PR #153, marker present), TaigiUnicode preprocessing codepoints (`TaigiUnicode.kt` — present), Association + Dictionary binary-reader layouts (`AssociationBinaryReader.kt` / `DictionaryBinaryReader.kt` — present).
-- Async pipelines that may produce stale results use a monotonic generation counter. Late callbacks drop on generation mismatch. Matches the iOS `NextWordController.currentGeneration` pattern; A5-impl ports it to Android per audit §7 parity-correction flag.
+- Surfaces carrying the marker on Android: NextWord scoring constants (`NextWordScorer.kt`), CandidateProcessor recency window + score caps (`CandidateProcessor.kt`), NextWord timing constants (`NextWordEngine.kt`), TaigiUnicode preprocessing codepoints (`TaigiUnicode.kt`), Association + Dictionary binary-reader layouts (`AssociationBinaryReader.kt` / `DictionaryBinaryReader.kt`). Authoritative list = `grep -rl 'CROSS-PLATFORM INVARIANT' android/`.
+- Async pipelines that may produce stale results use a monotonic generation counter. Late callbacks drop on generation mismatch. Matches the iOS `NextWordController.currentGeneration` pattern.
 
 ## 3. Kotlin idioms `[B]`
 
@@ -155,7 +155,7 @@ Before using SQL syntax you are not certain of, check its version against [SQLit
 - `.claude/rules/android-ime-patterns.md` — companion: Compose, IME-specific patterns, testing, refactor-round checklist
 - Companion documents on the iOS side: `.claude/rules/ios-guidelines.md` (day-to-day), `.claude/rules/ios-architecture.md` (structural).
 - Cross-platform behavior contract: `.claude/rules/cross-platform-alignment.md`.
-- Architectural target: `docs/architecture/ios-exemplar.md` (the contract Android Phase II aligns toward).
+- Architectural target: `docs/architecture/ios-exemplar.md` (the contract Android aligns toward).
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Invariants to preserve: `docs/architecture/behavioral-invariants.md`.
 - Code review checklist: `~/.claude/rules/code-review-rules.md`.

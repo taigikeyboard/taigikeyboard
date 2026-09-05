@@ -49,10 +49,7 @@ Durable checklist for every Android refactor PR:
 - [ ] Invariant tests stay green.
 - [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `.claude/rules/cross-platform-alignment.md` §3a).
 - [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.
-
-**Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`). The Phase II state-audit doc has been retired post-completion.
-
-During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `.claude/rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
+- [ ] PR touching a shared-core-candidate file honors `.claude/rules/cross-platform-alignment.md` §1c.
 
 ## 5. References
 

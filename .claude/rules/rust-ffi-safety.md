@@ -28,7 +28,7 @@ Policy lives here; the technical spec is `docs/engine/ffi-safety.md`. Enforcemen
 
 ## 2. Domain↔proto boundary rule `[R]` `[A]`
 
-Established 2026-04-29 after the second domain crate landed (PR #189 ranking slice). Codifies the surface pattern both `engine/phonetics` and `engine/ranking` already follow, so `engine/composing` (and any future stateless slice) inherits a consistent template.
+Every domain crate (`engine/phonetics`, `engine/ranking`, `engine/composing`, any future stateless slice) follows one surface pattern.
 
 **Rule.** The **dispatch / RPC façade** of each domain crate (the function the dispatcher routes through — `phonetics::dispatch::handle`, `ranking::process_candidates`, future `composing::*`) accepts and returns **protobuf-generated types** (`protos::engine::*`) directly. There is no parallel native-Rust mirror tier and no proto↔native translation layer between `engine/dispatch` and the domain crate. The protobuf schema is the cross-platform contract; duplicating it doubles maintenance with no consumer.
 
@@ -113,7 +113,7 @@ Both extern fns wrap their bodies in `catch_unwind` per §1. Every `unsafe` bloc
 
 - `.claude/rules/rust-best-practices.md` — parent file: workspace, errors, crates, tests, versions, non-goals
 - `.claude/rules/rust-migration-policy.md` — slice migration policy
-- `.claude/rules/cross-platform-alignment.md` §1c, §4a, §5.1 — shared-core-candidate constraint + Phase II.5 prerequisites + non-goals
+- `.claude/rules/cross-platform-alignment.md` §1c, §4.1 — shared-core-candidate constraint + non-goals
 - `docs/engine/ffi-safety.md` — technical spec (this file is the policy)
 - `docs/engine/rust-core-proto.md` — Request/Response schema
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference
