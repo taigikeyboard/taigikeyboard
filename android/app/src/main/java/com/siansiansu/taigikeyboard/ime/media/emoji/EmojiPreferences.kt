@@ -44,11 +44,4 @@ class EmojiPreferences(
             preferences[PREFERRED_SKIN_TONE_KEY] = skinTone.codePoint
         }
     }
-
-    /**
-     * 重設膚色偏好為預設值
-     */
-    suspend fun resetSkinTone() {
-        setPreferredSkinTone(EmojiSkinTone.DEFAULT)
-    }
 }

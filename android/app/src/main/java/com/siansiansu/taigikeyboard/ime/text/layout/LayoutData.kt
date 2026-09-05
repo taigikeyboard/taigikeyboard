@@ -24,14 +24,6 @@ data class LayoutData(
         }
         return ret
     }
-
-    fun toComputedLayoutData(keyboardMode: KeyboardMode): ComputedLayoutData =
-        ComputedLayoutData(
-            keyboardMode,
-            name,
-            direction,
-            getComputedLayoutDataArrangement(),
-        )
 }
 
 typealias ComputedLayoutDataArrangement = MutableList<MutableList<KeyData>>

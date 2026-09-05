@@ -394,7 +394,7 @@ The build pipeline must:
 
 | Format | Test |
 |---|---|
-| `dictionary.bin` (content count) | iOS `DictionaryContentTests` / Android `DictionaryCoverageTest` |
+| `dictionary.bin` (content count) | iOS `DictionaryContentTests` (no Android counterpart) |
 | `dictionary.bin` (parser) | Rust `engine/lexicon/tests/parity.rs` |
 | `association.bin` | Rust `engine/lexicon/tests/parity.rs` |
 | `dictionary.fst` | Rust `engine/lexicon/tests/parity.rs` (round-trip a sentinel key set) |

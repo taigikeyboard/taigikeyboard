@@ -133,8 +133,8 @@ To inspect a previous release's full dictionary directly:
 - **`aiongtaigi-dictionary.csv` (removed Step 8)** — the legacy Aiong-Taigi
   source dump was replaced by the ChhoeTaigi community sources. Its former
   consumer `scripts/generate-syllable-test-data.mjs` (also removed) produced
-  `android/app/src/test/resources/syllable-test-data.csv`, which now stands
-  as a frozen, hand-maintained oracle for `DictionaryCoverageTest`.
+  `android/app/src/test/resources/syllable-test-data.csv`, removed 2026-09-05
+  once no test read it any more.
 - **Binary format reference**: `../docs/engine/binary-format.md` documents
   `dictionary.bin` / `association.bin` on-disk layout.
 - **Cross-platform invariant**: `SOURCE_BITS` + `SOURCE_TIERS` + tier

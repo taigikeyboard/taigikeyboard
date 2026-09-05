@@ -27,12 +27,6 @@
     public *;
 }
 
-# Keep all preference-related classes
--keep class * extends androidx.preference.PreferenceFragmentCompat
--keepclassmembers class * extends androidx.preference.PreferenceFragmentCompat {
-    public *;
-}
-
 # Keep all Activity classes
 -keep public class * extends androidx.appcompat.app.AppCompatActivity {
     public *;
@@ -55,8 +49,6 @@
 -keep class kotlin.Metadata { *; }
 
 # Keep all model classes used with Moshi (data classes for JSON parsing)
--keep class com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard$ImeConfig { *; }
--keep class com.siansiansu.taigikeyboard.ime.core.DefaultSubtype { *; }
 -keep class com.siansiansu.taigikeyboard.ime.core.Subtype { *; }
 -keep class com.siansiansu.taigikeyboard.ime.text.layout.** { *; }
 -keep class com.siansiansu.taigikeyboard.ime.text.key.** { *; }

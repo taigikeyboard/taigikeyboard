@@ -24,7 +24,7 @@ import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
  *
  * Access through [shared]; call-sites pass any `Context`, the root keys
  * itself on `applicationContext`. Owned by `TaigiKeyboardApplication`
- * after A7 (`android-state-audit.md` §A7 + §8 #1 resolution). The IME
+ * after A7 (the 2026-04 Android state audit §A7 + §8 #1 resolution). The IME
  * manager graph (TextInputManager / SmartbarManager / MediaInputManager)
  * stays IME-service-scoped and is constructed inside `TaigiKeyboard.onCreate`;
  * it is intentionally NOT held here because manager lifecycles follow the

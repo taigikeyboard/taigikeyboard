@@ -4,7 +4,6 @@
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
-import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
@@ -83,8 +82,6 @@ data class Bounds(
         x: Int,
         y: Int,
     ): Boolean = x >= left && x < right && y >= top && y < bottom
-
-    fun toRect(): Rect = Rect(left, top, right, bottom)
 }
 
 /**

@@ -1,4 +1,4 @@
-// 鍵盤佈局管理器 — 從 assets/layouts/ 讀 JSON,合併 main + modifier + extension 三層,
+// 鍵盤佈局管理器 — 從 assets/ime/text/ 讀 JSON,合併 main + modifier + extension 三層,
 // 注入 extended popups,輸出 ComputedLayoutData 給 KeyboardImeRoot 使用。
 // Moshi 解析快取 + LayoutType / KeyType / KeyVariation Adapter 集中於此。
 

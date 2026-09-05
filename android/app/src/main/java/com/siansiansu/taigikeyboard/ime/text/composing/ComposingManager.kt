@@ -983,28 +983,3 @@ internal fun clearHostComposingRegion(ic: InputConnection?) {
     ic?.setComposingText("", 1)
     ic?.finishComposingText()
 }
-
-/**
- * Helper used during `dispatch` and `commitComposition` paths to surface a
- * caller-supplied raw snapshot's display form via the Rust engine. Callers
- * that already issued `composingQueryState` get the display text from the
- * response; this helper exists for off-path consumers (e.g. async refresh).
- */
-internal fun deriveDisplay(
-    raw: String,
-    settingsProvider: EngineSettingsProvider,
-): String {
-    if (raw.isEmpty()) return ""
-    if (RustEngineBridge.containsTps(raw)) return raw
-    val settings = settingsProvider.current
-    val mode = when (settings.inputMode) {
-        "poj" -> NormalizeMode.POJ
-        "english" -> NormalizeMode.ENGLISH
-        else -> NormalizeMode.TL
-    }
-    val carrier = ToneTogglesCarrier(
-        isDoubleTapOoEnabled = settings.toneToggles.isDoubleTapOOEnabled,
-        isDoubleTapNnEnabled = settings.toneToggles.isDoubleTapNNEnabled,
-    )
-    return RustEngineBridge.normalizeTone(raw, mode, carrier)
-}

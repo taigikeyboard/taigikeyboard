@@ -219,9 +219,6 @@ dependencies {
     // Compose 偵錯工具
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Flexbox（現有依賴）
-    implementation("com.google.android.flexbox:flexbox:3.0.0")
-
     // Moshi JSON
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 

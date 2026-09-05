@@ -3,7 +3,6 @@
 
 package com.siansiansu.taigikeyboard.ime.core
 
-import com.squareup.moshi.Json
 import java.util.*
 
 data class Subtype(
@@ -54,10 +53,3 @@ data class Subtype(
         return "$id/$languageTag/$layout"
     }
 }
-
-data class DefaultSubtype(
-    var id: Int,
-    @param:Json(name = "languageTag")
-    var locale: Locale,
-    var preferredLayout: String,
-)

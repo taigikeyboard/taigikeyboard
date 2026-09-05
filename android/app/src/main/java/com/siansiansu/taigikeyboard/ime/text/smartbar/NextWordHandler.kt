@@ -62,13 +62,6 @@ class NextWordHandler(
     fun isShowingNextWordCandidates(): Boolean = cachedIsShowing
 
     /**
-     * Envelope generation owned by this executor. Accessor retained for
-     * NextWord bridge-state sharing; its prior consumer (the platform
-     * autocomplete context-boost path) was retired in v3.5.8 Item 13.
-     */
-    fun nextwordEnvelopeGeneration(): Long = envelopeGen
-
-    /**
      * Zero association state + cancel any pending timeout. Called on
      * `onStartInputView` when switching input fields.
      *

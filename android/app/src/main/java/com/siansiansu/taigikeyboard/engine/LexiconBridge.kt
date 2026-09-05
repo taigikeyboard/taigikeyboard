@@ -1,17 +1,15 @@
-// Lexicon 讀路徑橋:將 install / search / searchByHanzi / assocLookup /
-// classifyInput / isHanzi / dictionaryFilters 等 op 包成 Kotlin API,
+// Lexicon 讀路徑橋:將 install / searchWithSources / searchByHanzi / assocLookup /
+// isHanzi / dictionaryFilters 等 op 包成 Kotlin API,
 // 共用 RustEngineBridge.dispatchRaw 做 JNI roundtrip。對應 iOS RustEngineBridge+Lexicon.swift。
 
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
-import com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
-import com.siansiansu.taigikeyboard.engine.proto.InputType
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
 import com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest
 import com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles
@@ -21,7 +19,6 @@ import com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
 import com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest
-import com.siansiansu.taigikeyboard.engine.proto.SearchRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
@@ -30,7 +27,6 @@ import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles as ProtoDictionaryToggles
 import com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown as ProtoScoreBreakdown
 import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
-import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
 
 /**
  * Lexicon read-path bridge. Top-level object (NOT a member of
@@ -74,16 +70,6 @@ object LexiconBridge {
         val dictionaryRecordCount: ULong,
         val prefixIndexEntryCount: ULong,
     )
-
-    /** Lexicon engine `inputType` enum (mirrors proto `InputType`). */
-    enum class LexiconInputType(
-        val protoValue: Int,
-    ) {
-        UNSPECIFIED(0),
-        ROMAN_NO_TONE(1),
-        ROMAN_WITH_TONE(2),
-        HANZI(3),
-    }
 
     /** Lexicon engine `inputMode` enum (mirrors proto `InputMode`). */
     enum class LexiconInputMode(
@@ -231,35 +217,6 @@ object LexiconBridge {
     }
 
     /**
-     * IME autocomplete entry. Hanzi `inputType` returns `[]` per D-8 hard
-     * guard (pinned by INVARIANT_LEX_HANZI_GUARD; commit 12 adds the
-     * platform parity test).
-     *
-     * IME autocomplete 進入點;inputType==Hanzi 直接回 []。Engine 內部走 phonetics::normalize_input + trie 查詢。
-     */
-    fun search(
-        input: String,
-        inputType: LexiconInputType,
-        inputMode: LexiconInputMode,
-        limit: UInt,
-        tpsOrMappedToER: Boolean,
-        enabledSourcesBitmask: UInt,
-    ): List<Row> {
-        val payload = SearchRequest
-            .newBuilder()
-            .setInput(input)
-            .setInputType(InputType.forNumber(inputType.protoValue) ?: InputType.INPUT_TYPE_UNSPECIFIED)
-            .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
-            .setLimit(limit.toInt())
-            .setTpsOrMappedToEr(tpsOrMappedToER)
-            .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
-            .build()
-        val resp = dispatch(LexiconRequest.newBuilder().setSearch(payload).build()) ?: return emptyList()
-        if (!resp.hasSearchResult()) return emptyList()
-        return resp.searchResult.rowsList.map(::taigiWordToRow)
-    }
-
-    /**
      * Dictionary tab multi-source lookup.
      *
      * Tab3 多來源查詢 — input 可為羅馬字或漢字,engine 內自行分類;sources bitmask 由平台端 toggle 結果決定。
@@ -334,40 +291,6 @@ object LexiconBridge {
     }
 
     // region Classification (v3.5.7)
-
-    /**
-     * Classifier output — `inputType` is the platform `DictInputType`.
-     * C-1 (v3.5.9 D) retired the TPS→TL pre-conversion; `searchKey` is
-     * now an identity passthrough of the raw input. The `tps:` FST
-     * family is queried directly via `SearchRequest.inputMode = Tps`.
-     */
-    data class ClassificationResult(
-        val inputType: DictInputType,
-        val searchKey: String,
-    )
-
-    /**
-     * Classify `raw` into `(InputType, search_key)`. Single FFI hop —
-     * `lexicon::classify_input` keeps tone / TPS detection inside Rust,
-     * replacing the platform-side per-keystroke ladder that previously
-     * chained multiple phonetics ops per keypress. See
-     * `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
-     *
-     * 把 raw 分類成 (InputType, searchKey) 二元組;v3.5.7 後改成單次 FFI,取代過去每按鍵都串多個 phonetics op 的階梯邏輯。
-     */
-    fun classifyInput(raw: String): ClassificationResult {
-        val payload = ClassifyInputRequest.newBuilder().setRaw(raw).build()
-        val resp = dispatch(LexiconRequest.newBuilder().setClassifyInput(payload).build())
-            ?: return ClassificationResult(DictInputType.RomanWithoutTone, raw)
-        if (!resp.hasClassifyInputResult()) {
-            return ClassificationResult(DictInputType.RomanWithoutTone, raw)
-        }
-        val r = resp.classifyInputResult
-        return ClassificationResult(
-            inputType = platformInputType(r.inputType),
-            searchKey = r.searchKey,
-        )
-    }
 
     /**
      * Resolve user's 12-toggle dictionary preferences into ready-to-send
@@ -455,20 +378,6 @@ object LexiconBridge {
         if (!resp.hasIsHanziResult()) return false
         return resp.isHanziResult.isHanzi
     }
-
-    /**
-     * Map proto `InputType` to the platform `DictInputType`. Unspecified /
-     * unrecognised values fall back to `RomanWithoutTone` (matches the
-     * safe-fallback contract used by the dispatch error paths).
-     * Mirrors iOS `RustEngineBridge.platformInputType` — must drift
-     * together.
-     */
-    private fun platformInputType(proto: InputType): DictInputType =
-        when (proto) {
-            InputType.INPUT_TYPE_HANZI -> DictInputType.Hanzi
-            InputType.INPUT_TYPE_ROMAN_WITH_TONE -> DictInputType.RomanWithTone
-            else -> DictInputType.RomanWithoutTone
-        }
 
     /**
      * Fallback only for platform/Rust binary skew where method 18 is absent.
@@ -751,7 +660,7 @@ object LexiconBridge {
      * `missing lexicon payload`). Distinct from this class's broader
      * [dispatch] helper which routes legacy lexicon read-path errors
      * through `backend.w` only — that pre-existing behaviour is preserved
-     * for `install` / `search*` / `assocLookup` / `classifyInput` /
+     * for `install` / `search*` / `assocLookup` /
      * `dictionaryFilters` / `isHanzi`, but the ranking public API must
      * keep its op-named diagnostics for telemetry parity with iOS
      * `RustEngineBridge.lexiconDispatch`.
