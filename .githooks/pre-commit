@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Blocks a commit that stages a credential. Activated per clone by `make hooks`,
+# which sets core.hooksPath; a clone that never runs it commits with no gate, and
+# `--no-verify` skips it. That is why the same scan also runs in CI.
+#
+# Not `set -e`: the scan's exit status is the whole point and is read explicitly.
+set -uo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not installed — staged changes were NOT scanned." >&2
+  echo "  brew install gitleaks" >&2
+  exit 0
+fi
+
+# --exit-code 2 is what separates the two failure modes: gitleaks reports both a
+# finding and its own errors as 1 by default, so a broken config would otherwise
+# be indistinguishable from a leaked credential.
+status=0
+gitleaks git --staged --no-banner --redact -v --exit-code 2 --log-level warn || status=$?
+
+case "$status" in
+  0)
+    ;;
+  2)
+    cat >&2 <<'MSG'
+
+pre-commit: staged changes contain what looks like a credential (shown redacted above).
+
+  false positive -> add its fingerprint to .gitleaksignore, with a comment saying
+                    what the value actually is
+  real secret    -> unstage it, rotate the credential, and keep it out of the tree
+
+MSG
+    exit 1
+    ;;
+  *)
+    echo "" >&2
+    echo "pre-commit: gitleaks failed to run (exit $status) — staged changes were NOT scanned." >&2
+    echo "  check .gitleaks.toml, or re-run: gitleaks git --staged -v" >&2
+    exit 1
+    ;;
+esac

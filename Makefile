@@ -7,7 +7,7 @@ DICT := dictionary
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 .PHONY: build test test-crate doc dict dogfood help \
-        fmt lint \
+        fmt lint hooks scan-secrets \
         i18n i18n-test \
         macos-release version-mobile version-desktop \
         windows-check windows-release \
@@ -160,6 +160,19 @@ lint:
 	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
 	cd android && ./gradlew spotlessCheck
 
+# Point git at the repo's tracked hooks. Per clone, not per checkout — core.hooksPath
+# lives in .git/config, so a fresh clone has no gate until this runs. That is why the
+# same scan also runs in CI, which no clone can skip.
+hooks:
+	git config core.hooksPath .githooks
+	@echo "✓ core.hooksPath = .githooks — staged changes are now scanned before every commit"
+	@command -v gitleaks >/dev/null 2>&1 || echo "⚠ gitleaks not installed; the hook will pass through until you run: brew install gitleaks"
+
+# Scan the whole history for credentials. Config and dismissals come from
+# .gitleaks.toml and .gitleaksignore; a clean run is the expected result.
+scan-secrets:
+	gitleaks git --no-banner --redact -v --exit-code 2
+
 # Pull the latest remote-default-branch commit for the taigi-converter submodule
 # into the working tree. Submodules always record a pinned SHA, so review + commit
 # the gitlink bump afterwards.
@@ -185,6 +198,9 @@ help:
 	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
 	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
+	@echo ""
+	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
+	@echo "  make scan-secrets       Scan the full git history for credentials"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
 	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"

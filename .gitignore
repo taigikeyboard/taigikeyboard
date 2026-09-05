@@ -104,6 +104,24 @@ macos/.swiftpm/
 # `-derivedDataPath build/` (or a script that does) drops XCBuildData here.
 ios/build/
 
+# === Credentials ===
+# Nothing of this shape has ever been committed (verified over the full history,
+# 2026-09-05) and nothing should be. Ignoring the shapes keeps an accidental
+# `git add .` from staging one; .githooks/pre-commit and the Secrets workflow
+# catch what gets past this.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+*.cer
+credentials.json
+client_secret*.json
+secrets.properties
+keystore.properties
+
 # === Claude Code ===
 .claude/settings.local.json
 .claude/projects/
@@ -112,7 +130,6 @@ ios/build/
 # top-level cloned IME repos only — anchored so it does NOT match docs/references/ or spec/references
 /references/
 .tmp/
-client_secret.json
 # === Windows input method (windows/ Cargo workspace) ===
 windows/target/
 # `.build/` holds the staged install layout and the installer that

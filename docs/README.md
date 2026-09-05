@@ -132,6 +132,7 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 
 | File | Description | Status |
 |------|-------------|--------|
+| `go-public-checklist.md` | What has to be true before the repository is made public — history audit results, dictionary redistribution blockers, anonymous-clone check, release-chain review, and the settings to turn on afterwards | Active |
 | `roadmap.md` | Forward-looking work items not yet scheduled into a release slice | Active |
 
 ---

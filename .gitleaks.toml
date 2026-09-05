@@ -1,0 +1,53 @@
+# Secret-scanning config. Discovered automatically from the repository root by
+# `gitleaks git`, which is how scripts/scan-secrets.sh picks it up without
+# passing --config.
+#
+# Two rules for anything added to a *rule* allowlist below:
+#
+#   Scope it to the rule it belongs to. A top-level [allowlist] applies across
+#   all rules, so it would also hide a private key or a cloud credential that
+#   happened to sit in an allowlisted path — acceptable only for paths that
+#   contain no hand-written content at all (see the next block).
+#
+#   Anchor line regexes to the whole line. An unanchored fragment dismisses the
+#   entire line, including a real credential that shares it.
+#
+# A false positive frozen in history belongs in .gitleaksignore as a fingerprint.
+# This file is only for shapes that recur — regenerated code mints a new
+# fingerprint on every build, so a fingerprint cannot hold it.
+
+[extend]
+useDefault = true
+
+# Dictionary data: machine-generated lexicon rows — 漢字, romanization, frequency
+# counts — merged from the sources catalogued in dictionary/docs/SOURCES.md.
+# Nothing here is hand-written, so it cannot carry a credential, and it is most of
+# what a scan costs: dictionary/output/dictionary.csv alone is 35 MB and adds 5 s
+# to every full-history pass and to every commit made after `make dict`. A path
+# allowlist skips reading the file; a rule allowlist would still decode 35 MB to
+# discard the matches afterwards (measured: 0.02 s against 3.5 s).
+#
+# Deliberately not listed: dictionary/build, common, pipeline, tools and tests.
+# Those are Python that a human edits, and they stay in scope.
+[allowlist]
+description = "generated dictionary data — lexicon rows, never hand-written"
+paths = [
+  '''^dictionary/output/.*''',
+  '''^dictionary/(sources|supplementary)/.*/data/.*''',
+  '''^dictionary/shared/data/.*''',
+  '''^dictionary/baseline\.json$''',
+  '''^ios/Resources/Dictionaries/.*''',
+  '''^android/app/src/main/assets/(dictionary|syllables|association).*''',
+]
+
+[[rules]]
+id = "generic-api-key"
+
+  # Generated localization keys: a whole line that is nothing but
+  # `case <something>Key = "i18n_…"`. The rule reads it as assigning a string to a
+  # variable named "key". Emitted by tools/i18n/generate.py into the iOS and macOS
+  # StringKey.swift files, so it reappears on every regeneration.
+  [[rules.allowlists]]
+  description = "generated localization key declarations"
+  regexTarget = "line"
+  regexes = ['''^\s*(?:case\s+)?\w*[Kk]ey\s*=\s*"i18n_\w+",?\s*$''']
