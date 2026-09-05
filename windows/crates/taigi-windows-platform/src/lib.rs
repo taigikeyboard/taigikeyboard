@@ -108,7 +108,6 @@ pub fn open_url(url: &str) -> bool {
     false
 }
 
-/// The default system alert sound (`NSSound.beep()`).
 /// The window a file dialog must be modal to, in the shape `rfd` asks for.
 /// Reactor hands out no HWND, so it is read from the thread inside the
 /// message handler that opens the dialog — which is the UI thread, whose
@@ -487,10 +486,3 @@ pub fn set_dark_title_bar(hwnd: isize, is_dark: bool) {
 
 #[cfg(not(windows))]
 pub fn set_dark_title_bar(_hwnd: isize, _is_dark: bool) {}
-
-/// `%WINDIR%\Fonts` — where the system's own faces live (Segoe UI Variable,
-/// Segoe Fluent Icons). `None` off Windows or with no `WINDIR`.
-pub fn system_fonts_directory() -> Option<std::path::PathBuf> {
-    let windir = std::env::var_os("WINDIR").or_else(|| std::env::var_os("SystemRoot"))?;
-    Some(std::path::PathBuf::from(windir).join("Fonts"))
-}

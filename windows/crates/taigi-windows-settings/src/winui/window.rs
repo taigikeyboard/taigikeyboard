@@ -69,7 +69,7 @@ fn page_view(pane: SettingsPane) -> Option<PageView> {
         .map(|(_, view)| *view)
 }
 
-/// `SettingsPaneLayout.swift:668-690`: sidebar 215 + detail 545.
+/// `SettingsPaneLayout` in `SettingsSplitView.swift`: sidebar 215 + detail 545.
 const SIDEBAR_WIDTH: f64 = 215.0;
 const INITIAL_WIDTH: f64 = SIDEBAR_WIDTH + 545.0;
 const INITIAL_HEIGHT: f64 = 560.0;

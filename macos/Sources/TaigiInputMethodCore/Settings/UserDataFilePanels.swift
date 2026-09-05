@@ -14,11 +14,6 @@ import UniformTypeIdentifiers
 /// way to attach the sheet to it.
 @MainActor
 enum UserDataFilePanels {
-    /// The `.taigi` backup document. Declared as an exported type in the
-    /// bundle's Info.plist so the panels can filter for it; an undeclared
-    /// extension would only ever resolve to a dynamic type nothing recognises.
-    static let backupContentType = UTType(exportedAs: "tw.taigikeyboard.backup", conformingTo: .json)
-
     /// Runs `body` with the window the panels hang their sheets on.
     ///
     /// A page that somehow has no window simply does not open one, and does so

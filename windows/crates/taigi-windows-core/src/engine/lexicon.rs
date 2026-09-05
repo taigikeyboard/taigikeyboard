@@ -259,7 +259,7 @@ pub fn dictionary_filters(toggles: &DictionarySourceToggles) -> Option<Dictionar
     }
 }
 
-/// One dictionary record as the search page lists it (`LexiconRow.swift`).
+/// One dictionary record as the search page lists it (macOS `DictionarySearchResult`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LexiconRow {
     pub id: i64,
