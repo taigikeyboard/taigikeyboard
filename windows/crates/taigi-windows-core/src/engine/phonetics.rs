@@ -3,8 +3,6 @@
 //! conversions the dictionary pages need. Port of
 //! `RustEngineBridge+Phonetics.swift`.
 
-// 音韻切片 — 自訂詞的儲存鍵/查詢鍵推導,以及 POJ↔TL 等小轉換。
-
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, DeriveCustomQueryKey,
     DeriveCustomSearchKeys, NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, PojToTl,

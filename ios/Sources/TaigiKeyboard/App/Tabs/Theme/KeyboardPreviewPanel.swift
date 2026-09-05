@@ -1,6 +1,3 @@
-// 外觀編輯器底部的鍵盤預覽面板。用一份 ThemeAppearance(草稿或預設 buffer)
-// 透過 ThemePreviewEnvironment 渲染真實 TaigiKeyboardView,不讀寫全域設定。
-
 import KeyboardKit
 import SwiftUI
 
@@ -11,7 +8,6 @@ import SwiftUI
 /// `CustomLayoutService` overload. Font is GLOBAL (not part of the theme), so
 /// both the keys and the callout use `settings.fontType`. Nothing here writes
 /// the live settings.
-// 顯示用鍵盤預覽。外觀來自傳入的 appearance(草稿);字型走全域設定(非主題)。不接受輸入,候選列為靜態 mock。
 struct KeyboardPreviewPanel: View {
     /// The appearance to render — bound draft (theme editor) or default-buffer appearance.
     let appearance: ThemeAppearance
@@ -53,7 +49,6 @@ struct KeyboardPreviewPanel: View {
         }
     }
 
-    // 在 onAppear 設定預覽用 KeyboardContext + 注入 mock 候選詞,讓使用者看到視覺效果。
     private func configurePreviewContext() {
         let ctx = previewState.keyboardContext
         ctx.isLiquidGlassEnabled = false

@@ -3,8 +3,6 @@
 //! a page has to tell the user after a job. The egui window reads them
 //! today, the WinUI one from roadmap W17 — so neither owns them.
 
-// 與 UI 套件無關的呈現層 — 介面語言解析與標籤、pane 標題、對外連結、頁面訊息。
-
 use std::sync::OnceLock;
 use taigi_windows_core::settings::{keys, SettingsDocument, SettingsPane};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};

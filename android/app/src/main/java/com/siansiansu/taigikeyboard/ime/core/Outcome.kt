@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 模組邊界回傳的 typed result(Success / Failure),對齊 Rust Result<T, E>。
-// 取代 JVM Throwable 在 shared-core 候選檔流通,避免依賴 JVM 例外型別。
+// Typed result (Success / Failure) for module-boundary returns, mirroring Rust Result<T, E>.
+// Replaces JVM Throwable in shared-core candidate files to avoid depending on JVM exception types.
 
 package com.siansiansu.taigikeyboard.ime.core
 

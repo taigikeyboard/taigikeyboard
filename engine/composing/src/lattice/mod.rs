@@ -41,12 +41,6 @@
 //! full-buffer best path at candidate slot 0 (Codex pre-impl S2
 //! Q1/Q1c, 2026-05-16).
 
-// S1 — TL/POJ shadow 上的切分 lattice;建完整多起點 DAG 供 S2 全句 walker。
-// S1 嚴格行為中性:對外只發左錨投影 (start==0),逐 byte 等同 S1 前。
-// 內段 (start>0) 不發為可點 key:Model B forward-only commit 無對應語意;
-//   S2 (Codex Q1c=ii) 不加 consumed_start / 可點內段,walker 內部吃內段、
-//   只發單一全 buffer slot-0 合成候選,commit span 維持 (0,end)。
-
 mod builder;
 mod cost;
 mod walker;

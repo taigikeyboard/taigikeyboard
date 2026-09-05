@@ -1,55 +1,37 @@
-// 候選詞列的容器 view。負責 toolbar 展開狀態與輸入模式 / 組字切換時的自動收合。
+// Candidate row container — owns toolbar expansion and auto-collapse on mode / composing changes.
 
 import KeyboardKit
 import SwiftUI
 
-/// 候選詞列容器視圖
-///
-/// Stateful orchestrator：擁有 `isToolShortcutsExpanded` 狀態、處理輸入模式 /
-/// 組字切換時的自動收合；實際按鈕列與候選詞滾動由 `ToolShortcutsToolbar` 與
-/// `CandidateSuggestionsRow` 負責。
+/// Stateful orchestrator: owns `isToolShortcutsExpanded` and auto-collapses on input-mode or
+/// composing changes. `ToolShortcutsToolbar` and `CandidateSuggestionsRow` do the drawing.
 struct CandidateView: View {
-    /// 候選詞建議列表
     let suggestions: [AutocompleteSuggestion]
-    /// 當前選中的候選詞索引
     let selectedCandidateIndex: Int
-    /// 點擊候選詞時的回調
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
-    /// 是否交換漢字與羅馬字顯示位置
+    /// Swaps the 漢字 / 羅馬字 display positions.
     let isTranslateSwapped: Bool
-    /// 候選詞顯示模式（漢羅並排 / 羅馬字）
     let candidateDisplayMode: CandidateDisplayMode
-    /// 點擊設定按鈕的回調
     let onSettingsTap: () -> Void
-    /// 點擊佈局選擇按鈕的回調
     let onLayoutTap: () -> Void
-    /// 點擊符號面板按鈕的回調
     let onSymbolTap: () -> Void
-    /// 點擊收合鍵盤按鈕的回調
     let onDismissKeyboard: () -> Void
-    /// 當前輸入模式
     let currentInputMode: InputMode
-    /// 切換輸入模式的回調
     let onInputModeChange: (InputMode) -> Void
-    /// 英文模式的 KeyboardKit 預設候選詞視圖（可選）
     let englishAutocompleteView: AnyView?
     /// Whether the engine is currently composing (used to auto-collapse toolbar)
     let isComposing: Bool
-    /// 是否為 TPS 佈局模式（影響候選詞顯示與 commit 邏輯）
+    /// TPS layout — affects candidate rendering and commit logic.
     let isTPSLayout: Bool
-    /// TPS 模式下 `or` 是否映射為 ㄜ
+    /// Whether `or` maps to ㄜ in TPS mode.
     let orMapsToER: Bool
 
-    /// 工具快捷鍵（輸入模式切換）是否展開
     @State private var isToolShortcutsExpanded = false
 
-    /// 候選詞視圖樣式
     @Environment(\.candidateViewStyle) private var style
-    /// 系統顏色模式（淺色/深色）
     @Environment(\.colorScheme) private var colorScheme
 
-    /// iOS 版本兼容的候選詞列上邊距
-    /// iOS 26+ 使用較大負偏移，舊版本使用較小負偏移以避免顯示問題
+    /// Larger negative offset on iOS 26+, smaller on older versions to avoid clipping.
     private var topOffset: CGFloat {
         if #available(iOS 26.0, *) {
             -6
@@ -99,7 +81,6 @@ struct CandidateView: View {
         }
     }
 
-    /// 使用者在設定中啟用自動收合時，關閉工具快捷鍵列。
     private func autoCollapseIfNeeded() {
         guard SharedSettings.shared.isToolbarAutoCollapse, isToolShortcutsExpanded else { return }
         withAnimation(.easeInOut(duration: 0.2)) {

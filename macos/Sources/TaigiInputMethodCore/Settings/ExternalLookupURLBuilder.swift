@@ -10,7 +10,7 @@ import Foundation
 /// android/.../ime/dictionary/ExternalLookupURLBuilder.kt — the same reading
 /// has to reach the same page from all three.
 enum ExternalLookupURLBuilder {
-    /// 教育部臺灣台語常用詞辭典.
+    /// Ministry of Education's Taiwanese Dictionary (教育部臺灣台語常用詞辭典).
     static func moeURL(forTl tl: String) -> URL? {
         url(
             host: "sutian.moe.edu.tw",
@@ -21,7 +21,7 @@ enum ExternalLookupURLBuilder {
         )
     }
 
-    /// ChhoeTaigi 台語辭典.
+    /// ChhoeTaigi Taiwanese dictionary.
     static func chhoeURL(forTl tl: String) -> URL? {
         url(
             host: "chhoe.taigi.info",

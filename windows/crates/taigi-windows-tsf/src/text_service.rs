@@ -11,8 +11,6 @@
 //! return (rakukan `factory.rs:1304-1330`); the settings re-read they
 //! request happens on the next key-sink call.
 
-// 文字服務 COM 物件 — 生命週期、sink、系統匣按鈕與選單、設定重讀、context 身分;借用期間絕不做 COM 呼叫。
-
 use crate::com_guard::guarded;
 use crate::contexts::ContextRegistry;
 use crate::conversion_mode;

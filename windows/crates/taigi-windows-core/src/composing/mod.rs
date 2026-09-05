@@ -7,8 +7,6 @@
 //! [`ComposingEffectExecutor`] over an edit session; the storage crate
 //! implements the three store traits; tests implement all of them in memory.
 
-// 組字流程 — 引擎鏡像、效果依序執行、候選提取/送出、學習握手;平台端只實作 trait。
-
 mod coordinator;
 mod document_text;
 mod learner;

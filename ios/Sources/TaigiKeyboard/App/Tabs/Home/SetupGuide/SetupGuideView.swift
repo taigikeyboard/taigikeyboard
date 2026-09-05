@@ -1,22 +1,17 @@
-// 鍵盤啟用步驟引導 View,共用於全螢幕 onboarding 與 HomeTab 內導覽。
-
 import SwiftUI
 
 /// Keyboard setup guide.
 ///
 /// Shows activation steps. Shared between full-screen onboarding and HomeTab navigation.
-// 鍵盤啟用步驟引導。isFullScreen=true 時隱藏 nav bar 並顯示關閉按鈕(對齊 Android SetupGuideActivity)。
 struct SetupGuideView: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @Environment(\.openURL) private var openURL
     @Environment(DisplayLanguageStore.self) private var lang
 
     /// Full-screen mode (matches Android SetupGuideActivity.isFullScreen).
-    // 全螢幕模式旗標,對齊 Android SetupGuideActivity.isFullScreen。
     var isFullScreen: Bool = false
 
     /// Dismiss callback (only used when isFullScreen = true).
-    // 關閉 callback,僅 isFullScreen=true 時使用。
     var onComplete: (() -> Void)?
 
     var body: some View {
@@ -112,7 +107,7 @@ struct SetupGuideView: View {
 
 // MARK: - Step Row
 
-// 設定步驟單列子 View(編號圓圈 + 標題 + 截圖)。
+// One row of the setup steps list (numbered circle + title + screenshot).
 private struct SetupGuideStepRow: View {
     let stepNumber: Int
     let title: String

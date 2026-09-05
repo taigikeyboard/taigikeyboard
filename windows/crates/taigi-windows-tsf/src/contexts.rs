@@ -9,8 +9,6 @@
 //! BEFORE taking the state borrow, and drops what `forget` / `into_tokens`
 //! hand back AFTER releasing it (roadmap W3).
 
-// 每個活著的 ITfContext 對應一個 token;COM 呼叫都在借用之外,這裡只做 map 操作。
-
 use std::collections::HashMap;
 use std::rc::Rc;
 use taigi_windows_core::composing::{CandidateSource, ContextToken};

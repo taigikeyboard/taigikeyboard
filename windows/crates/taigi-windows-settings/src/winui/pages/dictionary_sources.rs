@@ -1,10 +1,8 @@
-//! 詞庫來源: which dictionaries the engine draws from, in three sections —
+//! Which dictionaries the engine draws from, in three sections —
 //! 教育部, the others, the supplements — with 教典's eleven subcollections
 //! always visible under it, greyed while 教典 is off. Port of
 //! `DictionaryTogglesView.swift`. Every toggle is read live by the engine
 //! bridge on the next fetch.
-
-// 詞庫來源頁 — 三個區段的開關;教典子集恆展開在教典下方,教典關閉時停用;恢復預設。
 
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};

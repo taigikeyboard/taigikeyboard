@@ -1,26 +1,24 @@
-// 整個 app + keyboard extension 共用的設定持久化 facade。
-// 後端為 App Group UserDefaults,跨程序共享;部分欄位代理到 KeyboardSettings.store (KeyboardKit 自有 store)。
-// 同時實作 KeyboardEnvironment (UI 端可寫) 與 EngineSettings/EngineSettingsProvider (引擎端唯讀 + live-read)。
+// Settings persistence facade shared by the app and the keyboard extension, backed by App Group
+// UserDefaults; a few fields proxy to KeyboardKit's own KeyboardSettings.store. Implements both
+// KeyboardEnvironment (writable from the UI) and EngineSettings/EngineSettingsProvider (engine live-read).
 
 import Foundation
 import KeyboardKit
 import SwiftUI
 
-// 設定中心 singleton。所有持久化都走 App Group UserDefaults,
-// inputMode 與 keyboardLayoutType 透過 setInputMode / setKeyboardLayoutType 狀態機維持 1:1 連動。
+// setInputMode / setKeyboardLayoutType are a state machine keeping inputMode and keyboardLayoutType 1:1.
 final class SharedSettings {
     private let userDefaults: UserDefaults
 
-    // App Group identifier;sharedContainerURL 與 sharedUserDefaults 都掛在這個 group。
     static let appGroupId = "group.com.siansiansu.TaigiKeyboard"
 
     /// App Group shared container URL, accessible by both main app and keyboard extension.
-    // App Group 共享容器 URL — 主 app 與 keyboard extension 共用,放使用者 DB 與資源檔。
     static var sharedContainerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
     }
 
-    // App Group 共享 UserDefaults。建立失敗 (Provisioning 沒設好) 時回退到 .standard,避免 crash。
+    // Falls back to .standard when the suite cannot be created (misconfigured provisioning) so the
+    // keyboard does not crash.
     static let sharedUserDefaults = UserDefaults(suiteName: appGroupId) ?? .standard
 
     // MARK: - Typed key descriptors
@@ -31,7 +29,6 @@ final class SharedSettings {
     // build must keep round-tripping. Typos (`tpsOrMapsToER`, `khiin`,
     // `enableDoubleTapOO/NN`) are deliberate; renaming them silently abandons
     // the user's existing preference.
-    // 持久化欄位描述符。每個 key 字串都凍結 (含拼字錯誤) — 改了就會丟失既有使用者設定。
 
     private static let inputModeKey: SettingsKey<InputMode> = .rawRep("inputMode", default: .tl)
     private static let inputModeBeforeTpsKey: SettingsKey<InputMode> = .rawRep("inputModeBeforeTps", default: .tl)
@@ -64,7 +61,6 @@ final class SharedSettings {
     private static let isVariantEnabledKey: SettingsKey<Bool> = .bool("variantEnabled", default: false)
     private static let isKhiinEnabledKey: SettingsKey<Bool> = .bool("khiin", default: false)
     private static let isLkkDictEnabledKey: SettingsKey<Bool> = .bool("lkkDictEnabled", default: true)
-    // 開發者補充辭典 (詞庫增補檔案) 開關。預設 true。
     private static let isDevDictEnabledKey: SettingsKey<Bool> = .bool("devDictEnabled", default: true)
 
     // kautian subcollection toggles (nested under the kautian master).
@@ -72,7 +68,6 @@ final class SharedSettings {
     // Name appendix defaults ON — opt-out model; a user who never toggled it gets
     // surname candidates after upgrade, an explicit OFF stored value is preserved.
     // Accent key order mirrors config.yaml `dialect_columns` (= subtag bit - 1).
-    // kautian subcollection 子開關 (10 腔調 + 姓名附錄)。腔調預設開 (DD5 opt-out),姓名附錄預設開 (opt-out)。腔調順序對齊 config.yaml dialect_columns。
     private static let isKautianAccentLukangEnabledKey: SettingsKey<Bool> = .bool("kautianAccentLukangEnabled", default: true)
     private static let isKautianAccentSansiaEnabledKey: SettingsKey<Bool> = .bool("kautianAccentSansiaEnabled", default: true)
     private static let isKautianAccentTaipakEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTaipakEnabled", default: true)
@@ -91,7 +86,6 @@ final class SharedSettings {
     /// Globe key has a device-dependent default (`DeviceCapabilities.prefersGlobeKeyByDefault`)
     /// so the getter is hand-written; the descriptor is reused for writes
     /// and the reset-to-default `removeObject(forKey:)` path.
-    // 地球鍵描述符僅供寫入與 reset 用;讀取走 isGlobeKeyEnabled getter 因預設依機型。
     private static let isGlobeKeyEnabledKey: SettingsKey<Bool> = .bool("isGlobeKeyEnabled", default: false)
 
     private static let keyHeightScaleKey: SettingsKey<CGFloat> = .cgFloat("keyHeightScale", default: 1.0)
@@ -102,17 +96,14 @@ final class SharedSettings {
 
     private static let colorSettingsKey: SettingsKey<KeyboardColorSettings> = .codable("colorSettings", default: .default)
 
-    // 選定主題 id。"default" = 既有自由配色 buffer(colorSettings);其餘為 UserTheme UUID / built-in id。
     private static let selectedThemeIdKey: SettingsKey<String> = .string("selectedThemeId", default: ThemeId.default)
-    // 主題版本計數。每次 user-theme 檔變更 +1,寫入觸發 didChangeNotification,讓 extension 重新解析。
     private static let themeRevisionKey: SettingsKey<Int> = .int("themeRevision", default: 0)
 
-    // App UI 顯示語言 tag (與鍵盤輸入模式正交)。持久於 App Group,host↔extension 共用同一值;
-    // extension 透過 didChangeNotification 反映變更。預設 system (Automatic),首次啟動跟隨裝置 OS locale。Key 拼字凍結。
-    // App UI display-language tag (orthogonal to keyboard input mode) — see DisplayLanguage.
+    // App UI display-language tag (orthogonal to keyboard input mode) — see DisplayLanguage. Shared
+    // host↔extension through the App Group; the extension picks up changes via didChangeNotification.
+    // Defaults to system (Automatic), which follows the device locale on first launch. Key spelling is frozen.
     private static let displayLanguageKey: SettingsKey<String> = .string("displayLanguage", default: DisplayLanguage.defaultTag)
 
-    // process 內 singleton。整個 app + extension 共用同一份設定 facade。
     static let shared = SharedSettings()
 
     private init() {
@@ -130,34 +121,29 @@ final class SharedSettings {
     /// Tests must not exercise the `UserDefaults.didChangeNotification`
     /// path through `settingsUserDefaults`; only stored-value reads / writes
     /// flow through the injected store.
-    // 測試專用 init。讓 SharedSettingsTests 可以注入獨立的 UserDefaults suite,
-    // 在不污染 app group store 的前提下驗證 TPS 狀態機與預設值。
-    // 範圍上限:settingsUserDefaults 仍回傳 static app group store,因此本 seam
-    // 不覆蓋 didChangeNotification 鏈路 — 該路徑的測試需另想辦法。
     init(userDefaults: UserDefaults) {
         self.userDefaults = userDefaults
     }
 
-    // 目前輸入模式。setter 轉發到 setInputMode(_:),由狀態機維持 inputMode ↔ keyboardLayoutType 連動。
+    // The setter forwards to setInputMode(_:) so the layout stays in sync.
     var inputMode: InputMode {
         get { userDefaults.value(for: Self.inputModeKey) }
         set { setInputMode(newValue) }
     }
 
-    // App UI 顯示語言 tag (DisplayLanguage.tag)。寫入觸發 didChangeNotification,
-    // host + extension 兩端的 DisplayLanguageStore 都重新解析 → live-switch 免重啟。
+    // A write posts didChangeNotification, so DisplayLanguageStore re-resolves in both processes
+    // and the language switches live without a relaunch.
     var displayLanguage: String {
         get { userDefaults.value(for: Self.displayLanguageKey) }
         set { userDefaults.set(newValue, for: Self.displayLanguageKey) }
     }
 
-    // POJ「雙擊 OO」預處理開關。預設 true。供 ToneToggles 打包後給 ToneConverter。
+    // Consumed by ToneConverter via ToneToggles.
     var isDoubleTapOOEnabled: Bool {
         get { userDefaults.value(for: Self.isDoubleTapOOEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isDoubleTapOOEnabledKey) }
     }
 
-    // POJ「雙擊 NN」預處理開關。預設 true。
     var isDoubleTapNNEnabled: Bool {
         get { userDefaults.value(for: Self.isDoubleTapNNEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isDoubleTapNNEnabledKey) }
@@ -167,7 +153,6 @@ final class SharedSettings {
     /// toggle (after its `romanOnly` guard) and `resetToDefaults` use this.
     /// Everything that *consumes* the swap reads the derived
     /// `isTranslateSwapped` (`EngineSettings` conformance below).
-    // 翻譯方向反轉的儲存值 (台↔英)。預設 false。消費端一律讀推導後的 isTranslateSwapped。
     var storedIsTranslateSwapped: Bool {
         get { userDefaults.value(for: Self.isTranslateSwappedKey) }
         set { userDefaults.set(newValue, for: Self.isTranslateSwappedKey) }
@@ -175,19 +160,17 @@ final class SharedSettings {
 
     /// Candidate cell rendering mode. Switching to `.romanOnly` leaves the
     /// stored swap / both-scripts flags untouched; switching back restores them.
-    // 候選詞顯示模式。切到羅馬字不動 stored 旗標,切回即還原。
     var candidateDisplayMode: CandidateDisplayMode {
         get { userDefaults.value(for: Self.candidateDisplayModeKey) }
         set { userDefaults.set(newValue, for: Self.candidateDisplayModeKey) }
     }
 
-    // 鍵盤字體選擇(全域設定,非每主題)。預設見 FontType.keyboardDefault。
+    // Global setting, not per-theme.
     var fontType: FontType {
         get { userDefaults.value(for: Self.fontTypeKey) }
         set { userDefaults.set(newValue, for: Self.fontTypeKey) }
     }
 
-    // Full Access 開關 (是否取得網路 / 剪貼簿等完整存取)。預設 false。
     var isFullAccessEnabled: Bool {
         get { userDefaults.value(for: Self.isFullAccessEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isFullAccessEnabledKey) }
@@ -196,13 +179,12 @@ final class SharedSettings {
     // isAutoCapitalizationEnabled moved to KeyboardKit's KeyboardSettings
     // Access via state.keyboardContext.settings.isAutocapitalizationEnabled
 
-    // 自動空格開關 (上字後是否補空白)。預設 false。
     var isAutoSpaceEnabled: Bool {
         get { userDefaults.value(for: Self.isAutoSpaceEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isAutoSpaceEnabledKey) }
     }
 
-    // 目前鍵盤排版。setter 轉發到 setKeyboardLayoutType(_:),由狀態機維持 layout ↔ inputMode 連動。
+    // The setter forwards to setKeyboardLayoutType(_:) so the input mode stays in sync.
     var keyboardLayoutType: KeyboardLayoutType {
         get { userDefaults.value(for: Self.keyboardLayoutTypeKey) }
         set { setKeyboardLayoutType(newValue) }
@@ -220,9 +202,6 @@ final class SharedSettings {
     ///   earlier in the same flow is preserved.
     /// - All cascading writes go through `userDefaults.set(_, for:)`, which
     ///   bypasses the property setter (no re-entry into the state machine).
-    // 寫入 inputMode 並由狀態機保持 TPS 連動。進入 TPS 時備份 layout 並翻成 .tps,
-    // 離開時若 layout 仍是 .tps 才還原。所有連動寫入都走 userDefaults.set(_, for:),
-    // 直接打 UserDefaults,不會再觸發本物件的 setter,因此不再需要 re-entry guard。
     func setInputMode(_ newMode: InputMode) {
         let oldMode = inputMode
         userDefaults.set(newMode, for: Self.inputModeKey)
@@ -248,9 +227,6 @@ final class SharedSettings {
     /// `keyboardLayoutType == .tps` before restoring layout. This mirrors
     /// HEAD~1 byte-for-byte; any future symmetrization belongs in a
     /// separate slice.
-    // 寫入 keyboardLayoutType 並由狀態機保持 TPS 連動。語意刻意對稱於 HEAD~1 而非完全對稱於 setInputMode —
-    // layout 側離開 TPS 時無條件用 inputModeBeforeTps 還原 inputMode (即使當下 inputMode 已被外部改過),
-    // 與 input 側的有條件還原相反。若未來要拉齊兩側,需獨立 slice 處理。
     func setKeyboardLayoutType(_ newLayout: KeyboardLayoutType) {
         let oldLayout = keyboardLayoutType
         userDefaults.set(newLayout, for: Self.keyboardLayoutTypeKey)
@@ -267,14 +243,12 @@ final class SharedSettings {
     }
 
     /// Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
-    // 切換到 TPS 之前的 inputMode 備份。離開 TPS 時用來還原。
     private var inputModeBeforeTps: InputMode {
         get { userDefaults.value(for: Self.inputModeBeforeTpsKey) }
         set { userDefaults.set(newValue, for: Self.inputModeBeforeTpsKey) }
     }
 
     /// Stores the layout before switching to TPS, so it can be restored when leaving TPS
-    // 切換到 TPS 之前的 layout 備份。離開 TPS 時用來還原。
     private var layoutBeforeTps: KeyboardLayoutType {
         get { userDefaults.value(for: Self.layoutBeforeTpsKey) }
         set { userDefaults.set(newValue, for: Self.layoutBeforeTpsKey) }
@@ -282,7 +256,6 @@ final class SharedSettings {
 
     /// Raw stored 括號標註 flag — read-write counterpart of the derived
     /// `isOutputBothScripts`; same split as `storedIsTranslateSwapped`.
-    // 「同時輸出漢字 + 羅馬字」的儲存值。預設 false。消費端讀推導後的 isOutputBothScripts。
     var storedIsOutputBothScripts: Bool {
         get { userDefaults.value(for: Self.isOutputBothScriptsKey) }
         set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
@@ -290,7 +263,7 @@ final class SharedSettings {
 
     // MARK: - Frequency Recording (default: on)
 
-    // 是否記錄使用者選字頻率 (供 user_frequency.db 排序加權)。預設 true。
+    // Feeds the user_frequency.db ranking weight.
     var isFrequencyRecordingEnabled: Bool {
         get { userDefaults.value(for: Self.isFrequencyRecordingEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isFrequencyRecordingEnabledKey) }
@@ -298,7 +271,7 @@ final class SharedSettings {
 
     // MARK: - Association Recording (default: on)
 
-    // 是否記錄選字關聯 (供 NextWord 推薦使用)。預設 true。
+    // Feeds NextWord suggestions.
     var isAssociationRecordingEnabled: Bool {
         get { userDefaults.value(for: Self.isAssociationRecordingEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isAssociationRecordingEnabledKey) }
@@ -306,7 +279,7 @@ final class SharedSettings {
 
     // MARK: - Literal-Roman Candidate (§34/S22, default: on)
 
-    // 顯示當咧拍的字開關 (§34/S22)。TL/POJ 組字時是否在候選列首位顯示字面 roman 候選。預設 true。
+    // 顯示當咧拍的字: put the literal roman candidate first while composing in TL/POJ.
     var isLiteralRomanCandidateEnabled: Bool {
         get { userDefaults.value(for: Self.isLiteralRomanCandidateEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isLiteralRomanCandidateEnabledKey) }
@@ -314,7 +287,6 @@ final class SharedSettings {
 
     // MARK: - Custom Dictionary
 
-    // 自訂詞庫開關。預設 true。
     var isCustomDictEnabled: Bool {
         get { userDefaults.value(for: Self.isCustomDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isCustomDictEnabledKey) }
@@ -322,86 +294,72 @@ final class SharedSettings {
 
     // MARK: - Dictionary Toggles
 
-    // 各內建詞典開關。每個欄位獨立持久化於 UserDefaults,預設值見每行 descriptor。
-    // 預設開啟:MOE / Newword / Kungge / STTI / Khpoo;預設關閉:iTaigi / TaiwanJapan / TaiHua / TaiwanPlant / Variant / Khiin / LKK。
-
-    // 教育部詞典 (MOE) 開關。預設 true。
     var isMoeDictEnabled: Bool {
         get { userDefaults.value(for: Self.isMoeDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isMoeDictEnabledKey) }
     }
 
-    // 新詞詞典開關。預設 true。
     var isNewwordDictEnabled: Bool {
         get { userDefaults.value(for: Self.isNewwordDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isNewwordDictEnabledKey) }
     }
 
-    // 公語詞典開關。預設 true。
     var isKunggeDictEnabled: Bool {
         get { userDefaults.value(for: Self.isKunggeDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKunggeDictEnabledKey) }
     }
 
-    // iTaigi 詞典開關。預設 false。
     var isITaigiDictEnabled: Bool {
         get { userDefaults.value(for: Self.isITaigiDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isITaigiDictEnabledKey) }
     }
 
-    // 台日大辭典開關。預設 false。
     var isTaiwanJapanDictEnabled: Bool {
         get { userDefaults.value(for: Self.isTaiwanJapanDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isTaiwanJapanDictEnabledKey) }
     }
 
-    // 台華對照辭典開關。預設 false。
     var isTaiHuaDictEnabled: Bool {
         get { userDefaults.value(for: Self.isTaiHuaDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isTaiHuaDictEnabledKey) }
     }
 
-    // 台灣植物名彙開關。預設 false。
     var isTaiwanPlantDictEnabled: Bool {
         get { userDefaults.value(for: Self.isTaiwanPlantDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isTaiwanPlantDictEnabledKey) }
     }
 
-    // 教育部臺灣台語常用詞辭典 (STTI) 開關。預設 true。
     var isSttiDictEnabled: Bool {
         get { userDefaults.value(for: Self.isSttiDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isSttiDictEnabledKey) }
     }
 
-    // 教育部閩南語推薦用字 (Khpoo) 開關。預設 true。
     var isKhpooDictEnabled: Bool {
         get { userDefaults.value(for: Self.isKhpooDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKhpooDictEnabledKey) }
     }
 
     /// Variant characters toggle (default: off)
-    // 異體字候選開關。預設 false。
+    // Variant-character (異體字) candidates.
     var isVariantEnabled: Bool {
         get { userDefaults.value(for: Self.isVariantEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isVariantEnabledKey) }
     }
 
     /// Khiin supplementary data toggle (default: off)
-    // Khiin 補充資料開關。預設 false。
     var isKhiinEnabled: Bool {
         get { userDefaults.value(for: Self.isKhiinEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKhiinEnabledKey) }
     }
 
     /// LKK Hàn-lô mixed script suggestions (default: on)
-    // LKK 漢羅混寫候選開關。預設 true。
+    // LKK mixed Hanji-romanization (漢羅混寫) candidates.
     var isLkkDictEnabled: Bool {
         get { userDefaults.value(for: Self.isLkkDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isLkkDictEnabledKey) }
     }
 
     /// Developer supplement dictionary (詞庫增補檔案) toggle (default: on)
-    // 開發者補充辭典 (詞庫增補檔案) 開關。預設 true。
     var isDevDictEnabled: Bool {
         get { userDefaults.value(for: Self.isDevDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isDevDictEnabledKey) }
@@ -409,67 +367,61 @@ final class SharedSettings {
 
     // MARK: - Kautian Subcollections (nested under the kautian master, default on)
 
-    // 鹿港偏泉腔 (語音差異)。預設 true。
+    // Accent (腔口) classification, in `config.yaml` dialect_columns order: 鹿港/三峽/臺北/金門/
+    // 馬公/新竹 偏泉腔, 宜蘭/臺中 偏漳腔, 臺南/高雄 混合腔. The identifier names the locality;
+    // the classification is what the identifier cannot carry.
+
     var isKautianAccentLukangEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentLukangEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentLukangEnabledKey) }
     }
 
-    // 三峽偏泉腔 (語音差異)。預設 true。
     var isKautianAccentSansiaEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentSansiaEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentSansiaEnabledKey) }
     }
 
-    // 臺北偏泉腔 (語音差異)。預設 true。
     var isKautianAccentTaipakEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentTaipakEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentTaipakEnabledKey) }
     }
 
-    // 宜蘭偏漳腔 (語音差異)。預設 true。
     var isKautianAccentGilanEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentGilanEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentGilanEnabledKey) }
     }
 
-    // 臺南混合腔 (語音差異)。預設 true。
     var isKautianAccentTainanEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentTainanEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentTainanEnabledKey) }
     }
 
-    // 高雄混合腔 (語音差異)。預設 true。
     var isKautianAccentKaohsiungEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentKaohsiungEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentKaohsiungEnabledKey) }
     }
 
-    // 金門偏泉腔 (語音差異)。預設 true。
     var isKautianAccentKinmenEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentKinmenEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentKinmenEnabledKey) }
     }
 
-    // 馬公偏泉腔 (語音差異)。預設 true。
     var isKautianAccentMakungEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentMakungEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentMakungEnabledKey) }
     }
 
-    // 新竹偏泉腔 (語音差異)。預設 true。
     var isKautianAccentSintikEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentSintikEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentSintikEnabledKey) }
     }
 
-    // 臺中偏漳腔 (語音差異)。預設 true。
     var isKautianAccentTaichungEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianAccentTaichungEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianAccentTaichungEnabledKey) }
     }
 
-    // 姓名附錄 (名 + 姓)。預設 true (opt-out)。
+    // 姓名附錄 (given + family names).
     var isKautianNameAppendixEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianNameAppendixEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianNameAppendixEnabledKey) }
@@ -478,7 +430,6 @@ final class SharedSettings {
     // MARK: - Toolbar Settings
 
     /// Toolbar auto-collapse toggle (default: true = auto-collapse on composing/mode change)
-    // 工具列自動收合開關。true 時組字或切模式會自動收合工具列。預設 true。
     var isToolbarAutoCollapse: Bool {
         get { userDefaults.value(for: Self.isToolbarAutoCollapseKey) }
         set { userDefaults.set(newValue, for: Self.isToolbarAutoCollapseKey) }
@@ -488,8 +439,6 @@ final class SharedSettings {
 
     /// Globe key toggle. Default depends on device type for backward compatibility:
     /// iPad/iPhone SE (Touch ID) = true, regular iPhone = false.
-    // 地球鍵開關。預設值由 DeviceCapabilities.prefersGlobeKeyByDefault 決定 (iPad / Touch ID iPhone 為 true)。
-    // 一旦使用者寫入過值,後續以儲存值為準,不再走 device-default fallback。
     var isGlobeKeyEnabled: Bool {
         get {
             guard let stored = userDefaults.storedObject(for: Self.isGlobeKeyEnabledKey) as? Bool else {
@@ -503,7 +452,6 @@ final class SharedSettings {
     // MARK: - TPS Settings
 
     /// TPS "or" maps to ㄜ (default: on). When off, "or" maps to ㄛ.
-    // TPS 中 "or" 映射對象開關。true 時映射到ㄜ,false 時映射到ㄛ。預設 true。
     var isTpsOrMappedToER: Bool {
         get { userDefaults.value(for: Self.isTpsOrMappedToERKey) }
         set { userDefaults.set(newValue, for: Self.isTpsOrMappedToERKey) }
@@ -511,63 +459,59 @@ final class SharedSettings {
 
     // MARK: - Appearance (scale factor, default 1.0)
 
-    // 鍵盤高度縮放係數。預設 1.0。
     var keyHeightScale: CGFloat {
         get { userDefaults.value(for: Self.keyHeightScaleKey) }
         set { userDefaults.set(newValue, for: Self.keyHeightScaleKey) }
     }
 
-    // 鍵帽字體大小縮放係數。預設 1.0。
     var keyFontSizeScale: CGFloat {
         get { userDefaults.value(for: Self.keyFontSizeScaleKey) }
         set { userDefaults.set(newValue, for: Self.keyFontSizeScaleKey) }
     }
 
-    // 候選列文字大小縮放係數。預設 1.0。
     var candidateTextSizeScale: CGFloat {
         get { userDefaults.value(for: Self.candidateTextSizeScaleKey) }
         set { userDefaults.set(newValue, for: Self.candidateTextSizeScaleKey) }
     }
 
-    // 鍵帽圓角半徑 (point)。預設 6.0。
     var keyCornerRadius: CGFloat {
         get { userDefaults.value(for: Self.keyCornerRadiusKey) }
         set { userDefaults.set(newValue, for: Self.keyCornerRadiusKey) }
     }
 
-    // 鍵帽邊框寬度 (point)。預設 0 (無邊框)。
     var keyBorderWidth: CGFloat {
         get { userDefaults.value(for: Self.keyBorderWidthKey) }
         set { userDefaults.set(newValue, for: Self.keyBorderWidthKey) }
     }
 
-    // 鍵盤顏色組合(自由配色 buffer)。以 JSON 序列化進 UserDefaults;decode 失敗或未設定時回傳 .default (全 nil)。
-    // 主題模型下,此欄位 = "default" 主題解析來源,也是外觀編輯器寫入目標(editor scratch)。
+    // Free-form color buffer, JSON-encoded into UserDefaults; a decode failure or missing value
+    // yields .default (all nil). It is both the "default" theme's source and the editor's scratch target.
     var colorSettings: KeyboardColorSettings {
         get { userDefaults.value(for: Self.colorSettingsKey) }
         set { userDefaults.set(newValue, for: Self.colorSettingsKey) }
     }
 
-    // 選定主題 id。"default" 時渲染走 colorSettings;其餘走 userThemeStore / built-in。
+    // "default" renders from colorSettings; any other id resolves through userThemeStore or a built-in.
     var selectedThemeId: String {
         get { userDefaults.value(for: Self.selectedThemeIdKey) }
         set { userDefaults.set(newValue, for: Self.selectedThemeIdKey) }
     }
 
-    // 使用者自訂主題儲存(App Group JSON 檔,排除備份)。變更時 bump themeRevision 觸發跨進程刷新。
+    // User themes live in a backup-excluded JSON file in the App Group; each mutation bumps
+    // themeRevision to refresh the other process.
     private lazy var userThemeStore = UserThemeStore(
         containerURL: Self.sharedContainerURL,
         onMutated: { [weak self] in self?.bumpThemeRevision() },
     )
 
-    // 主題版本 +1。寫入 themeRevision 鍵 → 觸發 didChangeNotification,讓 keyboard extension 重新解析主題。
+    // Writing themeRevision posts didChangeNotification so the extension re-resolves the theme.
     private func bumpThemeRevision() {
         let next = userDefaults.value(for: Self.themeRevisionKey) &+ 1
         userDefaults.set(next, for: Self.themeRevisionKey)
     }
 
-    // 全域外觀(= "default" 主題)。由 SharedSettings 自有的外觀鍵組成 —
-    // colorSettings + 5 尺寸 scalar;陰影固定 0(自由配色 buffer 無陰影)。字型為全域設定,不在此包內。
+    // The global appearance (the "default" theme): colorSettings plus the 5 size scalars. Shadow is
+    // pinned to 0 (the free-form buffer has none); font is a global setting and stays out of this bundle.
     private var legacyAppearance: ThemeAppearance {
         ThemeAppearance(
             colors: colorSettings,
@@ -580,9 +524,9 @@ final class SharedSettings {
         )
     }
 
-    // 渲染端消費的解析外觀。"default" 走快路徑(免 file I/O,= 全域外觀)。
-    // 只有 id 為 UUID(user theme)才讀 user-theme 檔;非 UUID(built-in id)不讀檔 —
-    // 避免 render 熱路徑無謂 I/O,built-in 由 ThemeResolver 查 BuiltInThemes 表並依 colorScheme 取 light/dark。
+    // Resolved appearance for the renderer. "default" takes the fast path (no file I/O). Only a UUID id
+    // reads the user-theme file; a built-in id resolves from the BuiltInThemes table by colorScheme,
+    // keeping the render hot path free of I/O.
     func resolvedAppearance(for colorScheme: ColorScheme) -> ThemeAppearance {
         let id = selectedThemeId
         if id == ThemeId.default {
@@ -597,8 +541,7 @@ final class SharedSettings {
         )
     }
 
-    // user-theme JSON 以 themeRevision 快取,避免 render 熱路徑(snapshot 每次重繪)反覆讀檔/解碼。
-    // 任何 CRUD 變更都會 bump themeRevision → 下次讀失配即重載(跨進程也成立,host app 改 → extension 重載)。
+    // Any CRUD bumps themeRevision, so a revision mismatch on the next read reloads — across processes too.
     private var userThemesCache: (revision: Int, themes: [UserTheme])?
 
     /// Loads user themes, cached by `themeRevision` (bumped on every mutation),
@@ -615,8 +558,8 @@ final class SharedSettings {
 
     // MARK: - User theme CRUD
 
-    // user theme CRUD 對外接口(委派 private userThemeStore)。主題編輯器 / Custom Themes shelf 用。
-    // 走 themeRevision 快取(與 render 路徑同源);CRUD 變更 bump revision 後即重載。
+    // Public user-theme CRUD for the editor and the Custom Themes shelf, delegating to userThemeStore
+    // and sharing the themeRevision cache with the render path.
     func loadUserThemes() -> [UserTheme] {
         cachedUserThemes()
     }
@@ -637,11 +580,10 @@ final class SharedSettings {
 
     /// Creates an immutable snapshot of render-relevant settings.
     /// Call once per render cycle to avoid repeated UserDefaults reads.
-    // 取得渲染週期一致快照。每次渲染 (~50 個鍵) 呼叫一次,避免每個鍵都打 UserDefaults。
     func snapshot(for colorScheme: ColorScheme) -> SettingsSnapshot {
         let appearance = resolvedAppearance(for: colorScheme)
-        // 只有自訂主題套用明確陰影語意(0 = 無陰影);default / built-in 回 nil →
-        // 渲染端沿用 KeyboardKit 標準陰影,維持 HEAD 觀感(陰影 slider 是自訂主題專屬功能)。
+        // Only user themes carry explicit shadow semantics (0 = no shadow); default / built-in return nil
+        // so the renderer keeps KeyboardKit's standard shadow. The shadow slider is user-theme-only.
         let isUserTheme = ThemeId.isUserTheme(selectedThemeId)
         return SettingsSnapshot(
             inputMode: inputMode,
@@ -658,8 +600,8 @@ final class SharedSettings {
         )
     }
 
-    // 把 SharedSettings 自有的所有欄位重設為原廠預設值。
-    // 不負責 KeyboardKit-owned defaults — 那些走 SettingsResetCoordinator.resetKeyboardKitDefaults()。
+    // Resets every SharedSettings-owned field to its factory default. KeyboardKit-owned defaults are
+    // not covered here — those go through SettingsResetCoordinator.resetKeyboardKitDefaults().
     func resetToDefaults() {
         inputMode = .tl
         isDoubleTapOOEnabled = true
@@ -710,10 +652,10 @@ final class SharedSettings {
         keyCornerRadius = ThemeAppearance.default.keyCornerRadius
         keyBorderWidth = ThemeAppearance.default.keyBorderWidth
         colorSettings = .default
-        // 回到 default 主題(走 colorSettings buffer);不刪除已存的 user themes。
+        // Back to the default theme (the colorSettings buffer); stored user themes are not deleted.
         selectedThemeId = ThemeId.default
-        // 顯示語言回到預設 (system/Automatic)。寫的是 persisted 值;呼叫端 (resetAllSettings) 必須接著呼叫
-        // DisplayLanguageStore.syncFromSettings() 把 live store 同步回來,否則畫面語言不會跟著還原。
+        // Writes the persisted value only. The caller (resetAllSettings) must then call
+        // DisplayLanguageStore.syncFromSettings(), or the on-screen language will not follow.
         displayLanguage = DisplayLanguage.defaultTag
 
         // KeyboardKit-owned defaults live in a separate store; reset via
@@ -734,8 +676,6 @@ extension SharedSettings: EngineSettings {
     /// engine-layer code (e.g. candidate capitalization via
     /// `RustEngineBridge.capitalizeCandidate`) can read it through
     /// `EngineSettings` without importing KeyboardKit.
-    // 鏡射 KeyboardKit 自有的 isAutocapitalizationEnabled 設定 — 引擎層因不能 import KeyboardKit,
-    // 透過這個 conformance 從 EngineSettings 取得自動大寫狀態。
     var isAutoCap: Bool {
         KeyboardSettings.store.bool(
             forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
@@ -744,7 +684,6 @@ extension SharedSettings: EngineSettings {
 
     /// Live-reads the two underlying booleans per call, matching the
     /// `EngineSettingsProvider.current` live-read contract.
-    // 每次 access 都重讀兩個底層 bool,符合 EngineSettingsProvider 的 live-read 契約。
     var toneToggles: ToneToggles {
         ToneToggles(
             isDoubleTapOOEnabled: isDoubleTapOOEnabled,
@@ -755,13 +694,11 @@ extension SharedSettings: EngineSettings {
     /// Effective swap — the rule lives on `CandidateDisplayMode`. Read-only by
     /// design: a `.toggle()` on a derived getter would overwrite the stored
     /// flag, so writers go through `storedIsTranslateSwapped`.
-    // 推導值;規則在 CandidateDisplayMode。唯讀;寫入走 storedIsTranslateSwapped。
     var isTranslateSwapped: Bool {
         candidateDisplayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped)
     }
 
     /// Effective 括號標註 — same seam, same rule owner.
-    // 推導值;寫入走 storedIsOutputBothScripts。
     var isOutputBothScripts: Bool {
         candidateDisplayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts)
     }
@@ -774,8 +711,6 @@ extension SharedSettings: EngineSettingsProvider {
     /// returned value re-reads `UserDefaults`, so the engine always sees
     /// the most recent values (critical for in-app setting changes to
     /// propagate without restarting the keyboard extension).
-    // 直接回傳 self。引擎端後續對其 property 的 access 都會打到實際的 UserDefaults getter,
-    // 因此 host app 改設定後不必重啟 extension 即可生效。
     var current: EngineSettings {
         self
     }

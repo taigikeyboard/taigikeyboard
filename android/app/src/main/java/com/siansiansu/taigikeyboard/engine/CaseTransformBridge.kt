@@ -1,6 +1,3 @@
-// Case-transform 橋 — 把字元/字串大小寫處理(含 POJ/TL 聲調符號 case 對應)
-// 委派給 Rust phonetics::case_transform 子系統。對應 iOS RustEngineBridge+CaseTransform.swift。
-
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
@@ -17,15 +14,15 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 
 /**
- * Case-transform bridge. Top-level object (mirrors `LexiconBridge` pattern).
+ * Case-transform bridge — delegates char/string case handling (including POJ/TL tone-mark case
+ * mapping) to Rust `phonetics::case_transform`. Top-level object (mirrors `LexiconBridge` pattern);
+ * iOS counterpart is `RustEngineBridge+CaseTransform.swift`.
  * Single FFI hop per per-char or per-word case operation. Mode is forwarded
  * via envelope `AppConfig.input_mode`; case-transform is independent of POJ
  * doubletap preprocessing so the toggles fields are left at default.
  *
  * Suggestion skip rules (`id < 0 && id != -2` and `id == 0`) stay platform-side
  * — only transform-eligible items reach `transformSuggestion(...)`.
- *
- * skip 規則(id<0 且 ≠-2、id==0)保留在平台側,只有合格的 suggestion 才進來轉換。
  */
 object CaseTransformBridge {
     private const val TAG = "CaseTransformBridge"
@@ -63,9 +60,8 @@ object CaseTransformBridge {
     // region Per-char helpers
 
     /**
-     * Replaces `ToneUtilities.uppercaseToneLetter`.
-     *
-     * 單字元(含 combining mark)依模式查 POJ/TL 聲調表轉大寫;多字元僅將首字大寫。
+     * Replaces `ToneUtilities.uppercaseToneLetter`. A single char (including its combining mark)
+     * uppercases via the mode's tone table; multi-char input uppercases only the first character.
      */
     fun uppercaseToneChar(
         input: String,
@@ -81,9 +77,8 @@ object CaseTransformBridge {
     }
 
     /**
-     * Replaces `ToneUtilities.fullUppercaseToneLetter`.
-     *
-     * 整字串全部依模式聲調表轉大寫;CapsLock 路徑用此函式。
+     * Replaces `ToneUtilities.fullUppercaseToneLetter`. Uppercases the whole string via the mode's
+     * tone table; used by the CapsLock path.
      */
     fun fullUppercaseToneString(
         input: String,
@@ -99,9 +94,8 @@ object CaseTransformBridge {
     }
 
     /**
-     * Replaces `ToneUtilities.lowercaseToneLetter`.
-     *
-     * 單字元依模式聲調表轉小寫,含 ᴺ→ⁿ 鼻音記號 shortcut。
+     * Replaces `ToneUtilities.lowercaseToneLetter`. Lowercases a single char via the mode's tone
+     * table, including the ᴺ→ⁿ nasal-marker shortcut.
      */
     fun lowercaseToneChar(
         input: String,
@@ -121,9 +115,7 @@ object CaseTransformBridge {
     // region Per-string compound transforms
 
     /**
-     * Apply `letterCase` to `text` per the engine's input-case pipeline.
-     *
-     * 對輸入字串套用 LetterCase(Lowercased/Uppercased/CapsLocked);對應 KeyLabelCaseCache 路徑。
+     * Apply `letterCase` to `text` per the engine's input-case pipeline. Used by `KeyLabelCaseCache`.
      */
     fun transformInputCase(
         text: String,
@@ -146,9 +138,8 @@ object CaseTransformBridge {
     /**
      * Per-suggestion case transformation. Output is post-processed via
      * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed).
-     *
-     * 對 suggestion 候選字做大小寫轉換 — CapsLock → 全大寫;其他依 composing 已輸入字數切兩段
-     *       (typed-portion 比對大小寫、remaining-portion 首字大寫或全小寫),最後 adjust_nasal_marker_case 後處理。
+     * CapsLock uppercases everything; otherwise the candidate is split at the composing length —
+     * typed portion matches the typed case, remaining portion is title- or lower-cased.
      */
     fun transformSuggestion(
         original: String,

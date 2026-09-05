@@ -25,8 +25,6 @@
 //! - `baseFreqScore` is the dictionary-frequency proxy times the
 //!   first-match `SOURCE_TIERS` multiplier.
 
-// 候選詞評分公式,六項加權加總(使用者頻率、最近使用、完全相符、補全懲罰、長度接近度、字典分數)。
-
 use protos::engine::{ScoreBreakdown, TaigiWord};
 
 use phonetics::taigi_unicode_base_form;
@@ -37,9 +35,7 @@ use phonetics::taigi_unicode_base_form;
 // Verified byte-identical across platforms at the v3.5.2 ranking-slice audit.
 // ---------------------------------------------------------------------------
 
-// 使用者頻率次數上限。
 const USER_FREQ_CAP: i32 = 100;
-// 使用者頻率每次的加權倍率。
 const USER_FREQ_WEIGHT: i32 = 100;
 /// Recency window for both the legacy additive [`calculate_score`] and
 /// the Phase 9.1 lexicographic [`recency_rank`]. An entry is "recent"
@@ -53,28 +49,18 @@ const USER_FREQ_WEIGHT: i32 = 100;
 /// `last_used_ms > 0`. Tightening the legacy guards would change
 /// scoring for the non-Continuous path and is out of scope for this
 /// slice (`~/.claude/rules/round-workflow.md` § Branching & rounds).
-// 最近使用判定視窗(1 小時內);Phase 9.1 SortKey 與 legacy 加總公式共用同一閾值。
-// legacy calculate_score 不採用 9.3a 的 clock-invalid guard,以維持 pre-9.3a 行為。
 pub const RECENCY_WINDOW_MS: i64 = 60 * 60 * 1000;
-// 最近使用加分。
 const RECENCY_BONUS: i32 = 200;
-// 完全相符加分。
 const EXACT_BONUS: i32 = 100;
-// 補全(非完全相符)懲罰分數。
 const COMPLETION_PENALTY: i32 = -1000;
-// 長度接近度的最大加分上限。
 const CLOSENESS_WEIGHT: i32 = 500;
-// 字典 length_score 的縮放除數。
 const BASE_FREQ_DIVISOR: i32 = 10;
-// 字典來源 tier 倍率分母。
 const TIER_DENOMINATOR: i32 = 10;
-// 沒有命中任何 tier 時使用的預設分子。
 const DEFAULT_TIER_NUMERATOR: i32 = 10;
 
 /// Maps a dictionary-source bit position to the `baseFreqScore` multiplier
 /// numerator. First-match-wins on overlapping bits — the entry order here
 /// is authoritative. Mirrors `dictionary/common/source_bits.py`.
-// 字典來源優先權表,bit 位對應 base_freq_score 的倍率分子;多 bit 命中時依此處順序取第一個。
 const SOURCE_TIERS: &[(u32, i32)] = &[
     (0, 15), // kautian
     (1, 13), // taigitv
@@ -97,7 +83,6 @@ const SOURCE_TIERS: &[(u32, i32)] = &[
 // cross-platform invariant violation.
 // ---------------------------------------------------------------------------
 
-// Phase 9.1 連續輸入排序使用的來源 rank 表;rank 越小越優先,custom=0 由 is_custom 旗標進入。
 const CONTINUOUS_SOURCE_BITS: &[(u16, u8)] = &[
     (1 << 0, 1), // kautian
     (1 << 1, 2), // taigitv
@@ -108,7 +93,6 @@ const CONTINUOUS_SOURCE_BITS: &[(u16, u8)] = &[
 /// Source rank returned when `bitmask` has no known source bit set.
 /// Higher than any explicit-source rank so unknown-source entries
 /// sort last on the source dimension.
-// 未命中任何已知來源 bit 時使用的 fallback rank。
 pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
 
 /// Per-selection boost increment for the Continuous-input
@@ -118,7 +102,6 @@ pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
 /// (`docs/releases/v3.5.8/plan.md` § Phase 9 跨平台 invariant 常數). Platforms MUST NOT
 /// redefine — single source of truth per
 /// `.claude/rules/cross-platform-alignment.md` §3a.
-// Phase 9.3a — 每次使用者選用,boost 增量 0.1;跨平台不可重定義。
 pub const BOOST_ALPHA: f32 = 0.1;
 
 /// Saturation ceiling for the Continuous-input `user_freq_boost`.
@@ -127,7 +110,6 @@ pub const BOOST_ALPHA: f32 = 0.1;
 /// candidate list after dozens of selections (stale-dominance defense
 /// from `docs/engine/continuous-input-ranking.md` §3.2 Gap B). Same
 /// cross-platform invariant policy as [`BOOST_ALPHA`].
-// Phase 9.3a — boost 飽和上限 5×,40 次以上選擇後不再放大,防 stale dominance。
 pub const MAX_BOOST: f32 = 5.0;
 
 /// First-match-wins source rank for the Continuous-input sort_key.
@@ -139,7 +121,6 @@ pub const MAX_BOOST: f32 = 5.0;
 /// for Continuous-input source ordering. Platform-side ranking code
 /// MUST NOT redefine the table; per
 /// `.claude/rules/cross-platform-alignment.md` §3a.
-// 連續輸入排序的來源 rank;custom=0,字典 bit 依表內順序 1..=4,未知=5。
 pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
     if is_custom {
         return 0;
@@ -155,18 +136,15 @@ pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
 /// Per-candidate user-frequency snapshot. Caller-supplied so engine stays
 /// stateless. `last_used_ms == 0` means "never used"; the recency bonus
 /// gate guards against a stray bonus for never-seen entries.
-// 單一候選詞的使用者頻率資料,last_used_ms == 0 代表沒用過。
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct FrequencyData {
     /// Cumulative selection count. Capped at [`USER_FREQ_CAP`] by the
     /// legacy additive `calculate_score`; Continuous boost uses
     /// [`user_freq_boost`] which has its own saturation via
     /// [`MAX_BOOST`].
-    // 累計被選用次數。
     pub count: i32,
     /// Last selection in epoch-ms. `0` means never used; the recency
     /// helpers treat this and any non-positive value as "never".
-    // 上次使用的 epoch 毫秒,0 代表從未使用。
     pub last_used_ms: i64,
 }
 
@@ -197,8 +175,6 @@ pub struct FrequencyData {
 /// **Duplicate-key policy**: last-write-wins within one
 /// `(display, tl)` bucket. Platform queries return at most one row per
 /// pair (UNIQUE(word, tl)); for legacy callers, duplicates coalesce.
-// 使用者頻率查詢表,身分鍵 = (顯示文字, canonical TL) 配對 (#7;R5)。
-// 巢狀 display→(tl→data);canonical_tl="" 為舊資料 fallback 桶,exact 命中即遮蔽。
 #[derive(Debug, Clone, Default)]
 pub struct FrequencyMap {
     by_display: std::collections::HashMap<String, std::collections::HashMap<String, FrequencyData>>,
@@ -234,7 +210,6 @@ impl FrequencyMap {
     /// when neither is present, so absent entries reproduce the pre-R5
     /// never-used behaviour. A `canonical_tl == ""` query consults the
     /// legacy bucket once (no redundant second probe).
-    // 容錯配對查詢 — 先 exact (display,tl),miss 再退 legacy (display,"")。絕不相加。
     pub fn get(&self, display_text: &str, canonical_tl: &str) -> FrequencyData {
         let Some(inner) = self.by_display.get(display_text) else {
             return FrequencyData::default();
@@ -264,7 +239,6 @@ impl FrequencyMap {
 ///
 /// `count = 0` (entry absent or never selected) → boost = `1.0` (no
 /// amplification). Saturates at `count >= (MAX_BOOST − 1) / BOOST_ALPHA = 40`.
-// Phase 9.3a — Continuous boost 飽和公式;count=0 → 1.0,>=40 → 5.0。
 pub fn user_freq_boost(count: u32) -> f32 {
     let raw = 1.0 + count as f32 * BOOST_ALPHA;
     raw.min(MAX_BOOST)
@@ -291,7 +265,6 @@ pub fn user_freq_boost(count: u32) -> f32 {
 /// `< RECENCY_WINDOW_MS` policy in `calculate_score` (the boundary
 /// is shared so the two scoring paths see the "recent / stale" axis
 /// identically).
-// Phase 9.3a — SortKey recency 計算;不合理 now_ms/last_used_ms 一律視為 stale (rank=1)。
 pub fn recency_rank(now_ms: i64, last_used_ms: i64) -> u8 {
     if now_ms <= 0 || last_used_ms <= 0 || now_ms < last_used_ms {
         return 1;
@@ -320,9 +293,6 @@ pub fn recency_rank(now_ms: i64, last_used_ms: i64) -> u8 {
 /// noticeably stale over months. **Dogfood-tunable in 14..=90 days**
 /// (Codex pre-impl S3 Q4a, 2026-05-16) — kept a named constant, not a
 /// magic literal, so retuning is a one-line change.
-// S3 — walker user-freq 邊權重的指數時間常數 τ;librime formula_d 用 commit tick,
-//   我們無 tick model,改用 now_ms − last_used_ms 牆鐘衰減。weight 在 τ 後降到 1/e,
-//   在 τ·ln2 ≈ 20.8 天降到 0.5(τ=30 天)。dogfood 可調 14..=90 天。
 pub const USER_WEIGHT_DECAY_TAU_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 
 /// v3.5.8 S3 — time-decayed user-frequency boost **delta** for one
@@ -359,12 +329,6 @@ pub const USER_WEIGHT_DECAY_TAU_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 /// (single-syllable edges are damped so a hot single character cannot
 /// ride the discount to sweep the whole sentence — see
 /// `composing::lattice::cost::edge_cost`).
-// S3 — 單條 walker lattice edge 的時間衰減 user-freq boost「delta」(librime formula_d 牆鐘版,收斂 Gap B → G2)。
-// 回傳超過中性 1.0 的量:decay = exp(−age/τ);delta = (user_freq_boost(count) − 1.0) × decay。
-// 關鍵:cap 在衰減「之前」套用(用已飽和的 boost delta 再衰減);先衰減 raw count 再 cap 會讓
-//   count=1000 的 entry 卡在 MAX_BOOST 數月 → 正是本片要消除的 stale 單一 entry dominance(Codex S3 Q4a/Q4c BLOCK)。
-// now_ms/last_used_ms 由 caller 注入(pure/stateless,與 user_freq_boost/recency_rank 同跨平台不可重定義契約);
-//   三類壞時鐘(now<=0 / last<=0 / skew)回 0.0 = 中性,與 recency_rank guard 一致。
 pub fn decayed_user_weight_delta(count: u32, now_ms: i64, last_used_ms: i64) -> f64 {
     // Same bad-clock guard policy as `recency_rank` — single source of
     // truth for "is this user-frequency timestamp usable".
@@ -396,8 +360,6 @@ pub fn decayed_user_weight_delta(count: u32, now_ms: i64, last_used_ms: i64) -> 
 /// (selections are bounded by user actions), and the boost itself
 /// saturates at [`MAX_BOOST`] regardless of the converted count's
 /// magnitude. See `engine/lexicon/src/continuous.rs::record_to_candidate`.
-// 從 proto FrequencyEntry[] 建查詢表;count u32 → i32 用 saturate 防 wrap。
-// Continuous boost 路徑會再 i32 → u32 (saturate to 0) 回轉,實務 count 永遠 < i32::MAX,飽和不會發生。
 pub fn build_frequency_map(entries: &[protos::engine::FrequencyEntry]) -> FrequencyMap {
     let mut map = FrequencyMap::with_capacity(entries.len());
     for entry in entries {
@@ -414,7 +376,6 @@ pub fn build_frequency_map(entries: &[protos::engine::FrequencyEntry]) -> Freque
 }
 
 /// Compute the score breakdown for a single candidate.
-// 計算單一候選詞的六項分數明細(ScoreBreakdown)。
 pub(crate) fn calculate_score(
     word: &TaigiWord,
     normalized_input: &str,
@@ -467,7 +428,6 @@ pub(crate) fn calculate_score(
 /// Sum of all six fields — mirrors `ScoreBreakdown.total` accessor on
 /// both platforms. Internal helper; engine returns the breakdown and lets
 /// the platform / sort layer compute totals as needed.
-// 六項分數加總取得最終總分,行為對齊 iOS/Android 的 ScoreBreakdown.total。
 #[inline]
 pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
     breakdown.user_freq_score
@@ -478,7 +438,7 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
         + breakdown.base_freq_score
 }
 
-/// v3.5.8 連續輸入 (Continuous Input) Phase 5 score formula:
+/// v3.5.8 Continuous Input Phase 5 score formula:
 ///
 /// `score = freq × (1.0 + 0.1 × max(0, syllable_count − 1)) × user_freq_boost`
 ///
@@ -505,9 +465,6 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
 /// Cited mainstream IME parallel: khiin-rs `khiin/src/data/segmenter.rs`
 /// uses `cost = ln(1/p) / word_len_bias × syllable_bias`. We pick a
 /// simpler multiplicative form per `docs/releases/v3.5.8/plan.md` § Sort_key 公式 (PR-9.1 source-of-truth).
-// v3.5.8 連續輸入 Phase 5 排序公式:freq × (1 + 0.1×(syll−1)) × user_freq_boost。
-// 純 f32 倍乘式,不接 bigram / recency / closeness;與既有 calculate_score 不重疊。
-// user_freq_boost 由呼叫端注入 (傳 1.0 即無 boost),保持本函式無狀態。
 pub fn calculate_continuous_score(freq: u32, syllable_count: u8, user_freq_boost: f32) -> f32 {
     let syll_bias = 1.0 + BOOST_ALPHA * f32::from(syllable_count.saturating_sub(1));
     freq as f32 * syll_bias * user_freq_boost
@@ -532,7 +489,6 @@ pub fn calculate_continuous_score(freq: u32, syllable_count: u8, user_freq_boost
 /// tone digits 1-9) all three predicates produced byte-identical output;
 /// the strict Nd choice retains alignment with the narrower historical
 /// Kotlin contract while remaining a subset of Swift's predicate.
-// 把候選羅馬字轉成比對用的 base 形式:去連字號/空白、處理 POJ 鼻音與 o͘、去 Mn/Nd、轉小寫。
 fn roman_to_base(roman: &str) -> String {
     let no_hyphens: String = roman.chars().filter(|c| *c != '-' && *c != ' ').collect();
     let with_oo = taigi_unicode_base_form(&no_hyphens);
@@ -550,7 +506,6 @@ fn roman_to_base(roman: &str) -> String {
 /// filter catches the trailing tone digit (`tai5tsi3` → `taitsi`). Uses
 /// the same strict `Nd` predicate as [`roman_to_base`] for parity with
 /// the pre-Path-G platform contract.
-// 把使用者輸入轉成比對用 base:輸入已是數字調(無變音符號),只去尾調數字並轉小寫。
 fn input_to_base(normalized_input: &str) -> String {
     normalized_input
         .chars()
@@ -561,7 +516,6 @@ fn input_to_base(normalized_input: &str) -> String {
 
 /// First-match-wins multiplier numerator. Returns the default when
 /// `bitmask` is `None` or no `SOURCE_TIERS` entry's bit is set.
-// 依 source_bitmask 取得字典 tier 倍率分子;沒命中或 None 時回傳預設值。
 fn tier_numerator(bitmask: Option<u32>) -> i32 {
     let Some(bits) = bitmask else {
         return DEFAULT_TIER_NUMERATOR;
@@ -582,7 +536,6 @@ fn tier_numerator(bitmask: Option<u32>) -> i32 {
 /// fall under this category. Strict `Mn` (not `CCC > 0`) is required
 /// because `Mc` / `Me` marks and the rare `Mn` characters with
 /// `CCC == 0` would otherwise diverge from the platform predicate.
-// 嚴格用 General Category Mn 判定非間隔符號,行為與 iOS/Android 對齊。
 fn is_nonspacing_mark(c: char) -> bool {
     use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
     c.general_category() == GeneralCategory::NonspacingMark
@@ -593,7 +546,6 @@ fn is_nonspacing_mark(c: char) -> bool {
 /// `Character.isNumber` (which also includes `Nl` and `No`); the input
 /// space here is restricted to ASCII tone digits, so the predicates
 /// agree on every reachable input.
-// 嚴格用 General Category Nd 判定十進位數字,對齊 Kotlin Char.isDigit。
 fn is_decimal_digit(c: char) -> bool {
     use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
     c.general_category() == GeneralCategory::DecimalNumber

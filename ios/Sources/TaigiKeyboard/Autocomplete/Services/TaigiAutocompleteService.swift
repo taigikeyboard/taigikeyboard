@@ -1,7 +1,4 @@
-// Taigi 候選詞 autocomplete service — 連續輸入引擎為唯一候選來源。
-// v3.5.8 Item 13 後不再有 platform lexicon fallback;engine 內部處理所有
-// 切音節 / 前綴 / 自訂詞 / hanzi guard 邏輯,平台只負責把 engine 候選
-// 轉成 KeyboardKit Suggestion 列表(單向資料流,對齊 MOE tutgInputLine model)。
+// Taigi candidate autocomplete service — the continuous-input engine is the only candidate source.
 
 import Foundation
 import KeyboardKit
@@ -11,8 +8,6 @@ import KeyboardKit
 /// (`CandidateCellHelper.suggestionToHandle`), and the commit resolver
 /// (`ActionHandler.markedCellCommit`). Values mirror Android
 /// `TaigiWord.MetadataKeys.CELL_SCRIPT*`; wire strings must not drift.
-// 漢羅濫 split cell 的 wire 字串單一出處 — builder / render guard / commit
-// resolver 三處共用,與 Android MetadataKeys 常數一字不差。
 enum CandidateCellScript {
     /// `additionalInfo` key carrying the cell's script marker.
     static let infoKey = "cellScript"
@@ -33,8 +28,6 @@ enum CandidateCellScript {
     /// mode-derived path together. Splitting that predicate is what let a
     /// defective marker skip the swap rewrite and then be re-parsed as an
     /// un-split dual-script suggestion.
-    // 這格是不是 §42 split cell — render guard 與 commit resolver 共用同一
-    // 判斷,壞掉的標記兩邊一起退回未標記路徑,不會半標記半改寫。
     static func marker(for suggestion: AutocompleteSuggestion) -> String? {
         guard let marker = suggestion.additionalInfo[infoKey],
               marker == hanji || marker == roman,
@@ -60,14 +53,11 @@ func shouldSplitCombinedCells(
     keyboardLayoutType != .tps && candidateDisplayMode == .combined
 }
 
-/// 自動完成服務
-///
-/// 處理台語連續輸入候選詞。`autocomplete(_:)` 把 `ComposingManager`
-/// 的 span-local engine 候選轉成 KeyboardKit Suggestion;engine 回空時
-/// 候選列即為空(inline pre-edit 仍保留組字緩衝,Enter 由 Item 3 的
-/// `Phase::Continuous` `Intent::CommitRaw` arm 提交 pending tail)。
+/// Turns `ComposingManager`'s span-local engine candidates into KeyboardKit suggestions.
+/// An empty engine result means an empty candidate row — the inline pre-edit still holds
+/// the composing buffer, and Enter commits the pending tail.
 class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
-    // MARK: - KeyboardKit 協議屬性
+    // MARK: - KeyboardKit Protocol Properties
 
     var locale: Locale = .current
 
@@ -100,7 +90,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     func removeIgnoredWord(_: String) {}
     func unlearnWord(_: String) {}
 
-    // MARK: - 核心屬性
+    // MARK: - Core Properties
 
     /// Composing state provider (decoupled from ComposingManager)
     private weak var composingState: (any ComposingStateProvider)?
@@ -109,30 +99,22 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// Distinct protocol from `composingState` because the fetch surface is
     /// not Foundation-only (`RustEngineBridge.ContinuousCandidate`); same
     /// backing instance in practice (ComposingManager conforms to both).
-    // 連續輸入 fetcher protocol。實作端與 composingState 是同一個 ComposingManager。
     private weak var continuousFetcher: (any ContinuousCandidateFetcher)?
 
     let logger = DebugLogger(category: "TaigiAutocompleteService")
 
-    // MARK: - 公開介面
+    // MARK: - Public API
 
-    // 注入組字狀態 provider(通常是 ComposingManager)。同一實例也供應
-    // 連續輸入 fetch surface(ComposingManager 同時 conform 兩個 protocol)。
     func setComposingManager(_ provider: any ComposingStateProvider) {
         composingState = provider
         continuousFetcher = provider as? any ContinuousCandidateFetcher
     }
 
-    /// 自動完成核心方法
-    ///
-    /// 連續輸入引擎為唯一候選來源:`ComposingManager.fetchContinuousCandidates()`
-    /// 同步呼叫 `RustEngineBridge.composingFetchAtPos`,generation snapshot 與
-    /// 當前 `rawInput` 一致。engine 回空 ⇒ 候選列為空(per
-    /// `docs/engine/continuous-candidate-display.md` §15.4/§15.6:engine 單一
-    /// 來源,inline pre-edit 才是 composing-text surface,候選列 §10.1.2 起
-    /// 沒有 slot-0 cell)。同步 fetch 無 suspension window,故不需 stale-result
-    /// 防護(KeyboardKit `autocomplete(_:updating:)` 的 untracked Task 只在有
-    /// `await` 時才有過期風險,本路徑已無 await)。
+    /// The engine is the only candidate source: `fetchContinuousCandidates()` calls
+    /// `RustEngineBridge.composingFetchAtPos` synchronously, so the generation snapshot always
+    /// matches the current `rawInput` and no stale-result guard is needed. An empty engine
+    /// result means an empty candidate row (see
+    /// `docs/engine/continuous-candidate-display.md` §15.4/§15.6).
     func autocomplete(_ text: String) async throws -> AutocompleteResult {
         guard !text.isEmpty, activeComposingContext() != nil else {
             return AutocompleteResult(inputText: text, suggestions: [])
@@ -142,7 +124,6 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
         // (hanji-first by construction), so a TPS layout never splits
         // regardless of the stored mode. Mirrors Android's
         // `splitCombinedCellsProvider`.
-        // TPS 佈局不理會候選詞顯示模式,恆走未拆分的並排 shape。
         let settings = SharedSettings.shared
         let splitCombinedCells = shouldSplitCombinedCells(
             keyboardLayoutType: settings.keyboardLayoutType,
@@ -157,7 +138,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - Internal
 
-    /// 是否有作用中的組字緩衝;沒有時回 nil,呼叫端即不顯示候選詞。
+    /// The active composing buffer, or nil — callers show no candidates when nil.
     private func activeComposingContext() -> (rawInput: String, displayText: String)? {
         guard let composingState,
               composingState.isComposing,
@@ -233,11 +214,6 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// scripts keep separate keys. Split OFF (the default — 並排 / 羅馬字 / TPS
     /// all resolve to `false` at the caller) emits the un-split shape
     /// byte-identically — 並排's subtitle tells 重/tîng from 重/tāng.
-    // text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
-    // Bug 1 後 displayText sidechannel = canonical key,走 canonicalText
-    // (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
-    // 漢羅濫 = 拆成相鄰的 漢字 cell + 羅馬字 cell(無副標題),cellScript 標記
-    // 該 cell 顯示/送出的 script;semantic sidechannel 兩個 cell 皆原樣複製。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
         splitCombinedCells: Bool = false,

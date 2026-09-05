@@ -33,10 +33,6 @@
 //! code is: a Win32 call that fills a buffer we read goes through a raw
 //! binding, never through a `&mut [T]` wrapper.
 
-// 會寫入我們自己 buffer 的 Win32 呼叫,一律走 windows-sys 原始 binding。
-// windows crate 的 &mut [T] 包裝用 as_ptr()(唯讀 provenance)transmute 成 *mut 交給 OS 寫,
-// 那是 UB;release build 會把呼叫端讀到的值摺回初值 —— modifier 全部讀成「無壓落」。
-
 use windows::Win32::Foundation::{HMODULE, MAX_PATH};
 use windows::Win32::System::SystemServices::LOCALE_NAME_MAX_LENGTH;
 use windows::Win32::UI::Input::KeyboardAndMouse::HKL;

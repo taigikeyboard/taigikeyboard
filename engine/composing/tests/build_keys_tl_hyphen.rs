@@ -19,9 +19,6 @@
 //! `engine/composing/tests/syllabifier_tl.rs:204-247` to avoid a shared
 //! test-utils crate.
 
-// Phase 9 Item 8 — hyphen-shadow + offset map 的 end-to-end 測試。
-// 七種型態:無連字 regression / 一般 / numeric tone / 雙連字 / 前導 / 後綴 / 內外混合。
-
 use std::path::PathBuf;
 
 use composing::dispatch::build_keys_tl_with_inventory;

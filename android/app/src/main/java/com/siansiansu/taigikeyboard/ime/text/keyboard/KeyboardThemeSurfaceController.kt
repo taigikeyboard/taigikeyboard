@@ -1,7 +1,3 @@
-// 主題的 View 層套用 — 在共同父容器 text_input_content 畫(或清除)背景漸層,
-// 並請 SmartbarView 把候選列 chrome 透明化,使漸層從候選列連續延伸到鍵盤底部。
-// 鍵盤 body(Compose)的透明由 KeyboardLayout 讀 hasBackgroundGradient 自行處理。
-
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.graphics.drawable.GradientDrawable
@@ -20,6 +16,8 @@ import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView
  *
  * A flat/legacy theme clears the gradient (back to the parent's `?keyboard_bgColor`)
  * and restores the attr-backed chrome, so the default path is visually unchanged.
+ * The Compose keyboard body handles its own transparency separately, by reading
+ * `hasBackgroundGradient`.
  */
 internal class KeyboardThemeSurfaceController(
     private val inputView: InputView,

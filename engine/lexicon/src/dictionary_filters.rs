@@ -11,11 +11,9 @@
 //!
 //! ```text
 //!  0 = kautian   3 = sitbut   6 = kungge   9 = khiin   12 = variant
-//!  1 = taigitv   4 = taihoa   7 = stti    10 = dev (詞庫增補檔案 toggle)
+//!  1 = taigitv   4 = taihoa   7 = stti    10 = dev (dictionary-supplement-file toggle)
 //!  2 = itaigi    5 = taijit   8 = khpoo   11 = lkk
 //! ```
-
-// 字典開關 → bitmask 換算的單一真實來源,取代平台端 ~80 行的 EnabledDictionaries 鏡像實作。
 
 use crate::dictionary_reader::{
     KAUTIAN_SUBTAG_ACCENT_COUNT, KAUTIAN_SUBTAG_ACCENT_SHIFT, KAUTIAN_SUBTAG_MAIN_BIT,
@@ -28,12 +26,10 @@ use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, Dictionary
 /// shortcut at `lexicon.proto:166-173`. When the platform receives this
 /// value it forwards to `AssocLookupRequest.enabled_sources_bitmask`
 /// without further processing; the engine treats it as "filter disabled".
-// 9 個 association 來源全開時使用的 sentinel 值,代表「過濾停用」。
 const ASSOC_ALL_ENABLED_SENTINEL: u32 = u32::MAX;
 
 /// Compute filter bitmasks + enabled-source codes from the user's
 /// 12-toggle preference snapshot.
-// 由 12 個字典開關計算 dictionary.bin / association.bin bitmask 與啟用來源代碼清單。
 pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersResponse {
     DictionaryFiltersResponse {
         dictionary_filter_bitmask: dictionary_filter_bitmask(toggles),
@@ -48,7 +44,6 @@ pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersR
 /// Full `dictionary.bin` filter bitmask: source/variant bits 0-12 plus the
 /// kautian subcollection wire high region (bit 13 active + bits 14..=25 enable
 /// mask) when the subcollection toggles are present.
-// dictionary.bin 完整 bitmask;bit 0-12 為來源/異體字,bit 13 + 14-25 為 kautian subcollection 啟用區 (子訊息存在時才設)。
 fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
     let mut mask: u32 = 0;
     if t.kautian {
@@ -101,10 +96,8 @@ fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
 /// sub-message is absent (a platform whose UI is not wired yet, NextWord) OR
 /// the kautian master toggle is off (kautian rows are dropped by the source-OR
 /// regardless, so gating them is moot). The `main` subcollection bit is set
-/// unconditionally when present: main (主條目) is not a user toggle — it is
+/// unconditionally when present: main is not a user toggle — it is
 /// always on whenever the kautian master is on.
-// 把使用者的 kautian subcollection 啟用狀態編成 wire 高位 (bit13 啟用 + bit14-25 啟用遮罩)。
-// 子訊息缺席或 master 關時回 0 (引擎維持 legacy 全開,DD5 零行為變更);存在時 main 位元必設 (主條目非開關)。
 fn encode_kautian_subcoll_wire(t: &DictionaryToggles) -> u32 {
     let Some(sub) = t.kautian_subcoll.as_ref() else {
         return 0;
@@ -145,7 +138,6 @@ fn encode_kautian_subcoll_wire(t: &DictionaryToggles) -> u32 {
 /// Returns `u32::MAX` sentinel when ALL 9 association sources are on,
 /// preserving the documented shortcut consumed by
 /// `AssocLookupRequest.enabled_sources_bitmask`.
-// association.bin 的 9 位元 bitmask;9 個來源全開時回傳 u32::MAX sentinel。
 fn assoc_lookup_bitmask(t: &DictionaryToggles) -> u32 {
     if all_association_sources_enabled(t) {
         return ASSOC_ALL_ENABLED_SENTINEL;
@@ -195,10 +187,9 @@ fn all_association_sources_enabled(t: &DictionaryToggles) -> bool {
 
 /// `DictionarySourceCode` set the platform should mark as enabled when
 /// retagging Tab3 result badges. `CUSTOM` is non-toggleable and always
-/// present; `DEV` (詞庫增補檔案) is gated by the dev toggle and pushed
+/// present; `DEV` (dictionary-supplement-file source) is gated by the dev toggle and pushed
 /// first-when-present so the order stays `[DEV?, CUSTOM, …]`; `variant` is
 /// a filter bit, not a source code.
-// 提供 Tab3 標籤重貼用的啟用來源清單;CUSTOM 永遠存在,DEV 受開關控制 (開時排最前),variant 是過濾位元 (非來源)。
 fn enabled_source_codes(t: &DictionaryToggles) -> Vec<DictionarySourceCode> {
     use DictionarySourceCode as C;
     let mut codes = Vec::new();
@@ -292,7 +283,7 @@ mod tests {
     }
 
     /// INVARIANT: every source is toggleable — all-off ⇒ empty source mask.
-    /// dev (bit 10, 詞庫增補檔案 toggle) is no longer an unconditional floor;
+    /// dev (bit 10, dictionary-supplement-file toggle) is no longer an unconditional floor;
     /// `CUSTOM` stays in the source-code list (separate user-dict path, not a
     /// `dictionary.bin` source bit).
     #[test]
@@ -422,7 +413,7 @@ mod tests {
         assert_ne!(mask, u32::MAX);
     }
 
-    /// Present + every nested toggle off ⇒ main still on (主條目 is not a user
+    /// Present + every nested toggle off ⇒ main still on (not a user
     /// toggle), accent + name bits clear.
     #[test]
     fn subcoll_present_all_off_keeps_main() {

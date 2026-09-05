@@ -1,7 +1,3 @@
-// 字典查詢編排器 — Tab3(Dictionary tab)字典瀏覽用。
-// v3.5.8 Item 13 後 keyboard 候選詞路徑已退役平台 lexicon fallback(engine
-// 為唯一來源),本 service 只保留 Tab3 的 hanzi / roman 探索查詢 + source filter。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context

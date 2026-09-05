@@ -1,7 +1,5 @@
 //! POJ (Pe̍h-ōe-jī) assembly — ported from `taigi-converter/src/poj.js`.
 
-// POJ (白話字) 音節組裝,從 TL 的 (聲母, 韻母, 聲調) 三元組組出 POJ 顯示形式 (含聲調符號)。
-
 use crate::tables::{poj_tone_mark, POJ_FINAL_SUBSTITUTIONS, POJ_INITIAL_FROM_TL};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -11,7 +9,6 @@ static TWO_VOWELS: Lazy<Regex> = Lazy::new(|| Regex::new("[aeiou]{2}").unwrap())
 static SINGLE_VOWEL: Lazy<Regex> = Lazy::new(|| Regex::new("[aeiou]").unwrap());
 
 /// Assemble a POJ syllable from a TL `initial + final + tone`. Output is NFC.
-// 從 TL 的 (聲母, 韻母, 聲調) 組出 POJ 音節,輸出為 NFC。
 pub fn to_poj(initial: &str, final_str: &str, tone: &str) -> String {
     let poj_initial = POJ_INITIAL_FROM_TL.get(initial).copied().unwrap_or(initial);
     let poj_final = tl_final_to_poj(final_str);
@@ -29,7 +26,6 @@ pub fn to_poj(initial: &str, final_str: &str, tone: &str) -> String {
 /// mark on `o`). The mark lands per [`place_poj_tone_mark`] (handles `o͘`, vowel
 /// pairs, syllabic `ng`/`m`); leading consonants are untouched. Output is NFC.
 /// Tone 1/4 (and toneless) have no mark → returns `syllable`.
-// 直接在字面音節上放 POJ 聲調符號,不做任何拼寫正規化(ting→tíng、goa→góa)。
 pub fn apply_poj_tone_literal(syllable: &str, tone: &str) -> String {
     let mark = poj_tone_mark(tone);
     place_poj_tone_mark(syllable, mark).nfc().collect()

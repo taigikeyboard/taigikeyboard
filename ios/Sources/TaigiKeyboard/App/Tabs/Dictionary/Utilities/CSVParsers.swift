@@ -1,6 +1,3 @@
-// CSVDocument 的 decode/encode 擴充 — 詞頻 (word,count) + 聯想詞 5 欄格式。
-// 解析時跳過空行、缺欄、計數非正整數的列;NextWordService.AssociationEntry 為來源型別。
-
 import Foundation
 
 extension CSVDocument {
@@ -16,7 +13,6 @@ extension CSVDocument {
     /// hand-edited file) decodes with `tl = ""` — the tolerant legacy bucket.
     /// Any other column count is skipped (an exact discriminator, not `>= 2`,
     /// so a malformed row is never silently eaten as legacy).
-    // 解析詞頻 CSV — 3 欄 (word,tl,count) 為現格式;2 欄 (word,count) 舊檔 → tl=""(legacy bucket);其餘欄數跳過。
     static func decodeFrequencyCSV(_ csv: String) -> [(word: String, tl: String, count: Int)] {
         let lines = csv.components(separatedBy: .newlines)
         var entries: [(word: String, tl: String, count: Int)] = []
@@ -45,7 +41,7 @@ extension CSVDocument {
         return entries
     }
 
-    // 把詞頻清單編成 CSV 字串(每列 word,tl,count\n);word 與 tl 走 escape() 轉義。
+    // Encodes the frequency list to CSV lines `word,tl,count`; word and tl go through escape().
     static func encodeFrequencyCSV(_ entries: [(word: String, tl: String, count: Int)]) -> String {
         var csv = ""
         for item in entries {
@@ -56,7 +52,7 @@ extension CSVDocument {
 
     // MARK: - Association
 
-    // 聯想詞 CSV 一列的具名 tuple — 5 欄:prev/next 漢字 + prev/next TL + count。
+    // Named tuple for one association-CSV row — 5 columns: prev/next hanzi + prev/next TL + count.
     typealias AssociationCSVRow = (
         prevWord: String,
         prevTl: String,
@@ -65,7 +61,7 @@ extension CSVDocument {
         count: Int
     )
 
-    // 解析聯想詞 CSV(5 欄);過濾掉空 nextWord 與非正整數 count 的列。
+    // Parses the association CSV (5 columns); drops rows with empty nextWord or a non-positive count.
     static func decodeAssociationCSV(_ csv: String) -> [AssociationCSVRow] {
         let lines = csv.components(separatedBy: .newlines)
         var entries: [AssociationCSVRow] = []
@@ -85,7 +81,7 @@ extension CSVDocument {
         return entries
     }
 
-    // 把聯想詞清單編成 CSV(5 欄);每個字串欄都走 escape() 轉義。
+    // Encodes the association list to CSV (5 columns); every string column goes through escape().
     static func encodeAssociationCSV(_ entries: [NextWordService.AssociationEntry]) -> String {
         var csv = ""
         for item in entries {

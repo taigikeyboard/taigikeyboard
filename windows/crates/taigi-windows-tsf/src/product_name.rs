@@ -5,8 +5,6 @@
 //! (`lang_bar`, `text_service`), the CLSID key and the TSF profile
 //! (`registration`) — so none of them owns it.
 
-// DLL 家己的名:未翻譯的退路、字串資源 id、以及照使用者介面語言解出來的在地化名稱。
-
 use crate::module::instance;
 use windows::core::PWSTR;
 use windows::Win32::UI::WindowsAndMessaging::LoadStringW;

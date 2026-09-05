@@ -5,8 +5,6 @@
 //! (Codex W6): keyboard, display-attribute provider, tray support, UI-less
 //! candidate list, input-mode compartment, immersive support. NOT COMLESS.
 
-// 註冊/解除註冊 — CLSID、語言 profile、六個真實類別;解除逐項對稱。
-
 use crate::com_out_buffer;
 use crate::guids::{CLSID_TEXT_SERVICE, GUID_PROFILE, LANGID_ZH_TW};
 use crate::module::module_path;

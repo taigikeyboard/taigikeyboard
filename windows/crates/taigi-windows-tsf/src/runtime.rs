@@ -7,8 +7,6 @@
 //! settings file; the stores open and the lexicon loads on the first key
 //! the TIP handles (`prepare_for_first_key`, PR5b), never in `Activate`.
 
-// 每個程序一份的執行期狀態 — 即時設定、使用者資料庫、引擎詞庫;辭典與資料庫延後到第一個按鍵才載入。
-
 use crate::module::install_directory;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};

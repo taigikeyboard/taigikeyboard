@@ -1,4 +1,4 @@
-// 為 KeyboardKit KeyboardContext 加上組字狀態屬性的擴充,透過 Associated Object 暫存。
+// Adds a composing-state property to KeyboardKit's KeyboardContext via an associated object.
 
 import Combine
 import Foundation
@@ -6,13 +6,9 @@ import KeyboardKit
 import ObjectiveC
 import SwiftUI
 
-/// KeyboardContext 組字狀態擴展
-///
-/// 使用 Associated Object 為 KeyboardContext 添加組字狀態屬性。
 extension KeyboardContext: ComposingContextSink {
     private static var isComposingTextKey: UInt8 = 0
 
-    /// 是否正在組字中
     var isComposingText: Bool {
         get {
             objc_getAssociatedObject(self, &Self.isComposingTextKey) as? Bool ?? false
@@ -21,7 +17,7 @@ extension KeyboardContext: ComposingContextSink {
             guard newValue != isComposingText else { return }
             objc_setAssociatedObject(self, &Self.isComposingTextKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
 
-            // 在主執行緒觸發更新（關閉動畫避免閃爍）
+            // Dispatch on the main thread with animations disabled to avoid a flicker.
             DispatchQueue.main.async { [weak self] in
                 var transaction = Transaction()
                 transaction.disablesAnimations = true

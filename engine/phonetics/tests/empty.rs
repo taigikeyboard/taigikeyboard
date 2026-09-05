@@ -4,8 +4,6 @@
 //! "no special-case for empty input" guarantee — callers never need to
 //! pre-filter.
 
-// 空字串輸入合約測試;每個 op 都應該回正常 Ok 而非錯誤,呼叫端不需要先過濾。
-
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;

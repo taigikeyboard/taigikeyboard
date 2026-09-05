@@ -1,5 +1,3 @@
-// 字型 / 詞典 / 開源專案的版權聲明頁。
-
 import SwiftUI
 
 // Standardized short license names — language-invariant, never translated (kept as constants rather
@@ -17,8 +15,7 @@ private enum License {
     static let ogdlTaiwan10 = "OGDL-Taiwan-1.0"
 }
 
-/// Copyright notices for dictionaries and open-source projects.
-// 版權聲明頁。各區段透過 CopyrightSection 渲染:title、描述、授權、連結。
+/// Copyright notices for fonts, dictionaries, and open-source projects.
 struct CopyrightView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     var body: some View {
@@ -160,7 +157,6 @@ struct CopyrightView: View {
 
 // MARK: - Copyright Section
 
-// 單一版權項目的 Section 子 View。licenseURL 必填,websiteURL 可選。
 private struct CopyrightSection: View {
     @Environment(DisplayLanguageStore.self) private var lang
     let title: String

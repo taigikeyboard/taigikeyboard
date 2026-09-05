@@ -3,8 +3,6 @@
 //! the macOS formatter binds, so the stored text sorts the way the query
 //! orders by it regardless of locale or time zone.
 
-// 自訂詞庫時間戳文字(UTC,與 SQLite CURRENT_TIMESTAMP 同格式),不引入日期函式庫。
-
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Now, as `yyyy-MM-dd HH:mm:ss` in UTC.

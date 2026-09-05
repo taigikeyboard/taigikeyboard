@@ -5,8 +5,6 @@
 //! SIMPLIFICATION: no fade (a plain hide after the hold); the corners are
 //! DWM's rounding, not a custom radius.
 
-// 模式切換提示 — 最後游標所在螢幕中央偏下的小卡片,停 0.8 秒後消失(無淡出,具名簡化)。
-
 use super::render::{RenderFactory, Surface};
 use super::theme::{SystemTheme, Theme};
 use super::window::{monitor_at, PopupWindow, WindowHandler, WindowRef, BASE_DPI};

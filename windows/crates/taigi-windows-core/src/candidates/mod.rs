@@ -14,8 +14,6 @@
 //! DIVERGENCE: `f32` throughout (Direct2D's unit) where the Mac uses 64-bit
 //! `CGFloat`; see `HorizontalPageLayout::pack`.
 
-// 候選窗的幾何與導覽,純模型無視窗;PR6 的 Direct2D 只負責畫。
-
 mod expandable;
 mod grid;
 mod horizontal;

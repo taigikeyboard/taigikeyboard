@@ -3,8 +3,6 @@
 //! `CandidateMetrics.swift`; the AppKit measurements go through the
 //! [`TextMeasurer`] the renderer supplies (DirectWrite in PR6, a stub in tests).
 
-// 候選窗所有點數尺寸,從兩個大小選項 + 字型一次解析;文字量測交給 TextMeasurer。
-
 use super::index_label::CandidateIndexLabel;
 use crate::composing::CandidateCellContent;
 use crate::settings::{CandidateFontChoice, CandidateTextSizeChoice, CandidateWindowSizeChoice};
@@ -167,7 +165,6 @@ impl CandidateMetrics {
     /// and the two-line box otherwise, so 並排's mixed lists keep lining up.
     /// Inline is one line either way. Idempotent: resolved once per list,
     /// on `show` and on `update_cells`.
-    // 依內容決定格高 — 整份清單無副標時只留一行。
     pub fn for_content(&self, has_annotations: bool) -> Self {
         let item_height = match self.cell_arrangement {
             CandidateCellArrangement::Inline => self.item_height,

@@ -2,9 +2,6 @@
 //! `NextWordResponse`. Generation-mismatch envelope reset lives one layer
 //! up in `EngineHandle::handle`.
 
-// 把 proto 請求解碼為 Intent、分派給 Engine、再把回應打包成 proto。
-// envelope 層的世代重置在 `EngineHandle::handle` 處理,不在這層。
-
 use crate::api::{Engine, Intent, NextWordError};
 use crate::booster;
 use protos::engine::{
@@ -15,7 +12,6 @@ use protos::engine::{
 /// Decode the proto request method into a typed `Intent`. Returns
 /// `MissingMethod` when `oneof method` is empty, `MissingDecisionInput`
 /// when an intent's nested `DecisionInput` is missing.
-// 把 proto oneof method 解碼為強型別 Intent;欄位缺失會回傳對應錯誤。
 fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError> {
     use next_word_request::Method;
     let method = req.method.clone().ok_or(NextWordError::MissingMethod)?;
@@ -117,7 +113,6 @@ enum DecodedRequest {
 /// engine method. `BoostCandidates` is stateless — runs without entering
 /// the decide / filter paths. `QueryState` is also stateless (read-only
 /// snapshot). Other methods route through the engine state machine.
-// 純分派入口;解碼後依方法分流至 decide / filter / boost / 狀態快照路徑。
 pub fn handle(
     req: &NextWordRequest,
     engine: &mut Engine,

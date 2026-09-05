@@ -1,5 +1,5 @@
-// 候選點擊處理器 — 從 SmartbarManager 抽出。
-// 處理 Taigi 候選選擇、英文建議替換、overlay 候選選擇,並做 outputText 格式化。
+// Candidate click handler, extracted from SmartbarManager: handles Taigi candidate selection,
+// English suggestion replacement, and overlay candidate selection, and formats the output text.
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 

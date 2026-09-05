@@ -3,10 +3,6 @@
 // Mirrors iOS Sources/TaigiKeyboard/Input/CharacterInputPipeline.swift.
 // endregion
 
-// TPS(注音)鍵級輸入前處理薄殼。實際邏輯已在 Rust phonetics::tps_input_adjust;
-// 此檔僅將 (char, rawInput) 委派給 RustEngineBridge.tpsInputAdjust。
-// TextInputManager 必須在 TPS layout 才呼叫,本物件不檢查 layout。
-
 package com.siansiansu.taigikeyboard.ime.text
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge

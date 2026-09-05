@@ -2,8 +2,6 @@
 //! both sides read, so the spawner (`taigi-windows-tsf::settings_launcher`)
 //! and the parser (`taigi-windows-settings::cli`) cannot drift.
 
-// DLL 與設定視窗之間的命令列契約 — 兩邊共用同一份常數。
-
 /// The settings window's executable, beside the DLL in the install
 /// directory (roadmap W1).
 pub const SETTINGS_EXE_NAME: &str = "TaigiKeyboardSettings.exe";

@@ -2,15 +2,12 @@
 //! `AutocompleteContextBooster.boost` and Android
 //! `AutocompleteContextBooster.boost`. Engine state untouched.
 
-// 依候選首字加權的純函式;對齊兩平台 AutocompleteContextBooster.boost,完全不動引擎狀態。
-
 use std::collections::HashSet;
 
 /// Reorder `words` so entries whose first Unicode scalar is in
 /// `predicted_first_chars` float to the top, preserving original order
 /// within both partitions. Empty `predicted_first_chars` short-circuits to
 /// the original list (matches iOS / Android behavior).
-// 把首字命中 predicted_first_chars 的詞拉到前面,兩段各自保留原順序;空集合直接回傳原列表。
 pub(crate) fn boost_words(words: Vec<String>, predicted_first_chars: Vec<String>) -> Vec<String> {
     if predicted_first_chars.is_empty() {
         return words;

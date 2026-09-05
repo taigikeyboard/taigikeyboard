@@ -1,8 +1,6 @@
 //! Lifecycle tests — generation-mismatch silent drop + idempotent reset.
 //! Per plan §4 + §5b.2.
 
-// 生命週期測試:generation 不一致的靜默重設與冪等 reset 行為。
-
 use composing::EngineHandle;
 use protos::engine::composing_request::Method;
 use protos::engine::{AppConfig, ComposingRequest, Reset, Start};

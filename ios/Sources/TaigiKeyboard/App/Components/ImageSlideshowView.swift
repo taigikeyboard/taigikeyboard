@@ -1,12 +1,8 @@
-// 自動循環的圖片輪播 View,setup guide 與 feature 詳情頁用。
-
 import SwiftUI
 
 /// Auto-cycling image slideshow.
 ///
 /// Used in setup guide and feature detail pages.
-// 自動循環圖片輪播 View。
-// imageNames 為 asset 名稱清單;interval 為切換秒數(預設 2 秒)。
 struct ImageSlideshowView: View {
     let imageNames: [String]
     let interval: TimeInterval

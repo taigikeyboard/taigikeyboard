@@ -1,8 +1,6 @@
 //! The envelope round-trip and the per-request config snapshot.
 //! Port of `RustEngineBridge.swift:97-187`.
 
-// 信封往返(id 序列、錯誤檢查、失敗紀錄)與每次請求攜帶的 AppConfig。
-
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use prost::Message;
@@ -26,7 +24,6 @@ fn next_request_id() -> u32 {
 ///
 /// Shared by every slice: envelope, id sequence, error checks and failure log
 /// are identical, only the payload case differs.
-// 單一往返;None = 往返失敗、引擎狀態未動,絕不可當成「未組字」。
 pub(super) fn roundtrip(
     payload: request::Payload,
     op: &str,
@@ -97,7 +94,6 @@ pub(super) fn record_failure(op: &str, message: &str) {
 /// `candidate_display_mode` rides on the BASE config: the engine collapses
 /// same-roman rows under roman-only in both the candidate fetch and the
 /// next-word filter, and the two derived configs below inherit it.
-// 每個請求都帶的 AppConfig;oo/nn 雙擊摺疊在硬體鍵盤上永遠開。
 pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),

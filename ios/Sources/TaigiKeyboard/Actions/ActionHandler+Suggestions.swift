@@ -1,5 +1,4 @@
 // ActionHandler extension: suggestion selection (candidate commit, output formatting).
-// ActionHandler 的候選詞選取擴充 — 解析建議內容、組出輸出字串、送出並交給 NextWord 記錄關聯。
 
 import Foundation
 import KeyboardKit
@@ -17,7 +16,6 @@ struct ResolvedCommit {
 extension ActionHandler {
     // MARK: - Suggestion Selection
 
-    // 候選詞點選主入口。先處理 raw-input 直送,再依組字 / NextWord 路徑組出 commit 字串並更新使用頻率。
     func handleSuggestionSelection(_ suggestion: AutocompleteSuggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
@@ -80,9 +78,6 @@ extension ActionHandler {
             // CommitContinuous noop emits zero effects, so both flags stay
             // false and neither frequency recording nor auto-space fires for
             // text that was never written.
-            // 用 transition.effects 是否含 commitTextReplacingPreedit 取代
-            // wasComposing→!nowComposing 推導,徹底關掉 generation mismatch silent
-            // reset 造成的假 commit。Invariant: didFinalCommit => didCommit。
             // v3.5.8 Phase 9 Bug 1 (Option A): the continuous tap must commit
             // the SAME swap/TPS/both-scripts-formatted string the legacy
             // lexicon path commits — reuse `parseRomanAndHanzi` +
@@ -101,8 +96,6 @@ extension ActionHandler {
             // reconstruction — the identity sidechannels are shared by both
             // cells, so 詞頻 / NextWord recording is unchanged whichever cell
             // of the same candidate is tapped.
-            // 帶 cellScript 標記的 split cell 直接由標記解出 commit 字串;
-            // 兩個 cell 共用同一組 identity sidechannel,學習路徑不變。
             let docText: String
             // Whether this commit wrote romanization into the document — the
             // SINGLE auto-space verdict read by the gate below (§42: the space
@@ -164,7 +157,6 @@ extension ActionHandler {
             // platform boundary. Sidechannel `displayText` (not view-rewritten
             // suggestion.text) ensures frequency tracks what the engine
             // committed, not the TPS surface form (PR #257 r3214912627).
-            // 每次成功 commit(mid 或 final)都記頻次;頻次用 sidechannel displayText。
             // R5 pair-key (#7): record `(displayText, canonical TL)` so
             // 一字多音 keep separate frequency buckets. `associationTl` is
             // the canonical-TL sidechannel already extracted above (the same
@@ -175,7 +167,6 @@ extension ActionHandler {
             // Auto-space only on FINAL commit (entire buffer consumed; engine
             // exits Continuous → Idle). Mid-commits keep composing more
             // syllables and must NOT insert a space.
-            // 只有 final-commit 才補空白(整個 buffer 被消化、engine 退到 Idle)。
             // Keys on the RESOLVED committed script — the `wroteRomanization`
             // verdict resolved above beside the string itself. Suffix check is
             // on the actual committed document string (`docText`) so a trailing
@@ -255,9 +246,6 @@ extension ActionHandler {
     /// (the bracket form DID write it, so the hanji arm's verdict is
     /// `isOutputBothScripts`). Static with the settings flag injected so tests
     /// pin it without a keyboard context.
-    // 漢字 cell 出漢字(括號標註 ON 補 `(羅馬字)`);羅馬字 cell 恆出裸羅馬字、
-    // 無視括號標註;回傳是否寫出羅馬字供自動空白判斷。壞掉的標記在
-    // CandidateCellScript.marker 就被擋掉,render 與 commit 一起退回未標記路徑。
     static func markedCellCommit(
         cellScript: String,
         cellText: String,
@@ -297,8 +285,8 @@ extension ActionHandler {
         "\(hanzi) (\(roman))"
     }
 
-    /// Extract romanization and Hanji from suggestion based on display mode
-    // 依顯示模式從候選建議中拆出羅馬字 + 漢字。NextWord 路徑要把先前 swap 過的欄位還原。
+    /// Extract romanization and Hanji from suggestion based on display mode. The NextWord path
+    /// restores the fields that were swapped earlier.
     private func parseRomanAndHanzi(
         from suggestion: AutocompleteSuggestion,
         isNextWord: Bool,
@@ -330,8 +318,8 @@ extension ActionHandler {
         }
     }
 
-    /// Format output text based on display mode (roman, Hanji, or both scripts)
-    // 依顯示模式組出最終輸出字串(純羅馬字 / 純漢字 / 兩種並陳)。TPS layout 時用 TPS bracket 顯示。
+    /// Format output text based on display mode (roman, Hanji, or both scripts); a TPS layout
+    /// uses the TPS bracket rendering.
     /// The document string AND whether writing it puts romanization in the
     /// document — resolved together, by the one branch that picks the string.
     ///
@@ -429,7 +417,6 @@ extension ActionHandler {
     /// Commit text via proxy (NextWord) or composing manager (regular candidate).
     /// The `suggestion` parameter is kept for future telemetry/logging use
     /// but ComposingManager only needs the candidate text.
-    // NextWord 直接走 textDocumentProxy 插字;一般候選走 ComposingManager.selectSuggestion。
     private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: AutocompleteSuggestion) {
         if isNextWord {
             keyboardContext.textDocumentProxy.insertText(text)

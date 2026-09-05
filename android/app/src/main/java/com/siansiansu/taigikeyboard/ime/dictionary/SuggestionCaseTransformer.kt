@@ -1,15 +1,9 @@
-// 候選大小寫轉換 thin wrapper — Path G 後保留為 platform skip-rule 執行器。
-// skip 規則:composing-text 候選 (id == 0) 與 NextWord/English (id < 0 且 ≠ -2) 不轉;
-// custom dict (id == -2) 仍會轉。實際大小寫邏輯在 Rust phonetics::case_transform。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 /**
- * 候選詞大小寫轉換器
- *
  * Thin per-word bridge over `CaseTransformBridge.transformSuggestion`.
  * Skip rules (composing-text candidate `id == 0`, NextWord/English
  * `id < 0 && id != -2`) stay platform-side via the existing numeric-id
@@ -44,8 +38,6 @@ object SuggestionCaseTransformer {
         // Model B and would clobber the engine casing, so bypass it for
         // Continuous-flagged words (flagged at TaigiAutocompleteService
         // `buildContinuousSuggestionsForCandidates`).
-        // §10.2 Opt 2A — Continuous 候選已由引擎依使用者 raw 逐段 case,
-        // 合成 id>=1 不被下方數字 skip 蓋到,legacy 全域大寫在 Model B 下無效,故跳過。
         // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/SuggestionCaseTransformer.swift isContinuous skip.
         // Drift causes silent divergence (continuous candidate re-cased away from raw).
         if (word.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true") return word

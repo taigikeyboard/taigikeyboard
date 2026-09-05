@@ -6,8 +6,6 @@
 //! `macos/Sources/TaigiInputMethodCore/Strings/StringResolver.swift:25-46`:
 //! active language → Hanji → the key's own raw name.
 
-// UI 字串 — 顯示語言名冊、解析器、以及產生程式碼呼叫的位置參數格式化器。
-
 // Generator output, gated byte-for-byte by tools/i18n/check.py — rustfmt must not touch it.
 #[rustfmt::skip]
 mod generated;
@@ -20,7 +18,6 @@ pub use generated::StringKey;
 ///
 /// MIRROR: `tools/i18n/i18n_lib.py` `RUST_LANGUAGE_VARIANTS` and
 /// `macos/Sources/TaigiInputMethodCore/Strings/DisplayLanguage.swift:19`.
-// 介面語言;System 是「跟隨系統」的選擇策略,不是語言本身。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DisplayLanguage {
     System,
@@ -121,7 +118,6 @@ impl DisplayLanguage {
 /// Holds a language rather than reading a setting so every string one screen
 /// draws comes from a single language; a resolver is rebuilt when the setting
 /// changes, not consulted per key (`StringResolver.swift:11-21`).
-// 針對一個具體語言解析字串;不會持有 System。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StringResolver {
     pub language: DisplayLanguage,
@@ -172,7 +168,6 @@ impl StringResolver {
 ///
 /// This is the only formatter the generated code calls; the `{N}` contract is
 /// owned by `tools/i18n/i18n_lib.py` (`_lower_atom`, `target == "rust"`).
-// 以位置參數填入 {N} 槽位;`{{`/`}}` 還原成單一大括號;格式錯誤照字面輸出不 panic。
 pub fn format_positional(template: &str, args: &[&dyn std::fmt::Display]) -> String {
     let mut out = String::with_capacity(template.len() + 16);
     let mut chars = template.char_indices().peekable();

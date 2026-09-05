@@ -4,8 +4,6 @@
 //! `:740-780`); the unfold's timing and drawing are the renderer's, its
 //! geometry (which cell moves where) is computed here.
 
-// 展開式候選窗 — 收合的一列與展開的格線,兩種模式的導覽狀態機;展開動畫的幾何在此,插值與繪製歸渲染器。
-
 use super::grid::ExpandedGridLayout;
 use super::horizontal::{HorizontalPageLayout, PageSlot};
 use super::positioning::{Point, Rect};

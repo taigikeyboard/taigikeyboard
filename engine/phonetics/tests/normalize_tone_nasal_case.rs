@@ -5,8 +5,6 @@
 //! tests live alongside the helper in `engine/phonetics/src/case_adjust.rs`;
 //! these tests pin the rule end-to-end through the dispatcher.
 
-// NormalizeTone 端到端整合測試,釘住「鼻化符號大小寫須與前一字母大小寫一致」這條 in-band 規則。
-
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;

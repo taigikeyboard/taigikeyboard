@@ -1,19 +1,13 @@
-// HomeTab 的 features / FAQ 內容資料模型。
-// JSON 檔內以 {"hanji": "...", "en": ..., "ja": ...} 物件包裝在地化文字(iOS / Android 共用),
-// 解碼成 LocalizedContentText;render 時依顯示語言 resolve,未授權語言 fallback 回 hanji。
-
 import Foundation
 
 // MARK: - HomeTab content models (parsed from features.json / faq.json)
 
 /// Root container for the features JSON file.
-// features.json 的根容器。
 struct FeaturesFile: Codable {
     let features: [FeatureContent]
 }
 
 /// Root container for the FAQ JSON file.
-// faq.json 的根容器。
 struct FAQsFile: Codable {
     let faqs: [FeatureContent]
 }
@@ -23,7 +17,6 @@ struct FAQsFile: Codable {
 /// active language's string, falling back to `hanji` for any language not yet authored — so until C2
 /// fills the keys, every effective language renders Hanji (display unchanged).
 /// `Codable` (not Decodable-only) so the enclosing `Codable` models keep their synthesized `Encodable`.
-// 跨平台 JSON 共用格式 — Android 也讀同份檔。hanji 必填,其餘語言之後補(C2);未授權 fallback hanji。
 struct LocalizedContentText: Codable {
     let hanji: String
     let tailo: String?
@@ -52,7 +45,6 @@ struct LocalizedContentText: Codable {
 }
 
 /// A single feature description entry.
-// 單筆 feature / FAQ 項目。title / summary 走 hanji 欄位解碼。
 struct FeatureContent: Codable, Identifiable {
     let id: String
     let title: LocalizedContentText
@@ -75,7 +67,6 @@ struct FeatureContent: Codable, Identifiable {
 }
 
 /// A paragraph with optional media attachment.
-// 一個段落:文字 + 可選 media / link / navigation attachment。
 struct FeatureParagraph: Codable {
     let text: LocalizedContentText
     let attachment: ParagraphAttachment?
@@ -92,14 +83,12 @@ struct FeatureParagraph: Codable {
 }
 
 /// Platform-specific icon names.
-// 跨平台 icon 名稱對照(iOS = SF Symbol;Android = Material name)。
 struct PlatformIcon: Codable {
     let ios: String
     let android: String
 }
 
 /// Media attachment on a paragraph.
-// 段落附件:slideshow(輪播)/ image / link(外部連結)/ navigation(in-app 導覽)。
 enum ParagraphAttachment: Codable {
     case slideshow(images: [String], interval: Double)
     case image(name: String)

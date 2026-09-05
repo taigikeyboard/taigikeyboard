@@ -1,8 +1,3 @@
-// Rust shared-core FFI 的 Swift 端薄包裝層 — 核心檔。
-// 對應 engine/swift-ffi/src/lib.rs;Composing / NextWord / Lexicon /
-// Phonetics / CaseTransform 等切片各自有獨立的 RustEngineBridge+*.swift extension 檔。
-// 本檔僅保留跨切片共用的 install / 診斷 / 請求 ID / appConfig / 測試 seam。
-
 import Foundation
 import SwiftProtobuf
 
@@ -41,10 +36,6 @@ import SwiftProtobuf
 /// failure; release returns a graceful fallback + logs + records a
 /// structured `DiagnosticsEntry` in a bounded in-memory queue accessible
 /// via `diagnostics()` for dogfood inspection.
-// Rust 引擎橋接層核心。每個切片(phonetics / composing / lexicon /
-// nextword / case-transform)獨立 extension 檔。AppConfig 採每呼叫顯式傳入策略,不留全域預設。
-// 錯誤路徑於 DEBUG 會 assertionFailure;Release 走 fallback + 寫入
-// 上限 32 筆的診斷環形緩衝,供 diagnostics() 讀取。
 public enum RustEngineBridge {
     private static let installLock = NSLock()
     private static var installed = false
@@ -55,8 +46,6 @@ public enum RustEngineBridge {
     /// dogfood traces are visible. Release stays at default `Warn` so
     /// `log::debug!`/`log::info!` macros short-circuit before format —
     /// no FFI cost for the no-op render path on `DebugLogger`.
-    // 安裝 Rust log sink + DEBUG 時調整 max_level。冪等,內部用 NSLock 防重入。
-    // Release 維持 Warn 等級,debug! / info! 巨集短路,不付 FFI 成本。
     public static func install() {
         installLock.lock()
         defer { installLock.unlock() }
@@ -70,7 +59,7 @@ public enum RustEngineBridge {
 
     // MARK: Diagnostics (Codex v2 §8 / v3 §7)
 
-    // 單筆診斷紀錄 — 失敗時的時間、op 名稱、錯誤碼與訊息。
+    /// One diagnostics record: timestamp, op name, error code, and message on failure.
     public struct DiagnosticsEntry: Equatable {
         public let timestamp: Date
         public let op: String
@@ -82,8 +71,6 @@ public enum RustEngineBridge {
     /// + test inspection. Counter increments on every fallback path
     /// (encode error, decode error, dispatch returned non-OK, missing
     /// result variant). Recent entries capped at 32 to bound memory.
-    // 唯讀的診斷快照 — 給 debug 選單與測試看。計數器在所有 fallback
-    // 路徑都會 +1,最近紀錄 ring buffer 上限 32 筆。
     public static func diagnostics() -> (failureCount: Int, recentErrors: [DiagnosticsEntry]) {
         diagnosticsLock.lock()
         defer { diagnosticsLock.unlock() }
@@ -123,7 +110,6 @@ public enum RustEngineBridge {
     private static var nextID: UInt32 = 0
     /// `internal` (default) so every `RustEngineBridge+*` extension file
     /// can share the request-id sequence.
-    // 預設 internal,所有 RustEngineBridge 切片共用一條 request id 序列。
     static func nextRequestID() -> UInt32 {
         idLock.lock()
         defer { idLock.unlock() }
@@ -140,7 +126,6 @@ public enum RustEngineBridge {
     /// `internal` (default) so every `RustEngineBridge+*` extension file
     /// can route bridge failures through the same counter +
     /// bounded ring-buffer.
-    // 預設 internal,所有 RustEngineBridge 切片走同一條失敗計數 + ring buffer。
     static func recordFailure(op: String, message: String, code: Int32 = -1) {
         diagnosticsLock.lock()
         defer { diagnosticsLock.unlock() }
@@ -171,8 +156,6 @@ public enum RustEngineBridge {
     /// Proto field 9 (`candidateDisplayMode`) is set by the two builders whose
     /// requests the engine reads it on — `continuousAppConfig` and
     /// `nextwordConfig` — not here (mirrors Android).
-    // 跨切片共用的 AppConfig builder。internal 因 +Phonetics / +Composing /
-    // +CaseTransform 都會在其上組裝 envelope。連續輸入渲染用 continuousAppConfig 包裹。
     static func appConfig(mode: InputMode, toggles: ToneToggles) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
         switch mode {

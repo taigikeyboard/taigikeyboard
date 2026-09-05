@@ -1,6 +1,3 @@
-// RustEngineBridge 的 Composing 切片擴充 — v3.5.4 起,加上 v3.5.8 Phase 6 連續輸入 4 op。
-// 含 12 composing op + 4 continuous op + 4 synthesized 型別 + composing 專屬 dispatch helper。
-
 import Foundation
 import SwiftProtobuf
 
@@ -14,14 +11,11 @@ import SwiftProtobuf
 /// / `synthComposing` / `continuousAppConfig`). All five helpers stay
 /// `private` within this file — they are file-local to the composing
 /// surface.
-// Composing bridge 擴充入口。12+4 op + 4 個 synthesized 型別 + 5 個私有 composing 專屬 helper。
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
     /// Bridge-synthesized companion to the proto `ComposingResponse`.
     /// Consumed by `ComposingManager` and its delegate.
-    // 對應 proto ComposingResponse 的 Swift 端 struct,由 bridge 解碼後組成。
-    // ComposingManager 與其 delegate 用這個型別決定要對輸入框做什麼動作。
     struct ComposingTransition: Equatable {
         public enum Effect: Equatable {
             case updatePreedit(String)
@@ -78,8 +72,6 @@ public extension RustEngineBridge {
     /// dropped field"; it is never emitted by the current Rust engine.
     /// Platforms must treat `.unspecified` as "ignore mode" rather than
     /// falling back to any local classification.
-    // Phase 9.2 候選類型軸;Rust 端 derive_mode 推導,平台僅讀不算(禁 display_text sniff)。
-    //   metadata-only,不入 SortKey。`.unspecified` = wire 上 mode 缺漏 → 視為「無 mode 資訊」。
     enum CandidateMode: Equatable {
         case unspecified
         case hant
@@ -90,7 +82,6 @@ public extension RustEngineBridge {
         /// produced by SwiftProtobuf. Unrecognized values (forward-compat
         /// from a newer engine) collapse to `.unspecified` so the
         /// platform never crashes on a binding mismatch.
-        // 由 proto wire 整數解碼;未知值 fall back 到 .unspecified,避免 binding mismatch crash。
         static func decode(_ wire: Int) -> CandidateMode {
             switch wire {
             case 1: .hant
@@ -109,8 +100,6 @@ public extension RustEngineBridge {
     /// TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
     /// slices `pending[start..<end]` on commit. `form` is currently always 1
     /// (FORM_NOTONE). `mode` is the Phase 9.2 carrier; metadata-only.
-    // 連續輸入候選詞,對應 proto CandidateMessage。consumed span 是 raw
-    // 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1;mode 為 Phase 9.2 metadata-only。
     struct ContinuousCandidate: Equatable {
         public let consumedSpanStart: UInt32
         public let consumedSpanEnd: UInt32
@@ -125,13 +114,11 @@ public extension RustEngineBridge {
         /// input mode (TL, or POJ-display in POJ mode). UI reads
         /// `displayText` for commit / `user_frequency.db` writes and
         /// `roman` only for cell-title display.
-        // Item 5 — 顯示羅馬字 sidechannel(引擎依 input mode 渲染:TL 或 POJ),dual-line 候選列 render 用。
         public let roman: String
         /// v3.5.8 Phase 9 Item 5 — hanji display sidechannel. `nil`
         /// iff the proto3 `optional string hanji` was absent on the
         /// wire (TAILO candidate). Present-empty is treated as
         /// present (engine never emits `Some("")` today; defensive).
-        // Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → nil。
         public let hanji: String?
         /// v3.6.1 R2 — canonical TL identity sidechannel
         /// (`CandidateMessage.canonical_tl`). Unlike `roman` (the
@@ -141,7 +128,6 @@ public extension RustEngineBridge {
         /// `commitContinuous(associationTl:)` so the NextWord association
         /// learns the same TL a normal candidate commit records. Empty
         /// only for TPS-OOV hanji-absent candidates with no dict TL.
-        // R2 — canonical TL 身分 sidechannel;tap 時 round-trip 回 associationTl。
         public let canonicalTl: String
 
         public init(
@@ -191,10 +177,6 @@ public extension RustEngineBridge {
     /// to phase-1 candidates on a transient phase-2 FFI failure rather
     /// than dropping suggestions and resetting state. Codex PR #265
     /// r3216857164.
-    // composingFetchAtPos 的查詢結果。candidates 三態只在 isBridgeFailure == false 時有意義。
-    //   nil = 不在 Continuous phase;[] = 在但無候選;non-empty = 有候選。
-    // transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
-    // isBridgeFailure 區分「引擎回 Idle」與「FFI 失敗」— 後者套用 transition 會清掉鏡射狀態。
     struct ContinuousFetchResult: Equatable {
         public let transition: ComposingTransition
         public let candidates: [ContinuousCandidate]?
@@ -302,8 +284,6 @@ public extension RustEngineBridge {
     // tone toggles) to render POJ doubletap / nasal-marker / tone marks
     // correctly. Composing-arm behavior is unchanged; the carrier is
     // ignored there.
-    // Phase 9 Item 3 — Continuous 下 CommitRaw 走 derived_display 需 AppConfig;
-    // Composing 路徑不受影響 (config 在 Composing 分支被忽略)。
     // v3.5.8 §10.2 platform pass: under `Phase::Continuous`, `CommitRaw`
     // routes to `commit_raw_continuous` which renders the whole
     // composition via `combined_display(nailed, raw, config)` — so the
@@ -447,8 +427,6 @@ public extension RustEngineBridge {
     /// `Append` populated. Engine no-ops on Idle / already-Continuous / empty
     /// `Composing.raw`. AppConfig is required because the snapshot's preedit
     /// display goes through `derived_display(raw, config)`.
-    // 把 Composing 轉到 Continuous。Phase 6 規約 — 無 payload,raw 來自先前的
-    // Start / Append。空 raw / 非 Composing 一律 noop。
     static func composingEnterContinuous(
         mode: InputMode,
         toggles: ToneToggles,
@@ -476,10 +454,6 @@ public extension RustEngineBridge {
     /// `recency_rank = 1` everywhere); the platform plumb is responsible for
     /// populating real values via a two-phase fetch (`ComposingManager
     /// .fetchContinuousCandidates`).
-    // 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
-    // generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
-    // frequencyEntries + nowMs 為 Phase 9.3a/9.3b 的 user_freq_boost / recency_rank 來源,
-    // 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
     //
     /// v3.5.8 Phase 9 Item 12 — `customEntries` carries the platform's
     /// `custom_dictionary.db` matches (raw stored `(roman, hanji)`
@@ -493,10 +467,6 @@ public extension RustEngineBridge {
     /// raw on the lattice / dedupe axis and folds it to canonical TL
     /// only when synthesizing the `user_frequency.db` commit key,
     /// keeping that key mode-invariant across TL/POJ.
-    // Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op,
-    // 引擎合成 full-buffer 候選並對 (roman,hanji) 去重 (custom 必勝碰撞)。
-    // B-4 — roman 為用戶 native 形(TL 或 POJ),引擎在合成 freq commit key 時折成 canonical TL,
-    //   跨 mode freq 學習合一。
     // v3.5.8 §10.2 platform pass: the FetchAtPos snapshot renders the
     // combined marked region (`combined_display`) and per-segment recased
     // candidates, so it needs the continuous spacing flags to match the
@@ -549,8 +519,6 @@ public extension RustEngineBridge {
     /// sending mismatched values mis-aligns the committed segment.
     /// `consumedBytes >= pending.utf8.count` triggers a final commit (exit
     /// to Idle). Programmer-error inputs collapse to noop on the engine side.
-    // 連續輸入提交候選段。displayText / consumedBytes / syllableCount 必須與
-    // 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
     // v3.5.8 §10.2 platform pass: the repro path. Mid-commit renders
     // `combined_display(nailed, pending, config)`; final-commit renders
     // `nailed_prefix(nailed, config)` — both need the spacing flags so
@@ -599,7 +567,6 @@ public extension RustEngineBridge {
     /// `NextWordClearForNewComposing`). Committed segments stay in the
     /// document — earlier `CommitTextReplacingPreedit` effects already wrote
     /// them.
-    // 連續輸入中止。pending 與 committed 一起丟,Phase 退回 Idle,發 abort 三 effects。
     static func composingResetContinuous(generation: UInt64) -> ComposingTransition {
         composingDispatch(
             method: .resetContinuous(Taigi_Engine_ResetContinuous()),
@@ -631,10 +598,6 @@ public extension RustEngineBridge {
     /// minimal (continuous-input-ranking.md §10.2; platform pass decided
     /// 2026-05-18). All other composing methods keep the flag-free base
     /// `appConfig`.
-    // 連續輸入渲染用 AppConfig — base appConfig + §10.2 字界空格兩旗標。
-    // effectiveSwapped(翻譯反轉 OR TPS,平台端合併,因雙平台 TPS→"tl" 故引擎 input_mode=="tps" 永不觸發)
-    // 走 is_translate_swapped;outputBothScripts 區分漢字優先(無空格)vs 雙腳本(要空格)。
-    // 只用在會渲染 nailed prefix 的 Continuous 進入點,縮小 hanji-first 退化面。
     // `candidateDisplayMode` (proto field 9) travels with the pair: under 羅馬字 the callers already
     // pass the DERIVED `(false, false)` pair, and FetchAtPos uses the mode to collapse same-roman rows.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt continuousAppConfig.
@@ -659,7 +622,6 @@ public extension RustEngineBridge {
     /// dispatch. Generation is passed through verbatim — composing-slice
     /// generation bumping is owned by `ComposingManager.bumpGeneration()`,
     /// not this layer.
-    // composing slice 的 FFI roundtrip,回傳原始 proto 供需要 continuous 載體的 caller(FetchAtPos)使用。
     private static func composingProtoRoundtrip(
         method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
@@ -729,8 +691,6 @@ public extension RustEngineBridge {
     /// `ComposingTransition` (for engine snapshot mirroring) and the
     /// `ContinuousFetchResult.candidates` tri-state read off
     /// `ComposingResponse.continuous`.
-    // Phase 6 FetchAtPos 專用分派 — 同時產生 ComposingTransition 與
-    // ContinuousFetchResult.candidates(從 proto.continuous 三態解碼)。
     private static func composingFetchDispatch(
         method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
@@ -761,8 +721,6 @@ public extension RustEngineBridge {
                 // regen skipped), fall back to `displayText` so the
                 // Item 6 dual-line render does not show a blank title
                 // row. Bundled releases never hit this branch.
-                // Item 5 — hanji 為 proto3 optional;wire absent → Swift nil。
-                // roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
                 let roman = msg.roman.isEmpty ? msg.displayText : msg.roman
                 return ContinuousCandidate(
                     consumedSpanStart: msg.consumedSpanStart,

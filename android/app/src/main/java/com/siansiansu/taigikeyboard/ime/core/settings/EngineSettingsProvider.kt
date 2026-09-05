@@ -2,9 +2,6 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 提供 live-read 的 EngineSettings — `current` 每次都讀最新狀態,不快照。
-// 設計目的:使用者改設定後,下一次 engine 查詢就能看到新值,不需重建組裝根。
-
 package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**

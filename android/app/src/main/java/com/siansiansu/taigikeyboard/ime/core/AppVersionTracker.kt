@@ -1,6 +1,3 @@
-// 應用版本追蹤器 — 紀錄 install 當下的版本與最後使用版本到 Pref。
-// 由 Settings Activity 啟動時呼叫,持久化兩個版本值供日後比對使用。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context

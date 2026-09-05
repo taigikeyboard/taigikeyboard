@@ -13,10 +13,6 @@
 //! same TKDB v3 / dictionary.fst / syllables.fst byte layout — composing
 //! tests cannot import `lexicon/tests/common/mod.rs` (test-private).
 
-// TPS 視覺去重整合測試 — 對齊使用者回報的 ㄨㄢ → 重複兩個 灣 bug。
-//   兩列 (灣/uan tone1 + 灣/uân tone5) 共用 tps:ㄨㄢ;TL/POJ 顯示羅馬字,
-//   保留兩列合法;TPS 隱藏羅馬字,須去重。TL/POJ regression 同檢查不誤收。
-
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 

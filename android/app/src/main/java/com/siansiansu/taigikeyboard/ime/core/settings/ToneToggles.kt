@@ -2,9 +2,6 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// POJ 雙擊預處理 toggles 值型別 —(oo→o͘、nn→ⁿ)。
-// 由 wrapper 在呼叫 engine 時 live-read,對應 iOS Settings/ToneToggles.swift。
-
 package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**

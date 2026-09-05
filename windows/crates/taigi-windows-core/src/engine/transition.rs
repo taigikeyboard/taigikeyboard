@@ -2,8 +2,6 @@
 //! effects it wants the platform to run, and the continuous candidates.
 //! Port of `macos/Sources/TaigiInputMethodCore/Engine/ComposingTransition.swift`.
 
-// 一次組字往返的值型別 — 引擎快照、依序執行的效果、連續輸入候選。
-
 use protos::engine::{effect, CandidateMessage, ComposingResponse, Effect as WireEffect};
 
 /// The complete effect vocabulary of `engine/protos/proto/composing.proto`

@@ -24,7 +24,6 @@ jacoco {
     toolVersion = "0.8.15"
 }
 
-// 產生日期字串 (yyyyMMdd)
 val buildDate: String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
 
 android {
@@ -101,7 +100,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // 確保 release 建置包含完整符號檔供 Google Play 使用
+            // Full native symbols so Google Play can symbolicate release crashes
             ndk {
                 debugSymbolLevel = "FULL"
             }
@@ -171,7 +170,6 @@ tasks.named("preBuild") {
     dependsOn("checkI18nGenerated")
 }
 
-// Task 用於顯示目前的 versionCode（用於驗證）
 tasks.register("printVersionCode") {
     doLast {
         val versionCode = android.defaultConfig.versionCode
@@ -184,7 +182,6 @@ tasks.register("printVersionCode") {
 }
 
 dependencies {
-    // AndroidX 核心
     // core-ktx capped at 1.18.0: 1.19.0 declares minCompileSdk=37 (Android 17) in its
     // aar-metadata, which fails the build against this module's compileSdk 36. Raise the
     // cap only together with compileSdk.
@@ -194,7 +191,6 @@ dependencies {
     implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.activity:activity-ktx:1.13.0")
 
-    // Lifecycle（Compose 需要）
     // Held at 2.10.0: lifecycle-runtime-compose 2.11.0 declares minCompileSdk=37, and the
     // lifecycle group publishes constraints that force every artifact in it to the same
     // version — so the whole group is capped by its strictest member.
@@ -202,13 +198,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 
-    // Compose BOM（統一版本管理）
     // Capped at 2026.06.01 (compose-ui 1.11.4) for the same reason as core-ktx: the
     // 2026.08.00 BOM ships compose-ui 1.12.0 with minCompileSdk=37.
     val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     implementation(composeBom)
 
-    // Compose 核心元件
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
@@ -216,20 +210,15 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.material:material-icons-core")
 
-    // Compose 偵錯工具
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Moshi JSON
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 
-    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
-    // DataStore
     implementation("androidx.datastore:datastore-preferences:1.2.1")
 
-    // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     // Pure-JVM SQLite for SQL-structure tests (the custom-dict cross-mode JOIN

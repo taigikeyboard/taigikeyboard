@@ -9,8 +9,6 @@
 //! keys, password / read-only gating, context handover; PR6 the candidate
 //! window (Direct2D over the core models), the UI-less list and the mode flash.
 
-// TSF 文字服務 DLL 的五個匯出點;每個 COM 進入點都包 catch_unwind,PR5a 只做生命週期不組字。
-
 #![allow(non_snake_case)]
 
 mod class_factory;

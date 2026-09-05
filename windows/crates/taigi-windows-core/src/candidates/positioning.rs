@@ -4,8 +4,6 @@
 //! caret's line (its `y` is the line's top), `visible` is the monitor's work
 //! area. NAMED DELTA from the macOS file, which is written y-up.
 
-// 候選窗擺放 — 游標下方,放不下翻到上方,再夾進螢幕;座標為 Windows 的 y 向下。
-
 /// A point in screen space, in device-independent pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Point {

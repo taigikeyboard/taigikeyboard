@@ -55,7 +55,6 @@ class MediaInputManager(
                 .setOnTouchListener { view, event -> onBottomButtonEvent(view, event) }
 
             try {
-                // 直接建立並加入 EmojiKeyboardView
                 val emojiView = EmojiKeyboardView(taigikeyboard.context)
                 withContext(Dispatchers.Main) {
                     val layoutParams =
@@ -111,7 +110,6 @@ class MediaInputManager(
                     if (osHandler == null) {
                         osHandler = Handler(Looper.getMainLooper())
                     }
-                    // 使用 Handler 替代 Timer，確保回調在主執行緒執行
                     val repeatDelete =
                         object : Runnable {
                             override fun run() {

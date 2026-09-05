@@ -1,6 +1,3 @@
-// 解析後主題外觀的字串相等快取 — 只在輸入(themeId / colorSettings / userThemes / isDark / 5 尺寸)變動時重解析。
-// 鍵盤渲染端(KeyboardAppearanceResolver)與候選列(SmartbarManager)各持一份,避免每次按鍵重 parse JSON。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context

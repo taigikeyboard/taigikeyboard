@@ -6,8 +6,6 @@
 //! shell builds a [`KeyEventSnapshot`] from `OnKeyDown` and asks
 //! [`ComposingKeyIntent::intent`]; nothing in here reads the keyboard.
 
-// 鍵盤契約 — 每個按鍵對組字的意義,以及使用者可自訂的那部分。純分類,無 Win32。
-
 mod action;
 mod bindings;
 mod chord;

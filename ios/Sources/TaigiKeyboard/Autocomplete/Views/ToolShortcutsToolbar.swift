@@ -1,12 +1,8 @@
-// 候選詞列上的工具快捷鍵 toolbar — `+` 切換按鈕與 9 個等寬功能按鈕(輸入模式 / 符號 / 佈局 / globe / 收合 / 設定)。
-
 import KeyboardKit
 import SwiftUI
 
-/// 候選詞列工具快捷鍵工具列
-///
-/// 永遠顯示 `+` toggle 按鈕；展開時顯示 9 個等寬快捷按鈕
-/// （4 個輸入模式切換 + 符號 / 佈局 / globe / 收合鍵盤 / 設定）。
+/// Tool-shortcut toolbar above the candidate row: an always-visible `+` toggle plus, when expanded,
+/// nine equal-width buttons (4 input modes + symbol / layout / globe / dismiss / settings).
 struct ToolShortcutsToolbar: View {
     @Binding var isExpanded: Bool
     let currentInputMode: InputMode
@@ -32,7 +28,7 @@ struct ToolShortcutsToolbar: View {
         }
     }
 
-    /// `+` 展開/收合按鈕（展開時旋轉 45° 變 `×`）
+    /// `+` expand/collapse button; rotates 45° into a `×` when expanded.
     private var toggleButton: some View {
         Button(action: {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -53,7 +49,6 @@ struct ToolShortcutsToolbar: View {
         .accessibilityLabel(lang.string(.keyboardToggleToolbar))
     }
 
-    /// 9 個等寬快捷按鈕
     private var expandedButtons: some View {
         HStack(spacing: 0) {
             inputModeButton(mode: .poj, label: "POJ")
@@ -90,7 +85,6 @@ struct ToolShortcutsToolbar: View {
         .offset(y: 7)
     }
 
-    /// 單個輸入模式按鈕
     private func inputModeButton(mode: InputMode, label: String) -> some View {
         let isSelected = currentInputMode == mode
         return Button(action: { onInputModeChange(mode) }) {
@@ -117,7 +111,7 @@ struct ToolShortcutsToolbar: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    /// 切換鍵盤的 globe 按鈕（tap: 下一個鍵盤, long-press: 鍵盤選擇器）
+    /// Globe button — tap: next keyboard, long-press: keyboard picker.
     private var globeButton: some View {
         Keyboard.NextKeyboardButton {
             ToolShortcutIcon(systemName: "globe")
@@ -128,9 +122,9 @@ struct ToolShortcutsToolbar: View {
     }
 }
 
-// MARK: - Icon 快捷按鈕
+// MARK: - Icon shortcut button
 
-/// 符號 / 佈局 / 收合鍵盤 / 設定 四個 icon 按鈕共用模板
+/// Shared template for the symbol / layout / dismiss-keyboard / settings icon buttons.
 private struct ToolShortcutButton: View {
     let systemName: String
     let accessibilityLabel: String
@@ -148,7 +142,7 @@ private struct ToolShortcutButton: View {
     }
 }
 
-/// 共用 icon 排版：`ToolShortcutButton` 與 globe `NextKeyboardButton` 共用視覺。
+/// Shared icon layout so `ToolShortcutButton` and the globe `NextKeyboardButton` look identical.
 private struct ToolShortcutIcon: View {
     let systemName: String
 
@@ -165,7 +159,7 @@ private struct ToolShortcutIcon: View {
     }
 }
 
-/// Tool shortcut button 按壓回饋（縮放 + 透明度）
+/// Press feedback for tool shortcut buttons (scale + opacity).
 private struct ToolShortcutButtonStyle: SwiftUI.ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

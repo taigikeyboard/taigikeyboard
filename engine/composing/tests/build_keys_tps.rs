@@ -20,12 +20,6 @@
 //! 3. `mode_key_prefix(Tps)` emits the `tps:` family prefix matching
 //!    the `tps_notone` axis of the build pipeline.
 
-// D / C-3b — TPS 連續輸入 first-class 行為定錨測試。對應 TL 版的
-//   build_keys_tl_lattice.rs;舊 build_keys_tps_* in-crate 測試已退役。
-// 新路徑:Bopomofo shadow → canonicalize_poj_shadow no-op → hyphen-shadow
-//   → lattice (走 syllabifier::tps::valid_span_endings_lowered) →
-//   strip_tones_for_mode(.., Tps) → tps: 家族前綴。
-
 use std::path::PathBuf;
 
 use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
@@ -214,10 +208,6 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
 // every inventory carries the BASE reading's syllables as well as the
 // alternate's, so an expanded ending is proven an ADDITION, not a
 // replacement.
-
-// §35 — key 層只發使用者字面;讀法解析在 lexicon 查詢層(其 hermetic 測試在
-//   lexicon/tests/tps_readings.rs)。本層守的是:替代讀法所在的 span,切分器必須放行
-//   並發出字面 key。每個 inventory 同時含 base 音節 → 展開 ending 是新增非取代。
 
 fn key_texts(keys: &[((u32, u32), String)]) -> Vec<String> {
     keys.iter().map(|(_, k)| k.clone()).collect()

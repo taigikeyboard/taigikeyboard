@@ -1,10 +1,9 @@
-// 單一候選詞按鈕的 SwiftUI 視圖 — 處理顯示 / 副標題 / 按下狀態 / Liquid Glass 背景。
+// A single candidate button — handles display, subtitle, press state, and the
+// Liquid Glass background. Tap forwards the commit suggestion via `onTap`.
 
 import KeyboardKit
 import SwiftUI
 
-/// 單個候選詞按鈕視圖
-// 候選詞按鈕。Tap 後透過 onTap 把 commit 用的 suggestion 回呼給 caller。
 struct CandidateButtonView: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
@@ -15,7 +14,8 @@ struct CandidateButtonView: View {
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
-    /// 第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
+    /// The top-ranked candidate (engine ranker index 0) — fills the keycap
+    /// background as a visual hint.
     let isFirstCandidate: Bool
     let onTap: (AutocompleteSuggestion) -> Void
 
@@ -106,7 +106,7 @@ struct CandidateButtonView: View {
                 .padding(.horizontal, -2)
                 .padding(.vertical, -4),
         )
-        .offset(y: 5) // 讓整個候選詞項目背景往下移動，與候選列下沿對齊
+        .offset(y: 5) // Shift the whole item's background down to align with the candidate bar's bottom edge.
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .buttonStyle(PlainButtonStyle())
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in

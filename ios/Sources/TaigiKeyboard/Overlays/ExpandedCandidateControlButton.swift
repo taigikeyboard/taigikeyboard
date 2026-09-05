@@ -1,10 +1,6 @@
-// 展開候選詞 overlay 右側控制面板用的小元件 — 帶按壓動畫的圖示按鈕,
-// 以及切隔每行候選的 FixedColumnDivider 線條。
-
 import SwiftUI
 
 /// Icon button with press feedback animation for the expanded overlay control panel
-// 帶按壓回饋動畫的圖示按鈕,給展開候選 overlay 的控制面板使用。
 struct ExpandedCandidateControlButton: View {
     let iconName: String
     let yOffset: CGFloat
@@ -37,7 +33,6 @@ struct ExpandedCandidateControlButton: View {
 }
 
 /// Vertical and horizontal divider lines for the right-side control panel area
-// 右側控制面板的縱向 + 橫向分隔線(每 cellHeight 畫一條橫線)。
 struct FixedColumnDivider: View {
     var body: some View {
         GeometryReader { geometry in

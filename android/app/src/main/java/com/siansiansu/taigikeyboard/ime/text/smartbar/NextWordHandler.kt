@@ -1,6 +1,6 @@
-// NextWord 平台執行器 — Android 側對接 Rust nextword crate(v3.5.5 後)。
-// 決策與狀態都在 Rust;此檔負責 intent 序列化、Effect 解譯(timeout / NextWordService I/O / UI callback)、
-// 把 lastSelectedWord/isShowing 從 engine 取回 cache 以維持同步讀取體驗。
+// NextWord platform executor — Android wiring into the Rust nextword crate (since v3.5.5).
+// Decisions/state live in Rust; this file handles intent serialization, Effect interpretation
+// (timeout / NextWordService I/O / UI callback), and caches lastSelectedWord/isShowing from engine.
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 

@@ -13,9 +13,6 @@
 //! Reuses production `phonetics::canonicalize_syllable` so that test
 //! samples can be authored in either TL or POJ shape.
 
-// Phase 3 TL syllabifier 測試 — 用 hermetic SyllableInventory 配合 roadmap 教學例子。
-// Builder pattern 1:1 鏡射 lexicon::syllables_fst tests,以避免引入共用 test-utils crate。
-
 use std::path::PathBuf;
 
 use composing::syllabifier::tl::valid_span_endings;

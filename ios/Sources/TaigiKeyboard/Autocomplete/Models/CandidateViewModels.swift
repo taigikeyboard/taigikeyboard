@@ -1,23 +1,19 @@
-// 候選詞 UI 的固定幾何常數(間距、列高、最大顯示數)。
-// 受使用者設定影響的動態值改由 CandidateTheme 提供。
-
 import SwiftUI
 
-/// 候選詞視圖常數
+/// Fixed candidate-view geometry constants.
 ///
-/// 視圖無關的固定幾何參數（不受使用者外觀設定影響）。
-/// 受 `candidateTextSizeScale` / `colorSettings` 影響的動態值改由
-/// `CandidateTheme`（透過 SwiftUI environment）提供。
+/// View-agnostic constants unaffected by user appearance settings. Values
+/// that depend on `candidateTextSizeScale` / `colorSettings` come from
+/// `CandidateTheme` (via the SwiftUI environment) instead.
 enum CandidateViewModels {
     enum UI {
         static let buttonSpacing: CGFloat = 14
         static let maxDisplayCount: Int = 200
 
-        // 展開網格視圖配置
-        static let expandedRowSpacing: CGFloat = 6 // 減少行間距 (從12減到10)
+        static let expandedRowSpacing: CGFloat = 6
         static let expandedItemSpacing: CGFloat = 4
-        static let expandedMinRowHeight: CGFloat = 35 // 減少最小行高 (從44減到42)
-        static let expandedButtonVerticalPadding: CGFloat = 7 // 減少垂直內邊距 (從8減到7)
+        static let expandedMinRowHeight: CGFloat = 35
+        static let expandedButtonVerticalPadding: CGFloat = 7
     }
 
     enum Spacing {

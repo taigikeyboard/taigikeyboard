@@ -1,6 +1,4 @@
-// Lexicon 讀路徑橋:將 install / searchWithSources / searchByHanzi / assocLookup /
-// isHanzi / dictionaryFilters 等 op 包成 Kotlin API,
-// 共用 RustEngineBridge.dispatchRaw 做 JNI roundtrip。對應 iOS RustEngineBridge+Lexicon.swift。
+// Lexicon read-path bridge (iOS counterpart: RustEngineBridge+Lexicon.swift).
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -41,9 +39,6 @@ import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
  * Read-path only — the mutable `user_association.db` SQLite half of
  * NextWord persistence is out of scope for this bridge; only the
  * bundled `association.bin` read-only half goes through here.
- *
- * 唯讀路徑 — `user_association.db` 由 Android 平台 SQLite 處理(設計如此),
- *       此橋只走 `association.bin` 唯讀資料(bundle 字典+ngram)。
  */
 object LexiconBridge {
     private const val TAG = "LexiconBridge"
@@ -179,9 +174,6 @@ object LexiconBridge {
      * from `AppInitializer` after `copyAssetsIfNeeded` finishes; idempotent.
      * Returns `null` on failure (logged via `RustEngineBridge.diagnostics()`).
      *
-     * 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;
-     *       失敗回 null,診斷打到 RustEngineBridge.diagnostics()。
-     *
      * @param syllableInventoryPath Absolute path to v3.5.8 Phase 2
      *   `syllables.fst` (TL syllable inventory FST). Empty string =
      *   skip-install; engine leaves `EngineState.syllable_inventory = None`
@@ -217,9 +209,7 @@ object LexiconBridge {
     }
 
     /**
-     * Dictionary tab multi-source lookup.
-     *
-     * Tab3 多來源查詢 — input 可為羅馬字或漢字,engine 內自行分類;sources bitmask 由平台端 toggle 結果決定。
+     * Dictionary tab multi-source lookup. Engine classifies `input` as romanization or Hanji.
      */
     fun searchWithSources(
         input: String,
@@ -240,9 +230,7 @@ object LexiconBridge {
     }
 
     /**
-     * Dictionary tab hanzi-prefix lookup.
-     *
-     * Tab3 漢字前綴查詢 — query 必為漢字。供 Tab3 漢字 short-circuit 路徑使用。
+     * Dictionary tab hanzi-prefix lookup; `query` must be Hanji.
      */
     fun searchByHanzi(
         query: String,
@@ -264,8 +252,6 @@ object LexiconBridge {
 
     /**
      * Bundled-bigram lookup. Called by `NextWordService.predict` for dict rows.
-     *
-     * 內建 bigram 查詢(association.bin)— previousWord → 後續候選清單。NextWordService.predict 用來補 dict 來源預測。
      */
     fun assocLookup(
         previousWord: String,
@@ -299,10 +285,6 @@ object LexiconBridge {
      *
      * Call ONCE per query and pass the result down the search pipeline;
      * resolving again inside the Dictionary tab's badge filter would split the snapshot.
-     *
-     * 把使用者 12 個字典 toggle 解析成 (dictionaryFilterBitmask, assocLookupBitmask, enabledSources)。
-     *       每次查詢「呼叫一次」,結果傳遞到整個 search 管線;Tab3 badge filter 不可重新解析(會把 snapshot 切兩份)。
-     *       FFI 失敗時 fallback 跑平台側對齊版 compute_filters,避免 dev 環境 Rust .so 未重 build 時誤失能。
      */
     fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters {
         val protoToggles = ProtoDictionaryToggles
@@ -368,9 +350,7 @@ object LexiconBridge {
      * Dictionary tab short-circuit predicate. True iff `text` contains any CJK
      * codepoint (Unified + Extensions A-E). See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
-     *
-     * Tab3 漢字短路徑判斷 — text 含 CJK Unified + Ext A-E 任一字即 true;
-     *       修正 v3.5.7 前 Kotlin Char.code(16-bit)漏判 Ext B/C/D/E 的舊 bug。
+     * Engine-side check fixes the pre-v3.5.7 Kotlin `Char.code` (16-bit) miss on Ext B-E.
      */
     fun isHanzi(text: String): Boolean {
         val payload = IsHanziRequest.newBuilder().setText(text).build()
@@ -563,9 +543,6 @@ object LexiconBridge {
      * In `BuildConfig.DEBUG` builds, requests + emits the per-candidate
      * `ScoreBreakdown` so dogfood traces include the score arithmetic.
      * Release builds skip the breakdown (zero serialization overhead).
-     *
-     * 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
-     *       tpsDedupEnabled 由平台端決定(讀 settings.inputMode == "tps"),Engine 不自行推。
      */
     fun processCandidates(
         raw: List<TaigiWord>,
@@ -608,8 +585,6 @@ object LexiconBridge {
      * `System.loadLibrary("rust_taigi")` fails on host JVM. Bridge
      * parity is verified by the Rust workspace tests + iOS XCTest
      * (links the xcframework) + Android instrumented dogfood.
-     *
-     * 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
      */
     fun processCandidatesDetailed(
         raw: List<TaigiWord>,

@@ -4,8 +4,6 @@
 //! the macOS `DispatchQueue` — while reads answer on the caller's thread
 //! through a second, read-only connection that never waits.
 
-// 一個學習資料庫 = 一條序列工作執行緒(開檔、寫入、perform 依序)+ 一條不等待的讀取連線。
-
 use rusqlite::{Connection, OpenFlags};
 use std::cell::Cell;
 use std::path::PathBuf;

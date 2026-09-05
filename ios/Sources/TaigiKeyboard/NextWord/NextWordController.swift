@@ -1,7 +1,3 @@
-// NextWord 平台執行器 — v3.5.5 後決策邏輯與持久狀態都搬到 Rust。
-// 本檔負責序列化 intents 給 RustEngineBridge.nextword*,並把回傳的 Effect
-// 翻譯成 Timer / SQLite / 主執行緒 UI 動作。
-
 import Foundation
 
 /// Platform executor for NextWord prediction on iOS — post-v3.5.5 Rust slice.
@@ -24,7 +20,6 @@ import Foundation
 /// - `clearDisplay()`
 /// - `updateLastSelectedWord(text:roman:)` (v3.5.8 Phase 4 mid-commit handshake)
 /// - `isShowing` (read-only)
-// 對外 API 與 Rust 化前完全相同(Phase 4 加 updateLastSelectedWord 給連續輸入 mid-commit 用)。
 final class NextWordController {
     let logger = DebugLogger(category: "NextWord")
 
@@ -47,7 +42,6 @@ final class NextWordController {
     /// Mirrors `state.is_showing`. Set locally by `handleQueryResult` after
     /// rendering, then pushed to the engine via `nextwordSetIsShowing` so
     /// downstream clear / reset paths gate `clearPredictionsUI` correctly.
-    // 鏡射 is_showing,讓後續的 clear / reset 能正確判斷是否要發 clearPredictionsUI。
     private var cachedIsShowing: Bool = false
 
     private var contextTimeoutTimer: Timer?
@@ -57,18 +51,13 @@ final class NextWordController {
     /// see `ComposingManager.bumpGeneration`). Called by
     /// `KeyboardViewController` lifecycle hooks on real input-context
     /// changes.
-    // 每個 IME session 用獨立的 envelope generation。引擎側 generation 不符
-    // 時會先重置狀態再處理請求,參考 ComposingManager.bumpGeneration 規範。
     private var envelopeGen: UInt64 = 1
 
     /// Whether NextWord predictions are currently displayed.
-    // 目前 NextWord 預測是否顯示中。
     var isShowing: Bool {
         cachedIsShowing
     }
 
-    // 跨欄位切換 IME session 時呼叫 — 推進 generation 並強制清除快取與 UI,
-    // 避免引擎 was_showing gate 已被 envelope 重置而吞掉 ClearPredictionsUI。
     func bumpEnvelopeGeneration() {
         envelopeGen &+= 1
         // Cross-field IME-session boundary. Rust engine state will be wiped
@@ -87,7 +76,6 @@ final class NextWordController {
 
     // MARK: - Public API (preserved from pre-Rust controller)
 
-    // 使用者選詞後的主入口 — 把字串、模式、generation 都送給 Rust decide。
     func process(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordWordSelected(
@@ -104,7 +92,6 @@ final class NextWordController {
         applyDecideResult(result)
     }
 
-    // 倒退鍵之後重新預測 — 把最後一個字交回 Rust 做 backspace decide。
     func rePredictAfterBackspace(lastChar: String) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordBackspace(
@@ -118,7 +105,6 @@ final class NextWordController {
         applyDecideResult(result)
     }
 
-    // 完整重置 — 清空 NextWord 狀態與 UI(例如 IME session 結束)。
     func resetAndClearUI() {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordResetFull(
@@ -131,7 +117,7 @@ final class NextWordController {
         applyDecideResult(result)
     }
 
-    // 開始新組字時清掉舊預測,但保留 last_selected_word 給後續 boost。
+    // Clears the shown predictions but keeps last_selected_word for the next boost.
     func clearDisplay() {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordClearForNewComposing(
@@ -155,9 +141,6 @@ final class NextWordController {
     /// `prev → this` association and (optionally) trigger prediction;
     /// `UpdateLastSelectedWord` only updates the context for the *next*
     /// mid-commit's compound association.
-    // Phase 4 連續輸入 mid-commit handshake。只更新 last_selected_word /
-    // time,不 bump generation、不發 timer effects;與 process(...) 語意不同 —
-    // 後者會記錄 prev→this 關聯並可觸發預測,本方法只更新上下文。
     func updateLastSelectedWord(text: String, roman: String) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordUpdateLastSelectedWord(
@@ -181,8 +164,6 @@ final class NextWordController {
     /// `@MainActor handleQueryResult` stays on main, keyboard action handlers
     /// run on main. No synchronization on cached state — the main-thread
     /// invariant is the contract.
-    // 鏡射引擎回傳的 state,然後依 effects 順序逐一執行。
-    // 執行緒不變式:呼叫端必須在主執行緒,快取狀態不另外加鎖。
     private func applyDecideResult(_ result: RustEngineBridge.NextWordDecideResult) {
         cachedIsShowing = result.isShowing
         for effect in result.effects {
@@ -190,7 +171,6 @@ final class NextWordController {
         }
     }
 
-    // 把單一 Effect 分派到對應的平台動作(timer / SQLite / UI)。
     private func execute(_ effect: RustEngineBridge.NextWordDecideResult.Effect) {
         switch effect {
         case let .rescheduleContextTimeout(afterMs):
@@ -210,7 +190,6 @@ final class NextWordController {
 
     // MARK: - Service I/O
 
-    // 把單一 (prev, next) 關聯非同步寫進 user_association.db。
     private func recordAssociation(_ pair: RustEngineBridge.NextWordAssociationPair) {
         Task { [nextWordService] in
             await nextWordService.recordAssociation(
@@ -224,7 +203,6 @@ final class NextWordController {
 
     /// Loop sequentially to avoid races on the SQLite UNIQUE constraint that
     /// protects `(prev_word, next_word)`.
-    // 多筆關聯依序寫入,避免 SQLite UNIQUE(prev_word, next_word) 競爭。
     private func recordCompoundAssociations(_ pairs: [RustEngineBridge.NextWordAssociationPair]) {
         Task { [nextWordService] in
             for pair in pairs {
@@ -238,7 +216,6 @@ final class NextWordController {
         }
     }
 
-    // 觸發非同步預測查詢 — 走 NextWordService.predict,結果交給 handleQueryResult。
     private func dispatchPredictionQuery(word: String, roman: String, generation: UInt64, nowMs: Int64) {
         logger.debug("[TRIGGER] querying for word='\(word)' gen=\(generation)")
 
@@ -255,8 +232,6 @@ final class NextWordController {
     /// `nextwordSetIsShowing` — required so subsequent
     /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetFull`
     /// paths can emit `clearPredictionsUI` when there is UI to clear.
-    // 處理非同步預測結果 — 把原始 rows 餵給 Rust filter 做 score / merge / sort,
-    // 渲染後再用 nextwordSetIsShowing 把可見狀態同步回引擎。
     @MainActor
     private func handleQueryResult(
         raw: [RustEngineBridge.NextWordRawRow],
@@ -305,7 +280,6 @@ final class NextWordController {
     /// where a stale clear runs after a newer prediction query has rendered.
     /// `generation` from the effect is informational; main-thread invariant
     /// (above) keeps this safe.
-    // 清除預測 UI 同步執行,避免 main.async 跳脫造成過期 clear 蓋掉新結果。
     private func clearPredictionsUIEffect() {
         contextUpdater?.resetNextWordSuggestions()
         cachedIsShowing = false
@@ -316,10 +290,8 @@ final class NextWordController {
     /// Mirrors `engine/nextword/src/decide.rs` `CONTEXT_TIMEOUT_MS = 30_000`.
     /// CROSS-PLATFORM INVARIANT: changing this value requires a paired update
     /// in the Rust crate + an `INVARIANT_*` parity-test mirror.
-    // 與 Rust decide.rs 對齊的 30 秒 context timeout。修改需同步更新 Rust 與 parity test。
     static let contextTimeoutMs: UInt64 = 30000
 
-    // 啟動 context timeout 計時器 — 帶上 trace id 以便日誌串接。
     private func startContextTimeoutTimer(afterMs: UInt64) {
         stopContextTimeoutTimer()
         let interval = TimeInterval(afterMs) / 1000.0
@@ -339,7 +311,6 @@ final class NextWordController {
         contextTimeoutTimer = nil
     }
 
-    // timer 觸發後通知 Rust 引擎做 context timeout 決策,通常會清掉 last_selected_word。
     private func handleContextTimeout() {
         logger.debug("[TIMEOUT] Context timeout - resetting")
         let settings = settingsProvider.current
@@ -355,7 +326,6 @@ final class NextWordController {
 
     // MARK: - Clock
 
-    // 統一的時鐘來源 — 給 Rust decide / filter 用的 epoch 毫秒。
     static var currentTimestampMs: Int64 {
         Int64(Date().timeIntervalSince1970 * 1000)
     }

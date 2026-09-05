@@ -1,18 +1,15 @@
-// 主 App 與鍵盤擴充共用的服務組裝點 (Composition Root)。
-// 順序固定:repositories → leaf services → composite services。
-// lexicon engine 安裝由啟動點各自負責,這裡不持有引擎狀態。
-
 import Foundation
 
-/// Production service graph. Wiring order matches constructor dependencies:
-/// repositories → leaf services → composite services.
-/// `SharedSettings.shared` is referenced directly by init defaults.
+/// Production service graph, shared by the main app and the keyboard extension.
+/// Wiring order matches constructor dependencies: repositories → leaf services
+/// → composite services. `SharedSettings.shared` is referenced directly by init
+/// defaults.
 ///
-/// The Rust shared-core lexicon engine owns the trie + binary readers; install
-/// happens once at process startup via `RustEngineBridge.lexiconInstall(...)`
-/// from `TaigiKeyboardApp.installLexiconEngineForMainApp()` and
+/// The Rust shared-core lexicon engine owns the trie + binary readers; this
+/// type holds no engine state itself. Install happens once at process startup
+/// via `RustEngineBridge.lexiconInstall(...)` from
+/// `TaigiKeyboardApp.installLexiconEngineForMainApp()` and
 /// `KeyboardViewController.installLexiconEngine()`.
-// 服務相依圖的組裝點,所有單例服務都從這裡取出。
 enum CompositionRoot {
     // MARK: - Repositories
 

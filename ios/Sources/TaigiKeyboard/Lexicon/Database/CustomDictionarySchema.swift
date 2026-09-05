@@ -1,6 +1,3 @@
-// 自訂詞庫 DB 的 DDL 定義 — 表格、索引、column-existence 檢查。
-// 純 DDL,沒有 derivation / migration / capacity 邏輯,那些在另外的檔案。
-
 import Foundation
 import SQLite3
 
@@ -11,7 +8,6 @@ import SQLite3
 /// search keys) live in `CustomDictionaryMigrator` so this type stays purely
 /// DDL — no domain logic, no derivation, no capacity policy.
 /// Callers must serialize access (typically via `SQLiteConnectionManager.execute`).
-// 自訂詞庫 schema — 表格 + 索引 DDL 集中地。
 enum CustomDictionarySchema {
     static let tableName = "custom_dictionary"
 
@@ -21,8 +17,6 @@ enum CustomDictionarySchema {
     /// here by the current input's family; the legacy `notone` / `abbrev` /
     /// `roman_num` columns on `custom_dictionary` stay write-only for
     /// backcompat / rollback.
-    // 跨模式搜尋側表 — 一筆 (entry, family, form) 搜尋鍵。新查詢路徑走這張表,
-    // 舊衍生欄位保留為 write-only(回滾用)。
     static let searchKeyTableName = "custom_search_key"
     static let searchKeyEntryIdColumn = "entry_id"
     static let searchKeyFamilyColumn = "family"
@@ -32,18 +26,14 @@ enum CustomDictionarySchema {
     /// Bump when `CustomDictionaryDerivation` logic changes or new derived
     /// columns are added — `CustomDictionaryMigrator` re-runs ALTER + backfill
     /// against any DB whose `PRAGMA user_version` is below this value.
-    // schema 版本號 — 衍生欄位邏輯改動時要 bump,
-    // migrator 會對 PRAGMA user_version 低於此值的 DB 重跑 ALTER + backfill。
     static let schemaVersion = 3
 
     /// Derived column names backed by `CustomDictionaryDerivation`.
     /// Single source of truth for the `ALTER TABLE` migrator.
-    // 衍生欄位名清單,作為 ALTER TABLE migrator 的單一資料來源。
     static let derivedColumns = ["notone", "abbrev", "roman_num"]
 
     /// Create the primary table + side table + all indexes. Idempotent via
     /// `IF NOT EXISTS`.
-    // 建立主表 + 側表與全部索引,IF NOT EXISTS 保證冪等。
     static func ensureTables(db: OpaquePointer) throws {
         try createMainTable(db: db)
         createIndexes(db: db)
@@ -53,7 +43,6 @@ enum CustomDictionarySchema {
 
     /// Check whether a column exists on `custom_dictionary`.
     /// Public so `CustomDictionaryMigrator` can gate `ALTER TABLE` calls.
-    // 檢查 custom_dictionary 是否已有指定欄位,給 migrator 判斷要不要 ALTER。
     static func columnExists(db: OpaquePointer, column: String) -> Bool {
         sqliteColumnExists(db: db, table: tableName, column: column)
     }

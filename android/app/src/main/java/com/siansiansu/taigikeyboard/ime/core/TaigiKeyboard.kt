@@ -1,6 +1,4 @@
-// IME service 主類 — 繼承 LifecycleInputMethodService,作為 InputMethodService 的入口點。
-// 持有 TextInputManager / SmartbarManager / MediaInputManager / SubtypeManager 等 IME-scoped 元件;
-// 透過 EventListener 把按鍵事件發到 TextInputManager,自身負責生命週期與 Compose Recomposer 注入。
+// IME service entry point — owns the IME-scoped managers and routes key events to TextInputManager.
 
 package com.siansiansu.taigikeyboard.ime.core
 
@@ -284,7 +282,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         val view = layoutInflater.inflate(R.layout.taigikeyboard, null) as InputView
         inputView = view
 
-        // 設定 ViewTree owners 讓 ComposeView 能找到 LifecycleOwner.
         // Bottom inset padding for the keyboard body now lives declaratively
         // inside `KeyboardImeRoot` via `WindowInsets.navigationBars` (Phase D
         // §1b parity-correction); media_input still owns its own padding via
@@ -294,8 +291,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         textInputManager.onCreateInputView()
         mediaInputManager.onCreateInputView()
 
-        // 更新導覽列顏色以配合鍵盤主題
-        // InputMethodService 需要使用 getWindow().getWindow() 來取得真正的 Window 物件
+        // InputMethodService needs getWindow().getWindow() to reach the real Window.
         getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
 
         // Compose host shell — inner subtrees migrate to native Compose
@@ -394,8 +390,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         // Handle theme change when system dark mode changes
         val uiModeChanged = (newConfig.diff(resources.configuration) and Configuration.UI_MODE_NIGHT_MASK) != 0
         if (uiModeChanged) {
-            // 先更新導覽列顏色，再重建 input view
-            // InputMethodService 需要使用 getWindow().getWindow() 來取得真正的 Window 物件
+            // Navigation bar color must update before the input view is rebuilt.
             getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
             onCreateInputView()?.let { setInputView(it) }
         }
@@ -484,13 +479,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         startActivity(intent)
     }
 
-    /**
-     * 切換到系統的下一個輸入法
-     */
     fun switchToNextInputMethod() {
         try {
-            // switchToNextInputMethod(false) 切換到下一個輸入法
-            // 參數 false 表示不只切換到此應用的輸入法
+            // false = also switch to other apps' input methods, not only this app's.
             switchToNextInputMethod(false)
         } catch (e: Exception) {
             compositionRoot.logger.e(TAG, "Failed to switch to next input method", e)

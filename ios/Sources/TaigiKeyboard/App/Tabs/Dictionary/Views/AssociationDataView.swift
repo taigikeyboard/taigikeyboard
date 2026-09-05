@@ -1,13 +1,11 @@
-// 詞關聯(NextWord 聯想)資料管理子頁。
-// 含錄製開關、CSV 匯入匯出、全部清除、隱私警語、列表瀏覽 + 過濾搜尋。
+// NextWord association data management: record toggle, CSV import/export, clear-all, privacy
+// notice, and a filterable list.
 
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Association data sub-page
-/// Shows word association list with toggle, import/export, and clear option
-// 詞關聯資料子頁的根 View。資料層由 AssociationDataViewModel 提供;
-// 匯入匯出由 ImportExportHandler 負責。
+/// Root view of the association data sub-page. Data comes from `AssociationDataViewModel`;
+/// import/export is delegated to `ImportExportHandler`.
 struct AssociationDataView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = AssociationDataViewModel()
@@ -18,8 +16,8 @@ struct AssociationDataView: View {
 
     private let displayLimit = 100
 
-    // 依 filterText 對 prevWord/prevTl/nextWord/nextTl 做大小寫不敏感子字串比對;
-    // 無關鍵字時走 displayLimit 上限以避免大量列表卡頓。
+    // Case-insensitive substring match over prevWord/prevTl/nextWord/nextTl. With no query the list
+    // is capped at `displayLimit` so a large dataset does not stall rendering.
     private var filteredData: [NextWordService.AssociationEntry] {
         if filterText.isEmpty {
             return Array(viewModel.allData.prefix(displayLimit))
@@ -166,7 +164,7 @@ struct AssociationDataView: View {
 
     // MARK: - Display
 
-    // 把單筆聯想紀錄組成 "prev → next" 顯示字串;tl 為空時退化為純漢字顯示。
+    // Falls back to Hanji-only display when the romanization is empty.
     private func associationDisplayText(_ item: NextWordService.AssociationEntry) -> String {
         let prev = item.prevTl.isEmpty ? item.prevWord : "(\(item.prevTl), \(item.prevWord))"
         let next = item.nextTl.isEmpty ? item.nextWord : "(\(item.nextTl), \(item.nextWord))"
@@ -175,7 +173,7 @@ struct AssociationDataView: View {
 
     // MARK: - Import
 
-    // 把 fileImporter 結果轉交 ImportExportHandler;完成後觸發 viewModel.load() 重新載入。
+    // Hands the fileImporter result to ImportExportHandler, then reloads via viewModel.load().
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,

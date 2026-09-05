@@ -3,8 +3,6 @@
 //! test target of its own, and a wrong `LANGUAGE` split or string escape would
 //! only surface as a mis-named input method on a Windows machine.
 
-// 在 macOS 主機上鎖住 build script 的 .rc 產生邏輯(LANGID 拆解、字串跳脫、resource id)。
-
 #[path = "../../../build-support/resource.rs"]
 #[allow(dead_code)]
 mod resource;

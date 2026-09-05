@@ -1,5 +1,3 @@
-// 使用者自訂詞庫的單筆紀錄模型 — id / roman / hanzi + 建立與更新時間。
-
 import Foundation
 
 // Custom dictionary entry model
@@ -7,7 +5,6 @@ import Foundation
 // MARK: - Shared-Core Candidate
 
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
-// 自訂詞庫項目 — Identifiable + Equatable,id 為 UUID 字串。
 struct CustomDictionaryEntry: Identifiable, Equatable {
     let id: String
     var roman: String

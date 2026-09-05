@@ -1,6 +1,3 @@
-// 跨產物備份/還原服務 — 以 .taigi 為單一 JSON 文件,封裝自訂字典 + 使用者頻次 + NextWord 關聯。
-// 由 CompositionRoot 持有,實際讀寫委派給 CustomDictionaryService / UserFrequencyService / NextWordService。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
@@ -135,8 +132,6 @@ class BackupService(
         // Respect the row cap: grandfather existing entries, stop at the limit.
         // save() swallows the over-cap throw, so without this the reported count
         // would over-count rows that were never written. Mirrors importFromFile.
-        // 尊重 row 上限 — grandfather 既有列,到上限停;save() 會吞掉超量例外,
-        // 不擋的話回報數會灌水(算進沒寫成功的列)。對齊 importFromFile。
         val remaining = CustomDictionaryCapacityPolicy.remainingCapacity(existing.size)
         var imported = 0
         for (i in 0 until array.length()) {

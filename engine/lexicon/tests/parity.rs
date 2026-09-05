@@ -7,8 +7,6 @@
 //!
 //! Tests pin the invariants from `docs/architecture/behavioral-invariants.md`.
 
-// lexicon crate 的 INVARIANT_LEX_* 整合測試;以合成的 in-memory fixture 取代實際 dictionary.fst/.bin,以免依賴完整 build pipeline。
-
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
@@ -66,8 +64,8 @@ fn invariant_lex_filter_bitmask_three_layers() {
     assert!(!DictionaryReader::passes_filter(khiin_record, 0, &f2));
 
     // Layer 3: source-OR — every source passes iff its bit is in
-    // `enabled_mask`. dev (bit 10, 詞庫增補檔案 toggle) is a normal
-    // toggleable source, NOT an unconditional floor.
+    // `enabled_mask`. dev (bit 10, dictionary-supplement-file toggle) is a
+    // normal toggleable source, NOT an unconditional floor.
     let f3 = Filter {
         variant: true,
         khiin: true,

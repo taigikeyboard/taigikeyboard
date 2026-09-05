@@ -9,9 +9,6 @@
 //!
 //! Spec: `docs/engine/composing.md`.
 
-// 組字 (composing) slice 的 crate 入口,提供 Intent → Effect 狀態機。
-// 平台端透過 dispatch::handle 呼叫,引擎本身在 FFI 邊界由 Mutex<Engine> 包覆。
-
 pub mod api;
 pub mod dispatch;
 pub mod handle;

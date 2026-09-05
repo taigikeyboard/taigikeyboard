@@ -26,13 +26,6 @@
 //!
 //! Hermetic `LexiconHandle` install mirrors `continuous_explicit_tone.rs`.
 
-// slot-0 尊重字典分隔符形式 — hoogua bug(USER 2026-06-02)整合測試。
-//   walker synth 以空格 join 逐音節羅馬字;真多詞句空格正確,但合成
-//   (hanji,span) 撞上單一字典詞(存 `-`/`--`)時空格版是錯誤呈現。
-//   修法在 display 層提字典 canonical roman 到 slot 0(§S5/§18 教訓)。
-//   fixture 對齊 production:予我/hōo--guá + 戶外/hōo-guā 共用去調鍵 hoogua;
-//   高頻單字 予/我 使 walker 最小成本路徑為 予+我 split(synth roman hōo guá)。
-
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 

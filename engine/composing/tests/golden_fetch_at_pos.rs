@@ -56,11 +56,6 @@
 //! behavior-neutral slice means the slice is NOT behavior-neutral — stop,
 //! do not `UPDATE_GOLDEN` to paper over it.
 
-// S0 — golden FetchAtPos 快照測試,凍結 dispatch FetchAtPos 的完整 proto 候選向量,
-//   作為 v3.5.9 重構每個 behavior-neutral slice 的驗收閘(空 golden diff = 通過)。
-// 必裝真實 syllables.fst(parity.rs 傳 "" 會靜默漏 walker 路徑)。所有字典三元組
-//   逐字取自既有 hermetic 測試,無捏造字典內容。UPDATE_GOLDEN=1 重錄。
-
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
@@ -171,8 +166,6 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
         // `tl:tai5` byte-matches this fixture key. Emitted only when the
         // result carries a tone digit (display-unmarked tone-1/4 syllables
         // collapse onto the toneless key, matching `normalize_input`).
-        // 明確聲調修正 — tl:<tl_num> 含調家族,對齊 create_fst.py 的 tl_num emit。
-        //   以 normalize_input 從顯示 tl 推導(與 runtime 數字輸入同一正規化器,fixture↔runtime byte 一致)。
         let tl_num = phonetics::normalize_input(row.tl);
         if tl_num.bytes().any(|b| b.is_ascii_digit()) {
             let mut e_num = Vec::with_capacity(tl_num.len() + 4 + 5);
@@ -201,7 +194,6 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
         // parity with create_fst.py. Same per-syllable canonicalize as
         // `derive_poj_notone` but keeps the tone digit, so a toned POJ
         // query `poj:choa2` byte-matches.
-        // 明確聲調修正 — poj:<poj_num> 含調家族;與 derive_poj_notone 同切分但保留聲調數字。
         if let Some(poj_num) = derive_poj_num(row.tl) {
             if poj_num.bytes().any(|b| b.is_ascii_digit()) {
                 let mut e2n = Vec::with_capacity(poj_num.len() + 5 + 5);
@@ -218,7 +210,6 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
         // uses `phonetics::tps_notone_from_tl` (same chain the runtime
         // continuous-input guard uses) so fixture ↔ production parity
         // holds for the cases the golden matrix exercises.
-        // D / C-5 — tps: 家族;對齊 create_fst.py 的雙發 (主形 + 變體形)。
         let tps_notone = phonetics::tps_notone_from_tl(row.tl);
         if !tps_notone.is_empty() {
             let mut e3 = Vec::with_capacity(tps_notone.len() + 4 + 5);
@@ -333,9 +324,6 @@ fn build_syllables_fst(samples: &[&str]) -> PathBuf {
         // matching the Node bridge default. Emit BOTH numeric (with
         // Bopomofo tone marks) AND toneless forms — same shape the
         // production pipeline ships.
-        // D / C-5 — TPS 家族;
-        //   逐 sample 經 to_zhuyin 取得 with-tone Bopomofo,
-        //   再以 is_tps_tone_mark 剝除取得 toneless,雙發 tps: 入 syllables.fst。
         let numeric = phonetics::to_tone_number(s);
         let tps_with_tone = phonetics::tl_numeric_token_to_tps(&numeric, false, true);
         // `to_zhuyin` emits a trailing space marker for tone-1 inputs and
@@ -450,9 +438,6 @@ fn fixture_rows() -> Vec<Row> {
         // `lookup_prefix("tl:taigi")` surfaces it because the FST key
         // here (`tl:taigir`, 6 bytes) extends beyond any lattice edge
         // the buffer can produce.
-        // tâi-gír — 台語的泉州腔變體;產線 dictionary.csv:33059/75190 對應。
-        //   FST key `tl:taigir` 比 `tl:taigi` 多 1 byte,Step 4b
-        //   `lookup_prefix("tl:taigi")` 才能撈到。
         Row {
             toneless_key: "taigir",
             hanzi: "台語",
@@ -502,9 +487,6 @@ fn fixture_rows() -> Vec<Row> {
         // 有/ū → `tps_notone=ㄨ` (the vowel ㄨ IS a complete TPS syllable
         // on its own). Pairs with the `u7` sample below so the inventory
         // accepts `ㄨ` as a span ending → span-local fetch hits this row.
-        // Mirrors production `dictionary.csv:8` (有,ū,53685,ū,u7,u7,ㄨ˫,...).
-        // D Fork 7b — 有/ū 是 ㄨ 自身為完整音節的 fixture 證據;
-        //   配合下方 u7 sample 讓 inv 認可 ㄨ,確保 ㄨ 走 span-local。
         Row {
             toneless_key: "u",
             hanzi: "有",
@@ -582,14 +564,12 @@ fn matrix() -> Vec<Case> {
         // is the headline bug fix: pre-fix `tsua2` stripped to `tl:tsua`
         // and surfaced every tone. (Was `tsua7`, which has no fixture word
         // — pre-fix it folded to `tl:tsua` and wrongly returned 紙/珠仔.)
-        // 明確聲調修正 — 數字單音節輸入按聲調過濾;tsua2 保留數字 → 只出 紙,排除同去調鍵的 珠仔。
         case("tl_numeric_single", "tsua2", "tl"),
         // Explicit-tone fix — numeric multi-syllable input keeps the full
         // toned key. `tai5bak8` (= `tâi-ba̍k`/代墨) hits `tl:tai5bak8`; the
         // 1-syllable prefix span `tai5` also surfaces 台 (`tl:tai5`). Was
         // `tai1bak4` (an off-reading of 代墨 = tone5+tone8) which pre-fix
         // folded to `tl:taibak` and matched regardless of tone.
-        // 明確聲調修正 — 數字多音節保留完整含調鍵;tai5bak8 命中 代墨,前綴 tai5 另出 台。
         case("tl_numeric_multi", "tai5bak8", "tl"),
         case("poj_diacritic", "tâi-uân", "tl"),
         // Negative guard: post-C-3b TPS is first-class. This raw's
@@ -600,9 +580,6 @@ fn matrix() -> Vec<Case> {
         // (2026-05-27 dogfood enable), this case now exercises the
         // `prefix_index.n` no-hit branch on the TPS family — empty result
         // is intended.
-        // 負面守門 — TPS first-class + Fork 7b 開放後,此 raw 的 toneless
-        //   `ㄉㄧㄠㄨㄢ` 在 fixture dict.fst 的 tps: 家族中無前綴匹配,
-        //   prefix_index.n("tps:ㄉㄧㄠㄨㄢ") 回空。
         case("tps_no_inventory_match", "ㄉㄧㄠˊㄨㄢˊ", "tl"),
         // v3.5.9 D Fork 7b activation (2026-05-27 dogfood): leading lone
         // Bopomofo initial `ㄉ` is not a complete syllable in the TPS
@@ -617,9 +594,6 @@ fn matrix() -> Vec<Case> {
         // COVERAGE_KIND_PARTIAL_PREFIX` and `consumed_span = (0, 3)`
         // (`ㄉ` is 3 bytes UTF-8). Mirrors librime / khiin-rs /
         // McBopomofo leading-prefix behavior.
-        // D Fork 7b 啟用 — 單一注音聲母 `ㄉ` 走 partial-prefix,
-        //   `tps:ㄉ` byte-range 掃出 fixture 中所有 ㄉ 開頭的字
-        //   (台/台語/台灣/代墨/...),對齊主流注音 IME 行為。
         case("tps_partial_prefix_leading_initial", "\u{3109}", "tl"),
         // Regression guard: `ㄨ` (3 bytes) IS a complete TPS syllable
         // in the fixture inventory (it appears as the second syllable
@@ -629,9 +603,6 @@ fn matrix() -> Vec<Case> {
         // fetch (`keys = ["tps:ㄨ"]`, non-empty) NOT partial-prefix. The
         // golden distinguishes the two paths via `coverage_kind`
         // (FULL=0 for span-local vs PARTIAL_PREFIX=1 above).
-        // 回歸守門 — `ㄨ` 自身在 fixture inventory 為完整音節
-        //   (tps:ㄨ 由 to_zhuyin 從 u 衍生),走 span-local 不走 partial,
-        //   coverage_kind 為 FULL(0)。
         case("tps_standalone_syllable", "\u{3128}", "tl"),
         Case {
             name: "custom_dict",
@@ -670,9 +641,6 @@ fn matrix() -> Vec<Case> {
         // Pre-fix this raw surfaced 台 + walker 台語 only; tâi-gír
         // was unreachable from a 5-byte buffer. Pairs with the new
         // `taigir`/`台語` fixture row.
-        // Step 4b 前綴延伸 — `taigi` 必須同時出 `tâi-gí`(walker)
-        //   與 `tâi-gír`(prefix-extension);後者 FST key
-        //   `tl:taigir` 比 buffer 多 1 byte,僅 lookup_prefix 能撈到。
         case("tl_prefix_extension_taigi", "taigi", "tl"),
         case("trailing_hyphen", "tai-", "tl"),
         // Spec §1.5 names `HitTui`; no grounded hit/tui-class fixture
@@ -682,7 +650,7 @@ fn matrix() -> Vec<Case> {
         // span 0–3) AND multi-segment recase (台灣, span 0–6 →
         // `Tâi-Uân`) plus the walker slot-0 prepend — closer to
         // `HitTui`'s relocation off-by-one intent than single-span
-        // `Tsua` was. Codex pre-impl Q2 + USER 裁示 2026-05-21.
+        // `Tsua` was. Codex pre-impl Q2 + USER ruling 2026-05-21.
         case("case_sensitive", "TaiUan", "tl"),
         case("headline_ranking", "taiuantaigi", "tl"),
         // PR-9.6 — source-toggle filtering reaches the continuous path.
@@ -759,10 +727,6 @@ fn matrix() -> Vec<Case> {
         // The pre-fix structural "next initial seen" rule could not split
         // `ㄉㄞㄨㄢ` and `台灣` coverage was deferred to the tone-marked
         // path — that limitation is gone.
-        // D / C-5 — TPS first-class;dispatch::handle 以 contains_tps 自動升級模式,
-        //   input_mode="tl" 但 raw 含注音 → 走 TPS(對應生產自動偵測)。
-        // 2026-05-27 修復後 inv-driven BFS 可切 medial-led 第二音節 (例 ㄉㄞ|ㄨㄢ),
-        //   無聲調 台灣 覆蓋恢復;舊 next-initial-seen 限制退役。
         //
         // TPS toneless 2-syllable: `ㄉㄞㆣㄧ` = `tps_notone_from_tl("tâi-gí")`
         // → 台語 row hit.

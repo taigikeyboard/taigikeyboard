@@ -4,8 +4,6 @@
 //! the per-window render target with device-loss recovery (khiin
 //! `render_factory.rs`; roadmap W4, Codex F3).
 
-// D2D/DWrite 工廠、私有字型集、文字格式、量測器、視窗 render target(裝置遺失重建)。
-
 use crate::com_out_buffer;
 use crate::module::install_directory;
 use crate::wide::{to_wide, to_wide_nul};

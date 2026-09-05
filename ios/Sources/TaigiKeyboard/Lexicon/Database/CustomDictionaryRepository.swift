@@ -1,6 +1,3 @@
-// 使用者自訂詞庫 repository — CRUD、prefix search(async + sync hot path)、
-// CSV 批次匯入。schema / migration / capacity / derivation 都拆到鄰近檔案。
-
 import Foundation
 import SQLite3
 
@@ -13,7 +10,6 @@ import SQLite3
 /// - `CustomDictionaryMigrator`: forward data migrations (ALTER + backfill)
 /// - `CustomDictionaryCapacityPolicy`: row-count cap + TOCTOU-safe guard
 /// - `CustomDictionaryDerivation`: pure derivation of search-key variants
-// 自訂詞庫 repository 主類 — 對外 API 與 single-flight schema gate。
 final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - Properties
 
@@ -49,7 +45,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - CRUD
 
     /// Insert or update an entry (upsert by id).
-    // 依 id upsert 一筆。容量 guard 與寫入在同一個 transaction,避免 TOCTOU。
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -78,7 +73,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Fetch all entries ordered by updated_at descending.
-    // 取出所有 row,依 updated_at 由新到舊排序。
     func fetchAll() async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -111,7 +105,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     ///   - form: Search-key form (`num` / `notone` / `abbrev`).
     ///   - key: Fused search string (already normalized + lowercased by the
     ///     engine — bind verbatim, do NOT re-lowercase).
-    // 跨模式 prefix 查詢(async)。鍵由引擎依當前 mode 產生家族原生形,任一模式存的詞都查得到。
     func search(family: String, form: String, key: String, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -122,7 +115,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Search entries synchronously (for the keyboard extension hot path).
     /// Returns `[]` when the DB is not yet connected — callers must accept
     /// empty results on the very first keystroke rather than blocking.
-    // keyboard extension hot path 用的同步版本。連線未就緒就回空陣列,絕不 block。
     func searchSync(family: String, form: String, key: String, limit: Int = 50) -> [CustomDictionaryEntry] {
         guard connectionManager.isConnected() else { return [] }
         do {
@@ -135,7 +127,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Delete an entry by id (and its `custom_search_key` side rows).
-    // 依 id 刪除一筆,連同 custom_search_key 側表的對應 row。
     func delete(id: String) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -152,7 +143,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Delete all entries (and all `custom_search_key` side rows).
-    // 清空主表與 custom_search_key 側表。
     func deleteAll() async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -167,7 +157,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Total entry count.
-    // 總 row 數。
     func count() async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -183,8 +172,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// so a single transaction can never hold locks for long, and stops
     /// early when `maxEntries` is reached. Duplicates (same `roman|hanzi`
     /// key) are skipped.
-    // CSV 批次匯入 — 每 importBatchSize 筆 commit 一次,鎖不會抓太久;
-    // 達到 maxEntries 即停止;以 roman|hanzi 為去重鍵跳過重複。
     func batchImport(_ entries: [CustomDictionaryEntry]) async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -266,8 +253,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Single-flight schema + migration initialization. Concurrent callers
     /// await the same `Task`; once it succeeds subsequent calls await a
     /// completed task (near-free). Failures clear the cache for retry.
-    // schema + migration 的 single-flight gate — 並行呼叫共用同一個 Task,
-    // 失敗時清掉 cache 讓下次 retry。
     private func createTablesIfNeeded() async throws {
         let (task, generation) = stateLock.withLock { () -> (Task<Void, Error>, UInt64) in
             if let existing = _tableCreationTask {
@@ -378,7 +363,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// insert the full cross-mode bundle from
     /// `CustomDictionaryDerivation.searchKeys(for:)`. Called after every upsert
     /// and batch insert so the side table never drifts from the entry's roman.
-    // 取代某 entry 的 custom_search_key 列 — 先依 id 刪,再插完整跨模式 bundle。
     private static func writeSearchKeys(db: OpaquePointer, entryId: String, roman: String) {
         deleteSearchKeys(db: db, entryId: entryId)
 

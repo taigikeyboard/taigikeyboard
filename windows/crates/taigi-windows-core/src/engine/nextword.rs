@@ -9,8 +9,6 @@
 //! strict 10-second window inside the engine (`decide.rs:306-312`), so with
 //! no predictions on screen a fired timeout changes nothing observable.
 
-// 詞關聯切片 — 只學不預測,三個意圖;計時器效果解碼後忽略。
-
 use protos::engine::{
     next_word_effect, next_word_request, next_word_response, request, response, DecisionInput,
     NextWordEffect as WireEffect, NextWordRequest, ResetFull, UpdateLastSelectedWord, WordSelected,

@@ -1,5 +1,3 @@
-// 主題身分 — "default" = 既有全域外觀 buffer;UUID 字串 = 自訂主題;其餘非 UUID 字串 = 內建主題 id。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import java.util.UUID

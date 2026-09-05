@@ -1,10 +1,9 @@
-// 自訂詞庫的 service 層 — CRUD、CSV 匯出、檔案匯入。底下委派給 CustomDictionaryRepository。
+// Custom-dictionary service layer: CRUD, CSV export, file import, delegating to CustomDictionaryRepository.
 
 import Foundation
 
 /// Service for managing user custom dictionary
 /// Handles CRUD, CSV export, and file import
-// 自訂詞庫服務 — 把 repository 包成適合 UI / settings 流程使用的介面。
 final class CustomDictionaryService: @unchecked Sendable {
     // MARK: - Properties
 
@@ -25,7 +24,6 @@ final class CustomDictionaryService: @unchecked Sendable {
     ]
 
     /// Seed default example entries if the dictionary is empty
-    // 詞庫為空時補上預設範例,讓使用者第一次看到自訂詞庫頁有東西可看。
     func seedDefaultEntryIfEmpty() async throws {
         let entries = try await repository.fetchAll()
         guard entries.isEmpty else { return }
@@ -59,7 +57,6 @@ final class CustomDictionaryService: @unchecked Sendable {
 
     /// Cross-mode prefix search (for autocomplete). `family` / `form` / `key`
     /// come from `CustomDictionaryDerivation.queryKey(for:mode:)`.
-    // 跨模式 prefix 搜尋(autocomplete 用)。鍵由 queryKey(for:mode:) 產生。
     func search(family: String, form: String, key: String, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
         try await repository.search(family: family, form: form, key: key, limit: limit)
     }
@@ -67,7 +64,6 @@ final class CustomDictionaryService: @unchecked Sendable {
     // MARK: - Export
 
     /// Export all entries as CSV string
-    // 把整個自訂詞庫轉成 CSV 字串。
     func exportCSV() async throws -> String {
         let entries = try await repository.fetchAll()
         var csv = ""
@@ -81,7 +77,6 @@ final class CustomDictionaryService: @unchecked Sendable {
 
     // MARK: - File Import
 
-    // CSV 匯入結果 — 成功匯入筆數與被跳過的筆數。
     struct ImportResult {
         let imported: Int
         let skipped: Int
@@ -91,7 +86,7 @@ final class CustomDictionaryService: @unchecked Sendable {
     private static let maxEntryCount = 30000
 
     /// Import entries from a local CSV file
-    // 從本地 CSV 檔匯入詞條 — 含檔案大小、entry 數量、編碼、格式四道前置驗證。
+    /// Pre-validates file size, entry count, encoding, and format.
     func importFromFile(url: URL) async throws -> ImportResult {
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
@@ -137,7 +132,7 @@ final class CustomDictionaryService: @unchecked Sendable {
 
     /// Parse CSV string into entries
     /// Expected format: column A = roman, column B = hanzi
-    // 解析 CSV 字串成詞條 — 第一欄 = roman,第二欄 = hanzi。空行 / 不足兩欄會被跳過。
+    /// Blank lines and rows with fewer than two columns are skipped.
     func parseCSV(_ csv: String) -> [CustomDictionaryEntry] {
         let lines = csv.components(separatedBy: .newlines)
         var entries: [CustomDictionaryEntry] = []
@@ -161,7 +156,6 @@ final class CustomDictionaryService: @unchecked Sendable {
     }
 
     /// Parse a single CSV line handling quoted fields
-    // 解析單行 CSV,可處理雙引號包裹的欄位。
     private func parseCSVLine(_ line: String) -> [String] {
         var fields: [String] = []
         var current = ""
@@ -183,7 +177,6 @@ final class CustomDictionaryService: @unchecked Sendable {
     }
 
     /// Escape a field for CSV output
-    // CSV 輸出時若欄位內含逗號 / 引號 / 換行,要包雙引號並對引號做 escape。
     private func csvEscape(_ field: String) -> String {
         if field.contains(",") || field.contains("\"") || field.contains("\n") {
             return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
@@ -194,8 +187,6 @@ final class CustomDictionaryService: @unchecked Sendable {
 
 // MARK: - Custom Dictionary Errors
 
-// CSV 匯入流程的錯誤型別 — 編碼壞掉、格式錯誤、檔案太大、entry 太多。
-//
 // Engine-layer error — stays a plain typed enum, unaware of the App/Strings presentation layer
 // (`StringKey`/resolver). The App layer maps each case to a localized message at the display boundary
 // (see `CustomDictionaryView.localizedImportMessage`), mirroring Android where the service raises a bare

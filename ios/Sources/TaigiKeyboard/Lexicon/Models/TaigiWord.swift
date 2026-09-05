@@ -1,13 +1,10 @@
-// 候選詞核心模型 — id / roman / hanzi / lengthScore / sourceBitmask。
+// Core candidate-word model — id / roman / hanzi / lengthScore / sourceBitmask.
 
 import Foundation
-
-// 台語詞彙資料模型
 
 // MARK: - Shared-Core Candidate
 
 /// Pure logic, Foundation-only. Eligible for cross-platform extraction.
-// 台語詞彙 value type,排序 / 顯示 / FFI marshalling 都用這個型別。
 public struct TaigiWord: Equatable {
     let id: Int
     let roman: String
@@ -29,7 +26,6 @@ public struct TaigiWord: Equatable {
         self.sourceBitmask = sourceBitmask
     }
 
-    // 顯示文字 — hanzi 優先,沒有就 fallback 到 roman。
     var displayText: String {
         if let hanzi, !hanzi.isEmpty {
             return hanzi

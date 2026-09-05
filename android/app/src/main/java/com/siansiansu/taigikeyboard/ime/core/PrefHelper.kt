@@ -1,8 +1,7 @@
-// PrefHelper — 同時實作 EngineSettings / EngineSettingsProvider 兩介面,作為 IME 設定的 single live-read entry。
-// 後端用 androidx.datastore.preferences,cache + collector 為 process-wide companion state;
-// Application.onCreate 呼叫 warmUp() 之後,後續任何 ctor (ViewModel / Activity) 都共用同一份已 warmed cache,
-// 不會再撞到 Main thread runBlocking fallback。
-// Engine 端永遠 live-read,不做快照(對齊 iOS SharedSettings.swift)。
+// PrefHelper — single live-read entry for IME settings; implements both EngineSettings and
+// EngineSettingsProvider over androidx.datastore.preferences. Cache + collector are process-wide companion
+// state: after Application.onCreate calls warmUp(), later ctors share the warmed cache and never hit the
+// Main-thread runBlocking fallback. Engine side always live-reads, never snapshots (mirrors iOS SharedSettings).
 
 package com.siansiansu.taigikeyboard.ime.core
 
@@ -362,7 +361,7 @@ class PrefHelper(
 
     var phahTaigiLayoutEnabled: Boolean by preference(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, true)
 
-    // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2, tps
+    // Layout id: phahTaigi, qwerty, moe1, moe2, tps.
     //
     // Pattern-C: cross-key TPS state machine. Setter forwards to
     // [applyKeyboardLayoutType]. See [TpsCascade] for asymmetry vs
@@ -451,51 +450,47 @@ class PrefHelper(
     // TPS settings
     var tpsOrMapsToER: Boolean by preference(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
 
-    // 詞頻紀錄開關（預設開啟）
     var frequencyRecordingEnabled: Boolean by preference(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, true)
 
-    // 詞關聯紀錄開關（預設開啟）
     var associationRecordingEnabled: Boolean by preference(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, true)
 
-    // 自訂詞庫開關（預設開啟）
     var customDictEnabled: Boolean by preference(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
 
-    // 詞庫開關設定
-    // 教育部臺灣台語常用詞辭典（kautian）
+    // 教育部臺灣台語常用詞辭典 (kautian)
     var moeDictEnabled: Boolean by preference(PreferenceKeys.MOE_DICT_ENABLED, true)
 
-    // 台語新詞辭庫（taigitv）
+    // 台語新詞辭庫 (taigitv)
     var newwordDictEnabled: Boolean by preference(PreferenceKeys.NEWWORD_DICT_ENABLED, true)
 
-    // iTaigi 華台對照典（itaigi）- 預設關閉
+    // iTaigi 華台對照典 (itaigi)
     var itaigiDictEnabled: Boolean by preference(PreferenceKeys.ITAIGI_DICT_ENABLED, false)
 
-    // 台灣植物名彙（sitbut）
+    // 台灣植物名彙 (sitbut)
     var taiwanPlantDictEnabled: Boolean by preference(PreferenceKeys.SITBUT_DICT_ENABLED, false)
 
-    // 台華線頂對照典（taihoa）
+    // 台華線頂對照典 (taihoa)
     var taiHuaDictEnabled: Boolean by preference(PreferenceKeys.TAIHOA_DICT_ENABLED, false)
 
-    // 台日大辭典（taijit）
+    // 台日大辭典 (taijit)
     var taiwanJapanDictEnabled: Boolean by preference(PreferenceKeys.TAIJIT_DICT_ENABLED, false)
 
-    // 台語工藝詞庫（kungge）
+    // 台語工藝詞庫 (kungge)
     var kunggeDictEnabled: Boolean by preference(PreferenceKeys.KUNGGE_DICT_ENABLED, true)
 
-    // 學科術語辭典（stti）
+    // 學科術語辭典 (stti)
     var sttiDictEnabled: Boolean by preference(PreferenceKeys.STTI_DICT_ENABLED, true)
 
-    // 腔口補充資料（khpoo）
+    // 腔口補充資料 (khpoo)
     var khpooDictEnabled: Boolean by preference(PreferenceKeys.KHPOO_DICT_ENABLED, true)
 
-    // LKK漢羅合用建議用字（預設開啟）
+    // LKK漢羅合用建議用字
     var lkkDictEnabled: Boolean by preference(PreferenceKeys.LKK_DICT_ENABLED, true)
 
-    // 開發者補充辭典（詞庫增補檔案，預設開啟）
+    // 開發者補充辭典 (developer supplement file)
     var devDictEnabled: Boolean by preference(PreferenceKeys.DEV_DICT_ENABLED, true)
 
-    // 教育部辭典子集（腔調 + 姓名附錄，巢狀於 MOE master 下）— 預設全開（DD5 opt-out）。
-    // 腔調順序對齊 config.yaml dialect_columns；bit 佈局由 Rust compute_filters 持有。
+    // MOE dictionary subsets (accents + name appendix), nested under the MOE master toggle; all default on
+    // (DD5 opt-out). Accent order follows config.yaml dialect_columns; bit layout lives in Rust compute_filters.
     var kautianAccentLukangEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_LUKANG_ENABLED, true)
 
     var kautianAccentSansiaEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_SANSIA_ENABLED, true)
@@ -516,7 +511,7 @@ class PrefHelper(
 
     var kautianAccentTaichungEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_TAICHUNG_ENABLED, true)
 
-    // 姓名附錄預設開 (opt-out;CROSS-PLATFORM mirrors iOS SharedSettings.swift isKautianNameAppendixEnabledKey default true)
+    // Name appendix defaults on (opt-out; CROSS-PLATFORM mirrors iOS SharedSettings.swift isKautianNameAppendixEnabledKey)
     var kautianNameAppendixEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_NAME_APPENDIX_ENABLED, true)
 
     // Appearance settings
@@ -567,10 +562,9 @@ class PrefHelper(
     fun resolvedAppearance(isDark: Boolean): ThemeAppearance =
         ThemeResolver.resolved(selectedThemeId, isDark, legacyAppearance, loadUserThemes())
 
-    // 異用字開關（預設關閉）
     var variantEnabled: Boolean by preference(PreferenceKeys.VARIANT_DICT_ENABLED, false)
 
-    // 在來字開關（預設關閉）
+    // 在來字 (Khiin) dictionary toggle
     var khiin: Boolean by preference(PreferenceKeys.KHIIN_ENABLED, false)
 
     // ------------------------------------------------------------------ //
@@ -825,29 +819,24 @@ class PrefHelper(
     }
 
     /**
-     * 重置所有設定為預設值
-     * 保留內部設定（版本資訊）
+     * Resets every preference to its default, keeping the internal version keys.
      *
      * Direct-write counterpart to [migrateFromSharedPreferences]; finishes
      * by calling [clearPendingOverlay] for the same reason.
      */
     suspend fun resetToDefaults() {
         dataStore.edit { prefs ->
-            // 保存需要保留的值
             val versionOnInstall = prefs[PreferenceKeys.VERSION_ON_INSTALL]
             val versionLastUse = prefs[PreferenceKeys.VERSION_LAST_USE]
             // User-created themes are user content (like the SQLite user DBs) — preserved across a full settings reset.
             val userThemes = prefs[PreferenceKeys.USER_THEMES]
 
-            // 清除所有偏好設定
             prefs.clear()
 
-            // 恢復需要保留的值
             versionOnInstall?.let { prefs[PreferenceKeys.VERSION_ON_INSTALL] = it }
             versionLastUse?.let { prefs[PreferenceKeys.VERSION_LAST_USE] = it }
             userThemes?.let { prefs[PreferenceKeys.USER_THEMES] = it }
 
-            // 設定預設值（明確寫入，確保一致性）
             prefs[PreferenceKeys.SETTINGS_THEME] = "auto"
             prefs[PreferenceKeys.SHOW_APP_ICON] = true
             prefs[PreferenceKeys.DOUBLE_SPACE_PERIOD] = true

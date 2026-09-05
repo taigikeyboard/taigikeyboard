@@ -1,6 +1,3 @@
-// RustEngineBridge 的 NextWord 切片擴充(v3.5.5,v3.5.8 Phase 7A 補 updateLastSelectedWord)。
-// 含 6 個 decide intent + filter / boost / queryState + setIsShowing。
-
 import Foundation
 import SwiftProtobuf
 
@@ -16,15 +13,12 @@ import SwiftProtobuf
 /// that emits the matching `Effect.nextWordUpdateLastSelectedWord` from the
 /// composing engine; iOS now needs the wrapper to forward the effect through
 /// `NextWordController.updateLastSelectedWord`.
-// NextWord 切片的 bridge 擴充入口。
-// v3.5.8 Phase 4 後 iOS 也需要 updateLastSelectedWord(連續輸入 mid-commit handshake)。
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
     /// Bridge-synthesized companion to the proto `DecideResult`. Consumed
     /// by `NextWordController`; effect-list executes in order on the iOS
     /// platform-executor side.
-    // 對應 proto DecideResult 的 Swift struct,NextWordController 會依 effects 的順序執行。
     struct NextWordDecideResult: Equatable {
         public enum Effect: Equatable {
             case rescheduleContextTimeout(afterMs: UInt64)
@@ -58,7 +52,6 @@ public extension RustEngineBridge {
     /// Bigram association pair surfaced through `RecordAssociation` /
     /// `RecordCompoundAssociations` effects. Consumed by
     /// `NextWordService.recordAssociation`.
-    // bigram 詞組關聯對,由 RecordAssociation / RecordCompoundAssociations effect 帶出。
     struct NextWordAssociationPair: Equatable {
         public let prev: String
         public let prevTl: String
@@ -68,7 +61,6 @@ public extension RustEngineBridge {
 
     /// UI-ready prediction value. `subtitle` is `nil` when the wire
     /// string is empty (filter contract — happens iff roman is empty).
-    // UI 直接可用的 NextWord 預測項。subtitle 在 wire 為空字串時轉成 nil(roman 為空才會發生)。
     struct NextWordEnginePrediction: Equatable {
         public let text: String
         public let subtitle: String?
@@ -83,8 +75,6 @@ public extension RustEngineBridge {
     /// Filter+merge+sort+limit result. `wasStale=true` indicates the
     /// platform-supplied `queryGeneration` did not match the engine's
     /// current generation — late async result; predictions are empty.
-    // filter + merge + sort + limit 的結果。wasStale=true 表示 queryGeneration 不符,
-    // 是來不及處理的舊 async 結果,predictions 必為空。
     struct NextWordFilterResult: Equatable {
         public let predictions: [NextWordEnginePrediction]
         public let wasStale: Bool
@@ -92,7 +82,6 @@ public extension RustEngineBridge {
 
     /// Pre-merge un-scored row from the platform `NextWordService.predict`
     /// SQL pipeline. Crosses the bridge to the Rust filter step.
-    // NextWordService.predict 的 SQL pipeline 出來、尚未計分的 row,送進 Rust filter 計分用。
     struct NextWordRawRow: Equatable {
         public enum Source { case dict, user }
 
@@ -112,7 +101,6 @@ public extension RustEngineBridge {
     }
 
     /// Engine-state read for the NextWord executor.
-    // 讀取 NextWord engine 當前狀態 — 給 NextWord executor 用。
     struct NextWordStateSnapshot: Equatable {
         public let lastSelectedWord: String?
         public let isShowing: Bool
@@ -126,8 +114,6 @@ public extension RustEngineBridge {
     /// bumping `current_generation`, no timer effects, emits compound-only
     /// `RecordCompoundAssociations` effect. Pre-v3.5.8 this was Android-only;
     /// the Phase 4 effect-based handshake brought iOS into the call site.
-    // 連續輸入 mid-commit 用 — 只更新 last_selected_word/time,不 bump generation,
-    // 不發 timer effects,只發 RecordCompoundAssociations。Phase 4 後 iOS 也走這條路徑。
     static func nextwordUpdateLastSelectedWord(
         text: String,
         roman: String,
@@ -275,8 +261,6 @@ public extension RustEngineBridge {
     /// downstream `nextwordClearForNewComposing` / sentence-end / context
     /// timeout / resetFull paths gate `clearPredictionsUI` emission on it.
     /// No effects, no current_generation bump.
-    // 平台 → engine 同步 UI 顯示狀態。在渲染完 async predict 結果後呼叫,
-    // 讓 engine 的 state.is_showing 維持正確,後續 clearForNewComposing 等路徑才知道要不要清 UI。
     static func nextwordSetIsShowing(
         _ isShowing: Bool,
         mode: InputMode,
@@ -418,7 +402,6 @@ public extension RustEngineBridge {
     // MARK: - Private helpers
 
     /// Build the `DecisionInput` proto field shared by every decide intent.
-    // 組出每個 decide intent 共用的 DecisionInput proto 欄位。
     private static func decisionInput(nowMs: Int64) -> Taigi_Engine_DecisionInput {
         var input = Taigi_Engine_DecisionInput()
         input.nowMs = nowMs
@@ -428,8 +411,6 @@ public extension RustEngineBridge {
     /// Build an `AppConfig` populated for the NextWord engine. iOS bridge
     /// always sets `platform_id = .ios`; tone toggles default to false (the
     /// NextWord engine does not read them, but the field is required).
-    // 為 NextWord engine 組 AppConfig。iOS bridge 一律 platform_id = .ios,
-    // tone toggles 預設關閉(NextWord engine 不讀,但欄位必填)。
     // `candidateDisplayMode` rides only `nextwordFilter` — the sole nextword reader of field 9 (mirrors Android);
     // `nextwordFilter` MUST pass the live setting; the other entry points leave the default.
     private static func nextwordConfig(
@@ -460,8 +441,6 @@ public extension RustEngineBridge {
     /// passes it through the FFI seam, decodes, returns the
     /// `NextWordResponse` payload (or nil on any failure path —
     /// `recordFailure` invoked).
-    // NextWord 專用 dispatch helper,複製 composing dispatch 的模式。
-    // 任一失敗路徑都呼叫 recordFailure 並回 nil。
     private static func nextwordDispatch(
         method: Taigi_Engine_NextWordRequest.OneOf_Method,
         op: String,
@@ -506,7 +485,6 @@ public extension RustEngineBridge {
     }
 
     /// Decide-result dispatch wrapper. Used by all 5 iOS decide entries.
-    // decide-result 的 dispatch wrapper,iOS 5 個 decide intent 都共用。
     private static func decideDispatch(
         method: Taigi_Engine_NextWordRequest.OneOf_Method,
         op: String,

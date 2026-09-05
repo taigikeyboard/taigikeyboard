@@ -1,7 +1,3 @@
-// Settings Tab — App 主要設定頁。內含輸入模式、輸入行為、鍵盤、回饋、
-// POJ / TPS 切換、診斷複製/分享/Email、重置等 Section。
-// 部分開關透過 KeyboardKit @AppStorage 與 keyboard extension 共用 App Group。
-
 import KeyboardKit
 import SwiftUI
 import UIKit
@@ -9,8 +5,7 @@ import UIKit
 /// Settings tab.
 ///
 /// Input mode, typing options, keyboard toggles, feedback, and diagnostics.
-// Settings Tab View。集中所有設定 row,並透過 SharedSettings / KeyboardKit
-// App Group UserDefaults 雙路徑落盤。
+/// Some toggles are shared with the keyboard extension through KeyboardKit `@AppStorage` in the App Group.
 struct SettingsTab: View {
     @Environment(DisplayLanguageStore.self) private var lang
     private let settings = SharedSettings.shared
@@ -107,7 +102,6 @@ struct SettingsTab: View {
                 // Global keyboard font — its own Section (separate card) below 輸入模式.
                 // Applies to every theme (font is NOT per-theme); native Form grouped
                 // container, no hand-rolled card.
-                // 全域鍵盤字型獨立 Section(自成一卡),放輸入模式下方;非 per-theme,改一次=全部主題。
                 Section {
                     NavigationLink {
                         ThemeFontPickerView(
@@ -128,7 +122,6 @@ struct SettingsTab: View {
                 Section {
                     // Default Form picker style = navigation-link row + selection subpage, the same
                     // shape as the 輸入模式 / 字型 rows above without a bespoke subpage view.
-                    // 候選詞顯示模式(漢羅並排 / 羅馬字),放 括號標註 上方。
                     Picker(selection: $candidateDisplayMode) {
                         ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
                             Text(lang.string(mode.displayNameKey)).tag(mode)
@@ -336,7 +329,6 @@ struct SettingsTab: View {
 
     // MARK: - Feature Summary Lookup
 
-    // 依 featureId 從 FeatureContentLoader 找對應的功能摘要,供 SettingInfoButton 顯示。
     private func featureSummary(_ featureId: String) -> String {
         FeatureContentLoader.features
             .first(where: { $0.id == featureId })?
@@ -345,8 +337,6 @@ struct SettingsTab: View {
 
     // MARK: - Actions
 
-    // 觸發 SettingsResetCoordinator 全量重置(設定 + 使用者資料),並把本地 @State
-    // 同步回預設,最後給一次 medium 觸覺回饋。
     private func resetAllSettings() {
         SettingsResetCoordinator.resetAll()
         SettingsResetCoordinator.resetAllUserData()
@@ -365,7 +355,8 @@ struct SettingsTab: View {
         isTpsOrMappedToER = settings.isTpsOrMappedToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled
-        // reset 把 persisted displayLanguage 寫回 system (Automatic),但 live store 是注入的;同步回來才會即時還原畫面語言。
+        // Reset persists displayLanguage back to system (Automatic), but the live store is injected — sync it
+        // back so the UI language reverts immediately.
         lang.syncFromSettings()
 
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)

@@ -1,8 +1,6 @@
 //! How often the user has committed each word, and how recently. Port of
 //! `Storage/UserFrequencyStore.swift`; SQL byte-identical.
 
-// 詞頻資料庫 — (漢字, canonical TL) 為鍵,引擎排序,這裡只交出計數。
-
 use crate::capacity::LearningCapacity;
 use crate::database::{UserDataDatabase, UserDataDatabaseError};
 use rusqlite::{params, params_from_iter, Connection};

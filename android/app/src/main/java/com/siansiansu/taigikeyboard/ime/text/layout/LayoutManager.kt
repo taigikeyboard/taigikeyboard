@@ -1,6 +1,6 @@
-// 鍵盤佈局管理器 — 從 assets/ime/text/ 讀 JSON,合併 main + modifier + extension 三層,
-// 注入 extended popups,輸出 ComputedLayoutData 給 KeyboardImeRoot 使用。
-// Moshi 解析快取 + LayoutType / KeyType / KeyVariation Adapter 集中於此。
+// Keyboard layout manager: reads JSON from assets/ime/text/, merges the main + modifier + extension layers,
+// injects extended popups, and emits ComputedLayoutData for KeyboardImeRoot. Owns the Moshi parse cache and
+// the LayoutType / KeyType / KeyVariation adapters.
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
@@ -80,17 +80,14 @@ class LayoutManager(
     private fun loadExtendedPopups(subtype: Subtype): Map<String, List<KeyData>> {
         val inputMode = prefs.inputMode
 
-        // English / TPS mode：不載入台語 popup
         if (inputMode == "english" || inputMode == "tps") {
             return mapOf()
         }
 
         val lang = subtype.locale.language
 
-        // 檢查是否為台語佈局並載入對應的聲調 popup
         val taigiMap =
             when {
-                // 根據 inputMode 載入對應的台語 popup
                 lang == "nan" || subtype.layout == "qwerty_poj" || subtype.layout == "qwerty_tl" -> {
                     when (inputMode) {
                         "poj" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_poj.json")
@@ -235,7 +232,7 @@ class LayoutManager(
 
         return ComputedLayoutData(
             keyboardMode,
-            mainLayout?.name ?: "computed", // 使用 mainLayout 的名稱
+            mainLayout?.name ?: "computed",
             mainLayout?.direction ?: "ltr",
             computedArrangement,
         )
@@ -248,7 +245,7 @@ class LayoutManager(
      *
      * @param keyboardMode The keyboard mode for which the layout should be computed.
      * @param subtype The subtype which localizes the computed layout.
-     * @param overrideIsTranslateSwapped Optional override for isTranslateSwapped, 優先於 prefs 的值
+     * @param overrideIsTranslateSwapped Optional override for isTranslateSwapped; takes precedence over the prefs value.
      */
     private fun computeLayoutFor(
         keyboardMode: KeyboardMode,
@@ -260,8 +257,8 @@ class LayoutManager(
         var modifier: LTN? = null
         var extension: LTN? = null
 
-        // 根據 isTranslateSwapped 決定使用半形或全形標點的佈局
-        // 優先使用傳入的 override 值，避免 DataStore 非同步讀取導致的時序問題
+        // Prefer the passed-in override over prefs: an async DataStore read can otherwise lag the punctuation
+        // (halfwidth / fullwidth) layout choice by a frame.
         val isTranslateSwapped = overrideIsTranslateSwapped ?: prefs.isTranslateSwapped
         val inputMode = overrideInputMode ?: prefs.inputMode
         val modSuffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
@@ -269,7 +266,6 @@ class LayoutManager(
 
         when (keyboardMode) {
             KeyboardMode.CHARACTERS -> {
-                // 選擇佈局：English mode > keyboardLayoutType
                 val layoutName =
                     when {
                         inputMode == "english" -> {
@@ -283,7 +279,6 @@ class LayoutManager(
                         else -> {
                             when (prefs.keyboardLayoutType) {
                                 "phahTaigi" -> {
-                                    // phahTaigi 佈局：根據 isTranslateSwapped 選擇全形/半形
                                     val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
                                     "qwerty_phah_taigi_$suffix"
                                 }
@@ -309,7 +304,6 @@ class LayoutManager(
                                 }
 
                                 "qwerty" -> {
-                                    // 原有邏輯：根據 inputMode 選擇 poj/tl
                                     when (inputMode) {
                                         "poj" -> "qwerty_poj"
                                         "tl" -> "qwerty_tl"
@@ -318,7 +312,7 @@ class LayoutManager(
                                 }
 
                                 else -> {
-                                    // 向後相容：使用舊的 phahTaigiLayoutEnabled
+                                    // Backward compatibility: fall back to the legacy phahTaigiLayoutEnabled flag.
                                     if (prefs.phahTaigiLayoutEnabled) {
                                         val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
                                         "qwerty_phah_taigi_$suffix"
@@ -337,7 +331,6 @@ class LayoutManager(
                     "[LAYOUT] Loading layout: $layoutName (inputMode=$inputMode, layoutType=${prefs.keyboardLayoutType}, isTranslateSwapped=$isTranslateSwapped)"
                 }
                 main = LTN(LayoutType.CHARACTERS, layoutName)
-                // 根據模式選擇 modifier
                 val modifierName =
                     when {
                         inputMode == "english" -> "english"
@@ -375,7 +368,7 @@ class LayoutManager(
             KeyboardMode.SYMBOLS -> {
                 main = LTN(LayoutType.SYMBOLS, "western_$symbolsSuffix")
                 modifier = LTN(LayoutType.SYMBOLS_MOD, "default_$modSuffix")
-                // 不需要 number_row extension，因為 symbols layout 已經包含數字列
+                // No number_row extension: the symbols layout already carries the digit row.
             }
 
             KeyboardMode.SYMBOLS2 -> {
@@ -425,7 +418,7 @@ class LayoutManager(
      *
      * @param keyboardMode The keyboard mode for which the layout should be computed.
      * @param subtype The subtype which localizes the computed layout.
-     * @param overrideIsTranslateSwapped Optional override for isTranslateSwapped, 優先於 prefs 的值
+     * @param overrideIsTranslateSwapped Optional override for isTranslateSwapped; takes precedence over the prefs value.
      * @return The computed layout data.
      */
     fun fetchComputedLayout(

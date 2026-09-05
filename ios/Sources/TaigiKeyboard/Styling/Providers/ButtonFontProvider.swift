@@ -1,6 +1,3 @@
-// 鍵面字型解析 — 結合使用者選的字型家族、KeyboardKit 標準大小、使用者縮放,
-// 以及 layout-specific 調整(MOE2 多字鍵自動縮小)。
-
 import Foundation
 import KeyboardKit
 
@@ -13,7 +10,6 @@ import KeyboardKit
 /// Queried by: `TaigiButtonContent.standardHintContent` and `textOnlyContent`
 /// Also called by: `TaigiKeyboardView.coreKeyboard` (keyboardButtonStyle closure)
 /// Depends on: `SettingsSnapshot`, `KeyboardContext`
-// 鍵面字型 provider — 由 TaigiButtonContent 與 KeyboardKit 的 buttonStyle 取得 KeyboardFont。
 final class ButtonFontProvider {
     /// MOE2 layout: shrink factor for 3+ char keys (e.g. "tsh", "chh") to fit within key width
     private static let moe2MultiCharShrinkFactor: CGFloat = 0.75
@@ -27,7 +23,6 @@ final class ButtonFontProvider {
     }
 
     /// Returns the KeyboardFont for the given action, combining user font choice with adjusted size.
-    // 結合使用者字型選擇與調整後字級,回傳該鍵的 KeyboardFont。
     func buttonKeyboardFont(for action: KeyboardAction) -> KeyboardFont {
         let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
         let fontSize = adjustedFontSize(for: action, baseFontSize: baseFontSize)
@@ -40,7 +35,6 @@ final class ButtonFontProvider {
     }
 
     /// Adjusts font size: applies user scale, and shrinks MOE2 multi-char keys to fit.
-    // 套用使用者字級縮放;MOE2 模式下若鍵面字 ≥ 3 個字元(如 tsh / chh)會再縮 0.75 倍以塞進按鍵。
     private func adjustedFontSize(for action: KeyboardAction, baseFontSize: CGFloat) -> CGFloat {
         let userScale = settings.keyFontSizeScale
 

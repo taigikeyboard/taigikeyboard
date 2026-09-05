@@ -14,10 +14,6 @@
 //! own. Engine-side syllabifier-driven auto-hyphenation is out of scope for
 //! v3.5.8 Item 2 (see §10.2 amendment 2026-05-13).
 
-// 計算組字緩衝區的顯示形式;TPS 回傳去掉分隔記號的字面,POJ/TL 走 phonetics 正規化流程。
-// 本檔案是 §10.2 rawInput 契約的 rendering primitive。
-// 使用者輸入的 hyphen 維持作為轉換邊界 (tone-mark chain 以 - 切段),引擎不驗證音節合法性。
-
 use protos::engine::AppConfig;
 
 pub(crate) fn derived_display(raw: &str, config: &AppConfig) -> String {
@@ -43,11 +39,6 @@ pub(crate) fn derived_display(raw: &str, config: &AppConfig) -> String {
 /// glyph, tone mark included, passes through untouched; only `U+0020` goes,
 /// and only for a buffer that actually carries TPS (a TL / POJ space is a
 /// literal word boundary and survives).
-// §41 — 去掉 TPS 分隔記號。鍵盤在 TPS buffer 裡的 ASCII 空白是第一調/音節邊界「記號」,
-//   不是使用者打的字:附加它讓下一個雙形聲母維持聲母形、shadow 記成 lattice barrier、
-//   §41 據以釘無調號調。所以它留在 raw,但必須不出現在 raw 對外供給的東西裡 ——
-//   preedit、commit 寫進文件的字、交給 NextWord 的羅馬字。TPS glyph(含調號)原樣通過,
-//   只丟 U+0020,且只對確實含 TPS 的 buffer(TL/POJ 空白是字面詞界,保留)。
 pub(crate) fn strip_tps_separator_markers(raw: &str) -> String {
     if phonetics::api::contains_tps(raw) {
         return raw.replace(' ', "");
@@ -150,9 +141,6 @@ mod tests {
         // document, so pin the fix on the real display path, not just on
         // `normalize_tone` in isolation: with both toggles on, typing
         // `h o o n n` must read `ho͘ⁿ`, not `ho͘nn`.
-        // 組字區既是使用者看到的、也是送出時寫進文件的內容,所以要釘在真正的
-        //   display path 上,而不是只測 normalize_tone:兩個開關都開時,
-        //   打 h-o-o-n-n 必須讀作 ho͘ⁿ,不是 ho͘nn。
         let config = AppConfig {
             oo_doubletap_enabled: true,
             nn_doubletap_enabled: true,
@@ -245,7 +233,6 @@ mod tests {
     // §41 — the separator marker is hidden at the display seam. Trailing
     // (`ㄒㄧ` + space, the reported case), interior (`ㄍㄠ`␣`ㄉㄞ`), and
     // repeated separators all render as the bare glyph run.
-    // §41 — 分隔記號在顯示接縫被隱藏;尾端(回報案例)、中間、連續多個皆然。
     #[test]
     fn raw_input_tps_hides_the_trailing_separator_marker() {
         let phase = Phase::Composing {
@@ -280,7 +267,6 @@ mod tests {
 
     // A TL/POJ space is a literal word boundary and must survive — the
     // hide rule is TPS-only, keyed on the buffer actually carrying TPS.
-    // TL/POJ 的空白是字面詞界,必須留著 — 隱藏規則只對「確實含 TPS」的 buffer 生效。
     #[test]
     fn raw_input_tl_keeps_a_literal_space() {
         let phase = Phase::Composing {

@@ -1,7 +1,3 @@
-// 鍵盤 UI 不可變狀態快照 — 由 TextInputManager 推給 KeyboardImeRoot;
-// 用 data class 等價驅動 recomposition,等價時跳過發送,避免 ~30 個 KeyContent 重 render。
-// layouts map 必須用全新 Map copy 發布,不得就地修改(否則 snapshot 比較失靈)。
-
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation

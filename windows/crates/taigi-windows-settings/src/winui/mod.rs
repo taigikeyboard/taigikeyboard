@@ -7,8 +7,6 @@
 //! type-checks this for the gnu target and `make check-box` compiles and
 //! tests it on the Windows box.
 
-// WinUI 3 設定視窗(W17)— 同一份 settings.json,原生 Windows 11 外觀。
-
 mod cards;
 mod file_dialog;
 mod pages;

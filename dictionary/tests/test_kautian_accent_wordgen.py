@@ -44,7 +44,6 @@ def test_dd9_文讀_reading_generates_nothing():
 def test_single_variable_char_ors_matching_accents():
     # 八字 base "pueh-jī": 字 is fixed (∉ table); the 漳/混腔 accents read 八 as
     # "peh" → all four produce "peh-jī" sharing one row with OR'd bits = 568.
-    # The 泉腔 accents read 八 as "pueh" == base → no change → no row.
     result = generate_variants_for_word("八字", "pueh-jī", EIGHT_TABLE)
     assert result.variants == {"peh-jī": 568}
 

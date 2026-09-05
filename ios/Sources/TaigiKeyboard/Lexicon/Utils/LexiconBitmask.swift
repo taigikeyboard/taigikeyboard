@@ -1,7 +1,3 @@
-// 把 dictionary.bin 的 record bitmask 解碼成 [DictionarySource]。
-// bit 位置由 dictionary/common/source_bits.py 與 Android LexiconBitmask 共同擁有,
-// 三邊不能漂移,否則 filter / ranking 會靜默分歧。
-
 import Foundation
 
 /// `LexiconBitmask` — bitmask → `[DictionarySource]` decoder.
@@ -15,8 +11,6 @@ enum LexiconBitmask {
     /// Decode a record bitmask (`UInt32` from `RustEngineBridge.LexiconRow`)
     /// into the ordered list of `DictionarySource` values. Order matches
     /// the bit position so iOS UI badges render predictably.
-    // 解碼 record bitmask → [DictionarySource]。
-    // 順序跟著 bit 位置走,讓 UI badge 渲染有可預測順序。
     static func sources(from bitmask: UInt32) -> [DictionarySource] {
         let pairs: [(bit: UInt32, source: DictionarySource)] = [
             (1 << 0, .kautian), (1 << 1, .taigitv), (1 << 2, .itaigi), (1 << 3, .sitbut),

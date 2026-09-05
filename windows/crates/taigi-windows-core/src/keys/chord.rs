@@ -1,8 +1,6 @@
 //! One recordable key combination, and the keys a binding may never claim.
 //! Port of `ComposingKeyChord.swift`.
 
-// 一個可錄製的按鍵組合,以及絕不可被綁走的按鍵。
-
 use super::intent::ComposingKeyIntent;
 use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};

@@ -1,7 +1,3 @@
-// 自訂字典 CRUD + CSV 匯出 + 檔案匯入服務。
-// 持久化於 custom_dictionary.db(SQLiteOpenHelper);user_data SQLite 平台原生(設計如此)。
-// 由 CompositionRoot 持有。對應 iOS CustomDictionaryService.swift。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
@@ -22,7 +18,8 @@ import java.util.UUID
 
 /**
  * Custom-dictionary CRUD, CSV export, and file import. Persists to
- * `custom_dictionary.db` via `SQLiteOpenHelper`. Owned by `CompositionRoot`.
+ * `custom_dictionary.db` via `SQLiteOpenHelper`. Owned by `CompositionRoot`;
+ * mirrors iOS `CustomDictionaryService.swift`.
  */
 class CustomDictionaryService(
     appContext: Context,
@@ -67,7 +64,6 @@ class CustomDictionaryService(
          * Delete-first keeps the side table consistent when an UPSERT edits the
          * entry's `roman`.
          */
-        // 先刪後插重建 entry 的側表鍵;upsert 路徑與 v5→v6 回填共用;roman 改動時保持一致。
         private fun rewriteSearchKeys(
             db: SQLiteDatabase,
             entryId: String,
@@ -105,8 +101,6 @@ class CustomDictionaryService(
      * input's family; the legacy `notone` / `abbrev` / `roman_num` columns on
      * `custom_dictionary` stay write-only for backcompat / rollback.
      */
-    // 跨模式搜尋側表 — 一筆 (entry, family, form) 搜尋鍵。新查詢路徑走這張表,
-    // 舊衍生欄位保留為 write-only(回滾用)。
     private object SearchKeyTable {
         const val NAME = "custom_search_key"
         const val ENTRY_ID = "entry_id"
@@ -149,7 +143,6 @@ class CustomDictionaryService(
         // v3.6.1 R3 — refresh the cross-mode side-table keys for this entry.
         // The legacy notone/abbrev/roman_num columns above stay written for
         // backcompat / rollback; the side table is the NEW query path.
-        // R3 — 重建此 entry 的跨模式側表鍵;舊欄位仍寫(回滾用),側表為新查詢路徑。
         rewriteSearchKeys(db, entry.id, entry.roman)
     }
 
@@ -248,7 +241,6 @@ class CustomDictionaryService(
                 // Capacity guard + write in one transaction (TOCTOU-safe). A NEW
                 // id over the cap throws CustomDictionaryFullException → caught
                 // below → entry not added (matches iOS silent single-save).
-                // 容量 guard 與寫入同一 transaction;新 id 超過上限會拋出 → 下方吞掉 → 不新增(對齊 iOS)。
                 db.transaction {
                     CustomDictionaryCapacityPolicy.guardInsertCapacity(this, entry.id)
                     executeUpsert(this, entry)
@@ -296,7 +288,6 @@ class CustomDictionaryService(
      * @param form `num` / `notone` — the query key's primary form (`abbrev` is always also matched).
      * @param key Family-native prefix (bound verbatim).
      */
-    // R3 跨模式 prefix 查詢 — 依 family JOIN 側表,比對 primary form 或 abbrev 列的 key 前綴。
     // SQL is the `SEARCH_SQL` companion constant (shared with the JVM test).
     suspend fun search(
         family: String,
@@ -397,7 +388,6 @@ class CustomDictionaryService(
 
             // Cumulative row cap: grandfather existing rows, stop at MAX_ENTRIES,
             // overflow entries fall into totalSkipped below (no eviction, no throw).
-            // 累計 row 上限 — 既有列 grandfather,到上限停;超量列計入 totalSkipped(不驅逐、不拋錯)。
             val remaining =
                 CustomDictionaryCapacityPolicy.remainingCapacity(
                     CustomDictionaryCapacityPolicy.currentEntryCount(db),
@@ -581,7 +571,6 @@ class CustomDictionaryService(
          * and backfill one bundle per existing entry. Non-destructive — the
          * legacy `notone` / `abbrev` / `roman_num` columns are untouched.
          */
-        // v5→v6 — 建 custom_search_key 側表 + 索引,對既有每筆 entry 回填 bundle;非破壞,舊欄位不動。
         private fun migrateV5ToV6(db: SQLiteDatabase) {
             createSearchKeyTable(db)
             regenerateSearchKeys(db)
@@ -596,9 +585,6 @@ class CustomDictionaryService(
          * containing either were unreachable from the keyboard. Same shape as
          * v3 → v4, which re-derived for the nasal marker.
          */
-        // v6→v7 — POJ 拼寫字符修正後重新衍生。o͘ (U+0358) 舊版被當聲調砍掉、
-        //   鼻化 ⁿ 則以顯示字符留在 num 鍵裡,查詢端 raw buffer 卻是 ASCII oo/nn,
-        //   含這兩者的 POJ 自訂詞從鍵盤查無。與 v3→v4 (鼻化) 同一種重新衍生。
         private fun migrateV6ToV7(db: SQLiteDatabase) {
             regenerateNotone(db)
             regenerateSearchKeys(db)

@@ -1,33 +1,25 @@
-// NextWord facade — 串起字典 mmap、user_association.db 寫入、容量策略,
-// 並把排序 / 合併 / 截斷交給 RustEngineBridge.nextwordFilter。
-
 import Foundation
 import SQLite3
 
-/// NextWord 下一詞預測服務 (facade)
+/// NextWord next-word prediction service (facade).
 ///
-/// 使用「相鄰字 Bigram」模型預測下一個字：
-/// - 選擇「早安」→ 用「安」查詢 → 預測下一個字
+/// Predicts with an adjacent-word bigram model: selecting 早安 queries on 安.
 ///
-/// 資料來源：
-/// - `association.bin` (binary mmap): 字典關聯（冷啟動）
-/// - `user_association.db`: 使用者學習（個人化）
+/// Data sources:
+/// - `association.bin` (binary mmap): dictionary associations (cold start)
+/// - `user_association.db`: user-learned associations (personalized)
 ///
-/// Facade 責任：
-/// - 持有 public API、concurrency state、capacity policy、wiring。
-/// - Schema (`NextWordSchema`)、CRUD (`NextWordRepository`) 各司其職。
-/// - 排序 / 合併 / 截斷 移交 Rust 端 `engine/nextword/` filter 步驟
-///   (post-v3.5.5)：`predict()` 回傳未排序的 `[NextWordRawRow]`，呼叫端
-///   走 `RustEngineBridge.nextwordFilter` 完成 score + merge + sort + limit。
+/// The facade owns the public API, concurrency state, capacity policy and wiring; `NextWordSchema`
+/// owns the schema and `NextWordRepository` the CRUD. Scoring / merging / sorting / truncation moved
+/// to the Rust `engine/nextword/` filter step (post-v3.5.5): `predict()` returns unsorted
+/// `[NextWordRawRow]` and the caller runs `RustEngineBridge.nextwordFilter`.
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants (capacity policy)
 
-    // 容量策略常數 — 上限 5 萬筆、每 100 次寫入檢查一次、每次裁切 5000 筆。
     private enum Constants {
         static let defaultLimit = 30
 
         /// User-association capacity
-        // 使用者關聯資料表的容量上限。
         static let maxUserAssociations = 50000
         static let pruneCheckInterval = 100
         static let pruneBatchSize = 5000
@@ -35,8 +27,8 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Public Types
 
-    /// 使用者關聯資料。UI (DictionaryTab AssociationDataView) 依賴此公開型別；
-    /// 保留為 facade-owned struct 以支援外部 `Identifiable` extension。
+    /// A user association row. The UI (DictionaryTab AssociationDataView) depends on this public
+    /// type; it stays a facade-owned struct so an external `Identifiable` extension can be added.
     struct AssociationEntry {
         let prevWord: String
         let prevTl: String
@@ -108,8 +100,6 @@ final class NextWordService: @unchecked Sendable {
     /// Mixed bigram model:
     /// - Dict layer: look up by last character → single-char predictions.
     /// - User layer: look up by full word → full-word predictions.
-    // 回傳尚未合併與評分的原始 rows,呼叫端再交給 Rust filter 做 score / merge / sort / limit。
-    // 字典層用最後一個字查詢,使用者層用完整詞查詢,兩者合併在 Rust 端。
     func predict(
         word: String,
         roman: String = "",
@@ -134,7 +124,6 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Public API: Recording
 
-    /// 記錄使用者選詞關聯
     func recordAssociation(
         prev: String,
         prevTl: String = "",
@@ -172,7 +161,6 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// 清除所有使用者關聯資料
     func clearAllAssociations() async {
         do {
             try await ensureUserTablesCreated()
@@ -191,7 +179,6 @@ final class NextWordService: @unchecked Sendable {
     }
 
     /// Delete a single user association entry.
-    // 刪除單筆使用者關聯。
     func deleteAssociation(_ entry: AssociationEntry) async {
         do {
             try await ensureUserTablesCreated()
@@ -208,7 +195,6 @@ final class NextWordService: @unchecked Sendable {
     }
 
     /// Import association entries with merge-by-max strategy: keep the higher count.
-    // 批次匯入關聯資料,衝突時採 merge-by-max 策略保留較高 count。
     func batchImportAssociations(
         entries: [(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int)],
     ) async throws -> Int {
@@ -218,7 +204,6 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// 取得使用者關聯數量
     func associationCount() async -> Int {
         do {
             try await ensureUserTablesCreated()
@@ -230,7 +215,7 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// 取得所有使用者關聯（for backup / UI listing）
+    /// All user associations, for backup and UI listing.
     func allAssociations() async -> [AssociationEntry] {
         do {
             try await ensureUserTablesCreated()
@@ -245,7 +230,6 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Lifecycle
 
-    /// 刪除使用者關聯資料庫
     func deleteUserDatabase() throws {
         // Cancel the in-flight init Task (if any) BEFORE closing the
         // connection so it bails out rather than racing against a fresh
@@ -275,8 +259,6 @@ final class NextWordService: @unchecked Sendable {
     /// Over-fetches `limit * 2` so the Rust filter has slack to merge
     /// `(hanzi, tl)` collisions across dict + user without dropping below
     /// the caller's requested limit (Codex post-impl P2-1).
-    // 字典層 raw rows — 從 association.bin mmap 撈、套上使用者啟用字典 bitmask,回傳未評分 .dict 標記列。
-    // 過撈 limit * 2 留 merge slack,避免 dict + user 合併後筆數不足。
     private func collectDictAssociations(
         lastChar: String,
         limit: Int,
@@ -316,8 +298,6 @@ final class NextWordService: @unchecked Sendable {
     ///
     /// Over-fetches `limit * 2` for the same merge-slack reason as
     /// `collectDictAssociations` (Codex post-impl P2-1).
-    // 使用者層 raw rows — 從 user_association.db 讀,回傳未評分 .user 標記列。
-    // Rust filter 會於 filter time 套用 decay + learning bonus 計算 user score。
     private func collectUserAssociations(
         word: String,
         roman: String,
@@ -349,8 +329,6 @@ final class NextWordService: @unchecked Sendable {
 
     /// Single-flight schema initialization. Concurrent callers await the
     /// same `Task`; failures clear the cache so the next caller retries.
-    // schema 初始化的 single-flight gate — 多個 caller 共享同一個 Task,
-    // 失敗時清掉快取讓後續 caller 重試。
     private func ensureUserTablesCreated() async throws {
         let (task, generation) = stateLock.withLock { () -> (Task<Void, Error>, UInt64) in
             if let existing = _tableCreationTask {
@@ -390,7 +368,6 @@ final class NextWordService: @unchecked Sendable {
     /// Prune the oldest/lowest-count entries when over capacity.
     /// Over-deletes by `pruneBatchSize` so the table sits below the cap
     /// between prune runs instead of oscillating around it.
-    // 表超出容量時砍掉最舊 / 最少使用的列。多砍 pruneBatchSize 讓表落在上限以下,避免來回震盪。
     private func pruneOldAssociations() async {
         do {
             let currentCount = await associationCount()

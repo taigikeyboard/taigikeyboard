@@ -1,5 +1,5 @@
-// 鍵盤模式列舉 — characters / symbols / numeric / phone / clipboard 等 8 種。
-// 由 LayoutManager 驅動 mode 切換,各 mode 對應一份 layout JSON。
+// Keyboard mode enum — 8 modes (characters / symbols / numeric / phone / clipboard, etc.),
+// switched by LayoutManager; each mode maps to one layout JSON.
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 

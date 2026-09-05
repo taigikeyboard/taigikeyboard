@@ -1,16 +1,10 @@
-// Taigi 鍵盤所有版面的資料定義 — 每張版面都是 [[KeyDef]]。
-// _withGlobe 變體由 withGlobeKey 在底列 index 1 插入 .globe 自動衍生;
-// .char(half, fullWidth:) 預設顯示半形,isTranslateSwapped 切到全形(TPS 永遠全形)。
-
 /// Taigi keyboard layout definitions — each layout is [[KeyDef]]
 ///
 /// _withGlobe variants are derived by inserting .globe at bottom-row index 1.
 /// .char(half, fullWidth: full) shows half-width by default,
 /// full-width when isTranslateSwapped = true (or always for TPS layout).
-// Taigi 鍵盤所有版面的資料命名空間 — Alphabetic / Numeric / Symbolic 三大類。
 enum TaigiLayouts {
     /// Derives a withGlobe variant by inserting .globe at index 1 of the bottom row
-    // 衍生 withGlobe 變體的工具 — 在底列 index 1 插入 .globe。
     private static func withGlobeKey(_ layout: [[KeyDef]]) -> [[KeyDef]] {
         var result = layout
         result[result.count - 1].insert(.globe, at: 1)
@@ -19,7 +13,7 @@ enum TaigiLayouts {
 
     // MARK: - Alphabetic Keyboards
 
-    // 字母鍵盤命名空間 — 涵蓋 PhahTaigi / QWERTY(TL/POJ/英文)/ TPS / MOE1 / MOE2。
+    // Alphabetic keyboard namespace — covers PhahTaigi / QWERTY (TL/POJ/English) / TPS / MOE1 / MOE2.
     enum Alphabetic {
         // MARK: PhahTaigi Layout
 
@@ -77,7 +71,7 @@ enum TaigiLayouts {
         /// QWERTY English - iPhone SE / iPad (with globe key)
         static let qwerty_English_withGlobe: [[KeyDef]] = TaigiLayouts.withGlobeKey(qwerty_English_iPhone)
 
-        // MARK: TPS Layout (Taiwanese Phonetic Symbols / 方音符號)
+        // MARK: TPS Layout (Taiwanese Phonetic Symbols)
 
         // Row 1: Voiced initials + tones + nasalized vowels
         // Row 2: Unaspirated stops + vowels + nasalized vowels
@@ -106,7 +100,7 @@ enum TaigiLayouts {
         /// TPS - iPhone SE / iPad (with globe key)
         static let tps_withGlobe: [[KeyDef]] = TaigiLayouts.withGlobeKey(tps_iPhone)
 
-        // MARK: MOE Layout 1 (教育部輸入法佈局1) - TL version
+        // MARK: MOE Layout 1 - TL version
 
         /// MOE1 TL - iPhone (no globe key)
         static let moe1_TL_iPhone: [[KeyDef]] = [
@@ -120,7 +114,7 @@ enum TaigiLayouts {
         /// MOE1 TL - iPhone SE / iPad (with globe key)
         static let moe1_TL_withGlobe: [[KeyDef]] = TaigiLayouts.withGlobeKey(moe1_TL_iPhone)
 
-        // MARK: MOE Layout 1 (教育部輸入法佈局1) - POJ version
+        // MARK: MOE Layout 1 - POJ version
 
         /// MOE1 POJ - iPhone (no globe key)
         static let moe1_POJ_iPhone: [[KeyDef]] = [
@@ -134,7 +128,7 @@ enum TaigiLayouts {
         /// MOE1 POJ - iPhone SE / iPad (with globe key)
         static let moe1_POJ_withGlobe: [[KeyDef]] = TaigiLayouts.withGlobeKey(moe1_POJ_iPhone)
 
-        // MARK: MOE Layout 2 (教育部輸入法佈局2) - TL version
+        // MARK: MOE Layout 2 - TL version
 
         /// MOE2 TL - iPhone (no globe key)
         static let moe2_TL_iPhone: [[KeyDef]] = [
@@ -148,7 +142,7 @@ enum TaigiLayouts {
         /// MOE2 TL - iPhone SE / iPad (with globe key)
         static let moe2_TL_withGlobe: [[KeyDef]] = TaigiLayouts.withGlobeKey(moe2_TL_iPhone)
 
-        // MARK: MOE Layout 2 (教育部輸入法佈局2) - POJ version
+        // MARK: MOE Layout 2 - POJ version
 
         /// MOE2 POJ - iPhone (no globe key)
         static let moe2_POJ_iPhone: [[KeyDef]] = [
@@ -167,7 +161,6 @@ enum TaigiLayouts {
 
     // 5-row design: High-frequency symbols + Quotation marks & brackets + Punctuation + Common symbols + Bottom row
 
-    // 數字鍵盤命名空間 — 高頻符號、引號括號、標點、常用符號等五列。
     enum Numeric {
         /// Numeric - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
@@ -210,7 +203,6 @@ enum TaigiLayouts {
     // 5-row design: Programming brackets + Arrows & special symbols + Currency + Math + Bottom row
     // Does not overlap with Numeric keyboard
 
-    // 進階符號鍵盤命名空間 — 程式括號、箭頭、貨幣、數學符號等;與 Numeric 不重複。
     enum Symbolic {
         /// Symbolic - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [

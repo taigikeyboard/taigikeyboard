@@ -1,6 +1,5 @@
-// Composing + Continuous-input 橋 — 12 composing ops + 4 continuous ops。
-// 對應 iOS RustEngineBridge+Composing.swift。共用 RustEngineBridge.sendRawBytes 做 JNI roundtrip。
-// 巢狀型別(ComposingTransition / ContinuousCandidate / CandidateMode 等)留在 RustEngineBridge,public API 不破。
+// Composing + Continuous-input bridge (12 composing ops, 4 continuous ops) — mirrors iOS
+// RustEngineBridge+Composing.swift via the shared JNI roundtrip; nested types stay in RustEngineBridge.
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -329,8 +328,6 @@ internal object ComposingBridge {
      * dispatch. Generation is passed through verbatim — composing-slice
      * generation bumping is owned by `ComposingManager.bumpGeneration()`,
      * not this layer.
-     *
-     * composing slice 的 FFI roundtrip,回傳原始 proto 供需要 continuous 載體的 caller(FetchAtPos)使用。
      */
     private inline fun composingProtoRoundtrip(
         methodSetter: (ComposingRequest.Builder) -> Unit,
@@ -388,9 +385,6 @@ internal object ComposingBridge {
      * [RustEngineBridge.ComposingTransition] (for engine snapshot mirroring)
      * and the [RustEngineBridge.ContinuousFetchResult.candidates] tri-state
      * read off `ComposingResponse.continuous`.
-     *
-     * Phase 6 FetchAtPos 專用分派 — 同時產生 ComposingTransition 與
-     * ContinuousFetchResult.candidates(從 proto.continuous 三態解碼)。
      */
     private inline fun composingFetchDispatch(
         methodSetter: (ComposingRequest.Builder) -> Unit,
@@ -416,8 +410,6 @@ internal object ComposingBridge {
                 // regen skipped), fall back to `displayText` so the
                 // Item 6 dual-line render does not show a blank title
                 // row. Bundled releases never hit this branch.
-                // Item 5 — hanji 為 proto3 optional;wire absent → Kotlin null。
-                // roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
                 val roman = if (msg.roman.isEmpty()) msg.displayText else msg.roman
                 RustEngineBridge.ContinuousCandidate(
                     consumedSpanStart = msg.consumedSpanStart,

@@ -15,9 +15,6 @@
 //! `InitMenu` is the legacy desktop language bar's path, off by default on
 //! Windows 11.
 
-// 語言列(系統匣)按鈕與選單:設定 / 分隔線 / 檢查更新,與 macOS 輸入來源選單一致。
-// Windows 8 以後工作列的輸入指示器只會呼叫 OnClick,不會走 TSF 的 InitMenu,所以選單由這裡自己畫。
-
 use crate::guids::CLSID_TEXT_SERVICE;
 use crate::module::instance;
 use crate::product_name;

@@ -1,5 +1,5 @@
-// 鍵盤擴充設定 / 服務初始化擴充。
-// 安裝 lexicon engine、串接 ActionHandler / AutocompleteService、處理設定變動同步。
+// Keyboard-extension setup: installs the lexicon engine, wires ActionHandler / AutocompleteService,
+// and re-syncs services when settings change.
 
 import KeyboardKit
 import SwiftUI
@@ -10,7 +10,6 @@ import UIKit
 private let setupLogger = DebugLogger(category: "KeyboardViewController+Setup")
 
 extension KeyboardViewController {
-    // 主初始化序 — 必須在第一次存取 KeyboardSettings 前呼叫。
     func setupServices() {
         // Must be called before any KeyboardSettings access. Legacy setup path
         // kept on purpose: the standard setupKeyboardKit(for:) migration did
@@ -30,8 +29,6 @@ extension KeyboardViewController {
     /// single install is sufficient. Failures are logged and left to graceful
     /// degradation at first search call (engine returns
     /// `LexiconError::NotInitialized` → bridge returns `[]`).
-    // 在 extension 啟動時安裝 Rust lexicon engine,bundle 資源整個生命週期都是唯讀,所以只裝一次。
-    // 失敗就記 log,首次查詢時引擎自然回 [] 走 graceful 降級。
     func installLexiconEngine() {
         let bundle = ResourceBundleResolver.dictionaryBundle
         guard
@@ -71,7 +68,6 @@ extension KeyboardViewController {
         }
     }
 
-    // 在支援 Liquid Glass 的裝置上開啟對應視覺效果。
     func setupLiquidGlass() {
         let context = state.keyboardContext
         if context.isLiquidGlassAvailable {
@@ -80,7 +76,6 @@ extension KeyboardViewController {
     }
 
     /// Order matters: AutocompleteService → ActionHandler → link them together.
-    // 順序敏感的服務組裝 — 先建 AutocompleteService,再建 ActionHandler,最後串連兩邊。
     func setupCoreServices() {
         // 1. Configure AutocompleteContext
         state.autocompleteContext.settings.suggestionsDisplayCount = 100
@@ -140,14 +135,6 @@ extension KeyboardViewController {
         //    `LexiconService` fallback that lazy-opened this DB but only kept
         //    the user-freq warmup, so custom-dict candidates silently vanished
         //    from the keyboard (behavioral-invariants.md §26).
-        // 連續輸入同步讀取的兩個 eager-empty user-data DB 都在此提前打開 +
-        //   建 schema:user_frequency.db(boost)+ custom_dictionary.db(自訂詞候選)。
-        //   兩者 searchSync / frequencyDataBatch 在連線開啟前回 [] 且不 lazy-open
-        //   (連續 fetch 同步,不可 block async open),故須在此 warmup。
-        //   NextWord user_association.db 不在此 — 走 async lazy-init,不需要。
-        //   custom dict warmup ungated(查詢已在 buildCustomEntries gate),連線
-        //   常駐讓設定即時開關免重啟生效;#279 刪舊 LexiconService lazy-open 卻只留
-        //   user-freq warmup → 自訂詞候選消失(§26 regression guard)。
         let userFrequencyService = CompositionRoot.userFrequencyService
         Task {
             do {
@@ -179,8 +166,6 @@ extension KeyboardViewController {
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.
-    // 依當前 inputMode 安裝對應的 AutocompleteService。English 模式用 EnglishAutocompleteService,
-    // 其它模式用 Taigi 自家的 TaigiAutocompleteService。在初始 setup 與 settings 變動時都會呼叫。
     func setupAutocompleteServiceForCurrentMode() {
         if keyboardSettings.inputMode == .english {
             services.autocompleteService = EnglishAutocompleteService()
@@ -189,9 +174,8 @@ extension KeyboardViewController {
             let autocompleteService = TaigiAutocompleteService()
             services.autocompleteService = autocompleteService
 
-            // Settings 變更路徑：ActionHandler 已存在，直接以 helper 連線。
-            // 初始建構路徑：ActionHandler 尚未建立，setupCoreServices() 會在
-            // handler 建好後再呼叫 wireTaigiAutocompleteProviders 補上 provider。
+            // Settings-change path: the handler already exists, so wire the provider now.
+            // Initial-build path: setupCoreServices() wires it once the handler is built.
             if let handler = actionHandler {
                 wireTaigiAutocompleteProviders(from: autocompleteService, to: handler)
             }
@@ -201,13 +185,10 @@ extension KeyboardViewController {
         // syncs handler.autocompleteService — no manual sync needed.
     }
 
-    /// 將 Taigi 專用的 composing provider 接上 TaigiAutocompleteService。
-    ///
-    /// 兩個呼叫路徑共用：
-    /// - `setupCoreServices()` 建立 handler 後初始連線
-    /// - `setupAutocompleteServiceForCurrentMode()` 在 settings 變更時重建 service 後重新連線
-    ///
-    /// service 為 `EnglishAutocompleteService` 或其它非 Taigi 實作時，直接略過。
+    /// Connects the Taigi composing provider to `TaigiAutocompleteService`. Called from
+    /// `setupCoreServices()` once the handler exists, and again from
+    /// `setupAutocompleteServiceForCurrentMode()` when a settings change rebuilds the service.
+    /// Non-Taigi services such as `EnglishAutocompleteService` are skipped.
     func wireTaigiAutocompleteProviders(
         from service: any KeyboardKit.AutocompleteService,
         to handler: ActionHandler,
@@ -219,8 +200,6 @@ extension KeyboardViewController {
     /// Re-read settings from App Group UserDefaults.
     /// @AppStorage didSet doesn't fire for changes from an external process,
     /// so this is triggered via UserDefaults.didChangeNotification.
-    // 從 App Group UserDefaults 重新讀取設定,@AppStorage 對跨 process 變動不會觸發 didSet,
-    // 所以由外部 didChangeNotification 主動驅動。
     func syncSettings() {
         var needsAutocompleteReset = false
 
@@ -236,8 +215,6 @@ extension KeyboardViewController {
             // the new mode's FetchAtPos calls. `bumpGeneration` then causes
             // any in-flight engine call to be silently dropped at the FFI
             // boundary (`engine/composing/src/handle.rs:61-65`).
-            // 切換輸入模式前先清連續輸入狀態 + bump generation,避免跨模式 byte
-            // 偏移污染與 in-flight 請求滲入新模式。
             actionHandler?.composingManager.resetContinuous()
             actionHandler?.composingManager.bumpGeneration()
             lastInputMode = currentInputMode
@@ -263,7 +240,6 @@ extension KeyboardViewController {
         // colors / font / corner update in place via TaigiKeyboardView, but height
         // needs a fresh layout. Gate on the RESOLVED key-height so switching between
         // two same-height themes (or any non-height change) never rebuilds.
-        // 主題改變解析後的鍵高才重建鍵盤 view(layout 重算 rowHeight);其餘外觀已即時更新,免重建。
         let currentKeyHeightScale = keyboardSettings
             .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
         if lastResolvedKeyHeightScale != currentKeyHeightScale {

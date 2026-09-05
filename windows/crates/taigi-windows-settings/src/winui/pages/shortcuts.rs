@@ -6,8 +6,6 @@
 //! the tier's. Last writer wins across both registries
 //! (`ShortcutConflicts`), and the loser's row visibly empties.
 
-// 快捷鍵 pane — 全域四顆 + 組字動作 + 選字鍵組 + 恢復預設;後寫者贏。
-
 use super::choice_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};

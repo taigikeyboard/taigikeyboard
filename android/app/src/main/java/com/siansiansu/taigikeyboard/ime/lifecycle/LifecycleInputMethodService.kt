@@ -15,10 +15,9 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 /**
- * InputMethodService 的 Lifecycle 支援基類
- *
- * 提供 LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner 支援
- * 讓 ComposeView 可以正確找到 Lifecycle
+ * Lifecycle support base class for [InputMethodService], providing
+ * [LifecycleOwner] / [ViewModelStoreOwner] / [SavedStateRegistryOwner] so a
+ * hosted [ComposeView][androidx.compose.ui.platform.ComposeView] can find them.
  */
 open class LifecycleInputMethodService :
     InputMethodService(),
@@ -46,10 +45,7 @@ open class LifecycleInputMethodService :
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
     }
 
-    /**
-     * 在 decorView 設定 ViewTree owners
-     * 讓所有 child view (包含 ComposeView) 都能找到 LifecycleOwner
-     */
+    /** Sets the ViewTree owners on `decorView` so child views (including ComposeView) can find [LifecycleOwner]. */
     fun installViewTreeOwners() {
         val decorView = window?.window?.decorView
         if (decorView != null) {

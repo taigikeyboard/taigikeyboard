@@ -37,13 +37,13 @@ enum ShortcutDefaultMigration {
     /// Oldest first. Each is independent — an install may match none, one, or
     /// both — so they are checked in turn rather than short-circuited.
     private static let migrations: [Migration] = [
-        // 切換 漢羅對調: ⌃⌘H → bare ` (USER 2026-08-21).
+        // Toggle Hanji-Roman swap: ⌃⌘H → bare ` (USER 2026-08-21).
         Migration(
             action: .toggleTranslateSwapped,
             supersededDefault: KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
             flagKey: "didMoveTranslateSwappedDefaultToBacktick",
         ),
-        // 切換 台羅/白話字: ⌃⌘R → ⌃⌘C (USER 2026-08-25). R was the mnemonic
+        // Toggle TL/POJ: ⌃⌘R → ⌃⌘C (USER 2026-08-25). R was the mnemonic
         // for "romanization", but this switch is reached for all day and is
         // muscle memory by the second day — what is left is how far the hand
         // travels, and ⌃, ⌘ and C are all on the bottom row while R is two

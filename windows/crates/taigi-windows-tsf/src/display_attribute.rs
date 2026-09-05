@@ -6,8 +6,6 @@
 //! (`GUID_PROP_ATTRIBUTE` `Clear` then `SetValue`, rakukan
 //! `on_compose.rs:379-396`).
 
-// 組字區的顯示屬性(點線底線)— 提供者、列舉器、以及每次啟用註冊一次的 atom。
-
 use crate::guids::GUID_DISPLAY_ATTRIBUTE_INPUT;
 use std::cell::Cell;
 use windows::core::{Error, Result, BOOL, BSTR, GUID};

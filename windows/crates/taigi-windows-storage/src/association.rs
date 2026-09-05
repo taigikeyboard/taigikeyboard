@@ -1,8 +1,6 @@
 //! Which word the user tends to type after which. Port of
 //! `Storage/UserAssociationStore.swift`; SQL byte-identical.
 
-// 詞關聯(bigram)資料庫,兩端都帶 canonical TL;schema v6 與 iOS/Android 一致。
-
 use crate::capacity::LearningCapacity;
 use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 use rusqlite::{params, Connection};

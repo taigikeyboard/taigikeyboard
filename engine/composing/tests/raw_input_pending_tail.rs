@@ -17,10 +17,6 @@
 //! `Phase::composing_display` is the canonical whole-composition accessor.
 //! If either invariant breaks, the Enter contract diverges silently.
 
-// 釘住 §10.2 不變式 (Model B):preedit.display_text == Phase::composing_display
-// (整段組字);preedit.raw_input == Phase::Continuous.raw 原始 bytes
-// (刻意非 Phase::raw_input — 後者走 derived chain,是既有引擎性質)。
-
 use composing::{Engine, Intent, Phase};
 use protos::engine::{AppConfig, ComposingResponse};
 

@@ -1,12 +1,8 @@
-// 功能特性詳情頁,以 JSON 驅動;支援文字、圖片、輪播、外部連結。
-
 import SwiftUI
 
 /// Feature detail page.
 ///
 /// JSON-driven display with text, images, slideshows, and external links.
-// Feature 詳情頁。FeatureContent 來自 FeatureContentLoader.features;
-// 段落 attachment 為 .link 時渲染為獨立 section 的外部連結。
 struct FeatureDetailView: View {
     let feature: FeatureContent
     @Environment(DisplayLanguageStore.self) private var lang

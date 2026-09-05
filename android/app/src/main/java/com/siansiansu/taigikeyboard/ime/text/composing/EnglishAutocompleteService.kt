@@ -1,7 +1,6 @@
-// 英文輸入模式的拼字建議服務 — 使用自帶英文頻率詞表 (EnglishWordMatcher)。
-// 對應 iOS UITextChecker,但 iOS 留用系統 UITextChecker (deliberate cross-platform
-// divergence) — Android 改自帶詞表,擺脫裝置系統 SpellCheckerSession 的相依性。
-// 僅 English InputMode 使用,Taigi 路徑走 TaigiAutocompleteService + Rust lexicon。
+// Spell suggestions for English InputMode, backed by the bundled frequency list (EnglishWordMatcher).
+// Deliberate cross-platform divergence: iOS keeps the system UITextChecker, Android ships its own list
+// so it does not depend on the device SpellCheckerSession. Taigi input uses TaigiAutocompleteService.
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -14,17 +13,11 @@ import kotlinx.coroutines.withContext
 private const val TAG = "ENSPELL"
 
 /**
- * 英文自動補全服務
+ * Completes and corrects English words from the bundled frequency list (assets/english_freq.txt).
  *
- * 使用自帶的英文頻率詞表 (assets/english_freq.txt) 提供拼字補全 + 校正,
- * 不依賴裝置的系統 SpellCheckerSession (部分機型未內建,候選會永遠空白)。
- *
- * 功能:
- * - 拼字校正:Damerau-Levenshtein (OSA) 距離 <= 2 的相近詞
- * - 自動補全:依輸入前綴預測完整單字
- *
- * 詞表載入失敗時 fail-closed (回空候選,不 crash IME)。比對邏輯在純 Kotlin 的
- * [EnglishWordMatcher];本類別只負責 asset I/O 與生命週期。
+ * Correction accepts Damerau-Levenshtein (OSA) distance <= 2; completion predicts from the typed prefix.
+ * Fail-closed on load failure (empty candidates, never crashes the IME). Matching lives in
+ * [EnglishWordMatcher]; this class owns only asset I/O and lifecycle.
  */
 class EnglishAutocompleteService(
     private val context: Context,
@@ -44,12 +37,7 @@ class EnglishAutocompleteService(
     @Volatile
     private var loadFailed = false
 
-    /**
-     * 取得英文建議。
-     *
-     * @param text 目前輸入的文字(游標前的完整文字)
-     * @return 建議列表(re-cased 對齊輸入大小寫),無 match 或載入失敗時為空
-     */
+    /** Suggestions for the current word in [text] (full text before the cursor), re-cased to match it. */
     suspend fun getSuggestions(text: String): List<EnglishSuggestion> {
         val currentWord = extractCurrentWord(text)
         if (currentWord.isEmpty()) return emptyList()
@@ -89,10 +77,7 @@ class EnglishAutocompleteService(
         null
     }
 
-    /**
-     * 從輸入文字中提取當前單字(最後一個分隔符後的文字)。
-     * 分隔符 = 空白 + `.,!?;:`;撇號/連字號不分隔(`don't` 視為單一 token)。
-     */
+    // Separators are whitespace and `.,!?;:` — apostrophe and hyphen do not split, so `don't` stays one token.
     private fun extractCurrentWord(text: String): String {
         val trimmed = text.trimEnd()
         if (trimmed.isEmpty()) return ""
@@ -106,9 +91,7 @@ class EnglishAutocompleteService(
         }
     }
 
-    /**
-     * 釋放詞表記憶體(在 onDestroy 呼叫)。
-     */
+    /** Releases the word list; call from onDestroy. */
     fun close() {
         synchronized(matcherLock) {
             matcher = null
@@ -117,9 +100,6 @@ class EnglishAutocompleteService(
     }
 }
 
-/**
- * 英文建議資料類別
- */
 data class EnglishSuggestion(
     val text: String,
 )

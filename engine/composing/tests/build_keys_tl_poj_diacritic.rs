@@ -40,8 +40,8 @@
 //! The hermetic inventory builder mirrors
 //! `engine/composing/tests/build_keys_tl_hyphen.rs:177-214`.
 
-// Phase 9 Item 9 — POJ-display canonicalize + offset map 的 end-to-end 測試。
-// 九組案例:NFC 白話字 / NFD canary / chóa / peⁿ / so͘ / so͘ + so/soo 兄弟 / tâi-ōe / 混合 combining + digit / ASCII regression / ASCII-only 防呆。
+// Phase 9 Item 9 — POJ-display canonicalize + offset map end-to-end test.
+// Nine cases: NFC 白話字 / NFD canary / chóa / peⁿ / so͘ / so͘+soo siblings / tâi-ōe / mixed combining+digit / ASCII regression / ASCII-only guard.
 
 use std::path::PathBuf;
 

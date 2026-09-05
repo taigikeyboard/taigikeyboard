@@ -163,7 +163,7 @@ fun DictionarySettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // MOE dictionaries (教育部)
+                // MOE dictionaries
                 SectionHeader(L10n.dictionaryMoeSectionTitle)
 
                 SettingsCard {

@@ -4,8 +4,6 @@
 //! `ComposingStateTest.kt` (both deleted with the migration). These pin
 //! the behavior the platform state machines deliver pre-deletion (commit 9/10).
 
-// 對齊 iOS / Android 平台原本狀態機行為的不變式測試 (parity oracle)。
-
 use composing::{Engine, Intent};
 use protos::engine::{effect::Kind as EffectKind, AppConfig, ComposingResponse};
 

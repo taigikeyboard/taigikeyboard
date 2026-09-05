@@ -1,13 +1,10 @@
-// 英打模式的 autocomplete service — 完全用 Apple UITextChecker,不走 Taigi 詞典與組字邏輯。
+// English-mode autocomplete service — Apple UITextChecker only, no Taigi dictionary or composing.
 
 import Foundation
 import KeyboardKit
 import UIKit
 
-/// 英文自動完成服務
-///
-/// 使用 Apple 的 UITextChecker 提供英文自動完成與拼字建議。
-/// 完全依賴 KeyboardKit 框架，不使用組字邏輯。
+/// Provides English completions and spelling suggestions through Apple's `UITextChecker`.
 class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - Properties
 
@@ -37,7 +34,6 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - KeyboardKit Protocol Methods
 
-    // KeyboardKit 入口 — 把 UITextChecker 的回傳包成 AutocompleteResult。
     func autocomplete(_ text: String) async throws -> AutocompleteResult {
         let suggestions = getSuggestions(for: text)
         return AutocompleteResult(
@@ -61,14 +57,13 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - Private Helpers
 
-    // 先用 UITextChecker 完成補全,沒結果再 fallback 拼字校正,各最多 3 個。
+    // Completions first; spelling guesses only when there are none. Three suggestions max either way.
     private func getSuggestions(for text: String) -> [AutocompleteSuggestion] {
         let currentWord = extractCurrentWord(from: text)
         guard !currentWord.isEmpty else { return [] }
 
         var suggestions: [AutocompleteSuggestion] = []
 
-        // 取得當前單字的自動完成建議
         let range = NSRange(0 ..< currentWord.utf16.count)
         if let completions = checker.completions(
             forPartialWordRange: range,
@@ -80,7 +75,6 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
             }
         }
 
-        // 若無自動完成建議，嘗試拼字校正
         if suggestions.isEmpty {
             let misspelledRange = checker.rangeOfMisspelledWord(
                 in: currentWord,
@@ -106,7 +100,7 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
         return suggestions
     }
 
-    /// 從輸入文字中提取當前單字（最後一個空白後的文字）
+    /// Returns the word after the last space — the one currently being typed.
     private func extractCurrentWord(from text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return "" }

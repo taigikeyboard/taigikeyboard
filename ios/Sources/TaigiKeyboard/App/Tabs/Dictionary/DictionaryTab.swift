@@ -1,14 +1,9 @@
-// Dictionary 分頁主畫面 — 詞典開關、自訂詞庫、頻率/聯想資料管理、跨詞典搜尋。
-// 各 NavigationLink 子畫面分別由 CustomDictionaryView / FrequencyDataView /
-// AssociationDataView / DataManagementView 處理。
-
 import SwiftUI
 import UIKit
 
 /// Dictionary tab.
 ///
 /// Manage dictionary toggles, custom dictionary, frequency/association data, and search.
-// Dictionary 分頁的根 View,組裝詞典開關區塊、底部搜尋列與查詢結果浮層。
 struct DictionaryTab: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var searchVM = DictionarySearchViewModel()
@@ -340,7 +335,6 @@ struct DictionaryTab: View {
     /// i18n key for a dictionary source's compact badge label. Resolved at the
     /// call site via the active display language, so the shared-core
     /// `DictionarySource` enum stays free of App-layer i18n types.
-    // 來源 badge 短標籤的 i18n key — 在此 App 層映射,讓 shared-core enum 不依賴 i18n 型別。
     private func tagKey(for source: DictionarySource) -> StringKey {
         switch source {
         case .kautian: .dictionaryKautianTag
@@ -360,7 +354,6 @@ struct DictionaryTab: View {
     /// Deduplicated badge keys for a result, preserving `sources` order. Dedup by
     /// key (not resolved string) so the 4 supplementary sources collapse to one
     /// badge regardless of the active display language.
-    // 去重後的 badge key — 以 key 去重(非解析後字串),保留 sources 原排序。
     private func uniqueTagKeys(for result: DictionarySearchResult) -> [StringKey] {
         var seen = Set<StringKey>()
         return result.sources.compactMap { source in
@@ -371,7 +364,7 @@ struct DictionaryTab: View {
 
     // MARK: - Dictionary Toggle with Description + Link
 
-    // 帶外部連結 + 說明文字的詞典開關列(MOE / 補充類詞典使用)。
+    // Dictionary toggle row with an external link + description (MOE / supplementary dictionaries).
     private func dictToggleWithDescription(
         title: String,
         url: String,
@@ -409,7 +402,7 @@ struct DictionaryTab: View {
 
     // MARK: - Dictionary Toggle with Info Button
 
-    // 帶資訊按鈕的詞典開關列(顯示 DictionaryInfo.descriptionKey 解析後的彈窗)。
+    // Dictionary toggle row with an info button (popup from DictionaryInfo.descriptionKey).
     private func dictionaryToggle(
         _ text: String,
         isOn: Binding<Bool>,
@@ -429,7 +422,8 @@ struct DictionaryTab: View {
 
     // MARK: - Kautian Subcollection Toggle (nested, dependent on master)
 
-    // 教育部辭典底下的巢狀子集開關 — 縮排顯示;父開關 (isMoeDictEnabled) 關閉時整組變灰停用 (DD7)。
+    // Nested MOE subcollection toggle, indented; greys out as a group when
+    // isMoeDictEnabled is off (DD7). Mirrors Android kautianSubcollToggle.
     private func kautianSubcollToggle(
         _ title: String,
         isOn: Binding<Bool>,

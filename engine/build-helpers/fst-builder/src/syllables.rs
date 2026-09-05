@@ -41,12 +41,6 @@
 //! toneless (`tl:tsua` / `poj:choa`). Sort + dedup happens before
 //! insert.
 
-// build-syllables 子命令 — 從 tl_num 與 poj_num 兩條 input 流取出音節,
-//   分別走 canonicalize_syllable (TL fold) 與 canonicalize_poj_syllable (POJ ASCII),
-//   keys 加上 `tl:` / `poj:` 前綴併入單一 fst::Set。
-// residue (token 沒以聲調數字結尾) 視為 build anomaly,直接 abort。
-// phonotactic 不合法 (如 tn̄g6) 計數+取樣 log 後跳過,不擋 build。
-
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::path::Path;
@@ -72,7 +66,6 @@ pub struct SyllableBuildStats {
 /// Family discriminant for the tagged-single-FST syllable inventory.
 /// The string form is consumed as a key prefix (`tl:` / `poj:`); the
 /// callback dispatches to the right phonetics canonicalizer.
-// tagged-single-FST 的家族標籤;字串形式作為 key 前綴,callback 決定 canonicalize 走 TL 或 POJ。
 #[derive(Debug, Clone, Copy)]
 enum Family {
     Tl,
@@ -101,8 +94,6 @@ impl Family {
     /// the digit-based [`split_into_syllables`] does not apply to
     /// Bopomofo. TL / POJ inputs hold one `tl_num` / `poj_num` row per
     /// line and need digit-based splitting.
-    // TPS 輸入已經一行一音節 (Python 端 per-syllable 預轉),不走 digit splitter;
-    //   TL / POJ 仍為一行一 row (含多音節),需依 ASCII 聲調數字切。
     fn line_is_single_syllable(self) -> bool {
         matches!(self, Family::Tps)
     }
@@ -126,8 +117,6 @@ pub(crate) fn run_build(
     // canonicalizer or an empty `--poj-input` to silently land a POJ-empty
     // inventory and ship as green. B-1 is B-2's hard prerequisite, C-0 is
     // C-3b's hard prerequisite — both MUST fail loud.
-    // 每家族 non-empty + valid > 0 雙閘 — 防止 POJ / TPS canonicalizer 退化或
-    //   對應 input 漏接時,builder 仍從其他家族綠燈走完寫出殘缺的 FST。
     for (label, c) in &[
         ("tl", &tl_counts),
         ("poj", &poj_counts),
@@ -194,7 +183,6 @@ pub(crate) fn run_build(
 /// Per-family running counters; returned by [`ingest_family`] so
 /// `run_build` can apply per-family non-empty + valid > 0 gates before
 /// writing the FST (Codex pre-impl B-1 SHOULD/BLOCK guard).
-// 單一家族的計數,讓 run_build 在寫 FST 前對 TL / POJ 各自閘門。
 #[derive(Default)]
 struct FamilyCounts {
     lines_in: usize,
@@ -204,7 +192,6 @@ struct FamilyCounts {
 
 /// Read one family's input file, accumulate prefixed keys into `keys`,
 /// and return the family's per-stream counters.
-// 讀一條家族 input,把帶 prefix 的 key 累積進 keys,並回該家族的計數。
 fn ingest_family(
     family: Family,
     input_path: &str,
@@ -249,9 +236,6 @@ fn ingest_family(
                     // that is the only place the boundaries are still known
                     // (see `phonetics::nasal_oo_alias_spelling`). TPS is
                     // Bopomofo and never matches.
-                    // 鼻化 oo 別名 —— 鼻化韻的 o͘ⁿ 寫法 (ASCII oonn) 與正規 onn 並列入庫,
-                    //   以該拼法輸入的使用者才切得出音節。發在這裡是因為 token 就是一個音節,
-                    //   只有此處還握有邊界 (見 phonetics::nasal_oo_alias_spelling)。TPS 是注音,不會命中。
                     let spellings = std::iter::once(canonical_toneless.clone())
                         .chain(nasal_oo_alias_spelling(&canonical_toneless));
                     for toneless in spellings {
@@ -326,7 +310,6 @@ fn collect_family_keys_from_stdin_for_test(
 /// Split a `tl_num` / `poj_num` line into syllable tokens at ASCII tone
 /// digits. Each token includes its trailing tone digit. Returns `Err` on
 /// trailing residue (token never closed) or leading-digit anomalies.
-// 把 tl_num/poj_num 行依 ASCII 聲調數字 1..=9 切成 token,trailing 不收尾或開頭即為數字算 anomaly。
 fn split_into_syllables(line: &str) -> Result<Vec<String>, String> {
     let mut tokens: Vec<String> = Vec::new();
     let mut current = String::new();

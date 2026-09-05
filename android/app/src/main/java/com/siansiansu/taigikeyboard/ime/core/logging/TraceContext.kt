@@ -1,6 +1,6 @@
-// 端到端 trace ID 機制 — TraceId.next() 在 DEBUG 配發毫秒+序號的 ID,release 走 "untraced"(zero-overhead)。
-// TraceContext 用 ThreadLocal<ArrayDeque<String>> 維護當前堆疊頂端的 trace ID,
-// 用於 keystroke 全鏈路 fn=field 結構化日誌(對齊 iOS [COMPOSE] fn=... 模式)。
+// End-to-end trace ID mechanism — TraceId.next() issues a millis+sequence ID in DEBUG, "untraced"
+// in release (zero-overhead). TraceContext keeps the top-of-stack trace ID in a
+// ThreadLocal<ArrayDeque<String>> for keystroke-wide fn=field structured logging (mirrors iOS [COMPOSE] fn=... pattern).
 
 package com.siansiansu.taigikeyboard.ime.core.logging
 

@@ -28,11 +28,6 @@
 //! composing↔lexicon boundary clean and reuses the lexicon candidate
 //! construction instead of duplicating it (Codex pre-impl S2 Q1b).
 
-// S2/S5 — 全句最佳路徑 walker(min Σ edge_cost,khiin segment_min_cost 忠實移植 = McBopomofo max Σ log P)。
-// McBopomofo 形狀:byte offset 天然拓樸序 → 單趟前向 relaxation 即合法(min-cost 下圖仍 forward-only DAG)。
-// S2/S3 的 max Σ edge_score 結構性獎勵過度切分(taiuan→乾伊有俺)→ S5 改 min-cost(見 cost.rs / roadmap S5)。
-// walker 純函式、shadow-space;每條 edge 內容由 caller(dispatch,持 LexiconHandle)注入 (Codex S2 Q1b)。
-
 use super::{cost::edge_cost, Lattice};
 
 /// Content the caller resolved for one lattice edge `(start, end)`.
@@ -41,7 +36,6 @@ use super::{cost::edge_cost, Lattice};
 /// dict hit — synthesized from the edge's own toneless roman so the
 /// no-hanji roman path is the walker's natural best path (Bug 2 / §1
 /// subsumed, not a fallback).
-// caller 為單條 edge 解出的內容;有字典命中用最佳候選,無命中用該段 toneless 羅馬字。
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EdgeChoice {
     /// Romanization for this edge. The synthesized candidate's roman
@@ -104,7 +98,6 @@ pub(crate) struct EdgeChoice {
 /// content of `edges[i]`; `edges` is contiguous and covers
 /// `0..shadow_len`. `cost` is the accumulated `Σ edge_cost`
 /// (**lower = better**).
-// walker 的全 buffer 最佳路徑;edges 連續覆蓋 0..shadow_len,cost = Σ edge_cost(越小越好)。
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct BestPath {
     pub edges: Vec<(usize, usize)>,
@@ -132,10 +125,6 @@ pub(crate) struct BestPath {
 /// `continuous::fetch_walker_slot0_inner` carve-out — keeping it here would
 /// re-introduce the over-segmentation pressure min-cost exists to
 /// remove (Codex pre-impl S5 Q5, 2026-05-17).
-// 對 lattice 跑單趟鬆弛求 0→shadow_len 的最小 Σ edge_cost 路徑;
-//   無法整段覆蓋時回 None(sub-syllable partial-prefix)→ caller 不合成 slot 0,維持 pre-S2。
-// 同分取 ascending edge order 先到者(strict < 才取代);無 edge-count tiebreak
-//   (S2 "more edges wins" 只為逼出 no-dict 逐音節,S5 移到 fetch_walker_slot0 carve-out;留著會重新引入過度切分壓力)。
 pub(crate) fn walk_best(
     lattice: &Lattice,
     shadow_len: usize,

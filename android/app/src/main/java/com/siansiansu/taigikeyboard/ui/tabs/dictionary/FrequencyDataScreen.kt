@@ -315,8 +315,7 @@ fun FrequencyDataScreen(
                                     .padding(start = 20.dp, end = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // 羅馬字 (caption/onSurfaceVariant) + 漢字 (body) 同行;
-                            // legacy tl='' 或純羅馬字 (tl == word) 不重複前綴。
+                            // Roman (caption) + hanji (body) share a row; skip roman prefix for legacy tl='' or pure-roman entries.
                             Row(
                                 modifier = Modifier.weight(1f),
                                 verticalAlignment = Alignment.CenterVertically,

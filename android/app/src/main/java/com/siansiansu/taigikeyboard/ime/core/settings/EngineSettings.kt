@@ -2,10 +2,6 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// Lexicon / 輸入引擎用的唯讀設定介面 — 由 EngineSettingsProvider 提供。
-// 純 Kotlin stdlib(無 android.* / androidx.* / coroutines),engine 層可直接依賴。
-// 所有 getter 必須 live-read,具體實作不可在初始化時快照。對應 iOS Settings/EngineSettings.swift。
-
 package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**
@@ -112,7 +108,6 @@ interface EngineSettings {
     // mirrors config.yaml dialect_columns; the bridge packs these into the
     // KautianSubcollToggles proto and Rust compute_filters owns the subtag bit
     // layout. Absent sub-message ⇒ engine keeps legacy all-on (DD5).
-    // kautian subcollection 子開關 — 10 腔調 + 姓名附錄。對應 iOS Settings/EngineSettings.swift。
     val isKautianAccentLukangEnabled: Boolean
     val isKautianAccentSansiaEnabled: Boolean
     val isKautianAccentTaipakEnabled: Boolean

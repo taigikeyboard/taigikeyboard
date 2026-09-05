@@ -17,12 +17,6 @@
 //! preedit` therefore carries the **whole composition** during Continuous;
 //! tests inspect `nailed` via `Engine::snapshot_state`.
 
-// 純粹的狀態轉移函式,不做 log/FFI/平台型別轉換。
-// Effect 順序攸關平台端消化,prost 對 repeated Effect 會保留順序。
-// Phase::Continuous 採 Model B(對齊主流,§10)— nailed 段**未**寫入文件;
-// 整段組字 (Σ nailed.display_text + pending raw 衍生形) 留在單一 marked region,
-// 直到 hard finalize 才一次把整段寫入文件。preedit 欄位反映整段組字。
-
 use crate::api::{combined_display, nailed_prefix, EngineState, Intent, NailedSegment, Phase};
 use crate::derived::{derived_display, strip_tps_separator_markers};
 use protos::engine::composing_response::Preedit;
@@ -36,7 +30,6 @@ use protos::engine::{
 };
 
 /// Apply `intent` against `state`, mutate, return the proto response.
-// 依 intent 變更 state,並回傳 proto 組字回應 (狀態機核心)。
 pub(crate) fn apply(
     state: &mut EngineState,
     intent: Intent,
@@ -120,7 +113,6 @@ pub(crate) fn apply(
 
 /// Drop the last `char` from `s` in a single UTF-8 walk via `Chars::as_str`.
 /// Returns "" if `s` is empty.
-// 安全移除字串最後一個 Unicode 字元 (單次 UTF-8 走訪),空字串回傳 ""。
 fn drop_last_char(s: &str) -> String {
     let mut it = s.chars();
     it.next_back();
@@ -130,7 +122,6 @@ fn drop_last_char(s: &str) -> String {
 /// Build a `composing` step response (typing / replace-last / delete-backward
 /// non-empty branches). All three update the preedit + request a fresh
 /// autocomplete query against the new buffer.
-// 組成「組字進行中」的回應,負責同時更新預編輯並觸發候選詞查詢。
 fn step_response(raw: String, display: String, selected_index: i32) -> ComposingResponse {
     ComposingResponse {
         preedit: Some(Preedit {
@@ -146,7 +137,6 @@ fn step_response(raw: String, display: String, selected_index: i32) -> Composing
 
 /// Enter or update the composing phase. A fresh composition step resets
 /// `selected_candidate_index` to 0.
-// 進入或更新 Composing 階段;每次新輸入會把候選索引重設為 0。
 fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> ComposingResponse {
     state.phase = Phase::Composing { raw: raw.clone() };
     state.selected_candidate_index = 0;
@@ -170,9 +160,6 @@ fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> 
 /// `text == "-"` (remainder empty → pure literal insert, stay Idle). The
 /// split also covers a multi-char `Start { text: "--ah" }` from the engine API
 /// / tests so no old-model entry survives.
-// 開頭 hyphen run(輕聲標記 --ah,在 Idle 尚無音節內容時)視為文件 literal,直接插入;
-// 若同一段後面有音節餘字則以餘字進 Composing。底線只蓋可轉換音節,對齊候選詞與 MOE。
-// 內部 hyphen(音節之後,如 tai-bak 連字)走 Append/Composing arm,維持斷詞分隔,不到此函式。
 fn enter_composing_or_insert_leading_hyphens(
     state: &mut EngineState,
     text: String,
@@ -206,8 +193,6 @@ fn enter_composing_or_insert_leading_hyphens(
 /// of an in-progress selection). Under `Phase::Continuous` it edits the
 /// pending tail only — nailed segments are untouched — but the preedit
 /// re-renders the whole composition (Model B).
-// TPS 自動修正:替換尾端字元,保留目前候選索引 (修正疊在已選擇之上)。
-// Continuous phase 下只動 pending 尾,nailed 不受影響,但 preedit 重渲染整段組字 (Model B)。
 fn replace_last(
     state: &mut EngineState,
     replacement: String,
@@ -303,9 +288,6 @@ fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResp
 ///      / both-scripts display can desync from raw).
 ///   3. pending empty AND nailed empty → exit to Idle (degenerate case;
 ///      shouldn't occur in steady state but guarded).
-// Model B 下的 Continuous backspace:nailed 未在文件,故**不**發
-// DeleteBackwardFromDocument,只重塑單一 marked region。有 pending 砍尾;
-// 無 pending 但有 nailed 則 unnail 最後一段(raw_text 回填為 pending);兩者皆空退 Idle。
 fn delete_backward_continuous(
     state: &mut EngineState,
     pending: String,
@@ -438,10 +420,6 @@ fn commit_raw_composing(
     // would hold only for the phase the platforms happen to be in (both
     // promote to Continuous after every mutation, but the engine cannot
     // depend on that — Codex post-impl BLOCK 2026-08-21).
-    // §41 — 提交去掉記號的字面而非 raw buffer。TPS 的 ASCII 空白是第一調/邊界記號(§31),
-    //   留在 raw 供 barrier 與釘調讀取,不可進到文件。下面 Continuous arm 已提交
-    //   combined_display,此 arm 必須一致 — 否則契約只在平台「剛好所處的 phase」成立
-    //   (兩平台每次變動後都會升 Continuous,但引擎不能倚賴這點)。
     exit_to_idle(
         state,
         vec![
@@ -466,10 +444,6 @@ fn commit_raw_composing(
 /// See `docs/engine/continuous-input-ranking.md` §10.3 commit contract
 /// (Enter commits the whole composition) and §10.7 "Enter after segments
 /// already nailed" row.
-// Phase 9 Item 3,Model B(§10)— Continuous 下 Enter 提交**整段組字**
-// (Σ nailed.display_text + pending 衍生形)一次 CommitTextReplacingPreedit;
-// nailed 在 Model B 從未寫入文件,故此處才一次性寫入。per-segment NextWord
-// 已在 nail 時以 UpdateLastSelectedWord 觸發,此處只發單一 terminal WordSelected。
 fn commit_raw_continuous(
     state: &mut EngineState,
     raw: String,
@@ -480,7 +454,6 @@ fn commit_raw_continuous(
     // Defensive guard: empty composition (no nailed, empty raw) violates the
     // "Continuous is non-empty in at least one of pending / nailed"
     // invariant and is unreachable under normal flow. noop, don't panic.
-    // 防禦性保護;空組字違反 Continuous 不變式,不應出現,出現時 noop 不 panic。
     if combined.is_empty() {
         return noop(state, config);
     }
@@ -497,9 +470,6 @@ fn commit_raw_continuous(
         // romanization key on both platforms. Learning `ㄍㄠ␣ㄉㄞ` where the
         // committed word is `ㄍㄠㄉㄞ` would key the row on a form no later
         // lookup reconstructs (Codex post-impl BLOCK 2026-08-21).
-        // §41 — 兩個欄位都要去掉分隔記號。text 走 derived_display;roman 是 raw 尾段,
-        //   TPS 下仍帶記號,而該字串會成為兩平台的關聯羅馬字鍵。committed 是 ㄍㄠㄉㄞ
-        //   卻學成 ㄍㄠ␣ㄉㄞ,等於把列鍵在沒有查詢會重建出來的形上。
         let tail_display = derived_display(&raw, config);
         let tail_roman = strip_tps_separator_markers(&raw);
         next_word_word_selected(tail_display, tail_roman, true)
@@ -576,7 +546,6 @@ fn commit_preedit_then_insert_external(
 /// User-initiated reset. `Phase::Continuous` adds `NextWordClearForNewComposing`
 /// to the standard Composing reset effect pair so the platform tears down
 /// nextword's continuous-mode candidate strip.
-// 使用者主動 reset;Continuous 額外發 NextWordClearForNewComposing 通知平台。
 fn reset(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match state.phase {
         Phase::Idle => noop(state, config),
@@ -650,8 +619,6 @@ fn noop(state: &EngineState, config: &AppConfig) -> ComposingResponse {
 /// composition** (`Σ nailed.display_text` + pending-tail derived form) —
 /// callers build it via [`combined_display`]. `raw_input` stays the
 /// still-editable pending tail.
-// Continuous 編輯中回應。Model B:display 為整段組字 (combined_display),
-// raw_input 仍只反映 pending 尾。
 fn continuous_step_response(
     pending: String,
     display: String,
@@ -677,9 +644,6 @@ fn continuous_step_response(
 /// state is invalid; entering it from a degenerate empty Composing buffer
 /// would violate the "Continuous is non-empty in at least one of pending /
 /// nailed" invariant — Codex post-impl finding #2).
-// Composing → Continuous;raw 不變 nailed 起始為空,不發 effect
-// (無 nailed 時 Model B 組字面 = 原 derived 形,marked text 已正確)。
-// Composing.raw 為空時不轉,維持「Continuous 至少 pending 或 nailed 一邊非空」不變式。
 fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     let Phase::Composing { raw } = &state.phase else {
         return noop(state, config);
@@ -711,7 +675,6 @@ fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
 /// Composing buffer with `text`". Emits the ResetContinuous effect trio
 /// followed by the regular Composing entry effects; final state is
 /// `Phase::Composing { raw: text }` (or Idle if `text` is empty).
-// Continuous 下收到 Start { text }:先 drop 連續狀態,再 enter_composing(text)。
 fn start_under_continuous(
     state: &mut EngineState,
     text: String,
@@ -741,8 +704,6 @@ fn start_under_continuous(
 /// `Σ nailed[i].display_text + text` — in one `CommitTextReplacingPreedit`,
 /// preserving the net-document parity the pre-Model-B behavior had
 /// (nailed-in-doc + text). Then exit Continuous.
-// Continuous 下收到 SelectSuggestion { text }。Model B:nailed 在 marked
-// region(非文件),只 commit text 會丟 nailed;故 commit Σ nailed.display_text + text。
 fn select_suggestion_under_continuous(
     state: &mut EngineState,
     text: String,
@@ -775,8 +736,6 @@ fn select_suggestion_under_continuous(
 /// text are committed in one `CommitTextReplacingPreedit` — nailed segments
 /// were never in the document, so they must ride the commit here too. Then
 /// exits Continuous. Empty `text` collapses to `noop`.
-// Continuous 下:整段組字 (Σ nailed.display_text + pending 衍生形) + external
-// 合成單次 commit,退出(Model B:nailed 未在文件,需一併寫入)。
 fn commit_preedit_then_insert_external_under_continuous(
     state: &mut EngineState,
     external: String,
@@ -805,8 +764,6 @@ fn commit_preedit_then_insert_external_under_continuous(
 /// the final-commit branch (exit to Idle); otherwise mid-commit (stay in
 /// Continuous). Programmer-error inputs (out-of-range or non-char-boundary
 /// `consumed_bytes`) collapse to `noop` rather than panicking.
-// Continuous 下的 commit;consumed_bytes >= pending.len() 為 final commit。
-// 邊界錯誤 (超界 / 非 UTF-8 邊界) 一律降為 noop,不 panic。
 // v3.5.8 Phase 9 Bug 1 (Option A): `display_text` is the swap/TPS/both-
 // scripts-formatted string the platform tap handler produced (mirroring the
 // legacy lexicon formatter); under **Model B (§10)** it is the segment's
@@ -912,9 +869,6 @@ fn commit_continuous(
 /// that **entire** region, and dropping `state` (exit to Idle) discards all
 /// nailed segments. Nothing reaches the document — abort is a clean discard,
 /// not "keep nailed, drop pending". No `DeleteBackwardFromDocument`.
-// Continuous 中途 abort。Model B:nailed 從未寫入文件;整段組字在單一
-// marked region,ClearPreeditWithoutCommit 清掉**整段**,退 Idle 丟棄所有 nailed。
-// 不碰文件,是乾淨捨棄而非「保留 nailed 只丟 pending」。
 fn reset_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     if !matches!(state.phase, Phase::Continuous { .. }) {
         return noop(state, config);
@@ -934,8 +888,6 @@ fn reset_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
 /// composition** (Model B). Empty `ch` collapses to noop (mirrors how
 /// Composing's empty `Append` produces a degenerate buffer state — kept
 /// guarded here rather than echoed forward).
-// Continuous 下的 Append:把 ch 黏到 pending 尾,nailed 不動,
-// preedit 重渲染整段組字 (Model B)。
 fn append_continuous(state: &mut EngineState, ch: String, config: &AppConfig) -> ComposingResponse {
     let Phase::Continuous { raw, nailed } = &state.phase else {
         return noop(state, config);
@@ -1014,8 +966,6 @@ fn reset_autocomplete_context() -> Effect {
 /// commit (fixing continuous-vs-normal fragmentation); the raw fallback
 /// preserves pre-R2 behavior for legacy callers + TPS-OOV hanji-absent
 /// candidates that carry no canonical TL.
-// R2 — 已釘連續 segment 的 NextWord roman 引數:有 canonical TL 用之
-//   (學到的 prev_tl/next_tl 與一般候選 commit 對齊),無則 fallback raw slice。
 fn association_roman(association_tl: &str, raw_text: &str) -> String {
     if association_tl.is_empty() {
         raw_text.to_owned()

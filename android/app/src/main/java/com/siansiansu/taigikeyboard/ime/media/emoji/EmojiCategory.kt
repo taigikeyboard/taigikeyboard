@@ -28,9 +28,6 @@ enum class EmojiCategory {
 
     override fun toString(): String = super.toString().replace("_", " & ")
 
-    /**
-     * 取得對應的 Material Icon
-     */
     fun icon(): ImageVector =
         when (this) {
             SMILEYS_EMOTION -> Icons.Default.EmojiEmotions

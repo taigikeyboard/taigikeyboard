@@ -1,5 +1,3 @@
-// 載入共用 taigi-emojis dist/emoji.json,映射成 ISEmojiView 的分類模型(資料源替換,UI 不變)。
-
 import CoreGraphics
 import CoreText
 import Foundation
@@ -51,8 +49,6 @@ enum TaigiEmojiData {
             let data = try? Data(contentsOf: url),
             let document = try? JSONDecoder().decode(Document.self, from: data)
         else {
-            // 單一資料源 = emoji.json。缺失/壞檔 = 打包錯誤,直接 assert 把錯點炸出來,
-            // 不做 plist fallback(USER:不要冗餘 fallback,否則看不到錯在哪)。
             assertionFailure("[EMOJI] emoji.json missing/unreadable — must be bundled in the keyboard-extension target")
             return []
         }

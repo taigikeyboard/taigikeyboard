@@ -390,7 +390,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// non-empty value must survive a serialize/deserialize pair so
     /// the bridge decode path `roman: msg.roman` produces the same
     /// String the engine emitted.
-    // Item 5 — roman 為非 optional;Swift wire round-trip 必須保留原值。
     func testCandidateMessage_RomanField_RoundTripsThroughWire() throws {
         var msg = Taigi_Engine_CandidateMessage()
         msg.roman = "tâi-uân"
@@ -408,7 +407,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// regen drift), bridge consumers would mis-classify TAILO
     /// candidates as `hanji == ""` and the dual-line render rule from
     /// `docs/engine/continuous-candidate-display.md` §5 would break.
-    // Item 5 — hanji 為 proto3 optional;wire absent vs Some("") 必須由 hasHanji 區分。
     func testCandidateMessage_HanjiOptional_AbsentVsPresentEmpty() throws {
         // Default-constructed message has hanji absent.
         let absent = Taigi_Engine_CandidateMessage()

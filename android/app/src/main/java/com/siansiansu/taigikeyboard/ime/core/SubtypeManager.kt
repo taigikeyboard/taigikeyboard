@@ -1,4 +1,4 @@
-// Subtype 管理器 — 從 PrefHelper.subtypes 字串解析出 List<Subtype>,並決定 active subtype。
+// Parses PrefHelper.subtypes string into a List<Subtype> and determines the active subtype.
 
 package com.siansiansu.taigikeyboard.ime.core
 

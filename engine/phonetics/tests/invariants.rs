@@ -2,8 +2,6 @@
 //! Mirrors `TaigiPhoneticsTests.swift` test_INVARIANT_* methods so the iOS
 //! production fixtures travel intact into the Rust crate.
 
-// D9 規定的 INVARIANT_* 測試,把 iOS 的 test_INVARIANT_* 方法原樣搬到 Rust。
-
 use phonetics::api::{poj_display_to_tl_display, tl_display_to_poj_display};
 
 const TL_POJ_FIXTURES: &[(&str, &str)] = &[
@@ -59,8 +57,6 @@ fn invariant_nasal_marker_variants_collapse_on_parse() {
 /// rewritten inside ONE syllable. Across a seam the same letters are an `oo`
 /// final meeting the next syllable's onset, and rewriting there destroys a real
 /// dictionary key.
-// 鼻化韻的 o͘ⁿ / oonn 別名拼法只能在「單一音節內」改寫;跨接縫的同樣字母是
-//   oo 韻碰下一個音節的聲母,在那裡改寫會毀掉真正的字典鍵。
 #[test]
 fn invariant_roman_nasal_oo_alias_is_syllable_local() {
     // The helper respells ONE syllable, and that is the whole of its contract:
@@ -74,10 +70,6 @@ fn invariant_roman_nasal_oo_alias_is_syllable_local() {
     // Pinned here: every shape the build hands over respells, tone digit
     // surviving so the numeric-tone key family gets an alias too, and a
     // syllable with no nasal final is left alone.
-    // helper 只改寫「一個音節」,而那就是它契約的全部 —— 它是展開方向,自己沒有
-    //   邊界可檢查。scope 由呼叫端持有,逐音節餵給它:create_fst.py 先依聲調數字
-    //   切 *_num(由 test_nasal_oo_alias.py 釘住,斷言 滷卵/芋卵/菜脯卵/飛烏卵 不被動),
-    //   而 fst-builder 的 build-syllables 本來就是一行一個音節。
     for (canonical, alias) in [
         ("honn", "hoonn"),
         ("honnh", "hoonnh"),
@@ -106,9 +98,6 @@ fn invariant_roman_nasal_oo_alias_is_syllable_local() {
 /// search shadow applies to a whole buffer — must never carry it. The
 /// per-syllable list keeps it, because `canonical_tl_form` needs it to hold the
 /// cross-mode identity together (Core Principle #7).
-// 整段套用的折疊正是弄壞真實詞的那個形狀(滷卵 lo͘nng → lonng),
-//   所以 shadow 整段套用的 TL_ENCODING_RULES 絕不可帶它;逐音節的表要留著,
-//   canonical_tl_form 靠它守跨模式身分(Core Principle #7)。
 #[test]
 fn invariant_roman_nasal_oo_alias_never_folds_whole_buffer() {
     assert!(

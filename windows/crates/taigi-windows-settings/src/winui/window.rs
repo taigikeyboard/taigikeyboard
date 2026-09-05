@@ -10,8 +10,6 @@
 //! pop-up rather than three drawn thumbnails; the window may be narrowed
 //! until `NavigationView` compacts its pane.
 
-// WinUI 設定視窗本體 — NavigationView + 目前 pane 的頁面;每秒一次 tick 重讀 settings.json,寫入走原子更新。
-
 use crate::presentation::{self, pane_title, PageMessage};
 use crate::settings_writer::{SettingsWriter, BUSY_REFRESH_INTERVAL, IDLE_REFRESH_INTERVAL};
 use crate::updates::{UpdateState, INSTALLED_VERSION};

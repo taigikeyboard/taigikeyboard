@@ -5,8 +5,6 @@
 //! context of its own, so it keeps a thread and a poll the window's beat
 //! collects (roadmap W9).
 
-// 更新檢查用的背景工作 — 一條執行緒 + 每次 tick 收一次結果(UpdateState 不是 component,拿不到 Reactor 的 spawn_background)。
-
 use std::sync::mpsc;
 
 /// A job in flight, and where its answer arrives.

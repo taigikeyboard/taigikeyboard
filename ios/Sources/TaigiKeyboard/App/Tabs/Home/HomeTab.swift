@@ -1,13 +1,9 @@
-// Home tab — setup guide / 打字教學 / 功能設定 / 外部連結 / FAQ 全部走 JSON 驅動。
-
 import KeyboardKit
 import SwiftUI
 
 /// Home tab.
 ///
 /// Setup guide, typing guides, feature settings, links, and FAQ.
-// 首頁 tab。內容區段:setup guide → 前 6 筆 features 當打字教學 → 其餘當功能設定
-// → 外部連結與 in-app 導覽 → 版本資訊 → FAQ。features / faqs 由 FeatureContentLoader 提供。
 struct HomeTab: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @Environment(DisplayLanguageStore.self) private var lang

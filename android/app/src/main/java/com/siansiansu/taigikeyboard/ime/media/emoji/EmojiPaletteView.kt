@@ -51,29 +51,18 @@ private val EmojiCategoryValues = EmojiCategory.entries
 private val EmojiBaseWidth = 70.dp
 private val EmojiDefaultFontSize = 35.sp
 
-// 變體指示器三角形形狀（左到右佈局）
 private val VariantsTriangleShapeLtr = GenericShape { size, _ ->
     moveTo(x = size.width, y = 0f)
     lineTo(x = size.width, y = size.height)
     lineTo(x = 0f, y = size.height)
 }
 
-// 變體指示器三角形形狀（右到左佈局）
 private val VariantsTriangleShapeRtl = GenericShape { size, _ ->
     moveTo(x = 0f, y = 0f)
     lineTo(x = size.width, y = size.height)
     lineTo(x = 0f, y = size.height)
 }
 
-/**
- * Emoji 面板主 Composable
- *
- * @param fullEmojiMappings 所有分類的 emoji 資料
- * @param preferredSkinTone 使用者偏好的膚色設定
- * @param onEmojiClick Emoji 點擊回調
- * @param onSkinToneSelected 膚色選擇回調
- * @param modifier Modifier
- */
 @Composable
 fun EmojiPaletteView(
     fullEmojiMappings: EmojiLayoutDataMap,
@@ -88,7 +77,6 @@ fun EmojiPaletteView(
     Column(modifier = modifier) {
         val pagerState = rememberPagerState(pageCount = { EmojiCategoryValues.size })
 
-        // Tab 列
         EmojiCategoriesTabRow(
             activeCategory = activeCategory,
             onCategoryChange = { category ->
@@ -99,29 +87,26 @@ fun EmojiPaletteView(
             },
         )
 
-        // 分頁內容
         HorizontalPager(
             state = pagerState,
             beyondViewportPageCount = 2,
         ) { page ->
             val lazyGridState = rememberLazyGridState()
 
-            // 同步 pager 與 activeCategory
             LaunchedEffect(pagerState.currentPage) {
                 activeCategory = EmojiCategoryValues[pagerState.currentPage]
             }
 
             val category = EmojiCategoryValues[page]
 
-            // 根據分類取得 emoji 資料
             val emojiList = remember(category, fullEmojiMappings) {
                 fullEmojiMappings[category] ?: emptyList()
             }
 
-            // 使用 key() 包裹確保 Compose 正確追蹤和複用
+            // key() keeps Compose tracking and reusing grid state per category.
             key(category) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    // Emoji Grid - 設定固定高度避免佔滿整個螢幕
+                    // Fixed height so the grid does not fill the whole screen.
                     LazyVerticalGrid(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -146,9 +131,6 @@ fun EmojiPaletteView(
     }
 }
 
-/**
- * Emoji 分類 Tab 列
- */
 @Composable
 private fun EmojiCategoriesTabRow(
     activeCategory: EmojiCategory,
@@ -187,9 +169,6 @@ private fun EmojiCategoriesTabRow(
     }
 }
 
-/**
- * 單個 Emoji 按鈕
- */
 @Composable
 private fun EmojiKey(
     emojiSet: EmojiSet,
@@ -197,7 +176,6 @@ private fun EmojiKey(
     onEmojiClick: (EmojiKeyData) -> Unit,
     onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit,
 ) {
-    // 使用 remember 快取計算結果，避免每次重組都重新計算
     val variations = remember(emojiSet) { emojiSet.variations() }
     val hasVariations = remember(emojiSet) { variations.isNotEmpty() }
     val base = remember(emojiSet, preferredSkinTone, hasVariations) {
@@ -225,7 +203,6 @@ private fun EmojiKey(
                 )
             },
     ) {
-        // Emoji 文字
         Text(
             modifier = Modifier.align(Alignment.Center),
             text = base.getCodePointsAsString(),
@@ -233,7 +210,6 @@ private fun EmojiKey(
             color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
         )
 
-        // 變體指示器
         if (hasVariations) {
             val shape = when (LocalLayoutDirection.current) {
                 LayoutDirection.Ltr -> VariantsTriangleShapeLtr
@@ -251,13 +227,11 @@ private fun EmojiKey(
             )
         }
 
-        // 變體彈窗
         if (showVariantsPopup) {
             EmojiVariationsPopup(
                 variations = variations,
                 onEmojiTap = { emoji, skinTone ->
                     onEmojiClick(emoji)
-                    // 記錄使用者選擇的膚色
                     if (skinTone != null) {
                         onSkinToneSelected(skinTone)
                     }
@@ -271,9 +245,6 @@ private fun EmojiKey(
     }
 }
 
-/**
- * Emoji 變體彈窗（膚色選擇）
- */
 @Composable
 private fun EmojiVariationsPopup(
     variations: List<EmojiKeyData>,
@@ -300,7 +271,6 @@ private fun EmojiVariationsPopup(
                 variations.chunked(6).forEach { row ->
                     androidx.compose.foundation.layout.Row {
                         row.forEach { emoji ->
-                            // 偵測 emoji 的膚色修飾符
                             val skinTone = detectSkinToneFromEmoji(emoji)
 
                             Box(
@@ -326,16 +296,11 @@ private fun EmojiVariationsPopup(
     }
 }
 
-/**
- * 偵測 emoji 中的膚色修飾符
- * 返回對應的 EmojiSkinTone，如果沒有膚色修飾符則返回 null
- */
 private fun detectSkinToneFromEmoji(emoji: EmojiKeyData): com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone? {
     val skinToneCodePoints = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone
         .availableTones()
         .map { it.codePoint }
 
-    // 檢查 emoji 的 codePoints 中是否包含膚色修飾符
     for (codePoint in emoji.codePoints) {
         if (codePoint in skinToneCodePoints) {
             return com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone

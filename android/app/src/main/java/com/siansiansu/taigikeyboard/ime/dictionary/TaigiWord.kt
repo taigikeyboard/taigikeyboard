@@ -2,9 +2,6 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 一筆候選詞值型別 —(id, roman, hanzi?, lengthScore?, sourceBitmask?)。
-// displayText 漢字優先,其次羅馬字。對應 Rust protos::TaigiWord(平台 DTO 仍保留以避免每次橋接重建)。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**
@@ -12,7 +9,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * @property id Database row ID
  * @property roman Romanized form with tone marks (POJ or TL)
  * @property hanzi Chinese characters representation (nullable)
- * @property lengthScore 詞庫頻率（frequency），用於排序。值越大代表越常用。
+ * @property lengthScore Dictionary frequency score used for ranking; higher is more common.
  * @property sourceBitmask u16 source-dictionary bitmask from `dictionary.bin`,
  *   `null` for non-dictionary sources (custom dict, autocomplete, spell-check).
  *   Consumed by `engine/ranking/src/score.rs::tier_numerator` through

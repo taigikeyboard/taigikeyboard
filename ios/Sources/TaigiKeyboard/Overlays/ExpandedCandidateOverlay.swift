@@ -1,12 +1,9 @@
-// 展開候選詞 overlay 的最外層 SwiftUI view。
-// 把候選詞排成 wrapping rows、提供上下分頁與漢字/羅馬字切換按鈕,
-// TPS 佈局下隱藏 translate 按鈕(永遠是漢字)。
+// Expanded candidate overlay — wrapping candidate grid, paging, and the 漢字 / 羅馬字 toggle (hidden under TPS).
 
 import KeyboardKit
 import SwiftUI
 
 /// Overlay that displays expanded candidate grid with navigation controls
-// 展開候選詞 overlay — 候選詞網格 + 右側控制面板(上下翻頁、translate 切換、收合)。
 struct ExpandedCandidateOverlay: View {
     let suggestions: [AutocompleteSuggestion]
     let selectedCandidateIndex: Int
@@ -15,9 +12,8 @@ struct ExpandedCandidateOverlay: View {
     let candidateDisplayMode: CandidateDisplayMode
     let onTranslateToggle: () -> Void
     let onCollapse: () -> Void
-    /// 是否為 TPS 佈局模式
     let isTPSLayout: Bool
-    /// TPS 模式下 `or` 是否映射為 ㄜ
+    /// Whether `or` maps to ㄜ in TPS mode.
     let orMapsToER: Bool
 
     @Environment(\.candidateViewStyle) private var style
@@ -230,7 +226,6 @@ struct ExpandedCandidateOverlay: View {
 
     // MARK: - Pagination
 
-    // 上翻一頁 — 每頁固定 20 個候選,計算新起點並滾動。
     private func scrollToPreviousPage(_ scrollToAction: @escaping (String) -> Void) {
         let itemsPerPage = 20
         let newStartIndex = max(0, currentPage * itemsPerPage - itemsPerPage)
@@ -243,7 +238,6 @@ struct ExpandedCandidateOverlay: View {
         }
     }
 
-    // 下翻一頁 — 每頁固定 20 個候選。
     private func scrollToNextPage(_ scrollToAction: @escaping (String) -> Void) {
         let itemsPerPage = 20
         let newStartIndex = min(suggestions.count - 1, (currentPage + 1) * itemsPerPage)

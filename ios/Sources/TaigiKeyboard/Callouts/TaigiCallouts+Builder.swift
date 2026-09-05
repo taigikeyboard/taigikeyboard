@@ -3,16 +3,11 @@
 // Lookup order: layout-specific (TPS/MOE1/MOE2) → symbol → tone variations (POJ/TL).
 // Maps are defined in TaigiCallouts+Maps.swift.
 
-// 長按 callout 動作的進入點。
-// 查詢順序:layout-specific(TPS / MOE1 / MOE2)→ Symbol → 調符變體(POJ / TL)。
-// callout 資料表定義於 TaigiCallouts+Maps.swift。
-
 import Foundation
 import KeyboardKit
 
 public extension TaigiCallouts {
     /// Long-press callout builder: layout-specific → symbol → tone variations
-    // 長按 callout 的 builder — 依 layout-specific → symbol → 調符變體順序查表。
     static let taigiCalloutActions: KeyboardCalloutActions.Builder = { params in
         guard case let .character(char) = params.action else {
             return KeyboardCalloutActions.english.actions(for: params.action)

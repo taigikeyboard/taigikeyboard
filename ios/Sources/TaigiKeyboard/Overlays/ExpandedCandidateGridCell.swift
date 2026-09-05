@@ -1,11 +1,7 @@
-// 展開候選詞 overlay 內單一候選 cell 的 SwiftUI view。
-// 顯示主標題 + 副標題、按壓回饋、選中狀態,點選後送出 suggestion 並收合 overlay。
-
 import KeyboardKit
 import SwiftUI
 
-/// Grid cell displaying a single candidate in the expanded overlay
-// 展開候選詞 overlay 中顯示單一候選的 grid cell。
+/// Grid cell displaying a single candidate in the expanded overlay.
 struct ExpandedCandidateGridCell: View {
     let suggestion: AutocompleteSuggestion
     let isTranslateSwapped: Bool
@@ -16,7 +12,7 @@ struct ExpandedCandidateGridCell: View {
     let isTPSLayout: Bool
     let orMapsToER: Bool
     let isSelected: Bool
-    /// 第一候選詞(engine ranker top, index 0) — 填滿鍵帽底色作視覺提示
+    /// First candidate (engine ranker top, index 0) — fills the keycap background as a visual cue.
     let isFirstCandidate: Bool
     let onTap: (AutocompleteSuggestion) -> Void
 

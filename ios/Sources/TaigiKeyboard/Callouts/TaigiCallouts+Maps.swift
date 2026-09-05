@@ -4,16 +4,11 @@
 // Some keys (e.g. ",", ".", "-") intentionally appear in both layout-specific and
 // SymbolCallouts with different values — the builder checks layout-specific first.
 
-// 長按 callout 的資料表 — TaigiToneMaps / TPSCallouts / MOE1Callouts / MOE2Callouts / SymbolCallouts。
-// 部分鍵(如「,」「.」「-」)同時出現在 layout-specific 與 SymbolCallouts 但值不同 —
-// builder 會優先查 layout-specific。
-
 import Foundation
 import KeyboardKit
 
 /// Namespace for Taigi long-press callout data and builders. Our own
 /// namespace — KK's `Callouts` namespace is deprecated and removed in KK 11.
-// Taigi callout 自有 namespace — KK 的 Callouts namespace 已棄用,KK 11 移除。
 public enum TaigiCallouts {}
 
 public extension TaigiCallouts {
@@ -25,8 +20,6 @@ public extension TaigiCallouts {
     /// helpers (`combiningMark` / `buildVariations`) are now built in Rust by
     /// `engine/phonetics/src/tone_variations.rs` to match the McBopomofo /
     /// khiin-rs "platform owns zero phonetics" architecture.
-    // POJ / TL 的調符變體查表 — D9.4 起改由 RustEngineBridge.toneVariations 提供,
-    // 平台端不再自行建表(對齊 McBopomofo / khiin-rs 的「平台零語音邏輯」架構)。
     enum TaigiToneMaps {
         static var poj: [String: [String]] {
             RustEngineBridge.toneVariations.poj
@@ -38,7 +31,6 @@ public extension TaigiCallouts {
     }
 
     /// TPS layout callouts (方音符號 long-press variants)
-    // TPS 方音符號佈局的長按 callout 表 — 包含數字捷徑、入聲韻尾、鼻化母音等。
     enum TPSCallouts {
         /// Glyph keys — long-press prepends the key's own glyph before these
         /// variants (see `calloutChars`). USER scope 2026-08-21: letter-variant
@@ -94,7 +86,6 @@ public extension TaigiCallouts {
     }
 
     /// MOE1 layout punctuation callouts (full-width variants)
-    // MOE1 佈局的標點 callout(全形變體 + 半形對應)。
     enum MOE1Callouts {
         static let actions: [String: [String]] = [
             // Full-width keys (when isTranslateSwapped)
@@ -112,7 +103,6 @@ public extension TaigiCallouts {
     }
 
     /// MOE2 layout punctuation callouts
-    // MOE2 佈局的標點 callout(全形 + 半形對應)。
     enum MOE2Callouts {
         static let actions: [String: [String]] = [
             // Hyphen
@@ -135,7 +125,6 @@ public extension TaigiCallouts {
     /// Symbol keyboard callouts (long-press alternatives for numeric & symbolic pages)
     /// Both half-width and full-width entries are needed because the actual character
     /// depends on isTranslateSwapped state.
-    // 數字 / 符號頁的長按 callout 表;半形與全形項目都列出,因為實際送出的字元取決於 isTranslateSwapped。
     enum SymbolCallouts {
         static let actions: [String: [String]] = [
             // === Page 1 Row 1: High-frequency symbols ===

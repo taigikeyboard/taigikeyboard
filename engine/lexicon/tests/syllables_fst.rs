@@ -20,10 +20,6 @@
 //! syllabifier crate exercises prefix walking. See
 //! `docs/reports/2026-05-20-v359-b-plan.md` §B-1.
 
-// v3.5.9 B-1 tagged-single-FST 音節合法集合契約測試 — TL 維持原 50/50 矩陣;
-//   新增 POJ 家族 pin 測試 (chit/goa/toa/che/koe/peng) 確認分屬不同前綴、
-//   contains_in(mode, …) 各管各家族,不會串味。
-
 use std::path::PathBuf;
 
 use fst::SetBuilder;

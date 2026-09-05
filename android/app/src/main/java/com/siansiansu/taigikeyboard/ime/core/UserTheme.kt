@@ -1,6 +1,3 @@
-// 使用者自訂主題 — 身分 + 名稱 + ThemeAppearance + 建立/更新時間(epoch ms)。對齊 iOS UserTheme。
-// 以 JSON list 持久化於 DataStore.userThemes。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import org.json.JSONArray

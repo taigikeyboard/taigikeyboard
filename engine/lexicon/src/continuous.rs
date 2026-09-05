@@ -1,4 +1,4 @@
-//! v3.5.8 連續輸入 (Continuous Input) Phase 5 — span-local candidate fetch.
+//! v3.5.8 Continuous Input Phase 5 — span-local candidate fetch.
 //!
 //! Given a **mode-canonical ASCII** input (TL ASCII for TL/English, POJ
 //! ASCII for POJ — both upstream-canonicalized via
@@ -19,7 +19,7 @@
 //! commit `tsua` to span 4 and lose the `珠 (tsu, span=3)` candidate.
 //! Global lattice (librime `src/rime/algo/syllabifier.cc`) is over-built
 //! for our scope. Multi-cut span-local fetch is the canonical middle
-//! ground per `docs/releases/v3.5.8/plan.md` § Phase 3 — 純函數 syllabifier (TL + TPS).
+//! ground per `docs/releases/v3.5.8/plan.md` § Phase 3 — pure-function syllabifier (TL + TPS).
 //!
 //! Multi-syllable candidates (e.g. `珠仔`) and single-syllable candidates
 //! (e.g. `紙`) under the same toneless key (`tl:tsua`) are distinguished
@@ -88,10 +88,6 @@
 //! exists only so the integration tests under `engine/lexicon/tests/`
 //! keep working without rebuilding `(span, key)` pairs inline.
 
-// v3.5.8 連續輸入 Phase 5 — 多 span 候選查詢入口。
-// 對 endings 中的每個 end 以 input[pos..end] 為 toneless key 查 FST(mode-aware
-//   前綴 `tl:` / `poj:`),把每個命中包成 RawCandidate 並用 ContinuousScore 公式打分後 desc 排序回傳。
-
 use std::cmp::Reverse;
 
 use unicode_normalization::UnicodeNormalization;
@@ -108,15 +104,12 @@ use ranking::{
 /// first-class FST family; `docs/releases/v3.5.8/plan.md` § Phase 5 — Span-local candidate fetch); Phase 6+ may extend
 /// with hanzi (0) / numeric (2) / abbrev (3) when proto-side carriers
 /// exist (Codex pre-impl review 2026-05-10 Fork 5 ACCEPT).
-// Phase 5 唯一支援的 form 標籤 (notone);其他 form 留給 Phase 6+。
-// B-2 後 toneless key 前綴 mode-aware (`tl:` / `poj:`),但 form 標籤本身仍只一種。
 pub const FORM_NOTONE: u8 = 1;
 
 /// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
 /// full-syllable hits (the pre-Item-10 path: `valid_span_endings`
 /// returned at least one ending and `fetch_candidates_for_keys`
 /// produced the candidate via `prefix_index.lookup_exact`).
-// Item 10 — 完整音節覆蓋候選 (syllabifier 切出邊界,fetch_candidates_for_keys 走 lookup_exact)。
 pub const COVERAGE_KIND_FULL: u8 = 0;
 
 /// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
@@ -125,8 +118,6 @@ pub const COVERAGE_KIND_FULL: u8 = 0;
 /// `prefix_index.lookup_prefix`). Ranks strictly below
 /// [`COVERAGE_KIND_FULL`] in [`SortKey`] regardless of any other
 /// dimension; see `docs/engine/continuous-candidate-display.md` §15.5.
-// Item 10 — 部分前綴覆蓋候選 (syllabifier 切不出邊界,改走 lookup_prefix);
-//   SortKey 上強制排在 COVERAGE_KIND_FULL 之後,不被任何其他維度反超。
 pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 
 /// Worst-case rowid hydration budget per partial-prefix lookup.
@@ -144,8 +135,6 @@ pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 /// front-loaded `tl:ka-*` multi-syllable phrases and evicted
 /// high-frequency single-syllable entries like `tl:ki` before any
 /// scoring ran.
-// partial-prefix lookup_prefix 後 dict.record hydration 上限;
-//   高於 OUTPUT_CAP 是為了讓 byte-sort 後 30 名外的高頻短候選仍能進排序。
 pub const PARTIAL_PREFIX_HYDRATE_CAP: usize = 500;
 
 /// Maximum candidates returned from [`fetch_partial_prefix_candidates`]
@@ -155,8 +144,6 @@ pub const PARTIAL_PREFIX_HYDRATE_CAP: usize = 500;
 /// [`PARTIAL_PREFIX_HYDRATE_CAP`]) hydrated pool, not the FST
 /// byte-sort prefix. Matches the legacy `LexiconService` per-request
 /// output size to keep the candidate strip visually stable.
-// partial-prefix 對外回傳上限;在 SortKey 排序之後才裁切,
-//   保證 UI 看到的是「按分數選出的 top-N」而非「FST 字典序前 N 筆」。
 pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 
 /// MOE-aligned candidate-type discriminator (`VocType` analog). Carried
@@ -171,25 +158,19 @@ pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 /// Q3.a "reserve rank use until real collisions are measured"). The
 /// existing `form` axis remains orthogonal (toneless / numeric / hanji
 /// / abbrev) and unaffected.
-// Phase 9.2 候選類型軸 — HANT 純漢字 / TAILO 純羅馬字 / MIXED 漢羅混排;
-//   由 derive_mode 用 NFKD 規範化後判斷 Latin 字母命中;不入 SortKey。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CandidateMode {
     /// Proto3 default — Rust never emits this; platforms reading the
     /// wire treat it as "unknown carrier, ignore" rather than HANT.
-    // proto3 預設值;Rust 永不主動發送,讀端視作 unknown carrier。
     Unspecified = 0,
     /// Hanji-only display (no Latin letters after NFKD normalization).
-    // 純漢字顯示(NFKD 規範後無 Latin 字母)。
     Hant = 1,
     /// Roman/romanization-only display — `DictionaryRecord.hanzi` was
     /// `None`, so `display_text` fell back to the TL field.
-    // 純羅馬字(`DictionaryRecord.hanzi == None`,display 退到 TL)。
     Tailo = 2,
     /// Hanji display containing at least one Latin letter after NFKD
     /// (e.g. `iáu未`, `ê早`, `屎î`, hypothetical fullwidth `Ａ字`).
-    // 漢字內含 Latin 字母(NFKD 規範後判斷;含 NFC composed `ê`、全角等)。
     Mixed = 3,
 }
 
@@ -198,7 +179,6 @@ impl CandidateMode {
     /// representation. Kept as a method so a future reshuffle of the
     /// proto enum values would fail this cast at compile time via the
     /// `as u32` discriminant.
-    // 對齊 proto CandidateMode 的 wire 整數;reshuffle 會編譯期 break。
     pub const fn to_proto_i32(self) -> i32 {
         self as i32
     }
@@ -221,9 +201,6 @@ impl CandidateMode {
 /// `hanji.is_some()` binary in the synth path mis-emitted HANT for
 /// mixed-script paths like `…hip相`). `pub` so `composing` reuses the
 /// wire-visible classification instead of duplicating the NFKD rule.
-// Phase 9.2 mode 推導 — hanzi=None → TAILO;NFKD 規範後若含 ASCII 字母 → MIXED;否則 HANT。
-//   數字 / 標點 / 假名 / PUA 不算 MIXED — MIXED 限定「漢字顯示內含羅馬字母」。
-// CandidateMode 唯一真相來源;record/custom/S2 walker synth 全走此(Codex PR #285 P2)。
 pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
     match hanzi {
         None => CandidateMode::Tailo,
@@ -234,7 +211,6 @@ pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
 
 /// One span-local candidate. Mirrors the 5-field shape pinned by
 /// `docs/releases/v3.5.8/plan.md` § Phase 5 — Each Candidate carries (5-field shape).
-// 單一 span-local 候選詞,5 欄位對應 roadmap §Phase 5 規格。
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawCandidate {
     /// Byte span `(start, end)` in the original input that this candidate
@@ -242,16 +218,13 @@ pub struct RawCandidate {
     /// through [`fetch_candidates_for_keys`] (the production entry; the
     /// test-only [`fetch_candidates_for_endings`] wrapper preserves the
     /// same contract); `end` is one of the offsets in `endings`.
-    // 此候選 commit 時消耗的 byte 區間 (start = pos,end ∈ endings)。
     pub consumed_span: (u32, u32),
     /// Number of TL syllables in the matched dictionary entry, copied
     /// from `DictionaryRecord::syllable_count` (1..=4 by builder cap).
-    // 對應字典條目的音節數 (builder 端上限 4)。
     pub syllable_count: u8,
     /// What the user sees / what gets committed: hanji if available,
     /// otherwise the stored TL romanization. Engine-authoritative
     /// commit key + `user_frequency.db` write key on both platforms.
-    // 上屏顯示文字 — 有漢字用漢字,否則回退到 TL 羅馬字。
     pub display_text: String,
     /// v3.5.8 Phase 9 Item 5 — display romanization carried alongside
     /// `display_text` so platform UI can render dual-line cells
@@ -263,10 +236,6 @@ pub struct RawCandidate {
     /// `nn`→`ⁿ`, …) — before emission. NEVER consulted for the engine
     /// commit (which goes through `display_text`); the platform formats
     /// its document string from this presentation roman.
-    // Phase 9 Item 5 — 顯示羅馬字 sidechannel;dual-line 候選列 render 來源。
-    // 在 lexicon 層等於 DictionaryRecord.tl;dispatch::handle_fetch_at_pos 再做呈現轉換
-    // (逐段 recase + POJ 模式下 TL→POJ-display)後才送出。引擎 commit 仍走 display_text,
-    // 不查 roman;平台則由此呈現 roman 產生文件字串。
     pub roman: String,
     /// v3.5.8 Phase 9 Item 5 — hanji display carried alongside
     /// `display_text`. `None` iff `DictionaryRecord.hanzi.is_none()`
@@ -276,8 +245,6 @@ pub struct RawCandidate {
     /// (per `docs/engine/continuous-candidate-display.md` §4.2). UI
     /// uses this as the dual-line cell subtitle; engine commit still
     /// goes through `display_text`.
-    // Phase 9 Item 5 — 漢字顯示用 sidechannel;TAILO 候選為 None。
-    // 對應 proto optional;commit 不查此欄,只用於 dual-line 候選列 subtitle。
     pub hanji: Option<String>,
     /// v3.6.1 R2 — canonical TL romanization, the identity sidechannel
     /// for the `(hanji, canonical-TL)` word-identity pair (Core
@@ -294,19 +261,10 @@ pub struct RawCandidate {
     /// only when no canonical TL is recoverable (TPS-OOV hanji-absent) —
     /// platform omits `association_tl` and the engine falls back to the
     /// raw committed slice. NEVER consulted for the document commit.
-    // R2 — canonical TL 身分 sidechannel((漢字, canonical-TL) 配對,#7)。
-    //   與 roman(顯示羅馬字,POJ mode 被改寫 + 逐段 recase)不同,此欄保持
-    //   canonical TL:dict 命中 = DictionaryRecord.tl,custom/walker-synth =
-    //   canonical_tl_form(roman, mode)。emit 上 CandidateMessage.canonical_tl,
-    //   平台 round-trip 回 CommitContinuous.association_tl,讓 NextWord 學到與
-    //   一般候選 commit 相同的 TL(修連續 vs 一般 next_tl fragmentation)。
-    //   TPS-OOV hanji-absent 無 TL 時為空 → 平台略過 → 引擎 fallback raw slice。commit 不查此欄。
     pub canonical_tl: String,
     /// Result of [`ranking::calculate_continuous_score`].
-    // 連續輸入排序分數 (見 ranking::calculate_continuous_score)。
     pub score: f32,
     /// Always [`FORM_NOTONE`] in Phase 5.
-    // 候選來源 form 標籤 (Phase 5 永遠是 FORM_NOTONE)。
     pub form: u8,
     /// Raw dictionary frequency before any bias / boost. Carried
     /// alongside the multiplicative `score` so the v3.5.8 Phase 9.1
@@ -314,7 +272,6 @@ pub struct RawCandidate {
     /// distinct from `adjusted_score`. Always equals
     /// `DictionaryRecord::frequency` for candidates produced by
     /// `fetch_candidates_for_keys`.
-    // 字典原始 freq;sort_key 內作為與 adjusted_score 區隔的二次 tie-break 維度。
     pub frequency: u32,
     /// Dictionary source bitmask copied verbatim from
     /// [`DictionaryRecord::bitmask`]. Used by the v3.5.8 Phase 9.1
@@ -322,12 +279,10 @@ pub struct RawCandidate {
     /// `docs/releases/v3.5.8/plan.md` § Phase 9. Carrying it on the candidate (vs.
     /// re-reading the dictionary record) lets the sort be a pure
     /// function of the returned `RawCandidate` vector.
-    // 字典 source bitmask;sort_key 依此呼 ranking::source_tier_rank 取得排序 rank。
     pub bitmask: u16,
     /// MOE-aligned candidate-type discriminator (HANT / TAILO / MIXED).
     /// Derived by [`derive_mode`] from `DictionaryRecord.hanzi`.
     /// Metadata-only in Phase 9.2 — not consulted by [`SortKey`].
-    // 候選類型軸 (Phase 9.2);由 derive_mode 從 hanzi 推導;不入 SortKey。
     pub mode: CandidateMode,
     /// v3.5.8 Phase 9.3a — `0` when this candidate's matching
     /// `FrequencyEntry` was selected strictly inside the
@@ -338,8 +293,6 @@ pub struct RawCandidate {
     /// `CandidateMessage` today — platform UI does not yet render a
     /// "recently used" affordance, so adding a wire field is
     /// premature (PR-9.3c may revisit).
-    // Phase 9.3a — 候選的最近使用 rank;由 record_to_candidate 從 FrequencyMap + now_ms 算好,SortKey 直接讀。
-    // 目前不上 wire (CandidateMessage 沒帶);UI 沒「最近使用」標記需求,PR-9.3c 視情況補。
     pub recency_rank: u8,
     /// v3.5.8 Phase 9 Item 10 — coverage kind for the new partial-prefix
     /// path. [`COVERAGE_KIND_FULL`] for the existing
@@ -354,8 +307,6 @@ pub struct RawCandidate {
     /// strictly below every full-syllable candidate in lexicographic
     /// order, irrespective of `tier`, score, recency, dict freq, or
     /// source rank.
-    // Item 10 — 覆蓋類型旗標;COVERAGE_KIND_FULL=0 走 lookup_exact,COVERAGE_KIND_PARTIAL_PREFIX=1 走 lookup_prefix。
-    // 不上 wire,僅供 SortKey 排序使用 — partial-prefix 永遠被排在 full-syllable 之後,不論其他維度。
     pub coverage_kind: u8,
     /// v3.5.8 Phase 9 Item 12 — `true` for candidates synthesized from
     /// a `custom_dictionary.db` entry ([`custom_entry_to_candidate`]),
@@ -369,8 +320,6 @@ pub struct RawCandidate {
     /// duplicate. Internal axis only — NOT emitted on
     /// `CandidateMessage` (same pattern as [`coverage_kind`] /
     /// `recency_rank`).
-    // Item 12 — true=custom_dictionary.db 合成候選 (source rank 0,(roman,hanji) 去重必勝),false=dict.bin FST 命中。
-    // 不上 wire,僅供 SortKey 與去重勝負政策使用。
     pub is_custom: bool,
 }
 
@@ -384,8 +333,6 @@ pub struct RawCandidate {
 /// is a romanization-only custom entry (mirrors
 /// `DictionaryRecord.hanzi` / `RawCandidate.hanji` `Option` semantics
 /// — drives [`derive_mode`] → `CandidateMode::Tailo`).
-// Item 12 — 一筆 custom_dictionary.db 命中的 domain 形;roman/hanji 為原始欄位 (未顯示大寫化),
-//   讓 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞;hanji=None 為純羅馬字 custom 條目。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CustomEntry {
     pub roman: String,
@@ -409,9 +356,6 @@ pub struct CustomEntry {
 /// literal at the call site (production builds it inside the composing
 /// seam; integration tests build it once per test). No constructor is
 /// needed.
-// D7 — 連續輸入 fetch 入口共用的 context;把原本 8 個位置參數中重複的 6 個 (filter/freq_map/clock/custom/readers)
-//   收進一個借用 struct,call site 縮到 3-4 args、移除 clippy::too_many_arguments allow。欄位順序對齊舊
-//   fetch_candidates_for_keys 參數順序,讓 git blame 可逐欄對應;欄位全 pub,call site 用 struct literal 直接建。
 pub struct ContinuousFetchCtx<'a> {
     /// `Filter::from_enabled_bitmask` input. PR-9.6 — production passes
     /// the platform's dictionary source-toggle bitmask (sentinel-
@@ -442,10 +386,6 @@ pub struct ContinuousFetchCtx<'a> {
     /// embedded in `keys` already — this field exists solely to fold
     /// the romanization fallback for the freq key, NOT to alter
     /// dictionary lookup.
-    // B-4 — fetch 當下的 input mode;custom_entry_to_candidate / OOV synth / walker
-    //   custom override 用以把 hanji-absent display_text 折成 canonical TL
-    //   (user_frequency.db commit key 跨 mode 合一)。FST key 前綴上游已決,此欄位
-    //   不影響字典 lookup。
     pub mode: phonetics::InputMode,
     /// A3 (§41) — the typed buffer's fused TPS notone body when its TAIL
     /// syllable was closed by the keyboard's space (so the user pinned
@@ -459,10 +399,6 @@ pub struct ContinuousFetchCtx<'a> {
     /// `None` for every non-TPS mode and for a TPS buffer that does not
     /// end on a space-closed unmarked syllable — the legacy all-tones
     /// behavior.
-    // A3 (§41) — 當輸入尾端音節由鍵盤空白關閉(使用者釘住該音節的無調號調:
-    //   開音節 1 / 入聲尾 4)時,帶入整個 buffer 的 fused TPS 去調 body,否則 None。
-    //   只有 whole-buffer 來源(custom 詞條在 (0, raw_len) 合成、無自身 key body)需要它;
-    //   字典命中以自己的 matched FST key 對齊。非 TPS / 尾端非空白關閉 → None(舊全聲調行為)。
     pub tps_space_pinned_body: Option<&'a str>,
 }
 
@@ -493,10 +429,6 @@ pub struct ContinuousFetchCtx<'a> {
 /// neutral behaviour (boost = 1.0, recency_rank = 1 everywhere) —
 /// `recency_rank()`'s guards (`now_ms <= 0`, `last_used_ms <= 0`,
 /// clock skew) make this a safe default.
-// D8 — test-only 連續輸入入口;production 走 composing::continuous::fetch_via_lexicon_inner 直呼
-//   fetch_candidates_for_keys 帶平台 custom,只剩 lexicon 整合測試會落到這裡。doc(hidden) 隱藏 rustdoc 公開面。
-// D / C-3b — TPS first-class 後,prefix ∈ {tl, poj, tps},全模式共用一條 span-local 入口。
-// Phase 9.3a — ctx 中 freq_map+now_ms;空 map + now_ms=0 = cold-start neutral。
 #[doc(hidden)]
 pub fn fetch_candidates_for_endings(
     input: &str,
@@ -514,11 +446,9 @@ pub fn fetch_candidates_for_endings(
     // v3.5.9 B-2 — emit the matching family prefix for `mode`. The
     // dispatcher [`matches_continuous_toneless_key`] then routes each
     // key to its mode-specific acronym-collision guard.
-    // B-2 — emit 與 mode 對應的家族前綴;下游 dispatcher 依前綴選 acronym guard。
     let prefix = match mode {
         phonetics::InputMode::Poj => "poj",
         // v3.5.9 D / C-3b — TPS first-class family.
-        // D / C-3b — TPS 連續輸入走 tps: 家族。
         phonetics::InputMode::Tps => "tps",
         phonetics::InputMode::Tl | phonetics::InputMode::English => "tl",
     };
@@ -565,8 +495,6 @@ pub fn fetch_candidates_for_endings(
     // through `composing::continuous::fetch_via_lexicon_inner` →
     // `fetch_candidates_for_keys` directly with the platform's
     // `custom_entries`.
-    // Item 12 + D7 — 此 test-only 入口不帶 custom;明確逐欄重建 inner ctx (不用 ..*ctx),
-    //   讓「強制空 custom」契約清楚、且未來若加非-Copy 欄位也不會破。
     let inner = ContinuousFetchCtx {
         enabled_sources_bitmask: ctx.enabled_sources_bitmask,
         freq_map: ctx.freq_map,
@@ -578,12 +506,10 @@ pub fn fetch_candidates_for_endings(
         // production ctx construction; this entry never carries
         // custom dict so `custom_entry_to_candidate` is never reached,
         // but the field is non-`Option` and must be set.
-        // B-4 — mode 沿用上游;此 entry 無 custom 故下游 canonicalize 不會觸發,但欄位必填。
         mode: ctx.mode,
         // A3 (§41) — carried through for symmetry. This legacy entry
         // takes pre-computed `endings` rather than a shadow pipeline, so
         // it has no space-pin signal of its own to derive.
-        // A3 (§41) — 沿用上游以保持對稱;此 legacy 入口吃現成 endings,自身無空白釘定訊號可推。
         tps_space_pinned_body: ctx.tps_space_pinned_body,
     };
     fetch_candidates_for_keys(&keys, input.len() as u32, &inner)
@@ -593,7 +519,6 @@ pub fn fetch_candidates_for_endings(
 /// in the user-facing input buffer (TL ASCII or TPS Bopomofo bytes,
 /// depending on caller). The engine only stores these verbatim in the
 /// returned `RawCandidate.consumed_span`; FST lookup uses the paired key.
-// ConsumedSpan = 使用者輸入緩衝中的 byte 區間 (TL/POJ 為 ASCII;TPS 為 Bopomofo bytes)。
 pub type ConsumedSpan = (u32, u32);
 
 /// Mode-agnostic span-local fetch entry. Each input pair is
@@ -622,7 +547,7 @@ pub type ConsumedSpan = (u32, u32);
 ///  -freq, -coverage_bytes, source_tier_rank, stable_idx)
 /// ```
 ///
-/// v3.5.8 整句 lattice + walker S8: `-coverage_bytes` was relocated
+/// v3.5.8 whole-sentence lattice + walker S8: `-coverage_bytes` was relocated
 /// from dim 3 to dim 6 (below `-adjusted_score` / `-freq`). With the
 /// slot-0 whole-sentence walker owning phrase priority, a graded
 /// longest-coverage-first rule inside a tier only buried the short
@@ -648,11 +573,6 @@ pub type ConsumedSpan = (u32, u32);
 /// produces a non-finite value — which it cannot under the
 /// public contract) are coerced to `f32::MIN` at `SortKey`
 /// construction so the descending-order invariant holds.
-// Phase 6 新增 — 模式無關的 span-local 候選查詢;接受 (consumed_span, "tl:<key>") pair list,讓 dispatch 端集中處理 TL vs TPS key 構造。
-// Phase 9.1 改:接 raw_len (= pending buffer 長度) 用於 Tier 1 判定;排序用 SortKey 8 維 lexicographic(S8:coverage 已降為 score/freq 之後弱 tiebreak)。
-// Phase 9.3a 改:把 user_freq_boost f32 換成 (FrequencyMap + now_ms),record_to_candidate 內查表算 boost 與 recency。
-// Phase 9 Item 12 改:接 custom 命中,合成 full-buffer 候選併入 out 後做 (roman,hanji) 去重 (排序前)。
-// D7 改:其餘 6 個共用 arg (filter/freq_map/clock/custom/readers) 收進 ContinuousFetchCtx。
 /// Resolve a continuous lookup key to its stored readings.
 ///
 /// TPS keys go through the ambiguity-aware automaton
@@ -668,9 +588,6 @@ pub type ConsumedSpan = (u32, u32);
 /// `tps_notone` reconstruction equals the MATCHED key, and the
 /// literal-key guard would reject every recovered word (Codex
 /// pre-impl 2026-08-19 BLOCK 3).
-// 連續查詢 key → 逐讀法回呼。TPS 走歧義感知 automaton(替換數升冪,字面優先);
-//   TL/POJ/hanzi 維持 exact(行為 byte-identical)。record 驗證必須用 matched_key,
-//   用字面 key 會把所有替代讀法命中全數誤殺(Codex BLOCK 3)。
 fn for_each_exact_reading(
     prefix_index: &PrefixIndex,
     key: &str,
@@ -686,7 +603,6 @@ fn for_each_exact_reading(
     } else {
         // TL / POJ / hanzi: byte-identical to the pre-§35 exact lookup —
         // the matched key IS the query key, no per-rowid allocation.
-        // 非 TPS 走原 exact,matched key 即查詢 key,零逐列配置。
         for rowid in prefix_index.lookup_exact(key) {
             visit(key, rowid);
         }
@@ -699,9 +615,6 @@ fn for_each_exact_reading(
 /// two, so they are exactly the tones a space-pinned candidate may carry.
 /// Tone 8 shares tone 4's coda but writes a dot, so it is excluded here —
 /// that is the 一 (`tsit8`) vs 這 (`tsit4`) split the bug report hit.
-// A3 (§41) — TPS 不寫調號的兩個調:開音節 1、入聲尾 (ㆴㆵㆻㆷ) 4。空白關閉音節,
-//   無調號的已收音節只能是這兩個。第 8 調共用入聲尾但帶點,故排除 — 即 一(tsit8)
-//   與 這(tsit4) 的分野。
 fn is_unmarked_tps_tone(tone: char) -> bool {
     matches!(tone, '1' | '4')
 }
@@ -725,12 +638,6 @@ fn is_unmarked_tps_tone(tone: char) -> bool {
 ///
 /// `reading` is a canonical TL reading — `DictionaryRecord.tl` for a
 /// dictionary hit, `CustomEntry.roman` for a custom entry.
-// A3 (§41) — reading 是否符合 tps_body 所釘的空白調:讀法必須在 tps_body 結尾
-//   剛好有音節邊界,且該音節為無調號調。tps_body 可為完整 tps: 鍵(dict 路徑用 MATCHED key
-//   — §35 替換讀法會重建成 matched 形,用字面查詢 key 會誤殺),或裸 body(whole-buffer
-//   來源:custom 詞條、walker custom override)。其他家族前綴直接通過(TL/POJ 走數字調,§17)。
-//   邊界不存在即拒絕 — 使用者在該處收了音節。reading 為 canonical TL(dict 用 record.tl,
-//   custom 用 entry.roman)。
 pub fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
     let body = match tps_body.strip_prefix("tps:") {
         Some(body) => body,
@@ -741,7 +648,6 @@ pub fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
     };
     if body.chars().any(phonetics::is_tps_tone_mark) {
         // Marked body — the verbatim toned key already filtered by tone.
-        // 已含調號 — verbatim toned key 已按聲調過濾。
         return true;
     }
     phonetics::tps_notone_prefix_boundary_tone(reading, body).is_some_and(is_unmarked_tps_tone)
@@ -764,8 +670,6 @@ pub fn fetch_candidates_for_keys(
 /// existing `(span, key)` call sites and fixtures stay untouched; an
 /// empty slice (or a short one) means "no barriers", which is also the
 /// TL / POJ / English shape.
-// fetch_candidates_for_keys + 每 key 的 barrier 資訊(平行索引,避免拓寬 tuple 動到既有呼叫端);
-//   tps_final_only[i] = keys[i] body 中 barrier 前一格的 byte 偏移;空 = 無 barrier(TL/POJ 形)。
 pub fn fetch_candidates_for_keys_with_barriers(
     keys: &[(ConsumedSpan, String)],
     tps_final_only: &[Vec<usize>],
@@ -779,7 +683,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
     // `keys` is empty, so this fn's `keys.is_empty()` branch is dead
     // for production callers — but a future caller passing empty
     // `keys` + non-empty `custom` must still get the custom merge).
-    // Item 12 — keys 空但 custom 非空時仍需合成 custom 候選 (不再 early-return)。
     if keys.is_empty() && ctx.custom.is_empty() {
         return Vec::new();
     }
@@ -795,8 +698,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
         // A3 (§41) — this span ends on the keyboard space the shadow
         // stripped, so only its unmarked tone may surface. A short or
         // empty slice means "no pin", the legacy all-tones shape.
-        // A3 (§41) — 此 span 結尾為被剝除的鍵盤空白,只許其無調號調;
-        //   slice 空/短 = 無釘定(舊全聲調形)。
         let tone_pinned = tps_tone_pinned.get(key_index).copied().unwrap_or(false);
         for_each_exact_reading(ctx.prefix_index, key, final_only, |matched_key, rowid| {
             let Some(record) = ctx.dict.record(rowid) else {
@@ -820,9 +721,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
             // (`ㄒㄧ`␣ keeps si1, drops si2/5/7; `ㄐㄧㆵ`␣ keeps tsit4,
             // drops tsit8). Validated against the MATCHED key so §35
             // substitution hits reconstruct correctly.
-            // A3 (§41) — 空白釘定的 span:丟掉釘定邊界上非無調號調的讀法
-            //   (ㄒㄧ␣ 留 si1 丟 si2/5/7;ㄐㄧㆵ␣ 留 tsit4 丟 tsit8)。
-            //   以 MATCHED key 驗證,§35 替換命中才對得起來。
             if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
                 return;
             }
@@ -831,7 +729,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
             // led to this `lookup_exact`. Partial-prefix hits flow
             // through `fetch_partial_prefix_candidates` instead and
             // carry `COVERAGE_KIND_PARTIAL_PREFIX`.
-            // 完整音節路徑固定 COVERAGE_KIND_FULL;partial-prefix 改走另一條入口。
             let effective = DictionaryReader::effective_source_bitmask(
                 record.bitmask,
                 record.kautian_subtag,
@@ -859,8 +756,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
     // collision). Mirrors the legacy lexicon path's whole-input-block
     // treatment of custom dict. See
     // `docs/engine/continuous-input-ranking.md` §10.10.
-    // Item 12 — custom 命中合成 full-buffer 候選 (is_custom→rank 0),append 在 dict.bin 之後;
-    //   (roman,hanji) 碰撞時 custom rank 0 必勝 (見下方 dedupe)。
     for entry in ctx.custom {
         // A3 (§41) — a custom entry is synthesized whole-buffer, so the
         // space pin applies to it exactly as to a dictionary hit: with the
@@ -868,9 +763,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
         // marked tone there is not what the user asked for. Skipping this
         // would let the "only tone 1/4" promise leak through the custom
         // source, which is appended AFTER dictionary filtering.
-        // A3 (§41) — custom 詞條以整個 buffer 合成,空白釘定同樣適用;
-        //   尾端音節被空白收掉時,讀法在該處帶調號的詞條不是使用者要的。
-        //   不做這層,「只剩 1/4 調」的承諾會從 custom 來源漏掉(它接在字典過濾之後)。
         if let Some(pinned_body) = ctx.tps_space_pinned_body {
             if !reading_passes_space_pin(pinned_body, &entry.roman) {
                 continue;
@@ -900,8 +792,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
     // extends it with `consumed_span` (Codex pre-impl S2 Q1d) — both
     // the custom synth and its `dict.bin` duplicate are emitted at the
     // same `(0, raw_len)` span so the collapse still fires.
-    // Item 12 + S2 — (roman,hanji,consumed_span) 去重;排序前;勝者 = source_tier_rank 最小 (custom rank 0 勝);
-    //   custom 與 dict.bin 重複者皆在 (0,raw_len) 同 span,仍碰撞。
     dedupe_by_roman_hanji_span(&mut out);
 
     // Phase 9.1 lexicographic sort. `stable_idx` is stamped from
@@ -976,16 +866,6 @@ pub fn fetch_candidates_for_keys_with_barriers(
 /// from `build_partial_prefix_key_tl` since the emitter is now
 /// mode-aware), which returns `None` when the toneless body would be
 /// empty and therefore never emits a bare `"tl:"` / `"poj:"` alone.
-// Item 10 — 部分前綴候選查詢。當 syllabifier 切不出音節邊界時 fall through 到 prefix_index.lookup_prefix。
-// rowid 上限 = PARTIAL_PREFIX_HYDRATE_CAP (hydration 預算);output 上限 = PARTIAL_PREFIX_OUTPUT_CAP (UI 預算,排序後才裁)。
-// 全部候選共用 8 維 SortKey,coverage_kind 在最前面;FULL/PARTIAL 跨 batch 合併時,
-//   composing::continuous::assemble_candidates Step 4b 在 caller 端做跨 batch
-//   (roman,hanji,consumed_span) 去重,coverage_kind 首維保證 PARTIAL 排在 FULL 之後,無需 re-sort。
-// 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu" / "poj:chi");bare namespace 不會被擋,但會 hydrate 到 PARTIAL_PREFIX_HYDRATE_CAP 筆後排序裁切;
-//   生產路徑由 composing::shadow::build_partial_prefix_key (B-2 脫 `_tl` 後綴,mode-aware) 保證不會傳 bare namespace。
-// Item 12 — custom 命中也併進 partial-prefix 路徑,標 COVERAGE_KIND_PARTIAL_PREFIX
-//   (NOT FULL — 否則繞過 §15.5「partial 永遠排在 full 之下」),legacy custom dict prefix-visible 行為對齊。
-// D7 改:其餘 6 個共用 arg 收進 ContinuousFetchCtx。
 pub fn fetch_partial_prefix_candidates(
     key: &(ConsumedSpan, String),
     raw_len: u32,
@@ -1018,11 +898,6 @@ pub fn fetch_partial_prefix_candidates(
 /// `PARTIAL_PREFIX_OUTPUT_CAP`) after the cross-batch filter; the
 /// returned vec is bounded only by `PARTIAL_PREFIX_HYDRATE_CAP` +
 /// custom count.
-// 與 fetch_partial_prefix_candidates 同管線但不裁尾 — Codex PR #351 r3321758666
-//   反應的 bug:exact 同音字超出 OUTPUT_CAP 時,bounded 版本會把整個 30 名額耗
-//   在 caller 等下要剔除的 row,使得 strict-prefix 延伸候選永遠進不來。
-//   Un-truncated 版讓 caller 在 cross-batch FULL/PARTIAL 過濾後自行裁。
-//   Empty-keys branch 沒有 FULL block,仍走有裁尾的 wrapper。
 pub fn fetch_partial_prefix_candidates_unbounded(
     key: &(ConsumedSpan, String),
     raw_len: u32,
@@ -1037,7 +912,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // does not grow `out` through the 16/32/64/128/256/512 doubling
     // sequence. Saves 2-3 reallocs on single-char prefixes that
     // saturate `HYDRATE_CAP`.
-    // 預估最壞值,省去 hydration loop 中的 Vec 倍增重配。
     let mut out: Vec<RawCandidate> =
         Vec::with_capacity(PARTIAL_PREFIX_HYDRATE_CAP + ctx.custom.len());
     // `take(PARTIAL_PREFIX_HYDRATE_CAP)` bounds `dict.record` work for
@@ -1056,13 +930,10 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // FULL-block exclude, then truncates itself. Filter rejects still
     // consume hydration budget — goal is bounding worst-case work, not
     // maximizing hits.
-    // rowid 上限拉到 HYDRATE_CAP (500) — hydration 本身便宜,讓 byte-sort 後排的高頻短候選也進排序。
-    //   此 fn 不裁尾;bounded wrapper / Step 4b 各自決定截斷時機(見 fn 尾註與 caller 端)。
     // Item 12: guard the unbounded `lookup_prefix("")` scan — with the
     // early-return now gated on `fst_key.is_empty() && custom.is_empty()`,
     // an empty `fst_key` + non-empty `custom` reaches here and must NOT
     // trigger a whole-FST scan.
-    // Item 12 — fst_key 空 + custom 非空時會走到這裡,須擋掉 lookup_prefix("") 全表掃描。
     if !fst_key.is_empty() {
         // Spend the hydrate budget on the SHORTEST matched keys first (all
         // modes). The FST wire separator `0xFF` is greater than any UTF-8
@@ -1087,22 +958,12 @@ pub fn fetch_partial_prefix_candidates_unbounded(
         // phrases, never 是/sī). `is_tps_initial_only` / `is_roman_acronym_key`
         // are conservative; the record-level `matches_continuous_*_toneless_prefix_key`
         // guard below still validates every surviving rowid.
-        // hydrate 預算優先給「最短 matched key」(三模式皆同)。FST wire 分隔符 0xFF
-        //   大於任何 UTF-8 byte → 短 exact key (tps:ㄍㄚ / tl:ka) byte 序排在其長延伸
-        //   之後;直接 take(cap) 會 front-load 最長最冷僻詞、把高頻短讀音埋到 cap 外
-        //   (回報:拍 ㄍ 只剩多音節詞)。長度分桶僅為預算政策,畫面順序仍由 SortKey 決定。
-        // 三模式皆剔除 *_abbrev 縮寫 key surface — 其短鍵在最短長度桶內與單音節完整
-        //   key 交錯 (TPS 注音子音排母音前;TL/POJ 雙音節縮寫 tl:sb 與完整 tl:si 同長度、
-        //   排在 tl:sa 與 tl:si 之間),否則會搶 budget 把單字讀音擠出 cap
-        //   (回報:拍 s 只剩 沙 + 雙字詞,撈不到 是/sī)。record 層 guard 仍逐一驗證存活 rowid。
         // §35 — the TPS partial hydration resolves through the same
         // ambiguity pattern as the exact paths (single lookup authority):
         // bare `ㄇ` lists ㆬ… words alongside ㄇ… words. The matched key
         // travels with each rowid so the record guard below validates what
         // the pattern actually hit, not the literal prefix (Codex
         // post-impl 2026-08-19 BLOCK 1). TL/POJ keep the plain lookup.
-        // §35 — TPS partial 與 exact 走同一 pattern(單一查詢裁決);matched key
-        //   隨 rowid 傳遞,record guard 驗 pattern 實際命中而非字面前綴。
         let skip_abbrev = |key: &str| match ctx.mode {
             phonetics::InputMode::Tps => {
                 phonetics::is_tps_initial_only(key.strip_prefix("tps:").unwrap_or(key))
@@ -1131,7 +992,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
         };
         // Loop-invariant: the family and the typed body's length are the
         // same for every hydrated row.
-        // 家族與輸入 body 長度對每一行都相同,迴圈外算一次。
         let reach = SyllableReach::new(fst_key);
         for (matched_key, rowid) in hits {
             let Some(record) = ctx.dict.record(rowid) else {
@@ -1148,10 +1008,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // partial-prefix path's key body is a STRICT PREFIX of the
             // toneless, so equality would reject every legitimate
             // extension hit.
-            // Codex PR #351 r3319500948 — partial-prefix 也必須過濾
-            //   `tl_abbrev`/`poj_abbrev`/`tps_abbrev` 命中,對齊 span-local
-            //   + walker 守門;此處 key body 為 toneless 嚴格前綴 → 用
-            //   matches_continuous_toneless_prefix_key 而非等值版。
             // §35 — prefix guard runs on the MATCHED key: a substituted
             // hit (`tps:ㆬㄒㄧ` under typed `tps:ㄇ`) reconstructs to the
             // matched form; the literal prefix would reject it.
@@ -1166,9 +1022,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // it. Reject a hit whose matched body IS the record's acronym
             // face — unless acronym == toneless (single-syllable words like
             // 毋 `ㆬ`, where the "acronym" is the real reading).
-            // §35 縮寫面 guard — 展開可撈到字面 range 掃不到的 tps_abbrev 鍵
-            //   (ㄇ → ㆬㄒ);首音節單 glyph 時縮寫恰為 toneless 前綴,上面的 guard
-            //   擋不住。matched body == 縮寫面即拒絕,但縮寫==toneless(單音節詞 毋)除外。
             if let Some(matched_body) = matched_key.strip_prefix("tps:") {
                 if is_tps_acronym_face_hit(matched_body, &record.tl) {
                     continue;
@@ -1179,8 +1032,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // unmarked tone. Checked against the TYPED body (the pin
             // point), not the matched key — the matched key runs past the
             // pin into the extension's later syllables.
-            // A3 (§41) — 尾端被空白釘定時,嚴格前綴延伸候選必須在該音節為無調號調。
-            //   以「輸入 body」(釘定點)檢查,不用 matched key — 後者已延伸到後續音節。
             if let Some(pinned_body) = ctx.tps_space_pinned_body {
                 if !reading_passes_space_pin(pinned_body, &record.tl) {
                     continue;
@@ -1191,9 +1042,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // 水社寮 `tsuí-siā-liâu`). Dictionary rows only — the custom-entry
             // loop below is deliberately exempt (product owner 2026-08-21: a
             // word the user added themselves stays prefix-visible).
-            // 音節到達判定 — 嚴格前綴延伸不得帶入使用者未打進的音節
-            //   (tsuisi 不可撈出 水社寮)。只作用於字典行;下方 custom
-            //   詞條迴圈刻意豁免(PO 2026-08-21:使用者自己加的詞維持前綴可見)。
             if !reach
                 .as_ref()
                 .is_none_or(|reach| reach.admits(&matched_key, &record.tl))
@@ -1224,14 +1072,11 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // §15.5's "partial-prefix ranks strictly below full-syllable" rule
     // is preserved (Codex pre-impl D6). The span-aware dedupe then runs
     // before the sort, identical to `fetch_candidates_for_keys`.
-    // Item 12 — custom 命中併入 partial-prefix,標 PARTIAL_PREFIX 不標 FULL,保 §15.5 排序不變式。
     for entry in ctx.custom {
         // A3 (§41) — same pin as the full-syllable path (see there). The
         // typed body is a strict prefix of a partial-prefix entry's
         // reading, so the check lands on the syllable the space closed,
         // not on the entry's own tail.
-        // A3 (§41) — 與完整音節路徑同一釘定;partial-prefix 詞條的讀法以輸入 body 為
-        //   嚴格前綴,故檢查落在空白收掉的那個音節,而非詞條自身尾音節。
         if let Some(pinned_body) = ctx.tps_space_pinned_body {
             if !reading_passes_space_pin(pinned_body, &entry.roman) {
                 continue;
@@ -1264,9 +1109,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // (Codex PR #351 r3321758666) takes the un-truncated pool, applies
     // its FULL-block exclude, then truncates itself — preserving the
     // visible top-N invariant after duplicates are dropped.
-    // 此處不裁尾;bounded wrapper fetch_partial_prefix_candidates 對不需 cross-batch
-    //   過濾的 caller 套 PARTIAL_PREFIX_OUTPUT_CAP。Step 4b 取 un-truncated pool
-    //   後在 caller 端套 exclude → 自己裁,確保 UI top-N 是 dup 剔除後的最佳子集。
     indexed.into_iter().map(|(_, c)| c).collect()
 }
 
@@ -1288,9 +1130,6 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 /// onto the returned candidate verbatim; the walker only reads
 /// `roman` / `hanji` / `frequency` / `syllable_count` /
 /// `display_text` off it.
-// S2 — 單一 exact FST key 的最佳字典候選 (score 最大,NaN coerce 低,平手取首 rowid)。
-// walker 每條 lattice edge 經 dispatch 注入的 provider 呼叫此函式 → walker 純 + shadow-space,
-//   重用 (非複製) lexicon 候選構造 (Codex S2 Q1b)。consumed_span 原樣戳上,walker 只讀內容欄。
 pub fn best_candidate_for_key(
     key: &str,
     consumed_span: ConsumedSpan,
@@ -1319,8 +1158,6 @@ pub fn best_candidate_for_key(
 /// stripped separator, so it needs the same restriction the span-local
 /// fetch gets — without it a walker edge could re-read a
 /// separator-closed coda as the next syllable's onset.
-// best_candidate_for_key + §35 barrier 限制(walker 的多音節 edge 可能跨 stripped 分隔符,
-//   須與 span-local fetch 同等限制,否則 walker 可能把已收音節的韻尾讀回聲母)。
 #[allow(clippy::too_many_arguments)]
 pub fn best_candidate_for_key_with_barriers(
     key: &str,
@@ -1343,10 +1180,6 @@ pub fn best_candidate_for_key_with_barriers(
     // computes and passes `tps_final_only` in edge coordinates rather than
     // this fn assuming there are no barriers (stale claim corrected by
     // Codex post-impl 2026-08-20).
-    // walker 與 span-local fetch 走同一讀法解析(Codex BLOCK 3)— 展開後的
-    //   segmenter edge 必須撈得到字典 payload。多音節 edge **可以**跨被剝除的分隔符
-    //   (§31 跨空白整詞 edge),故 tps_final_only 由呼叫端以 edge 座標算好傳入,
-    //   而非在此假設「無 barrier」(舊敘述由 Codex post-impl 2026-08-20 更正)。
     for_each_exact_reading(prefix_index, key, tps_final_only, |matched_key, rowid| {
         let Some(record) = dict.record(rowid) else {
             return;
@@ -1369,9 +1202,6 @@ pub fn best_candidate_for_key_with_barriers(
         // whole-sentence slot 0 would disagree and a wrong-tone word would
         // reappear at index 0 — the same split the explicit-tone fix (§17)
         // closed for TL/POJ digits.
-        // A3 (§41) — 此 walker edge 結尾為被剝除的鍵盤空白,slot 0 只能由釘定的
-        //   無調號調合成;否則 span-local 列與 walker slot 0 分歧,錯調字會在 index 0
-        //   復活(同 §17 為 TL/POJ 數字調關掉的分歧)。
         if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
             return;
         }
@@ -1432,11 +1262,6 @@ pub fn best_candidate_for_key_with_barriers(
 /// lattice-walk time instead of at commit-join time; this extension is
 /// the manual-nail-flow-compatible analog and is intentionally narrower
 /// in scope (an isolated UX heuristic, not a general best practice).
-// 漢字 exact-key 查詢:hanji 是否為「恰好 syllable_count 音節」的詞庫詞。
-// 掃全部 lookup_exact rowids(非 best_candidate_for_key — 分隔符不可依賴排序),
-//   syllable_count gate 為必要閘:很多雙漢字條目非 2 音節(先生 / 新婦),
-//   僅判存在會誤連;hanzi 再驗防 rowid 漂移(無法橋接位元不同的異體字)。
-// v3.5.9 longest-match 擴充 — 由固定 2 改為傳入,呼叫端 longest-match loop 用。
 pub fn compound_hanji_exists(
     hanji: &str,
     syllable_count: u8,
@@ -1484,12 +1309,6 @@ pub fn compound_hanji_exists(
 /// body still carries an ASCII digit is a numeric-tone (`tl:<tl_num>`)
 /// key, NOT a continuous toneless key, so the guard is skipped rather
 /// than silently filtering a non-continuous caller.
-// 連續輸入 abbrev 撞 key 守門 — 只有當 record 的去調拼寫真的等於查詢的 toneless key body
-//   (即經 tl_notone 命中,而非 tl_abbrev 縮寫命中)才保留。
-// 正常 IME 搜尋的 acronym 比對是刻意的(打 gi → 外夷),連續輸入是逐音節注音故為雜訊。
-// normalize_input 產生數字調形,去掉尾端 ASCII 數字即還原成 FST 儲存的 tl_notone 面。
-// 只守 tl: 族群;poj: 改走 matches_continuous_poj_toneless_key,dispatch 由
-//   matches_continuous_toneless_key 依 key 前綴選 guard;body 仍帶數字 = 數字調 key 放行。
 fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
     let Some(body) = key.strip_prefix("tl:") else {
         return true;
@@ -1518,11 +1337,6 @@ fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
 /// Accepting the respelled face cannot admit a wrong row: `oonn` never occurs
 /// in a canonical key, so the respelling is disjoint from every canonical face
 /// and can only match a body the build itself emitted.
-// face == body,另接受 face 的鼻化 oo 別名寫法。字典建置期在正規 onn 旁索引
-//   o͘ⁿ 寫法,故一行可能以「自己重建的 face 不等於」的 key 命中(好 hònn 重建為
-//   honn,卻由 tl:hoonn 命中)。與兩個 guard 之下的 er↔or 方言別名同一形狀,
-//   理由相同:建置期拼法別名一定要有 runtime 的重建對照,否則索引出去的行會被濾回來。
-// 放行別名 face 不會放行錯的行:oonn 不出現在正規 key,與所有正規 face 互斥。
 fn face_eq_with_nasal_oo_alias(face: &str, body: &str) -> bool {
     face == body || phonetics::nasal_oo_alias_spelling(face).is_some_and(|alias| alias == body)
 }
@@ -1563,12 +1377,6 @@ fn face_eq_with_nasal_oo_alias(face: &str, body: &str) -> bool {
 ///
 /// Scope mirrors the TL guard: a `poj:` key whose body still carries
 /// an ASCII digit is treated as a numeric-tone key and passed through.
-// B-2 — POJ analog。record 沒有 poj 欄位(Codex BLOCK #1)。
-//   依 merge_csv.py 既有 build pipeline 邏輯做 encoding-only derive:
-//   tl_display_to_poj_display → split `[-,空格]` → NFD 去 8 個 tone combining mark + 小寫
-//   → concat → 套 NORMALIZE_TO_POJ_RULES → 去 ASCII 數字。
-// 不做 phonotactic gating(Codex post-impl SHOULD #1):build pipeline 本身不 gate,
-//   gate 會誤殺 `hehⁿ` / `ho͘hⁿ` 等 ~10 條合法字典行。
 fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
     let Some(body) = key.strip_prefix("poj:") else {
         return true;
@@ -1594,8 +1402,6 @@ fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
 /// `uī` → `ui`, concat `toui` (no `ou` formed). The non-golden parity
 /// test `engine/lexicon/tests/poj_notone_parity.rs` pins this against
 /// every row of `dictionary/output/dictionary.csv`.
-// B-2 — encoding-only POJ-notone derive。逐 token 套 normalize_to_poj 後再 concat,
-//   避免 `ou→oo` 跨連字號邊界誤觸發 (例如 `tó-uī` 不應變成 `tooi`)。
 fn derive_poj_notone_for_match(poj_display: &str) -> String {
     use unicode_normalization::UnicodeNormalization;
     let mut out = String::with_capacity(poj_display.len());
@@ -1625,8 +1431,6 @@ fn derive_poj_notone_for_match(poj_display: &str) -> String {
 /// enumerates. Inlined here (not exported from phonetics) so the
 /// matching guard stays self-contained; the same 8 codepoints are
 /// pinned in `engine/composing/src/shadow.rs::is_tone_combining_mark`.
-// 與 phonetics::tables::COMBINING_TO_TONE_NUM 同步的 8 個 combining 聲調符號;
-//   shadow.rs::is_tone_combining_mark 也是同一份;改一處須同步另一處 (測試會抓到漂移)。
 fn is_combining_tone_mark(c: char) -> bool {
     matches!(
         c,
@@ -1668,13 +1472,6 @@ fn is_combining_tone_mark(c: char) -> bool {
 /// numeric-tone (`tps:<tps_num>`) key, not the toneless continuous one,
 /// so the guard passes through (mirrors TL/POJ guards' digit-in-body
 /// bypass).
-// D / C-3b — TPS toneless-key abbrev-collision 守門。
-//   walker 發 tps:<bopomofo_toneless> 鍵時,FST 可能回 tps_abbrev 命中(逐音節首字串接)
-//   恰巧同 body 的 record。連續輸入是逐音節打,非縮寫意圖 → 應濾除。
-// C-3a 變體接受 — build pipeline 對含 ㄜ row dual-emit `tps:<tps_notone>` +
-//   `tps:<tps_notone_var>`(ㄜ→ㄛ);guard 兩形都接受,否則打 ㄛ 形會被誤殺。
-//   `tps_notone_from_tl` 推主形,`tps_notone_or_variant` 推 ㄛ 變體形。
-//   body 仍含 TPS 聲調符 = 數字調鍵,放行(與 tl:/poj: guard 對稱)。
 fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
     let Some(body) = key.strip_prefix("tps:") else {
         return true;
@@ -1700,9 +1497,6 @@ fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
 /// v3.5.9 D / C-3b — `tps:` added; routes to
 /// [`matches_continuous_tps_toneless_key`] now that the TPS continuous
 /// walker emits `tps:` family keys against `dictionary.fst`.
-// B-2 — 依 key 前綴選擇 toneless guard;`tl:` / `poj:` 各走自家 guard,
-//   `hanzi:` / 未知前綴經 TL guard 的 strip_prefix 失敗早返 true 而透過。
-// D / C-3b — 加 tps: 分支,TPS 連續輸入走自家 guard。
 /// §35 abbrev-face guard for the TPS partial-prefix path: true when
 /// `matched_body` is one of the record's ACRONYM faces (primary
 /// `tps_abbrev`, or its C-3a or→er dialect variant — both are in the
@@ -1714,9 +1508,6 @@ fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
 /// variant-notone word (or-á — notone `ㄜㄚ` / variant `ㄛㄚ`, whose
 /// acronym faces coincide with them) must keep its legitimate variant
 /// hit (Codex confirms 2026-08-19).
-// §35 縮寫面 guard(TPS partial 專用)— matched body 等於任一縮寫面(primary
-//   或 er↔or 變體)且不等於任一 toneless 面時拒絕。變體 notone 單音節詞(or-á)
-//   的變體命中必須豁免。
 fn is_tps_acronym_face_hit(matched_body: &str, record_tl: &str) -> bool {
     let abbrev_face = phonetics::tps_abbrev_from_tl(record_tl);
     let abbrev_variant = phonetics::tps_notone_or_variant(&abbrev_face);
@@ -1764,12 +1555,6 @@ fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
 ///
 /// Sibling of [`matches_continuous_toneless_key`]; the two share the
 /// reconstruction code and only differ in `==` vs `starts_with`.
-// 部分前綴版 toneless guard — 與 matches_continuous_toneless_key 對稱,
-//   差別在 `reconstructed == body` 改為 `reconstructed.starts_with(body)`。
-//   Span-local/walker 的 key body 是完整 toneless,partial-prefix 的 body
-//   是 toneless 的嚴格前綴 (lookup_prefix 命中既含真正前綴延伸也含
-//   tl_abbrev 字首同字符的 acronym 命中);Codex PR #351 r3319500948 抓到
-//   原本未過濾,本變體把 acronym leak 擋掉。重用同一份 derivation。
 fn matches_continuous_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
     if key.starts_with("poj:") {
         matches_continuous_poj_toneless_prefix_key(key, record_tl)
@@ -1805,12 +1590,6 @@ fn matches_continuous_tl_toneless_prefix_key(key: &str, record_tl: &str) -> bool
 /// Admitting the respelled face cannot admit a wrong row: `oonn` never occurs
 /// in a canonical key, so the respelling is disjoint from every canonical face
 /// and only ever matches a body the build itself emitted.
-// face.starts_with(body),另接受 face 的鼻化 oo 別名寫法。字典建置期會在正規 onn
-//   旁索引 o͘ⁿ 寫法,故一行可能以「自己重建出的 face 開不了頭」的 key 被找到
-//   (好 hònn 重建為 honn,卻是由 tl:hoonn 命中)。與下一個 guard 的 er↔or 方言別名
-//   (tps_notone_or_variant) 同一形狀。
-// 放行別名 face 不會放行錯的行:oonn 不會出現在正規 key,別名與所有正規 face 互斥,
-//   只可能對上建置期自己發出的 body。
 fn starts_with_face_or_nasal_oo_alias(face: &str, body: &str) -> bool {
     if face.starts_with(body) {
         return true;
@@ -1823,11 +1602,6 @@ fn starts_with_face_or_nasal_oo_alias(face: &str, body: &str) -> bool {
     // spelling the user has chosen yet, and the extension pool is capped, so
     // the extra rows displace real ones (護欄 / 虎貓 / 好學 fell off `hoo`).
     // Once `oonn` is actually typed the choice is unambiguous.
-    // 別名分支要求「輸入自己帶別名拼法」。改寫後的 face 是正規 face 的嚴格超字串,
-    //   沒這道閘的話它的每個前綴都會命中:打 tl:hoo(予/戶/雨,極常用)會開始撈出
-    //   好/否/呼/齁,因為它們改寫後的 face 是 hoonn。使用者那時還沒選定這個拼法,
-    //   而延伸候選池有上限,多出來的列會把真的候選擠掉(護欄/虎貓/好學 從 hoo 掉出去)。
-    //   等 oonn 真的打出來,意圖就沒有歧義了。
     body.contains(phonetics::NASAL_OO_ALIAS_SPELLING)
         && phonetics::nasal_oo_alias_spelling(face).is_some_and(|alias| alias.starts_with(body))
 }
@@ -1889,16 +1663,6 @@ fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> boo
 /// fail-open on a tone-bearing body, this one measures it — so it belongs to a
 /// refactor round with its own behaviour-freeze list, not here. Do not add a
 /// fifth independent reconstruction.
-// 嚴格前綴延伸候選必須「打進」該詞條的最後一個音節 —— 引擎層規則
-//   「候選音節數不超過使用者已輸入的音節數」(PO 2026-08-21,三平台一致)。
-//   修正前 lookup_prefix 會把所有「key 以輸入開頭」的行都撈進來:
-//   tsuisi(2 音節)撈出 水社寮(3)、kesithau(3)撈出 家私頭仔(4),
-//   最後一個音節根本沒打到。
-// 以「逐音節到達與否」而非「音節數比較」表述,因為「使用者打了幾個音節」
-//   沒有唯一答案(aia 可切 ai+a 也可切 a+i+a),而 阿姨仔 a-î-á 是 exact 命中
-//   必須留下。量測輸入走進詞條自身音節鏈多遠,正好回答產品問題,且 exact
-//   命中天然不受影響(其 key 即輸入本身,多音節讀法的 head 必然更短)。
-// 家族與輸入 body 長度對每一行都相同,故由輸入 key 建一次後逐行詢問。
 struct SyllableReach<'a> {
     /// `<family>:`, including the colon.
     family: &'a str,
@@ -1908,7 +1672,6 @@ struct SyllableReach<'a> {
 impl<'a> SyllableReach<'a> {
     /// `None` for a key with no `<family>:` prefix — nothing to measure
     /// against, so the caller leaves every hit alone.
-    // key 沒有家族前綴 → None,呼叫端全部放行。
     fn new(typed_key: &'a str) -> Option<Self> {
         let family_end = typed_key.find(':')? + 1;
         Some(Self {
@@ -1937,10 +1700,6 @@ impl<'a> SyllableReach<'a> {
     /// and `tests/tps_notone_parity.rs` pin all five columns byte-for-byte
     /// against the shipped CSV, so a fail-open here means a real drift, not a
     /// tolerated gap.
-    // 讀法用 matched_key 選面(該行是以那個面被找到的;§35 TPS 歧義家族的
-    //   matched_key 是替換後的完整儲存 key 而非輸入前綴),到達距離用「輸入
-    //   body」量(替換是逐字元的,不會讓輸入前綴變長)。
-    // 無法重建的 key 面(縮寫面、過不了 POJ phonotactic gate 的讀法)維持原行為。
     fn admits(&self, matched_key: &str, record_tl: &str) -> bool {
         let Some(matched_body) = matched_key.strip_prefix(self.family) else {
             return true;
@@ -1949,7 +1708,6 @@ impl<'a> SyllableReach<'a> {
             return true;
         };
         // A single-syllable reading is reached by any non-empty typed prefix.
-        // 單音節讀法,任何非空輸入前綴都算已到達。
         match ends.len() {
             0 | 1 => true,
             count => (ends[count - 2] as usize) < self.typed_body_len,
@@ -1967,10 +1725,6 @@ impl<'a> SyllableReach<'a> {
     /// a second face of the same reading, so it is tried when the primary does
     /// not cover the body; the substitution is one Bopomofo scalar for another
     /// of the same width, so the boundaries carry over unchanged.
-    // 回傳該詞條在「matched_body 所屬 key 面」上的逐音節結束位移;無可重建的面回 None。
-    //   面的判定與既有 guard 同法:含 ASCII 數字 → 含調家族 (tl_num/poj_num),
-    //   含注音調號 → tps_num,其餘為去調 fused 家族。C-3a er↔or 方言變體是同一
-    //   讀法的第二個面,主面不涵蓋時再試;替換是等寬注音字元,邊界不變。
     fn syllable_ends(&self, matched_body: &str, record_tl: &str) -> Option<Vec<u32>> {
         match KeyFace::of(self.family, matched_body)? {
             KeyFace::TpsNum | KeyFace::TpsNotone => {
@@ -2009,10 +1763,6 @@ impl<'a> SyllableReach<'a> {
     /// boundary after it by one. A syllable that is nothing but its tone digit
     /// disappears entirely, and must not leave a boundary behind — that would
     /// count a syllable the toneless face does not have.
-    // face 涵蓋 matched_body 時回傳邊界;body 來自去調面則先剝掉聲調數字。
-    //   去調欄就是含調欄剝掉數字(notone.py::remove_tone),故一次衍生答兩個面:
-    //   剝掉一個數字會讓該音節與其後所有邊界各左移一。只由聲調數字構成的音節
-    //   會整個消失,不可留下邊界,否則會多算一個該面沒有的音節。
     fn covering(
         matched_body: &str,
         (num, ends): (String, Vec<u32>),
@@ -2055,14 +1805,6 @@ impl<'a> SyllableReach<'a> {
 ///
 /// `None` for a family with no romanization face at all (`hanzi:`), and for any
 /// family added later — the caller fails open rather than guessing a face.
-// 判定 hydrate 到的 body 屬於哪個儲存 key 面。create_fst.py 每個家族出兩個
-//   羅馬字面 —— 含調欄(tl_num/poj_num,數字兼作音節分隔)與去調 fused 欄,
-//   TPS 同理 —— 兩者是不同座標系:拿去調 head 比含調 body,每音節會短一個數字。
-//   把這個判定命名,決策就只有一處,不必到處重寫 any(is_ascii_digit)。
-// 同檔的既有 guard 讀同樣兩個 predicate 但政策相反:matches_continuous_*
-//   對帶調 body 直接放行(含調 key 保留給非連續路徑),而 SyllableReach 必須
-//   在含調面上量,否則 tai5 會被誤殺。是刻意分歧,不是漂移。
-// 沒有羅馬字面的家族(hanzi:)與日後新增的家族回 None,呼叫端放行而不猜面。
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum KeyFace {
     TlNum,
@@ -2122,8 +1864,6 @@ fn record_to_candidate(
     // before `hanzi.unwrap_or(tl)` consumes the TL string. `hanji`
     // mirrors `DictionaryRecord.hanzi` verbatim so the proto3
     // `optional` field can preserve the absent-vs-empty distinction.
-    // Item 5 — 在 hanzi.unwrap_or(tl) 移走 tl 之前 clone 一份到 roman 欄位;
-    //   hanji 直接照搬 DictionaryRecord.hanzi,讓 proto optional 保留 None vs Some("")。
     let roman = tl.clone();
     // R2 identity sidechannel: `DictionaryRecord.tl` is already canonical
     // TL, so `canonical_tl` equals `roman` here BEFORE the composing-layer
@@ -2164,7 +1904,6 @@ fn record_to_candidate(
         // dict.bin FST hit — `source_tier_rank` derives the rank from
         // `bitmask`; `is_custom = false` keeps the kautian/taigitv/…
         // ordering. Only `custom_entry_to_candidate` sets `true`.
-        // dict.bin 命中,rank 由 bitmask 推導;custom 才設 true。
         is_custom: false,
     }
 }
@@ -2202,9 +1941,6 @@ fn record_to_candidate(
 /// - `mode = derive_mode(hanji)` — TAILO when `hanji` is `None`.
 /// - user-frequency boost / recency are applied identically to
 ///   `dict.bin` candidates (custom entries can also be user-selected).
-// Item 12 — custom_dictionary.db 一筆 → RawCandidate;full-buffer span (final-commit)、
-//   freq=0 syll=1、is_custom=true (source rank 0,主管去重勝負與前維 tie,不全域置頂)、
-//   display_text/mode/boost/recency 與 record_to_candidate 同契約。
 fn custom_entry_to_candidate(
     entry: &CustomEntry,
     raw_len: u32,
@@ -2226,10 +1962,6 @@ fn custom_entry_to_candidate(
     // left raw (the walker / `custom_toneless_key` need it in the
     // user's native form so POJ-family lattice keys match against
     // POJ-form custom roman — see `composing::shadow::custom_toneless_key`).
-    // B-4 — display_text = 平台寫 user_frequency.db 的 commit key;
-    //   hanji 缺時 fallback 是 roman,可能為 POJ display 形。canonical_tl_form
-    //   把它折成 canonical TL 讓 freq key 跨 mode 合一。roman 保留原樣(walker /
-    //   custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵)。
     // R2 identity sidechannel: fold the user's native-form roman (POJ
     // display form on a POJ-mode entry) to canonical TL ONCE, then reuse
     // for both the hanji-absent `display_text` fallback and the
@@ -2267,7 +1999,6 @@ fn custom_entry_to_candidate(
         // No `dict.bin` source bits; rank is forced to 0 via
         // `is_custom = true` in `SortKey::new` /
         // `dedupe_by_roman_hanji_span` (`source_tier_rank` short-circuits).
-        // 無 dict.bin source bit;rank 由 is_custom=true 強制為 0。
         bitmask: 0,
         mode,
         recency_rank: recency,
@@ -2304,9 +2035,6 @@ fn custom_entry_to_candidate(
 ///   FST hit).
 /// - Survivor **insertion order is preserved** so the downstream
 ///   `SortKey.stable_idx` stays deterministic.
-// Item 12 + S2 — (roman,hanji,consumed_span) 三鍵去重,排序前執行;
-//   加 span 讓「同詞不同 span」(walker / path-step) 不被誤併;custom-vs-dict.bin
-//   仍同 (0,raw_len) span 碰撞,custom rank 0 必勝。同 rank 取較早插入者;倖存者保插入序。
 fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
     use std::collections::HashMap;
     // key → (winning source rank, index of winner in `out`).
@@ -2339,11 +2067,10 @@ fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
     });
 }
 
-// ---------------------------------------------------------------------------
 // v3.5.8 Phase 9.1 — SortKey
 //
 // Encodes the eight-dimension lexicographic sort policy pinned in
-// `docs/releases/v3.5.8/plan.md` § Phase 9 (+ 整句 lattice + walker S8). Field
+// `docs/releases/v3.5.8/plan.md` § Phase 9 (+ whole-sentence lattice + walker S8). Field
 // order in this struct matches `#[derive(Ord)]`'s lexicographic
 // comparison; `Reverse<T>` flips individual dimensions whose policy
 // is descending. NaN-safe because scores are wrapped in `NonNanF32`
@@ -2355,9 +2082,7 @@ fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
 // score/freq): the slot-0 whole-sentence walker now owns phrase
 // priority, so longest-coverage-first inside a tier only buried the
 // short single-syllable first-segment candidate.
-// ---------------------------------------------------------------------------
 
-// Phase 9.1 / Phase 9 Item 10 排序鍵 — 8 維 lexicographic,asc/desc 由 Reverse<T> 控;NaN 在 NonNanF32 內 coerce 成 f32::MIN。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct SortKey {
     /// v3.5.8 Phase 9 Item 10 — leading dim. `0` for full-syllable
@@ -2370,31 +2095,25 @@ struct SortKey {
     /// tier-1 candidate, violating §15.5 "rank below regardless of
     /// frequency". See `docs/engine/continuous-candidate-display.md`
     /// §15.5.
-    // Item 10 — coverage_kind 必須是最前維;partial-prefix 的 consumed_span_end == raw_len → tier=0,
-    //   若放在 tier 之後,partial 的 tier-0 會反超 full 的 tier-1,違反 §15.5。
     coverage_kind: u8,
     /// `0` = Tier 0 (full-buffer coverage), `1` = Tier 1 (partial).
     /// Roadmap and spec both use the "Tier 0 = full buffer" labelling
     /// (`docs/releases/v3.5.8/plan.md` § Phase 9 / `docs/engine/continuous-input-
     /// ranking.md` §1.1).
-    // tier — 0 為 Tier 0 (consumed_span_end == raw_len),1 為 Tier 1 (部分覆蓋)。
     tier: u8,
     /// `0` = recent (`last_used_ms` within
     /// `ranking::RECENCY_WINDOW_MS`), `1` = stale, never used, or
     /// clock-skew. Populated by `record_to_candidate` from the
     /// caller-built `FrequencyMap` + `now_ms` (Phase 9.3a). PR-9.1
     /// carried a sentinel `1`; that contract is now lifted.
-    // recency_rank — Phase 9.3a 從 FrequencyMap + now_ms 真正計算;0 = recent,1 = stale/never/clock-skew。
     recency_rank: u8,
     /// Descending: higher `freq × syll_bias × boost` wins.
-    // adjusted_score desc;NaN coerce 成 f32::MIN 於 NonNanF32 內。
     neg_score: Reverse<NonNanF32>,
     /// Descending: raw freq as a secondary tie-break independent of
     /// adjusted_score (only differs when boost ≠ 1.0 once 9.3a lands).
-    // freq desc 作為 adjusted_score 之外的二次 tie-break (9.3a boost 不為 1.0 後才會分歧)。
     neg_freq: Reverse<u32>,
     /// Descending: longer coverage wins — but only as a weak tiebreak
-    /// AFTER `neg_score` / `neg_freq`. v3.5.8 整句 lattice + walker S8
+    /// AFTER `neg_score` / `neg_freq`. v3.5.8 whole-sentence lattice + walker S8
     /// relocated this from dim 3 to here. The slot-0 whole-sentence
     /// walker owns phrase priority, so a graded longest-coverage-first
     /// rule inside a tier only buried the short single-syllable
@@ -2405,18 +2124,12 @@ struct SortKey {
     /// longer code-length bury a shorter strict match
     /// (`references/librime/src/rime/gear/script_translator.cc`
     /// `kNumExactMatchOnTop`).
-    // coverage 長度 desc,但已降為 score/freq 之後的弱 tiebreak(S8,原 dim 3)。
-    //   整句優先由 slot-0 walker 負責;長覆蓋優先在 tier 內只會埋葬使用者要逐段點選的
-    //   單音節首段。現只在 score+freq 同分時才分 — 對齊 librime per-segment menu
-    //   (保留多長度但不讓長碼蓋短嚴格匹配,kNumExactMatchOnTop)。
     neg_coverage: Reverse<u32>,
     /// Ascending: `custom=0, kautian=1, taigitv=2, stti=3, kungge=4,
     /// default=5` per `ranking::source_tier_rank`.
-    // source 來源 rank asc;ranking::source_tier_rank 為單一 source-of-truth。
     source_rank: u8,
     /// Insertion index — deterministic by caller-provided `keys`
     /// order × `prefix_index.lookup_exact` FST byte-sort.
-    // stable_idx — 插入順序,保證 deterministic tie-break。
     stable_idx: u32,
 }
 
@@ -2430,7 +2143,6 @@ impl SortKey {
         // bits; `custom_entry_to_candidate` → true, forces rank 0).
         // Before Item 12 this was hardcoded `false` because no caller
         // could produce a custom candidate yet.
-        // Item 12 — is_custom 改由候選帶 (custom=true→rank 0);此前無 caller 能產 custom 故硬編 false。
         let source_rank = source_tier_rank(candidate.bitmask, candidate.is_custom);
         Self {
             coverage_kind: candidate.coverage_kind,
@@ -2450,7 +2162,6 @@ impl SortKey {
 /// without a hand-written comparator, while still defending against
 /// `NaN` leakage from a contract-violating `user_freq_boost`
 /// (`calculate_continuous_score` docs).
-// f32 newtype + NaN coerce f32::MIN,讓 SortKey derive(Ord) 而不必手寫 cmp。
 #[derive(Debug, Clone, Copy)]
 struct NonNanF32(f32);
 
@@ -2487,8 +2198,6 @@ mod sort_key_tests {
     //! acceptance matrix) live alongside in
     //! `engine/lexicon/tests/span_local_fetch.rs`, using the same
     //! `build_fixture` synthetic dict.bin + FST builder.
-    //
-    // SortKey 排序政策的 hermetic 單元測試;hermetic 整合 regression 在 tests/span_local_fetch.rs。
     use super::*;
 
     /// Convenience builder so each test only specifies the dimensions
@@ -2536,8 +2245,6 @@ mod sort_key_tests {
     /// `coverage_kind` dim. Defaults to recency_rank=1 (stale) so
     /// tests can isolate the coverage_kind axis without mixing in
     /// recency boosts.
-    // Item 10 — partial-prefix 測試 fixture helper;recency_rank 預設 1 (stale),
-    //   讓 coverage_kind 維度可以單獨被驗證,不被 recency 0/1 干擾。
     fn cand_partial(
         span_start: u32,
         span_end: u32,
@@ -2568,7 +2275,7 @@ mod sort_key_tests {
 
     #[test]
     fn within_tier_higher_score_beats_longer_coverage() {
-        // v3.5.8 整句 lattice + walker S8 (was
+        // v3.5.8 whole-sentence lattice + walker S8 (was
         // `within_tier_longer_coverage_beats_shorter`, which pinned the
         // pre-S8 policy that caused the `guaikingkahuekhoo` dogfood
         // bug). `-coverage_bytes` is now dim 6, BELOW `-adjusted_score`
@@ -2759,8 +2466,6 @@ mod mode_derive_tests {
     //! 4. Fullwidth Latin (e.g. `Ａ`) in hanzi → MIXED via NFKD
     //! 5. Pure CJK → HANT
     //! 6. Digits / punctuation alone do NOT flip MIXED
-    //
-    // Phase 9.2 CandidateMode derive hermetic 測試;NFKD 規範後 ASCII 字母命中即 MIXED。
     use super::*;
 
     #[test]
@@ -2864,7 +2569,6 @@ mod mode_derive_tests {
         // silently misroute; this test fails first.
         //
         // Per Codex post-impl finding #2 (P3, 2026-05-11).
-        // 本 crate 與 prost 產生的 proto enum 對齊;reshuffle 會在這裡先 fail。
         use protos::engine::CandidateMode as ProtoCandidateMode;
         assert_eq!(
             CandidateMode::Unspecified.to_proto_i32(),
@@ -2892,7 +2596,6 @@ mod record_to_candidate_carrier_tests {
     //! proto3 wire carries both for dual-line UI render. These tests
     //! pin the field-population rule across the three `CandidateMode`
     //! axes (HANT / TAILO / MIXED).
-    // Item 5 — record_to_candidate 寫 roman + hanji sidechannel 的 hermetic 測試。
     use super::*;
 
     fn record(tl: &str, hanzi: Option<&str>) -> DictionaryRecord {
@@ -2974,7 +2677,6 @@ mod item12_custom_dedupe_tests {
     //! D4 (`frequency = 0`, `syllable_count = 1`, `is_custom` drives
     //! rank 0). Spec: `docs/engine/continuous-input-ranking.md`
     //! §10.10.
-    // Item 12 — custom 合成 + (roman,hanji) 去重 hermetic 測試;鎖 D1-D4 決議。
     use super::*;
 
     /// Minimal non-custom `dict.bin`-shaped candidate. `bitmask` picks
@@ -3065,8 +2767,6 @@ mod item12_custom_dedupe_tests {
         // through `dict.bin` (writing `record.tl = "guá"`) keys into
         // a different `user_frequency.db` bucket and learning splits
         // cross-mode.
-        // r3278520895 — POJ form custom entry 在 Tl mode 下要 fold,
-        //   否則跟 dict.bin canonical TL 分裂 user_frequency.db 鍵。
         let c = custom_entry_to_candidate(
             &CustomEntry {
                 roman: "g\u{00f3}a".to_owned(), // POJ display form
@@ -3099,8 +2799,6 @@ mod item12_custom_dedupe_tests {
         // collides with the TL-mode equivalent. `roman` itself is left
         // raw — see `composing::shadow::custom_toneless_key`, which
         // needs the POJ-form roman to match POJ lattice keys.
-        // B-4 — POJ form custom entry (hanji 缺) display_text 折成 canonical TL;
-        //   roman 保持原樣供 custom_toneless_key 對齊 POJ lattice 鍵。
         let c = custom_entry_to_candidate(
             &CustomEntry {
                 roman: "g\u{00f3}a".to_owned(), // POJ `góa` (TL would be `guá`)
@@ -3528,8 +3226,6 @@ mod nasal_oo_alias_face_tests {
     // the failure mode that made the build-time keys look like no-ops.
     // trace: 好 hònn → normalize_input → `honn3` → digits dropped → `honn`;
     //        respelled `hoonn` == the matched body.
-    // 建置期在正規 onn 旁索引 o͘ⁿ 寫法 → 一行會以「自己重建的 face 不等於」的 key
-    //   命中;face guard 沒有別名分支的話,撈進來的行會被原地濾掉。
     #[test]
     fn equality_guard_admits_the_alias_key() {
         assert!(matches_continuous_toneless_key("tl:honn", "hònn"));
@@ -3560,10 +3256,6 @@ mod nasal_oo_alias_face_tests {
     // extension pool is capped the new rows displaced real ones — 護欄, 虎貓
     // and 好學 fell off `hoo` / `hoon`. The alias only applies once the user
     // has actually typed it.
-    // 改寫後的 face 是正規 face 的嚴格超字串,prefix guard 若無條件採用,它的每個前綴
-    //   都會命中:打 hoo(予/戶/雨)會開始撈 好/否/呼/齁(改寫後 face = hoonn)。
-    //   上這道閘前用 production artifact 量過:hoo 多 20 列、khoo 18、tshioo 30,
-    //   而延伸池有上限 → 擠掉真的候選(護欄/虎貓/好學 從 hoo / hoon 掉出去)。
     #[test]
     fn prefix_guard_does_not_leak_the_alias_into_a_canonical_prefix() {
         // `hoo` is a prefix of the respelled `hoonn`, but not of `honn`.
@@ -3579,7 +3271,6 @@ mod nasal_oo_alias_face_tests {
 
     // The alias arm must not turn the guard into a pass-through: a body that
     // is neither the face nor its respelling is still rejected.
-    // 別名分支不可讓 guard 變成全放行 —— 既非 face 也非其別名寫法者仍要拒絕。
     #[test]
     fn still_rejects_an_unrelated_body() {
         assert!(!matches_continuous_toneless_key("tl:tai", "hònn"));
@@ -3601,12 +3292,6 @@ mod nasal_oo_alias_face_tests {
     // cross-seam body, and this guard only ever runs on rows a key already
     // hydrated. Tightening it would mean a fifth per-syllable face
     // reconstruction, which `SyllableReach`'s doc explicitly rules out.
-    // 滷卵 重建為 loonng,其中的 onn 跨 loo|nng 接縫,根本不是鼻化韻。
-    //   自己的 key 照樣命中;舊的整段折疊產生的 lonng(讓這個詞查不到的那個拼法)仍被拒絕。
-    // guard 重建的是融合面,看不到接縫,故確實會把它改寫成 looonng —— 這是「撈不到」
-    //   而非「錯」:建置期逐音節改寫,沒有任何 key 帶跨接縫 body,而 guard 只跑在
-    //   已被 key 撈出來的行上。要收緊就得再寫第五份逐音節重建,SyllableReach 的
-    //   文件明令禁止。
     #[test]
     fn leaves_a_cross_seam_face_alone() {
         assert!(matches_continuous_toneless_key("tl:loonng", "lóo-nn̄g"));

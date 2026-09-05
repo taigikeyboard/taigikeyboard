@@ -1,13 +1,8 @@
-// 自訂詞庫資料管理子頁。
-// 含啟用開關、CSV 匯入匯出、新增 / 編輯(alert 表單)、單筆刪除、全部清除、過濾搜尋。
-
 import SwiftUI
 import UniformTypeIdentifiers
 
 /// Custom dictionary subpage
 /// Lists all user-added entries with add/edit/delete and import/export
-// 自訂詞庫管理子頁的根 View。資料層由 CustomDictionaryViewModel 提供;
-// 匯入匯出由 ImportExportHandler 負責。
 struct CustomDictionaryView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = CustomDictionaryViewModel()
@@ -20,8 +15,7 @@ struct CustomDictionaryView: View {
     @State private var hanziInput = ""
     @State private var showDeleteAllAlert = false
 
-    // 依 filterText 對 roman / hanzi 做大小寫不敏感子字串比對;
-    // 無關鍵字時最多顯示 100 筆以避免大量列表卡頓。
+    // Case-insensitive substring match on roman/hanzi; with no query, cap at 100 rows so the list stays smooth.
     private var filteredEntries: [CustomDictionaryEntry] {
         if filterText.isEmpty {
             return Array(viewModel.entries.prefix(100))
@@ -215,7 +209,6 @@ struct CustomDictionaryView: View {
 
     // MARK: - Actions
 
-    // alert 表單儲存動作 — trim 兩欄並驗證非空,然後依 editingEntry 是否存在新增/更新。
     private func saveEntryFromAlert() {
         let trimmedRoman = romanInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedHanzi = hanziInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -236,7 +229,6 @@ struct CustomDictionaryView: View {
         Task { await viewModel.save(entry) }
     }
 
-    // 把 fileImporter 結果轉交 ImportExportHandler;完成後重新載入清單。
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,
@@ -247,8 +239,6 @@ struct CustomDictionaryView: View {
         )
     }
 
-    // App 層把 Engine 的 CustomDictionaryError 映射到對應的 i18n key 並解析;
-    // 其餘錯誤回退 localizedDescription。對應 Android CustomDictionaryScreen 的 e.message 對照。
     // Maps the engine's typed import error to a localized message at the display boundary — keeps the
     // `Lexicon/` service unaware of `StringKey` (presentation layer). Mirrors Android's
     // `CustomDictionaryScreen` error → `StringKey` resolution.
@@ -260,7 +250,6 @@ struct CustomDictionaryView: View {
     }
 }
 
-// CustomDictionaryError → i18n StringKey 對照,留在 App 層(Strings 屬 presentation layer)。
 private extension CustomDictionaryError {
     var messageKey: StringKey? {
         switch self {

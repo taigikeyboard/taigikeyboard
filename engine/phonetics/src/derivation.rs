@@ -10,8 +10,6 @@
 //! Combining-mark / NFD logic for InputNormalizer + ToneRestoration lives
 //! in `normalization.rs` — different concerns, different module.
 
-// CustomDictionary 衍生字串產生 (notone 去聲調、abbrev 取首字母縮寫),供自訂詞庫索引使用。
-
 use unicode_normalization::UnicodeNormalization;
 
 /// `Method::DeriveNotone` — strips tone diacritics + digits + hyphens + spaces
@@ -25,10 +23,6 @@ use unicode_normalization::UnicodeNormalization;
 /// [`is_nonspacing_mark`] treats as tone material, so an unfolded `o͘` would
 /// silently collapse onto a bare `o` and put a stored POJ entry under a key no
 /// keystroke produces (user report 2026-08-20: `băng-só͘-khó͘`).
-// 去聲調衍生形:先取 base form (鼻化 ⁿ/ᴺ → nn、o͘ 的點 U+0358 → o,再 NFD),
-//   然後把聲調符號/數字/連字號/空白拿掉。U+0358 是拼寫不是聲調 (POJ o͘ == TL oo),
-//   但它落在 is_nonspacing_mark 的 0x0300..=0x036F 內,不先折就會被當聲調砍掉,
-//   存起來的 POJ 自訂詞就落在鍵盤打不出來的鍵上。
 pub(crate) fn derive_notone(roman: &str) -> String {
     let decomposed = crate::taigi_unicode_base_form(&roman.to_lowercase());
     let mut result = String::new();
@@ -54,7 +48,6 @@ pub(crate) fn derive_notone(roman: &str) -> String {
 ///
 /// Whitespace split = ASCII `[ \t\n\x0B\f\r-]+` literal (matches Android JVM
 /// behavior; NBSP U+00A0 stays a non-delimiter).
-// 取每一音節首字母 (去聲調符號) 串成縮寫;少於兩音節時回空字串。NBSP 不視為分隔。
 pub(crate) fn derive_abbrev(roman: &str) -> String {
     let lowered = roman.to_lowercase();
     let syllables: Vec<&str> = lowered
@@ -77,7 +70,6 @@ pub(crate) fn derive_abbrev(roman: &str) -> String {
 /// Internal helper used by `derive_abbrev`. NOT exposed as an op (Codex v1
 /// Decision 4 — only dedicated derivation ops are exposed; primitives stay
 /// internal so platform cannot rebuild custom-dict semantics).
-// `derive_abbrev` 內部使用;不對外開放成 op,避免平台側自行組合衍生語義。
 fn strip_diacritics(s: &str) -> String {
     let decomposed: String = s.nfd().collect();
     let stripped: String = decomposed

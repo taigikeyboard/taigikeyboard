@@ -1,5 +1,5 @@
-// 候選列主 Composable — LazyRow 渲染 Taigi 候選 + English 建議 row;
-// 點擊由外部 callback 注入(見 CandidateClickHandler)。被 SmartbarView 內 ComposeView 主機 host。
+// Candidate-strip root composable. Click handling is injected by the caller
+// (see CandidateClickHandler); hosted inside SmartbarView's ComposeView.
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 

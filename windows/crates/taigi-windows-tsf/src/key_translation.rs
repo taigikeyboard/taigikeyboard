@@ -3,8 +3,6 @@
 //! `taigi_windows_platform::key_translation` (roadmap W5) so the settings
 //! window's shortcut recorder reads a key exactly as this classifier does.
 
-// 把 WM_KEYDOWN/WM_KEYUP 的 WPARAM/LPARAM 拆開,規則本身在 platform crate,與設定視窗的錄製欄共用。
-
 use taigi_windows_core::keys::KeyEventSnapshot;
 use windows::Win32::Foundation::{LPARAM, WPARAM};
 

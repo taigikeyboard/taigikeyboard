@@ -335,8 +335,6 @@ internal class TextInputKeyHandler(
             // render). clearCandidates() only touches the smartbar strip +
             // NextWord state, never the IC composing region (owned by
             // ComposingManager), so running it pre-commit is safe.
-            // Model B — clearCandidates 移到 commit 之前,讓引擎終端 NextWord
-            // 預測存活(Enter 保留預測);引擎 effect 為關聯唯一來源。
             smartbarManager.clearCandidates()
             composingManager?.commitComposition(ic)
 
@@ -454,8 +452,6 @@ internal class TextInputKeyHandler(
             // next-word *display*: clearCandidates() runs AFTER the commit
             // (kept order) → bumps the NextWord generation so the engine's
             // in-flight prediction query is dropped stale.
-            // Model B — 引擎 commit 已記關聯(唯一來源);Space 維持 commit 後
-            // clearCandidates 抑制下詞顯示(舊手動呼叫會雙記並重新顯示)。
             composingManager?.commitComposition(ic)
             ic.commitText(" ", 1)
             smartbarManager.clearCandidates()
@@ -539,7 +535,6 @@ internal class TextInputKeyHandler(
             return
         }
 
-        // 組字字元（字母、TPS 符號、連字符號、˙）→ 進入組字
         if (isComposingCharacter(char)) {
             if (manager.isComposing()) {
                 if (char == "-") {
@@ -568,7 +563,6 @@ internal class TextInputKeyHandler(
                 }
             }
         } else if (manager.isComposing() && char.length == 1 && char[0].isDigit()) {
-            // 組字中輸入數字 → 作為聲調標記追加
             manager.appendCharacter(char, ic)
             if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
             candidateCoordinator.scheduleDisplayDerivation()
@@ -577,7 +571,6 @@ internal class TextInputKeyHandler(
             }
             candidateCoordinator.updateTaigiCandidatesDebounced()
         } else {
-            // 非組字字元（標點、符號、箭頭等）→ 確認組字後直接輸出
             if (manager.isComposing()) {
                 manager.commitComposition(ic)
             }

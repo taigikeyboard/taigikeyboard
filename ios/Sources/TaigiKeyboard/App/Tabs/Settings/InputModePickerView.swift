@@ -1,9 +1,6 @@
-// SettingsTab 「輸入模式」row 點進去的子頁,列出全部 InputMode 供選擇。
-
 import SwiftUI
 
 /// Picker subpage for `SettingsTab` input-mode row.
-// 輸入模式挑選子頁。透過 binding + onChange 立刻寫回 SettingsTab 的 ViewModel。
 struct InputModePickerView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Binding var selectedMode: InputMode

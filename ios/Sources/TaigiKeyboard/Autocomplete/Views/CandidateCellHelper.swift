@@ -1,29 +1,26 @@
-// 候選詞 cell 的純函式工具 — 顯示文字 / commit 文字 / 寬度量測都集中在這裡。
-// TPS 模式、isTranslateSwapped 與 candidateDisplayMode 由呼叫端傳入,不直接讀 SharedSettings,方便測試。
+// Pure-function utilities for a candidate cell — display text, commit text, and width
+// measurement all live here.
 
 import KeyboardKit
 import SwiftUI
 
-/// 候選詞單元格輔助工具
+/// Pure-function helpers for a candidate cell's display.
 ///
-/// 封裝候選詞顯示 / commit 文字 / 寬度量測等純函式邏輯。
-/// TPS（方音符號）模式與翻譯漢羅交換皆由呼叫端以參數傳入，不在此直接讀 `SharedSettings`，
-/// 以利單元測試並避免隱式耦合。
+/// Encapsulates display text / commit text / width measurement as pure functions. TPS mode and
+/// the translate/hanji-roman swap are passed in by the caller rather than read from
+/// `SharedSettings` directly, for testability and to avoid implicit coupling.
 enum CandidateCellHelper {
-    // MARK: - 常數
+    // MARK: - Constants
 
     static let minimumCellWidth: CGFloat = 44
     private static let cellHorizontalPadding: CGFloat = 20
 
-    // MARK: - 顯示文字
+    // MARK: - Display text
 
-    /// 計算顯示的主標題
-    ///
-    /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）— TPS 不理會 candidateDisplayMode
-    /// - 羅馬字模式：主標題永遠是 engine `roman`（`text`）
-    /// - 漢羅濫：單一 script — split cell 直接顯示 `text`（上游已拆分）；
-    ///   未拆分的 NextWord 列漢字為主（無漢字時羅馬字）
-    /// - 一般模式：`isTranslateSwapped` 決定羅馬字 / 漢字順序
+    /// The cell's main title, per display mode: TPS shows hanji (TPS symbols when there is none) and
+    /// ignores `candidateDisplayMode`; 羅馬字 always shows the engine `roman` (`text`); 漢羅濫 is
+    /// single-script — a split cell shows its own `text`, an un-split NextWord row is hanji-led;
+    /// 並排 lets `isTranslateSwapped` pick the roman / hanji order.
     // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
     static func displayTitle(
@@ -64,12 +61,12 @@ enum CandidateCellHelper {
         return suggestion.text
     }
 
-    /// 計算顯示的副標題
+    /// The cell's subtitle, per display mode.
     ///
-    /// - TPS 模式：無副標題
-    /// - 羅馬字模式：無副標題（漢字不顯示）
-    /// - 漢羅濫：無副標題（split cell 上游已拆為單一 script）
-    /// - 一般模式：`isTranslateSwapped` 決定副標題是羅馬字或漢字
+    /// - TPS: no subtitle
+    /// - 羅馬字: no subtitle (hanji not shown)
+    /// - 漢羅濫: no subtitle (split cells are already single-script upstream)
+    /// - default: `isTranslateSwapped` picks whether the subtitle is roman or hanji
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
@@ -83,12 +80,12 @@ enum CandidateCellHelper {
         return isTranslateSwapped ? suggestion.text : suggestion.subtitle
     }
 
-    // MARK: - Commit 建議
+    // MARK: - Commit suggestion
 
-    /// 依 layout / translate 狀態決定實際 commit 給 textProxy 的 suggestion
+    /// The suggestion actually committed to the text proxy, resolved from layout / translate state.
     ///
-    /// - TPS 模式：優先輸出漢字；無漢字則輸出 TPS 符號 fallback
-    /// - 一般模式：`isTranslateSwapped = true` 輸出漢字；否則輸出羅馬字
+    /// - TPS: prefers hanji; falls back to the TPS-symbol rendering when there is no hanji
+    /// - default: `isTranslateSwapped = true` outputs hanji; otherwise outputs roman
     static func suggestionToHandle(
         for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
@@ -99,7 +96,6 @@ enum CandidateCellHelper {
         // cell already carries exactly the script it commits, so the swap / TPS
         // rewrites below must not touch it (a swapped rewrite would replace a
         // marked cell's text; the TPS fallback would re-render its roman).
-        // 帶 cellScript 標記的 split cell 原樣送出,不做 swap / TPS 改寫。
         if CandidateCellScript.marker(for: suggestion) != nil {
             return suggestion
         }
@@ -126,14 +122,15 @@ enum CandidateCellHelper {
         return suggestion
     }
 
-    // MARK: - Cell 寬度量測
+    // MARK: - Cell width measurement
 
-    /// 量測 title 與 subtitle 於對應字體大小的寬度，回傳 max + padding
-    /// 一律兩者都量，避免 translate toggle 時佈局 reflow。
-    /// 漢羅濫：每格單行，量測 rendered title 於 title 字體（split cell = 自身
-    /// `text`；未拆分 NextWord 列 = 漢字為主 title）— 量測與 render 同一來源。
+    /// Measures title and subtitle at their font sizes and returns max + padding. Always measures
+    /// both, so a translate toggle never triggers a layout reflow. Under 漢羅濫 each cell is
+    /// single-line: it measures the rendered title at the title font (a split cell's own `text`;
+    /// an un-split NextWord row's hanji-led title) — measurement and render share one source.
     ///
-    /// 字體大小由呼叫端從 `CandidateTheme` 環境傳入，避免這裡依賴 `SharedSettings`。
+    /// Font sizes are passed in by the caller from the `CandidateTheme` environment, so this stays
+    /// free of a `SharedSettings` dependency.
     static func measuredCellWidth(
         for suggestion: AutocompleteSuggestion,
         isTPSLayout: Bool,
@@ -189,8 +186,6 @@ enum CandidateCellHelper {
     /// subtitle line only when `displaySubtitle` is non-empty and differs from
     /// its `displayTitle` (a swapped hanji-less row's subtitle would repeat
     /// the title).
-    // cell 實際會畫出的副標題 — render 條件的唯一出處,view 與
-    // contentHasSubtitles 皆從這裡取。
     static func renderedSubtitle(
         for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
@@ -227,7 +222,6 @@ enum CandidateCellHelper {
     /// rows line up, while an all-single-line list (羅馬字 / 漢羅濫 / TPS)
     /// reserves nothing. Reads the cells' own render source
     /// (`renderedSubtitle`) so the two predicates cannot drift.
-    // 整份候選內容是否有任何 cell 會畫副標題 — 決定單行 cell 是否保留隱形副標空間。
     static func contentHasSubtitles(
         _ suggestions: [AutocompleteSuggestion],
         isTranslateSwapped: Bool,
@@ -248,7 +242,7 @@ enum CandidateCellHelper {
 
     // MARK: - Private
 
-    /// TPS fallback：把羅馬字轉為方音符號顯示。
+    /// TPS fallback: renders the roman romanization as TPS symbols.
     private static func tpsFallback(
         for suggestion: AutocompleteSuggestion,
         orMapsToER: Bool,
@@ -256,8 +250,9 @@ enum CandidateCellHelper {
         RustEngineBridge.tlNumericToTPS(suggestion.text, orMapsToER: orMapsToER)
     }
 
-    /// 以 `newText` 取代原本的 commit text，並把原本的 text 移到 subtitle 以保留 hint。
-    /// `keepOriginalSubtitle = true` 時 subtitle 保留原值（TPS 無漢字 fallback 的情境）。
+    /// Replaces the commit text with `newText`, moving the original text to the subtitle to keep
+    /// it as a hint. When `keepOriginalSubtitle = true` the subtitle keeps its own value (the TPS
+    /// hanji-absent fallback case).
     private static func replacingCommitText(
         of suggestion: AutocompleteSuggestion,
         with newText: String,
@@ -280,7 +275,6 @@ enum CandidateCellHelper {
 /// surrounding content has a subtitle somewhere (§42: one-script content is
 /// one line tall). Shared by `CandidateButtonView` and
 /// `ExpandedCandidateGridCell`.
-// 隱形副標 spacer — 單行 cell 與雙行鄰居對齊用,兩個候選 view 共用。
 struct SubtitleSpacer: View {
     let fontSize: CGFloat
 

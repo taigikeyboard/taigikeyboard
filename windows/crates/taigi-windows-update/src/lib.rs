@@ -11,8 +11,6 @@
 //! overdue at launch, the user checks from the 一般 pane or the lang-bar
 //! menu, and the DLL only ever READS the pending manifest.
 
-// 更新檢查 / 下載 / 驗簽 / 兩段式安裝 — 決策純邏輯可在主機測,網路與 Win32 各自隔離。
-
 pub mod checker;
 pub mod installation;
 pub mod manifest;

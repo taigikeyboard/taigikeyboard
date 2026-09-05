@@ -2,8 +2,6 @@
 //! 0); recorded in `memory/project_windows_ime.md`. Never reuse another
 //! IME's.
 
-// 本輸入法擁有的 GUID,2026-08-29 一次配發。
-
 use windows::core::GUID;
 
 /// The COM class the host creates (`CLSID\{…}\InProcServer32`).

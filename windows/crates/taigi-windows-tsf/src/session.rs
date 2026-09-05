@@ -11,8 +11,6 @@
 //! Candidates are a headless list here (PR5b): the highlighted index and
 //! the slot keys work, the window arrives with PR6.
 
-// 一個按鍵的完整路徑 — 快照→分類→(同步 edit session 內)引擎與文件;候選暫為無視窗列表。
-
 use crate::composition::{is_password_field, is_read_only, CompositionEditor, NullExecutor};
 use crate::contexts::ContextEntry;
 use crate::contexts::ContextRegistry;

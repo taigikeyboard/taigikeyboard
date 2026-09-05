@@ -1,7 +1,3 @@
-// 鍵盤每顆按鍵的客製化 SwiftUI content view。
-// 用 ButtonImageProvider → ButtonTextProvider → ButtonFontProvider 三段渲染鏈,
-// 並把 TPS callout、調符 hint、空白鍵的模式標籤等特殊呈現都收在這裡。
-
 import KeyboardKit
 import SwiftUI
 
@@ -9,8 +5,6 @@ import SwiftUI
 
 /// Layout constants for `TaigiButtonContent` sub-views.
 /// File-scoped because Swift does not allow static stored properties in nested types of generic structs.
-// 鍵面 sub-view 的版面常數。Swift 不允許 generic struct 的 nested type 持有 static stored property,
-// 所以放在 file-scope private enum。
 private enum ButtonContentLayout {
     // TPS key layout
     static let tpsHintFontSize: CGFloat = 12
@@ -48,8 +42,6 @@ private enum ButtonContentLayout {
 /// Depends on: `ButtonImageProvider`, `ButtonTextProvider`, `ButtonFontProvider`, `KeyboardFonts`
 ///
 /// - Note: `keyboardContext` must use `@ObservedObject` to respond to state changes like `isComposingText`
-// 鍵盤按鍵的客製化 content view — 串起 image / text / font 三組 provider。
-// keyboardContext 必須用 @ObservedObject,才能對 isComposingText 等狀態變更作出反應。
 struct TaigiButtonContent<StandardContent: View>: View {
     let action: KeyboardAction
     @ObservedObject var keyboardContext: KeyboardContext
@@ -61,7 +53,6 @@ struct TaigiButtonContent<StandardContent: View>: View {
     let inputMode: InputMode
 
     /// Input mode label for the space bar
-    // 空白鍵右下角顯示的輸入模式標籤(POJ / TL / EN / TPS)。
     private var spaceInputModeLabel: String? {
         guard action == .space else { return nil }
         switch inputMode {
@@ -76,7 +67,6 @@ struct TaigiButtonContent<StandardContent: View>: View {
 
     /// Render priority: image (ButtonImageProvider) > text (ButtonTextProvider) > standard (KeyboardKit default).
     /// Each provider returns nil to defer to the next in chain.
-    // 渲染優先順序 — 圖示 → 文字 → 預設 standardContent。每個 provider 回 nil 即放行給下一棒。
     var body: some View {
         if let image = imageProvider.buttonImage(for: action) {
             image
@@ -101,7 +91,6 @@ struct TaigiButtonContent<StandardContent: View>: View {
 
     /// TPS layout: callout hint(s) on top, main text below.
     /// Two hints are spread left/right; a single hint is centered.
-    // TPS 佈局 — hint 在上、主鍵字在下。兩個 hint 左右排開,單一 hint 置中。
     private func tpsHintContent(text: String, hint: String) -> some View {
         let hints = hint.split(separator: " ").map(String.init)
         return VStack(spacing: ButtonContentLayout.tpsVStackSpacing) {
@@ -130,8 +119,6 @@ struct TaigiButtonContent<StandardContent: View>: View {
 
     /// Standard hint layout: tone diacritic or text hint above the key label.
     /// Text hints (punctuation) use a smaller font; standalone diacritics (tone marks) use a larger font.
-    // 標準 hint 佈局 — 鍵面字上方放調符或文字 hint。
-    // 文字 hint(標點)用較小字級;獨立調符用較大字級。
     private func standardHintContent(text: String, hint: String) -> some View {
         let isText = textProvider.isTextHint(for: action)
         let hintFontSize = isText ? ButtonContentLayout.textHintFontSize : ButtonContentLayout.diacriticHintFontSize
@@ -159,7 +146,6 @@ struct TaigiButtonContent<StandardContent: View>: View {
 
     /// Space bar input mode label (e.g. "TL", "POJ").
     /// Rendered alone without standardContent to avoid KeyboardKit's "space" text overlapping on iPad.
-    // 空白鍵的模式標籤(TL / POJ / EN / TPS);單獨渲染,避免在 iPad 上與 KeyboardKit 的 "space" 文字重疊。
     private func spaceModeLabelContent(label: String) -> some View {
         Text(label)
             .font(KeyboardFonts.globalFont(size: ButtonContentLayout.modeLabelFontSize))

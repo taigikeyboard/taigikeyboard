@@ -8,8 +8,6 @@
 //! with the matching intent — a host-initiated synchronous call on the TIP
 //! thread, the one edit-session entry besides the key sink (W3).
 
-// 無視窗候選列表 — 讓自畫候選的宿主拿到同一份清單;Finalize/Abort 走與按鍵相同的路徑。
-
 use super::candidate_window::CandidateWindow;
 use super::presenter::CandidatePresenter;
 use crate::com_guard::guarded;

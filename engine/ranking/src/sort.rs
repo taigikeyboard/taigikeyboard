@@ -9,8 +9,6 @@
 //! debug logging. Stable: equal totals preserve input order, matching
 //! Swift `Array.sorted(by:)` and Kotlin `sortedByDescending` semantics.
 
-// 穩定排序模組,依候選詞總分由高到低排;同分時保留輸入順序,行為與 iOS/Android 平台一致。
-
 use protos::engine::{ScoreBreakdown, TaigiWord};
 
 use crate::score::{self, FrequencyMap};
@@ -26,7 +24,6 @@ use crate::score::{self, FrequencyMap};
 ///
 /// Stable sort: `slice::sort_by` (used here) is guaranteed-stable in
 /// std, matching the platform implementations' `sorted` semantics.
-// 對候選詞評分後依總分由高到低排序,並依需求回傳對應的 ScoreBreakdown 陣列。
 pub(crate) fn sort_by_score(
     words: Vec<TaigiWord>,
     normalized_input: &str,
@@ -81,7 +78,6 @@ fn sort_with_breakdown(
 /// the `ScoreBreakdown` after consuming its total. Saves one allocation
 /// plus the per-word `ScoreBreakdown` struct copy in release builds where
 /// the caller did not request breakdowns.
-// hot path 用版本,只留 i32 總分,省下 ScoreBreakdown 的配置成本。
 fn sort_totals_only(
     words: Vec<TaigiWord>,
     normalized_input: &str,
@@ -121,8 +117,6 @@ fn sort_totals_only(
 /// scoring flows through `lexicon::continuous`, which keys on
 /// `RawCandidate.canonical_tl`. Keep `word.roman` canonical-TL if this
 /// path is ever revived so the read key matches the platform write key.
-// 頻率表 PAIR key 的顯示分量:漢字非空用漢字,否則羅馬字;完整身分 = (顯示文字, word.roman canonical TL)。
-// 此 process_candidates 路徑兩平台皆 test-only,production 走 continuous(canonical_tl)。
 pub(crate) fn display_text_key(word: &TaigiWord) -> String {
     match word.hanji.as_deref() {
         Some(h) if !h.is_empty() => h.to_owned(),

@@ -4,8 +4,6 @@
 //! coverage for the TPS input adjuster and NBSP-as-non-delimiter for
 //! `derive_abbrev`.
 
-// 走過每一個 `PhoneticsRequest.method` 變體的端到端測試,確保 wire 格式、分派路由、實作三者保持同步。
-
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
@@ -200,10 +198,6 @@ fn normalize_tone_poj_both_doubletaps_fold_independently() {
     // combining mark (U+0358) exactly there. Running `oo` first stranded the
     // `nn`; `honn` (nothing to fold) converted fine, which is why the two
     // single-toggle tests above never caught it.
-    // 兩個開關是各自獨立的按鍵 affordance,同時含 oo 與 nn 的 buffer 兩邊都要生效。
-    //   實機回報:打 h-o-o-n-n 顯示 ho͘nn,oo 折了、nn 沒折。根因是順序 ——
-    //   nn 折疊只認「前一字元是 ASCII 母音」,而 oo 折疊正好在那裡插入 U+0358。
-    //   honn(無 oo 可折)卻正常,所以上面兩個單開關測試抓不到。
     for (input, expected) in [
         ("hoonn", "ho\u{0358}\u{207f}"),
         ("hoonnh", "ho\u{0358}\u{207f}h"),
@@ -228,8 +222,6 @@ fn normalize_tone_poj_doubletap_folds_uppercase() {
     // the case of the nearest preceding letter, so an all-caps buffer ends on
     // `ᴺ` (U+1D3A) rather than `ⁿ`.
     // trace: "HOONN" -> nn fold -> "HOOⁿ" -> oo fold -> "HO͘ⁿ" -> case -> "HO͘ᴺ"
-    // 同時驗證 OO arm、重排後的折疊順序,以及其後的 adjust_nasal_marker_case
-    //   (鼻化符號跟隨前一個字母的大小寫,全大寫收在 ᴺ 而非 ⁿ)。
     for (input, expected) in [
         ("HOONN", "HO\u{0358}\u{1d3a}"),
         ("Hoonn", "Ho\u{0358}\u{207f}"),
@@ -245,7 +237,6 @@ fn normalize_tone_poj_doubletap_folds_uppercase() {
     }
     // A shift between the two taps still folds: the pair is matched
     // case-insensitively and the FIRST tap decides the letter's case.
-    // 雙擊不分大小寫,且由「第一下」決定字母大小寫。
     // trace: "hoOnn" -> nn fold -> "hoOⁿ" -> oo fold pairs o+O, first tap
     //        lowercase -> "ho͘ⁿ" -> case pass sees `o` -> "ho͘ⁿ"
     let resp = run(
@@ -267,10 +258,6 @@ fn normalize_tone_poj_oo_doubletap_pairs_in_one_pass() {
     // `OOoo` folded to `O͘o͘`, whose `Oo` seam the second pass matched and whose
     // `OO` seam the third matched again, stacking THREE combining dots on one
     // letter.
-    // 單次左到右配對,既不會漏掉某個大小寫組合,也讀不到自己剛寫下的內容。
-    //   兩者都真的發生過:舊的三次 String::replace 沒有 oO arm,而且會互相吃 ——
-    //   OOoo 折成 O͘o͘ 後,第二趟match到接縫的 Oo、第三趟又match到 OO,
-    //   同一個字母疊出三個結合點。
     for (input, expected) in [
         // First tap decides the case of the letter.
         ("hoo", "ho\u{0358}"),
@@ -298,7 +285,6 @@ fn normalize_tone_poj_oo_doubletap_pairs_in_one_pass() {
 fn normalize_tone_poj_doubletap_toggles_stay_independent() {
     // Each toggle alone still does exactly its own rewrite and nothing else —
     // the reorder must not make one imply the other.
-    // 單獨開一個開關時只做自己那一項,重排順序不可讓其中一個牽動另一個。
     let resp = run(
         Method::NormalizeTone(NormalizeTone {
             input: "hoonn".to_string(),

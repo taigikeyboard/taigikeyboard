@@ -1,7 +1,3 @@
-// IME 輸入主編排器 — 管理 keyboard mode、layout、popup、composing、smartbar、
-// 候選 debounce、Caps 狀態整合等。對應 iOS 端 KeyboardController 的角色,
-// 同時也是 TaigiKeyboard.EventListener,負責把按鍵事件轉成 Rust 引擎呼叫與 UI 更新。
-
 package com.siansiansu.taigikeyboard.ime.text
 
 import android.os.Handler
@@ -33,7 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * IME 輸入主編排器 — manages all keyboard mode / layout / popup /
+ * Manages all keyboard mode / layout / popup /
  * composing / smartbar / candidate-debounce coordination.
  *
  * Implements [TaigiKeyboard.EventListener]; consumes key events and
@@ -428,7 +424,6 @@ class TextInputManager(
      * on screen until the next keystroke. No-op when nothing is composing —
      * the coordinator would otherwise clear a prediction strip.
      */
-    // 候選詞顯示切換後重抓候選 — 引擎在羅馬字會收合同音列;非組字中不動(避免清掉預測列)。
     fun refetchCandidatesForDisplayModeChange() {
         if (composingManager?.isComposing() == true) {
             candidateCoordinator.updateTaigiCandidatesDebounced()

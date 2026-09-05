@@ -1,7 +1,8 @@
-// 服務注入根(手寫 DI,沒用 Hilt)— 持有所有有狀態的引擎服務(Lexicon / NextWord / Backup /
-// CustomDictionary / UserFrequency / Logger),IME service / Settings Activity / Compose 畫面共用同一份。
-// 由 TaigiKeyboardApplication 持有;IME 內部 manager(TextInputManager / SmartbarManager)生命週期
-// 隨 IME service,故由 TaigiKeyboard.onCreate 自行建構,刻意不放在這裡。
+// Manual DI composition root (no Hilt) — holds stateful engine services (Lexicon / NextWord /
+// Backup / CustomDictionary / UserFrequency / Logger) shared by the IME service, Settings
+// Activity, and Compose screens. Owned by TaigiKeyboardApplication; IME-internal managers
+// (TextInputManager / SmartbarManager) live and die with the IME service, so they are
+// deliberately built in TaigiKeyboard.onCreate instead.
 
 package com.siansiansu.taigikeyboard.ime.core
 

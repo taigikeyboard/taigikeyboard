@@ -1,5 +1,5 @@
-// 主設定畫面 — Material3 NavigationBar + Scaffold,容納 Home / Theme / Layout / Dictionary / Settings 5 個 tab。
-// 由 SettingsMainActivity setContent 掛載。
+// Main settings screen — Material3 NavigationBar + Scaffold hosting the Home / Theme / Layout /
+// Dictionary / Settings tabs; mounted by SettingsMainActivity.setContent.
 
 package com.siansiansu.taigikeyboard.ui.tabs
 

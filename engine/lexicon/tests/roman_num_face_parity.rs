@@ -26,14 +26,6 @@
 //! Soft-skips when the CSV is absent (lean checkout), like its
 //! `tps_notone_parity` / `poj_notone_parity` siblings.
 
-// §43 — runtime tl_num / poj_num 衍生與 build pipeline 的平行性測試。
-//   帶調 body 的 key 面就是 create_fst.py 由 dictionary.csv 的 tl_num / poj_num
-//   欄產出的家族;runtime 鏡像若漂移,SyllableReach 會對不上自己的 key 而 fail-open,
-//   §43 要擋的超長候選就整批回來 —— 而且無錯誤、無 panic、單元測試也抓不到
-//   (hermetic fixture 用的是同一份鏡像建 key)。只有這支測試擋得住。
-// 兩欄慣例不同是刻意的:tl_num 保留原字、poj_num 走 ASCII 折疊;
-//   任一慣例套到兩欄都會產生上萬筆不符,故兩個鏡像各自獨立而非共用旗標。
-
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -102,8 +94,6 @@ fn read_rows(path: &Path) -> std::io::Result<Vec<Row>> {
 /// is romanization, so a row whose `tl` column holds 漢字 (an upstream
 /// build-pipeline anomaly) is unreachable and out of the gate — the same
 /// carve-out `tps_notone_parity` makes for non-Bopomofo `tps_notone`.
-// 連續路徑真的搆得到的讀法 —— tl:/poj: 查詢鍵是羅馬字,tl 欄放漢字的列
-//   (建置上游異常)搆不到,排除在門檻外;與 tps_notone_parity 的同類豁免一致。
 fn is_romanization(reading: &str) -> bool {
     !reading.is_empty() && reading.chars().any(|c| c.is_ascii_alphabetic())
 }

@@ -21,16 +21,12 @@
 //! Design + alternatives in `docs/reports/2026-05-20-v359-b-plan.md`
 //! §B-1.
 
-// SyllableInventory — mmap 過的 syllables.fst 包裝。v3.5.9 B-1 起改 tagged-single-FST 格式,
-//   每個音節以 `tl:` / `poj:` 前綴 + numeric/toneless 兩種 key 存在;contains_in(mode, …) 依模式選家族。
-
 use fst::Set;
 use mmap_host::MmapHandle;
 use phonetics::InputMode;
 
 use crate::error::LexiconError;
 
-// SyllableInventory — 持有 fst::Set;條目 = `tl:` + `poj:` 兩家族下 numeric + toneless key 的去重總和。
 pub struct SyllableInventory {
     set: Set<MmappedSetData>,
 }
@@ -53,7 +49,6 @@ impl AsRef<[u8]> for MmappedSetData {
 impl SyllableInventory {
     /// Open `syllables.fst` mmap'd readonly. Validates that fst can parse
     /// the bytes; deeper format checks happen on first lookup.
-    // 以唯讀 mmap 開啟 syllables.fst,並驗證 fst crate 能解析。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
         let handle = MmapHandle::open_readonly(path).map_err(|source| LexiconError::Mmap {
             path: path.display().to_string(),
@@ -81,11 +76,6 @@ impl SyllableInventory {
     /// emitted by `dictionary/build/create_syllables_fst.py` (one
     /// Bopomofo syllable per line, in both numeric-tone-marked and
     /// toneless forms).
-    // 在 mode 指定的家族裡查詢一個 canonical 音節 key (numeric 或 toneless)。
-    //   呼叫端必須已用對應家族的 canonicalize_*_syllable 正規化過。
-    //   InputMode::English 不單設家族,沿用 `tl:` 家族查詢 (English 路徑不會走音節切分時為 no-op)。
-    // v3.5.9 D / C-3b — InputMode::Tps 走 `tps:` 家族 (C-0 build pipeline 已 emit
-    //   syllables.fst 內 Bopomofo per-syllable + numeric/toneless)。
     pub fn contains_in(&self, mode: InputMode, syllable: &str) -> bool {
         let prefix = match mode {
             InputMode::Poj => "poj:",
@@ -104,8 +94,6 @@ impl SyllableInventory {
     /// `final_only_offsets` = byte offsets into `syllable` of glyphs
     /// immediately before a hard close (span end at a stripped separator
     /// barrier); tone-mark restriction is derived inside the pattern.
-    // TPS 歧義感知 inventory 探測 — syllable 任一讀法在 tps: 家族即 true;
-    //   字面探測為嚴格子集 → 既有 edge 全數保留。final_only_offsets = barrier 前一格偏移。
     pub fn contains_in_tps_readings(&self, syllable: &str, final_only_offsets: &[usize]) -> bool {
         use fst::{IntoStreamer, Streamer};
         if syllable.is_empty() {
@@ -116,8 +104,6 @@ impl SyllableInventory {
         // only ever match the literal, so a literal miss is a miss. This
         // keeps the per-keystroke BFS (O(n × 24) probes, most of which
         // miss) from building an automaton per probe.
-        // 字面命中免 automaton;span 無歧義 glyph 時 pattern 等同字面,
-        //   字面 miss 即 miss — BFS 熱路徑(多數 probe 為 miss)不必逐 probe 建自動機。
         if self.contains_prefixed("tps:", syllable) {
             return true;
         }
@@ -142,7 +128,6 @@ impl SyllableInventory {
     /// to land on the stack. We currently always allocate; callers stay
     /// off the hot path (BFS syllabifier loops do ≤ MAX_SYLLABLE_BYTES
     /// probes per start, well bounded by inventory size).
-    // 內部 helper — 把 prefix 與 syllable 拼成 fst key 再查 set。
     fn contains_prefixed(&self, prefix: &str, syllable: &str) -> bool {
         // Allocate a single String to avoid the cost of two .as_bytes()
         // calls and a manual byte concat. The fst::Set lookup itself
@@ -155,7 +140,7 @@ impl SyllableInventory {
         self.set.contains(key.as_bytes())
     }
 
-    // 回傳 FST 內的 key 總數 (numeric + toneless 去重,含 tl: 與 poj: 兩家族)。
+    // Total key count, deduped across numeric + toneless forms in both the tl: and poj: families.
     pub fn entry_count(&self) -> u64 {
         self.set.len() as u64
     }

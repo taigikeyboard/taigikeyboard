@@ -2,8 +2,6 @@
 //! from any romanization. Port of `Storage/CustomDictionaryStore.swift` +
 //! `CustomDictionaryRow.swift`; SQL byte-identical.
 
-// 自訂詞庫 — 主表 + 搜尋鍵側表;按鍵路徑同步查、使用者操作走 perform。
-
 use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 use crate::timestamp::utc_timestamp_now;
 use rusqlite::{params, Connection, OptionalExtension};

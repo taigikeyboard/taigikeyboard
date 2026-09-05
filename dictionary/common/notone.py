@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
-移除聲調相關函數
-"""
+"""Tone-removal helpers for TL/POJ digit-tone stripping and TPS variants."""
 
 import re
 
 
 def remove_tone(text: str) -> str:
     """
-    移除數字聲調版本中的聲調數字和連字符
+    Strip tone digits and hyphens from a numeric-tone romanization.
 
     Args:
-        text: 數字聲調版本的羅馬字 (如 gua2 或 gua2ho2)
+        text: Numeric-tone romanization (e.g. gua2 or gua2ho2).
 
     Returns:
-        無聲調版本，或空字串（輸入為空時）
+        Toneless form, or an empty string if the input is empty.
 
     Cross-system invariant — the `[\\d\\-]` character class strips BOTH
     digits AND hyphens, so multi-syllable `tl_num=tsu1a2` collapses to the
@@ -27,7 +25,6 @@ def remove_tone(text: str) -> str:
     if not text:
         return ""
 
-    # 移除數字 (1-9) 和連字符
     return re.sub(r"[\d\-]", "", text)
 
 

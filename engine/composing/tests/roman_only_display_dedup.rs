@@ -18,9 +18,6 @@
 //!
 //! Hermetic `LexiconHandle` install mirrors `tps_display_dedup.rs`.
 
-// 羅馬字模式顯示去重整合測試 — 同音異字與 §34 literal 對上同 roman 的字典列要收成一格;
-//   漢羅並排 / 預設 0 / 未知值全部保留;TPS 不受影響。
-
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 

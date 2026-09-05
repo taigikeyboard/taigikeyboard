@@ -6,22 +6,17 @@
 //! `0xFF` separates key from rowid because UTF-8 byte classes never produce
 //! `0xFF` mid-sequence. Multiple rowids per key appear as multiple entries.
 
-// build 子命令,讀取 stdin 的 TL\tkey\trowid 行,排序去重後輸出 fst 檔。
-// 用 0xFF 當分隔位元,因為合法 UTF-8 序列絕不會產生 0xFF。
-
 use std::fs::File;
 use std::io::{self, BufRead, BufWriter};
 
-// key 與 rowid 的分隔位元,UTF-8 序列不會出現 0xFF 故可安全當分界。
 const SEPARATOR: u8 = 0xFF;
 
-// 建置完成後回報的統計資料,供 main 印出 log 行使用。
+// Stats returned to `main`, which prints them as a log line.
 pub struct BuildStats {
     pub entries: usize,
     pub distinct_keys: usize,
 }
 
-// 主建置流程,讀 stdin 全部行、組成 key+0xFF+rowid 條目、排序去重後寫入 fst。
 pub(crate) fn run_build(output_path: &str) -> Result<BuildStats, String> {
     let stdin = io::stdin();
     let mut entries: Vec<Vec<u8>> = Vec::new();

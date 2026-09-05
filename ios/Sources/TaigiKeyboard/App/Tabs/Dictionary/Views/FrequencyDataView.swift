@@ -1,13 +1,8 @@
-// 使用者詞頻資料管理子頁。
-// 含錄製開關、CSV 匯入匯出、全部清除、隱私警語、列表瀏覽 + 過濾搜尋。
-
 import SwiftUI
 import UniformTypeIdentifiers
 
 /// Frequency data sub-page
 /// Shows top word frequency list with toggle, import/export, and clear option
-// 詞頻資料子頁的根 View。資料層由 FrequencyDataViewModel 提供;
-// 匯入匯出由 ImportExportHandler 負責。
 struct FrequencyDataView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = FrequencyDataViewModel()
@@ -18,8 +13,7 @@ struct FrequencyDataView: View {
 
     private let displayLimit = 100
 
-    // 依 filterText 對 漢字 word 或 羅馬字 tl 做大小寫不敏感子字串比對;
-    // 無關鍵字時走 displayLimit 上限以避免大量列表卡頓。
+    // Unfiltered list caps at displayLimit to stay responsive; filtering matches word or tl case-insensitively.
     private var filteredData: [FrequencyListItem] {
         if filterText.isEmpty {
             return Array(viewModel.allData.prefix(displayLimit))
@@ -109,8 +103,7 @@ struct FrequencyDataView: View {
                     } else {
                         ForEach(filteredData) { item in
                             HStack(spacing: 8) {
-                                // 羅馬字 (caption/secondary) + 漢字 (body) 同行;
-                                // legacy tl='' 或純羅馬字 (tl == word) 不重複前綴。
+                                // Roman (caption) + hanji (body) on one row; tl == "" or tl == word skips the prefix.
                                 if !item.tl.isEmpty, item.tl != item.word {
                                     Text(item.tl)
                                         .foregroundColor(.secondary)
@@ -170,7 +163,6 @@ struct FrequencyDataView: View {
 
     // MARK: - Import
 
-    // 把 fileImporter 結果轉交 ImportExportHandler;完成後重新載入清單。
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,

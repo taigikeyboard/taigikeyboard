@@ -19,10 +19,6 @@
 //! and the engine's `composing::shadow::custom_toneless_key` lattice path are
 //! untouched (they read `roman`, not these keys).
 
-// 自訂詞庫跨輸入模式搜尋鍵衍生 (R3)。寫入端把單一 roman 展成 tl/poj/tps × num/notone/abbrev
-//   多家族鍵 (對齊系統字典三索引);查詢端依當前 input + mode 產生單一家族鍵。鍵只在
-//   custom_dictionary.db 內比對,不碰系統 FST,故只要 write==query 同字即可,raw roman 路徑不動。
-
 use crate::api::{
     contains_tps, parse_input_mode, poj_display_to_tl_display, tl_display_to_poj_display,
     to_tone_number, InputMode,
@@ -185,9 +181,6 @@ fn dedup_nonempty(keys: Vec<CustomSearchKey>) -> Vec<CustomSearchKey> {
 /// raw keyboard buffer, so `soo2` / `kiann1`) on the same bytes — see
 /// [`derive_notone`] for why the display glyphs cannot reach a key as-is. Both
 /// sides run through this one function, so they cannot drift.
-// num 形鍵的共同整形 — 小寫、取 base form (o͘→oo、ⁿ→nn)、去連字號/空白。
-//   寫入端來自顯示形 roman (so͘2/kiaⁿ1)、查詢端來自鍵盤 raw buffer (soo2/kiann1),
-//   兩邊都走這支所以不會漂移。
 fn fuse_latin_numeric(numeric: &str) -> String {
     crate::taigi_unicode_base_form(&numeric.to_lowercase())
         .chars()

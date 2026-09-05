@@ -2,8 +2,6 @@
 //! input method in one readable, testable table. Port of
 //! `ComposingKeyIntent.swift:93-413`.
 
-// 一個按鍵對組字的意義 — 整個輸入法的鍵盤契約,七層分類,順序即優先權。
-
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, NavigationKey};
 

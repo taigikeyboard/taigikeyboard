@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins the 候選詞顯示 storage coercion + the two platform-side derivation
+ * Pins the candidate-display-mode storage coercion + the two platform-side derivation
  * rules (`effectiveTranslateSwapped` / `effectiveOutputBothScripts`).
  * `PrefHelper` itself needs a real Android `Context` (DataStore), so the
  * rules are tested at the enum seam it delegates to — same rationale as
@@ -60,7 +60,7 @@ class CandidateDisplayModeTest {
 
     /**
      * COMBINED projects to "cell leads with hanji, commit writes hanji":
-     * swap reads `true` whatever is stored, 括號標註 keeps the stored value.
+     * swap reads `true` whatever is stored, but output-both-scripts passes the stored value through.
      * Storage is untouched, so SIDE_BY_SIDE restores the user's choice.
      */
     @Test

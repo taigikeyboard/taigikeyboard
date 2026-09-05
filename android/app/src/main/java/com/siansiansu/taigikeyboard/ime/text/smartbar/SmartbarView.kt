@@ -1,5 +1,4 @@
-// Smartbar 平台 View 殼 — 候選 strip 內含為 ComposeView(LazyRow + English Row),
-// 外層仍為 LinearLayout 以維持 IME inflate / Activity 預覽穩定性。
+// Smartbar host View — LinearLayout shell (keeps IME inflate / preview stable) with ComposeView candidate strips.
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
@@ -22,39 +21,33 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
-/**
- * Smartbar 視圖：候選詞、英文三欄、數字列、Toolbar 容器。
- * 候選 strip 由 Compose 渲染（Taigi LazyRow + English Row）。
- */
+/** Smartbar view: Compose-rendered Taigi + English candidate strips, number row, toolbar containers. */
 class SmartbarView : LinearLayout {
     // A7: `SmartbarView` is only inflated inside the IME input view tree, so
     // `context` is always the IME service. Previewed screens do not use it.
     private val smartbarManager: SmartbarManager
         get() = (context as TaigiKeyboard).smartbarManager
 
-    // 候選詞容器（ToolbarManager visibility-swap target — keep）
+    // ToolbarManager visibility-swap target — keep.
     var candidatesContainer: LinearLayout? = null
         private set
     var candidatesComposeView: ComposeView? = null
         private set
 
-    // 展開收合相關視圖
     var expandToggleButton: ImageButton? = null
         private set
     var dividerView: View? = null
         private set
 
-    // 其他容器
     var numberRowView: LinearLayout? = null
         private set
 
-    // 英文三欄式候選詞容器（ToolbarManager visibility-swap target — keep）
+    // ToolbarManager visibility-swap target — keep.
     var englishCandidatesContainer: LinearLayout? = null
         private set
     var englishCandidatesComposeView: ComposeView? = null
         private set
 
-    // Toolbar views
     var toolbarContainer: LinearLayout? = null
         private set
     var toolbarToggleButton: ImageButton? = null
@@ -77,25 +70,19 @@ class SmartbarView : LinearLayout {
 
         super.onAttachedToWindow()
 
-        // 候選詞容器 + Compose 子視圖
         candidatesContainer = findViewById(R.id.candidates_container)
         candidatesComposeView = findViewById(R.id.candidates_compose)
 
-        // 展開收合按鈕與分隔線
         expandToggleButton = findViewById(R.id.expand_toggle_button)
         dividerView = findViewById(R.id.candidate_divider)
 
-        // 初始化展開按鈕 tint
         applyExpandButtonTint()
 
-        // 其他視圖
         numberRowView = findViewById(R.id.number_row)
 
-        // 英文三欄式候選詞容器 + Compose 子視圖
         englishCandidatesContainer = findViewById(R.id.english_candidates_container)
         englishCandidatesComposeView = findViewById(R.id.english_candidates_compose)
 
-        // Toolbar views
         toolbarContainer = findViewById(R.id.toolbar_container)
         toolbarToggleButton = findViewById(R.id.toolbar_toggle_button)
         toolbarGlobeButton = findViewById(R.id.toolbar_globe_button)
@@ -202,19 +189,13 @@ class SmartbarView : LinearLayout {
             intArrayOf(Color.WHITE, defaultColor),
         )
 
-    /**
-     * 設定展開按鈕可見性
-     * 只在有候選詞時顯示
-     */
+    /** Shows or hides the expand toggle and its divider — visible only while candidates exist. */
     fun setExpandButtonVisible(visible: Boolean) {
         expandToggleButton?.visibility = if (visible) View.VISIBLE else View.GONE
         dividerView?.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
-    /**
-     * 更新展開按鈕圖示狀態
-     * @param isExpanded true 顯示向上箭頭，false 顯示向下箭頭
-     */
+    /** Swaps the expand button icon: up arrow when [isExpanded], down arrow otherwise. */
     fun setExpandButtonState(isExpanded: Boolean) {
         expandToggleButton?.apply {
             setImageResource(
@@ -224,7 +205,7 @@ class SmartbarView : LinearLayout {
                     R.drawable.ic_keyboard_arrow_down
                 },
             )
-            // 根據鍵盤主題動態設定圖示顏色 (light-only theme role wins over the night attr)
+            // Light-only theme role wins over the night attr.
             imageTintList = ColorStateList.valueOf(resolvedChromeIconTint())
         }
     }
@@ -238,9 +219,6 @@ class SmartbarView : LinearLayout {
         layoutParams?.height = size
     }
 
-    /**
-     * 根據鍵盤主題設定展開按鈕的 tint
-     */
     private fun applyExpandButtonTint() {
         expandToggleButton?.imageTintList = ColorStateList.valueOf(resolvedChromeIconTint())
     }

@@ -13,9 +13,6 @@
 //! Empty / missing payload is reported as `FailInvariant` so the platform
 //! side can distinguish "you forgot to fill `payload`" from "we crashed".
 
-// 引擎頂層 FFI 分派器 — 單一 bytes 進、bytes 出的入口點。
-// 解析 Request、依 payload oneof 路由到對應子 crate,並用 catch_unwind 圍住整條 pipeline,確保 panic 不會跨越 FFI 邊界。
-
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use prost::Message;
@@ -28,13 +25,11 @@ mod case;
 /// envelope overhead. Single source of truth — `swift-ffi` and
 /// `android-jni` import this constant for their pre-allocation early
 /// rejection so the cap stays in lock-step across both FFI seams.
-// FFI 請求 byte buffer 的最大上限,iOS/Android 兩端共用此常數做早期拒絕,確保兩個 FFI 邊界門檻一致。
 pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 
 /// Decode `bytes` as a `Request`, dispatch by payload variant, encode the
 /// resulting `Response`. Always returns a valid encoded `Response` —
 /// never panics across the seam.
-// FFI 主入口 — 解析 Request、依 payload 分派、回傳序列化後的 Response,絕不會讓 panic 穿越邊界。
 #[must_use]
 pub fn process_request(bytes: &[u8]) -> Vec<u8> {
     let result = catch_unwind(AssertUnwindSafe(|| encode(&run(bytes))));
@@ -48,7 +43,6 @@ pub fn process_request(bytes: &[u8]) -> Vec<u8> {
 /// a closure that always panics so the catch-unwind boundary is
 /// exercised against a known panic. Production code never references
 /// this; it is compiled out of release builds.
-// 僅供測試的 panic 注入接縫,讓單元測試能直接驗證 catch_unwind 邊界,正式版本會被編譯掉。
 #[cfg(test)]
 fn process_request_with<F>(bytes: &[u8], dispatcher: F) -> Vec<u8>
 where
@@ -204,7 +198,6 @@ fn lexicon_error_code(err: &lexicon::LexiconError) -> ErrorCode {
 
 /// Encode an error-only `Response` for the FFI seams (`swift-ffi`, `android-jni`)
 /// so both crates share one definition of the empty-payload error envelope.
-// FFI 兩端共用的錯誤回應編碼,避免各自複製一份。
 #[must_use]
 pub fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
     encode(&error_response(id, code, generation))
@@ -212,7 +205,6 @@ pub fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
 
 /// Wire byte for a `log::Level` as delivered to the platform logger sinks
 /// (`SwiftLoggerSink` / `RustLogger`): Error=0 … Trace=4. One table for both seams.
-// log level → 平台 logger sink 的 wire byte,兩端共用同一張表。
 #[must_use]
 pub fn log_level_to_byte(level: log::Level) -> u8 {
     match level {

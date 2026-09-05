@@ -1,5 +1,3 @@
-// 候選詞顯示模式 — 漢羅並排(預設)/ 羅馬字 / 漢羅濫。羅馬字模式下 isTranslateSwapped / outputBothScripts 的有效值強制為 false;漢羅濫下 isTranslateSwapped 強制為 true。
-
 package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**

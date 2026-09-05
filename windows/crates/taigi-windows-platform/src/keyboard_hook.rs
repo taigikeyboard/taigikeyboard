@@ -22,8 +22,6 @@
 //! is tested on the macOS host; the `#[cfg(windows)]` half below is the
 //! API calls and the thread-local that holds them.
 
-// 錄製快捷鍵用的執行緒鍵盤 hook(W17-B1)。Reactor 不給鍵盤事件,錄製中就用 WH_KEYBOARD 在 XAML 之前攔下按鍵。吞掉的鍵 down/up 都要吞(否則 XAML 會收到孤兒 key-up,WinUI 的 Button 是在 key-up 觸發);Tab 只回報不吞,因為它要繼續走 focus。判斷邏輯在純資料的 Recording,Win32 只負責呼叫。
-
 use taigi_windows_core::keys::RecordedPress;
 
 /// What the window did with a press the hook offered it. The callback

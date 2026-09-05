@@ -1,5 +1,5 @@
-// 單鍵 Composable — 負責繪 label / icon / 背景 + 套用主題色。
-// 由 KeyboardLayout 的自訂 Layout block 配置位置,本檔只管「一個 cell 怎麼畫」。
+// Single-key Composable — draws label / icon / background and applies the theme color.
+// Position is laid out by KeyboardLayout's custom Layout block; this file only draws one cell.
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 

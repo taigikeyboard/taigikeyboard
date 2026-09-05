@@ -4,8 +4,6 @@
 //! `UpdatePackageDownload.run`: HTTPS only, 200 only, a size ceiling on
 //! both bodies, timeouts a stalled server cannot stretch.
 
-// 網路傳輸 — manifest 抓取與安裝檔下載,走 trait,實作用 ureq。
-
 use crate::manifest::{ManifestError, UpdateManifest, MAXIMUM_MANIFEST_BYTES, PUBLISHED_URL};
 use std::io::Write;
 use std::path::Path;

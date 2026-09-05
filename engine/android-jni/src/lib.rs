@@ -10,9 +10,6 @@
 //! `jbyteArray` BEFORE copying into a Rust `Vec<u8>`, so an oversized payload
 //! is rejected without the matching allocation.
 
-// Android JNI 入口,包覆 dispatch 並把 log 回呼透過快取的 JavaVM 反彈回 JVM。
-// 所有 extern "system" 導出函式皆以 EnvUnowned::with_env 包覆,先做長度檢查再複製 jbyteArray。
-
 use dispatch::{encode_error, log_level_to_byte, MAX_REQUEST_BYTES};
 use jni::objects::{Global, JByteArray, JClass, JObject, JStaticMethodID, JValue};
 use jni::signature::{MethodSignature, Primitive, ReturnType};
@@ -26,7 +23,6 @@ use std::sync::{Once, OnceLock};
 // jni 0.22 requires `AsRef<JNIStr>` and `AsRef<MethodSignature>` for class /
 // method / signature arguments. The `jni_str!` and `jni_sig!` macros perform
 // MUTF-8 / signature validation at compile time.
-// jni 0.22 起,類別/方法名/簽名須走編譯期驗證的 jni_str!/jni_sig! 巨集。
 const BRIDGE_CLASS: &JNIStr = jni_str!("com/siansiansu/taigikeyboard/engine/RustEngineBridge");
 const DISPATCH_METHOD: &JNIStr = jni_str!("dispatchLog");
 const DISPATCH_SIG: MethodSignature = jni_sig!("(ILjava/lang/String;Ljava/lang/String;)V");
@@ -35,7 +31,6 @@ const DISPATCH_SIG: MethodSignature = jni_sig!("(ILjava/lang/String;Ljava/lang/S
 
 /// `external fun processRequestBytes(bytes: ByteArray): ByteArray` declared on
 /// `com.siansiansu.taigikeyboard.engine.RustEngineBridge`.
-// Kotlin 端 processRequestBytes 的 JNI 對應實作,負責長度檢查與 dispatch 呼叫。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_processRequestBytes<
     'local,
@@ -86,7 +81,6 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 /// `external fun registerLogger(): Unit`. Caches `JavaVM` + a
 /// `Global<JClass<'static>>` to the bridge class + the `dispatchLog` static
 /// method ID, then installs the Rust `log` adapter.
-// 快取 JavaVM、橋接類別 Global<JClass<'static>> 與 dispatchLog 方法 ID,並安裝 Rust log adapter。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_registerLogger<
     'local,
@@ -127,7 +121,6 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 ///
 /// Levels: 0=Off, 1=Error, 2=Warn, 3=Info, 4=Debug, 5=Trace; anything
 /// else → `Off`.
-// swift-ffi set_log_level 的 JNI 對應版,執行期調整 log::max_level,釋出版不付格式化成本。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_setLogLevel<
     'local,
@@ -156,7 +149,6 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 /// T1 panic injector. Available only when the `panic-injector` feature is
 /// enabled (dev `.so`). Release builds omit this symbol; verified by `nm` in
 /// `build-android-libs.sh`.
-// T1 恐慌注入點,只在開發版 .so(panic-injector feature)出現,釋出版不存在此符號。
 #[cfg(feature = "panic-injector")]
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_panicForTest<
@@ -184,12 +176,10 @@ struct LoggerDispatch {
     vm: JavaVM,
     /// Global reference to the bridge class. Keeps the class alive so the
     /// cached `method_id` stays valid for the lifetime of the loaded library.
-    // 橋接類別的全域引用,保證類別不會被卸載,讓快取的 method_id 始終有效。
     class_global: Global<JClass<'static>>,
     /// `JStaticMethodID` is `Copy + Send + Sync` (lifetime-free) since
     /// jni 0.22, so it can be stored directly without the prior `usize`
     /// round-trip.
-    // jni 0.22 起 JStaticMethodID 已是無生命週期的 Copy/Send/Sync 型別,可直接存放。
     method_id: JStaticMethodID,
 }
 
@@ -212,7 +202,6 @@ impl log::Log for PlatformLogger {
         // catch_unwind in jni 0.22 — a panic there would unwind across the
         // JVM boundary and abort the process. Wrap explicitly so the logger
         // can never crash the host application.
-        // jni 0.22 的 attach_current_thread 不會 catch panic,自行包 catch_unwind 防止 abort。
         let _ = catch_unwind(AssertUnwindSafe(|| {
             // Per Codex round-2 H1: attach the current thread on every
             // callback; never cache the Env. The closure receives a fresh
@@ -256,7 +245,6 @@ impl log::Log for PlatformLogger {
 
 /// Encode `code` as a `Response`, allocate a `JByteArray`, and return the raw
 /// `jbyteArray`. Used inside `with_env` closures.
-// 在 with_env closure 內把 ErrorCode 編碼為 jbyteArray。
 fn encode_error_to_jarray(env: &mut Env<'_>, code: ErrorCode) -> jni::errors::Result<jbyteArray> {
     let buf = encode_error(0, code, 0);
     Ok(env.byte_array_from_slice(&buf)?.into_raw())
@@ -265,7 +253,6 @@ fn encode_error_to_jarray(env: &mut Env<'_>, code: ErrorCode) -> jni::errors::Re
 /// Fallback path for `Outcome::Err` and `Outcome::Panic` on the JNI methods
 /// that return `jbyteArray`: open a fresh `with_env` scope and re-encode the
 /// error. If even that fails (OOM, JVM in a bad state), return `null`.
-// Outcome::Err/Panic 的回退路徑,重新 attach 一次重編 FailInternal;若再失敗回 null。
 fn encode_error_via_fresh_attach(unowned: &mut EnvUnowned<'_>, code: ErrorCode) -> jbyteArray {
     let outcome = unowned
         .with_env(|env| -> jni::errors::Result<jbyteArray> { encode_error_to_jarray(env, code) })

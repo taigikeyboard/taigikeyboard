@@ -2,8 +2,6 @@
 //! contract the user chooses. Port of `CandidateSlotKeySet`
 //! (`ComposingKeyBindings.swift:5-107`).
 
-// 九個候選槽位用哪組按鍵選取 — 使用者可選的那部分。
-
 use super::intent::ComposingKeyIntent;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 use crate::settings::SettingChoice;

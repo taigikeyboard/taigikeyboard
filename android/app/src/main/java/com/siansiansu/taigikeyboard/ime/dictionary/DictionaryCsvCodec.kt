@@ -1,6 +1,3 @@
-// 單行 CSV 解析與跳脫(RFC 4180 雙引號規則)— 用於頻次 / NextWord 關聯資料的匯出匯入。
-// parseLine + escape 為對等對應,確保 round-trip 不失真。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 // Single-line CSV parsing and escaping for frequency/association data export/import
@@ -50,8 +47,6 @@ object DictionaryCsvCodec {
     // CROSS-PLATFORM INVARIANT — mirrors ios/.../App/Tabs/Dictionary/Utilities/CSVParsers.swift
     // (encode/decodeFrequencyCSV). Drift causes silent divergence; both serialize byte-for-byte.
     // Pins INVARIANT_USER_FREQ_PAIR_KEY (docs/architecture/behavioral-invariants.md §28).
-
-    // 逐 (word, tl, count) 列編成 word,tl,count\n;word 與 tl 走 escape() 轉義。
     fun encodeFrequencyCSV(rows: List<Triple<String, String, Int>>): String =
         buildString {
             for ((word, tl, count) in rows) {
@@ -62,7 +57,6 @@ object DictionaryCsvCodec {
     // 3 columns → (word, tl, count); legacy 2 columns → (word, "", count);
     // any other column count is skipped (exact discriminator, not >= 2, so a
     // malformed row is never silently eaten as legacy).
-    // 3 欄 (word,tl,count) 現格式;2 欄 (word,count) 舊檔 → tl="";其餘欄數跳過。
     fun decodeFrequencyCSV(csv: String): List<Triple<String, String, Int>> {
         val entries = mutableListOf<Triple<String, String, Int>>()
         for (line in csv.split("\n")) {

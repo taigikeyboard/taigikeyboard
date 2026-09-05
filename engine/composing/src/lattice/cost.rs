@@ -86,18 +86,6 @@
 //! (Codex pre-impl S5 Q2) — the OOV pricing here only governs *path
 //! selection* (dict path vs OOV blob), never the rendered string.
 
-// 全句 walker 單條 edge 成本(越小越好;min Σ cost = khiin segment_min_cost = McBopomofo max Σ log P)。
-// 字典分支忠實移植 khiin segmenter.rs:82-92:p=(1+freq)/CORPUS、cost=ln(1/p)/len^0.2·syll^0.2、user log-space 折減。
-// S2/S3 把 khiin 的 ln(1/p) 正規化 + minimize 拿掉 → maximize 結構性獎勵過度切分(taiuan→乾伊有俺,2026-05-17)。
-// RC0 — khiin 兩機制被 S5/S7 混淆:(1) 已索引詞 p<=0 下限 1e-5/10^word_len(ln 尺度);
-//   (2) segment_min_cost:198-206 真・未覆蓋 span 每字元付 BIG=1e10。S5 用 (1) 平滑機率定價真・OOV
-//   → 整段 blob 一次吃 ÷word_len^0.2 折扣贏過逐邊累 toll 的字典路徑(>6 邊翻車 → carve-out 吐純羅馬字;
-//   ginalangtsiahpngbesai 門檻恰 6 音節,2026-05-18 真實字典重現);S7 只調斜率沒解混淆。
-// RC0 解混淆:OOV edge = OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG),無 bias/折減
-//   →「OOV 輸給任何字典可覆蓋路徑」任何長度恆成立 = 成本性質非 dict_hit lexicographic 短路。
-// 無字典命中 buffer 的逐音節羅馬字由 continuous::fetch_walker_slot0_inner 顯式 carve-out 產生(不進本函式,Codex S5 Q2)。
-
-// ===========================================================================
 // Walker model parameters — engine-only, no platform mirror.
 //
 // The `pub(crate) const` below (`CORPUS_TOTAL_FREQ`, `LETTER_COUNT_BIAS`,
@@ -115,16 +103,6 @@
 // `pub(crate)`, engine-only (no platform sees them), and stay with the cost
 // model they parameterize. v3.5.9 A3 reframe locks this in (see
 // `docs/reports/2026-05-18-v358-refactor-design-spec.md` §3A.1).
-// ===========================================================================
-
-// walker 模型參數 — engine-only,無平台 mirror。
-//   pub(crate) const(CORPUS_TOTAL_FREQ / 兩 length-bias / OOV_PER_CHAR_PENALTY /
-//   WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE / CUSTOM_EFFECTIVE_FREQ)參數化
-//   edge_cost(字典分支 + OOV pricing 分支),皆 cited 命名常數 / 非 runtime tunable 非 magic literal。
-// 勿與 ranking::score.rs Cluster 1(BOOST_ALPHA / MAX_BOOST / RECENCY_WINDOW_MS /
-//   CONTINUOUS_DEFAULT_SOURCE_RANK / USER_WEIGHT_DECAY_TAU_MS;pub / 跨平台不變式
-//   per .claude/rules/cross-platform-alignment.md §3a)合併 — 本群 pub(crate)、engine-only,
-//   與自身 cost 模型同住(v3.5.9 A3 reframe / 設計稿 §3A.1)。
 
 /// Total corpus frequency mass — the denominator that turns a raw
 /// `DictionaryRecord.frequency` into a corpus probability
@@ -151,8 +129,6 @@
 /// fails `cargo test --workspace`, not silent drift. **Recompute and
 /// update this constant whenever the dictionary is rebuilt** — the
 /// artifact will print the expected value in the failure message.
-// 語料總頻 = dictionary.csv 全列 frequency 加總(168467 列,13_095_142,2026-05-31 量測;dev 補充詞庫 6 檔合併後)。
-// dict.bin v2 無語料總計 metadata → bake 成常數 + pipeline-emitted artifact 守門(Codex S5 Q4=a / v3.5.9 A4);字典重建須同步更新此值,失敗訊息會列實測值。
 pub(crate) const CORPUS_TOTAL_FREQ: f64 = 13_095_142.0;
 
 /// Compile-time invariant: `CORPUS_TOTAL_FREQ` must exceed
@@ -168,14 +144,12 @@ const _: () = assert!(CORPUS_TOTAL_FREQ > 184_694.0);
 /// cited constant, not a runtime tunable (Codex pre-impl S5 Q6, 2026-05-17:
 /// changing the model and tuning it in one patch makes regressions
 /// harder to reason about; dogfood can tune later).
-// khiin LETTER_COUNT_BIAS(segmenter.rs:20,0.2);長拼寫 → 較便宜,偏好少而長的詞。固定 cited 常數非 runtime tunable。
 pub(crate) const LETTER_COUNT_BIAS: f64 = 0.2;
 
 /// khiin `SYLLABLE_COUNT_BIAS` (`segmenter.rs:28`, default `0.2`):
 /// `cost × syllable_count^0.2` — a word spanning more syllables pays
 /// slightly more, the khiin counter-bias that keeps `letter` length
 /// preference from over-favouring very long single entries.
-// khiin SYLLABLE_COUNT_BIAS(segmenter.rs:28,0.2);跨較多音節的詞略貴,平衡 letter 長度偏好。
 pub(crate) const SYLLABLE_COUNT_BIAS: f64 = 0.2;
 
 /// Compile-time invariant: both khiin length-normalization exponents
@@ -225,17 +199,6 @@ const _: () = assert!(LETTER_COUNT_BIAS > 0.0 && SYLLABLE_COUNT_BIAS > 0.0);
 /// `BIG` constant), NOT a lexicographic `dict_hit` short-circuit
 /// (Codex pre-impl S7 Q1 / RC0 Q2). A cited constant, not a runtime
 /// tunable (same rationale as the khiin bias exponents).
-// RC0 修 — OOV(無字典命中)span 的「每字元」懲罰 = khiin 字面 BIG(segmenter.rs:29 `1e10`)。
-// khiin 兩個被 S5/S7 混淆的機制:(1) segmenter.rs:75-92 已索引詞 p<=0 的語料缺口下限
-//   p=1e-5/10^word_len(ln 尺度);(2) segment_min_cost:198-206 真・未覆蓋 span 不用任何機率,
-//   DP 每前進一字元付 costs[i-1]+BIG(1e10),整段累加 BIG/字元 → 單一 OOV 字元(1e10)
-//   壓過任何 ln 尺度(~5-30)字典切分,任何長度皆然(khiin 有字典路徑就幾乎不吐 OOV blob)。
-// S5 用機制(1)的平滑機率定價真・OOV span → 整段 blob 一次吃 ÷word_len^0.2 折扣、贏過逐邊累 toll
-//   的字典路徑(>6 邊翻車 → any_dict=false → carve-out 吐純羅馬字;ginalangtsiahpngbesai→純羅馬字,
-//   門檻恰 6 音節,2026-05-18 真實字典重現)。S7 只調斜率沒解混淆。
-// RC0 解混淆:OOV edge = OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG;toneless_len=khiin word_len),
-//   無 bias、無 user 折減(khiin BIG 是 raw;OOV edge user_weight_delta 恆 0);字典分支維持完整 khiin 公式。
-//   「OOV 輸給任何字典可覆蓋路徑」恆成立 = 成本性質(khiin 自己的 BIG 常數)非 dict_hit lexicographic 短路。
 pub(crate) const OOV_PER_CHAR_PENALTY: f64 = 1e10;
 
 /// Compile-time invariant: the OOV per-char penalty must dominate any
@@ -263,9 +226,6 @@ const _: () = assert!(OOV_PER_CHAR_PENALTY >= 1e5);
 /// Multi-syllable edges get the full delta (scale `1.0`, applied in
 /// [`edge_cost`]). **Dogfood-tunable 0.0..=0.25** if dogfood shows
 /// single-syllable user preference is under-weighted in segmentation.
-// S3/S5 — 單音節 edge 拿到的 decayed user delta 比例;0.0 = 不拿 walker user 折減。
-//   熱門單字(如「的」)不可靠自己 stale user 史壓垮整句(Codex S3 Q4c BLOCK,S5 log-space 改寫沿用:scale 0 → ln(1)=0)。
-//   其 user 偏好已由 best_candidate_for_key 選 record 時體現。多音節 edge 拿滿。dogfood 可調 0.0..=0.25。
 pub(crate) const WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0;
 
 /// v3.5.8 S6 (Codex pre-impl S6 Q1, 2026-05-17, BLOCK condition) —
@@ -290,9 +250,6 @@ pub(crate) const WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0;
 /// custom edge still loses badly to a real phrase path — pinned by
 /// [`tests`]). **Dogfood-tunable**; a named cited constant, not a
 /// runtime tunable nor a magic literal.
-// S6 — custom_dictionary.db edge 在 S5 min-cost 模型用的「等效語料頻率」(Codex Q1 BLOCK:用 proxy 不用 cost floor,
-//   floor 會繞過「每 edge 付 ln(CORPUS) 正規化稅」不變式)。2_000 = dictionary.csv 多音節 max≈1562 / 單音節 p95≈1461 / p99≈7721
-//   之間 → custom 是強多音節片語競爭者(勝單字拆分)但非頂頻單字(單音節 custom 仍輸真實片語,測試 pin)。dogfood 可調。
 pub(crate) const CUSTOM_EFFECTIVE_FREQ: u32 = 2_000;
 
 /// Min-cost for one lattice edge (**lower = better**).
@@ -345,12 +302,6 @@ pub(crate) const CUSTOM_EFFECTIVE_FREQ: u32 = 2_000;
 ///   `dict_hit` rule (Codex pre-impl S7 Q1 / RC0 Q2).
 ///
 /// Always finite and `> 0`.
-// 單 edge 最小化成本(越小越好),RC0 de-conflate khiin 兩機制:
-// dict_hit → khiin segmenter.rs:82-92:ln(1/p)/len^0.2·syll^0.2 − ln(1+δ),p=(1+freq)/CORPUS;
-//   分支只由 dict_hit 選,絕不從 freq==0 推(真實字典詞可 freq 0、custom 用 proxy freq)。
-// !dict_hit → khiin segment_min_cost:198-206:OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG),
-//   無 bias、無 user 折減;每字元 ≥1e10 壓過任何 ln 尺度字典可覆蓋路徑 → 字典可覆蓋 buffer 任何長度
-//   都不會塌成 OOV blob(RC0)= 成本性質非 dict_hit lexicographic 規則。OOV 的 syllable_count/frequency 僅 metadata。
 pub(crate) fn edge_cost(
     frequency: u32,
     syllable_count: u8,

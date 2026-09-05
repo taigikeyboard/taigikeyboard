@@ -3,8 +3,6 @@
 //! `GlobalShortcutPolicy`) that is not AppKit. The settings window feeds it
 //! the press and draws the answer.
 
-// 快捷鍵錄製欄的純決策 — 一個按鍵對錄製中的欄位代表什麼(錄下/拒絕/清空/離開)。
-
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::shortcut_actions::global_rejection;
 use super::slot_key_set::CandidateSlotKeySet;

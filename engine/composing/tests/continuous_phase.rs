@@ -13,10 +13,6 @@
 //! `transition.rs` doc-comment promises proto-ordered effect consumption,
 //! so order regressions must surface here.
 
-// Phase 4 連續輸入 (Phase::Continuous) 整合測試。
-// 新 Intent 還沒 proto carrier (Phase 6 才加),所以直接用 Engine::apply。
-// Effect 順序鎖死位置而不是只測 membership。
-
 use composing::{Engine, Intent, NailedSegment, Phase};
 use protos::engine::effect::Kind;
 use protos::engine::{AppConfig, Effect};
@@ -737,8 +733,6 @@ fn commit_derived_under_continuous_is_noop() {
 // derived display of the pending tail — because nailed segments were never
 // written to the document; they lived in the marked region. With no prior
 // mid-commit, combined == derived(raw) so single-segment Enter is unchanged.
-// Phase 9 Item 3,Model B — Continuous 下 CommitRaw 提交整段組字
-// (Σ nailed.display_text + derived(pending));無 mid-commit 時等同 derived(raw)。
 
 #[test]
 fn commit_raw_under_continuous_commits_derived_display_and_fires_nextword() {
@@ -805,7 +799,6 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
         unreachable!();
     };
     // Model B: whole composition — nailed "紙" + pending tail "li2" → "lí".
-    // 整段組字「紙」+ pending「lí」=「紙lí」一次寫入文件。
     assert_eq!(commit.text, "紙 lí");
     // Terminal NextWordWordSelected is for the pending tail "word".
     let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
@@ -821,7 +814,6 @@ fn commit_raw_under_continuous_with_translate_swapped_unchanged() {
     // F6.A regression: is_translate_swapped is a candidate-display swap that
     // does not influence the inline pre-edit / Enter-raw contract. Enter
     // commits the same derived display whether swap is on or off.
-    // F6.A 回歸測試 — is_translate_swapped 只影響候選顯示,不影響 Enter-raw commit 字串。
     let mut config = config_tl();
     config.is_translate_swapped = true;
     let mut e = Engine::new();
@@ -844,7 +836,6 @@ fn commit_raw_under_continuous_tps_passes_through_verbatim() {
     // TPS glyphs are rendered as-is (derived_display short-circuits TPS to
     // the raw bopomofo string, minus separator markers). Enter commits the
     // same string.
-    // TPS glyph 原樣作為 derived display(分隔記號除外);Enter 提交一致字串。
     let mut e = Engine::new();
     e.apply(
         Intent::Start {
@@ -871,9 +862,6 @@ fn commit_raw_under_continuous_tps_passes_through_verbatim() {
 // Continuous); that the emitted candidate's span actually REACHES raw len is
 // pinned end-to-end in `tps_space_pinned_tone.rs` and at the offset-map level
 // in `shadow.rs`.
-// §41 — 尾端分隔記號連同 glyph 一起被吃掉 → commit 為 final,不留幽靈單空白 buffer。
-//   此測試釘的是 transition 那一半(整段消耗後引擎離開 Continuous);候選 span 真的
-//   到達 raw 長度,由 tps_space_pinned_tone.rs(端對端)與 shadow.rs(offset map)釘。
 #[test]
 fn full_span_commit_consumes_the_trailing_separator_marker() {
     let raw = "ㄒㄧ ";
@@ -905,8 +893,6 @@ fn full_span_commit_consumes_the_trailing_separator_marker() {
 // so this arm is off the normal UX path, but the engine's contract cannot
 // rest on the phase a caller happens to be in (Codex post-impl BLOCK
 // 2026-08-21 — this arm used to commit `raw` verbatim).
-// §41 — 裸 Composing 的 commit 路徑同樣不可把記號送進文件。平台每次變動後都升
-//   Continuous,此 arm 不在正常 UX 路徑上,但引擎契約不能靠「呼叫端剛好在哪個 phase」。
 #[test]
 fn commit_raw_under_bare_composing_tps_hides_the_separator_marker() {
     let mut e = Engine::new();
@@ -927,8 +913,6 @@ fn commit_raw_under_bare_composing_tps_hides_the_separator_marker() {
 // §41 — the terminal NextWord effect keys the association on the committed
 // word, so its romanization must be marker-free too: a row keyed `ㄍㄠ␣ㄉㄞ`
 // would never be reconstructed by a later lookup of `ㄍㄠㄉㄞ`.
-// §41 — terminal NextWord 以送出的詞建立關聯,羅馬字欄同樣不可帶記號;
-//   鍵成 ㄍㄠ␣ㄉㄞ 的列,之後查 ㄍㄠㄉㄞ 永遠重建不出來。
 #[test]
 fn terminal_nextword_roman_drops_the_separator_marker() {
     let mut e = Engine::new();
@@ -956,8 +940,6 @@ fn terminal_nextword_roman_drops_the_separator_marker() {
 // stays in the raw buffer (the lattice barrier and the §41 tone pin both
 // read it) but must never reach the user — not in the pre-edit, not in what
 // Enter commits.
-// §41 — 鍵盤的第一調/邊界空白是記號不是字:留在 raw(lattice barrier 與 §41 釘調都讀它),
-//   但不可到達使用者 — preedit 不顯示,Enter 也不送出。
 #[test]
 fn commit_raw_under_continuous_tps_hides_the_separator_marker() {
     let mut e = Engine::new();

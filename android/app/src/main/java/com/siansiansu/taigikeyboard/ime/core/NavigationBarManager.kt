@@ -1,6 +1,3 @@
-// 導覽列圖示色管理 — 背景色已在 theme.xml 設透明,讓鍵盤底色直接延伸到 navbar 區。
-// 此檔只負責切換圖示前景色(深淺色 mode 對應)。設計參考 FlorisBoard。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
@@ -11,21 +8,13 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 private const val TAG = "NavigationBarManager"
 
 /**
- * 管理導覽列的前景色（圖示顏色）
- * 參考 FlorisBoard 的 SystemUi 實作
- *
- * 注意：導覽列背景色設定為透明（在 theme.xml 中），
- * 讓鍵盤背景自然延伸到導覽列區域
+ * Manages the navigation bar's foreground (icon) color, modeled on FlorisBoard's SystemUi.
+ * The navbar background is transparent (set in `theme.xml`) so the keyboard background extends
+ * into the navigation bar area; only the icon tint is switched here.
  */
 class NavigationBarManager {
-    /** 判斷當前是否為深色模式（共用 [isKeyboardNightMode]，避免重複實作）。 */
     private fun isDarkMode(context: Context): Boolean = isKeyboardNightMode(context)
 
-    /**
-     * 更新導覽列的圖示顏色
-     * @param window IME 的 Window
-     * @param context Context
-     */
     fun updateNavigationBar(
         window: Window,
         context: Context,
@@ -37,8 +26,7 @@ class NavigationBarManager {
         logger.debug(TAG) { "  Dark mode: $isDark" }
         logger.debug(TAG) { "  Will use light icons: ${!isDark}" }
 
-        // 設定導覽列前景色（圖示顏色）
-        // light mode: 深色圖示，dark mode: 淺色圖示
+        // Light mode gets dark icons, dark mode gets light icons.
         WindowCompat
             .getInsetsController(window, window.decorView)
             .isAppearanceLightNavigationBars = !isDark

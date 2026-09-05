@@ -1,12 +1,10 @@
-// 候選詞橫向滾動列 — 台語模式下顯示 LazyHStack + 展開 chevron;英打模式下交給 KeyboardKit。
+// Candidate scroll row — LazyHStack + expand chevron in Taigi mode; KeyboardKit's own view in English mode.
 
 import KeyboardKit
 import SwiftUI
 
-/// 候選詞滾動列
-///
-/// 顯示候選詞橫向滾動列表、右側擴充候選詞 chevron。
-/// 空建議時顯示 spacer；英打模式時改顯示 KeyboardKit 預設候選詞視圖。
+/// Horizontal candidate list plus the expand chevron. Empty suggestions render a spacer;
+/// English mode falls back to KeyboardKit's default candidate view.
 struct CandidateSuggestionsRow: View {
     let suggestions: [AutocompleteSuggestion]
     let selectedCandidateIndex: Int
@@ -62,7 +60,6 @@ struct CandidateSuggestionsRow: View {
         return style
     }
 
-    /// 台語模式下的候選詞橫向滾動列表
     private var taigiCandidateList: some View {
         // §42: whether any cell in the strip renders a subtitle — computed ONCE
         // per render here (not per cell) and passed down so single-line cells
@@ -115,7 +112,6 @@ struct CandidateSuggestionsRow: View {
         .frame(maxHeight: .infinity)
     }
 
-    /// 候選詞列與 chevron 之間的垂直分隔線
     private var separator: some View {
         Rectangle()
             .fill(CandidateViewModels.Colors.separatorColor)
@@ -123,7 +119,6 @@ struct CandidateSuggestionsRow: View {
             .offset(y: 7)
     }
 
-    /// 展開/收合擴充候選詞視圖的 chevron 按鈕
     private var expandChevronButton: some View {
         Button(action: { expandState.toggle() }) {
             Image(latinSystemName: expandState.isExpanded ? "chevron.up" : "chevron.down")

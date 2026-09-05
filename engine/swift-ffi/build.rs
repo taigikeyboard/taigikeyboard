@@ -3,8 +3,6 @@
 //! xcframework headers + sibling `RustTaigi.swift` by
 //! `engine/scripts/build-xcframework.sh`.
 
-// 編譯期產生 Swift bridge 程式碼,輸出到 OUT_DIR,後續由 build-xcframework.sh 搬進 xcframework。
-
 fn main() {
     let bridges = vec!["src/lib.rs"];
     for path in &bridges {

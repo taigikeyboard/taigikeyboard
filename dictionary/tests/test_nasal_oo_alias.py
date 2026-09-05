@@ -38,7 +38,6 @@ def test_respells_the_nasal_final_of_each_syllable():
 def test_leaves_cross_syllable_seams_alone():
     # Every dictionary value whose letters contain `onn` WITHOUT holding a
     # nasal final: the `oo` closes one syllable and `nng` opens the next.
-    # 滷卵 lóo-nn̄g / 芋卵 ōo-nn̄g / 菜脯卵 tshài-póo-nn̄g / 飛烏卵 pue-oo-nn̄g.
     for num_value in ("loo2nng7", "oo7nng7", "tshai3poo2nng7", "pue1oo1nng7"):
         assert _nasal_oo_alias_num(num_value) == "", num_value
         assert _nasal_oo_alias_keys(num_value) == (), num_value

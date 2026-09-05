@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../../README.md")]
 
-// 表音 (phonetics) crate 入口,負責 TL/POJ/TPS 羅馬字轉換、聲調正規化、字母大小寫處理、音節解析等跨平台演算法。
+// Phonetics crate entry point — TL/POJ/TPS conversion, tone normalization, case, and syllable parsing.
 
 // Public façade modules — the only externally-supported entry points.
 // Tests and other engine crates depend on these paths; everything else

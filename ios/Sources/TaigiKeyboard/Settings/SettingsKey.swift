@@ -1,6 +1,3 @@
-// SharedSettings 與 UserDefaults 之間的 typed-key 描述符。每個鍵 = key string + 預設值 + 編解碼器。
-// 公開 SettingsKey<T> 給設定 facade,以及 UserDefaults 的 typed read/write/remove 擴充。
-
 import CoreGraphics
 import Foundation
 
@@ -18,8 +15,6 @@ import Foundation
 /// Construct descriptors via the typed factories (`.bool(_:default:)`,
 /// `.rawRep(_:default:)`, `.double(_:default:)`, `.cgFloat(_:default:)`,
 /// `.codable(_:default:)`) so each codec lives in one place.
-// 持久化單一 UserDefaults 鍵的型別描述符。key 字串、預設值、讀寫 closure 全封裝。
-// 一律走 .bool / .rawRep / .double / .cgFloat / .codable factory 建構,讓每種編碼一處到位。
 struct SettingsKey<T> {
     let key: String
     let defaultValue: T
@@ -180,7 +175,6 @@ extension UserDefaults {
     /// distinguish "absent" from "stored default value" (e.g. the
     /// device-aware globe-key getter, which falls back to a computed
     /// default only when nothing has been written yet).
-    // 跳過 descriptor codec,直接拿 raw Any?。供 device-aware 預設值場景 (例:地球鍵) 判別「沒寫過」與「寫過跟預設一樣」。
     func storedObject<T>(for key: SettingsKey<T>) -> Any? {
         object(forKey: key.key)
     }

@@ -6,8 +6,6 @@
 //! downloaded package has to prove is `verify::Admission`'s business, not
 //! this module's.
 
-// 兩段式安裝狀態機 — 下載+驗證在背景,按鈕變成「安裝」後才由使用者啟動安裝程式。
-
 use crate::manifest::{PublishedPackage, UpdateManifest};
 use crate::transport::PackageDownloader;
 use crate::verify::Admission;

@@ -46,7 +46,7 @@ _BRIDGE_FAILURES = (
     RuntimeError,
 )
 
-# MOE 教育部造字碼 → Unicode 正式碼位（from KeSi normalize_kautian）
+# MOE PUA character code -> canonical Unicode code point (from KeSi normalize_kautian)
 _MOE_CHAR_MAP = {
     "": "\U0002A736",  # 𪜶
     "": "\U0002B74F",  # 𫝏
@@ -340,7 +340,7 @@ def is_valid_romanization(text: str) -> bool:
 
 
 def normalize_taibun(text: str) -> str:
-    """Unicode NFC normalization + MOE 教育部造字碼 remapping."""
+    """Unicode NFC normalization + MOE PUA character remapping."""
     for pua, uni in _MOE_CHAR_MAP.items():
         text = text.replace(pua, uni)
     return unicodedata.normalize("NFC", text)

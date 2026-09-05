@@ -48,7 +48,6 @@ enum CandidateFontChoice: String, CaseIterable, Sendable {
         }
     }
 
-    // 設定頁顯示用名稱的 i18n key。View 端用 language.string(...) 解析,語言切換即時更新。
     /// The picker row's label, resolved at the call site through the display
     /// language store so a language switch re-renders it.
     var labelKey: StringKey {

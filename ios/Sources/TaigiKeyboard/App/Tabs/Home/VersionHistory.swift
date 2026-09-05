@@ -1,9 +1,6 @@
 // App version-history changelog. Body text is language-invariant English (synced from
 // changelog/<version>.md by the release-helper skill); excluded from i18n per the multi-language plan.
-// App 版本歷史。內容為語言無關英文(release 時由 release-helper 從 changelog/<v>.md 同步),
-// 依多語計畫排除於 i18n 之外。對應 Android content/VersionHistory.kt(僅對齊放置方式,內容各平台可不同)。
 
-// 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
 enum VersionHistory {
     static let entries: [(version: String, date: String, changes: [String])] = [
         ("3.6.5", "2026/08/25", [

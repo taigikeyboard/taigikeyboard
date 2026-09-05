@@ -1,9 +1,8 @@
-// Android composing 平台殼 — 將 Rust composing engine(engine/composing crate)
-// 的 Intent → Effect 串到 InputConnection。狀態實質存在 Rust singleton EngineHandle,
-// 此層只把最新 raw/display/isComposing/selectedCandidateIndex 鏡射到 4 個 StateFlow
-// 給既有同步呼叫者(.value)與未來 Compose 觀察者(.collectAsStateWithLifecycle)讀取,
-// 不重建狀態機。bumpGeneration 在 onStartInputView(restarting=false) 觸發,讓 Rust 偵測
-// input-context 變動。
+// Android platform shell for the Rust composing engine (engine/composing crate): pipes Intent → Effect into
+// InputConnection. State lives in the Rust singleton EngineHandle; this layer only mirrors the latest
+// raw/display/isComposing/selectedCandidateIndex into 4 StateFlows for sync callers (.value) and Compose
+// observers, without rebuilding the state machine. bumpGeneration fires from
+// onStartInputView(restarting=false) so Rust can detect an input-context change.
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -76,12 +75,9 @@ class ComposingManager(
      * (`feedback_user_data_sqlite_stays_native`). Mirrors iOS
      * `ComposingManager.swift` `customDictionaryRepository`.
      */
-    // Item 12 — Continuous 路徑查 custom_dictionary.db,與 legacy lexicon path 共用同一 service;
-    // null 保持測試/Preview 可構造 (等同 feature 關閉,無 custom)。DB 留 native。
     private val customDictionaryService: CustomDictionaryService? = null,
 ) {
-    // 引擎鏡射狀態 — 4 個 MutableStateFlow,公開 read-only StateFlow 表面,
-    // 既有同步 getters 改讀 .value(語義/null 規則完全不變)。
+    // Engine-mirror state: 4 MutableStateFlow, public read-only StateFlow surface; sync getters read `.value`.
     // CROSS-PLATFORM PAIR — mirrors iOS `ComposingManager.swift` @Observable mirror.
     private val _rawInput = MutableStateFlow("")
     val rawInput: StateFlow<String> = _rawInput.asStateFlow()
@@ -321,8 +317,6 @@ class ComposingManager(
         // SelectSuggestion bypass is gone; the engine owns per-phase
         // routing. See
         // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*.
-        // Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
-        // 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎依 phase 決定行為。
         val settings = settingsProvider.current
         val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
@@ -484,10 +478,6 @@ class ComposingManager(
      * back on Main for the second `applyTransition` — `InputConnection`
      * writes are Main-only.
      */
-    // 連續輸入候選查詢 — suspend two-phase fetch:
-    // 中性查 → SQLite 查 user-freq → 帶 freq 重查 + 重排。
-    // generation 一次取樣,中途 bump 會讓 phase 2 回空,等同無 candidate 這 frame。
-    // isBridgeFailure 分辨「引擎回 Idle」與「FFI 失敗」— 後者不可套 transition。
     suspend fun fetchContinuousCandidates(ic: InputConnection): List<RustEngineBridge.ContinuousCandidate> {
         val settings = settingsProvider.current
         val mode = resolveMode(settings.inputMode)
@@ -503,8 +493,6 @@ class ComposingManager(
         // generation guard CANNOT cover this — `generation` only bumps
         // on a new input context, never per keystroke; Codex post-impl
         // 2026-05-15 P2).
-        // Item 12 — 查 custom_dictionary.db 一次,兩 phase 共用;buildCustomEntries 內部
-        // await 後 re-check _rawInput.value 自防 keystroke race(generation 不因 keystroke bump,guard 蓋不到)。
         val customEntries = buildCustomEntries(_rawInput.value, settings)
         val generation = currentGeneration
         val spacing = continuousSpacingFlags(settings)
@@ -621,8 +609,6 @@ class ComposingManager(
      * legacy `processCandidates` site and this Continuous-fetch site share
      * a single `count` clamp + field-naming source of truth.
      */
-    // 候選詞 user_frequency.db 快照 → proto FrequencyEntry。
-    // 以 displayText distinct 壓 SQL placeholder;DB 沒有的 row 不送 → 引擎自動 neutral。
     private suspend fun buildFrequencyEntries(
         candidates: List<RustEngineBridge.ContinuousCandidate>,
         userFreq: UserFrequencyService,
@@ -669,9 +655,6 @@ class ComposingManager(
      * `CustomDictionaryService.search`'s own `Dispatchers.IO`; resumes
      * on the caller context before the FFI.
      */
-    // Item 12 — 查 custom_dictionary.db 並 marshal 成 proto CustomDictEntry;
-    // R3 — 用 deriveCustomQueryKey 產家族鍵走 custom_search_key JOIN 查詢,送原始 (roman,hanzi);
-    // 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);查詢鍵衍生 + 側表查詢與 iOS 為跨平台不變式。
     private suspend fun buildCustomEntries(
         rawInput: String,
         settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
@@ -683,7 +666,6 @@ class ComposingManager(
         // string (incl. "tps"); `InputMode.fromPrefString` collapses "tps" → TL
         // and the engine upgrades to the TPS family via `contains_tps` on the
         // raw input. `null` key (residue-only input) → no custom matches.
-        // R3 — 由 raw buffer + 設定 input mode 產出單一家族查詢鍵;"tps" 折成 TL,引擎以 contains_tps(raw) 升家族。
         val queryKey =
             CustomDictionaryDerivation.deriveCustomQueryKey(
                 rawInput,
@@ -700,8 +682,6 @@ class ComposingManager(
             // moved under us these rows belong to a stale prefix —
             // inject nothing rather than wrong candidates; the racing
             // keystroke's own fetch produces the correct custom set.
-            // Item 12 — await race guard:search suspend 期間若 keystroke 改了 _rawInput.value,
-            //   generation 不會因 keystroke bump,guard 抓不到 → 這批 rows 是 stale prefix,丟空不注入錯候選。
             if (_rawInput.value != rawInput) {
                 return emptyList()
             }
@@ -921,8 +901,6 @@ class ComposingManager(
      * from the platform). [EngineSettings.inputMode] is the raw string
      * (`"tps"` representable) per the documented Android divergence.
      */
-    // §10.2 字界空格旗標的唯一來源 — effectiveSwapped = 翻譯反轉 OR TPS。
-    // TPS 在引擎端是 "tl"/"poj" input_mode,故 TPS 必須在平台端折進 swap 訊號。
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Input/Composing/ComposingManager.swift continuousSpacingFlags.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     private fun continuousSpacingFlags(

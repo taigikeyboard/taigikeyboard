@@ -1,11 +1,9 @@
-// 共用的 SQLite 連線管理器 — 提供連線、PRAGMA 設定、async-once 延遲初始化、
-// serialized queue 執行,以及 v3.4.8 的一次性 WAL → DELETE 遷移路徑。
+// Shared SQLite connection owner: open + PRAGMA config, async-once lazy init, serialized-queue
+// execution, plus the one-time v3.4.8 WAL → DELETE migration.
 
 import Foundation
 import SQLite3
 
-/// SQLite 連接管理器
-/// 提供資料庫連接、配置、延遲初始化等共用功能
 final class SQLiteConnectionManager: @unchecked Sendable {
     // MARK: - Properties
 
@@ -14,7 +12,6 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     private let queue: DispatchQueue
     private let logger: DebugLogger
 
-    // 延遲初始化相關屬性
     private var isInitialized = false
     private var isInitializing = false
     private var initializationTask: Task<Void, Error>?
@@ -38,11 +35,9 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
     // MARK: - Connection Management
 
-    /// 連接資料庫
     private func connect(flags: Int32 = SQLITE_OPEN_READWRITE) throws {
         let path = try databasePath()
 
-        // 一次性遷移：清理舊 WAL 檔（v3.4.8 升級用戶）
         migrateFromWAL(path: path, flags: flags)
 
         guard sqlite3_open_v2(path, &connection, flags, nil) == SQLITE_OK else {
@@ -57,16 +52,14 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
         try configure()
 
-        // configure() 的 PRAGMA 會逼 SQLite 真正開檔 → 檔案此時已落地，才標記排除
-        // OS 備份（R7 隱私決策）。SQLite 採延遲開檔，open 後檔案尚未必存在。
+        // configure()'s PRAGMA forces the file into existence (SQLite opens lazily), so only
+        // now is there a file to mark excluded from OS backup (R7 privacy decision).
         excludeFromOSBackup(path: path)
     }
 
-    /// 一次性 WAL → DELETE 遷移
-    /// 偵測舊 `.db-wal` 檔案，執行 checkpoint 後由 configure() 切換至 DELETE mode
-    /// 跳過唯讀資料庫（如 dictionary.db），因為它們不需要遷移
+    /// One-time WAL → DELETE migration: checkpoints a leftover `.db-wal` so configure() can switch
+    /// journal mode. Read-only databases such as dictionary.db are skipped.
     private func migrateFromWAL(path: String, flags: Int32) {
-        // 唯讀資料庫不需要 WAL 遷移
         guard flags & SQLITE_OPEN_READWRITE != 0 else { return }
 
         let walPath = path + "-wal"
@@ -84,7 +77,6 @@ final class SQLiteConnectionManager: @unchecked Sendable {
             return
         }
 
-        // Checkpoint：將 WAL 內容寫回主資料庫並截斷 WAL 檔
         let rc = sqlite3_wal_checkpoint_v2(db, nil, SQLITE_CHECKPOINT_TRUNCATE, nil, nil)
         sqlite3_close(db)
 
@@ -95,19 +87,14 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
     }
 
-    /// 將資料庫檔案標記為排除 OS / iCloud 自動備份。
+    /// Marks the database file as excluded from OS / iCloud backup. The three user databases
+    /// (frequency / association / custom dictionary) hold device-local typing data; cross-device
+    /// portability is manual `.taigi` export only (R7 product decision). Best-effort — a failed
+    /// metadata write must never break DB open, so it is logged and swallowed.
     ///
-    /// 三個使用者資料庫（詞頻 / 詞關聯 / 自訂詞）都是裝置端學習或自建的打字資料，
-    /// 不應隨 iCloud 自動上雲；跨裝置可攜僅靠手動 `.taigi` 匯出（R7 產品決策）。
-    /// `isExcludedFromBackup` 是系統指示而非硬保證，且這是 best-effort 的檔案
-    /// metadata 寫入 —— 失敗絕不可中斷 DB open（打字路徑），故吞錯只記 log。
-    ///
-    /// 須在 configure() 之後呼叫：SQLite 延遲開檔，`sqlite3_open_v2` 不會立即建檔，
-    /// 要等首個語句；configure() 的 PRAGMA 以 O_CREAT 把主 `.db` 落地，此時才有檔可
-    /// 標記。如此全新安裝「首次啟動」即標記成功，而非延到第二次。
-    ///
-    /// DELETE journal mode → 持久檔只有主 `.db`，無 `-wal`/`-shm` sidecar，標記主檔
-    /// 即足夠。若日後改用 WAL，sidecar 需比照排除（或改目錄層級排除）。
+    /// Must run AFTER configure(): SQLite opens lazily, so the file exists only once configure()'s
+    /// PRAGMA creates it. DELETE journal mode leaves the main `.db` as the only persistent file, so
+    /// marking it is enough; switching to WAL would mean excluding the `-wal`/`-shm` sidecars too.
     private func excludeFromOSBackup(path: String) {
         var url = URL(fileURLWithPath: path)
         var resourceValues = URLResourceValues()
@@ -119,14 +106,13 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
     }
 
-    /// 配置資料庫 PRAGMA 設定
     private func configure() throws {
         guard let db = connection else {
             throw LexiconError.databaseNotAvailable
         }
 
-        // DELETE journal mode 為刻意選擇（App Group 跨進程穩定 + 無 WAL sidecar）。
-        // 與 excludeFromOSBackup() 搭配：只標記主 `.db` 即可（無 -wal/-shm）。
+        // DELETE journal mode is deliberate: stable across App Group processes and no WAL
+        // sidecar, so excludeFromOSBackup() only has to mark the main `.db`.
         let configurations = [
             "PRAGMA journal_mode=DELETE;",
             "PRAGMA synchronous=NORMAL;",
@@ -146,7 +132,6 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
     }
 
-    /// 關閉資料庫連接
     func close() {
         queue.sync {
             if let db = connection {
@@ -159,25 +144,21 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
     // MARK: - Lazy Initialization
 
-    /// 確保資料庫已初始化（延遲初始化的核心方法）
     func ensureInitialized(flags: Int32 = SQLITE_OPEN_READWRITE) async throws {
-        // 快速檢查：如果已初始化，直接返回
         if isInitialized {
             return
         }
 
-        // 使用併發安全的方式避免重複初始化
         return try await withCheckedThrowingContinuation { continuation in
             initLock.lock()
             defer { initLock.unlock() }
 
-            // 再次檢查（雙重檢查模式）
+            // Double-check under the lock.
             if isInitialized {
                 continuation.resume()
                 return
             }
 
-            // 如果正在初始化，等待完成
             if let existingTask = initializationTask {
                 Task {
                     do {
@@ -211,7 +192,6 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
             initializationTask = task
 
-            // 等待初始化完成
             Task {
                 do {
                     try await task.value
@@ -223,7 +203,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
     }
 
-    /// 執行實際的資料庫初始化（在背景佇列中）
+    /// Runs the actual connect on the serialized queue.
     private func performInitialization(flags: Int32) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [weak self] in
@@ -245,7 +225,6 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
     // MARK: - Connection Status
 
-    /// 檢查是否已連接
     func isConnected() -> Bool {
         guard isInitialized else { return false }
         return queue.sync { connection != nil }
@@ -254,12 +233,11 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     // MARK: - Constants
 
     /// SQLITE_TRANSIENT equivalent — tells SQLite to copy the bound value immediately
-    // SQLITE_TRANSIENT 等價物 — 告訴 SQLite 立即複製綁定值,呼叫端 buffer 不需保留。
     static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     // MARK: - Query Execution
 
-    /// 在佇列中執行資料庫操作
+    /// Runs a database operation on the serialized queue, initializing first if needed.
     func execute<T>(_ operation: @escaping (OpaquePointer) throws -> T) async throws -> T {
         try await ensureInitialized()
 
@@ -280,7 +258,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
     }
 
-    /// 同步執行資料庫操作（用於已確保初始化的情況）
+    /// Synchronous variant for callers that already ensured initialization.
     func executeSync<T>(_ operation: @escaping (OpaquePointer) throws -> T) throws -> T {
         guard isInitialized else {
             throw LexiconError.databaseNotAvailable

@@ -3,8 +3,6 @@
 //! settings exe. Resolved from the DLL — never from the host exe (roadmap
 //! W2, Codex).
 
-// DllMain 存下的模組把手,以及由它推出的安裝目錄(辭典、字型、設定程式都在那裡)。
-
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicIsize, Ordering};
 use taigi_windows_platform::os_out_buffer;

@@ -1,12 +1,8 @@
-// FAQ 詳情頁,以 JSON 驅動;支援文字、圖片、輪播、In-app 導覽。
-
 import SwiftUI
 
 /// FAQ detail page.
 ///
 /// JSON-driven display with text, images, and in-app navigation links.
-// FAQ 詳情頁。faq 來自 FeatureContentLoader.faqs;
-// viewModel 用於 navigation attachment 跳到 setup guide。
 struct FAQDetailView: View {
     let faq: FeatureContent
     @ObservedObject var viewModel: SetupGuideViewModel

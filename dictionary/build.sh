@@ -1,23 +1,21 @@
 #!/bin/bash
 #
-# 辭典建置主腳本 — 每次執行 = 完整建置 + deploy
+# Dictionary build entry point — every run is a full rebuild + deploy.
+# Pipeline:
+#   1. merge_csv              - merge source CSVs (drop stats -> .build_stats.json)
+#   2. create_dictionary_bin  - dictionary.bin (binary mmap) + shared build_ts
+#   3. create_fst             - dictionary.fst prefix index (tl:/poj:/tps:/hanzi:)
+#   4. create_syllables_fst   - syllables.fst inventory (tl:/poj:/tps: tagged single FST)
+#   5. create_association_bin - association.bin (binary mmap), reusing build_ts
+#   6. verify_poj_integrity   - fail-fast POJ invariant gate
+#   7. version_snapshot       - drop summary + dictionary.csv diff vs previous release tag
+#   8. verify_known_keys      - fst fixture check (known keys such as poj:chi2)
+#   9. deploy                 - copy into the Android/iOS projects (incl. syllables.fst)
 #
-# 執行順序：
-#   1. merge_csv                - 合併各詞庫 CSV (寫入 .build_stats.json drop 統計)
-#   2. create_dictionary_bin    - 建立 dictionary.bin (binary mmap)，並寫入共享 build_ts
-#   3. create_fst               - 建立 dictionary.fst 前綴索引 (tl:/poj:/tps:/hanzi:)
-#   4. create_syllables_fst     - 建立 syllables.fst 音節庫 (tl:/poj:/tps: tagged-single-FST)
-#   5. create_association_bin   - 建立 association.bin (binary mmap)，沿用 build_ts
-#   6. verify_poj_integrity     - fail-fast POJ invariant gate (前 audit 12/13 stale_poj)
-#   7. version_snapshot         - drop 摘要 + vs 上一個 release tag 的 dictionary.csv diff
-#   8. verify_known_keys        - fst fixture 驗證 (poj:chi2 等已知 key 命中數)
-#   9. deploy                   - 複製到 Android/iOS 專案 (含 syllables.fst)
-#
-# Release 版本標籤：設 RELEASE_VERSION=vX.Y.Z（或傳第一個參數）→ step 7 的 diff 基準
-#   = semver 嚴格小於它的最新 tag（排除自己）。未設定 → 比對最新 release tag。
-#   不再寫 snapshot 檔；上一版內容直接讀 `git show <tag>:dictionary/output/dictionary.csv`。
-#
-# output/ 由使用者手動清除；本腳本不提供 clean / deploy-only 子命令。
+# RELEASE_VERSION=vX.Y.Z (or $1) sets step 7's diff base to the newest tag strictly below it;
+# unset compares against the newest release tag. Previous contents are read from
+# `git show <tag>:dictionary/output/dictionary.csv`; no snapshot file is written.
+# output/ is cleared manually; there is no clean / deploy-only subcommand.
 
 set -e
 

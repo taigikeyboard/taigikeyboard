@@ -47,7 +47,6 @@ private val emojiJsonAdapter by lazy {
         .adapter(EmojiJsonRoot::class.java)
 }
 
-// 將 emoji 字串轉換為 code points 列表
 private fun emojiStringToCodePoints(emoji: String): List<Int> {
     val codePoints = mutableListOf<Int>()
     var i = 0

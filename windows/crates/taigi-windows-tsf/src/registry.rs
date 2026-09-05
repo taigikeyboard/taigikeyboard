@@ -2,8 +2,6 @@
 //! over the raw advapi32 API (khiin `reg/hkey.rs`). Identifiers are literals
 //! owned by `registration.rs`; no user value reaches a key path.
 
-// 註冊用的登錄檔操作(建鍵、查在不在、寫字串、刪樹)。
-
 use crate::wide::to_wide_nul;
 use windows::core::{Error, Result, PCWSTR};
 use windows::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS, WIN32_ERROR};

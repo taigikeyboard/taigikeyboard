@@ -17,14 +17,6 @@
 //! `fetch_candidates_for_keys` — and the end-to-end candidate strip, which is
 //! pinned by `composing/tests/golden/fetch_at_pos.golden`.
 
-// 連續候選不得帶入使用者未打進的音節(PO 2026-08-21,三平台一致)。
-//   lookup_prefix 會撈出所有「key 以輸入開頭」的行,故修正前 tsuisi 撈出
-//   水社寮、kesithau 撈出 家私頭仔 —— 最後一個音節根本沒打到。
-// fixture 的 FST key 一律由該行的 tl 經 phonetics 衍生(與 create_fst.py 同鏈),
-//   不會與 production 儲存的 key 漂移。
-// 不涵蓋:exact 命中(阿姨仔 打 aia)走 lookup_exact 不經本 fetcher;
-//   端到端候選列由 golden/fetch_at_pos.golden 釘定。
-
 use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
@@ -260,8 +252,6 @@ fn tl_numeric_tone_key_measures_reach_on_the_toned_face() {
     // The `tl:<tl_num>` family is a different surface: digits separate
     // syllables, so a toneless head length would be off by one digit per
     // syllable and could admit a word the user stopped short of.
-    // trace: typed `tai5` (4). 台 face ["tai5"] → single syllable, kept.
-    // 台灣 faces ["tai5", "uan5"] → head "tai5" (4) ≥ 4 → dropped.
     let rows = vec![
         Row {
             hanzi: "台",
@@ -302,8 +292,6 @@ fn an_unmarked_reading_is_measured_on_its_numeric_face_too() {
     // derives `kaukuan`, fails its own `starts_with`, and the guard fails open
     // — silently, on 17,976 of the shipped dictionary's rows. Every other toned
     // case in this file uses a marked reading (`tâi-uân`) and cannot see it.
-    // trace: typed `kau1` (4). 交 face ["kau1"] single syllable → kept.
-    // 交關 face ["kau1", "kuan1"] → head "kau1" (4) ≥ 4 → dropped.
     let rows = vec![
         Row {
             hanzi: "交",

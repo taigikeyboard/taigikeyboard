@@ -1,7 +1,3 @@
-// 鍵觸控協調器 — 接 MotionEvent、判斷 down / move / up、決定觸發 keyPress / 長按彈 popup /
-// drag-select。核心多指觸碰規則:第一指 down 後續 finger 一律 cancel(不處理多指輸入)。
-// 對應 AOSP LatinIME PointerTracker 的單指主導模式;鎖入 §16 invariants 保證行為穩定。
-
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.os.Handler
@@ -98,7 +94,8 @@ data class Bounds(
  * (`actionMasked`, pointer IDs, `ACTION_POINTER_*`) reached via Compose
  * `Modifier.pointerInteropFilter` — Compose's native pointer-input API does
  * not expose `actionMasked` / `actionIndex` cleanly enough to port the
- * legacy multi-pointer first-cancel rule.
+ * legacy multi-pointer first-cancel rule (matches AOSP LatinIME
+ * PointerTracker; pinned by §16 invariants).
  */
 class KeyTouchCoordinator(
     private val popupHost: PopupHost,

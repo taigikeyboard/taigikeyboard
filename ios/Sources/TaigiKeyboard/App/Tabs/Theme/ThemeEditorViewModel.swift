@@ -1,6 +1,3 @@
-// 自訂主題編輯器的 ViewModel。持有單一 ThemeAppearance 草稿 + 名稱,
-// Save 才寫入(addUserTheme / updateUserTheme)並自動套用;Cancel 直接丟棄。
-
 import Foundation
 import SwiftUI
 
@@ -13,7 +10,6 @@ import SwiftUI
 /// Bindings into `appearance` always publish via copy-back
 /// (`var next = appearance; next.x = v; appearance = next`) so SwiftUI re-renders
 /// the live preview on every edit.
-// 草稿狀態。單一 @Published appearance + name + 編輯中身分(nil = 新增)。Save 才落盤,新主題存後自動套用。
 @MainActor
 final class ThemeEditorViewModel: ObservableObject {
     @Published var name: String

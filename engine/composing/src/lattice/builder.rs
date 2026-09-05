@@ -9,9 +9,6 @@
 //! so the BFS lowercases the shadow once instead of per start
 //! (`syllabifier::tl::valid_span_endings_lowered`; Codex PR #284 P1).
 
-// S1 — 多起點 lattice 建構;對每個從 0 可達的音節邊界跑 syllabifier,
-//   聯集所有 (start,end) span。演算法不變,僅加 pre-lowered 入口避免每 start 重抄。
-
 use std::collections::{BTreeSet, VecDeque};
 
 use lexicon::SyllableInventory;
@@ -22,8 +19,6 @@ use super::Lattice;
 // (`InputMode::Tps`) walks `syllabifier::tps::valid_span_endings_lowered`
 // (terminator scan + `SyllableInventory::contains_in(Tps, ..)` gate)
 // while TL/POJ/English keep the FST BFS path. One dispatcher, one mode.
-// D / C-3b — 改走 mode-aware dispatcher;TPS 走自家 lowered 變體,
-//   TL/POJ/English 維持原 FST BFS,單一 mode 路由。
 use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 
 /// Build the segmentation lattice for `shadow` (the hyphen-stripped,
@@ -52,13 +47,10 @@ use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 /// Pure. `valid_span_endings_lowered` guarantees every returned `end`
 /// is `> start`, on a UTF-8 char boundary, and `<= shadow.len()`, so
 /// the edges are well-formed by construction.
-// B-2 — `LATTICE_INVENTORY_FAMILY` constant 移除,改收 `mode: InputMode` 參數;
-//   呼叫端必須與 build_shadow_lattice 及下游 key emitter 使用同一 mode。
 /// Build the segmentation lattice. `barriers` (§35) = stripped-separator
 /// offsets forwarded to the TPS scanner (mandatory syllable cut +
 /// Final-only last glyph at a barrier); the TL scanner never sees them
 /// and callers without separator context pass `&[]`.
-// 建切分 lattice;barriers(§35)透傳給 TPS 掃描器(強制切點 + barrier 前 Final-only),TL 端不經手。
 pub(crate) fn build_lattice_with_barriers(
     shadow: &str,
     inv: &SyllableInventory,
@@ -71,8 +63,6 @@ pub(crate) fn build_lattice_with_barriers(
     // re-runs `to_ascii_lowercase()` on every call, so calling it per
     // reachable start would re-lower the entire buffer O(starts) times
     // on the per-keystroke hot path (Codex PR #284 P1, `r3252344518`).
-    // shadow 在此一次性 to_ascii_lowercase,BFS 改用 pre-lowered 變體;
-    //   否則每個 start 都重抄整個 buffer (Codex PR #284 P1)。
     let lowered = shadow.to_ascii_lowercase();
     let mut edges: Vec<(usize, usize)> = Vec::new();
     let mut visited: BTreeSet<usize> = BTreeSet::new();

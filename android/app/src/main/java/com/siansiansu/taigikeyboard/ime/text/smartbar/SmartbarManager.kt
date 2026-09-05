@@ -1,6 +1,3 @@
-// Smartbar(候選列)管理器 — 候選詞 StateFlow 來源、英文建議、numeric row、Toolbar 容器、
-// NextWord 顯示協調等狀態的 owner;TextInputManager 只往這裡推狀態,不直接寫 UI。
-
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.view.View
@@ -38,11 +35,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Smartbar 管理器
- *
- * 負責管理 Smartbar 的狀態與候選詞顯示
- * 支援動態生成候選詞按鈕，最多顯示 200 個候選詞
- * 候選詞數量由 LexiconService 控制（預設 limit = 200）
+ * Smartbar manager — owns the candidate StateFlow and display state, dynamically
+ * generating up to 200 candidate buttons (limit controlled by LexiconService).
  */
 class SmartbarManager(
     private val taigikeyboard: TaigiKeyboard,

@@ -1,12 +1,13 @@
-// 鍵盤擴充的主 ViewController。
-// 主檔負責 KeyboardKit 生命週期 + 輸入欄位偵測 + KeyboardKit 10 auto-cap workaround。
-// 其他細節在 KeyboardViewController+*.swift 各擴充。
+// Main view controller for the keyboard extension — owns the KeyboardKit
+// lifecycle, input-field detection, and the KeyboardKit 10 auto-cap workaround.
+// Other concerns live in the KeyboardViewController+*.swift extensions.
 
 import Combine
 import KeyboardKit
 import SwiftUI
 
-// 鍵盤擴充進入點 — 同時擔任 ComposingDelegate,把 effect 派送到 textDocumentProxy。
+// Keyboard extension entry point — also acts as ComposingDelegate, dispatching
+// effects to textDocumentProxy.
 class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // MARK: - Properties
 
@@ -14,7 +15,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
 
     /// DI seam. Default retains existing process-wide singleton behavior;
     /// tests (and future composition roots) can substitute a stub.
-    // DI 縫隙 — 預設用 SharedSettings.shared,測試或新組裝點可注入 stub。
     let keyboardSettings: any KeyboardEnvironment = SharedSettings.shared
 
     var emojiServiceStorage: EmojiService?
@@ -43,17 +43,13 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// is built once in `createKeyboardView`; when the active/edited theme changes
     /// it, `syncSettings()` rebuilds the keyboard view so the layout recomputes.
     /// Colors / font / corner already update in place via `TaigiKeyboardView`.
-    // 上次解析的鍵高係數。row height 由 layout 一次建好,主題改變其值時 syncSettings 重建鍵盤 view。
     var lastResolvedKeyHeightScale: Double?
 
     /// Identity of the most recent `UITextInput` seen by `textWillChange`.
     /// Pointer-equality detects field switches without touching the iOS 26
     /// SDK's broken `documentIdentifier` UUID bridge.
-    // 用 UITextInput 物件的 ObjectIdentifier 來偵測輸入欄位切換,
-    // 避開 iOS 26 SDK 損壞的 documentIdentifier UUID bridge。
     private var lastTextInputID: ObjectIdentifier?
 
-    // emoji 服務的 lazy 取出口 — 第一次存取時建立並把自己設為 delegate。
     var emojiService: EmojiService {
         if emojiServiceStorage == nil {
             emojiServiceStorage = EmojiService()
@@ -169,7 +165,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// Prefer rawInput over composingText for autocomplete:
     /// rawInput keeps tone digits ("Soo1") for Trie lookup;
     /// composingText is display-only ("Soo", tone 1/4 have no diacritics).
-    // autocomplete 用 rawInput 而非 composingText — rawInput 保留調符數字以利 Trie lookup。
     override var autocompleteText: String? {
         if let handler = actionHandler, handler.composingManager.isComposing {
             return handler.composingManager.rawInput
@@ -193,8 +188,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// distinct fields are distinct instances. Same-field textWillChange
     /// fires (typing, selection change) keep the same identity and skip
     /// the bump, preserving an active composing buffer.
-    // 真正切換輸入欄位時 +1 generation,觸發引擎丟棄 stale 狀態。
-    // 自我 commit / 同欄位 textWillChange 不算切換,維持組字 buffer 不被誤清。
     override func textWillChange(_ textInput: UITextInput?) {
         super.textWillChange(textInput)
         guard let manager = actionHandler?.composingManager else { return }
@@ -238,8 +231,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// when keyboardType switches to alphabetic, bypassing our tryChangeKeyboardCase
     /// and setKeyboardCase overrides. This guard observes keyboardCase changes and
     /// restores the expected state when auto-capitalization is off.
-    // KeyboardKit 10 auto-cap workaround 第二層 — 用 Combine 觀察 keyboardCase 變動,
-    // 在 auto-cap 關閉時把被內部路徑改掉的大寫狀態還原。
     private func setupKeyboardCaseProtection() {
         // Initialize expected value
         expectedKeyboardCase = state.keyboardContext.keyboardCase
@@ -311,7 +302,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // MARK: - Settings Observer
 
     /// Observe main app settings via App Group UserDefaults → syncSettings()
-    // 觀察主 App 透過 App Group UserDefaults 改設定,觸發 syncSettings 即時同步。
     private func setupSettingsObserver() {
         NotificationCenter.default.publisher(
             for: UserDefaults.didChangeNotification,

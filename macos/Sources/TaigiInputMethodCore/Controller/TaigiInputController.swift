@@ -796,7 +796,6 @@ public final class TaigiInputController: IMKInputController {
     /// Through `updateCells`, like the swap: the KVO path has no client to ask
     /// for a caret rectangle, and the window is already anchored. The bar goes
     /// down only when the composition is gone or the new list is empty.
-    // 候選詞顯示切換後重抓候選 — 引擎在羅馬字會收合同音列;無 client 可問 caret,故 updateCells 原地換。
     @MainActor
     private func refetchCandidatesForDisplayModeChange() {
         guard !source.isEmpty,

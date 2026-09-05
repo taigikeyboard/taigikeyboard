@@ -1,21 +1,13 @@
-// KeyboardKit 10 的 Layout Service 實作。
-// 根據 keyboardType / 使用者設定 / 裝置決定 [[KeyDef]],再交給 LayoutConverter 轉成 KeyboardLayout。
-
 import KeyboardKit
 
 private let layoutLogger = DebugLogger(category: "CustomLayoutService")
 
-/// KeyboardKit 10 相容的 Layout Service
-///
-/// 根據鍵盤類型、設定、裝置選擇對應的佈局，
-/// 並透過 LayoutConverter 轉換為 KeyboardLayout。
+/// KeyboardKit 10-compatible layout service. Picks the `[[KeyDef]]` set from keyboard type,
+/// settings and device, then converts it to a `KeyboardLayout` via `LayoutConverter`.
 class CustomLayoutService {
-    /// 根據 context 建構鍵盤 layout
-    ///
-    /// `appearance` 預設 nil = 解析當前選定主題的全域外觀(keyboard extension 用)。
-    /// 外觀編輯器預覽傳入 draft `ThemeAppearance`,讓 row height / corner 跟著草稿走,
-    /// 不必先寫進 SharedSettings(編輯器是 draft-and-save)。
-    // appearance nil → 走全域選定主題;傳入則用該草稿外觀(預覽專用)。
+    /// Builds the keyboard layout for `context`. A nil `appearance` resolves the globally selected
+    /// theme's appearance (what the keyboard extension uses); the appearance editor's preview passes
+    /// a draft `ThemeAppearance` so row height / corner follow it without writing to SharedSettings.
     func keyboardLayout(
         for context: KeyboardContext,
         appearance: ThemeAppearance? = nil,
@@ -38,7 +30,6 @@ class CustomLayoutService {
     // MARK: - Private
 
     /// Returns the globe or iPhone variant based on device requirements
-    // 依是否需要地球鍵,在 withGlobe / iPhone 兩種變體之間擇一。
     private func resolveLayout(
         withGlobe: [[KeyDef]],
         iPhone: [[KeyDef]],
@@ -47,7 +38,6 @@ class CustomLayoutService {
         needsGlobe ? withGlobe : iPhone
     }
 
-    /// 根據 keyboardType、設定、裝置選擇對應的佈局
     private func selectLayout(for context: KeyboardContext) -> [[KeyDef]] {
         let settings = SharedSettings.shared
         let needsGlobe = needsGlobeKey(for: context)
@@ -67,8 +57,6 @@ class CustomLayoutService {
     /// Determines whether the globe key should be shown.
     /// English mode: preserves device-dependent behavior (iPad/iPhone SE).
     /// Other modes: uses user toggle setting.
-    // 是否要顯示地球鍵。English 模式依裝置(iPad / iPhone SE)決定;其他模式看使用者開關。
-    // TPS 佈局按鍵已多,永遠不顯示地球鍵。
     private func needsGlobeKey(for context: KeyboardContext) -> Bool {
         let settings = SharedSettings.shared
         if context.keyboardType == .alphabetic, settings.inputMode == .english {
@@ -80,7 +68,6 @@ class CustomLayoutService {
         return settings.isGlobeKeyEnabled
     }
 
-    /// 選擇 Alphabetic 鍵盤佈局
     private func selectAlphabeticLayout(
         settings: SharedSettings,
         needsGlobe: Bool,

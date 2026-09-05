@@ -1,6 +1,6 @@
-// 鍵盤 body 主 Composable — 接 KeyboardLayoutData + KeyDimensions,
-// 用自訂 Layout block 重現舊版 FlexboxLayout 行為:per-mode 寬度倍率、flex-shrink、SPACE flex-grow。
-// 觸控走 pointerInteropFilter → KeyTouchCoordinator,維持與舊版 KeyboardView.onTouchEvent 1:1 行為。
+// Main keyboard body Composable. A custom Layout block reproduces the legacy FlexboxLayout
+// behavior (width multipliers, flex-shrink, SPACE flex-grow); touch dispatch goes through
+// pointerInteropFilter -> KeyTouchCoordinator to match legacy KeyboardView.onTouchEvent 1:1.
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 

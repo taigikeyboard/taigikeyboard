@@ -1,16 +1,14 @@
-// Taigi Keyboard 主 App 進入點,負責 logger / Rust engine / KeyboardKit 設定 / 導覽列外觀。
+// Main app entry point: logger, Rust engine, KeyboardKit setup, navigation-bar appearance.
 
 import KeyboardKit
 import SwiftUI
 
 /// Taigi Keyboard app entry point.
-// 主 App entry point。init 內依序安裝:
-// 1) LoggerFactory(共用 core 引擎走 DebugLogger)
-// 2) RustEngineBridge(Rust log sink,冪等)
-// 3) Lexicon engine(主 App 程序的 fst + 詞庫 binary)
-// 4) KeyboardKit App Group store(@AppStorage 前置條件)
-// 5) UINavigationBar 字型外觀(SwiftUI .environment 不影響此處)
-// 6) 自訂詞庫首次安裝 seed
+///
+/// `init` installs, in order: LoggerFactory, the RustEngineBridge log sink (idempotent), the
+/// Lexicon engine (this process's fst + dictionary binaries), the KeyboardKit App Group store
+/// (`@AppStorage` prerequisite), the UINavigationBar font appearance (out of SwiftUI
+/// `.environment` reach), and the first-run custom-dictionary seed.
 @main
 struct TaigiKeyboardApp: App {
     @StateObject private var keyboardStatus = KeyboardStatusContext(
@@ -59,8 +57,6 @@ struct TaigiKeyboardApp: App {
     /// process (Dictionary tab uses the same fst + bundled binaries).
     /// Idempotent; the keyboard extension does its own install in
     /// `KeyboardViewController.viewDidLoad`.
-    // 為主 App 程序安裝 Rust shared-core lexicon 引擎(Dictionary tab 用)。
-    // 冪等;鍵盤擴充走自己 viewDidLoad 的安裝路徑。
     private func installLexiconEngineForMainApp() {
         let bundle = ResourceBundleResolver.dictionaryBundle
         guard
@@ -94,12 +90,11 @@ struct TaigiKeyboardApp: App {
 /// App root view.
 ///
 /// Manages deep links and setup guide flow.
-// App 根 View。處理 taigikeyboard:// deep link 與 setup guide 全螢幕流程。
 struct AppRootView: View {
     @ObservedObject var keyboardStatus: KeyboardStatusContext
     @StateObject private var viewModel: SetupGuideViewModel
-    // App UI 顯示語言 root state。注入在 AppRootView(ContentView + setup-guide cover 的共同祖先),
-    // 讓 TabView 與全螢幕 cover 兩處都繼承同一份 store(plan D7 live-switch)。
+    // Display-language root state, injected at the common ancestor of ContentView and the
+    // setup-guide cover so the TabView and the full-screen cover share one store (D7 live-switch).
     @State private var displayLanguageStore = DisplayLanguageStore()
     // Re-reads the persisted tag AND recomputes Automatic's effective language from the OS locale on
     // foreground, so a device-language change (while display = Automatic) takes effect without a relaunch.
@@ -134,7 +129,6 @@ struct AppRootView: View {
     }
 
     /// Handle deep link (e.g. taigikeyboard://settings).
-    // 處理 taigikeyboard:// 開頭的 deep link;目前僅支援 host=settings 切到設定 tab。
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "taigikeyboard" else { return }
 
@@ -151,6 +145,5 @@ struct AppRootView: View {
 
 extension Notification.Name {
     /// Switch to Settings tab via deep link.
-    // deep link 觸發切換到設定 tab 的通知名稱。
     static let switchToSettingsTab = Notification.Name("switchToSettingsTab")
 }

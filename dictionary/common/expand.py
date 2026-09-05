@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-展開分隔符欄位的共用函數
-"""
+"""Shared helpers for expanding delimiter-separated fields."""
 
 import re
 import pandas as pd
@@ -10,15 +8,8 @@ DEFAULT_SEPARATORS = ["/", ","]
 
 
 def split_variants(value, separators=None):
-    """
-    將含分隔符的值拆成多個變體
-
-    Args:
-        value: 要拆分的值
-        separators: 分隔符列表，預設為 ["/", ","]
-
-    Returns:
-        變體列表
+    """Split a delimiter-separated value into its variants (default
+    separators "/" and ",").
     """
     if separators is None:
         separators = DEFAULT_SEPARATORS
@@ -32,20 +23,10 @@ def split_variants(value, separators=None):
 
 
 def expand_dataframe(df, separators=None, logger=None):
-    """
-    展開 tl 和 hanzi 欄位，並做配對
-
-    規則：
-    - 若兩欄位都有多個值，按索引配對
-    - 若只有一方有多個值，另一方複製以配對
-
-    Args:
-        df: DataFrame（需有 tl 欄位，hanzi 欄位可選）
-        separators: 分隔符列表
-        logger: Logger 實例（可選）
-
-    Returns:
-        展開後的 DataFrame
+    """Expand and pair the `tl` and `hanzi` columns by index; if only one
+    side has multiple values, its single counterpart repeats to match.
+    `df` needs a `tl` column (`hanzi` optional). Returns the expanded
+    DataFrame.
     """
     if separators is None:
         separators = DEFAULT_SEPARATORS
@@ -62,7 +43,6 @@ def expand_dataframe(df, separators=None, logger=None):
 
         max_variants = max(len(tl_variants), len(hanzi_variants)) if hanzi_variants else len(tl_variants)
 
-        # 若只有一個值，複製以配對
         if len(tl_variants) == 1 and max_variants > 1:
             tl_variants = tl_variants * max_variants
         if len(hanzi_variants) == 1 and max_variants > 1:

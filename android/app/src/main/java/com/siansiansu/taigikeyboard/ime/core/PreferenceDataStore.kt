@@ -1,6 +1,3 @@
-// DataStore 實例 + PreferenceKeys 集中定義 — DataStore 為延伸屬性 singleton(taigi_keyboard_prefs)。
-// 所有 typed key 都集中於此,避免字串散落各檔。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
@@ -69,16 +66,11 @@ object PreferenceKeys {
     val HEIGHT_FACTOR = stringPreferencesKey("looknfeel__height_factor")
     val LONG_PRESS_DELAY = intPreferencesKey("looknfeel__long_press_delay")
 
-    // 詞頻紀錄開關
+    // Dictionary toggles. VARIANT = 異用字, KHIIN = 在來字,
+    // LKK = LKK漢羅合用建議用字, DEV = 開發者補充辭典.
     val FREQUENCY_RECORDING_ENABLED = booleanPreferencesKey("dictionary__frequency_recording_enabled")
-
-    // 詞關聯紀錄開關
     val ASSOCIATION_RECORDING_ENABLED = booleanPreferencesKey("dictionary__association_recording_enabled")
-
-    // 自訂詞庫開關
     val CUSTOM_DICT_ENABLED = booleanPreferencesKey("dictionary__custom_dict_enabled")
-
-    // 詞庫開關設定
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
     val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")
     val ITAIGI_DICT_ENABLED = booleanPreferencesKey("dictionary__itaigi_dict_enabled")
@@ -88,21 +80,13 @@ object PreferenceKeys {
     val KUNGGE_DICT_ENABLED = booleanPreferencesKey("dictionary__kungge_dict_enabled")
     val STTI_DICT_ENABLED = booleanPreferencesKey("dictionary__stti_dict_enabled")
     val KHPOO_DICT_ENABLED = booleanPreferencesKey("dictionary__khpoo_dict_enabled")
-
-    // 異用字開關
     val VARIANT_DICT_ENABLED = booleanPreferencesKey("dictionary__variant_enabled")
-
-    // 在來字開關
     val KHIIN_ENABLED = booleanPreferencesKey("dictionary__khiin_enabled")
-
-    // LKK漢羅合用建議用字
     val LKK_DICT_ENABLED = booleanPreferencesKey("dictionary__lkk_dict_enabled")
-
-    // 開發者補充辭典 (詞庫增補檔案)
     val DEV_DICT_ENABLED = booleanPreferencesKey("dictionary__dev_dict_enabled")
 
-    // 教育部辭典子集 (腔調 + 姓名附錄) — 巢狀於 MOE master 下;腔調預設開 (DD5 opt-out),姓名附錄預設開 (opt-out)。
-    // 腔調順序對齊 config.yaml dialect_columns (= subtag bit - 1)。bit 佈局由 Rust compute_filters 持有。
+    // MOE subsets (accents + name appendix), nested under the MOE master; both default ON (opt-out).
+    // Accent order matches config.yaml dialect_columns (= subtag bit - 1); bit layout lives in Rust compute_filters.
     val KAUTIAN_ACCENT_LUKANG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_lukang_enabled")
     val KAUTIAN_ACCENT_SANSIA_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_sansia_enabled")
     val KAUTIAN_ACCENT_TAIPAK_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_taipak_enabled")

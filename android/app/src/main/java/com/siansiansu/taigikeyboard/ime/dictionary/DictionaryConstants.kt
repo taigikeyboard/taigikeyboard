@@ -2,8 +2,6 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 字典操作常數 — bin 檔名。
-
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**

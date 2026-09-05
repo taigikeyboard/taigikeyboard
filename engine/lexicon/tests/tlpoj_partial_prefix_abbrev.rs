@@ -16,13 +16,6 @@
 //! body that is not a valid standalone syllable — keeps full single-
 //! syllable keys, fused multi-syllable notone keys, and syllabic nasals).
 
-// TL/POJ 連續 partial-prefix 回歸 — 單一聲母 (s) 必須撈得到單字讀音 (是/sī),
-//   而非只有 sa 家族 + 雙字詞。根因:同長度桶內,完整單音節 key (tl:sa/tl:si,
-//   第 2 字母為母音) 與雙音節縮寫 tl_abbrev key (tl:sb/tl:sh,第 2 字母為子音)
-//   交錯,byte 序 sa(97) sb(98)…si(105) → sa 與 si 之間的縮寫洪流吃光 cap,
-//   tl:si(是) 進不了 pool。修法 = 把原本只對 TPS 的縮寫 skip 推廣到 TL/POJ
-//   (phonetics::is_roman_acronym_key)。
-
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 

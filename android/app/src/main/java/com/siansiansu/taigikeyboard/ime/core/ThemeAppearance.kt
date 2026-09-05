@@ -1,6 +1,3 @@
-// 主題外觀整包 — 6 角色配色 + 陰影 + 5 尺寸 scalar。字型不屬於主題(全域設定),切主題不改字型。
-// 同一型別 = UserTheme 儲存內容 / ThemeResolver 回傳結果 / render 讀的值。對齊 iOS ThemeAppearance。
-
 package com.siansiansu.taigikeyboard.ime.core
 
 import org.json.JSONObject

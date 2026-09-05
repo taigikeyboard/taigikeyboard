@@ -2,8 +2,6 @@
 //! 台語辭典 (ChhoeTaigi) — and the digit-tone spelling of a TL reading their
 //! query strings take. Port of `ExternalLookupURLBuilder.swift`.
 
-// 外部辭典連結 — 教典 / ChhoeTaigi 的查詢網址,與其要求的數字調拼法。
-
 use super::phonetics::{nfd_preprocess_for_lookup, strip_tone};
 
 /// 教典's search URL for `tl`, or `None` when the reading spells nothing.

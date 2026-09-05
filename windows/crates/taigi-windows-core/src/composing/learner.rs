@@ -5,8 +5,6 @@
 //! — and this only carries the answer to the store
 //! (`INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, invariants §40).
 
-// 把送出握手轉成學到的二元組;學什麼由引擎決定,這裡只搬運。
-
 use super::stores::{AssociationSink, Clock};
 use crate::engine::{self, NextWordEffect, NextWordOutcome};
 use crate::settings::EngineSettings;

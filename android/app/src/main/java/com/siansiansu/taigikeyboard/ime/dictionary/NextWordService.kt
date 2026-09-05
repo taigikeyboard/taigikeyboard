@@ -1,6 +1,5 @@
-// NextWord 平台服務 — 管理 user_association.db SQLite(read+write)+ bundled association.bin 共用查詢。
-// bigram lookup 已走 Rust lexicon::assoc_lookup;此處只剩 SQLite 寫路徑與啟動 prep 等平台粘合。
-// 對應 iOS NextWord/Services/NextWordService.swift。
+// Bigram lookup routes through Rust lexicon::assoc_lookup; this file only handles
+// the SQLite write path and startup prep. Mirrors iOS NextWord/Services/NextWordService.swift.
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
@@ -38,7 +37,7 @@ private fun SQLiteStatement.bindArgs(vararg args: Any?) {
  * NextWord bigram prediction service.
  *
  * Uses a bigram model keyed on the last character of the selected word:
- * - 選「早安」→ 用「安」查詢 → 預測下一個字
+ * - select 早安 → look up 安 → predict the next character
  *
  * Data sources:
  * - association.bin (binary mmap): read-only dictionary associations

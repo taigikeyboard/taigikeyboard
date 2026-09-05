@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-羅馬字轉換相關函數
+"""Romanization conversion helpers.
 
-使用 taigi-converter (Node.js subprocess) 進行 TL↔POJ 轉換和聲調處理。
+Uses taigi-converter (Node.js subprocess) for TL<->POJ conversion and tone processing.
 """
 
 from .taigi_bridge import convert_tl_to_poj, to_tone_number, to_tone_number_ascii
@@ -27,26 +26,25 @@ def normalize_roman_spacing(text: str, preserve_spaces: bool = False) -> str:
 
 def _to_numeric_tone_word(roman: str, ascii_only: bool = False) -> str:
     """
-    將單一 word（以 - 分隔的音節）轉換為數字聲調版本
+    Convert a single word (syllables separated by "-") to its digit-tone form.
 
     Args:
-        roman: 單一 word 的羅馬字（如 "m̄-bat" 或 "phàu"）
-        ascii_only: 是否只使用 ASCII 字元（POJ 用）
+        roman: A single word's romanization (e.g. "m̄-bat" or "phàu").
+        ascii_only: Whether to use ASCII characters only (for POJ).
 
     Returns:
-        數字聲調版本（無連字符），如 "m7bat4" 或 "phau3"
+        The digit-tone form (no hyphens), e.g. "m7bat4" or "phau3".
     """
     converter = to_tone_number_ascii if ascii_only else to_tone_number
     result = converter(roman).lower()
 
-    # 分割音節，檢查每個音節是否有聲調數字
+    # Split into syllables and check whether each already carries a tone digit.
     syllables = result.split("-")
     processed = []
     for syllable in syllables:
         if syllable and not syllable[-1].isdigit():
-            # 無聲調的音節，根據韻尾判斷聲調
-            # 入聲韻尾 (-p, -t, -k, -h) → 聲調 4（陰入）
-            # 其餘 → 聲調 1（陰平）
+            # Toneless syllable: infer the tone from the coda. A stop coda
+            # (-p/-t/-k/-h) is tone 4 (checked); everything else is tone 1.
             if syllable[-1] in "ptkh":
                 syllable = syllable + "4"
             else:
@@ -58,17 +56,18 @@ def _to_numeric_tone_word(roman: str, ascii_only: bool = False) -> str:
 
 def to_numeric_tone(roman: str, ascii_only: bool = False) -> str:
     """
-    轉換為數字聲調版本（去除連字符）
+    Convert to the digit-tone form (hyphens removed).
 
-    支援空白分隔的多詞輸入（如 "m̄ bat"），各詞分開處理後合併。
-    無聲調的音節會標記為聲調 1（陰平/陰入）
+    Supports space-separated multi-word input (e.g. "m̄ bat") — each word is
+    processed separately then joined. A toneless syllable is marked tone 1.
 
     Args:
-        roman: 羅馬字（含調號），可含空白（詞界）或連字符（音節界）
-        ascii_only: 是否只使用 ASCII 字元
+        roman: Romanization with tone marks; may contain spaces (word
+            boundaries) or hyphens (syllable boundaries).
+        ascii_only: Whether to use ASCII characters only.
 
     Returns:
-        數字聲調版本（無連字符、無空白），如 "m7bat4"
+        The digit-tone form (no hyphens or spaces), e.g. "m7bat4".
     """
     # Split by space (word boundary), process each word separately
     words = roman.split(" ")
@@ -84,27 +83,25 @@ def to_numeric_tone(roman: str, ascii_only: bool = False) -> str:
 
 def add_roman_columns(hanzi: str, tl: str, preserve_spaces: bool = False) -> dict:
     """
-    產生完整的羅馬字欄位
+    Generate the full set of romanization columns.
 
     Args:
-        hanzi: 漢字
-        tl: TL 羅馬字
-        preserve_spaces: True=保留空白（官方辭典），False=空白轉連字符
+        hanzi: The Hanji.
+        tl: TL romanization.
+        preserve_spaces: True keeps spaces (official dictionaries), False
+            converts spaces to hyphens.
 
     Returns:
-        包含所有羅馬字欄位的 dict
+        A dict with all romanization columns.
 
     Raises:
-        Exception: 轉換失敗時拋出
+        Exception: If conversion fails.
     """
-    # 轉換 TL → POJ
     poj = convert_tl_to_poj(tl)
 
-    # 正規化
     tl = normalize_roman_spacing(tl, preserve_spaces=preserve_spaces)
     poj = normalize_roman_spacing(poj, preserve_spaces=preserve_spaces)
 
-    # 產生數字聲調版本
     tl_num = to_numeric_tone(tl)
     poj_num = to_numeric_tone(poj, ascii_only=True)
 

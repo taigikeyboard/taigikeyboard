@@ -8,8 +8,6 @@
 //! `SettingsWriter` and answers with a `PageMessage` when there is
 //! something for the window to say, so no toolkit reaches in here.
 
-// 設定視窗這一側的更新流程 — 啟動逾期檢查、手動檢查、結果落地、toast、兩段式安裝。
-
 use crate::presentation::{self, PageMessage};
 use crate::settings_writer::SettingsWriter;
 use crate::work::PendingWork;

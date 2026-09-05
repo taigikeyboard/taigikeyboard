@@ -1,4 +1,4 @@
-// 編譯期呼叫 prost-build 把 proto/ 下所有 .proto 編譯成 Rust 型別,輸出至 OUT_DIR。
+// Compile-time: calls prost-build to compile every .proto under proto/ into Rust types in OUT_DIR.
 
 use std::io::Result;
 

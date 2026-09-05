@@ -20,8 +20,6 @@
 //! pinned here and were verified byte-identical across platforms at the
 //! v3.5.2 ranking-slice audit (`docs/engine/sort.md` documents the behaviour).
 
-// 候選詞排序 crate:去重、評分、排序、後處理。純 CPU 無 I/O,iOS/Android 共用同一套常數與公式。
-
 mod dedup;
 mod process;
 mod score;

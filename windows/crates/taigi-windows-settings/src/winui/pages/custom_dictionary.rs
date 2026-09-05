@@ -18,8 +18,6 @@
 //! Segoe Fluent Icons has no empty-container glyph, and a Windows 11 empty
 //! state is a line of text.
 
-// 自訂詞庫頁 — 分頁表格、篩選、新增/編輯/刪除、CSV 匯入匯出、清除學習紀錄;所有資料庫呼叫都在背景執行緒。⚠ 無雙擊/右鍵選單(Reactor 沒有),改用選取 + ✎ 按鈕。
-
 use crate::presentation::PageMessage;
 use crate::winui::cards;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
@@ -83,8 +81,8 @@ impl Confirm {
         }
     }
 
-    /// The question under the title. 清除學習紀錄 has none authored, and its
-    /// title already asks it.
+    /// The question under the title. `ClearLearningRecords` has none
+    /// authored, and its title already asks it.
     fn message_key(self) -> Option<StringKey> {
         match self {
             Self::DeleteAll => Some(StringKey::DictionaryDeleteAllMessage),
@@ -1148,7 +1146,6 @@ mod tests {
             Confirm::DeleteAll.message_key(),
             Some(StringKey::DictionaryDeleteAllMessage)
         );
-        // 刪除學習紀錄 has no question string authored; its title asks it.
         assert_eq!(
             Confirm::ClearLearningRecords.title_key(),
             StringKey::DesktopClearLearningRecords

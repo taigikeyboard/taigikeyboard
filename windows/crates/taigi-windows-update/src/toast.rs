@@ -5,8 +5,6 @@
 //! activation handler: the toast is informational, and the 一般 pane is the
 //! surface that keeps working after it is dismissed (roadmap W9).
 
-// 更新通知 toast — 需要安裝程式建立帶 AUMID 的開始功能表捷徑;僅告知,不處理點擊。
-
 /// The Application User Model ID the installer stamps on the Start-menu
 /// shortcut; a toast posted under any other id is silently dropped.
 pub const APPLICATION_USER_MODEL_ID: &str = "TaigiKeyboard.Settings";

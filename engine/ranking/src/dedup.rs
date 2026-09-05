@@ -13,8 +13,6 @@
 //! Both functions preserve input order for surviving entries (first-seen
 //! wins) and never mutate inputs.
 
-// 兩種去重:排序前依「羅馬字|漢字」key 去重,TPS 模式排序後再依漢字做顯示去重。皆保留首見順序。
-
 use std::collections::HashSet;
 
 use protos::engine::TaigiWord;
@@ -26,7 +24,6 @@ use protos::engine::TaigiWord;
 /// both platforms; today this crate is the single source of truth and
 /// the Kotlin mirror has been deleted (PR #192). iOS keeps only a
 /// 4-LOC residual unrelated to this function.
-// 排序前去重,以「羅馬字|漢字」為 key,只保留首次出現,維持原順序。
 pub(crate) fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
     let mut seen: HashSet<String> = HashSet::with_capacity(words.len());
     let mut result: Vec<TaigiWord> = Vec::with_capacity(words.len());
@@ -48,7 +45,6 @@ pub(crate) fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
 /// hanji survives — this is the v3.5.2 ranking-slice contract that
 /// previously lived in `CandidateProcessor.removeDisplayDuplicates`
 /// (Android mirror deleted PR #192; iOS residual is unrelated).
-// TPS 模式專用顯示去重,排序後呼叫;漢字相同只留排名最高的;漢字空/缺一律保留。
 pub(crate) fn remove_display_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
     let mut seen_hanji: HashSet<String> = HashSet::with_capacity(words.len());
     let mut result: Vec<TaigiWord> = Vec::with_capacity(words.len());

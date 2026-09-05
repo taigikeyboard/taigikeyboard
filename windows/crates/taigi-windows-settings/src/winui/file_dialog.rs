@@ -5,8 +5,6 @@
 //! whose active window IS the settings window; an unowned dialog would be
 //! free to fall behind it.
 
-// CSV 檔案對話框。Reactor 不給 HWND,所以開對話框當下讀執行緒的 active window 當 owner(否則對話框會掉到視窗後面)。
-
 use std::path::PathBuf;
 
 fn dialog() -> rfd::FileDialog {

@@ -13,8 +13,6 @@
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
 //!   provide the foundational helpers reused here.
 
-// Phonetics 子分派;把 `PhoneticsRequest.method` 各種 oneof 變體路由到對應實作,並包成 `PhoneticsResponse`。
-
 use crate::api::{
     poj_display_to_tl_display, tl_display_to_poj_display, to_tone_number, PhoneticsError,
 };
@@ -33,7 +31,6 @@ use protos::engine::{
 
 /// Dispatch a decoded `PhoneticsRequest` against the per-request `AppConfig`
 /// snapshot (live-read settings per `behavioral-invariants.md` §11).
-// 對解碼後的 `PhoneticsRequest` 做分派;`AppConfig` 為單次請求快照,跟著 live-read 設定一起傳入。
 pub fn handle(
     req: &PhoneticsRequest,
     config: &AppConfig,

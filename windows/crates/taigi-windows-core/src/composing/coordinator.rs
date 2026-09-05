@@ -29,8 +29,6 @@
 //! 7. The key sink's own `ITfContext` argument is the authority on which
 //!    context is typing; a late `OnSetFocus` is a hint, not the truth.
 
-// 決定哪個 context 可驅動唯一的組字引擎;所有權以 context token 而非 process 為鍵。
-
 use super::manager::ComposingManager;
 
 /// Identity of one input context. Allocated by the shell (a counter, never a

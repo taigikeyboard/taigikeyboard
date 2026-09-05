@@ -1,7 +1,5 @@
 //! The one `IClassFactory` this DLL exports: creates the text service.
 
-// 類別工廠 — 建立文字服務物件。
-
 use crate::com_guard::guarded;
 use crate::text_service::TextService;
 use std::ffi::c_void;

@@ -2,8 +2,6 @@
 //! engine's dictionaries under the user's source toggles, in the page's
 //! order. Port of `DictionarySearchService.swift`.
 
-// 辭典搜尋 — 先自訂詞庫,再引擎辭典(依來源開關),照頁面順序排。
-
 use std::sync::Arc;
 use taigi_windows_core::engine::{
     chhoe_url, derive_custom_query_key, dictionary_filters, is_hanzi, moe_url, search_by_hanzi,

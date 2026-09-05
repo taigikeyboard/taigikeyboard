@@ -1,6 +1,6 @@
-// 候選詞更新作業協調器 — 從 TextInputManager 抽出。
-// 管理 Taigi / English 候選 debounce 流程、display 衍生排程、生命週期取消;
-// 並對 TaigiAutocompleteService 做 inputMode-aware 快取以省重建成本。
+// Candidate update coordinator, extracted from TextInputManager. Manages the Taigi/English
+// candidate debounce flow, display-derivation scheduling, and lifecycle cancellation; caches
+// TaigiAutocompleteService per input mode to reduce rebuild cost.
 
 package com.siansiansu.taigikeyboard.ime.text
 
