@@ -801,11 +801,11 @@
         ]
       },
       "values": {
-        "hanji": "漢羅反向輸出",
-        "tailo": "hàn-lô huán-hiòng su-tshut",
-        "poj": "hàn-lô hoán-hiòng su-chhut",
-        "en": "Commit in the Other Script",
-        "ja": "もう一方の表記で確定"
+        "hanji": "臨時拍羅馬字/漢字",
+        "tailo": "lîm-sî phah lô-má-jī / hàn-jī",
+        "poj": "lîm-sî phah lô-má-jī / hàn-jī",
+        "en": "Type Roman/Hanji Temporarily",
+        "ja": "一時的にローマ字/漢字で入力"
       }
     },
     "shortcutUnbound": {
